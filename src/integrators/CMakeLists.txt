@@ -1,9 +1,9 @@
 set(integrators_sources
-    dg_neumann_integrator.cpp
+    hyperelastic_traction_integrator.cpp
     )
 
 set(integrators_headers
-    dg_neumann_integrator.hpp
+    hyperelastic_traction_integrator.hpp
     )
 
 blt_add_library(

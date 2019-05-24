@@ -11,6 +11,9 @@ include(cmake/defaults.cmake)
 
 project(serac)
 
+# Use c++11 standard everywhere
+set(BLT_CXX_STD "c++11" CACHE STRING "")
+
 ###############################################################################
 # Setup BLT
 ###############################################################################
@@ -50,7 +53,7 @@ add_subdirectory(src)
 # Build tests
 ###############################################################################
 
-if(ENABLE_TESTS AND ENABLE_GTEST)
-    add_subdirectory(tests)
-    endif()
+#if(ENABLE_TESTS AND ENABLE_GTEST)
+#    add_subdirectory(tests)
+#    endif()
 

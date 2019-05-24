@@ -10,6 +10,7 @@ if (MFEM_DIR)
     blt_register_library( NAME mfem     
                           INCLUDES ${MFEM_INCLUDE_DIRS}
                           LIBRARIES ${MFEM_LIBRARY}
+                          DEPENDS_ON superludist parmetis metis
                           TREAT_INCLUDES_AS_SYSTEM ON)
 else()
   message(FATAL_ERROR "Cannot find MFEM. MFEM_DIR is not defined. ")
@@ -36,6 +37,7 @@ if (PARMETIS_DIR)
     blt_register_library( NAME parmetis
                           INCLUDES ${PARMETIS_INCLUDE_DIRS}
                           LIBRARIES ${PARMETIS_LIBRARY}
+                          DEPENDS_ON metis
                           TREAT_INCLUDES_AS_SYSTEM ON)
 
     blt_register_library( NAME metis
@@ -45,6 +47,21 @@ if (PARMETIS_DIR)
 else()
   message(FATAL_ERROR "Cannot find PARMETIS. PARMETIS_DIR is not defined. ")
 endif()
+
+################################
+# SuperLUDist
+################################
+if (SUPERLUDIST_DIR)
+    include(cmake/thirdparty/FindSuperLUDist.cmake)
+    blt_register_library( NAME superludist
+                          INCLUDES ${SUPERLUDIST_INCLUDE_DIRS}
+                          LIBRARIES ${SUPERLUDIST_LIBRARY}
+                          DEPENDS_ON parmetis metis
+                          TREAT_INCLUDES_AS_SYSTEM ON)
+else()
+  message(FATAL_ERROR "Cannot find SUPERLUDIST. SUPERLUDIST_DIR is not defined. ")
+endif()
+
 
 ################################
 # BLAS

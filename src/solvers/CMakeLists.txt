@@ -1,17 +1,9 @@
 set(solvers_sources
-    dg_diffusion_solver.cpp
-    dg_convection_solver.cpp
-    cg_diffusion_solver.cpp
-    cg_convection_solver.cpp
-    coupled_potential_solver.cpp
+    hyperelastic_solver.cpp
     )
 
 set(solvers_headers
-    dg_diffusion_solver.hpp
-    dg_convection_solver.hpp
-    cg_diffusion_solver.hpp
-    cg_convection_solver.hpp    
-    coupled_potential_solver.hpp
+    hyperelastic_solver.hpp
     )
 
 blt_add_library(
