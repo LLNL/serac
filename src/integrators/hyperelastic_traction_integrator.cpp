@@ -3,7 +3,7 @@
 using namespace mfem;
 
 void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1,
-                                                        const FiniteElement &el2,
+                                                        __attribute__((unused)) const FiniteElement &el2,
                                                         FaceElementTransformations &Tr,
                                                         const Vector &elfun, 
                                                         Vector &elvec)
@@ -63,7 +63,7 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1
 }
 
 void HyperelasticTractionIntegrator::AssembleFaceGrad(const FiniteElement &el1,
-                                                     const FiniteElement &el2,
+                                                      __attribute__((unused)) const FiniteElement &el2,
                                                      FaceElementTransformations &Tr,
                                                      const Vector &elfun, 
                                                      DenseMatrix &elmat)
