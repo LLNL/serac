@@ -160,9 +160,9 @@ int main(int argc, char *argv[])
    // step configuration, the global deformation, the current configuration/solution 
    // guess, and the incremental nodal displacements
    ParGridFunction x_ref(&fe_space);
-   ParGridFunction x_beg(&fe_space);
-   ParGridFunction x_inc(&fe_space);
+   ParGridFunction x_cur(&fe_space);
    ParGridFunction x_fin(&fe_space);
+   ParGridFunction x_inc(&fe_space);   
 
    // Project the initial and reference configuration functions onto the appropriate grid functions
    VectorFunctionCoefficient deform(dim, InitialDeformation);
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
    // initialize x_cur, boundary condition, deformation, and 
    // incremental nodal displacment grid functions by projection the 
    // VectorFunctionCoefficient function onto them
-   x_beg.ProjectCoefficient(deform);
+   x_cur.ProjectCoefficient(deform);
 
    // define a boundary attribute array and initialize to 0
    Array<int> ess_bdr;
@@ -184,12 +184,12 @@ int main(int argc, char *argv[])
 
    // boundary attribute 1 (index 0) is fixed (Dirichlet)
    ess_bdr[0] = 1;
+   ess_bdr[1] = 1;   
 
    Array<int> trac_bdr;   
    trac_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
       
    trac_bdr = 0;
-   trac_bdr[3] = 1; 
    
    // define the traction vector
    Vector traction(dim);
@@ -209,16 +209,13 @@ int main(int argc, char *argv[])
    
    // declare incremental nodal displacement solution vector
    Vector x_sol(fe_space.TrueVSize());
-   x_sol = 0.0;
+   x_cur.GetTrueDofs(x_sol);
 
    // Solve the Newton system 
    oper.Solve(x_sol);     
 
    // distribute the solution vector to x_cur
-   x_inc.Distribute(x_sol);
-
-   // set the incremental nodal displacement grid function
-   add(x_ref, x_inc, x_fin);
+   x_fin.Distribute(x_sol);
 
    // Save the displaced mesh. These are snapshots of the endstep current 
    // configuration. Later add functionality to not save the mesh at each timestep.
@@ -237,6 +234,8 @@ int main(int argc, char *argv[])
     
    ofstream deformation_ofs(deformation_name.str().c_str());
    deformation_ofs.precision(8);
+
+   subtract(x_fin, x_ref, x_inc);
    x_inc.Save(deformation_ofs);
       
    // Free the used memory.
