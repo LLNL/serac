@@ -10,18 +10,18 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1
 {
 
    int dim = el1.GetDim();
-   int dof_u = el1.GetDof();
+   int dof = el1.GetDof();
 
-   shape.SetSize (dof_u);
-   elvec.SetSize (dim*dof_u);
+   shape.SetSize (dof);
+   elvec.SetSize (dim*dof);
 
-   DSh_u.SetSize(dof_u, dim);
-   DS_u.SetSize(dof_u, dim);
+   DSh_u.SetSize(dof, dim);
+   DS_u.SetSize(dof, dim);
    J0i.SetSize(dim);
-   J.SetSize(dim);
-   Jinv.SetSize(dim);
+   F.SetSize(dim);
+   Finv.SetSize(dim);
 
-   PMatI_u.UseExternalData(elfun.GetData(), dof_u, dim);
+   PMatI_u.UseExternalData(elfun.GetData(), dof, dim);
 
    int intorder = 2*el1.GetOrder() + 3; 
    const IntegrationRule &ir = IntRules.Get(Tr.FaceGeom, intorder);
@@ -30,6 +30,10 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1
 
    Vector trac(dim);
    Vector ftrac(dim);
+   Vector nor(dim);
+   Vector fnor(dim);
+   Vector u(dim);
+   Vector fu(dim);
    
    for (int i = 0; i < ir.GetNPoints(); i++)
    {
@@ -39,26 +43,38 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1
       
       Tr.Face->SetIntPoint(&ip);
 
+      CalcOrtho(Tr.Face->Jacobian(), nor);
+
+      //Normalize vector
+      double norm = nor.Norml2();
+      nor /= norm;
+      
       //Compute traction
       function.Eval(trac, *Tr.Face, ip);
-
+      
       Tr.Elem1->SetIntPoint(&eip);
       CalcInverse(Tr.Elem1->Jacobian(), J0i);
       
       el1.CalcDShape(eip, DSh_u);
       Mult(DSh_u, J0i, DS_u);
-      MultAtB(PMatI_u, DS_u, J);
+      MultAtB(PMatI_u, DS_u, F);
 
-      CalcInverse(J, Jinv);
+      CalcInverse(F, Finv);
 
-      Jinv.MultTranspose(trac, ftrac);
+      Finv.MultTranspose(nor, fnor);
 
       el1.CalcShape (eip, shape);
-      for (int j = 0; j < dof_u; j++)
-         for (int k = 0; k < dim; k++)
-         {
-            elvec(dof_u*k+j) += ip.weight * Tr.Face->Weight() * ftrac(k) * shape(j) * J.Det();
+      for (int j = 0; j < dof; j++) {
+         for (int k = 0; k < dim; k++) {
+            u = 0.0;
+            u(k) = shape(j);
+            F.Mult(u, fu);
+            F.Mult(trac, ftrac);
+            for (int l=0; l < dim; l++) {
+               elvec(dof*k+j) += ftrac(l) * fu(l) * ip.weight * Tr.Face->Weight() * F.Det() * fnor.Norml2();
+            }
          }
+      }
    }
 }
 
@@ -68,77 +84,34 @@ void HyperelasticTractionIntegrator::AssembleFaceGrad(const FiniteElement &el1,
                                                      const Vector &elfun, 
                                                      DenseMatrix &elmat)
 {
-   int dof_u = el1.GetDof();
-
+   int dof = el1.GetDof();
    int dim = el1.GetDim();
 
-   elmat.SetSize(dof_u*dim, dof_u*dim);
-
-   elmat = 0.0;
-
-   shape.SetSize (dof_u);
-   nor.SetSize (dim);
-   fnor.SetSize (dim);
+   double small = 1.0e-5;
    
-   DSh_u.SetSize(dof_u, dim);
-   DS_u.SetSize(dof_u, dim);
-   Sh_u.SetSize(dof_u);
-   J0i.SetSize(dim);
-   J.SetSize(dim);
-   Jinv.SetSize(dim);
-   JinvT.SetSize(dim);
-
-   PMatI_u.UseExternalData(elfun.GetData(), dof_u, dim);
-
-   int intorder = 2*el1.GetOrder() + 3; 
-   const IntegrationRule &ir = IntRules.Get(Tr.FaceGeom, intorder);
-
-   double dJ;
-   Vector trac(dim);
-   Vector ftrac(dim);
-
-   for (int i = 0; i < ir.GetNPoints(); i++)
-   {
-      const IntegrationPoint &ip = ir.IntPoint(i);
-      IntegrationPoint eip;
-      Tr.Loc1.Transform(ip, eip);
-
-      Tr.Face->SetIntPoint(&ip);
-
-      Tr.Elem1->SetIntPoint(&eip);
-      CalcInverse(Tr.Elem1->Jacobian(), J0i);
-
-      el1.CalcDShape(eip, DSh_u);
-      el1.CalcShape(eip, Sh_u);
-      Mult(DSh_u, J0i, DS_u);
-      MultAtB(PMatI_u, DS_u, J);
-
-      CalcInverse(J, Jinv);
-      CalcInverseTranspose(J, JinvT);
-
-      dJ = J.Det();
-
-      function.Eval(trac, *Tr.Face, ip);
-            
-      // u,u block
-      for (int i_u = 0; i_u < dof_u; i_u++) {
+   Vector test1(dim*dof);
+   Vector test2(dim*dof);   
+   Vector result1(dim*dof);
+   Vector result2(dim*dof);
+   
+   elmat.SetSize(dof*dim, dof*dim);
+   
+   for (int i = 0; i<dof; i++) {
       for (int i_dim = 0; i_dim < dim; i_dim++) {
-         for (int j_u = 0; j_u < dof_u; j_u++) {
-         for (int j_dim = 0; j_dim < dim; j_dim++) {
+         
+         test1 = elfun;
+         test1(dof*i_dim + i) += small;
+         AssembleFaceVector(el1, el2, Tr, test1, result1);
 
-            for (int n=0; n<dim; n++) {
-            for (int l=0; l<dim; l++) {
-               elmat(i_u + i_dim*dof_u, j_u + j_dim*dof_u) += dJ * JinvT(i_dim,l) * JinvT(j_dim,n) * trac(n) * Sh_u(i_u) * DS_u(j_u,n) * ip.weight * Tr.Face->Weight();        
-               elmat(i_u + i_dim*dof_u, j_u + j_dim*dof_u) -= dJ * JinvT(i_dim,n) * JinvT(j_dim,l) * trac(n) * Sh_u(i_u) * DS_u(j_u,n) * ip.weight * Tr.Face->Weight();
-               
+         test2 = elfun;
+         test2(dof*i_dim + i) -= small;
+         AssembleFaceVector(el1, el2, Tr, test2, result2);
+
+         for (int j = 0; j<dof; j++) {
+            for (int j_dim = 0; j_dim < dim; j_dim++) {
+               elmat(dof*j_dim + j, dof*i_dim + i) = (test1(dof*j_dim + j) - test2(dof*j_dim + j))/(2.0 * small);
             }
-            }
-            
-            
-         }
-         }
+         }            
       }
-      }
-      
-   }
+   }  
 }

@@ -43,8 +43,8 @@ int main(int argc, char *argv[])
    int order = 1;
 
    // newton input args
-   double newton_rel_tol = 1.0e-6;
-   double newton_abs_tol = 1.0e-8;
+   double newton_rel_tol = 1.0e-2;
+   double newton_abs_tol = 1.0e-4;
    int newton_iter = 500;
    
    // solver input args
@@ -56,8 +56,8 @@ int main(int argc, char *argv[])
    double K = 5.0;
 
    // loading parameters
-   double tx = 1.0e-3;
-   double ty = 0.0;
+   double tx = 0.0;
+   double ty = 1.0e-3;
    double tz = 0.0;   
    
    // specify all input arguments
@@ -184,12 +184,12 @@ int main(int argc, char *argv[])
 
    // boundary attribute 1 (index 0) is fixed (Dirichlet)
    ess_bdr[0] = 1;
-   ess_bdr[1] = 1;   
 
    Array<int> trac_bdr;   
    trac_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
       
    trac_bdr = 0;
+   trac_bdr[1] = 1;
    
    // define the traction vector
    Vector traction(dim);

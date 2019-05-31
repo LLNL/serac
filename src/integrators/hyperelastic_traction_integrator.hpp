@@ -6,7 +6,7 @@ class HyperelasticTractionIntegrator : public NonlinearFormIntegrator
 {
 private:
    VectorCoefficient &function;
-   mutable DenseMatrix DSh_u, DS_u, J0i, J, Jinv, JinvT, PMatI_u;
+   mutable DenseMatrix DSh_u, DS_u, J0i, F, Finv, FinvT, PMatI_u;
    mutable Vector shape, nor, fnor, Sh_p, Sh_u;
    
 public:
