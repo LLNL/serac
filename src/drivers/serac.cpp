@@ -23,9 +23,6 @@ using namespace mfem;
 
 int main(int argc, char *argv[])
 {
-   // print the version of the code being run
-   printf("MFEM Version: %d \n", GetVersion());
-
    // Initialize MPI.
    int num_procs, myid;
    MPI_Init(&argc, &argv);
