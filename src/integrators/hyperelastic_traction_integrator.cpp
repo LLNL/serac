@@ -66,13 +66,7 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1
       el1.CalcShape (eip, shape);
       for (int j = 0; j < dof; j++) {
          for (int k = 0; k < dim; k++) {
-            u = 0.0;
-            u(k) = shape(j);
-            F.Mult(u, fu);
-            F.Mult(trac, ftrac);
-            for (int l=0; l < dim; l++) {
-               elvec(dof*k+j) += ftrac(l) * fu(l) * ip.weight * Tr.Face->Weight() * F.Det() * fnor.Norml2();
-            }
+            elvec(dof*k+j) -= trac(k) * shape(j) * ip.weight * Tr.Face->Weight() * F.Det() * fnor.Norml2();
          }
       }
    }
@@ -84,34 +78,22 @@ void HyperelasticTractionIntegrator::AssembleFaceGrad(const FiniteElement &el1,
                                                      const Vector &elfun, 
                                                      DenseMatrix &elmat)
 {
-   int dof = el1.GetDof();
-   int dim = el1.GetDim();
+   double diff_step = 1.0e-8;
+   Vector temp_out_1;
+   Vector temp_out_2;
+   Vector temp(elfun.GetData(), elfun.Size());
 
-   double small = 1.0e-5;
+   elmat.SetSize(elfun.Size(),elfun.Size());
    
-   Vector test1(dim*dof);
-   Vector test2(dim*dof);   
-   Vector result1(dim*dof);
-   Vector result2(dim*dof);
-   
-   elmat.SetSize(dof*dim, dof*dim);
-   
-   for (int i = 0; i<dof; i++) {
-      for (int i_dim = 0; i_dim < dim; i_dim++) {
-         
-         test1 = elfun;
-         test1(dof*i_dim + i) += small;
-         AssembleFaceVector(el1, el2, Tr, test1, result1);
+   for (int j=0; j<temp.Size(); j++) {
+      temp[j] += diff_step;
+      AssembleFaceVector(el1, el2, Tr, temp, temp_out_1);
+      temp[j] -= 2.0*diff_step;
+      AssembleFaceVector(el1, el2, Tr, temp, temp_out_2);
 
-         test2 = elfun;
-         test2(dof*i_dim + i) -= small;
-         AssembleFaceVector(el1, el2, Tr, test2, result2);
-
-         for (int j = 0; j<dof; j++) {
-            for (int j_dim = 0; j_dim < dim; j_dim++) {
-               elmat(dof*j_dim + j, dof*i_dim + i) = (test1(dof*j_dim + j) - test2(dof*j_dim + j))/(2.0 * small);
-            }
-         }            
+      for (int k=0; k<temp.Size(); k++) {
+         elmat(k,j) = (temp_out_1[k] - temp_out_2[k]) / (2.0*diff_step);
       }
-   }  
+      temp[j] = elfun[j];
+   }
 }

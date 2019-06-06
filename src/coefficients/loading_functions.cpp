@@ -12,7 +12,6 @@ void ReferenceConfiguration(const Vector &x, Vector &y)
 void InitialDeformation(const Vector &x, Vector &y)
 {
    y = x;
-   y(1) = x(1)+0.25*x(0);
 }
 
 

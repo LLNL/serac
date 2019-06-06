@@ -74,11 +74,11 @@ int main(int argc, char *argv[])
                   "Shear modulus in the Neo-Hookean hyperelastic model.");
    args.AddOption(&K, "-K", "--bulk-modulus",
                   "Bulk modulus in the Neo-Hookean hyperelastic model.");
-   args.AddOption(&K, "-tx", "--traction-x",
+   args.AddOption(&tx, "-tx", "--traction-x",
                   "Cantilever tip traction in the x direction.");
-   args.AddOption(&K, "-ty", "--traction-y",
+   args.AddOption(&ty, "-ty", "--traction-y",
                   "Cantilever tip traction in the y direction.");
-   args.AddOption(&K, "-tz", "--traction-z",
+   args.AddOption(&tz, "-tz", "--traction-z",
                   "Cantilever tip traction in the z direction.");
    args.AddOption(&slu_solver, "-slu", "--superlu", "-no-slu",
                   "--no-superlu", "Use the SuperLU Solver.");
