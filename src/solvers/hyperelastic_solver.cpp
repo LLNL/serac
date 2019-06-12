@@ -1,5 +1,6 @@
 #include "hyperelastic_solver.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
+#include "integrators/inc_hyperelastic_integrator.hpp"
 
 using namespace mfem;
 
@@ -30,7 +31,7 @@ NonlinearMechOperator::NonlinearMechOperator(ParFiniteElementSpace &fes,
    model = new NeoHookeanModel(mu, K);   
 
    // Add the hyperelastic integrator
-   Hform->AddDomainIntegrator(new HyperelasticNLFIntegrator(model));
+   Hform->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model));
 
    // Add the traction integrator
    Hform->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(trac_coef), trac_bdr);

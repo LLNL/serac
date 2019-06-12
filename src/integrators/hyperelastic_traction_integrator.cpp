@@ -59,6 +59,11 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1
       Mult(DSh_u, J0i, DS_u);
       MultAtB(PMatI_u, DS_u, F);
 
+      for (int d=0; d<dim; d++) {
+         F(d,d) += 1.0;
+      }
+
+      
       CalcInverse(F, Finv);
 
       Finv.MultTranspose(nor, fnor);

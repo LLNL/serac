@@ -28,7 +28,7 @@ private:
 
 public:
    /** @param[in] m  HyperelasticModel that will be integrated. */
-   HyperelasticNLFIntegrator(HyperelasticModel *m) : model(m) { }
+   IncrementalHyperelasticIntegrator(HyperelasticModel *m) : model(m) { }
 
    /** @brief Computes the integral of W(Jacobian(Trt)) over a target zone
        @param[in] el     Type of FiniteElement.

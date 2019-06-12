@@ -174,6 +174,8 @@ int main(int argc, char *argv[])
    // VectorFunctionCoefficient function onto them
    x_cur.ProjectCoefficient(deform);
 
+   subtract(x_cur, x_ref, x_inc);
+   
    // define a boundary attribute array and initialize to 0
    Array<int> ess_bdr;
    ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
@@ -206,14 +208,16 @@ int main(int argc, char *argv[])
    
    // declare incremental nodal displacement solution vector
    Vector x_sol(fe_space.TrueVSize());
-   x_cur.GetTrueDofs(x_sol);
+   x_inc.GetTrueDofs(x_sol);
 
    // Solve the Newton system 
    oper.Solve(x_sol);     
 
    // distribute the solution vector to x_cur
-   x_fin.Distribute(x_sol);
+   x_inc.Distribute(x_sol);
 
+   add(x_inc, x_ref, x_fin);
+   
    // Save the displaced mesh. These are snapshots of the endstep current 
    // configuration. Later add functionality to not save the mesh at each timestep.
 
@@ -232,7 +236,6 @@ int main(int argc, char *argv[])
    ofstream deformation_ofs(deformation_name.str().c_str());
    deformation_ofs.precision(8);
 
-   subtract(x_fin, x_ref, x_inc);
    x_inc.Save(deformation_ofs);
       
    // Free the used memory.

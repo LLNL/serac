@@ -1,4 +1,4 @@
-#include "dg_neumann_integrator.hpp"
+#include "inc_hyperelastic_integrator.hpp"
 
 using namespace mfem;
 
@@ -33,10 +33,15 @@ double IncrementalHyperelasticIntegrator::GetElementEnergy(const FiniteElement &
       MultAtB(PMatI, DSh, Jpr);
       Mult(Jpr, Jrt, Jpt);
 
+      for (int d=0; d<dim; d++) {
+         Jpt(d,d) += 1.0;
+      }
+      
       energy += ip.weight * Ttr.Weight() * model->EvalW(Jpt);
    }
 
    return energy;
+   
 }
 
 void IncrementalHyperelasticIntegrator::AssembleElementVector(
@@ -71,6 +76,10 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(
       el.CalcDShape(ip, DSh);
       Mult(DSh, Jrt, DS);
       MultAtB(PMatI, DS, Jpt);
+
+      for (int d=0; d<dim; d++) {
+         Jpt(d,d) += 1.0;
+      }
 
       model->EvalP(Jpt, P);
 
@@ -111,6 +120,11 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const FiniteElement 
       Mult(DSh, Jrt, DS);
       MultAtB(PMatI, DS, Jpt);
 
+
+      for (int d=0; d<dim; d++) {
+         Jpt(d,d) += 1.0;
+      }
+      
       model->AssembleH(Jpt, DS, ip.weight * Ttr.Weight(), elmat);
    }
 }
