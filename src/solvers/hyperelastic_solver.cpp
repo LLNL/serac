@@ -89,12 +89,12 @@ NonlinearMechOperator::NonlinearMechOperator(ParFiniteElementSpace &fes,
 }
 
 // Solve the Newton system
-void NonlinearMechOperator::Solve(Vector &x) const
+int NonlinearMechOperator::Solve(Vector &x) const
 {
    Vector zero;
    newton_solver.Mult(zero, x);
 
-   MFEM_VERIFY(newton_solver.GetConverged(), "Newton Solver did not converge.");
+   return newton_solver.GetConverged();
 }
 
 // compute: y = H(x,p)

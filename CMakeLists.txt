@@ -53,7 +53,7 @@ add_subdirectory(src)
 # Build tests
 ###############################################################################
 
-#if(ENABLE_TESTS AND ENABLE_GTEST)
-#    add_subdirectory(tests)
-#    endif()
+if(ENABLE_TESTS AND ENABLE_GTEST)
+    add_subdirectory(tests)
+    endif()
 

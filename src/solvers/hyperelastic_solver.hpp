@@ -41,7 +41,7 @@ public:
    virtual void Mult(const Vector &k, Vector &y) const;
 
    /// Driver for the newton solver
-   void Solve(Vector &x) const;
+   int Solve(Vector &x) const;
 
    /// Get FE space
    const ParFiniteElementSpace *GetFESpace() { return &fe_space; }

@@ -1,17 +1,12 @@
 #
-# Tests for FLOBAT 
+# Tests for SERAC 
 #
 
-set( flobat_tests
-     flobat_dg_diffusion_essential.cpp
-     flobat_cg_diffusion_essential.cpp     
-     flobat_dg_diffusion_neumann.cpp
-     flobat_cg_diffusion_neumann.cpp     
-     flobat_dg_convection.cpp
-     flobat_cg_convection.cpp     
+set( serac_tests
+     serac_hyperelasticity_solver.cpp
      )
 
-foreach ( test ${flobat_tests} )
+foreach ( test ${serac_tests} )
 
     get_filename_component( test_name ${test} NAME_WE )
 
