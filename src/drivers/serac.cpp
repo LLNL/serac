@@ -172,9 +172,9 @@ int main(int argc, char *argv[])
    // initialize x_cur, boundary condition, deformation, and 
    // incremental nodal displacment grid functions by projection the 
    // VectorFunctionCoefficient function onto them
-   x_cur.ProjectCoefficient(deform);
+   x_inc.ProjectCoefficient(deform);
 
-   subtract(x_cur, x_ref, x_inc);
+   add(x_inc, x_ref, x_cur);
    
    // define a boundary attribute array and initialize to 0
    Array<int> ess_bdr;

@@ -9,9 +9,9 @@ void ReferenceConfiguration(const Vector &x, Vector &y)
 }
 
 
-void InitialDeformation(const Vector &x, Vector &y)
+void InitialDeformation(__attribute__((unused)) const Vector &x, Vector &y)
 {
-   y = x;
+   y = 0.0;
 }
 
 
