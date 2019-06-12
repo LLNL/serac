@@ -4,7 +4,8 @@ set(coefficients_sources
 
 set(coefficients_headers
     loading_functions.hpp
-    )
+    traction_coefficient.hpp
+    )   
 
 blt_add_library(
     NAME        coefficients

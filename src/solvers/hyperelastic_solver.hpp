@@ -39,7 +39,7 @@ public:
    /// Required to use the native newton solver
    virtual Operator &GetGradient(const Vector &x) const;
    virtual void Mult(const Vector &k, Vector &y) const;
-
+   
    /// Driver for the newton solver
    int Solve(Vector &x) const;
 

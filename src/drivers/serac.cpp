@@ -13,6 +13,7 @@
 #include "mfem.hpp"
 #include "solvers/hyperelastic_solver.hpp"
 #include "coefficients/loading_functions.hpp"
+#include "coefficients/traction_coefficient.hpp"
 #include <memory>
 #include <iostream>
 #include <fstream>
@@ -56,6 +57,9 @@ int main(int argc, char *argv[])
    double tx = 0.0;
    double ty = 1.0e-3;
    double tz = 0.0;   
+
+   double t_final = 1.0;
+   double dt = 0.25;
    
    // specify all input arguments
    OptionsParser args(argc, argv);
@@ -87,7 +91,11 @@ int main(int argc, char *argv[])
                   "Absolute tolerance for the Newton solve.");
    args.AddOption(&newton_iter, "-it", "--newton-iterations",
                   "Maximum iterations for the Newton solve.");
-
+   args.AddOption(&t_final, "-tf", "--t-final",
+                  "Final time; start time is 0.");
+   args.AddOption(&dt, "-dt", "--time-step",
+                  "Time step.");
+   
    // Parse the arguments and check if they are good
    args.Parse();
    if (!args.Good())
@@ -198,24 +206,48 @@ int main(int argc, char *argv[])
       traction(2) = tz;
    }
 
-   VectorConstantCoefficient traction_coef(traction);
+
+   
+   VectorScaledConstantCoefficient traction_coef(traction);
    
    // construct the nonlinear mechanics operator
    NonlinearMechOperator oper(fe_space, ess_bdr, trac_bdr,
                               mu, K, traction_coef,
                               newton_rel_tol, newton_abs_tol, 
                               newton_iter, gmres_solver, slu_solver);
-   
+
+
    // declare incremental nodal displacement solution vector
    Vector x_sol(fe_space.TrueVSize());
    x_inc.GetTrueDofs(x_sol);
+   
+   // initialize/set the time
+   double t = 0.0;
 
-   // Solve the Newton system 
-   oper.Solve(x_sol);     
+   bool last_step = false;
+
+   // enter the time step loop. This was modeled after example 10p.
+   for (int ti = 1; !last_step; ti++) {
+      
+      double dt_real = min(dt, t_final - t);
+      // compute current time
+      t = t + dt_real;
+
+      if (myid == 0) {
+         cout << "step " << ti << ", t = " << t << endl;
+      }
+      
+      traction_coef.SetScale(t);
+
+      // Solve the Newton system 
+      oper.Solve(x_sol);     
+
+      last_step = (t >= t_final - 1e-8*dt);
+   }
 
    // distribute the solution vector to x_cur
    x_inc.Distribute(x_sol);
-
+      
    add(x_inc, x_ref, x_fin);
    
    // Save the displaced mesh. These are snapshots of the endstep current 
