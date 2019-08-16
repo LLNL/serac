@@ -21,25 +21,32 @@ if(NOT HYPRE_DIR)
 endif()
 
 #find includes
-find_path( HYPRE_INCLUDE_DIRS HYPRE.h
-           PATHS  ${HYPRE_DIR}/include
-           NO_DEFAULT_PATH
-           NO_CMAKE_ENVIRONMENT_PATH
-           NO_CMAKE_PATH
-           NO_SYSTEM_ENVIRONMENT_PATH
-           NO_CMAKE_SYSTEM_PATH)
+find_path( 
+    HYPRE_INCLUDE_DIRS HYPRE.h
+    PATHS  ${HYPRE_DIR}/include
+    NO_DEFAULT_PATH
+    NO_CMAKE_ENVIRONMENT_PATH
+    NO_CMAKE_PATH
+    NO_SYSTEM_ENVIRONMENT_PATH
+    NO_CMAKE_SYSTEM_PATH
+)
 
-find_library( HYPRE_LIBRARY NAMES HYPRE libHYPRE
-              PATHS ${HYPRE_DIR}/lib
-              NO_DEFAULT_PATH
-              NO_CMAKE_ENVIRONMENT_PATH
-              NO_CMAKE_PATH
-              NO_SYSTEM_ENVIRONMENT_PATH
-              NO_CMAKE_SYSTEM_PATH)
-
+find_library( 
+    HYPRE_LIBRARY 
+    NAMES HYPRE libHYPRE
+    PATHS ${HYPRE_DIR}/lib
+    NO_DEFAULT_PATH
+    NO_CMAKE_ENVIRONMENT_PATH
+    NO_CMAKE_PATH
+    NO_SYSTEM_ENVIRONMENT_PATH
+    NO_CMAKE_SYSTEM_PATH
+)
 
 include(FindPackageHandleStandardArgs)
 
-find_package_handle_standard_args(HYPRE  DEFAULT_MSG
-                                  HYPRE_INCLUDE_DIRS
-                                  HYPRE_LIBRARY )
+find_package_handle_standard_args(
+    HYPRE
+    DEFAULT_MSG
+    HYPRE_INCLUDE_DIRS
+    HYPRE_LIBRARY
+)
