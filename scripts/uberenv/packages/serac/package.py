@@ -109,9 +109,9 @@ class Serac(CMakePackage):
         ##############################################
 
         cmake_exe = spec['cmake'].command.path
-        host_cfg_fname = "%s-%s-%s-serac.cmake" % (socket.gethostname(),
-                                                     sys_type,
-                                                     spec.compiler)
+        compiler_string = str(spec.compiler).strip('%').replace('@','_').replace('.','_')
+        host_cfg_fname = "%s__%s__serac.cmake" % (sys_type,
+                                                  compiler_string)
 
         cfg = open(host_cfg_fname, "w")
         cfg.write("##################################\n")

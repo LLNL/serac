@@ -91,27 +91,38 @@ def parse_args():
                       dest="install",
                       default=False,
                       help="Install `package_name` instead of `uberenv_package_name`.")
+
     # where to install
     parser.add_option("--prefix",
                       dest="prefix",
                       default="uberenv_libs",
                       help="destination directory")
+
     # what compiler to use
     parser.add_option("--spec",
                       dest="spec",
                       default=None,
                       help="spack compiler spec")
+
     # optional location of spack mirror
     parser.add_option("--mirror",
                       dest="mirror",
                       default=None,
                       help="spack mirror directory")
+
+    # optional location of spack upstream
+    parser.add_option("--upstream",
+                      dest="upstream",
+                      default=None,
+                      help="spack mirror directory")
+
     # flag to create mirror
     parser.add_option("--create-mirror",
                       action="store_true",
                       dest="create_mirror",
                       default=False,
                       help="Create spack mirror")
+
     # this option allows a user to explicitly to select a
     # group of spack settings files (compilers.yaml , packages.yaml)
     parser.add_option("--spack-config-dir",
@@ -285,7 +296,6 @@ def find_spack_mirror(spack_dir, mirror_name):
                 mirror_path = parts[1]
     return mirror_path
 
-
 def use_spack_mirror(spack_dir,
                      mirror_name,
                      mirror_path):
@@ -311,6 +321,44 @@ def use_spack_mirror(spack_dir,
                 mirror_name, mirror_path), echo=True)
         print("[using mirror {}]".format(mirror_path))
 
+def find_spack_upstream(spack_dir, upstream_name):
+    """
+    Returns the path of a site scoped spack upstream with the
+    given name, or None if no upstream exists.
+    """
+    upstream_path = None
+    
+    rv, res = sexe('spack/bin/spack config get upstreams', ret_output=True)
+    if (not res) and ("upstreams:" in res):
+        res = res.replace(' ', '')
+        res = res.replace('install_tree:', '')
+        res = res.replace(':', '')
+        res = res.splitlines()
+        res = res[1:]
+        upstreams = dict(zip(res[::2], res[1::2]))
+
+        for name in upstreams.keys():
+            if name == upstream_name:
+                upstream_path = upstreams[name]
+
+    return upstream_path
+
+def use_spack_upstream(spack_dir,
+                     upstream_name,
+                     upstream_path):
+    """
+    Configures spack to use upstream at a given path.
+    """
+    upstream_path = os.path.abspath(upstream_path)
+    existing_upstream_path = find_spack_upstream(spack_dir, upstream_name)
+    if (not existing_upstream_path) or (upstream_path != os.path.abspath(existing_upstream_path)):
+        # Existing upstream has different URL, error out
+        print("[removing existing spack upstream configuration file]")
+        sexe("rm spack/etc/spack/defaults/upstreams.yaml")
+        with open('spack/etc/spack/defaults/upstreams.yaml','w+') as upstreams_cfg_file:
+            upstreams_cfg_file.write("upstreams:\n")
+            upstreams_cfg_file.write("  {}:\n".format(upstream_name))
+            upstreams_cfg_file.write("    install_tree: {}\n".format(upstream_path))
 
 def find_osx_sdks():
     """
@@ -416,7 +464,7 @@ def main():
     if opts["ignore_ssl_errors"]:
         git_cmd +="-c http.sslVerify=false "
     spack_url = "https://github.com/spack/spack.git"
-    spack_branch = "develop"
+    spack_branch = "ci/serac"
     if "spack_url" in project_opts:
         spack_url = project_opts["spack_url"]
     if "spack_branch" in project_opts:
@@ -493,18 +541,27 @@ def main():
     #   OR
     # *) build
     #
+    # Note : When using an existing mirror to build from, the
+    # mirror is supposed to be in the same spack instance,
+    # i.e. created using create_mirror.
     ##########################################################
     if opts["create_mirror"]:
         return create_spack_mirror(opts["mirror"],
                                    uberenv_pkg_name,
                                    opts["ignore_ssl_errors"])
     else:
+        # use the uberenv package to trigger the right builds
+        # and build an host-config.cmake file
         if not opts["mirror"] is None:
             use_spack_mirror(dest_spack,
                              uberenv_pkg_name,
                              opts["mirror"])
-        # use the uberenv package to trigger the right builds
-        # and build an host-config.cmake file
+
+        if not opts["upstream"] is None:
+            use_spack_upstream(dest_spack,
+                               uberenv_pkg_name,
+                               opts["upstream"])
+
         install_cmd = "spack/bin/spack "
         if opts["ignore_ssl_errors"]:
             install_cmd += "-k "
@@ -515,6 +572,7 @@ def main():
         res = sexe(install_cmd, echo=True)
         if res != 0:
             return res
+
         if "spack_activate" in project_opts:
             print("[activating dependent packages]")
             # get the full spack spec for our project
@@ -530,12 +588,14 @@ def main():
                 if activate:
                     activate_cmd = "spack/bin/spack activate " + pkg_name
                     sexe(activate_cmd, echo=True)
+
         # note: this assumes package extends python when +python
         # this may fail general cases
         if opts["install"] and "+python" in full_spec:
             activate_cmd = "spack/bin/spack activate " + uberenv_pkg_name
             sexe(activate_cmd, echo=True)
-        # if user opt'd for an install, we want to symlink the final ascent
+
+        # if user opt'd for an install, we want to symlink the final
         # install to an easy place:
         if opts["install"]:
             pkg_path = find_spack_pkg_path(uberenv_pkg_name)
