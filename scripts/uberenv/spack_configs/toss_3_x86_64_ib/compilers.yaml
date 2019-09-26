@@ -4,14 +4,14 @@ compilers:
     extra_rpaths: []
     flags: {}
     modules:
-    - clang/3.9.0
+    - clang/3.9.1
     operating_system: rhel7
     paths:
-      cc: /usr/tce/packages/clang/clang-3.9.0/bin/clang
-      cxx: /usr/tce/packages/clang/clang-3.9.0/bin/clang++
+      cc: /usr/tce/packages/clang/clang-3.9.1/bin/clang
+      cxx: /usr/tce/packages/clang/clang-3.9.1/bin/clang++
       f77: null
       fc: null
-    spec: clang@3.9.0
+    spec: clang@3.9.1
     target: x86_64
 - compiler:
     environment: {}
