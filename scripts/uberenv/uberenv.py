@@ -410,26 +410,48 @@ def main():
     if os.path.isdir(dest_spack):
         print("[info: destination '{}' already exists]".format(dest_spack))
 
-    if not os.path.isdir(dest_spack):
-        print("[info: cloning spack develop branch from github]")
-        os.chdir(dest_dir)
-        # clone spack into the dest path
-        clone_cmd ="git "
-        if opts["ignore_ssl_errors"]:
-            clone_cmd +="-c http.sslVerify=false "
-        spack_url = "https://github.com/spack/spack.git"
-        spack_branch = "develop"
-        if "spack_url" in project_opts:
-            spack_url = project_opts["spack_url"]
-        if "spack_branch" in project_opts:
-            spack_branch = project_opts["spack_branch"]
-        clone_cmd +=  "clone -b %s %s" % (spack_branch,spack_url)
-        sexe(clone_cmd, echo=True)
-        if "spack_commit" in project_opts:
-            sha1 = project_opts["spack_commit"]
-            print("[info: using spack commit {}]".format(sha1))
+    os.chdir(dest_dir)
+    # clone spack into the dest path
+    git_cmd ="git "
+    if opts["ignore_ssl_errors"]:
+        git_cmd +="-c http.sslVerify=false "
+    spack_url = "https://github.com/spack/spack.git"
+    spack_branch = "develop"
+    if "spack_url" in project_opts:
+        spack_url = project_opts["spack_url"]
+    if "spack_branch" in project_opts:
+        spack_branch = project_opts["spack_branch"]
+    if not "spack_commit" in project_opts:
+        if not os.path.isdir(dest_spack):
+            print("[info: CLONING SPACK from the specified repo/branch]")
+            git_cmd +=  "clone --depth 3 -b %s %s" % (spack_branch,spack_url)
+            sexe(git_cmd, echo=True)
+        else:
+            # Reusing the existing clone.
+            print("[info: UPDATING SPACK to the specified repo/branch]")
+            git_cmd +=  "fetch --depth=3 %s %s" % (spack_url,spack_branch)
             os.chdir(pjoin(dest_dir,"spack"))
-            sexe("git checkout %s" % sha1,echo=True)
+            sexe(git_cmd, echo=True)
+            sexe("git checkout -f FETCH_HEAD")
+            # May fail because branch may already exist.
+            # Not a big deal since the checkout is done:
+            sexe("git checkout -b %s FETCH_HEAD" % (spack_branch))
+    else:
+        sha1 = project_opts["spack_commit"]
+        # When trying to retrieve a specific commit, a full clone/fetch
+        # is requiered, which is slower:
+        if not os.path.isdir(dest_spack):
+            print("[info: CLONING SPACK from the specified repo/branch]")
+            git_cmd +=  "clone -b %s %s" % (spack_branch,spack_url)
+            sexe(git_cmd, echo=True)
+            print("[info: using spack commit {}]".format(sha1))
+            sexe("git checkout -f %s" % sha1,echo=True)
+        else:
+            print("[info: UPDATING SPACK to the specified repo/branch]")
+            git_cmd +=  "fetch %s %s" % (spack_url,spack_branch)
+            sexe(git_cmd, echo=True)
+            print("[info: using spack commit {}]".format(sha1))
+            sexe("git checkout -f %s" % sha1,echo=True)
 
     if opts["spack_pull"]:
         # do a pull to make sure we have the latest
