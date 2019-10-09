@@ -58,8 +58,6 @@ include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 # Setup external libraries
 ###############################################################################
 
-find_package(ZLIB REQUIRED)
-
 include(${PROJECT_SOURCE_DIR}/cmake/thirdparty/SetupSeracThirdParty.cmake)
 
 ###############################################################################

@@ -21,7 +21,7 @@ foreach ( test_source ${serac_tests} )
         NAME ${test_cmd}
         SOURCES ${test_source}
         OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-        DEPENDS_ON solvers mfem mpi parmetis hypre ZLIB::ZLIB gtest
+        DEPENDS_ON solvers mpi mfem gtest
     )
 
     # Note : Parallel testing isn't protected by a check for MPI.
