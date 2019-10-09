@@ -50,13 +50,6 @@ class Serac(CMakePackage):
     git      = "ssh://git@czgitlab.llnl.gov:7999/bernede1/serac.git"
 
     version('develop', branch='develop', submodules=True, preferred=True)
-    depends_on('mpi')
-    depends_on('zlib')
-    depends_on('blas')
-    depends_on('lapack')
-    depends_on('hypre')
-    depends_on('parmetis')
-    depends_on('superlu-dist')
     depends_on('mfem +superlu-dist')
 
     def cmake_args(self):
@@ -66,11 +59,7 @@ class Serac(CMakePackage):
         spec = self.spec
 
         args = [
-            '-DMFEM_DIR=%s' % spec['mfem'].prefix,
-            '-DHYPRE_DIR=%s' % spec['hypre'].prefix,
-            '-DPARMETIS_DIR=%s' % spec['parmetis'].prefix,
-            '-DMETIS_DIR=%s' % spec['metis'].prefix,
-            '-DSUPERLUDIST_DIR=%s' % spec['superlu-dist'].prefix
+            '-DMFEM_DIR=%s' % spec['mfem'].prefix
             ]
         return args
 
@@ -105,7 +94,6 @@ class Serac(CMakePackage):
             f_compiler = which(env["SPACK_FC"])
 
         #######################################################################
-        # By directly fetching the names of the actual compilers we appear
         # By directly fetching the names of the actual compilers we appear
         # to doing something evil here, but this is necessary to create a
         # 'host config' file that works outside of the spack install env.
@@ -174,13 +162,6 @@ class Serac(CMakePackage):
         #######################
 
         cfg.write(cmake_cache_entry("MFEM_DIR", spec['mfem'].prefix))
-        cfg.write(cmake_cache_entry("HYPRE_DIR", spec['hypre'].prefix))
-        cfg.write(cmake_cache_entry("PARMETIS_DIR", spec['parmetis'].prefix))
-        cfg.write(cmake_cache_entry("METIS_DIR", spec['metis'].prefix))
-        cfg.write(cmake_cache_entry("SUPERLUDIST_DIR", spec['superlu-dist'].prefix))
-        cfg.write(cmake_cache_entry("LAPACK_DIR", spec['openblas'].prefix))
-        cfg.write(cmake_cache_entry("BLAS_DIR", spec['openblas'].prefix))
-        cfg.write(cmake_cache_entry("ZLIB_DIR", spec['zlib'].prefix))
 
         cfg.write("##################################\n")
         cfg.write("# end spack generated host-config\n")
@@ -188,6 +169,6 @@ class Serac(CMakePackage):
         cfg.close()
 
         host_cfg_fname = os.path.abspath(host_cfg_fname)
-        tty.info("spack generated conduit host-config file: " + host_cfg_fname)
+        tty.info("spack generated serac host-config file: " + host_cfg_fname)
         return host_cfg_fname
 
