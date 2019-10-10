@@ -423,10 +423,11 @@ def main():
 
     # load project settings
     project_opts = load_json_file(opts["project_json"])
+    uberenv_pkg_name = project_opts["package_name"]
     if opts["install"]:
-        uberenv_pkg_name = project_opts["package_name"]
+        install_arg = "install "
     else:
-        uberenv_pkg_name = project_opts["uberenv_package_name"]
+        install_arg = "install --only dependencies "
     print("[uberenv project settings: {}]".format(str(project_opts)))
     print("[uberenv options: {}]".format(str(opts)))
     if "darwin" in platform.system().lower():
@@ -565,7 +566,7 @@ def main():
         install_cmd = "spack/bin/spack "
         if opts["ignore_ssl_errors"]:
             install_cmd += "-k "
-        install_cmd += "install "
+        install_cmd += install_arg
         if opts["run_tests"]:
             install_cmd += "--test=root "
         install_cmd += uberenv_pkg_name + opts["spec"]
