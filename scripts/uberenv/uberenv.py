@@ -90,7 +90,7 @@ def parse_args():
                       action="store_true",
                       dest="install",
                       default=False,
-                      help="Install `package_name` instead of `uberenv_package_name`.")
+                      help="Install `package_name`, not just its dependencies.")
 
     # where to install
     parser.add_option("--prefix",
