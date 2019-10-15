@@ -51,7 +51,7 @@ stages:
     - scripts/gitlab/after_test.sh
   artifacts:
     reports:
-      junit: test.xml 
+      junit: test.xml
 
 # Butte uses a very different job allocation system, building on login nodes is recommended
 .build_blueos_3_ppc64le_ib_script:

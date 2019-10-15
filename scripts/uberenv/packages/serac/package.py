@@ -172,3 +172,8 @@ class Serac(CMakePackage):
         tty.info("spack generated serac host-config file: " + host_cfg_fname)
         return host_cfg_fname
 
+    def cmake(self, spec, prefix):
+        self.create_host_config(spec, prefix)
+        super().cmake(spec, prefix)
+
+

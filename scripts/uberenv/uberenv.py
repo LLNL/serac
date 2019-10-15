@@ -400,12 +400,15 @@ def setup_osx_sdk_env_vars():
     print("[setting MACOSX_DEPLOYMENT_TARGET to {}]".format(env["MACOSX_DEPLOYMENT_TARGET"]))
     print("[setting SDKROOT to {}]".format(env[ "SDKROOT"]))
 
-
 def find_spack_pkg_path(pkg_name):
     r,rout = sexe("spack/bin/spack find -p " + pkg_name,ret_output = True)
     for l in rout.split("\n"):
         if l.startswith(" "):
             return {"name": pkg_name, "path": l.split()[-1]}
+
+def find_spack_pkg_cache(pkg_name,spec):
+    r,rout = sexe("spack/bin/spack location -s " + pkg_name + " " + spec,ret_output = True)
+    return rout.strip()
 
 def read_spack_full_spec(pkg_name,spec):
     rv, res = sexe("spack/bin/spack spec " + pkg_name + " " + spec, ret_output=True)
@@ -427,7 +430,7 @@ def main():
     if opts["install"]:
         install_arg = "install "
     else:
-        install_arg = "install --only dependencies "
+        install_arg = "configure "
     print("[uberenv project settings: {}]".format(str(project_opts)))
     print("[uberenv options: {}]".format(str(opts)))
     if "darwin" in platform.system().lower():
@@ -599,17 +602,20 @@ def main():
         # if user opt'd for an install, we want to symlink the final
         # install to an easy place:
         if opts["install"]:
+            # Not safe: could return several path is the package is installed for several specs. This case is not covered
             pkg_path = find_spack_pkg_path(uberenv_pkg_name)
             if uberenv_pkg_name != pkg_path["name"]:
                 print("[ERROR: Could not find install of {}]".format(uberenv_pkg_name))
                 return -1
             else:
+                # Linking install directory
                 pkg_lnk_dir = "{}-install".format(uberenv_pkg_name)
                 if os.path.islink(pkg_lnk_dir):
                     os.unlink(pkg_lnk_dir)
                 print("")
                 print("[symlinking install to {}]").format(pjoin(dest_dir,pkg_lnk_dir))
                 os.symlink(pkg_path["path"],os.path.abspath(pkg_lnk_dir))
+                # Linking host config file
                 hcfg_glob = glob.glob(pjoin(pkg_lnk_dir,"*.cmake"))
                 if len(hcfg_glob) > 0:
                     hcfg_path  = hcfg_glob[0]
@@ -620,6 +626,22 @@ def main():
                     os.symlink(hcfg_path,hcfg_fname)
                 print("")
                 print("[install complete!]")
+        # If the user did not choose to install, the host-config file should be placed
+        # somewhere accessible
+        else:
+            stage_location = find_spack_pkg_cache(uberenv_pkg_name,opts["spec"])
+            complete_location = pjoin(stage_location,"spack-src/*.cmake")
+            hcfg_glob = glob.glob(complete_location)
+            if len(hcfg_glob) > 0:
+                hcfg_stage_location  = hcfg_glob[0]
+                hcfg_fname = os.path.split(hcfg_stage_location)[1]
+                if os.path.islink(hcfg_fname):
+                    os.unlink(hcfg_fname)
+                print("[symlinking host config file to {}]".format(pjoin(dest_dir,hcfg_fname)))
+                os.symlink(hcfg_stage_location,hcfg_fname)
+            else:
+                print("[ERROR: Could not find host-config file]")
+                return -1
         return res
 
 if __name__ == "__main__":
