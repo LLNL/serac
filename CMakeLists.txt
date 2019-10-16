@@ -13,7 +13,7 @@
 cmake_minimum_required(VERSION 3.3)
 
 # Use the LLNL toss3 clang settings bundled with BLT
-include(cmake/defaults.cmake)
+# include(cmake/defaults.cmake)
 
 project(serac)
 
@@ -23,8 +23,8 @@ set(BLT_CXX_STD "c++11" CACHE STRING "")
 ###############################################################################
 # MPI
 ###############################################################################
-# MPI is required in serac. (unprotected usage in sources and tests) 
-# If ENABLE_MPI is not defined, we conclude no host-config is loaded and we 
+# MPI is required in serac. (unprotected usage in sources and tests)
+# If ENABLE_MPI is not defined, we conclude no host-config is loaded and we
 # want the default cmake behavior to be used (FindMPI).
 if(NOT DEFINED ENABLE_MPI)
   set(ENABLE_MPI ON CACHE BOOL "")
@@ -51,7 +51,7 @@ else()
             "Or add -DBLT_SOURCE_DIR=/path/to/blt to your CMake command." )
     endif()
 endif()
-    
+
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
 ###############################################################################
