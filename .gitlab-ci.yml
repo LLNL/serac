@@ -5,8 +5,8 @@
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  BUILD_QUARTZ_ALLOC_NAME: umpire_ci_$CI_COMMIT_SHORT_SHA
-  BUILD_ROOT: $CI_BUILDS_DIR/umpire_$CI_COMMIT_REF_SLUG
+  BUILD_QUARTZ_ALLOC_NAME: serac_$CI_COMMIT_SHORT_SHA
+  BUILD_ROOT: $CI_BUILDS_DIR/serac_$CI_COMMIT_REF_SLUG
   INSTALL_ROOT: $CI_BUILDS_DIR/spack_uberenv
   SPACK_UPSTREAM: /usr/workspace/radiuss/spack-chain-parent/opt/spack
 
