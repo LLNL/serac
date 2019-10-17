@@ -23,6 +23,7 @@ stages:
   - build
   - test
   - release_resources
+  - clean
 
 .install_dependencies_script:
   script:
@@ -61,6 +62,9 @@ stages:
 .build_blueos_3_ppc64le_ib_p9_script:
   extends: .build_blueos_3_ppc64le_ib_script
 
+.clean_toss_3_x86_64_ib_script:
+  script:
+    - python scripts/uberenv/uberenv.py --prefix=${INSTALL_ROOT}_${COMPILER} --spec=${SPEC} --clean
 
 # This is where jobs are included
 include:
