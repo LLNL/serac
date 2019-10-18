@@ -64,7 +64,8 @@ stages:
 
 .clean_toss_3_x86_64_ib_script:
   script:
-    - python scripts/uberenv/uberenv.py --prefix=${INSTALL_ROOT}_${COMPILER} --spec=${SPEC} --clean
+    - rm -rf ${INSTALL_ROOT}_{COMPILER}
+      #    - python scripts/uberenv/uberenv.py --prefix=${INSTALL_ROOT}_${COMPILER} --spec=${SPEC} --clean
 
 # This is where jobs are included
 include:
