@@ -11,7 +11,7 @@ Getting Started
 4. `git submodule update --init`
 
    This initializes the [BLT](https://github.com/LLNL/blt) submodule which drives the build system
-5. `./build-config.py -hc <host config file> -DMFEM_DIR=<mfem install location> -DHYPRE_DIR=<hypre install location> -DPARMETIS_DIR=<parmetis install location> ..`
+5. `./config-build.py -hc <host config file> -DMFEM_DIR=<mfem install location> -DHYPRE_DIR=<hypre install location> -DPARMETIS_DIR=<parmetis install location> ..`
 
     Alternatively, you can edit the cmake/defaults.cmake file to permanently save these library locations. A host config should be generated for each new platform and compiler. Sample toss3 configs are located in the `host-configs` directory. If you would like a host config to be a default for a certain platform, the `_host_configs_map` on line 16 of `config-build.py` should be edited.
 6. `cd build-<system type>`
