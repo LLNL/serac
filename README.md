@@ -18,7 +18,7 @@ The easiest path to install both serac and its dependencies is to use spack. Thi
 If you already have a spack instance you would like to reuse, you can do so changing the uberenv command as follow:
 2. `python scripts/uberenv/uberenv.py --upstream=\</path/to/my/spack\>/opt/spack`
 
-If you want to use an existing installation of [MFEM](https://github.com/mfem/mfem/) (outside of Spack), you can write your own host-config file porviding the necessary information:
+If you would like to use an existing installation of [MFEM](https://github.com/mfem/mfem/) (outside of Spack), you can write your own host-config file porviding the necessary information:
 TODO
 
 WARNING: The only MFEM build supported at the moment is the Makefile one (not the CMake one, yet).
@@ -34,7 +34,9 @@ Serac is licensed under the BSD 3-Clause license,
 Copyrights and patents in the Serac project are retained by contributors.
 No copyright assignment is required to contribute to Serac.
 
-See [LICENSE](./LICENSE) for details.
+See [LICENSE](https://github.com/LLNL/serac/blob/master/LICENSE),
+[COPYRIGHT](https://github.com/LLNL/serac/blob/master/COPYRIGHT), and
+[NOTICE](https://github.com/LLNL/serac/blob/master/NOTICE) for details.
 
 Unlimited Open Source - BSD 3-clause Distribution
 `LLNL-CODE-XXXXXX`  `OCEC-XX-XXX`

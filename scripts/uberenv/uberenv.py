@@ -327,7 +327,7 @@ def find_spack_upstream(spack_dir, upstream_name):
     given name, or None if no upstream exists.
     """
     upstream_path = None
-    
+
     rv, res = sexe('spack/bin/spack config get upstreams', ret_output=True)
     if (not res) and ("upstreams:" in res):
         res = res.replace(' ', '')
