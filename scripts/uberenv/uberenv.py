@@ -427,10 +427,13 @@ def main():
     # load project settings
     project_opts = load_json_file(opts["project_json"])
     uberenv_pkg_name = project_opts["package_name"]
+
+    dest_dir = os.path.abspath(opts["prefix"])
+    base_dir = os.path.abspath(os.path.join(dest_dir, os.path.pardir))
     if opts["install"]:
         install_arg = "install "
     else:
-        install_arg = "configure "
+        install_arg = "dev-build -d {} -u hostconfig ".format(base_dir)
     print("[uberenv project settings: {}]".format(str(project_opts)))
     print("[uberenv options: {}]".format(str(opts)))
     if "darwin" in platform.system().lower():
@@ -451,7 +454,6 @@ def main():
     uberenv_path = os.path.split(os.path.abspath(__file__))[0]
     pkgs = pjoin(uberenv_path, "packages","*")
     # setup destination paths
-    dest_dir = os.path.abspath(opts["prefix"])
     dest_spack = pjoin(dest_dir,"spack")
     print("[installing to: {0}]".format(dest_dir))
     # print a warning if the dest path already exists

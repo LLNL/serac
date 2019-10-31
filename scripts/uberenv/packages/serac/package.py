@@ -52,18 +52,16 @@ class Serac(CMakePackage):
     version('develop', branch='develop', submodules=True, preferred=True)
     depends_on('mfem +superlu-dist')
 
-    def cmake_args(self):
-        # FIXME: Add arguments other than
-        # FIXME: CMAKE_INSTALL_PREFIX and CMAKE_BUILD_TYPE
-        # FIXME: If not needed delete this function
-        spec = self.spec
+    phases = ['hostconfig','cmake','build','install']
 
+    def cmake_args(self):
+        spec = self.spec
         args = [
             '-DMFEM_DIR=%s' % spec['mfem'].prefix
             ]
         return args
 
-    def create_host_config(self, spec, prefix, py_site_pkgs_dir=None):
+    def hostconfig(self, spec, prefix, py_site_pkgs_dir=None):
         """
         This method creates a 'host-config' file that specifies
         all of the options used to configure and build serac.
@@ -171,9 +169,4 @@ class Serac(CMakePackage):
         host_cfg_fname = os.path.abspath(host_cfg_fname)
         tty.info("spack generated serac host-config file: " + host_cfg_fname)
         return host_cfg_fname
-
-    def cmake(self, spec, prefix):
-        self.create_host_config(spec, prefix)
-        super().cmake(spec, prefix)
-
 
