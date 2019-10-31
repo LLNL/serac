@@ -18,7 +18,7 @@
 //***********************************************************************
 
 #include "mfem.hpp"
-#include "solvers/hyperelastic_solver.hpp"
+#include "solvers/quasistatic_solver.hpp"
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
 #include <memory>
@@ -218,10 +218,10 @@ int main(int argc, char *argv[])
    VectorScaledConstantCoefficient traction_coef(traction);
    
    // construct the nonlinear mechanics operator
-   NonlinearMechOperator oper(fe_space, ess_bdr, trac_bdr,
-                              mu, K, traction_coef,
-                              newton_rel_tol, newton_abs_tol, 
-                              newton_iter, gmres_solver, slu_solver);
+   QuasistaticSolver oper(fe_space, ess_bdr, trac_bdr,
+                          mu, K, traction_coef,
+                          newton_rel_tol, newton_abs_tol, 
+                          newton_iter, gmres_solver, slu_solver);
 
 
    // declare incremental nodal displacement solution vector

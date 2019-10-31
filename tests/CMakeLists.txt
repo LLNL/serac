@@ -9,7 +9,7 @@
 #
 
 set( serac_tests
-     serac_hyperelasticity_solver.cpp
+     serac_quasistatic_solver.cpp
      )
 
 foreach ( test ${serac_tests} )
