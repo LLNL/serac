@@ -46,19 +46,26 @@ class Serac(CMakePackage):
     """FIXME: Put a proper description of your package here."""
 
     # FIXME: Add a proper url for your package's homepage here.
-    homepage = "http://www.example.com"
+    homepage = "https://www.github.com/LLNL/serac"
     git      = "ssh://git@czgitlab.llnl.gov:7999/bernede1/serac.git"
 
     version('develop', branch='develop', submodules=True, preferred=True)
+
     depends_on('mfem +superlu-dist')
 
     phases = ['hostconfig','cmake','build','install']
 
     def cmake_args(self):
         spec = self.spec
-        args = [
-            '-DMFEM_DIR=%s' % spec['mfem'].prefix
-            ]
+        args = []
+
+        if not self.compiler.f77 is None:
+            args.append('-DENABLE_FORTRAN=ON')
+            args.append('-DENABLE_FRUIT=ON')
+
+        args.append(
+            '-DMFEM_DIR={}'.format(spec['mfem'].prefix)
+        )
         return args
 
     def hostconfig(self, spec, prefix, py_site_pkgs_dir=None):
