@@ -434,6 +434,7 @@ def main():
         install_arg = "install "
     else:
         install_arg = "dev-build -d {} -u hostconfig ".format(base_dir)
+
     print("[uberenv project settings: {}]".format(str(project_opts)))
     print("[uberenv options: {}]".format(str(opts)))
     if "darwin" in platform.system().lower():
@@ -604,7 +605,7 @@ def main():
         # if user opt'd for an install, we want to symlink the final
         # install to an easy place:
         if opts["install"]:
-            # Not safe: could return several path is the package is installed for several specs. This case is not covered
+            # Not safe: could return several path if the package is installed for several specs. This case is not covered
             pkg_path = find_spack_pkg_path(uberenv_pkg_name)
             if uberenv_pkg_name != pkg_path["name"]:
                 print("[ERROR: Could not find install of {}]".format(uberenv_pkg_name))
@@ -628,22 +629,6 @@ def main():
                     os.symlink(hcfg_path,hcfg_fname)
                 print("")
                 print("[install complete!]")
-        # If the user did not choose to install, the host-config file should be placed
-        # somewhere accessible
-        else:
-            stage_location = find_spack_pkg_cache(uberenv_pkg_name,opts["spec"])
-            complete_location = pjoin(stage_location,"spack-src/*.cmake")
-            hcfg_glob = glob.glob(complete_location)
-            if len(hcfg_glob) > 0:
-                hcfg_stage_location  = hcfg_glob[0]
-                hcfg_fname = os.path.split(hcfg_stage_location)[1]
-                if os.path.islink(hcfg_fname):
-                    os.unlink(hcfg_fname)
-                print("[symlinking host config file to {}]".format(pjoin(dest_dir,hcfg_fname)))
-                os.symlink(hcfg_stage_location,hcfg_fname)
-            else:
-                print("[ERROR: Could not find host-config file]")
-                return -1
         return res
 
 if __name__ == "__main__":
