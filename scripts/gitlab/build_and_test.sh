@@ -10,7 +10,7 @@ set -e
 
 PROJECT_DIRECTORY="$(pwd)"
 BUILD_DIRECTORY="${BUILD_ROOT}/build_${SYS_TYPE}_${COMPILER}"
-CCONF="${INSTALL_ROOT}_${COMPILER}/${SYS_TYPE}__${COMPILER}__serac.cmake"
+CCONF="${BUILD_ROOT}/${SYS_TYPE}__${COMPILER}__serac.cmake"
 
 # If building, then delete everything first
 if [[ "${1}" != "--test-only" ]]
