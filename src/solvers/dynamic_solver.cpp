@@ -5,43 +5,53 @@
 // SPDX-License-Identifier: (BSD-3-Clause) 
 
 #include "dynamic_solver.hpp"
-#include "integrators/hyperelastic_traction_integrator.hpp"
-#include "integrators/inc_hyperelastic_integrator.hpp"
 
 using namespace mfem;
 
 DynamicSolver::DynamicSolver(ParFiniteElementSpace &fes,
-                                             Array<int> &ess_bdr,
-                                             Array<int> &trac_bdr,
-                                             double mu,
-                                             double K,
-                                             VectorCoefficient &trac_coef,
-                                             double rel_tol,
-                                             double abs_tol,
-                                             int iter,
-                                             bool gmres,
-                                             bool slu)
-: Operator(fes.TrueVSize()), fe_space(fes),
-     newton_solver(fes.GetComm())
+                             Array<int> &ess_bdr,
+                             double mu,
+                             double K,
+                             double rel_tol,
+                             double abs_tol,
+                             int iter,
+                             bool gmres,
+                             bool slu)
+   : TimeDependentOperator(2*fes.TrueVSize(), 0.0), fe_space(fes),
+     newton_solver(fes.GetComm()),
+     z(height/2)
 {
-   Vector * rhs;
-   rhs = NULL;
 
-   // Define the paral2lel nonlinear form 
-   Hform = new ParNonlinearForm(&fes);
-
-   // Set the essential boundary conditions
-   Hform->SetEssentialBC(ess_bdr, rhs); 
-
-   // Define the material model
-   model = new NeoHookeanModel(mu, K);   
-
-   // Add the hyperelastic integrator
-   Hform->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model));
-
-   // Add the traction integrator
-   Hform->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(trac_coef), trac_bdr);
+   Array<int> ess_tdof_list;
    
+   const double ref_density = 1.0; // density in the reference configuration
+   ConstantCoefficient rho0(ref_density);
+
+   Mform = new ParBilinearForm(&fes);
+   
+   Mform->AddDomainIntegrator(new VectorMassIntegrator(rho0));
+   Mform->Assemble();
+   Mform->Finalize();
+   Mmat = Mform->ParallelAssemble();
+   fe_space.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
+   HypreParMatrix *Me = Mmat->EliminateRowsCols(ess_tdof_list);
+   delete Me;
+
+   M_solver.iterative_mode = false;
+   M_solver.SetRelTol(rel_tol);
+   M_solver.SetAbsTol(0.0);
+   M_solver.SetMaxIter(300);
+   M_solver.SetPrintLevel(0);
+   M_prec.SetType(HypreSmoother::Jacobi);
+   M_solver.SetPreconditioner(M_prec);
+   M_solver.SetOperator(*Mmat);
+
+   model = new NeoHookeanModel(mu, K);
+   Hform->AddDomainIntegrator(new HyperelasticNLFIntegrator(model));
+   Hform->SetEssentialTrueDofs(ess_tdof_list);
+
+   reduced_oper = new ReducedSystemOperator(Mform, Hform, ess_tdof_list);
+
    if (gmres) {
       HypreBoomerAMG *prec_amg = new HypreBoomerAMG();
       prec_amg->SetPrintLevel(0);
@@ -94,27 +104,42 @@ DynamicSolver::DynamicSolver(ParFiniteElementSpace &fes,
    newton_solver.SetMaxIter(iter);
 }
 
-// Solve the Newton system
-int DynamicSolver::Solve(Vector &x) const
+void DynamicSolver::Mult(const Vector &vx, Vector &dvx_dt) const
 {
-   Vector zero;
-   newton_solver.Mult(zero, x);
+   // Create views to the sub-vectors v, x of vx, and dv_dt, dx_dt of dvx_dt
+   int sc = height/2;
+   Vector v(vx.GetData() +  0, sc);
+   Vector x(vx.GetData() + sc, sc);
+   Vector dv_dt(dvx_dt.GetData() +  0, sc);
+   Vector dx_dt(dvx_dt.GetData() + sc, sc);
 
-   return newton_solver.GetConverged();
+   Hform->Mult(x, z);
+   z.Neg(); // z = -z
+   M_solver.Mult(z, dv_dt);
+
+   dx_dt = v;
 }
 
-// compute: y = H(x,p)
-void DynamicSolver::Mult(const Vector &k, Vector &y) const
+void DynamicSolver::ImplicitSolve(const double dt,
+                                  const Vector &vx, Vector &dvx_dt)
 {
-   // Apply the nonlinear form
-   Hform->Mult(k, y);
-}
+   int sc = height/2;
+   Vector v(vx.GetData() +  0, sc);
+   Vector x(vx.GetData() + sc, sc);
+   Vector dv_dt(dvx_dt.GetData() +  0, sc);
+   Vector dx_dt(dvx_dt.GetData() + sc, sc);
 
-// Compute the Jacobian from the nonlinear form
-Operator &DynamicSolver::GetGradient(const Vector &x) const
-{
-   Jacobian = &Hform->GetGradient(x);
-   return *Jacobian;
+   // By eliminating kx from the coupled system:
+   //    kv = -M^{-1}*[H(x + dt*kx)]
+   //    kx = v + dt*kv
+   // we reduce it to a nonlinear equation for kv, represented by the
+   // reduced_oper. This equation is solved with the newton_solver
+   // object (using J_solver and J_prec internally).
+   reduced_oper->SetParameters(dt, &v, &x);
+   Vector zero; // empty vector is interpreted as zero r.h.s. by NewtonSolver
+   newton_solver.Mult(zero, dv_dt);
+   MFEM_VERIFY(newton_solver.GetConverged(), "Newton solver did not converge.");
+   add(v, dt, dv_dt, dx_dt);
 }
 
 
@@ -125,4 +150,48 @@ DynamicSolver::~DynamicSolver()
       delete J_prec;
    }
    delete model;
+}
+
+
+ReducedSystemOperator::ReducedSystemOperator(
+   ParBilinearForm *M_, ParNonlinearForm *H_,
+   const Array<int> &ess_tdof_list_)
+   : Operator(M_->ParFESpace()->TrueVSize()), M(M_), H(H_),
+     Jacobian(NULL), dt(0.0), v(NULL), x(NULL), w(height), z(height),
+     ess_tdof_list(ess_tdof_list_)
+{ }
+
+void ReducedSystemOperator::SetParameters(double dt_, const Vector *v_,
+                                          const Vector *x_)
+{
+   dt = dt_;  v = v_;  x = x_;
+}
+
+void ReducedSystemOperator::Mult(const Vector &k, Vector &y) const
+{
+   // compute: y = H(x + dt*(v + dt*k)) + M*k + S*(v + dt*k)
+   add(*v, dt, k, w);
+   add(*x, dt, w, z);
+   H->Mult(z, y);
+   M->TrueAddMult(k, y);
+   y.SetSubVector(ess_tdof_list, 0.0);
+}
+
+Operator &ReducedSystemOperator::GetGradient(const Vector &k) const
+{
+   delete Jacobian;
+   SparseMatrix *localJ = &M->SpMat();
+   add(*v, dt, k, w);
+   add(*x, dt, w, z);
+   localJ->Add(dt*dt, H->GetLocalGradient(z));
+   Jacobian = M->ParallelAssemble(localJ);
+   delete localJ;
+   HypreParMatrix *Je = Jacobian->EliminateRowsCols(ess_tdof_list);
+   delete Je;
+   return *Jacobian;
+}
+
+ReducedSystemOperator::~ReducedSystemOperator()
+{
+   delete Jacobian;
 }
