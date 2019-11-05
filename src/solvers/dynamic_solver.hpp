@@ -11,16 +11,16 @@
 
 class ReducedSystemOperator;
 
-/** After spatial discretization, the hyperelastic model can be written as a
- *  system of ODEs:
- *     dv/dt = -M^{-1}*(H(x))
- *     dx/dt = v,
- *  where x is the vector representing the deformation, v is the velocity field,
- *  M is the mass matrix, and H(x) is the nonlinear
- *  hyperelastic operator.
- *
- *  Class HyperelasticOperator represents the right-hand side of the above
- *  system of ODEs. */
+// After spatial discretization, the hyperelastic model can be written as a
+//  system of ODEs:
+//     dv/dt = -M^{-1}*(H(x) + S*v)
+//     dx/dt = v,
+//  where x is the vector representing the deformation, v is the velocity field,
+//  M is the mass matrix, S is the viscosity matrix, and H(x) is the nonlinear
+//  hyperelastic operator.
+//
+//  Class HyperelasticOperator represents the right-hand side of the above
+//  system of ODEs. 
 class DynamicSolver : public mfem::TimeDependentOperator
 {
 protected:
@@ -37,8 +37,8 @@ protected:
    mfem::CGSolver m_M_solver;    // Krylov solver for inverting the mass matrix M
    mfem::HypreSmoother m_M_prec; // Preconditioner for the mass matrix M
    
-   /** Nonlinear operator defining the reduced backward Euler equation for the
-       velocity. Used in the implementation of method ImplicitSolve. */
+   // Nonlinear operator defining the reduced backward Euler equation for the
+   // velocity. Used in the implementation of method ImplicitSolve.
    ReducedSystemOperator *m_reduced_oper;
    
    /// Newton solver for the operator
@@ -68,8 +68,8 @@ public:
 
    /// Required to use the native newton solver
    virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
-   /** Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
-       This is the only requirement for high-order SDIRK implicit integration.*/
+   /// Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
+   /// This is the only requirement for high-order SDIRK implicit integration.*/
    virtual void ImplicitSolve(const double dt, const mfem::Vector &x, mfem::Vector &k);
 
    /// Get FE space
@@ -78,10 +78,10 @@ public:
    virtual ~DynamicSolver();
 };
 
-/** Nonlinear operator of the form:
-    k --> (M)*k + H(x + dt*v + dt^2*k),
-    where M is the given BilinearForm, H is a given NonlinearForm, v and x
-    are given vectors, and dt is a scalar. */
+//  Nonlinear operator of the form:
+//  k --> (M + dt*S)*k + H(x + dt*v + dt^2*k) + S*v,
+//  where M and S are given BilinearForms, H is a given NonlinearForm, v and x
+//  are given vectors, and dt is a scalar. */
 class ReducedSystemOperator : public mfem::Operator
 {
 private:
