@@ -6,12 +6,14 @@
 
 set(solvers_sources
     quasistatic_solver.cpp
-    dynamic_solver.cpp    
+    dynamic_solver.cpp
+    conduction_solver.cpp
     )
 
 set(solvers_headers
     quasistatic_solver.hpp
-    dynamic_solver.hpp        
+    dynamic_solver.hpp
+    conduction_solver.hpp
     )
 
 blt_add_library(
