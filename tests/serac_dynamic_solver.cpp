@@ -99,28 +99,6 @@ TEST(dynamic_solver, dyn_solve)
       last_step = (t >= t_final - 1e-8*dt);
    }
    
-   {
-      v_gf.SetFromTrueVector(); x_gf.SetFromTrueVector();
-      GridFunction *nodes = &x_gf;
-      int owns_nodes = 0;
-      pmesh->SwapNodes(nodes, owns_nodes);
-
-      int myid;
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-      
-      ostringstream mesh_name, velo_name, ee_name;
-      mesh_name << "deformed." << setfill('0') << setw(6) << myid;
-      velo_name << "velocity." << setfill('0') << setw(6) << myid;
-
-      ofstream mesh_ofs(mesh_name.str().c_str());
-      mesh_ofs.precision(8);
-      pmesh->Print(mesh_ofs);
-      pmesh->SwapNodes(nodes, owns_nodes);
-      ofstream velo_ofs(velo_name.str().c_str());
-      velo_ofs.precision(8);
-      v_gf.Save(velo_ofs);
-   }
-   
    delete pmesh;
    
    MPI_Barrier(MPI_COMM_WORLD);
