@@ -78,12 +78,12 @@ TEST(dynamic_solver, dyn_solve)
    // construct the nonlinear mechanics operator
    DynamicSolver oper(fe_space, ess_bdr,
                       0.25, 5.0, 0.0,
-                      1.0e-2, 1.0e-4, 
+                      1.0e-4, 1.0e-8, 
                       500, true, false);
 
    double t = 0.0;
-   double t_final = 1.0;
-   double dt = 0.1;
+   double t_final = 6.0;
+   double dt = 3.0;
    
    oper.SetTime(t);
    ode_solver->Init(oper);
@@ -97,6 +97,28 @@ TEST(dynamic_solver, dyn_solve)
       ode_solver->Step(vx, t, dt_real);
 
       last_step = (t >= t_final - 1e-8*dt);
+   }
+   
+   {
+      v_gf.SetFromTrueVector(); x_gf.SetFromTrueVector();
+      GridFunction *nodes = &x_gf;
+      int owns_nodes = 0;
+      pmesh->SwapNodes(nodes, owns_nodes);
+
+      int myid;
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+      
+      ostringstream mesh_name, velo_name, ee_name;
+      mesh_name << "deformed." << setfill('0') << setw(6) << myid;
+      velo_name << "velocity." << setfill('0') << setw(6) << myid;
+
+      ofstream mesh_ofs(mesh_name.str().c_str());
+      mesh_ofs.precision(8);
+      pmesh->Print(mesh_ofs);
+      pmesh->SwapNodes(nodes, owns_nodes);
+      ofstream velo_ofs(velo_name.str().c_str());
+      velo_ofs.precision(8);
+      v_gf.Save(velo_ofs);
    }
    
    delete pmesh;
