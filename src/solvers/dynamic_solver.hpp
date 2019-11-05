@@ -24,38 +24,35 @@ class ReducedSystemOperator;
 class DynamicSolver : public mfem::TimeDependentOperator
 {
 protected:
-   mfem::ParFiniteElementSpace &fe_space;
-   mfem::ParNonlinearForm *Hform;
-   mfem::ParBilinearForm *Mform;
-   mfem::ParBilinearForm *Sform;
+   mfem::ParFiniteElementSpace &m_fe_space;
+   mfem::ParNonlinearForm *m_H_form;
+   mfem::ParBilinearForm *m_M_form;
+   mfem::ParBilinearForm *m_S_form;
 
-   double viscosity;
+   double m_viscosity;
+
+   mutable mfem::Operator *m_jacobian;
    
-   
-   mutable mfem::Operator *Jacobian;
-   const mfem::Vector *x;
-   
-   mfem::HypreParMatrix *Mmat; // Mass matrix from ParallelAssemble()
-   mfem::CGSolver M_solver;    // Krylov solver for inverting the mass matrix M
-   mfem::HypreSmoother M_prec; // Preconditioner for the mass matrix M
+   mfem::HypreParMatrix *m_M_mat; // Mass matrix from ParallelAssemble()
+   mfem::CGSolver m_M_solver;    // Krylov solver for inverting the mass matrix M
+   mfem::HypreSmoother m_M_prec; // Preconditioner for the mass matrix M
    
    /** Nonlinear operator defining the reduced backward Euler equation for the
        velocity. Used in the implementation of method ImplicitSolve. */
-   ReducedSystemOperator *reduced_oper;
+   ReducedSystemOperator *m_reduced_oper;
    
    /// Newton solver for the operator
-   mfem::NewtonSolver newton_solver;
+   mfem::NewtonSolver m_newton_solver;
    /// Solver for the Jacobian solve in the Newton method
-   mfem::Solver *J_solver;
+   mfem::Solver *m_J_solver;
    /// Preconditioner for the Jacobian
-   mfem::Solver *J_prec;
+   mfem::Solver *m_J_prec;
    /// nonlinear material model 
-   mfem::HyperelasticModel *model;
+   mfem::HyperelasticModel *m_model;
 
-   mfem::Array<int> ess_tdof_list;
+   mfem::Array<int> m_ess_tdof_list;   
    
-   
-   mutable mfem::Vector z;
+   mutable mfem::Vector m_z;
    
 public:
    DynamicSolver(mfem::ParFiniteElementSpace &fes,
@@ -76,7 +73,7 @@ public:
    virtual void ImplicitSolve(const double dt, const mfem::Vector &x, mfem::Vector &k);
 
    /// Get FE space
-   const mfem::ParFiniteElementSpace *GetFESpace() { return &fe_space; }
+   const mfem::ParFiniteElementSpace *GetFESpace() { return &m_fe_space; }
 
    virtual ~DynamicSolver();
 };
@@ -88,21 +85,21 @@ public:
 class ReducedSystemOperator : public mfem::Operator
 {
 private:
-   mfem::ParBilinearForm *M;
-   mfem::ParBilinearForm *S;
-   mfem::ParNonlinearForm *H;
-   mutable mfem::HypreParMatrix *Jacobian;
-   double dt;
-   const mfem::Vector *v, *x;
-   mutable mfem::Vector w, z;
-   const mfem::Array<int> &ess_tdof_list;
+   mfem::ParBilinearForm *m_M_form;
+   mfem::ParBilinearForm *m_S_form;
+   mfem::ParNonlinearForm *m_H_form;
+   mutable mfem::HypreParMatrix *m_jacobian;
+   double m_dt;
+   const mfem::Vector *m_v, *m_x;
+   mutable mfem::Vector m_w, m_z;
+   const mfem::Array<int> &m_ess_tdof_list;
 
 public:
-   ReducedSystemOperator(mfem::ParBilinearForm *M_, mfem::ParBilinearForm *S_,
-                         mfem::ParNonlinearForm *H_, const mfem::Array<int> &ess_tdof_list);
+   ReducedSystemOperator(mfem::ParBilinearForm *M, mfem::ParBilinearForm *S,
+                         mfem::ParNonlinearForm *H, const mfem::Array<int> &ess_tdof_list);
 
    /// Set current dt, v, x values - needed to compute action and Jacobian.
-   void SetParameters(double dt_, const mfem::Vector *v_, const mfem::Vector *x_);
+   void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);
 
    /// Compute y = H(x + dt (v + dt k)) + M k + S (v + dt k).
    virtual void Mult(const mfem::Vector &k, mfem::Vector &y) const;
