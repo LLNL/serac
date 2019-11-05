@@ -12,45 +12,51 @@ DynamicSolver::DynamicSolver(ParFiniteElementSpace &fes,
                              Array<int> &ess_bdr,
                              double mu,
                              double K,
+                             double visc,
                              double rel_tol,
                              double abs_tol,
                              int iter,
                              bool gmres,
                              bool slu)
-   : TimeDependentOperator(2*fes.TrueVSize(), 0.0), fe_space(fes),
-     newton_solver(fes.GetComm()),
+   : TimeDependentOperator(2*fes.TrueVSize(), 0.0), fe_space(fes), viscosity(visc),
+     M_solver(fes.GetComm()), newton_solver(fes.GetComm()),
      z(height/2)
-{
-
-   Array<int> ess_tdof_list;
-   
+{   
    const double ref_density = 1.0; // density in the reference configuration
    ConstantCoefficient rho0(ref_density);
 
    Mform = new ParBilinearForm(&fes);
    
    Mform->AddDomainIntegrator(new VectorMassIntegrator(rho0));
-   Mform->Assemble();
-   Mform->Finalize();
+   Mform->Assemble(0);
+   Mform->Finalize(0);
    Mmat = Mform->ParallelAssemble();
    fe_space.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
    HypreParMatrix *Me = Mmat->EliminateRowsCols(ess_tdof_list);
    delete Me;
 
+   Sform = new ParBilinearForm(&fes);
+   ConstantCoefficient visc_coeff(viscosity);
+   Sform->AddDomainIntegrator(new VectorDiffusionIntegrator(visc_coeff));
+   Sform->Assemble(0);
+   Sform->Finalize(0);
+   
    M_solver.iterative_mode = false;
    M_solver.SetRelTol(rel_tol);
-   M_solver.SetAbsTol(0.0);
+   M_solver.SetAbsTol(abs_tol);
    M_solver.SetMaxIter(300);
    M_solver.SetPrintLevel(0);
    M_prec.SetType(HypreSmoother::Jacobi);
    M_solver.SetPreconditioner(M_prec);
    M_solver.SetOperator(*Mmat);
 
-   model = new NeoHookeanModel(mu, K);
+   // Define the parallel nonlinear form 
+   Hform = new ParNonlinearForm(&fes);
+   model = new NeoHookeanModel(mu, K);   
    Hform->AddDomainIntegrator(new HyperelasticNLFIntegrator(model));
    Hform->SetEssentialTrueDofs(ess_tdof_list);
-
-   reduced_oper = new ReducedSystemOperator(Mform, Hform, ess_tdof_list);
+   
+   reduced_oper = new ReducedSystemOperator(Mform, Sform, Hform, ess_tdof_list);
 
    if (gmres) {
       HypreBoomerAMG *prec_amg = new HypreBoomerAMG();
@@ -95,9 +101,9 @@ DynamicSolver::DynamicSolver(ParFiniteElementSpace &fes,
    }
 
    // Set the newton solve parameters
-   newton_solver.iterative_mode = true;
+   newton_solver.iterative_mode = false;
    newton_solver.SetSolver(*J_solver);
-   newton_solver.SetOperator(*this);
+   newton_solver.SetOperator(*reduced_oper);
    newton_solver.SetPrintLevel(1); 
    newton_solver.SetRelTol(rel_tol);
    newton_solver.SetAbsTol(abs_tol);
@@ -114,6 +120,11 @@ void DynamicSolver::Mult(const Vector &vx, Vector &dvx_dt) const
    Vector dx_dt(dvx_dt.GetData() + sc, sc);
 
    Hform->Mult(x, z);
+   if (viscosity != 0.0)
+   {
+      Sform->TrueAddMult(v, z);
+      z.SetSubVector(ess_tdof_list, 0.0);
+   }
    z.Neg(); // z = -z
    M_solver.Mult(z, dv_dt);
 
@@ -130,7 +141,7 @@ void DynamicSolver::ImplicitSolve(const double dt,
    Vector dx_dt(dvx_dt.GetData() + sc, sc);
 
    // By eliminating kx from the coupled system:
-   //    kv = -M^{-1}*[H(x + dt*kx)]
+   //    kv = -M^{-1}*[H(x + dt*kx) + S*(v + dt*kv)]
    //    kx = v + dt*kv
    // we reduce it to a nonlinear equation for kv, represented by the
    // reduced_oper. This equation is solved with the newton_solver
@@ -149,21 +160,26 @@ DynamicSolver::~DynamicSolver()
    if (J_prec != NULL) {
       delete J_prec;
    }
+   delete reduced_oper;
    delete model;
+   delete Mmat;
+   delete Mform;
+   delete Hform;
+   delete Sform;
 }
 
 
 ReducedSystemOperator::ReducedSystemOperator(
-   ParBilinearForm *M_, ParNonlinearForm *H_,
+   ParBilinearForm *M_, ParBilinearForm *S_, ParNonlinearForm *H_,
    const Array<int> &ess_tdof_list_)
-   : Operator(M_->ParFESpace()->TrueVSize()), M(M_), H(H_),
+   : Operator(M_->ParFESpace()->TrueVSize()), M(M_), S(S_), H(H_),
      Jacobian(NULL), dt(0.0), v(NULL), x(NULL), w(height), z(height),
      ess_tdof_list(ess_tdof_list_)
 { }
 
 void ReducedSystemOperator::SetParameters(double dt_, const Vector *v_,
                                           const Vector *x_)
-{
+{   
    dt = dt_;  v = v_;  x = x_;
 }
 
@@ -174,13 +190,14 @@ void ReducedSystemOperator::Mult(const Vector &k, Vector &y) const
    add(*x, dt, w, z);
    H->Mult(z, y);
    M->TrueAddMult(k, y);
+   S->TrueAddMult(w, y);
    y.SetSubVector(ess_tdof_list, 0.0);
 }
 
 Operator &ReducedSystemOperator::GetGradient(const Vector &k) const
 {
    delete Jacobian;
-   SparseMatrix *localJ = &M->SpMat();
+   SparseMatrix *localJ = Add(1.0, M->SpMat(), dt, S->SpMat());
    add(*v, dt, k, w);
    add(*x, dt, w, z);
    localJ->Add(dt*dt, H->GetLocalGradient(z));
@@ -188,7 +205,7 @@ Operator &ReducedSystemOperator::GetGradient(const Vector &k) const
    delete localJ;
    HypreParMatrix *Je = Jacobian->EliminateRowsCols(ess_tdof_list);
    delete Je;
-   return *Jacobian;
+   return *Jacobian;   
 }
 
 ReducedSystemOperator::~ReducedSystemOperator()

@@ -29,6 +29,10 @@ protected:
    ParFiniteElementSpace &fe_space;
    ParNonlinearForm *Hform;
    ParBilinearForm *Mform;
+   ParBilinearForm *Sform;
+
+   double viscosity;
+   
    
    mutable Operator *Jacobian;
    const Vector *x;
@@ -50,6 +54,9 @@ protected:
    /// nonlinear material model 
    HyperelasticModel *model;
 
+   Array<int> ess_tdof_list;
+   
+   
    mutable Vector z;
    
 public:
@@ -57,6 +64,7 @@ public:
                  Array<int> &ess_bdr,
                  double mu,
                  double K,
+                 double visc,
                  double rel_tol,
                  double abs_tol,
                  int iter,
@@ -83,6 +91,7 @@ class ReducedSystemOperator : public Operator
 {
 private:
    ParBilinearForm *M;
+   ParBilinearForm *S;
    ParNonlinearForm *H;
    mutable HypreParMatrix *Jacobian;
    double dt;
@@ -91,16 +100,16 @@ private:
    const Array<int> &ess_tdof_list;
 
 public:
-   ReducedSystemOperator(ParBilinearForm *M_, 
+   ReducedSystemOperator(ParBilinearForm *M_, ParBilinearForm *S_,
                          ParNonlinearForm *H_, const Array<int> &ess_tdof_list);
 
    /// Set current dt, v, x values - needed to compute action and Jacobian.
    void SetParameters(double dt_, const Vector *v_, const Vector *x_);
 
-   /// Compute y = H(x + dt (v + dt k)) + M k.
+   /// Compute y = H(x + dt (v + dt k)) + M k + S (v + dt k).
    virtual void Mult(const Vector &k, Vector &y) const;
 
-   /// Compute J = M + dt^2 grad_H(x + dt (v + dt k)).
+   /// Compute J = M + dt S + dt^2 grad_H(x + dt (v + dt k)).   
    virtual Operator &GetGradient(const Vector &k) const;
 
    virtual ~ReducedSystemOperator();

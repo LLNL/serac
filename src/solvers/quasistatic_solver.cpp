@@ -24,14 +24,11 @@ QuasistaticSolver::QuasistaticSolver(ParFiniteElementSpace &fes,
 : Operator(fes.TrueVSize()), fe_space(fes),
      newton_solver(fes.GetComm())
 {
-   Vector * rhs;
-   rhs = NULL;
-
    // Define the paral2lel nonlinear form 
    Hform = new ParNonlinearForm(&fes);
 
    // Set the essential boundary conditions
-   Hform->SetEssentialBC(ess_bdr, rhs); 
+   Hform->SetEssentialBC(ess_bdr); 
 
    // Define the material model
    model = new NeoHookeanModel(mu, K);   
