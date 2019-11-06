@@ -1,8 +1,6 @@
 ####
 # This is the share configuration of jobs for quartz
 .quartz_common:
-  variables:
-    CLUSTER: "toss_3_x86_64_ib"
   tags:
     - shell
     - quartz
@@ -18,7 +16,7 @@ allocate_resources_build_quartz:
   extends: .quartz_common
   stage: allocate_resources
   script:
-    - salloc -N 1 -c 36 -p pdebug -t 30 --no-shell --job-name=${BUILD_QUARTZ_ALLOC_NAME}
+    - salloc -N 1 -c 36 -p pdebug -t 30 --no-shell --job-name=${SLURM_ALLOC_NAME}
 
 ####
 # In post-build phase, deallocate resources
@@ -27,36 +25,30 @@ release_resources_build_quartz:
   extends: .quartz_common
   stage: release_resources
   script:
-    - export JOBID=$(squeue -h --name=${BUILD_QUARTZ_ALLOC_NAME} --format=%A)
+    - export JOBID=$(squeue -h --name=${SLURM_ALLOC_NAME} --format=%A)
     - ([[ -n "${JOBID}" ]] && scancel ${JOBID})
   when: always
 
 ####
-# Generic qwartz job, extending build script
+# Generic qwartz jobs
 .dependencies_quartz:
   extends:
     - .quartz_common
-    - .install_dependencies_script
+    - .dependencies_toss_3_x86_64_ib_script
   stage: dependencies
 
-####
-# Generic qwartz job, extending build script
 .build_quartz:
   extends:
     - .quartz_common
     - .build_toss_3_x86_64_ib_script
   stage: build
 
-####
-# Generic qwartz job, extending test script
 .test_quartz:
   extends:
     - .quartz_common
     - .test_toss_3_x86_64_ib_script
   stage: test
 
-####
-# Generic qwartz job, extending clean script
 .clean_quartz:
   extends:
     - .quartz_common
@@ -64,7 +56,7 @@ release_resources_build_quartz:
   stage: clean
 
 ####
-# Here are all quartz build jobs
+# Here are all quartz dependencies jobs
 
 dependencies_quartz_clang_3_9_1:
   variables:
@@ -91,13 +83,6 @@ dependencies_quartz_gcc_8_1_0:
     COMPILER: "gcc_8_1_0"
     SPEC: "%gcc@8.1.0"
   extends: .dependencies_quartz
-
-#dependencies_quartz_intel_16_0_4:
-#  variables:
-#    COMPILER: "intel_16_0_4"
-#    SPEC: "%intel@16.0.4"
-#  extends: .dependencies_quartz
-#  allow_failure: true
 
 dependencies_quartz_intel_18_0_2:
   variables:
@@ -138,11 +123,6 @@ build_quartz_gcc_8_1_0:
     SPEC: "%gcc@8.1.0"
   extends: .build_quartz
 
-#build_quartz_intel_16_0_4:
-#  variables:
-#    COMPILER: "intel_16_0_4"
-#  extends: .build_quartz
-
 build_quartz_intel_18_0_2:
   needs: ["dependencies_quartz_intel_18_0_2"]
   variables:
@@ -152,9 +132,6 @@ build_quartz_intel_18_0_2:
 
 ####
 # Here are all quartz tests jobs
-
-####
-# Here are all quartz clean jobs
 
 clean_quartz_clang_3_9_1:
   variables:
@@ -181,11 +158,6 @@ clean_quartz_gcc_8_1_0:
     COMPILER: "gcc_8_1_0"
     SPEC: "%gcc@8.1.0"
   extends: .clean_quartz
-
-#clean_quartz_intel_16_0_4:
-#  variables:
-#    COMPILER: "intel_16_0_4"
-#  extends: .clean_quartz
 
 clean_quartz_intel_18_0_2:
   variables:
