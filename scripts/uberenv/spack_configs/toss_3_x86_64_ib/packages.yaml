@@ -1,0 +1,26 @@
+packages:
+  all:
+    compiler: [gcc, intel, pgi, clang, xl, nag]
+    providers:
+      blas: [openblas]
+      lapack: [openblas]
+      mpi: [mvapich2]
+  cmake:
+    version: [3.9.6]
+    variants: ~openssl~ncurses
+  pkg-config:
+      buildable: False
+      paths:
+          pkg-config: /usr
+  mvapich2:
+    paths:
+      # clang mvapich2
+      mvapich2@2.2 %clang@3.9.1 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-clang-3.9.1
+      mvapich2@2.2 %clang@4.0.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0
+      # gcc mvapich2
+      mvapich2@2.2 %gcc@7.3.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-7.3.0
+      mvapich2@2.2 %gcc@8.1.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-8.1.0
+      # intel mvapich2
+      mvapich2@2.2 %intel@16.0.4 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-16.0.4
+      mvapich2@2.2 %intel@18.0.2 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-18.0.2
+    buildable: False

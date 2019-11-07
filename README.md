@@ -5,18 +5,25 @@ Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primar
 
 Getting Started
 ------
-1. Build [MFEM](https://github.com/mfem/mfem/), [HYPRE](https://github.com/LLNL/hypre), and [ParMETIS](http://glaros.dtc.umn.edu/gkhome/metis/parmetis/overview)
-2. `git clone ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git`
-3. `cd serac`
-4. `git submodule update --init`
+Serac uses git submodules, to clone the project:
+1. git clone --recursive ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git
 
-   This initializes the [BLT](https://github.com/LLNL/blt) submodule which drives the build system
-5. `./config-build.py -hc <host config file> -DMFEM_DIR=<mfem install location> -DHYPRE_DIR=<hypre install location> -DPARMETIS_DIR=<parmetis install location> ..`
+The easiest path to install both serac and its dependencies is to use spack. This has been encapsulated using Uberenv (TODO). It will generate a uberenv_libs directory containing a Spack instance with Serac dependencies installed. It also generate a host-config file (uberenv_libs/\<config_dependent_name\>.cmake) we can now use to build Serac. The CMake configuration phase has also been encapsulated in config-build.py.
+2. `python scripts/uberenv/uberenv.py`
+3. `python ./config-build.py -hc ../uberenv_libs/\<config_dependent_name\>.cmake`
+4. `cd build-<system-and-toolchain>
+4. `cmake --build .`
+5. `ctest .`
 
-    Alternatively, you can edit the cmake/defaults.cmake file to permanently save these library locations. A host config should be generated for each new platform and compiler. Sample toss3 configs are located in the `host-configs` directory. If you would like a host config to be a default for a certain platform, the `_host_configs_map` on line 16 of `config-build.py` should be edited.
-6. `cd build-<system type>`
-8. `make -j`
-9. `make test` to run all tests.
+If you already have a spack instance you would like to reuse, you can do so changing the uberenv command as follow:
+2. `python scripts/uberenv/uberenv.py --upstream=\</path/to/my/spack\>/opt/spack`
+
+If you would like to use an existing installation of [MFEM](https://github.com/mfem/mfem/) (outside of Spack), you can write your own host-config file porviding the necessary information:
+TODO
+
+WARNING: The only MFEM build supported at the moment is the Makefile one (not the CMake one, yet).
+
+Alternatively, you can edit the cmake/defaults.cmake file to permanently save these library locations. A host config should be generated for each new platform and compiler. Sample toss3 configs are located in the `host-configs` directory. If you would like a host config to be a default for a certain platform, the `_host_configs_map` on line 16 of `config-build.py` should be edited.
 
 License
 -------
@@ -27,7 +34,9 @@ Serac is licensed under the BSD 3-Clause license,
 Copyrights and patents in the Serac project are retained by contributors.
 No copyright assignment is required to contribute to Serac.
 
-See [LICENSE](./LICENSE) for details.
+See [LICENSE](https://github.com/LLNL/serac/blob/master/LICENSE),
+[COPYRIGHT](https://github.com/LLNL/serac/blob/master/COPYRIGHT), and
+[NOTICE](https://github.com/LLNL/serac/blob/master/NOTICE) for details.
 
 Unlimited Open Source - BSD 3-clause Distribution
 `LLNL-CODE-XXXXXX`  `OCEC-XX-XXX`
