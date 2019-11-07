@@ -9,6 +9,7 @@ variables:
   BUILD_ROOT: $CI_BUILDS_DIR/serac_$CI_COMMIT_REF_SLUG
   INSTALL_ROOT: $CI_BUILDS_DIR/spack_uberenv
   SPACK_UPSTREAM: /usr/workspace/radiuss/spack-chain-parent/opt/spack
+  SPACK_MIRROR: /usr/workspace/radiuss/mirrors/packages
 
 before_script:
   - date
@@ -30,7 +31,7 @@ stages:
     - echo ${SLURM_ALLOC_NAME}
     - export JOBID=$(squeue -h --name=${SLURM_ALLOC_NAME} --format=%A)
     - echo ${JOBID}
-    - srun $( [[ -n "${JOBID}" ]] && echo "--jobid=${JOBID}" ) -t 20 -N 1 -n 1 -c 4 python scripts/uberenv/uberenv.py --prefix=${INSTALL_ROOT}_${COMPILER} --spec=${SPEC} --upstream=${SPACK_UPSTREAM}
+    - srun $( [[ -n "${JOBID}" ]] && echo "--jobid=${JOBID}" ) -t 20 -N 1 -n 1 -c 4 python scripts/uberenv/uberenv.py --mirror=${SPACK_MIRROR} --prefix=${INSTALL_ROOT}_${COMPILER} --spec=${SPEC} --upstream=${SPACK_UPSTREAM}
     - mv ${CI_BUILDS_DIR}/${SYS_TYPE}__${COMPILER}__serac.cmake ${BUILD_ROOT}
 
 # This is not a job, but contains project specific build commands

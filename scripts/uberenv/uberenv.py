@@ -221,10 +221,10 @@ def uberenv_spack_config_dir(opts, uberenv_dir):
 
 
 def disable_spack_config_scopes(spack_dir):
-    # disables all config scopes except "default", which we will
+    # disables all config scopes except "defaults", which we will
     # force our settings into
     spack_lib_config = pjoin(spack_dir,"lib","spack","spack","config.py")
-    print("[disabling config scope (except default) in: {}]".format(spack_lib_config))
+    print("[disabling config scope (except defaults) in: {}]".format(spack_lib_config))
     cfg_script = open(spack_lib_config).read()
     for cfg_scope_stmt in ["('system', os.path.join(spack.paths.system_etc_path, 'spack')),",
                            "('site', os.path.join(spack.paths.etc_path, 'spack')),",
@@ -236,7 +236,7 @@ def disable_spack_config_scopes(spack_dir):
 
 
 def patch_spack(spack_dir,uberenv_dir,cfg_dir,pkgs):
-    # force spack to use only default config scope
+    # force spack to use only defaults config scope
     disable_spack_config_scopes(spack_dir)
     spack_etc_defaults_dir = pjoin(spack_dir,"etc","spack","defaults")
     # copy in default config.yaml
@@ -312,12 +312,12 @@ def use_spack_mirror(spack_dir,
         # Note: In this case, spack says it removes the mirror, but we still
         # get errors when we try to add a new one, sounds like a bug
         #
-        sexe("spack/bin/spack mirror remove --scope=site {} ".format(mirror_name),
+        sexe("spack/bin/spack mirror remove --scope=defaults {} ".format(mirror_name),
              echo=True)
         existing_mirror_path = None
     if not existing_mirror_path:
         # Add if not already there
-        sexe("spack/bin/spack mirror add --scope=site {} {}".format(
+        sexe("spack/bin/spack mirror add --scope=defaults {} {}".format(
                 mirror_name, mirror_path), echo=True)
         print("[using mirror {}]".format(mirror_path))
 
