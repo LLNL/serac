@@ -10,7 +10,8 @@
 
 set( serac_tests
      serac_quasistatic_solver.cpp
-     serac_dynamic_solver.cpp  
+     serac_dynamic_solver.cpp
+     serac_conduction_solver.cpp
      )
 
 foreach ( test ${serac_tests} )
