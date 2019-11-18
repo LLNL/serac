@@ -10,12 +10,9 @@
 #include "solvers/dynamic_solver.hpp"
 #include <fstream>
 
-using namespace std;
-using namespace mfem;
+void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
 
-void InitialDeformation(const Vector &x, Vector &y);
-
-void InitialVelocity(const Vector &x, Vector &v);
+void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -25,41 +22,41 @@ TEST(dynamic_solver, dyn_solve)
    const char *mesh_file = "../../data/beam-hex.mesh";
 
    // Open the mesh
-   ifstream imesh(mesh_file);
-   Mesh* mesh = new Mesh(imesh, 1, 1, true);
+   std::ifstream imesh(mesh_file);
+   mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
    imesh.close();
 
    // declare pointer to parallel mesh object
-   ParMesh *pmesh = NULL;
+   mfem::ParMesh *pmesh = NULL;
    mesh->UniformRefinement();
    
-   pmesh = new ParMesh(MPI_COMM_WORLD, *mesh);
+   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
    delete mesh;
 
    int dim = pmesh->Dimension();
 
-   ODESolver *ode_solver = new SDIRK33Solver;
+   mfem::ODESolver *ode_solver = new mfem::SDIRK33Solver;
    
    // Define the finite element spaces for displacement field
-   H1_FECollection fe_coll(1, dim);
-   ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
+   mfem::H1_FECollection fe_coll(1, dim);
+   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
 
    int true_size = fe_space.TrueVSize();
-   Array<int> true_offset(3);
+   mfem::Array<int> true_offset(3);
    true_offset[0] = 0;
    true_offset[1] = true_size;
    true_offset[2] = 2*true_size;
 
-   BlockVector vx(true_offset);
-   ParGridFunction v_gf, x_gf;
+   mfem::BlockVector vx(true_offset);
+   mfem::ParGridFunction v_gf, x_gf;
    v_gf.MakeTRef(&fe_space, vx, true_offset[0]);
    x_gf.MakeTRef(&fe_space, vx, true_offset[1]);
 
-   VectorFunctionCoefficient velo_coef(dim, InitialVelocity);   
+   mfem::VectorFunctionCoefficient velo_coef(dim, InitialVelocity);   
    v_gf.ProjectCoefficient(velo_coef);
    v_gf.SetTrueVector();
 
-   VectorFunctionCoefficient deform(dim, InitialDeformation);
+   mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
    x_gf.ProjectCoefficient(deform);
    x_gf.SetTrueVector();
    
@@ -67,7 +64,7 @@ TEST(dynamic_solver, dyn_solve)
 
    
    // define a boundary attribute array and initialize to 0
-   Array<int> ess_bdr;
+   mfem::Array<int> ess_bdr;
    ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
    ess_bdr = 0;
 
@@ -78,7 +75,7 @@ TEST(dynamic_solver, dyn_solve)
    // construct the nonlinear mechanics operator
    DynamicSolver oper(fe_space, ess_bdr,
                       0.25, 5.0, 0.0,
-                      1.0e-4, 1.0e-8, 
+         	      1.0e-4, 1.0e-8, 
                       500, true, false);
 
    double t = 0.0;
@@ -92,7 +89,7 @@ TEST(dynamic_solver, dyn_solve)
    //     (looping over the time iterations, ti, with a time-step dt).
    bool last_step = false;
    for (int ti = 1; !last_step; ti++) {
-      double dt_real = min(dt, t_final - t);
+      double dt_real = std::min(dt, t_final - t);
       
       ode_solver->Step(vx, t, dt_real);
 
@@ -118,14 +115,14 @@ int main(int argc, char* argv[])
   return result;
 }
 
-void InitialDeformation(const Vector &x, Vector &y)
+void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
 {
    // set the initial configuration to be the same as the reference, stress
    // free, configuration
    y = x;
 }
 
-void InitialVelocity(const Vector &x, Vector &v)
+void InitialVelocity(const mfem::Vector &x, mfem::Vector &v)
 {
    const int dim = x.Size();
    const double s = 0.1/64.;
