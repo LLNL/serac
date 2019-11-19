@@ -85,8 +85,8 @@ TEST(dynamic_solver, dyn_solve)
    oper.SetTime(t);
    ode_solver->Init(oper);
 
-   // 10. Perform time-integration
-   //     (looping over the time iterations, ti, with a time-step dt).
+   // Perform time-integration
+   // (looping over the time iterations, ti, with a time-step dt).
    bool last_step = false;
    for (int ti = 1; !last_step; ti++) {
       double dt_real = std::min(dt, t_final - t);
@@ -95,7 +95,17 @@ TEST(dynamic_solver, dyn_solve)
 
       last_step = (t >= t_final - 1e-8*dt);
    }
-   
+
+   mfem::Vector zero(dim);
+   zero = 0.0;
+   mfem::VectorConstantCoefficient zerovec(zero);
+
+   double x_norm = x_gf.ComputeLpError(2.0, zerovec); 
+   double v_norm = v_gf.ComputeLpError(2.0, zerovec);
+ 
+   EXPECT_NEAR(13.2665, x_norm, 0.0001);
+   EXPECT_NEAR(0.25368, v_norm, 0.0001);
+  
    delete pmesh;
    
    MPI_Barrier(MPI_COMM_WORLD);

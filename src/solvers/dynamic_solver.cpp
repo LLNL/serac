@@ -74,7 +74,7 @@ DynamicSolver::DynamicSolver(mfem::ParFiniteElementSpace &fes,
    // retain super LU solver capabilities
    else if (slu) { 
       mfem::SuperLUSolver *superlu = nullptr;
-      superlu = new mfem::SuperLUSolver(MPI_COMM_WORLD);
+      superlu = new mfem::SuperLUSolver(m_fe_space.GetComm());
       superlu->SetPrintStatistics(false);
       superlu->SetSymmetricPattern(false);
       superlu->SetColumnPermutation(mfem::superlu::PARMETIS);

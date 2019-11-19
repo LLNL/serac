@@ -69,7 +69,7 @@ public:
    /// Required to use the native newton solver
    virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
    /// Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
-   /// This is the only requirement for high-order SDIRK implicit integration.*/
+   /// This is the only requirement for high-order SDIRK implicit integration.
    virtual void ImplicitSolve(const double dt, const mfem::Vector &x, mfem::Vector &k);
 
    /// Get FE space
