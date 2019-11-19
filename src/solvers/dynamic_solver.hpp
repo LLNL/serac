@@ -69,7 +69,7 @@ public:
    /// Required to use the native newton solver
    virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
    /// Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
-   /// This is the only requirement for high-order SDIRK implicit integration.*/
+   /// This is the only requirement for high-order SDIRK implicit integration.
    virtual void ImplicitSolve(const double dt, const mfem::Vector &x, mfem::Vector &k);
 
    /// Get FE space
@@ -81,7 +81,7 @@ public:
 //  Nonlinear operator of the form:
 //  k --> (M + dt*S)*k + H(x + dt*v + dt^2*k) + S*v,
 //  where M and S are given BilinearForms, H is a given NonlinearForm, v and x
-//  are given vectors, and dt is a scalar. */
+//  are given vectors, and dt is a scalar. 
 class ReducedSystemOperator : public mfem::Operator
 {
 private:

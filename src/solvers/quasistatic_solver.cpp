@@ -57,7 +57,7 @@ QuasistaticSolver::QuasistaticSolver(ParFiniteElementSpace &fes,
    // retain super LU solver capabilities
    else if (slu) { 
       SuperLUSolver *superlu = NULL;
-      superlu = new SuperLUSolver(MPI_COMM_WORLD);
+      superlu = new SuperLUSolver(fe_space.GetComm());
       superlu->SetPrintStatistics(false);
       superlu->SetSymmetricPattern(false);
       superlu->SetColumnPermutation(superlu::PARMETIS);
