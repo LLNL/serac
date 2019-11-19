@@ -44,7 +44,7 @@ ConductionSolver::ConductionSolver(mfem::ParFiniteElementSpace &f, double kap)
 
 }
 
-void ConductionSolver::Mult(const Vector &u, Vector &du_dt) const
+void ConductionSolver::Mult(const mfem::Vector &u, mfem::Vector &du_dt) const
 {
    // Compute:
    //    du_dt = M^{-1}*-K(u)
@@ -55,7 +55,7 @@ void ConductionSolver::Mult(const Vector &u, Vector &du_dt) const
 }
 
 void ConductionSolver::ImplicitSolve(const double dt,
-                                       const Vector &u, Vector &du_dt)
+                                       const mfem::Vector &u, mfem::Vector &du_dt)
 {
    // Solve the equation:
    //    du_dt = M^{-1}*[-K(u + dt*du_dt)]

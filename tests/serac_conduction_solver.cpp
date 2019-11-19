@@ -10,10 +10,7 @@
 #include "solvers/conduction_solver.hpp"
 #include <fstream>
 
-using namespace std;
-using namespace mfem;
-
-double InitialTemperature(const Vector &x);
+double InitialTemperature(const mfem::Vector &x);
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -23,30 +20,30 @@ TEST(dynamic_solver, dyn_solve)
    const char *mesh_file = "../../data/beam-hex.mesh";
 
    // Open the mesh
-   ifstream imesh(mesh_file);
-   Mesh* mesh = new Mesh(imesh, 1, 1, true);
+   std::fstream imesh(mesh_file);
+   mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
    imesh.close();
 
    // declare pointer to parallel mesh object
-   ParMesh *pmesh = NULL;
+   mfem::ParMesh *pmesh = NULL;
    mesh->UniformRefinement();
    
-   pmesh = new ParMesh(MPI_COMM_WORLD, *mesh);
+   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
    delete mesh;
 
    int dim = pmesh->Dimension();
 
-   ODESolver *ode_solver = new BackwardEulerSolver;
+   mfem::ODESolver *ode_solver = new mfem::BackwardEulerSolver;
    
    // Define the finite element spaces for temperature field
-   H1_FECollection fe_coll(2, dim);
-   ParFiniteElementSpace fe_space(pmesh, &fe_coll);
+   mfem::H1_FECollection fe_coll(2, dim);
+   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll);
 
-   ParGridFunction u_gf(&fe_space);
+   mfem::ParGridFunction u_gf(&fe_space);
    
-   FunctionCoefficient u_0(InitialTemperature);
+   mfem::FunctionCoefficient u_0(InitialTemperature);
    u_gf.ProjectCoefficient(u_0);
-   Vector u;
+   mfem::Vector u;
    u_gf.GetTrueDofs(u);
    u_gf.SetFromTrueDofs(u);
    
@@ -54,12 +51,12 @@ TEST(dynamic_solver, dyn_solve)
    MPI_Comm_rank(MPI_COMM_WORLD, &myid);      
    
    {
-      ostringstream mesh_name, sol_name;
-      mesh_name << "mesh." << setfill('0') << setw(6) << myid;
-      ofstream omesh(mesh_name.str().c_str());
+      std::ostringstream mesh_name, sol_name;
+      mesh_name << "mesh." << std::setfill('0') << std::setw(6) << myid;
+      std::ofstream omesh(mesh_name.str().c_str());
       omesh.precision(8);
       pmesh->Print(omesh);
-      ofstream osol(sol_name.str().c_str());
+      std::ofstream osol(sol_name.str().c_str());
       osol.precision(8);
       u_gf.Save(osol);
    }
@@ -83,9 +80,9 @@ TEST(dynamic_solver, dyn_solve)
    }
 
    {
-      ostringstream sol_name;
-      sol_name << "final." << setfill('0') << setw(6) << myid;
-      ofstream osol(sol_name.str().c_str());
+      std::stringstream sol_name;
+      sol_name << "final." << std::setfill('0') << std::setw(6) << myid;
+      std::ofstream osol(sol_name.str().c_str());
       osol.precision(8);
       u_gf.Save(osol);
    }
@@ -109,7 +106,7 @@ int main(int argc, char* argv[])
   return result;
 }
 
-double InitialTemperature(const Vector &x)
+double InitialTemperature(const mfem::Vector &x)
 {
    if (x(0) < 4.0)
    {
