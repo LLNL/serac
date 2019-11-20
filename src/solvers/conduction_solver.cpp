@@ -2,7 +2,7 @@
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
-// SPDX-License-Identifier: (BSD-3-Clause) 
+// SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "conduction_solver.hpp"
 
@@ -20,12 +20,12 @@ ConductionSolver::ConductionSolver(mfem::ParFiniteElementSpace &f, double kap)
    m_M_form->FormSystemMatrix(m_ess_tdof_list, m_M_mat);
 
    mfem::ConstantCoefficient kappa_coef(m_kappa);
-   
+
    m_K_form = new mfem::ParBilinearForm(&m_fe_space);
    m_K_form->AddDomainIntegrator(new mfem::DiffusionIntegrator(kappa_coef));
    m_K_form->Assemble(0); // keep sparsity pattern of M and K the same
    m_K_form->FormSystemMatrix(m_ess_tdof_list, m_K_mat);
-   
+
    m_M_solver.iterative_mode = false;
    m_M_solver.SetRelTol(rel_tol);
    m_M_solver.SetAbsTol(0.0);
@@ -34,7 +34,7 @@ ConductionSolver::ConductionSolver(mfem::ParFiniteElementSpace &f, double kap)
    m_M_prec.SetType(mfem::HypreSmoother::Jacobi);
    m_M_solver.SetPreconditioner(m_M_prec);
    m_M_solver.SetOperator(m_M_mat);
-   
+
    m_T_solver.iterative_mode = false;
    m_T_solver.SetRelTol(rel_tol);
    m_T_solver.SetAbsTol(0.0);
@@ -63,11 +63,11 @@ void ConductionSolver::ImplicitSolve(const double dt,
 
    m_T_mat = Add(1.0, m_M_mat, dt, m_K_mat);
    m_T_solver.SetOperator(*m_T_mat);
-   
+
    m_K_mat.Mult(u, m_z);
    m_z.Neg();
    m_T_solver.Mult(m_z, du_dt);
-   delete m_T_mat;   
+   delete m_T_mat;
 }
 
 ConductionSolver::~ConductionSolver()
