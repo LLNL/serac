@@ -73,7 +73,10 @@ TEST(dynamic_solver, dyn_solve)
    u_gf.SetFromTrueDofs(u);
 
    mfem::ConstantCoefficient zero(0.0);
-   EXPECT_NEAR(2.53521, x_norm, 0.00001);
+
+   double u_norm = u_gf.ComputeLpError(2.0, zero);
+
+   EXPECT_NEAR(2.53521, u_norm, 0.00001);
 
    delete pmesh;
 
