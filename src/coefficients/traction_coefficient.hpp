@@ -9,20 +9,17 @@
 
 #include "mfem.hpp"
 
-using namespace mfem;
-
-
-class VectorScaledConstantCoefficient : public VectorCoefficient
+class VectorScaledConstantCoefficient : public mfem::VectorCoefficient
 {
 private:
-   Vector vec;
+   mfem::Vector vec;
    double scale;
 public:
-   VectorScaledConstantCoefficient(const Vector &v)
-      : VectorCoefficient(v.Size()), vec(v) { }
-   using VectorCoefficient::Eval;
+   VectorScaledConstantCoefficient(const mfem::Vector &v)
+      : mfem::VectorCoefficient(v.Size()), vec(v) { }
+   using mfem::VectorCoefficient::Eval;
    void SetScale(double s) { scale = s; }
-   virtual void Eval(Vector &V, __attribute__((unused)) ElementTransformation &T,
+   virtual void Eval(mfem::Vector &V, __attribute__((unused)) ElementTransformation &T,
                      __attribute__((unused)) const IntegrationPoint &ip) { V = vec; V *= scale; }
 };
 

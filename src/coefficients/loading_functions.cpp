@@ -6,16 +6,14 @@
 
 #include "loading_functions.hpp"
 
-using namespace mfem;
-
-void ReferenceConfiguration(const Vector &x, Vector &y)
+void ReferenceConfiguration(const mfem::Vector &x, mfem::Vector &y)
 {
    // set the reference, stress free, configuration
    y = x;
 }
 
 
-void InitialDeformation(__attribute__((unused)) const Vector &x, Vector &y)
+void InitialDeformation(__attribute__((unused)) const mfem::Vector &x, mfem::Vector &y)
 {
    y = 0.0;
 }
