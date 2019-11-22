@@ -17,7 +17,7 @@ TEST(dynamic_solver, dyn_solve)
    MPI_Barrier(MPI_COMM_WORLD);
 
    // mesh
-   const char *mesh_file = "../../data/beam-hex.mesh";
+   const char *mesh_file = "../../data/star.mesh";
 
    // Open the mesh
    std::fstream imesh(mesh_file);
@@ -30,6 +30,8 @@ TEST(dynamic_solver, dyn_solve)
    
    pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
    delete mesh;
+
+   pmesh->UniformRefinement();
 
    int dim = pmesh->Dimension();
 
@@ -66,8 +68,8 @@ TEST(dynamic_solver, dyn_solve)
 
    ode_solver->Init(oper);
    double t = 0.0;
-   double t_final = 500.0;
-   double dt = 10.0;
+   double t_final = 5.0;
+   double dt = 1.0;
    
    bool last_step = false;
    for (int ti = 1; !last_step; ti++)
@@ -78,6 +80,8 @@ TEST(dynamic_solver, dyn_solve)
       }
       ode_solver->Step(u, t, dt);
    }
+
+   u_gf.SetFromTrueDofs(u);
 
    {
       std::stringstream sol_name;
@@ -108,9 +112,9 @@ int main(int argc, char* argv[])
 
 double InitialTemperature(const mfem::Vector &x)
 {
-   if (x(0) < 4.0)
+   if (x.Norml2() < 0.5)
    {
-      return 10.0;
+      return 2.0;
    }
    else
    {
