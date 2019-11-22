@@ -8,30 +8,28 @@
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
 
-using namespace mfem;
-
-QuasistaticSolver::QuasistaticSolver(ParFiniteElementSpace &fes,
-                                     Array<int> &ess_bdr,
-                                     Array<int> &trac_bdr,
+QuasistaticSolver::QuasistaticSolver(mfem::ParFiniteElementSpace &fes,
+                                     mfem::Array<int> &ess_bdr,
+                                     mfem::Array<int> &trac_bdr,
                                      double mu,
                                      double K,
-                                     VectorCoefficient &trac_coef,
+                                     mfem::VectorCoefficient &trac_coef,
                                      double rel_tol,
                                      double abs_tol,
                                      int iter,
                                      bool gmres,
                                      bool slu)
-: Operator(fes.TrueVSize()), fe_space(fes),
+: mfem::Operator(fes.TrueVSize()), fe_space(fes),
      newton_solver(fes.GetComm())
 {
    // Define the paral2lel nonlinear form 
-   Hform = new ParNonlinearForm(&fes);
+   Hform = new mfem::ParNonlinearForm(&fes);
 
    // Set the essential boundary conditions
    Hform->SetEssentialBC(ess_bdr); 
 
    // Define the material model
-   model = new NeoHookeanModel(mu, K);   
+   model = new mfem::NeoHookeanModel(mu, K);   
 
    // Add the hyperelastic integrator
    Hform->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model));
@@ -40,12 +38,12 @@ QuasistaticSolver::QuasistaticSolver(ParFiniteElementSpace &fes,
    Hform->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(trac_coef), trac_bdr);
    
    if (gmres) {
-      HypreBoomerAMG *prec_amg = new HypreBoomerAMG();
+      mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
       prec_amg->SetPrintLevel(0);
       prec_amg->SetElasticityOptions(&fe_space);
       J_prec = prec_amg;
 
-      GMRESSolver *J_gmres = new GMRESSolver(fe_space.GetComm());
+      mfem::GMRESSolver *J_gmres = new mfem::GMRESSolver(fe_space.GetComm());
       J_gmres->SetRelTol(rel_tol);
       J_gmres->SetAbsTol(1e-12);
       J_gmres->SetMaxIter(300);
@@ -56,22 +54,22 @@ QuasistaticSolver::QuasistaticSolver(ParFiniteElementSpace &fes,
    } 
    // retain super LU solver capabilities
    else if (slu) { 
-      SuperLUSolver *superlu = NULL;
-      superlu = new SuperLUSolver(fe_space.GetComm());
+      mfem::SuperLUSolver *superlu = NULL;
+      superlu = new mfem::SuperLUSolver(fe_space.GetComm());
       superlu->SetPrintStatistics(false);
       superlu->SetSymmetricPattern(false);
-      superlu->SetColumnPermutation(superlu::PARMETIS);
+      superlu->SetColumnPermutation(mfem::superlu::PARMETIS);
       
       J_solver = superlu;
       J_prec = NULL;
    }
    else {
-      HypreSmoother *J_hypreSmoother = new HypreSmoother;
-      J_hypreSmoother->SetType(HypreSmoother::l1Jacobi);
+      mfem::HypreSmoother *J_hypreSmoother = new mfem::HypreSmoother;
+      J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
       J_hypreSmoother->SetPositiveDiagonal(true);
       J_prec = J_hypreSmoother;
 
-      MINRESSolver *J_minres = new MINRESSolver(fe_space.GetComm());
+      mfem::MINRESSolver *J_minres = new mfem::MINRESSolver(fe_space.GetComm());
       J_minres->SetRelTol(rel_tol);
       J_minres->SetAbsTol(0.0);
       J_minres->SetMaxIter(300);
@@ -92,23 +90,23 @@ QuasistaticSolver::QuasistaticSolver(ParFiniteElementSpace &fes,
 }
 
 // Solve the Newton system
-int QuasistaticSolver::Solve(Vector &x) const
+int QuasistaticSolver::Solve(mfem::Vector &x) const
 {
-   Vector zero;
+   mfem::Vector zero;
    newton_solver.Mult(zero, x);
 
    return newton_solver.GetConverged();
 }
 
 // compute: y = H(x,p)
-void QuasistaticSolver::Mult(const Vector &k, Vector &y) const
+void QuasistaticSolver::Mult(const mfem::Vector &k, mfem::Vector &y) const
 {
    // Apply the nonlinear form
    Hform->Mult(k, y);
 }
 
 // Compute the Jacobian from the nonlinear form
-Operator &QuasistaticSolver::GetGradient(const Vector &x) const
+mfem::Operator &QuasistaticSolver::GetGradient(const mfem::Vector &x) const
 {
    Jacobian = &Hform->GetGradient(x);
    return *Jacobian;

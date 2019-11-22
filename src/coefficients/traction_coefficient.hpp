@@ -19,8 +19,8 @@ public:
       : mfem::VectorCoefficient(v.Size()), vec(v) { }
    using mfem::VectorCoefficient::Eval;
    void SetScale(double s) { scale = s; }
-   virtual void Eval(mfem::Vector &V, __attribute__((unused)) ElementTransformation &T,
-                     __attribute__((unused)) const IntegrationPoint &ip) { V = vec; V *= scale; }
+   virtual void Eval(mfem::Vector &V, __attribute__((unused)) mfem::ElementTransformation &T,
+                     __attribute__((unused)) const mfem::IntegrationPoint &ip) { V = vec; V *= scale; }
 };
 
 #endif
