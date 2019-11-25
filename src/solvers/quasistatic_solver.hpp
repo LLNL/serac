@@ -4,14 +4,14 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause) 
 
-#ifndef HYPERELASTIC_SOLVER
-#define HYPERELASTIC_SOLVER
+#ifndef QUASISTATIC_SOLVER
+#define QUASISTATIC_SOLVER
 
 #include "mfem.hpp"
 
 using namespace mfem;
 
-class NonlinearMechOperator : public Operator
+class QuasistaticSolver : public Operator
 {
 protected:
    ParFiniteElementSpace &fe_space;
@@ -30,17 +30,17 @@ protected:
    HyperelasticModel *model;
 
 public:
-   NonlinearMechOperator(ParFiniteElementSpace &fes,
-                         Array<int> &ess_bdr,
-                         Array<int> &trac_bdr,                         
-                         double mu,
-                         double K,
-                         VectorCoefficient &trac_coef,
-                         double rel_tol,
-                         double abs_tol,
-                         int iter,
-                         bool gmres,
-                         bool slu);
+   QuasistaticSolver(ParFiniteElementSpace &fes,
+                       Array<int> &ess_bdr,
+                       Array<int> &trac_bdr,                         
+                       double mu,
+                       double K,
+                       VectorCoefficient &trac_coef,
+                       double rel_tol,
+                       double abs_tol,
+                       int iter,
+                       bool gmres,
+                       bool slu);
 
    /// Required to use the native newton solver
    virtual Operator &GetGradient(const Vector &x) const;
@@ -52,7 +52,7 @@ public:
    /// Get FE space
    const ParFiniteElementSpace *GetFESpace() { return &fe_space; }
 
-   virtual ~NonlinearMechOperator();
+   virtual ~QuasistaticSolver();
 };
 
 #endif

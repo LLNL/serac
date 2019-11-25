@@ -4,34 +4,31 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause) 
 
-#include "hyperelastic_solver.hpp"
+#include "quasistatic_solver.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
 
 using namespace mfem;
 
-NonlinearMechOperator::NonlinearMechOperator(ParFiniteElementSpace &fes,
-                                             Array<int> &ess_bdr,
-                                             Array<int> &trac_bdr,
-                                             double mu,
-                                             double K,
-                                             VectorCoefficient &trac_coef,
-                                             double rel_tol,
-                                             double abs_tol,
-                                             int iter,
-                                             bool gmres,
-                                             bool slu)
+QuasistaticSolver::QuasistaticSolver(ParFiniteElementSpace &fes,
+                                     Array<int> &ess_bdr,
+                                     Array<int> &trac_bdr,
+                                     double mu,
+                                     double K,
+                                     VectorCoefficient &trac_coef,
+                                     double rel_tol,
+                                     double abs_tol,
+                                     int iter,
+                                     bool gmres,
+                                     bool slu)
 : Operator(fes.TrueVSize()), fe_space(fes),
      newton_solver(fes.GetComm())
 {
-   Vector * rhs;
-   rhs = NULL;
-
    // Define the paral2lel nonlinear form 
    Hform = new ParNonlinearForm(&fes);
 
    // Set the essential boundary conditions
-   Hform->SetEssentialBC(ess_bdr, rhs); 
+   Hform->SetEssentialBC(ess_bdr); 
 
    // Define the material model
    model = new NeoHookeanModel(mu, K);   
@@ -60,7 +57,7 @@ NonlinearMechOperator::NonlinearMechOperator(ParFiniteElementSpace &fes,
    // retain super LU solver capabilities
    else if (slu) { 
       SuperLUSolver *superlu = NULL;
-      superlu = new SuperLUSolver(MPI_COMM_WORLD);
+      superlu = new SuperLUSolver(fe_space.GetComm());
       superlu->SetPrintStatistics(false);
       superlu->SetSymmetricPattern(false);
       superlu->SetColumnPermutation(superlu::PARMETIS);
@@ -95,7 +92,7 @@ NonlinearMechOperator::NonlinearMechOperator(ParFiniteElementSpace &fes,
 }
 
 // Solve the Newton system
-int NonlinearMechOperator::Solve(Vector &x) const
+int QuasistaticSolver::Solve(Vector &x) const
 {
    Vector zero;
    newton_solver.Mult(zero, x);
@@ -104,21 +101,21 @@ int NonlinearMechOperator::Solve(Vector &x) const
 }
 
 // compute: y = H(x,p)
-void NonlinearMechOperator::Mult(const Vector &k, Vector &y) const
+void QuasistaticSolver::Mult(const Vector &k, Vector &y) const
 {
    // Apply the nonlinear form
    Hform->Mult(k, y);
 }
 
 // Compute the Jacobian from the nonlinear form
-Operator &NonlinearMechOperator::GetGradient(const Vector &x) const
+Operator &QuasistaticSolver::GetGradient(const Vector &x) const
 {
    Jacobian = &Hform->GetGradient(x);
    return *Jacobian;
 }
 
 
-NonlinearMechOperator::~NonlinearMechOperator()
+QuasistaticSolver::~QuasistaticSolver()
 {
    delete J_solver;
    if (J_prec != NULL) {

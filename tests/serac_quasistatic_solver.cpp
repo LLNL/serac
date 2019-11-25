@@ -7,13 +7,13 @@
 #include <gtest/gtest.h>
 
 #include "mfem.hpp"
-#include "solvers/hyperelastic_solver.hpp"
+#include "solvers/quasistatic_solver.hpp"
 #include <fstream>
 
 using namespace std;
 using namespace mfem;
 
-TEST(cg_convection_solver, cg_conv_solve)
+TEST(quasistatic_solver, qs_solve)
 {
    MPI_Barrier(MPI_COMM_WORLD);
 
@@ -67,10 +67,10 @@ TEST(cg_convection_solver, cg_conv_solve)
    VectorConstantCoefficient traction_coef(traction);
    
    // construct the nonlinear mechanics operator
-   NonlinearMechOperator oper(fe_space, ess_bdr, trac_bdr,
-                              0.25, 5.0, traction_coef,
-                              1.0e-2, 1.0e-4, 
-                              500, true, false);
+   QuasistaticSolver oper(fe_space, ess_bdr, trac_bdr,
+                          0.25, 5.0, traction_coef,
+                          1.0e-2, 1.0e-4, 
+                          500, true, false);
    
    // declare incremental nodal displacement solution vector
    Vector x_sol(fe_space.TrueVSize());

@@ -5,11 +5,13 @@
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
 set(solvers_sources
-    hyperelastic_solver.cpp
+    quasistatic_solver.cpp
+    dynamic_solver.cpp    
     )
 
 set(solvers_headers
-    hyperelastic_solver.hpp
+    quasistatic_solver.hpp
+    dynamic_solver.hpp        
     )
 
 blt_add_library(
