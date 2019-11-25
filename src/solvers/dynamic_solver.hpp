@@ -49,9 +49,9 @@ protected:
    mfem::Solver *m_J_prec;
    /// nonlinear material model 
    mfem::HyperelasticModel *m_model;
-
+   /// essential degrees of freedom list
    mfem::Array<int> m_ess_tdof_list;   
-   
+   /// working vector
    mutable mfem::Vector m_z;
    
 public:
