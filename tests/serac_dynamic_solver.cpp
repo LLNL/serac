@@ -70,11 +70,12 @@ TEST(dynamic_solver, dyn_solve)
 
    // boundary attribute 1 (index 0) is fixed (Dirichlet)
    ess_bdr[0] = 1;
-   
+
+   mfem::ConstantCoefficient visc(0.0);
       
    // construct the nonlinear mechanics operator
    DynamicSolver oper(fe_space, ess_bdr,
-                      0.25, 5.0, 0.0,
+                      0.25, 5.0, visc,
          	      1.0e-4, 1.0e-8, 
                       500, true, false);
 

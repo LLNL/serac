@@ -29,7 +29,7 @@ protected:
    mfem::ParBilinearForm *m_M_form;
    mfem::ParBilinearForm *m_S_form;
 
-   double m_viscosity;
+   mfem::Coefficient &m_viscosity;
 
    mutable mfem::Operator *m_jacobian;
    
@@ -59,7 +59,7 @@ public:
                  mfem::Array<int> &ess_bdr,
                  double mu,
                  double K,
-                 double visc,
+                 mfem::Coefficient &visc,
                  double rel_tol,
                  double abs_tol,
                  int iter,
