@@ -33,7 +33,7 @@ TEST(quasistatic_solver, qs_solve)
    
    // Define the finite element spaces for displacement field
    mfem::H1_FECollection fe_coll(1, dim);
-   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
+   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
 
    // Define a grid function for the global reference configuration, the beginning 
    // step configuration, the global deformation, the current configuration/solution 
@@ -85,7 +85,7 @@ TEST(quasistatic_solver, qs_solve)
 
    double x_norm = x_inc.ComputeLpError(2.0, zerovec); 
    
-   EXPECT_NEAR(0.739583, x_norm, 0.00001);
+   EXPECT_NEAR(0.770937, x_norm, 0.00001);
    EXPECT_EQ(converged, 1);
    
    delete pmesh;

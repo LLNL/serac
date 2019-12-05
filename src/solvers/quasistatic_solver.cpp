@@ -38,6 +38,8 @@ QuasistaticSolver::QuasistaticSolver(mfem::ParFiniteElementSpace &fes,
    Hform->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(trac_coef), trac_bdr);
    
    if (gmres) {
+      MFEM_VERIFY(fe_space.GetOrdering() == mfem::Ordering::byVDIM, "Attempting to use BoomerAMG with nodal ordering.");
+
       mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
       prec_amg->SetPrintLevel(0);
       prec_amg->SetElasticityOptions(&fe_space);
