@@ -9,8 +9,8 @@ compilers:
     paths:
       cc: /usr/tce/packages/clang/clang-3.9.1/bin/clang
       cxx: /usr/tce/packages/clang/clang-3.9.1/bin/clang++
-      f77: null
-      fc: null
+      f77: /usr/tce/packages/gcc/gcc-4.9.3/bin/gfortran 
+      fc: /usr/tce/packages/gcc/gcc-4.9.3/bin/gfortran
     spec: clang@3.9.1
     target: x86_64
 - compiler:
@@ -23,8 +23,8 @@ compilers:
     paths:
       cc: /usr/tce/packages/clang/clang-4.0.0/bin/clang
       cxx: /usr/tce/packages/clang/clang-4.0.0/bin/clang++
-      f77: null
-      fc: null
+      f77: /usr/tce/packages/gcc/gcc-4.9.3/bin/gfortran 
+      fc: /usr/tce/packages/gcc/gcc-4.9.3/bin/gfortran
     spec: clang@4.0.0
     target: x86_64
 - compiler:
