@@ -25,10 +25,6 @@
 #include <iostream>
 #include <fstream>
 
-using namespace std;
-using namespace mfem;
-
-
 int main(int argc, char *argv[])
 {
    // Initialize MPI.
@@ -69,7 +65,7 @@ int main(int argc, char *argv[])
    double dt = 0.25;
    
    // specify all input arguments
-   OptionsParser args(argc, argv);
+   mfem::OptionsParser args(argc, argv);
    args.AddOption(&mesh_file, "-m", "--mesh",
                   "Mesh file to use.");
    args.AddOption(&ser_ref_levels, "-rs", "--refine-serial",
@@ -109,34 +105,34 @@ int main(int argc, char *argv[])
    {
       if (myid == 0)
       {
-         args.PrintUsage(cout);
+         args.PrintUsage(std::cout);
       }
       MPI_Finalize();
       return 1;
    }
    if (myid == 0)
    {
-      args.PrintOptions(cout);
+      args.PrintOptions(std::cout);
    }
 
    // Open the mesh
-   Mesh *mesh;
-   ifstream imesh(mesh_file);
+   mfem::Mesh *mesh;
+   std::ifstream imesh(mesh_file);
    if (!imesh)
       {
          if (myid == 0)
             {
-               cerr << "\nCan not open mesh file: " << mesh_file << '\n' << endl;
+	       std::cerr << "\nCan not open mesh file: " << mesh_file << '\n' << std::endl;
             }
          MPI_Finalize();
          return 2;
       }
   
-   mesh = new Mesh(imesh, 1, 1, true);
+   mesh = new mfem::Mesh(imesh, 1, 1, true);
    imesh.close();
 
    // declare pointer to parallel mesh object
-   ParMesh *pmesh = NULL;
+   mfem::ParMesh *pmesh = NULL;
    
    // mesh refinement if specified in input
    for (int lev = 0; lev < ser_ref_levels; lev++)
@@ -144,7 +140,7 @@ int main(int argc, char *argv[])
          mesh->UniformRefinement();
       }
 
-   pmesh = new ParMesh(MPI_COMM_WORLD, *mesh);
+   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
    for (int lev = 0; lev < par_ref_levels; lev++)
       {
          pmesh->UniformRefinement();
@@ -155,8 +151,8 @@ int main(int argc, char *argv[])
    int dim = pmesh->Dimension();
    
    // Define the finite element spaces for displacement field
-   H1_FECollection fe_coll(order, dim);
-   ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
+   mfem::H1_FECollection fe_coll(order, dim);
+   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
 
    HYPRE_Int glob_size = fe_space.GlobalTrueVSize();
 
@@ -171,14 +167,14 @@ int main(int argc, char *argv[])
    // Define a grid function for the global reference configuration, the beginning 
    // step configuration, the global deformation, the current configuration/solution 
    // guess, and the incremental nodal displacements
-   ParGridFunction x_ref(&fe_space);
-   ParGridFunction x_cur(&fe_space);
-   ParGridFunction x_fin(&fe_space);
-   ParGridFunction x_inc(&fe_space);   
+   mfem::ParGridFunction x_ref(&fe_space);
+   mfem::ParGridFunction x_cur(&fe_space);
+   mfem::ParGridFunction x_fin(&fe_space);
+   mfem::ParGridFunction x_inc(&fe_space);   
 
    // Project the initial and reference configuration functions onto the appropriate grid functions
-   VectorFunctionCoefficient deform(dim, InitialDeformation);
-   VectorFunctionCoefficient refconfig(dim, ReferenceConfiguration);
+   mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
+   mfem::VectorFunctionCoefficient refconfig(dim, ReferenceConfiguration);
    
    // Initialize the reference and beginning step configuration grid functions 
    // with the refconfig vector function coefficient.
@@ -192,21 +188,21 @@ int main(int argc, char *argv[])
    add(x_inc, x_ref, x_cur);
    
    // define a boundary attribute array and initialize to 0
-   Array<int> ess_bdr;
+   mfem::Array<int> ess_bdr;
    ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
    ess_bdr = 0;
 
    // boundary attribute 1 (index 0) is fixed (Dirichlet)
    ess_bdr[0] = 1;
 
-   Array<int> trac_bdr;   
+   mfem::Array<int> trac_bdr;   
    trac_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
       
    trac_bdr = 0;
    trac_bdr[1] = 1;
    
    // define the traction vector
-   Vector traction(dim);
+   mfem::Vector traction(dim);
    traction(0) = tx;
    traction(1) = ty;   
    if (dim == 3) {
@@ -225,7 +221,7 @@ int main(int argc, char *argv[])
 
 
    // declare incremental nodal displacement solution vector
-   Vector x_sol(fe_space.TrueVSize());
+   mfem::Vector x_sol(fe_space.TrueVSize());
    x_inc.GetTrueDofs(x_sol);
    
    // initialize/set the time
@@ -236,12 +232,12 @@ int main(int argc, char *argv[])
    // enter the time step loop. This was modeled after example 10p.
    for (int ti = 1; !last_step; ti++) {
       
-      double dt_real = min(dt, t_final - t);
+      double dt_real = std::min(dt, t_final - t);
       // compute current time
       t = t + dt_real;
 
       if (myid == 0) {
-         cout << "step " << ti << ", t = " << t << endl;
+	 std::cout << "step " << ti << ", t = " << t << std::endl;
       }
       
       traction_coef.SetScale(t);
@@ -260,19 +256,19 @@ int main(int argc, char *argv[])
    // Save the displaced mesh. These are snapshots of the endstep current 
    // configuration. Later add functionality to not save the mesh at each timestep.
 
-   GridFunction *nodes = &x_fin; // set a nodes grid function to global current configuration
+   mfem::GridFunction *nodes = &x_fin; // set a nodes grid function to global current configuration
    int owns_nodes = 0;
    pmesh->SwapNodes(nodes, owns_nodes); // pmesh has current configuration nodes
 
-   ostringstream mesh_name, pressure_name, deformation_name;
-   mesh_name << "mesh." << setfill('0') << setw(6) << myid;
-   deformation_name << "deformation." << setfill('0') << setw(6) << myid;
+   std::ostringstream mesh_name, pressure_name, deformation_name;
+   mesh_name << "mesh." << std::setfill('0') << std::setw(6) << myid;
+   deformation_name << "deformation." << std::setfill('0') << std::setw(6) << myid;
 
-   ofstream mesh_ofs(mesh_name.str().c_str());
+   std::ofstream mesh_ofs(mesh_name.str().c_str());
    mesh_ofs.precision(8);
    pmesh->Print(mesh_ofs);
     
-   ofstream deformation_ofs(deformation_name.str().c_str());
+   std::ofstream deformation_ofs(deformation_name.str().c_str());
    deformation_ofs.precision(8);
 
    x_inc.Save(deformation_ofs);
@@ -284,4 +280,3 @@ int main(int argc, char *argv[])
 
    return 0;
 }
-

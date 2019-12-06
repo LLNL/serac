@@ -2,33 +2,31 @@
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
-// SPDX-License-Identifier: (BSD-3-Clause) 
+// SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "mfem.hpp"
 
-using namespace mfem;
-
-class HyperelasticTractionIntegrator : public NonlinearFormIntegrator
+class HyperelasticTractionIntegrator : public mfem::NonlinearFormIntegrator
 {
 private:
-   VectorCoefficient &function;
-   mutable DenseMatrix DSh_u, DS_u, J0i, F, Finv, FinvT, PMatI_u;
-   mutable Vector shape, nor, fnor, Sh_p, Sh_u;
-   
+   mfem::VectorCoefficient &function;
+   mutable mfem::DenseMatrix DSh_u, DS_u, J0i, F, Finv, FinvT, PMatI_u;
+   mutable mfem::Vector shape, nor, fnor, Sh_p, Sh_u;
+
 public:
-   HyperelasticTractionIntegrator(VectorCoefficient &f) : function(f) { }
+   HyperelasticTractionIntegrator(mfem::VectorCoefficient &f) : function(f) { }
 
-   virtual void AssembleFaceVector(const FiniteElement &el1,
-                                   const FiniteElement &el2,
-                                   FaceElementTransformations &Tr,
-                                   const Vector &elfun, 
-                                   Vector &elvec);
+   virtual void AssembleFaceVector(const mfem::FiniteElement &el1,
+                                   const mfem::FiniteElement &el2,
+                                   mfem::FaceElementTransformations &Tr,
+                                   const mfem::Vector &elfun,
+                                   mfem::Vector &elvec);
 
-   virtual void AssembleFaceGrad(const FiniteElement &el1,
-                                 const FiniteElement &el2,
-                                 FaceElementTransformations &Tr,
-                                 const Vector &elfun, 
-                                 DenseMatrix &elmat);
+   virtual void AssembleFaceGrad(const mfem::FiniteElement &el1,
+                                 const mfem::FiniteElement &el2,
+                                 mfem::FaceElementTransformations &Tr,
+                                 const mfem::Vector &elfun,
+                                 mfem::DenseMatrix &elmat);
 
    virtual ~HyperelasticTractionIntegrator() { }
 };

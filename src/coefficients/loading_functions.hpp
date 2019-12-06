@@ -9,10 +9,8 @@
 
 #include "mfem.hpp"
 
-using namespace mfem;
-
 // set kinematic functions and boundary condition functions
-void ReferenceConfiguration(const Vector &x, Vector &y);
-void InitialDeformation(const Vector &x, Vector &y);
+void ReferenceConfiguration(const mfem::Vector &x, mfem::Vector &y);
+void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
 
 #endif

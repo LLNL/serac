@@ -6,13 +6,11 @@
 
 #include "hyperelastic_traction_integrator.hpp"
 
-using namespace mfem;
-
-void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1,
-                                                        __attribute__((unused)) const FiniteElement &el2,
-                                                        FaceElementTransformations &Tr,
-                                                        const Vector &elfun, 
-                                                        Vector &elvec)
+void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElement &el1,
+                                                        __attribute__((unused)) const mfem::FiniteElement &el2,
+                                                        mfem::FaceElementTransformations &Tr,
+                                                        const mfem::Vector &elfun, 
+                                                        mfem::Vector &elvec)
 {
 
    int dim = el1.GetDim();
@@ -30,21 +28,21 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1
    PMatI_u.UseExternalData(elfun.GetData(), dof, dim);
 
    int intorder = 2*el1.GetOrder() + 3; 
-   const IntegrationRule &ir = IntRules.Get(Tr.FaceGeom, intorder);
+   const mfem::IntegrationRule &ir = mfem::IntRules.Get(Tr.FaceGeom, intorder);
 
    elvec = 0.0;
 
-   Vector trac(dim);
-   Vector ftrac(dim);
-   Vector nor(dim);
-   Vector fnor(dim);
-   Vector u(dim);
-   Vector fu(dim);
+   mfem::Vector trac(dim);
+   mfem::Vector ftrac(dim);
+   mfem::Vector nor(dim);
+   mfem::Vector fnor(dim);
+   mfem::Vector u(dim);
+   mfem::Vector fu(dim);
    
    for (int i = 0; i < ir.GetNPoints(); i++)
    {
-      const IntegrationPoint &ip = ir.IntPoint(i);
-      IntegrationPoint eip;
+      const mfem::IntegrationPoint &ip = ir.IntPoint(i);
+      mfem::IntegrationPoint eip;
       Tr.Loc1.Transform(ip, eip);
       
       Tr.Face->SetIntPoint(&ip);
@@ -83,16 +81,16 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const FiniteElement &el1
    }
 }
 
-void HyperelasticTractionIntegrator::AssembleFaceGrad(const FiniteElement &el1,
-                                                      __attribute__((unused)) const FiniteElement &el2,
-                                                     FaceElementTransformations &Tr,
-                                                     const Vector &elfun, 
-                                                     DenseMatrix &elmat)
+void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement &el1,
+                                                      __attribute__((unused)) const mfem::FiniteElement &el2,
+                                                     mfem::FaceElementTransformations &Tr,
+                                                     const mfem::Vector &elfun, 
+                                                     mfem::DenseMatrix &elmat)
 {
    double diff_step = 1.0e-8;
-   Vector temp_out_1;
-   Vector temp_out_2;
-   Vector temp(elfun.GetData(), elfun.Size());
+   mfem::Vector temp_out_1;
+   mfem::Vector temp_out_2;
+   mfem::Vector temp(elfun.GetData(), elfun.Size());
 
    elmat.SetSize(elfun.Size(),elfun.Size());
    

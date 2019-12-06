@@ -10,9 +10,6 @@
 #include "solvers/quasistatic_solver.hpp"
 #include <fstream>
 
-using namespace std;
-using namespace mfem;
-
 TEST(quasistatic_solver, qs_solve)
 {
    MPI_Barrier(MPI_COMM_WORLD);
@@ -21,50 +18,50 @@ TEST(quasistatic_solver, qs_solve)
    const char *mesh_file = "../../data/beam-hex.mesh";
 
    // Open the mesh
-   ifstream imesh(mesh_file);
-   Mesh* mesh = new Mesh(imesh, 1, 1, true);
+   std::ifstream imesh(mesh_file);
+   mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
    imesh.close();
 
    // declare pointer to parallel mesh object
-   ParMesh *pmesh = NULL;
+   mfem::ParMesh *pmesh = NULL;
    mesh->UniformRefinement();
    
-   pmesh = new ParMesh(MPI_COMM_WORLD, *mesh);
+   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
    delete mesh;
 
    int dim = pmesh->Dimension();
    
    // Define the finite element spaces for displacement field
-   H1_FECollection fe_coll(1, dim);
-   ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
+   mfem::H1_FECollection fe_coll(1, dim);
+   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
 
    // Define a grid function for the global reference configuration, the beginning 
    // step configuration, the global deformation, the current configuration/solution 
    // guess, and the incremental nodal displacements
-   ParGridFunction x_inc(&fe_space);   
+   mfem::ParGridFunction x_inc(&fe_space);   
 
    x_inc=0.0;
    
    // define a boundary attribute array and initialize to 0
-   Array<int> ess_bdr;
+   mfem::Array<int> ess_bdr;
    ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
    ess_bdr = 0;
 
    // boundary attribute 1 (index 0) is fixed (Dirichlet)
    ess_bdr[0] = 1;
    
-   Array<int> trac_bdr;   
+   mfem::Array<int> trac_bdr;   
    trac_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
       
    trac_bdr = 0;
    trac_bdr[1] = 1;
    
    // define the traction vector
-   Vector traction(dim);
+   mfem::Vector traction(dim);
    traction = 0.0;
-   traction(1) = 1.0e-4;
+   traction(1) = 3.0e-4;
 
-   VectorConstantCoefficient traction_coef(traction);
+   mfem::VectorConstantCoefficient traction_coef(traction);
    
    // construct the nonlinear mechanics operator
    QuasistaticSolver oper(fe_space, ess_bdr, trac_bdr,
@@ -73,13 +70,23 @@ TEST(quasistatic_solver, qs_solve)
                           500, true, false);
    
    // declare incremental nodal displacement solution vector
-   Vector x_sol(fe_space.TrueVSize());
+   mfem::Vector x_sol(fe_space.TrueVSize());
    x_inc.GetTrueDofs(x_sol);
 
    // Solve the Newton system 
-   int converged = oper.Solve(x_sol);     
+   bool converged = oper.Solve(x_sol);     
 
-   ASSERT_EQ(converged, 1);
+   // distribute the solution vector to x_cur
+   x_inc.Distribute(x_sol);
+ 
+   mfem::Vector zero(dim);
+   zero = 0.0;
+   mfem::VectorConstantCoefficient zerovec(zero);
+
+   double x_norm = x_inc.ComputeLpError(2.0, zerovec); 
+   
+   EXPECT_NEAR(0.739583, x_norm, 0.00001);
+   EXPECT_TRUE(converged);
    
    delete pmesh;
    
