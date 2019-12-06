@@ -6,23 +6,20 @@
 
 #include "conduction_solver.hpp"
 
-ConductionSolver::ConductionSolver(mfem::ParFiniteElementSpace &f, double kap)
+ConductionSolver::ConductionSolver(mfem::ParFiniteElementSpace &f, mfem::Coefficient &kap)
    : mfem::TimeDependentOperator(f.GetTrueVSize(), 0.0), m_fe_space(f), m_M_form(nullptr), m_K_form(nullptr),
      m_T_mat(nullptr), m_current_dt(0.0),
-     m_M_solver(f.GetComm()), m_T_solver(f.GetComm()), m_z(height)
+     m_M_solver(f.GetComm()), m_T_solver(f.GetComm()), m_kappa(kap), m_z(height)
 {
    const double rel_tol = 1e-8;
-   m_kappa = kap;
 
    m_M_form = new mfem::ParBilinearForm(&m_fe_space);
    m_M_form->AddDomainIntegrator(new mfem::MassIntegrator());
    m_M_form->Assemble(0); // keep sparsity pattern of M and K the same
    m_M_form->FormSystemMatrix(m_ess_tdof_list, m_M_mat);
 
-   mfem::ConstantCoefficient kappa_coef(m_kappa);
-
    m_K_form = new mfem::ParBilinearForm(&m_fe_space);
-   m_K_form->AddDomainIntegrator(new mfem::DiffusionIntegrator(kappa_coef));
+   m_K_form->AddDomainIntegrator(new mfem::DiffusionIntegrator(m_kappa));
    m_K_form->Assemble(0); // keep sparsity pattern of M and K the same
    m_K_form->FormSystemMatrix(m_ess_tdof_list, m_K_mat);
 

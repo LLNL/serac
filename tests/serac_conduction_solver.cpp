@@ -53,7 +53,8 @@ TEST(dynamic_solver, dyn_solve)
    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
    // Initialize the conduction operator and the VisIt visualization.
-   ConductionSolver oper(fe_space, 0.5);
+   mfem::ConstantCoefficient kappa(0.5);
+   ConductionSolver oper(fe_space, kappa);
 
    ode_solver->Init(oper);
    double t = 0.0;
