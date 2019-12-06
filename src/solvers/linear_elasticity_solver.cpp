@@ -2,78 +2,127 @@
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
-// SPDX-License-Identifier: (BSD-3-Clause)
+// SPDX-License-Identifier: (BSD-3-Clause) 
 
-#include "conduction_solver.hpp"
+#include "quasistatic_solver.hpp"
+#include "integrators/hyperelastic_traction_integrator.hpp"
+#include "integrators/inc_hyperelastic_integrator.hpp"
 
-ConductionSolver::ConductionSolver(mfem::ParFiniteElementSpace &f, double kap)
-   : mfem::TimeDependentOperator(f.GetTrueVSize(), 0.0), m_fe_space(f), m_M_form(nullptr), m_K_form(nullptr),
-     m_T_mat(nullptr), m_current_dt(0.0),
-     m_M_solver(f.GetComm()), m_T_solver(f.GetComm()), m_z(height)
+QuasistaticSolver::QuasistaticSolver(mfem::ParFiniteElementSpace &fes,
+                                     mfem::Array<int> &ess_bdr,
+                                     mfem::Array<int> &trac_bdr,
+                                     double mu,
+                                     double K,
+                                     mfem::VectorCoefficient &trac_coef,
+                                     double rel_tol,
+                                     double abs_tol,
+                                     int iter,
+                                     bool gmres,
+                                     bool slu)
+: mfem::Operator(fes.TrueVSize()), fe_space(fes),
+     newton_solver(fes.GetComm())
 {
-   const double rel_tol = 1e-8;
-   m_kappa = kap;
+   // Define the paral2lel nonlinear form 
+   Hform = new mfem::ParNonlinearForm(&fes);
 
-   m_M_form = new mfem::ParBilinearForm(&m_fe_space);
-   m_M_form->AddDomainIntegrator(new mfem::MassIntegrator());
-   m_M_form->Assemble(0); // keep sparsity pattern of M and K the same
-   m_M_form->FormSystemMatrix(m_ess_tdof_list, m_M_mat);
+   // Set the essential boundary conditions
+   Hform->SetEssentialBC(ess_bdr); 
 
-   mfem::ConstantCoefficient kappa_coef(m_kappa);
+   // Define the material model
+   model = new mfem::NeoHookeanModel(mu, K);   
 
-   m_K_form = new mfem::ParBilinearForm(&m_fe_space);
-   m_K_form->AddDomainIntegrator(new mfem::DiffusionIntegrator(kappa_coef));
-   m_K_form->Assemble(0); // keep sparsity pattern of M and K the same
-   m_K_form->FormSystemMatrix(m_ess_tdof_list, m_K_mat);
+   // Add the hyperelastic integrator
+   Hform->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model));
 
-   m_M_solver.iterative_mode = false;
-   m_M_solver.SetRelTol(rel_tol);
-   m_M_solver.SetAbsTol(0.0);
-   m_M_solver.SetMaxIter(100);
-   m_M_solver.SetPrintLevel(0);
-   m_M_prec.SetType(mfem::HypreSmoother::Jacobi);
-   m_M_solver.SetPreconditioner(m_M_prec);
-   m_M_solver.SetOperator(m_M_mat);
+   // Add the traction integrator
+   Hform->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(trac_coef), trac_bdr);
+   
+   if (gmres) {
+      MFEM_VERIFY(fe_space.GetOrdering() == mfem::Ordering::byVDIM, "Attempting to use BoomerAMG with nodal ordering.");
 
-   m_T_solver.iterative_mode = false;
-   m_T_solver.SetRelTol(rel_tol);
-   m_T_solver.SetAbsTol(0.0);
-   m_T_solver.SetMaxIter(100);
-   m_T_solver.SetPrintLevel(0);
-   m_T_solver.SetPreconditioner(m_T_prec);
+      mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
+      prec_amg->SetPrintLevel(0);
+      prec_amg->SetElasticityOptions(&fe_space);
+      J_prec = prec_amg;
 
+      mfem::GMRESSolver *J_gmres = new mfem::GMRESSolver(fe_space.GetComm());
+      J_gmres->SetRelTol(rel_tol);
+      J_gmres->SetAbsTol(1e-12);
+      J_gmres->SetMaxIter(300);
+      J_gmres->SetPrintLevel(0);
+      J_gmres->SetPreconditioner(*J_prec);
+      J_solver = J_gmres; 
+
+   } 
+   // retain super LU solver capabilities
+   else if (slu) { 
+      mfem::SuperLUSolver *superlu = NULL;
+      superlu = new mfem::SuperLUSolver(fe_space.GetComm());
+      superlu->SetPrintStatistics(false);
+      superlu->SetSymmetricPattern(false);
+      superlu->SetColumnPermutation(mfem::superlu::PARMETIS);
+      
+      J_solver = superlu;
+      J_prec = NULL;
+   }
+   else {
+      mfem::HypreSmoother *J_hypreSmoother = new mfem::HypreSmoother;
+      J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
+      J_hypreSmoother->SetPositiveDiagonal(true);
+      J_prec = J_hypreSmoother;
+
+      mfem::MINRESSolver *J_minres = new mfem::MINRESSolver(fe_space.GetComm());
+      J_minres->SetRelTol(rel_tol);
+      J_minres->SetAbsTol(0.0);
+      J_minres->SetMaxIter(300);
+      J_minres->SetPrintLevel(-1);
+      J_minres->SetPreconditioner(*J_prec);
+      J_solver = J_minres;
+
+   }
+
+   // Set the newton solve parameters
+   newton_solver.iterative_mode = true;
+   newton_solver.SetSolver(*J_solver);
+   newton_solver.SetOperator(*this);
+   newton_solver.SetPrintLevel(1); 
+   newton_solver.SetRelTol(rel_tol);
+   newton_solver.SetAbsTol(abs_tol);
+   newton_solver.SetMaxIter(iter);
+   newton_solver.SetLineSearch(LineSearchNewtonSolver::NoLineSearch);
+   newton_solver.SetSigmaTerm(0.5);
+   newton_solver.SetTauTerm(5.0);
 }
 
-void ConductionSolver::Mult(const mfem::Vector &u, mfem::Vector &du_dt) const
+// Solve the Newton system
+int QuasistaticSolver::Solve(mfem::Vector &x) const
 {
-   // Compute:
-   //    du_dt = M^{-1}*-K(u)
-   // for du_dt
-   m_K_mat.Mult(u, m_z);
-   m_z.Neg(); // z = -z
-   m_M_solver.Mult(m_z, du_dt);
+   mfem::Vector zero;
+   newton_solver.Mult(zero, x);
+
+   return newton_solver.GetConverged();
 }
 
-void ConductionSolver::ImplicitSolve(const double dt,
-                                       const mfem::Vector &u, mfem::Vector &du_dt)
+// compute: y = H(x,p)
+void QuasistaticSolver::Mult(const mfem::Vector &k, mfem::Vector &y) const
 {
-   // Solve the equation:
-   //    du_dt = M^{-1}*[-K(u + dt*du_dt)]
-   // for du_dt
-
-   m_T_mat = Add(1.0, m_M_mat, dt, m_K_mat);
-   m_T_solver.SetOperator(*m_T_mat);
-
-   m_K_mat.Mult(u, m_z);
-   m_z.Neg();
-   m_T_solver.Mult(m_z, du_dt);
-   delete m_T_mat;
+   // Apply the nonlinear form
+   Hform->Mult(k, y);
 }
 
-ConductionSolver::~ConductionSolver()
+// Compute the Jacobian from the nonlinear form
+mfem::Operator &QuasistaticSolver::GetGradient(const mfem::Vector &x) const
 {
-   delete m_M_form;
-   delete m_K_form;
+   Jacobian = &Hform->GetGradient(x);
+   return *Jacobian;
 }
 
 
+QuasistaticSolver::~QuasistaticSolver()
+{
+   delete J_solver;
+   if (J_prec != NULL) {
+      delete J_prec;
+   }
+   delete model;
+}

@@ -2,58 +2,56 @@
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
-// SPDX-License-Identifier: (BSD-3-Clause) 
+// SPDX-License-Identifier: (BSD-3-Clause)
 
-#ifndef CONDUCTION_SOLVER
-#define CONDUCTION_SOLVER
+#ifndef QUASISTATIC_SOLVER
+#define QUASISTATIC_SOLVER
 
 #include "mfem.hpp"
+#include "linalg/linesearch_newton.hpp"
 
-// After spatial discretization, the conduction model can be written as:
-//
-//     du/dt = M^{-1}(-Ku)
-//
-//  where u is the vector representing the temperature, M is the mass matrix,
-//  and K is the diffusion opeperator.
-//
-//  Class ConductionSolver represents the right-hand side of the above ODE.
- 
-class ConductionSolver : public mfem::TimeDependentOperator
+class QuasistaticSolver : public mfem::Operator
 {
 protected:
-   mfem::ParFiniteElementSpace &m_fe_space;
-   mfem::Array<int> m_ess_tdof_list;
-   mfem::ParBilinearForm *m_M_form;
-   mfem::ParBilinearForm *m_K_form;
+   mfem::ParFiniteElementSpace &fe_space;
+   mfem::ParNonlinearForm *Hform;
 
-   mfem::HypreParMatrix m_M_mat;
-   mfem::HypreParMatrix m_K_mat;
-   mfem::HypreParMatrix *m_T_mat; // T = M + dt K
-   double m_current_dt;
+   mutable mfem::Operator *Jacobian;
+   const mfem::Vector *x;
 
-   mfem::CGSolver m_M_solver;    // Krylov solver for inverting the mass matrix M
-   mfem::HypreSmoother m_M_prec; // Preconditioner for the mass matrix M
+   /// Newton solver for the operator
+   LineSearchNewtonSolver newton_solver;
+   /// Solver for the Jacobian solve in the Newton method
+   mfem::Solver *J_solver;
+   /// Preconditioner for the Jacobian
+   mfem::Solver *J_prec;
+   /// nonlinear material model
+   mfem::HyperelasticModel *model;
 
-   mfem::CGSolver m_T_solver;    // Implicit solver for T = M + dt K
-   mfem::HypreSmoother m_T_prec; // Preconditioner for the implicit solver
-
-   double m_kappa;
-
-   mutable mfem::Vector m_z; // auxiliary vector
-
-   
 public:
-   ConductionSolver(mfem::ParFiniteElementSpace &f, double kappa);
+   QuasistaticSolver(mfem::ParFiniteElementSpace &fes,
+                       mfem::Array<int> &ess_bdr,
+                       mfem::Array<int> &trac_bdr,
+                       double mu,
+                       double K,
+                       mfem::VectorCoefficient &trac_coef,
+                       double rel_tol,
+                       double abs_tol,
+                       int iter,
+                       bool gmres,
+                       bool slu);
 
-   virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
-   /** Solve the Backward-Euler equation: k = f(u + dt*k, t), for the unknown k.
-       This is the only requirement for high-order SDIRK implicit integration.*/
-   virtual void ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &k);
+   /// Required to use the native newton solver
+   virtual mfem::Operator &GetGradient(const mfem::Vector &x) const;
+   virtual void Mult(const mfem::Vector &k, mfem::Vector &y) const;
 
-   virtual ~ConductionSolver();
-   
-   
+   /// Driver for the newton solver
+   int Solve(mfem::Vector &x) const;
+
+   /// Get FE space
+   const mfem::ParFiniteElementSpace *GetFESpace() { return &fe_space; }
+
+   virtual ~QuasistaticSolver();
 };
-
 
 #endif
