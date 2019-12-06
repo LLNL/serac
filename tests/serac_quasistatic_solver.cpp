@@ -74,7 +74,7 @@ TEST(quasistatic_solver, qs_solve)
    x_inc.GetTrueDofs(x_sol);
 
    // Solve the Newton system 
-   int converged = oper.Solve(x_sol);     
+   bool converged = oper.Solve(x_sol);     
 
    // distribute the solution vector to x_cur
    x_inc.Distribute(x_sol);
@@ -86,7 +86,7 @@ TEST(quasistatic_solver, qs_solve)
    double x_norm = x_inc.ComputeLpError(2.0, zerovec); 
    
    EXPECT_NEAR(0.739583, x_norm, 0.00001);
-   EXPECT_EQ(converged, 1);
+   EXPECT_TRUE(converged);
    
    delete pmesh;
    

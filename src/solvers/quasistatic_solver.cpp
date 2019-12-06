@@ -90,12 +90,12 @@ QuasistaticSolver::QuasistaticSolver(mfem::ParFiniteElementSpace &fes,
 }
 
 // Solve the Newton system
-int QuasistaticSolver::Solve(mfem::Vector &x) const
+bool QuasistaticSolver::Solve(mfem::Vector &x) const
 {
    mfem::Vector zero;
    newton_solver.Mult(zero, x);
 
-   return newton_solver.GetConverged();
+   return (newton_solver.GetConverged() == 1);
 }
 
 // compute: y = H(x,p)
