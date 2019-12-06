@@ -29,7 +29,7 @@ protected:
    mfem::ParBilinearForm *m_M_form;
    mfem::ParBilinearForm *m_S_form;
 
-   double m_viscosity;
+   mfem::Coefficient &m_viscosity;
 
    mutable mfem::Operator *m_jacobian;
    
@@ -49,9 +49,9 @@ protected:
    mfem::Solver *m_J_prec;
    /// nonlinear material model 
    mfem::HyperelasticModel *m_model;
-
+   /// essential degrees of freedom list
    mfem::Array<int> m_ess_tdof_list;   
-   
+   /// working vector
    mutable mfem::Vector m_z;
    
 public:
@@ -59,7 +59,7 @@ public:
                  mfem::Array<int> &ess_bdr,
                  double mu,
                  double K,
-                 double visc,
+                 mfem::Coefficient &visc,
                  double rel_tol,
                  double abs_tol,
                  int iter,

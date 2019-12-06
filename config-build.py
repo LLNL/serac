@@ -192,7 +192,7 @@ def create_cmake_command_line(args, unknown_args, buildpath, hostconfigpath):
 
     # Set the test executable directory
     cmakeline += " -DTEST_OUTPUT_DIRECTORY=bin/tests"
-    
+
     if args.exportcompilercommands:
         cmakeline += " -DCMAKE_EXPORT_COMPILE_COMMANDS=on"
 
@@ -252,7 +252,6 @@ def main():
        else:
           return False
 
-    
     basehostconfigpath = find_host_config(args, repodir)
     platform_info = get_platform_info(basehostconfigpath)
     buildpath = setup_build_dir(args, platform_info)
