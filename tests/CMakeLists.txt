@@ -14,20 +14,27 @@ set( serac_tests
      serac_conduction_solver.cpp
      )
 
-foreach ( test ${serac_tests} )
+foreach ( test_source ${serac_tests} )
 
-    get_filename_component( test_name ${test} NAME_WE )
+    get_filename_component( test_name ${test_source} NAME_WE )
+    set( test_cmd ${test_name}_test )
 
-    blt_add_executable(NAME ${test_name}_test
-                       SOURCES ${test}
-                       OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-                       DEPENDS_ON solvers mfem mpi parmetis hypre gtest
-                       )                      
+    blt_add_executable(
+        NAME ${test_cmd}
+        SOURCES ${test_source}
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest
+    )
 
-    blt_add_test( NAME ${test_name}
-                  COMMAND ${test_name}_test
-                  NUM_MPI_TASKS 4
-                  )
+    # Note : Parallel testing isn't protected by a check for MPI.
+    # => MPI is considered required (MPI usage in sources is not
+    # protected neither)
+    blt_add_test(
+        NAME ${test_name}
+        COMMAND ${test_cmd}
+        NUM_MPI_TASKS 4
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY}
+    )
 
 endforeach()
 
