@@ -8,7 +8,7 @@
 #define QUASISTATIC_SOLVER
 
 #include "mfem.hpp"
-#include "linalg/backtracking_newton.hpp"
+#include "linalg/linesearch_newton.hpp"
 
 class QuasistaticSolver : public mfem::Operator
 {
@@ -20,7 +20,7 @@ protected:
    const mfem::Vector *x;
 
    /// Newton solver for the operator
-   BacktrackingNewtonSolver newton_solver;
+   LineSearchNewtonSolver newton_solver;
    /// Solver for the Jacobian solve in the Newton method
    mfem::Solver *J_solver;
    /// Preconditioner for the Jacobian

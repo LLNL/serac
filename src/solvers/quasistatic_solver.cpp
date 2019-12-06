@@ -89,6 +89,9 @@ QuasistaticSolver::QuasistaticSolver(mfem::ParFiniteElementSpace &fes,
    newton_solver.SetRelTol(rel_tol);
    newton_solver.SetAbsTol(abs_tol);
    newton_solver.SetMaxIter(iter);
+   newton_solver.SetLineSearch(LineSearchNewtonSolver::NoLineSearch);
+   newton_solver.SetSigmaTerm(0.5);
+   newton_solver.SetTauTerm(5.0);
 }
 
 // Solve the Newton system

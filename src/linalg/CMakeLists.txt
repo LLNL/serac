@@ -5,11 +5,11 @@
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
 set(linalg_sources
-    backtracking_newton.cpp
+    linesearch_newton.cpp
     )
 
 set(linalg_headers
-    backtracking_newton.hpp 
+    linesearch_newton.hpp 
    )
 
 blt_add_library(
