@@ -13,10 +13,10 @@ void BacktrackingNewtonSolver::SetOperator(const mfem::Operator &op)
    width = op.Width();
    MFEM_ASSERT(height == width, "square Operator is required.");
 
-   r.SetSize(width);
-   c.SetSize(width);
-   newres.SetSize(width);
-   test.SetSize(width);
+   m_r.SetSize(width);
+   m_c.SetSize(width);
+   m_newres.SetSize(width);
+   m_test.SetSize(width);
 }
 
 void BacktrackingNewtonSolver::Mult(const mfem::Vector &b, mfem::Vector &x) const
@@ -33,13 +33,13 @@ void BacktrackingNewtonSolver::Mult(const mfem::Vector &b, mfem::Vector &x) cons
       x = 0.0;
    }
 
-   oper->Mult(x, r);
+   oper->Mult(x, m_r);
    if (have_b)
    {
-      r -= b;
+      m_r -= b;
    }
 
-   norm0 = norm = Norm(r);
+   norm0 = norm = Norm(m_r);
    norm_goal = std::max(rel_tol*norm, abs_tol);
 
    prec->iterative_mode = false;
@@ -73,22 +73,22 @@ void BacktrackingNewtonSolver::Mult(const mfem::Vector &b, mfem::Vector &x) cons
 
       prec->SetOperator(oper->GetGradient(x));
 
-      prec->Mult(r, c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
+      prec->Mult(m_r, m_c);  // c = [DF(x_i)]^{-1} [F(x_i)-b]
 
-      const double c_scale = ComputeScalingFactor(x, c, b, r);
+      const double c_scale = ComputeScalingFactor(x, m_c, b, m_r);
       if (c_scale == 0.0)
       {
          converged = 0;
          break;
       }
-      add(x, -c_scale, c, x);
+      add(x, -c_scale, m_c, x);
 
-      oper->Mult(x, r);
+      oper->Mult(x, m_r);
       if (have_b)
       {
-         r -= b;
+         m_r -= b;
       }
-      norm = Norm(r);
+      norm = Norm(m_r);
    }
 
    final_iter = it;
@@ -97,23 +97,20 @@ void BacktrackingNewtonSolver::Mult(const mfem::Vector &b, mfem::Vector &x) cons
 
 double BacktrackingNewtonSolver::ComputeScalingFactor(const mfem::Vector &x, const mfem::Vector &dir, const mfem::Vector  &b, const mfem::Vector &res) const
 {
-/*
    const bool have_b = (b.Size() == Height());
    double size = 1.0;
-   for (int steps = 0; steps < maxsteps; steps++) {
-      add(x, -1.0*size, dir, test);
-      oper->Mult(test, newres);
+   for (int steps = 0; steps < m_maxsteps; steps++) {
+      add(x, -1.0*size, dir, m_test);
+      oper->Mult(m_test, m_newres);
       if (have_b) {
-	 add(newres, -1.0, b, newres); 
+	 add(m_newres, -1.0, b, m_newres); 
       }
-      if(Norm(res) > Norm(newres)) {
+      if(Norm(res) > Norm(m_newres)) {
 	 break;
       }  
       else {
-	 size*=alpha;
+	 size*=m_alpha;
       }
    }
    return size;
-*/
-   return 1.0;
 }
