@@ -32,7 +32,7 @@ stages:
     - export JOBID=$(squeue -h --name=${SLURM_ALLOC_NAME} --format=%A)
     - echo ${JOBID}
     - srun $( [[ -n "${JOBID}" ]] && echo "--jobid=${JOBID}" ) -t 20 -N 1 -n 1 -c 4 python scripts/uberenv/uberenv.py --mirror=${SPACK_MIRROR} --prefix=${INSTALL_ROOT}_${COMPILER} --spec=${SPEC} --upstream=${SPACK_UPSTREAM}
-    - mv ${CI_BUILDS_DIR}/${SYS_TYPE}__${COMPILER}__serac.cmake ${BUILD_ROOT}
+    - mv ${CI_PROJECT_DIR}/${SYS_TYPE}__${COMPILER}__serac.cmake ${BUILD_ROOT}
 
 # This is not a job, but contains project specific build commands
 # If an allocation exist with the name defined in this pipeline, the job will use it

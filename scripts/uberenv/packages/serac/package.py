@@ -57,7 +57,7 @@ class Serac(CMakePackage):
     depends_on('mfem +superlu-dist', when='~debug')
     depends_on('mfem +superlu-dist +debug', when='+debug')
 
-    phases = ['configure','cmake','build','install']
+    phases = ['hostconfig','cmake','build','install']
 
     def cmake_args(self):
         spec = self.spec
@@ -76,7 +76,7 @@ class Serac(CMakePackage):
         )
         return args
 
-    def configure(self, spec, prefix, py_site_pkgs_dir=None):
+    def hostconfig(self, spec, prefix, py_site_pkgs_dir=None):
         """
         This method creates a 'host-config' file that specifies
         all of the options used to configure and build serac.
