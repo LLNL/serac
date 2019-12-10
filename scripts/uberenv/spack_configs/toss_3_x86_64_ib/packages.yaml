@@ -24,3 +24,23 @@ packages:
       mvapich2@2.2 %intel@16.0.4 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-16.0.4
       mvapich2@2.2 %intel@18.0.2 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-18.0.2
     buildable: False
+  openmpi:
+    buildable: False
+  mpich:
+    buildable: False
+  spectrum-mpi:
+    buildable: False
+  charmpp:
+    buildable: False
+  charm:
+    buildable: False
+  intel-mpi:
+    buildable: False
+  intel-parallel-studio:
+    buildable: False
+  fujitsu-mpi:
+    buildable: False
+  mpilander:
+    buildable: False
+  mpt:
+    buildable: False
