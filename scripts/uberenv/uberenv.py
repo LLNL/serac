@@ -286,9 +286,9 @@ class SpackEnv(UberEnv):
         if os.path.isdir(self.dest_spack):
             print("[info: destination '{}' already exists]".format(self.dest_spack))
 
-        self.source_dir = os.path.join(self.uberenv_path,self.project_opts["source_dir"])
-        if not os.path.isdir(self.source_dir):
-            print("[ERROR: source_dir '{}'  exists]".format(self.source_dir))
+        self.pkg_src_dir = os.path.join(self.uberenv_path,self.project_opts["package_source_dir"])
+        if not os.path.isdir(self.pkg_src_dir):
+            print("[ERROR: package_source_dir '{}' does not exist]".format(self.pkg_src_dir))
             sys.exit(-1)
 
 
@@ -427,7 +427,7 @@ class SpackEnv(UberEnv):
         install_cmd = "spack/bin/spack "
         if self.opts["ignore_ssl_errors"]:
             install_cmd += "-k "
-        install_cmd += "dev-build -d {} ".format(self.source_dir)
+        install_cmd += "dev-build -d {} ".format(self.pkg_src_dir)
         if not self.opts["install"]:
             try:
                 if self.pkg_stop_phase:
