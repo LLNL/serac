@@ -218,16 +218,8 @@ class UberEnv():
         print("[uberenv project settings: {}]".format(str(self.project_opts)))
         print("[uberenv options: {}]".format(str(self.opts)))
 
-        self.pkg_name = self.project_opts["package_name"]
-        self.pkg_version = self.project_opts["package_version"]
-        self.pkg_stop_phase = self.project_opts["package_stop_phase"]
-
     def setup_paths_and_dirs(self):
         self.uberenv_path = os.path.dirname(os.path.realpath(__file__))
-        self.source_dir = os.path.join(self.uberenv_path,self.project_opts["source_dir"])
-        if not os.path.isdir(self.source_dir):
-            print("[ERROR: source_dir '{}'  exists]".format(self.source_dir))
-            sys.exit(-1)
 
     def detect_platform(self):
         # find supported sets of compilers.yaml, packages,yaml
@@ -246,6 +238,10 @@ class SpackEnv(UberEnv):
     def __init__(self, opts, extra_opts):
         UberEnv.__init__(self,opts,extra_opts)
 
+        self.pkg_name = self.project_opts["package_name"]
+        self.pkg_version = self.project_opts["package_version"]
+        self.pkg_stop_phase = self.project_opts["package_stop_phase"]
+
         # Some additional setup for macos
         if is_darwin():
             if opts["macos_sdk_env_setup"]:
@@ -260,8 +256,11 @@ class SpackEnv(UberEnv):
                 opts["spec"] = "%clang"
             else:
                 opts["spec"] = "%gcc"
-
-        opts["spec"] = "@{}{}".format(self.pkg_version,opts["spec"])
+            opts["spec"] = "@{}{}".format(self.pkg_version,opts["spec"])
+        elif not opts["spec"].startswith("@"):
+            opts["spec"] = "@{}{}".format(self.pkg_version,opts["spec"])
+        else:
+            opts["spec"] = "{}".format(opts["spec"])
 
         print("[spack spec: {}]".format(opts["spec"]))
 
@@ -286,6 +285,11 @@ class SpackEnv(UberEnv):
 
         if os.path.isdir(self.dest_spack):
             print("[info: destination '{}' already exists]".format(self.dest_spack))
+
+        self.source_dir = os.path.join(self.uberenv_path,self.project_opts["source_dir"])
+        if not os.path.isdir(self.source_dir):
+            print("[ERROR: source_dir '{}'  exists]".format(self.source_dir))
+            sys.exit(-1)
 
 
     def find_spack_pkg_path(self,pkg_name):
