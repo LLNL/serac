@@ -130,6 +130,24 @@ def parse_args():
                       default=None,
                       help="dir with spack settings files (compilers.yaml, packages.yaml, etc)")
 
+    # overrides package name
+    parser.add_option("--pkg-name",
+                      dest="package_name",
+                      default=None,
+                      help="override the default package name")
+
+    # controls after which package phase spack should stop
+    parser.add_option("--pkg-final-phase",
+                      dest="package_final_phase",
+                      default=None,
+                      help="override the default phase after which spack should stop")
+
+    # controls source_dir spack should use to build the package
+    parser.add_option("--pkg-src-dir",
+                      dest="package_source_dir",
+                      default=None,
+                      help="override the default source dir spack should use")
+
     # a file that holds settings for a specific project
     # using uberenv.py
     parser.add_option("--project-json",
@@ -238,9 +256,17 @@ class SpackEnv(UberEnv):
     def __init__(self, opts, extra_opts):
         UberEnv.__init__(self,opts,extra_opts)
 
-        self.pkg_name = self.project_opts["package_name"]
+        if opts["package_name"]:
+            self.pkg_name = opts["package_name"]
+        else:
+            self.pkg_name = self.project_opts["package_name"]
+
         self.pkg_version = self.project_opts["package_version"]
-        self.pkg_stop_phase = self.project_opts["package_stop_phase"]
+
+        if opts["package_final_phase"]:
+            self.pkg_stop_phase = opts["package_final_phase"]
+        else:
+            self.pkg_stop_phase = self.project_opts["package_final_phase"]
 
         # Some additional setup for macos
         if is_darwin():
@@ -256,13 +282,13 @@ class SpackEnv(UberEnv):
                 opts["spec"] = "%clang"
             else:
                 opts["spec"] = "%gcc"
-            opts["spec"] = "@{}{}".format(self.pkg_version,opts["spec"])
+            self.opts["spec"] = "@{}{}".format(self.pkg_version,opts["spec"])
         elif not opts["spec"].startswith("@"):
-            opts["spec"] = "@{}{}".format(self.pkg_version,opts["spec"])
+            self.opts["spec"] = "@{}{}".format(self.pkg_version,opts["spec"])
         else:
-            opts["spec"] = "{}".format(opts["spec"])
+            self.opts["spec"] = "{}".format(opts["spec"])
 
-        print("[spack spec: {}]".format(opts["spec"]))
+        print("[spack spec: {}]".format(self.opts["spec"]))
 
     def setup_paths_and_dirs(self):
         # get the current working path, and the glob used to identify the
@@ -286,7 +312,12 @@ class SpackEnv(UberEnv):
         if os.path.isdir(self.dest_spack):
             print("[info: destination '{}' already exists]".format(self.dest_spack))
 
-        self.pkg_src_dir = os.path.join(self.uberenv_path,self.project_opts["package_source_dir"])
+        if self.opts["package_source_dir"]:
+            self.pkg_src_dir = self.opts["package_source_dir"]
+        else:
+            self.pkg_src_dir = self.project_opts["package_source_dir"]
+
+        self.pkg_src_dir = os.path.join(self.uberenv_path,self.pkg_src_dir)
         if not os.path.isdir(self.pkg_src_dir):
             print("[ERROR: package_source_dir '{}' does not exist]".format(self.pkg_src_dir))
             sys.exit(-1)
@@ -360,7 +391,6 @@ class SpackEnv(UberEnv):
             cfg_script = cfg_script.replace(cfg_scope_stmt,
                                             "#DISABLED BY UBERENV: " + cfg_scope_stmt)
         open(spack_lib_config,"w").write(cfg_script)
-
 
 
     def patch(self):
