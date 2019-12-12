@@ -19,12 +19,21 @@ after_script:
 
 # There are no tests for now
 stages:
+  - setup
   - allocate_resources
   - dependencies
   - build
   - test
   - release_resources
   - clean
+
+setup_env:
+  stage: setup
+  tags:
+    - shell
+    - quartz
+  script:
+    - mkdir -p ${BUILD_ROOT}
 
 .dependencies_toss_3_x86_64_ib_script:
   script:
