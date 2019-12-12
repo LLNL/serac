@@ -130,20 +130,20 @@ def parse_args():
                       default=None,
                       help="dir with spack settings files (compilers.yaml, packages.yaml, etc)")
 
-    # overrides package name
-    parser.add_option("--pkg-name",
+    # overrides package_name
+    parser.add_option("--package-name",
                       dest="package_name",
                       default=None,
                       help="override the default package name")
 
     # controls after which package phase spack should stop
-    parser.add_option("--pkg-final-phase",
+    parser.add_option("--package-final-phase",
                       dest="package_final_phase",
                       default=None,
                       help="override the default phase after which spack should stop")
 
     # controls source_dir spack should use to build the package
-    parser.add_option("--pkg-src-dir",
+    parser.add_option("--package-source-dir",
                       dest="package_source_dir",
                       default=None,
                       help="override the default source dir spack should use")
