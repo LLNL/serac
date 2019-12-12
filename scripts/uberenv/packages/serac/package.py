@@ -51,7 +51,11 @@ class Serac(CMakePackage):
 
     version('develop', branch='develop', submodules=True, preferred=True)
 
-    depends_on('mfem +superlu-dist')
+    variant('debug', default=False,
+            description='Enable runtime safety and debug checks')
+
+    depends_on('mfem +superlu-dist', when='~debug')
+    depends_on('mfem +superlu-dist +debug', when='+debug')
 
     phases = ['hostconfig','cmake','build','install']
 
@@ -62,6 +66,10 @@ class Serac(CMakePackage):
         if not self.compiler.f77 is None:
             args.append('-DENABLE_FORTRAN=ON')
             args.append('-DENABLE_FRUIT=ON')
+
+        args.append(
+                '-DCMAKE_BUILD_TYPE:=%s' % (
+                'Debug' if '+debug' in spec else 'Release')),
 
         args.append(
             '-DMFEM_DIR={}'.format(spec['mfem'].prefix)

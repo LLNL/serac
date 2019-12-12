@@ -63,14 +63,12 @@ dependencies_quartz_clang_3_9_1:
     COMPILER: "clang_3_9_1"
     SPEC: "@develop%clang@3.9.1"
   extends: .dependencies_quartz
-  allow_failure: true
 
 dependencies_quartz_clang_4_0_0:
   variables:
     COMPILER: "clang_4_0_0"
     SPEC: "@develop%clang@4.0.0"
   extends: .dependencies_quartz
-  allow_failure: true
 
 dependencies_quartz_gcc_7_3_0:
   variables:
@@ -99,7 +97,6 @@ build_quartz_clang_3_9_1:
     COMPILER: "clang_3_9_1"
     SPEC: "@develop%clang@3.9.1"
   extends: .build_quartz
-  allow_failure: true
 
 build_quartz_clang_4_0_0:
   needs: ["dependencies_quartz_clang_4_0_0"]
@@ -107,7 +104,6 @@ build_quartz_clang_4_0_0:
     COMPILER: "clang_4_0_0"
     SPEC: "@develop%clang@4.0.0"
   extends: .build_quartz
-  allow_failure: true
 
 build_quartz_gcc_7_3_0:
   needs: ["dependencies_quartz_gcc_7_3_0"]
@@ -138,14 +134,12 @@ clean_quartz_clang_3_9_1:
     COMPILER: "clang_3_9_1"
     SPEC: "@develop%clang@3.9.1"
   extends: .clean_quartz
-  allow_failure: true
 
 clean_quartz_clang_4_0_0:
   variables:
     COMPILER: "clang_4_0_0"
     SPEC: "@develop%clang@4.0.0"
   extends: .clean_quartz
-  allow_failure: true
 
 clean_quartz_gcc_7_3_0:
   variables:
