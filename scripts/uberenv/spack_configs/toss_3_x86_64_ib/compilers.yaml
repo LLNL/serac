@@ -60,26 +60,12 @@ compilers:
     extra_rpaths: []
     flags: {}
     modules:
-    - intel/16.0.4
+    - intel/19.0.4
     operating_system: rhel7
     paths:
-      cc: /usr/tce/packages/intel/intel-16.0.4/bin/icc
-      cxx: /usr/tce/packages/intel/intel-16.0.4/bin/icpc
-      f77: /usr/tce/packages/intel/intel-16.0.4/bin/ifort
-      fc: /usr/tce/packages/intel/intel-16.0.4/bin/ifort
-    spec: intel@16.0.4
-    target: x86_64
-- compiler:
-    environment: {}
-    extra_rpaths: []
-    flags: {}
-    modules:
-    - intel/18.0.2
-    operating_system: rhel7
-    paths:
-      cc: /usr/tce/packages/intel/intel-18.0.2/bin/icc
-      cxx: /usr/tce/packages/intel/intel-18.0.2/bin/icpc
-      f77: /usr/tce/packages/intel/intel-18.0.2/bin/ifort
-      fc: /usr/tce/packages/intel/intel-18.0.2/bin/ifort
+      cc: /usr/tce/packages/intel/intel-19.0.4/bin/icc
+      cxx: /usr/tce/packages/intel/intel-19.0.4/bin/icpc
+      f77: /usr/tce/packages/intel/intel-19.0.4/bin/ifort
+      fc: /usr/tce/packages/intel/intel-19.0.4/bin/ifort
     spec: intel@18.0.2
     target: x86_64

@@ -29,17 +29,35 @@ import llnl.util.tty as tty
 from os import environ as env
 
 
-def cmake_cache_entry(name, value, vtype=None):
-    """
-    Helper that creates CMake cache entry strings used in
-    'host-config' files.
-    """
-    if vtype is None:
-        if value == "ON" or value == "OFF":
-            vtype = "BOOL"
-        else:
-            vtype = "PATH"
-    return 'set({0} "{1}" CACHE {2} "")\n\n'.format(name, value, vtype)
+def cmake_cache_entry(name, value, comment=""):
+    """Generate a string for a cmake cache variable"""
+
+    return 'set(%s "%s" CACHE PATH "%s")\n\n' % (name,value,comment)
+
+
+def cmake_cache_option(name, boolean_value, comment=""):
+    """Generate a string for a cmake configuration option"""
+
+    value = "ON" if boolean_value else "OFF"
+    return 'set(%s %s CACHE BOOL "%s")\n\n' % (name,value,comment)
+
+
+def get_spec_path(spec, package_name, path_replacements = {}, use_bin = False) :
+    """Extracts the prefix path for the given spack package"""
+
+    if not use_bin:
+        path = spec[package_name].prefix
+    else:
+        path = spec[package_name].prefix.bin
+    path = path_replace(path, path_replacements)
+    return path
+
+
+def path_replace(path, path_replacements):
+    """Replaces path key/value pairs from paht_replacements in path"""
+    for key in path_replacements:
+        path = path.replace(key,path_replacements[key])
+    return path
 
 
 class Serac(CMakePackage):
@@ -54,18 +72,33 @@ class Serac(CMakePackage):
     variant('debug', default=False,
             description='Enable runtime safety and debug checks')
 
-    depends_on('mfem +superlu-dist', when='~debug')
-    depends_on('mfem +superlu-dist +debug', when='+debug')
+    # Basic dependencies
+    depends_on("mpi")
+
+
+    # Libraries that support +debug
+    depends_on("mfem~shared+hypre+metis+superlu-dist+lapack+mpi")
+    depends_on("mfem~shared+hypre+metis+superlu-dist+lapack+mpi+debug", when="+debug")
+    depends_on("hypre~shared+superlu-dist+mpi")
+    depends_on("hypre~shared+superlu-dist+mpi+debug", when="+debug")
+
+
+    # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
+    # TODO: figure out this syntax
+    depends_on("metis~shared")
+    # TODO: figure out if parmetis gets this by default by being a CMakePackage
+    depends_on("parmetis~shared")
+
+
+    # Libraries that do not have a debug variant
+    depends_on("superlu-dist~shared")
 
     phases = ['hostconfig','cmake','build','install']
 
     def cmake_args(self):
+        # TODO: use host-config
         spec = self.spec
         args = []
-
-        if not self.compiler.f77 is None:
-            args.append('-DENABLE_FORTRAN=ON')
-            args.append('-DENABLE_FRUIT=ON')
 
         args.append(
                 '-DCMAKE_BUILD_TYPE:=%s' % (
@@ -122,43 +155,48 @@ class Serac(CMakePackage):
         ##############################################
 
         cmake_exe = spec['cmake'].command.path
-        compiler_string = str(spec.compiler).strip('%').replace('@','_').replace('.','_')
-        host_cfg_fname = "%s__%s__serac.cmake" % (sys_type,
-                                                  compiler_string)
+        compiler_string = str(spec.compiler).strip('%')
+        host_config_filename = "{0}.cmake".format(compiler_string)
+        host_config_path = os.path.abspath(os.path.join(env["SPACK_DEBUG_LOG_DIR"],
+                                                        host_config_filename))
+        cfg = open(host_config_path, "w")
+        cfg.write("####################################################################\n")
+        cfg.write("# Generated host-config - Edit at own risk!\n")
+        cfg.write("####################################################################\n")
+        cfg.write("# Copyright (c) 2019, Lawrence Livermore National Security, LLC and\n")
+        cfg.write("# other Serac Project Developers. See the top-level LICENSE file for\n")
+        cfg.write("# details.\n")
+        cfg.write("#\n")
+        cfg.write("# SPDX-License-Identifier: (BSD-3-Clause) \n")
+        cfg.write("####################################################################\n\n")
 
-        cfg = open(host_cfg_fname, "w")
-        cfg.write("##################################\n")
-        cfg.write("# spack generated host-config\n")
-        cfg.write("##################################\n")
-        cfg.write("# {0}-{1}\n".format(sys_type, spec.compiler))
-        cfg.write("##################################\n\n")
-
-        # Include path to cmake for reference
-        cfg.write("# cmake from spack \n")
-        cfg.write("# cmake executable path: %s\n\n" % cmake_exe)
+        cfg.write("#---------------------------------------\n")
+        cfg.write("# SYS_TYPE: {0}\n".format(sys_type))
+        cfg.write("# Compiler Spec: {0}\n".format(spec.compiler))
+        cfg.write("# CMake executable path: %s\n" % cmake_exe)
+        cfg.write("#---------------------------------------\n\n")
 
         #######################
         # Compiler Settings
         #######################
 
-        cfg.write("#######\n")
-        cfg.write("# using %s compiler spec\n" % spec.compiler)
-        cfg.write("#######\n\n")
-        cfg.write("# c compiler used by spack\n")
+        cfg.write("#---------------------------------------\n")
+        cfg.write("# Compilers\n")
+        cfg.write("#---------------------------------------\n")
         cfg.write(cmake_cache_entry("CMAKE_C_COMPILER", c_compiler))
-        cfg.write("# cpp compiler used by spack\n")
         cfg.write(cmake_cache_entry("CMAKE_CXX_COMPILER", cpp_compiler))
 
         #######################
         # MPI
         #######################
 
+        cfg.write("#---------------------------------------\n")
+        cfg.write("# MPI\n")
+        cfg.write("#---------------------------------------\n")
         cfg.write(cmake_cache_entry("ENABLE_MPI", "ON"))
         cfg.write(cmake_cache_entry("MPI_C_COMPILER", spec['mpi'].mpicc))
         cfg.write(cmake_cache_entry("MPI_CXX_COMPILER",
                                     spec['mpi'].mpicxx))
-        cfg.write(cmake_cache_entry("MPI_Fortran_COMPILER",
-                                    spec['mpi'].mpifc))
         mpiexe_bin = join_path(spec['mpi'].prefix.bin, 'mpiexec')
         if os.path.isfile(mpiexe_bin):
             # starting with cmake 3.10, FindMPI expects MPIEXEC_EXECUTABLE
@@ -174,14 +212,61 @@ class Serac(CMakePackage):
         # Adding dependencies
         #######################
 
-        cfg.write(cmake_cache_entry("MFEM_DIR", spec['mfem'].prefix))
+        cfg.write("#---------------------------------------\n")
+        cfg.write("# Library Dependencies\n")
+        cfg.write("#---------------------------------------\n")
 
-        cfg.write("##################################\n")
-        cfg.write("# end spack generated host-config\n")
-        cfg.write("##################################\n")
+        path_replacements = {}
+
+        # Try to find the common prefix of the TPL directory, including the compiler
+        # If found, we will use this in the TPL paths
+        compiler_str = str(spec.compiler).replace('@','-')
+        prefix_paths = prefix.split(compiler_str)
+        tpl_root = ""
+        if len(prefix_paths) == 2:
+            tpl_root = os.path.join( prefix_paths[0], compiler_str )
+            path_replacements[tpl_root] = "${TPL_ROOT}"
+            cfg.write(cmake_cache_entry("TPL_ROOT", tpl_root))
+
+        mfem_dir = get_spec_path(spec, "mfem", path_replacements)
+        cfg.write(cmake_cache_entry("MFEM_DIR", mfem_dir))
+
+        #######################
+        # Adding developer tools
+        #######################
+
+        #TODO: Change this to the common location (/usr/WS1/smithdev/tools) when thats available
+        #TODO: Handle removing or globbing for the compiler version in path
+        devtools_root = os.path.dirname(os.path.dirname(tpl_root))
+        devtools_root = os.path.join(devtools_root, "devtools", "gcc-8.1.0")
+
+        if os.path.exists(devtools_root):
+            cfg.write("#---------------------------------------\n")
+            cfg.write("# Developer Tools\n")
+            cfg.write("#---------------------------------------\n")
+
+            cfg.write(cmake_cache_entry("DEVTOOLS_ROOT", devtools_root))
+
+            #TODO: These paths should be able to come from a Spack upstream when they aren't tied to a spec
+            astyle_path = "${DEVTOOLS_ROOT}/astyle-3.1/bin/astyle"
+            cfg.write(cmake_cache_entry("ASTYLE_EXECUTABLE", astyle_path))
+
+            cppcheck_path = "${DEVTOOLS_ROOT}/cppcheck-1.87/bin/cppcheck"
+            cfg.write(cmake_cache_entry("CPPCHECK_EXECUTABLE", cppcheck_path))
+
+            doxygen_path = "${DEVTOOLS_ROOT}/doxygen-1.8.15/bin/doxygen"
+            cfg.write(cmake_cache_entry("DOXYGEN_EXECUTABLE", doxygen_path))
+
+            sphinx_path = "${DEVTOOLS_ROOT}/py-sphinx-2.2.0/bin/sphinx-build"
+            cfg.write(cmake_cache_entry("SPHINX_EXECUTABLE", sphinx_path))
+
+        #######################
+        # Close and save
+        #######################
+        cfg.write("\n")
         cfg.close()
 
-        host_cfg_fname = os.path.abspath(host_cfg_fname)
-        tty.info("spack generated serac host-config file: " + host_cfg_fname)
-        return host_cfg_fname
-
+        # Fake install something so Spack doesn't complain
+        mkdirp(prefix)
+        install(host_config_path, prefix)
+        print("Spack generated Serac host-config file: {0}".format(host_config_path))

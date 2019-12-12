@@ -59,3 +59,17 @@ Files that are licensed as BSD 3-Clause contain the following
 text in the license header:
 
     SPDX-License-Identifier: (BSD-3-Clause)
+
+External Packages
+-----------------
+
+Serac bundles some of its external dependencies in its repository.  These
+packages are covered by various permissive licenses.  A summary listing
+follows.  See the license included with each package for full details.
+
+
+[//]: # (Note: The spaces at the end of each line below add line breaks)
+
+PackageName: BLT  
+PackageHomePage: https://github.com/LLNL/blt  
+PackageLicenseDeclared: BSD-3-Clause  
