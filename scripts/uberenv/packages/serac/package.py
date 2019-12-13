@@ -54,7 +54,7 @@ def get_spec_path(spec, package_name, path_replacements = {}, use_bin = False) :
 
 
 def path_replace(path, path_replacements):
-    """Replaces path key/value pairs from paht_replacements in path"""
+    """Replaces path key/value pairs from path_replacements in path"""
     for key in path_replacements:
         path = path.replace(key,path_replacements[key])
     return path
