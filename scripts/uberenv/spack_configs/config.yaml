@@ -45,8 +45,7 @@ config:
   build_stage:
     # skipping tempdir b/c running mpi tests fails with local fs
     # - $tempdir
-    - /nfs/tmp2/$user
-    - $spack/var/spack/stage
+    - $spack/../builds
 
 
   # Cache directory already downloaded source tarballs and archived

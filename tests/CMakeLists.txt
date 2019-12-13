@@ -17,7 +17,7 @@ if (ENABLE_GTEST)
         NAME       serac_dynamic_solver
         SOURCES    serac_dynamic_solver.cpp
         OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-        DEPENDS_ON solvers mpi mfem gtest cli )
+        DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_dynamic_solver
         COMMAND           serac_dynamic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
@@ -31,7 +31,7 @@ if (ENABLE_GTEST)
         NAME       serac_quasistatic_solver
         SOURCES    serac_quasistatic_solver.cpp
         OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-        DEPENDS_ON solvers mpi mfem gtest cli )
+        DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_quasistatic_solver
         COMMAND           serac_quasistatic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
@@ -45,7 +45,7 @@ if (ENABLE_GTEST)
         NAME       serac_conduction_solver
         SOURCES    serac_conduction_solver.cpp
         OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-        DEPENDS_ON solvers mpi mfem gtest cli )
+        DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_conduction_solver
         COMMAND           serac_conduction_solver -m ${PROJECT_SOURCE_DIR}/data/star.mesh

@@ -49,7 +49,7 @@ packages:
   mfem:
     version: [4.0.0]
   hypre:
-    version: [2.15.1]
+    version: [2.10.1]
   superlu-dist:
     version: [6.1.1]
   parmetis:
