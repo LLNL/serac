@@ -4,54 +4,45 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#ifndef QUASISTATIC_SOLVER
-#define QUASISTATIC_SOLVER
+#ifndef LINEARELASTIC_SOLVER
+#define LINEARELASTIC_SOLVER
 
 #include "mfem.hpp"
-#include "linalg/linesearch_newton.hpp"
 
-class QuasistaticSolver : public mfem::Operator
+class LinearElasticSolver
 {
 protected:
-   mfem::ParFiniteElementSpace &fe_space;
-   mfem::ParNonlinearForm *Hform;
+   mfem::ParFiniteElementSpace &m_fe_space;
+   mfem::ParBilinearForm *m_Kform;
+   mfem::ParLinearForm *m_lform;
 
-   mutable mfem::Operator *Jacobian;
-   const mfem::Vector *x;
+   /// Solver for the stiffness matrix 
+   mfem::Solver *m_K_solver;
+   /// Preconditioner for the stiffness
+   mfem::Solver *m_K_prec;
 
-   /// Newton solver for the operator
-   LineSearchNewtonSolver newton_solver;
-   /// Solver for the Jacobian solve in the Newton method
-   mfem::Solver *J_solver;
-   /// Preconditioner for the Jacobian
-   mfem::Solver *J_prec;
-   /// nonlinear material model
-   mfem::HyperelasticModel *model;
+   mfem::Array<int> m_ess_tdof_list;
 
 public:
-   QuasistaticSolver(mfem::ParFiniteElementSpace &fes,
+   LinearElasticSolver(mfem::ParFiniteElementSpace &fes,
                        mfem::Array<int> &ess_bdr,
                        mfem::Array<int> &trac_bdr,
-                       double mu,
-                       double K,
-                       mfem::VectorCoefficient &trac_coef,
+                       mfem::Coefficient &mu,
+                       mfem::Coefficient &K,
+                       mfem::VectorCoefficient &trac,
                        double rel_tol,
                        double abs_tol,
                        int iter,
                        bool gmres,
                        bool slu);
 
-   /// Required to use the native newton solver
-   virtual mfem::Operator &GetGradient(const mfem::Vector &x) const;
-   virtual void Mult(const mfem::Vector &k, mfem::Vector &y) const;
-
-   /// Driver for the newton solver
-   int Solve(mfem::Vector &x) const;
+   /// Driver for the solver 
+   bool Solve(mfem::Vector &x) const;
 
    /// Get FE space
-   const mfem::ParFiniteElementSpace *GetFESpace() { return &fe_space; }
+   const mfem::ParFiniteElementSpace *GetFESpace() { return &m_fe_space; }
 
-   virtual ~QuasistaticSolver();
+   virtual ~LinearElasticSolver();
 };
 
 #endif
