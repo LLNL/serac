@@ -8,32 +8,50 @@
 # Tests for Serac solvers 
 #------------------------------------------------------------------------------
 
-set( serac_tests
-     serac_quasistatic_solver.cpp
-     serac_dynamic_solver.cpp
-     serac_conduction_solver.cpp )
-
 if (ENABLE_GTEST)
-    foreach ( test_source ${serac_tests} )
 
-        get_filename_component( test_name ${test_source} NAME_WE )
-        set( test_cmd ${test_name}_test )
+    #----------------------
+    # Dynamic Solver
+    #----------------------
+    blt_add_executable(
+        NAME       serac_dynamic_solver
+        SOURCES    serac_dynamic_solver.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest cli )
+    blt_add_test(
+        NAME              serac_dynamic_solver
+        COMMAND           serac_dynamic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
+        NUM_MPI_TASKS     4
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
-        blt_add_executable(
-            NAME ${test_cmd}
-            SOURCES ${test_source}
-            OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-            DEPENDS_ON solvers mpi mfem gtest
-        )
+    #----------------------
+    # Quasistatic Solver
+    #----------------------
+    blt_add_executable(
+        NAME       serac_quasistatic_solver
+        SOURCES    serac_quasistatic_solver.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest cli )
+    blt_add_test(
+        NAME              serac_quasistatic_solver
+        COMMAND           serac_quasistatic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
+        NUM_MPI_TASKS     4
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
-        blt_add_test(
-            NAME ${test_name}
-            COMMAND ${test_cmd}
-            NUM_MPI_TASKS 4
-            WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY}
-        )
+    #----------------------
+    # Conduction Solver
+    #----------------------
+    blt_add_executable(
+        NAME       serac_conduction_solver
+        SOURCES    serac_conduction_solver.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest cli )
+    blt_add_test(
+        NAME              serac_conduction_solver
+        COMMAND           serac_conduction_solver -m ${PROJECT_SOURCE_DIR}/data/star.mesh
+        NUM_MPI_TASKS     4
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
-    endforeach()
 endif()
 
 serac_add_code_checks(PREFIX serac_tests)
