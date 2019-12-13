@@ -29,7 +29,7 @@ LinearElasticSolver::LinearElasticSolver(mfem::ParFiniteElementSpace &fes,
    m_lform = new mfem::ParLinearForm(&fes);
 
    // Add the traction integrator
-   m_lform->AddBdrFaceIntegrator(new mfem::VectorBoundaryLFIntegrator(trac), trac_bdr);
+   m_lform->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(trac));
 
    m_fe_space.GetEssentialTrueDofs(ess_bdr, m_ess_tdof_list);
 
@@ -48,7 +48,7 @@ LinearElasticSolver::LinearElasticSolver(mfem::ParFiniteElementSpace &fes,
       K_gmres->SetRelTol(rel_tol);
       K_gmres->SetAbsTol(abs_tol);
       K_gmres->SetMaxIter(iter);
-      K_gmres->SetPrintLevel(0);
+      K_gmres->SetPrintLevel(1);
       K_gmres->SetPreconditioner(*m_K_prec);
       m_K_solver = K_gmres; 
 
