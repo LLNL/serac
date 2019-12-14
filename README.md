@@ -14,10 +14,10 @@ The easiest path to install both serac and its dependencies is to use spack. Thi
 2. `python scripts/uberenv/uberenv.py`
 
 Helpful uberenv options:
-  * -spec=+debug
-  * -spec=%clang@4.0.0
-  * -spec=%clang@4.0.0+debug
-  * -prefix=<Path to uberenv build directory (defaults to ./uberenv-libs)>
+  * --spec=+debug
+  * --spec=%clang@4.0.0
+  * --spec=%clang@4.0.0+debug
+  * --prefix=<Path to uberenv build directory (defaults to ./uberenv-libs)>
 
 3. `python ./config-build.py -hc uberenv-libs/\<config_dependent_name\>.cmake`
 
