@@ -42,7 +42,7 @@ setup_env:
     - echo ${JOBID}
     - rm -rf ${LIBS_ROOT}
     - srun $( [[ -n "${JOBID}" ]] && echo "--jobid=${JOBID}" ) -t 20 -N 1 -n 1 -c 4 python scripts/uberenv/uberenv.py --mirror=${SPACK_MIRROR} --prefix=${LIBS_ROOT} --spec=${SPEC}
-    - mv ${LIBS_ROOT}/${COMPILER}.cmake ${BUILD_ROOT}
+    - mv ${LIBS_ROOT}/${COMPILER}.cmake ${BUILD_ROOT}/${SYS_TYPE}_${COMPILER}.cmake
 
 # This is not a job, but contains project specific build commands
 # If an allocation exist with the name defined in this pipeline, the job will use it
