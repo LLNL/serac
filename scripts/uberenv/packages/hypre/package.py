@@ -150,9 +150,10 @@ class Hypre(Package):
             configure_args.append('--with-dsuperlu-lib=%s' %
                                   spec['superlu-dist'].libs)
             configure_args.append('--with-dsuperlu')
-            # SERAC EDIT BEGIN
-            configure_args.append('--enable-global-partition')
-            # SERAC EDIT END
+
+        # SERAC EDIT BEGIN
+        configure_args.append('--enable-global-partition')
+        # SERAC EDIT END
 
         if '+debug' in self.spec:
             configure_args.append("--enable-debug")

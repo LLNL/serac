@@ -46,9 +46,9 @@ packages:
   mfem:
     version: [4.0.0]
   hypre:
-    version: [2.10.1]
+    version: [2.11.1]
   superlu-dist:
-    version: [6.1.1]
+    version: [5.4.0]
   parmetis:
     version: [4.0.3]
   metis:
