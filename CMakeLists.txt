@@ -4,30 +4,20 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-###############################################################################
-#
-# BLT (and CMAKE) SERAC build system
-#
-###############################################################################
+#------------------------------------------------------------------------------
+# Basic CMake Setup
+#------------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.9)
 
-# TODO: test existence of cmake/defaults.cmake and use it if no configuration is specified... If that’s what we want.
+project(serac LANGUAGES CXX)
 
-project(serac)
-
-# Use c++11 standard everywhere
-set(BLT_CXX_STD "c++11" CACHE STRING "")
-
-###############################################################################
-# MPI
-###############################################################################
-# MPI is required in serac. (unprotected usage in sources and tests)
+# MPI is required in Serac.
 set(ENABLE_MPI ON CACHE BOOL "")
 
-###############################################################################
+#------------------------------------------------------------------------------
 # Setup BLT
-###############################################################################
+#------------------------------------------------------------------------------
 
 if(DEFINED BLT_SOURCE_DIR)
     # Support having a shared BLT outside of the repository if given a BLT_SOURCE_DIR
@@ -46,25 +36,32 @@ else()
     endif()
 endif()
 
+# Tune BLT to our needs
+if (NOT BLT_CXX_STD)
+    set(BLT_CXX_STD "c++11" CACHE STRING "")
+endif()
+set(ENABLE_CLANGQUERY OFF CACHE BOOL "")
+set(ENABLE_UNCRUSTIFY OFF CACHE BOOL "")
+
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
-###############################################################################
-# Setup external libraries
-###############################################################################
+#------------------------------------------------------------------------------
+# Setup Macros and dependencies
+#------------------------------------------------------------------------------
 
+include(${PROJECT_SOURCE_DIR}/cmake/SeracMacros.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/thirdparty/SetupSeracThirdParty.cmake)
 
-###############################################################################
+#------------------------------------------------------------------------------
 # Build src
-###############################################################################
+#------------------------------------------------------------------------------
 
 add_subdirectory(src)
 
-###############################################################################
+#------------------------------------------------------------------------------
 # Build tests
-###############################################################################
+#------------------------------------------------------------------------------
 
-if(ENABLE_TESTS AND ENABLE_GTEST)
+if(ENABLE_TESTS)
     add_subdirectory(tests)
-    endif()
-
+endif()

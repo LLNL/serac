@@ -2,27 +2,18 @@ packages:
   all:
     compiler: [gcc, intel, pgi, clang, xl, nag]
     providers:
-      blas: [openblas]
-      lapack: [openblas]
+      blas: [netlib-lapack]
+      lapack: [netlib-lapack]
       mpi: [mvapich2]
-  cmake:
-    version: [3.9.6]
-    variants: ~openssl~ncurses
-  pkg-config:
-      buildable: False
-      paths:
-          pkg-config: /usr
+  # Lock down which MPI we are using
   mvapich2:
     paths:
       # clang mvapich2
-      mvapich2@2.2 %clang@3.9.1 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-clang-3.9.1
       mvapich2@2.2 %clang@4.0.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0
       # gcc mvapich2
-      mvapich2@2.2 %gcc@7.3.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-7.3.0
       mvapich2@2.2 %gcc@8.1.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-8.1.0
       # intel mvapich2
-      mvapich2@2.2 %intel@16.0.4 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-16.0.4
-      mvapich2@2.2 %intel@18.0.2 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-18.0.2
+      mvapich2@2.2 %intel@19.0.4 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4
     buildable: False
   openmpi:
     buildable: False
@@ -44,3 +35,76 @@ packages:
     buildable: False
   mpt:
     buildable: False
+
+  # Lock down versions of packages we depend on
+  cmake:
+    version: [3.9.2]
+    paths:
+      cmake: /usr/tce/packages/cmake/cmake-3.9.2
+    buildable: False
+
+  mfem:
+    version: [4.0.0]
+  hypre:
+    version: [2.11.1]
+  superlu-dist:
+    version: [5.4.0]
+  parmetis:
+    version: [4.0.3]
+  metis:
+    version: [5.1.0]
+
+  # blas is a bit more complicated because its a virtual package so fake it with
+  # the following per spack docs
+  netlib-lapack:
+    paths:
+      netlib-lapack@3.6.1: /usr
+    buildable: False
+
+# System level packages to not build
+  autoconf:
+    paths:
+      autoconf: /usr
+    buildable: False 
+  automake:
+    paths:
+      automake: /usr
+    buildable: False
+  bzip2:
+   paths:
+      bzip2: /usr
+   buildable: False
+  gettext:
+   paths:
+      gettext: /usr
+   buildable: False
+  libiconv:
+   paths:
+      libiconv: /usr
+   buildable: False
+  libtool:
+   paths:
+      libtool: /usr
+   buildable: False
+  m4:
+   paths:
+      m4: /usr
+   buildable: False
+  perl:
+    paths:
+      perl: /usr
+    buildable: False 
+  pkg-config:
+    paths:
+      pkg-config: /usr
+    buildable: False 
+  tar:
+   paths:
+      tar: /usr
+   buildable: False
+  graphviz:
+    paths:
+      graphviz: /usr
+    buildable: False
+
+
