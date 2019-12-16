@@ -79,8 +79,8 @@ class Serac(CMakePackage):
     # Libraries that support +debug
     depends_on("mfem~shared+hypre+metis+superlu-dist+lapack+mpi")
     depends_on("mfem~shared+hypre+metis+superlu-dist+lapack+mpi+debug", when="+debug")
-    depends_on("hypre~shared+mpi")
-    depends_on("hypre~shared+mpi+debug", when="+debug")
+    depends_on("hypre~shared~superlu-dist+mpi")
+    depends_on("hypre~shared~superlu-dist+mpi+debug", when="+debug")
 
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
