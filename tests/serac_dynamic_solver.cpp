@@ -45,7 +45,7 @@ TEST(dynamic_solver, dyn_solve)
    
    // Define the finite element spaces for displacement field
    mfem::H1_FECollection fe_coll(1, dim);
-   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
+   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
 
    int true_size = fe_space.TrueVSize();
    mfem::Array<int> true_offset(3);

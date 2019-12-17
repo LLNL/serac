@@ -39,7 +39,7 @@ TEST(quasistatic_solver, qs_solve)
    
    // Define the finite element spaces for displacement field
    mfem::H1_FECollection fe_coll(1, dim);
-   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
+   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
 
    // Define a grid function for the global reference configuration, the beginning 
    // step configuration, the global deformation, the current configuration/solution 
@@ -67,15 +67,15 @@ TEST(quasistatic_solver, qs_solve)
    // define the traction vector
    mfem::Vector traction(dim);
    traction = 0.0;
-   traction(1) = 1.0e-4;
+   traction(1) = 1.0e-3;
 
    mfem::VectorConstantCoefficient traction_coef(traction);
    
    // construct the nonlinear mechanics operator
    QuasistaticSolver oper(fe_space, ess_bdr, trac_bdr,
                           0.25, 10.0, traction_coef,
-                          1.0e-6, 1.0e-9, 
-                          500, false, false);
+                          1.0e-3, 1.0e-6, 
+                          5000, false, false);
    
    // declare incremental nodal displacement solution vector
    mfem::Vector x_sol(fe_space.TrueVSize());
@@ -87,47 +87,13 @@ TEST(quasistatic_solver, qs_solve)
    // distribute the solution vector to x_cur
    x_inc.Distribute(x_sol);
 
-   mfem::ParGridFunction x_fin(&fe_space);
-   mfem::ParGridFunction x_ref(&fe_space);
-   mfem::VectorFunctionCoefficient refconfig(dim, ReferenceConfiguration);
-   
-   // Initialize the reference and beginning step configuration grid functions 
-   // with the refconfig vector function coefficient.
-   x_ref.ProjectCoefficient(refconfig);
-
-   add(x_inc, x_ref, x_fin);
-   
-   // Save the displaced mesh. These are snapshots of the endstep current 
-   // configuration. Later add functionality to not save the mesh at each timestep.
-
-   mfem::GridFunction *nodes = &x_fin; // set a nodes grid function to global current configuration
-   int owns_nodes = 0;
-   pmesh->SwapNodes(nodes, owns_nodes); // pmesh has current configuration nodes
-
-   int myid;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
-   std::ostringstream mesh_name, pressure_name, deformation_name;
-   mesh_name << "mesh." << std::setfill('0') << std::setw(6) << myid;
-   deformation_name << "deformation." << std::setfill('0') << std::setw(6) << myid;
-
-   std::ofstream mesh_ofs(mesh_name.str().c_str());
-   mesh_ofs.precision(8);
-   pmesh->Print(mesh_ofs);
-    
-   std::ofstream deformation_ofs(deformation_name.str().c_str());
-   deformation_ofs.precision(8);
-
-   x_inc.Save(deformation_ofs);
- 
-
    mfem::Vector zero(dim);
    zero = 0.0;
    mfem::VectorConstantCoefficient zerovec(zero);
 
    double x_norm = x_inc.ComputeLpError(2.0, zerovec); 
    
-   EXPECT_NEAR(0.739583, x_norm, 0.00001);
+   EXPECT_NEAR(2.2322, x_norm, 0.0001);
    EXPECT_TRUE(converged);
    
    delete pmesh;
