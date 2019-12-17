@@ -31,7 +31,7 @@ if (ENABLE_GTEST)
         NAME       serac_quasistatic_solver
         SOURCES    serac_quasistatic_solver.cpp
         OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-        DEPENDS_ON solvers mpi mfem gtest )
+        DEPENDS_ON solvers coefficients mpi mfem gtest )
     blt_add_test(
         NAME              serac_quasistatic_solver
         COMMAND           serac_quasistatic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
