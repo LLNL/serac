@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "mfem.hpp"
+#include "coefficients/loading_functions.hpp"
 #include "solvers/quasistatic_solver.hpp"
 #include <fstream>
 
@@ -16,7 +17,6 @@ inline bool file_exists(const char* path) {
   struct stat buffer;   
   return (stat(path, &buffer) == 0); 
 }
-
 
 TEST(quasistatic_solver, qs_solve)
 {
@@ -39,14 +39,16 @@ TEST(quasistatic_solver, qs_solve)
    
    // Define the finite element spaces for displacement field
    mfem::H1_FECollection fe_coll(1, dim);
-   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
+   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
 
    // Define a grid function for the global reference configuration, the beginning 
    // step configuration, the global deformation, the current configuration/solution 
    // guess, and the incremental nodal displacements
    mfem::ParGridFunction x_inc(&fe_space);   
 
-   x_inc=0.0;
+   mfem::VectorFunctionCoefficient defo_coef(dim, InitialDeformation);
+   x_inc.ProjectCoefficient(defo_coef);
+   x_inc.SetTrueVector();
    
    // define a boundary attribute array and initialize to 0
    mfem::Array<int> ess_bdr;
@@ -65,15 +67,15 @@ TEST(quasistatic_solver, qs_solve)
    // define the traction vector
    mfem::Vector traction(dim);
    traction = 0.0;
-   traction(1) = 3.0e-4;
+   traction(1) = 1.0e-3;
 
    mfem::VectorConstantCoefficient traction_coef(traction);
    
    // construct the nonlinear mechanics operator
    QuasistaticSolver oper(fe_space, ess_bdr, trac_bdr,
-                          0.25, 5.0, traction_coef,
-                          1.0e-2, 1.0e-4, 
-                          500, true, false);
+                          0.25, 10.0, traction_coef,
+                          1.0e-3, 1.0e-6, 
+                          5000, false, false);
    
    // declare incremental nodal displacement solution vector
    mfem::Vector x_sol(fe_space.TrueVSize());
@@ -84,14 +86,14 @@ TEST(quasistatic_solver, qs_solve)
 
    // distribute the solution vector to x_cur
    x_inc.Distribute(x_sol);
- 
+
    mfem::Vector zero(dim);
    zero = 0.0;
    mfem::VectorConstantCoefficient zerovec(zero);
 
    double x_norm = x_inc.ComputeLpError(2.0, zerovec); 
    
-   EXPECT_NEAR(0.739583, x_norm, 0.00001);
+   EXPECT_NEAR(2.2322, x_norm, 0.0001);
    EXPECT_TRUE(converged);
    
    delete pmesh;

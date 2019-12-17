@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
    
    // Define the finite element spaces for displacement field
    mfem::H1_FECollection fe_coll(order, dim);
-   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim);
+   mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
 
    HYPRE_Int glob_size = fe_space.GlobalTrueVSize();
 
