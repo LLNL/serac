@@ -2,3 +2,4 @@
 *.swp
 cmake/defaults.cmake
 /uberenv_libs/
+spack-build*
