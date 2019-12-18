@@ -8,7 +8,7 @@ macro(serac_add_code_checks)
 
     set(options)
     set(singleValueArgs PREFIX )
-    set(multiValueArgs  EXCLUDES )
+    set(multiValueArgs  INCLUDES EXCLUDES)
 
     # Parse the arguments to the macro
     cmake_parse_arguments(arg
@@ -17,12 +17,20 @@ macro(serac_add_code_checks)
     set(_all_sources)
     file(GLOB_RECURSE _all_sources "*.cpp" "*.hpp")
 
-    # Check for excludes
-    if (NOT DEFINED arg_EXCLUDES)
+    # Check for includes/excludes
+    if (NOT DEFINED arg_INCLUDES)
         set(_sources ${_all_sources})
     else()
         set(_sources)
         foreach(_source ${_all_sources})
+            set(_to_be_included FALSE)
+            foreach(_include ${arg_INCLUDES})
+                if (${_source} MATCHES ${_include})
+                    set(_to_be_included TRUE)
+                    break()
+                endif()
+            endforeach()
+
             set(_to_be_excluded FALSE)
             foreach(_exclude ${arg_EXCLUDES})
                 if (${_source} MATCHES ${_exclude})
@@ -31,7 +39,7 @@ macro(serac_add_code_checks)
                 endif()
             endforeach()
 
-            if (NOT ${_to_be_excluded})
+            if (NOT ${_to_be_excluded} AND ${_to_be_included})
                 list(APPEND _sources ${_source})
             endif()
         endforeach()
