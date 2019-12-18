@@ -7,17 +7,23 @@
 #include <gtest/gtest.h>
 
 #include "mfem.hpp"
+#include "coefficients/loading_functions.hpp"
 #include "solvers/quasistatic_solver.hpp"
 #include <fstream>
+
+const char* mesh_file = "NO_MESH_GIVEN";
+
+inline bool file_exists(const char* path) {
+  struct stat buffer;   
+  return (stat(path, &buffer) == 0); 
+}
 
 TEST(quasistatic_solver, qs_solve)
 {
    MPI_Barrier(MPI_COMM_WORLD);
 
-   // mesh
-   const char *mesh_file = "../../data/beam-hex.mesh";
-
    // Open the mesh
+   ASSERT_TRUE(file_exists(mesh_file));
    std::ifstream imesh(mesh_file);
    mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
    imesh.close();
@@ -40,7 +46,9 @@ TEST(quasistatic_solver, qs_solve)
    // guess, and the incremental nodal displacements
    mfem::ParGridFunction x_inc(&fe_space);   
 
-   x_inc=0.0;
+   mfem::VectorFunctionCoefficient defo_coef(dim, InitialDeformation);
+   x_inc.ProjectCoefficient(defo_coef);
+   x_inc.SetTrueVector();
    
    // define a boundary attribute array and initialize to 0
    mfem::Array<int> ess_bdr;
@@ -59,34 +67,34 @@ TEST(quasistatic_solver, qs_solve)
    // define the traction vector
    mfem::Vector traction(dim);
    traction = 0.0;
-   traction(1) = 3.0e-4;
+   traction(1) = 1.0e-3;
 
    mfem::VectorConstantCoefficient traction_coef(traction);
    
    // construct the nonlinear mechanics operator
    QuasistaticSolver oper(fe_space, ess_bdr, trac_bdr,
-                          0.25, 5.0, traction_coef,
-                          1.0e-2, 1.0e-4, 
-                          500, true, false);
+                          0.25, 10.0, traction_coef,
+                          1.0e-3, 1.0e-6, 
+                          5000, false, false);
    
    // declare incremental nodal displacement solution vector
    mfem::Vector x_sol(fe_space.TrueVSize());
    x_inc.GetTrueDofs(x_sol);
 
    // Solve the Newton system 
-   int converged = oper.Solve(x_sol);     
+   bool converged = oper.Solve(x_sol);     
 
    // distribute the solution vector to x_cur
    x_inc.Distribute(x_sol);
- 
+
    mfem::Vector zero(dim);
    zero = 0.0;
    mfem::VectorConstantCoefficient zerovec(zero);
 
    double x_norm = x_inc.ComputeLpError(2.0, zerovec); 
    
-   EXPECT_NEAR(0.770937, x_norm, 0.00001);
-   EXPECT_EQ(converged, 1);
+   EXPECT_NEAR(2.2322, x_norm, 0.0001);
+   EXPECT_TRUE(converged);
    
    delete pmesh;
    
@@ -101,6 +109,28 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
+  // Parse command line options
+  mfem::OptionsParser args(argc, argv);
+  args.AddOption(&mesh_file, "-m", "--mesh",
+                "Mesh file to use.", true);
+  args.Parse();
+  if (!args.Good())
+  {
+    if (myid == 0)
+    {
+      args.PrintUsage(std::cout);
+    }
+    MPI_Finalize();
+    return 1;
+  }
+  if (myid == 0)
+  {
+    args.PrintOptions(std::cout);
+  }
+
   result = RUN_ALL_TESTS();
   MPI_Finalize();
 

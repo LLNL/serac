@@ -46,7 +46,7 @@ public:
    virtual void Mult(const mfem::Vector &k, mfem::Vector &y) const;
 
    /// Driver for the newton solver
-   int Solve(mfem::Vector &x) const;
+   bool Solve(mfem::Vector &x) const;
 
    /// Get FE space
    const mfem::ParFiniteElementSpace *GetFESpace() { return &fe_space; }

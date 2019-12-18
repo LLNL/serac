@@ -10,7 +10,7 @@ DynamicSolver::DynamicSolver(mfem::ParFiniteElementSpace &fes,
                              mfem::Array<int> &ess_bdr,
                              double mu,
                              double K,
-                             double visc,
+                             mfem::Coefficient &visc,
                              double rel_tol,
                              double abs_tol,
                              int iter,
@@ -34,8 +34,7 @@ DynamicSolver::DynamicSolver(mfem::ParFiniteElementSpace &fes,
    delete Me;
 
    m_S_form = new mfem::ParBilinearForm(&fes);
-   mfem::ConstantCoefficient visc_coeff(m_viscosity);
-   m_S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(visc_coeff));
+   m_S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(m_viscosity));
    m_S_form->Assemble(0);
    m_S_form->Finalize(0);
    
@@ -120,11 +119,8 @@ void DynamicSolver::Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const
    mfem::Vector dx_dt(dvx_dt.GetData() + sc, sc);
 
    m_H_form->Mult(x, m_z);
-   if (m_viscosity != 0.0)
-   {
-      m_S_form->TrueAddMult(v, m_z);
-      m_z.SetSubVector(m_ess_tdof_list, 0.0);
-   }
+   m_S_form->TrueAddMult(v, m_z);
+   m_z.SetSubVector(m_ess_tdof_list, 0.0);
    m_z.Neg(); // z = -z
    m_M_solver.Mult(m_z, dv_dt);
 

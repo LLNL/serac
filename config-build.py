@@ -20,9 +20,9 @@ import platform
 import shutil
 import socket
 
-_host_configs_map = {"rzgenie"   : "toss3_clang4.0.0.cmake",
-                     "rztopaz"   : "toss3_clang4.0.0.cmake",
-                     "quartz"    : "toss3_clang4.0.0.cmake"}
+_host_configs_map = {"rzgenie"   : "toss_3_x86_64_ib/clang@4.0.0.cmake",
+                     "rztopaz"   : "toss_3_x86_64_ib/clang@4.0.0.cmake",
+                     "quartz"    : "toss_3_x86_64_ib/clang@4.0.0.cmake"}
 
 def get_machine_name():
     return socket.gethostname().rstrip('1234567890')
@@ -184,15 +184,10 @@ def create_cmake_command_line(args, unknown_args, buildpath, hostconfigpath):
 
     # Add cache file option
     cmakeline += " -C %s" % hostconfigpath
+
     # Add build type (opt or debug)
     cmakeline += " -DCMAKE_BUILD_TYPE=" + args.buildtype
 
-    # Turn off Fortran and Fruit
-    cmakeline += " -DENABLE_FORTRAN=OFF -DENABLE_FRUIT=OFF"
-
-    # Set the test executable directory
-    cmakeline += " -DTEST_OUTPUT_DIRECTORY=bin/tests"
-    
     if args.exportcompilercommands:
         cmakeline += " -DCMAKE_EXPORT_COMPILE_COMMANDS=on"
 
@@ -252,7 +247,6 @@ def main():
        else:
           return False
 
-    
     basehostconfigpath = find_host_config(args, repodir)
     platform_info = get_platform_info(basehostconfigpath)
     buildpath = setup_build_dir(args, platform_info)

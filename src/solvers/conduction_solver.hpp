@@ -37,13 +37,14 @@ protected:
    mfem::CGSolver m_T_solver;    // Implicit solver for T = M + dt K
    mfem::HypreSmoother m_T_prec; // Preconditioner for the implicit solver
 
-   double m_kappa;
+   mfem::Coefficient &m_kappa; // Conduction coefficient
 
    mutable mfem::Vector m_z; // auxiliary vector
 
    
 public:
-   ConductionSolver(mfem::ParFiniteElementSpace &f, double kappa);
+   ConductionSolver(mfem::ParFiniteElementSpace &f, mfem::Coefficient &kappa);
+   ConductionSolver(mfem::ParFiniteElementSpace &f, mfem::MatrixCoefficient &matrix_kappa);
 
    virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
    /** Solve the Backward-Euler equation: k = f(u + dt*k, t), for the unknown k.

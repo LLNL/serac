@@ -4,31 +4,69 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
-#
-# Tests for SERAC 
-#
+#------------------------------------------------------------------------------
+# Tests for Serac solvers 
+#------------------------------------------------------------------------------
 
-set( serac_tests
-     serac_quasistatic_solver.cpp
-     serac_dynamic_solver.cpp
-     serac_conduction_solver.cpp
-     serac_linelastic_solver.cpp
-     )
+if (ENABLE_GTEST)
 
-foreach ( test ${serac_tests} )
+    #----------------------
+    # Dynamic Solver
+    #----------------------
+    blt_add_executable(
+        NAME       serac_dynamic_solver
+        SOURCES    serac_dynamic_solver.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest )
+    blt_add_test(
+        NAME              serac_dynamic_solver
+        COMMAND           serac_dynamic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
+        NUM_MPI_TASKS     4
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
-    get_filename_component( test_name ${test} NAME_WE )
+    #----------------------
+    # Linear Elasticity Solver
+    #----------------------
+    blt_add_executable(
+        NAME       serac_linelastic_solver
+        SOURCES    serac_linelastic_solver.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest )
+    blt_add_test(
+        NAME              serac_linelastic_solver
+        COMMAND           serac_linelastic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
+        NUM_MPI_TASKS     4
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
-    blt_add_executable(NAME ${test_name}_test
-                       SOURCES ${test}
-                       OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-                       DEPENDS_ON solvers mfem mpi parmetis hypre gtest
-                       )                      
 
-    blt_add_test( NAME ${test_name}
-                  COMMAND ${test_name}_test
-                  NUM_MPI_TASKS 4
-                  )
+    #----------------------
+    # Quasistatic Solver
+    #----------------------
+    blt_add_executable(
+        NAME       serac_quasistatic_solver
+        SOURCES    serac_quasistatic_solver.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers coefficients mpi mfem gtest )
+    blt_add_test(
+        NAME              serac_quasistatic_solver
+        COMMAND           serac_quasistatic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
+        NUM_MPI_TASKS     4
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
-endforeach()
+    #----------------------
+    # Conduction Solver
+    #----------------------
+    blt_add_executable(
+        NAME       serac_conduction_solver
+        SOURCES    serac_conduction_solver.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest )
+    blt_add_test(
+        NAME              serac_conduction_solver
+        COMMAND           serac_conduction_solver -m ${PROJECT_SOURCE_DIR}/data/star.mesh
+        NUM_MPI_TASKS     4
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
+endif()
+
+serac_add_code_checks(PREFIX serac_tests)

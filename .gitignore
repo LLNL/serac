@@ -1,1 +1,4 @@
-build*
+/build*/
+*.swp
+cmake/defaults.cmake
+/uberenv_libs/

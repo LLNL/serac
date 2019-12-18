@@ -14,14 +14,20 @@ void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
 
 void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
 
+const char* mesh_file = "NO_MESH_GIVEN";
+
+inline bool file_exists(const char* path) {
+  struct stat buffer;   
+  return (stat(path, &buffer) == 0); 
+}
+
+
 TEST(dynamic_solver, dyn_solve)
 {
    MPI_Barrier(MPI_COMM_WORLD);
 
-   // mesh
-   const char *mesh_file = "../../data/beam-hex.mesh";
-
    // Open the mesh
+   ASSERT_TRUE(file_exists(mesh_file));
    std::ifstream imesh(mesh_file);
    mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
    imesh.close();
@@ -70,11 +76,12 @@ TEST(dynamic_solver, dyn_solve)
 
    // boundary attribute 1 (index 0) is fixed (Dirichlet)
    ess_bdr[0] = 1;
-   
+
+   mfem::ConstantCoefficient visc(0.0);
       
    // construct the nonlinear mechanics operator
    DynamicSolver oper(fe_space, ess_bdr,
-                      0.25, 5.0, 0.0,
+                      0.25, 5.0, visc,
          	      1.0e-4, 1.0e-8, 
                       500, true, false);
 
@@ -119,6 +126,28 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
+  // Parse command line options
+  mfem::OptionsParser args(argc, argv);
+  args.AddOption(&mesh_file, "-m", "--mesh",
+                "Mesh file to use.", true);
+  args.Parse();
+  if (!args.Good())
+  {
+    if (myid == 0)
+    {
+      args.PrintUsage(std::cout);
+    }
+    MPI_Finalize();
+    return 1;
+  }
+  if (myid == 0)
+  {
+    args.PrintOptions(std::cout);
+  }
+
   result = RUN_ALL_TESTS();
   MPI_Finalize();
 

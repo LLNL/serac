@@ -9,17 +9,24 @@
 #include "mfem.hpp"
 #include "solvers/conduction_solver.hpp"
 #include <fstream>
+#include <sys/stat.h>
 
 double InitialTemperature(const mfem::Vector &x);
+
+const char* mesh_file = "NO_MESH_GIVEN";
+
+inline bool file_exists(const char* path) {
+  struct stat buffer;   
+  return (stat(path, &buffer) == 0); 
+}
+
 
 TEST(dynamic_solver, dyn_solve)
 {
    MPI_Barrier(MPI_COMM_WORLD);
 
-   // mesh
-   const char *mesh_file = "../../data/star.mesh";
-
    // Open the mesh
+   ASSERT_TRUE(file_exists(mesh_file));
    std::fstream imesh(mesh_file);
    mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
    imesh.close();
@@ -53,7 +60,8 @@ TEST(dynamic_solver, dyn_solve)
    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
    // Initialize the conduction operator and the VisIt visualization.
-   ConductionSolver oper(fe_space, 0.5);
+   mfem::ConstantCoefficient kappa(0.5);
+   ConductionSolver oper(fe_space, kappa);
 
    ode_solver->Init(oper);
    double t = 0.0;
@@ -91,6 +99,28 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
+  // Parse command line options
+  mfem::OptionsParser args(argc, argv);
+  args.AddOption(&mesh_file, "-m", "--mesh",
+                "Mesh file to use.", true);
+  args.Parse();
+  if (!args.Good())
+  {
+    if (myid == 0)
+    {
+      args.PrintUsage(std::cout);
+    }
+    MPI_Finalize();
+    return 1;
+  }
+  if (myid == 0)
+  {
+    args.PrintOptions(std::cout);
+  }
+
   result = RUN_ALL_TESTS();
   MPI_Finalize();
 
