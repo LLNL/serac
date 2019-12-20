@@ -10,14 +10,19 @@
 #include "solvers/linear_elasticity_solver.hpp"
 #include <fstream>
 
+const char* mesh_file = "NO_MESH_GIVEN";
+
+inline bool file_exists(const char* path) {
+  struct stat buffer;   
+  return (stat(path, &buffer) == 0); 
+}
+
 TEST(linearelastic_solver, le_solve)
 {
    MPI_Barrier(MPI_COMM_WORLD);
 
-   // mesh
-   const char *mesh_file = "../../data/beam-hex.mesh";
-
    // Open the mesh
+   ASSERT_TRUE(file_exists(mesh_file));
    std::ifstream imesh(mesh_file);
    mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
    imesh.close();
@@ -83,33 +88,10 @@ TEST(linearelastic_solver, le_solve)
    LinearElasticSolver oper(fe_space, ess_bdr, trac_bdr,
                             mu_coef, K_coef, f,
                             1.0e-4, 1.0e-10, 
-                            500, true, false);
+                            500, false, false);
    
   // Solve the Newton system 
    bool converged = oper.Solve(x); 
-
-   {
-      int myid;
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
-
-      mfem::GridFunction *nodes = pmesh->GetNodes();
-      *nodes += x;
-      x *= -1;
-
-      std::ostringstream mesh_name, sol_name;
-      mesh_name << "mesh." << std::setfill('0') << std::setw(6) << myid;
-      sol_name << "sol." << std::setfill('0') << std::setw(6) << myid;
-
-      std::ofstream mesh_ofs(mesh_name.str().c_str());
-      mesh_ofs.precision(8);
-      pmesh->Print(mesh_ofs);
-
-      std::ofstream sol_ofs(sol_name.str().c_str());
-      sol_ofs.precision(8);
-      x.Save(sol_ofs);
-   }
-
  
    mfem::Vector zero(dim);
    zero = 0.0;
@@ -117,14 +99,13 @@ TEST(linearelastic_solver, le_solve)
 
    double x_norm = x.ComputeLpError(2.0, zerovec); 
    
-   EXPECT_NEAR(0.770937, x_norm, 0.00001);
+   EXPECT_NEAR(0.128065, x_norm, 0.00001);
    EXPECT_TRUE(converged);
    
    delete pmesh;
    
    MPI_Barrier(MPI_COMM_WORLD);
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -133,6 +114,28 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+  int myid;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
+  // Parse command line options
+  mfem::OptionsParser args(argc, argv);
+  args.AddOption(&mesh_file, "-m", "--mesh",
+                "Mesh file to use.", true);
+  args.Parse();
+  if (!args.Good())
+  {
+    if (myid == 0)
+    {
+      args.PrintUsage(std::cout);
+    }
+    MPI_Finalize();
+    return 1;
+  }
+  if (myid == 0)
+  {
+    args.PrintOptions(std::cout);
+  }
+
   result = RUN_ALL_TESTS();
   MPI_Finalize();
 

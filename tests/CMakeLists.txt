@@ -34,8 +34,8 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_linelastic_solver
-        COMMAND           serac_linelastic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
-        NUM_MPI_TASKS     4
+        COMMAND           serac_linelastic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-quad.mesh
+        NUM_MPI_TASKS     3
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
 
