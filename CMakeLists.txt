@@ -65,3 +65,11 @@ add_subdirectory(src)
 if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
+
+#------------------------------------------------------------------------------
+# Add Code Checks
+#------------------------------------------------------------------------------
+
+serac_add_code_checks(PREFIX   serac
+                      INCLUDES src tests
+                      EXCLUDES cmake/blt)

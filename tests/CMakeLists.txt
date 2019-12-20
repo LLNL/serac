@@ -68,5 +68,3 @@ if (ENABLE_GTEST)
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
 endif()
-
-serac_add_code_checks(PREFIX serac_tests)

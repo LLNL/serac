@@ -8,5 +8,3 @@ add_subdirectory(solvers)
 add_subdirectory(integrators)
 add_subdirectory(coefficients)
 add_subdirectory(drivers)
-
-serac_add_code_checks(PREFIX serac_src)
