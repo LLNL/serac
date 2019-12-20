@@ -29,7 +29,7 @@ LinearElasticSolver::LinearElasticSolver(mfem::ParFiniteElementSpace &fes,
    m_lform = new mfem::ParLinearForm(&fes);
 
    // Add the traction integrator
-   m_lform->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(trac));
+   m_lform->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(trac), trac_bdr);
 
    m_fe_space.GetEssentialTrueDofs(ess_bdr, m_ess_tdof_list);
 
@@ -81,7 +81,7 @@ LinearElasticSolver::LinearElasticSolver(mfem::ParFiniteElementSpace &fes,
    }
 }
 
-// Solve the Newton system
+// Form and solve the linear system
 bool LinearElasticSolver::Solve(mfem::Vector &x) const
 {
 

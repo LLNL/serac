@@ -61,19 +61,6 @@ TEST(linearelastic_solver, le_solve)
    trac_bdr = 0;
    trac_bdr[1] = 1;
 
-   mfem::VectorArrayCoefficient f(dim);
-   for (int i = 0; i < dim-1; i++)
-   {
-      f.Set(i, new mfem::ConstantCoefficient(0.0));
-   }
-   {
-      mfem::Vector pull_force(pmesh->bdr_attributes.Max());
-      pull_force = 0.0;
-      pull_force(1) = -1.0e-4;
-      f.Set(dim-1, new mfem::PWConstCoefficient(pull_force));
-   }
-
-
    // define the traction vector
    mfem::Vector traction(dim);
    traction = 0.0;
@@ -86,7 +73,7 @@ TEST(linearelastic_solver, le_solve)
 
    // construct the nonlinear mechanics operator
    LinearElasticSolver oper(fe_space, ess_bdr, trac_bdr,
-                            mu_coef, K_coef, f,
+                            mu_coef, K_coef, traction_coef,
                             1.0e-4, 1.0e-10, 
                             500, false, false);
    
