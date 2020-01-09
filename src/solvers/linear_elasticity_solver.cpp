@@ -98,6 +98,8 @@ bool LinearElasticSolver::Solve(mfem::Vector &x) const
 
 LinearElasticSolver::~LinearElasticSolver()
 {
+   delete m_Kform;
+   delete m_lform;
    delete m_K_solver;
    if (m_K_prec != nullptr) {
       delete m_K_prec;
