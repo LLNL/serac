@@ -5,7 +5,7 @@ Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primar
 
 Getting Started
 ------
-Serac uses git submodules, to clone the project:
+Serac uses git submodules, so the project must be cloned recursively. Using bitbucket SSH keys, the command is:
 
 1. `git clone --recursive ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git`
 
@@ -13,7 +13,7 @@ The easiest path to install both serac and its dependencies is to use spack. Thi
 
 2. `python scripts/uberenv/uberenv.py`
 
-Helpful uberenv options:
+On LC machines, it is good practice to submit this command on a batch node (e.g. `srun -ppdebug -N1 --exclusive python scripts/uberenv/uberenv.py`). Helpful uberenv options:
   * --spec=+debug
   * --spec=%clang@4.0.0
   * --spec=%clang@4.0.0+debug
