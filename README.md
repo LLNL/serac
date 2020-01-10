@@ -78,4 +78,4 @@ follows.  See the license included with each package for full details.
 
 PackageName: BLT  
 PackageHomePage: https://github.com/LLNL/blt  
-PackageLicenseDeclared: BSD-3-Clause
+PackageLicenseDeclared: BSD-3-Clause  
