@@ -65,7 +65,7 @@ class Serac(CMakePackage):
 
     # FIXME: Add a proper url for your package's homepage here.
     homepage = "https://www.github.com/LLNL/serac"
-    git      = "ssh://git@czgitlab.llnl.gov:7999/bernede1/serac.git"
+    git      = "ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git"
 
     version('develop', branch='develop', submodules=True, preferred=True)
 

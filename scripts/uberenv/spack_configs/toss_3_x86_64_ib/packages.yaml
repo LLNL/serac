@@ -78,10 +78,6 @@ packages:
    paths:
       gettext: /usr
    buildable: False
-  libiconv:
-   paths:
-      libiconv: /usr
-   buildable: False
   libtool:
    paths:
       libtool: /usr
