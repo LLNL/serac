@@ -5,7 +5,7 @@ Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primar
 
 Getting Started
 ------
-Serac uses git submodules, to clone the project:
+Serac uses git submodules, so the project must be cloned recursively. Using bitbucket SSH keys, the command is:
 
 1. `git clone --recursive ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git`
 
@@ -78,4 +78,4 @@ follows.  See the license included with each package for full details.
 
 PackageName: BLT  
 PackageHomePage: https://github.com/LLNL/blt  
-PackageLicenseDeclared: BSD-3-Clause  
+PackageLicenseDeclared: BSD-3-Clause
