@@ -94,7 +94,7 @@ TEST(quasistatic_solver, qs_solve)
 
   double x_norm = x_inc.ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(2.2322, x_norm, 0.0001);
+  EXPECT_NEAR(2.2322, x_norm, 0.001);
   EXPECT_TRUE(converged);
 
   delete pmesh;
