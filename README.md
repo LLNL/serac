@@ -13,7 +13,7 @@ The easiest path to install both serac and its dependencies is to use spack. Thi
 
 2. `python scripts/uberenv/uberenv.py`
 
-Helpful uberenv options:
+On LC machines, it is good practice to submit this command on a batch node (e.g. `srun -ppdebug -N1 --exclusive python scripts/uberenv/uberenv.py`). Helpful uberenv options:
   * --spec=+debug
   * --spec=%clang@4.0.0
   * --spec=%clang@4.0.0+debug
