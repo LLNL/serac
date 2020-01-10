@@ -56,6 +56,7 @@ DynamicSolver::DynamicSolver(mfem::ParFiniteElementSpace &fes,
   m_reduced_oper = new ReducedSystemOperator(m_M_form, m_S_form, m_H_form, m_ess_tdof_list);
 
   if (gmres) {
+    MFEM_VERIFY(m_fe_space.GetOrdering() == mfem::Ordering::byVDIM, "Attempting to use BoomerAMG with nodal ordering.");
     mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
     prec_amg->SetPrintLevel(0);
     prec_amg->SetElasticityOptions(&m_fe_space);

@@ -25,6 +25,21 @@ if (ENABLE_GTEST)
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
     #----------------------
+    # Linear Elasticity Solver
+    #----------------------
+    blt_add_executable(
+        NAME       serac_linelastic_solver
+        SOURCES    serac_linelastic_solver.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest )
+    blt_add_test(
+        NAME              serac_linelastic_solver
+        COMMAND           serac_linelastic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-quad.mesh
+        NUM_MPI_TASKS     3
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
+
+
+    #----------------------
     # Quasistatic Solver
     #----------------------
     blt_add_executable(

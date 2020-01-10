@@ -8,12 +8,14 @@ set(solvers_sources
     quasistatic_solver.cpp
     dynamic_solver.cpp
     conduction_solver.cpp
+    linear_elasticity_solver.cpp
     )
 
 set(solvers_headers
     quasistatic_solver.hpp
     dynamic_solver.hpp
     conduction_solver.hpp
+    linear_elasticity_solver.hpp
     )
 
 blt_add_library(
@@ -21,7 +23,6 @@ blt_add_library(
     SOURCES     ${solvers_sources}
     HEADERS     ${solvers_headers}
     DEPENDS_ON  mfem integrators mpi
-    #DEPENDS_ON  mpi mfem hypre blas lapack parmetis metis integrators
     )
 
 target_include_directories(solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
