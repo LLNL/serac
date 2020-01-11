@@ -175,7 +175,7 @@ def set_group_and_perms(directory):
     return 0
 
 
-def build_devtools(builds_dir, timestamp, make_symlink):
+def build_devtools(builds_dir, timestamp):
     compiler_spec = "%gcc@8.1.0"
     compiler_dir  = "gcc-8.1.0"
     print "[Building devtools using compiler spec: {0}]".format(compiler_spec)
@@ -203,16 +203,15 @@ def build_devtools(builds_dir, timestamp, make_symlink):
         print "[ERROR: Failed build of devtools for spec %s]\n" % compiler_spec
     else:
         # Only update the latest symlink if successful
-        if make_symlink:
-            link_path = pjoin(builds_dir, "latest")
-            print "[Creating symlink to latest devtools build: {0}]".format(link_path)
-            if os.path.exists(link_path):
-                if not os.path.islink(link_path):
-                    print "[ERROR: Latest devtools link path exists and is not a link: {0}".format(link_path)
-                    return 1
-                os.unlink(link_path)
-            install_dir = pjoin(builds_dir, compiler_dir)
-            os.symlink(install_dir, link_path)
+        link_path = pjoin(builds_dir, "latest")
+        print "[Creating symlink to latest devtools build: {0}]".format(link_path)
+        if os.path.exists(link_path):
+            if not os.path.islink(link_path):
+                print "[ERROR: Latest devtools link path exists and is not a link: {0}".format(link_path)
+                return 1
+            os.unlink(link_path)
+        install_dir = pjoin(builds_dir, compiler_dir)
+        os.symlink(install_dir, link_path)
 
         # Clean up directories we don't need to save
         dir_names = ["builds", "spack"]

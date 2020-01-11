@@ -44,14 +44,12 @@ def main():
     opts = parse_args()
 
     # Determine location to do all the building
-    make_symlink = False
     if opts["directory"] != "":
         build_dir = opts["directory"]
         if not os.path.exists(build_dir):
             os.makedirs(build_dir)
     else:
         build_dir = get_shared_devtool_dir()
-        make_symlink = True
     build_dir = os.path.abspath(build_dir)
 
     repo_dir = get_repo_dir()
@@ -60,7 +58,7 @@ def main():
         original_wd = os.getcwd()
         os.chdir(repo_dir)
 
-        res = build_devtools(build_dir, get_timestamp(), make_symlink)
+        res = build_devtools(build_dir, get_timestamp())
     finally:
         os.chdir(original_wd)
 
