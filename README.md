@@ -19,8 +19,8 @@ On LC machines, it is good practice to submit this command on a batch node (e.g.
   * --spec=%clang@4.0.0+debug
   * --prefix=<Path to uberenv build directory (defaults to ./uberenv-libs)>
 
-If you wish to utilize the optional developer tools, such as CppCheck, Doxygen, Astyle, Sphinx. 
-There is a shared location if you have the correct permissions on most LC machine.  The build system
+If you wish to utilize the optional developer tools, such as CppCheck, Doxygen, Astyle, Sphinx, 
+there is a shared location if you have the correct permissions on most LC machine.  The build system
 will auto-detect the paths for you.  If you wish to build them yourself (which takes a long time), 
 use one of the following commands:
 
