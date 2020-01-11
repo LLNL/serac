@@ -204,13 +204,13 @@ def build_devtools(builds_dir, timestamp):
     else:
         # Only update the latest symlink if successful
         link_path = pjoin(builds_dir, "latest")
-        print "[Creating symlink to latest devtools build: {0}]".format(link_path)
+        install_dir = pjoin(prefix, compiler_dir)
+        print "[Creating symlink to latest devtools build:\n{0}\n->\n{1}]".format(link_path, install_dir)
         if os.path.exists(link_path):
             if not os.path.islink(link_path):
                 print "[ERROR: Latest devtools link path exists and is not a link: {0}".format(link_path)
                 return 1
             os.unlink(link_path)
-        install_dir = pjoin(builds_dir, compiler_dir)
         os.symlink(install_dir, link_path)
 
         # Clean up directories we don't need to save
