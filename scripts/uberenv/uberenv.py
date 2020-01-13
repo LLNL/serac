@@ -239,6 +239,25 @@ class UberEnv():
     def setup_paths_and_dirs(self):
         self.uberenv_path = os.path.dirname(os.path.realpath(__file__))
 
+    def set_from_args_or_json(self,setting):
+        try:
+            setting_value = self.project_opts[setting]
+        except (KeyError):
+            print("ERROR: {} must at least be defined in project.json".format(setting))
+            raise
+        else:
+            if self.opts[setting]:
+                setting_value = self.opts[setting]
+        return setting_value
+
+    def set_from_json(self,setting):
+        try:
+            setting_value = self.project_opts[setting]
+        except (KeyError):
+            print("ERROR: {} must at least be defined in project.json".format(setting))
+            raise
+        return setting_value
+
     def detect_platform(self):
         # find supported sets of compilers.yaml, packages,yaml
         res = None
@@ -256,17 +275,10 @@ class SpackEnv(UberEnv):
     def __init__(self, opts, extra_opts):
         UberEnv.__init__(self,opts,extra_opts)
 
-        if opts["package_name"]:
-            self.pkg_name = opts["package_name"]
-        else:
-            self.pkg_name = self.project_opts["package_name"]
-
-        self.pkg_version = self.project_opts["package_version"]
-
-        if opts["package_final_phase"]:
-            self.pkg_stop_phase = opts["package_final_phase"]
-        else:
-            self.pkg_stop_phase = self.project_opts["package_final_phase"]
+        self.pkg_name = self.set_from_args_or_json("package_name")
+        self.pkg_version = self.set_from_json("package_version")
+        self.pkg_final_phase = self.set_from_args_or_json("package_final_phase")
+        self.pkg_src_dir = self.set_from_args_or_json("package_source_dir")
 
         # Some additional setup for macos
         if is_darwin():
@@ -311,11 +323,6 @@ class SpackEnv(UberEnv):
 
         if os.path.isdir(self.dest_spack):
             print("[info: destination '{}' already exists]".format(self.dest_spack))
-
-        if self.opts["package_source_dir"]:
-            self.pkg_src_dir = self.opts["package_source_dir"]
-        else:
-            self.pkg_src_dir = self.project_opts["package_source_dir"]
 
         self.pkg_src_dir = os.path.join(self.uberenv_path,self.pkg_src_dir)
         if not os.path.isdir(self.pkg_src_dir):
@@ -459,14 +466,7 @@ class SpackEnv(UberEnv):
             install_cmd += "-k "
         install_cmd += "dev-build -d {} ".format(self.pkg_src_dir)
         if not self.opts["install"]:
-            try:
-                if self.pkg_stop_phase:
-                    install_cmd += "-u {} ".format(self.pkg_stop_phase)
-                else:
-                    raise ValueError("package_stop_phase cannot be empty.")
-            except (KeyError, ValueError) as e:
-                print("ERROR: hostconfig_phase must be defined in project.json")
-                raise
+            install_cmd += "-u {} ".format(self.pkg_final_phase)
         if self.opts["run_tests"]:
             install_cmd += "--test=root "
         install_cmd += self.pkg_name + self.opts["spec"]
@@ -719,5 +719,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
-

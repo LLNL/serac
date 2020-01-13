@@ -9,7 +9,7 @@ Serac uses git submodules, so the project must be cloned recursively. Using bitb
 
 1. `git clone --recursive ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git`
 
-The easiest path to install both serac and its dependencies is to use spack. This has been encapsulated using Uberenv. It will generate a uberenv_libs directory containing a Spack instance with Serac dependencies installed. It also generate a host-config file (uberenv_libs\<config_dependent_name\>.cmake) we can now use to build Serac. The CMake configuration phase has also been encapsulated in config-build.py.
+The easiest path to install both Serac and its dependencies is to use Spack. This has been encapsulated using Uberenv. It will generate a uberenv_libs directory containing a Spack instance with Serac dependencies installed. It also generate a host-config file (uberenv_libs\<config_dependent_name\>.cmake) we can now use to build Serac. The CMake configuration phase has also been encapsulated in config-build.py.
 
 2. `python scripts/uberenv/uberenv.py`
 
@@ -18,6 +18,17 @@ On LC machines, it is good practice to submit this command on a batch node (e.g.
   * --spec=%clang@4.0.0
   * --spec=%clang@4.0.0+debug
   * --prefix=<Path to uberenv build directory (defaults to ./uberenv-libs)>
+
+If you wish to utilize the optional developer tools, such as CppCheck, Doxygen, Astyle, or Sphinx, 
+there is a shared location if you have the correct permissions on most LC machine.  The build system
+will auto-detect the paths for you.  If you wish to build them yourself (which takes a long time), 
+use one of the following commands:
+
+On an LC machine:
+`python scripts/llnl/build_devtools.py --directory=<devtool/build/path>`
+
+Everywhere else:
+`python scripts/uberenv/uberenv.py --package-name=serac_devtools --install`
 
 3. `python ./config-build.py -hc uberenv-libs/\<config_dependent_name\>.cmake`
 

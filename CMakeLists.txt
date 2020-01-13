@@ -15,6 +15,9 @@ project(serac LANGUAGES CXX)
 # MPI is required in Serac.
 set(ENABLE_MPI ON CACHE BOOL "")
 
+# Find devtools before loading BLT which sets up their targets
+include(${PROJECT_SOURCE_DIR}/cmake/SeracFindDevtools.cmake)
+
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------
