@@ -206,7 +206,7 @@ def build_devtools(builds_dir, timestamp):
         link_path = pjoin(builds_dir, "latest")
         install_dir = pjoin(prefix, compiler_dir)
         print "[Creating symlink to latest devtools build:\n{0}\n->\n{1}]".format(link_path, install_dir)
-        if os.path.exists(link_path):
+        if os.path.exists(link_path) or os.path.islink(link_path):
             if not os.path.islink(link_path):
                 print "[ERROR: Latest devtools link path exists and is not a link: {0}".format(link_path)
                 return 1
@@ -222,7 +222,7 @@ def build_devtools(builds_dir, timestamp):
                 shutil.rmtree(path_to_be_deleted)
         link_to_be_deleted = pjoin(prefix, "serac_devtools-install")
         print "[Removing link after successful devtools build: {0}]".format(link_to_be_deleted)
-        if os.path.exists(link_to_be_deleted):
+        if os.path.exists(link_to_be_deleted) or os.path.islink(link_path):
             os.unlink(link_to_be_deleted)
 
         print "[SUCCESS: Finished build devtools for spec %s]\n" % compiler_spec
