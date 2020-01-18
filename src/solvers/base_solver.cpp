@@ -4,73 +4,109 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "conduction_solver.hpp"
+#include "base_solver.hpp"
+#include "common/serac_types.hpp"
 
-ConductionSolver::ConductionSolver(mfem::ParFiniteElementSpace &f, mfem::Coefficient &kap)
-  : mfem::TimeDependentOperator(f.GetTrueVSize(), 0.0), m_fe_space(f), m_M_form(nullptr), m_K_form(nullptr),
-    m_T_mat(nullptr), m_current_dt(0.0),
-    m_M_solver(f.GetComm()), m_T_solver(f.GetComm()), m_kappa(kap), m_z(height)
+BaseSolver::BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf)
+  : m_fespaces(stategf.Size()), m_state_gf(stategf), m_visit_dc(nullptr)
 {
-  const double rel_tol = 1e-8;
+  MFEM_ASSERT(stategf.Size() > 0, "State vector array of size 0 in BaseSolver constructor.");
 
-  m_M_form = new mfem::ParBilinearForm(&m_fe_space);
-  m_M_form->AddDomainIntegrator(new mfem::MassIntegrator());
-  m_M_form->Assemble(0); // keep sparsity pattern of M and K the same
-  m_M_form->FormSystemMatrix(m_ess_tdof_list, m_M_mat);
+  for (int i=0; i<stategf.Size(); ++i) {
+    m_fespaces[i] = m_state_gf[i]->ParFESpace();
+  }
+  m_pmesh = m_fespaces[0]->GetParMesh(); 
 
-  m_K_form = new mfem::ParBilinearForm(&m_fe_space);
-  m_K_form->AddDomainIntegrator(new mfem::DiffusionIntegrator(m_kappa));
-  m_K_form->Assemble(0); // keep sparsity pattern of M and K the same
-  m_K_form->FormSystemMatrix(m_ess_tdof_list, m_K_mat);
-
-  m_M_solver.iterative_mode = false;
-  m_M_solver.SetRelTol(rel_tol);
-  m_M_solver.SetAbsTol(0.0);
-  m_M_solver.SetMaxIter(100);
-  m_M_solver.SetPrintLevel(0);
-  m_M_prec.SetType(mfem::HypreSmoother::Jacobi);
-  m_M_solver.SetPreconditioner(m_M_prec);
-  m_M_solver.SetOperator(m_M_mat);
-
-  m_T_solver.iterative_mode = false;
-  m_T_solver.SetRelTol(rel_tol);
-  m_T_solver.SetAbsTol(0.0);
-  m_T_solver.SetMaxIter(100);
-  m_T_solver.SetPrintLevel(0);
-  m_T_solver.SetPreconditioner(m_T_prec);
-
+  m_time = 0.0;
+  m_cycle = 0;
+  MPI_Comm_rank(m_fespaces[0]->GetComm(), &m_rank); 
 }
 
-void ConductionSolver::Mult(const mfem::Vector &u, mfem::Vector &du_dt) const
+void BaseSolver::SetEssentialBCs(const mfem::Array<int> &ess_bdr, const mfem::Array<int> &ess_bdr_coef)
 {
-  // Compute:
-  //    du_dt = M^{-1}*-K(u)
-  // for du_dt
-  m_K_mat.Mult(u, m_z);
-  m_z.Neg(); // z = -z
-  m_M_solver.Mult(m_z, du_dt);
+  m_ess_bdr = ess_bdr;
+  m_ess_bdr_coef = &ess_bdr_coef;
 }
 
-void ConductionSolver::ImplicitSolve(const double dt,
-                                     const mfem::Vector &u, mfem::Vector &du_dt)
+void BaseSolver::SetNaturalBCs(const mfem::Array<int> &nat_bdr, const mfem::Array<int> &nat_bdr_coef)
 {
-  // Solve the equation:
-  //    du_dt = M^{-1}*[-K(u + dt*du_dt)]
-  // for du_dt
-
-  m_T_mat = Add(1.0, m_M_mat, dt, m_K_mat);
-  m_T_solver.SetOperator(*m_T_mat);
-
-  m_K_mat.Mult(u, m_z);
-  m_z.Neg();
-  m_T_solver.Mult(m_z, du_dt);
-  delete m_T_mat;
+  m_nat_bdr = nat_bdr;
+  m_nat_bdr_coef = &nat_bdr_coef;
 }
 
-ConductionSolver::~ConductionSolver()
+void BaseSolver::SetState(const mfem::Array<mfem::ParGridFunction*> &state_gf)
 {
-  delete m_M_form;
-  delete m_K_form;
+  m_state_gf = state_gf;
 }
 
+mfem::Array<mfem::ParGridFunction*> BaseSolver::GetState() const
+{
+  return m_state_gf;
+}
 
+void BaseSolver::SetTime(const double time)
+{
+  m_time = time;
+}
+
+double BaseSolver::GetTime() const
+{
+  return m_time;
+}
+
+int BaseSolver::GetCycle() const
+{
+  return m_cycle;
+}
+
+void BaseSolver::InitializeOutput(const OutputType output_type, const mfem::Array<std::string> names)
+{
+  MFEM_ASSERT(names.Size() == m_state_gf.Size(), "State vector and name arrays are not the same size.");
+  
+  m_state_names = names;
+  m_output_type = output_type;
+
+  switch(m_output_type)
+  {
+    case OutputType::VisIt:
+      m_visit_dc = new VisItDataCollection("serac", m_pmesh);
+      
+      for (int i=0; i<m_state_names.Size(); ++i) {
+	m_visit_dc->RegisterField(m_state_names(i), m_state_gf(i));
+      }	
+      break;
+
+    case OutputType::GLVis:
+      std::ostringstream mesh_name;
+      mesh_name << "serac-mesh" << setfill('0') << setw(6) << m_rank;
+      std::ofstream omesh(mesh_name.str().c_str());
+      omesh.precision(8);
+      pmesh->Print(omesh);
+      break;
+
+    default:
+      mfem_error("OutputType not recognized!");	  
+  }
+}
+
+void BaseSolver::OutputState() const
+{
+  switch(m_output_type)
+  {
+    case VisIt:
+      m_visit_dc.SetCycle(m_cycle);
+      m_visit_dc.SetTime(m_time);
+      m_visit_dc.Save();
+    case GLVis:
+      for (int i=0; i<m_state_gf->Size(); ++i) {
+	std::ostringstream sol_name;
+	sol_name << m_state_names(i) << setfill('0') << setw(6) << m_cycle << setfill('0') << setw(6) << m_rank;
+	std::ofstream osol(sol_name.str().c_str());
+	osol.precision(8);
+	m_state_gf(i)->Save(osol);
+      }
+    default:
+      mfem_error("OutputType not recognized!");
+  }
+
+}

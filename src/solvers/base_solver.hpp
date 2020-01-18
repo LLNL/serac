@@ -4,55 +4,58 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#ifndef CONDUCTION_SOLVER
-#define CONDUCTION_SOLVER
+#ifndef BASE_SOLVER
+#define BASE_SOLVER
 
 #include "mfem.hpp"
 
-// After spatial discretization, the conduction model can be written as:
-//
-//     du/dt = M^{-1}(-Ku)
-//
-//  where u is the vector representing the temperature, M is the mass matrix,
-//  and K is the diffusion opeperator.
-//
-//  Class ConductionSolver represents the right-hand side of the above ODE.
+// This is the abstract base class for a generic forward solver
 
-class ConductionSolver : public mfem::TimeDependentOperator
+class BaseSolver 
 {
 protected:
-  mfem::ParFiniteElementSpace &m_fe_space;
-  mfem::Array<int> m_ess_tdof_list;
-  mfem::ParBilinearForm *m_M_form;
-  mfem::ParBilinearForm *m_K_form;
+  mfem::Array<mfem::ParFiniteElementSpace*> m_fespaces; 
+  mfem::Array<mfem::ParGridFunction*> m_state_gf;
+  mfem::ParMesh *m_pmesh;
+  mfem::Array<int> m_ess_bdr;
+  mfem::Array<int> m_nat_bdr;
+  mfem::Coefficient *m_ess_bdr_coef;
+  mfem::Coefficient *m_nat_bdr_coef;
 
-  mfem::HypreParMatrix m_M_mat;
-  mfem::HypreParMatrix m_K_mat;
-  mfem::HypreParMatrix *m_T_mat; // T = M + dt K
-  double m_current_dt;
+  mfem::Array<std::string> m_state_names;
 
-  mfem::CGSolver m_M_solver;    // Krylov solver for inverting the mass matrix M
-  mfem::HypreSmoother m_M_prec; // Preconditioner for the mass matrix M
-
-  mfem::CGSolver m_T_solver;    // Implicit solver for T = M + dt K
-  mfem::HypreSmoother m_T_prec; // Preconditioner for the implicit solver
-
-  mfem::Coefficient &m_kappa; // Conduction coefficient
-
-  mutable mfem::Vector m_z; // auxiliary vector
-
+  double m_time;
+  int m_cycle;
+  int m_rank;
+  
+  mfem::VisItDataCollection* m_visit_dc;
 
 public:
-  ConductionSolver(mfem::ParFiniteElementSpace &f, mfem::Coefficient &kappa);
-  ConductionSolver(mfem::ParFiniteElementSpace &f, mfem::MatrixCoefficient &matrix_kappa);
+  explicit BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf);
 
-  virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
-  /** Solve the Backward-Euler equation: k = f(u + dt*k, t), for the unknown k.
-      This is the only requirement for high-order SDIRK implicit integration.*/
-  virtual void ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &k);
+  virtual void SetEssentialBCs(const mfem::Array<int> &ess_bdr, const mfem::Coefficient &ess_bdr_coef);
 
-  virtual ~ConductionSolver();
+  virtual void SetNaturalBCs(const mfem::Array<int> &nat_bdr, const mfem::Coefficient &nat_bdr_coef);
 
+  virtual void SetState(const mfem::Array<mfem::ParGridFunction*> &state_gf);
+
+  virtual mfem::Array<mfem::ParGridFunction*> GetState() const;
+
+  virtual void SetTime(const double time);
+
+  virtual double GetTime() const;
+
+  virtual int GetCycle() const;
+
+  virtual void StaticSolve() = 0;
+
+  virtual void AdvanceTimestep(const double dt) = 0;
+
+  virtual void SetStateNames(const mfem::Array<std::string> names);
+
+  virtual void OutputState() const;
+
+  virtual ~BaseSolver();
 
 };
 
