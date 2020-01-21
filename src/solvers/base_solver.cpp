@@ -10,13 +10,10 @@
 #include <fstream>
 
 BaseSolver::BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf)
-  : m_fespaces(stategf.Size()), m_state_gf(stategf), m_visit_dc(nullptr)
+  : m_fespaces(stategf), m_state_gf(stategf), m_visit_dc(nullptr)
 {
   MFEM_ASSERT(stategf.Size() > 0, "State vector array of size 0 in BaseSolver constructor.");
 
-  for (int i=0; i<stategf.Size(); ++i) {
-    m_fespaces[i] = m_state_gf[i]->ParFESpace();
-  }
   m_pmesh = m_fespaces[0]->GetParMesh();
 
   m_time = 0.0;
@@ -24,13 +21,13 @@ BaseSolver::BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf)
   MPI_Comm_rank(m_fespaces[0]->GetComm(), &m_rank);
 }
 
-void BaseSolver::SetEssentialBCs(const mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
+void BaseSolver::SetEssentialBCs(const mfem::Array<int> &ess_bdr, const mfem::Coefficient *ess_bdr_coef)
 {
   m_ess_bdr = ess_bdr;
   m_ess_bdr_coef = ess_bdr_coef;
 }
 
-void BaseSolver::SetNaturalBCs(const mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
+void BaseSolver::SetNaturalBCs(const mfem::Array<int> &nat_bdr, const mfem::Coefficient *nat_bdr_coef)
 {
   m_nat_bdr = nat_bdr;
   m_nat_bdr_coef = nat_bdr_coef;
