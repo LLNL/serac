@@ -6,6 +6,8 @@
 
 #include "base_solver.hpp"
 #include "common/serac_types.hpp"
+#include <iostream>
+#include <fstream>
 
 BaseSolver::BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf)
   : m_fespaces(stategf.Size()), m_state_gf(stategf), m_visit_dc(nullptr)
@@ -22,16 +24,16 @@ BaseSolver::BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf)
   MPI_Comm_rank(m_fespaces[0]->GetComm(), &m_rank); 
 }
 
-void BaseSolver::SetEssentialBCs(const mfem::Array<int> &ess_bdr, const mfem::Array<int> &ess_bdr_coef)
+void BaseSolver::SetEssentialBCs(const mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
 {
   m_ess_bdr = ess_bdr;
-  m_ess_bdr_coef = &ess_bdr_coef;
+  m_ess_bdr_coef = ess_bdr_coef;
 }
 
-void BaseSolver::SetNaturalBCs(const mfem::Array<int> &nat_bdr, const mfem::Array<int> &nat_bdr_coef)
+void BaseSolver::SetNaturalBCs(const mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
 {
   m_nat_bdr = nat_bdr;
-  m_nat_bdr_coef = &nat_bdr_coef;
+  m_nat_bdr_coef = nat_bdr_coef;
 }
 
 void BaseSolver::SetState(const mfem::Array<mfem::ParGridFunction*> &state_gf)
@@ -68,24 +70,28 @@ void BaseSolver::InitializeOutput(const OutputType output_type, const mfem::Arra
 
   switch(m_output_type)
   {
-    case OutputType::VisIt:
-      m_visit_dc = new VisItDataCollection("serac", m_pmesh);
+    case OutputType::VisIt: 
+      {
+      m_visit_dc = new mfem::VisItDataCollection("serac", m_pmesh);
       
       for (int i=0; i<m_state_names.Size(); ++i) {
-	m_visit_dc->RegisterField(m_state_names(i), m_state_gf(i));
+	m_visit_dc->RegisterField(m_state_names[i], m_state_gf[i]);
       }	
       break;
+      }
 
     case OutputType::GLVis:
+      {
       std::ostringstream mesh_name;
-      mesh_name << "serac-mesh" << setfill('0') << setw(6) << m_rank;
+      mesh_name << "serac-mesh" << std::setfill('0') << std::setw(6) << m_rank;
       std::ofstream omesh(mesh_name.str().c_str());
       omesh.precision(8);
-      pmesh->Print(omesh);
+      m_pmesh->Print(omesh);
       break;
+      }
 
     default:
-      mfem_error("OutputType not recognized!");	  
+      mfem::mfem_error("OutputType not recognized!");	  
   }
 }
 
@@ -93,20 +99,28 @@ void BaseSolver::OutputState() const
 {
   switch(m_output_type)
   {
-    case VisIt:
-      m_visit_dc.SetCycle(m_cycle);
-      m_visit_dc.SetTime(m_time);
-      m_visit_dc.Save();
-    case GLVis:
-      for (int i=0; i<m_state_gf->Size(); ++i) {
+    case OutputType::VisIt:
+      {
+      m_visit_dc->SetCycle(m_cycle);
+      m_visit_dc->SetTime(m_time);
+      m_visit_dc->Save();
+      break;
+      }
+
+    case OutputType::GLVis:
+      {
+      for (int i=0; i<m_state_gf.Size(); ++i) {
 	std::ostringstream sol_name;
-	sol_name << m_state_names(i) << setfill('0') << setw(6) << m_cycle << setfill('0') << setw(6) << m_rank;
+	sol_name << m_state_names[i] << std::setfill('0') << std::setw(6) << m_cycle << std::setfill('0') << std::setw(6) << m_rank;
 	std::ofstream osol(sol_name.str().c_str());
 	osol.precision(8);
-	m_state_gf(i)->Save(osol);
+	m_state_gf[i]->Save(osol);
       }
+      break;
+      }
+
     default:
-      mfem_error("OutputType not recognized!");
+      mfem::mfem_error("OutputType not recognized!");
   }
 
 }

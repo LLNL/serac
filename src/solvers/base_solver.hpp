@@ -8,6 +8,7 @@
 #define BASE_SOLVER
 
 #include "mfem.hpp"
+#include "common/serac_types.hpp"
 
 // This is the abstract base class for a generic forward solver
 
@@ -22,6 +23,8 @@ protected:
   mfem::Coefficient *m_ess_bdr_coef;
   mfem::Coefficient *m_nat_bdr_coef;
 
+  OutputType m_output_type;
+
   mfem::Array<std::string> m_state_names;
 
   double m_time;
@@ -33,9 +36,9 @@ protected:
 public:
   explicit BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf);
 
-  virtual void SetEssentialBCs(const mfem::Array<int> &ess_bdr, const mfem::Coefficient &ess_bdr_coef);
+  virtual void SetEssentialBCs(const mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
 
-  virtual void SetNaturalBCs(const mfem::Array<int> &nat_bdr, const mfem::Coefficient &nat_bdr_coef);
+  virtual void SetNaturalBCs(const mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef);
 
   virtual void SetState(const mfem::Array<mfem::ParGridFunction*> &state_gf);
 
@@ -51,7 +54,7 @@ public:
 
   virtual void AdvanceTimestep(const double dt) = 0;
 
-  virtual void SetStateNames(const mfem::Array<std::string> names);
+  virtual void InitializeOutput(const OutputType output_type, const mfem::Array<std::string> names);
 
   virtual void OutputState() const;
 
