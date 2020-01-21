@@ -7,8 +7,7 @@
 #ifndef SERAC_TYPES
 #define SERAC_TYPES
 
-enum class OutputType
-{
+enum class OutputType {
   GLVis,
   VisIt
 };

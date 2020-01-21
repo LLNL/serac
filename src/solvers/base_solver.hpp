@@ -12,10 +12,10 @@
 
 // This is the abstract base class for a generic forward solver
 
-class BaseSolver 
+class BaseSolver
 {
 protected:
-  mfem::Array<mfem::ParFiniteElementSpace*> m_fespaces; 
+  mfem::Array<mfem::ParFiniteElementSpace*> m_fespaces;
   mfem::Array<mfem::ParGridFunction*> m_state_gf;
   mfem::ParMesh *m_pmesh;
   mfem::Array<int> m_ess_bdr;
@@ -30,7 +30,7 @@ protected:
   double m_time;
   int m_cycle;
   int m_rank;
-  
+
   mfem::VisItDataCollection* m_visit_dc;
 
 public:
