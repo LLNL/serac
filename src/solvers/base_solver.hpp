@@ -22,8 +22,12 @@ protected:
   mfem::Array<int> m_nat_bdr;
   const mfem::Coefficient *m_ess_bdr_coef;
   const mfem::Coefficient *m_nat_bdr_coef;
+  mfem::Array<int> m_ess_tdof_list;
 
   OutputType m_output_type;
+
+  TimestepMethod m_timestepper;
+  mfem::ODESolver *m_ode_solver;
 
   mfem::Array<std::string> m_state_names;
 
@@ -34,6 +38,8 @@ protected:
   mfem::VisItDataCollection* m_visit_dc;
 
 public:
+  explicit BaseSolver();
+
   explicit BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf);
 
   virtual void SetEssentialBCs(const mfem::Array<int> &ess_bdr, const mfem::Coefficient *ess_bdr_coef);
@@ -43,6 +49,8 @@ public:
   virtual void SetState(const mfem::Array<mfem::ParGridFunction*> &state_gf);
 
   virtual mfem::Array<mfem::ParGridFunction*> GetState() const;
+
+  virtual void SetTimestepper(TimestepMethod timestepper);
 
   virtual void SetTime(const double time);
 

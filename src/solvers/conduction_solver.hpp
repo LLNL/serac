@@ -9,6 +9,40 @@
 
 #include "mfem.hpp"
 
+class ThermalSolver : public BaseSolver
+{
+  protected:
+    mfem::ParBilinearForm *m_M_form;
+    mfem::ParBilinearFOrm *m_K_form;
+    mfem::HypreParMatrix *m_M_mat;
+    mfem::HypreParMatrix *m_T_mat; // T = M + dt K
+
+    mfem::CGSolver m_K_solver;    // Krylov solver for inverting the stiffness matrix K
+    mfem::HypreSmoother m_K_prec; // Preconditioner for the stiffness matrix K
+
+    mfem::Coefficient &m_kappa; // Conduction coefficient
+    DynamicConductionOperator *m_dyn_oper;
+
+    bool m_dynamic;
+    bool m_gf_initialized;
+
+  public:
+
+    void SetTemperatureBCs(const mfem::Array<int> &temp_bdr, const mfem::Coefficient *temp_bdr_coef);
+
+    void SetFluxBCs(const mfem::Array<int> &flux_bdr, const mfem::Coefficient *flux_bdr_coef);
+
+    void StaticSolve();
+
+    void AdvanceTimestep(const double dt);
+
+    void SetConductivity(const mfem::Coefficient &kappa);
+
+    void SetInitialState(const mfem::Coefficient &temp);
+  
+    void CompleteSetup(const bool allow_dynamic = true);
+}   
+
 // After spatial discretization, the conduction model can be written as:
 //
 //     du/dt = M^{-1}(-Ku)
@@ -18,33 +52,26 @@
 //
 //  Class ConductionSolver represents the right-hand side of the above ODE.
 
-class ConductionSolver : public mfem::TimeDependentOperator
+class DynamicConductionOperator : public mfem::TimeDependentOperator
 {
 protected:
-  mfem::ParFiniteElementSpace &m_fe_space;
-  mfem::Array<int> m_ess_tdof_list;
-  mfem::ParBilinearForm *m_M_form;
-  mfem::ParBilinearForm *m_K_form;
-
-  mfem::HypreParMatrix m_M_mat;
-  mfem::HypreParMatrix m_K_mat;
-  mfem::HypreParMatrix *m_T_mat; // T = M + dt K
-  double m_current_dt;
 
   mfem::CGSolver m_M_solver;    // Krylov solver for inverting the mass matrix M
-  mfem::HypreSmoother m_M_prec; // Preconditioner for the mass matrix M
-
   mfem::CGSolver m_T_solver;    // Implicit solver for T = M + dt K
+  mfem::HypreSmoother m_M_prec; // Preconditioner for the mass matrix M
   mfem::HypreSmoother m_T_prec; // Preconditioner for the implicit solver
 
-  mfem::Coefficient &m_kappa; // Conduction coefficient
+  mfem::HypreParMatrix *m_M_mat;  
+  mfem::HypreParMatrix *m_K_mat;
+  mfem::HypreParMatrix *m_T_mat; // T = M + dt K
 
-  mutable mfem::Vector m_z; // auxiliary vector
-
+ mutable mfem::Vector m_z; // auxiliary vector
 
 public:
-  ConductionSolver(mfem::ParFiniteElementSpace &f, mfem::Coefficient &kappa);
-  ConductionSolver(mfem::ParFiniteElementSpace &f, mfem::MatrixCoefficient &matrix_kappa);
+  ConductionSolver(int height);
+
+  void SetMMatrix(mfem::HypreParMatrix *M_mat);
+  void SetKMatrix(mfem::HypreParMatrix *K_mat);
 
   virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
   /** Solve the Backward-Euler equation: k = f(u + dt*k, t), for the unknown k.
@@ -52,7 +79,6 @@ public:
   virtual void ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &k);
 
   virtual ~ConductionSolver();
-
 
 };
 

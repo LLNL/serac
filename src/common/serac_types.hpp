@@ -12,4 +12,16 @@ enum class OutputType {
   VisIt
 };
 
+enum class TimestepMethod {
+  BackwardEuler,
+  SDIRK33,
+  ForwardEuler,
+  RK2,
+  RK3SSP,
+  GeneralizedAlpha,
+  ImplicitMidpoint,
+  SDIRK23,
+  SDIRK34
+};
+
 #endif

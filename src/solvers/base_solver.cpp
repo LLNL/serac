@@ -9,16 +9,34 @@
 #include <iostream>
 #include <fstream>
 
+BaseSolver::BaseSolver() 
+  : m_visit_dc(nullptr), m_pmesh(nullptr), m_timestepper(TimestepMethod::ForwardEuler)
+{
+  m_time = 0.0;
+  m_cycle = 0;
+ 
+  m_ode_solver = new mfem::ForwardEulerSolver;
+}
+
 BaseSolver::BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf)
-  : m_fespaces(stategf), m_state_gf(stategf), m_visit_dc(nullptr)
+  : m_fespaces(stategf), m_state_gf(stategf), m_visit_dc(nullptr), m_timestepper(TimestepMethod::ForwardEuler)
 {
   MFEM_ASSERT(stategf.Size() > 0, "State vector array of size 0 in BaseSolver constructor.");
+
+  m_fespaces.Resize(m_stategf.Size());
+
+  for (int i=0; i<m_state_gf.Size(); ++i) {
+    m_fespaces[i] = m_state_gf[i]->GetFESpace();
+  }
 
   m_pmesh = m_fespaces[0]->GetParMesh();
 
   m_time = 0.0;
   m_cycle = 0;
   MPI_Comm_rank(m_fespaces[0]->GetComm(), &m_rank);
+
+  m_ode_solver = new mfem::ForwardEulerSolver;
+  
 }
 
 void BaseSolver::SetEssentialBCs(const mfem::Array<int> &ess_bdr, const mfem::Coefficient *ess_bdr_coef)
@@ -35,12 +53,47 @@ void BaseSolver::SetNaturalBCs(const mfem::Array<int> &nat_bdr, const mfem::Coef
 
 void BaseSolver::SetState(const mfem::Array<mfem::ParGridFunction*> &state_gf)
 {
+  MFEM_ASSERT(stategf.Size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
+
+  m_fespaces.Resize(m_stategf.Size());
+
+  for (int i=0; i<m_state_gf.Size(); ++i) {
+    m_fespaces[i] = m_state_gf[i]->GetFESpace();
+  }
+
+  m_pmesh = m_fespaces[0]->GetParMesh();
+
+  m_time = 0.0;
+  m_cycle = 0;
+  MPI_Comm_rank(m_fespaces[0]->GetComm(), &m_rank);
+
   m_state_gf = state_gf;
 }
 
 mfem::Array<mfem::ParGridFunction*> BaseSolver::GetState() const
 {
   return m_state_gf;
+}
+
+void BaseSolver::SetTimestepper(const TimestepMethod timestepper)
+{
+  m_timestepper = timestepper;
+  delete m_ode_solver;
+
+  switch (m_timestepper) {
+  case TimestepMethod::BackwardEuler	: m_ode_solver = new mfem::BackwardEulerSolver; break;
+  case TimestepMethod::SDIRK33		: m_ode_solver = new mfem::SDIRK33Solver; break;
+  case TimestepMethod::ForwardEuler	: m_ode_solver = new mfem::ForwardEulerSolver; break;
+  case TimestepMethod::RK2		: m_ode_solver = new mfem::RK2Solver(0.5); break;
+  case TimestepMethod::RK3SSP		: m_ode_solver = new mfem::RK3SSPSolver; break;
+  case TimestepMethod::RK4		: m_ode_solver = new mfem::RK4Solver; break;
+  case TimestepMethod::GeneralizedAlpha	: m_ode_solver = new mfem::GeneralizedAlphaSolver(0.5); break;
+  case TimestepMethod::ImplicitMidpoint	: m_ode_solver = new mfem::ImplicitMidpointSolver; break;
+  case TimestepMethod::SDIRD23		: m_ode_solver = new mfem::SDIRK23Solver; break;
+  case TimestepMethod::SDIRK34		: m_ode_solver = new mfem::SDIRK34Solver; break;
+  default: {
+    mfem::mfem_error("Timestep method not recognized!");
+  }
 }
 
 void BaseSolver::SetTime(const double time)
