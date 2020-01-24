@@ -18,6 +18,7 @@ enum class TimestepMethod {
   ForwardEuler,
   RK2,
   RK3SSP,
+  RK4,
   GeneralizedAlpha,
   ImplicitMidpoint,
   SDIRK23,

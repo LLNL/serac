@@ -15,7 +15,7 @@
 class BaseSolver
 {
 protected:
-  const mfem::Array<mfem::ParFiniteElementSpace*> m_fespaces;
+  mfem::Array<mfem::ParFiniteElementSpace*> m_fespaces;
   mfem::Array<mfem::ParGridFunction*> m_state_gf;
   mfem::ParMesh *m_pmesh;
   mfem::Array<int> m_ess_bdr;
@@ -42,9 +42,9 @@ public:
 
   explicit BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf);
 
-  virtual void SetEssentialBCs(const mfem::Array<int> &ess_bdr, const mfem::Coefficient *ess_bdr_coef);
+  virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
 
-  virtual void SetNaturalBCs(const mfem::Array<int> &nat_bdr, const mfem::Coefficient *nat_bdr_coef);
+  virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef);
 
   virtual void SetState(const mfem::Array<mfem::ParGridFunction*> &state_gf);
 
@@ -60,7 +60,7 @@ public:
 
   virtual void StaticSolve() = 0;
 
-  virtual void AdvanceTimestep(const double dt) = 0;
+  virtual void AdvanceTimestep(double dt) = 0;
 
   virtual void InitializeOutput(const OutputType output_type, const mfem::Array<std::string> names);
 
