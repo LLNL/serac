@@ -20,8 +20,8 @@ protected:
   mfem::HypreParMatrix *m_M_mat;
   mfem::HypreParMatrix *m_K_mat; // T = M + dt K
 
-  mfem::CGSolver m_K_solver;    // Krylov solver for inverting the stiffness matrix K
-  mfem::HypreSmoother m_K_prec; // Preconditioner for the stiffness matrix K
+  mfem::CGSolver *m_K_solver;    // Krylov solver for inverting the stiffness matrix K
+  mfem::HypreSmoother *m_K_prec; // Preconditioner for the stiffness matrix K
 
   mfem::Coefficient *m_kappa; // Conduction coefficient
   DynamicConductionOperator *m_dyn_oper;
@@ -68,10 +68,10 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator
 {
 protected:
 
-  mfem::CGSolver m_M_solver;    // Krylov solver for inverting the mass matrix M
-  mfem::CGSolver m_T_solver;    // Implicit solver for T = M + dt K
-  mfem::HypreSmoother m_M_prec; // Preconditioner for the mass matrix M
-  mfem::HypreSmoother m_T_prec; // Preconditioner for the implicit solver
+  mfem::CGSolver *m_M_solver;    // Krylov solver for inverting the mass matrix M
+  mfem::CGSolver *m_T_solver;    // Implicit solver for T = M + dt K
+  mfem::HypreSmoother *m_M_prec; // Preconditioner for the mass matrix M
+  mfem::HypreSmoother *m_T_prec; // Preconditioner for the implicit solver
 
   mfem::HypreParMatrix *m_M_mat;
   mfem::HypreParMatrix *m_K_mat;
@@ -80,7 +80,7 @@ protected:
   mutable mfem::Vector m_z; // auxiliary vector
 
 public:
-  DynamicConductionOperator(int height, LinearSolverParameters &params);
+  DynamicConductionOperator(MPI_Comm comm, int height, LinearSolverParameters &params);
 
   void SetMMatrix(mfem::HypreParMatrix *M_mat);
   void SetKMatrix(mfem::HypreParMatrix *K_mat);

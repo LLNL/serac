@@ -22,7 +22,7 @@ inline bool file_exists(const char* path)
 }
 
 
-TEST(thermal_solver, therm_solve)
+TEST(thermal_solver, dyn_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -34,7 +34,7 @@ TEST(thermal_solver, therm_solve)
 
   // declare pointer to parallel mesh object
   mfem::ParMesh *pmesh = NULL;
-  mesh->UniformRefinement();
+  //mesh->UniformRefinement();
 
   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
   delete mesh;
@@ -50,6 +50,13 @@ TEST(thermal_solver, therm_solve)
   mfem::ConstantCoefficient kappa(0.5);
   therm_solver.SetConductivity(kappa);
 
+  LinearSolverParameters params;
+  params.rel_tol = 1.0e-6;
+  params.abs_tol = 1.0e-12;
+  params.print_level = 1;
+  params.max_iter = 100;
+  therm_solver.SetLinearSolverParameters(params);
+
   therm_solver.CompleteSetup();
 
   double t = 0.0;
@@ -62,14 +69,8 @@ TEST(thermal_solver, therm_solve)
       last_step = true;
     }
     therm_solver.AdvanceTimestep(dt);
+    t += dt;
   }
-
-  std::string var_name = "temp";
-  mfem::Array<std::string> names(1);
-  names[0] = var_name;
-
-  therm_solver.InitializeOutput(OutputType::VisIt, names);
-  therm_solver.OutputState();
 
   auto state_gf = therm_solver.GetState();
 
@@ -77,7 +78,7 @@ TEST(thermal_solver, therm_solve)
 
   double u_norm = state_gf[0]->ComputeLpError(2.0, zero);
 
-  EXPECT_NEAR(2.53521, u_norm, 0.00001);
+  EXPECT_NEAR(2.5236604, u_norm, 0.00001);
 
   delete pmesh;
 

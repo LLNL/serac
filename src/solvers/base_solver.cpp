@@ -24,9 +24,14 @@ BaseSolver::BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf)
   MFEM_ASSERT(stategf.Size() > 0, "State vector array of size 0 in BaseSolver constructor.");
 
   m_fespaces.SetSize(m_state_gf.Size());
+  m_fecolls.SetSize(m_state_gf.Size());
+  m_true_vec.SetSize(m_state_gf.Size());
 
   for (int i=0; i<m_state_gf.Size(); ++i) {
     m_fespaces[i] = m_state_gf[i]->ParFESpace();
+    m_fecolls[i] = m_fespaces[i]->FEColl();
+    m_true_vec[i] = new mfem::Vector;
+    m_state_gf[i]->GetTrueDofs(*m_true_vec[i]);
   }
 
   m_pmesh = m_fespaces[0]->GetParMesh();
@@ -147,7 +152,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, const mfem::Arra
 
   case OutputType::GLVis: {
     std::ostringstream mesh_name;
-    mesh_name << "serac-mesh" << std::setfill('0') << std::setw(6) << m_rank;
+    mesh_name << "serac-mesh." << std::setfill('0') << std::setw(6) << m_rank - 1;
     std::ofstream omesh(mesh_name.str().c_str());
     omesh.precision(8);
     m_pmesh->Print(omesh);
@@ -172,8 +177,8 @@ void BaseSolver::OutputState() const
   case OutputType::GLVis: {
     for (int i=0; i<m_state_gf.Size(); ++i) {
       std::ostringstream sol_name;
-      sol_name << m_state_names[i] << std::setfill('0') << std::setw(6) << m_cycle << std::setfill('0') << std::setw(
-                 6) << m_rank;
+      sol_name << m_state_names[i] << "." << std::setfill('0') << std::setw(6) << m_cycle << "." << std::setfill('0') << std::setw(
+                 6) << m_rank - 1;
       std::ofstream osol(sol_name.str().c_str());
       osol.precision(8);
       m_state_gf[i]->Save(osol);
@@ -189,8 +194,10 @@ void BaseSolver::OutputState() const
 BaseSolver::~BaseSolver()
 {
   for (int i=0; i<m_fespaces.Size(); ++i) {
+    delete m_fecolls[i];
     delete m_fespaces[i];
     delete m_state_gf[i];
+    delete m_true_vec[i];
   }
   delete m_ode_solver;
   delete m_visit_dc;
