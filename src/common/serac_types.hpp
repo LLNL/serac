@@ -7,6 +7,8 @@
 #ifndef SERAC_TYPES
 #define SERAC_TYPES
 
+// Option bundling enums
+
 enum class OutputType {
   GLVis,
   VisIt
@@ -23,6 +25,27 @@ enum class TimestepMethod {
   ImplicitMidpoint,
   SDIRK23,
   SDIRK34
+};
+
+enum class LinearSolver {
+  CG,
+  GMRES
+};
+
+enum class Preconditioner {
+  Jacobi,
+  BoomerAMG
+};
+
+// Parameter bundles
+
+struct LinearSolverParameters {
+  double rel_tol;
+  double abs_tol;
+  int print_level;
+  int max_iter;
+  LinearSolver lin_solver;
+  Preconditioner prec;
 };
 
 #endif

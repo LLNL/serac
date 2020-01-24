@@ -26,12 +26,15 @@ protected:
   mfem::Coefficient *m_kappa; // Conduction coefficient
   DynamicConductionOperator *m_dyn_oper;
 
+  LinearSolverParameters m_lin_params;
+
   bool m_dynamic;
   bool m_gf_initialized;
   bool m_conductivity_set;
+  bool m_solverparams_set;
 
 public:
-  ThermalSolver(int order, mfem::ParMesh *pmesh, bool allow_dynamic);
+  ThermalSolver(int order, mfem::ParMesh *pmesh);
 
   void SetTemperatureBCs(mfem::Array<int> &temp_bdr, mfem::Coefficient *temp_bdr_coef);
 
@@ -46,6 +49,10 @@ public:
   void SetInitialState(mfem::Coefficient &temp);
 
   void CompleteSetup(const bool allow_dynamic = true);
+
+  void SetLinearSolverParameters(const LinearSolverParameters &params);
+
+  virtual ~ThermalSolver();
 };
 
 // After spatial discretization, the conduction model can be written as:
@@ -73,7 +80,7 @@ protected:
   mutable mfem::Vector m_z; // auxiliary vector
 
 public:
-  DynamicConductionOperator(int height);
+  DynamicConductionOperator(int height, LinearSolverParameters &params);
 
   void SetMMatrix(mfem::HypreParMatrix *M_mat);
   void SetKMatrix(mfem::HypreParMatrix *K_mat);

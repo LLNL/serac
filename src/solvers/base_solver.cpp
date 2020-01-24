@@ -184,5 +184,15 @@ void BaseSolver::OutputState() const
   default:
     mfem::mfem_error("OutputType not recognized!");
   }
-
 }
+
+BaseSolver::~BaseSolver()
+{
+  for (int i=0; i<m_fespaces.Size(); ++i) {
+    delete m_fespaces[i];
+    delete m_state_gf[i];
+  }
+  delete m_ode_solver;
+  delete m_visit_dc;
+}
+

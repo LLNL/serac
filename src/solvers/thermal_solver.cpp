@@ -4,11 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "conduction_solver.hpp"
+#include "thermal_solver.hpp"
 
-ThermalSolver::ThermalSolver(int order, mfem::ParMesh *pmesh, bool allow_dynamic) :
+ThermalSolver::ThermalSolver(int order, mfem::ParMesh *pmesh) :
   BaseSolver(), m_M_form(nullptr), m_K_form(nullptr), m_M_mat(nullptr), m_K_mat(nullptr),
-  m_dyn_oper(nullptr), m_dynamic(allow_dynamic), m_gf_initialized(false), m_conductivity_set(false)
+  m_dyn_oper(nullptr), m_dynamic(true), m_gf_initialized(false), m_conductivity_set(false),
+  m_solverparams_set(false)
 {
   m_fespaces.SetSize(1);
 
@@ -45,18 +46,26 @@ void ThermalSolver::SetConductivity(mfem::Coefficient &kappa)
   m_conductivity_set = true;
 }
 
+void ThermalSolver::SetLinearSolverParameters(const LinearSolverParameters &params)
+{
+  m_lin_params = params;
+  m_solverparams_set = true;
+}
+
 void ThermalSolver::CompleteSetup(const bool allow_dynamic)
 {
+  MFEM_ASSERT(m_conductivity_set == true, "Conductivity not set in ThermalSolver!");
+  MFEM_ASSERT(m_solverparams_set == true, "Linear solver parameters not set in ThermalSolver!");
   m_K_form = new mfem::ParBilinearForm(m_fespaces[0]);
   m_K_form->AddDomainIntegrator(new mfem::DiffusionIntegrator(*m_kappa));
   m_K_form->Assemble(0); // keep sparsity pattern of M and K the same
   m_K_form->FormSystemMatrix(m_ess_tdof_list, *m_K_mat);
 
   m_K_solver.iterative_mode = false;
-  m_K_solver.SetRelTol(1.0e-6);
-  m_K_solver.SetAbsTol(0.0);
-  m_K_solver.SetMaxIter(100);
-  m_K_solver.SetPrintLevel(0);
+  m_K_solver.SetRelTol(m_lin_params.rel_tol);
+  m_K_solver.SetAbsTol(m_lin_params.abs_tol);
+  m_K_solver.SetMaxIter(m_lin_params.max_iter);
+  m_K_solver.SetPrintLevel(m_lin_params.print_level);
   m_K_prec.SetType(mfem::HypreSmoother::Jacobi);
   m_K_solver.SetPreconditioner(m_K_prec);
 
@@ -66,7 +75,7 @@ void ThermalSolver::CompleteSetup(const bool allow_dynamic)
     m_M_form->Assemble(0); // keep sparsity pattern of M and K the same
     m_M_form->FormSystemMatrix(m_ess_tdof_list, *m_M_mat);
 
-    m_dyn_oper = new DynamicConductionOperator(m_fespaces[0]->GetTrueVSize());
+    m_dyn_oper = new DynamicConductionOperator(m_fespaces[0]->GetTrueVSize(), m_lin_params);
     m_dyn_oper->SetMMatrix(m_M_mat);
     m_dyn_oper->SetKMatrix(m_K_mat);
     m_ode_solver->Init(*m_dyn_oper);
@@ -90,22 +99,34 @@ void ThermalSolver::AdvanceTimestep(double dt)
   m_cycle += 1;
 }
 
-DynamicConductionOperator::DynamicConductionOperator(int height)
+ThermalSolver::~ThermalSolver()
+{
+  delete m_K_form;
+  delete m_K_mat;
+
+  if (m_dynamic) {
+    delete m_dyn_oper;
+    delete m_M_form;
+    delete m_M_mat;
+  }
+}
+
+DynamicConductionOperator::DynamicConductionOperator(int height, LinearSolverParameters &params)
   : mfem::TimeDependentOperator(height, 0.0), m_z(height)
 {
   m_M_solver.iterative_mode = false;
-  m_M_solver.SetRelTol(1.0e-6);
-  m_M_solver.SetAbsTol(0.0);
-  m_M_solver.SetMaxIter(100);
-  m_M_solver.SetPrintLevel(0);
+  m_M_solver.SetRelTol(params.rel_tol);
+  m_M_solver.SetAbsTol(params.abs_tol);
+  m_M_solver.SetMaxIter(params.max_iter);
+  m_M_solver.SetPrintLevel(params.print_level);
   m_M_prec.SetType(mfem::HypreSmoother::Jacobi);
   m_M_solver.SetPreconditioner(m_M_prec);
 
   m_T_solver.iterative_mode = false;
-  m_T_solver.SetRelTol(1.0e-6);
-  m_T_solver.SetAbsTol(0.0);
-  m_T_solver.SetMaxIter(100);
-  m_T_solver.SetPrintLevel(0);
+  m_T_solver.SetRelTol(params.rel_tol);
+  m_T_solver.SetAbsTol(params.abs_tol);
+  m_T_solver.SetMaxIter(params.max_iter);
+  m_T_solver.SetPrintLevel(params.print_level);
   m_T_solver.SetPreconditioner(m_T_prec);
 
 }
@@ -151,3 +172,5 @@ void DynamicConductionOperator::ImplicitSolve(const double dt,
   delete m_T_mat;
 }
 
+DynamicConductionOperator::~DynamicConductionOperator()
+{}

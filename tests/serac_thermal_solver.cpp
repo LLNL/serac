@@ -7,7 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "mfem.hpp"
-#include "solvers/conduction_solver.hpp"
+#include "solvers/thermal_solver.hpp"
 #include <fstream>
 #include <sys/stat.h>
 
@@ -22,7 +22,7 @@ inline bool file_exists(const char* path)
 }
 
 
-TEST(dynamic_solver, dyn_solve)
+TEST(thermal_solver, therm_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -41,30 +41,17 @@ TEST(dynamic_solver, dyn_solve)
 
   pmesh->UniformRefinement();
 
-  int dim = pmesh->Dimension();
-
-  mfem::ODESolver *ode_solver = new mfem::BackwardEulerSolver;
-
-  // Define the finite element spaces for temperature field
-  mfem::H1_FECollection fe_coll(2, dim);
-  mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll);
-
-  mfem::ParGridFunction u_gf(&fe_space);
+  ThermalSolver therm_solver(2, pmesh);
+  therm_solver.SetTimestepper(TimestepMethod::BackwardEuler);
 
   mfem::FunctionCoefficient u_0(InitialTemperature);
-  u_gf.ProjectCoefficient(u_0);
-  mfem::Vector u;
-  u_gf.GetTrueDofs(u);
-  u_gf.SetFromTrueDofs(u);
+  therm_solver.SetInitialState(u_0);
 
-  int myid;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
-  // Initialize the conduction operator and the VisIt visualization.
   mfem::ConstantCoefficient kappa(0.5);
-  ConductionSolver oper(fe_space, kappa);
+  therm_solver.SetConductivity(kappa);
 
-  ode_solver->Init(oper);
+  therm_solver.CompleteSetup();
+
   double t = 0.0;
   double t_final = 5.0;
   double dt = 1.0;
@@ -74,14 +61,21 @@ TEST(dynamic_solver, dyn_solve)
     if (t + dt >= t_final - dt/2) {
       last_step = true;
     }
-    ode_solver->Step(u, t, dt);
+    therm_solver.AdvanceTimestep(dt);
   }
 
-  u_gf.SetFromTrueDofs(u);
+  std::string var_name = "temp";
+  mfem::Array<std::string> names(1);
+  names[0] = var_name;
+
+  therm_solver.InitializeOutput(OutputType::VisIt, names);
+  therm_solver.OutputState();
+
+  auto state_gf = therm_solver.GetState();
 
   mfem::ConstantCoefficient zero(0.0);
 
-  double u_norm = u_gf.ComputeLpError(2.0, zero);
+  double u_norm = state_gf[0]->ComputeLpError(2.0, zero);
 
   EXPECT_NEAR(2.53521, u_norm, 0.00001);
 
