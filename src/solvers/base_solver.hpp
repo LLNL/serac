@@ -18,7 +18,7 @@ protected:
   mfem::Array<const mfem::FiniteElementCollection*> m_fecolls;
   mfem::Array<mfem::ParFiniteElementSpace*> m_fespaces;
   mfem::Array<mfem::ParGridFunction*> m_state_gf;
-  mfem::Array<mfem::Vector*> m_true_vec;
+  mfem::Array<mfem::HypreParVector*> m_true_vec;
   mfem::ParMesh *m_pmesh;
   mfem::Array<int> m_ess_bdr;
   mfem::Array<int> m_nat_bdr;

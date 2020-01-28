@@ -30,7 +30,7 @@ BaseSolver::BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf)
   for (int i=0; i<m_state_gf.Size(); ++i) {
     m_fespaces[i] = m_state_gf[i]->ParFESpace();
     m_fecolls[i] = m_fespaces[i]->FEColl();
-    m_true_vec[i] = new mfem::Vector;
+    m_true_vec[i] = new mfem::HypreParVector(m_fespaces[i]);
     m_state_gf[i]->GetTrueDofs(*m_true_vec[i]);
   }
 

@@ -20,18 +20,21 @@ protected:
   mfem::HypreParMatrix *m_M_mat;
   mfem::HypreParMatrix *m_K_mat; // T = M + dt K
 
+  mfem::ParLinearForm *m_l_form;
+  mfem::HypreParVector *m_rhs;
+
   mfem::CGSolver *m_K_solver;    // Krylov solver for inverting the stiffness matrix K
   mfem::HypreSmoother *m_K_prec; // Preconditioner for the stiffness matrix K
 
   mfem::Coefficient *m_kappa; // Conduction coefficient
+  mfem::Coefficient *m_source;
+
   DynamicConductionOperator *m_dyn_oper;
 
   LinearSolverParameters m_lin_params;
 
   bool m_dynamic;
   bool m_gf_initialized;
-  bool m_conductivity_set;
-  bool m_solverparams_set;
 
 public:
   ThermalSolver(int order, mfem::ParMesh *pmesh);
@@ -47,6 +50,8 @@ public:
   void SetConductivity(mfem::Coefficient &kappa);
 
   void SetInitialState(mfem::Coefficient &temp);
+
+  void SetSource(mfem::Coefficient &source);
 
   void CompleteSetup(const bool allow_dynamic = true);
 
@@ -77,13 +82,15 @@ protected:
   mfem::HypreParMatrix *m_K_mat;
   mfem::HypreParMatrix *m_T_mat; // T = M + dt K
 
+  mfem::Vector *m_true_rhs;
+
   mutable mfem::Vector m_z; // auxiliary vector
 
 public:
   DynamicConductionOperator(MPI_Comm comm, int height, LinearSolverParameters &params);
 
   void SetMMatrix(mfem::HypreParMatrix *M_mat);
-  void SetKMatrix(mfem::HypreParMatrix *K_mat);
+  void SetKMatrixAndRHS(mfem::HypreParMatrix *K_mat, mfem::Vector *rhs);
 
   virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
   /** Solve the Backward-Euler equation: k = f(u + dt*k, t), for the unknown k.

@@ -11,6 +11,7 @@
 #include <fstream>
 #include <sys/stat.h>
 
+double BoundaryTemperature(const mfem::Vector &x);
 double InitialTemperature(const mfem::Vector &x);
 
 const char* mesh_file = "NO_MESH_GIVEN";
@@ -20,6 +21,62 @@ inline bool file_exists(const char* path)
   struct stat buffer;
   return (stat(path, &buffer) == 0);
 }
+
+TEST(thermal_solver, static_solve)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Open the mesh
+  ASSERT_TRUE(file_exists(mesh_file));
+  std::fstream imesh(mesh_file);
+  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  imesh.close();
+
+  mesh->UniformRefinement();
+
+  // declare pointer to parallel mesh object
+  mfem::ParMesh *pmesh = NULL;
+
+  pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
+  delete mesh;
+
+  pmesh->UniformRefinement();
+
+  ThermalSolver therm_solver(2, pmesh);
+
+  mfem::FunctionCoefficient u_0(BoundaryTemperature);
+  mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
+  temp_bdr = 1;
+  therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
+
+  mfem::ConstantCoefficient kappa(0.5);
+  therm_solver.SetConductivity(kappa);
+
+  LinearSolverParameters params;
+  params.rel_tol = 1.0e-6;
+  params.abs_tol = 1.0e-12;
+  params.print_level = 0;
+  params.max_iter = 100;
+  therm_solver.SetLinearSolverParameters(params);
+
+  bool allow_dynamic = false;
+  therm_solver.CompleteSetup(allow_dynamic);
+
+  therm_solver.StaticSolve();
+
+  auto state_gf = therm_solver.GetState();
+
+  mfem::ConstantCoefficient zero(0.0);
+
+  double u_norm = state_gf[0]->ComputeLpError(2.0, zero);
+
+  EXPECT_NEAR(2.56980679, u_norm, 0.00001);
+
+  delete pmesh;
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
 
 
 TEST(thermal_solver, dyn_solve)
@@ -32,9 +89,10 @@ TEST(thermal_solver, dyn_solve)
   mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
+  mesh->UniformRefinement();
+
   // declare pointer to parallel mesh object
   mfem::ParMesh *pmesh = NULL;
-  //mesh->UniformRefinement();
 
   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
   delete mesh;
@@ -47,13 +105,17 @@ TEST(thermal_solver, dyn_solve)
   mfem::FunctionCoefficient u_0(InitialTemperature);
   therm_solver.SetInitialState(u_0);
 
+  mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
+  temp_bdr = 1;
+  therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
+
   mfem::ConstantCoefficient kappa(0.5);
   therm_solver.SetConductivity(kappa);
 
   LinearSolverParameters params;
   params.rel_tol = 1.0e-6;
   params.abs_tol = 1.0e-12;
-  params.print_level = 1;
+  params.print_level = 0;
   params.max_iter = 100;
   therm_solver.SetLinearSolverParameters(params);
 
@@ -78,7 +140,7 @@ TEST(thermal_solver, dyn_solve)
 
   double u_norm = state_gf[0]->ComputeLpError(2.0, zero);
 
-  EXPECT_NEAR(2.5236604, u_norm, 0.00001);
+  EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   delete pmesh;
 
@@ -116,6 +178,11 @@ int main(int argc, char* argv[])
   MPI_Finalize();
 
   return result;
+}
+
+double BoundaryTemperature(const mfem::Vector &x)
+{
+  return x.Norml2();
 }
 
 double InitialTemperature(const mfem::Vector &x)
