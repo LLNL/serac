@@ -71,10 +71,14 @@ void ThermalSolver::CompleteSetup(const bool allow_dynamic)
   m_K_form->Finalize();
 
   m_l_form = new mfem::ParLinearForm(m_fespaces[0]);
-  if (m_source != nullptr) {
+  if (m_source != nullptr && m_nat_bdr_coef == nullptr) {
     m_l_form->AddDomainIntegrator(new mfem::DomainLFIntegrator(*m_source));
+    m_rhs = m_l_form->ParallelAssemble();
   }
-  m_rhs = m_l_form->ParallelAssemble();
+  else {
+    m_rhs = new mfem::HypreParVector(m_fespaces[0]);
+    *m_rhs = 0.0;
+  }
 
   m_K_mat = m_K_form->ParallelAssemble();
   m_K_mat->EliminateRowsCols(m_ess_tdof_list, *m_true_vec[0], *m_rhs);
@@ -188,6 +192,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt)
   // for du_dt
   m_K_mat->Mult(u, m_z);
   m_z.Neg(); // z = -z
+  m_z.Add(1.0, *m_true_rhs);
   m_M_solver->Mult(m_z, du_dt);
 }
 
