@@ -74,8 +74,7 @@ void ThermalSolver::CompleteSetup(const bool allow_dynamic)
   if (m_source != nullptr && m_nat_bdr_coef == nullptr) {
     m_l_form->AddDomainIntegrator(new mfem::DomainLFIntegrator(*m_source));
     m_rhs = m_l_form->ParallelAssemble();
-  }
-  else {
+  } else {
     m_rhs = new mfem::HypreParVector(m_fespaces[0]);
     *m_rhs = 0.0;
   }
@@ -105,7 +104,7 @@ void ThermalSolver::StaticSolve()
 {
   m_K_solver = new mfem::CGSolver(m_fespaces[0]->GetComm());
   m_K_prec = new mfem::HypreSmoother();
-    
+
   m_K_solver->iterative_mode = false;
   m_K_solver->SetRelTol(m_lin_params.rel_tol);
   m_K_solver->SetAbsTol(m_lin_params.abs_tol);
@@ -204,7 +203,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt,
   // Solve the equation:
   //    du_dt = M^{-1}*[-K(u + dt*du_dt)]
   // for du_dt
- 
+
   m_T_mat = new mfem::HypreParMatrix;
   m_T_mat = Add(1.0, *m_M_mat, dt, *m_K_mat);
   m_T_solver->SetOperator(*m_T_mat);

@@ -177,8 +177,8 @@ void BaseSolver::OutputState() const
   case OutputType::GLVis: {
     for (int i=0; i<m_state_gf.Size(); ++i) {
       std::ostringstream sol_name;
-      sol_name << m_state_names[i] << "." << std::setfill('0') << std::setw(6) << m_cycle << "." << std::setfill('0') << std::setw(
-                 6) << m_rank - 1;
+      sol_name << m_state_names[i] << "." << std::setfill('0') << std::setw(6) << m_cycle << "." << std::setfill('0') <<
+               std::setw(6) << m_rank - 1;
       std::ofstream osol(sol_name.str().c_str());
       osol.precision(8);
       m_state_gf[i]->Save(osol);
