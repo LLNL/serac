@@ -10,93 +10,148 @@
 #include "mfem.hpp"
 #include "base_solver.hpp"
 
+// Forward declaration
 class DynamicConductionOperator;
 
+/** This is a generic linear thermal diffusion oeprator of the form
+ *
+ *    M du/dt = -kappa Ku + f
+ *
+ *  where M is a mass matrix, K is a stiffness matrix, and f is a
+ *  thermal load vector. */
 class ThermalSolver : public BaseSolver
 {
 protected:
+  /// Mass bilinear form object
   mfem::ParBilinearForm *m_M_form;
-  mfem::ParBilinearForm *m_K_form;
-  mfem::HypreParMatrix *m_M_mat;
-  mfem::HypreParMatrix *m_K_mat; // T = M + dt K
 
+  /// Stiffness bilinear form object
+  mfem::ParBilinearForm *m_K_form;
+
+  /// Assembled mass matrix
+  mfem::HypreParMatrix *m_M_mat;
+
+  /// Assembled stiffness matrix
+  mfem::HypreParMatrix *m_K_mat;
+
+  /// Thermal load linear form
   mfem::ParLinearForm *m_l_form;
+
+  /// Assembled RHS vector
   mfem::HypreParVector *m_rhs;
 
-  mfem::CGSolver *m_K_solver;    // Krylov solver for inverting the stiffness matrix K
-  mfem::HypreSmoother *m_K_prec; // Preconditioner for the stiffness matrix K
+  /// Linear solver for the K operator
+  mfem::CGSolver *m_K_solver;
 
-  mfem::Coefficient *m_kappa; // Conduction coefficient
+  /// Preconditioner for the K operator
+  mfem::HypreSmoother *m_K_prec;
+
+  /// Conduction coefficient
+  mfem::Coefficient *m_kappa;
+
+  /// Body source coefficient
   mfem::Coefficient *m_source;
 
+  /// Time integration operator
   DynamicConductionOperator *m_dyn_oper;
 
+  /// Linear solver parameters
   LinearSolverParameters m_lin_params;
 
+  /// Dynamic solver indicator
   bool m_dynamic;
+
+  /// State variable initialization indicator
   bool m_gf_initialized;
 
 public:
+  /// Constructor from order and parallel mesh
   ThermalSolver(int order, mfem::ParMesh *pmesh);
 
+  /// Set essential temperature boundary conditions (strongly enforced)
   void SetTemperatureBCs(mfem::Array<int> &temp_bdr, mfem::Coefficient *temp_bdr_coef);
 
+  /// Set flux boundary conditions (weakly enforced)
   void SetFluxBCs(mfem::Array<int> &flux_bdr, mfem::Coefficient *flux_bdr_coef);
 
+  /// Solve the system statically
   void StaticSolve();
 
+  /// Advance the timestep using the chosen integration scheme
   void AdvanceTimestep(double dt);
 
+  /// Set the thermal conductivity coefficient
   void SetConductivity(mfem::Coefficient &kappa);
 
+  /// Set the initial temperature from a coefficient
   void SetInitialState(mfem::Coefficient &temp);
 
+  /// Set the body thermal source from a coefficient
   void SetSource(mfem::Coefficient &source);
 
+  /** Complete the initialization and allocation of the data structures. This
+   *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic = false,
+   *  do not allocate the mass matrix or dynamic operator */
   void CompleteSetup(const bool allow_dynamic = true);
 
+  /// Set the linear solver parameters for both the M and K operators
   void SetLinearSolverParameters(const LinearSolverParameters &params);
 
+  /// Destructor
   virtual ~ThermalSolver();
 };
 
-// After spatial discretization, the conduction model can be written as:
-//
-//     du/dt = M^{-1}(-Ku)
-//
-//  where u is the vector representing the temperature, M is the mass matrix,
-//  and K is the diffusion opeperator.
-//
-//  Class ConductionSolver represents the right-hand side of the above ODE.
-
+/// The time dependent operator for advancing the discretized conduction ODE
 class DynamicConductionOperator : public mfem::TimeDependentOperator
 {
 protected:
 
-  mfem::CGSolver *m_M_solver;    // Krylov solver for inverting the mass matrix M
-  mfem::CGSolver *m_T_solver;    // Implicit solver for T = M + dt K
-  mfem::HypreSmoother *m_M_prec; // Preconditioner for the mass matrix M
-  mfem::HypreSmoother *m_T_prec; // Preconditioner for the implicit solver
+  /// Solver for the mass matrix
+  mfem::CGSolver *m_M_solver;
 
+  /// Solver for the T matrix
+  mfem::CGSolver *m_T_solver;
+
+  /// Preconditioner for the M matrix
+  mfem::HypreSmoother *m_M_prec;
+
+  /// Preconditioner for the T matrix
+  mfem::HypreSmoother *m_T_prec;
+
+  /// Pointer to the assembled M matrix
   mfem::HypreParMatrix *m_M_mat;
-  mfem::HypreParMatrix *m_K_mat;
-  mfem::HypreParMatrix *m_T_mat; // T = M + dt K
 
+  /// Pointer to the assembled K matrix
+  mfem::HypreParMatrix *m_K_mat;
+
+  /// Pointer to the assembled T ( = M + dt K) matrix
+  mfem::HypreParMatrix *m_T_mat;
+
+  /// Assembled RHS vector
   mfem::Vector *m_true_rhs;
 
-  mutable mfem::Vector m_z; // auxiliary vector
+  /// Auxillary working vector
+  mutable mfem::Vector m_z;
 
 public:
+  /// Constructor. Height is the true degree of freedom size
   DynamicConductionOperator(MPI_Comm comm, int height, LinearSolverParameters &params);
 
+  /// Set the mass matrix
   void SetMMatrix(mfem::HypreParMatrix *M_mat);
+
+  /// Set the stiffness matrix and RHS
   void SetKMatrixAndRHS(mfem::HypreParMatrix *K_mat, mfem::Vector *rhs);
 
+  /** Calculate du_dt = M^-1 (-Ku + f).
+   *  This is all that is needed for explicit methods */
   virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
-  /** Solve the Backward-Euler equation: k = f(u + dt*k, t), for the unknown k.
-      This is the only requirement for high-order SDIRK implicit integration.*/
-  virtual void ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &k);
 
+  /** Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
+   *  for du_dt. This is need for all implicit methods */
+  virtual void ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &du_dt);
+
+  ///Destructor
   virtual ~DynamicConductionOperator();
 
 };
