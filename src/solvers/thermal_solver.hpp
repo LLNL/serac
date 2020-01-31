@@ -4,8 +4,8 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#ifndef CONDUCTION_SOLVER
-#define CONDUCTION_SOLVER
+#ifndef THERMAL_SOLVER
+#define THERMAL_SOLVER
 
 #include "mfem.hpp"
 #include "base_solver.hpp"
@@ -37,8 +37,17 @@ protected:
   /// Thermal load linear form
   mfem::ParLinearForm *m_l_form;
 
-  /// Assembled RHS vector
-  mfem::HypreParVector *m_rhs;
+  /// Assembled temperature RHS vector
+  mfem::HypreParVector *m_temp_rhs;
+
+  /// Assembled temperature change RHS vector
+  mfem::HypreParVector *m_tempdot_rhs;
+
+  /// Grid function for the temperature rate
+  mfem::ParGridFunction *m_tempdot_gf;
+
+  /// True vector for the temperature rate
+  mfem::HypreParVector *m_tempdot_true_vec;
 
   /// Linear solver for the K operator
   mfem::CGSolver *m_K_solver;
@@ -58,12 +67,24 @@ protected:
   /// Linear solver parameters
   LinearSolverParameters m_lin_params;
 
+  /// Array of the temp dot degree of freedom indicies
+  mfem::Array<int> m_tempdot_tdof_list;
+
+  /// Temperature change boundary marker
+  mfem::Array<int> m_tempdot_bdr;
+
+  /// Temperature change coefficient
+  const mfem::Coefficient *m_tempdot_bdr_coef;
+
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
 
 public:
   /// Constructor from order and parallel mesh
   ThermalSolver(int order, mfem::ParMesh *pmesh);
+
+  /// Set essential temperature change boundary conditions (strongly enforced)
+  void SetTemperatureRateBCs(mfem::Array<int> &temp_dot_bdr, mfem::Coefficient *temp_dot_bdr_coef);
 
   /// Set essential temperature boundary conditions (strongly enforced)
   void SetTemperatureBCs(mfem::Array<int> &temp_bdr, mfem::Coefficient *temp_bdr_coef);
@@ -84,7 +105,7 @@ public:
   void SetSource(mfem::Coefficient &source);
 
   /** Complete the initialization and allocation of the data structures. This
-   *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic = false,
+   *  must be called before AdvanceTimestep(). If the time integrator is quasi-static,
    *  do not allocate the mass matrix or dynamic operator */
   void CompleteSetup();
 
@@ -121,8 +142,11 @@ protected:
   /// Pointer to the assembled T ( = M + dt K) matrix
   mfem::HypreParMatrix *m_T_mat;
 
-  /// Assembled RHS vector
-  mfem::Vector *m_true_rhs;
+  /// Assembled RHS vector for temperature
+  mfem::Vector *m_K_true_rhs;
+
+  /// Assembled RHS vector for temperature change
+  mfem::Vector *m_M_true_rhs;
 
   /// Auxillary working vector
   mutable mfem::Vector m_z;
@@ -132,7 +156,7 @@ public:
   DynamicConductionOperator(MPI_Comm comm, int height, LinearSolverParameters &params);
 
   /// Set the mass matrix
-  void SetMMatrix(mfem::HypreParMatrix *M_mat);
+  void SetMMatrixAndRHS(mfem::HypreParMatrix *M_mat, mfem::Vector *rhs);
 
   /// Set the stiffness matrix and RHS
   void SetKMatrixAndRHS(mfem::HypreParMatrix *K_mat, mfem::Vector *rhs);
