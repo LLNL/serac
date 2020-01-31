@@ -68,6 +68,9 @@ protected:
   /// VisIt data collection pointer
   mfem::VisItDataCollection* m_visit_dc;
 
+  /// State variable initialization indicator
+  bool m_gf_initialized;
+
 public:
   /// Empty constructor
   BaseSolver();
@@ -99,11 +102,8 @@ public:
   /// Get the current cycle
   virtual int GetCycle() const;
 
-  /// Perform a static solve
-  virtual void StaticSolve() = 0;
-
   /// Advance the state variables according to the chosen time integrator
-  virtual void AdvanceTimestep(double dt) = 0;
+  virtual void AdvanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
   virtual void InitializeOutput(const OutputType output_type, const mfem::Array<std::string> names);

@@ -48,6 +48,9 @@ TEST(thermal_solver, static_solve)
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
 
+  // Set the time integration method
+  therm_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+
   // Initialize the temperature boundary condition
   mfem::FunctionCoefficient u_0(BoundaryTemperature);
   mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
@@ -69,11 +72,11 @@ TEST(thermal_solver, static_solve)
   therm_solver.SetLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic operator
-  bool allow_dynamic = false;
-  therm_solver.CompleteSetup(allow_dynamic);
+  therm_solver.CompleteSetup();
 
   // Perform the static solve
-  therm_solver.StaticSolve();
+  double dt = 1.0;
+  therm_solver.AdvanceTimestep(dt);
 
   // Get the state grid function
   auto state_gf = therm_solver.GetState();
@@ -144,11 +147,6 @@ TEST(thermal_solver, dyn_solve)
   therm_solver.CompleteSetup();
 
   //// Initialize the output
-  // mfem::Array<std::string> names(1);
-  // names[0] = "temperature";
-  // therm_solver.InitializeOutput(OutputType::VisIt, names);
-  // therm_solver.OutputState();
-
   double t=0.0;
   double t_final = 5.0;
   double dt = 1.0;
@@ -160,7 +158,6 @@ TEST(thermal_solver, dyn_solve)
 
     // Advance the timestep
     therm_solver.AdvanceTimestep(dt_real);
-    // therm_solver.OutputState();
     t += dt_real;
   }
 

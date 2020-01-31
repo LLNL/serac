@@ -24,7 +24,8 @@ enum class TimestepMethod {
   GeneralizedAlpha,
   ImplicitMidpoint,
   SDIRK23,
-  SDIRK34
+  SDIRK34,
+  QuasiStatic
 };
 
 enum class LinearSolver {

@@ -58,11 +58,8 @@ protected:
   /// Linear solver parameters
   LinearSolverParameters m_lin_params;
 
-  /// Dynamic solver indicator
-  bool m_dynamic;
-
-  /// State variable initialization indicator
-  bool m_gf_initialized;
+  /// Solve the Quasi-static operator
+  void QuasiStaticSolve();
 
 public:
   /// Constructor from order and parallel mesh
@@ -74,11 +71,8 @@ public:
   /// Set flux boundary conditions (weakly enforced)
   void SetFluxBCs(mfem::Array<int> &flux_bdr, mfem::Coefficient *flux_bdr_coef);
 
-  /// Solve the system statically
-  void StaticSolve();
-
   /// Advance the timestep using the chosen integration scheme
-  void AdvanceTimestep(double dt);
+  void AdvanceTimestep(double &dt);
 
   /// Set the thermal conductivity coefficient
   void SetConductivity(mfem::Coefficient &kappa);
@@ -92,7 +86,7 @@ public:
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic = false,
    *  do not allocate the mass matrix or dynamic operator */
-  void CompleteSetup(const bool allow_dynamic = true);
+  void CompleteSetup();
 
   /// Set the linear solver parameters for both the M and K operators
   void SetLinearSolverParameters(const LinearSolverParameters &params);
@@ -148,7 +142,7 @@ public:
   virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
 
   /** Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
-   *  for du_dt. This is need for all implicit methods */
+   *  for du_dt. This is needed for implicit methods */
   virtual void ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &du_dt);
 
   ///Destructor

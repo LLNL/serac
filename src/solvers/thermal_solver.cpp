@@ -9,7 +9,7 @@
 ThermalSolver::ThermalSolver(int order, mfem::ParMesh *pmesh) :
   BaseSolver(), m_M_form(nullptr), m_K_form(nullptr), m_M_mat(nullptr), m_K_mat(nullptr),
   m_l_form(nullptr), m_rhs(nullptr), m_K_solver(nullptr), m_K_prec(nullptr), m_kappa(nullptr), m_source(nullptr),
-  m_dyn_oper(nullptr), m_dynamic(true), m_gf_initialized(false)
+  m_dyn_oper(nullptr)
 {
   m_pmesh = pmesh;
   m_fecolls.SetSize(1);
@@ -69,7 +69,7 @@ void ThermalSolver::SetLinearSolverParameters(const LinearSolverParameters &para
   m_lin_params = params;
 }
 
-void ThermalSolver::CompleteSetup(const bool allow_dynamic)
+void ThermalSolver::CompleteSetup()
 {
   MFEM_ASSERT(m_kappa != nullptr, "Conductivity not set in ThermalSolver!");
 
@@ -98,7 +98,7 @@ void ThermalSolver::CompleteSetup(const bool allow_dynamic)
   // Eliminate the essential DOFs from the stiffness matrix and save the RHS
   m_K_mat->EliminateRowsCols(m_ess_tdof_list, *m_true_vec[0], *m_rhs);
 
-  if (allow_dynamic) {
+  if (m_timestepper != TimestepMethod::QuasiStatic) {
     // If dynamic, assemble the mass matrix
     m_M_mat = new mfem::HypreParMatrix;
     m_M_form = new mfem::ParBilinearForm(m_fespaces[0]);
@@ -120,7 +120,7 @@ void ThermalSolver::CompleteSetup(const bool allow_dynamic)
   }
 }
 
-void ThermalSolver::StaticSolve()
+void ThermalSolver::QuasiStaticSolve()
 {
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
@@ -143,15 +143,19 @@ void ThermalSolver::StaticSolve()
   m_state_gf[0]->SetFromTrueDofs(*m_true_vec[0]);
 }
 
-void ThermalSolver::AdvanceTimestep(double dt)
+void ThermalSolver::AdvanceTimestep(double &dt)
 {
-  MFEM_ASSERT(m_dynamic == true, "Solver not setup with dynamic option!");
+  if (m_timestepper == TimestepMethod::QuasiStatic) {
+    QuasiStaticSolve();
+  } else {
+    MFEM_ASSERT(m_gf_initialized, "Thermal state not initialized!");
 
-  // Step the time integrator
-  m_ode_solver->Step(*m_true_vec[0], m_time, dt);
+    // Step the time integrator
+    m_ode_solver->Step(*m_true_vec[0], m_time, dt);
 
-  // Distribute the shared DOFs
-  m_state_gf[0]->SetFromTrueDofs(*m_true_vec[0]);
+    // Distribute the shared DOFs
+    m_state_gf[0]->SetFromTrueDofs(*m_true_vec[0]);
+  }
 
   // Increment the time and cycle
   m_time += dt;
@@ -167,7 +171,7 @@ ThermalSolver::~ThermalSolver()
   delete m_K_solver;
   delete m_K_prec;
 
-  if (m_dynamic) {
+  if (m_timestepper != TimestepMethod::QuasiStatic) {
     delete m_dyn_oper;
     delete m_M_form;
     delete m_M_mat;

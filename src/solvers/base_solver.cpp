@@ -11,7 +11,8 @@
 
 BaseSolver::BaseSolver()
   : m_pmesh(nullptr), m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr), m_output_type(OutputType::VisIt),
-    m_timestepper(TimestepMethod::ForwardEuler), m_ode_solver(nullptr), m_time(0.0), m_cycle(0), m_visit_dc(nullptr)
+    m_timestepper(TimestepMethod::ForwardEuler), m_ode_solver(nullptr), m_time(0.0), m_cycle(0), m_visit_dc(nullptr),
+    m_gf_initialized(false)
 {
   m_ode_solver = new mfem::ForwardEulerSolver;
 }
@@ -19,7 +20,8 @@ BaseSolver::BaseSolver()
 BaseSolver::BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf)
   : m_state_gf(stategf), m_pmesh(nullptr), m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr),
     m_output_type(OutputType::VisIt),
-    m_timestepper(TimestepMethod::ForwardEuler), m_ode_solver(nullptr), m_time(0.0), m_cycle(0), m_visit_dc(nullptr)
+    m_timestepper(TimestepMethod::ForwardEuler), m_ode_solver(nullptr), m_time(0.0), m_cycle(0), m_visit_dc(nullptr),
+    m_gf_initialized(false)
 {
   MFEM_ASSERT(stategf.Size() > 0, "State vector array of size 0 in BaseSolver constructor.");
 
@@ -83,6 +85,9 @@ void BaseSolver::SetTimestepper(const TimestepMethod timestepper)
   delete m_ode_solver;
 
   switch (m_timestepper) {
+  case TimestepMethod::QuasiStatic :
+    m_ode_solver = nullptr;
+    break;
   case TimestepMethod::BackwardEuler  :
     m_ode_solver = new mfem::BackwardEulerSolver;
     break;
