@@ -31,12 +31,21 @@ protected:
   /// Assembled mass matrix
   mfem::HypreParMatrix *m_M_mat;
 
+  /// Eliminated mass matrix
+  mfem::HypreParMatrix *m_M_e_mat;
+
   /// Assembled stiffness matrix
   mfem::HypreParMatrix *m_K_mat;
+
+  /// Eliminated stiffness matrix
+  mfem::HypreParMatrix *m_K_e_mat;
 
   /// Thermal load linear form
   mfem::ParLinearForm *m_l_form;
 
+  /// Assembled BC load vector
+  mfem::HypreParVector *m_bc_rhs;
+    
   /// Assembled RHS vector
   mfem::HypreParVector *m_rhs;
 
@@ -100,6 +109,12 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator
 {
 protected:
 
+  /// Finite Element space
+  mfem::ParFiniteElementSpace *m_fespace;
+
+  /// Grid function for boundary condition projection
+  mfem::ParGridFunction *m_state_gf;
+
   /// Solver for the mass matrix
   mfem::CGSolver *m_M_solver;
 
@@ -115,27 +130,55 @@ protected:
   /// Pointer to the assembled M matrix
   mfem::HypreParMatrix *m_M_mat;
 
+  /// Pointer to the eliminated M matrix
+  mfem::HypreParMatrix *m_M_e_mat;
+
   /// Pointer to the assembled K matrix
   mfem::HypreParMatrix *m_K_mat;
+
+  /// Eliminated K matrix
+  mfem::HypreParMatrix *m_K_e_mat;
 
   /// Pointer to the assembled T ( = M + dt K) matrix
   mfem::HypreParMatrix *m_T_mat;
 
-  /// Assembled RHS vector
-  mfem::Vector *m_true_rhs;
+  /// Pointer to the eliminated T matrix
+  mfem::HypreParMatrix *m_T_e_mat;
 
-  /// Auxillary working vector
+  /// Assembled RHS vector
+  mfem::Vector *m_rhs;
+
+  /// RHS vector including essential boundary elimination
+  mfem::Vector *m_bc_rhs;
+
+  /// Temperature essential boundary coefficient
+  mfem::Coefficient *m_ess_bdr_coef;
+
+  /// Essential temperature boundary markers
+  mutable mfem::Array<int> m_ess_bdr;
+
+  /// Essential true DOFs
+  mfem::Array<int> m_ess_tdof_list;
+
+  /// Auxillary working vectors
   mutable mfem::Vector m_z;
+  mutable mfem::Vector m_y;
+
+  /// Storage of old dt use to determine if we should recompute the T matrix
+  mutable double m_old_dt;
 
 public:
   /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(MPI_Comm comm, int height, LinearSolverParameters &params);
+  DynamicConductionOperator(mfem::ParFiniteElementSpace *fespace, LinearSolverParameters &params);
 
   /// Set the mass matrix
-  void SetMMatrix(mfem::HypreParMatrix *M_mat);
+  void SetMMatrix(mfem::HypreParMatrix *M_mat, mfem::HypreParMatrix *M_e_mat);
 
-  /// Set the stiffness matrix and RHS
-  void SetKMatrixAndRHS(mfem::HypreParMatrix *K_mat, mfem::Vector *rhs);
+  /// Set the stiffness matrix 
+  void SetKMatrixAndRHS(mfem::HypreParMatrix *K_mat, mfem::HypreParMatrix *K_e_mat, mfem::Vector *rhs);
+
+  /// Set the essential temperature boundary information
+  void SetEssentialBCs(mfem::Coefficient *ess_bdr_coef, mfem::Array<int> &ess_bdr, mfem::Array<int> &ess_tdof_list);
 
   /** Calculate du_dt = M^-1 (-Ku + f).
    *  This is all that is needed for explicit methods */

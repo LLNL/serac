@@ -146,8 +146,8 @@ TEST(thermal_solver, dyn_solve)
   // Complete the setup including the dynamic operators
   therm_solver.CompleteSetup();
 
-  //// Initialize the output
-  double t=0.0;
+  // Set timestep options
+  double t = 0.0;
   double t_final = 5.0;
   double dt = 1.0;
   bool last_step = false;

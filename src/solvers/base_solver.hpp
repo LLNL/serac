@@ -36,10 +36,10 @@ protected:
   mfem::Array<int> m_nat_bdr;
 
   /// Pointer to the essential BC coefficient
-  const mfem::Coefficient *m_ess_bdr_coef;
+  mfem::Coefficient *m_ess_bdr_coef;
 
   /// Pointer to the nautral BC coefficient
-  const mfem::Coefficient *m_nat_bdr_coef;
+  mfem::Coefficient *m_nat_bdr_coef;
 
   /// Array of the essential degree of freedom indicies
   mfem::Array<int> m_ess_tdof_list;

@@ -205,6 +205,5 @@ BaseSolver::~BaseSolver()
     delete m_true_vec[i];
   }
   delete m_ode_solver;
-  delete m_visit_dc;
 }
 
