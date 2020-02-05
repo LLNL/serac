@@ -57,7 +57,7 @@ struct FiniteElementState {
   mfem::FiniteElementCollection* coll = nullptr;
   mfem::ParGridFunction* gf = nullptr;
   mfem::ParMesh* mesh = nullptr;
-  mfem::Vector* true_vec;
+  mfem::Vector* true_vec = nullptr;
   std::string name = "";
 };
 
