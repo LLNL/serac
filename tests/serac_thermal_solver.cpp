@@ -299,12 +299,4 @@ double InitialTemperature(const mfem::Vector &x)
   }
 }
 
-double ChangingTemperature(const mfem::Vector &x, double t)
-{
-  double rate = 0.001;
-  if (x.Norml2() < 0.5) {
-    return 2.0 + rate*t;
-  } else {
-    return 1.0 + rate*t;
-  }
-}
+
