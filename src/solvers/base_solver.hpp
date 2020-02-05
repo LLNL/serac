@@ -14,20 +14,8 @@
 class BaseSolver
 {
 protected:
-  /// List of finite element collections for the state variables
-  mfem::Array<const mfem::FiniteElementCollection*> m_fecolls;
-
-  /// List of finite element spaces for the state variables
-  mfem::Array<mfem::ParFiniteElementSpace*> m_fespaces;
-
-  /// List of state variable grid functions
-  mfem::Array<mfem::ParGridFunction*> m_state_gf;
-
-  /// List of true degree of freedom vectors for the state variables
-  mfem::Array<mfem::HypreParVector*> m_true_vec;
-
-  /// Pointer to the parallel mesh object
-  mfem::ParMesh *m_pmesh;
+  /// List of finite element data structures
+  mfem::Array<FiniteElementState> m_state;
 
   /// Essential BC markers
   mfem::Array<int> m_ess_bdr;
@@ -56,9 +44,6 @@ protected:
   /// Root output name
   std::string m_root_name;
 
-  /// Array of variable names
-  mfem::Array<std::string> m_state_names;
-
   /// Current time
   double m_time;
 
@@ -79,7 +64,7 @@ public:
   BaseSolver();
 
   /// Constructor from previously constructed grid function
-  BaseSolver(mfem::Array<mfem::ParGridFunction*> &stategf);
+  BaseSolver(mfem::Array<FiniteElementState> &state);
 
   /// Set the essential boundary conditions from a list of boundary markers and a coefficient
   virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
@@ -88,10 +73,10 @@ public:
   virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void SetState(const mfem::Array<mfem::ParGridFunction*> &state_gf);
+  virtual void SetState(const mfem::Array<FiniteElementState> &state);
 
   /// Get the list of state variable grid functions
-  virtual mfem::Array<mfem::ParGridFunction*> GetState() const;
+  virtual mfem::Array<FiniteElementState> GetState() const;
 
   /// Set the time integration method
   virtual void SetTimestepper(TimestepMethod timestepper);

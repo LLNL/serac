@@ -79,11 +79,11 @@ TEST(thermal_solver, static_solve)
   therm_solver.AdvanceTimestep(dt);
 
   // Get the state grid function
-  auto state_gf = therm_solver.GetState();
+  auto state = therm_solver.GetState();
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state_gf[0]->ComputeLpError(2.0, zero);
+  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   delete pmesh;
@@ -160,11 +160,11 @@ TEST(thermal_solver, dyn_exp_solve)
   }
 
   // Get the state grid function
-  auto state_gf = therm_solver.GetState();
+  auto state = therm_solver.GetState();
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state_gf[0]->ComputeLpError(2.0, zero);
+  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.6493029, u_norm, 0.00001);
 
   delete pmesh;
@@ -241,11 +241,11 @@ TEST(thermal_solver, dyn_imp_solve)
   }
 
   // Get the state grid function
-  auto state_gf = therm_solver.GetState();
+  auto state = therm_solver.GetState();
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state_gf[0]->ComputeLpError(2.0, zero);
+  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   delete pmesh;

@@ -7,6 +7,8 @@
 #ifndef SERAC_TYPES
 #define SERAC_TYPES
 
+#include "mfem.hpp"
+
 // Option bundling enums
 
 enum class OutputType {
@@ -47,6 +49,16 @@ struct LinearSolverParameters {
   int max_iter;
   LinearSolver lin_solver;
   Preconditioner prec;
+};
+
+// Finite element information bundle
+struct FiniteElementState {
+  mfem::ParFiniteElementSpace* space = nullptr;
+  mfem::FiniteElementCollection* coll = nullptr;
+  mfem::ParGridFunction* gf = nullptr;
+  mfem::ParMesh* mesh = nullptr;
+  mfem::Vector* true_vec;
+  std::string name = "";
 };
 
 #endif
