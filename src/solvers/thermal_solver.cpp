@@ -254,6 +254,8 @@ void DynamicConductionOperator::SetEssentialBCs(mfem::Coefficient *ess_bdr_coef,
   m_ess_tdof_list = ess_tdof_list;
 }
 
+
+// TODO: allow for changing thermal essential boundary conditions
 void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt) const
 {
   MFEM_ASSERT(m_M_mat != nullptr, "Mass matrix not set in ConductionSolver::Mult!");
