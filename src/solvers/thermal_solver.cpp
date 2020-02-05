@@ -7,8 +7,10 @@
 #include "thermal_solver.hpp"
 
 ThermalSolver::ThermalSolver(int order, mfem::ParMesh *pmesh) :
-  BaseSolver(), m_M_form(nullptr), m_K_form(nullptr), m_M_mat(nullptr), m_K_mat(nullptr),
-  m_l_form(nullptr), m_bc_rhs(nullptr), m_rhs(nullptr), m_K_solver(nullptr), m_K_prec(nullptr), m_kappa(nullptr), m_source(nullptr),
+  BaseSolver(), m_M_form(nullptr), m_K_form(nullptr), m_M_mat(nullptr), m_M_e_mat(nullptr), m_K_mat(nullptr),
+  m_K_e_mat(nullptr),
+  m_l_form(nullptr), m_bc_rhs(nullptr), m_rhs(nullptr), m_K_solver(nullptr), m_K_prec(nullptr), m_kappa(nullptr),
+  m_source(nullptr),
   m_dyn_oper(nullptr)
 {
   m_pmesh = pmesh;
@@ -23,7 +25,7 @@ ThermalSolver::ThermalSolver(int order, mfem::ParMesh *pmesh) :
   m_state_gf.SetSize(1);
   m_state_gf[0] = new mfem::ParGridFunction(m_fespaces[0]);
   *m_state_gf[0] = 0.0;
-  
+
   // Initialize the state true dof vector
   m_true_vec.SetSize(1);
   m_true_vec[0] = new mfem::HypreParVector(m_fespaces[0]);
@@ -33,6 +35,7 @@ ThermalSolver::ThermalSolver(int order, mfem::ParMesh *pmesh) :
 void ThermalSolver::SetInitialState(mfem::Coefficient &temp)
 {
   // Project the coefficient onto the grid function
+  temp.SetTime(m_time);
   m_state_gf[0]->ProjectCoefficient(temp);
   m_gf_initialized = true;
 }
@@ -93,7 +96,7 @@ void ThermalSolver::CompleteSetup()
   // Assemble the stiffness matrix
   m_K_mat = m_K_form->ParallelAssemble();
 
-  // Eliminate the essential DOFs from the stiffness matrix 
+  // Eliminate the essential DOFs from the stiffness matrix
   m_K_e_mat = m_K_mat->EliminateRowsCols(m_ess_tdof_list);
 
   // Initialize the eliminated BC RHS vector
@@ -113,13 +116,11 @@ void ThermalSolver::CompleteSetup()
 
     m_M_mat = m_M_form->ParallelAssemble();
 
-    // Eliminate the essential DOFs from the mass matrix
-    m_M_e_mat = m_M_mat->EliminateRowsCols(m_ess_tdof_list);
-
     // Make the time integration operator and set the appropriate matricies
     m_dyn_oper = new DynamicConductionOperator(m_fespaces[0], m_lin_params);
     m_dyn_oper->SetMMatrix(m_M_mat, m_M_e_mat);
-    m_dyn_oper->SetKMatrixAndRHS(m_K_mat, m_K_e_mat, m_rhs);
+    m_dyn_oper->SetKMatrix(m_K_mat, m_K_e_mat);
+    m_dyn_oper->SetLoadVector(m_rhs);
     m_dyn_oper->SetEssentialBCs(m_ess_bdr_coef, m_ess_bdr, m_ess_tdof_list);
     m_ode_solver->Init(*m_dyn_oper);
   }
@@ -129,12 +130,12 @@ void ThermalSolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
-  if (m_ess_bdr_coef != nullptr) { 
+  if (m_ess_bdr_coef != nullptr) {
     m_ess_bdr_coef->SetTime(m_time);
     m_state_gf[0]->ProjectBdrCoefficient(*m_ess_bdr_coef, m_ess_bdr);
     m_state_gf[0]->GetTrueDofs(*m_true_vec[0]);
     mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, *m_true_vec[0], *m_bc_rhs);
-  } 
+  }
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
@@ -171,9 +172,6 @@ void ThermalSolver::AdvanceTimestep(double &dt)
 
   // Distribute the shared DOFs
   m_state_gf[0]->SetFromTrueDofs(*m_true_vec[0]);
-
-  // Increment the time and cycle
-  m_time += dt;
   m_cycle += 1;
 }
 
@@ -195,11 +193,13 @@ ThermalSolver::~ThermalSolver()
   }
 }
 
-DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace *fespace, LinearSolverParameters &params)
-  : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0), m_fespace(fespace), m_M_solver(nullptr), m_T_solver(nullptr), m_M_prec(nullptr),
-    m_T_prec(nullptr), m_M_mat(nullptr), m_M_e_mat(nullptr), m_K_mat(nullptr), 
-    m_K_e_mat(nullptr), m_T_mat(nullptr), m_T_e_mat(nullptr), m_rhs(nullptr), m_bc_rhs(nullptr), m_ess_bdr_coef(nullptr),
-    m_z(fespace->GetTrueVSize()), m_y(fespace->GetTrueVSize()), m_old_dt(-1.0)
+DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace *fespace,
+    LinearSolverParameters &params)
+  : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0), m_fespace(fespace), m_M_solver(nullptr),
+    m_T_solver(nullptr), m_M_prec(nullptr),
+    m_T_prec(nullptr), m_M_mat(nullptr), m_M_e_mat(nullptr), m_K_mat(nullptr), m_K_e_mat(nullptr),
+    m_T_mat(nullptr), m_T_e_mat(nullptr), m_rhs(nullptr), m_bc_rhs(nullptr), m_ess_bdr_coef(nullptr),
+    m_z(fespace->GetTrueVSize()), m_y(fespace->GetTrueVSize()), m_x(fespace->GetTrueVSize()), m_old_dt(-1.0)
 {
   // Set the mass solver options (CG and Jacobi for now)
   m_M_solver = new mfem::CGSolver(m_fespace->GetComm());
@@ -234,15 +234,20 @@ void DynamicConductionOperator::SetMMatrix(mfem::HypreParMatrix *M_mat, mfem::Hy
   m_M_e_mat = M_e_mat;
 }
 
-void DynamicConductionOperator::SetKMatrixAndRHS(mfem::HypreParMatrix *K_mat, mfem::HypreParMatrix *K_e_mat, mfem::Vector *rhs)
+void DynamicConductionOperator::SetKMatrix(mfem::HypreParMatrix *K_mat, mfem::HypreParMatrix *K_e_mat)
 {
   // Set the stiffness matrix and RHS
   m_K_mat = K_mat;
   m_K_e_mat = K_e_mat;
+}
+
+void DynamicConductionOperator::SetLoadVector(mfem::Vector *rhs)
+{
   m_rhs = rhs;
 }
 
-void DynamicConductionOperator::SetEssentialBCs(mfem::Coefficient *ess_bdr_coef, mfem::Array<int> &ess_bdr, mfem::Array<int> &ess_tdof_list)
+void DynamicConductionOperator::SetEssentialBCs(mfem::Coefficient *ess_bdr_coef, mfem::Array<int> &ess_bdr,
+    mfem::Array<int> &ess_tdof_list)
 {
   m_ess_bdr_coef = ess_bdr_coef;
   m_ess_bdr = ess_bdr;
@@ -253,26 +258,18 @@ void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt)
 {
   MFEM_ASSERT(m_M_mat != nullptr, "Mass matrix not set in ConductionSolver::Mult!");
   MFEM_ASSERT(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::Mult!");
- 
-  m_y = u;
-    
-  // Set the essential boundary conditions
-  *m_bc_rhs = *m_rhs;
-  if (m_ess_bdr_coef != nullptr) { 
-    m_ess_bdr_coef->SetTime(t);
-    m_state_gf->SetFromTrueDofs(m_y);
-    m_state_gf->ProjectBdrCoefficient(*m_ess_bdr_coef, m_ess_bdr);
-    m_state_gf->GetTrueDofs(m_y);
-    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, m_y, *m_bc_rhs);
-  }
 
+  m_y = u;
   m_M_solver->SetOperator(*m_M_mat);
+
+  *m_bc_rhs = *m_rhs;
+  mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, m_y, *m_bc_rhs);
 
   // Compute:
   //    du_dt = M^{-1}*-K(u)
   // for du_dt
   m_K_mat->Mult(m_y, m_z);
-  m_z.Neg(); // z = -z
+  m_z.Neg(); // z = -zw  m_z.Add(1.0, *m_bc_rhs);
   m_z.Add(1.0, *m_bc_rhs);
   m_M_solver->Mult(m_z, du_dt);
 }
@@ -291,26 +288,25 @@ void DynamicConductionOperator::ImplicitSolve(const double dt,
   if (dt != m_old_dt) {
     delete m_T_mat;
     delete m_T_e_mat;
-    m_T_mat = new mfem::HypreParMatrix;
-    m_T_mat = mfem::ParAdd(m_K_e_mat, m_K_mat);
-    *m_T_mat *= dt;
-    m_T_mat = ParAdd(m_T_mat, m_M_mat);
-    m_T_mat = ParAdd(m_T_mat, m_M_e_mat);
-    // Eliminate the essential DOFs from the T matrix 
+    m_T_mat = mfem::Add(1.0, *m_M_mat, dt, *m_K_mat);
+
+    // Eliminate the essential DOFs from the T matrix
     m_T_e_mat = m_T_mat->EliminateRowsCols(m_ess_tdof_list);
     m_T_solver->SetOperator(*m_T_mat);
   }
 
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
+  m_x = 0.0;
 
-  if (m_ess_bdr_coef != nullptr) { 
+  if (m_ess_bdr_coef != nullptr) {
     m_ess_bdr_coef->SetTime(t);
     m_state_gf->SetFromTrueDofs(m_y);
     m_state_gf->ProjectBdrCoefficient(*m_ess_bdr_coef, m_ess_bdr);
     m_state_gf->GetTrueDofs(m_y);
+
     mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, m_y, *m_bc_rhs);
-  }  
+  }
 
   m_K_mat->Mult(m_y, m_z);
   m_z.Neg();

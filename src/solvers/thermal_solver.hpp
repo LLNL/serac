@@ -45,7 +45,7 @@ protected:
 
   /// Assembled BC load vector
   mfem::HypreParVector *m_bc_rhs;
-    
+
   /// Assembled RHS vector
   mfem::HypreParVector *m_rhs;
 
@@ -136,7 +136,7 @@ protected:
   /// Pointer to the assembled K matrix
   mfem::HypreParMatrix *m_K_mat;
 
-  /// Eliminated K matrix
+  /// Pointer to the eliminated K matrix
   mfem::HypreParMatrix *m_K_e_mat;
 
   /// Pointer to the assembled T ( = M + dt K) matrix
@@ -163,6 +163,7 @@ protected:
   /// Auxillary working vectors
   mutable mfem::Vector m_z;
   mutable mfem::Vector m_y;
+  mutable mfem::Vector m_x;
 
   /// Storage of old dt use to determine if we should recompute the T matrix
   mutable double m_old_dt;
@@ -174,8 +175,11 @@ public:
   /// Set the mass matrix
   void SetMMatrix(mfem::HypreParMatrix *M_mat, mfem::HypreParMatrix *M_e_mat);
 
-  /// Set the stiffness matrix 
-  void SetKMatrixAndRHS(mfem::HypreParMatrix *K_mat, mfem::HypreParMatrix *K_e_mat, mfem::Vector *rhs);
+  /// Set the stiffness matrix
+  void SetKMatrix(mfem::HypreParMatrix *K_mat, mfem::HypreParMatrix *K_e_mat);
+
+  /// Set the load vector
+  void SetLoadVector(mfem::Vector *rhs);
 
   /// Set the essential temperature boundary information
   void SetEssentialBCs(mfem::Coefficient *ess_bdr_coef, mfem::Array<int> &ess_bdr, mfem::Array<int> &ess_tdof_list);

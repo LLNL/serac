@@ -67,8 +67,6 @@ void BaseSolver::SetState(const mfem::Array<mfem::ParGridFunction*> &state_gf)
 
   m_pmesh = m_fespaces[0]->GetParMesh();
 
-  m_time = 0.0;
-  m_cycle = 0;
   MPI_Comm_rank(m_fespaces[0]->GetComm(), &m_rank);
 
   m_state_gf = state_gf;
@@ -138,16 +136,18 @@ int BaseSolver::GetCycle() const
   return m_cycle;
 }
 
-void BaseSolver::InitializeOutput(const OutputType output_type, const mfem::Array<std::string> names)
+void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name,
+                                  const mfem::Array<std::string> names)
 {
   MFEM_ASSERT(names.Size() == m_state_gf.Size(), "State vector and name arrays are not the same size.");
 
+  m_root_name = root_name;
   m_state_names = names;
   m_output_type = output_type;
 
   switch(m_output_type) {
   case OutputType::VisIt: {
-    m_visit_dc = new mfem::VisItDataCollection("serac", m_pmesh);
+    m_visit_dc = new mfem::VisItDataCollection(m_root_name, m_pmesh);
 
     for (int i=0; i<m_state_names.Size(); ++i) {
       m_visit_dc->RegisterField(m_state_names[i], m_state_gf[i]);
@@ -157,7 +157,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, const mfem::Arra
 
   case OutputType::GLVis: {
     std::ostringstream mesh_name;
-    mesh_name << "serac-mesh." << std::setfill('0') << std::setw(6) << m_rank - 1;
+    mesh_name << m_root_name << "-mesh." << std::setfill('0') << std::setw(6) << m_rank - 1;
     std::ofstream omesh(mesh_name.str().c_str());
     omesh.precision(8);
     m_pmesh->Print(omesh);
@@ -182,7 +182,8 @@ void BaseSolver::OutputState() const
   case OutputType::GLVis: {
     for (int i=0; i<m_state_gf.Size(); ++i) {
       std::ostringstream sol_name;
-      sol_name << m_state_names[i] << "." << std::setfill('0') << std::setw(6) << m_cycle << "." << std::setfill('0') <<
+      sol_name << m_root_name << "-" << m_state_names[i] << "." << std::setfill('0') << std::setw(
+                 6) << m_cycle << "." << std::setfill('0') <<
                std::setw(6) << m_rank - 1;
       std::ofstream osol(sol_name.str().c_str());
       osol.precision(8);

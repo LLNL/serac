@@ -53,6 +53,9 @@ protected:
   /// MFEM ode solver object
   mfem::ODESolver *m_ode_solver;
 
+  /// Root output name
+  std::string m_root_name;
+
   /// Array of variable names
   mfem::Array<std::string> m_state_names;
 
@@ -106,9 +109,10 @@ public:
   virtual void AdvanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const OutputType output_type, const mfem::Array<std::string> names);
+  virtual void InitializeOutput(const OutputType output_type, const std::string root_name,
+                                const mfem::Array<std::string> names);
 
-  /// Output the state variables
+  /// output the state variables
   virtual void OutputState() const;
 
   /// Destructor

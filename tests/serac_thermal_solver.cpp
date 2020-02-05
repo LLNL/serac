@@ -91,9 +91,88 @@ TEST(thermal_solver, static_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+TEST(thermal_solver, dyn_exp_solve)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
 
+  // Open the mesh
+  ASSERT_TRUE(file_exists(mesh_file));
+  std::fstream imesh(mesh_file);
+  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  imesh.close();
 
-TEST(thermal_solver, dyn_solve)
+  // Refine in serial
+  mesh->UniformRefinement();
+
+  // Declare pointer to parallel mesh object
+  mfem::ParMesh *pmesh = nullptr;
+
+  // Initialize the parallel mesh and delete the serial mesh
+  pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
+  delete mesh;
+
+  // Refine the parallel mesh
+  pmesh->UniformRefinement();
+
+  // Initialize the second order thermal solver on the parallel mesh
+  ThermalSolver therm_solver(2, pmesh);
+
+  // Set the time integration method
+  therm_solver.SetTimestepper(TimestepMethod::ForwardEuler);
+
+  // Initialize the state grid function
+  mfem::FunctionCoefficient u_0(InitialTemperature);
+  therm_solver.SetInitialState(u_0);
+
+  // Set the temperature BC in the thermal solver
+  mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
+  temp_bdr = 1;
+  therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
+
+  // Set the conductivity of the thermal operator
+  mfem::ConstantCoefficient kappa(0.5);
+  therm_solver.SetConductivity(kappa);
+
+  // Define the linear solver params
+  LinearSolverParameters params;
+  params.rel_tol = 1.0e-6;
+  params.abs_tol = 1.0e-12;
+  params.print_level = 0;
+  params.max_iter = 100;
+  therm_solver.SetLinearSolverParameters(params);
+
+  // Complete the setup including the dynamic operators
+  therm_solver.CompleteSetup();
+
+  // Set timestep options
+  double t = 0.0;
+  double t_final = 0.001;
+  double dt = 0.0001;
+  bool last_step = false;
+
+  for (int ti = 1; !last_step; ti++) {
+    double dt_real = std::min(dt, t_final - t);
+    last_step = (t >= t_final - 1e-8*dt);
+
+    // Advance the timestep
+    therm_solver.AdvanceTimestep(dt_real);
+    t += dt_real;
+  }
+
+  // Get the state grid function
+  auto state_gf = therm_solver.GetState();
+
+  // Measure the L2 norm of the solution and check the value
+  mfem::ConstantCoefficient zero(0.0);
+  double u_norm = state_gf[0]->ComputeLpError(2.0, zero);
+  EXPECT_NEAR(2.6493029, u_norm, 0.00001);
+
+  delete pmesh;
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(thermal_solver, dyn_imp_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -174,7 +253,6 @@ TEST(thermal_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -218,5 +296,15 @@ double InitialTemperature(const mfem::Vector &x)
     return 2.0;
   } else {
     return 1.0;
+  }
+}
+
+double ChangingTemperature(const mfem::Vector &x, double t)
+{
+  double rate = 0.001;
+  if (x.Norml2() < 0.5) {
+    return 2.0 + rate*t;
+  } else {
+    return 1.0 + rate*t;
   }
 }
