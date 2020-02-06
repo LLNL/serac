@@ -31,6 +31,18 @@ BaseSolver::BaseSolver(mfem::Array<FiniteElementState> &state)
 
 }
 
+void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef)
+{
+  m_ess_bdr = ess_bdr;
+  m_ess_bdr_vec_coef = ess_bdr_vec_coef;
+}
+
+void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef)
+{
+  m_nat_bdr = nat_bdr;
+  m_nat_bdr_vec_coef = nat_bdr_vec_coef;
+}
+
 void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
 {
   m_ess_bdr = ess_bdr;

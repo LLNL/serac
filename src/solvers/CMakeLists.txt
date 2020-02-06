@@ -9,7 +9,7 @@ set(solvers_sources
     quasistatic_solver.cpp
     dynamic_solver.cpp
     thermal_solver.cpp
-    linear_elasticity_solver.cpp
+    elasticity_solver.cpp
     )
 
 set(solvers_headers
@@ -17,7 +17,7 @@ set(solvers_headers
     quasistatic_solver.hpp
     dynamic_solver.hpp
     thermal_solver.hpp
-    linear_elasticity_solver.hpp
+    elasticity_solver.hpp
     )
 
 blt_add_library(

@@ -24,7 +24,7 @@ ThermalSolver::ThermalSolver(int order, mfem::ParMesh *pmesh) :
 
   // Initialize the state true dof vector
   m_state[0].true_vec = new mfem::HypreParVector(m_state[0].space);
-  *m_state[0].true_vec = 0.0;;
+  *m_state[0].true_vec = 0.0;
 }
 
 void ThermalSolver::SetInitialState(mfem::Coefficient &temp)
