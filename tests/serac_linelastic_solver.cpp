@@ -18,7 +18,7 @@ inline bool file_exists(const char* path)
   return (stat(path, &buffer) == 0);
 }
 
-TEST(linearelastic_solver, le_solve)
+TEST(elastic_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -79,6 +79,8 @@ TEST(linearelastic_solver, le_solve)
   params.lin_solver = LinearSolver::MINRES;
 
   elas_solver.SetLinearSolverParameters(params);
+
+  elas_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
   // allocate the data structures
   elas_solver.CompleteSetup();

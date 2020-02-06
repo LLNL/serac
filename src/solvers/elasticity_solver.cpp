@@ -66,6 +66,8 @@ void ElasticitySolver::CompleteSetup()
 
   // Add the elastic integrator
   m_K_form->AddDomainIntegrator(new mfem::ElasticityIntegrator(*m_lambda, *m_mu));
+  m_K_form->Assemble();
+  m_K_form->Finalize();
 
   // Define the parallel linear form
   
@@ -149,7 +151,7 @@ void ElasticitySolver::QuasiStaticSolve()
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
   if (m_ess_bdr_vec_coef != nullptr) {
-    m_ess_bdr_coef->SetTime(m_time);
+    m_ess_bdr_vec_coef->SetTime(m_time);
     m_state[0].gf->ProjectBdrCoefficient(*m_ess_bdr_vec_coef, m_ess_bdr);
     m_state[0].gf->GetTrueDofs(*m_state[0].true_vec);
     mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, *m_state[0].true_vec, *m_bc_rhs);
