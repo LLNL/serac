@@ -4,9 +4,4 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-add_subdirectory(common)
-add_subdirectory(solvers)
-add_subdirectory(integrators)
-add_subdirectory(coefficients)
-add_subdirectory(drivers)
-add_subdirectory(docs)
+blt_add_doxygen_target(serac_doxygen)
