@@ -61,14 +61,14 @@ TEST(elastic_solver, static_solve)
   traction = 0.0;
   traction(1) = 1.0e-4;
   mfem::VectorConstantCoefficient traction_coef(traction);
-  elas_solver.SetDisplacementBCs(trac_bdr, &traction_coef);
+  elas_solver.SetTractionBCs(trac_bdr, &traction_coef);
 
   // set the material properties
   mfem::ConstantCoefficient mu_coef(0.25);
   mfem::ConstantCoefficient K_coef(5.0);
 
   elas_solver.SetLameParameters(K_coef, mu_coef);
-    
+
   // Define the linear solver params
   LinearSolverParameters params;
   params.rel_tol = 1.0e-4;
@@ -79,7 +79,6 @@ TEST(elastic_solver, static_solve)
   params.lin_solver = LinearSolver::MINRES;
 
   elas_solver.SetLinearSolverParameters(params);
-
   elas_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
   // allocate the data structures

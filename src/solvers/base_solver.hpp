@@ -101,7 +101,7 @@ public:
 
   /// Get the current cycle
   virtual int GetCycle() const;
-  
+
   /// Complete the setup and allocate the necessary data structures
   virtual void CompleteSetup() = 0;
 

@@ -7,7 +7,7 @@
 #include "elasticity_solver.hpp"
 
 ElasticitySolver::ElasticitySolver(int order, mfem::ParMesh *pmesh) :
-  BaseSolver(), m_K_form(nullptr), m_l_form(nullptr), m_K_mat(nullptr), m_K_e_mat(nullptr), m_rhs(nullptr), 
+  BaseSolver(), m_K_form(nullptr), m_l_form(nullptr), m_K_mat(nullptr), m_K_e_mat(nullptr), m_rhs(nullptr),
   m_bc_rhs(nullptr), m_K_solver(nullptr), m_K_prec(nullptr),
   m_mu(nullptr), m_lambda(nullptr), m_body_force(nullptr)
 {
@@ -70,12 +70,13 @@ void ElasticitySolver::CompleteSetup()
   m_K_form->Finalize();
 
   // Define the parallel linear form
-  
+
   m_l_form = new mfem::ParLinearForm(m_state[0].space);
 
   // Add the traction integrator
   if (m_nat_bdr_vec_coef != nullptr) {
     m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*m_nat_bdr_vec_coef), m_nat_bdr);
+    m_l_form->Assemble();
     m_rhs = m_l_form->ParallelAssemble();
   } else {
     m_rhs = new mfem::HypreParVector(m_state[0].space);
@@ -96,7 +97,8 @@ void ElasticitySolver::CompleteSetup()
   m_state[0].gf->GetTrueDofs(*m_state[0].true_vec);
 
   if (m_lin_params.prec == Preconditioner::BoomerAMG) {
-    MFEM_VERIFY(m_state[0].space->GetOrdering() == mfem::Ordering::byVDIM, "Attempting to use BoomerAMG with nodal ordering.");
+    MFEM_VERIFY(m_state[0].space->GetOrdering() == mfem::Ordering::byVDIM,
+                "Attempting to use BoomerAMG with nodal ordering.");
 
     mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
     prec_amg->SetPrintLevel(m_lin_params.print_level);
