@@ -38,6 +38,9 @@ Everywhere else:
 
 5. `ctest .`
 
+6. To build documentation, `make docs`. This installs Doxygen documentation at
+   /build-*/src/docs/doxygen/html/html/index.html and Sphinx documentation at build-*/src/docs/sphinx/html/index.html
+
 If you already have a spack instance you would like to reuse, you can do so changing the uberenv command as follow:
 
 2. `python scripts/uberenv/uberenv.py --upstream=\</path/to/my/spack\>/opt/spack`
