@@ -34,9 +34,15 @@ Everywhere else:
 
 4. `cd build-<system-and-toolchain>`
 
-4. `cmake --build .`
+5. `cmake --build .`
 
-5. `ctest .`
+To build in parallel on an LC machine:
+`srun -ppdebug -N1 --exclusive make -j16`
+
+6. `ctest .`
+
+7. To build documentation, `make docs`. This installs Doxygen documentation at
+   /build-\*/src/docs/doxygen/html/html/index.html and Sphinx documentation at build-\*/src/docs/sphinx/html/index.html
 
 If you already have a spack instance you would like to reuse, you can do so changing the uberenv command as follow:
 
