@@ -74,15 +74,15 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Add the essential boundary
   if (m_ess_bdr_coef != nullptr) {
-    m_H_form->AddEssentialBoundary(m_ess_bdr);
+    m_H_form->SetEssentialBC(m_ess_bdr);
   }
 
-  if (m_lin_params.prec = Preconditioner::BoomerAMG) {
-    MFEM_VERIFY(fe_space.GetOrdering() == mfem::Ordering::byVDIM, "Attempting to use BoomerAMG with nodal ordering.");
+  if (m_lin_params.prec == Preconditioner::BoomerAMG) {
+    MFEM_VERIFY(m_state[0].space->GetOrdering() == mfem::Ordering::byVDIM, "Attempting to use BoomerAMG with nodal ordering.");
     mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
     prec_amg->SetPrintLevel(m_lin_params.print_level);
     prec_amg->SetElasticityOptions(m_state[0].space);
-    m_J_prec = prec_amg
+    m_J_prec = prec_amg;
 
     mfem::GMRESSolver *J_gmres = new mfem::GMRESSolver(m_state[0].space->GetComm());
     J_gmres->SetRelTol(m_lin_params.rel_tol);
@@ -106,12 +106,12 @@ void NonlinearSolidSolver::CompleteSetup()
     m_J_solver = J_minres;
   }
 
-  if (m_timestepper = TimestepMethod::QuasiStatic) {
-    m_nonlinear_oper = new NonlinearSolidQuasistaticOperator(m_H_form)
+  if (m_timestepper == TimestepMethod::QuasiStatic) {
+    m_nonlinear_oper = new NonlinearSolidQuasiStaticOperator(m_H_form);
   }
   else {
     // TODO: implement dynamic operator
-    mfem_error("Dynamic operator not implemented yet!");
+    mfem::mfem_error("Dynamic operator not implemented yet!");
   }
 
   // Set the newton solve parameters
@@ -126,10 +126,10 @@ void NonlinearSolidSolver::CompleteSetup()
 }
 
 // Solve the Quasi-static Newton system
-void NonlinearSolidSolver::QuasiStaticSolve(mfem::Vector &x) const
+void NonlinearSolidSolver::QuasiStaticSolve()
 {
   mfem::Vector zero;
-  newton_solver.Mult(zero, x);
+  m_newton_solver.Mult(zero, *m_state[0].true_vec);
 }
 
 // Advance the timestep
