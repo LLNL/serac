@@ -18,7 +18,7 @@
 //***********************************************************************
 
 #include "mfem.hpp"
-#include "solvers/quasistatic_solver.hpp"
+#include "solvers/nonlinear_solid_solver.hpp"
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
 #include <memory>
@@ -143,52 +143,35 @@ int main(int argc, char *argv[])
 
   int dim = pmesh->Dimension();
 
-  // Define the finite element spaces for displacement field
-  mfem::H1_FECollection fe_coll(order, dim);
-  mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
-
-  HYPRE_Int glob_size = fe_space.GlobalTrueVSize();
-
-  // Print the mesh statistics
-  if (myid == 0) {
-    std::cout << "***********************************************************\n";
-    std::cout << "dim(u) = " << glob_size << "\n";
-    std::cout << "***********************************************************\n";
-  }
-
-  // Define a grid function for the global reference configuration, the beginning
-  // step configuration, the global deformation, the current configuration/solution
-  // guess, and the incremental nodal displacements
-  mfem::ParGridFunction x_ref(&fe_space);
-  mfem::ParGridFunction x_cur(&fe_space);
-  mfem::ParGridFunction x_fin(&fe_space);
-  mfem::ParGridFunction x_inc(&fe_space);
+  // Define the solid solver object
+  NonlinearSolidSolver solid_solver(order, pmesh);
 
   // Project the initial and reference configuration functions onto the appropriate grid functions
-  mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
-  mfem::VectorFunctionCoefficient refconfig(dim, ReferenceConfiguration);
+  mfem::VectorCoefficient *defo_coef = new mfem::VectorFunctionCoefficient(dim, InitialDeformation);
 
-  // Initialize the reference and beginning step configuration grid functions
-  // with the refconfig vector function coefficient.
-  x_ref.ProjectCoefficient(refconfig);
+  mfem::Array<mfem::VectorCoefficient*> coefs(1);
+  coefs[0] = defo_coef;
 
   // initialize x_cur, boundary condition, deformation, and
   // incremental nodal displacment grid functions by projection the
   // VectorFunctionCoefficient function onto them
-  x_inc.ProjectCoefficient(deform);
-
-  add(x_inc, x_ref, x_cur);
+  solid_solver.ProjectState(coefs);
 
   // define a boundary attribute array and initialize to 0
   mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
+  ess_bdr.SetSize(pmesh->bdr_attributes.Max());
   ess_bdr = 0;
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
+  // define the displacement vector
+  mfem::Vector disp(dim);
+  disp = 0.0;
+  mfem::VectorConstantCoefficient disp_coef(disp);
+
   mfem::Array<int> trac_bdr;
-  trac_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
+  trac_bdr.SetSize(pmesh->bdr_attributes.Max());
 
   trac_bdr = 0;
   trac_bdr[1] = 1;
@@ -202,24 +185,45 @@ int main(int argc, char *argv[])
   }
 
 
-
   VectorScaledConstantCoefficient traction_coef(traction);
 
-  // construct the nonlinear mechanics operator
-  QuasistaticSolver oper(fe_space, ess_bdr, trac_bdr,
-                         mu, K, traction_coef,
-                         newton_rel_tol, newton_abs_tol,
-                         newton_iter, gmres_solver, slu_solver);
+  // Set the boundary condition information
+  solid_solver.SetDisplacementBCs(ess_bdr, &disp_coef);
+  solid_solver.SetTractionBCs(trac_bdr, &traction_coef);
 
+  // Set the material parameters
+  solid_solver.SetHyperelasticMaterialParameters(mu, K);
 
-  // declare incremental nodal displacement solution vector
-  mfem::Vector x_sol(fe_space.TrueVSize());
-  x_inc.GetTrueDofs(x_sol);
+  // Set the linear solver parameters
+  LinearSolverParameters params;
+  params.rel_tol = newton_rel_tol;
+  params.abs_tol = newton_abs_tol;
+  params.print_level = 0;
+  params.max_iter = newton_iter;
+  if (gmres_solver == true) {
+    params.prec = Preconditioner::BoomerAMG;
+    params.lin_solver = LinearSolver::GMRES;
+  } else {
+    params.prec = Preconditioner::Jacobi;
+    params.lin_solver = LinearSolver::MINRES;
+  }
+  solid_solver.SetLinearSolverParameters(params);
+  
+  // Set the time step method
+  solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+
+  // Complete the solver setup
+  solid_solver.CompleteSetup();
 
   // initialize/set the time
   double t = 0.0;
 
   bool last_step = false;
+
+  mfem::Array<std::string> names(1);
+  names[0] = "Deformation";
+
+  solid_solver.InitializeOutput(OutputType::VisIt, "serac", names);
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {
@@ -235,35 +239,12 @@ int main(int argc, char *argv[])
     traction_coef.SetScale(t);
 
     // Solve the Newton system
-    oper.Solve(x_sol);
+    solid_solver.AdvanceTimestep(dt_real);
+
+    solid_solver.OutputState();
 
     last_step = (t >= t_final - 1e-8*dt);
   }
-
-  // distribute the solution vector to x_cur
-  x_inc.Distribute(x_sol);
-
-  add(x_inc, x_ref, x_fin);
-
-  // Save the displaced mesh. These are snapshots of the endstep current
-  // configuration. Later add functionality to not save the mesh at each timestep.
-
-  mfem::GridFunction *nodes = &x_fin; // set a nodes grid function to global current configuration
-  int owns_nodes = 0;
-  pmesh->SwapNodes(nodes, owns_nodes); // pmesh has current configuration nodes
-
-  std::ostringstream mesh_name, pressure_name, deformation_name;
-  mesh_name << "mesh." << std::setfill('0') << std::setw(6) << myid;
-  deformation_name << "deformation." << std::setfill('0') << std::setw(6) << myid;
-
-  std::ofstream mesh_ofs(mesh_name.str().c_str());
-  mesh_ofs.precision(8);
-  pmesh->Print(mesh_ofs);
-
-  std::ofstream deformation_ofs(deformation_name.str().c_str());
-  deformation_ofs.precision(8);
-
-  x_inc.Save(deformation_ofs);
 
   // Free the used memory.
   delete pmesh;

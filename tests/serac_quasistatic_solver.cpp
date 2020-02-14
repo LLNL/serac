@@ -8,7 +8,7 @@
 
 #include "mfem.hpp"
 #include "coefficients/loading_functions.hpp"
-#include "solvers/quasistatic_solver.hpp"
+#include "solvers/nonlinear_solid_solver.hpp"
 #include <fstream>
 
 const char* mesh_file = "NO_MESH_GIVEN";
@@ -19,7 +19,7 @@ inline bool file_exists(const char* path)
   return (stat(path, &buffer) == 0);
 }
 
-TEST(quasistatic_solver, qs_solve)
+TEST(nonlinear_solid_solver, qs_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -38,30 +38,25 @@ TEST(quasistatic_solver, qs_solve)
 
   int dim = pmesh->Dimension();
 
-  // Define the finite element spaces for displacement field
-  mfem::H1_FECollection fe_coll(1, dim);
-  mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
-
-  // Define a grid function for the global reference configuration, the beginning
-  // step configuration, the global deformation, the current configuration/solution
-  // guess, and the incremental nodal displacements
-  mfem::ParGridFunction x_inc(&fe_space);
-
-  mfem::VectorFunctionCoefficient defo_coef(dim, InitialDeformation);
-  x_inc.ProjectCoefficient(defo_coef);
-  x_inc.SetTrueVector();
+  // Define the solver object
+  NonlinearSolidSolver solid_solver(1, pmesh);
 
   // define a boundary attribute array and initialize to 0
   mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
+  ess_bdr.SetSize(pmesh->bdr_attributes.Max());
   ess_bdr = 0;
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
-  mfem::Array<int> trac_bdr;
-  trac_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
+  // define the displacement vector
+  mfem::Vector disp(dim);
+  disp = 0.0;
+  mfem::VectorConstantCoefficient disp_coef(disp);
 
+
+  mfem::Array<int> trac_bdr;
+  trac_bdr.SetSize(pmesh->bdr_attributes.Max());
   trac_bdr = 0;
   trac_bdr[1] = 1;
 
@@ -69,33 +64,43 @@ TEST(quasistatic_solver, qs_solve)
   mfem::Vector traction(dim);
   traction = 0.0;
   traction(1) = 1.0e-3;
-
   mfem::VectorConstantCoefficient traction_coef(traction);
 
-  // construct the nonlinear mechanics operator
-  QuasistaticSolver oper(fe_space, ess_bdr, trac_bdr,
-                         0.25, 10.0, traction_coef,
-                         1.0e-3, 1.0e-6,
-                         5000, false, false);
+  // Pass the BC information to the solver object
+  solid_solver.SetDisplacementBCs(ess_bdr, &disp_coef);
+  solid_solver.SetTractionBCs(trac_bdr, &traction_coef);
 
-  // declare incremental nodal displacement solution vector
-  mfem::Vector x_sol(fe_space.TrueVSize());
-  x_inc.GetTrueDofs(x_sol);
+  // Set the material parameters
+  solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
 
-  // Solve the Newton system
-  bool converged = oper.Solve(x_sol);
+  // Set the linear solver params
+  LinearSolverParameters params;
+  params.rel_tol = 1.0e-3;
+  params.abs_tol = 1.0e-6;
+  params.print_level = 0;
+  params.max_iter = 5000;
+  params.prec = Preconditioner::Jacobi;
+  params.lin_solver = LinearSolver::MINRES;
+  solid_solver.SetLinearSolverParameters(params);
+  
+  // Set the time step method
+  solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
-  // distribute the solution vector to x_cur
-  x_inc.Distribute(x_sol);
+  // Complete the solver setup
+  solid_solver.CompleteSetup();
+
+  double dt = 1.0;
+  solid_solver.AdvanceTimestep(dt);
+
+  auto state = solid_solver.GetState(); 
 
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = x_inc.ComputeLpError(2.0, zerovec);
+  double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2322, x_norm, 0.001);
-  EXPECT_TRUE(converged);
 
   delete pmesh;
 

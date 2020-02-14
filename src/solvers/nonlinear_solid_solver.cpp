@@ -158,6 +158,11 @@ NonlinearSolidSolver::~NonlinearSolidSolver()
   delete m_model;
 }
 
+NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(mfem::ParNonlinearForm *H_form)
+{
+  m_H_form = H_form;
+}
+
 // compute: y = H(x,p)
 void NonlinearSolidQuasiStaticOperator::Mult(const mfem::Vector &k, mfem::Vector &y) const
 {
