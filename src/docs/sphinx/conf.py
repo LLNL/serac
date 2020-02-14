@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Serac'
-copyright = u'2020, 2019-2020, Lawrence Livermore National Security, LLNS'
+copyright = u'2019-2020, Lawrence Livermore National Security, LLNS'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
