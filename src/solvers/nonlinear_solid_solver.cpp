@@ -9,7 +9,7 @@
 #include "integrators/inc_hyperelastic_integrator.hpp"
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh) :
-  BaseSolver(), m_H_form(nullptr), m_nonlinear_oper(nullptr), m_J_solver(nullptr),
+  BaseSolver(), m_H_form(nullptr), m_nonlinear_oper(nullptr), m_newton_solver(pmesh->GetComm()), m_J_solver(nullptr),
   m_J_prec(nullptr), m_model(nullptr)
 {
   m_state.SetSize(1);
