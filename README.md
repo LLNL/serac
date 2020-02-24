@@ -48,7 +48,7 @@ If you already have a spack instance you would like to reuse, you can do so chan
 
 2. `python scripts/uberenv/uberenv.py --upstream=\</path/to/my/spack\>/opt/spack`
 
-If you would like to use an existing installation of [MFEM](https://github.com/mfem/mfem/) (outside of Spack), you can write your own host-config file porviding the necessary information:
+If you would like to use an existing installation of [MFEM](https://github.com/mfem/mfem/) (outside of Spack), you can write your own host-config file providing the necessary information:
 TODO
 
 WARNING: The only MFEM build system supported at the moment is the Makefile one (not the CMake one, yet).
