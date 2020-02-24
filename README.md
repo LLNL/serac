@@ -45,7 +45,7 @@ Getting Started
 
 8.  (optional) If you already have a spack instance you would like to reuse, you can do so changing the uberenv command as follow:
 
-    python scripts/uberenv/uberenv.py --upstream=\</path/to/my/spack\>/opt/spack`
+    `python scripts/uberenv/uberenv.py --upstream=\</path/to/my/spack\>/opt/spack`
 
     Alternatively, you can edit the cmake/defaults.cmake file to permanently save these library locations. A host config should be generated for each new platform and compiler. Sample toss3 configs are located in the `host-configs` directory. If you would like a host config to be a default for a certain platform, the `_host_configs_map` on line 16 of `config-build.py` should be edited.
 
