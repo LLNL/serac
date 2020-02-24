@@ -7,13 +7,13 @@ Getting Started
 ------
 Serac uses git submodules, so the project must be cloned recursively. Using bitbucket SSH keys, the command is:
 
-* `git clone --recursive ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git`
-
+* `git clone --recursive ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git`  
+  
 The easiest path to install both Serac and its dependencies is to use Spack. This has been encapsulated using Uberenv. It will generate a uberenv_libs directory containing a Spack instance with Serac dependencies installed. It also generate a host-config file (uberenv_libs\<config_dependent_name\>.cmake) we can now use to build Serac. The CMake configuration phase has also been encapsulated in config-build.py.
-
-* `python scripts/uberenv/uberenv.py`
-
-On LC machines, it is good practice to submit this command on a batch node (e.g. `srun -ppdebug -N1 --exclusive python scripts/uberenv/uberenv.py`). Helpful uberenv options:
+  
+* `python scripts/uberenv/uberenv.py  
+  
+On LC machines, it is good practice to submit this command on a batch node (e.g. `srun -ppdebug -N1 --exclusive python scripts/uberenv/uberenv.py`). Helpful uberenv options:  
   * --spec=+debug
   * --spec=%clang@4.0.0
   * --spec=%clang@4.0.0+debug
