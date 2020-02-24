@@ -1,4 +1,4 @@
-# Copyright 2013-2019 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2019-2020 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
@@ -163,7 +163,7 @@ class Serac(CMakePackage):
         cfg.write("####################################################################\n")
         cfg.write("# Generated host-config - Edit at own risk!\n")
         cfg.write("####################################################################\n")
-        cfg.write("# Copyright (c) 2019, Lawrence Livermore National Security, LLC and\n")
+        cfg.write("# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and\n")
         cfg.write("# other Serac Project Developers. See the top-level LICENSE file for\n")
         cfg.write("# details.\n")
         cfg.write("#\n")
