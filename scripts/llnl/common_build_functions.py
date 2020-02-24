@@ -1,7 +1,7 @@
 #!/usr/local/bin/python
 
 # Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
-# other Axom Project Developers. See the top-level COPYRIGHT file for details.
+# other Serac Project Developers. See the top-level LICENSE file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
@@ -9,7 +9,7 @@
  file: llnl_lc_uberenv_install_tools.py
 
  description: 
-  helpers for installing axom tpls on llnl lc systems.
+  helpers for installing serac tpls on llnl lc systems.
 
 """
 
@@ -288,7 +288,7 @@ def get_repo_dir():
     return os.path.abspath(pjoin(script_dir, "../.."))
 
 def get_build_and_test_root(prefix, timestamp):
-    return pjoin(prefix,"_axom_build_and_test_%s" % timestamp)
+    return pjoin(prefix,"_serac_build_and_test_%s" % timestamp)
 
 
 def get_machine_name():
