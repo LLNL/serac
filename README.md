@@ -54,7 +54,7 @@ Contributions
 
 We welcome all kinds of contributions: new features, bug fixes, documentation edits.
 
-For more information, see the [contributing guide](https://github.com/llnl/serac/blob/develop/CONTRIBUTING.md).
+For more information, see the [contributing guide](./CONTRIBUTING.md).
 
 License
 -------
