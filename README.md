@@ -55,18 +55,53 @@ WARNING: The only MFEM build system supported at the moment is the Makefile one 
 
 Alternatively, you can edit the cmake/defaults.cmake file to permanently save these library locations. A host config should be generated for each new platform and compiler. Sample toss3 configs are located in the `host-configs` directory. If you would like a host config to be a default for a certain platform, the `_host_configs_map` on line 16 of `config-build.py` should be edited.
 
+Contributions
+-------------
+
+We welcome all kinds of contributions: new features, bug fixes, documentation edits.
+
+For more information, see the [contributing guide](https://github.com/llnl/serac/blob/develop/CONTRIBUTING.md).
+
 License
 -------
 
-Serac is licensed under the BSD 3-Clause license,
-(BSD-3-Clause or https://opensource.org/licenses/BSD-3-Clause).
+Copyright (c) 2017-2020, Lawrence Livermore National Security, LLC. 
+Produced at the Lawrence Livermore National Laboratory.
 
-Copyrights and patents in the Serac project are retained by contributors.
-No copyright assignment is required to contribute to Serac.
+Copyrights and patents in the Axom project are retained by contributors.
+No copyright assignment is required to contribute to Axom.
 
-See [LICENSE-BSD](https://github.com/LLNL/serac/blob/master/LICENSE-BSD),
-[COPYRIGHT](https://github.com/LLNL/serac/blob/master/COPYRIGHT), and
-[NOTICE](https://github.com/LLNL/serac/blob/master/NOTICE) for details.
+See [LICENSE](./LICENSE) for details.
 
 Unlimited Open Source - BSD 3-clause Distribution
 `LLNL-CODE-805541`
+
+SPDX usage
+------------
+
+Individual files contain SPDX tags instead of the full license text.
+This enables machine processing of license information based on the SPDX
+License Identifiers that are available here: https://spdx.org/licenses/
+
+Files that are licensed as BSD 3-Clause contain the following
+text in the license header:
+
+    SPDX-License-Identifier: (BSD-3-Clause)
+
+External Packages
+-----------------
+
+Serac bundles some of its external dependencies in its repository.  These
+packages are covered by various permissive licenses.  A summary listing
+follows.  See the license included with each package for full details.
+
+
+[//]: # (Note: The spaces at the end of each line below add line breaks)
+
+PackageName: BLT  
+PackageHomePage: https://github.com/LLNL/blt  
+PackageLicenseDeclared: BSD-3-Clause  
+
+PackageName: uberenv  
+PackageHomePage: https://github.com/LLNL/uberenv  
+PackageLicenseDeclared: BSD-3-Clause  
