@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -54,16 +54,16 @@ if (ENABLE_GTEST)
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
     #----------------------
-    # Conduction Solver
+    # Thermal Solver
     #----------------------
     blt_add_executable(
-        NAME       serac_conduction_solver
-        SOURCES    serac_conduction_solver.cpp
+        NAME       serac_thermal_solver
+        SOURCES    serac_thermal_solver.cpp
         OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
         DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
-        NAME              serac_conduction_solver
-        COMMAND           serac_conduction_solver -m ${PROJECT_SOURCE_DIR}/data/star.mesh
+        NAME              serac_thermal_solver
+        COMMAND           serac_thermal_solver -m ${PROJECT_SOURCE_DIR}/data/star.mesh
         NUM_MPI_TASKS     4
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 

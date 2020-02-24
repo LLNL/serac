@@ -17,7 +17,7 @@ On LC machines, it is good practice to submit this command on a batch node (e.g.
   * --spec=+debug
   * --spec=%clang@4.0.0
   * --spec=%clang@4.0.0+debug
-  * --prefix=<Path to uberenv build directory (defaults to ./uberenv-libs)>
+  * --prefix=<Path to uberenv build directory (defaults to ./uberenv_libs)>
 
 If you wish to utilize the optional developer tools, such as CppCheck, Doxygen, Astyle, or Sphinx, 
 there is a shared location if you have the correct permissions on most LC machine.  The build system
@@ -48,28 +48,33 @@ If you already have a spack instance you would like to reuse, you can do so chan
 
 2. `python scripts/uberenv/uberenv.py --upstream=\</path/to/my/spack\>/opt/spack`
 
-If you would like to use an existing installation of [MFEM](https://github.com/mfem/mfem/) (outside of Spack), you can write your own host-config file porviding the necessary information:
+If you would like to use an existing installation of [MFEM](https://github.com/mfem/mfem/) (outside of Spack), you can write your own host-config file providing the necessary information:
 TODO
 
 WARNING: The only MFEM build system supported at the moment is the Makefile one (not the CMake one, yet).
 
 Alternatively, you can edit the cmake/defaults.cmake file to permanently save these library locations. A host config should be generated for each new platform and compiler. Sample toss3 configs are located in the `host-configs` directory. If you would like a host config to be a default for a certain platform, the `_host_configs_map` on line 16 of `config-build.py` should be edited.
 
+Contributions
+-------------
+
+We welcome all kinds of contributions: new features, bug fixes, documentation edits.
+
+For more information, see the [contributing guide](https://github.com/llnl/serac/blob/develop/CONTRIBUTING.md).
+
 License
 -------
 
-Serac is licensed under the BSD 3-Clause license,
-(BSD-3-Clause or https://opensource.org/licenses/BSD-3-Clause).
+Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC. 
+Produced at the Lawrence Livermore National Laboratory.
 
 Copyrights and patents in the Serac project are retained by contributors.
 No copyright assignment is required to contribute to Serac.
 
-See [LICENSE](https://github.com/LLNL/serac/blob/master/LICENSE),
-[COPYRIGHT](https://github.com/LLNL/serac/blob/master/COPYRIGHT), and
-[NOTICE](https://github.com/LLNL/serac/blob/master/NOTICE) for details.
+See [LICENSE](./LICENSE) for details.
 
 Unlimited Open Source - BSD 3-clause Distribution
-`LLNL-CODE-XXXXXX`  `OCEC-XX-XXX`
+`LLNL-CODE-805541`
 
 SPDX usage
 ------------
@@ -95,4 +100,8 @@ follows.  See the license included with each package for full details.
 
 PackageName: BLT  
 PackageHomePage: https://github.com/LLNL/blt  
+PackageLicenseDeclared: BSD-3-Clause  
+
+PackageName: uberenv  
+PackageHomePage: https://github.com/LLNL/uberenv  
 PackageLicenseDeclared: BSD-3-Clause  
