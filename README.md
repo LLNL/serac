@@ -5,11 +5,11 @@ Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primar
 
 Getting Started
 ------
-* Serac uses git submodules, so the project must be cloned recursively. Using bitbucket SSH keys, the command is:
+1. Serac uses git submodules, so the project must be cloned recursively. Using bitbucket SSH keys, the command is:
 
   `git clone --recursive ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git`  
   
-* The easiest path to install both Serac and its dependencies is to use Spack. This has been encapsulated using Uberenv. It will generate a uberenv_libs directory containing a Spack instance with Serac dependencies installed. It also generate a host-config file (uberenv_libs\<config_dependent_name\>.cmake) we can now use to build Serac. The CMake configuration phase has also been encapsulated in config-build.py.
+2.  The easiest path to install both Serac and its dependencies is to use Spack. This has been encapsulated using Uberenv. It will generate a uberenv_libs directory containing a Spack instance with Serac dependencies installed. It also generate a host-config file (uberenv_libs\<config_dependent_name\>.cmake) we can now use to build Serac. The CMake configuration phase has also been encapsulated in config-build.py.
   
   `python scripts/uberenv/uberenv.py`
   
@@ -30,20 +30,20 @@ Getting Started
   Everywhere else:
     `python scripts/uberenv/uberenv.py --package-name=serac_devtools --install`
 
-* `python ./config-build.py -hc uberenv-libs/\<config_dependent_name\>.cmake`
+3. `python ./config-build.py -hc uberenv-libs/\<config_dependent_name\>.cmake`
 
-* `cd build-<system-and-toolchain>`
+4. `cd build-<system-and-toolchain>`
 
-* `cmake --build .`
+5. `cmake --build .`
 
   To build in parallel on an LC machine:
     `srun -ppdebug -N1 --exclusive make -j16`
 
-* `ctest .`
+6. `ctest .`
 
-* To build documentation, `make docs`. This installs Doxygen documentation at /build-\*/src/docs/doxygen/html/html/index.html and Sphinx documentation at build-\*/src/docs/sphinx/html/index.html.
+7. To build documentation, `make docs`. This installs Doxygen documentation at /build-\*/src/docs/doxygen/html/html/index.html and Sphinx documentation at build-\*/src/docs/sphinx/html/index.html.
 
-* If you already have a spack instance you would like to reuse, you can do so changing the uberenv command as follow:
+8. (optional) If you already have a spack instance you would like to reuse, you can do so changing the uberenv command as follow:
 
   `python scripts/uberenv/uberenv.py --upstream=\</path/to/my/spack\>/opt/spack`
 
