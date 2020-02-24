@@ -69,7 +69,7 @@ See [LICENSE](https://github.com/LLNL/serac/blob/master/LICENSE),
 [NOTICE](https://github.com/LLNL/serac/blob/master/NOTICE) for details.
 
 Unlimited Open Source - BSD 3-clause Distribution
-`LLNL-CODE-XXXXXX`  `OCEC-XX-XXX`
+`LLNL-CODE-805541`  `OCEC-XX-XXX`
 
 SPDX usage
 ------------
