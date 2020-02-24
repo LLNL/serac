@@ -21,4 +21,6 @@ For example:
 
 # Contributors (In Alphabetical Order)
 
+* Adrien Bernede, LLNL
 * Jamie Bramwell, LLNL
+* Chris White, LLNL
