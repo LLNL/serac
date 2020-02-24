@@ -68,8 +68,8 @@ License
 Copyright (c) 2017-2020, Lawrence Livermore National Security, LLC. 
 Produced at the Lawrence Livermore National Laboratory.
 
-Copyrights and patents in the Axom project are retained by contributors.
-No copyright assignment is required to contribute to Axom.
+Copyrights and patents in the Serac project are retained by contributors.
+No copyright assignment is required to contribute to Serac.
 
 See [LICENSE](./LICENSE) for details.
 
