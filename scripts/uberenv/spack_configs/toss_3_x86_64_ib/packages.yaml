@@ -53,6 +53,8 @@ packages:
     version: [4.0.3]
   metis:
     version: [5.1.0]
+  glvis:
+    version: [3.4]
 
   # blas is a bit more complicated because its a virtual package so fake it with
   # the following per spack docs
