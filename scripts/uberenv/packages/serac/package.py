@@ -93,6 +93,9 @@ class Serac(CMakePackage):
     # Libraries that do not have a debug variant
     depends_on("superlu-dist~shared")
 
+    # Libraries that we do not build debug
+    depends_on("glvis")
+
     phases = ['hostconfig','cmake','build','install']
 
     def cmake_args(self):
@@ -231,6 +234,9 @@ class Serac(CMakePackage):
         mfem_dir = get_spec_path(spec, "mfem", path_replacements)
         cfg.write(cmake_cache_entry("MFEM_DIR", mfem_dir))
 
+	glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
+	cfg.write(cmake_cache_entry("GLVIS_EXECUTABLE", pjoin(glvis_bin_dir,
+				    "glvis")))
 
         #######################
         # Close and save
