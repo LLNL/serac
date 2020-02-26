@@ -64,7 +64,6 @@ def path_replace(path, path_replacements):
 class Serac(CMakePackage):
     """FIXME: Put a proper description of your package here."""
 
-    # FIXME: Add a proper url for your package's homepage here.
     homepage = "https://www.github.com/LLNL/serac"
     git      = "ssh://git@github.com:LLNL/serac.git"
 
@@ -95,7 +94,7 @@ class Serac(CMakePackage):
     depends_on("superlu-dist~shared")
 
     # Libraries that we do not build debug
-    depends_on("glvis")
+    depends_on("glvis~fonts+screenshots")
 
     phases = ['hostconfig','cmake','build','install']
 
