@@ -72,6 +72,9 @@ class Serac(CMakePackage):
     variant('debug', default=False,
             description='Enable runtime safety and debug checks')
 
+    variant('glvis', default=False,
+            description='Build the glvis visualization executable')
+
     # Basic dependencies
     depends_on("mpi")
 
@@ -94,7 +97,7 @@ class Serac(CMakePackage):
     depends_on("superlu-dist~shared")
 
     # Libraries that we do not build debug
-    depends_on("glvis~fonts screenshots=png")
+    depends_on("glvis~fonts", when='+glvis')
 
     phases = ['hostconfig','cmake','build','install']
 
