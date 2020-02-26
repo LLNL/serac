@@ -94,7 +94,7 @@ class Serac(CMakePackage):
     depends_on("superlu-dist~shared")
 
     # Libraries that we do not build debug
-    depends_on("glvis~fonts+screenshots")
+    depends_on("glvis~fonts screenshots=png")
 
     phases = ['hostconfig','cmake','build','install']
 
