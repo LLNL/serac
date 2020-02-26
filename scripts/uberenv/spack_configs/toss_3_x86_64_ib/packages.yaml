@@ -18,12 +18,14 @@ packages:
       mvapich2@2.2 %intel@19.0.4 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4
     buildable: False
   opengl:
+    version: [1.7.0]
     paths:
-      opengl@1.7.0: /usr
+      opengl: /usr
     buildable: False
   openglu:
+    version: [1.3.1]
     paths:
-      openglu@1.3.1: /usr
+      openglu: /usr
     buildable: False
   openmpi:
     buildable: False
