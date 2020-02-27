@@ -27,6 +27,7 @@ import os
 
 import llnl.util.tty as tty
 from os import environ as env
+from os.path import join as pjoin
 
 
 def cmake_cache_entry(name, value, comment=""):
@@ -63,14 +64,16 @@ def path_replace(path, path_replacements):
 class Serac(CMakePackage):
     """FIXME: Put a proper description of your package here."""
 
-    # FIXME: Add a proper url for your package's homepage here.
     homepage = "https://www.github.com/LLNL/serac"
-    git      = "ssh://git@cz-bitbucket.llnl.gov:7999/ser/serac.git"
+    git      = "ssh://git@github.com:LLNL/serac.git"
 
     version('develop', branch='develop', submodules=True, preferred=True)
 
     variant('debug', default=False,
             description='Enable runtime safety and debug checks')
+
+    variant('glvis', default=False,
+            description='Build the glvis visualization executable')
 
     # Basic dependencies
     depends_on("mpi")
@@ -92,6 +95,9 @@ class Serac(CMakePackage):
 
     # Libraries that do not have a debug variant
     depends_on("superlu-dist~shared")
+
+    # Libraries that we do not build debug
+    depends_on("glvis~fonts", when='+glvis')
 
     phases = ['hostconfig','cmake','build','install']
 
@@ -231,6 +237,9 @@ class Serac(CMakePackage):
         mfem_dir = get_spec_path(spec, "mfem", path_replacements)
         cfg.write(cmake_cache_entry("MFEM_DIR", mfem_dir))
 
+        if "+glvis" in spec:
+            glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
+            cfg.write(cmake_cache_entry("GLVIS_EXECUTABLE", pjoin(glvis_bin_dir, "glvis")))
 
         #######################
         # Close and save

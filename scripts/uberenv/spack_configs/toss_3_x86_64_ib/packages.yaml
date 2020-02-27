@@ -5,6 +5,8 @@ packages:
       blas: [netlib-lapack]
       lapack: [netlib-lapack]
       mpi: [mvapich2]
+      gl: [opengl]
+      glu: [openglu]
   # Lock down which MPI we are using
   mvapich2:
     paths:
@@ -14,6 +16,14 @@ packages:
       mvapich2@2.2 %gcc@8.1.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-8.1.0
       # intel mvapich2
       mvapich2@2.2 %intel@19.0.4 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4
+    buildable: False
+  opengl:
+    paths:
+      opengl@1.7.0: /usr
+    buildable: False
+  openglu:
+    paths:
+      openglu@1.3.1: /usr
     buildable: False
   openmpi:
     buildable: False
@@ -53,6 +63,8 @@ packages:
     version: [4.0.3]
   metis:
     version: [5.1.0]
+  glvis:
+    version: [3.4]
 
   # blas is a bit more complicated because its a virtual package so fake it with
   # the following per spack docs
@@ -102,5 +114,7 @@ packages:
     paths:
       graphviz: /usr
     buildable: False
-
-
+  libx11:
+    paths:
+      libx11: /usr
+    buildable: False
