@@ -74,7 +74,7 @@ endif()
 #------------------------------------------------------------------------------
 
 if(GLVIS_EXECUTABLE)
-    ADD_CUSTOM_TARGET(link_target ALL
+    ADD_CUSTOM_TARGET(glvis_symlink ALL
                       COMMAND ${CMAKE_COMMAND} 
                       -E create_symlink ${GLVIS_EXECUTABLE} ${CMAKE_INSTALL_BINDIR}/glvis)
 endif()
