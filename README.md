@@ -68,11 +68,11 @@ No copyright assignment is required to contribute to Serac.
 
 See [LICENSE](./LICENSE) for details.
 
-Unlimited Open Source - BSD 3-clause Distribution
+Unlimited Open Source - BSD 3-clause Distribution  
 `LLNL-CODE-805541`
 
 SPDX usage
-------------
+-----------
 
 Individual files contain SPDX tags instead of the full license text.
 This enables machine processing of license information based on the SPDX
