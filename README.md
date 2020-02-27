@@ -14,10 +14,11 @@ Getting Started
     `python scripts/uberenv/uberenv.py`
   
     On LC machines, it is good practice to submit this command on a batch node (e.g. `srun -ppdebug -N1 --exclusive python scripts/uberenv/uberenv.py`). Helpful uberenv options:  
-    * --spec=+debug
-    * --spec=%clang@4.0.0
-    * --spec=%clang@4.0.0+debug
-    * --prefix=<Path to uberenv build directory (defaults to ./uberenv_libs)>
+    * `--spec=+debug`
+    * `--spec=+glvis`
+    * `--spec=%clang@4.0.0`
+    * `--spec=%clang@4.0.0+debug`
+    * `--prefix=<Path to uberenv build directory (defaults to ./uberenv_libs)>`
 
     If you wish to utilize the optional developer tools, such as CppCheck, Doxygen, Astyle, or Sphinx, 
     there is a shared location if you have the correct permissions on most LC machine.  The build system
@@ -67,11 +68,11 @@ No copyright assignment is required to contribute to Serac.
 
 See [LICENSE](./LICENSE) for details.
 
-Unlimited Open Source - BSD 3-clause Distribution
+Unlimited Open Source - BSD 3-clause Distribution  
 `LLNL-CODE-805541`
 
 SPDX usage
-------------
+-----------
 
 Individual files contain SPDX tags instead of the full license text.
 This enables machine processing of license information based on the SPDX
