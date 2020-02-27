@@ -1,4 +1,4 @@
-# Copyright (c) 2019, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -68,6 +68,17 @@ add_subdirectory(src)
 if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
+
+#------------------------------------------------------------------------------
+# Copy utility TPL executables
+#------------------------------------------------------------------------------
+
+if(GLVIS_EXECUTABLE)
+    ADD_CUSTOM_TARGET(glvis_symlink ALL
+                      COMMAND ${CMAKE_COMMAND} 
+                      -E create_symlink ${GLVIS_EXECUTABLE} ${CMAKE_INSTALL_BINDIR}/glvis)
+endif()
+
 
 #------------------------------------------------------------------------------
 # Add Code Checks
