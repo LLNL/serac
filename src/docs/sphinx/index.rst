@@ -25,7 +25,9 @@ Software Documentation
 .. toctree::
    :maxdepth: 1
    :caption: Software Documentation
- 
+
+   Source Code Documentation
+
 --------------------------
 Source Code Documentation
 --------------------------
@@ -39,6 +41,8 @@ Copyright and License Information
 .. toctree::
    :maxdepth: 1
    :caption: License Information 
+
+   License
 
 Please see the :ref:`LICENSE<https://github.com/LLNL/serac/blob/master/LICENSE>`_ file in the repository.
 
