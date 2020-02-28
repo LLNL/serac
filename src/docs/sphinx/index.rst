@@ -43,17 +43,23 @@ On LC machines, it is good practice to submit this command on a batch node (e.g.
 If you wish to utilize the optional developer tools, such as CppCheck, Doxygen, Astyle, or Sphinx, 
 there is a shared location if you have the correct permissions on most LC machine.  The build system
 will auto-detect the paths for you.  If you wish to build them yourself (which takes a long time), 
-use one of the following commands:
+use one of the following commands\:
 
-On an LC machine:
-      ``python scripts/llnl/build_devtools.py --directory=<devtool/build/path>``
+On an LC machine
+.. code:: bash
+   $ python scripts/llnl/build_devtools.py --directory=<devtool/build/path>
 
-Everywhere else:
-      ``python scripts/uberenv/uberenv.py --package-name=serac_devtools --install``
+Everywhere else
+.. code:: bash
+   $ python scripts/uberenv/uberenv.py --package-name=serac_devtools --install
 
-3. ``python ./config-build.py -hc uberenv-libs/\<config_dependent_name\>.cmake``
+3. 
+.. code:: bash
+   $ python ./config-build.py -hc uberenv-libs/\<config_dependent_name\>.cmake
 
-4. ``cd build-<system-and-toolchain>``
+4. 
+.. code:: bash
+   $ cd build-<system-and-toolchain>
 
 5. ``cmake --build .``
 
