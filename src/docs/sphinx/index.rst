@@ -96,12 +96,14 @@ The unit tests can now be run in the build directory.
 To build documentation, ``make docs``. This installs Doxygen documentation at ``/build-*/src/docs/doxygen/html/html/index.html`` 
 and Sphinx documentation at ``build-*/src/docs/sphinx/html/index.html``.
 
-================================
-Software Documentation
-================================
-
-`Doxygen documentation <../doxygen/html/index.html>`_
-
+.. TODO: fix the linking of the doxygen documentation
+.. 
+.. ================================
+..  Software Documentation
+.. ================================
+..  
+.. `Doxygen documentation <../doxygen/html/index.html>`_
+.. 
 ======================================================
 Copyright and License Information
 ======================================================
