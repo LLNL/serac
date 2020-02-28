@@ -22,6 +22,10 @@ configuring, and building the code.
 Software Documentation
 ================================
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Software Documentation
+ 
 --------------------------
 Source Code Documentation
 --------------------------
@@ -29,8 +33,12 @@ Source Code Documentation
 `Doxygen documentation <../doxygen/html/index.html>`_
  
 ======================================================
-Serac Copyright and License Information
+Copyright and License Information
 ======================================================
+
+.. toctree::
+   :maxdepth: 1
+   :caption: License Information 
 
 Please see the :ref:`LICENSE<https://github.com/LLNL/serac/blob/master/LICENSE>`_ file in the repository.
 
