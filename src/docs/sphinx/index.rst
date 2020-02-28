@@ -22,15 +22,13 @@ configuring, and building the code.
    :maxdepth: 1
    :caption: Software Documentation
 
-   Source Code Documentation
+   doxygen
 
 ================================
 Software Documentation
 ================================
+:ref:`doxygen`
 
---------------------------
-Source Code Documentation
---------------------------
 
 `Doxygen documentation <../doxygen/html/index.html>`_
 
@@ -38,11 +36,12 @@ Source Code Documentation
    :maxdepth: 1
    :caption: License Information 
 
-   Copyright and License Information
+   license
 
 ======================================================
 Copyright and License Information
 ======================================================
+:ref:`license`
 
 Please see the :ref:`LICENSE<https://github.com/LLNL/serac/blob/master/LICENSE>`_ file in the repository.
 
