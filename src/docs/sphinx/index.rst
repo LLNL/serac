@@ -30,7 +30,7 @@ Serac Quickstart Guide
 
 .. code:: bash
    $ python scripts/uberenv/uberenv.py
-  
+
 On LC machines, it is good practice to submit this command on a batch node (e.g. ``srun -ppdebug -N1 --exclusive python scripts/uberenv/uberenv.py``). Helpful uberenv options:  
     * ``--spec=+debug``
     * ``--spec=+glvis``
