@@ -3,7 +3,7 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-Axom Quickstart Guide
+Serac Quickstart Guide
 =====================
 
 ****
