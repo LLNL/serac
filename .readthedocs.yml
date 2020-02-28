@@ -15,3 +15,6 @@ formats: all
 # Optionally set the version of Python and requirements required to build your docs
 python:
   version: 2.7
+
+conda:
+  file: src/docs/sphinx/environment.yml
