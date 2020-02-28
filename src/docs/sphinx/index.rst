@@ -64,14 +64,12 @@ Serac Quickstart Guide
 ================================
 Software Documentation
 ================================
-:ref:`doxygen`
 
 `Doxygen documentation <../doxygen/html/index.html>`_
 
 ======================================================
 Copyright and License Information
 ======================================================
-:ref:`license`
 
 Please see the :ref:`LICENSE<https://github.com/LLNL/serac/blob/master/LICENSE>`_ file in the repository.
 
