@@ -10,7 +10,7 @@ Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primar
 Documentation
 ------
 
-Build, run, and design documentation can be found at [readthedocs](https://serac.readthedocs.io/en/feature-bramwell-readthedocs/)
+Build, run, and design documentation can be found at [readthedocs](https://serac.readthedocs.io/en/feature-bramwell-readthedocs/).
 
 Contributions
 -------------
