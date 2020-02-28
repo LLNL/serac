@@ -4,7 +4,7 @@
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
 Serac Quickstart Guide
-======================
+=====================
 
 1.  Serac uses git submodules, so the project must be cloned recursively. Using GitHub SSH keys, the command is:
 
