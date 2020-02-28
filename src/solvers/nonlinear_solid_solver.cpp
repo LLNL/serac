@@ -159,6 +159,7 @@ NonlinearSolidSolver::~NonlinearSolidSolver()
 }
 
 NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(mfem::ParNonlinearForm *H_form)
+  : mfem::Operator(H_form->FESpace()->GetTrueVSize())
 {
   m_H_form = H_form;
 }
