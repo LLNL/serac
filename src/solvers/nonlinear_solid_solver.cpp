@@ -68,7 +68,7 @@ void NonlinearSolidSolver::CompleteSetup()
   m_H_form->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(m_model));
 
   // Add the traction integrator
-  if (m_nat_bdr_coef != nullptr) {
+  if (m_nat_bdr_vec_coef != nullptr) {
     m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*m_nat_bdr_vec_coef), m_nat_bdr);
   }
 
