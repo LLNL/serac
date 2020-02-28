@@ -18,31 +18,31 @@ Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primar
 The Serac Quickstart Guide contains information about accessing,
 configuring, and building the code.
 
-================================
-Software Documentation
-================================
-
 .. toctree::
    :maxdepth: 1
    :caption: Software Documentation
 
    Source Code Documentation
 
+================================
+Software Documentation
+================================
+
 --------------------------
 Source Code Documentation
 --------------------------
 
 `Doxygen documentation <../doxygen/html/index.html>`_
- 
-======================================================
-Copyright and License Information
-======================================================
 
 .. toctree::
    :maxdepth: 1
    :caption: License Information 
 
-   License
+   Copyright and License Information
+
+======================================================
+Copyright and License Information
+======================================================
 
 Please see the :ref:`LICENSE<https://github.com/LLNL/serac/blob/master/LICENSE>`_ file in the repository.
 
