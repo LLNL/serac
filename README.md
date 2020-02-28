@@ -1,6 +1,9 @@
 Serac
 ====
 
+[![Documentation
+Status](https://readthedocs.org/projects/serac/badge/?version=latest&token=d83fda75e28e8064f494749464bf7bef31893f82c15d631884eae5de5aaebe80)](https://serac.readthedocs.io/en/latest/?badge=latest)
+
 Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primary purpose is to investigate multiphysics abstraction strategies and implicit finite element-based alogrithm development for emerging computing architectures. It also serves as a proxy-app for LLNL's DIABLO and ALE3D codes.
 
 Getting Started
