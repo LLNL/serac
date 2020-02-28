@@ -3,6 +3,9 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
+.. toctree::
+   :maxdepth: 2
+
 =======
 Serac
 =======
@@ -11,10 +14,7 @@ Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primar
 strategies and implicit finite element-based alogrithm development for emerging computing architectures. It also serves as a proxy-app for
 LLNL's DIABLO and ALE3D codes.
 
-.. toctree::
-   :maxdepth: 2
-
-======================
+=====================
 Quickstart Guide
 ======================
 
