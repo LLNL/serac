@@ -3,9 +3,9 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-*****
+=======
 Serac
-*****
+=======
 
 Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primary purpose is to investigate multiphysics abstraction
 strategies and implicit finite element-based alogrithm development for emerging computing architectures. It also serves as a proxy-app for
