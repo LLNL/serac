@@ -13,7 +13,7 @@ Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primar
    :maxdepth: 1
    :caption: Quickstart Guide
 
-   docs/sphinx/quickstart_guide/index
+   quickstart_guide/index
 
 The Serac Quickstart Guide contains information about accessing,
 configuring, and building the code.
