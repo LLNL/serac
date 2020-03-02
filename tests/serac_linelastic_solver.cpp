@@ -7,7 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "mfem.hpp"
-#include "solvers/linear_elasticity_solver.hpp"
+#include "solvers/elasticity_solver.hpp"
 #include <fstream>
 
 const char* mesh_file = "NO_MESH_GIVEN";
@@ -18,7 +18,7 @@ inline bool file_exists(const char* path)
   return (stat(path, &buffer) == 0);
 }
 
-TEST(linearelastic_solver, le_solve)
+TEST(elastic_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -35,60 +35,67 @@ TEST(linearelastic_solver, le_solve)
   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
   delete mesh;
 
-  int dim = pmesh->Dimension();
-
-  // Define the finite element spaces for displacement field
-  mfem::H1_FECollection fe_coll(1, dim);
-  mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
-
-  // Define a grid function for the global reference configuration, the beginning
-  // step configuration, the global deformation, the current configuration/solution
-  // guess, and the incremental nodal displacements
-  mfem::ParGridFunction x(&fe_space);
-
-  x=0.0;
+  ElasticitySolver elas_solver(1, pmesh);
 
   // define a boundary attribute array and initialize to 0
-  mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
-  ess_bdr = 0;
+  mfem::Array<int> disp_bdr;
+  disp_bdr.SetSize(pmesh->bdr_attributes.Max());
+  disp_bdr = 0;
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
-  ess_bdr[0] = 1;
+  disp_bdr[0] = 1;
+
+  // define the displacement vector
+  mfem::Vector disp(pmesh->Dimension());
+  disp = 0.0;
+  mfem::VectorConstantCoefficient disp_coef(disp);
+  elas_solver.SetDisplacementBCs(disp_bdr, &disp_coef);
 
   mfem::Array<int> trac_bdr;
-  trac_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
-
+  trac_bdr.SetSize(pmesh->bdr_attributes.Max());
   trac_bdr = 0;
   trac_bdr[1] = 1;
 
   // define the traction vector
-  mfem::Vector traction(dim);
+  mfem::Vector traction(pmesh->Dimension());
   traction = 0.0;
   traction(1) = 1.0e-4;
-
   mfem::VectorConstantCoefficient traction_coef(traction);
+  elas_solver.SetTractionBCs(trac_bdr, &traction_coef);
+
+  // set the material properties
   mfem::ConstantCoefficient mu_coef(0.25);
   mfem::ConstantCoefficient K_coef(5.0);
 
+  elas_solver.SetLameParameters(K_coef, mu_coef);
 
-  // construct the nonlinear mechanics operator
-  LinearElasticSolver oper(fe_space, ess_bdr, trac_bdr,
-                           mu_coef, K_coef, traction_coef,
-                           1.0e-4, 1.0e-10,
-                           500, false, false);
+  // Define the linear solver params
+  LinearSolverParameters params;
+  params.rel_tol = 1.0e-4;
+  params.abs_tol = 1.0e-10;
+  params.print_level = 0;
+  params.max_iter = 500;
+  params.prec = Preconditioner::Jacobi;
+  params.lin_solver = LinearSolver::MINRES;
 
-  // Solve the Newton system
-  bool converged = oper.Solve(x);
+  elas_solver.SetLinearSolverParameters(params);
+  elas_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
-  mfem::Vector zero(dim);
+  // allocate the data structures
+  elas_solver.CompleteSetup();
+
+  double dt = 1.0;
+  elas_solver.AdvanceTimestep(dt);
+
+  auto state = elas_solver.GetState();
+
+  mfem::Vector zero(pmesh->Dimension());
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = x.ComputeLpError(2.0, zerovec);
+  double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
-  EXPECT_TRUE(converged);
 
   delete pmesh;
 

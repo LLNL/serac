@@ -32,7 +32,8 @@ enum class TimestepMethod {
 
 enum class LinearSolver {
   CG,
-  GMRES
+  GMRES,
+  MINRES
 };
 
 enum class Preconditioner {
