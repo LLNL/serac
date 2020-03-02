@@ -11,7 +11,7 @@ It also serves as a proxy-app for LLNL's DIABLO and ALE3D codes.
 Documentation
 ------
 
-Build, run, and design documentation can be found at [readthedocs](https://serac.readthedocs.io/en/feature-bramwell-readthedocs/).
+Build, run, and design documentation can be found at [readthedocs](https://serac.readthedocs.io).
 
 Contributions
 -------------
