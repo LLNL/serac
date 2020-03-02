@@ -1,11 +1,12 @@
 Serac
 ====
 
-[![Documentation
-Status](https://readthedocs.org/projects/serac/badge/?version=feature-bramwell-readthedocs)](https://serac.readthedocs.io/en/feature-bramwell-readthedocs/?badge=feature-bramwell-readthedocs)
+[![Documentation Status](https://readthedocs.org/projects/serac/badge/?version=latest)](https://serac.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg)](./LICENSE)
 
-Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primary purpose is to investigate multiphysics abstraction strategies and implicit finite element-based alogrithm development for emerging computing architectures. It also serves as a proxy-app for LLNL's DIABLO and ALE3D codes.
+Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primary purpose is to investigate multiphysics 
+abstraction strategies and implicit finite element-based alogrithm development for emerging computing architectures. 
+It also serves as a proxy-app for LLNL's DIABLO and ALE3D codes.
 
 Documentation
 ------
