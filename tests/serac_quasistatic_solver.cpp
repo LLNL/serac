@@ -92,6 +92,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   double dt = 1.0;
   solid_solver.AdvanceTimestep(dt);
 
+  solid_solver.OutputState();
   auto state = solid_solver.GetState(); 
 
   mfem::Vector zero(dim);
@@ -100,7 +101,7 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(2.2322, x_norm, 0.001);
+  EXPECT_NEAR(2.2309025, x_norm, 0.001);
 
   delete pmesh;
 

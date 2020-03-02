@@ -73,7 +73,7 @@ void NonlinearSolidSolver::CompleteSetup()
   }
 
   // Add the essential boundary
-  if (m_ess_bdr_coef != nullptr) {
+  if (m_ess_bdr_vec_coef != nullptr) {
     m_H_form->SetEssentialBC(m_ess_bdr);
   }
 
@@ -99,7 +99,7 @@ void NonlinearSolidSolver::CompleteSetup()
 
     mfem::MINRESSolver *J_minres = new mfem::MINRESSolver(m_state[0].space->GetComm());
     J_minres->SetRelTol(m_lin_params.rel_tol);
-    J_minres->SetAbsTol(m_lin_params.abs_tol);
+    J_minres->SetAbsTol(0.0);
     J_minres->SetMaxIter(m_lin_params.max_iter);
     J_minres->SetPrintLevel(m_lin_params.print_level);
     J_minres->SetPreconditioner(*m_J_prec);
