@@ -65,9 +65,6 @@ protected:
   /// State variable initialization indicator
   bool m_gf_initialized;
 
-  /// Mesh displacement state index
-  int m_disp_index;
-
 public:
   /// Empty constructor
   BaseSolver();

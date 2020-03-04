@@ -23,7 +23,7 @@ protected:
   /// The operator for use with the MFEM newton and ODE solvers
   mfem::Operator *m_nonlinear_oper;
 
-  /// The Newton solver for the nonlinear iterattions
+  /// The Newton solver for the nonlinear iterations
   mfem::NewtonSolver m_newton_solver;
 
   /// The linear solver for the Jacobian

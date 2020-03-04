@@ -92,7 +92,6 @@ TEST(nonlinear_solid_solver, qs_solve)
   double dt = 1.0;
   solid_solver.AdvanceTimestep(dt);
 
-  solid_solver.OutputState();
   auto state = solid_solver.GetState(); 
 
   mfem::Vector zero(dim);

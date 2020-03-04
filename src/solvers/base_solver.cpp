@@ -12,7 +12,7 @@
 BaseSolver::BaseSolver()
   : m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr), m_output_type(OutputType::VisIt),
     m_timestepper(TimestepMethod::ForwardEuler), m_ode_solver(nullptr), m_time(0.0), m_cycle(0), m_visit_dc(nullptr),
-    m_gf_initialized(false), m_disp_index(-1)
+    m_gf_initialized(false)
 {
   m_ode_solver = new mfem::ForwardEulerSolver;
 }
@@ -21,7 +21,7 @@ BaseSolver::BaseSolver(mfem::Array<FiniteElementState> &state)
   : m_state(state), m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr),
     m_output_type(OutputType::VisIt),
     m_timestepper(TimestepMethod::ForwardEuler), m_ode_solver(nullptr), m_time(0.0), m_cycle(0), m_visit_dc(nullptr),
-    m_gf_initialized(false), m_disp_index(-1), m_mesh_index(-1)
+    m_gf_initialized(false)
 {
   MFEM_ASSERT(state.Size() > 0, "State vector array of size 0 in BaseSolver constructor.");
 
@@ -183,21 +183,6 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
 
 void BaseSolver::OutputState() const
 {
-  // Check if we need to move the mesh nodes or use a state field
-  if (m_disp_index >= 0) {
-    mfem::GridFunction *nodes = m_state[0].mesh->GetNodes();
-    mfem::GridFunction *newnodes(m_state[m_mesh_index);
-
-    if (m_disp_index >= 0) {
-      add(m_state[m_disp_index].gf, nodes, newnodes);
-    } 
-
-    mfem::GridFunction *nodes = &x_fin; // set a nodes grid function to global current configuration
-    int owns_nodes = 0;
-    pmesh->SwapNodes(nodes, owns_nodes); // pmesh has current configuration nodes
-  }
-
-
   switch(m_output_type) {
   case OutputType::VisIt: {
     m_visit_dc->SetCycle(m_cycle);
