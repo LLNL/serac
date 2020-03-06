@@ -13,12 +13,19 @@
 // Forward declaration
 class NonlinearSolidQuasiStaticOperator;
 class NonlinearSolidDynamicOperator;
+class NonlinearSolidReducedSystemOperator;
 
 class NonlinearSolidSolver : public BaseSolver
 {
 protected:
   /// The abstract nonlinear form
   mfem::ParNonlinearForm *m_H_form;
+
+  /// The abstract mass bilinear form
+  mfem::ParBilinearForm *m_S_form;
+
+  /// The abstract viscosity bilinear form
+  mfem::ParBilinearForm *m_S_form;
 
   /// The operator for use with the MFEM newton and ODE solvers
   mfem::Operator *m_nonlinear_oper;
@@ -31,6 +38,9 @@ protected:
 
   /// The preconditioner for the Jacobian solver
   mfem::Solver *m_J_prec;
+
+  /// The viscosity coefficient
+  mfem::Coefficient &m_viscosity;
 
   /// The hyperelastic material model
   mfem::HyperelasticModel *m_model;
