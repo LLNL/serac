@@ -99,4 +99,64 @@ public:
   virtual ~NonlinearSolidQuasiStaticOperator();
 };
 
+class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator
+{
+protected:
+  mfem::ParBilinearForm *m_M_form;
+  mfem::ParBilinearForm *m_S_form;
+  mfem::ParNonlinearForm *m_H_form;
+
+  mfem::HypreParMatrix *m_M_mat; // Mass matrix from ParallelAssemble()
+  mfem::CGSolver m_M_solver;    // Krylov solver for inverting the mass matrix M
+  mfem::HypreSmoother m_M_prec; // Preconditioner for the mass matrix M
+
+  NonlinearSolidReducedSystemOperator *m_reduced_oper;
+
+  LinearSolverParameters m_lin_params;
+
+public:
+  NonlinearSolidDynamicOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form, mfem::ParBilinearForm *M_form, 
+                                const mfem::Array<int> &ess_tdof_list, LinearSolverParameters lin_params);
+
+  /// Required to use the native newton solver
+  virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
+  /// Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
+  /// This is the only requirement for high-order SDIRK implicit integration.
+  virtual void ImplicitSolve(const double dt, const mfem::Vector &x, mfem::Vector &k);
+
+  virtual ~NonlinearSolidQuasiStaticOperator();
+};
+
+//  Nonlinear operator of the form:
+//  k --> (M + dt*S)*k + H(x + dt*v + dt^2*k) + S*v,
+//  where M and S are given BilinearForms, H is a given NonlinearForm, v and x
+//  are given vectors, and dt is a scalar.
+class NonlinearSolidReducedSystemOperator : public mfem::Operator
+{
+private:
+  mfem::ParBilinearForm *m_M_form;
+  mfem::ParBilinearForm *m_S_form;
+  mfem::ParNonlinearForm *m_H_form;
+  mutable mfem::HypreParMatrix *m_jacobian;
+  double m_dt;
+  const mfem::Vector *m_v, *m_x;
+  mutable mfem::Vector m_w, m_z;
+  const mfem::Array<int> &m_ess_tdof_list;
+
+public:
+  NonlinearSolidReducedSystemOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
+    mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list);
+
+  /// Set current dt, v, x values - needed to compute action and Jacobian.
+  void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);
+
+  /// Compute y = H(x + dt (v + dt k)) + M k + S (v + dt k).
+  virtual void Mult(const mfem::Vector &k, mfem::Vector &y) const;
+
+  /// Compute J = M + dt S + dt^2 grad_H(x + dt (v + dt k)).
+  virtual mfem::Operator &GetGradient(const mfem::Vector &k) const;
+
+  virtual ~NonlinearSolidReducedSystemOperator();
+};
+
 #endif
