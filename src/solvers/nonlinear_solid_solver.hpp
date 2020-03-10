@@ -22,7 +22,7 @@ protected:
   mfem::ParNonlinearForm *m_H_form;
 
   /// The abstract mass bilinear form
-  mfem::ParBilinearForm *m_S_form;
+  mfem::ParBilinearForm *m_M_form;
 
   /// The abstract viscosity bilinear form
   mfem::ParBilinearForm *m_S_form;
@@ -40,7 +40,7 @@ protected:
   mfem::Solver *m_J_prec;
 
   /// The viscosity coefficient
-  mfem::Coefficient &m_viscosity;
+  mfem::Coefficient *m_viscosity;
 
   /// The hyperelastic material model
   mfem::HyperelasticModel *m_model;
@@ -65,7 +65,7 @@ public:
   void SetHyperelasticMaterialParameters(double mu, double K);
 
   /// Set the initial state (guess)
-  void SetInitialState(mfem::VectorCoefficient &state);
+  void SetInitialState(mfem::VectorCoefficient &disp_state, mfem::VectorCoefficient &velo_state);
 
   /// Set the linear solver params
   void SetLinearSolverParameters(const LinearSolverParameters &params);
@@ -112,11 +112,18 @@ protected:
 
   NonlinearSolidReducedSystemOperator *m_reduced_oper;
 
+  /// The Newton solver for the nonlinear iterations
+  mfem::NewtonSolver *m_newton_solver;
+
+  const mfem::Array<int> &m_ess_tdof_list;
   LinearSolverParameters m_lin_params;
+
+  mutable mfem::Vector m_z;
 
 public:
   NonlinearSolidDynamicOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form, mfem::ParBilinearForm *M_form, 
-                                const mfem::Array<int> &ess_tdof_list, LinearSolverParameters lin_params);
+                                const mfem::Array<int> &ess_tdof_list, mfem::NewtonSolver *newton_solver,
+                                LinearSolverParameters lin_params);
 
   /// Required to use the native newton solver
   virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
@@ -124,7 +131,7 @@ public:
   /// This is the only requirement for high-order SDIRK implicit integration.
   virtual void ImplicitSolve(const double dt, const mfem::Vector &x, mfem::Vector &k);
 
-  virtual ~NonlinearSolidQuasiStaticOperator();
+  virtual ~NonlinearSolidDynamicOperator();
 };
 
 //  Nonlinear operator of the form:

@@ -17,6 +17,9 @@ protected:
   /// List of finite element data structures
   mfem::Array<FiniteElementState> m_state;
 
+  /// Block vector storage of the true state
+  mfem::BlockVector *m_block;
+
   /// Essential BC markers
   mfem::Array<int> m_ess_bdr;
 
