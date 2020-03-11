@@ -214,7 +214,6 @@ BaseSolver::~BaseSolver()
     delete m_state[i].coll;
     delete m_state[i].space;
     delete m_state[i].gf;
-    delete m_state[i].true_vec;
   }
   delete m_ode_solver;
 }

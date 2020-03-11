@@ -61,6 +61,9 @@ public:
   /// Set the traction boundary conditions
   void SetTractionBCs(mfem::Array<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef);
 
+  /// Set the viscosity coefficient
+  void SetViscosity(mfem::Coefficient *visc_coef);
+
   /// Set the hyperelastic material parameters
   void SetHyperelasticMaterialParameters(double mu, double K);
 

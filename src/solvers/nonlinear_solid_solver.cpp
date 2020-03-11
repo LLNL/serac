@@ -65,6 +65,11 @@ void NonlinearSolidSolver::SetHyperelasticMaterialParameters(double mu, double K
   m_model = new mfem::NeoHookeanModel(mu, K);
 }
 
+void NonlinearSolidSolver::SetViscosity(mfem::Coefficient *visc)
+{
+  m_viscosity = visc;
+}
+
 void NonlinearSolidSolver::SetInitialState(mfem::VectorCoefficient &disp_state, mfem::VectorCoefficient &velo_state)
 {
   disp_state.SetTime(m_time);
