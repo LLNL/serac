@@ -44,7 +44,7 @@ TEST(dynamic_solver, dyn_solve)
 
   // define a boundary attribute array and initialize to 0
   mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
+  ess_bdr.SetSize(pmesh->bdr_attributes.Max());
   ess_bdr = 0;
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
@@ -61,14 +61,14 @@ TEST(dynamic_solver, dyn_solve)
   initialstate[1] = &velo;
 
   NonlinearSolidSolver dyn_solver(1, pmesh);
-  dyn_solver.SetDisplacementBCs(ess_bdr, deform);
+  dyn_solver.SetDisplacementBCs(ess_bdr, &deform);
   dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.SetViscosity(&visc);
   dyn_solver.ProjectState(initialstate);
 
   dyn_solver.SetTimestepper(TimestepMethod::SDIRK33);
 
-  LinearSolverParams params;
+  LinearSolverParameters params;
   params.prec = Preconditioner::BoomerAMG;
   params.abs_tol = 1.0e-8;
   params.rel_tol = 1.0e-4;
