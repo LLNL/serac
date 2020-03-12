@@ -27,8 +27,11 @@ protected:
   /// The abstract viscosity bilinear form
   mfem::ParBilinearForm *m_S_form;
 
-  /// The operator for use with the MFEM newton and ODE solvers
+  /// The quasi-static operator for use with the MFEM newton solvers
   mfem::Operator *m_nonlinear_oper;
+
+  /// The time dependent operator for use with the MFEM ODE solvers
+  mfem::TimeDependentOperator *m_timedep_oper;
 
   /// The Newton solver for the nonlinear iterations
   mfem::NewtonSolver m_newton_solver;

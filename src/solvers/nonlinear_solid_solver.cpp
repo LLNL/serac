@@ -10,7 +10,7 @@
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh) :
   BaseSolver(), m_H_form(nullptr), m_M_form(nullptr), m_S_form(nullptr), 
-  m_nonlinear_oper(nullptr), m_newton_solver(pmesh->GetComm()), m_J_solver(nullptr),
+  m_nonlinear_oper(nullptr), m_timedep_oper(nullptr), m_newton_solver(pmesh->GetComm()), m_J_solver(nullptr),
   m_J_prec(nullptr), m_viscosity(nullptr), m_model(nullptr)
 {
   m_state.SetSize(2);
@@ -166,8 +166,9 @@ void NonlinearSolidSolver::CompleteSetup()
     m_newton_solver.SetOperator(*m_nonlinear_oper);
   }
   else {
-    m_nonlinear_oper = new NonlinearSolidDynamicOperator(m_H_form, m_S_form, m_M_form, 
+    m_timedep_oper = new NonlinearSolidDynamicOperator(m_H_form, m_S_form, m_M_form, 
         m_ess_tdof_list, &m_newton_solver, m_lin_params);
+    m_ode_solver->Init(*m_timedep_oper);
   }
 
 }
@@ -202,6 +203,7 @@ NonlinearSolidSolver::~NonlinearSolidSolver()
 {
   delete m_H_form;
   delete m_nonlinear_oper;
+  delete m_timedep_oper;
   delete m_J_solver;
   delete m_J_prec;
   delete m_model;

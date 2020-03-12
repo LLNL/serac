@@ -7,7 +7,6 @@
 set(solvers_sources
     base_solver.cpp
     nonlinear_solid_solver.cpp
-    dynamic_solver.cpp
     thermal_solver.cpp
     elasticity_solver.cpp
     )
@@ -15,7 +14,6 @@ set(solvers_sources
 set(solvers_headers
     base_solver.hpp
     nonlinear_solid_solver.hpp
-    dynamic_solver.hpp
     thermal_solver.hpp
     elasticity_solver.hpp
     )
