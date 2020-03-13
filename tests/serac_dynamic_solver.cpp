@@ -101,10 +101,10 @@ TEST(dynamic_solver, dyn_solve)
   bool last_step = false;
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
+    t += dt_real;
     last_step = (t >= t_final - 1e-8*dt);
 
     dyn_solver.AdvanceTimestep(dt_real);
-    t += dt_real;
   }
 
   mfem::Vector zero(dim);
@@ -116,8 +116,8 @@ TEST(dynamic_solver, dyn_solve)
   double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
   double v_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(13.2665, x_norm, 0.0001);
-  EXPECT_NEAR(0.25368, v_norm, 0.0001);
+  EXPECT_NEAR(12.8727, x_norm, 0.0001);
+  EXPECT_NEAR(0.22314, v_norm, 0.0001);
 
   delete pmesh;
 

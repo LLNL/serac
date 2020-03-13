@@ -152,11 +152,11 @@ TEST(thermal_solver, dyn_exp_solve)
 
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
+    t += dt_real;
     last_step = (t >= t_final - 1e-8*dt);
 
     // Advance the timestep
     therm_solver.AdvanceTimestep(dt_real);
-    t += dt_real;
   }
 
   // Get the state grid function
@@ -233,11 +233,11 @@ TEST(thermal_solver, dyn_imp_solve)
 
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
+    t += dt_real;
     last_step = (t >= t_final - 1e-8*dt);
 
     // Advance the timestep
     therm_solver.AdvanceTimestep(dt_real);
-    t += dt_real;
   }
 
   // Get the state grid function
