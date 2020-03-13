@@ -72,14 +72,15 @@ TEST(dynamic_solver, dyn_solve)
   params.prec = Preconditioner::BoomerAMG;
   params.abs_tol = 1.0e-8;
   params.rel_tol = 1.0e-4;
-  params.max_iter = 5000;
+  params.max_iter = 500;
   params.lin_solver = LinearSolver::GMRES;
+  params.print_level = 0;
  
   NonlinearSolverParameters nl_params;
-  nl_params.rel_tol = 1.0e-3;
-  nl_params.abs_tol = 1.0e-6;
+  nl_params.rel_tol = 1.0e-4;
+  nl_params.abs_tol = 1.0e-8;
   nl_params.print_level = 1;
-  nl_params.max_iter = 5000;
+  nl_params.max_iter = 500;
  
   dyn_solver.SetSolverParameters(params, nl_params);
 
@@ -89,15 +90,21 @@ TEST(dynamic_solver, dyn_solve)
   double t_final = 6.0;
   double dt = 3.0;
 
+  mfem::Array<std::string> names(2);
+  names[0] = "displacement";
+  names[1] = "velocity";
+
+  dyn_solver.InitializeOutput(OutputType::VisIt, "serac", names);
+
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
   bool last_step = false;
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
+    last_step = (t >= t_final - 1e-8*dt);
 
     dyn_solver.AdvanceTimestep(dt_real);
-
-    last_step = (t >= t_final - 1e-8*dt);
+    t += dt_real;
   }
 
   mfem::Vector zero(dim);
