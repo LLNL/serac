@@ -75,13 +75,20 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   // Set the linear solver params
   LinearSolverParameters params;
-  params.rel_tol = 1.0e-3;
-  params.abs_tol = 1.0e-6;
+  params.rel_tol = 1.0e-6;
+  params.abs_tol = 1.0e-8;
   params.print_level = 0;
   params.max_iter = 5000;
   params.prec = Preconditioner::Jacobi;
   params.lin_solver = LinearSolver::MINRES;
-  solid_solver.SetLinearSolverParameters(params);
+
+  NonlinearSolverParameters nl_params;
+  nl_params.rel_tol = 1.0e-3;
+  nl_params.abs_tol = 1.0e-6;
+  nl_params.print_level = 1;
+  nl_params.max_iter = 5000;
+  
+  solid_solver.SetSolverParameters(params, nl_params);
   
   // Set the time step method
   solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);

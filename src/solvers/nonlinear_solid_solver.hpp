@@ -51,6 +51,9 @@ protected:
   /// Linear solver parameters
   LinearSolverParameters m_lin_params;
 
+  /// Nonlinear solver parameters
+  NonlinearSolverParameters m_nonlin_params;
+
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
 
@@ -74,7 +77,7 @@ public:
   void SetInitialState(mfem::VectorCoefficient &disp_state, mfem::VectorCoefficient &velo_state);
 
   /// Set the linear solver params
-  void SetLinearSolverParameters(const LinearSolverParameters &params);
+  void SetSolverParameters(const LinearSolverParameters &lin_params, const NonlinearSolverParameters &nonlin_params);
 
   /// Complete the data structure initialization
   void CompleteSetup();

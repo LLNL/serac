@@ -43,10 +43,18 @@ int main(int argc, char *argv[])
   // polynomial interpolation order
   int order = 1;
 
-  // newton input args
-  double newton_rel_tol = 1.0e-2;
-  double newton_abs_tol = 1.0e-4;
-  int newton_iter = 500;
+  // Solver parameters
+  NonlinearSolverParameters nonlin_params;
+  nonlin_params.rel_tol = 1.0e-2;
+  nonlin_params.abs_tol = 1.0e-4;
+  nonlin_params.max_iter = 500;
+  nonlin_params.print_level = 0;
+
+  LinearSolverParameters lin_params;
+  lin_params.rel_tol = 1.0e-6;
+  lin_params.abs_tol = 1.0e-8;
+  lin_params.max_iter = 5000;
+  lin_params.print_level = 0;
 
   // solver input args
   bool gmres_solver = true;
@@ -88,12 +96,22 @@ int main(int argc, char *argv[])
                  "--no-superlu", "Use the SuperLU Solver.");
   args.AddOption(&gmres_solver, "-gmres", "--gmres", "-no-gmres", "--no-gmres",
                  "Use gmres, otherwise minimum residual is used.");
-  args.AddOption(&newton_rel_tol, "-rel", "--relative-tolerance",
+  args.AddOption(&lin_params.rel_tol, "-lrel", "--linear-relative-tolerance",
+                 "Relative tolerance for the lienar solve.");
+  args.AddOption(&lin_params.abs_tol, "-labs", "--linear-absolute-tolerance",
+                 "Absolute tolerance for the linear solve.");
+  args.AddOption(&lin_params.max_iter, "-lit", "--linear-iterations",
+                 "Maximum iterations for the linear solve.");
+  args.AddOption(&lin_params.print_level, "-lpl", "--linear-print-level",
+                 "Linear print level.");
+  args.AddOption(&nonlin_params.rel_tol, "-nrel", "--newton-relative-tolerance",
                  "Relative tolerance for the Newton solve.");
-  args.AddOption(&newton_abs_tol, "-abs", "--absolute-tolerance",
+  args.AddOption(&nonlin_params.abs_tol, "-nabs", "--newton-absolute-tolerance",
                  "Absolute tolerance for the Newton solve.");
-  args.AddOption(&newton_iter, "-it", "--newton-iterations",
+  args.AddOption(&nonlin_params.max_iter, "-nit", "--newton-iterations",
                  "Maximum iterations for the Newton solve.");
+  args.AddOption(&nonlin_params.print_level, "-npl", "--newton-print-level",
+                 "Newton print level.");
   args.AddOption(&t_final, "-tf", "--t-final",
                  "Final time; start time is 0.");
   args.AddOption(&dt, "-dt", "--time-step",
@@ -199,19 +217,14 @@ int main(int argc, char *argv[])
   solid_solver.SetHyperelasticMaterialParameters(mu, K);
 
   // Set the linear solver parameters
-  LinearSolverParameters params;
-  params.rel_tol = newton_rel_tol;
-  params.abs_tol = newton_abs_tol;
-  params.print_level = 0;
-  params.max_iter = newton_iter;
-  if (gmres_solver == true) {
-    params.prec = Preconditioner::BoomerAMG;
-    params.lin_solver = LinearSolver::GMRES;
+ if (gmres_solver == true) {
+    lin_params.prec = Preconditioner::BoomerAMG;
+    lin_params.lin_solver = LinearSolver::GMRES;
   } else {
-    params.prec = Preconditioner::Jacobi;
-    params.lin_solver = LinearSolver::MINRES;
+    lin_params.prec = Preconditioner::Jacobi;
+    lin_params.lin_solver = LinearSolver::MINRES;
   }
-  solid_solver.SetLinearSolverParameters(params);
+  solid_solver.SetSolverParameters(lin_params, nonlin_params);
   
   // Set the time step method
   solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);

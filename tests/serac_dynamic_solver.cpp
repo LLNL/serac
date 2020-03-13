@@ -72,9 +72,17 @@ TEST(dynamic_solver, dyn_solve)
   params.prec = Preconditioner::BoomerAMG;
   params.abs_tol = 1.0e-8;
   params.rel_tol = 1.0e-4;
-  params.max_iter = 500;
+  params.max_iter = 5000;
   params.lin_solver = LinearSolver::GMRES;
-  
+ 
+  NonlinearSolverParameters nl_params;
+  nl_params.rel_tol = 1.0e-3;
+  nl_params.abs_tol = 1.0e-6;
+  nl_params.print_level = 1;
+  nl_params.max_iter = 5000;
+ 
+  dyn_solver.SetSolverParameters(params, nl_params);
+
   dyn_solver.CompleteSetup();
 
   double t = 0.0;

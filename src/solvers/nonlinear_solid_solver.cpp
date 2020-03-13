@@ -79,9 +79,10 @@ void NonlinearSolidSolver::SetInitialState(mfem::VectorCoefficient &disp_state, 
   m_gf_initialized = true;
 }
 
-void NonlinearSolidSolver::SetLinearSolverParameters(const LinearSolverParameters &params)
+void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &lin_params, const NonlinearSolverParameters &nonlin_params)
 {
-  m_lin_params = params;
+  m_lin_params = lin_params;
+  m_nonlin_params = nonlin_params;
 }
 
 void NonlinearSolidSolver::CompleteSetup()
@@ -146,7 +147,7 @@ void NonlinearSolidSolver::CompleteSetup()
 
     mfem::MINRESSolver *J_minres = new mfem::MINRESSolver(m_state[0].space->GetComm());
     J_minres->SetRelTol(m_lin_params.rel_tol);
-    J_minres->SetAbsTol(0.0);
+    J_minres->SetAbsTol(m_lin_params.abs_tol);
     J_minres->SetMaxIter(m_lin_params.max_iter);
     J_minres->SetPrintLevel(m_lin_params.print_level);
     J_minres->SetPreconditioner(*m_J_prec);
@@ -156,10 +157,10 @@ void NonlinearSolidSolver::CompleteSetup()
   // Set the newton solve parameters
   m_newton_solver.iterative_mode = true;
   m_newton_solver.SetSolver(*m_J_solver);
-  m_newton_solver.SetPrintLevel(m_lin_params.print_level);
-  m_newton_solver.SetRelTol(m_lin_params.rel_tol);
-  m_newton_solver.SetAbsTol(m_lin_params.abs_tol);
-  m_newton_solver.SetMaxIter(m_lin_params.max_iter);
+  m_newton_solver.SetPrintLevel(m_nonlin_params.print_level);
+  m_newton_solver.SetRelTol(m_nonlin_params.rel_tol);
+  m_newton_solver.SetAbsTol(m_nonlin_params.abs_tol);
+  m_newton_solver.SetMaxIter(m_nonlin_params.max_iter);
 
   if (m_timestepper == TimestepMethod::QuasiStatic) {
     m_nonlinear_oper = new NonlinearSolidQuasiStaticOperator(m_H_form);
