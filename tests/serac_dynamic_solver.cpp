@@ -51,7 +51,8 @@ TEST(dynamic_solver, dyn_solve)
   ess_bdr[0] = 1;
 
   mfem::ConstantCoefficient visc(0.0);
- 
+
+  // define the inital state coefficients 
   mfem::Array<mfem::VectorCoefficient*> initialstate(2);
 
   mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
@@ -60,14 +61,15 @@ TEST(dynamic_solver, dyn_solve)
   initialstate[0] = &deform;
   initialstate[1] = &velo;
 
+  // initialize the dynamic solver object
   NonlinearSolidSolver dyn_solver(1, pmesh);
   dyn_solver.SetDisplacementBCs(ess_bdr, &deform);
   dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.SetViscosity(&visc);
   dyn_solver.ProjectState(initialstate);
-
   dyn_solver.SetTimestepper(TimestepMethod::SDIRK33);
 
+  // Set the linear solver parameters
   LinearSolverParameters params;
   params.prec = Preconditioner::BoomerAMG;
   params.abs_tol = 1.0e-8;
@@ -76,25 +78,20 @@ TEST(dynamic_solver, dyn_solve)
   params.lin_solver = LinearSolver::GMRES;
   params.print_level = 0;
  
+  // Set the nonlinear solver parameters
   NonlinearSolverParameters nl_params;
   nl_params.rel_tol = 1.0e-4;
   nl_params.abs_tol = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter = 500;
- 
   dyn_solver.SetSolverParameters(params, nl_params);
 
+  // Construct the internal dynamic solver data structures
   dyn_solver.CompleteSetup();
 
   double t = 0.0;
   double t_final = 6.0;
   double dt = 3.0;
-
-  mfem::Array<std::string> names(2);
-  names[0] = "displacement";
-  names[1] = "velocity";
-
-  dyn_solver.InitializeOutput(OutputType::VisIt, "serac", names);
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
@@ -107,6 +104,7 @@ TEST(dynamic_solver, dyn_solve)
     dyn_solver.AdvanceTimestep(dt_real);
   }
 
+  // Check the final displacement and velocity L2 norms
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);

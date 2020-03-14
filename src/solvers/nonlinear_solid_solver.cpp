@@ -125,6 +125,7 @@ void NonlinearSolidSolver::CompleteSetup()
     m_S_form->Finalize(0);
   }
 
+  // Set up the jacbian solver based on the linear solver options
   if (m_lin_params.prec == Preconditioner::BoomerAMG) {
     MFEM_VERIFY(m_state[0].space->GetOrdering() == mfem::Ordering::byVDIM, "Attempting to use BoomerAMG with nodal ordering.");
     mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
@@ -162,6 +163,7 @@ void NonlinearSolidSolver::CompleteSetup()
   m_newton_solver.SetAbsTol(m_nonlin_params.abs_tol);
   m_newton_solver.SetMaxIter(m_nonlin_params.max_iter);
 
+  // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (m_timestepper == TimestepMethod::QuasiStatic) {
     m_nonlinear_oper = new NonlinearSolidQuasiStaticOperator(m_H_form);
     m_newton_solver.SetOperator(*m_nonlinear_oper);
@@ -232,7 +234,8 @@ mfem::Operator &NonlinearSolidQuasiStaticOperator::GetGradient(const mfem::Vecto
 
 // destructor
 NonlinearSolidQuasiStaticOperator::~NonlinearSolidQuasiStaticOperator()
-{}
+{
+}
 
 NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
   mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form, 
@@ -241,11 +244,13 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
   : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize()*2), m_M_form(M_form), m_S_form(S_form), m_H_form(H_form),
     m_M_mat(nullptr), m_reduced_oper(nullptr), m_newton_solver(newton_solver),
     m_ess_tdof_list(ess_tdof_list), m_lin_params(lin_params), m_z(height/2)
-{ 
+{
+  // Assemble the mass matrix and eliminate the fixed DOFs
   m_M_mat = m_M_form->ParallelAssemble();
   mfem::HypreParMatrix *Me = m_M_mat->EliminateRowsCols(m_ess_tdof_list);
   delete Me;
 
+  // Set the mass matrix solver options
   m_M_solver.iterative_mode = false;
   m_M_solver.SetRelTol(m_lin_params.rel_tol);
   m_M_solver.SetAbsTol(m_lin_params.abs_tol);
@@ -255,8 +260,8 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
   m_M_solver.SetPreconditioner(m_M_prec);
   m_M_solver.SetOperator(*m_M_mat);
 
+  // Construct the reduced system operator and initialize the newton solver with it 
   m_reduced_oper = new NonlinearSolidReducedSystemOperator(H_form, S_form, M_form, ess_tdof_list);
-  
   m_newton_solver->SetOperator(*m_reduced_oper);
 }
 
@@ -337,12 +342,15 @@ void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector &k, mfem::Vect
 mfem::Operator &NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vector &k) const
 {
   delete m_jacobian;
+  // Form the gradient of the complete nonlinear operator
   mfem::SparseMatrix *localJ = Add(1.0, m_M_form->SpMat(), m_dt, m_S_form->SpMat());
   add(*m_v, m_dt, k, m_w);
   add(*m_x, m_dt, m_w, m_z);
   localJ->Add(m_dt*m_dt, m_H_form->GetLocalGradient(m_z));
   m_jacobian = m_M_form->ParallelAssemble(localJ);
   delete localJ;
+
+  // Eliminate the fixed boundary DOFs
   mfem::HypreParMatrix *Je = m_jacobian->EliminateRowsCols(m_ess_tdof_list);
   delete Je;
   return *m_jacobian;
