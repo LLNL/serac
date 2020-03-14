@@ -58,7 +58,8 @@ void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat
 
 void BaseSolver::ProjectState(mfem::Array<mfem::Coefficient*> state_coef)
 {
-  MFEM_ASSERT(state_coef.Size() == m_state.Size(), "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
+  MFEM_ASSERT(state_coef.Size() == m_state.Size(),
+              "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
 
   for (int i=0; i<state_coef.Size(); ++i) {
     m_state[i].gf->ProjectCoefficient(*state_coef[i]);
@@ -67,7 +68,8 @@ void BaseSolver::ProjectState(mfem::Array<mfem::Coefficient*> state_coef)
 
 void BaseSolver::ProjectState(mfem::Array<mfem::VectorCoefficient*> state_vec_coef)
 {
-  MFEM_ASSERT(state_vec_coef.Size() == m_state.Size(), "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
+  MFEM_ASSERT(state_vec_coef.Size() == m_state.Size(),
+              "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
 
   for (int i=0; i<state_vec_coef.Size(); ++i) {
     m_state[i].gf->ProjectCoefficient(*state_vec_coef[i]);

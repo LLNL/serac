@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
   solid_solver.SetHyperelasticMaterialParameters(mu, K);
 
   // Set the linear solver parameters
- if (gmres_solver == true) {
+  if (gmres_solver == true) {
     lin_params.prec = Preconditioner::BoomerAMG;
     lin_params.lin_solver = LinearSolver::GMRES;
   } else {
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
     lin_params.lin_solver = LinearSolver::MINRES;
   }
   solid_solver.SetSolverParameters(lin_params, nonlin_params);
-  
+
   // Set the time step method
   solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 

@@ -87,9 +87,9 @@ TEST(nonlinear_solid_solver, qs_solve)
   nl_params.abs_tol = 1.0e-6;
   nl_params.print_level = 1;
   nl_params.max_iter = 5000;
-  
+
   solid_solver.SetSolverParameters(params, nl_params);
-  
+
   // Set the time step method
   solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
@@ -99,7 +99,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   double dt = 1.0;
   solid_solver.AdvanceTimestep(dt);
 
-  auto state = solid_solver.GetState(); 
+  auto state = solid_solver.GetState();
 
   mfem::Vector zero(dim);
   zero = 0.0;

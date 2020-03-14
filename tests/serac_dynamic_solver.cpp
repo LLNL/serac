@@ -52,7 +52,7 @@ TEST(dynamic_solver, dyn_solve)
 
   mfem::ConstantCoefficient visc(0.0);
 
-  // define the inital state coefficients 
+  // define the inital state coefficients
   mfem::Array<mfem::VectorCoefficient*> initialstate(2);
 
   mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
@@ -77,7 +77,7 @@ TEST(dynamic_solver, dyn_solve)
   params.max_iter = 500;
   params.lin_solver = LinearSolver::GMRES;
   params.print_level = 0;
- 
+
   // Set the nonlinear solver parameters
   NonlinearSolverParameters nl_params;
   nl_params.rel_tol = 1.0e-4;

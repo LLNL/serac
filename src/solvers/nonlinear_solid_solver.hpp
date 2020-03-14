@@ -105,7 +105,7 @@ protected:
 public:
   /// The constructor
   NonlinearSolidQuasiStaticOperator(mfem::ParNonlinearForm *H_form);
-      
+
   /// Required to use the native newton solver
   mfem::Operator &GetGradient(const mfem::Vector &x) const;
 
@@ -122,7 +122,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator
 protected:
   /// The bilinear form for the mass matrix
   mfem::ParBilinearForm *m_M_form;
-  
+
   /// The bilinear form for the viscous terms
   mfem::ParBilinearForm *m_S_form;
 
@@ -155,7 +155,8 @@ protected:
 
 public:
   /// The constructor
-  NonlinearSolidDynamicOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form, mfem::ParBilinearForm *M_form, 
+  NonlinearSolidDynamicOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
+                                mfem::ParBilinearForm *M_form,
                                 const mfem::Array<int> &ess_tdof_list, mfem::NewtonSolver *newton_solver,
                                 LinearSolverParameters lin_params);
 
@@ -204,7 +205,7 @@ private:
 public:
   /// The constructor
   NonlinearSolidReducedSystemOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
-    mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list);
+                                      mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
   void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);

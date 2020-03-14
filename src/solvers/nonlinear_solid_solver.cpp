@@ -9,7 +9,7 @@
 #include "integrators/inc_hyperelastic_integrator.hpp"
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh) :
-  BaseSolver(), m_H_form(nullptr), m_M_form(nullptr), m_S_form(nullptr), 
+  BaseSolver(), m_H_form(nullptr), m_M_form(nullptr), m_S_form(nullptr),
   m_nonlinear_oper(nullptr), m_timedep_oper(nullptr), m_newton_solver(pmesh->GetComm()), m_J_solver(nullptr),
   m_J_prec(nullptr), m_viscosity(nullptr), m_model(nullptr)
 {
@@ -79,7 +79,8 @@ void NonlinearSolidSolver::SetInitialState(mfem::VectorCoefficient &disp_state, 
   m_gf_initialized = true;
 }
 
-void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &lin_params, const NonlinearSolverParameters &nonlin_params)
+void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &lin_params,
+    const NonlinearSolverParameters &nonlin_params)
 {
   m_lin_params = lin_params;
   m_nonlin_params = nonlin_params;
@@ -93,8 +94,7 @@ void NonlinearSolidSolver::CompleteSetup()
   // Add the hyperelastic integrator
   if (m_timestepper == TimestepMethod::QuasiStatic) {
     m_H_form->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(m_model));
-  }
-  else {
+  } else {
     m_H_form->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(m_model));
   }
 
@@ -127,7 +127,8 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Set up the jacbian solver based on the linear solver options
   if (m_lin_params.prec == Preconditioner::BoomerAMG) {
-    MFEM_VERIFY(m_state[0].space->GetOrdering() == mfem::Ordering::byVDIM, "Attempting to use BoomerAMG with nodal ordering.");
+    MFEM_VERIFY(m_state[0].space->GetOrdering() == mfem::Ordering::byVDIM,
+                "Attempting to use BoomerAMG with nodal ordering.");
     mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
     prec_amg->SetPrintLevel(m_lin_params.print_level);
     prec_amg->SetElasticityOptions(m_state[0].space);
@@ -139,7 +140,7 @@ void NonlinearSolidSolver::CompleteSetup()
     J_gmres->SetMaxIter(m_lin_params.max_iter);
     J_gmres->SetPrintLevel(m_lin_params.print_level);
     J_gmres->SetPreconditioner(*m_J_prec);
-    m_J_solver = J_gmres; 
+    m_J_solver = J_gmres;
   } else {
     mfem::HypreSmoother *J_hypreSmoother = new mfem::HypreSmoother;
     J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
@@ -153,7 +154,7 @@ void NonlinearSolidSolver::CompleteSetup()
     J_minres->SetPrintLevel(m_lin_params.print_level);
     J_minres->SetPreconditioner(*m_J_prec);
     m_J_solver = J_minres;
- }
+  }
 
   // Set the newton solve parameters
   m_newton_solver.iterative_mode = true;
@@ -167,9 +168,8 @@ void NonlinearSolidSolver::CompleteSetup()
   if (m_timestepper == TimestepMethod::QuasiStatic) {
     m_nonlinear_oper = new NonlinearSolidQuasiStaticOperator(m_H_form);
     m_newton_solver.SetOperator(*m_nonlinear_oper);
-  }
-  else {
-    m_timedep_oper = new NonlinearSolidDynamicOperator(m_H_form, m_S_form, m_M_form, 
+  } else {
+    m_timedep_oper = new NonlinearSolidDynamicOperator(m_H_form, m_S_form, m_M_form,
         m_ess_tdof_list, &m_newton_solver, m_lin_params);
     m_ode_solver->Init(*m_timedep_oper);
   }
@@ -202,7 +202,7 @@ void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
   m_cycle += 1;
 }
 
-NonlinearSolidSolver::~NonlinearSolidSolver() 
+NonlinearSolidSolver::~NonlinearSolidSolver()
 {
   delete m_H_form;
   delete m_nonlinear_oper;
@@ -238,10 +238,11 @@ NonlinearSolidQuasiStaticOperator::~NonlinearSolidQuasiStaticOperator()
 }
 
 NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
-  mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form, 
+  mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
   mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list,
   mfem::NewtonSolver *newton_solver, LinearSolverParameters lin_params)
-  : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize()*2), m_M_form(M_form), m_S_form(S_form), m_H_form(H_form),
+  : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize()*2), m_M_form(M_form), m_S_form(S_form),
+    m_H_form(H_form),
     m_M_mat(nullptr), m_reduced_oper(nullptr), m_newton_solver(newton_solver),
     m_ess_tdof_list(ess_tdof_list), m_lin_params(lin_params), m_z(height/2)
 {
@@ -260,7 +261,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
   m_M_solver.SetPreconditioner(m_M_prec);
   m_M_solver.SetOperator(*m_M_mat);
 
-  // Construct the reduced system operator and initialize the newton solver with it 
+  // Construct the reduced system operator and initialize the newton solver with it
   m_reduced_oper = new NonlinearSolidReducedSystemOperator(H_form, S_form, M_form, ess_tdof_list);
   m_newton_solver->SetOperator(*m_reduced_oper);
 }
@@ -284,7 +285,7 @@ void NonlinearSolidDynamicOperator::Mult(const mfem::Vector &vx, mfem::Vector &d
 }
 
 void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt,
-                                  const mfem::Vector &vx, mfem::Vector &dvx_dt)
+    const mfem::Vector &vx, mfem::Vector &dvx_dt)
 {
   int sc = height/2;
   mfem::Vector v(vx.GetData() +  0, sc);
