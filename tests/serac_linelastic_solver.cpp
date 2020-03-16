@@ -93,7 +93,7 @@ TEST(elastic_solver, static_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
+  double x_norm = state["displacement"].gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
 

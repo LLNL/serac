@@ -7,6 +7,8 @@
 #ifndef BASE_SOLVER
 #define BASE_SOLVER
 
+#include <map>
+
 #include "mfem.hpp"
 #include "common/serac_types.hpp"
 
@@ -15,7 +17,7 @@ class BaseSolver
 {
 protected:
   /// List of finite element data structures
-  mfem::Array<FiniteElementState> m_state;
+  std::map< std::string, FiniteElementState > m_state;
 
   /// Essential BC markers
   mfem::Array<int> m_ess_bdr;
@@ -45,7 +47,7 @@ protected:
   TimestepMethod m_timestepper;
 
   /// MFEM ode solver object
-  mfem::ODESolver *m_ode_solver;
+  std::shared_ptr < mfem::ODESolver > m_ode_solver;
 
   /// Root output name
   std::string m_root_name;
@@ -69,8 +71,8 @@ public:
   /// Empty constructor
   BaseSolver();
 
-  /// Constructor from previously constructed grid function
-  BaseSolver(mfem::Array<FiniteElementState> &state);
+  // /// Constructor from previously constructed grid function
+  // BaseSolver(std::map< std::string, FiniteElementState > & state);
 
   /// Set the essential boundary conditions from a list of boundary markers and a coefficient
   virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
@@ -85,10 +87,10 @@ public:
   virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void SetState(const mfem::Array<FiniteElementState> &state);
+  virtual void SetState(const std::map<std::string, FiniteElementState> &state);
 
   /// Get the list of state variable grid functions
-  virtual mfem::Array<FiniteElementState> GetState() const;
+  virtual std::map<std::string, FiniteElementState> GetState() const;
 
   /// Set the time integration method
   virtual void SetTimestepper(TimestepMethod timestepper);
@@ -109,14 +111,13 @@ public:
   virtual void AdvanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const OutputType output_type, const std::string root_name,
-                                const mfem::Array<std::string> names);
+  virtual void InitializeOutput(const OutputType output_type, const std::string root_name);
 
   /// output the state variables
   virtual void OutputState() const;
 
   /// Destructor
-  virtual ~BaseSolver();
+  virtual ~BaseSolver() = default;
 
 };
 

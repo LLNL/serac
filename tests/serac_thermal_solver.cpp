@@ -11,9 +11,19 @@
 #include <fstream>
 #include <sys/stat.h>
 
-double BoundaryTemperature(const mfem::Vector &x);
-double InitialTemperature(const mfem::Vector &x);
+double BoundaryTemperature(const mfem::Vector &x)
+{
+  return x.Norml2();
+}
 
+double InitialTemperature(const mfem::Vector &x)
+{
+  if (x.Norml2() < 0.5) {
+    return 2.0;
+  } else {
+    return 1.0;
+  }
+}
 const char* mesh_file = "NO_MESH_GIVEN";
 
 inline bool file_exists(const char* path)
@@ -53,6 +63,7 @@ TEST(thermal_solver, static_solve)
 
   // Initialize the temperature boundary condition
   mfem::FunctionCoefficient u_0(BoundaryTemperature);
+
   mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
   temp_bdr = 1;
 
@@ -83,7 +94,7 @@ TEST(thermal_solver, static_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double u_norm = state["temperature"].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   delete pmesh;
@@ -164,7 +175,7 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double u_norm = state["temperature"].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.6493029, u_norm, 0.00001);
 
   delete pmesh;
@@ -245,7 +256,7 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double u_norm = state["temperature"].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   delete pmesh;
@@ -285,18 +296,6 @@ int main(int argc, char* argv[])
   return result;
 }
 
-double BoundaryTemperature(const mfem::Vector &x)
-{
-  return x.Norml2();
-}
 
-double InitialTemperature(const mfem::Vector &x)
-{
-  if (x.Norml2() < 0.5) {
-    return 2.0;
-  } else {
-    return 1.0;
-  }
-}
 
 

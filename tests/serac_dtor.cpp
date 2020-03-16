@@ -6,8 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "mfem.hpp"
-#include "solvers/dynamic_solver.hpp"
+#include "solvers/thermal_solver.hpp"
 #include <fstream>
 
 template < typename T >
@@ -27,48 +26,57 @@ int main(int argc, char ** argv) {
   mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
-  // declare pointer to parallel mesh object
-  mfem::ParMesh *pmesh = NULL;
+  // Refine in serial
   mesh->UniformRefinement();
 
+  // Declare pointer to parallel mesh object
+  mfem::ParMesh *pmesh = nullptr;
+
+  // Initialize the parallel mesh and delete the serial mesh
   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
   delete mesh;
 
-  int dim = pmesh->Dimension();
+  // Refine the parallel mesh
+  pmesh->UniformRefinement();
 
-  // Define the finite element spaces for displacement field
-  mfem::H1_FECollection fe_coll(1, dim);
-  mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
+  // Initialize the second order thermal solver on the parallel mesh
+  ThermalSolver therm_solver(2, pmesh);
 
-  int true_size = fe_space.TrueVSize();
-  mfem::Array<int> true_offset(3);
-  true_offset[0] = 0;
-  true_offset[1] = true_size;
-  true_offset[2] = 2*true_size;
+  // Set the time integration method
+  therm_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
-  // define a boundary attribute array and initialize to 0
-  mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
-  ess_bdr = 0;
+  // Initialize the temperature boundary condition
+  mfem::FunctionCoefficient u_0([](const mfem::Vector &x) {
+    return x.Norml2();
+  });
 
-  // boundary attribute 1 (index 0) is fixed (Dirichlet)
-  ess_bdr[0] = 1;
+  mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
+  temp_bdr = 1;
 
-  mfem::ConstantCoefficient visc(0.0);
+  // Set the temperature BC in the thermal solver
+  therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
 
-  // construct the nonlinear mechanics operator
-  DynamicSolver oper(fe_space, ess_bdr,
-                     0.25, 5.0, visc,
-                     1.0e-4, 1.0e-8,
-                     500, true, false);
+  // Set the conductivity of the thermal operator
+  mfem::ConstantCoefficient kappa(0.5);
+  therm_solver.SetConductivity(kappa);
 
-  do_nothing(oper); 
+  // Define the linear solver params
+  LinearSolverParameters params;
+  params.rel_tol = 1.0e-6;
+  params.abs_tol = 1.0e-12;
+  params.print_level = 0;
+  params.max_iter = 100;
+  therm_solver.SetLinearSolverParameters(params);
 
-  do_nothing(oper); 
+  // Complete the setup without allocating the mass matrices and dynamic operator
+  therm_solver.CompleteSetup();
 
-  do_nothing(oper); 
-
-  do_nothing(oper); 
+  // just do something to make sure the dtor is being called 
+  // and that the member variables lifetime is managed properly
+  do_nothing(therm_solver); 
+  do_nothing(therm_solver); 
+  do_nothing(therm_solver); 
+  do_nothing(therm_solver); 
 
   MPI_Finalize();
 
