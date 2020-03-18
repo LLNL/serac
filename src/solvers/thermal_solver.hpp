@@ -22,6 +22,9 @@ class DynamicConductionOperator;
 class ThermalSolver : public BaseSolver
 {
 protected:
+
+  FiniteElementState & temperature;
+
   /// Mass bilinear form object
   std::shared_ptr < mfem::ParBilinearForm > m_M_form;
 

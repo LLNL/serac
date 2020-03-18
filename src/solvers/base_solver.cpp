@@ -16,19 +16,9 @@ BaseSolver::BaseSolver()
   SetTimestepper(TimestepMethod::ForwardEuler);
 }
 
-//BaseSolver::BaseSolver(std::map < std::string, mfem::Array<FiniteElementState> &state)
-//  : m_state(state), m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr),
-//    m_output_type(OutputType::VisIt),
-//    m_timestepper(TimestepMethod::ForwardEuler), m_ode_solver(nullptr), m_time(0.0), m_cycle(0), m_visit_dc(nullptr),
-//    m_gf_initialized(false)
-//{
-//  MFEM_ASSERT(state.size() > 0, "State vector array of size 0 in BaseSolver constructor.");
-//
-//  MPI_Comm_rank(m_state[].space->GetComm(), &m_rank);
-//
-//  m_ode_solver = new mfem::ForwardEulerSolver;
-//
-//}
+BaseSolver::BaseSolver(int n) : BaseSolver() { 
+  m_state.resize(n);
+}
 
 void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef)
 {
@@ -54,15 +44,15 @@ void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat
   m_nat_bdr_coef = nat_bdr_coef;
 }
 
-void BaseSolver::SetState(const std::map<std::string, FiniteElementState> &state)
+void BaseSolver::SetState(const std::vector<FiniteElementState> &state)
 {
   MFEM_ASSERT(state.Size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
   m_state = state;
 
-  MPI_Comm_rank(m_state.begin()->second.space->GetComm(), &m_rank);
+  MPI_Comm_rank(m_state.begin()->space->GetComm(), &m_rank);
 }
 
-std::map< std::string, FiniteElementState > BaseSolver::GetState() const
+std::vector< FiniteElementState > BaseSolver::GetState() const
 {
   return m_state;
 }
@@ -135,12 +125,10 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
 
   switch(m_output_type) {
   case OutputType::VisIt: {
-    m_visit_dc = new mfem::VisItDataCollection(m_root_name, m_state.begin()->second.mesh);
+    m_visit_dc = new mfem::VisItDataCollection(m_root_name, m_state.begin()->mesh);
 
-    for (auto & key_value : m_state) {
-      auto name = key_value.first;
-      auto fe_state = key_value.second;
-      m_visit_dc->RegisterField(name, fe_state.gf.get());
+    for (auto & state : m_state) {
+      m_visit_dc->RegisterField(state.name, state.gf.get());
     }
     break;
   }
@@ -171,16 +159,13 @@ void BaseSolver::OutputState() const
 
   case OutputType::GLVis: {
 
-    for (auto & key_value : m_state) {
-      auto name = key_value.first;
-      auto fe_state = key_value.second;
-
+    for (auto & state : m_state) {
       std::ostringstream sol_name;
-      sol_name << m_root_name << "-" << name << "." << std::setfill('0') << std::setw(
+      sol_name << m_root_name << "-" << state.name << "." << std::setfill('0') << std::setw(
                  6) << m_cycle << "." << std::setfill('0') << std::setw(6) << m_rank - 1;
       std::ofstream osol(sol_name.str().c_str());
       osol.precision(8);
-      fe_state.gf->Save(osol);
+      state.gf->Save(osol);
     }
     break;
   }

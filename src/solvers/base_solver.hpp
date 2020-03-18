@@ -17,7 +17,7 @@ class BaseSolver
 {
 protected:
   /// List of finite element data structures
-  std::map< std::string, FiniteElementState > m_state;
+  std::vector< FiniteElementState > m_state;
 
   /// Essential BC markers
   mfem::Array<int> m_ess_bdr;
@@ -71,8 +71,8 @@ public:
   /// Empty constructor
   BaseSolver();
 
-  // /// Constructor from previously constructed grid function
-  // BaseSolver(std::map< std::string, FiniteElementState > & state);
+  /// Constructor that creates n entries in m_state
+  BaseSolver(int n);
 
   /// Set the essential boundary conditions from a list of boundary markers and a coefficient
   virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
@@ -87,10 +87,10 @@ public:
   virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void SetState(const std::map<std::string, FiniteElementState> &state);
+  virtual void SetState(const std::vector<FiniteElementState> &state);
 
   /// Get the list of state variable grid functions
-  virtual std::map<std::string, FiniteElementState> GetState() const;
+  virtual std::vector<FiniteElementState> GetState() const;
 
   /// Set the time integration method
   virtual void SetTimestepper(TimestepMethod timestepper);
