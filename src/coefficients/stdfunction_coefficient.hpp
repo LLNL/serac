@@ -11,10 +11,9 @@
 
 #ifndef STD_FUNCTION_COEFFICIENT_HPP
 #define STD_FUNCTION_COEFFICIENT_HPP
+
 #include <functional>
 #include "mfem.hpp"
-
-using namespace mfem;
 
 /**
    \brief StdFunctionCoefficient is an easy way to make an mfem::Coefficient using a lambda
@@ -22,23 +21,22 @@ using namespace mfem;
    This is a place holder until the coefficient of the same name is merged into mfem.
 
 */
-class StdFunctionCoefficient : public Coefficient
+class StdFunctionCoefficient : public mfem::Coefficient
 {
 public:
   /// Constructor that takes in an mfem Vector representing the coordinates and produces a double
   StdFunctionCoefficient(std::function<double(mfem::Vector &)> func);
-  virtual ~StdFunctionCoefficient() {}
 
-  virtual double Eval (ElementTransformation &Tr, const IntegrationPoint &ip);
+  virtual double Eval (mfem::ElementTransformation &Tr, const mfem::IntegrationPoint &ip);
 private:
-  std::function<double(mfem::Vector &)> func_;
+  std::function<double(mfem::Vector &)> m_func;
 };
 
 /**
    \brief StdFunctionVectorCoefficient is an easy way to make an mfem::Coefficient using a lambda
 
 */
-class StdFunctionVectorCoefficient : public VectorCoefficient
+class StdFunctionVectorCoefficient : public mfem::VectorCoefficient
 {
 public:
 
@@ -51,9 +49,9 @@ public:
   StdFunctionVectorCoefficient(int dim,
                                std::function<void(mfem::Vector &, mfem::Vector &)> func);
 
-  virtual void Eval (Vector &V, ElementTransformation &T, const IntegrationPoint &ip);
+  virtual void Eval (mfem::Vector &V, mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
 private:
-  std::function<void(mfem::Vector &,mfem::Vector &)> func_;
+  std::function<void(mfem::Vector &,mfem::Vector &)> m_func;
 };
 
 /**
@@ -63,7 +61,7 @@ private:
    \param[in] c A VectorCoefficient that is porjected on to the mesh. All d.o.f's are examined and those that are the condition (> 0.) are appended toe the vdof list.
    \param[out] ess_vdof_list The list of vdofs that should be part of the essential boundary conditions
 */
-void MakeEssList(Mesh &m, VectorCoefficient &c, Array<int> & ess_vdof_list);
+void MakeEssList(mfem::Mesh &m, mfem::VectorCoefficient &c, mfem::Array<int> & ess_vdof_list);
 
 /**
    \brief This method creates an array of size(local_elems), and assigns attributes based on the coefficient c
@@ -76,8 +74,8 @@ void MakeEssList(Mesh &m, VectorCoefficient &c, Array<int> & ess_vdof_list);
    \param[in] digitize An optional function that can be called to assign attributes based on the value of c at a given projection point. By default, values of c at a given d.o.f that are > 0. are assigned attribute 2, otherwise attribute 1.
 
 */
-void MakeAttributeList(Mesh &m, Array<int> &attr_list,
-                       Coefficient &c,
+void MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list,
+                       mfem::Coefficient &c,
                        std::function<int(double)> = [](double v)
 {
   return v > 0. ? 2 : 1;
@@ -94,8 +92,8 @@ void MakeAttributeList(Mesh &m, Array<int> &attr_list,
    \param[in] digitize An optional function that can be called to assign attributes based on the value of c at a given projection point. By default, values of c at a given d.o.f that are ==1. are assigned attribute 2, otherwise attribute 1. This means that only if all the d.o.f's of an bdr_element are "tagged" 1, will this bdr element be assigned attribute 2.
 
 */
-void MakeBdrAttributeList(Mesh &m, Array<int> &attr_list,
-                          Coefficient &c,
+void MakeBdrAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list,
+                          mfem::Coefficient &c,
                           std::function<int(double)> = [](double v)
 {
   return v == 1. ? 2 : 1;
@@ -106,7 +104,7 @@ void MakeBdrAttributeList(Mesh &m, Array<int> &attr_list,
 
    This class temporarily changes the attribute to a given attribute list during evaluation
 */
-class AttributeModifierCoefficient : public Coefficient
+class AttributeModifierCoefficient : public mfem::Coefficient
 {
 public:
   /**
@@ -115,20 +113,20 @@ public:
      \param[in] attr_list A list of attributes values corresponding to the type of coefficient at each element.
      \param[in] c The coefficient to "modify" the element attributes
   */
-  AttributeModifierCoefficient(const Array<int> &attr_list, Coefficient &c) :
-    attr_list_(attr_list), C_(&c) {}
+  AttributeModifierCoefficient(const mfem::Array<int> &attr_list, mfem::Coefficient &c) :
+    m_attr_list(attr_list), m_C(&c) {}
 
-  virtual double Eval (ElementTransformation &Tr, const IntegrationPoint &ip);
+  virtual double Eval (mfem::ElementTransformation &Tr, const mfem::IntegrationPoint &ip);
 
 protected:
-  const Array<int> & attr_list_;
-  Coefficient *C_;
+  const mfem::Array<int> & m_attr_list;
+  mfem::Coefficient *m_C;
 };
 
 /**
    TransformedVectorCoefficient applies various operations to modify a VectorCoefficient
 */
-class TransformedVectorCoefficient : public VectorCoefficient
+class TransformedVectorCoefficient : public mfem::VectorCoefficient
 {
 public:
 
@@ -139,7 +137,7 @@ public:
      \param[in] v1 A VectorCoefficient to apply Func to
      \param[in] func A function that takes in an input vector, and returns the output as the second argument.
   */
-  TransformedVectorCoefficient(VectorCoefficient *v1, std::function <void (Vector &, Vector &)> func);
+  TransformedVectorCoefficient(mfem::VectorCoefficient *v1, std::function <void (mfem::Vector &, mfem::Vector &)> func);
 
   /**
      \brief Apply a vector function, Func, to v1 and v2
@@ -150,16 +148,16 @@ public:
      \param[in] func A function that takes in two input vectors, and returns the output as the third argument.
   */
 
-  TransformedVectorCoefficient(VectorCoefficient *v1, VectorCoefficient *v2,
-                               std::function <void (Vector &, Vector &, Vector &)>  func);
-  virtual void Eval (Vector & V, ElementTransformation & T, const IntegrationPoint & ip );
+  TransformedVectorCoefficient(mfem::VectorCoefficient *v1, mfem::VectorCoefficient *v2,
+                               std::function <void (mfem::Vector &, mfem::Vector &, mfem::Vector &)>  func);
+  virtual void Eval (mfem::Vector & V, mfem::ElementTransformation & T, const mfem::IntegrationPoint & ip );
 
 private:
-  VectorCoefficient *v1_;
-  VectorCoefficient *v2_;
+  mfem::VectorCoefficient *m_v1;
+  mfem::VectorCoefficient *m_v2;
 
-  std::function <void (Vector &, Vector &)> mono_function_;
-  std::function <void (Vector &, Vector &, Vector &)> bi_function_;
+  std::function <void (mfem::Vector &, mfem::Vector &)> m_mono_function;
+  std::function <void (mfem::Vector &, mfem::Vector &, mfem::Vector &)> m_bi_function;
 };
 
 

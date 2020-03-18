@@ -9,12 +9,9 @@
 #include <gtest/gtest.h>
 
 #include "mfem.hpp"
-#include "solvers/thermal_solver.hpp"
-#include <fstream>
-#include <sys/stat.h>
 #include <memory>
 
-#include "coefficients/StdFunctionCoefficient.hpp"
+#include "coefficients/stdfunction_coefficient.hpp"
 
 using namespace mfem;
 using namespace std;
@@ -23,8 +20,6 @@ using namespace std;
 int main(int argc, char **argv)
 {
   MPI_Init(&argc, &argv);
-  int nranks;
-  MPI_Comm_size(MPI_COMM_WORLD, &nranks);
   ::testing::InitGoogleTest(&argc, argv);
   int return_code = RUN_ALL_TESTS();
   MPI_Finalize();
