@@ -1,6 +1,7 @@
 packages:
   all:
-    compiler: [gcc, clang]
+    target: [ivybridge]
+    compiler: [gcc]
     providers:
       mpi: [mpich, openmpi]
       blas: [openblas]
@@ -9,7 +10,7 @@ packages:
       glu: [openglu]
 # Lock down versions of packages we depend on
   cmake:
-    version: [3.10.2]
+    version: [3.9.2]
   mfem:
     version: [4.0.0]
   hypre:
@@ -51,11 +52,15 @@ packages:
     paths:
       libx11: /usr
     buildable: False
-  cmake:
-    paths:
-      cmake@3.10.2: /usr
-    buildable: False
   autoconf:
     paths:
       autoconf: /usr
+    buildable: False
+  flex:
+    paths:
+      flex: /usr
+    buildable: False
+  cmake:
+    paths:
+      cmake: /usr
     buildable: False

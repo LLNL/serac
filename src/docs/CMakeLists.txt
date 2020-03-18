@@ -4,6 +4,11 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-add_subdirectory(sphinx)
-add_subdirectory(doxygen)
+if (SPHINX_FOUND)
+  add_subdirectory(sphinx)
+endif()
+
+if (DOXYGEN_FOUND)
+  add_subdirectory(doxygen)
+endif()
 
