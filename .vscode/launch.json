@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "(gdb) Launch Serac",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build-gcc@7.4.0-debug/bin/serac",
-            "args": [],
+            "args": ["-m", "${workspaceFolder}/data/beam-hex.mesh"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build-gcc@7.4.0-debug/bin/",
             "environment": [],
