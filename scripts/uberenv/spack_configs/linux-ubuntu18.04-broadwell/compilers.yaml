@@ -1,5 +1,18 @@
 compilers:
 - compiler:
+    spec: clang@6.0.0
+    paths:
+      cc: /usr/bin/clang
+      cxx: /usr/bin/clang++
+      f77: /usr/bin/gfortran
+      fc: /usr/bin/gfortran
+    flags: {}
+    operating_system: ubuntu18.04
+    target: ivybridge
+    modules: []
+    environment: {}
+    extra_rpaths: [] 
+- compiler:
     spec: gcc@7.4.0
     paths:
       cc: /usr/bin/gcc
@@ -8,7 +21,7 @@ compilers:
       fc: /usr/bin/gfortran
     flags: {}
     operating_system: ubuntu18.04
-    target: x86_64
+    target: ivybridge
     modules: []
     environment: {}
     extra_rpaths: []

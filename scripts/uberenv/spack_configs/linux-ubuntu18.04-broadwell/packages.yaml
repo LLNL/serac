@@ -1,7 +1,7 @@
 packages:
   all:
     target: [ivybridge]
-    compiler: [gcc]
+    compiler: [gcc, clang]
     providers:
       mpi: [mpich, openmpi]
       blas: [openblas]
