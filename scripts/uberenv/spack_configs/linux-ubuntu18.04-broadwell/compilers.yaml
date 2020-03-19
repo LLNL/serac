@@ -8,7 +8,7 @@ compilers:
       fc: /usr/bin/gfortran
     flags: {}
     operating_system: ubuntu18.04
-    target: ivybridge
+    target: x86_64
     modules: []
     environment: {}
     extra_rpaths: [] 
@@ -21,7 +21,7 @@ compilers:
       fc: /usr/bin/gfortran
     flags: {}
     operating_system: ubuntu18.04
-    target: ivybridge
+    target: x86_64
     modules: []
     environment: {}
     extra_rpaths: []

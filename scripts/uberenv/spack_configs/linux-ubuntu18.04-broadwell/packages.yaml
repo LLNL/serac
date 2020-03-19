@@ -1,6 +1,5 @@
 packages:
   all:
-    target: [ivybridge]
     compiler: [gcc, clang]
     providers:
       mpi: [mpich, openmpi]
@@ -9,8 +8,6 @@ packages:
       gl: [opengl]
       glu: [openglu]
 # Lock down versions of packages we depend on
-  cmake:
-    version: [3.9.2]
   mfem:
     version: [4.0.0]
   hypre:
