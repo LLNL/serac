@@ -69,4 +69,87 @@ packages:
       mvapich2@2.2%xl@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/ 
     buildable: False
 
+  autoconf:
+    paths:
+      autoconf: /usr
+    buildable: False 
+  automake:
+    paths:
+      automake: /usr
+    buildable: False
+  bzip2:
+   paths:
+      bzip2: /usr
+   buildable: False
+  gettext:
+   paths:
+      gettext: /usr
+   buildable: False
+  libtool:
+   paths:
+      libtool: /usr
+   buildable: False
+  m4:
+   paths:
+      m4: /usr
+   buildable: False
+  perl:
+    paths:
+      perl: /usr
+    buildable: False 
+  pkg-config:
+    paths:
+      pkg-config: /usr
+    buildable: False 
+  tar:
+   paths:
+      tar: /usr
+   buildable: False
+
+  # Lock down versions of packages we depend on
+  mfem:
+    version: [4.0.0]
+  hypre:
+    version: [2.11.1]
+  superlu-dist:
+    version: [5.4.0]
+  parmetis:
+    version: [4.0.3]
+  metis:
+    version: [5.1.0]
+  glvis:
+    version: [3.4]
+
+# Lock in versions of Devtools
+  cmake:
+    version: [3.9.6]
+    paths:
+      cmake: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/cmake-3.9.6
+    buildable: False
+
+  cppcheck:
+    version: [1.87]
+    paths:
+      cppcheck: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-1.87
+    buildable: False
+  doxygen:
+    version: [1.8.14]
+    paths:
+      doxygen: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.14
+    buildable: False
+  python:
+    version: [3.7.4]
+    paths:
+      python: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
+    buildable: False
+  py-sphinx:
+    version: [2.2.0]
+    paths:
+      py-sphinx: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
+    buildable: False
+  uncrustify:
+    version: [0.61]
+    paths:
+      uncrustify: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/uncrustify-0.61
+    buildable: False
 
