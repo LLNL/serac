@@ -9,7 +9,8 @@
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c11",
             "cppStandard": "c++17",
-            "intelliSenseMode": "${default}"
+            "intelliSenseMode": "${default}",
+            "compileCommands": "${workspaceFolder}/build-gcc@7.4.0-debug/compile_commands.json"
         }
     ],
     "version": 4
