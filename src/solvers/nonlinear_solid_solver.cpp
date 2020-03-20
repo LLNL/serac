@@ -352,6 +352,9 @@ mfem::Operator &NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   delete localJ;
 
   // Eliminate the fixed boundary DOFs
+  //
+  // This call eliminates the appropriate DOFs in m_jacobian and returns the
+  // eliminated DOFs in Je. We don't need this so it gets deleted.
   mfem::HypreParMatrix *Je = m_jacobian->EliminateRowsCols(m_ess_tdof_list);
   delete Je;
   return *m_jacobian;
