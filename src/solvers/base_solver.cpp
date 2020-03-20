@@ -10,7 +10,8 @@
 #include <fstream>
 
 BaseSolver::BaseSolver()
-  : m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr), m_output_type(OutputType::VisIt),
+  : m_block(nullptr), m_ess_bdr_coef(nullptr), m_ess_bdr_vec_coef(nullptr), m_nat_bdr_coef(nullptr),
+    m_nat_bdr_vec_coef(nullptr), m_output_type(OutputType::VisIt),
     m_timestepper(TimestepMethod::ForwardEuler), m_ode_solver(nullptr), m_time(0.0), m_cycle(0), m_visit_dc(nullptr),
     m_gf_initialized(false)
 {
@@ -18,7 +19,7 @@ BaseSolver::BaseSolver()
 }
 
 BaseSolver::BaseSolver(mfem::Array<FiniteElementState> &state)
-  : m_state(state), m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr),
+  : m_state(state), m_block(nullptr), m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr),
     m_output_type(OutputType::VisIt),
     m_timestepper(TimestepMethod::ForwardEuler), m_ode_solver(nullptr), m_time(0.0), m_cycle(0), m_visit_dc(nullptr),
     m_gf_initialized(false)
@@ -55,6 +56,25 @@ void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat
   m_nat_bdr_coef = nat_bdr_coef;
 }
 
+void BaseSolver::ProjectState(mfem::Array<mfem::Coefficient*> state_coef)
+{
+  MFEM_ASSERT(state_coef.Size() == m_state.Size(),
+              "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
+
+  for (int i=0; i<state_coef.Size(); ++i) {
+    m_state[i].gf->ProjectCoefficient(*state_coef[i]);
+  }
+}
+
+void BaseSolver::ProjectState(mfem::Array<mfem::VectorCoefficient*> state_vec_coef)
+{
+  MFEM_ASSERT(state_vec_coef.Size() == m_state.Size(),
+              "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
+
+  for (int i=0; i<state_vec_coef.Size(); ++i) {
+    m_state[i].gf->ProjectCoefficient(*state_vec_coef[i]);
+  }
+}
 void BaseSolver::SetState(const mfem::Array<FiniteElementState> &state)
 {
   MFEM_ASSERT(state.Size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
@@ -197,7 +217,6 @@ BaseSolver::~BaseSolver()
     delete m_state[i].coll;
     delete m_state[i].space;
     delete m_state[i].gf;
-    delete m_state[i].true_vec;
   }
   delete m_ode_solver;
 }
