@@ -67,4 +67,19 @@ if (ENABLE_GTEST)
         NUM_MPI_TASKS     4
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
+    #----------------------
+    # StdFunctionCoefficient.test
+    #----------------------
+    blt_add_executable(
+        NAME       stdfunction_coefficient
+        SOURCES    stdfunction_coefficient.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers coefficients mpi mfem gtest )
+    blt_add_test(
+        NAME              stdfunction_coefficient
+        COMMAND           stdfunction_coefficient 
+        NUM_MPI_TASKS     1
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
+
+
 endif()
