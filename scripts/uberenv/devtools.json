@@ -1,5 +1,5 @@
 {
-"package_name" : "seracdevtools",
+"package_name" : "serac_devtools",
 "package_version" : "fakeversion",
 "package_source_dir" : "../..",
 "spack_url": "https://github.com/spack/spack",

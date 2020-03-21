@@ -124,32 +124,32 @@ packages:
   cmake:
     version: [3.9.6]
     paths:
-      cmake: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/cmake-3.9.6
+      cmake: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cmake-3.9.6
     buildable: False
 
   cppcheck:
     version: [1.87]
     paths:
-      cppcheck: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-1.87
+      cppcheck: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-1.87
     buildable: False
   doxygen:
     version: [1.8.14]
     paths:
-      doxygen: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.14
+      doxygen: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.14
     buildable: False
   python:
     version: [3.7.4]
     paths:
-      python: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
+      python: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
     buildable: False
   py-sphinx:
     version: [2.2.0]
     paths:
-      py-sphinx: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
+      py-sphinx: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
     buildable: False
   uncrustify:
     version: [0.61]
     paths:
-      uncrustify: /usr/WS2/serac/devtools/blueos_3_ppc64le_ib_p9/latest/uncrustify-0.61
+      uncrustify: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/uncrustify-0.61
     buildable: False
 

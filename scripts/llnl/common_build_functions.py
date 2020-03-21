@@ -167,6 +167,129 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     return res
 
 
+def build_and_test_host_config(test_root,host_config):
+    host_config_root = get_host_config_root(host_config)
+
+    build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
+    print "[Testing build, test, and docs of host config file: %s]" % host_config
+    print "[ build dir: %s]"   % build_dir
+
+    # configure
+    cfg_output_file = pjoin(test_root,"output.log.%s.configure.txt" % host_config_root)
+    print "[starting configure of %s]" % host_config
+    print "[log file: %s]" % cfg_output_file
+    res = sexe("python config-build.py  -bp %s -hc %s" % (build_dir, host_config),
+               output_file = cfg_output_file,
+               echo=True)
+    
+    if res != 0:
+        print "[ERROR: Configure for host-config: %s failed]\n" % host_config
+        return res
+        
+    ####
+    # build, test, and install
+    ####
+    
+    # build the code
+    bld_output_file =  pjoin(build_dir,"output.log.make.txt")
+    print "[starting build]"
+    print "[log file: %s]" % bld_output_file
+    res = sexe("cd %s && make -j 16 VERBOSE=1 " % build_dir,
+                output_file = bld_output_file,
+                echo=True)
+
+    if res != 0:
+        print "[ERROR: Build for host-config: %s failed]\n" % host_config
+        return res
+
+    # test the code
+    tst_output_file = pjoin(build_dir,"output.log.make.test.txt")
+    print "[starting unit tests]"
+    print "[log file: %s]" % tst_output_file
+
+    tst_cmd = "cd %s && make CTEST_OUTPUT_ON_FAILURE=1 test ARGS=\"-T Test -VV -j8\"" % build_dir
+
+    res = sexe(tst_cmd,
+               output_file = tst_output_file,
+               echo=True)
+
+    if res != 0:
+        print "[ERROR: Tests for host-config: %s failed]\n" % host_config
+        return res
+
+    # build the docs
+    docs_output_file = pjoin(build_dir,"output.log.make.docs.txt")
+    print "[starting docs generation]"
+    print "[log file: %s]" % docs_output_file
+
+    res = sexe("cd %s && make docs " % build_dir,
+               output_file = docs_output_file,
+               echo=True)
+
+    if res != 0:
+        print "[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config
+        return res
+
+    print "[SUCCESS: Build, test, and install for host-config: {0} complete]\n".format(host_config)
+
+    set_group_and_perms(build_dir)
+
+    return 0
+
+
+def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs):
+    host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
+    if len(host_configs) == 0:
+        log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
+        return 1
+    print "Found Host-configs:"
+    for host_config in host_configs:
+        print "    " + host_config
+    print "\n"
+
+    test_root =  get_build_and_test_root(prefix, timestamp)
+    os.mkdir(test_root)
+    write_build_info(pjoin(test_root,"info.json")) 
+    ok  = []
+    bad = []
+    for host_config in host_configs:
+        build_dir = get_build_dir(test_root, host_config)
+
+        start_time = time.time()
+        if build_and_test_host_config(test_root,host_config) == 0:
+            ok.append(host_config)
+            log_success(build_dir, timestamp)
+        else:
+            bad.append(host_config)
+            log_failure(build_dir, timestamp)
+        end_time = time.time()
+        print "[build time: {0}]\n".format(convertSecondsToReadableTime(end_time - start_time))
+
+
+    # Log overall job success/failure
+    if len(bad) != 0:
+        log_failure(test_root, timestamp)
+    else:
+        log_success(test_root, timestamp)
+
+    # Output summary of failure/succesful builds
+    if len(ok) > 0:
+        print "Succeeded:"
+        for host_config in ok:
+            print "    " + host_config
+
+    if len(bad) > 0:
+        print "Failed:"
+        for host_config in bad:
+            print "    " + host_config
+        print "\n"
+        return 1
+
+    print "\n"
+
+    return 0
+
+
 def set_group_and_perms(directory):
     """
     Sets the proper group and access permissions of given input
@@ -184,6 +307,78 @@ def set_group_and_perms(directory):
     sexe("chmod -f -R a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
     print "[done setting perms for: %s]" % directory
     return 0
+
+
+def full_build_and_test_of_tpls(builds_dir, timestamp):
+    project_file = "scripts/uberenv/project.json"
+    config_dir = "scripts/uberenv/spack_configs/{0}".format(get_system_type())
+
+    specs = get_specs_for_current_machine()
+    print "[Building and testing tpls for specs: "
+    for spec in specs:
+        print "{0}".format(spec)
+    print "]\n"
+
+    # Use shared network mirror location otherwise create local one
+    mirror_dir = get_shared_mirror_dir()
+    if not os.path.exists(mirror_dir):
+        mirror_dir = pjoin(builds_dir,"mirror")
+    print "[using mirror location: %s]" % mirror_dir
+
+    # unique install location
+    prefix = pjoin(builds_dir, get_system_type())
+    if not os.path.exists(prefix):
+        os.mkdir(prefix)
+    prefix = pjoin(prefix, timestamp)
+
+    # create a mirror
+    uberenv_create_mirror(prefix, project_file, mirror_dir)
+    # write info about this build
+    write_build_info(pjoin(prefix, "info.json"))
+
+    repo_dir = get_repo_dir()
+    # Clean previously generated host-configs into TPL install directory
+    print "[Cleaning previously generated host-configs if they exist]"
+    host_configs = get_host_configs_for_current_machine(repo_dir, True)
+    for host_config in host_configs:
+        os.remove(host_config)
+
+    # use uberenv to install for all specs
+    tpl_build_failed = False
+    for spec in specs:
+        start_time = time.time()
+        fullspec = "{0}".format(spec)
+        res = uberenv_build(prefix, fullspec, project_file, config_dir, mirror_dir)
+        end_time = time.time()
+        print "[build time: {0}]".format(convertSecondsToReadableTime(end_time - start_time))
+        if res != 0:
+            print "[ERROR: Failed build of tpls for spec %s]\n" % spec
+            tpl_build_failed = True
+            break
+        else:
+            print "[SUCCESS: Finished build tpls for spec %s]\n" % spec
+
+    # Copy generated host-configs into TPL install directory
+    print "[Copying spack generated host-configs to TPL build directory]"
+    host_configs = get_host_configs_for_current_machine(repo_dir, True)
+    for host_config in host_configs:
+        dst = pjoin(prefix, os.path.basename(host_config))
+        if os.path.exists(host_config) and not os.path.exists(dst):
+            shutil.copy2(host_config, dst)
+
+    if not tpl_build_failed:
+        # build the serac against the new tpls
+        res = build_and_test_host_configs(prefix, timestamp, True)
+        if res != 0:
+            print "[ERROR: build and test of serac vs tpls test failed.]\n"
+        else:
+            print "[SUCCESS: build and test of serac vs tpls test passed.]\n"
+ 
+    # set proper perms for installed tpls
+    set_group_and_perms(prefix)
+    # set proper perms for the mirror files
+    set_group_and_perms(mirror_dir)
+    return res
 
 
 def build_devtools(builds_dir, timestamp):
@@ -244,6 +439,7 @@ def build_devtools(builds_dir, timestamp):
 
     return res
 
+
 def get_specs_for_current_machine():
     repo_dir = get_repo_dir()
     specs_json_path = pjoin(repo_dir, "scripts/uberenv/specs.json")
@@ -265,21 +461,15 @@ def get_specs_for_current_machine():
     return specs
 
 
-def get_host_configs_for_current_machine(src_dir):
+def get_host_configs_for_current_machine(src_dir, use_generated_host_configs):
     host_configs = []
 
-    # Note: This function is called in two situations:
-    # (1) To test the checked-in host-configs from a source dir 
-    #   In that case, check the 'host-configs' directory
-    # (2) To test the uberenv-generated host-configs
-    #   In that case, host-configs should be in src_dir
-    
-    host_configs_dir = pjoin(src_dir, "host-configs")
-    if not os.path.isdir(host_configs_dir):
-        host_configs_dir = src_dir
+    # Generated host-configs will be at the base of the source repository
+    host_configs_dir = src_dir
+    if not use_generated_host_configs:
+        host_configs_dir = pjoin(src_dir, "host-configs")
 
     hostname_base = get_machine_name()
-
     host_configs = glob.glob(pjoin(host_configs_dir, hostname_base + "*.cmake"))
 
     return host_configs
@@ -332,8 +522,8 @@ def get_shared_mirror_dir():
     return pjoin(get_shared_base_dir(), "mirror")
 
 
-def get_shared_libraries_dir():
-    return pjoin(get_shared_tpl_base_dir(), "libraries")
+def get_shared_libs_dir():
+    return pjoin(get_shared_base_dir(), "libs")
 
 
 def on_rz():

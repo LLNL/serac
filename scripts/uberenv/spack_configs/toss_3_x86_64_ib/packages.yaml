@@ -24,11 +24,11 @@ packages:
   mvapich2:
     paths:
       # clang mvapich2
-      mvapich2@2.2 %clang@4.0.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0
+      mvapich2@2.2%clang@4.0.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0
       # gcc mvapich2
-      mvapich2@2.2 %gcc@8.1.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-8.1.0
+      mvapich2@2.2%gcc@8.1.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-8.1.0
       # intel mvapich2
-      mvapich2@2.2 %intel@19.0.4 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4
+      mvapich2@2.2%intel@19.0.4 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4
     buildable: False
   openmpi:
     buildable: False
@@ -122,31 +122,31 @@ packages:
   cmake:
     version: [3.9.6]
     paths:
-      cmake: /usr/WS2/serac/devtools/toss_3_x86_64_ib/latest/cmake-3.9.6
+      cmake: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cmake-3.9.6
     buildable: False
 
+  astyle:
+    version: [3.1]
+    paths:
+      astyle: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/astyle-3.1
+    buildable: False
   cppcheck:
     version: [1.87]
     paths:
-      cppcheck: /usr/WS2/serac/devtools/toss_3_x86_64_ib/latest/cppcheck-1.87
+      cppcheck: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cppcheck-1.87
     buildable: False
   doxygen:
-    version: [1.8.14]
+    version: [1.8.15]
     paths:
-      doxygen: /usr/WS2/serac/devtools/toss_3_x86_64_ib/latest/doxygen-1.8.14
+      doxygen: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.8.15
     buildable: False
   python:
     version: [3.7.4]
     paths:
-      python: /usr/WS2/serac/devtools/toss_3_x86_64_ib/latest/python-3.7.4
+      python: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.7.4
     buildable: False
   py-sphinx:
     version: [2.2.0]
     paths:
-      py-sphinx: /usr/WS2/serac/devtools/toss_3_x86_64_ib/latest/python-3.7.4
-    buildable: False
-  uncrustify:
-    version: [0.61]
-    paths:
-      uncrustify: /usr/WS2/serac/devtools/toss_3_x86_64_ib/latest/uncrustify-0.61
+      py-sphinx: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.7.4
     buildable: False
