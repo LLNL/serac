@@ -130,7 +130,7 @@ def uberenv_create_mirror(prefix, project_file, mirror_path):
     cmd += " --project-json=\"{0}\" ".format(project_file)
     res = sexe(cmd, echo=True, error_prefix="WARNING:")
     print "[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]"
-    print "[The above behavior of 'spack --create-mirror' is normal to throw many warnings]"
+    print "[ It is expected for 'spack --create-mirror' to throw warnings.                ]"
     print "[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]"
     set_group_and_perms(mirror_path)
     return res
