@@ -1,13 +1,15 @@
 {
-   "version": "0.2.0",
+    "version": "0.2.0",
     "configurations": [
         {
             "name": "(gcc/gdb) Launch Serac",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build-gcc@7.4.0-debug/bin/serac",
-            "args": ["-m", "${workspaceFolder}/data/beam-hex.mesh"],
-            "stopAtEntry": true,
+            "args": [
+                "-m",
+                "${workspaceFolder}/data/beam-hex.mesh"
+            ],
             "cwd": "${workspaceFolder}/build-gcc@7.4.0-debug/bin/",
             "environment": [],
             "externalConsole": false,
