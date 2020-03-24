@@ -19,6 +19,9 @@ protected:
   /// List of finite element data structures
   std::vector< FiniteElementState > m_state;
 
+  /// Block vector storage of the true state
+  mfem::BlockVector *m_block;
+
   /// Essential BC markers
   mfem::Array<int> m_ess_bdr;
 
@@ -85,6 +88,12 @@ public:
 
   /// Set the vector-valued natural boundary conditions from a list of boundary markers and a coefficient
   virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef);
+
+  /// Set the state variables from a coefficient
+  virtual void ProjectState(mfem::Array<mfem::Coefficient*> state_coef);
+
+  /// Set the state variables from a vector coefficient
+  virtual void ProjectState(mfem::Array<mfem::VectorCoefficient*> state_vec_coef);
 
   /// Set the state variables from an existing grid function
   virtual void SetState(const std::vector<FiniteElementState> &state);

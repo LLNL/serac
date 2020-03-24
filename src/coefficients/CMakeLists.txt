@@ -6,11 +6,13 @@
 
 set(coefficients_sources
     loading_functions.cpp
+    stdfunction_coefficient.cpp
     )
 
 set(coefficients_headers
     loading_functions.hpp
     traction_coefficient.hpp
+    stdfunction_coefficient.hpp
     )
 
 blt_add_library(

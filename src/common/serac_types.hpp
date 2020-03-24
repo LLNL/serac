@@ -54,6 +54,13 @@ struct LinearSolverParameters {
   Preconditioner prec;
 };
 
+struct NonlinearSolverParameters {
+  double rel_tol;
+  double abs_tol;
+  int max_iter;
+  int print_level;
+};
+
 // Finite element information bundle
 struct FiniteElementState {
   std::shared_ptr < mfem::ParFiniteElementSpace > space;

@@ -7,7 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "mfem.hpp"
-#include "solvers/dynamic_solver.hpp"
+#include "solvers/nonlinear_solid_solver.hpp"
 #include <fstream>
 
 void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
@@ -42,38 +42,9 @@ TEST(dynamic_solver, dyn_solve)
 
   int dim = pmesh->Dimension();
 
-  mfem::ODESolver *ode_solver = new mfem::SDIRK33Solver;
-
-  // Define the finite element spaces for displacement field
-  mfem::H1_FECollection fe_coll(1, dim);
-  mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
-
-  int true_size = fe_space.TrueVSize();
-  mfem::Array<int> true_offset(3);
-  true_offset[0] = 0;
-  true_offset[1] = true_size;
-  true_offset[2] = 2*true_size;
-
-  mfem::BlockVector vx(true_offset);
-  mfem::ParGridFunction v_gf, x_gf;
-  v_gf.MakeTRef(&fe_space, vx, true_offset[0]);
-  x_gf.MakeTRef(&fe_space, vx, true_offset[1]);
-
-  mfem::VectorFunctionCoefficient velo_coef(dim, InitialVelocity);
-  v_gf.ProjectCoefficient(velo_coef);
-  v_gf.SetTrueVector();
-
-  mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
-  x_gf.ProjectCoefficient(deform);
-  x_gf.SetTrueVector();
-
-  v_gf.SetFromTrueVector();
-  x_gf.SetFromTrueVector();
-
-
   // define a boundary attribute array and initialize to 0
   mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
+  ess_bdr.SetSize(pmesh->bdr_attributes.Max());
   ess_bdr = 0;
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
@@ -81,39 +52,70 @@ TEST(dynamic_solver, dyn_solve)
 
   mfem::ConstantCoefficient visc(0.0);
 
-  // construct the nonlinear mechanics operator
-  DynamicSolver oper(fe_space, ess_bdr,
-                     0.25, 5.0, visc,
-                     1.0e-4, 1.0e-8,
-                     500, true, false);
+  // define the inital state coefficients
+  mfem::Array<mfem::VectorCoefficient*> initialstate(2);
+
+  mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
+  mfem::VectorFunctionCoefficient velo(dim, InitialVelocity);
+
+  initialstate[0] = &deform;
+  initialstate[1] = &velo;
+
+  // initialize the dynamic solver object
+  NonlinearSolidSolver dyn_solver(1, pmesh);
+  dyn_solver.SetDisplacementBCs(ess_bdr, &deform);
+  dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
+  dyn_solver.SetViscosity(&visc);
+  dyn_solver.ProjectState(initialstate);
+  dyn_solver.SetTimestepper(TimestepMethod::SDIRK33);
+
+  // Set the linear solver parameters
+  LinearSolverParameters params;
+  params.prec = Preconditioner::BoomerAMG;
+  params.abs_tol = 1.0e-8;
+  params.rel_tol = 1.0e-4;
+  params.max_iter = 500;
+  params.lin_solver = LinearSolver::GMRES;
+  params.print_level = 0;
+
+  // Set the nonlinear solver parameters
+  NonlinearSolverParameters nl_params;
+  nl_params.rel_tol = 1.0e-4;
+  nl_params.abs_tol = 1.0e-8;
+  nl_params.print_level = 1;
+  nl_params.max_iter = 500;
+  dyn_solver.SetSolverParameters(params, nl_params);
+
+  // Construct the internal dynamic solver data structures
+  dyn_solver.CompleteSetup();
 
   double t = 0.0;
   double t_final = 6.0;
   double dt = 3.0;
-
-  oper.SetTime(t);
-  ode_solver->Init(oper);
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
   bool last_step = false;
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
-
-    ode_solver->Step(vx, t, dt_real);
-
+    t += dt_real;
     last_step = (t >= t_final - 1e-8*dt);
+
+    dyn_solver.AdvanceTimestep(dt_real);
   }
 
+  // Check the final displacement and velocity L2 norms
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = x_gf.ComputeLpError(2.0, zerovec);
-  double v_norm = v_gf.ComputeLpError(2.0, zerovec);
+  auto state = dyn_solver.GetState();
 
-  EXPECT_NEAR(13.2665, x_norm, 0.0001);
-  EXPECT_NEAR(0.25368, v_norm, 0.0001);
+  double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
+  double v_norm = state[1].gf->ComputeLpError(2.0, zerovec);
+
+  EXPECT_NEAR(12.8727, x_norm, 0.0001);
+  EXPECT_NEAR(0.22314, v_norm, 0.0001);
 
   delete pmesh;
 
