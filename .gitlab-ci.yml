@@ -6,9 +6,8 @@
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
   SLURM_ALLOC_NAME: serac_$CI_COMMIT_SHORT_SHA
-  BUILD_ROOT: $CI_BUILDS_DIR/serac_$CI_COMMIT_REF_SLUG
-  LIBS_ROOT: $CI_BUILDS_DIR/serac_libs_$CI_COMMIT_REF_SLUG
-  INSTALL_ROOT: $CI_BUILDS_DIR/spack_uberenv
+  BUILD_ROOT: $CI_BUILDS_DIR/serac/${CI_COMMIT_REF_SLUG}_${CI_PIPELIN_ID}
+  LIBS_ROOT: $CI_BUILDS_DIR/serac/${CI_COMMIT_REF_SLUG}_${CI_PIPELINE_ID}/libs
   SPACK_MIRROR: /usr/workspace/radiuss/mirrors/packages
 
 before_script:
@@ -69,9 +68,9 @@ setup_env:
 .build_blueos_3_ppc64le_ib_p9_script:
   extends: .build_blueos_3_ppc64le_ib_script
 
-.clean_toss_3_x86_64_ib_script:
-  script:
-    - rm -rf ${INSTALL_ROOT}_{COMPILER}
+  #.clean_toss_3_x86_64_ib_script:
+  #  script:
+  #    - rm -rf ${BUILD_ROOT}
 
 # This is where jobs are included
 include:
