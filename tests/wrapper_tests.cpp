@@ -34,9 +34,9 @@ protected:
   {
     // Set up mesh
     dim = 3;
-    int nex = 3;
-    int ney = 3;
-    int nez = 3;
+    int nex = 4;
+    int ney = 4;
+    int nez = 4;
 
     Mesh mesh(nex, ney, nez, mfem::Element::HEXAHEDRON, true);
     pmesh = std::shared_ptr<ParMesh>(new ParMesh(MPI_COMM_WORLD, mesh));
@@ -93,6 +93,7 @@ void SolveLinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess_td
 
 }
 
+// Solve the same linear system using a newton solver
 void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess_tdof_list, ParGridFunction &temp)
 {
 
@@ -102,6 +103,37 @@ void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess
   DiffusionIntegrator diffusion(one);
 
   A_nonlin.AddDomainIntegrator(new BilinearNonlinearFormIntegrator(diffusion));
+  A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
+
+  ParLinearForm f_lin(pfes.get());
+  f_lin = 0.;
+  std::unique_ptr<HypreParVector> F = std::unique_ptr<HypreParVector>(f_lin.ParallelAssemble());
+
+  // The temperature solution vector already contains the essential boundary condition values
+  std::unique_ptr<HypreParVector> T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
+
+  GMRESSolver solver(pfes->GetComm());
+
+  NewtonSolver newton_solver(pfes->GetComm());
+  newton_solver.SetSolver(solver);
+  newton_solver.SetOperator(A_nonlin);
+
+  Vector zero;
+  newton_solver.Mult(zero, *T);
+
+  temp = *T;
+}
+
+// Solve the same linear system using a newton solver but by using the MixedIntegrator calls
+void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess_tdof_list, ParGridFunction &temp)
+{
+
+  ConstantCoefficient one(1.);
+
+  ParNonlinearForm A_nonlin(pfes.get());
+  DiffusionIntegrator diffusion(one);
+
+  A_nonlin.AddDomainIntegrator(new MixedBilinearNonlinearFormIntegrator(diffusion, pfes.get()));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
   ParLinearForm f_lin(pfes.get());
@@ -193,4 +225,15 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
     EXPECT_NEAR(t_lin[i], t_nonlin[i], 1.e-12);
   }
 
+  // Solve the same nonlinear problem with the MixedBilinearNonlinearformIntegrator
+  ParGridFunction t_mixed_nonlin(pfes.get());
+  t_mixed_nonlin = t_ess;
+  SolveMixedNonlinear(pfes, ess_tdof_list, t_mixed_nonlin);
+
+  // Compare the mixed nonlinear linear and the nonlinear solution
+  for (int i = 0; i < t_nonlin.Size(); i++) {
+    EXPECT_NEAR(t_mixed_nonlin[i], t_nonlin[i], 1.e-12);
+  }
+
+  
 }
