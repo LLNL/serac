@@ -160,7 +160,7 @@ TEST_F(StdFunctionCoefficientTest, AttributeListSet)
     pmesh->GetElement(e)->SetAttribute(attr_list[e]);
   }
 
-  // Ouput for visualization
+  // Output for visualization
   std::unique_ptr<VisItDataCollection> visit = std::unique_ptr<VisItDataCollection>(
         new VisItDataCollection("StdFunctionCoefficient.AttributeSet", pmesh.get()));
 

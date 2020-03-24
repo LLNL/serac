@@ -8,23 +8,26 @@
 
 using namespace mfem;
 
-LinearNonlinearFormIntegrator::LinearNonlinearFormIntegrator( LinearFormIntegrator & f, ParFiniteElementSpace * trial_fes)
+LinearNonlinearFormIntegrator::LinearNonlinearFormIntegrator( LinearFormIntegrator & f,
+    ParFiniteElementSpace * trial_fes)
   :
   m_f(f), m_trial_fes(trial_fes)
 {}
 
-void LinearNonlinearFormIntegrator::AssembleElementVector( const FiniteElement &el, ElementTransformation &Tr, const Vector &elfun, Vector & elvect)
+void LinearNonlinearFormIntegrator::AssembleElementVector( const FiniteElement &el, ElementTransformation &Tr,
+    const Vector &elfun, Vector & elvect)
 {
   m_f.AssembleRHSElementVect(el, Tr, elvect);
   elvect *= -1.;
 }
 
-void LinearNonlinearFormIntegrator::AssembleElementGrad( const FiniteElement &el, ElementTransformation &Tr, const Vector &elfun, DenseMatrix &elmat)
+void LinearNonlinearFormIntegrator::AssembleElementGrad( const FiniteElement &el, ElementTransformation &Tr,
+    const Vector &elfun, DenseMatrix &elmat)
 {
   const FiniteElement &trial_el = *(m_trial_fes->FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
-  
+
   elmat.SetSize(trial_el.GetDof()*trial_el.GetDim(),
-		el.GetDof()*el.GetDim());
+                el.GetDof()*el.GetDim());
   elmat = 0.;
 }
 
@@ -33,7 +36,8 @@ BilinearNonlinearFormIntegrator::BilinearNonlinearFormIntegrator( BilinearFormIn
   m_A(A)
 {}
 
-void BilinearNonlinearFormIntegrator::AssembleElementVector( const FiniteElement &el, ElementTransformation &Tr, const Vector &elfun, Vector & elvect)
+void BilinearNonlinearFormIntegrator::AssembleElementVector( const FiniteElement &el, ElementTransformation &Tr,
+    const Vector &elfun, Vector & elvect)
 {
   DenseMatrix elmat;
   m_A.AssembleElementMatrix(el, Tr, elmat);
@@ -41,27 +45,31 @@ void BilinearNonlinearFormIntegrator::AssembleElementVector( const FiniteElement
   elmat.Mult(elfun, elvect);
 }
 
-void BilinearNonlinearFormIntegrator::AssembleElementGrad( const FiniteElement &el, ElementTransformation &Tr, const Vector &elfun, DenseMatrix &elmat)
+void BilinearNonlinearFormIntegrator::AssembleElementGrad( const FiniteElement &el, ElementTransformation &Tr,
+    const Vector &elfun, DenseMatrix &elmat)
 {
   m_A.AssembleElementMatrix(el, Tr, elmat);
 }
 
-MixedBilinearNonlinearFormIntegrator::MixedBilinearNonlinearFormIntegrator( BilinearFormIntegrator &A, ParFiniteElementSpace *trial_fes)
+MixedBilinearNonlinearFormIntegrator::MixedBilinearNonlinearFormIntegrator( BilinearFormIntegrator &A,
+    ParFiniteElementSpace *trial_fes)
   :
   m_A(A), m_trial_fes(trial_fes)
 {}
 
-void MixedBilinearNonlinearFormIntegrator::AssembleElementVector( const FiniteElement &el, ElementTransformation &Tr, const Vector &elfun, Vector & elvect)
+void MixedBilinearNonlinearFormIntegrator::AssembleElementVector( const FiniteElement &el, ElementTransformation &Tr,
+    const Vector &elfun, Vector & elvect)
 {
   const FiniteElement &trial_el = *(m_trial_fes->FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
-    
-  DenseMatrix elmat;  
+
+  DenseMatrix elmat;
   m_A.AssembleElementMatrix2(trial_el, el, Tr, elmat);
   elvect.SetSize(elmat.Height());
   elmat.Mult(elfun, elvect);
 }
 
-void MixedBilinearNonlinearFormIntegrator::AssembleElementGrad( const FiniteElement &el, ElementTransformation &Tr, const Vector &elfun, DenseMatrix &elmat)
+void MixedBilinearNonlinearFormIntegrator::AssembleElementGrad( const FiniteElement &el, ElementTransformation &Tr,
+    const Vector &elfun, DenseMatrix &elmat)
 {
   const FiniteElement &trial_el = *(m_trial_fes->FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
 
