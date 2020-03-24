@@ -107,19 +107,19 @@ double AttributeModifierCoefficient::Eval (mfem::ElementTransformation &Tr, cons
 TransformedVectorCoefficient::TransformedVectorCoefficient(mfem::VectorCoefficient *v1,
     std::function <void (mfem::Vector &, mfem::Vector &)>  func) :
   mfem::VectorCoefficient(v1->GetVDim()),
-  m_mono_function(func),
-  m_bi_function(nullptr),
   m_v1(v1),
-  m_v2(nullptr)
+  m_v2(nullptr),
+  m_mono_function(func),
+  m_bi_function(nullptr)
 {  }
 
 TransformedVectorCoefficient::TransformedVectorCoefficient(mfem::VectorCoefficient *v1, mfem::VectorCoefficient *v2,
     std::function <void (mfem::Vector &, mfem::Vector &, mfem::Vector &)>  func) :
   mfem::VectorCoefficient(v1->GetVDim()),
-  m_mono_function(nullptr),
-  m_bi_function(func),
   m_v1(v1),
-  m_v2(v2)
+  m_v2(v2),
+  m_mono_function(nullptr),
+  m_bi_function(func)
 {
   MFEM_VERIFY(m_v1->GetVDim() == m_v2->GetVDim(), "v1 and v2 are not the same size");
 }
