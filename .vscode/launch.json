@@ -2,25 +2,19 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gcc/gdb) Launch Serac",
+            "name": "(gdb) Dynamic Test",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build-gcc@7.4.0-debug/bin/serac",
+            "program": "${workspaceFolder}/build-gcc@7.4.0-debug/tests/serac_dynamic_solver",
             "args": [
                 "-m",
                 "${workspaceFolder}/data/beam-hex.mesh"
             ],
-            "cwd": "${workspaceFolder}/build-gcc@7.4.0-debug/bin/",
+            "cwd": "${workspaceFolder}/build-gcc@7.4.0-debug/tests/",
             "environment": [],
+            "stopAtEntry": true,
             "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
-        }
+            "MIMode": "gdb"
+        },
     ]
 }
