@@ -19,6 +19,93 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "(gdb) mpi Dynamic Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/uberenv_libs/gcc-7.4.0/mpich-3.3.2/bin/mpiexec",
+            "args": [
+                "-n", "4", "/home/sam/serac/build/tests/serac_dynamic_solver", 
+                "-m", "${workspaceFolder}/data/beam-hex.mesh"
+            ],
+            "cwd": "${config:cmake.buildDirectory}/tests/",
+            "environment": [],
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "MIMode": "gdb"
+        },
+        {
+            "name": "(gdb) mpi Quasistatic Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/uberenv_libs/gcc-7.4.0/mpich-3.3.2/bin/mpiexec",
+            "args": [
+                "-n", "4", "/home/sam/serac/build/tests/serac_quasistatic_solver", 
+                "-m", "${workspaceFolder}/data/beam-hex.mesh"
+            ],
+            "cwd": "${config:cmake.buildDirectory}/tests/",
+            "environment": [],
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "MIMode": "gdb"
+        },
+        {
+            "name": "(gdb) mpi Thermal Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/uberenv_libs/gcc-7.4.0/mpich-3.3.2/bin/mpiexec",
+            "args": [
+                "-n", "1", "/home/sam/serac/build/tests/serac_thermal_solver", 
+                "-m", "${workspaceFolder}/data/beam-hex.mesh"
+            ],
+            "cwd": "${config:cmake.buildDirectory}/tests/",
+            "environment": [],
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "MIMode": "gdb"
+        }
+        {
+            "name": "(gdb) Dynamic Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${config:cmake.buildDirectory}/tests/serac_dynamic_solver", 
+            "args": [
+                "-m", "${workspaceFolder}/data/beam-hex.mesh"
+            ],
+            "cwd": "${config:cmake.buildDirectory}/tests/",
+            "environment": [],
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "MIMode": "gdb"
+        },
+        {
+            "name": "(gdb) Quasistatic Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/sam/serac/build/tests/serac_quasistatic_solver", 
+            "args": [
+                "-m", "${workspaceFolder}/data/beam-hex.mesh"
+            ],
+            "cwd": "${config:cmake.buildDirectory}/tests/",
+            "environment": [],
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "MIMode": "gdb"
+        },
+        {
+            "name": "(gdb) Thermal Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/sam/serac/build/tests/serac_thermal_solver", 
+            "args": [
+                "-m", "${workspaceFolder}/data/beam-hex.mesh"
+            ],
+            "cwd": "${config:cmake.buildDirectory}/tests/",
+            "environment": [],
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "MIMode": "gdb"
         }
     ]
 }

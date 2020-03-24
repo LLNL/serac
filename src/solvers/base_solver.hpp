@@ -120,7 +120,7 @@ public:
   virtual void AdvanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const OutputType output_type, const std::string root_name);
+  virtual void InitializeOutput(const OutputType output_type, const std::string root_name, mfem::Array< std::string > names);
 
   /// output the state variables
   virtual void OutputState() const;
