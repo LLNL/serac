@@ -1,6 +1,6 @@
 [
     {
         "name": "GCC",
-        "toolchainFile": "${workspaceFolder}/uberenv_libs/gcc@7.4.0.cmake"
+        "toolchainFile": "${workspaceFolder}/SamEagle-linux-ubuntu18.04-broadwell-gcc@7.4.0.cmake"
     }
 ]
