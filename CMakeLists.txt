@@ -15,9 +15,6 @@ project(serac LANGUAGES CXX)
 # MPI is required in Serac.
 set(ENABLE_MPI ON CACHE BOOL "")
 
-# Find devtools before loading BLT which sets up their targets
-include(${PROJECT_SOURCE_DIR}/cmake/SeracFindDevtools.cmake)
-
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------
@@ -43,8 +40,9 @@ endif()
 if (NOT BLT_CXX_STD)
     set(BLT_CXX_STD "c++11" CACHE STRING "")
 endif()
-set(ENABLE_CLANGQUERY OFF CACHE BOOL "")
-set(ENABLE_UNCRUSTIFY OFF CACHE BOOL "")
+set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
+set(ENABLE_CLANGQUERY  OFF CACHE BOOL "")
+set(ENABLE_UNCRUSTIFY  OFF CACHE BOOL "")
 
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
