@@ -11,9 +11,19 @@
 #include <fstream>
 #include <sys/stat.h>
 
-double BoundaryTemperature(const mfem::Vector &x);
-double InitialTemperature(const mfem::Vector &x);
+double BoundaryTemperature(const mfem::Vector &x)
+{
+  return x.Norml2();
+}
 
+double InitialTemperature(const mfem::Vector &x)
+{
+  if (x.Norml2() < 0.5) {
+    return 2.0;
+  } else {
+    return 1.0;
+  }
+}
 const char* mesh_file = "NO_MESH_GIVEN";
 
 inline bool file_exists(const char* path)
@@ -53,6 +63,7 @@ TEST(thermal_solver, static_solve)
 
   // Initialize the temperature boundary condition
   mfem::FunctionCoefficient u_0(BoundaryTemperature);
+
   mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
   temp_bdr = 1;
 
@@ -285,18 +296,6 @@ int main(int argc, char* argv[])
   return result;
 }
 
-double BoundaryTemperature(const mfem::Vector &x)
-{
-  return x.Norml2();
-}
 
-double InitialTemperature(const mfem::Vector &x)
-{
-  if (x.Norml2() < 0.5) {
-    return 2.0;
-  } else {
-    return 1.0;
-  }
-}
 
 
