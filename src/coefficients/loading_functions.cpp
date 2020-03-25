@@ -8,8 +8,8 @@
 
 void ReferenceConfiguration(const mfem::Vector &x, mfem::Vector &y)
 {
-   // set the reference, stress free, configuration
-   y = x;
+  // set the reference, stress free, configuration
+  y = x;
 }
 
 void InitialDeformation(__attribute__((unused)) const mfem::Vector &x, mfem::Vector &y) { y = 0.0; }
