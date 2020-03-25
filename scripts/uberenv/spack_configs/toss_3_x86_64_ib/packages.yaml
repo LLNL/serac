@@ -1,5 +1,8 @@
 packages:
   all:
+    # This defaults us to machine specific flags of ivybridge which allows
+    # us to run on broadwell as well
+    target: [ivybridge]
     compiler: [gcc, intel, pgi, clang, xl, nag]
     providers:
       blas: [netlib-lapack]
@@ -7,16 +10,7 @@ packages:
       mpi: [mvapich2]
       gl: [opengl]
       glu: [openglu]
-  # Lock down which MPI we are using
-  mvapich2:
-    paths:
-      # clang mvapich2
-      mvapich2@2.2 %clang@4.0.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0
-      # gcc mvapich2
-      mvapich2@2.2 %gcc@8.1.0 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-8.1.0
-      # intel mvapich2
-      mvapich2@2.2 %intel@19.0.4 arch=linux-rhel7-x86_64: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4
-    buildable: False
+
   opengl:
     paths:
       opengl@1.7.0: /usr
@@ -24,6 +18,17 @@ packages:
   openglu:
     paths:
       openglu@1.3.1: /usr
+    buildable: False
+
+  # Lock down which MPI we are using
+  mvapich2:
+    paths:
+      # clang mvapich2
+      mvapich2@2.2%clang@4.0.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0
+      # gcc mvapich2
+      mvapich2@2.2%gcc@8.1.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-8.1.0
+      # intel mvapich2
+      mvapich2@2.2%intel@19.0.4 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4
     buildable: False
   openmpi:
     buildable: False
@@ -45,26 +50,6 @@ packages:
     buildable: False
   mpt:
     buildable: False
-
-  # Lock down versions of packages we depend on
-  cmake:
-    version: [3.9.2]
-    paths:
-      cmake: /usr/tce/packages/cmake/cmake-3.9.2
-    buildable: False
-
-  mfem:
-    version: [4.0.0]
-  hypre:
-    version: [2.11.1]
-  superlu-dist:
-    version: [5.4.0]
-  parmetis:
-    version: [4.0.3]
-  metis:
-    version: [5.1.0]
-  glvis:
-    version: [3.4]
 
   # blas is a bit more complicated because its a virtual package so fake it with
   # the following per spack docs
@@ -117,4 +102,51 @@ packages:
   libx11:
     paths:
       libx11: /usr
+    buildable: False
+
+  # Lock down versions of packages we depend on
+  mfem:
+    version: [4.0.0]
+  hypre:
+    version: [2.11.1]
+  superlu-dist:
+    version: [5.4.0]
+  parmetis:
+    version: [4.0.3]
+  metis:
+    version: [5.1.0]
+  glvis:
+    version: [3.4]
+
+# Lock in versions of Devtools
+  cmake:
+    version: [3.9.6]
+    paths:
+      cmake: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cmake-3.9.6
+    buildable: False
+
+  astyle:
+    version: [3.1]
+    paths:
+      astyle: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/astyle-3.1
+    buildable: False
+  cppcheck:
+    version: [1.87]
+    paths:
+      cppcheck: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cppcheck-1.87
+    buildable: False
+  doxygen:
+    version: [1.8.15]
+    paths:
+      doxygen: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.8.15
+    buildable: False
+  python:
+    version: [3.7.4]
+    paths:
+      python: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.7.4
+    buildable: False
+  py-sphinx:
+    version: [2.2.0]
+    paths:
+      py-sphinx: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.7.4
     buildable: False
