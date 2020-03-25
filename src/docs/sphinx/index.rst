@@ -18,39 +18,33 @@ LLNL's DIABLO and ALE3D codes.
 Quickstart Guide
 ======================
 
-Serac uses git submodules, so the project must be cloned recursively. Using GitHub SSH keys, the command is:
+Getting Serac
+-------------
+
+Serac is hosted on GitHub `here <https://github.com/LLNL/serac>`_. Serac uses git submodules, so the project must be cloned recursively. Use either of the following commands to pull Serac's repository:
 
 .. code-block:: bash
 
+   # Using SSH keys setup with GitHub
    $ git clone --recursive git@github.com:LLNL/serac.git
-  
-The easiest path to install both Serac and its dependencies is to use Spack. This has been encapsulated using Uberenv. It will generate 
-a ``uberenv_libs`` directory containing a Spack instance with Serac dependencies installed. It also generate a host-config file 
-(``uberenv_libs<config_dependent_name>.cmake``) we can now use to build Serac. The CMake configuration phase has also been encapsulated in ``config-build.py``.
 
-.. code-block:: bash
+   # Using HTTPS which works for everyone but is slightly slower and will require username/password
+   # for some commands
+   $ git clone -- recursive https://github.com/LLNL/serac.git
 
-   $ python scripts/uberenv/uberenv.py
+Building Serac's Developer Tools
+--------------------------------
 
-On LC machines, it is good practice to submit this command on a batch node (e.g. ``srun -ppdebug -N1 --exclusive python scripts/uberenv/uberenv.py``). Helpful uberenv options:  
+.. note::
+  This can be skipped if you are not doing Serac development or if you are on an LC machine.
+  We have them installed for you in a public space defined in 
+  ``host-config/<machine name>-<SYS_TYPE>-<compiler>.cmake``
 
-* ``--spec=+debug``
-* ``--spec=+glvis``
-* ``--spec=%clang@4.0.0``
-* ``--spec=%clang@4.0.0+debug``
-* ``--prefix=<Path to uberenv build directory (defaults to ./uberenv_libs)>``
+Serac developers utilizes some industry standard development tools in their everyday work.  We build
+these with Spack and have them installed in a public space on the LC machines we use. These are
+defined in the host-configs in our repository for the machines we support.
 
-If you already have a spack instance you would like to reuse, you can do so changing the uberenv command as follow:
-
-.. code-block:: bash
-
-   $ python scripts/uberenv/uberenv.py --upstream=</path/to/my/spack>/opt/spack
-
-If you wish to utilize the optional developer tools, such as CppCheck, Doxygen, Astyle, or Sphinx, 
-there is a shared location if you have the correct permissions on most LC machine.  The build system
-will auto-detect the paths for you.  If you wish to build them yourself (which takes a long time), 
-use one of the following commands:
-
+If you wish to build them yourself (which takes a long time), use one of the following commands:
 
 For LC machines: 
 
@@ -62,39 +56,105 @@ For other machines:
 
 .. code-block:: bash
 
-   $ python scripts/uberenv/uberenv.py --package-name=serac_devtools --install
+   $ python scripts/uberenv/uberenv.py --project-json=scripts/uberenv/devtools.json --prefix=<devtool/build/path>
 
-Serac can then be configured using the generated cmake ``host-config`` file.
+Unlike Serac's library dependencies, our developer tools can be built with any compiler because
+they are not linked into the serac executable.  We recommend GCC 8 because we have tested that they all
+build with that compiler.
+
+Building Serac's Dependencies
+-----------------------------
+
+.. note::
+  This is optional if you are on an LC machine we have previously built the dependencies.  You
+  can see these machines and configurations in the ``host-configs`` repository directory.
+
+Serac only directly requires `MFEM <https://mfem.org/>`_.  Though to fully utilize MFEM's capabilities
+we need to build 5 other libraries (Hypre, METIS, ParMETIS, SuperLU, and zlib).
+
+The easiest path to build Serac's dependencies is to use `Spack <https://github.com/spack/spack>`_.
+This has been encapsulated using `Uberenv <https://github.com/LLNL/uberenv>`_. Uberenv helps by
+doing the following:
+
+* Pulls a blessed version of Spack locally
+* If you are on a known operating system (like TOSS3), we have defined compilers and system packages
+  so you don't have to rebuild the world
+* Installs our Spack packages into the local Spack
+* Simplifies whole dependency build into one command
+
+Uberenv will create a directory ``uberenv_libs`` containing a Spack instance with the required Serac
+dependencies installed. It also generates a host-config file (``<config_dependent_name>.cmake``)
+at the root of Serac repository. This host-config defines all the required information for building
+Serac.
 
 .. code-block:: bash
 
-   $ python ./config-build.py -hc uberenv-libs/<config_dependent_name>.cmake
+   $ python scripts/uberenv/uberenv.py
 
-Alternatively, you can edit the ``cmake/defaults.cmake`` file to permanently save these library locations. A host config should be generated 
-for each new platform and compiler. Sample toss3 configs are located in the ``host-configs`` directory. If you would like a host config to 
-be a default for a certain platform, the ``_host_configs_map`` on line 16 of ``config-build.py`` should be edited.
+.. note::
+  On LC machines, it is good practice to do the build step in parallel on a compute node.
+  Here is an example command: ``srun -ppdebug -N1 --exclusive python scripts/uberenv/uberenv.py``
 
-Once it has been configured, Serac can be built.
+Unless otherwise specified Spack will default to a compiler.  This is generally not a good idea when
+developing large codes. To specify which compiler to use add the compiler spec to the ``--spec`` Uberenv
+command line option. On TOSS3, we recommend and have tested ``--spec=%clang@4.0.0``.  More compiler specs
+can be found in the Spack compiler files in our repository: 
+``scripts/uberenv/spack_configs/<System type>/compilers.yaml``.
+
+Some helpful uberenv options:  
+
+* ``--spec=+debug``
+* ``--spec=+glvis``
+* ``--spec=%clang@4.0.0``
+* ``--spec=%clang@4.0.0+debug``
+* ``--prefix=<Path to uberenv build directory (defaults to ./uberenv_libs)>``
+
+If you already have a spack instance you would like to reuse, you can do so changing the uberenv
+command as follow:
+
+.. code-block:: bash
+
+   $ python scripts/uberenv/uberenv.py --upstream=</path/to/my/spack>/opt/spack
+
+Building Serac
+--------------
+
+Serac is a CMake build system that wraps its configure step with a script
+called ``config-build.py``.  This script creates a build directory and
+runs the necessary CMake command for you. You just need to point the script
+at the generated or a provided host-config. This can be accomplished with
+one of the following commands:
+
+.. code-block:: bash
+
+   # If you built Serac's dependencies yourself
+   $ python ./config-build.py -hc <config_dependent_name>.cmake
+
+   # If you are on an LC machine and want to use our dependencies
+   $ python ./config-build.py -hc host-config/<machine name>-<SYS_TYPE>-<compiler>.cmake
+
+Once the build has been configured, Serac can be built with the following commands:
 
 .. code-block:: bash
 
    $ cd build-<system-and-toolchain>
-   $ cmake --build .
+   $ make -j16
 
-On LC machines, it is good practice to do the build step in parallel on a compute node.
+.. note::
+  On LC machines, it is good practice to do the build step in parallel on a compute node.
+  Here is an example command: ``srun -ppdebug -N1 --exclusive make -j16``
 
-.. code-block:: bash      
+We provide the following useful build targets that can be run from the build directory:
 
-   $ srun -ppdebug -N1 --exclusive make -j16
+* ``test``: Runs our unit tests
+* ``docs``: Builds our documentation to the following locations:
 
-The unit tests can now be run in the build directory.   
+   * Doxygen: ``/build-*/src/docs/doxygen/html/html/index.html``
+   * Sphinx: ``build-*/src/docs/sphinx/html/index.html``
 
-.. code-block:: bash
+* ``style``: Runs styling over source code and replaces files in place
+* ``check``: Runs a set of code checks over source code (CppCheck and AStyle)
 
-   $ ctest .
-
-To build documentation, ``make docs``. This installs Doxygen documentation at ``/build-*/src/docs/doxygen/html/html/index.html`` 
-and Sphinx documentation at ``build-*/src/docs/sphinx/html/index.html``.
 
 .. TODO: fix the linking of the doxygen documentation
 .. 
