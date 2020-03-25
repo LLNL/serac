@@ -30,7 +30,7 @@ Serac is hosted on GitHub `here <https://github.com/LLNL/serac>`_. Serac uses gi
 
    # Using HTTPS which works for everyone but is slightly slower and will require username/password
    # for some commands
-   $ git clone -- recursive https://github.com/LLNL/serac.git
+   $ git clone --recursive https://github.com/LLNL/serac.git
 
 Building Serac's Developer Tools
 --------------------------------
