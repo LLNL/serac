@@ -55,7 +55,7 @@ build_quartz_gcc_8_1_0:
     SPEC: "@develop%${COMPILER}"
   extends: .build_quartz
 
-build_quartz_intel_18_0_2:
+build_quartz_intel_19_0_4:
   variables:
     COMPILER: "intel@19.0.4"
     SPEC: "@develop%${COMPILER}"
