@@ -8,39 +8,36 @@
 
 set -e
 
-PROJECT_DIRECTORY="$(pwd)"
-BUILD_DIRECTORY="${BUILD_ROOT}/build_${SYS_TYPE}_${COMPILER}"
-CCONF="${BUILD_ROOT}/${SYS_TYPE}_${COMPILER}.cmake"
-
-# If building, then delete everything first
-if [[ "${1}" != "--test-only" ]]
-then
-    rm -rf ${BUILD_DIRECTORY}
-    mkdir -p ${BUILD_DIRECTORY}
-fi
-
-# Assert that build directory exist (mainly for --test-only mode)
-if [[ ! -d ${BUILD_DIRECTORY} ]]
-then
-    echo "Build directory not found : $(pwd)/${BUILD_DIRECTORY}"
-    exit 1
-fi
-
-# Always go to build directory
-echo "moving to ${BUILD_DIRECTORY}"
-cd ${BUILD_DIRECTORY}
+project_dir="$(pwd)"
+build_dir="${BUILD_ROOT}/build_${SYS_TYPE}_${COMPILER}"
+hostconfig="${BUILD_ROOT}/uberenv_libs/${COMPILER}.cmake"
 
 # Build
 if [[ "${1}" != "--test-only" ]]
 then
+    rm -rf ${build_dir}
+    mkdir -p ${build_dir}
+
+    echo "moving to ${build_dir}"
+    cd ${build_dir}
+
     cmake \
-      -C ${CCONF} \
-      ${PROJECT_DIRECTORY}
+      -C ${hostconfig} \
+      ${project_dir}
     cmake --build . -j 4
 fi
 
 # Test
-if [[ "${1}" != "--build-only" ]] 
+if [[ "${1}" != "--build-only" ]]
 then
+    if [[ ! -d ${build_dir} ]]
+    then
+        echo "Build directory not found : $(pwd)/${build_dir}"
+        exit 1
+    fi
+
+    echo "moving to ${build_dir}"
+    cd ${build_dir}
+
     ctest -T test
 fi
