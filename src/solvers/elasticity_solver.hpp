@@ -20,9 +20,6 @@
 class ElasticitySolver : public BaseSolver
 {
 protected:
-  
-  FiniteElementState & displacement;
-
   /// Stiffness bilinear form
   mfem::ParBilinearForm *m_K_form;
 

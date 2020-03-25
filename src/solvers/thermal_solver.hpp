@@ -22,41 +22,38 @@ class DynamicConductionOperator;
 class ThermalSolver : public BaseSolver
 {
 protected:
-
-  FiniteElementState & temperature;
-
   /// Mass bilinear form object
-  std::shared_ptr < mfem::ParBilinearForm > m_M_form;
+  mfem::ParBilinearForm *m_M_form;
 
   /// Stiffness bilinear form object
-  std::shared_ptr < mfem::ParBilinearForm > m_K_form;
+  mfem::ParBilinearForm *m_K_form;
 
   /// Assembled mass matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_M_mat;
+  mfem::HypreParMatrix *m_M_mat;
 
   /// Eliminated mass matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_M_e_mat;
+  mfem::HypreParMatrix *m_M_e_mat;
 
   /// Assembled stiffness matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_K_mat;
+  mfem::HypreParMatrix *m_K_mat;
 
   /// Eliminated stiffness matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_K_e_mat;
+  mfem::HypreParMatrix *m_K_e_mat;
 
   /// Thermal load linear form
-  std::shared_ptr < mfem::ParLinearForm > m_l_form;
+  mfem::ParLinearForm *m_l_form;
 
   /// Assembled BC load vector
-  std::shared_ptr < mfem::HypreParVector > m_bc_rhs;
+  mfem::HypreParVector *m_bc_rhs;
 
   /// Assembled RHS vector
-  std::shared_ptr < mfem::HypreParVector > m_rhs;
+  mfem::HypreParVector *m_rhs;
 
   /// Linear solver for the K operator
-  std::shared_ptr < mfem::CGSolver > m_K_solver;
+  mfem::CGSolver *m_K_solver;
 
   /// Preconditioner for the K operator
-  std::shared_ptr < mfem::HypreSmoother > m_K_prec;
+  mfem::HypreSmoother *m_K_prec;
 
   /// Conduction coefficient
   mfem::Coefficient *m_kappa;
@@ -65,7 +62,7 @@ protected:
   mfem::Coefficient *m_source;
 
   /// Time integration operator
-  std::shared_ptr < DynamicConductionOperator > m_dyn_oper;
+  DynamicConductionOperator *m_dyn_oper;
 
   /// Linear solver parameters
   LinearSolverParameters m_lin_params;
@@ -104,7 +101,7 @@ public:
   void SetLinearSolverParameters(const LinearSolverParameters &params);
 
   /// Destructor
-  virtual ~ThermalSolver() = default;
+  virtual ~ThermalSolver();
 };
 
 /// The time dependent operator for advancing the discretized conduction ODE
@@ -113,43 +110,43 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator
 protected:
 
   /// Finite Element space
-  std::shared_ptr < mfem::ParFiniteElementSpace > m_fespace;
+  mfem::ParFiniteElementSpace *m_fespace;
 
   /// Grid function for boundary condition projection
   mfem::ParGridFunction *m_state_gf;
 
   /// Solver for the mass matrix
-  std::shared_ptr < mfem::CGSolver > m_M_solver;
+  mfem::CGSolver *m_M_solver;
 
   /// Solver for the T matrix
-  std::shared_ptr < mfem::CGSolver > m_T_solver;
+  mfem::CGSolver *m_T_solver;
 
   /// Preconditioner for the M matrix
-  std::shared_ptr < mfem::HypreSmoother > m_M_prec;
+  mfem::HypreSmoother *m_M_prec;
 
   /// Preconditioner for the T matrix
-  std::shared_ptr < mfem::HypreSmoother > m_T_prec;
+  mfem::HypreSmoother *m_T_prec;
 
   /// Pointer to the assembled M matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_M_mat;
+  mfem::HypreParMatrix *m_M_mat;
 
   /// Pointer to the eliminated M matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_M_e_mat;
+  mfem::HypreParMatrix *m_M_e_mat;
 
   /// Pointer to the assembled K matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_K_mat;
+  mfem::HypreParMatrix *m_K_mat;
 
   /// Pointer to the eliminated K matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_K_e_mat;
+  mfem::HypreParMatrix *m_K_e_mat;
 
   /// Pointer to the assembled T ( = M + dt K) matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_T_mat;
+  mfem::HypreParMatrix *m_T_mat;
 
   /// Pointer to the eliminated T matrix
-  std::shared_ptr < mfem::HypreParMatrix > m_T_e_mat;
+  mfem::HypreParMatrix *m_T_e_mat;
 
   /// Assembled RHS vector
-  std::shared_ptr < mfem::Vector > m_rhs;
+  mfem::Vector *m_rhs;
 
   /// RHS vector including essential boundary elimination
   mfem::Vector *m_bc_rhs;
@@ -173,18 +170,16 @@ protected:
 
 public:
   /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(std::shared_ptr < mfem::ParFiniteElementSpace > fespace, LinearSolverParameters &params);
+  DynamicConductionOperator(mfem::ParFiniteElementSpace *fespace, LinearSolverParameters &params);
 
   /// Set the mass matrix
-  void SetMMatrix(std::shared_ptr < mfem::HypreParMatrix > M_mat, 
-                  std::shared_ptr < mfem::HypreParMatrix > M_e_mat);
+  void SetMMatrix(mfem::HypreParMatrix *M_mat, mfem::HypreParMatrix *M_e_mat);
 
   /// Set the stiffness matrix
-  void SetKMatrix(std::shared_ptr < mfem::HypreParMatrix > K_mat, 
-                  std::shared_ptr < mfem::HypreParMatrix > K_e_mat);
+  void SetKMatrix(mfem::HypreParMatrix *K_mat, mfem::HypreParMatrix *K_e_mat);
 
   /// Set the load vector
-  void SetLoadVector(std::shared_ptr < mfem::Vector > rhs);
+  void SetLoadVector(mfem::Vector *rhs);
 
   /// Set the essential temperature boundary information
   void SetEssentialBCs(mfem::Coefficient *ess_bdr_coef, mfem::Array<int> &ess_bdr, mfem::Array<int> &ess_tdof_list);
@@ -204,4 +199,3 @@ public:
 
 
 #endif
-

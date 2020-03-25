@@ -9,8 +9,6 @@
 
 #include "mfem.hpp"
 
-#include <memory>
-
 // Option bundling enums
 
 enum class OutputType {
@@ -63,11 +61,11 @@ struct NonlinearSolverParameters {
 
 // Finite element information bundle
 struct FiniteElementState {
-  std::shared_ptr < mfem::ParFiniteElementSpace > space;
-  std::shared_ptr < mfem::FiniteElementCollection > coll;
-  std::shared_ptr < mfem::ParGridFunction > gf;
-  mfem::Vector true_vec;
-  mfem::ParMesh * mesh;
+  mfem::ParFiniteElementSpace* space = nullptr;
+  mfem::FiniteElementCollection* coll = nullptr;
+  mfem::ParGridFunction* gf = nullptr;
+  mfem::ParMesh* mesh = nullptr;
+  mfem::Vector* true_vec = nullptr;
   std::string name = "";
 };
 

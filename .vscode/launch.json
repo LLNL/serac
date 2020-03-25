@@ -15,6 +15,6 @@
             "stopAtEntry": true,
             "externalConsole": false,
             "MIMode": "gdb"
-        }
+        },
     ]
 }

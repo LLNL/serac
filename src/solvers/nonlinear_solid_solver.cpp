@@ -8,42 +8,42 @@
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
 
-const int num_fields = 2;
-
 NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh) :
-  BaseSolver(num_fields), velocity(m_state[0]), displacement(m_state[1]), m_H_form(nullptr), m_M_form(nullptr), m_S_form(nullptr),
+  BaseSolver(), m_H_form(nullptr), m_M_form(nullptr), m_S_form(nullptr),
   m_nonlinear_oper(nullptr), m_timedep_oper(nullptr), m_newton_solver(pmesh->GetComm()), m_J_solver(nullptr),
   m_J_prec(nullptr), m_viscosity(nullptr), m_model(nullptr)
 {
+  m_state.SetSize(2);
+  m_state[0].mesh = pmesh;
+  m_state[1].mesh = pmesh;
 
-  velocity.mesh = pmesh;
-  velocity.coll = std::make_shared< mfem::H1_FECollection >(order, pmesh->Dimension());
-  velocity.space = std::make_shared< mfem::ParFiniteElementSpace >(pmesh, velocity.coll.get(), pmesh->Dimension(), mfem::Ordering::byVDIM);
-  velocity.gf = std::make_shared < mfem::ParGridFunction >(velocity.space.get());
-  *velocity.gf = 0.0;
-  velocity.name = "velocity";
+  // Use vector-valued H1 nodal basis functions for the displacement and velocity field
+  m_state[0].coll = new mfem::H1_FECollection(order, pmesh->Dimension());
+  m_state[0].space = new mfem::ParFiniteElementSpace(pmesh, m_state[0].coll, pmesh->Dimension(), mfem::Ordering::byVDIM);
 
-  displacement.mesh = pmesh;
-  displacement.coll = std::make_shared< mfem::H1_FECollection >(order, pmesh->Dimension());
-  displacement.space = std::make_shared< mfem::ParFiniteElementSpace >(pmesh, displacement.coll.get(), pmesh->Dimension(), mfem::Ordering::byVDIM);
-  displacement.gf = std::make_shared < mfem::ParGridFunction >(displacement.space.get());
-  *displacement.gf = 0.0;
-  displacement.name = "displacement";
+  m_state[1].coll = new mfem::H1_FECollection(order, pmesh->Dimension());
+  m_state[1].space = new mfem::ParFiniteElementSpace(pmesh, m_state[1].coll, pmesh->Dimension(), mfem::Ordering::byVDIM);
+
+  // Initialize the grid functions
+  m_state[0].gf = new mfem::ParGridFunction(m_state[0].space);
+  *m_state[0].gf = 0.0;
+
+  m_state[1].gf = new mfem::ParGridFunction(m_state[1].space);
+  *m_state[1].gf = 0.0;
 
   // Initialize the true DOF vector
-  int true_size = velocity.space->TrueVSize();
+  int true_size = m_state[0].space->TrueVSize();
   mfem::Array<int> true_offset(3);
   true_offset[0] = 0;
   true_offset[1] = true_size;
   true_offset[2] = 2*true_size;
   m_block = new mfem::BlockVector(true_offset);
 
-  m_block->GetBlockView(0, velocity.true_vec);
-  velocity.true_vec = 0.0;
+  m_state[0].true_vec = &m_block->GetBlock(1);
+  *m_state[0].true_vec = 0.0;
 
-  m_block->GetBlockView(1, displacement.true_vec);
-  displacement.true_vec = 0.0;
-
+  m_state[1].true_vec = &m_block->GetBlock(0);
+  *m_state[1].true_vec = 0.0;
 }
 
 void NonlinearSolidSolver::SetDisplacementBCs(mfem::Array<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef)
@@ -89,7 +89,7 @@ void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &lin
 void NonlinearSolidSolver::CompleteSetup()
 {
   // Define the nonlinear form
-  m_H_form = new mfem::ParNonlinearForm(m_state[0].space.get());
+  m_H_form = new mfem::ParNonlinearForm(m_state[0].space);
 
   // Add the hyperelastic integrator
   if (m_timestepper == TimestepMethod::QuasiStatic) {
@@ -113,13 +113,13 @@ void NonlinearSolidSolver::CompleteSetup()
     const double ref_density = 1.0; // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
-    m_M_form = new mfem::ParBilinearForm(m_state[0].space.get());
+    m_M_form = new mfem::ParBilinearForm(m_state[0].space);
 
     m_M_form->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
     m_M_form->Assemble(0);
     m_M_form->Finalize(0);
 
-    m_S_form = new mfem::ParBilinearForm(m_state[0].space.get());
+    m_S_form = new mfem::ParBilinearForm(m_state[0].space);
     m_S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*m_viscosity));
     m_S_form->Assemble(0);
     m_S_form->Finalize(0);
@@ -131,7 +131,7 @@ void NonlinearSolidSolver::CompleteSetup()
                 "Attempting to use BoomerAMG with nodal ordering.");
     mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
     prec_amg->SetPrintLevel(m_lin_params.print_level);
-    prec_amg->SetElasticityOptions(m_state[0].space.get());
+    prec_amg->SetElasticityOptions(m_state[0].space);
     m_J_prec = prec_amg;
 
     mfem::GMRESSolver *J_gmres = new mfem::GMRESSolver(m_state[0].space->GetComm());
@@ -180,15 +180,15 @@ void NonlinearSolidSolver::CompleteSetup()
 void NonlinearSolidSolver::QuasiStaticSolve()
 {
   mfem::Vector zero;
-  m_newton_solver.Mult(zero, velocity.true_vec);
+  m_newton_solver.Mult(zero, *m_state[0].true_vec);
 }
 
 // Advance the timestep
 void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
 {
   // Initialize the true vector
-  velocity.gf->GetTrueDofs(velocity.true_vec);
-  displacement.gf->GetTrueDofs(displacement.true_vec);
+  m_state[0].gf->GetTrueDofs(*m_state[0].true_vec);
+  m_state[1].gf->GetTrueDofs(*m_state[1].true_vec);
 
   if (m_timestepper == TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
@@ -197,8 +197,8 @@ void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
   }
 
   // Distribute the shared DOFs
-  velocity.gf->SetFromTrueDofs(velocity.true_vec);
-  displacement.gf->SetFromTrueDofs(displacement.true_vec);
+  m_state[0].gf->SetFromTrueDofs(*m_state[0].true_vec);
+  m_state[1].gf->SetFromTrueDofs(*m_state[1].true_vec);
   m_cycle += 1;
 }
 

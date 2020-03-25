@@ -21,10 +21,6 @@ class NonlinearSolidReducedSystemOperator;
 class NonlinearSolidSolver : public BaseSolver
 {
 protected:
-
-  FiniteElementState & velocity;
-  FiniteElementState & displacement; 
- 
   /// The abstract nonlinear form
   mfem::ParNonlinearForm *m_H_form;
 
