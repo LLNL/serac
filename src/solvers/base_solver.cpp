@@ -4,193 +4,183 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "base_solver.hpp"
-#include "common/serac_types.hpp"
+#include "solvers/base_solver.hpp"
+
 #include <iostream>
 #include <fstream>
 
+#include "common/serac_types.hpp"
+
 BaseSolver::BaseSolver()
-  : m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr), m_output_type(OutputType::VisIt),
-    m_time(0.0), m_cycle(0), m_visit_dc(nullptr), m_gf_initialized(false)
+   : m_ess_bdr_coef(nullptr)
+   , m_nat_bdr_coef(nullptr)
+   , m_output_type(OutputType::VisIt)
+   , m_time(0.0)
+   , m_cycle(0)
+   , m_visit_dc(nullptr)
+   , m_gf_initialized(false)
 {
-  SetTimestepper(TimestepMethod::ForwardEuler);
+   SetTimestepper(TimestepMethod::ForwardEuler);
 }
 
-BaseSolver::BaseSolver(int n) : BaseSolver() { 
-  m_state.resize(n);
-}
+BaseSolver::BaseSolver(int n) : BaseSolver() { m_states.resize(n); }
 
-void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef)
+void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr,
+                                 mfem::VectorCoefficient *ess_bdr_vec_coef)
 {
-  m_ess_bdr = ess_bdr;
-  m_ess_bdr_vec_coef = ess_bdr_vec_coef;
+   m_ess_bdr          = ess_bdr;
+   m_ess_bdr_vec_coef = ess_bdr_vec_coef;
 }
 
 void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef)
 {
-  m_nat_bdr = nat_bdr;
-  m_nat_bdr_vec_coef = nat_bdr_vec_coef;
+   m_nat_bdr          = nat_bdr;
+   m_nat_bdr_vec_coef = nat_bdr_vec_coef;
 }
 
 void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
 {
-  m_ess_bdr = ess_bdr;
-  m_ess_bdr_coef = ess_bdr_coef;
+   m_ess_bdr      = ess_bdr;
+   m_ess_bdr_coef = ess_bdr_coef;
 }
 
 void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
 {
-  m_nat_bdr = nat_bdr;
-  m_nat_bdr_coef = nat_bdr_coef;
+   m_nat_bdr      = nat_bdr;
+   m_nat_bdr_coef = nat_bdr_coef;
 }
 
-void BaseSolver::ProjectState(mfem::Array<mfem::Coefficient*> state_coef)
+void BaseSolver::ProjectState(std::vector<mfem::Coefficient *> state_coef)
 {
-  MFEM_ASSERT(state_coef.Size() == m_state.size(),
-              "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
+   MFEM_ASSERT(state_coef.size() == m_states.size(),
+               "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
 
-  for (int i=0; i<state_coef.Size(); ++i) {
-    m_state[i].gf->ProjectCoefficient(*state_coef[i]);
-  }
+   for (size_t i = 0; i < state_coef.size(); ++i)
+   {
+      m_states[i].gf->ProjectCoefficient(*state_coef[i]);
+   }
 }
 
-void BaseSolver::ProjectState(mfem::Array<mfem::VectorCoefficient*> state_vec_coef)
+void BaseSolver::ProjectState(std::vector<mfem::VectorCoefficient *> state_vec_coef)
 {
-  MFEM_ASSERT(state_vec_coef.Size() == m_state.size(),
-              "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
+   MFEM_ASSERT(state_vec_coef.size() == m_states.size(),
+               "State and coefficient bundles not the same size in BaseSolver::ProjectState.");
 
-  for (int i=0; i<state_vec_coef.Size(); ++i) {
-    m_state[i].gf->ProjectCoefficient(*state_vec_coef[i]);
-  }
+   for (size_t i = 0; i < state_vec_coef.size(); ++i)
+   {
+      m_states[i].gf->ProjectCoefficient(*state_vec_coef[i]);
+   }
 }
 
 void BaseSolver::SetState(const std::vector<FiniteElementState> &state)
 {
-  MFEM_ASSERT(state.size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
-  m_state = state;
+   MFEM_ASSERT(state.size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
+   m_states = state;
 
-  MPI_Comm_rank(m_state.begin()->space->GetComm(), &m_rank);
+   MPI_Comm_rank(m_states[0].space->GetComm(), &m_rank);
 }
 
-std::vector< FiniteElementState > BaseSolver::GetState() const
-{
-  return m_state;
-}
+std::vector<FiniteElementState> BaseSolver::GetState() const { return m_states; }
 
 void BaseSolver::SetTimestepper(const TimestepMethod timestepper)
 {
-  m_timestepper = timestepper;
+   m_timestepper = timestepper;
 
-  switch (m_timestepper) {
-  case TimestepMethod::QuasiStatic :
-    m_ode_solver = nullptr;
-    break;
-  case TimestepMethod::BackwardEuler  :
-    m_ode_solver = std::make_shared< mfem::BackwardEulerSolver >();
-    break;
-  case TimestepMethod::SDIRK33    :
-    m_ode_solver = std::make_shared< mfem::SDIRK33Solver >();
-    break;
-  case TimestepMethod::ForwardEuler :
-    m_ode_solver = std::make_shared< mfem::ForwardEulerSolver >();
-    break;
-  case TimestepMethod::RK2    :
-    m_ode_solver = std::make_shared< mfem::RK2Solver >(0.5);
-    break;
-  case TimestepMethod::RK3SSP   :
-    m_ode_solver = std::make_shared< mfem::RK3SSPSolver >();
-    break;
-  case TimestepMethod::RK4    :
-    m_ode_solver = std::make_shared< mfem::RK4Solver >();
-    break;
-  case TimestepMethod::GeneralizedAlpha :
-    m_ode_solver = std::make_shared< mfem::GeneralizedAlphaSolver >(0.5);
-    break;
-  case TimestepMethod::ImplicitMidpoint :
-    m_ode_solver = std::make_shared< mfem::ImplicitMidpointSolver >();
-    break;
-  case TimestepMethod::SDIRK23    :
-    m_ode_solver = std::make_shared< mfem::SDIRK23Solver >();
-    break;
-  case TimestepMethod::SDIRK34    :
-    m_ode_solver = std::make_shared< mfem::SDIRK34Solver >();
-    break;
-  default:
-    mfem::mfem_error("Timestep method not recognized!");
-  }
+   switch (m_timestepper)
+   {
+      case TimestepMethod::QuasiStatic: m_ode_solver = nullptr; break;
+      case TimestepMethod::BackwardEuler:
+         m_ode_solver = std::make_shared<mfem::BackwardEulerSolver>();
+         break;
+      case TimestepMethod::SDIRK33: m_ode_solver = std::make_shared<mfem::SDIRK33Solver>(); break;
+      case TimestepMethod::ForwardEuler:
+         m_ode_solver = std::make_shared<mfem::ForwardEulerSolver>();
+         break;
+      case TimestepMethod::RK2: m_ode_solver = std::make_shared<mfem::RK2Solver>(0.5); break;
+      case TimestepMethod::RK3SSP: m_ode_solver = std::make_shared<mfem::RK3SSPSolver>(); break;
+      case TimestepMethod::RK4: m_ode_solver = std::make_shared<mfem::RK4Solver>(); break;
+      case TimestepMethod::GeneralizedAlpha:
+         m_ode_solver = std::make_shared<mfem::GeneralizedAlphaSolver>(0.5);
+         break;
+      case TimestepMethod::ImplicitMidpoint:
+         m_ode_solver = std::make_shared<mfem::ImplicitMidpointSolver>();
+         break;
+      case TimestepMethod::SDIRK23: m_ode_solver = std::make_shared<mfem::SDIRK23Solver>(); break;
+      case TimestepMethod::SDIRK34: m_ode_solver = std::make_shared<mfem::SDIRK34Solver>(); break;
+      default: mfem::mfem_error("Timestep method not recognized!");
+   }
 }
 
-void BaseSolver::SetTime(const double time)
+void BaseSolver::SetTime(const double time) { m_time = time; }
+
+double BaseSolver::GetTime() const { return m_time; }
+
+int BaseSolver::GetCycle() const { return m_cycle; }
+
+void BaseSolver::InitializeOutput(const OutputType output_type,
+                                  std::string root_name,
+                                  std::vector<std::string> names)
 {
-  m_time = time;
-}
+   MFEM_ASSERT(names.size() == m_states.size(),
+               "State vector and name arrays are not the same size.");
 
-double BaseSolver::GetTime() const
-{
-  return m_time;
-}
+   m_root_name = root_name;
 
-int BaseSolver::GetCycle() const
-{
-  return m_cycle;
-}
+   m_output_type = output_type;
 
-void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name, mfem::Array < std::string > names)
-{
-  MFEM_ASSERT(names.Size() == m_state.size(), "State vector and name arrays are not the same size.");
+   switch (m_output_type)
+   {
+      case OutputType::VisIt:
+      {
+         m_visit_dc = new mfem::VisItDataCollection(m_root_name, m_states[0].mesh);
 
-  m_root_name = root_name;
+         for (size_t i = 0; i < names.size(); i++)
+         {
+            m_visit_dc->RegisterField(names[i], m_states[i].gf.get());
+         }
+         break;
+      }
 
-  m_output_type = output_type;
+      case OutputType::GLVis:
+      {
+         std::ostringstream mesh_name;
+         mesh_name << m_root_name << "-mesh." << std::setfill('0') << std::setw(6) << m_rank - 1;
+         std::ofstream omesh(mesh_name.str().c_str());
+         omesh.precision(8);
+         m_states[0].mesh->Print(omesh);
+         break;
+      }
 
-  switch(m_output_type) {
-  case OutputType::VisIt: {
-    m_visit_dc = new mfem::VisItDataCollection(m_root_name, m_state.begin()->mesh);
-
-    for (int i = 0; i < names.Size(); i++) {
-      m_visit_dc->RegisterField(names[i], m_state[i].gf.get());
-    }
-    break;
-  }
-
-  case OutputType::GLVis: {
-    std::ostringstream mesh_name;
-    mesh_name << m_root_name << "-mesh." << std::setfill('0') << std::setw(6) << m_rank - 1;
-    std::ofstream omesh(mesh_name.str().c_str());
-    omesh.precision(8);
-    m_state[0].mesh->Print(omesh);
-    break;
-  }
-
-  default:
-    mfem::mfem_error("OutputType not recognized!");
-  }
+      default: mfem::mfem_error("OutputType not recognized!");
+   }
 }
 
 void BaseSolver::OutputState() const
 {
-  switch(m_output_type) {
-  case OutputType::VisIt: {
-    m_visit_dc->SetCycle(m_cycle);
-    m_visit_dc->SetTime(m_time);
-    m_visit_dc->Save();
-    break;
-  }
+   switch (m_output_type)
+   {
+      case OutputType::VisIt:
+      {
+         m_visit_dc->SetCycle(m_cycle);
+         m_visit_dc->SetTime(m_time);
+         m_visit_dc->Save();
+         break;
+      }
 
-  case OutputType::GLVis: {
+      case OutputType::GLVis:
+      {
+         for (auto &state : m_states)
+         {
+            std::ostringstream sol_name;
+            sol_name << m_root_name << "-" << state.name << "." << std::setfill('0') << std::setw(6)
+                     << m_cycle << "." << std::setfill('0') << std::setw(6) << m_rank - 1;
+            std::ofstream osol(sol_name.str().c_str());
+            osol.precision(8);
+            state.gf->Save(osol);
+         }
+         break;
+      }
 
-    for (auto & state : m_state) {
-      std::ostringstream sol_name;
-      sol_name << m_root_name << "-" << state.name << "." << std::setfill('0') << std::setw(
-                 6) << m_cycle << "." << std::setfill('0') << std::setw(6) << m_rank - 1;
-      std::ofstream osol(sol_name.str().c_str());
-      osol.precision(8);
-      state.gf->Save(osol);
-    }
-    break;
-  }
-
-  default:
-    mfem::mfem_error("OutputType not recognized!");
-  }
+      default: mfem::mfem_error("OutputType not recognized!");
+   }
 }

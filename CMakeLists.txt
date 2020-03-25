@@ -38,9 +38,9 @@ endif()
 
 # Tune BLT to our needs
 if (NOT BLT_CXX_STD)
-    set(BLT_CXX_STD "c++11" CACHE STRING "")
+    set(BLT_CXX_STD "c++14" CACHE STRING "")
 endif()
-set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
+set(ENABLE_ASTYLE      OFF CACHE BOOL "")
 set(ENABLE_CLANGQUERY  OFF CACHE BOOL "")
 set(ENABLE_UNCRUSTIFY  OFF CACHE BOOL "")
 
@@ -83,5 +83,5 @@ endif()
 #------------------------------------------------------------------------------
 
 serac_add_code_checks(PREFIX   serac
-                      INCLUDES src tests
-                      EXCLUDES cmake/blt)
+                      INCLUDES /src/ /tests/
+                      EXCLUDES cmake/blt uberenv_libs)

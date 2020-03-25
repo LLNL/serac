@@ -16,37 +16,39 @@
 class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator
 {
 private:
-  mfem::HyperelasticModel *model;
+   mfem::HyperelasticModel *model;
 
-  //   Jrt: the Jacobian of the target-to-reference-element transformation.
-  //   Jpr: the Jacobian of the reference-to-physical-element transformation.
-  //   Jpt: the Jacobian of the target-to-physical-element transformation.
-  //     P: represents dW_d(Jtp) (dim x dim).
-  //   DSh: gradients of reference shape functions (dof x dim).
-  //    DS: gradients of the shape functions in the target (stress-free)
-  //        configuration (dof x dim).
-  // PMatI: coordinates of the deformed configuration (dof x dim).
-  // PMatO: reshaped view into the local element contribution to the operator
-  //        output - the result of AssembleElementVector() (dof x dim).
-  mfem::DenseMatrix DSh, DS, Jrt, Jpr, Jpt, P, PMatI, PMatO;
+   //   Jrt: the Jacobian of the target-to-reference-element transformation.
+   //   Jpr: the Jacobian of the reference-to-physical-element transformation.
+   //   Jpt: the Jacobian of the target-to-physical-element transformation.
+   //     P: represents dW_d(Jtp) (dim x dim).
+   //   DSh: gradients of reference shape functions (dof x dim).
+   //    DS: gradients of the shape functions in the target (stress-free)
+   //        configuration (dof x dim).
+   // PMatI: coordinates of the deformed configuration (dof x dim).
+   // PMatO: reshaped view into the local element contribution to the operator
+   //        output - the result of AssembleElementVector() (dof x dim).
+   mfem::DenseMatrix DSh, DS, Jrt, Jpr, Jpt, P, PMatI, PMatO;
 
 public:
-  /** @param[in] m  HyperelasticModel that will be integrated. */
-  IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model(m) { }
+   /** @param[in] m  HyperelasticModel that will be integrated. */
+   IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model(m) {}
 
-  /** @brief Computes the integral of W(Jacobian(Trt)) over a target zone
+   /** @brief Computes the integral of W(Jacobian(Trt)) over a target zone
       @param[in] el     Type of FiniteElement.
       @param[in] Ttr    Represents ref->target coordinates transformation.
       @param[in] elfun  Physical coordinates of the zone. */
-  virtual double GetElementEnergy(const mfem::FiniteElement &el,
-                                  mfem::ElementTransformation &Ttr,
-                                  const mfem::Vector &elfun);
-
-  virtual void AssembleElementVector(const mfem::FiniteElement &el,
-                                     mfem::ElementTransformation &Ttr,
-                                     const mfem::Vector &elfun, mfem::Vector &elvect);
-
-  virtual void AssembleElementGrad(const mfem::FiniteElement &el,
+   virtual double GetElementEnergy(const mfem::FiniteElement &el,
                                    mfem::ElementTransformation &Ttr,
-                                   const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
+                                   const mfem::Vector &elfun);
+
+   virtual void AssembleElementVector(const mfem::FiniteElement &el,
+                                      mfem::ElementTransformation &Ttr,
+                                      const mfem::Vector &elfun,
+                                      mfem::Vector &elvect);
+
+   virtual void AssembleElementGrad(const mfem::FiniteElement &el,
+                                    mfem::ElementTransformation &Ttr,
+                                    const mfem::Vector &elfun,
+                                    mfem::DenseMatrix &elmat);
 };

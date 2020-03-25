@@ -7,8 +7,9 @@
 #ifndef LINEARELASTIC_SOLVER
 #define LINEARELASTIC_SOLVER
 
+#include "solvers/base_solver.hpp"
+
 #include "mfem.hpp"
-#include "base_solver.hpp"
 
 /** This is a generic linear elasticity oeprator of the form
  *
@@ -20,75 +21,74 @@
 class ElasticitySolver : public BaseSolver
 {
 protected:
-  
-  FiniteElementState & displacement;
+   FiniteElementState &displacement;
 
-  /// Stiffness bilinear form
-  mfem::ParBilinearForm *m_K_form;
+   /// Stiffness bilinear form
+   mfem::ParBilinearForm *m_K_form;
 
-  /// Load bilinear form
-  mfem::ParLinearForm *m_l_form;
+   /// Load bilinear form
+   mfem::ParLinearForm *m_l_form;
 
-  /// Stiffness matrix
-  mfem::HypreParMatrix *m_K_mat;
+   /// Stiffness matrix
+   mfem::HypreParMatrix *m_K_mat;
 
-  /// Eliminated stiffness matrix
-  mfem::HypreParMatrix *m_K_e_mat;
+   /// Eliminated stiffness matrix
+   mfem::HypreParMatrix *m_K_e_mat;
 
-  /// RHS vector
-  mfem::HypreParVector *m_rhs;
+   /// RHS vector
+   mfem::HypreParVector *m_rhs;
 
-  /// Eliminated RHS vector
-  mfem::HypreParVector *m_bc_rhs;
+   /// Eliminated RHS vector
+   mfem::HypreParVector *m_bc_rhs;
 
-  /// Solver for the stiffness matrix
-  mfem::Solver *m_K_solver;
+   /// Solver for the stiffness matrix
+   mfem::Solver *m_K_solver;
 
-  /// Preconditioner for the stiffness
-  mfem::Solver *m_K_prec;
+   /// Preconditioner for the stiffness
+   mfem::Solver *m_K_prec;
 
-  /// Lame mu parameter coefficient
-  mfem::Coefficient *m_mu;
+   /// Lame mu parameter coefficient
+   mfem::Coefficient *m_mu;
 
-  /// Lame lambda parameter coefficient
-  mfem::Coefficient *m_lambda;
+   /// Lame lambda parameter coefficient
+   mfem::Coefficient *m_lambda;
 
-  /// Body source coefficient
-  mfem::VectorCoefficient *m_body_force;
+   /// Body source coefficient
+   mfem::VectorCoefficient *m_body_force;
 
-  /// Linear solver parameters
-  LinearSolverParameters m_lin_params;
+   /// Linear solver parameters
+   LinearSolverParameters m_lin_params;
 
-  /// Driver for a quasi-static solve
-  void QuasiStaticSolve();
+   /// Driver for a quasi-static solve
+   void QuasiStaticSolve();
 
 public:
-  /// Constructor using order and mesh
-  ElasticitySolver(int order, mfem::ParMesh *pmesh);
+   /// Constructor using order and mesh
+   ElasticitySolver(int order, mfem::ParMesh *pmesh);
 
-  /// Set the vector-valued essential displacement boundary conditions
-  void SetDisplacementBCs(mfem::Array<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef);
+   /// Set the vector-valued essential displacement boundary conditions
+   void SetDisplacementBCs(mfem::Array<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef);
 
-  /// Set the vector-valued natural traction boundary conditions
-  void SetTractionBCs(mfem::Array<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef);
+   /// Set the vector-valued natural traction boundary conditions
+   void SetTractionBCs(mfem::Array<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef);
 
-  /// Driver for advancing the timestep
-  void AdvanceTimestep(double &dt);
+   /// Driver for advancing the timestep
+   void AdvanceTimestep(double &dt);
 
-  /// Set the elastic lame parameters
-  void SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu);
+   /// Set the elastic lame parameters
+   void SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu);
 
-  /// Set the vector-valued body force coefficient
-  void SetBodyForce(mfem::VectorCoefficient &force);
+   /// Set the vector-valued body force coefficient
+   void SetBodyForce(mfem::VectorCoefficient &force);
 
-  /// Finish the setup and allocate the associate data structures
-  void CompleteSetup();
+   /// Finish the setup and allocate the associate data structures
+   void CompleteSetup();
 
-  /// Set the linear solver parameters object
-  void SetLinearSolverParameters(const LinearSolverParameters &params);
+   /// Set the linear solver parameters object
+   void SetLinearSolverParameters(const LinearSolverParameters &params);
 
-  /// The destructor
-  virtual ~ElasticitySolver();
+   /// The destructor
+   virtual ~ElasticitySolver();
 };
 
 #endif
