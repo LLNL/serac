@@ -119,7 +119,7 @@ command as follow:
 Building Serac
 --------------
 
-Serac is a CMake build system that wraps its configure step with a script
+Serac uses a CMake build system that wraps its configure step with a script
 called ``config-build.py``.  This script creates a build directory and
 runs the necessary CMake command for you. You just need to point the script
 at the generated or a provided host-config. This can be accomplished with
