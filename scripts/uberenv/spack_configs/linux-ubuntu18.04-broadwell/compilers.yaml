@@ -6,7 +6,10 @@ compilers:
       cxx: /usr/bin/clang++
       f77: /usr/bin/gfortran
       fc: /usr/bin/gfortran
-    flags: {}
+    flags:
+      cflags: -fPIC
+      cxxflags: -fPIC
+      cppflags: -fPIC
     operating_system: ubuntu18.04
     target: x86_64
     modules: []
