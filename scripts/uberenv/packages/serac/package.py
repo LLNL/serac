@@ -44,13 +44,20 @@ def cmake_cache_option(name, boolean_value, comment=""):
 
 
 def get_spec_path(spec, package_name, path_replacements = {}, use_bin = False) :
-    """Extracts the prefix path for the given spack package"""
+    """Extracts the prefix path for the given spack package
+       path_replacements is a dictionary with string replacements for the path.
+    """
 
     if not use_bin:
         path = spec[package_name].prefix
     else:
         path = spec[package_name].prefix.bin
-    path = path_replace(path, path_replacements)
+
+    path = os.path.realpath(path)
+
+    for key in path_replacements:
+        path = path.replace(key, path_replacements[key])
+
     return path
 
 
@@ -61,7 +68,7 @@ def path_replace(path, path_replacements):
     return path
 
 
-class Serac(CMakePackage):
+class Serac(Package):
     """FIXME: Put a proper description of your package here."""
 
     homepage = "https://www.github.com/LLNL/serac"
@@ -72,12 +79,22 @@ class Serac(CMakePackage):
     variant('debug', default=False,
             description='Enable runtime safety and debug checks')
 
+    variant("devtools",  default=False,
+            description="Build development tools (such as Sphinx, AStyle, etc...)")
+
     variant('glvis', default=False,
             description='Build the glvis visualization executable')
 
     # Basic dependencies
     depends_on("mpi")
 
+    # Devtool dependencies these need to match serac_devtools/package.py
+    depends_on('astyle', when="+devtools")
+    depends_on('cmake', when="+devtools")
+    depends_on('cppcheck', when="+devtools")
+    depends_on('doxygen', when="+devtools")
+    depends_on('python', when="+devtools")
+    depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
     depends_on("mfem~shared+hypre+metis+superlu-dist+lapack+mpi")
@@ -101,19 +118,20 @@ class Serac(CMakePackage):
 
     phases = ['hostconfig','cmake','build','install']
 
-    def cmake_args(self):
-        # TODO: use host-config
-        spec = self.spec
-        args = []
+    def _get_sys_type(self, spec):
+        sys_type = spec.architecture
+        # if on llnl systems, we can use the SYS_TYPE
+        if "SYS_TYPE" in env:
+            sys_type = env["SYS_TYPE"]
+        return sys_type
 
-        args.append(
-                '-DCMAKE_BUILD_TYPE:=%s' % (
-                'Debug' if '+debug' in spec else 'Release')),
-
-        args.append(
-            '-DMFEM_DIR={}'.format(spec['mfem'].prefix)
-        )
-        return args
+    def _get_host_config_path(self, spec):
+        host_config_path = "%s-%s-%s.cmake" % (socket.gethostname().rstrip('1234567890'),
+                                               self._get_sys_type(spec),
+                                               spec.compiler)
+        dest_dir = self.stage.source_path
+        host_config_path = os.path.abspath(pjoin(dest_dir, host_config_path))
+        return host_config_path
 
     def hostconfig(self, spec, prefix, py_site_pkgs_dir=None):
         """
@@ -161,15 +179,13 @@ class Serac(CMakePackage):
         ##############################################
 
         cmake_exe = spec['cmake'].command.path
-        compiler_string = str(spec.compiler).strip('%')
-        host_config_filename = "{0}.cmake".format(compiler_string)
-        host_config_path = os.path.abspath(os.path.join(env["SPACK_DEBUG_LOG_DIR"],
-                                                        host_config_filename))
+
+        host_config_path = self._get_host_config_path(spec)
         cfg = open(host_config_path, "w")
         cfg.write("####################################################################\n")
         cfg.write("# Generated host-config - Edit at own risk!\n")
         cfg.write("####################################################################\n")
-        cfg.write("# Copyright (c) 2019, Lawrence Livermore National Security, LLC and\n")
+        cfg.write("# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and\n")
         cfg.write("# other Serac Project Developers. See the top-level LICENSE file for\n")
         cfg.write("# details.\n")
         cfg.write("#\n")
@@ -241,6 +257,46 @@ class Serac(CMakePackage):
             glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
             cfg.write(cmake_cache_entry("GLVIS_EXECUTABLE", pjoin(glvis_bin_dir, "glvis")))
 
+        ##################################
+        # Devtools
+        ##################################
+
+        cfg.write("#------------------{}\n".format("-"*60))
+        cfg.write("# Devtools\n")
+        cfg.write("#------------------{}\n\n".format("-"*60))
+
+        # Add common prefix to path replacement list
+        if "+devtools" in spec:
+            # Grab common devtools root and strip the trailing slash
+            path1 = os.path.realpath(spec["astyle"].prefix)
+            path2 = os.path.realpath(spec["doxygen"].prefix)
+            devtools_root = os.path.commonprefix([path1, path2])[:-1]
+            path_replacements[devtools_root] = "${DEVTOOLS_ROOT}"
+            cfg.write("# Root directory for generated developer tools\n")
+            cfg.write(cmake_cache_entry("DEVTOOLS_ROOT",devtools_root))
+
+        if "doxygen" in spec or "py-sphinx" in spec:
+            cfg.write(cmake_cache_option("ENABLE_DOCS", True))
+
+            if "doxygen" in spec:
+                doxygen_bin_dir = get_spec_path(spec, "doxygen", path_replacements, use_bin=True)
+                cfg.write(cmake_cache_entry("DOXYGEN_EXECUTABLE", pjoin(doxygen_bin_dir, "doxygen")))
+
+            if "py-sphinx" in spec:
+                python_bin_dir = get_spec_path(spec, "python", path_replacements, use_bin=True)
+                cfg.write(cmake_cache_entry("SPHINX_EXECUTABLE", pjoin(python_bin_dir, "sphinx-build")))
+        else:
+            cfg.write(cmake_cache_option("ENABLE_DOCS", False))
+
+        if "astyle" in spec:
+            astyle_bin_dir = get_spec_path(spec, "astyle", path_replacements, use_bin=True)
+            cfg.write(cmake_cache_entry("ASTYLE_EXECUTABLE", pjoin(astyle_bin_dir, "astyle")))
+
+        if "cppcheck" in spec:
+            cppcheck_bin_dir = get_spec_path(spec, "cppcheck", path_replacements, use_bin=True)
+            cfg.write(cmake_cache_entry("CPPCHECK_EXECUTABLE", pjoin(cppcheck_bin_dir, "cppcheck")))
+
+
         #######################
         # Close and save
         #######################
@@ -251,3 +307,37 @@ class Serac(CMakePackage):
         mkdirp(prefix)
         install(host_config_path, prefix)
         print("Spack generated Serac host-config file: {0}".format(host_config_path))
+
+
+    def configure(self, spec, prefix):
+        with working_dir('spack-build', create=True):
+            host_config_path = self._get_host_config_path(spec)
+
+            cmake_args = []
+            cmake_args.extend(std_cmake_args)
+            cmake_args.extend(["-C", host_config_path, "../src"])
+            print("Configuring Serac...")
+            cmake(*cmake_args)
+
+
+    def build(self, spec, prefix):
+        with working_dir('spack-build'):
+            print("Building Serac...")
+            make()
+
+
+    @run_after('build')
+    @on_package_attributes(run_tests=True)
+    def test(self):
+        with working_dir('spack-build'):
+            print("Running Axom's Unit Tests...")
+            make("test")
+
+
+    def install(self, spec, prefix):
+        with working_dir('spack-build'):
+            make("install")
+            # install copy of host config for provenance
+            print("Installing Serac's CMake Host Config File...")
+            host_config_path = self._get_host_config_path(spec)
+            install(host_config_path, prefix)
