@@ -2,7 +2,7 @@ packages:
   all:
     compiler: [gcc, clang]
     providers:
-      mpi: [mpich, openmpi]
+      mpi: [openmpi]
       blas: [openblas]
       lapack: [openblas]
       gl: [opengl]
