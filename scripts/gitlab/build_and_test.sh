@@ -20,8 +20,14 @@ echo "~~~~~ Project Dir: ${project_dir}"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 
+# Dependencies
+if [[ "${1}" != "--build-only" && "${1}" != "--test-only" ]]
+then
+    python scripts/uberenv/uberenv.py --spec=${SPEC}
+fi
+
 # Build
-if [[ "${1}" != "--test-only" ]]
+if [[ "${1}" != "--deps-only" && "${1}" != "--test-only" ]]
 then
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Building Serac"
@@ -40,7 +46,7 @@ then
 fi
 
 # Test
-if [[ "${1}" != "--build-only" ]]
+if [[ "${1}" != "--deps-only" && "${1}" != "--build-only" ]]
 then
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Testing Serac"
