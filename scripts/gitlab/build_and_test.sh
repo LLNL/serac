@@ -8,9 +8,10 @@
 
 set -e
 
+hostname="$(hostname)"
 project_dir="$(pwd)"
 build_dir="${BUILD_ROOT}/build_${SYS_TYPE}_${COMPILER}"
-hostconfig="${BUILD_ROOT}/uberenv_libs/${COMPILER}.cmake"
+hostconfig="${BUILD_ROOT}/${hostname//[0-9]/}-${SYS_TYPE}-${COMPILER}.cmake"
 
 # Build
 if [[ "${1}" != "--test-only" ]]
