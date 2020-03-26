@@ -7,3 +7,4 @@ spack-build*
 /src/docs/doxygen/xml/
 /src/docs/sphinx/_build/
 *.cmake
+.vscode/
