@@ -38,11 +38,11 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh) :
   true_offset[2] = 2*true_size;
   m_block = new mfem::BlockVector(true_offset);
 
-  m_block->GetBlockView(0, velocity.true_vec);
-  velocity.true_vec = 0.0;
-
-  m_block->GetBlockView(1, displacement.true_vec);
+  m_block->GetBlockView(0, displacement.true_vec);
   displacement.true_vec = 0.0;
+
+  m_block->GetBlockView(1, velocity.true_vec);
+  velocity.true_vec = 0.0;
 
 }
 
