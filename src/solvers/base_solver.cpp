@@ -10,8 +10,8 @@
 #include <fstream>
 
 BaseSolver::BaseSolver()
-  : m_ess_bdr_coef(nullptr), m_nat_bdr_coef(nullptr), m_output_type(OutputType::VisIt),
-    m_time(0.0), m_cycle(0), m_visit_dc(nullptr), m_gf_initialized(false)
+  : m_ess_bdr_coef(nullptr), m_ess_bdr_vec_coef(nullptr), m_nat_bdr_coef(nullptr), m_nat_bdr_vec_coef(nullptr),
+    m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0), m_visit_dc(nullptr), m_gf_initialized(false)
 {
   SetTimestepper(TimestepMethod::ForwardEuler);
 }
