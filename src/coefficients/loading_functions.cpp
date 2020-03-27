@@ -4,12 +4,14 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "coefficients/loading_functions.hpp"
+#include "loading_functions.hpp"
 
-void ReferenceConfiguration(const mfem::Vector &x, mfem::Vector &y)
-{
+void ReferenceConfiguration(const mfem::Vector &x, mfem::Vector &y) {
   // set the reference, stress free, configuration
   y = x;
 }
 
-void InitialDeformation(__attribute__((unused)) const mfem::Vector &x, mfem::Vector &y) { y = 0.0; }
+void InitialDeformation(__attribute__((unused)) const mfem::Vector &x,
+                        mfem::Vector &                              y) {
+  y = 0.0;
+}

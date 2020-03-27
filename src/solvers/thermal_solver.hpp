@@ -7,8 +7,7 @@
 #ifndef CONDUCTION_SOLVER
 #define CONDUCTION_SOLVER
 
-#include "solvers/base_solver.hpp"
-
+#include "base_solver.hpp"
 #include "mfem.hpp"
 
 // Forward declaration
@@ -20,9 +19,8 @@ class DynamicConductionOperator;
  *
  *  where M is a mass matrix, K is a stiffness matrix, and f is a
  *  thermal load vector. */
-class ThermalSolver : public BaseSolver
-{
-  protected:
+class ThermalSolver : public BaseSolver {
+ protected:
   FiniteElementState &temperature;
 
   /// Mass bilinear form object
@@ -73,12 +71,13 @@ class ThermalSolver : public BaseSolver
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
 
-  public:
+ public:
   /// Constructor from order and parallel mesh
   ThermalSolver(int order, mfem::ParMesh *pmesh);
 
   /// Set essential temperature boundary conditions (strongly enforced)
-  void SetTemperatureBCs(mfem::Array<int> &temp_bdr, mfem::Coefficient *temp_bdr_coef);
+  void SetTemperatureBCs(mfem::Array<int> & temp_bdr,
+                         mfem::Coefficient *temp_bdr_coef);
 
   /// Set flux boundary conditions (weakly enforced)
   void SetFluxBCs(mfem::Array<int> &flux_bdr, mfem::Coefficient *flux_bdr_coef);
@@ -96,8 +95,8 @@ class ThermalSolver : public BaseSolver
   void SetSource(mfem::Coefficient &source);
 
   /** Complete the initialization and allocation of the data structures. This
-   *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic = false,
-   *  do not allocate the mass matrix or dynamic operator */
+   *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
+   * = false, do not allocate the mass matrix or dynamic operator */
   void CompleteSetup();
 
   /// Set the linear solver parameters for both the M and K operators
@@ -108,9 +107,8 @@ class ThermalSolver : public BaseSolver
 };
 
 /// The time dependent operator for advancing the discretized conduction ODE
-class DynamicConductionOperator : public mfem::TimeDependentOperator
-{
-  protected:
+class DynamicConductionOperator : public mfem::TimeDependentOperator {
+ protected:
   /// Finite Element space
   std::shared_ptr<mfem::ParFiniteElementSpace> m_fespace;
 
@@ -170,10 +168,11 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator
   /// Storage of old dt use to determine if we should recompute the T matrix
   mutable double m_old_dt;
 
-  public:
+ public:
   /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
-                            LinearSolverParameters &params);
+  DynamicConductionOperator(
+      std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
+      LinearSolverParameters &                     params);
 
   /// Set the mass matrix
   void SetMMatrix(std::shared_ptr<mfem::HypreParMatrix> M_mat,
@@ -188,8 +187,8 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator
 
   /// Set the essential temperature boundary information
   void SetEssentialBCs(mfem::Coefficient *ess_bdr_coef,
-                       mfem::Array<int> &ess_bdr,
-                       mfem::Array<int> &ess_tdof_list);
+                       mfem::Array<int> & ess_bdr,
+                       mfem::Array<int> & ess_tdof_list);
 
   /** Calculate du_dt = M^-1 (-Ku + f).
    *  This is all that is needed for explicit methods */
@@ -197,9 +196,10 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator
 
   /** Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
    *  for du_dt. This is needed for implicit methods */
-  virtual void ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &du_dt);
+  virtual void ImplicitSolve(const double dt, const mfem::Vector &u,
+                             mfem::Vector &du_dt);
 
-  ///Destructor
+  /// Destructor
   virtual ~DynamicConductionOperator();
 };
 

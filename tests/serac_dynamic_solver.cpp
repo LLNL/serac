@@ -6,9 +6,10 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+
 #include "mfem.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
-#include <fstream>
 
 void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
 
@@ -16,20 +17,18 @@ void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
 
 const char *mesh_file = "NO_MESH_GIVEN";
 
-inline bool file_exists(const char *path)
-{
+inline bool file_exists(const char *path) {
   struct stat buffer;
   return (stat(path, &buffer) == 0);
 }
 
-TEST(dynamic_solver, dyn_solve)
-{
+TEST(dynamic_solver, dyn_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  mfem::Mesh *mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh *  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
@@ -52,7 +51,7 @@ TEST(dynamic_solver, dyn_solve)
   mfem::ConstantCoefficient visc(0.0);
 
   // define the inital state coefficients
-  std::vector<mfem::VectorCoefficient *> initialstate(2);
+  mfem::Array<mfem::VectorCoefficient *> initialstate(2);
 
   mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
   mfem::VectorFunctionCoefficient velo(dim, InitialVelocity);
@@ -95,8 +94,7 @@ TEST(dynamic_solver, dyn_solve)
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
   bool last_step = false;
-  for (int ti = 1; !last_step; ti++)
-  {
+  for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
     t += dt_real;
     last_step = (t >= t_final - 1e-8 * dt);
@@ -122,8 +120,7 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   int result = 0;
 
   ::testing::InitGoogleTest(&argc, argv);
@@ -136,17 +133,14 @@ int main(int argc, char *argv[])
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
   args.Parse();
-  if (!args.Good())
-  {
-    if (myid == 0)
-    {
+  if (!args.Good()) {
+    if (myid == 0) {
       args.PrintUsage(std::cout);
     }
     MPI_Finalize();
     return 1;
   }
-  if (myid == 0)
-  {
+  if (myid == 0) {
     args.PrintOptions(std::cout);
   }
 
@@ -156,17 +150,15 @@ int main(int argc, char *argv[])
   return result;
 }
 
-void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
-{
+void InitialDeformation(const mfem::Vector &x, mfem::Vector &y) {
   // set the initial configuration to be the same as the reference, stress
   // free, configuration
   y = x;
 }
 
-void InitialVelocity(const mfem::Vector &x, mfem::Vector &v)
-{
-  const int dim  = x.Size();
-  const double s = 0.1 / 64.;
+void InitialVelocity(const mfem::Vector &x, mfem::Vector &v) {
+  const int    dim = x.Size();
+  const double s   = 0.1 / 64.;
 
   v          = 0.0;
   v(dim - 1) = s * x(0) * x(0) * (8.0 - x(0));

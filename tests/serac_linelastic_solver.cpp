@@ -6,26 +6,25 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+
 #include "mfem.hpp"
 #include "solvers/elasticity_solver.hpp"
-#include <fstream>
 
 const char* mesh_file = "NO_MESH_GIVEN";
 
-inline bool file_exists(const char* path)
-{
+inline bool file_exists(const char* path) {
   struct stat buffer;
   return (stat(path, &buffer) == 0);
 }
 
-TEST(elastic_solver, static_solve)
-{
+TEST(elastic_solver, static_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh*   mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
@@ -102,8 +101,7 @@ TEST(elastic_solver, static_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   int result = 0;
 
   ::testing::InitGoogleTest(&argc, argv);
@@ -116,17 +114,14 @@ int main(int argc, char* argv[])
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
   args.Parse();
-  if (!args.Good())
-  {
-    if (myid == 0)
-    {
+  if (!args.Good()) {
+    if (myid == 0) {
       args.PrintUsage(std::cout);
     }
     MPI_Finalize();
     return 1;
   }
-  if (myid == 0)
-  {
+  if (myid == 0) {
     args.PrintOptions(std::cout);
   }
 

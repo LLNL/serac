@@ -5,41 +5,36 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include <gtest/gtest.h>
+#include <sys/stat.h>
+
+#include <fstream>
 
 #include "mfem.hpp"
 #include "solvers/thermal_solver.hpp"
-#include <fstream>
-#include <sys/stat.h>
 
 double BoundaryTemperature(const mfem::Vector& x) { return x.Norml2(); }
 
-double InitialTemperature(const mfem::Vector& x)
-{
-  if (x.Norml2() < 0.5)
-  {
+double InitialTemperature(const mfem::Vector& x) {
+  if (x.Norml2() < 0.5) {
     return 2.0;
-  }
-  else
-  {
+  } else {
     return 1.0;
   }
 }
 const char* mesh_file = "NO_MESH_GIVEN";
 
-inline bool file_exists(const char* path)
-{
+inline bool file_exists(const char* path) {
   struct stat buffer;
   return (stat(path, &buffer) == 0);
 }
 
-TEST(thermal_solver, static_solve)
-{
+TEST(thermal_solver, static_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh*  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
@@ -82,7 +77,8 @@ TEST(thermal_solver, static_solve)
   params.max_iter    = 100;
   therm_solver.SetLinearSolverParameters(params);
 
-  // Complete the setup without allocating the mass matrices and dynamic operator
+  // Complete the setup without allocating the mass matrices and dynamic
+  // operator
   therm_solver.CompleteSetup();
 
   // Perform the static solve
@@ -94,7 +90,7 @@ TEST(thermal_solver, static_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   delete pmesh;
@@ -102,14 +98,13 @@ TEST(thermal_solver, static_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(thermal_solver, dyn_exp_solve)
-{
+TEST(thermal_solver, dyn_exp_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh*  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
@@ -156,13 +151,12 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.CompleteSetup();
 
   // Set timestep options
-  double t       = 0.0;
-  double t_final = 0.001;
-  double dt      = 0.0001;
-  bool last_step = false;
+  double t         = 0.0;
+  double t_final   = 0.001;
+  double dt        = 0.0001;
+  bool   last_step = false;
 
-  for (int ti = 1; !last_step; ti++)
-  {
+  for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
     t += dt_real;
     last_step = (t >= t_final - 1e-8 * dt);
@@ -176,7 +170,7 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.6493029, u_norm, 0.00001);
 
   delete pmesh;
@@ -184,14 +178,13 @@ TEST(thermal_solver, dyn_exp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(thermal_solver, dyn_imp_solve)
-{
+TEST(thermal_solver, dyn_imp_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh*  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
@@ -238,13 +231,12 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.CompleteSetup();
 
   // Set timestep options
-  double t       = 0.0;
-  double t_final = 5.0;
-  double dt      = 1.0;
-  bool last_step = false;
+  double t         = 0.0;
+  double t_final   = 5.0;
+  double dt        = 1.0;
+  bool   last_step = false;
 
-  for (int ti = 1; !last_step; ti++)
-  {
+  for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
     t += dt_real;
     last_step = (t >= t_final - 1e-8 * dt);
@@ -258,7 +250,7 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   delete pmesh;
@@ -266,8 +258,7 @@ TEST(thermal_solver, dyn_imp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   int result = 0;
 
   ::testing::InitGoogleTest(&argc, argv);
@@ -280,17 +271,14 @@ int main(int argc, char* argv[])
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
   args.Parse();
-  if (!args.Good())
-  {
-    if (myid == 0)
-    {
+  if (!args.Good()) {
+    if (myid == 0) {
       args.PrintUsage(std::cout);
     }
     MPI_Finalize();
     return 1;
   }
-  if (myid == 0)
-  {
+  if (myid == 0) {
     args.PrintOptions(std::cout);
   }
 
