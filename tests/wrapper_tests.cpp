@@ -235,5 +235,5 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
     EXPECT_NEAR(t_mixed_nonlin[i], t_nonlin[i], 1.e-12);
   }
 
-  
+
 }
