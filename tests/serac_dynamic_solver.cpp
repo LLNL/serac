@@ -17,12 +17,14 @@ void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
 
 const char *mesh_file = "NO_MESH_GIVEN";
 
-inline bool file_exists(const char *path) {
+inline bool file_exists(const char *path)
+{
   struct stat buffer;
   return (stat(path, &buffer) == 0);
 }
 
-TEST(dynamic_solver, dyn_solve) {
+TEST(dynamic_solver, dyn_solve)
+{
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
@@ -120,7 +122,8 @@ TEST(dynamic_solver, dyn_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   int result = 0;
 
   ::testing::InitGoogleTest(&argc, argv);
@@ -150,13 +153,15 @@ int main(int argc, char *argv[]) {
   return result;
 }
 
-void InitialDeformation(const mfem::Vector &x, mfem::Vector &y) {
+void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
+{
   // set the initial configuration to be the same as the reference, stress
   // free, configuration
   y = x;
 }
 
-void InitialVelocity(const mfem::Vector &x, mfem::Vector &v) {
+void InitialVelocity(const mfem::Vector &x, mfem::Vector &v)
+{
   const int    dim = x.Size();
   const double s   = 0.1 / 64.;
 

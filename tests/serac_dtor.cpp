@@ -11,11 +11,13 @@
 #include "solvers/thermal_solver.hpp"
 
 template <typename T>
-T do_nothing(T foo) {
+T do_nothing(T foo)
+{
   return foo;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   MPI_Init(&argc, &argv);
   int myid;
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
@@ -46,8 +48,7 @@ int main(int argc, char **argv) {
   therm_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
-  mfem::FunctionCoefficient u_0(
-      [](const mfem::Vector &x) { return x.Norml2(); });
+  mfem::FunctionCoefficient u_0([](const mfem::Vector &x) { return x.Norml2(); });
 
   mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
   temp_bdr = 1;

@@ -18,37 +18,39 @@ BaseSolver::BaseSolver()
       m_time(0.0),
       m_cycle(0),
       m_visit_dc(nullptr),
-      m_gf_initialized(false) {
+      m_gf_initialized(false)
+{
   SetTimestepper(TimestepMethod::ForwardEuler);
 }
 
 BaseSolver::BaseSolver(int n) : BaseSolver() { m_state.resize(n); }
 
-void BaseSolver::SetEssentialBCs(mfem::Array<int> &       ess_bdr,
-                                 mfem::VectorCoefficient *ess_bdr_vec_coef) {
+void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef)
+{
   m_ess_bdr          = ess_bdr;
   m_ess_bdr_vec_coef = ess_bdr_vec_coef;
 }
 
-void BaseSolver::SetNaturalBCs(mfem::Array<int> &       nat_bdr,
-                               mfem::VectorCoefficient *nat_bdr_vec_coef) {
+void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef)
+{
   m_nat_bdr          = nat_bdr;
   m_nat_bdr_vec_coef = nat_bdr_vec_coef;
 }
 
-void BaseSolver::SetEssentialBCs(mfem::Array<int> & ess_bdr,
-                                 mfem::Coefficient *ess_bdr_coef) {
+void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
+{
   m_ess_bdr      = ess_bdr;
   m_ess_bdr_coef = ess_bdr_coef;
 }
 
-void BaseSolver::SetNaturalBCs(mfem::Array<int> & nat_bdr,
-                               mfem::Coefficient *nat_bdr_coef) {
+void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
+{
   m_nat_bdr      = nat_bdr;
   m_nat_bdr_coef = nat_bdr_coef;
 }
 
-void BaseSolver::ProjectState(mfem::Array<mfem::Coefficient *> state_coef) {
+void BaseSolver::ProjectState(mfem::Array<mfem::Coefficient *> state_coef)
+{
   MFEM_ASSERT(state_coef.Size() == m_state.size(),
               "State and coefficient bundles not the same size in "
               "BaseSolver::ProjectState.");
@@ -58,8 +60,8 @@ void BaseSolver::ProjectState(mfem::Array<mfem::Coefficient *> state_coef) {
   }
 }
 
-void BaseSolver::ProjectState(
-    mfem::Array<mfem::VectorCoefficient *> state_vec_coef) {
+void BaseSolver::ProjectState(mfem::Array<mfem::VectorCoefficient *> state_vec_coef)
+{
   MFEM_ASSERT(state_vec_coef.Size() == m_state.size(),
               "State and coefficient bundles not the same size in "
               "BaseSolver::ProjectState.");
@@ -69,9 +71,9 @@ void BaseSolver::ProjectState(
   }
 }
 
-void BaseSolver::SetState(const std::vector<FiniteElementState> &state) {
-  MFEM_ASSERT(state.size() > 0,
-              "State vector array of size 0 in BaseSolver::SetState.");
+void BaseSolver::SetState(const std::vector<FiniteElementState> &state)
+{
+  MFEM_ASSERT(state.size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
   m_state = state;
 
   MPI_Comm_rank(m_state.begin()->space->GetComm(), &m_rank);
@@ -79,7 +81,8 @@ void BaseSolver::SetState(const std::vector<FiniteElementState> &state) {
 
 std::vector<FiniteElementState> BaseSolver::GetState() const { return m_state; }
 
-void BaseSolver::SetTimestepper(const TimestepMethod timestepper) {
+void BaseSolver::SetTimestepper(const TimestepMethod timestepper)
+{
   m_timestepper = timestepper;
 
   switch (m_timestepper) {
@@ -127,11 +130,9 @@ double BaseSolver::GetTime() const { return m_time; }
 
 int BaseSolver::GetCycle() const { return m_cycle; }
 
-void BaseSolver::InitializeOutput(const OutputType         output_type,
-                                  std::string              root_name,
-                                  mfem::Array<std::string> names) {
-  MFEM_ASSERT(names.Size() == m_state.size(),
-              "State vector and name arrays are not the same size.");
+void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name, mfem::Array<std::string> names)
+{
+  MFEM_ASSERT(names.Size() == m_state.size(), "State vector and name arrays are not the same size.");
 
   m_root_name = root_name;
 
@@ -139,8 +140,7 @@ void BaseSolver::InitializeOutput(const OutputType         output_type,
 
   switch (m_output_type) {
     case OutputType::VisIt: {
-      m_visit_dc =
-          new mfem::VisItDataCollection(m_root_name, m_state.begin()->mesh);
+      m_visit_dc = new mfem::VisItDataCollection(m_root_name, m_state.begin()->mesh);
 
       for (int i = 0; i < names.Size(); i++) {
         m_visit_dc->RegisterField(names[i], m_state[i].gf.get());
@@ -150,8 +150,7 @@ void BaseSolver::InitializeOutput(const OutputType         output_type,
 
     case OutputType::GLVis: {
       std::ostringstream mesh_name;
-      mesh_name << m_root_name << "-mesh." << std::setfill('0') << std::setw(6)
-                << m_rank - 1;
+      mesh_name << m_root_name << "-mesh." << std::setfill('0') << std::setw(6) << m_rank - 1;
       std::ofstream omesh(mesh_name.str().c_str());
       omesh.precision(8);
       m_state[0].mesh->Print(omesh);
@@ -163,7 +162,8 @@ void BaseSolver::InitializeOutput(const OutputType         output_type,
   }
 }
 
-void BaseSolver::OutputState() const {
+void BaseSolver::OutputState() const
+{
   switch (m_output_type) {
     case OutputType::VisIt: {
       m_visit_dc->SetCycle(m_cycle);
@@ -175,9 +175,8 @@ void BaseSolver::OutputState() const {
     case OutputType::GLVis: {
       for (auto &state : m_state) {
         std::ostringstream sol_name;
-        sol_name << m_root_name << "-" << state.name << "." << std::setfill('0')
-                 << std::setw(6) << m_cycle << "." << std::setfill('0')
-                 << std::setw(6) << m_rank - 1;
+        sol_name << m_root_name << "-" << state.name << "." << std::setfill('0') << std::setw(6) << m_cycle << "."
+                 << std::setfill('0') << std::setw(6) << m_rank - 1;
         std::ofstream osol(sol_name.str().c_str());
         osol.precision(8);
         state.gf->Save(osol);

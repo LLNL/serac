@@ -37,17 +37,12 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
       @param[in] el     Type of FiniteElement.
       @param[in] Ttr    Represents ref->target coordinates transformation.
       @param[in] elfun  Physical coordinates of the zone. */
-  virtual double GetElementEnergy(const mfem::FiniteElement &  el,
-                                  mfem::ElementTransformation &Ttr,
-                                  const mfem::Vector &         elfun);
+  virtual double GetElementEnergy(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
+                                  const mfem::Vector &elfun);
 
-  virtual void AssembleElementVector(const mfem::FiniteElement &  el,
-                                     mfem::ElementTransformation &Ttr,
-                                     const mfem::Vector &         elfun,
-                                     mfem::Vector &               elvect);
+  virtual void AssembleElementVector(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
+                                     const mfem::Vector &elfun, mfem::Vector &elvect);
 
-  virtual void AssembleElementGrad(const mfem::FiniteElement &  el,
-                                   mfem::ElementTransformation &Ttr,
-                                   const mfem::Vector &         elfun,
-                                   mfem::DenseMatrix &          elmat);
+  virtual void AssembleElementGrad(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
+                                   const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
 };

@@ -6,11 +6,11 @@
 
 #include "hyperelastic_traction_integrator.hpp"
 
-void HyperelasticTractionIntegrator::AssembleFaceVector(
-    const mfem::FiniteElement &                        el1,
-    __attribute__((unused)) const mfem::FiniteElement &el2,
-    mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun,
-    mfem::Vector &elvec) {
+void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElement &                        el1,
+                                                        __attribute__((unused)) const mfem::FiniteElement &el2,
+                                                        mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun,
+                                                        mfem::Vector &elvec)
+{
   int dim = el1.GetDim();
   int dof = el1.GetDof();
 
@@ -26,7 +26,7 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(
   PMatI_u.UseExternalData(elfun.GetData(), dof, dim);
 
   int                          intorder = 2 * el1.GetOrder() + 3;
-  const mfem::IntegrationRule &ir = mfem::IntRules.Get(Tr.FaceGeom, intorder);
+  const mfem::IntegrationRule &ir       = mfem::IntRules.Get(Tr.FaceGeom, intorder);
 
   elvec = 0.0;
 
@@ -71,18 +71,17 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(
     el1.CalcShape(eip, shape);
     for (int j = 0; j < dof; j++) {
       for (int k = 0; k < dim; k++) {
-        elvec(dof * k + j) -= trac(k) * shape(j) * ip.weight *
-                              Tr.Face->Weight() * F.Det() * fnor.Norml2();
+        elvec(dof * k + j) -= trac(k) * shape(j) * ip.weight * Tr.Face->Weight() * F.Det() * fnor.Norml2();
       }
     }
   }
 }
 
-void HyperelasticTractionIntegrator::AssembleFaceGrad(
-    const mfem::FiniteElement &                        el1,
-    __attribute__((unused)) const mfem::FiniteElement &el2,
-    mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun,
-    mfem::DenseMatrix &elmat) {
+void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement &                        el1,
+                                                      __attribute__((unused)) const mfem::FiniteElement &el2,
+                                                      mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun,
+                                                      mfem::DenseMatrix &elmat)
+{
   double       diff_step = 1.0e-8;
   mfem::Vector temp_out_1;
   mfem::Vector temp_out_2;

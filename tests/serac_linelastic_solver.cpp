@@ -13,12 +13,14 @@
 
 const char* mesh_file = "NO_MESH_GIVEN";
 
-inline bool file_exists(const char* path) {
+inline bool file_exists(const char* path)
+{
   struct stat buffer;
   return (stat(path, &buffer) == 0);
 }
 
-TEST(elastic_solver, static_solve) {
+TEST(elastic_solver, static_solve)
+{
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
@@ -101,7 +103,8 @@ TEST(elastic_solver, static_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
   int result = 0;
 
   ::testing::InitGoogleTest(&argc, argv);

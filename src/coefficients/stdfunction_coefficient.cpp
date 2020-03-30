@@ -7,31 +7,31 @@
 
 #include "stdfunction_coefficient.hpp"
 
-StdFunctionCoefficient::StdFunctionCoefficient(
-    std::function<double(mfem::Vector &)> func)
-    : m_func(func) {}
+StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector &)> func) : m_func(func) {}
 
-double StdFunctionCoefficient::Eval(mfem::ElementTransformation & T,
-                                    const mfem::IntegrationPoint &ip) {
+double StdFunctionCoefficient::Eval(mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip)
+{
   mfem::Vector transip(T.GetSpaceDim());
   T.Transform(ip, transip);
   return m_func(transip);
 }
 
-StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(
-    int dim, std::function<void(mfem::Vector &, mfem::Vector &)> func)
-    : mfem::VectorCoefficient(dim), m_func(func) {}
+StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(int                                                 dim,
+                                                           std::function<void(mfem::Vector &, mfem::Vector &)> func)
+    : mfem::VectorCoefficient(dim), m_func(func)
+{
+}
 
-void StdFunctionVectorCoefficient::Eval(mfem::Vector &                V,
-                                        mfem::ElementTransformation & T,
-                                        const mfem::IntegrationPoint &ip) {
+void StdFunctionVectorCoefficient::Eval(mfem::Vector &V, mfem::ElementTransformation &T,
+                                        const mfem::IntegrationPoint &ip)
+{
   mfem::Vector transip(T.GetSpaceDim());
   T.Transform(ip, transip);
   m_func(transip, V);
 }
 
-void MakeEssList(mfem::Mesh &m, mfem::VectorCoefficient &c,
-                 mfem::Array<int> &ess_vdof_list) {
+void MakeEssList(mfem::Mesh &m, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list)
+{
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &h1_fec, m.SpaceDimension());
 
@@ -48,9 +48,9 @@ void MakeEssList(mfem::Mesh &m, mfem::VectorCoefficient &c,
     }
 }
 
-void MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list,
-                       mfem::Coefficient &        c,
-                       std::function<int(double)> digitize) {
+void MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+                       std::function<int(double)> digitize)
+{
   mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &l2_fec);
 
@@ -65,9 +65,9 @@ void MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list,
 }
 
 // Need to use H1_fec because boundary elements don't exist in L2
-void MakeBdrAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list,
-                          mfem::Coefficient &        c,
-                          std::function<int(double)> digitize) {
+void MakeBdrAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+                          std::function<int(double)> digitize)
+{
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &h1_fec);
 
@@ -82,8 +82,8 @@ void MakeBdrAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list,
   }
 }
 
-double AttributeModifierCoefficient::Eval(mfem::ElementTransformation & Tr,
-                                          const mfem::IntegrationPoint &ip) {
+double AttributeModifierCoefficient::Eval(mfem::ElementTransformation &Tr, const mfem::IntegrationPoint &ip)
+{
   // Store old attribute and change to new attribute
   double attr  = Tr.Attribute;
   Tr.Attribute = m_attr_list[Tr.ElementNo];
@@ -98,30 +98,23 @@ double AttributeModifierCoefficient::Eval(mfem::ElementTransformation & Tr,
   return result;
 }
 
-TransformedVectorCoefficient::TransformedVectorCoefficient(
-    mfem::VectorCoefficient *                           v1,
-    std::function<void(mfem::Vector &, mfem::Vector &)> func)
-    : mfem::VectorCoefficient(v1->GetVDim()),
-      m_v1(v1),
-      m_v2(nullptr),
-      m_mono_function(func),
-      m_bi_function(nullptr) {}
+TransformedVectorCoefficient::TransformedVectorCoefficient(mfem::VectorCoefficient *                           v1,
+                                                           std::function<void(mfem::Vector &, mfem::Vector &)> func)
+    : mfem::VectorCoefficient(v1->GetVDim()), m_v1(v1), m_v2(nullptr), m_mono_function(func), m_bi_function(nullptr)
+{
+}
 
 TransformedVectorCoefficient::TransformedVectorCoefficient(
     mfem::VectorCoefficient *v1, mfem::VectorCoefficient *v2,
     std::function<void(mfem::Vector &, mfem::Vector &, mfem::Vector &)> func)
-    : mfem::VectorCoefficient(v1->GetVDim()),
-      m_v1(v1),
-      m_v2(v2),
-      m_mono_function(nullptr),
-      m_bi_function(func) {
-  MFEM_VERIFY(m_v1->GetVDim() == m_v2->GetVDim(),
-              "v1 and v2 are not the same size");
+    : mfem::VectorCoefficient(v1->GetVDim()), m_v1(v1), m_v2(v2), m_mono_function(nullptr), m_bi_function(func)
+{
+  MFEM_VERIFY(m_v1->GetVDim() == m_v2->GetVDim(), "v1 and v2 are not the same size");
 }
 
-void TransformedVectorCoefficient::Eval(mfem::Vector &                V,
-                                        mfem::ElementTransformation & T,
-                                        const mfem::IntegrationPoint &ip) {
+void TransformedVectorCoefficient::Eval(mfem::Vector &V, mfem::ElementTransformation &T,
+                                        const mfem::IntegrationPoint &ip)
+{
   V.SetSize(m_v1->GetVDim());
   mfem::Vector temp(m_v1->GetVDim());
   m_v1->Eval(temp, T, ip);

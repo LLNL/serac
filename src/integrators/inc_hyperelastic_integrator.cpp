@@ -6,9 +6,9 @@
 
 #include "inc_hyperelastic_integrator.hpp"
 
-double IncrementalHyperelasticIntegrator::GetElementEnergy(
-    const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-    const mfem::Vector &elfun) {
+double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement &  el,
+                                                           mfem::ElementTransformation &Ttr, const mfem::Vector &elfun)
+{
   int    dof = el.GetDof(), dim = el.GetDim();
   double energy;
 
@@ -20,8 +20,7 @@ double IncrementalHyperelasticIntegrator::GetElementEnergy(
 
   const mfem::IntegrationRule *ir = IntRule;
   if (!ir) {
-    ir =
-        &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
+    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
 
   energy = 0.0;
@@ -45,9 +44,10 @@ double IncrementalHyperelasticIntegrator::GetElementEnergy(
   return energy;
 }
 
-void IncrementalHyperelasticIntegrator::AssembleElementVector(
-    const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-    const mfem::Vector &elfun, mfem::Vector &elvect) {
+void IncrementalHyperelasticIntegrator::AssembleElementVector(const mfem::FiniteElement &  el,
+                                                              mfem::ElementTransformation &Ttr,
+                                                              const mfem::Vector &elfun, mfem::Vector &elvect)
+{
   int dof = el.GetDof(), dim = el.GetDim();
 
   DSh.SetSize(dof, dim);
@@ -61,8 +61,7 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(
 
   const mfem::IntegrationRule *ir = IntRule;
   if (!ir) {
-    ir =
-        &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
+    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
 
   elvect = 0.0;
@@ -87,9 +86,10 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(
   }
 }
 
-void IncrementalHyperelasticIntegrator::AssembleElementGrad(
-    const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-    const mfem::Vector &elfun, mfem::DenseMatrix &elmat) {
+void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteElement &  el,
+                                                            mfem::ElementTransformation &Ttr, const mfem::Vector &elfun,
+                                                            mfem::DenseMatrix &elmat)
+{
   int dof = el.GetDof(), dim = el.GetDim();
 
   DSh.SetSize(dof, dim);
@@ -101,8 +101,7 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(
 
   const mfem::IntegrationRule *ir = IntRule;
   if (!ir) {
-    ir =
-        &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
+    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
 
   elmat = 0.0;

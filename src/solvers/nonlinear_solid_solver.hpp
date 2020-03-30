@@ -67,12 +67,10 @@ class NonlinearSolidSolver : public BaseSolver {
   NonlinearSolidSolver(int order, mfem::ParMesh *pmesh);
 
   /// Set the displacement essential boundary conditions
-  void SetDisplacementBCs(mfem::Array<int> &       disp_bdr,
-                          mfem::VectorCoefficient *disp_bdr_coef);
+  void SetDisplacementBCs(mfem::Array<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef);
 
   /// Set the traction boundary conditions
-  void SetTractionBCs(mfem::Array<int> &       trac_bdr,
-                      mfem::VectorCoefficient *trac_bdr_coef);
+  void SetTractionBCs(mfem::Array<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef);
 
   /// Set the viscosity coefficient
   void SetViscosity(mfem::Coefficient *visc_coef);
@@ -81,12 +79,10 @@ class NonlinearSolidSolver : public BaseSolver {
   void SetHyperelasticMaterialParameters(double mu, double K);
 
   /// Set the initial state (guess)
-  void SetInitialState(mfem::VectorCoefficient &disp_state,
-                       mfem::VectorCoefficient &velo_state);
+  void SetInitialState(mfem::VectorCoefficient &disp_state, mfem::VectorCoefficient &velo_state);
 
   /// Set the linear and nonlinear solver params
-  void SetSolverParameters(const LinearSolverParameters &   lin_params,
-                           const NonlinearSolverParameters &nonlin_params);
+  void SetSolverParameters(const LinearSolverParameters &lin_params, const NonlinearSolverParameters &nonlin_params);
 
   /// Complete the data structure initialization
   void CompleteSetup();
@@ -159,20 +155,16 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
 
  public:
   /// The constructor
-  NonlinearSolidDynamicOperator(mfem::ParNonlinearForm *H_form,
-                                mfem::ParBilinearForm * S_form,
-                                mfem::ParBilinearForm * M_form,
-                                const mfem::Array<int> &ess_tdof_list,
-                                mfem::NewtonSolver *    newton_solver,
-                                LinearSolverParameters  lin_params);
+  NonlinearSolidDynamicOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
+                                mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list,
+                                mfem::NewtonSolver *newton_solver, LinearSolverParameters lin_params);
 
   /// Required to use the native newton solver
   virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
 
   /// Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
   /// This is the only requirement for high-order SDIRK implicit integration.
-  virtual void ImplicitSolve(const double dt, const mfem::Vector &x,
-                             mfem::Vector &k);
+  virtual void ImplicitSolve(const double dt, const mfem::Vector &x, mfem::Vector &k);
 
   /// The destructor
   virtual ~NonlinearSolidDynamicOperator();
@@ -210,10 +202,8 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 
  public:
   /// The constructor
-  NonlinearSolidReducedSystemOperator(mfem::ParNonlinearForm *H_form,
-                                      mfem::ParBilinearForm * S_form,
-                                      mfem::ParBilinearForm * M_form,
-                                      const mfem::Array<int> &ess_tdof_list);
+  NonlinearSolidReducedSystemOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
+                                      mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
   void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);

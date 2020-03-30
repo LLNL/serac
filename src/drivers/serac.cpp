@@ -25,7 +25,8 @@
 #include "mfem.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   // Initialize MPI.
   int num_procs, myid;
   MPI_Init(&argc, &argv);
@@ -74,42 +75,30 @@ int main(int argc, char *argv[]) {
   // specify all input arguments
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.");
-  args.AddOption(&ser_ref_levels, "-rs", "--refine-serial",
-                 "Number of times to refine the mesh uniformly in serial.");
+  args.AddOption(&ser_ref_levels, "-rs", "--refine-serial", "Number of times to refine the mesh uniformly in serial.");
   args.AddOption(&par_ref_levels, "-rp", "--refine-parallel",
                  "Number of times to refine the mesh uniformly in parallel.");
-  args.AddOption(&order, "-o", "--order",
-                 "Order (degree) of the finite elements.");
-  args.AddOption(&mu, "-mu", "--shear-modulus",
-                 "Shear modulus in the Neo-Hookean hyperelastic model.");
-  args.AddOption(&K, "-K", "--bulk-modulus",
-                 "Bulk modulus in the Neo-Hookean hyperelastic model.");
-  args.AddOption(&tx, "-tx", "--traction-x",
-                 "Cantilever tip traction in the x direction.");
-  args.AddOption(&ty, "-ty", "--traction-y",
-                 "Cantilever tip traction in the y direction.");
-  args.AddOption(&tz, "-tz", "--traction-z",
-                 "Cantilever tip traction in the z direction.");
-  args.AddOption(&slu_solver, "-slu", "--superlu", "-no-slu", "--no-superlu",
-                 "Use the SuperLU Solver.");
+  args.AddOption(&order, "-o", "--order", "Order (degree) of the finite elements.");
+  args.AddOption(&mu, "-mu", "--shear-modulus", "Shear modulus in the Neo-Hookean hyperelastic model.");
+  args.AddOption(&K, "-K", "--bulk-modulus", "Bulk modulus in the Neo-Hookean hyperelastic model.");
+  args.AddOption(&tx, "-tx", "--traction-x", "Cantilever tip traction in the x direction.");
+  args.AddOption(&ty, "-ty", "--traction-y", "Cantilever tip traction in the y direction.");
+  args.AddOption(&tz, "-tz", "--traction-z", "Cantilever tip traction in the z direction.");
+  args.AddOption(&slu_solver, "-slu", "--superlu", "-no-slu", "--no-superlu", "Use the SuperLU Solver.");
   args.AddOption(&gmres_solver, "-gmres", "--gmres", "-no-gmres", "--no-gmres",
                  "Use gmres, otherwise minimum residual is used.");
   args.AddOption(&lin_params.rel_tol, "-lrel", "--linear-relative-tolerance",
                  "Relative tolerance for the lienar solve.");
   args.AddOption(&lin_params.abs_tol, "-labs", "--linear-absolute-tolerance",
                  "Absolute tolerance for the linear solve.");
-  args.AddOption(&lin_params.max_iter, "-lit", "--linear-iterations",
-                 "Maximum iterations for the linear solve.");
-  args.AddOption(&lin_params.print_level, "-lpl", "--linear-print-level",
-                 "Linear print level.");
+  args.AddOption(&lin_params.max_iter, "-lit", "--linear-iterations", "Maximum iterations for the linear solve.");
+  args.AddOption(&lin_params.print_level, "-lpl", "--linear-print-level", "Linear print level.");
   args.AddOption(&nonlin_params.rel_tol, "-nrel", "--newton-relative-tolerance",
                  "Relative tolerance for the Newton solve.");
   args.AddOption(&nonlin_params.abs_tol, "-nabs", "--newton-absolute-tolerance",
                  "Absolute tolerance for the Newton solve.");
-  args.AddOption(&nonlin_params.max_iter, "-nit", "--newton-iterations",
-                 "Maximum iterations for the Newton solve.");
-  args.AddOption(&nonlin_params.print_level, "-npl", "--newton-print-level",
-                 "Newton print level.");
+  args.AddOption(&nonlin_params.max_iter, "-nit", "--newton-iterations", "Maximum iterations for the Newton solve.");
+  args.AddOption(&nonlin_params.print_level, "-npl", "--newton-print-level", "Newton print level.");
   args.AddOption(&t_final, "-tf", "--t-final", "Final time; start time is 0.");
   args.AddOption(&dt, "-dt", "--time-step", "Time step.");
 
@@ -131,8 +120,7 @@ int main(int argc, char *argv[]) {
   std::ifstream imesh(mesh_file);
   if (!imesh) {
     if (myid == 0) {
-      std::cerr << "\nCan not open mesh file: " << mesh_file << '\n'
-                << std::endl;
+      std::cerr << "\nCan not open mesh file: " << mesh_file << '\n' << std::endl;
     }
     MPI_Finalize();
     return 2;
@@ -163,13 +151,11 @@ int main(int argc, char *argv[]) {
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  mfem::VectorCoefficient *defo_coef =
-      new mfem::VectorFunctionCoefficient(dim, InitialDeformation);
+  mfem::VectorCoefficient *defo_coef = new mfem::VectorFunctionCoefficient(dim, InitialDeformation);
 
   mfem::Vector velo(dim);
-  velo = 0.0;
-  mfem::VectorConstantCoefficient *velo_coef =
-      new mfem::VectorConstantCoefficient(velo);
+  velo                                       = 0.0;
+  mfem::VectorConstantCoefficient *velo_coef = new mfem::VectorConstantCoefficient(velo);
 
   mfem::Array<mfem::VectorCoefficient *> coefs(2);
   coefs[0] = defo_coef;

@@ -78,30 +78,25 @@ class BaseSolver {
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
-  virtual void SetEssentialBCs(mfem::Array<int> & ess_bdr,
-                               mfem::Coefficient *ess_bdr_coef);
+  virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
 
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
-  virtual void SetEssentialBCs(mfem::Array<int> &       ess_bdr,
-                               mfem::VectorCoefficient *ess_bdr_vec_coef);
+  virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
-  virtual void SetNaturalBCs(mfem::Array<int> & nat_bdr,
-                             mfem::Coefficient *nat_bdr_coef);
+  virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef);
 
   /// Set the vector-valued natural boundary conditions from a list of boundary
   /// markers and a coefficient
-  virtual void SetNaturalBCs(mfem::Array<int> &       nat_bdr,
-                             mfem::VectorCoefficient *nat_bdr_vec_coef);
+  virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef);
 
   /// Set the state variables from a coefficient
   virtual void ProjectState(mfem::Array<mfem::Coefficient *> state_coef);
 
   /// Set the state variables from a vector coefficient
-  virtual void ProjectState(
-      mfem::Array<mfem::VectorCoefficient *> state_vec_coef);
+  virtual void ProjectState(mfem::Array<mfem::VectorCoefficient *> state_vec_coef);
 
   /// Set the state variables from an existing grid function
   virtual void SetState(const std::vector<FiniteElementState> &state);
@@ -128,8 +123,7 @@ class BaseSolver {
   virtual void AdvanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const OutputType         output_type,
-                                const std::string        root_name,
+  virtual void InitializeOutput(const OutputType output_type, const std::string root_name,
                                 mfem::Array<std::string> names);
 
   /// output the state variables

@@ -14,7 +14,8 @@
 
 double BoundaryTemperature(const mfem::Vector& x) { return x.Norml2(); }
 
-double InitialTemperature(const mfem::Vector& x) {
+double InitialTemperature(const mfem::Vector& x)
+{
   if (x.Norml2() < 0.5) {
     return 2.0;
   } else {
@@ -23,12 +24,14 @@ double InitialTemperature(const mfem::Vector& x) {
 }
 const char* mesh_file = "NO_MESH_GIVEN";
 
-inline bool file_exists(const char* path) {
+inline bool file_exists(const char* path)
+{
   struct stat buffer;
   return (stat(path, &buffer) == 0);
 }
 
-TEST(thermal_solver, static_solve) {
+TEST(thermal_solver, static_solve)
+{
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
@@ -98,7 +101,8 @@ TEST(thermal_solver, static_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(thermal_solver, dyn_exp_solve) {
+TEST(thermal_solver, dyn_exp_solve)
+{
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
@@ -178,7 +182,8 @@ TEST(thermal_solver, dyn_exp_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(thermal_solver, dyn_imp_solve) {
+TEST(thermal_solver, dyn_imp_solve)
+{
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
@@ -258,7 +263,8 @@ TEST(thermal_solver, dyn_imp_solve) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
   int result = 0;
 
   ::testing::InitGoogleTest(&argc, argv);

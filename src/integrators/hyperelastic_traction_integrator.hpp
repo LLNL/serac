@@ -15,17 +15,12 @@ class HyperelasticTractionIntegrator : public mfem::NonlinearFormIntegrator {
  public:
   HyperelasticTractionIntegrator(mfem::VectorCoefficient &f) : function(f) {}
 
-  virtual void AssembleFaceVector(const mfem::FiniteElement &       el1,
-                                  const mfem::FiniteElement &       el2,
-                                  mfem::FaceElementTransformations &Tr,
-                                  const mfem::Vector &              elfun,
-                                  mfem::Vector &                    elvec);
+  virtual void AssembleFaceVector(const mfem::FiniteElement &el1, const mfem::FiniteElement &el2,
+                                  mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun, mfem::Vector &elvec);
 
-  virtual void AssembleFaceGrad(const mfem::FiniteElement &       el1,
-                                const mfem::FiniteElement &       el2,
-                                mfem::FaceElementTransformations &Tr,
-                                const mfem::Vector &              elfun,
-                                mfem::DenseMatrix &               elmat);
+  virtual void AssembleFaceGrad(const mfem::FiniteElement &el1, const mfem::FiniteElement &el2,
+                                mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun,
+                                mfem::DenseMatrix &elmat);
 
   virtual ~HyperelasticTractionIntegrator() {}
 };

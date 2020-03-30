@@ -13,9 +13,14 @@
 
 // Option bundling enums
 
-enum class OutputType { GLVis, VisIt };
+enum class OutputType
+{
+  GLVis,
+  VisIt
+};
 
-enum class TimestepMethod {
+enum class TimestepMethod
+{
   BackwardEuler,
   SDIRK33,
   ForwardEuler,
@@ -29,9 +34,18 @@ enum class TimestepMethod {
   QuasiStatic
 };
 
-enum class LinearSolver { CG, GMRES, MINRES };
+enum class LinearSolver
+{
+  CG,
+  GMRES,
+  MINRES
+};
 
-enum class Preconditioner { Jacobi, BoomerAMG };
+enum class Preconditioner
+{
+  Jacobi,
+  BoomerAMG
+};
 
 // Parameter bundles
 
