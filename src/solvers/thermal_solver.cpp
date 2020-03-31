@@ -33,15 +33,15 @@ void ThermalSolver::SetInitialState(mfem::Coefficient &temp)
   m_gf_initialized = true;
 }
 
-void ThermalSolver::SetTemperatureBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
+void ThermalSolver::SetTemperatureBCs(std::vector<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
 {
   SetEssentialBCs(ess_bdr, ess_bdr_coef);
 
   // Get the essential dof indicies and project the coefficient onto them
-  temperature.space->GetEssentialTrueDofs(ess_bdr, m_ess_tdof_list);
+  temperature.space->GetEssentialTrueDofs(*m_ess_bdr.get(), m_ess_tdof_list);
 }
 
-void ThermalSolver::SetFluxBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
+void ThermalSolver::SetFluxBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   SetNaturalBCs(nat_bdr, nat_bdr_coef);
@@ -113,7 +113,7 @@ void ThermalSolver::CompleteSetup()
     m_dyn_oper->SetMMatrix(m_M_mat, m_M_e_mat);
     m_dyn_oper->SetKMatrix(m_K_mat, m_K_e_mat);
     m_dyn_oper->SetLoadVector(m_rhs);
-    m_dyn_oper->SetEssentialBCs(m_ess_bdr_coef, m_ess_bdr, m_ess_tdof_list);
+    m_dyn_oper->SetEssentialBCs(m_ess_bdr_coef, *m_ess_bdr.get(), m_ess_tdof_list);
 
     m_ode_solver->Init(*m_dyn_oper);
   }
@@ -125,7 +125,7 @@ void ThermalSolver::QuasiStaticSolve()
   *m_bc_rhs = *m_rhs;
   if (m_ess_bdr_coef != nullptr) {
     m_ess_bdr_coef->SetTime(m_time);
-    temperature.gf->ProjectBdrCoefficient(*m_ess_bdr_coef, m_ess_bdr);
+    temperature.gf->ProjectBdrCoefficient(*m_ess_bdr_coef, *m_ess_bdr.get());
     temperature.gf->GetTrueDofs(temperature.true_vec);
     mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, temperature.true_vec, *m_bc_rhs);
   }

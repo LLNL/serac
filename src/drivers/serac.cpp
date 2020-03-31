@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
   velo                                       = 0.0;
   mfem::VectorConstantCoefficient *velo_coef = new mfem::VectorConstantCoefficient(velo);
 
-  mfem::Array<mfem::VectorCoefficient *> coefs(2);
+  std::vector<mfem::VectorCoefficient *> coefs(2);
   coefs[0] = defo_coef;
   coefs[1] = velo_coef;
 
@@ -167,9 +167,7 @@ int main(int argc, char *argv[])
   solid_solver.ProjectState(coefs);
 
   // define a boundary attribute array and initialize to 0
-  mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(pmesh->bdr_attributes.Max());
-  ess_bdr = 0;
+  std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
@@ -179,10 +177,8 @@ int main(int argc, char *argv[])
   disp = 0.0;
   mfem::VectorConstantCoefficient disp_coef(disp);
 
-  mfem::Array<int> trac_bdr;
-  trac_bdr.SetSize(pmesh->bdr_attributes.Max());
+  std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
 
-  trac_bdr    = 0;
   trac_bdr[1] = 1;
 
   // define the traction vector
@@ -223,7 +219,7 @@ int main(int argc, char *argv[])
 
   bool last_step = false;
 
-  mfem::Array<std::string> names(2);
+  std::vector<std::string> names(2);
   names[0] = "Deformation";
   names[1] = "Velocity";
 

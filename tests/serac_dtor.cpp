@@ -50,8 +50,7 @@ int main(int argc, char **argv)
   // Initialize the temperature boundary condition
   mfem::FunctionCoefficient u_0([](const mfem::Vector &x) { return x.Norml2(); });
 
-  mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
-  temp_bdr = 1;
+  std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
 
   // Set the temperature BC in the thermal solver
   therm_solver.SetTemperatureBCs(temp_bdr, &u_0);

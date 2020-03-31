@@ -43,9 +43,7 @@ TEST(dynamic_solver, dyn_solve)
   int dim = pmesh->Dimension();
 
   // define a boundary attribute array and initialize to 0
-  mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(pmesh->bdr_attributes.Max());
-  ess_bdr = 0;
+  std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
@@ -53,7 +51,7 @@ TEST(dynamic_solver, dyn_solve)
   mfem::ConstantCoefficient visc(0.0);
 
   // define the inital state coefficients
-  mfem::Array<mfem::VectorCoefficient *> initialstate(2);
+  std::vector<mfem::VectorCoefficient *> initialstate(2);
 
   mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
   mfem::VectorFunctionCoefficient velo(dim, InitialVelocity);

@@ -12,66 +12,63 @@
 #include "common/serac_types.hpp"
 
 BaseSolver::BaseSolver()
-<<<<<<< HEAD
-  : m_ess_bdr_coef(nullptr), m_ess_bdr_vec_coef(nullptr), m_nat_bdr_coef(nullptr), m_nat_bdr_vec_coef(nullptr),
-    m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0), m_visit_dc(nullptr), m_gf_initialized(false)
-=======
     : m_ess_bdr_coef(nullptr),
+      m_ess_bdr_vec_coef(nullptr),
       m_nat_bdr_coef(nullptr),
+      m_nat_bdr_vec_coef(nullptr),
       m_output_type(OutputType::VisIt),
       m_time(0.0),
       m_cycle(0),
       m_visit_dc(nullptr),
       m_gf_initialized(false)
->>>>>>> master
 {
   SetTimestepper(TimestepMethod::ForwardEuler);
 }
 
 BaseSolver::BaseSolver(int n) : BaseSolver() { m_state.resize(n); }
 
-void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef)
+void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef)
 {
-  m_ess_bdr          = ess_bdr;
+  m_ess_bdr = std::make_shared<mfem::Array<int> >(ess_bdr.data(), ess_bdr.size());
   m_ess_bdr_vec_coef = ess_bdr_vec_coef;
 }
 
-void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef)
+void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef)
 {
-  m_nat_bdr          = nat_bdr;
+  m_nat_bdr = std::make_shared<mfem::Array<int> >(nat_bdr.data(), nat_bdr.size());
   m_nat_bdr_vec_coef = nat_bdr_vec_coef;
 }
 
-void BaseSolver::SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
+void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
 {
-  m_ess_bdr      = ess_bdr;
+  m_ess_bdr = std::make_shared<mfem::Array<int> >(ess_bdr.data(), ess_bdr.size());
   m_ess_bdr_coef = ess_bdr_coef;
 }
 
-void BaseSolver::SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
+void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
 {
-  m_nat_bdr      = nat_bdr;
+  m_nat_bdr = std::make_shared<mfem::Array<int> >(nat_bdr.data(), nat_bdr.size());
   m_nat_bdr_coef = nat_bdr_coef;
 }
 
-void BaseSolver::ProjectState(mfem::Array<mfem::Coefficient *> state_coef)
+void BaseSolver::ProjectState(std::vector<mfem::Coefficient *> state_coef)
 {
-  MFEM_ASSERT(state_coef.Size() == m_state.size(),
+  MFEM_ASSERT(state_coef.size() == m_state.size(),
               "State and coefficient bundles not the same size in "
               "BaseSolver::ProjectState.");
 
-  for (int i = 0; i < state_coef.Size(); ++i) {
+  for (unsigned int i = 0; i < state_coef.size(); ++i) {
     m_state[i].gf->ProjectCoefficient(*state_coef[i]);
   }
 }
 
-void BaseSolver::ProjectState(mfem::Array<mfem::VectorCoefficient *> state_vec_coef)
+void BaseSolver::ProjectState(std::vector<mfem::VectorCoefficient *> state_vec_coef)
 {
-  MFEM_ASSERT(state_vec_coef.Size() == m_state.size(),
+  MFEM_ASSERT(state_vec_coef.size() == m_state.size(),
               "State and coefficient bundles not the same size in "
               "BaseSolver::ProjectState.");
 
-  for (int i = 0; i < state_vec_coef.Size(); ++i) {
+  for (unsigned int i = 0; i < state_vec_coef.size(); ++i) {
     m_state[i].gf->ProjectCoefficient(*state_vec_coef[i]);
   }
 }
@@ -135,9 +132,9 @@ double BaseSolver::GetTime() const { return m_time; }
 
 int BaseSolver::GetCycle() const { return m_cycle; }
 
-void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name, mfem::Array<std::string> names)
+void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name, std::vector<std::string> names)
 {
-  MFEM_ASSERT(names.Size() == m_state.size(), "State vector and name arrays are not the same size.");
+  MFEM_ASSERT(names.size() == m_state.size(), "State vector and name arrays are not the same size.");
 
   m_root_name = root_name;
 
@@ -147,7 +144,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
     case OutputType::VisIt: {
       m_visit_dc = new mfem::VisItDataCollection(m_root_name, m_state.begin()->mesh);
 
-      for (int i = 0; i < names.Size(); i++) {
+      for (unsigned int i = 0; i < names.size(); i++) {
         m_visit_dc->RegisterField(names[i], m_state[i].gf.get());
       }
       break;

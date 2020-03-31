@@ -39,9 +39,7 @@ TEST(elastic_solver, static_solve)
   ElasticitySolver elas_solver(1, pmesh);
 
   // define a boundary attribute array and initialize to 0
-  mfem::Array<int> disp_bdr;
-  disp_bdr.SetSize(pmesh->bdr_attributes.Max());
-  disp_bdr = 0;
+  std::vector<int> disp_bdr(pmesh->bdr_attributes.Max(), 0);
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   disp_bdr[0] = 1;
@@ -52,9 +50,7 @@ TEST(elastic_solver, static_solve)
   mfem::VectorConstantCoefficient disp_coef(disp);
   elas_solver.SetDisplacementBCs(disp_bdr, &disp_coef);
 
-  mfem::Array<int> trac_bdr;
-  trac_bdr.SetSize(pmesh->bdr_attributes.Max());
-  trac_bdr    = 0;
+  std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
   trac_bdr[1] = 1;
 
   // define the traction vector
