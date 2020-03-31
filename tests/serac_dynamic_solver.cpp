@@ -6,22 +6,22 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+
 #include "mfem.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
-#include <fstream>
 
 void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
 
 void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
 
-const char* mesh_file = "NO_MESH_GIVEN";
+const char *mesh_file = "NO_MESH_GIVEN";
 
-inline bool file_exists(const char* path)
+inline bool file_exists(const char *path)
 {
   struct stat buffer;
   return (stat(path, &buffer) == 0);
 }
-
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -30,7 +30,7 @@ TEST(dynamic_solver, dyn_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh *  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
@@ -53,7 +53,7 @@ TEST(dynamic_solver, dyn_solve)
   mfem::ConstantCoefficient visc(0.0);
 
   // define the inital state coefficients
-  mfem::Array<mfem::VectorCoefficient*> initialstate(2);
+  mfem::Array<mfem::VectorCoefficient *> initialstate(2);
 
   mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
   mfem::VectorFunctionCoefficient velo(dim, InitialVelocity);
@@ -71,27 +71,27 @@ TEST(dynamic_solver, dyn_solve)
 
   // Set the linear solver parameters
   LinearSolverParameters params;
-  params.prec = Preconditioner::BoomerAMG;
-  params.abs_tol = 1.0e-8;
-  params.rel_tol = 1.0e-4;
-  params.max_iter = 500;
-  params.lin_solver = LinearSolver::GMRES;
+  params.prec        = Preconditioner::BoomerAMG;
+  params.abs_tol     = 1.0e-8;
+  params.rel_tol     = 1.0e-4;
+  params.max_iter    = 500;
+  params.lin_solver  = LinearSolver::GMRES;
   params.print_level = 0;
 
   // Set the nonlinear solver parameters
   NonlinearSolverParameters nl_params;
-  nl_params.rel_tol = 1.0e-4;
-  nl_params.abs_tol = 1.0e-8;
+  nl_params.rel_tol     = 1.0e-4;
+  nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
-  nl_params.max_iter = 500;
+  nl_params.max_iter    = 500;
   dyn_solver.SetSolverParameters(params, nl_params);
 
   // Construct the internal dynamic solver data structures
   dyn_solver.CompleteSetup();
 
-  double t = 0.0;
+  double t       = 0.0;
   double t_final = 6.0;
-  double dt = 3.0;
+  double dt      = 3.0;
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
@@ -99,7 +99,7 @@ TEST(dynamic_solver, dyn_solve)
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
     t += dt_real;
-    last_step = (t >= t_final - 1e-8*dt);
+    last_step = (t >= t_final - 1e-8 * dt);
 
     dyn_solver.AdvanceTimestep(dt_real);
   }
@@ -122,8 +122,7 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
   int result = 0;
 
@@ -135,8 +134,7 @@ int main(int argc, char* argv[])
 
   // Parse command line options
   mfem::OptionsParser args(argc, argv);
-  args.AddOption(&mesh_file, "-m", "--mesh",
-                 "Mesh file to use.", true);
+  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
   args.Parse();
   if (!args.Good()) {
     if (myid == 0) {
@@ -164,10 +162,10 @@ void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
 
 void InitialVelocity(const mfem::Vector &x, mfem::Vector &v)
 {
-  const int dim = x.Size();
-  const double s = 0.1/64.;
+  const int    dim = x.Size();
+  const double s   = 0.1 / 64.;
 
-  v = 0.0;
-  v(dim-1) = s*x(0)*x(0)*(8.0-x(0));
-  v(0) = -s*x(0)*x(0);
+  v          = 0.0;
+  v(dim - 1) = s * x(0) * x(0) * (8.0 - x(0));
+  v(0)       = -s * x(0) * x(0);
 }

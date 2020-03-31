@@ -8,24 +8,32 @@
 
 const int num_fields = 1;
 
-ElasticitySolver::ElasticitySolver(int order, mfem::ParMesh *pmesh) :
-  BaseSolver(num_fields), displacement(m_state[0]), m_K_form(nullptr), m_l_form(nullptr), m_K_mat(nullptr), m_K_e_mat(nullptr), m_rhs(nullptr),
-  m_bc_rhs(nullptr), m_K_solver(nullptr), m_K_prec(nullptr),
-  m_mu(nullptr), m_lambda(nullptr), m_body_force(nullptr)
+ElasticitySolver::ElasticitySolver(int order, mfem::ParMesh *pmesh)
+    : BaseSolver(num_fields),
+      displacement(m_state[0]),
+      m_K_form(nullptr),
+      m_l_form(nullptr),
+      m_K_mat(nullptr),
+      m_K_e_mat(nullptr),
+      m_rhs(nullptr),
+      m_bc_rhs(nullptr),
+      m_K_solver(nullptr),
+      m_K_prec(nullptr),
+      m_mu(nullptr),
+      m_lambda(nullptr),
+      m_body_force(nullptr)
 {
-
-  displacement.mesh = pmesh;
-  displacement.coll = std::make_shared< mfem::H1_FECollection >(order, pmesh->Dimension(), mfem::Ordering::byVDIM);
-  displacement.space = std::make_shared< mfem::ParFiniteElementSpace >(pmesh, displacement.coll.get());
-  displacement.gf = std::make_shared < mfem::ParGridFunction >(displacement.space.get());
+  displacement.mesh     = pmesh;
+  displacement.coll     = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension(), mfem::Ordering::byVDIM);
+  displacement.space    = std::make_shared<mfem::ParFiniteElementSpace>(pmesh, displacement.coll.get());
+  displacement.gf       = std::make_shared<mfem::ParGridFunction>(displacement.space.get());
   displacement.true_vec = mfem::HypreParVector(displacement.space.get());
 
   // and initial conditions
-  *displacement.gf = 0.0;
+  *displacement.gf      = 0.0;
   displacement.true_vec = 0.0;
 
   displacement.name = "displacement";
-
 }
 
 void ElasticitySolver::SetDisplacementBCs(mfem::Array<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef)
@@ -44,18 +52,12 @@ void ElasticitySolver::SetTractionBCs(mfem::Array<int> &trac_bdr, mfem::VectorCo
 void ElasticitySolver::SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu)
 {
   m_lambda = &lambda;
-  m_mu = &mu;
+  m_mu     = &mu;
 }
 
-void ElasticitySolver::SetBodyForce(mfem::VectorCoefficient &force)
-{
-  m_body_force = &force;
-}
+void ElasticitySolver::SetBodyForce(mfem::VectorCoefficient &force) { m_body_force = &force; }
 
-void ElasticitySolver::SetLinearSolverParameters(const LinearSolverParameters &params)
-{
-  m_lin_params = params;
-}
+void ElasticitySolver::SetLinearSolverParameters(const LinearSolverParameters &params) { m_lin_params = params; }
 
 void ElasticitySolver::CompleteSetup()
 {
@@ -80,7 +82,7 @@ void ElasticitySolver::CompleteSetup()
     m_l_form->Assemble();
     m_rhs = m_l_form->ParallelAssemble();
   } else {
-    m_rhs = new mfem::HypreParVector(displacement.space.get());
+    m_rhs  = new mfem::HypreParVector(displacement.space.get());
     *m_rhs = 0.0;
   }
 
@@ -91,7 +93,7 @@ void ElasticitySolver::CompleteSetup()
   m_K_e_mat = m_K_mat->EliminateRowsCols(m_ess_tdof_list);
 
   // Initialize the eliminate BC RHS vector
-  m_bc_rhs = new mfem::HypreParVector(displacement.space.get());
+  m_bc_rhs  = new mfem::HypreParVector(displacement.space.get());
   *m_bc_rhs = 0.0;
 
   // Initialize the true vector

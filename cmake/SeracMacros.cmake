@@ -47,7 +47,7 @@ macro(serac_add_code_checks)
 
     blt_add_code_checks(PREFIX          ${arg_PREFIX}
                         SOURCES         ${_sources}
-                        ASTYLE_CFG_FILE ${PROJECT_SOURCE_DIR}/astyle.cfg
+                        CLANGFORMAT_CFG_FILE ${PROJECT_SOURCE_DIR}/.clang-format
                         CPPCHECK_FLAGS  --enable=all --inconclusive)
 
 endmacro(serac_add_code_checks)

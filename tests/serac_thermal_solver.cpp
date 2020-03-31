@@ -5,18 +5,16 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include <gtest/gtest.h>
+#include <sys/stat.h>
+
+#include <fstream>
 
 #include "mfem.hpp"
 #include "solvers/thermal_solver.hpp"
-#include <fstream>
-#include <sys/stat.h>
 
-double BoundaryTemperature(const mfem::Vector &x)
-{
-  return x.Norml2();
-}
+double BoundaryTemperature(const mfem::Vector& x) { return x.Norml2(); }
 
-double InitialTemperature(const mfem::Vector &x)
+double InitialTemperature(const mfem::Vector& x)
 {
   if (x.Norml2() < 0.5) {
     return 2.0;
@@ -39,14 +37,14 @@ TEST(thermal_solver, static_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh*  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
   mesh->UniformRefinement();
 
   // Declare pointer to parallel mesh object
-  mfem::ParMesh *pmesh = nullptr;
+  mfem::ParMesh* pmesh = nullptr;
 
   // Initialize the parallel mesh and delete the serial mesh
   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
@@ -76,13 +74,14 @@ TEST(thermal_solver, static_solve)
 
   // Define the linear solver params
   LinearSolverParameters params;
-  params.rel_tol = 1.0e-6;
-  params.abs_tol = 1.0e-12;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-12;
   params.print_level = 0;
-  params.max_iter = 100;
+  params.max_iter    = 100;
   therm_solver.SetLinearSolverParameters(params);
 
-  // Complete the setup without allocating the mass matrices and dynamic operator
+  // Complete the setup without allocating the mass matrices and dynamic
+  // operator
   therm_solver.CompleteSetup();
 
   // Perform the static solve
@@ -94,7 +93,7 @@ TEST(thermal_solver, static_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   delete pmesh;
@@ -109,14 +108,14 @@ TEST(thermal_solver, dyn_exp_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh*  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
   mesh->UniformRefinement();
 
   // Declare pointer to parallel mesh object
-  mfem::ParMesh *pmesh = nullptr;
+  mfem::ParMesh* pmesh = nullptr;
 
   // Initialize the parallel mesh and delete the serial mesh
   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
@@ -146,25 +145,25 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Define the linear solver params
   LinearSolverParameters params;
-  params.rel_tol = 1.0e-6;
-  params.abs_tol = 1.0e-12;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-12;
   params.print_level = 0;
-  params.max_iter = 100;
+  params.max_iter    = 100;
   therm_solver.SetLinearSolverParameters(params);
 
   // Complete the setup including the dynamic operators
   therm_solver.CompleteSetup();
 
   // Set timestep options
-  double t = 0.0;
-  double t_final = 0.001;
-  double dt = 0.0001;
-  bool last_step = false;
+  double t         = 0.0;
+  double t_final   = 0.001;
+  double dt        = 0.0001;
+  bool   last_step = false;
 
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
     t += dt_real;
-    last_step = (t >= t_final - 1e-8*dt);
+    last_step = (t >= t_final - 1e-8 * dt);
 
     // Advance the timestep
     therm_solver.AdvanceTimestep(dt_real);
@@ -175,7 +174,7 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.6493029, u_norm, 0.00001);
 
   delete pmesh;
@@ -190,14 +189,14 @@ TEST(thermal_solver, dyn_imp_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh*  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
   mesh->UniformRefinement();
 
   // Declare pointer to parallel mesh object
-  mfem::ParMesh *pmesh = nullptr;
+  mfem::ParMesh* pmesh = nullptr;
 
   // Initialize the parallel mesh and delete the serial mesh
   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
@@ -227,25 +226,25 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Define the linear solver params
   LinearSolverParameters params;
-  params.rel_tol = 1.0e-6;
-  params.abs_tol = 1.0e-12;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-12;
   params.print_level = 0;
-  params.max_iter = 100;
+  params.max_iter    = 100;
   therm_solver.SetLinearSolverParameters(params);
 
   // Complete the setup including the dynamic operators
   therm_solver.CompleteSetup();
 
   // Set timestep options
-  double t = 0.0;
-  double t_final = 5.0;
-  double dt = 1.0;
-  bool last_step = false;
+  double t         = 0.0;
+  double t_final   = 5.0;
+  double dt        = 1.0;
+  bool   last_step = false;
 
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
     t += dt_real;
-    last_step = (t >= t_final - 1e-8*dt);
+    last_step = (t >= t_final - 1e-8 * dt);
 
     // Advance the timestep
     therm_solver.AdvanceTimestep(dt_real);
@@ -256,7 +255,7 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   delete pmesh;
@@ -276,8 +275,7 @@ int main(int argc, char* argv[])
 
   // Parse command line options
   mfem::OptionsParser args(argc, argv);
-  args.AddOption(&mesh_file, "-m", "--mesh",
-                 "Mesh file to use.", true);
+  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
   args.Parse();
   if (!args.Good()) {
     if (myid == 0) {
@@ -295,7 +293,3 @@ int main(int argc, char* argv[])
 
   return result;
 }
-
-
-
-

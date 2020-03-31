@@ -6,16 +6,18 @@
 
 #include <gtest/gtest.h>
 
-#include "solvers/thermal_solver.hpp"
 #include <fstream>
 
-template < typename T >
-T do_nothing(T foo) {
+#include "solvers/thermal_solver.hpp"
+
+template <typename T>
+T do_nothing(T foo)
+{
   return foo;
 }
 
-int main(int argc, char ** argv) {
-
+int main(int argc, char **argv)
+{
   MPI_Init(&argc, &argv);
   int myid;
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
@@ -23,7 +25,7 @@ int main(int argc, char ** argv) {
   MPI_Barrier(MPI_COMM_WORLD);
 
   std::ifstream imesh("../../data/beam-hex.mesh");
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh *  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
@@ -46,9 +48,7 @@ int main(int argc, char ** argv) {
   therm_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
-  mfem::FunctionCoefficient u_0([](const mfem::Vector &x) {
-    return x.Norml2();
-  });
+  mfem::FunctionCoefficient u_0([](const mfem::Vector &x) { return x.Norml2(); });
 
   mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
   temp_bdr = 1;
@@ -62,22 +62,22 @@ int main(int argc, char ** argv) {
 
   // Define the linear solver params
   LinearSolverParameters params;
-  params.rel_tol = 1.0e-6;
-  params.abs_tol = 1.0e-12;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-12;
   params.print_level = 0;
-  params.max_iter = 100;
+  params.max_iter    = 100;
   therm_solver.SetLinearSolverParameters(params);
 
-  // Complete the setup without allocating the mass matrices and dynamic operator
+  // Complete the setup without allocating the mass matrices and dynamic
+  // operator
   therm_solver.CompleteSetup();
 
-  // just do something to make sure the dtor is being called 
+  // just do something to make sure the dtor is being called
   // and that the member variables lifetime is managed properly
-  do_nothing(therm_solver); 
-  do_nothing(therm_solver); 
-  do_nothing(therm_solver); 
-  do_nothing(therm_solver); 
+  do_nothing(therm_solver);
+  do_nothing(therm_solver);
+  do_nothing(therm_solver);
+  do_nothing(therm_solver);
 
   MPI_Finalize();
-
 }
