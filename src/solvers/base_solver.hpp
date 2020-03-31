@@ -9,15 +9,14 @@
 
 #include <map>
 
-#include "mfem.hpp"
 #include "common/serac_types.hpp"
+#include "mfem.hpp"
 
 /// This is the abstract base class for a generic forward solver
-class BaseSolver
-{
-protected:
+class BaseSolver {
+ protected:
   /// List of finite element data structures
-  std::vector< FiniteElementState > m_state;
+  std::vector<FiniteElementState> m_state;
 
   /// Block vector storage of the true state
   mfem::BlockVector *m_block;
@@ -50,7 +49,7 @@ protected:
   TimestepMethod m_timestepper;
 
   /// MFEM ode solver object
-  std::shared_ptr < mfem::ODESolver > m_ode_solver;
+  std::shared_ptr<mfem::ODESolver> m_ode_solver;
 
   /// Root output name
   std::string m_root_name;
@@ -65,35 +64,39 @@ protected:
   int m_rank;
 
   /// VisIt data collection pointer
-  mfem::VisItDataCollection* m_visit_dc;
+  mfem::VisItDataCollection *m_visit_dc;
 
   /// State variable initialization indicator
   bool m_gf_initialized;
 
-public:
+ public:
   /// Empty constructor
   BaseSolver();
 
   /// Constructor that creates n entries in m_state
   BaseSolver(int n);
 
-  /// Set the essential boundary conditions from a list of boundary markers and a coefficient
+  /// Set the essential boundary conditions from a list of boundary markers and
+  /// a coefficient
   virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
 
-  /// Set the vector-valued essential boundary conditions from a list of boundary markers and a coefficient
+  /// Set the vector-valued essential boundary conditions from a list of
+  /// boundary markers and a coefficient
   virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef);
 
-  /// Set the natural boundary conditions from a list of boundary markers and a coefficient
+  /// Set the natural boundary conditions from a list of boundary markers and a
+  /// coefficient
   virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef);
 
-  /// Set the vector-valued natural boundary conditions from a list of boundary markers and a coefficient
+  /// Set the vector-valued natural boundary conditions from a list of boundary
+  /// markers and a coefficient
   virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef);
 
   /// Set the state variables from a coefficient
-  virtual void ProjectState(mfem::Array<mfem::Coefficient*> state_coef);
+  virtual void ProjectState(mfem::Array<mfem::Coefficient *> state_coef);
 
   /// Set the state variables from a vector coefficient
-  virtual void ProjectState(mfem::Array<mfem::VectorCoefficient*> state_vec_coef);
+  virtual void ProjectState(mfem::Array<mfem::VectorCoefficient *> state_vec_coef);
 
   /// Set the state variables from an existing grid function
   virtual void SetState(const std::vector<FiniteElementState> &state);
@@ -120,15 +123,14 @@ public:
   virtual void AdvanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const OutputType output_type, const std::string root_name, mfem::Array< std::string > names);
+  virtual void InitializeOutput(const OutputType output_type, const std::string root_name,
+                                mfem::Array<std::string> names);
 
   /// output the state variables
   virtual void OutputState() const;
 
   /// Destructor
   virtual ~BaseSolver() = default;
-
 };
-
 
 #endif

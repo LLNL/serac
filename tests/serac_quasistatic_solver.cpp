@@ -6,10 +6,11 @@
 
 #include <gtest/gtest.h>
 
-#include "mfem.hpp"
-#include "coefficients/loading_functions.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
 #include <fstream>
+
+#include "coefficients/loading_functions.hpp"
+#include "mfem.hpp"
+#include "solvers/nonlinear_solid_solver.hpp"
 
 const char* mesh_file = "NO_MESH_GIVEN";
 
@@ -26,11 +27,11 @@ TEST(nonlinear_solid_solver, qs_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  mfem::Mesh* mesh = new mfem::Mesh(imesh, 1, 1, true);
+  mfem::Mesh*   mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
-  mfem::ParMesh *pmesh = NULL;
+  mfem::ParMesh* pmesh = NULL;
   mesh->UniformRefinement();
 
   pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
@@ -54,15 +55,14 @@ TEST(nonlinear_solid_solver, qs_solve)
   disp = 0.0;
   mfem::VectorConstantCoefficient disp_coef(disp);
 
-
   mfem::Array<int> trac_bdr;
   trac_bdr.SetSize(pmesh->bdr_attributes.Max());
-  trac_bdr = 0;
+  trac_bdr    = 0;
   trac_bdr[1] = 1;
 
   // define the traction vector
   mfem::Vector traction(dim);
-  traction = 0.0;
+  traction    = 0.0;
   traction(1) = 1.0e-3;
   mfem::VectorConstantCoefficient traction_coef(traction);
 
@@ -75,18 +75,18 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   // Set the linear solver params
   LinearSolverParameters params;
-  params.rel_tol = 1.0e-6;
-  params.abs_tol = 1.0e-8;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-8;
   params.print_level = 0;
-  params.max_iter = 5000;
-  params.prec = Preconditioner::Jacobi;
-  params.lin_solver = LinearSolver::MINRES;
+  params.max_iter    = 5000;
+  params.prec        = Preconditioner::Jacobi;
+  params.lin_solver  = LinearSolver::MINRES;
 
   NonlinearSolverParameters nl_params;
-  nl_params.rel_tol = 1.0e-3;
-  nl_params.abs_tol = 1.0e-6;
+  nl_params.rel_tol     = 1.0e-3;
+  nl_params.abs_tol     = 1.0e-6;
   nl_params.print_level = 1;
-  nl_params.max_iter = 5000;
+  nl_params.max_iter    = 5000;
 
   solid_solver.SetSolverParameters(params, nl_params);
 
@@ -114,7 +114,6 @@ TEST(nonlinear_solid_solver, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -127,8 +126,7 @@ int main(int argc, char* argv[])
 
   // Parse command line options
   mfem::OptionsParser args(argc, argv);
-  args.AddOption(&mesh_file, "-m", "--mesh",
-                 "Mesh file to use.", true);
+  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
   args.Parse();
   if (!args.Good()) {
     if (myid == 0) {

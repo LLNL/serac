@@ -5,45 +5,56 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "nonlinear_solid_solver.hpp"
+
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
 
 const int num_fields = 2;
 
-NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh) :
-  BaseSolver(num_fields), velocity(m_state[0]), displacement(m_state[1]), m_H_form(nullptr), m_M_form(nullptr), m_S_form(nullptr),
-  m_nonlinear_oper(nullptr), m_timedep_oper(nullptr), m_newton_solver(pmesh->GetComm()), m_J_solver(nullptr),
-  m_J_prec(nullptr), m_viscosity(nullptr), m_model(nullptr)
+NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh)
+    : BaseSolver(num_fields),
+      velocity(m_state[0]),
+      displacement(m_state[1]),
+      m_H_form(nullptr),
+      m_M_form(nullptr),
+      m_S_form(nullptr),
+      m_nonlinear_oper(nullptr),
+      m_timedep_oper(nullptr),
+      m_newton_solver(pmesh->GetComm()),
+      m_J_solver(nullptr),
+      m_J_prec(nullptr),
+      m_viscosity(nullptr),
+      m_model(nullptr)
 {
+  velocity.mesh  = pmesh;
+  velocity.coll  = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
+  velocity.space = std::make_shared<mfem::ParFiniteElementSpace>(pmesh, velocity.coll.get(), pmesh->Dimension(),
+                                                                 mfem::Ordering::byVDIM);
+  velocity.gf    = std::make_shared<mfem::ParGridFunction>(velocity.space.get());
+  *velocity.gf   = 0.0;
+  velocity.name  = "velocity";
 
-  velocity.mesh = pmesh;
-  velocity.coll = std::make_shared< mfem::H1_FECollection >(order, pmesh->Dimension());
-  velocity.space = std::make_shared< mfem::ParFiniteElementSpace >(pmesh, velocity.coll.get(), pmesh->Dimension(), mfem::Ordering::byVDIM);
-  velocity.gf = std::make_shared < mfem::ParGridFunction >(velocity.space.get());
-  *velocity.gf = 0.0;
-  velocity.name = "velocity";
-
-  displacement.mesh = pmesh;
-  displacement.coll = std::make_shared< mfem::H1_FECollection >(order, pmesh->Dimension());
-  displacement.space = std::make_shared< mfem::ParFiniteElementSpace >(pmesh, displacement.coll.get(), pmesh->Dimension(), mfem::Ordering::byVDIM);
-  displacement.gf = std::make_shared < mfem::ParGridFunction >(displacement.space.get());
-  *displacement.gf = 0.0;
-  displacement.name = "displacement";
+  displacement.mesh  = pmesh;
+  displacement.coll  = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
+  displacement.space = std::make_shared<mfem::ParFiniteElementSpace>(pmesh, displacement.coll.get(), pmesh->Dimension(),
+                                                                     mfem::Ordering::byVDIM);
+  displacement.gf    = std::make_shared<mfem::ParGridFunction>(displacement.space.get());
+  *displacement.gf   = 0.0;
+  displacement.name  = "displacement";
 
   // Initialize the true DOF vector
-  int true_size = velocity.space->TrueVSize();
+  int              true_size = velocity.space->TrueVSize();
   mfem::Array<int> true_offset(3);
   true_offset[0] = 0;
   true_offset[1] = true_size;
-  true_offset[2] = 2*true_size;
-  m_block = new mfem::BlockVector(true_offset);
+  true_offset[2] = 2 * true_size;
+  m_block        = new mfem::BlockVector(true_offset);
 
   m_block->GetBlockView(0, velocity.true_vec);
   velocity.true_vec = 0.0;
 
   m_block->GetBlockView(1, displacement.true_vec);
   displacement.true_vec = 0.0;
-
 }
 
 void NonlinearSolidSolver::SetDisplacementBCs(mfem::Array<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef)
@@ -65,10 +76,7 @@ void NonlinearSolidSolver::SetHyperelasticMaterialParameters(double mu, double K
   m_model = new mfem::NeoHookeanModel(mu, K);
 }
 
-void NonlinearSolidSolver::SetViscosity(mfem::Coefficient *visc)
-{
-  m_viscosity = visc;
-}
+void NonlinearSolidSolver::SetViscosity(mfem::Coefficient *visc) { m_viscosity = visc; }
 
 void NonlinearSolidSolver::SetInitialState(mfem::VectorCoefficient &disp_state, mfem::VectorCoefficient &velo_state)
 {
@@ -79,10 +87,10 @@ void NonlinearSolidSolver::SetInitialState(mfem::VectorCoefficient &disp_state, 
   m_gf_initialized = true;
 }
 
-void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &lin_params,
-    const NonlinearSolverParameters &nonlin_params)
+void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &   lin_params,
+                                               const NonlinearSolverParameters &nonlin_params)
 {
-  m_lin_params = lin_params;
+  m_lin_params    = lin_params;
   m_nonlin_params = nonlin_params;
 }
 
@@ -110,7 +118,7 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // If dynamic, create the mass and viscosity forms
   if (m_timestepper != TimestepMethod::QuasiStatic) {
-    const double ref_density = 1.0; // density in the reference configuration
+    const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
     m_M_form = new mfem::ParBilinearForm(m_state[0].space.get());
@@ -169,11 +177,10 @@ void NonlinearSolidSolver::CompleteSetup()
     m_nonlinear_oper = new NonlinearSolidQuasiStaticOperator(m_H_form);
     m_newton_solver.SetOperator(*m_nonlinear_oper);
   } else {
-    m_timedep_oper = new NonlinearSolidDynamicOperator(m_H_form, m_S_form, m_M_form,
-        m_ess_tdof_list, &m_newton_solver, m_lin_params);
+    m_timedep_oper = new NonlinearSolidDynamicOperator(m_H_form, m_S_form, m_M_form, m_ess_tdof_list, &m_newton_solver,
+                                                       m_lin_params);
     m_ode_solver->Init(*m_timedep_oper);
   }
-
 }
 
 // Solve the Quasi-static Newton system
@@ -213,7 +220,7 @@ NonlinearSolidSolver::~NonlinearSolidSolver()
 }
 
 NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(mfem::ParNonlinearForm *H_form)
-  : mfem::Operator(H_form->FESpace()->GetTrueVSize())
+    : mfem::Operator(H_form->FESpace()->GetTrueVSize())
 {
   m_H_form = H_form;
 }
@@ -233,21 +240,24 @@ mfem::Operator &NonlinearSolidQuasiStaticOperator::GetGradient(const mfem::Vecto
 }
 
 // destructor
-NonlinearSolidQuasiStaticOperator::~NonlinearSolidQuasiStaticOperator()
-{
-}
+NonlinearSolidQuasiStaticOperator::~NonlinearSolidQuasiStaticOperator() {}
 
 NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
-  mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
-  mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list,
-  mfem::NewtonSolver *newton_solver, LinearSolverParameters lin_params)
-  : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize()*2), m_M_form(M_form), m_S_form(S_form),
-    m_H_form(H_form),
-    m_M_mat(nullptr), m_reduced_oper(nullptr), m_newton_solver(newton_solver),
-    m_ess_tdof_list(ess_tdof_list), m_lin_params(lin_params), m_z(height/2)
+    mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form, mfem::ParBilinearForm *M_form,
+    const mfem::Array<int> &ess_tdof_list, mfem::NewtonSolver *newton_solver, LinearSolverParameters lin_params)
+    : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
+      m_M_form(M_form),
+      m_S_form(S_form),
+      m_H_form(H_form),
+      m_M_mat(nullptr),
+      m_reduced_oper(nullptr),
+      m_newton_solver(newton_solver),
+      m_ess_tdof_list(ess_tdof_list),
+      m_lin_params(lin_params),
+      m_z(height / 2)
 {
   // Assemble the mass matrix and eliminate the fixed DOFs
-  m_M_mat = m_M_form->ParallelAssemble();
+  m_M_mat                  = m_M_form->ParallelAssemble();
   mfem::HypreParMatrix *Me = m_M_mat->EliminateRowsCols(m_ess_tdof_list);
   delete Me;
 
@@ -261,7 +271,8 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
   m_M_solver.SetPreconditioner(m_M_prec);
   m_M_solver.SetOperator(*m_M_mat);
 
-  // Construct the reduced system operator and initialize the newton solver with it
+  // Construct the reduced system operator and initialize the newton solver with
+  // it
   m_reduced_oper = new NonlinearSolidReducedSystemOperator(H_form, S_form, M_form, ess_tdof_list);
   m_newton_solver->SetOperator(*m_reduced_oper);
 }
@@ -269,28 +280,27 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
 void NonlinearSolidDynamicOperator::Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const
 {
   // Create views to the sub-vectors v, x of vx, and dv_dt, dx_dt of dvx_dt
-  int sc = height/2;
-  mfem::Vector v(vx.GetData() +  0, sc);
+  int          sc = height / 2;
+  mfem::Vector v(vx.GetData() + 0, sc);
   mfem::Vector x(vx.GetData() + sc, sc);
-  mfem::Vector dv_dt(dvx_dt.GetData() +  0, sc);
+  mfem::Vector dv_dt(dvx_dt.GetData() + 0, sc);
   mfem::Vector dx_dt(dvx_dt.GetData() + sc, sc);
 
   m_H_form->Mult(x, m_z);
   m_S_form->TrueAddMult(v, m_z);
   m_z.SetSubVector(m_ess_tdof_list, 0.0);
-  m_z.Neg(); // z = -z
+  m_z.Neg();  // z = -z
   m_M_solver.Mult(m_z, dv_dt);
 
   dx_dt = v;
 }
 
-void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt,
-    const mfem::Vector &vx, mfem::Vector &dvx_dt)
+void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::Vector &vx, mfem::Vector &dvx_dt)
 {
-  int sc = height/2;
-  mfem::Vector v(vx.GetData() +  0, sc);
+  int          sc = height / 2;
+  mfem::Vector v(vx.GetData() + 0, sc);
   mfem::Vector x(vx.GetData() + sc, sc);
-  mfem::Vector dv_dt(dvx_dt.GetData() +  0, sc);
+  mfem::Vector dv_dt(dvx_dt.GetData() + 0, sc);
   mfem::Vector dx_dt(dvx_dt.GetData() + sc, sc);
 
   // By eliminating kx from the coupled system:
@@ -300,33 +310,38 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt,
   // m_reduced_oper. This equation is solved with the m_newton_solver
   // object (using m_J_solver and m_J_prec internally).
   m_reduced_oper->SetParameters(dt, &v, &x);
-  mfem::Vector zero; // empty vector is interpreted as zero r.h.s. by NewtonSolver
+  mfem::Vector zero;  // empty vector is interpreted as zero r.h.s. by NewtonSolver
   m_newton_solver->Mult(zero, dv_dt);
   MFEM_VERIFY(m_newton_solver->GetConverged(), "Newton solver did not converge.");
   add(v, dt, dv_dt, dx_dt);
 }
 
 // destructor
-NonlinearSolidDynamicOperator::~NonlinearSolidDynamicOperator()
+NonlinearSolidDynamicOperator::~NonlinearSolidDynamicOperator() { delete m_M_mat; }
+
+NonlinearSolidReducedSystemOperator::NonlinearSolidReducedSystemOperator(mfem::ParNonlinearForm *H_form,
+                                                                         mfem::ParBilinearForm * S_form,
+                                                                         mfem::ParBilinearForm * M_form,
+                                                                         const mfem::Array<int> &ess_tdof_list)
+    : mfem::Operator(M_form->ParFESpace()->TrueVSize()),
+      m_M_form(M_form),
+      m_S_form(S_form),
+      m_H_form(H_form),
+      m_jacobian(nullptr),
+      m_dt(0.0),
+      m_v(nullptr),
+      m_x(nullptr),
+      m_w(height),
+      m_z(height),
+      m_ess_tdof_list(ess_tdof_list)
 {
-  delete m_M_mat;
 }
 
-
-NonlinearSolidReducedSystemOperator::NonlinearSolidReducedSystemOperator(
-  mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form, mfem::ParBilinearForm *M_form,
-  const mfem::Array<int> &ess_tdof_list)
-  : mfem::Operator(M_form->ParFESpace()->TrueVSize()), m_M_form(M_form), m_S_form(S_form), m_H_form(H_form),
-    m_jacobian(nullptr), m_dt(0.0), m_v(nullptr), m_x(nullptr), m_w(height), m_z(height),
-    m_ess_tdof_list(ess_tdof_list)
-{ }
-
-void NonlinearSolidReducedSystemOperator::SetParameters(double dt, const mfem::Vector *v,
-    const mfem::Vector *x)
+void NonlinearSolidReducedSystemOperator::SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x)
 {
   m_dt = dt;
-  m_v = v;
-  m_x = x;
+  m_v  = v;
+  m_x  = x;
 }
 
 void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector &k, mfem::Vector &y) const
@@ -347,7 +362,7 @@ mfem::Operator &NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   mfem::SparseMatrix *localJ = Add(1.0, m_M_form->SpMat(), m_dt, m_S_form->SpMat());
   add(*m_v, m_dt, k, m_w);
   add(*m_x, m_dt, m_w, m_z);
-  localJ->Add(m_dt*m_dt, m_H_form->GetLocalGradient(m_z));
+  localJ->Add(m_dt * m_dt, m_H_form->GetLocalGradient(m_z));
   m_jacobian = m_M_form->ParallelAssemble(localJ);
   delete localJ;
 
@@ -360,7 +375,4 @@ mfem::Operator &NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   return *m_jacobian;
 }
 
-NonlinearSolidReducedSystemOperator::~NonlinearSolidReducedSystemOperator()
-{
-  delete m_jacobian;
-}
+NonlinearSolidReducedSystemOperator::~NonlinearSolidReducedSystemOperator() { delete m_jacobian; }

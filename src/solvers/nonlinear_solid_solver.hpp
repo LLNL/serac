@@ -7,8 +7,8 @@
 #ifndef NONLINSOLID_SOLVER
 #define NONLINSOLID_SOLVER
 
-#include "mfem.hpp"
 #include "base_solver.hpp"
+#include "mfem.hpp"
 
 // Forward declaration
 class NonlinearSolidQuasiStaticOperator;
@@ -18,13 +18,11 @@ class NonlinearSolidReducedSystemOperator;
 /// The nonlinear hyperelastic quasi-static and dynamic
 /// hyperelastic solver object. It is derived from MFEM
 /// example 10p.
-class NonlinearSolidSolver : public BaseSolver
-{
-protected:
+class NonlinearSolidSolver : public BaseSolver {
+ protected:
+  FiniteElementState &velocity;
+  FiniteElementState &displacement;
 
-  FiniteElementState & velocity;
-  FiniteElementState & displacement; 
- 
   /// The abstract nonlinear form
   mfem::ParNonlinearForm *m_H_form;
 
@@ -64,7 +62,7 @@ protected:
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
 
-public:
+ public:
   /// Constructor from order and parallel mesh
   NonlinearSolidSolver(int order, mfem::ParMesh *pmesh);
 
@@ -97,16 +95,15 @@ public:
 };
 
 /// The abstract MFEM operator for a quasi-static solve
-class NonlinearSolidQuasiStaticOperator : public mfem::Operator
-{
-protected:
+class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
+ protected:
   /// The nonlinear form
   mfem::ParNonlinearForm *m_H_form;
 
   /// The linearized jacobian at the current state
   mutable mfem::Operator *m_Jacobian;
 
-public:
+ public:
   /// The constructor
   NonlinearSolidQuasiStaticOperator(mfem::ParNonlinearForm *H_form);
 
@@ -121,9 +118,8 @@ public:
 };
 
 /// The abstract time dependent MFEM operator for explicit and implicit solves
-class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator
-{
-protected:
+class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
+ protected:
   /// The bilinear form for the mass matrix
   mfem::ParBilinearForm *m_M_form;
 
@@ -157,12 +153,11 @@ protected:
   /// Working vector
   mutable mfem::Vector m_z;
 
-public:
+ public:
   /// The constructor
   NonlinearSolidDynamicOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
-                                mfem::ParBilinearForm *M_form,
-                                const mfem::Array<int> &ess_tdof_list, mfem::NewtonSolver *newton_solver,
-                                LinearSolverParameters lin_params);
+                                mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list,
+                                mfem::NewtonSolver *newton_solver, LinearSolverParameters lin_params);
 
   /// Required to use the native newton solver
   virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
@@ -179,9 +174,8 @@ public:
 ///  k --> (M + dt*S)*k + H(x + dt*v + dt^2*k) + S*v,
 ///  where M and S are given BilinearForms, H is a given NonlinearForm, v and x
 ///  are given vectors, and dt is a scalar.
-class NonlinearSolidReducedSystemOperator : public mfem::Operator
-{
-private:
+class NonlinearSolidReducedSystemOperator : public mfem::Operator {
+ private:
   /// The bilinear form for the mass matrix
   mfem::ParBilinearForm *m_M_form;
 
@@ -206,7 +200,7 @@ private:
   /// Essential degrees of freedom
   const mfem::Array<int> &m_ess_tdof_list;
 
-public:
+ public:
   /// The constructor
   NonlinearSolidReducedSystemOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
                                       mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list);
