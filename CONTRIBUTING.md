@@ -18,4 +18,6 @@ the list below as part of your commit.
 
 * Adrien Bernede, LLNL
 * Jamie Bramwell, LLNL
+* Samuel Mish, LLNL
 * Chris White, LLNL
+* Jonathan Wong, LLNL
