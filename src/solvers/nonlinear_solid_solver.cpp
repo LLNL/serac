@@ -167,7 +167,6 @@ void NonlinearSolidSolver::CompleteSetup()
   }
 
   // Set the newton solve parameters
-  m_newton_solver.iterative_mode = true;
   m_newton_solver.SetSolver(*m_J_solver);
   m_newton_solver.SetPrintLevel(m_nonlin_params.print_level);
   m_newton_solver.SetRelTol(m_nonlin_params.rel_tol);
@@ -176,9 +175,11 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (m_timestepper == TimestepMethod::QuasiStatic) {
+    m_newton_solver.iterative_mode = true;
     m_nonlinear_oper = new NonlinearSolidQuasiStaticOperator(m_H_form);
     m_newton_solver.SetOperator(*m_nonlinear_oper);
   } else {
+    m_newton_solver.iterative_mode = false;
     m_timedep_oper = new NonlinearSolidDynamicOperator(m_H_form, m_S_form, m_M_form, m_ess_tdof_list, &m_newton_solver,
                                                        m_lin_params);
     m_ode_solver->Init(*m_timedep_oper);
