@@ -154,12 +154,11 @@ int main(int argc, char *argv[])
   mfem::VectorCoefficient *defo_coef = new mfem::VectorFunctionCoefficient(dim, InitialDeformation);
 
   mfem::Vector velo(dim);
-  velo                                       = 0.0;
+  velo = 0.0;
+  
   mfem::VectorConstantCoefficient *velo_coef = new mfem::VectorConstantCoefficient(velo);
 
-  std::vector<mfem::VectorCoefficient *> coefs(2);
-  coefs[0] = defo_coef;
-  coefs[1] = velo_coef;
+  std::vector<mfem::VectorCoefficient *> coefs = {defo_coef, velo_coef};
 
   // initialize x_cur, boundary condition, deformation, and
   // incremental nodal displacment grid functions by projection the
@@ -219,9 +218,7 @@ int main(int argc, char *argv[])
 
   bool last_step = false;
 
-  std::vector<std::string> names(2);
-  names[0] = "Deformation";
-  names[1] = "Velocity";
+  std::vector<std::string> names = {"Deformation", "Velocity"};
 
   solid_solver.InitializeOutput(OutputType::VisIt, "serac", names);
 
