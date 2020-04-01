@@ -61,5 +61,5 @@ then
     echo "~~~~~ Moving to ${build_dir}"
     cd ${build_dir}
 
-    ctest -T test
+    ctest --output-on-failure -T test
 fi
