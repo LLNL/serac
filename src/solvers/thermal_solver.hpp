@@ -76,10 +76,10 @@ class ThermalSolver : public BaseSolver {
   ThermalSolver(int order, mfem::ParMesh *pmesh);
 
   /// Set essential temperature boundary conditions (strongly enforced)
-  void SetTemperatureBCs(mfem::Array<int> &temp_bdr, mfem::Coefficient *temp_bdr_coef);
+  void SetTemperatureBCs(std::vector<int> &temp_bdr, mfem::Coefficient *temp_bdr_coef);
 
   /// Set flux boundary conditions (weakly enforced)
-  void SetFluxBCs(mfem::Array<int> &flux_bdr, mfem::Coefficient *flux_bdr_coef);
+  void SetFluxBCs(std::vector<int> &flux_bdr, mfem::Coefficient *flux_bdr_coef);
 
   /// Advance the timestep using the chosen integration scheme
   void AdvanceTimestep(double &dt);

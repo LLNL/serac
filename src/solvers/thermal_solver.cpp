@@ -33,15 +33,15 @@ void ThermalSolver::SetInitialState(mfem::Coefficient &temp)
   m_gf_initialized = true;
 }
 
-void ThermalSolver::SetTemperatureBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
+void ThermalSolver::SetTemperatureBCs(std::vector<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
 {
   SetEssentialBCs(ess_bdr, ess_bdr_coef);
 
   // Get the essential dof indicies and project the coefficient onto them
-  temperature.space->GetEssentialTrueDofs(ess_bdr, m_ess_tdof_list);
+  temperature.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
-void ThermalSolver::SetFluxBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
+void ThermalSolver::SetFluxBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   SetNaturalBCs(nat_bdr, nat_bdr_coef);

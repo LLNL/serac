@@ -43,9 +43,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   NonlinearSolidSolver solid_solver(1, pmesh);
 
   // define a boundary attribute array and initialize to 0
-  mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(pmesh->bdr_attributes.Max());
-  ess_bdr = 0;
+  std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
@@ -55,9 +53,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   disp = 0.0;
   mfem::VectorConstantCoefficient disp_coef(disp);
 
-  mfem::Array<int> trac_bdr;
-  trac_bdr.SetSize(pmesh->bdr_attributes.Max());
-  trac_bdr    = 0;
+  std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
   trac_bdr[1] = 1;
 
   // define the traction vector

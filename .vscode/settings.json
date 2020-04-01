@@ -1,3 +1,0 @@
-{
-    "cmake.buildDirectory": "${workspaceFolder}/build-gcc@7.4.0-debug"
-}

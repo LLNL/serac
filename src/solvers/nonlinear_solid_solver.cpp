@@ -50,22 +50,24 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh)
   true_offset[2] = 2 * true_size;
   m_block        = new mfem::BlockVector(true_offset);
 
-  m_block->GetBlockView(0, velocity.true_vec);
+  m_block->GetBlockView(0, displacement.true_vec);
+  displacement.true_vec = 0.0;
+
+  m_block->GetBlockView(1, velocity.true_vec);
   velocity.true_vec = 0.0;
 
-  m_block->GetBlockView(1, displacement.true_vec);
-  displacement.true_vec = 0.0;
 }
 
-void NonlinearSolidSolver::SetDisplacementBCs(mfem::Array<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef)
+void NonlinearSolidSolver::SetDisplacementBCs(std::vector<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef);
 
   // Get the list of essential DOFs
-  m_state[0].space->GetEssentialTrueDofs(disp_bdr, m_ess_tdof_list);
+  
+  m_state[0].space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
-void NonlinearSolidSolver::SetTractionBCs(mfem::Array<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef)
+void NonlinearSolidSolver::SetTractionBCs(std::vector<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef)
 {
   SetNaturalBCs(trac_bdr, trac_bdr_coef);
 }
@@ -165,7 +167,6 @@ void NonlinearSolidSolver::CompleteSetup()
   }
 
   // Set the newton solve parameters
-  m_newton_solver.iterative_mode = true;
   m_newton_solver.SetSolver(*m_J_solver);
   m_newton_solver.SetPrintLevel(m_nonlin_params.print_level);
   m_newton_solver.SetRelTol(m_nonlin_params.rel_tol);
@@ -174,9 +175,11 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (m_timestepper == TimestepMethod::QuasiStatic) {
+    m_newton_solver.iterative_mode = true;
     m_nonlinear_oper = new NonlinearSolidQuasiStaticOperator(m_H_form);
     m_newton_solver.SetOperator(*m_nonlinear_oper);
   } else {
+    m_newton_solver.iterative_mode = false;
     m_timedep_oper = new NonlinearSolidDynamicOperator(m_H_form, m_S_form, m_M_form, m_ess_tdof_list, &m_newton_solver,
                                                        m_lin_params);
     m_ode_solver->Init(*m_timedep_oper);

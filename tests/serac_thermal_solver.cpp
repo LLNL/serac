@@ -62,8 +62,7 @@ TEST(thermal_solver, static_solve)
   // Initialize the temperature boundary condition
   mfem::FunctionCoefficient u_0(BoundaryTemperature);
 
-  mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
-  temp_bdr = 1;
+  std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
 
   // Set the temperature BC in the thermal solver
   therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
@@ -135,8 +134,7 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.SetInitialState(u_0);
 
   // Set the temperature BC in the thermal solver
-  mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
-  temp_bdr = 1;
+  std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
   therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
 
   // Set the conductivity of the thermal operator
@@ -216,8 +214,7 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.SetInitialState(u_0);
 
   // Set the temperature BC in the thermal solver
-  mfem::Array<int> temp_bdr(pmesh->bdr_attributes.Max());
-  temp_bdr = 1;
+  std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
   therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
 
   // Set the conductivity of the thermal operator

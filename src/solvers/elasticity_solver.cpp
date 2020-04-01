@@ -25,7 +25,7 @@ ElasticitySolver::ElasticitySolver(int order, mfem::ParMesh *pmesh)
 {
   displacement.mesh     = pmesh;
   displacement.coll     = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension(), mfem::Ordering::byVDIM);
-  displacement.space    = std::make_shared<mfem::ParFiniteElementSpace>(pmesh, displacement.coll.get());
+  displacement.space    = std::make_shared<mfem::ParFiniteElementSpace>(pmesh, displacement.coll.get(), pmesh->Dimension());
   displacement.gf       = std::make_shared<mfem::ParGridFunction>(displacement.space.get());
   displacement.true_vec = mfem::HypreParVector(displacement.space.get());
 
@@ -36,15 +36,15 @@ ElasticitySolver::ElasticitySolver(int order, mfem::ParMesh *pmesh)
   displacement.name = "displacement";
 }
 
-void ElasticitySolver::SetDisplacementBCs(mfem::Array<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef)
+void ElasticitySolver::SetDisplacementBCs(std::vector<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef);
 
   // Get the list of essential DOFs
-  displacement.space->GetEssentialTrueDofs(disp_bdr, m_ess_tdof_list);
+  displacement.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
-void ElasticitySolver::SetTractionBCs(mfem::Array<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef)
+void ElasticitySolver::SetTractionBCs(std::vector<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef)
 {
   SetNaturalBCs(trac_bdr, trac_bdr_coef);
 }
