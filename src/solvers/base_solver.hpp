@@ -22,10 +22,10 @@ class BaseSolver {
   mfem::BlockVector *m_block;
 
   /// Essential BC markers
-  std::shared_ptr<mfem::Array<int> > m_ess_bdr;
+  mfem::Array<int> m_ess_bdr;
 
   /// Natural BC markers
-  std::shared_ptr<mfem::Array<int> > m_nat_bdr;
+  mfem::Array<int> m_nat_bdr;
 
   /// Pointer to the essential BC coefficient
   mfem::Coefficient *m_ess_bdr_coef;

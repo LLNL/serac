@@ -29,25 +29,45 @@ BaseSolver::BaseSolver(int n) : BaseSolver() { m_state.resize(n); }
 
 void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef)
 {
-  m_ess_bdr = std::make_shared<mfem::Array<int> >(ess_bdr.data(), ess_bdr.size());
+  m_ess_bdr.SetSize(ess_bdr.size());
+
+  for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
+    m_ess_bdr[i] = ess_bdr[i];
+  }
+
   m_ess_bdr_vec_coef = ess_bdr_vec_coef;
 }
 
 void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef)
 {
-  m_nat_bdr = std::make_shared<mfem::Array<int> >(nat_bdr.data(), nat_bdr.size());
+  m_nat_bdr.SetSize(nat_bdr.size());
+  
+  for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
+    m_nat_bdr[i] = nat_bdr[i];
+  }
+
   m_nat_bdr_vec_coef = nat_bdr_vec_coef;
 }
 
 void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
 {
-  m_ess_bdr = std::make_shared<mfem::Array<int> >(ess_bdr.data(), ess_bdr.size());
+  m_ess_bdr.SetSize(ess_bdr.size());
+
+  for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
+    m_ess_bdr[i] = ess_bdr[i];
+  }
+
   m_ess_bdr_coef = ess_bdr_coef;
 }
 
 void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
 {
-  m_nat_bdr = std::make_shared<mfem::Array<int> >(nat_bdr.data(), nat_bdr.size());
+  m_nat_bdr.SetSize(nat_bdr.size());
+  
+  for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
+    m_nat_bdr[i] = nat_bdr[i];
+  }
+  
   m_nat_bdr_coef = nat_bdr_coef;
 }
 

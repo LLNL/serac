@@ -41,7 +41,7 @@ void ElasticitySolver::SetDisplacementBCs(std::vector<int> &disp_bdr, mfem::Vect
   SetEssentialBCs(disp_bdr, disp_bdr_coef);
 
   // Get the list of essential DOFs
-  displacement.space->GetEssentialTrueDofs(*m_ess_bdr.get(), m_ess_tdof_list);
+  displacement.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
 void ElasticitySolver::SetTractionBCs(std::vector<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef)
@@ -78,7 +78,7 @@ void ElasticitySolver::CompleteSetup()
 
   // Add the traction integrator
   if (m_nat_bdr_vec_coef != nullptr) {
-    m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*m_nat_bdr_vec_coef), *m_nat_bdr.get());
+    m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*m_nat_bdr_vec_coef), m_nat_bdr);
     m_l_form->Assemble();
     m_rhs = m_l_form->ParallelAssemble();
   } else {
@@ -157,7 +157,7 @@ void ElasticitySolver::QuasiStaticSolve()
   *m_bc_rhs = *m_rhs;
   if (m_ess_bdr_vec_coef != nullptr) {
     m_ess_bdr_vec_coef->SetTime(m_time);
-    displacement.gf->ProjectBdrCoefficient(*m_ess_bdr_vec_coef, *m_ess_bdr.get());
+    displacement.gf->ProjectBdrCoefficient(*m_ess_bdr_vec_coef, m_ess_bdr);
     displacement.gf->GetTrueDofs(displacement.true_vec);
     mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, displacement.true_vec, *m_bc_rhs);
   }

@@ -64,7 +64,7 @@ void NonlinearSolidSolver::SetDisplacementBCs(std::vector<int> &disp_bdr, mfem::
 
   // Get the list of essential DOFs
   
-  m_state[0].space->GetEssentialTrueDofs(*m_ess_bdr.get(), m_ess_tdof_list);
+  m_state[0].space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
 void NonlinearSolidSolver::SetTractionBCs(std::vector<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef)
@@ -110,12 +110,12 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Add the traction integrator
   if (m_nat_bdr_vec_coef != nullptr) {
-    m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*m_nat_bdr_vec_coef), *m_nat_bdr.get());
+    m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*m_nat_bdr_vec_coef), m_nat_bdr);
   }
 
   // Add the essential boundary
   if (m_ess_bdr_vec_coef != nullptr) {
-    m_H_form->SetEssentialBC(*m_ess_bdr.get());
+    m_H_form->SetEssentialBC(m_ess_bdr);
   }
 
   // If dynamic, create the mass and viscosity forms
