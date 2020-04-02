@@ -7,8 +7,8 @@
 #ifndef LINEARELASTIC_SOLVER
 #define LINEARELASTIC_SOLVER
 
-#include "mfem.hpp"
 #include "base_solver.hpp"
+#include "mfem.hpp"
 
 /** This is a generic linear elasticity oeprator of the form
  *
@@ -17,9 +17,10 @@
  *
  *  where u is the displacement vector, f is the body force,
  *  and lambda and mu are the lame parameters */
-class ElasticitySolver : public BaseSolver
-{
-protected:
+class ElasticitySolver : public BaseSolver {
+ protected:
+  FiniteElementState &displacement;
+
   /// Stiffness bilinear form
   mfem::ParBilinearForm *m_K_form;
 
@@ -59,15 +60,15 @@ protected:
   /// Driver for a quasi-static solve
   void QuasiStaticSolve();
 
-public:
+ public:
   /// Constructor using order and mesh
   ElasticitySolver(int order, mfem::ParMesh *pmesh);
 
   /// Set the vector-valued essential displacement boundary conditions
-  void SetDisplacementBCs(mfem::Array<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef);
+  void SetDisplacementBCs(std::vector<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef);
 
   /// Set the vector-valued natural traction boundary conditions
-  void SetTractionBCs(mfem::Array<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef);
+  void SetTractionBCs(std::vector<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef);
 
   /// Driver for advancing the timestep
   void AdvanceTimestep(double &dt);

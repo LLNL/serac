@@ -4,7 +4,6 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-
 //***********************************************************************
 //
 //   SERAC - Nonlinear Implicit Contact Proxy App
@@ -17,13 +16,14 @@
 //
 //***********************************************************************
 
-#include "mfem.hpp"
-#include "solvers/quasistatic_solver.hpp"
+#include <fstream>
+#include <iostream>
+#include <memory>
+
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
-#include <memory>
-#include <iostream>
-#include <fstream>
+#include "mfem.hpp"
+#include "solvers/nonlinear_solid_solver.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -43,18 +43,26 @@ int main(int argc, char *argv[])
   // polynomial interpolation order
   int order = 1;
 
-  // newton input args
-  double newton_rel_tol = 1.0e-2;
-  double newton_abs_tol = 1.0e-4;
-  int newton_iter = 500;
+  // Solver parameters
+  NonlinearSolverParameters nonlin_params;
+  nonlin_params.rel_tol     = 1.0e-2;
+  nonlin_params.abs_tol     = 1.0e-4;
+  nonlin_params.max_iter    = 500;
+  nonlin_params.print_level = 0;
+
+  LinearSolverParameters lin_params;
+  lin_params.rel_tol     = 1.0e-6;
+  lin_params.abs_tol     = 1.0e-8;
+  lin_params.max_iter    = 5000;
+  lin_params.print_level = 0;
 
   // solver input args
   bool gmres_solver = true;
-  bool slu_solver = false;
+  bool slu_solver   = false;
 
   // neo-Hookean material parameters
   double mu = 0.25;
-  double K = 5.0;
+  double K  = 5.0;
 
   // loading parameters
   double tx = 0.0;
@@ -62,42 +70,37 @@ int main(int argc, char *argv[])
   double tz = 0.0;
 
   double t_final = 1.0;
-  double dt = 0.25;
+  double dt      = 0.25;
 
   // specify all input arguments
   mfem::OptionsParser args(argc, argv);
-  args.AddOption(&mesh_file, "-m", "--mesh",
-                 "Mesh file to use.");
-  args.AddOption(&ser_ref_levels, "-rs", "--refine-serial",
-                 "Number of times to refine the mesh uniformly in serial.");
+  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.");
+  args.AddOption(&ser_ref_levels, "-rs", "--refine-serial", "Number of times to refine the mesh uniformly in serial.");
   args.AddOption(&par_ref_levels, "-rp", "--refine-parallel",
                  "Number of times to refine the mesh uniformly in parallel.");
-  args.AddOption(&order, "-o", "--order",
-                 "Order (degree) of the finite elements.");
-  args.AddOption(&mu, "-mu", "--shear-modulus",
-                 "Shear modulus in the Neo-Hookean hyperelastic model.");
-  args.AddOption(&K, "-K", "--bulk-modulus",
-                 "Bulk modulus in the Neo-Hookean hyperelastic model.");
-  args.AddOption(&tx, "-tx", "--traction-x",
-                 "Cantilever tip traction in the x direction.");
-  args.AddOption(&ty, "-ty", "--traction-y",
-                 "Cantilever tip traction in the y direction.");
-  args.AddOption(&tz, "-tz", "--traction-z",
-                 "Cantilever tip traction in the z direction.");
-  args.AddOption(&slu_solver, "-slu", "--superlu", "-no-slu",
-                 "--no-superlu", "Use the SuperLU Solver.");
+  args.AddOption(&order, "-o", "--order", "Order (degree) of the finite elements.");
+  args.AddOption(&mu, "-mu", "--shear-modulus", "Shear modulus in the Neo-Hookean hyperelastic model.");
+  args.AddOption(&K, "-K", "--bulk-modulus", "Bulk modulus in the Neo-Hookean hyperelastic model.");
+  args.AddOption(&tx, "-tx", "--traction-x", "Cantilever tip traction in the x direction.");
+  args.AddOption(&ty, "-ty", "--traction-y", "Cantilever tip traction in the y direction.");
+  args.AddOption(&tz, "-tz", "--traction-z", "Cantilever tip traction in the z direction.");
+  args.AddOption(&slu_solver, "-slu", "--superlu", "-no-slu", "--no-superlu", "Use the SuperLU Solver.");
   args.AddOption(&gmres_solver, "-gmres", "--gmres", "-no-gmres", "--no-gmres",
                  "Use gmres, otherwise minimum residual is used.");
-  args.AddOption(&newton_rel_tol, "-rel", "--relative-tolerance",
+  args.AddOption(&lin_params.rel_tol, "-lrel", "--linear-relative-tolerance",
+                 "Relative tolerance for the lienar solve.");
+  args.AddOption(&lin_params.abs_tol, "-labs", "--linear-absolute-tolerance",
+                 "Absolute tolerance for the linear solve.");
+  args.AddOption(&lin_params.max_iter, "-lit", "--linear-iterations", "Maximum iterations for the linear solve.");
+  args.AddOption(&lin_params.print_level, "-lpl", "--linear-print-level", "Linear print level.");
+  args.AddOption(&nonlin_params.rel_tol, "-nrel", "--newton-relative-tolerance",
                  "Relative tolerance for the Newton solve.");
-  args.AddOption(&newton_abs_tol, "-abs", "--absolute-tolerance",
+  args.AddOption(&nonlin_params.abs_tol, "-nabs", "--newton-absolute-tolerance",
                  "Absolute tolerance for the Newton solve.");
-  args.AddOption(&newton_iter, "-it", "--newton-iterations",
-                 "Maximum iterations for the Newton solve.");
-  args.AddOption(&t_final, "-tf", "--t-final",
-                 "Final time; start time is 0.");
-  args.AddOption(&dt, "-dt", "--time-step",
-                 "Time step.");
+  args.AddOption(&nonlin_params.max_iter, "-nit", "--newton-iterations", "Maximum iterations for the Newton solve.");
+  args.AddOption(&nonlin_params.print_level, "-npl", "--newton-print-level", "Newton print level.");
+  args.AddOption(&t_final, "-tf", "--t-final", "Final time; start time is 0.");
+  args.AddOption(&dt, "-dt", "--time-step", "Time step.");
 
   // Parse the arguments and check if they are good
   args.Parse();
@@ -113,7 +116,7 @@ int main(int argc, char *argv[])
   }
 
   // Open the mesh
-  mfem::Mesh *mesh;
+  mfem::Mesh *  mesh;
   std::ifstream imesh(mesh_file);
   if (!imesh) {
     if (myid == 0) {
@@ -143,54 +146,38 @@ int main(int argc, char *argv[])
 
   int dim = pmesh->Dimension();
 
-  // Define the finite element spaces for displacement field
-  mfem::H1_FECollection fe_coll(order, dim);
-  mfem::ParFiniteElementSpace fe_space(pmesh, &fe_coll, dim, mfem::Ordering::byVDIM);
+  // Define the solid solver object
+  NonlinearSolidSolver solid_solver(order, pmesh);
 
-  HYPRE_Int glob_size = fe_space.GlobalTrueVSize();
+  // Project the initial and reference configuration functions onto the
+  // appropriate grid functions
+  mfem::VectorCoefficient *defo_coef = new mfem::VectorFunctionCoefficient(dim, InitialDeformation);
 
-  // Print the mesh statistics
-  if (myid == 0) {
-    std::cout << "***********************************************************\n";
-    std::cout << "dim(u) = " << glob_size << "\n";
-    std::cout << "***********************************************************\n";
-  }
+  mfem::Vector velo(dim);
+  velo = 0.0;
+  
+  mfem::VectorConstantCoefficient *velo_coef = new mfem::VectorConstantCoefficient(velo);
 
-  // Define a grid function for the global reference configuration, the beginning
-  // step configuration, the global deformation, the current configuration/solution
-  // guess, and the incremental nodal displacements
-  mfem::ParGridFunction x_ref(&fe_space);
-  mfem::ParGridFunction x_cur(&fe_space);
-  mfem::ParGridFunction x_fin(&fe_space);
-  mfem::ParGridFunction x_inc(&fe_space);
-
-  // Project the initial and reference configuration functions onto the appropriate grid functions
-  mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
-  mfem::VectorFunctionCoefficient refconfig(dim, ReferenceConfiguration);
-
-  // Initialize the reference and beginning step configuration grid functions
-  // with the refconfig vector function coefficient.
-  x_ref.ProjectCoefficient(refconfig);
+  std::vector<mfem::VectorCoefficient *> coefs = {defo_coef, velo_coef};
 
   // initialize x_cur, boundary condition, deformation, and
   // incremental nodal displacment grid functions by projection the
   // VectorFunctionCoefficient function onto them
-  x_inc.ProjectCoefficient(deform);
-
-  add(x_inc, x_ref, x_cur);
+  solid_solver.ProjectState(coefs);
 
   // define a boundary attribute array and initialize to 0
-  mfem::Array<int> ess_bdr;
-  ess_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
-  ess_bdr = 0;
+  std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
-  mfem::Array<int> trac_bdr;
-  trac_bdr.SetSize(fe_space.GetMesh()->bdr_attributes.Max());
+  // define the displacement vector
+  mfem::Vector disp(dim);
+  disp = 0.0;
+  mfem::VectorConstantCoefficient disp_coef(disp);
 
-  trac_bdr = 0;
+  std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
+
   trac_bdr[1] = 1;
 
   // define the traction vector
@@ -201,29 +188,42 @@ int main(int argc, char *argv[])
     traction(2) = tz;
   }
 
-
-
   VectorScaledConstantCoefficient traction_coef(traction);
 
-  // construct the nonlinear mechanics operator
-  QuasistaticSolver oper(fe_space, ess_bdr, trac_bdr,
-                         mu, K, traction_coef,
-                         newton_rel_tol, newton_abs_tol,
-                         newton_iter, gmres_solver, slu_solver);
+  // Set the boundary condition information
+  solid_solver.SetDisplacementBCs(ess_bdr, &disp_coef);
+  solid_solver.SetTractionBCs(trac_bdr, &traction_coef);
 
+  // Set the material parameters
+  solid_solver.SetHyperelasticMaterialParameters(mu, K);
 
-  // declare incremental nodal displacement solution vector
-  mfem::Vector x_sol(fe_space.TrueVSize());
-  x_inc.GetTrueDofs(x_sol);
+  // Set the linear solver parameters
+  if (gmres_solver == true) {
+    lin_params.prec       = Preconditioner::BoomerAMG;
+    lin_params.lin_solver = LinearSolver::GMRES;
+  } else {
+    lin_params.prec       = Preconditioner::Jacobi;
+    lin_params.lin_solver = LinearSolver::MINRES;
+  }
+  solid_solver.SetSolverParameters(lin_params, nonlin_params);
+
+  // Set the time step method
+  solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+
+  // Complete the solver setup
+  solid_solver.CompleteSetup();
 
   // initialize/set the time
   double t = 0.0;
 
   bool last_step = false;
 
+  std::vector<std::string> names = {"Deformation", "Velocity"};
+
+  solid_solver.InitializeOutput(OutputType::VisIt, "serac", names);
+
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {
-
     double dt_real = std::min(dt, t_final - t);
     // compute current time
     t = t + dt_real;
@@ -235,35 +235,12 @@ int main(int argc, char *argv[])
     traction_coef.SetScale(t);
 
     // Solve the Newton system
-    oper.Solve(x_sol);
+    solid_solver.AdvanceTimestep(dt_real);
 
-    last_step = (t >= t_final - 1e-8*dt);
+    solid_solver.OutputState();
+
+    last_step = (t >= t_final - 1e-8 * dt);
   }
-
-  // distribute the solution vector to x_cur
-  x_inc.Distribute(x_sol);
-
-  add(x_inc, x_ref, x_fin);
-
-  // Save the displaced mesh. These are snapshots of the endstep current
-  // configuration. Later add functionality to not save the mesh at each timestep.
-
-  mfem::GridFunction *nodes = &x_fin; // set a nodes grid function to global current configuration
-  int owns_nodes = 0;
-  pmesh->SwapNodes(nodes, owns_nodes); // pmesh has current configuration nodes
-
-  std::ostringstream mesh_name, pressure_name, deformation_name;
-  mesh_name << "mesh." << std::setfill('0') << std::setw(6) << myid;
-  deformation_name << "deformation." << std::setfill('0') << std::setw(6) << myid;
-
-  std::ofstream mesh_ofs(mesh_name.str().c_str());
-  mesh_ofs.precision(8);
-  pmesh->Print(mesh_ofs);
-
-  std::ofstream deformation_ofs(deformation_name.str().c_str());
-  deformation_ofs.precision(8);
-
-  x_inc.Save(deformation_ofs);
 
   // Free the used memory.
   delete pmesh;

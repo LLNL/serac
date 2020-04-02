@@ -6,16 +6,14 @@
 
 set(solvers_sources
     base_solver.cpp
-    quasistatic_solver.cpp
-    dynamic_solver.cpp
+    nonlinear_solid_solver.cpp
     thermal_solver.cpp
     elasticity_solver.cpp
     )
 
 set(solvers_headers
     base_solver.hpp
-    quasistatic_solver.hpp
-    dynamic_solver.hpp
+    nonlinear_solid_solver.hpp
     thermal_solver.hpp
     elasticity_solver.hpp
     )

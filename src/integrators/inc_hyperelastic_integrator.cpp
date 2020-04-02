@@ -6,11 +6,10 @@
 
 #include "inc_hyperelastic_integrator.hpp"
 
-double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement &el,
-    mfem::ElementTransformation &Ttr,
-    const mfem::Vector &elfun)
+double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement &  el,
+                                                           mfem::ElementTransformation &Ttr, const mfem::Vector &elfun)
 {
-  int dof = el.GetDof(), dim = el.GetDim();
+  int    dof = el.GetDof(), dim = el.GetDim();
   double energy;
 
   DSh.SetSize(dof, dim);
@@ -21,7 +20,7 @@ double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEle
 
   const mfem::IntegrationRule *ir = IntRule;
   if (!ir) {
-    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2*el.GetOrder() + 3)); // <---
+    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
 
   energy = 0.0;
@@ -35,20 +34,19 @@ double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEle
     MultAtB(PMatI, DSh, Jpr);
     Mult(Jpr, Jrt, Jpt);
 
-    for (int d=0; d<dim; d++) {
-      Jpt(d,d) += 1.0;
+    for (int d = 0; d < dim; d++) {
+      Jpt(d, d) += 1.0;
     }
 
     energy += ip.weight * Ttr.Weight() * model->EvalW(Jpt);
   }
 
   return energy;
-
 }
 
-void IncrementalHyperelasticIntegrator::AssembleElementVector(
-  const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-  const mfem::Vector &elfun, mfem::Vector &elvect)
+void IncrementalHyperelasticIntegrator::AssembleElementVector(const mfem::FiniteElement &  el,
+                                                              mfem::ElementTransformation &Ttr,
+                                                              const mfem::Vector &elfun, mfem::Vector &elvect)
 {
   int dof = el.GetDof(), dim = el.GetDim();
 
@@ -58,12 +56,12 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(
   Jpt.SetSize(dim);
   P.SetSize(dim);
   PMatI.UseExternalData(elfun.GetData(), dof, dim);
-  elvect.SetSize(dof*dim);
+  elvect.SetSize(dof * dim);
   PMatO.UseExternalData(elvect.GetData(), dof, dim);
 
   const mfem::IntegrationRule *ir = IntRule;
   if (!ir) {
-    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2*el.GetOrder() + 3)); // <---
+    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
 
   elvect = 0.0;
@@ -77,8 +75,8 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(
     Mult(DSh, Jrt, DS);
     MultAtB(PMatI, DS, Jpt);
 
-    for (int d=0; d<dim; d++) {
-      Jpt(d,d) += 1.0;
+    for (int d = 0; d < dim; d++) {
+      Jpt(d, d) += 1.0;
     }
 
     model->EvalP(Jpt, P);
@@ -88,10 +86,9 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(
   }
 }
 
-void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteElement &el,
-    mfem::ElementTransformation &Ttr,
-    const mfem::Vector &elfun,
-    mfem::DenseMatrix &elmat)
+void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteElement &  el,
+                                                            mfem::ElementTransformation &Ttr, const mfem::Vector &elfun,
+                                                            mfem::DenseMatrix &elmat)
 {
   int dof = el.GetDof(), dim = el.GetDim();
 
@@ -100,11 +97,11 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
   Jrt.SetSize(dim);
   Jpt.SetSize(dim);
   PMatI.UseExternalData(elfun.GetData(), dof, dim);
-  elmat.SetSize(dof*dim);
+  elmat.SetSize(dof * dim);
 
   const mfem::IntegrationRule *ir = IntRule;
   if (!ir) {
-    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2*el.GetOrder() + 3)); // <---
+    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
 
   elmat = 0.0;
@@ -118,9 +115,8 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
     Mult(DSh, Jrt, DS);
     MultAtB(PMatI, DS, Jpt);
 
-
-    for (int d=0; d<dim; d++) {
-      Jpt(d,d) += 1.0;
+    for (int d = 0; d < dim; d++) {
+      Jpt(d, d) += 1.0;
     }
 
     model->AssembleH(Jpt, DS, ip.weight * Ttr.Weight(), elmat);

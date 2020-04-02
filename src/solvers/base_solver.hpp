@@ -7,15 +7,19 @@
 #ifndef BASE_SOLVER
 #define BASE_SOLVER
 
-#include "mfem.hpp"
+#include <map>
+
 #include "common/serac_types.hpp"
+#include "mfem.hpp"
 
 /// This is the abstract base class for a generic forward solver
-class BaseSolver
-{
-protected:
+class BaseSolver {
+ protected:
   /// List of finite element data structures
-  mfem::Array<FiniteElementState> m_state;
+  std::vector<FiniteElementState> m_state;
+
+  /// Block vector storage of the true state
+  mfem::BlockVector *m_block;
 
   /// Essential BC markers
   mfem::Array<int> m_ess_bdr;
@@ -45,7 +49,7 @@ protected:
   TimestepMethod m_timestepper;
 
   /// MFEM ode solver object
-  mfem::ODESolver *m_ode_solver;
+  std::shared_ptr<mfem::ODESolver> m_ode_solver;
 
   /// Root output name
   std::string m_root_name;
@@ -60,35 +64,45 @@ protected:
   int m_rank;
 
   /// VisIt data collection pointer
-  mfem::VisItDataCollection* m_visit_dc;
+  mfem::VisItDataCollection *m_visit_dc;
 
   /// State variable initialization indicator
   bool m_gf_initialized;
 
-public:
+ public:
   /// Empty constructor
   BaseSolver();
 
-  /// Constructor from previously constructed grid function
-  BaseSolver(mfem::Array<FiniteElementState> &state);
+  /// Constructor that creates n entries in m_state
+  BaseSolver(int n);
 
-  /// Set the essential boundary conditions from a list of boundary markers and a coefficient
-  virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
+  /// Set the essential boundary conditions from a list of boundary markers and
+  /// a coefficient
+  virtual void SetEssentialBCs(std::vector<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
 
-  /// Set the vector-valued essential boundary conditions from a list of boundary markers and a coefficient
-  virtual void SetEssentialBCs(mfem::Array<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef);
+  /// Set the vector-valued essential boundary conditions from a list of
+  /// boundary markers and a coefficient
+  virtual void SetEssentialBCs(std::vector<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef);
 
-  /// Set the natural boundary conditions from a list of boundary markers and a coefficient
-  virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef);
+  /// Set the natural boundary conditions from a list of boundary markers and a
+  /// coefficient
+  virtual void SetNaturalBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef);
 
-  /// Set the vector-valued natural boundary conditions from a list of boundary markers and a coefficient
-  virtual void SetNaturalBCs(mfem::Array<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef);
+  /// Set the vector-valued natural boundary conditions from a list of boundary
+  /// markers and a coefficient
+  virtual void SetNaturalBCs(std::vector<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef);
+
+  /// Set the state variables from a coefficient
+  virtual void ProjectState(std::vector<mfem::Coefficient *> state_coef);
+
+  /// Set the state variables from a vector coefficient
+  virtual void ProjectState(std::vector<mfem::VectorCoefficient *> state_vec_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void SetState(const mfem::Array<FiniteElementState> &state);
+  virtual void SetState(const std::vector<FiniteElementState> &state);
 
   /// Get the list of state variable grid functions
-  virtual mfem::Array<FiniteElementState> GetState() const;
+  virtual std::vector<FiniteElementState> GetState() const;
 
   /// Set the time integration method
   virtual void SetTimestepper(TimestepMethod timestepper);
@@ -110,15 +124,13 @@ public:
 
   /// Initialize the state variable output
   virtual void InitializeOutput(const OutputType output_type, const std::string root_name,
-                                const mfem::Array<std::string> names);
+                                std::vector<std::string> names);
 
   /// output the state variables
   virtual void OutputState() const;
 
   /// Destructor
-  virtual ~BaseSolver();
-
+  virtual ~BaseSolver() = default;
 };
-
 
 #endif

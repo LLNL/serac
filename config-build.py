@@ -21,6 +21,7 @@ import shutil
 import socket
 
 _host_configs_map = {"rzgenie"   : "toss_3_x86_64_ib/clang@4.0.0.cmake",
+                     "rzalastor" : "toss_3_x86_64_ib/clang@4.0.0.cmake",
                      "rztopaz"   : "toss_3_x86_64_ib/clang@4.0.0.cmake",
                      "quartz"    : "toss_3_x86_64_ib/clang@4.0.0.cmake"}
 
@@ -128,23 +129,25 @@ def get_platform_info(hostconfigpath):
         platform_info = platform_info[:-6]
     return platform_info
         
+
 #####################
 # Setup Build Dir
 #####################
 def setup_build_dir(args, platform_info):
-    buildpath = ""
-
-    # use platform info, variant_info & build type
-    build_platform = platform_info 
-    buildpath += "-".join(["build", build_platform, args.buildtype.lower()])
+    if args.buildpath != "":
+        # use explicit build path
+        buildpath = args.buildpath
+    else:
+        # use platform info & build type
+        buildpath = "-".join(["build", platform_info, args.buildtype.lower()])
 
     buildpath = os.path.abspath(buildpath)
 
     if os.path.exists(buildpath):
-        print "Build directory '%s' already exists.  Deleting..." % buildpath
+        print("Build directory '%s' already exists.  Deleting..." % buildpath)
         shutil.rmtree(buildpath)
 
-    print "Creating build directory '%s'..." % buildpath
+    print("Creating build directory '%s'..." % buildpath)
     os.makedirs(buildpath)
     return buildpath
 
@@ -156,6 +159,7 @@ def executable_exists(path):
     if path == "cmake":
         return True
     return os.path.isfile(path) and os.access(path, os.X_OK)
+
 
 ############################
 # Build CMake command line

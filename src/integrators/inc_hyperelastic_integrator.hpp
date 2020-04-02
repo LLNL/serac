@@ -13,9 +13,8 @@
     target->physical coordinates transformation. The target configuration is
     given by the current mesh at the time of the evaluation of the integrator.
 */
-class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator
-{
-private:
+class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
+ private:
   mfem::HyperelasticModel *model;
 
   //   Jrt: the Jacobian of the target-to-reference-element transformation.
@@ -30,23 +29,20 @@ private:
   //        output - the result of AssembleElementVector() (dof x dim).
   mfem::DenseMatrix DSh, DS, Jrt, Jpr, Jpt, P, PMatI, PMatO;
 
-public:
+ public:
   /** @param[in] m  HyperelasticModel that will be integrated. */
-  IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model(m) { }
+  IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model(m) {}
 
   /** @brief Computes the integral of W(Jacobian(Trt)) over a target zone
       @param[in] el     Type of FiniteElement.
       @param[in] Ttr    Represents ref->target coordinates transformation.
       @param[in] elfun  Physical coordinates of the zone. */
-  virtual double GetElementEnergy(const mfem::FiniteElement &el,
-                                  mfem::ElementTransformation &Ttr,
+  virtual double GetElementEnergy(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
                                   const mfem::Vector &elfun);
 
-  virtual void AssembleElementVector(const mfem::FiniteElement &el,
-                                     mfem::ElementTransformation &Ttr,
+  virtual void AssembleElementVector(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
                                      const mfem::Vector &elfun, mfem::Vector &elvect);
 
-  virtual void AssembleElementGrad(const mfem::FiniteElement &el,
-                                   mfem::ElementTransformation &Ttr,
+  virtual void AssembleElementGrad(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
                                    const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
 };

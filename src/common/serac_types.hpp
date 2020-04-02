@@ -7,16 +7,20 @@
 #ifndef SERAC_TYPES
 #define SERAC_TYPES
 
+#include <memory>
+
 #include "mfem.hpp"
 
 // Option bundling enums
 
-enum class OutputType {
+enum class OutputType
+{
   GLVis,
   VisIt
 };
 
-enum class TimestepMethod {
+enum class TimestepMethod
+{
   BackwardEuler,
   SDIRK33,
   ForwardEuler,
@@ -30,13 +34,15 @@ enum class TimestepMethod {
   QuasiStatic
 };
 
-enum class LinearSolver {
+enum class LinearSolver
+{
   CG,
   GMRES,
   MINRES
 };
 
-enum class Preconditioner {
+enum class Preconditioner
+{
   Jacobi,
   BoomerAMG
 };
@@ -44,22 +50,29 @@ enum class Preconditioner {
 // Parameter bundles
 
 struct LinearSolverParameters {
+  double         rel_tol;
+  double         abs_tol;
+  int            print_level;
+  int            max_iter;
+  LinearSolver   lin_solver;
+  Preconditioner prec;
+};
+
+struct NonlinearSolverParameters {
   double rel_tol;
   double abs_tol;
-  int print_level;
-  int max_iter;
-  LinearSolver lin_solver;
-  Preconditioner prec;
+  int    max_iter;
+  int    print_level;
 };
 
 // Finite element information bundle
 struct FiniteElementState {
-  mfem::ParFiniteElementSpace* space = nullptr;
-  mfem::FiniteElementCollection* coll = nullptr;
-  mfem::ParGridFunction* gf = nullptr;
-  mfem::ParMesh* mesh = nullptr;
-  mfem::Vector* true_vec = nullptr;
-  std::string name = "";
+  std::shared_ptr<mfem::ParFiniteElementSpace>   space;
+  std::shared_ptr<mfem::FiniteElementCollection> coll;
+  std::shared_ptr<mfem::ParGridFunction>         gf;
+  mfem::Vector                                   true_vec;
+  mfem::ParMesh*                                 mesh;
+  std::string                                    name = "";
 };
 
 #endif

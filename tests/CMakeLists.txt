@@ -68,6 +68,20 @@ if (ENABLE_GTEST)
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
     #----------------------
+    # Deconstructor test
+    #----------------------
+    blt_add_executable(
+        NAME       serac_dtor
+        SOURCES    serac_dtor.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest )
+    blt_add_test(
+        NAME              serac_dtor
+        COMMAND           serac_dtor
+        NUM_MPI_TASKS     4
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
+
+    #----------------------
     # StdFunctionCoefficient.test
     #----------------------
     blt_add_executable(

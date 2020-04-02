@@ -3,24 +3,21 @@
 We welcome contributions to Serac. To do so please submit a pull request through our
 Serac github page at https://github.com/LLNL/serac.
 
-All contributions to Serac must be made under the BSD-3 License.
+All contributions to Serac must be made under the BSD License.
+
+Any questions can be sent to bramwell1@llnl.gov.
 
 # Attribution
 
-We want everyone to feel they are getting the proper attribution for their
-contributions.  Here are some suggestions on how to get that:
+The Serac project uses git's commit history to track contributions from individual developers. 
 
-* New files: add your name and a date to the top of the file
-* New functions or macros: add your name to the comment above it
-
-For example:
-
-```
-# Author: John Doe @ Some Company, Inc.
-```
+Since we want everyone to feel they are getting the proper attribution for their contributions, please add your name to
+the list below as part of your commit.
 
 # Contributors (In Alphabetical Order)
 
 * Adrien Bernede, LLNL
 * Jamie Bramwell, LLNL
+* Samuel Mish, LLNL
 * Chris White, LLNL
+* Jonathan Wong, LLNL

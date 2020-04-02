@@ -239,22 +239,25 @@ class UberEnv():
     def setup_paths_and_dirs(self):
         self.uberenv_path = os.path.dirname(os.path.realpath(__file__))
 
-    def set_from_args_or_json(self,setting):
-        try:
+    def set_from_args_or_json(self, setting, fail_on_undefined=True):
+        # Command line options take precedence over project file
+        setting_value = None
+        if setting in self.project_opts:
             setting_value = self.project_opts[setting]
-        except (KeyError):
-            print("ERROR: {} must at least be defined in project.json".format(setting))
-            raise
-        else:
             if self.opts[setting]:
                 setting_value = self.opts[setting]
+
+        if fail_on_undefined and setting_value == None:
+            print("ERROR: '{}' must be defined in the project file or on the command line".format(setting))
+            sys.exit(-1)
+
         return setting_value
 
     def set_from_json(self,setting):
         try:
             setting_value = self.project_opts[setting]
         except (KeyError):
-            print("ERROR: {} must at least be defined in project.json".format(setting))
+            print("ERROR: '{}' must at least be defined in project.json".format(setting))
             raise
         return setting_value
 
@@ -277,7 +280,7 @@ class SpackEnv(UberEnv):
 
         self.pkg_name = self.set_from_args_or_json("package_name")
         self.pkg_version = self.set_from_json("package_version")
-        self.pkg_final_phase = self.set_from_args_or_json("package_final_phase")
+        self.pkg_final_phase = self.set_from_args_or_json("package_final_phase", False)
         self.pkg_src_dir = self.set_from_args_or_json("package_source_dir")
 
         # Some additional setup for macos
@@ -465,7 +468,7 @@ class SpackEnv(UberEnv):
         if self.opts["ignore_ssl_errors"]:
             install_cmd += "-k "
         install_cmd += "dev-build -d {} ".format(self.pkg_src_dir)
-        if not self.opts["install"]:
+        if not self.opts["install"] and self.pkg_final_phase:
             install_cmd += "-u {} ".format(self.pkg_final_phase)
         if self.opts["run_tests"]:
             install_cmd += "--test=root "
@@ -488,7 +491,9 @@ class SpackEnv(UberEnv):
                         break
                 if activate:
                     activate_cmd = "spack/bin/spack activate " + pkg_name
-                    sexe(activate_cmd, echo=True)
+                    res = sexe(activate_cmd, echo=True)
+                    if res != 0:
+                      return res
         # note: this assumes package extends python when +python
         # this may fail general cases
         if self.opts["install"] and "+python" in full_spec:
