@@ -10,7 +10,7 @@
 #include "mfem.hpp"
 
 /// A class to convert linearform integrators into a nonlinear residual-based one
-class LinearNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator
+class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator
 {
 public:
   /**
@@ -18,7 +18,7 @@ public:
 
   \param[in] f A LinearFormIntegrator
    */
-  LinearNonlinearFormIntegrator( mfem::LinearFormIntegrator & f, mfem::ParFiniteElementSpace *trial_fes);
+  LinearToNonlinearFormIntegrator( mfem::LinearFormIntegrator & f, mfem::ParFiniteElementSpace *trial_fes);
 
   /// Compute the residual vector => -F
   virtual void AssembleElementVector( const mfem::FiniteElement &el, mfem::ElementTransformation &Tr,
@@ -35,7 +35,7 @@ private:
 
 
 /// A class to convert linearform integrators into a nonlinear residual-based one
-class BilinearNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator
+class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator
 {
 public:
   /**
@@ -43,7 +43,7 @@ public:
 
      \param[in] A A BilinearFormIntegrator
    */
-  BilinearNonlinearFormIntegrator( mfem::BilinearFormIntegrator & A);
+  BilinearToNonlinearFormIntegrator( mfem::BilinearFormIntegrator & A);
 
   /// Compute the residual vector
   virtual void AssembleElementVector( const mfem::FiniteElement &el, mfem::ElementTransformation &Tr,
@@ -59,7 +59,7 @@ private:
 };
 
 /// A class to convert a MixedBiolinearIntegrator into a nonlinear residual-based one
-class MixedBilinearNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator
+class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator
 {
 public:
   /**
@@ -67,7 +67,7 @@ public:
 
      \param[in] A A MixedBilinearFormIntegrator
    */
-  MixedBilinearNonlinearFormIntegrator( mfem::BilinearFormIntegrator & A, mfem::ParFiniteElementSpace *trial_fes);
+  MixedBilinearToNonlinearFormIntegrator( mfem::BilinearFormIntegrator & A, mfem::ParFiniteElementSpace *trial_fes);
 
   /// Compute the residual vector
   virtual void AssembleElementVector( const mfem::FiniteElement &el, mfem::ElementTransformation &Tr,

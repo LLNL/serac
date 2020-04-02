@@ -74,8 +74,10 @@ void SolveLinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess_td
   A_lin.Finalize(0);
   std::unique_ptr<HypreParMatrix> A = std::unique_ptr<HypreParMatrix>(A_lin.ParallelAssemble());
 
+  ConstantCoefficient coeff_zero(0.0);
   ParLinearForm f_lin(pfes.get());
-  f_lin = 0.;
+  f_lin.AddDomainIntegrator(new DomainLFIntegrator(coeff_zero));
+  f_lin.Assemble();
   std::unique_ptr<HypreParVector> F = std::unique_ptr<HypreParVector>(f_lin.ParallelAssemble());
 
   std::unique_ptr<HypreParVector> T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
@@ -102,12 +104,12 @@ void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess
   ParNonlinearForm A_nonlin(pfes.get());
   DiffusionIntegrator diffusion(one);
 
-  A_nonlin.AddDomainIntegrator(new BilinearNonlinearFormIntegrator(diffusion));
+  A_nonlin.AddDomainIntegrator(new BilinearToNonlinearFormIntegrator(diffusion));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
-  ParLinearForm f_lin(pfes.get());
-  f_lin = 0.;
-  std::unique_ptr<HypreParVector> F = std::unique_ptr<HypreParVector>(f_lin.ParallelAssemble());
+  ConstantCoefficient coeff_zero(0.0);
+  DomainLFIntegrator zero_integrator(coeff_zero);
+  A_nonlin.AddDomainIntegrator(new LinearToNonlinearFormIntegrator(zero_integrator, pfes.get()));  
 
   // The temperature solution vector already contains the essential boundary condition values
   std::unique_ptr<HypreParVector> T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
@@ -133,7 +135,7 @@ void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int>
   ParNonlinearForm A_nonlin(pfes.get());
   DiffusionIntegrator diffusion(one);
 
-  A_nonlin.AddDomainIntegrator(new MixedBilinearNonlinearFormIntegrator(diffusion, pfes.get()));
+  A_nonlin.AddDomainIntegrator(new MixedBilinearToNonlinearFormIntegrator(diffusion, pfes.get()));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
   ParLinearForm f_lin(pfes.get());
@@ -225,7 +227,7 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
     EXPECT_NEAR(t_lin[i], t_nonlin[i], 1.e-12);
   }
 
-  // Solve the same nonlinear problem with the MixedBilinearNonlinearformIntegrator
+  // Solve the same nonlinear problem with the MixedBilinearToNonlinearformIntegrator
   ParGridFunction t_mixed_nonlin(pfes.get());
   t_mixed_nonlin = t_ess;
   SolveMixedNonlinear(pfes, ess_tdof_list, t_mixed_nonlin);
