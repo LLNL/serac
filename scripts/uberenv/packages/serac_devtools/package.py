@@ -10,7 +10,6 @@ class SeracDevtools(BundlePackage):
 
     version('fakeversion')
 
-    depends_on('astyle')
     depends_on('cmake')
     depends_on('cppcheck')
     depends_on('doxygen')
