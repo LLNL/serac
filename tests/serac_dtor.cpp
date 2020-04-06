@@ -31,6 +31,7 @@ int main(int argc, char **argv)
   MPI_Barrier(MPI_COMM_WORLD);
 
   const char *mesh_file = "NO_MESH_GIVEN";
+
   // Parse command line options
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
@@ -46,7 +47,9 @@ int main(int argc, char **argv)
     args.PrintOptions(std::cout);
   }
 
-  std::ifstream imesh("../../data/beam-hex.mesh");
+  // Open the mesh
+  ASSERT_TRUE(file_exists(mesh_file));
+  std::ifstream imesh(mesh_file);
   mfem::Mesh *  mesh = new mfem::Mesh(imesh, 1, 1, true);
   imesh.close();
 
