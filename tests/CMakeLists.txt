@@ -74,7 +74,7 @@ if (ENABLE_GTEST)
         NAME       serac_dtor
         SOURCES    serac_dtor.cpp
         OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-        DEPENDS_ON solvers mpi mfem )
+        DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_dtor
         COMMAND           serac_dtor -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
