@@ -85,8 +85,6 @@ TEST(serac_dtor, test1)
   do_nothing(therm_solver);
   do_nothing(therm_solver);
   do_nothing(therm_solver);
-
-  MPI_Finalize();
 }
 
 int main(int argc, char *argv[])
