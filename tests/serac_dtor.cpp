@@ -4,8 +4,6 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
-
 #include <fstream>
 
 #include "solvers/thermal_solver.hpp"
@@ -16,6 +14,12 @@ T do_nothing(T foo)
   return foo;
 }
 
+inline bool file_exists(const char *path)
+{
+  struct stat buffer;
+  return (stat(path, &buffer) == 0);
+}
+
 int main(int argc, char **argv)
 {
   MPI_Init(&argc, &argv);
@@ -23,6 +27,22 @@ int main(int argc, char **argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  const char *mesh_file = "NO_MESH_GIVEN";
+  // Parse command line options
+  mfem::OptionsParser args(argc, argv);
+  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
+  args.Parse();
+  if (!args.Good()) {
+    if (myid == 0) {
+      args.PrintUsage(std::cout);
+    }
+    MPI_Finalize();
+    return 1;
+  }
+  if (myid == 0) {
+    args.PrintOptions(std::cout);
+  }
 
   std::ifstream imesh("../../data/beam-hex.mesh");
   mfem::Mesh *  mesh = new mfem::Mesh(imesh, 1, 1, true);
