@@ -77,7 +77,7 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_dtor
-        COMMAND           serac_dtor
+        COMMAND           serac_dtor -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
         NUM_MPI_TASKS     4
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 

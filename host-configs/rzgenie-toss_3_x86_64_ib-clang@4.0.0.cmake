@@ -33,7 +33,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0/bin/mp
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_03_20_22_45_04/clang-4.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_04_06_16_32_41/clang-4.0.0" CACHE PATH "")
 
 set(MFEM_DIR "${TPL_ROOT}/mfem-4.0.0" CACHE PATH "")
 
@@ -50,7 +50,7 @@ set(DOXYGEN_EXECUTABLE "${DEVTOOLS_ROOT}/doxygen-1.8.15/bin/doxygen" CACHE PATH 
 
 set(SPHINX_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.7.4/bin/sphinx-build" CACHE PATH "")
 
-set(ASTYLE_EXECUTABLE "${DEVTOOLS_ROOT}/astyle-3.1/bin/astyle" CACHE PATH "")
+set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-9.0.0/bin/clang-format" CACHE PATH "")
 
 set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-1.87/bin/cppcheck" CACHE PATH "")
 
