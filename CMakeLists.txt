@@ -51,7 +51,9 @@ include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 #------------------------------------------------------------------------------
 
 include(${PROJECT_SOURCE_DIR}/cmake/SeracMacros.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/SeracBasics.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/thirdparty/SetupSeracThirdParty.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
 #------------------------------------------------------------------------------
 # Build src
@@ -66,17 +68,6 @@ add_subdirectory(src)
 if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
-
-#------------------------------------------------------------------------------
-# Copy utility TPL executables
-#------------------------------------------------------------------------------
-
-if(GLVIS_EXECUTABLE)
-    ADD_CUSTOM_TARGET(glvis_symlink ALL
-                      COMMAND ${CMAKE_COMMAND} 
-                      -E create_symlink ${GLVIS_EXECUTABLE} ${CMAKE_INSTALL_BINDIR}/glvis)
-endif()
-
 
 #------------------------------------------------------------------------------
 # Add Code Checks

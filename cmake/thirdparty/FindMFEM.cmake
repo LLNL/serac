@@ -9,15 +9,14 @@
 #
 # This file defines:
 #  MFEM_FOUND        - If MFEM was found
-#  MFEM_INCLUDE_DIRS - The MFEM include directories
-#  MFEM_LIBRARY      - The MFEM library
+#  mfem              - BLT Registered Library 
 #------------------------------------------------------------------------------
 
 if(NOT MFEM_DIR)
     message(FATAL_ERROR "MFEM support needs explicit MFEM_DIR")
 endif()
-
 message(STATUS "Looking for MFEM using MFEM_DIR = ${MFEM_DIR}")
+serac_assert_is_directory(VARIABLE_NAME MFEM_DIR)
 
 set(_mfem_cmake_config "${MFEM_DIR}/MFEMConfig.cmake")
 
@@ -114,7 +113,7 @@ find_package_handle_standard_args(MFEM DEFAULT_MSG
                                   MFEM_INCLUDE_DIRS )
 
 if(NOT MFEM_FOUND)
-    message(FATAL_ERROR "MFEM_FOUND is not a path to a valid MFEM install")
+    message(FATAL_ERROR "MFEM_DIR is not a path to a valid MFEM install")
 endif()
 
 message(STATUS "MFEM Includes: ${MFEM_INCLUDE_DIRS}")
