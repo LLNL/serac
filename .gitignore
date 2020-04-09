@@ -1,6 +1,5 @@
 /build*/
 *.swp
-cmake/defaults.cmake
 /uberenv_libs*
 spack-build*
 /src/docs/doxygen/html/

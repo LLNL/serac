@@ -4,6 +4,19 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+
+#------------------------------------------------------------------------------
+# Adds code checks for all cpp/hpp files recursively under the current directory
+# that regex match INCLUDES and excludes any files that regex match EXCLUDES
+# 
+# This creates the following parent build targets:
+#  check - Runs a non file changing style check and CppCheck
+#  style - In-place code formatting
+#
+# Creates various child build targets that follow this pattern:
+#  serac_<check|style>
+#  serac_<cppcheck|clangformat>_<check|style>
+#------------------------------------------------------------------------------
 macro(serac_add_code_checks)
 
     set(options)
@@ -51,3 +64,27 @@ macro(serac_add_code_checks)
                         CPPCHECK_FLAGS  --enable=all --inconclusive)
 
 endmacro(serac_add_code_checks)
+
+#------------------------------------------------------------------------------
+# Asserts that the given VARIABLE_NAME's value is a directory and exists.
+# Fails with a helpful message when it doesn't.
+#------------------------------------------------------------------------------
+macro(serac_assert_is_directory)
+
+    set(options)
+    set(singleValueArgs VARIABLE_NAME)
+    set(multiValueArgs)
+
+    # Parse the arguments to the macro
+    cmake_parse_arguments(arg
+         "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    if (NOT EXISTS "${${arg_VARIABLE_NAME}}")
+        message(FATAL_ERROR "Given ${arg_VARIABLE_NAME} does not exist: ${${arg_VARIABLE_NAME}}")
+    endif()
+
+    if (NOT IS_DIRECTORY "${${arg_VARIABLE_NAME}}")
+        message(FATAL_ERROR "Given ${arg_VARIABLE_NAME} is not a directory: ${${arg_VARIABLE_NAME}}")
+    endif()
+
+endmacro(serac_assert_is_directory)
