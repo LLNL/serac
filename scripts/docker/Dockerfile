@@ -4,7 +4,7 @@ MAINTAINER Jamie Bramwell bramwell1@llnl.gov
 RUN sudo apt-get update -y
 RUN sudo apt-get install curl ssh pkg-config build-essential gfortran libgfortran3 libgfortran4 libopenblas-dev -fy
 
-RUN useradd -ms /bin/bash serac && echo "serac:serac" | chpasswd && adduser serac sudo
+RUN sudo useradd -m -s /bin/bash -G sudo serac
 
 WORKDIR "/home/serac"
 USER serac
