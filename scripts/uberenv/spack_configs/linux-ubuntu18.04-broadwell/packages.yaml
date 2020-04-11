@@ -61,7 +61,3 @@ packages:
     paths:
       cmake: /usr
     buildable: False
-  hwloc:
-    paths:
-      hwloc: /usr
-    buildable: False
