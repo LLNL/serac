@@ -61,7 +61,7 @@ packages:
     paths:
       cmake: /usr
     buildable: False
-  libtool:
+  hwloc:
     paths:
-      libtool: /usr
+      hwloc: /usr
     buildable: False
