@@ -1,10 +1,12 @@
-FROM ubuntu:18.04
+FROM axom/compilers:gcc-8
 MAINTAINER Jamie Bramwell bramwell1@llnl.gov
 
-RUN apt-get update -y
-RUN apt-get install libtool git curl gcc gfortran python cmake -fy
+RUN sudo apt-get update -y
+RUN sudo apt-get install curl -fy
 
-RUN useradd -ms /bin/bash serac
+RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-7 100
+
+RUN sudo useradd -ms /bin/bash serac
 
 WORKDIR "/home/serac"
 USER serac
@@ -13,8 +15,8 @@ RUN git clone --recursive https://github.com/LLNL/serac.git
 
 WORKDIR "/home/serac/serac"
 
-#RUN ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/uberenv/spack_configs/linux-ubuntu18.04-broadwell/ --spec=%gcc --prefix=/home/serac/serac_tpls -k
+RUN ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/uberenv/spack_configs/docker/ --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
 
-#WORKDIR "/home/serac"
+WORKDIR "/home/serac"
 
-#RUN rm -rf serac
+RUN rm -rf serac
