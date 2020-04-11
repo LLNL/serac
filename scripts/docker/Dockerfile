@@ -10,7 +10,6 @@ RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo updat
  
 #(For Clang Builds - Need to restore stdc++ lib)
 RUN sudo apt-get install libstdc++-7-dev
-
 RUN useradd -ms /bin/bash serac
 
 WORKDIR "/home/serac"
