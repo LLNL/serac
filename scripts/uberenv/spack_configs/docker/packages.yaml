@@ -70,7 +70,7 @@ packages:
   graphviz:
     paths:
       graphviz: /usr/bin/
-    buildable: Falsei
+    buildable: False
   openblas:
     paths:
       openblas: /usr
