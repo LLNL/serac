@@ -20,6 +20,7 @@ packages:
     providers:
       awk: [gawk]
       blas: [openblas]
+      lapack: [openblas]
       daal: [intel-daal]
       elf: [elfutils]
       golang: [gcc]
@@ -69,6 +70,10 @@ packages:
   graphviz:
     paths:
       graphviz: /usr/bin/
+    buildable: Falsei
+  openblas:
+    paths:
+      openblas: /usr
     buildable: False
 # Globally lock in version of CMake
   cmake:

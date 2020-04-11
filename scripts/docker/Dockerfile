@@ -2,11 +2,9 @@ FROM axom/compilers:gcc-8
 MAINTAINER Jamie Bramwell bramwell1@llnl.gov
 
 RUN sudo apt-get update -y
-RUN sudo apt-get install curl -fy
+RUN sudo apt-get install curl pkg-config build-essential gfortran libgfortran3 libgfortran4 libopenblas-dev -fy
 
-RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-7 100
-
-RUN sudo useradd -ms /bin/bash serac
+RUN useradd -ms /bin/bash serac && echo "serac:serac" | chpasswd && adduser serac sudo
 
 WORKDIR "/home/serac"
 USER serac
