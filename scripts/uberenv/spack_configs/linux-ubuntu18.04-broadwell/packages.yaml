@@ -61,7 +61,3 @@ packages:
     paths:
       cmake: /usr
     buildable: False
-  libtool:
-    paths:
-      cmake: /usr
-    buildable: False
