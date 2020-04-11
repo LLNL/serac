@@ -70,10 +70,6 @@ packages:
     paths:
       graphviz: /usr/bin/
     buildable: False
-  raja:
-    paths:
-      raja: /usr/local/share/raja/cmake
-    buildable: False
 # Globally lock in version of CMake
   cmake:
     version: [3.10.1]
