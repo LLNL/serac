@@ -58,7 +58,7 @@ packages:
    paths:
       m4: /usr/bin/
    buildable: False
-  pkg-config:`
+  pkg-config:
     paths:
       pkg-config: /usr/bin/
     buildable: False 
