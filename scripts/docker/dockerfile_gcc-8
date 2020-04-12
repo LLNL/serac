@@ -17,3 +17,7 @@ WORKDIR "/home/serac/serac"
 RUN git checkout feature/bramwell/docker
 
 RUN ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/uberenv/spack_configs/docker/ --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
+
+WORKDIR "home/serac"
+
+RUN rm -rf serac
