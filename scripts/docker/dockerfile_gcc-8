@@ -1,5 +1,5 @@
 FROM axom/compilers:gcc-8
-MAINTAINER Jamie Bramwell bramwell1@llnl.gov
+LABEL maintainer="bramwell1@llnl.gov"
 
 RUN sudo apt-get update -y
 RUN sudo apt-get install curl ssh pkg-config build-essential libopenblas-dev -fy
