@@ -29,7 +29,6 @@ steps:
   submodules: recursive
 - script:  |
     echo " -e $TEST_TARGET -e $COMPILER -e $DO_BUILD -e $DO_TEST -e $CMAKE_EXTRA_FLAGS $(Compiler_ImageName) ./scripts/azure-pipelines/linux-build_and_test.sh"
-    docker run --rm --user='root' -v `pwd`:/home/serac/serac $(Compiler_ImageName) chown -R serac /home/serac
     docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e COMPILER -e DO_BUILD -e DO_TEST -e DO_CLEAN -e HOST_CONFIG -e CMAKE_EXTRA_FLAGS $(Compiler_ImageName) ./serac/scripts/azure-pipelines/linux-build_and_test.sh
 
   displayName: '$(TEST_TARGET) Build & Test'
