@@ -2,7 +2,7 @@ Serac
 ====
 
 [![Build
-Status](https://dev.azure.com/serac-llnl/serac/_apis/build/status/LLNL.serac?branchName=feature%2Fbramwell%2Fdocker)](https://dev.azure.com/serac-llnl/serac/_build/latest?definitionId=1&branchName=feature%2Fbramwell%2Fdocker)
+Status](https://dev.azure.com/serac-llnl/serac/_apis/build/status/LLNL.serac?branchName=master)](https://dev.azure.com/serac-llnl/serac/_build/latest?definitionId=1&branchName=master)
 [![Documentation Status](https://readthedocs.org/projects/serac/badge/?version=latest)](https://serac.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg)](./LICENSE)
 
