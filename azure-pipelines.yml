@@ -14,7 +14,7 @@ strategy:
   matrix:
    linux_gcc8:
       VM_ImageName: 'ubuntu-16.04'
-      Compiler_ImageName: 'jabramwell/serac_tpls:gcc-8'
+      Compiler_ImageName: 'seracllnl/tpls:gcc-8'
       CMAKE_EXTRA_FLAGS: ''
       COMPILER: 'g++'
       TEST_TARGET: 'linux_gcc8'
