@@ -13,6 +13,8 @@
 ####
 # In pre-build phase, allocate a node for builds
 allocate_resources_build_quartz:
+  variables:
+    GIT_STRATEGY: none
   extends: .on_quartz
   stage: allocate_resources
   script:
@@ -22,6 +24,8 @@ allocate_resources_build_quartz:
 # In post-build phase, deallocate resources
 # Note : make sure this is run even on build phase failure
 release_resources_build_quartz:
+  variables:
+    GIT_STRATEGY: none
   extends: .on_quartz
   stage: release_resources
   script:
