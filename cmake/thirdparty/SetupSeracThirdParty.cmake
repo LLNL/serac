@@ -13,7 +13,7 @@ if(AXOM_DIR)
 
     set(AXOM_INCLUDE_DIR ${AXOM_DIR}/include)
 
-    set(AXOM_LIBRARIES fmt axom )
+    set(AXOM_LIBRARIES fmt sparsehash axom )
     foreach(_library ${AXOM_LIBRARIES})
         set(_target_file ${AXOM_DIR}/lib/cmake/${_library}-targets.cmake)
 
