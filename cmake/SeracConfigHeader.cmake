@@ -56,8 +56,8 @@ endif()
 #------------------------------------------------------------------------------
 # General Build Info
 #------------------------------------------------------------------------------
-convert_to_native_escaped_file_path(${PROJECT_SOURCE_DIR} SERAC_SRC_DIR)
-convert_to_native_escaped_file_path(${CMAKE_BINARY_DIR}   SERAC_BIN_DIR)
+serac_convert_to_native_escaped_file_path(${PROJECT_SOURCE_DIR} SERAC_SRC_DIR)
+serac_convert_to_native_escaped_file_path(${CMAKE_BINARY_DIR}   SERAC_BIN_DIR)
 
 
 #------------------------------------------------------------------------------

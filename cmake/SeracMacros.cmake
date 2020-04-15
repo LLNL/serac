@@ -88,3 +88,16 @@ macro(serac_assert_is_directory)
     endif()
 
 endmacro(serac_assert_is_directory)
+
+
+##------------------------------------------------------------------------------
+## serac_convert_to_native_escaped_file_path( path output )
+##
+## This macro converts a cmake path to a platform specific string literal
+## usable in C++.  (For example, on windows C:/Path will be come C:\\Path)
+##------------------------------------------------------------------------------
+
+macro(serac_convert_to_native_escaped_file_path path output)
+    file(TO_NATIVE_PATH ${path} ${output})
+    string(REPLACE "\\" "\\\\"  ${output} "${${output}}")
+endmacro(serac_convert_to_native_escaped_file_path)
