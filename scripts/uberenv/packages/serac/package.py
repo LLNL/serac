@@ -96,8 +96,8 @@ class Serac(Package):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    depends_on("mfem~shared+hypre+metis+superlu-dist+lapack+mpi")
-    depends_on("mfem~shared+hypre+metis+superlu-dist+lapack+mpi+debug", when="+debug")
+    depends_on("mfem~shared~gzstream+hypre+metis+superlu-dist+lapack+mpi")
+    depends_on("mfem~shared~gzstream+hypre+metis+superlu-dist+lapack+mpi+debug", when="+debug")
     depends_on("hypre~shared~superlu-dist+mpi")
     depends_on("hypre~shared~superlu-dist+mpi+debug", when="+debug")
 
@@ -248,6 +248,18 @@ class Serac(Package):
             tpl_root = os.path.join( prefix_paths[0], compiler_str )
             path_replacements[tpl_root] = "${TPL_ROOT}"
             cfg.write(cmake_cache_entry("TPL_ROOT", tpl_root))
+
+        hypre_dir = get_spec_path(spec, "hypre", path_replacements)
+        cfg.write(cmake_cache_entry("HYPRE_DIR", hypre_dir))
+
+        metis_dir = get_spec_path(spec, "metis", path_replacements)
+        cfg.write(cmake_cache_entry("METIS_DIR", metis_dir))
+
+        parmetis_dir = get_spec_path(spec, "parmetis", path_replacements)
+        cfg.write(cmake_cache_entry("PARMETIS_DIR", parmetis_dir))
+
+        superludist_dir = get_spec_path(spec, "superlu-dist", path_replacements)
+        cfg.write(cmake_cache_entry("SUPERLUDIST_DIR", superludist_dir))
 
         mfem_dir = get_spec_path(spec, "mfem", path_replacements)
         cfg.write(cmake_cache_entry("MFEM_DIR", mfem_dir))
