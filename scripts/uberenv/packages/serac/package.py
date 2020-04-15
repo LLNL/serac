@@ -88,6 +88,8 @@ class Serac(Package):
     # Basic dependencies
     depends_on("mpi")
 
+    depends_on("axom~fortran~raja~umpire")
+
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cmake', when="+devtools")
     depends_on('cppcheck', when="+devtools")
@@ -248,6 +250,9 @@ class Serac(Package):
             tpl_root = os.path.join( prefix_paths[0], compiler_str )
             path_replacements[tpl_root] = "${TPL_ROOT}"
             cfg.write(cmake_cache_entry("TPL_ROOT", tpl_root))
+
+        axom_dir = get_spec_path(spec, "axom", path_replacements)
+        cfg.write(cmake_cache_entry("AXOM_DIR", axom_dir))
 
         hypre_dir = get_spec_path(spec, "hypre", path_replacements)
         cfg.write(cmake_cache_entry("HYPRE_DIR", hypre_dir))
