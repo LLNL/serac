@@ -254,6 +254,12 @@ class Serac(Package):
         axom_dir = get_spec_path(spec, "axom", path_replacements)
         cfg.write(cmake_cache_entry("AXOM_DIR", axom_dir))
 
+        conduit_dir = get_spec_path(spec, "conduit", path_replacements)
+        cfg.write(cmake_cache_entry("CONDUIT_DIR", conduit_dir))
+
+        hdf5_dir = get_spec_path(spec, "hdf5", path_replacements)
+        cfg.write(cmake_cache_entry("HDF5_DIR", hdf5_dir))
+
         hypre_dir = get_spec_path(spec, "hypre", path_replacements)
         cfg.write(cmake_cache_entry("HYPRE_DIR", hypre_dir))
 
