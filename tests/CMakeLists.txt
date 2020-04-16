@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
 #------------------------------------------------------------------------------
-# Tests for Serac solvers 
+# Tests for Serac objects 
 #------------------------------------------------------------------------------
 
 if (ENABLE_GTEST)
@@ -85,15 +85,28 @@ if (ENABLE_GTEST)
     # StdFunctionCoefficient.test
     #----------------------
     blt_add_executable(
-        NAME       stdfunction_coefficient
-        SOURCES    stdfunction_coefficient.cpp
+        NAME       serac_stdfunction_coefficient
+        SOURCES    serac_stdfunction_coefficient.cpp
         OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
         DEPENDS_ON solvers coefficients mpi mfem gtest )
     blt_add_test(
-        NAME              stdfunction_coefficient
-        COMMAND           stdfunction_coefficient 
+        NAME              serac_stdfunction_coefficient
+        COMMAND           serac_stdfunction_coefficient 
         NUM_MPI_TASKS     1
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
+    #----------------------
+    # Wrapper Unit tests
+    #----------------------
+    blt_add_executable(
+        NAME       serac_wrapper_tests
+        SOURCES    serac_wrapper_tests.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers coefficients mpi mfem gtest )
+    blt_add_test(
+        NAME              serac_wrapper_tests
+        COMMAND           serac_wrapper_tests
+        NUM_MPI_TASKS     1
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
 endif()

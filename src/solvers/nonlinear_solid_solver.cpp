@@ -46,7 +46,6 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh)
 
   m_block->GetBlockView(1, velocity.true_vec);
   velocity.true_vec = 0.0;
-
 }
 
 void NonlinearSolidSolver::SetDisplacementBCs(std::vector<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef)
@@ -54,7 +53,7 @@ void NonlinearSolidSolver::SetDisplacementBCs(std::vector<int> &disp_bdr, mfem::
   SetEssentialBCs(disp_bdr, disp_bdr_coef);
 
   // Get the list of essential DOFs
-  
+
   m_state[0].space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
@@ -166,7 +165,7 @@ void NonlinearSolidSolver::CompleteSetup()
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (m_timestepper == TimestepMethod::QuasiStatic) {
     m_newton_solver.iterative_mode = true;
-    m_nonlinear_oper = new NonlinearSolidQuasiStaticOperator(m_H_form);
+    m_nonlinear_oper               = new NonlinearSolidQuasiStaticOperator(m_H_form);
     m_newton_solver.SetOperator(*m_nonlinear_oper);
   } else {
     m_newton_solver.iterative_mode = false;

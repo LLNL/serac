@@ -23,9 +23,10 @@ ElasticitySolver::ElasticitySolver(int order, mfem::ParMesh *pmesh)
       m_lambda(nullptr),
       m_body_force(nullptr)
 {
-  displacement.mesh     = pmesh;
-  displacement.coll     = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension(), mfem::Ordering::byVDIM);
-  displacement.space    = std::make_shared<mfem::ParFiniteElementSpace>(pmesh, displacement.coll.get(), pmesh->Dimension());
+  displacement.mesh = pmesh;
+  displacement.coll = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension(), mfem::Ordering::byVDIM);
+  displacement.space =
+      std::make_shared<mfem::ParFiniteElementSpace>(pmesh, displacement.coll.get(), pmesh->Dimension());
   displacement.gf       = std::make_shared<mfem::ParGridFunction>(displacement.space.get());
   displacement.true_vec = mfem::HypreParVector(displacement.space.get());
 

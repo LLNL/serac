@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include <gtest/gtest.h>
+#include <sys/stat.h>
 
 #include <fstream>
-#include <sys/stat.h>
 
 #include "mfem.hpp"
 #include "solvers/thermal_solver.hpp"
