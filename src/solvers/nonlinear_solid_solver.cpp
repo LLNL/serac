@@ -15,16 +15,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh)
     : BaseSolver(num_fields),
       velocity(m_state[0]),
       displacement(m_state[1]),
-      m_H_form(nullptr),
-      m_M_form(nullptr),
-      m_S_form(nullptr),
-      m_nonlinear_oper(nullptr),
-      m_timedep_oper(nullptr),
-      m_newton_solver(pmesh->GetComm()),
-      m_J_solver(nullptr),
-      m_J_prec(nullptr),
-      m_viscosity(nullptr),
-      m_model(nullptr)
+      m_newton_solver(pmesh->GetComm())
 {
   velocity.mesh  = pmesh;
   velocity.coll  = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
@@ -74,8 +65,7 @@ void NonlinearSolidSolver::SetTractionBCs(std::vector<int> &trac_bdr, mfem::Vect
 
 void NonlinearSolidSolver::SetHyperelasticMaterialParameters(double mu, double K)
 {
-  delete m_model;
-  m_model = new mfem::NeoHookeanModel(mu, K);
+  m_model.reset(new mfem::NeoHookenModel(mu, K));
 }
 
 void NonlinearSolidSolver::SetViscosity(mfem::Coefficient *visc) { m_viscosity = visc; }
@@ -84,8 +74,8 @@ void NonlinearSolidSolver::SetInitialState(mfem::VectorCoefficient &disp_state, 
 {
   disp_state.SetTime(m_time);
   velo_state.SetTime(m_time);
-  m_state[0].gf->ProjectCoefficient(disp_state);
-  m_state[1].gf->ProjectCoefficient(velo_state);
+  displacement.gf->ProjectCoefficient(disp_state);
+  velocity.gf->ProjectCoefficient(velo_state);
   m_gf_initialized = true;
 }
 

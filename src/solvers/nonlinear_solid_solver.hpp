@@ -24,34 +24,34 @@ class NonlinearSolidSolver : public BaseSolver {
   FiniteElementState &displacement;
 
   /// The abstract nonlinear form
-  mfem::ParNonlinearForm *m_H_form;
+  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
 
   /// The abstract mass bilinear form
-  mfem::ParBilinearForm *m_M_form;
+  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
 
   /// The abstract viscosity bilinear form
-  mfem::ParBilinearForm *m_S_form;
+  std::shared_ptr<mfem::ParBilinearForm> m_S_form;
 
   /// The quasi-static operator for use with the MFEM newton solvers
-  mfem::Operator *m_nonlinear_oper;
+  std::shared_ptr<mfem::Operator> m_nonlinear_oper;
 
   /// The time dependent operator for use with the MFEM ODE solvers
-  mfem::TimeDependentOperator *m_timedep_oper;
+  std::shared_ptr<mfem::TimeDependentOperator> m_timedep_oper;
 
   /// The Newton solver for the nonlinear iterations
   mfem::NewtonSolver m_newton_solver;
 
   /// The linear solver for the Jacobian
-  mfem::Solver *m_J_solver;
+  std::shared_ptr<mfem::Solver> m_J_solver;
 
   /// The preconditioner for the Jacobian solver
-  mfem::Solver *m_J_prec;
+  std::shared_ptr<mfem::Solver> m_J_prec;
 
   /// The viscosity coefficient
-  mfem::Coefficient *m_viscosity;
+  std::shared_ptr> mfem::Coefficient> m_viscosity;
 
   /// The hyperelastic material model
-  mfem::HyperelasticModel *m_model;
+  std::shared_ptr<mfem::HyperelasticModel> m_model;
 
   /// Linear solver parameters
   LinearSolverParameters m_lin_params;
@@ -73,7 +73,7 @@ class NonlinearSolidSolver : public BaseSolver {
   void SetTractionBCs(std::vector<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef);
 
   /// Set the viscosity coefficient
-  void SetViscosity(mfem::Coefficient *visc_coef);
+  void SetViscosity(std::shared_ptr<mfem::Coefficient> visc_coef);
 
   /// Set the hyperelastic material parameters
   void SetHyperelasticMaterialParameters(double mu, double K);
