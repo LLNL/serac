@@ -5,12 +5,11 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 // # Author: Jonathan Wong @ LLNL.
 
-#include "coefficients/stdfunction_coefficient.hpp"
-
 #include <gtest/gtest.h>
 
 #include <memory>
 
+#include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
 
 using namespace mfem;
@@ -111,8 +110,8 @@ TEST_F(StdFunctionCoefficientTest, AttributeList)
   Array<int>          attr(2);
   attr    = 0;
   attr[1] = 1;
-  RestrictedCoefficient        restrict(one, attr);
-  AttributeModifierCoefficient load_bdr(attr_list, restrict);
+  RestrictedCoefficient        restrict_coefficient(one, attr);
+  AttributeModifierCoefficient load_bdr(attr_list, restrict_coefficient);
 
   ParGridFunction c1(pfes_l2.get());
   ParGridFunction c2(pfes_l2.get());

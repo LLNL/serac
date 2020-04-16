@@ -41,7 +41,7 @@ void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::VectorCoeffici
 void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef)
 {
   m_nat_bdr.SetSize(nat_bdr.size());
-  
+
   for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
     m_nat_bdr[i] = nat_bdr[i];
   }
@@ -63,11 +63,11 @@ void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::Coefficient *e
 void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
 {
   m_nat_bdr.SetSize(nat_bdr.size());
-  
+
   for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
     m_nat_bdr[i] = nat_bdr[i];
   }
-  
+
   m_nat_bdr_coef = nat_bdr_coef;
 }
 
