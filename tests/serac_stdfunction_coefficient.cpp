@@ -5,12 +5,11 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 // # Author: Jonathan Wong @ LLNL.
 
-#include "coefficients/stdfunction_coefficient.hpp"
-
 #include <gtest/gtest.h>
 
 #include <memory>
 
+#include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
 
 using namespace mfem;
