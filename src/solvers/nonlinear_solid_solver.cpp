@@ -68,7 +68,7 @@ void NonlinearSolidSolver::SetHyperelasticMaterialParameters(double mu, double K
   m_model.reset(new mfem::NeoHookenModel(mu, K));
 }
 
-void NonlinearSolidSolver::SetViscosity(mfem::Coefficient *visc) { m_viscosity = visc; }
+void NonlinearSolidSolver::SetViscosity(std::shared_ptr<mfem::Coefficient> visc) { m_viscosity = visc; }
 
 void NonlinearSolidSolver::SetInitialState(mfem::VectorCoefficient &disp_state, mfem::VectorCoefficient &velo_state)
 {
@@ -89,13 +89,13 @@ void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &   
 void NonlinearSolidSolver::CompleteSetup()
 {
   // Define the nonlinear form
-  m_H_form = new mfem::ParNonlinearForm(m_state[0].space.get());
+  m_H_form = std::make_shared<mfem::ParNonlinearForm>(displacement.space.get());
 
   // Add the hyperelastic integrator
   if (m_timestepper == TimestepMethod::QuasiStatic) {
-    m_H_form->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(m_model));
+    m_H_form->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(m_model.get()));
   } else {
-    m_H_form->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(m_model));
+    m_H_form->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(m_model.get()));
   }
 
   // Add the traction integrator
@@ -113,13 +113,13 @@ void NonlinearSolidSolver::CompleteSetup()
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
-    m_M_form = new mfem::ParBilinearForm(m_state[0].space.get());
+    m_M_form = std::make_shared<mfem::ParBilinearForm>(displacement.space.get());
 
     m_M_form->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
     m_M_form->Assemble(0);
     m_M_form->Finalize(0);
 
-    m_S_form = new mfem::ParBilinearForm(m_state[0].space.get());
+    m_S_form = new mfem::ParBilinearForm(displacement.space.get());
     m_S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*m_viscosity));
     m_S_form->Assemble(0);
     m_S_form->Finalize(0);
@@ -127,14 +127,14 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Set up the jacbian solver based on the linear solver options
   if (m_lin_params.prec == Preconditioner::BoomerAMG) {
-    MFEM_VERIFY(m_state[0].space->GetOrdering() == mfem::Ordering::byVDIM,
+    MFEM_VERIFY(displacement.space->GetOrdering() == mfem::Ordering::byVDIM,
                 "Attempting to use BoomerAMG with nodal ordering.");
     mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
     prec_amg->SetPrintLevel(m_lin_params.print_level);
-    prec_amg->SetElasticityOptions(m_state[0].space.get());
+    prec_amg->SetElasticityOptions(displacement.space.get());
     m_J_prec = prec_amg;
 
-    mfem::GMRESSolver *J_gmres = new mfem::GMRESSolver(m_state[0].space->GetComm());
+    mfem::GMRESSolver *J_gmres = new mfem::GMRESSolver(displacement.space->GetComm());
     J_gmres->SetRelTol(m_lin_params.rel_tol);
     J_gmres->SetAbsTol(m_lin_params.abs_tol);
     J_gmres->SetMaxIter(m_lin_params.max_iter);
@@ -203,14 +203,7 @@ void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
 }
 
 NonlinearSolidSolver::~NonlinearSolidSolver()
-{
-  delete m_H_form;
-  delete m_nonlinear_oper;
-  delete m_timedep_oper;
-  delete m_J_solver;
-  delete m_J_prec;
-  delete m_model;
-}
+{}
 
 NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(mfem::ParNonlinearForm *H_form)
     : mfem::Operator(H_form->FESpace()->GetTrueVSize())

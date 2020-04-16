@@ -48,7 +48,7 @@ class NonlinearSolidSolver : public BaseSolver {
   std::shared_ptr<mfem::Solver> m_J_prec;
 
   /// The viscosity coefficient
-  std::shared_ptr> mfem::Coefficient> m_viscosity;
+  std::shared_ptr<mfem::Coefficient> m_viscosity;
 
   /// The hyperelastic material model
   std::shared_ptr<mfem::HyperelasticModel> m_model;
@@ -98,7 +98,7 @@ class NonlinearSolidSolver : public BaseSolver {
 class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
  protected:
   /// The nonlinear form
-  mfem::ParNonlinearForm *m_H_form;
+  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
 
   /// The linearized jacobian at the current state
   mutable mfem::Operator *m_Jacobian;
