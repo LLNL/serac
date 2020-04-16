@@ -7,6 +7,8 @@
 #ifndef WRAPPER_INTEGRATOR_HPP
 #define WRAPPER_INTEGRATOR_HPP
 
+#include <memory>
+
 #include "mfem.hpp"
 
 /// A class to convert linearform integrators into a nonlinear residual-based one
@@ -17,7 +19,8 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 
   \param[in] f A LinearFormIntegrator
    */
-  LinearToNonlinearFormIntegrator(mfem::LinearFormIntegrator &f, mfem::ParFiniteElementSpace *trial_fes);
+  LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator>  f,
+                                  std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes);
 
   /// Compute the residual vector => -F
   virtual void AssembleElementVector(const mfem::FiniteElement &el, mfem::ElementTransformation &Tr,
@@ -28,8 +31,8 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
                                    const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
 
  private:
-  mfem::LinearFormIntegrator & m_f;
-  mfem::ParFiniteElementSpace *m_trial_fes;
+  std::shared_ptr<mfem::LinearFormIntegrator>  m_f;
+  std::shared_ptr<mfem::ParFiniteElementSpace> m_trial_fes;
 };
 
 /// A class to convert linearform integrators into a nonlinear residual-based one
@@ -40,7 +43,7 @@ class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 
      \param[in] A A BilinearFormIntegrator
    */
-  BilinearToNonlinearFormIntegrator(mfem::BilinearFormIntegrator &A);
+  BilinearToNonlinearFormIntegrator(std::shared_ptr<mfem::BilinearFormIntegrator> A);
 
   /// Compute the residual vector
   virtual void AssembleElementVector(const mfem::FiniteElement &el, mfem::ElementTransformation &Tr,
@@ -51,8 +54,7 @@ class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
                                    const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
 
  private:
-  mfem::BilinearFormIntegrator &m_A;
-  mfem::ParFiniteElementSpace * m_trial_fes;
+  std::shared_ptr<mfem::BilinearFormIntegrator> m_A;
 };
 
 /// A class to convert a MixedBiolinearIntegrator into a nonlinear residual-based one
@@ -63,7 +65,8 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
 
      \param[in] A A MixedBilinearFormIntegrator
    */
-  MixedBilinearToNonlinearFormIntegrator(mfem::BilinearFormIntegrator &A, mfem::ParFiniteElementSpace *trial_fes);
+  MixedBilinearToNonlinearFormIntegrator(std::shared_ptr<mfem::BilinearFormIntegrator> A,
+                                         std::shared_ptr<mfem::ParFiniteElementSpace>  trial_fes);
 
   /// Compute the residual vector
   virtual void AssembleElementVector(const mfem::FiniteElement &el, mfem::ElementTransformation &Tr,
@@ -74,8 +77,8 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
                                    const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
 
  private:
-  mfem::BilinearFormIntegrator &m_A;
-  mfem::ParFiniteElementSpace * m_trial_fes;
+  std::shared_ptr<mfem::BilinearFormIntegrator> m_A;
+  std::shared_ptr<mfem::ParFiniteElementSpace>  m_trial_fes;
 };
 
 #endif
