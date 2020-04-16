@@ -89,7 +89,6 @@ class Serac(Package):
     depends_on("mpi")
 
     # Devtool dependencies these need to match serac_devtools/package.py
-    depends_on('astyle', when="+devtools")
     depends_on('cmake', when="+devtools")
     depends_on('cppcheck', when="+devtools")
     depends_on('doxygen', when="+devtools")
@@ -268,7 +267,7 @@ class Serac(Package):
         # Add common prefix to path replacement list
         if "+devtools" in spec:
             # Grab common devtools root and strip the trailing slash
-            path1 = os.path.realpath(spec["astyle"].prefix)
+            path1 = os.path.realpath(spec["python"].prefix)
             path2 = os.path.realpath(spec["doxygen"].prefix)
             devtools_root = os.path.commonprefix([path1, path2])[:-1]
             path_replacements[devtools_root] = "${DEVTOOLS_ROOT}"
@@ -288,9 +287,9 @@ class Serac(Package):
         else:
             cfg.write(cmake_cache_option("ENABLE_DOCS", False))
 
-        if "astyle" in spec:
-            astyle_bin_dir = get_spec_path(spec, "astyle", path_replacements, use_bin=True)
-            cfg.write(cmake_cache_entry("ASTYLE_EXECUTABLE", pjoin(astyle_bin_dir, "astyle")))
+        clangformatpath = "/usr/tce/packages/clang/clang-9.0.0/bin/clang-format"
+        if os.path.exists(clangformatpath):
+            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", clangformatpath))
 
         if "cppcheck" in spec:
             cppcheck_bin_dir = get_spec_path(spec, "cppcheck", path_replacements, use_bin=True)

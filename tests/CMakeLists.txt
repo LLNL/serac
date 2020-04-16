@@ -21,7 +21,7 @@ if (ENABLE_GTEST)
     blt_add_test(
         NAME              serac_dynamic_solver
         COMMAND           serac_dynamic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
-        NUM_MPI_TASKS     4
+        NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
     #----------------------
@@ -35,7 +35,7 @@ if (ENABLE_GTEST)
     blt_add_test(
         NAME              serac_linelastic_solver
         COMMAND           serac_linelastic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-quad.mesh
-        NUM_MPI_TASKS     3
+        NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
 
@@ -50,7 +50,7 @@ if (ENABLE_GTEST)
     blt_add_test(
         NAME              serac_quasistatic_solver
         COMMAND           serac_quasistatic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
-        NUM_MPI_TASKS     4
+        NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
     #----------------------
@@ -64,7 +64,7 @@ if (ENABLE_GTEST)
     blt_add_test(
         NAME              serac_thermal_solver
         COMMAND           serac_thermal_solver -m ${PROJECT_SOURCE_DIR}/data/star.mesh
-        NUM_MPI_TASKS     4
+        NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
     #----------------------
@@ -77,8 +77,8 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_dtor
-        COMMAND           serac_dtor
-        NUM_MPI_TASKS     4
+        COMMAND           serac_dtor -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
+        NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
     #----------------------
