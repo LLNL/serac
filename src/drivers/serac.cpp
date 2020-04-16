@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 
   mfem::Vector velo(dim);
   velo = 0.0;
-  
+
   mfem::VectorConstantCoefficient *velo_coef = new mfem::VectorConstantCoefficient(velo);
 
   std::vector<mfem::VectorCoefficient *> coefs = {defo_coef, velo_coef};
