@@ -110,8 +110,8 @@ TEST_F(StdFunctionCoefficientTest, AttributeList)
   Array<int>          attr(2);
   attr    = 0;
   attr[1] = 1;
-  RestrictedCoefficient        restrict(one, attr);
-  AttributeModifierCoefficient load_bdr(attr_list, restrict);
+  RestrictedCoefficient        restrict_coefficient(one, attr);
+  AttributeModifierCoefficient load_bdr(attr_list, restrict_coefficient);
 
   ParGridFunction c1(pfes_l2.get());
   ParGridFunction c2(pfes_l2.get());
