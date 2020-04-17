@@ -33,7 +33,21 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0/bin/mp
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_04_06_16_32_41/clang-4.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_04_16_21_15_41/clang-4.0.0" CACHE PATH "")
+
+set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
+
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-master" CACHE PATH "")
+
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
+
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.11.1" CACHE PATH "")
+
+set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
+
+set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
+
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-5.4.0" CACHE PATH "")
 
 set(MFEM_DIR "${TPL_ROOT}/mfem-4.0.0" CACHE PATH "")
 
