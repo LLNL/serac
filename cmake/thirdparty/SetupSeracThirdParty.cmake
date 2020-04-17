@@ -91,29 +91,42 @@ include(cmake/thirdparty/FindMFEM.cmake)
 
 
 #------------------------------------------------------------------------------
-# TRIBOL
+# Tribol
 #------------------------------------------------------------------------------
-if (TRIBOL_DIR)
+if(TRIBOL_DIR)
     serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
 
-    find_package(tribol REQUIRED PATHS ${TRIBOL_DIR})
+    set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
 
-    message(STATUS "Checking for expected TRIBOL target 'tribol'")
-    if (NOT TARGET tribol)
-        message(FATAL_ERROR "TRIBOL failed to load: ${TRIBOL_DIR}")
-    else()
-        message(STATUS "TRIBOL loaded: ${TRIBOL_DIR}")
-        set_property(TARGET tribol 
-                     APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                     ${TRIBOL_INCLUDE_DIRS})
-        set(TRIBOL_FOUND TRUE CACHE BOOL "")
+    set(_target_file ${TRIBOL_DIR}/lib/cmake/tribol-targets.cmake)
+
+    if(NOT EXISTS ${_target_file})
+        message(FATAL_ERROR "Could not find Tribol CMake exported target file (${_target_file})")
     endif()
+
+    include(${_target_file})
+
+    if(TARGET tribol)
+        message(STATUS "Tribol CMake exported library loaded: tribol")
+    else()
+        message(FATAL_ERROR "Could not load Tribol CMake exported library: tribol")
+    endif()
+
+    # Set include dir to system
+    set_property(TARGET tribol
+                 APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                 ${TRIBOL_INCLUDE_DIR})
+
+    set(TRIBOL_FOUND TRUE CACHE BOOL "")
 else()
-    message(STATUS "TRIBOL support is OFF")
+    message(STATUS "Tribol support is OFF")
     set(TRIBOL_FOUND FALSE CACHE BOOL "")
 endif()
 
+
+#------------------------------------------------------------------------------
 # Remove exported OpenMP flags because they are not language agnostic
+#------------------------------------------------------------------------------
 set(_props)
 if( ${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.13.0" )
     list(APPEND _props INTERFACE_LINK_OPTIONS)
