@@ -431,7 +431,10 @@ class Axom(Package):
 
             cmake_args = []
             cmake_args.extend(std_cmake_args)
-            cmake_args.extend(["-C", host_config_path, "../src"])
+            cmake_args.extend(["-C", host_config_path])
+            if self.run_tests == False:
+                cmake_args.extend(["-DENABLE_TESTS=OFF"])
+            cmake_args.extend(["../src"])
             print("Configuring Axom...")
             cmake(*cmake_args)
 

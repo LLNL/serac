@@ -42,7 +42,6 @@ release_resources_build_quartz:
     - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
     - JOBID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
     - EXEC_PREFIX="srun ${JOBID} -t 20 -N 1 -n 1 -c 4"
-    - ${EXEC_PREFIX} python scripts/uberenv/uberenv.py --spec=${SPEC}
     - ${EXEC_PREFIX} scripts/gitlab/build_and_test.sh
 
 ####
@@ -50,17 +49,17 @@ release_resources_build_quartz:
 build_quartz_clang_4_0_0:
   variables:
     COMPILER: "clang@4.0.0"
-    SPEC: "@develop%${COMPILER}"
+    HOST_CONFIG: "quartz-toss_3_x86_64_ib-clang@4.0.0.cmake"
   extends: .build_quartz
 
 build_quartz_gcc_8_1_0:
   variables:
     COMPILER: "gcc@8.1.0"
-    SPEC: "@develop%${COMPILER}"
+    HOST_CONFIG: "quartz-toss_3_x86_64_ib-gcc@8.1.0.cmake"
   extends: .build_quartz
 
 build_quartz_intel_19_0_4:
   variables:
     COMPILER: "intel@19.0.4"
-    SPEC: "@develop%${COMPILER}"
+    HOST_CONFIG: "quartz-toss_3_x86_64_ib-intel@19.0.4.cmake"
   extends: .build_quartz
