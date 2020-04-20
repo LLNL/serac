@@ -71,7 +71,7 @@ struct FiniteElementState {
   std::shared_ptr<mfem::FiniteElementCollection> coll;
   std::shared_ptr<mfem::ParGridFunction>         gf;
   mfem::Vector                                   true_vec;
-  mfem::ParMesh*                                 mesh;
+  std::shared_ptr<mfem::ParMesh>                 mesh;
   std::string                                    name = "";
 };
 

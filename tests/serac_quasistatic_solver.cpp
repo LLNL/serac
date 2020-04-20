@@ -27,15 +27,13 @@ TEST(nonlinear_solid_solver, qs_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  mfem::Mesh*   mesh = new mfem::Mesh(imesh, 1, 1, true);
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
-  mfem::ParMesh* pmesh = NULL;
   mesh->UniformRefinement();
 
-  pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
-  delete mesh;
+  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
 
   int dim = pmesh->Dimension();
 
@@ -51,7 +49,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   // define the displacement vector
   mfem::Vector disp(dim);
   disp = 0.0;
-  mfem::VectorConstantCoefficient disp_coef(disp);
+  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
 
   std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
   trac_bdr[1] = 1;
@@ -60,11 +58,11 @@ TEST(nonlinear_solid_solver, qs_solve)
   mfem::Vector traction(dim);
   traction    = 0.0;
   traction(1) = 1.0e-3;
-  mfem::VectorConstantCoefficient traction_coef(traction);
+  auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Pass the BC information to the solver object
-  solid_solver.SetDisplacementBCs(ess_bdr, &disp_coef);
-  solid_solver.SetTractionBCs(trac_bdr, &traction_coef);
+  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef);
+  solid_solver.SetTractionBCs(trac_bdr, traction_coef);
 
   // Set the material parameters
   solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
@@ -104,8 +102,6 @@ TEST(nonlinear_solid_solver, qs_solve)
   double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
-
-  delete pmesh;
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

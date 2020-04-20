@@ -8,6 +8,7 @@
 #define BASE_SOLVER
 
 #include <map>
+#include <memory>
 
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
@@ -19,7 +20,7 @@ class BaseSolver {
   std::vector<FiniteElementState> m_state;
 
   /// Block vector storage of the true state
-  mfem::BlockVector *m_block;
+  std::unique_ptr<mfem::BlockVector> m_block;
 
   /// Essential BC markers
   mfem::Array<int> m_ess_bdr;
@@ -28,16 +29,16 @@ class BaseSolver {
   mfem::Array<int> m_nat_bdr;
 
   /// Pointer to the essential BC coefficient
-  mfem::Coefficient *m_ess_bdr_coef;
+  std::shared_ptr<mfem::Coefficient> m_ess_bdr_coef;
 
   /// Pointer to the vector-valued essential BC coefficient
-  mfem::VectorCoefficient *m_ess_bdr_vec_coef;
+  std::shared_ptr<mfem::VectorCoefficient> m_ess_bdr_vec_coef;
 
   /// Pointer to the nautral BC coefficient
-  mfem::Coefficient *m_nat_bdr_coef;
+  std::shared_ptr<mfem::Coefficient> m_nat_bdr_coef;
 
   /// Pointer to the vector-valued natural BC coefficient
-  mfem::VectorCoefficient *m_nat_bdr_vec_coef;
+  std::shared_ptr<mfem::VectorCoefficient> m_nat_bdr_vec_coef;
 
   /// Array of the essential degree of freedom indicies
   mfem::Array<int> m_ess_tdof_list;
@@ -49,7 +50,7 @@ class BaseSolver {
   TimestepMethod m_timestepper;
 
   /// MFEM ode solver object
-  std::shared_ptr<mfem::ODESolver> m_ode_solver;
+  std::unique_ptr<mfem::ODESolver> m_ode_solver;
 
   /// Root output name
   std::string m_root_name;
@@ -64,7 +65,7 @@ class BaseSolver {
   int m_rank;
 
   /// VisIt data collection pointer
-  mfem::VisItDataCollection *m_visit_dc;
+  std::unique_ptr<mfem::VisItDataCollection> m_visit_dc;
 
   /// State variable initialization indicator
   bool m_gf_initialized;
@@ -76,27 +77,30 @@ class BaseSolver {
   /// Constructor that creates n entries in m_state
   BaseSolver(int n);
 
+  /// Copy constructor
+  BaseSolver(const BaseSolver&); // copy constructor
+
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
-  virtual void SetEssentialBCs(std::vector<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef);
+  virtual void SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);
 
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
-  virtual void SetEssentialBCs(std::vector<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef);
+  virtual void SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
-  virtual void SetNaturalBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef);
+  virtual void SetNaturalBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef);
 
   /// Set the vector-valued natural boundary conditions from a list of boundary
   /// markers and a coefficient
-  virtual void SetNaturalBCs(std::vector<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef);
+  virtual void SetNaturalBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef);
 
   /// Set the state variables from a coefficient
-  virtual void ProjectState(std::vector<mfem::Coefficient *> state_coef);
+  virtual void ProjectState(std::vector<std::shared_ptr<mfem::Coefficient> >state_coef);
 
   /// Set the state variables from a vector coefficient
-  virtual void ProjectState(std::vector<mfem::VectorCoefficient *> state_vec_coef);
+  virtual void ProjectState(std::vector<std::shared_ptr<mfem::VectorCoefficient> >state_vec_coef);
 
   /// Set the state variables from an existing grid function
   virtual void SetState(const std::vector<FiniteElementState> &state);
@@ -123,8 +127,7 @@ class BaseSolver {
   virtual void AdvanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const OutputType output_type, const std::string root_name,
-                                std::vector<std::string> names);
+  virtual void InitializeOutput(const OutputType output_type, const std::string root_name);
 
   /// output the state variables
   virtual void OutputState() const;

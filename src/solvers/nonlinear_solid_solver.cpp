@@ -11,7 +11,7 @@
 
 const int num_fields = 2;
 
-NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh)
+NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(num_fields),
       velocity(m_state[0]),
       displacement(m_state[1]),
@@ -19,7 +19,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh)
 {
   velocity.mesh  = pmesh;
   velocity.coll  = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
-  velocity.space = std::make_shared<mfem::ParFiniteElementSpace>(pmesh, velocity.coll.get(), pmesh->Dimension(),
+  velocity.space = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), velocity.coll.get(), pmesh->Dimension(),
                                                                  mfem::Ordering::byVDIM);
   velocity.gf    = std::make_shared<mfem::ParGridFunction>(velocity.space.get());
   *velocity.gf   = 0.0;
@@ -27,7 +27,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh)
 
   displacement.mesh  = pmesh;
   displacement.coll  = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
-  displacement.space = std::make_shared<mfem::ParFiniteElementSpace>(pmesh, displacement.coll.get(), pmesh->Dimension(),
+  displacement.space = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), displacement.coll.get(), pmesh->Dimension(),
                                                                      mfem::Ordering::byVDIM);
   displacement.gf    = std::make_shared<mfem::ParGridFunction>(displacement.space.get());
   *displacement.gf   = 0.0;
@@ -39,7 +39,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh)
   true_offset[0] = 0;
   true_offset[1] = true_size;
   true_offset[2] = 2 * true_size;
-  m_block        = new mfem::BlockVector(true_offset);
+  m_block        = std::make_unique<mfem::BlockVector>(true_offset);
 
   m_block->GetBlockView(0, displacement.true_vec);
   displacement.true_vec = 0.0;
@@ -48,7 +48,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, mfem::ParMesh *pmesh)
   velocity.true_vec = 0.0;
 }
 
-void NonlinearSolidSolver::SetDisplacementBCs(std::vector<int> &disp_bdr, mfem::VectorCoefficient *disp_bdr_coef)
+void NonlinearSolidSolver::SetDisplacementBCs(std::vector<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef);
 
@@ -57,7 +57,7 @@ void NonlinearSolidSolver::SetDisplacementBCs(std::vector<int> &disp_bdr, mfem::
   m_state[0].space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
-void NonlinearSolidSolver::SetTractionBCs(std::vector<int> &trac_bdr, mfem::VectorCoefficient *trac_bdr_coef)
+void NonlinearSolidSolver::SetTractionBCs(std::vector<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef)
 {
   SetNaturalBCs(trac_bdr, trac_bdr_coef);
 }
@@ -79,7 +79,7 @@ void NonlinearSolidSolver::SetInitialState(mfem::VectorCoefficient &disp_state, 
 }
 
 void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &   lin_params,
-                                               const NonlinearSolverParameters &nonlin_params)
+                                               const NonlinearSolverParameters & nonlin_params)
 {
   m_lin_params    = lin_params;
   m_nonlin_params = nonlin_params;

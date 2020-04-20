@@ -37,18 +37,14 @@ TEST(thermal_solver, static_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  mfem::Mesh*  mesh = new mfem::Mesh(imesh, 1, 1, true);
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
   mesh->UniformRefinement();
 
-  // Declare pointer to parallel mesh object
-  mfem::ParMesh* pmesh = nullptr;
-
   // Initialize the parallel mesh and delete the serial mesh
-  pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
-  delete mesh;
+  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
 
   // Refine the parallel mesh
   pmesh->UniformRefinement();
@@ -60,15 +56,15 @@ TEST(thermal_solver, static_solve)
   therm_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
-  mfem::FunctionCoefficient u_0(BoundaryTemperature);
+  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
 
   std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
 
   // Set the temperature BC in the thermal solver
-  therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
+  therm_solver.SetTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  mfem::ConstantCoefficient kappa(0.5);
+  auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
   therm_solver.SetConductivity(kappa);
 
   // Define the linear solver params
@@ -95,8 +91,6 @@ TEST(thermal_solver, static_solve)
   double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
-  delete pmesh;
-
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -107,18 +101,14 @@ TEST(thermal_solver, dyn_exp_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  mfem::Mesh*  mesh = new mfem::Mesh(imesh, 1, 1, true);
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
   mesh->UniformRefinement();
 
-  // Declare pointer to parallel mesh object
-  mfem::ParMesh* pmesh = nullptr;
-
   // Initialize the parallel mesh and delete the serial mesh
-  pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
-  delete mesh;
+  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
 
   // Refine the parallel mesh
   pmesh->UniformRefinement();
@@ -130,15 +120,15 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.SetTimestepper(TimestepMethod::ForwardEuler);
 
   // Initialize the state grid function
-  mfem::FunctionCoefficient u_0(InitialTemperature);
-  therm_solver.SetInitialState(u_0);
+  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
+  therm_solver.SetInitialState(*u_0);
 
   // Set the temperature BC in the thermal solver
   std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
-  therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
+  therm_solver.SetTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  mfem::ConstantCoefficient kappa(0.5);
+  auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
   therm_solver.SetConductivity(kappa);
 
   // Define the linear solver params
@@ -175,8 +165,6 @@ TEST(thermal_solver, dyn_exp_solve)
   double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.6493029, u_norm, 0.00001);
 
-  delete pmesh;
-
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -187,18 +175,14 @@ TEST(thermal_solver, dyn_imp_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  mfem::Mesh*  mesh = new mfem::Mesh(imesh, 1, 1, true);
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
   mesh->UniformRefinement();
 
-  // Declare pointer to parallel mesh object
-  mfem::ParMesh* pmesh = nullptr;
-
   // Initialize the parallel mesh and delete the serial mesh
-  pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
-  delete mesh;
+  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
 
   // Refine the parallel mesh
   pmesh->UniformRefinement();
@@ -210,15 +194,15 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.SetTimestepper(TimestepMethod::BackwardEuler);
 
   // Initialize the state grid function
-  mfem::FunctionCoefficient u_0(InitialTemperature);
-  therm_solver.SetInitialState(u_0);
+  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
+  therm_solver.SetInitialState(*u_0);
 
   // Set the temperature BC in the thermal solver
   std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
-  therm_solver.SetTemperatureBCs(temp_bdr, &u_0);
+  therm_solver.SetTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  mfem::ConstantCoefficient kappa(0.5);
+  auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
   therm_solver.SetConductivity(kappa);
 
   // Define the linear solver params
@@ -254,8 +238,6 @@ TEST(thermal_solver, dyn_imp_solve)
   mfem::ConstantCoefficient zero(0.0);
   double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
-
-  delete pmesh;
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

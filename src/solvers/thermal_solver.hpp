@@ -57,10 +57,10 @@ class ThermalSolver : public BaseSolver {
   std::shared_ptr<mfem::HypreSmoother> m_K_prec;
 
   /// Conduction coefficient
-  mfem::Coefficient *m_kappa;
+  std::shared_ptr<mfem::Coefficient> m_kappa;
 
   /// Body source coefficient
-  mfem::Coefficient *m_source;
+  std::shared_ptr<mfem::Coefficient> m_source;
 
   /// Time integration operator
   std::shared_ptr<DynamicConductionOperator> m_dyn_oper;
@@ -73,25 +73,25 @@ class ThermalSolver : public BaseSolver {
 
  public:
   /// Constructor from order and parallel mesh
-  ThermalSolver(int order, mfem::ParMesh *pmesh);
+  ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set essential temperature boundary conditions (strongly enforced)
-  void SetTemperatureBCs(std::vector<int> &temp_bdr, mfem::Coefficient *temp_bdr_coef);
+  void SetTemperatureBCs(std::vector<int> &temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);
 
   /// Set flux boundary conditions (weakly enforced)
-  void SetFluxBCs(std::vector<int> &flux_bdr, mfem::Coefficient *flux_bdr_coef);
+  void SetFluxBCs(std::vector<int> &flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef);
 
   /// Advance the timestep using the chosen integration scheme
   void AdvanceTimestep(double &dt);
 
   /// Set the thermal conductivity coefficient
-  void SetConductivity(mfem::Coefficient &kappa);
+  void SetConductivity(std::shared_ptr<mfem::Coefficient> kappa);
 
   /// Set the initial temperature from a coefficient
   void SetInitialState(mfem::Coefficient &temp);
 
   /// Set the body thermal source from a coefficient
-  void SetSource(mfem::Coefficient &source);
+  void SetSource(std::shared_ptr<mfem::Coefficient> source);
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
@@ -112,7 +112,7 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   std::shared_ptr<mfem::ParFiniteElementSpace> m_fespace;
 
   /// Grid function for boundary condition projection
-  mfem::ParGridFunction *m_state_gf;
+  std::shared_ptr<mfem::ParGridFunction> m_state_gf;
 
   /// Solver for the mass matrix
   std::shared_ptr<mfem::CGSolver> m_M_solver;
@@ -148,10 +148,10 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   std::shared_ptr<mfem::Vector> m_rhs;
 
   /// RHS vector including essential boundary elimination
-  mfem::Vector *m_bc_rhs;
+  std::shared_ptr<mfem::Vector> m_bc_rhs;
 
   /// Temperature essential boundary coefficient
-  mfem::Coefficient *m_ess_bdr_coef;
+  std::shared_ptr<mfem::Coefficient> m_ess_bdr_coef;
 
   /// Essential temperature boundary markers
   mutable mfem::Array<int> m_ess_bdr;
@@ -181,7 +181,7 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   void SetLoadVector(std::shared_ptr<mfem::Vector> rhs);
 
   /// Set the essential temperature boundary information
-  void SetEssentialBCs(mfem::Coefficient *ess_bdr_coef, mfem::Array<int> &ess_bdr, mfem::Array<int> &ess_tdof_list);
+  void SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef, mfem::Array<int> &ess_bdr, mfem::Array<int> &ess_tdof_list);
 
   /** Calculate du_dt = M^-1 (-Ku + f).
    *  This is all that is needed for explicit methods */

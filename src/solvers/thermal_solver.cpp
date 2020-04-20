@@ -8,12 +8,12 @@
 
 const int num_fields = 1;
 
-ThermalSolver::ThermalSolver(int order, mfem::ParMesh *pmesh)
-    : BaseSolver(num_fields), temperature(m_state[0]), m_kappa(nullptr), m_source(nullptr), m_dyn_oper(nullptr)
+ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
+    : BaseSolver(num_fields), temperature(m_state[0])
 {
   temperature.mesh     = pmesh;
   temperature.coll     = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
-  temperature.space    = std::make_shared<mfem::ParFiniteElementSpace>(pmesh, temperature.coll.get());
+  temperature.space    = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), temperature.coll.get());
   temperature.gf       = std::make_shared<mfem::ParGridFunction>(temperature.space.get());
   temperature.true_vec = mfem::HypreParVector(temperature.space.get());
   temperature.name     = "temperature";
@@ -33,7 +33,7 @@ void ThermalSolver::SetInitialState(mfem::Coefficient &temp)
   m_gf_initialized = true;
 }
 
-void ThermalSolver::SetTemperatureBCs(std::vector<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
+void ThermalSolver::SetTemperatureBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   SetEssentialBCs(ess_bdr, ess_bdr_coef);
 
@@ -41,22 +41,22 @@ void ThermalSolver::SetTemperatureBCs(std::vector<int> &ess_bdr, mfem::Coefficie
   temperature.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
-void ThermalSolver::SetFluxBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
+void ThermalSolver::SetFluxBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   SetNaturalBCs(nat_bdr, nat_bdr_coef);
 }
 
-void ThermalSolver::SetConductivity(mfem::Coefficient &kappa)
+void ThermalSolver::SetConductivity(std::shared_ptr<mfem::Coefficient> kappa)
 {
   // Set the conduction coefficient
-  m_kappa = &kappa;
+  m_kappa = kappa;
 }
 
-void ThermalSolver::SetSource(mfem::Coefficient &source)
+void ThermalSolver::SetSource(std::shared_ptr<mfem::Coefficient> source)
 {
   // Set the body source integral coefficient
-  m_source = &source;
+  m_source = source;
 }
 
 void ThermalSolver::SetLinearSolverParameters(const LinearSolverParameters &params)
@@ -199,8 +199,8 @@ DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFi
   m_T_solver->SetPrintLevel(params.print_level);
   m_T_solver->SetPreconditioner(*m_T_prec);
 
-  m_state_gf = new mfem::ParGridFunction(m_fespace.get());
-  m_bc_rhs   = new mfem::Vector(fespace->GetTrueVSize());
+  m_state_gf = std::make_shared<mfem::ParGridFunction>(m_fespace.get());
+  m_bc_rhs   = std::make_shared<mfem::Vector>(fespace->GetTrueVSize());
 }
 
 void DynamicConductionOperator::SetMMatrix(std::shared_ptr<mfem::HypreParMatrix> M_mat,
@@ -221,7 +221,7 @@ void DynamicConductionOperator::SetKMatrix(std::shared_ptr<mfem::HypreParMatrix>
 
 void DynamicConductionOperator::SetLoadVector(std::shared_ptr<mfem::Vector> rhs) { m_rhs = rhs; }
 
-void DynamicConductionOperator::SetEssentialBCs(mfem::Coefficient *ess_bdr_coef, mfem::Array<int> &ess_bdr,
+void DynamicConductionOperator::SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef, mfem::Array<int> &ess_bdr,
                                                 mfem::Array<int> &ess_tdof_list)
 {
   m_ess_bdr_coef  = ess_bdr_coef;
@@ -290,8 +290,4 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   m_old_dt = dt;
 }
 
-DynamicConductionOperator::~DynamicConductionOperator()
-{
-  delete m_state_gf;
-  delete m_bc_rhs;
-}
+DynamicConductionOperator::~DynamicConductionOperator() { }
