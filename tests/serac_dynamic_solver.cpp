@@ -48,7 +48,7 @@ TEST(dynamic_solver, dyn_solve)
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
-  mfem::ConstantCoefficient visc(0.0);
+  auto visc = std::make_shared<mfem::ConstantCoefficient> (0.0);
 
   // define the inital state coefficients
   std::vector<mfem::VectorCoefficient *> initialstate(2);
@@ -63,7 +63,7 @@ TEST(dynamic_solver, dyn_solve)
   NonlinearSolidSolver dyn_solver(1, pmesh);
   dyn_solver.SetDisplacementBCs(ess_bdr, &deform);
   dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  dyn_solver.SetViscosity(&visc);
+  dyn_solver.SetViscosity(visc);
   dyn_solver.ProjectState(initialstate);
   dyn_solver.SetTimestepper(TimestepMethod::SDIRK33);
 
