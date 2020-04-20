@@ -5,7 +5,7 @@
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-  SLURM_ALLOC_NAME: serac_${CI_PIPELINE_ID}
+  PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
 
 # There are no tests for now
