@@ -105,7 +105,7 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
 
  public:
   /// The constructor
-  NonlinearSolidQuasiStaticOperator(mfem::ParNonlinearForm *H_form);
+  NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
 
   /// Required to use the native newton solver
   mfem::Operator &GetGradient(const mfem::Vector &x) const;
@@ -121,16 +121,16 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
 class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
  protected:
   /// The bilinear form for the mass matrix
-  mfem::ParBilinearForm *m_M_form;
+  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
 
   /// The bilinear form for the viscous terms
-  mfem::ParBilinearForm *m_S_form;
+  std::shared_ptr<mfem::ParBilinearForm> m_S_form;
 
   /// The nonlinear form for the hyperelastic response
-  mfem::ParNonlinearForm *m_H_form;
+  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
 
   /// The assembled mass matrix
-  mfem::HypreParMatrix *m_M_mat;
+  std::shared_ptr<mfem::HypreParMatrix> m_M_mat;
 
   /// The CG solver for the mass matrix
   mfem::CGSolver m_M_solver;
@@ -139,10 +139,10 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   mfem::HypreSmoother m_M_prec;
 
   /// The reduced system operator for applying the bilinear and nonlinear forms
-  NonlinearSolidReducedSystemOperator *m_reduced_oper;
+  std::shared_ptr<NonlinearSolidReducedSystemOperator> m_reduced_oper;
 
   /// The Newton solver for the nonlinear iterations
-  mfem::NewtonSolver *m_newton_solver;
+  mfem::NewtonSolver &m_newton_solver;
 
   /// The fixed boudnary degrees of freedom
   const mfem::Array<int> &m_ess_tdof_list;
@@ -155,9 +155,9 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
 
  public:
   /// The constructor
-  NonlinearSolidDynamicOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
-                                mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list,
-                                mfem::NewtonSolver *newton_solver, LinearSolverParameters lin_params);
+  NonlinearSolidDynamicOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
+                                std::shared_ptr<mfem::ParBilinearForm> M_form, const mfem::Array<int> &ess_tdof_list,
+                                mfem::NewtonSolver &newton_solver, LinearSolverParameters lin_params);
 
   /// Required to use the native newton solver
   virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
@@ -177,16 +177,16 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
 class NonlinearSolidReducedSystemOperator : public mfem::Operator {
  private:
   /// The bilinear form for the mass matrix
-  mfem::ParBilinearForm *m_M_form;
+  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
 
   /// The bilinear form for the viscous terms
-  mfem::ParBilinearForm *m_S_form;
+  std::shared_ptr<mfem::ParBilinearForm> m_S_form;
 
   /// The nonlinear form for the hyperelastic response
-  mfem::ParNonlinearForm *m_H_form;
+  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
 
   /// The linearized jacobian
-  mutable mfem::HypreParMatrix *m_jacobian;
+  mutable std::shared_ptr<mfem::HypreParMatrix> m_jacobian;
 
   /// The current timestep
   double m_dt;
@@ -202,8 +202,8 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 
  public:
   /// The constructor
-  NonlinearSolidReducedSystemOperator(mfem::ParNonlinearForm *H_form, mfem::ParBilinearForm *S_form,
-                                      mfem::ParBilinearForm *M_form, const mfem::Array<int> &ess_tdof_list);
+  NonlinearSolidReducedSystemOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
+                                      std::shared_ptr<mfem::ParBilinearForm> M_form, const mfem::Array<int> &ess_tdof_list);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
   void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);
