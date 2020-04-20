@@ -37,7 +37,7 @@ TEST(thermal_solver, static_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
@@ -101,7 +101,7 @@ TEST(thermal_solver, dyn_exp_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial
@@ -175,7 +175,7 @@ TEST(thermal_solver, dyn_imp_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::fstream imesh(mesh_file);
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial

@@ -7,10 +7,10 @@
 #ifndef NONLINSOLID_OPER
 #define NONLINSOLID_OPER
 
-#include "mfem.hpp"
-#include "common/serac_types.hpp"
-
 #include <memory>
+
+#include "common/serac_types.hpp"
+#include "mfem.hpp"
 
 /// The abstract MFEM operator for a quasi-static solve
 class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
@@ -67,8 +67,10 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 
  public:
   /// The constructor
-  NonlinearSolidReducedSystemOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
-                                      std::shared_ptr<mfem::ParBilinearForm> M_form, const mfem::Array<int> &ess_tdof_list);
+  NonlinearSolidReducedSystemOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form,
+                                      std::shared_ptr<mfem::ParBilinearForm>  S_form,
+                                      std::shared_ptr<mfem::ParBilinearForm>  M_form,
+                                      const mfem::Array<int> &                ess_tdof_list);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
   void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);
@@ -121,7 +123,8 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
 
  public:
   /// The constructor
-  NonlinearSolidDynamicOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
+  NonlinearSolidDynamicOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form,
+                                std::shared_ptr<mfem::ParBilinearForm>  S_form,
                                 std::shared_ptr<mfem::ParBilinearForm> M_form, const mfem::Array<int> &ess_tdof_list,
                                 mfem::NewtonSolver &newton_solver, LinearSolverParameters lin_params);
 

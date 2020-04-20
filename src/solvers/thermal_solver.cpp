@@ -221,8 +221,8 @@ void DynamicConductionOperator::SetKMatrix(std::shared_ptr<mfem::HypreParMatrix>
 
 void DynamicConductionOperator::SetLoadVector(std::shared_ptr<mfem::Vector> rhs) { m_rhs = rhs; }
 
-void DynamicConductionOperator::SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef, mfem::Array<int> &ess_bdr,
-                                                mfem::Array<int> &ess_tdof_list)
+void DynamicConductionOperator::SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
+                                                mfem::Array<int> &ess_bdr, mfem::Array<int> &ess_tdof_list)
 {
   m_ess_bdr_coef  = ess_bdr_coef;
   m_ess_bdr       = ess_bdr;
@@ -290,4 +290,4 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   m_old_dt = dt;
 }
 
-DynamicConductionOperator::~DynamicConductionOperator() { }
+DynamicConductionOperator::~DynamicConductionOperator() {}

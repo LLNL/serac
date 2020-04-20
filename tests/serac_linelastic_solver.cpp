@@ -26,7 +26,7 @@ TEST(elastic_solver, static_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+  auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
@@ -44,7 +44,7 @@ TEST(elastic_solver, static_solve)
 
   // define the displacement vector
   mfem::Vector disp(pmesh->Dimension());
-  disp = 0.0;
+  disp           = 0.0;
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
   elas_solver.SetDisplacementBCs(disp_bdr, disp_coef);
 
@@ -53,8 +53,8 @@ TEST(elastic_solver, static_solve)
 
   // define the traction vector
   mfem::Vector traction(pmesh->Dimension());
-  traction    = 0.0;
-  traction(1) = 1.0e-4;
+  traction           = 0.0;
+  traction(1)        = 1.0e-4;
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
   elas_solver.SetTractionBCs(trac_bdr, traction_coef);
 

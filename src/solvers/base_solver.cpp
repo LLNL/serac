@@ -11,18 +11,14 @@
 
 #include "common/serac_types.hpp"
 
-BaseSolver::BaseSolver()
-    : m_output_type(OutputType::VisIt),
-      m_time(0.0),
-      m_cycle(0),
-      m_gf_initialized(false)
+BaseSolver::BaseSolver() : m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0), m_gf_initialized(false)
 {
   SetTimestepper(TimestepMethod::ForwardEuler);
 }
 
 BaseSolver::BaseSolver(int n) : BaseSolver() { m_state.resize(n); }
 
-BaseSolver::BaseSolver(const BaseSolver& old_solver) 
+BaseSolver::BaseSolver(const BaseSolver &old_solver)
     : m_state(old_solver.m_state),
       m_ess_bdr(old_solver.m_ess_bdr),
       m_nat_bdr(old_solver.m_nat_bdr),
@@ -38,7 +34,8 @@ BaseSolver::BaseSolver(const BaseSolver& old_solver)
       m_cycle(old_solver.m_cycle),
       m_rank(old_solver.m_rank),
       m_gf_initialized(old_solver.m_gf_initialized)
-{ }
+{
+}
 
 void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
@@ -166,7 +163,6 @@ int BaseSolver::GetCycle() const { return m_cycle; }
 
 void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name)
 {
-
   m_root_name = root_name;
 
   m_output_type = output_type;

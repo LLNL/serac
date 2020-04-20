@@ -37,7 +37,8 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
   displacement.name = "displacement";
 }
 
-void ElasticitySolver::SetDisplacementBCs(std::vector<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+void ElasticitySolver::SetDisplacementBCs(std::vector<int> &                       disp_bdr,
+                                          std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef);
 
@@ -45,7 +46,8 @@ void ElasticitySolver::SetDisplacementBCs(std::vector<int> &disp_bdr, std::share
   displacement.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
-void ElasticitySolver::SetTractionBCs(std::vector<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef)
+void ElasticitySolver::SetTractionBCs(std::vector<int> &                       trac_bdr,
+                                      std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef)
 {
   SetNaturalBCs(trac_bdr, trac_bdr_coef);
 }

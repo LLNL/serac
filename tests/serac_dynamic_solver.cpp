@@ -30,7 +30,7 @@ TEST(dynamic_solver, dyn_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  auto mesh = std::make_shared<mfem::Mesh>(imesh, 1, 1, true);
+  auto          mesh = std::make_shared<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   mesh->UniformRefinement();
@@ -45,13 +45,13 @@ TEST(dynamic_solver, dyn_solve)
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
-  auto visc = std::make_shared<mfem::ConstantCoefficient> (0.0);
+  auto visc = std::make_shared<mfem::ConstantCoefficient>(0.0);
 
   // define the inital state coefficients
   std::vector<std::shared_ptr<mfem::VectorCoefficient> > initialstate(2);
 
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
-  auto velo = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
+  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
 
   initialstate[0] = deform;
   initialstate[1] = velo;

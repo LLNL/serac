@@ -78,7 +78,7 @@ class BaseSolver {
   BaseSolver(int n);
 
   /// Copy constructor
-  BaseSolver(const BaseSolver&); // copy constructor
+  BaseSolver(const BaseSolver &);  // copy constructor
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
@@ -97,10 +97,10 @@ class BaseSolver {
   virtual void SetNaturalBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef);
 
   /// Set the state variables from a coefficient
-  virtual void ProjectState(std::vector<std::shared_ptr<mfem::Coefficient> >state_coef);
+  virtual void ProjectState(std::vector<std::shared_ptr<mfem::Coefficient> > state_coef);
 
   /// Set the state variables from a vector coefficient
-  virtual void ProjectState(std::vector<std::shared_ptr<mfem::VectorCoefficient> >state_vec_coef);
+  virtual void ProjectState(std::vector<std::shared_ptr<mfem::VectorCoefficient> > state_vec_coef);
 
   /// Set the state variables from an existing grid function
   virtual void SetState(const std::vector<FiniteElementState> &state);

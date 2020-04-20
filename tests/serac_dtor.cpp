@@ -33,7 +33,7 @@ TEST(serac_dtor, test1)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+  auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // Refine in serial

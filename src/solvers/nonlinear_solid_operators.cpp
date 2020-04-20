@@ -29,9 +29,12 @@ mfem::Operator &NonlinearSolidQuasiStaticOperator::GetGradient(const mfem::Vecto
 // destructor
 NonlinearSolidQuasiStaticOperator::~NonlinearSolidQuasiStaticOperator() {}
 
-NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
-    std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form, std::shared_ptr<mfem::ParBilinearForm> M_form,
-    const mfem::Array<int> &ess_tdof_list, mfem::NewtonSolver &newton_solver, LinearSolverParameters lin_params)
+NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form,
+                                                             std::shared_ptr<mfem::ParBilinearForm>  S_form,
+                                                             std::shared_ptr<mfem::ParBilinearForm>  M_form,
+                                                             const mfem::Array<int> &                ess_tdof_list,
+                                                             mfem::NewtonSolver &                    newton_solver,
+                                                             LinearSolverParameters                  lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
       m_M_form(M_form),
       m_S_form(S_form),
@@ -101,11 +104,11 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
 }
 
 // destructor
-NonlinearSolidDynamicOperator::~NonlinearSolidDynamicOperator() { }
+NonlinearSolidDynamicOperator::~NonlinearSolidDynamicOperator() {}
 
 NonlinearSolidReducedSystemOperator::NonlinearSolidReducedSystemOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form,
-                                                                         std::shared_ptr<mfem::ParBilinearForm> S_form,
-                                                                         std::shared_ptr<mfem::ParBilinearForm> M_form,
+                                                                         std::shared_ptr<mfem::ParBilinearForm>  S_form,
+                                                                         std::shared_ptr<mfem::ParBilinearForm>  M_form,
                                                                          const mfem::Array<int> &ess_tdof_list)
     : mfem::Operator(M_form->ParFESpace()->TrueVSize()),
       m_M_form(M_form),
@@ -155,4 +158,4 @@ mfem::Operator &NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   return *m_jacobian;
 }
 
-NonlinearSolidReducedSystemOperator::~NonlinearSolidReducedSystemOperator() { }
+NonlinearSolidReducedSystemOperator::~NonlinearSolidReducedSystemOperator() {}

@@ -8,8 +8,8 @@
 #define NONLINSOLID_SOLVER
 
 #include "base_solver.hpp"
-#include "nonlinear_solid_operators.hpp"
 #include "mfem.hpp"
+#include "nonlinear_solid_operators.hpp"
 
 /// The nonlinear hyperelastic quasi-static and dynamic
 /// hyperelastic solver object. It is derived from MFEM

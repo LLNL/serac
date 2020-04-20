@@ -153,7 +153,8 @@ int main(int argc, char *argv[])
 
   auto velo_coef = std::make_shared<mfem::VectorConstantCoefficient>(velo);
 
-  auto coefs = {std::static_pointer_cast<mfem::VectorCoefficient>(defo_coef), std::static_pointer_cast<mfem::VectorCoefficient>(velo_coef)};
+  auto coefs = {std::static_pointer_cast<mfem::VectorCoefficient>(defo_coef),
+                std::static_pointer_cast<mfem::VectorCoefficient>(velo_coef)};
 
   // initialize x_cur, boundary condition, deformation, and
   // incremental nodal displacment grid functions by projection the
@@ -168,7 +169,7 @@ int main(int argc, char *argv[])
 
   // define the displacement vector
   mfem::Vector disp(dim);
-  disp = 0.0;
+  disp           = 0.0;
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
 
   std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);

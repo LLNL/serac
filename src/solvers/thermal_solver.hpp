@@ -181,7 +181,8 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   void SetLoadVector(std::shared_ptr<mfem::Vector> rhs);
 
   /// Set the essential temperature boundary information
-  void SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef, mfem::Array<int> &ess_bdr, mfem::Array<int> &ess_tdof_list);
+  void SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef, mfem::Array<int> &ess_bdr,
+                       mfem::Array<int> &ess_tdof_list);
 
   /** Calculate du_dt = M^-1 (-Ku + f).
    *  This is all that is needed for explicit methods */
