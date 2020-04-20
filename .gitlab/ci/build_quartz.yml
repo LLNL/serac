@@ -18,7 +18,7 @@ allocate_resources_build_quartz:
   extends: .on_quartz
   stage: allocate_resources
   script:
-    - salloc -N 1 -c 36 -p pdebug -t 30 --no-shell --job-name=${SLURM_ALLOC_NAME}
+    - salloc -N 1 -c 36 -p pdebug -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
 
 ####
 # In post-build phase, deallocate resources
@@ -29,7 +29,7 @@ release_resources_build_quartz:
   extends: .on_quartz
   stage: release_resources
   script:
-    - export JOBID=$(squeue -h --name=${SLURM_ALLOC_NAME} --format=%A)
+    - export JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
     - ([[ -n "${JOBID}" ]] && scancel ${JOBID})
   when: always
 
@@ -39,8 +39,8 @@ release_resources_build_quartz:
   extends: .on_quartz
   stage: build
   script:
-    - JOBID="$(squeue -h --name=${SLURM_ALLOC_NAME} --format=%A)"
-    - JOBID="$( [[ -n ${JOBID} ]] && echo --jobid=${JOBID} )"
+    - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
+    - JOBID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
     - EXEC_PREFIX="srun ${JOBID} -t 20 -N 1 -n 1 -c 4"
     - ${EXEC_PREFIX} python scripts/uberenv/uberenv.py --spec=${SPEC}
     - ${EXEC_PREFIX} scripts/gitlab/build_and_test.sh
