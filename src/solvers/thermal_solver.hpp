@@ -8,10 +8,8 @@
 #define CONDUCTION_SOLVER
 
 #include "base_solver.hpp"
+#include "thermal_operators.hpp"
 #include "mfem.hpp"
-
-// Forward declaration
-class DynamicConductionOperator;
 
 /** This is a generic linear thermal diffusion oeprator of the form
  *
@@ -24,10 +22,10 @@ class ThermalSolver : public BaseSolver {
   FiniteElementState &temperature;
 
   /// Mass bilinear form object
-  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
+  std::unique_ptr<mfem::ParBilinearForm> m_M_form;
 
   /// Stiffness bilinear form object
-  std::shared_ptr<mfem::ParBilinearForm> m_K_form;
+  std::unique_ptr<mfem::ParBilinearForm> m_K_form;
 
   /// Assembled mass matrix
   std::shared_ptr<mfem::HypreParMatrix> m_M_mat;
@@ -42,7 +40,7 @@ class ThermalSolver : public BaseSolver {
   std::shared_ptr<mfem::HypreParMatrix> m_K_e_mat;
 
   /// Thermal load linear form
-  std::shared_ptr<mfem::ParLinearForm> m_l_form;
+  std::unique_ptr<mfem::ParLinearForm> m_l_form;
 
   /// Assembled BC load vector
   std::shared_ptr<mfem::HypreParVector> m_bc_rhs;
@@ -63,7 +61,7 @@ class ThermalSolver : public BaseSolver {
   std::shared_ptr<mfem::Coefficient> m_source;
 
   /// Time integration operator
-  std::shared_ptr<DynamicConductionOperator> m_dyn_oper;
+  std::unique_ptr<DynamicConductionOperator> m_dyn_oper;
 
   /// Linear solver parameters
   LinearSolverParameters m_lin_params;
@@ -103,97 +101,6 @@ class ThermalSolver : public BaseSolver {
 
   /// Destructor
   virtual ~ThermalSolver() = default;
-};
-
-/// The time dependent operator for advancing the discretized conduction ODE
-class DynamicConductionOperator : public mfem::TimeDependentOperator {
- protected:
-  /// Finite Element space
-  std::shared_ptr<mfem::ParFiniteElementSpace> m_fespace;
-
-  /// Grid function for boundary condition projection
-  std::shared_ptr<mfem::ParGridFunction> m_state_gf;
-
-  /// Solver for the mass matrix
-  std::shared_ptr<mfem::CGSolver> m_M_solver;
-
-  /// Solver for the T matrix
-  std::shared_ptr<mfem::CGSolver> m_T_solver;
-
-  /// Preconditioner for the M matrix
-  std::shared_ptr<mfem::HypreSmoother> m_M_prec;
-
-  /// Preconditioner for the T matrix
-  std::shared_ptr<mfem::HypreSmoother> m_T_prec;
-
-  /// Pointer to the assembled M matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_M_mat;
-
-  /// Pointer to the eliminated M matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_M_e_mat;
-
-  /// Pointer to the assembled K matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_K_mat;
-
-  /// Pointer to the eliminated K matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_K_e_mat;
-
-  /// Pointer to the assembled T ( = M + dt K) matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_T_mat;
-
-  /// Pointer to the eliminated T matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_T_e_mat;
-
-  /// Assembled RHS vector
-  std::shared_ptr<mfem::Vector> m_rhs;
-
-  /// RHS vector including essential boundary elimination
-  std::shared_ptr<mfem::Vector> m_bc_rhs;
-
-  /// Temperature essential boundary coefficient
-  std::shared_ptr<mfem::Coefficient> m_ess_bdr_coef;
-
-  /// Essential temperature boundary markers
-  mutable mfem::Array<int> m_ess_bdr;
-
-  /// Essential true DOFs
-  mfem::Array<int> m_ess_tdof_list;
-
-  /// Auxillary working vectors
-  mutable mfem::Vector m_z;
-  mutable mfem::Vector m_y;
-  mutable mfem::Vector m_x;
-
-  /// Storage of old dt use to determine if we should recompute the T matrix
-  mutable double m_old_dt;
-
- public:
-  /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace, LinearSolverParameters &params);
-
-  /// Set the mass matrix
-  void SetMMatrix(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> M_e_mat);
-
-  /// Set the stiffness matrix
-  void SetKMatrix(std::shared_ptr<mfem::HypreParMatrix> K_mat, std::shared_ptr<mfem::HypreParMatrix> K_e_mat);
-
-  /// Set the load vector
-  void SetLoadVector(std::shared_ptr<mfem::Vector> rhs);
-
-  /// Set the essential temperature boundary information
-  void SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef, mfem::Array<int> &ess_bdr,
-                       mfem::Array<int> &ess_tdof_list);
-
-  /** Calculate du_dt = M^-1 (-Ku + f).
-   *  This is all that is needed for explicit methods */
-  virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
-
-  /** Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
-   *  for du_dt. This is needed for implicit methods */
-  virtual void ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &du_dt);
-
-  /// Destructor
-  virtual ~DynamicConductionOperator();
 };
 
 #endif
