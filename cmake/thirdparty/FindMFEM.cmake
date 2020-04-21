@@ -9,15 +9,14 @@
 #
 # This file defines:
 #  MFEM_FOUND        - If MFEM was found
-#  MFEM_INCLUDE_DIRS - The MFEM include directories
-#  MFEM_LIBRARY      - The MFEM library
+#  mfem              - BLT Registered Library 
 #------------------------------------------------------------------------------
 
 if(NOT MFEM_DIR)
     message(FATAL_ERROR "MFEM support needs explicit MFEM_DIR")
 endif()
-
 message(STATUS "Looking for MFEM using MFEM_DIR = ${MFEM_DIR}")
+serac_assert_is_directory(VARIABLE_NAME MFEM_DIR)
 
 set(_mfem_cmake_config "${MFEM_DIR}/MFEMConfig.cmake")
 
@@ -75,7 +74,9 @@ else()
 
     # parse include flags
     string(REGEX MATCHALL "MFEM_TPLFLAGS [^\n]+\n" mfem_tpl_inc_flags ${mfem_cfg_file_txt})
-    message(VERBOSE "Content of variable mfem_tpl_inc_flags: ${mfem_tpl_inc_flags}")
+    if(${CMAKE_VERSION} VERSION_GREATER 3.15.0)
+        message(VERBOSE "Content of variable mfem_tpl_inc_flags: ${mfem_tpl_inc_flags}")
+    endif()
     string(REGEX REPLACE  "MFEM_TPLFLAGS +=" "" mfem_tpl_inc_flags ${mfem_tpl_inc_flags})
     string(FIND  ${mfem_tpl_inc_flags} "\n" mfem_tpl_inc_flags_end_pos)
     string(SUBSTRING ${mfem_tpl_inc_flags} 0 ${mfem_tpl_inc_flags_end_pos} mfem_tpl_inc_flags)
@@ -93,7 +94,9 @@ else()
 
     # parse link flags
     string(REGEX MATCHALL "MFEM_EXT_LIBS [^\n]+\n" mfem_tpl_lnk_flags ${mfem_cfg_file_txt})
-    message(VERBOSE "Content of variable mfem_tpl_lnk_flags: ${mfem_tpl_lnk_flags}")
+    if(${CMAKE_VERSION} VERSION_GREATER 3.15.0)
+        message(VERBOSE "Content of variable mfem_tpl_lnk_flags: ${mfem_tpl_lnk_flags}")
+    endif()
     if(NOT mfem_tpl_lnk_flags EQUAL "")
         string(REGEX REPLACE  "MFEM_EXT_LIBS +=" "" mfem_tpl_lnk_flags ${mfem_tpl_lnk_flags})
         string(FIND  ${mfem_tpl_lnk_flags} "\n" mfem_tpl_lnl_flags_end_pos )
@@ -114,7 +117,7 @@ find_package_handle_standard_args(MFEM DEFAULT_MSG
                                   MFEM_INCLUDE_DIRS )
 
 if(NOT MFEM_FOUND)
-    message(FATAL_ERROR "MFEM_FOUND is not a path to a valid MFEM install")
+    message(FATAL_ERROR "MFEM_DIR is not a path to a valid MFEM install")
 endif()
 
 message(STATUS "MFEM Includes: ${MFEM_INCLUDE_DIRS}")
