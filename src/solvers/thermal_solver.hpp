@@ -8,8 +8,8 @@
 #define CONDUCTION_SOLVER
 
 #include "base_solver.hpp"
-#include "thermal_operators.hpp"
 #include "mfem.hpp"
+#include "thermal_operators.hpp"
 
 /** This is a generic linear thermal diffusion oeprator of the form
  *

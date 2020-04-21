@@ -8,6 +8,7 @@
 #define CONDUCTION_OPER
 
 #include <memory>
+
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
 

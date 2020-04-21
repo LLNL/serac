@@ -19,7 +19,7 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
   std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
 
   /// The linearized jacobian at the current state
-  mutable mfem::Operator *m_Jacobian;
+  mutable std::unique_ptr<mfem::Operator> m_Jacobian;
 
  public:
   /// The constructor
@@ -51,7 +51,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
   std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
 
   /// The linearized jacobian
-  mutable std::shared_ptr<mfem::HypreParMatrix> m_jacobian;
+  mutable std::unique_ptr<mfem::HypreParMatrix> m_jacobian;
 
   /// The current timestep
   double m_dt;
@@ -98,7 +98,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
 
   /// The assembled mass matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_M_mat;
+  std::unique_ptr<mfem::HypreParMatrix> m_M_mat;
 
   /// The CG solver for the mass matrix
   mfem::CGSolver m_M_solver;
@@ -107,7 +107,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   mfem::HypreSmoother m_M_prec;
 
   /// The reduced system operator for applying the bilinear and nonlinear forms
-  std::shared_ptr<NonlinearSolidReducedSystemOperator> m_reduced_oper;
+  std::unique_ptr<NonlinearSolidReducedSystemOperator> m_reduced_oper;
 
   /// The Newton solver for the nonlinear iterations
   mfem::NewtonSolver &m_newton_solver;

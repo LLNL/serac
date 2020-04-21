@@ -8,7 +8,6 @@
 #include <sys/stat.h>
 
 #include <fstream>
-
 #include <memory>
 
 #include "mfem.hpp"

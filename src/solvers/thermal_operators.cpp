@@ -18,8 +18,8 @@ DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFi
       m_old_dt(-1.0)
 {
   // Set the mass solver options (CG and Jacobi for now)
-  m_M_solver                 = std::make_unique<mfem::CGSolver>(m_fespace->GetComm());
-  m_M_prec                   = std::make_unique<mfem::HypreSmoother>();
+  m_M_solver = std::make_unique<mfem::CGSolver>(m_fespace->GetComm());
+  m_M_prec   = std::make_unique<mfem::HypreSmoother>();
 
   m_M_solver->iterative_mode = false;
   m_M_solver->SetRelTol(params.rel_tol);
@@ -30,9 +30,9 @@ DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFi
   m_M_solver->SetPreconditioner(*m_M_prec);
 
   // Use the same options for the T (= M + dt K) solver
-  m_T_solver                 = std::make_unique<mfem::CGSolver>(m_fespace->GetComm());
-  m_T_prec                   = std::make_unique<mfem::HypreSmoother>();
-  
+  m_T_solver = std::make_unique<mfem::CGSolver>(m_fespace->GetComm());
+  m_T_prec   = std::make_unique<mfem::HypreSmoother>();
+
   m_T_solver->iterative_mode = false;
   m_T_solver->SetRelTol(params.rel_tol);
   m_T_solver->SetAbsTol(params.abs_tol);

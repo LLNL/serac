@@ -22,8 +22,7 @@ void NonlinearSolidQuasiStaticOperator::Mult(const mfem::Vector &k, mfem::Vector
 // Compute the Jacobian from the nonlinear form
 mfem::Operator &NonlinearSolidQuasiStaticOperator::GetGradient(const mfem::Vector &x) const
 {
-  m_Jacobian = &m_H_form->GetGradient(x);
-  return *m_Jacobian;
+  return m_H_form->GetGradient(x);
 }
 
 // destructor
@@ -60,7 +59,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::shared_ptr<mfe
 
   // Construct the reduced system operator and initialize the newton solver with
   // it
-  m_reduced_oper = std::make_shared<NonlinearSolidReducedSystemOperator>(H_form, S_form, M_form, ess_tdof_list);
+  m_reduced_oper = std::make_unique<NonlinearSolidReducedSystemOperator>(H_form, S_form, M_form, ess_tdof_list);
   m_newton_solver.SetOperator(*m_reduced_oper);
 }
 
