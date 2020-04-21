@@ -18,25 +18,6 @@ BaseSolver::BaseSolver() : m_output_type(OutputType::VisIt), m_time(0.0), m_cycl
 
 BaseSolver::BaseSolver(int n) : BaseSolver() { m_state.resize(n); }
 
-BaseSolver::BaseSolver(const BaseSolver &old_solver)
-    : m_state(old_solver.m_state),
-      m_ess_bdr(old_solver.m_ess_bdr),
-      m_nat_bdr(old_solver.m_nat_bdr),
-      m_ess_bdr_coef(old_solver.m_ess_bdr_coef),
-      m_ess_bdr_vec_coef(old_solver.m_ess_bdr_vec_coef),
-      m_nat_bdr_coef(old_solver.m_nat_bdr_coef),
-      m_nat_bdr_vec_coef(old_solver.m_nat_bdr_vec_coef),
-      m_ess_tdof_list(old_solver.m_ess_tdof_list),
-      m_output_type(old_solver.m_output_type),
-      m_timestepper(old_solver.m_timestepper),
-      m_root_name(old_solver.m_root_name),
-      m_time(old_solver.m_time),
-      m_cycle(old_solver.m_cycle),
-      m_rank(old_solver.m_rank),
-      m_gf_initialized(old_solver.m_gf_initialized)
-{
-}
-
 void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
   m_ess_bdr.SetSize(ess_bdr.size());

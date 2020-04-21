@@ -77,9 +77,6 @@ class BaseSolver {
   /// Constructor that creates n entries in m_state
   BaseSolver(int n);
 
-  /// Copy constructor
-  BaseSolver(const BaseSolver &);  // copy constructor
-
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
   virtual void SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);

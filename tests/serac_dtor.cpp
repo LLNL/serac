@@ -9,14 +9,10 @@
 
 #include <fstream>
 
+#include <memory>
+
 #include "mfem.hpp"
 #include "solvers/thermal_solver.hpp"
-
-template <typename T>
-T do_nothing(T foo)
-{
-  return foo;
-}
 
 const char *mesh_file = "NO_MESH_GIVEN";
 
@@ -32,8 +28,11 @@ TEST(serac_dtor, test1)
 
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
+
   std::ifstream imesh(mesh_file);
-  auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+
   imesh.close();
 
   // Refine in serial
@@ -46,10 +45,10 @@ TEST(serac_dtor, test1)
   pmesh->UniformRefinement();
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
+  auto therm_solver = std::make_unique<ThermalSolver>(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  therm_solver->SetTimestepper(TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector &x) { return x.Norml2(); });
@@ -57,11 +56,11 @@ TEST(serac_dtor, test1)
   std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
 
   // Set the temperature BC in the thermal solver
-  therm_solver.SetTemperatureBCs(temp_bdr, u_0);
+  therm_solver->SetTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
-  therm_solver.SetConductivity(kappa);
+  therm_solver->SetConductivity(kappa);
 
   // Define the linear solver params
   LinearSolverParameters params;
@@ -69,18 +68,17 @@ TEST(serac_dtor, test1)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
-  therm_solver.SetLinearSolverParameters(params);
+  therm_solver->SetLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
-  therm_solver.CompleteSetup();
+  therm_solver->CompleteSetup();
 
-  // just do something to make sure the dtor is being called
-  // and that the member variables lifetime is managed properly
-  do_nothing(therm_solver);
-  do_nothing(therm_solver);
-  do_nothing(therm_solver);
-  do_nothing(therm_solver);
+  // Destruct the old thermal solver and build a new one
+  therm_solver.reset(new ThermalSolver(1, pmesh));
+
+  // Destruct the second thermal solver and leave the pointer empty
+  therm_solver.reset(nullptr);
 }
 
 int main(int argc, char *argv[])
