@@ -150,7 +150,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
 
   switch (m_output_type) {
     case OutputType::VisIt: {
-      m_visit_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.begin()->mesh.get());
+      m_visit_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.front().mesh.get());
       for(const auto& state : m_state) {
         m_visit_dc->RegisterField(state.name, state.gf.get());
       }
