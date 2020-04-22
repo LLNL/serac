@@ -96,6 +96,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   MFEM_ASSERT(m_M_mat != nullptr, "Mass matrix not set in ConductionSolver::ImplicitSolve!");
   MFEM_ASSERT(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::ImplicitSolve!");
 
+  // Save a copy of the current state vector
   m_y = u;
 
   // Solve the equation:
