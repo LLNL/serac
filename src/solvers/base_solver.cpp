@@ -18,7 +18,8 @@ BaseSolver::BaseSolver() : m_output_type(OutputType::VisIt), m_time(0.0), m_cycl
 
 BaseSolver::BaseSolver(int n) : BaseSolver() { m_state.resize(n); }
 
-void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
+void BaseSolver::SetEssentialBCs(const std::vector<int> &                        ess_bdr,
+                                 const std::shared_ptr<mfem::VectorCoefficient> &ess_bdr_vec_coef)
 {
   m_ess_bdr.SetSize(ess_bdr.size());
 
@@ -29,7 +30,8 @@ void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem
   m_ess_bdr_vec_coef = ess_bdr_vec_coef;
 }
 
-void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef)
+void BaseSolver::SetNaturalBCs(const std::vector<int> &                        nat_bdr,
+                               const std::shared_ptr<mfem::VectorCoefficient> &nat_bdr_vec_coef)
 {
   m_nat_bdr.SetSize(nat_bdr.size());
 
@@ -40,7 +42,8 @@ void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::
   m_nat_bdr_vec_coef = nat_bdr_vec_coef;
 }
 
-void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+void BaseSolver::SetEssentialBCs(const std::vector<int> &                  ess_bdr,
+                                 const std::shared_ptr<mfem::Coefficient> &ess_bdr_coef)
 {
   m_ess_bdr.SetSize(ess_bdr.size());
 
@@ -51,7 +54,7 @@ void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem
   m_ess_bdr_coef = ess_bdr_coef;
 }
 
-void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
+void BaseSolver::SetNaturalBCs(const std::vector<int> &nat_bdr, const std::shared_ptr<mfem::Coefficient> &nat_bdr_coef)
 {
   m_nat_bdr.SetSize(nat_bdr.size());
 
@@ -62,7 +65,7 @@ void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::
   m_nat_bdr_coef = nat_bdr_coef;
 }
 
-void BaseSolver::ProjectState(std::vector<std::shared_ptr<mfem::Coefficient> > state_coef)
+void BaseSolver::ProjectState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
 {
   MFEM_ASSERT(state_coef.size() == m_state.size(),
               "State and coefficient bundles not the same size in "
@@ -73,7 +76,7 @@ void BaseSolver::ProjectState(std::vector<std::shared_ptr<mfem::Coefficient> > s
   }
 }
 
-void BaseSolver::ProjectState(std::vector<std::shared_ptr<mfem::VectorCoefficient> > state_vec_coef)
+void BaseSolver::ProjectState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef)
 {
   MFEM_ASSERT(state_vec_coef.size() == m_state.size(),
               "State and coefficient bundles not the same size in "
@@ -89,7 +92,7 @@ void BaseSolver::SetState(const std::vector<FiniteElementState> &state)
   MFEM_ASSERT(state.size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
   m_state = state;
 
-  MPI_Comm_rank(m_state.begin()->space->GetComm(), &m_rank);
+  MPI_Comm_rank(m_state.front().space->GetComm(), &m_rank);
 }
 
 std::vector<FiniteElementState> BaseSolver::GetState() const { return m_state; }
@@ -151,7 +154,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
   switch (m_output_type) {
     case OutputType::VisIt: {
       m_visit_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.front().mesh.get());
-      for(const auto& state : m_state) {
+      for (const auto &state : m_state) {
         m_visit_dc->RegisterField(state.name, state.gf.get());
       }
       break;

@@ -6,12 +6,10 @@
 
 #include "thermal_operators.hpp"
 
-DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
-                                                     LinearSolverParameters &                     params)
+DynamicConductionOperator::DynamicConductionOperator(const std::shared_ptr<mfem::ParFiniteElementSpace> &fespace,
+                                                     const LinearSolverParameters &                      params)
     : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0),
       m_fespace(fespace),
-      m_bc_rhs(nullptr),
-      m_ess_bdr_coef(nullptr),
       m_z(fespace->GetTrueVSize()),
       m_y(fespace->GetTrueVSize()),
       m_x(fespace->GetTrueVSize()),
@@ -44,26 +42,26 @@ DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFi
   m_bc_rhs   = std::make_shared<mfem::Vector>(fespace->GetTrueVSize());
 }
 
-void DynamicConductionOperator::SetMMatrix(std::shared_ptr<mfem::HypreParMatrix> M_mat,
-                                           std::shared_ptr<mfem::HypreParMatrix> M_e_mat)
+void DynamicConductionOperator::SetMMatrix(const std::shared_ptr<mfem::HypreParMatrix> &M_mat,
+                                           const std::shared_ptr<mfem::HypreParMatrix> &M_e_mat)
 {
   // Set the mass matrix
   m_M_mat   = M_mat;
   m_M_e_mat = M_e_mat;
 }
 
-void DynamicConductionOperator::SetKMatrix(std::shared_ptr<mfem::HypreParMatrix> K_mat,
-                                           std::shared_ptr<mfem::HypreParMatrix> K_e_mat)
+void DynamicConductionOperator::SetKMatrix(const std::shared_ptr<mfem::HypreParMatrix> &K_mat,
+                                           const std::shared_ptr<mfem::HypreParMatrix> &K_e_mat)
 {
   // Set the stiffness matrix and RHS
   m_K_mat   = K_mat;
   m_K_e_mat = K_e_mat;
 }
 
-void DynamicConductionOperator::SetLoadVector(std::shared_ptr<mfem::Vector> rhs) { m_rhs = rhs; }
+void DynamicConductionOperator::SetLoadVector(const std::shared_ptr<mfem::Vector> &rhs) { m_rhs = rhs; }
 
-void DynamicConductionOperator::SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                                                mfem::Array<int> &ess_bdr, mfem::Array<int> &ess_tdof_list)
+void DynamicConductionOperator::SetEssentialBCs(const std::shared_ptr<mfem::Coefficient> &ess_bdr_coef,
+                                                const mfem::Array<int> &ess_bdr, const mfem::Array<int> &ess_tdof_list)
 {
   m_ess_bdr_coef  = ess_bdr_coef;
   m_ess_bdr       = ess_bdr;

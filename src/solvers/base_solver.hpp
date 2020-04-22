@@ -79,25 +79,27 @@ class BaseSolver {
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
-  virtual void SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);
+  virtual void SetEssentialBCs(const std::vector<int> &ess_bdr, const std::shared_ptr<mfem::Coefficient> &ess_bdr_coef);
 
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
-  virtual void SetEssentialBCs(std::vector<int> &ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef);
+  virtual void SetEssentialBCs(const std::vector<int> &                        ess_bdr,
+                               const std::shared_ptr<mfem::VectorCoefficient> &ess_bdr_vec_coef);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
-  virtual void SetNaturalBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef);
+  virtual void SetNaturalBCs(const std::vector<int> &nat_bdr, const std::shared_ptr<mfem::Coefficient> &nat_bdr_coef);
 
   /// Set the vector-valued natural boundary conditions from a list of boundary
   /// markers and a coefficient
-  virtual void SetNaturalBCs(std::vector<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef);
+  virtual void SetNaturalBCs(const std::vector<int> &                        nat_bdr,
+                             const std::shared_ptr<mfem::VectorCoefficient> &nat_bdr_vec_coef);
 
   /// Set the state variables from a coefficient
-  virtual void ProjectState(std::vector<std::shared_ptr<mfem::Coefficient> > state_coef);
+  virtual void ProjectState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef);
 
   /// Set the state variables from a vector coefficient
-  virtual void ProjectState(std::vector<std::shared_ptr<mfem::VectorCoefficient> > state_vec_coef);
+  virtual void ProjectState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef);
 
   /// Set the state variables from an existing grid function
   virtual void SetState(const std::vector<FiniteElementState> &state);

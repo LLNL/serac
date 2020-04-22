@@ -23,7 +23,7 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
 
  public:
   /// The constructor
-  NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
+  NonlinearSolidQuasiStaticOperator(const std::shared_ptr<mfem::ParNonlinearForm> &H_form);
 
   /// Required to use the native newton solver
   mfem::Operator &GetGradient(const mfem::Vector &x) const;
@@ -38,7 +38,7 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
 ///  Nonlinear operator of the form:
 ///  k --> (M + dt*S)*k + H(x + dt*v + dt^2*k) + S*v,
 ///  where M and S are given BilinearForms, H is a given NonlinearForm, v and x
-///  are given vectors, and dt is a scalar.
+///  are given vectors, and dt is a scalar.S
 class NonlinearSolidReducedSystemOperator : public mfem::Operator {
  private:
   /// The bilinear form for the mass matrix
@@ -67,10 +67,10 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 
  public:
   /// The constructor
-  NonlinearSolidReducedSystemOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form,
-                                      std::shared_ptr<mfem::ParBilinearForm>  S_form,
-                                      std::shared_ptr<mfem::ParBilinearForm>  M_form,
-                                      const mfem::Array<int> &                ess_tdof_list);
+  NonlinearSolidReducedSystemOperator(const std::shared_ptr<mfem::ParNonlinearForm> &H_form,
+                                      const std::shared_ptr<mfem::ParBilinearForm> & S_form,
+                                      const std::shared_ptr<mfem::ParBilinearForm> & M_form,
+                                      const mfem::Array<int> &                       ess_tdof_list);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
   void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);
@@ -123,10 +123,11 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
 
  public:
   /// The constructor
-  NonlinearSolidDynamicOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form,
-                                std::shared_ptr<mfem::ParBilinearForm>  S_form,
-                                std::shared_ptr<mfem::ParBilinearForm> M_form, const mfem::Array<int> &ess_tdof_list,
-                                mfem::NewtonSolver &newton_solver, LinearSolverParameters lin_params);
+  NonlinearSolidDynamicOperator(const std::shared_ptr<mfem::ParNonlinearForm> &H_form,
+                                const std::shared_ptr<mfem::ParBilinearForm> & S_form,
+                                const std::shared_ptr<mfem::ParBilinearForm> & M_form,
+                                const mfem::Array<int> &ess_tdof_list, mfem::NewtonSolver &newton_solver,
+                                const LinearSolverParameters &lin_params);
 
   /// Required to use the native newton solver
   virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
