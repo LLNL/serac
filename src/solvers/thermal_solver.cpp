@@ -33,8 +33,7 @@ void ThermalSolver::SetInitialState(mfem::Coefficient &temp)
   m_gf_initialized = true;
 }
 
-void ThermalSolver::SetTemperatureBCs(const std::vector<int> &                  ess_bdr,
-                                      const std::shared_ptr<mfem::Coefficient> &ess_bdr_coef)
+void ThermalSolver::SetTemperatureBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   SetEssentialBCs(ess_bdr, ess_bdr_coef);
 
@@ -42,19 +41,19 @@ void ThermalSolver::SetTemperatureBCs(const std::vector<int> &                  
   temperature.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
-void ThermalSolver::SetFluxBCs(const std::vector<int> &nat_bdr, const std::shared_ptr<mfem::Coefficient> &nat_bdr_coef)
+void ThermalSolver::SetFluxBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   SetNaturalBCs(nat_bdr, nat_bdr_coef);
 }
 
-void ThermalSolver::SetConductivity(const std::shared_ptr<mfem::Coefficient> &kappa)
+void ThermalSolver::SetConductivity(std::shared_ptr<mfem::Coefficient> kappa)
 {
   // Set the conduction coefficient
   m_kappa = kappa;
 }
 
-void ThermalSolver::SetSource(const std::shared_ptr<mfem::Coefficient> &source)
+void ThermalSolver::SetSource(std::shared_ptr<mfem::Coefficient> source)
 {
   // Set the body source integral coefficient
   m_source = source;

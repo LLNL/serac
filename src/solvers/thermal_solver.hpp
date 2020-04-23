@@ -74,22 +74,22 @@ class ThermalSolver : public BaseSolver {
   ThermalSolver(int order, const std::shared_ptr<mfem::ParMesh> &pmesh);
 
   /// Set essential temperature boundary conditions (strongly enforced)
-  void SetTemperatureBCs(const std::vector<int> &temp_bdr, const std::shared_ptr<mfem::Coefficient> &temp_bdr_coef);
+  void SetTemperatureBCs(const std::vector<int> &temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);
 
   /// Set flux boundary conditions (weakly enforced)
-  void SetFluxBCs(const std::vector<int> &flux_bdr, const std::shared_ptr<mfem::Coefficient> &flux_bdr_coef);
+  void SetFluxBCs(const std::vector<int> &flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef);
 
   /// Advance the timestep using the chosen integration scheme
   void AdvanceTimestep(double &dt);
 
   /// Set the thermal conductivity coefficient
-  void SetConductivity(const std::shared_ptr<mfem::Coefficient> &kappa);
+  void SetConductivity(std::shared_ptr<mfem::Coefficient> kappa);
 
   /// Set the initial temperature from a coefficient
   void SetInitialState(mfem::Coefficient &temp);
 
   /// Set the body thermal source from a coefficient
-  void SetSource(const std::shared_ptr<mfem::Coefficient> &source);
+  void SetSource(std::shared_ptr<mfem::Coefficient> source);
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic

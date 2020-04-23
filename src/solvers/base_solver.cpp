@@ -18,8 +18,8 @@ BaseSolver::BaseSolver() : m_output_type(OutputType::VisIt), m_time(0.0), m_cycl
 
 BaseSolver::BaseSolver(int n) : BaseSolver() { m_state.resize(n); }
 
-void BaseSolver::SetEssentialBCs(const std::vector<int> &                        ess_bdr,
-                                 const std::shared_ptr<mfem::VectorCoefficient> &ess_bdr_vec_coef)
+void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bdr,
+                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
   m_ess_bdr.SetSize(ess_bdr.size());
 
@@ -30,8 +30,8 @@ void BaseSolver::SetEssentialBCs(const std::vector<int> &                       
   m_ess_bdr_vec_coef = ess_bdr_vec_coef;
 }
 
-void BaseSolver::SetNaturalBCs(const std::vector<int> &                        nat_bdr,
-                               const std::shared_ptr<mfem::VectorCoefficient> &nat_bdr_vec_coef)
+void BaseSolver::SetNaturalBCs(const std::vector<int> &                 nat_bdr,
+                               std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef)
 {
   m_nat_bdr.SetSize(nat_bdr.size());
 
@@ -42,8 +42,7 @@ void BaseSolver::SetNaturalBCs(const std::vector<int> &                        n
   m_nat_bdr_vec_coef = nat_bdr_vec_coef;
 }
 
-void BaseSolver::SetEssentialBCs(const std::vector<int> &                  ess_bdr,
-                                 const std::shared_ptr<mfem::Coefficient> &ess_bdr_coef)
+void BaseSolver::SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   m_ess_bdr.SetSize(ess_bdr.size());
 
@@ -54,7 +53,7 @@ void BaseSolver::SetEssentialBCs(const std::vector<int> &                  ess_b
   m_ess_bdr_coef = ess_bdr_coef;
 }
 
-void BaseSolver::SetNaturalBCs(const std::vector<int> &nat_bdr, const std::shared_ptr<mfem::Coefficient> &nat_bdr_coef)
+void BaseSolver::SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
 {
   m_nat_bdr.SetSize(nat_bdr.size());
 

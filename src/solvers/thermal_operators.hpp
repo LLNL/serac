@@ -76,22 +76,19 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
 
  public:
   /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(const std::shared_ptr<mfem::ParFiniteElementSpace> &fespace,
-                            const LinearSolverParameters &                      params);
+  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const LinearSolverParameters &params);
 
   /// Set the mass matrix
-  void SetMMatrix(const std::shared_ptr<mfem::HypreParMatrix> &M_mat,
-                  const std::shared_ptr<mfem::HypreParMatrix> &M_e_mat);
+  void SetMMatrix(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> M_e_mat);
 
   /// Set the stiffness matrix
-  void SetKMatrix(const std::shared_ptr<mfem::HypreParMatrix> &K_mat,
-                  const std::shared_ptr<mfem::HypreParMatrix> &K_e_mat);
+  void SetKMatrix(std::shared_ptr<mfem::HypreParMatrix> K_mat, std::shared_ptr<mfem::HypreParMatrix> K_e_mat);
 
   /// Set the load vector
-  void SetLoadVector(const std::shared_ptr<mfem::Vector> &rhs);
+  void SetLoadVector(std::shared_ptr<mfem::Vector> rhs);
 
   /// Set the essential temperature boundary information
-  void SetEssentialBCs(const std::shared_ptr<mfem::Coefficient> &ess_bdr_coef, const mfem::Array<int> &ess_bdr,
+  void SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef, const mfem::Array<int> &ess_bdr,
                        const mfem::Array<int> &ess_tdof_list);
 
   /** Calculate du_dt = M^-1 (-Ku + f).
