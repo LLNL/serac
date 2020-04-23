@@ -68,13 +68,18 @@ void NonlinearSolidSolver::SetHyperelasticMaterialParameters(double mu, double K
 
 void NonlinearSolidSolver::SetViscosity(std::shared_ptr<mfem::Coefficient> visc) { m_viscosity = visc; }
 
-void NonlinearSolidSolver::SetInitialState(mfem::VectorCoefficient &disp_state, mfem::VectorCoefficient &velo_state)
+void NonlinearSolidSolver::SetDisplacement(mfem::VectorCoefficient &disp_state)
 {
   disp_state.SetTime(m_time);
-  velo_state.SetTime(m_time);
   displacement.gf->ProjectCoefficient(disp_state);
+  m_gf_initialized[1] = true;
+}
+
+void NonlinearSolidSolver::SetVelocity(mfem::VectorCoefficient &velo_state)
+{
+  velo_state.SetTime(m_time);
   velocity.gf->ProjectCoefficient(velo_state);
-  m_gf_initialized = true;
+  m_gf_initialized[0] = true;
 }
 
 void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &   lin_params,

@@ -85,8 +85,8 @@ class ThermalSolver : public BaseSolver {
   /// Set the thermal conductivity coefficient
   void SetConductivity(std::shared_ptr<mfem::Coefficient> kappa);
 
-  /// Set the initial temperature from a coefficient
-  void SetInitialState(mfem::Coefficient &temp);
+  /// Set the temperature from a coefficient
+  void SetTemperature(mfem::Coefficient &temp);
 
   /// Set the body thermal source from a coefficient
   void SetSource(std::shared_ptr<mfem::Coefficient> source);

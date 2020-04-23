@@ -11,12 +11,16 @@
 
 #include "common/serac_types.hpp"
 
-BaseSolver::BaseSolver() : m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0), m_gf_initialized(false)
+BaseSolver::BaseSolver() : m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0)
 {
   SetTimestepper(TimestepMethod::ForwardEuler);
 }
 
-BaseSolver::BaseSolver(int n) : BaseSolver() { m_state.resize(n); }
+BaseSolver::BaseSolver(int n) : BaseSolver()
+{
+  m_state.resize(n);
+  m_gf_initialized.assign(n, false);
+}
 
 void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bdr,
                                  std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
@@ -64,22 +68,22 @@ void BaseSolver::SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<
   m_nat_bdr_coef = nat_bdr_coef;
 }
 
-void BaseSolver::ProjectState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
+void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
 {
   MFEM_ASSERT(state_coef.size() == m_state.size(),
               "State and coefficient bundles not the same size in "
-              "BaseSolver::ProjectState.");
+              "BaseSolver::SetState.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
     m_state[i].gf->ProjectCoefficient(*state_coef[i]);
   }
 }
 
-void BaseSolver::ProjectState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef)
+void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef)
 {
   MFEM_ASSERT(state_vec_coef.size() == m_state.size(),
               "State and coefficient bundles not the same size in "
-              "BaseSolver::ProjectState.");
+              "BaseSolver::SetState.");
 
   for (unsigned int i = 0; i < state_vec_coef.size(); ++i) {
     m_state[i].gf->ProjectCoefficient(*state_vec_coef[i]);

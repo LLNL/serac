@@ -50,18 +50,16 @@ TEST(dynamic_solver, dyn_solve)
   // define the inital state coefficients
   std::vector<std::shared_ptr<mfem::VectorCoefficient> > initialstate(2);
 
-  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
-  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
-
-  initialstate[0] = deform;
-  initialstate[1] = velo;
+  auto                            deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
+  mfem::VectorFunctionCoefficient velo(dim, InitialVelocity);
 
   // initialize the dynamic solver object
   NonlinearSolidSolver dyn_solver(1, pmesh);
   dyn_solver.SetDisplacementBCs(ess_bdr, deform);
   dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.SetViscosity(visc);
-  dyn_solver.ProjectState(initialstate);
+  dyn_solver.SetDisplacement(*deform);
+  dyn_solver.SetVelocity(velo);
   dyn_solver.SetTimestepper(TimestepMethod::SDIRK33);
 
   // Set the linear solver parameters

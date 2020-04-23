@@ -146,20 +146,18 @@ int main(int argc, char *argv[])
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  auto defo_coef = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
+  mfem::VectorFunctionCoefficient defo_coef(dim, InitialDeformation);
 
   mfem::Vector velo(dim);
   velo = 0.0;
 
-  auto velo_coef = std::make_shared<mfem::VectorConstantCoefficient>(velo);
-
-  auto coefs = {std::static_pointer_cast<mfem::VectorCoefficient>(defo_coef),
-                std::static_pointer_cast<mfem::VectorCoefficient>(velo_coef)};
+  mfem::VectorConstantCoefficient velo_coef(velo);
 
   // initialize x_cur, boundary condition, deformation, and
   // incremental nodal displacment grid functions by projection the
   // VectorFunctionCoefficient function onto them
-  solid_solver.ProjectState(coefs);
+  solid_solver.SetDisplacement(defo_coef);
+  solid_solver.SetVelocity(velo_coef);
 
   // define a boundary attribute array and initialize to 0
   std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);

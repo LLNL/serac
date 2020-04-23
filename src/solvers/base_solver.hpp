@@ -68,7 +68,7 @@ class BaseSolver {
   std::unique_ptr<mfem::VisItDataCollection> m_visit_dc;
 
   /// State variable initialization indicator
-  bool m_gf_initialized;
+  std::vector<bool> m_gf_initialized;
 
  public:
   /// Empty constructor
@@ -96,10 +96,10 @@ class BaseSolver {
                              std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef);
 
   /// Set the state variables from a coefficient
-  virtual void ProjectState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef);
+  virtual void SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef);
 
   /// Set the state variables from a vector coefficient
-  virtual void ProjectState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef);
+  virtual void SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef);
 
   /// Set the state variables from an existing grid function
   virtual void SetState(const std::vector<FiniteElementState> &state);

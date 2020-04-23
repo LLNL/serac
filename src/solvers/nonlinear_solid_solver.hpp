@@ -74,8 +74,11 @@ class NonlinearSolidSolver : public BaseSolver {
   /// Set the hyperelastic material parameters
   void SetHyperelasticMaterialParameters(double mu, double K);
 
-  /// Set the initial state (guess)
-  void SetInitialState(mfem::VectorCoefficient &disp_state, mfem::VectorCoefficient &velo_state);
+  /// Set the initial displacement state (guess)
+  void SetDisplacement(mfem::VectorCoefficient &disp_state);
+
+  /// Set the initial velocity state (guess)
+  void SetVelocity(mfem::VectorCoefficient &velo_state);
 
   /// Set the linear and nonlinear solver params
   void SetSolverParameters(const LinearSolverParameters &lin_params, const NonlinearSolverParameters &nonlin_params);

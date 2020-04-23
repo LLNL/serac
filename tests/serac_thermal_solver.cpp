@@ -121,7 +121,7 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
-  therm_solver.SetInitialState(*u_0);
+  therm_solver.SetTemperature(*u_0);
 
   // Set the temperature BC in the thermal solver
   std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
@@ -195,7 +195,7 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
-  therm_solver.SetInitialState(*u_0);
+  therm_solver.SetTemperature(*u_0);
 
   // Set the temperature BC in the thermal solver
   std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);

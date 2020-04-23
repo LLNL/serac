@@ -25,12 +25,12 @@ ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
   temperature.name = "temperature";
 }
 
-void ThermalSolver::SetInitialState(mfem::Coefficient &temp)
+void ThermalSolver::SetTemperature(mfem::Coefficient &temp)
 {
   // Project the coefficient onto the grid function
   temp.SetTime(m_time);
   temperature.gf->ProjectCoefficient(temp);
-  m_gf_initialized = true;
+  m_gf_initialized[0] = true;
 }
 
 void ThermalSolver::SetTemperatureBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
@@ -156,7 +156,7 @@ void ThermalSolver::AdvanceTimestep(double &dt)
   if (m_timestepper == TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
   } else {
-    MFEM_ASSERT(m_gf_initialized, "Thermal state not initialized!");
+    MFEM_ASSERT(m_gf_initialized[0], "Thermal state not initialized!");
 
     // Step the time integrator
     m_ode_solver->Step(temperature.true_vec, m_time, dt);
