@@ -71,7 +71,7 @@ class ThermalSolver : public BaseSolver {
 
  public:
   /// Constructor from order and parallel mesh
-  ThermalSolver(int order, const std::shared_ptr<mfem::ParMesh> &pmesh);
+  ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set essential temperature boundary conditions (strongly enforced)
   void SetTemperatureBCs(const std::vector<int> &temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);

@@ -8,7 +8,7 @@
 
 const int num_fields = 1;
 
-ThermalSolver::ThermalSolver(int order, const std::shared_ptr<mfem::ParMesh> &pmesh)
+ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(num_fields), temperature(m_state[0])
 {
   temperature.mesh     = pmesh;
