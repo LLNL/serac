@@ -50,8 +50,8 @@ TEST(dynamic_solver, dyn_solve)
   // define the inital state coefficients
   std::vector<std::shared_ptr<mfem::VectorCoefficient> > initialstate(2);
 
-  auto                            deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
-  mfem::VectorFunctionCoefficient velo(dim, InitialVelocity);
+  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
+  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
 
   // initialize the dynamic solver object
   NonlinearSolidSolver dyn_solver(1, pmesh);
@@ -59,7 +59,7 @@ TEST(dynamic_solver, dyn_solve)
   dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.SetViscosity(visc);
   dyn_solver.SetDisplacement(*deform);
-  dyn_solver.SetVelocity(velo);
+  dyn_solver.SetVelocity(*velo);
   dyn_solver.SetTimestepper(TimestepMethod::SDIRK33);
 
   // Set the linear solver parameters
@@ -104,8 +104,8 @@ TEST(dynamic_solver, dyn_solve)
 
   auto state = dyn_solver.GetState();
 
-  double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
-  double v_norm = state[1].gf->ComputeLpError(2.0, zerovec);
+  double v_norm = state[0].gf->ComputeLpError(2.0, zerovec);
+  double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(12.8727, x_norm, 0.0001);
   EXPECT_NEAR(0.22314, v_norm, 0.0001);

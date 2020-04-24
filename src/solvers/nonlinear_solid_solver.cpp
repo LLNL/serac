@@ -38,10 +38,10 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   true_offset[2] = 2 * true_size;
   m_block        = std::make_unique<mfem::BlockVector>(true_offset);
 
-  m_block->GetBlockView(0, displacement.true_vec);
+  m_block->GetBlockView(1, displacement.true_vec);
   displacement.true_vec = 0.0;
 
-  m_block->GetBlockView(1, velocity.true_vec);
+  m_block->GetBlockView(0, velocity.true_vec);
   velocity.true_vec = 0.0;
 }
 
@@ -52,7 +52,7 @@ void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &          
 
   // Get the list of essential DOFs
 
-  m_state[0].space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
+  displacement.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
 }
 
 void NonlinearSolidSolver::SetTractionBCs(const std::vector<int> &                 trac_bdr,
@@ -183,7 +183,7 @@ void NonlinearSolidSolver::CompleteSetup()
 void NonlinearSolidSolver::QuasiStaticSolve()
 {
   mfem::Vector zero;
-  m_newton_solver.Mult(zero, velocity.true_vec);
+  m_newton_solver.Mult(zero, displacement.true_vec);
 }
 
 // Advance the timestep
