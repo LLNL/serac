@@ -116,7 +116,6 @@ int main(int argc, char *argv[])
   }
 
   // Open the mesh
-  mfem::Mesh *  mesh;
   std::ifstream imesh(mesh_file);
   if (!imesh) {
     if (myid == 0) {
@@ -126,23 +125,19 @@ int main(int argc, char *argv[])
     return 2;
   }
 
-  mesh = new mfem::Mesh(imesh, 1, 1, true);
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
-
-  // declare pointer to parallel mesh object
-  mfem::ParMesh *pmesh = NULL;
 
   // mesh refinement if specified in input
   for (int lev = 0; lev < ser_ref_levels; lev++) {
     mesh->UniformRefinement();
   }
 
-  pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
+  // create the parallel mesh
+  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
   for (int lev = 0; lev < par_ref_levels; lev++) {
     pmesh->UniformRefinement();
   }
-
-  delete mesh;
 
   int dim = pmesh->Dimension();
 
@@ -151,19 +146,18 @@ int main(int argc, char *argv[])
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  mfem::VectorCoefficient *defo_coef = new mfem::VectorFunctionCoefficient(dim, InitialDeformation);
+  mfem::VectorFunctionCoefficient defo_coef(dim, InitialDeformation);
 
   mfem::Vector velo(dim);
   velo = 0.0;
 
-  mfem::VectorConstantCoefficient *velo_coef = new mfem::VectorConstantCoefficient(velo);
-
-  std::vector<mfem::VectorCoefficient *> coefs = {defo_coef, velo_coef};
+  mfem::VectorConstantCoefficient velo_coef(velo);
 
   // initialize x_cur, boundary condition, deformation, and
   // incremental nodal displacment grid functions by projection the
   // VectorFunctionCoefficient function onto them
-  solid_solver.ProjectState(coefs);
+  solid_solver.SetDisplacement(defo_coef);
+  solid_solver.SetVelocity(velo_coef);
 
   // define a boundary attribute array and initialize to 0
   std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
@@ -173,8 +167,8 @@ int main(int argc, char *argv[])
 
   // define the displacement vector
   mfem::Vector disp(dim);
-  disp = 0.0;
-  mfem::VectorConstantCoefficient disp_coef(disp);
+  disp           = 0.0;
+  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
 
   std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
 
@@ -188,11 +182,11 @@ int main(int argc, char *argv[])
     traction(2) = tz;
   }
 
-  VectorScaledConstantCoefficient traction_coef(traction);
+  auto traction_coef = std::make_shared<VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
-  solid_solver.SetDisplacementBCs(ess_bdr, &disp_coef);
-  solid_solver.SetTractionBCs(trac_bdr, &traction_coef);
+  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef);
+  solid_solver.SetTractionBCs(trac_bdr, traction_coef);
 
   // Set the material parameters
   solid_solver.SetHyperelasticMaterialParameters(mu, K);
@@ -218,9 +212,7 @@ int main(int argc, char *argv[])
 
   bool last_step = false;
 
-  std::vector<std::string> names = {"Deformation", "Velocity"};
-
-  solid_solver.InitializeOutput(OutputType::VisIt, "serac", names);
+  solid_solver.InitializeOutput(OutputType::VisIt, "serac");
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {
@@ -232,7 +224,7 @@ int main(int argc, char *argv[])
       std::cout << "step " << ti << ", t = " << t << std::endl;
     }
 
-    traction_coef.SetScale(t);
+    traction_coef->SetScale(t);
 
     // Solve the Newton system
     solid_solver.AdvanceTimestep(dt_real);
@@ -241,9 +233,6 @@ int main(int argc, char *argv[])
 
     last_step = (t >= t_final - 1e-8 * dt);
   }
-
-  // Free the used memory.
-  delete pmesh;
 
   MPI_Finalize();
 

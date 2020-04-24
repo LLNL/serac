@@ -30,15 +30,12 @@ TEST(dynamic_solver, dyn_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  mfem::Mesh *  mesh = new mfem::Mesh(imesh, 1, 1, true);
+  auto          mesh = std::make_shared<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
-  // declare pointer to parallel mesh object
-  mfem::ParMesh *pmesh = NULL;
   mesh->UniformRefinement();
 
-  pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
-  delete mesh;
+  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
 
   int dim = pmesh->Dimension();
 
@@ -48,23 +45,21 @@ TEST(dynamic_solver, dyn_solve)
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
-  mfem::ConstantCoefficient visc(0.0);
+  auto visc = std::make_shared<mfem::ConstantCoefficient>(0.0);
 
   // define the inital state coefficients
-  std::vector<mfem::VectorCoefficient *> initialstate(2);
+  std::vector<std::shared_ptr<mfem::VectorCoefficient> > initialstate(2);
 
-  mfem::VectorFunctionCoefficient deform(dim, InitialDeformation);
-  mfem::VectorFunctionCoefficient velo(dim, InitialVelocity);
-
-  initialstate[0] = &deform;
-  initialstate[1] = &velo;
+  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
+  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
 
   // initialize the dynamic solver object
   NonlinearSolidSolver dyn_solver(1, pmesh);
-  dyn_solver.SetDisplacementBCs(ess_bdr, &deform);
+  dyn_solver.SetDisplacementBCs(ess_bdr, deform);
   dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  dyn_solver.SetViscosity(&visc);
-  dyn_solver.ProjectState(initialstate);
+  dyn_solver.SetViscosity(visc);
+  dyn_solver.SetDisplacement(*deform);
+  dyn_solver.SetVelocity(*velo);
   dyn_solver.SetTimestepper(TimestepMethod::SDIRK33);
 
   // Set the linear solver parameters
@@ -109,13 +104,11 @@ TEST(dynamic_solver, dyn_solve)
 
   auto state = dyn_solver.GetState();
 
-  double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
-  double v_norm = state[1].gf->ComputeLpError(2.0, zerovec);
+  double v_norm = state[0].gf->ComputeLpError(2.0, zerovec);
+  double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(12.8727, x_norm, 0.0001);
   EXPECT_NEAR(0.22314, v_norm, 0.0001);
-
-  delete pmesh;
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

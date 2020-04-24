@@ -7,14 +7,18 @@
 set(solvers_sources
     base_solver.cpp
     nonlinear_solid_solver.cpp
+    nonlinear_solid_operators.cpp
     thermal_solver.cpp
+    thermal_operators.cpp
     elasticity_solver.cpp
     )
 
 set(solvers_headers
     base_solver.hpp
     nonlinear_solid_solver.hpp
+    nonlinear_solid_operators.hpp
     thermal_solver.hpp
+    thermal_operators.hpp
     elasticity_solver.hpp
     )
 

@@ -11,23 +11,19 @@
 
 #include "common/serac_types.hpp"
 
-BaseSolver::BaseSolver()
-    : m_ess_bdr_coef(nullptr),
-      m_ess_bdr_vec_coef(nullptr),
-      m_nat_bdr_coef(nullptr),
-      m_nat_bdr_vec_coef(nullptr),
-      m_output_type(OutputType::VisIt),
-      m_time(0.0),
-      m_cycle(0),
-      m_visit_dc(nullptr),
-      m_gf_initialized(false)
+BaseSolver::BaseSolver() : m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0)
 {
   SetTimestepper(TimestepMethod::ForwardEuler);
 }
 
-BaseSolver::BaseSolver(int n) : BaseSolver() { m_state.resize(n); }
+BaseSolver::BaseSolver(int n) : BaseSolver()
+{
+  m_state.resize(n);
+  m_gf_initialized.assign(n, false);
+}
 
-void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::VectorCoefficient *ess_bdr_vec_coef)
+void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bdr,
+                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
   m_ess_bdr.SetSize(ess_bdr.size());
 
@@ -38,7 +34,8 @@ void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::VectorCoeffici
   m_ess_bdr_vec_coef = ess_bdr_vec_coef;
 }
 
-void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::VectorCoefficient *nat_bdr_vec_coef)
+void BaseSolver::SetNaturalBCs(const std::vector<int> &                 nat_bdr,
+                               std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef)
 {
   m_nat_bdr.SetSize(nat_bdr.size());
 
@@ -49,7 +46,7 @@ void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::VectorCoefficien
   m_nat_bdr_vec_coef = nat_bdr_vec_coef;
 }
 
-void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::Coefficient *ess_bdr_coef)
+void BaseSolver::SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   m_ess_bdr.SetSize(ess_bdr.size());
 
@@ -60,7 +57,7 @@ void BaseSolver::SetEssentialBCs(std::vector<int> &ess_bdr, mfem::Coefficient *e
   m_ess_bdr_coef = ess_bdr_coef;
 }
 
-void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat_bdr_coef)
+void BaseSolver::SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
 {
   m_nat_bdr.SetSize(nat_bdr.size());
 
@@ -71,22 +68,22 @@ void BaseSolver::SetNaturalBCs(std::vector<int> &nat_bdr, mfem::Coefficient *nat
   m_nat_bdr_coef = nat_bdr_coef;
 }
 
-void BaseSolver::ProjectState(std::vector<mfem::Coefficient *> state_coef)
+void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
 {
   MFEM_ASSERT(state_coef.size() == m_state.size(),
               "State and coefficient bundles not the same size in "
-              "BaseSolver::ProjectState.");
+              "BaseSolver::SetState.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
     m_state[i].gf->ProjectCoefficient(*state_coef[i]);
   }
 }
 
-void BaseSolver::ProjectState(std::vector<mfem::VectorCoefficient *> state_vec_coef)
+void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef)
 {
   MFEM_ASSERT(state_vec_coef.size() == m_state.size(),
               "State and coefficient bundles not the same size in "
-              "BaseSolver::ProjectState.");
+              "BaseSolver::SetState.");
 
   for (unsigned int i = 0; i < state_vec_coef.size(); ++i) {
     m_state[i].gf->ProjectCoefficient(*state_vec_coef[i]);
@@ -98,7 +95,7 @@ void BaseSolver::SetState(const std::vector<FiniteElementState> &state)
   MFEM_ASSERT(state.size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
   m_state = state;
 
-  MPI_Comm_rank(m_state.begin()->space->GetComm(), &m_rank);
+  MPI_Comm_rank(m_state.front().space->GetComm(), &m_rank);
 }
 
 std::vector<FiniteElementState> BaseSolver::GetState() const { return m_state; }
@@ -109,37 +106,36 @@ void BaseSolver::SetTimestepper(const TimestepMethod timestepper)
 
   switch (m_timestepper) {
     case TimestepMethod::QuasiStatic:
-      m_ode_solver = nullptr;
       break;
     case TimestepMethod::BackwardEuler:
-      m_ode_solver = std::make_shared<mfem::BackwardEulerSolver>();
+      m_ode_solver = std::make_unique<mfem::BackwardEulerSolver>();
       break;
     case TimestepMethod::SDIRK33:
-      m_ode_solver = std::make_shared<mfem::SDIRK33Solver>();
+      m_ode_solver = std::make_unique<mfem::SDIRK33Solver>();
       break;
     case TimestepMethod::ForwardEuler:
-      m_ode_solver = std::make_shared<mfem::ForwardEulerSolver>();
+      m_ode_solver = std::make_unique<mfem::ForwardEulerSolver>();
       break;
     case TimestepMethod::RK2:
-      m_ode_solver = std::make_shared<mfem::RK2Solver>(0.5);
+      m_ode_solver = std::make_unique<mfem::RK2Solver>(0.5);
       break;
     case TimestepMethod::RK3SSP:
-      m_ode_solver = std::make_shared<mfem::RK3SSPSolver>();
+      m_ode_solver = std::make_unique<mfem::RK3SSPSolver>();
       break;
     case TimestepMethod::RK4:
-      m_ode_solver = std::make_shared<mfem::RK4Solver>();
+      m_ode_solver = std::make_unique<mfem::RK4Solver>();
       break;
     case TimestepMethod::GeneralizedAlpha:
-      m_ode_solver = std::make_shared<mfem::GeneralizedAlphaSolver>(0.5);
+      m_ode_solver = std::make_unique<mfem::GeneralizedAlphaSolver>(0.5);
       break;
     case TimestepMethod::ImplicitMidpoint:
-      m_ode_solver = std::make_shared<mfem::ImplicitMidpointSolver>();
+      m_ode_solver = std::make_unique<mfem::ImplicitMidpointSolver>();
       break;
     case TimestepMethod::SDIRK23:
-      m_ode_solver = std::make_shared<mfem::SDIRK23Solver>();
+      m_ode_solver = std::make_unique<mfem::SDIRK23Solver>();
       break;
     case TimestepMethod::SDIRK34:
-      m_ode_solver = std::make_shared<mfem::SDIRK34Solver>();
+      m_ode_solver = std::make_unique<mfem::SDIRK34Solver>();
       break;
     default:
       mfem::mfem_error("Timestep method not recognized!");
@@ -152,20 +148,17 @@ double BaseSolver::GetTime() const { return m_time; }
 
 int BaseSolver::GetCycle() const { return m_cycle; }
 
-void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name, std::vector<std::string> names)
+void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name)
 {
-  MFEM_ASSERT(names.size() == m_state.size(), "State vector and name arrays are not the same size.");
-
   m_root_name = root_name;
 
   m_output_type = output_type;
 
   switch (m_output_type) {
     case OutputType::VisIt: {
-      m_visit_dc = new mfem::VisItDataCollection(m_root_name, m_state.begin()->mesh);
-
-      for (unsigned int i = 0; i < names.size(); i++) {
-        m_visit_dc->RegisterField(names[i], m_state[i].gf.get());
+      m_visit_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.front().mesh.get());
+      for (const auto &state : m_state) {
+        m_visit_dc->RegisterField(state.name, state.gf.get());
       }
       break;
     }
@@ -175,7 +168,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
       mesh_name << m_root_name << "-mesh." << std::setfill('0') << std::setw(6) << m_rank - 1;
       std::ofstream omesh(mesh_name.str().c_str());
       omesh.precision(8);
-      m_state[0].mesh->Print(omesh);
+      m_state.front().mesh->Print(omesh);
       break;
     }
 

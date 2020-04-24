@@ -26,15 +26,13 @@ TEST(elastic_solver, static_solve)
   // Open the mesh
   ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
-  mfem::Mesh*   mesh = new mfem::Mesh(imesh, 1, 1, true);
+  auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
-  mfem::ParMesh* pmesh = NULL;
   mesh->UniformRefinement();
 
-  pmesh = new mfem::ParMesh(MPI_COMM_WORLD, *mesh);
-  delete mesh;
+  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
 
   ElasticitySolver elas_solver(1, pmesh);
 
@@ -46,19 +44,19 @@ TEST(elastic_solver, static_solve)
 
   // define the displacement vector
   mfem::Vector disp(pmesh->Dimension());
-  disp = 0.0;
-  mfem::VectorConstantCoefficient disp_coef(disp);
-  elas_solver.SetDisplacementBCs(disp_bdr, &disp_coef);
+  disp           = 0.0;
+  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
+  elas_solver.SetDisplacementBCs(disp_bdr, disp_coef);
 
   std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
   trac_bdr[1] = 1;
 
   // define the traction vector
   mfem::Vector traction(pmesh->Dimension());
-  traction    = 0.0;
-  traction(1) = 1.0e-4;
-  mfem::VectorConstantCoefficient traction_coef(traction);
-  elas_solver.SetTractionBCs(trac_bdr, &traction_coef);
+  traction           = 0.0;
+  traction(1)        = 1.0e-4;
+  auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
+  elas_solver.SetTractionBCs(trac_bdr, traction_coef);
 
   // set the material properties
   mfem::ConstantCoefficient mu_coef(0.25);
@@ -93,8 +91,6 @@ TEST(elastic_solver, static_solve)
   double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
-
-  delete pmesh;
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
