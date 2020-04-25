@@ -194,3 +194,69 @@ TEST_F(StdFunctionCoefficientTest, EssentialBC)
     }
   }
 }
+
+/**
+   Create the ess_vdof_list for all dofs that are x = 0
+ */
+TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
+{
+  // Create an indicator function to set vertex at the origin
+  StdFunctionVectorCoefficient origin_bc(3, [](Vector &x, Vector &X) {
+    X = 0.;
+
+    if (abs(x[0]) < 1.e-13 && abs(x[1]) < 1.e-13 && abs(x[2]) < 1.e-13) {
+      X = 1.;
+    }
+  });
+
+  Array<int> ess_origin_bc_list;
+  MakeEssList(*pmesh, origin_bc, ess_origin_bc_list);
+
+  // Define bottom indicator list
+  StdFunctionVectorCoefficient bottom_bc_z(pfes_v->GetVDim(), [](Vector &x, Vector &X) {
+    X = 0.;
+
+    if (abs(x[2]) < 1.e-13) {
+      X[2] = 1.;
+    }
+  });
+  Array<int>                   ess_bottom_bc_list;
+  MakeEssList(*pmesh, bottom_bc_z, ess_bottom_bc_list);
+
+  // Define top indicator list
+  StdFunctionVectorCoefficient top_bc_z(pfes_v->GetVDim(), [](Vector &x, Vector &X) {
+    X = 0.;
+
+    if (abs(x[2] - 1.) < 1.e-13) {
+      X[2] = 1.;
+    }
+  });
+  Array<int>                   ess_top_bc_list;
+  MakeEssList(*pmesh, top_bc_z, ess_top_bc_list);
+
+  // Project displacement values z = 0.5*z
+  StdFunctionVectorCoefficient vals(pfes_v->GetVDim(), [](Vector &x, Vector &disp) {
+    disp    = 0.;
+    disp[2] = x[2] * 0.5;
+  });
+
+  ParGridFunction vals_eval(pfes_v.get());
+  vals_eval.ProjectCoefficient(vals);
+
+  Array<int> ess_vdof_bc_list(ess_bottom_bc_list);
+  ess_vdof_bc_list.Append(ess_top_bc_list);
+  ess_vdof_bc_list.Append(ess_origin_bc_list);
+
+  // In case a bc_vdof comes up multiple times
+  ess_vdof_bc_list.Unique();
+
+  Vector ess_vdof_list_vals(ess_vdof_bc_list.Size());
+  vals_eval.GetSubVector(ess_vdof_bc_list, ess_vdof_list_vals);
+
+  Vector nonzero(pfes_v->GetVSize());
+  nonzero = 1.;
+  nonzero.SetSubVector(ess_vdof_bc_list, ess_vdof_list_vals);
+  ess_vdof_bc_list.Print();
+  ess_vdof_list_vals.Print();
+  nonzero.Print();
+}
