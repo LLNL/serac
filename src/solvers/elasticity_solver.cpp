@@ -9,7 +9,7 @@
 const int num_fields = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(num_fields),
+    : BaseSolver(pmesh->GetComm(), num_fields),
       displacement(m_state[0]),
       m_K_form(nullptr),
       m_l_form(nullptr),

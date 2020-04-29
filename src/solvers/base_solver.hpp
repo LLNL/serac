@@ -16,6 +16,9 @@
 /// This is the abstract base class for a generic forward solver
 class BaseSolver {
  protected:
+  /// The MPI communicator
+  MPI_Comm m_comm;
+
   /// List of finite element data structures
   std::vector<FiniteElementState> m_state;
 
@@ -72,10 +75,10 @@ class BaseSolver {
 
  public:
   /// Empty constructor
-  BaseSolver();
+  BaseSolver(MPI_Comm comm);
 
   /// Constructor that creates n entries in m_state
-  BaseSolver(int n);
+  BaseSolver(MPI_Comm comm, int n);
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient

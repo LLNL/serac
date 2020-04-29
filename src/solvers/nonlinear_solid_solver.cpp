@@ -12,7 +12,7 @@
 const int num_fields = 2;
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(num_fields), velocity(m_state[0]), displacement(m_state[1]), m_newton_solver(pmesh->GetComm())
+    : BaseSolver(pmesh->GetComm(), num_fields), velocity(m_state[0]), displacement(m_state[1]), m_newton_solver(pmesh->GetComm())
 {
   velocity.mesh  = pmesh;
   velocity.coll  = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
