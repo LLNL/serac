@@ -180,6 +180,7 @@ class Serac(Package):
         ##############################################
 
         cmake_exe = spec['cmake'].command.path
+        cmake_exe = os.path.realpath(cmake_exe)
 
         host_config_path = self._get_host_config_path(spec)
         cfg = open(host_config_path, "w")
