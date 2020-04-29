@@ -8,9 +8,9 @@
 
 #include <fstream>
 #include <iostream>
-#include "fmt/fmt.hpp"
 
 #include "common/serac_types.hpp"
+#include "fmt/fmt.hpp"
 
 BaseSolver::BaseSolver(MPI_Comm comm) : m_comm(comm), m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0)
 {
@@ -164,7 +164,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
     }
 
     case OutputType::GLVis: {
-      std::string mesh_name = fmt::format("{0}-mesh.{1:0>6}", m_root_name, m_rank);
+      std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}", m_root_name, m_rank);
       std::ofstream omesh(mesh_name.c_str());
       omesh.precision(8);
       m_state.front().mesh->Print(omesh);
@@ -188,7 +188,7 @@ void BaseSolver::OutputState() const
 
     case OutputType::GLVis: {
       for (auto &state : m_state) {
-        std::string sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", m_root_name, state.name, m_cycle, m_rank);
+        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", m_root_name, state.name, m_cycle, m_rank);
         std::ofstream osol(sol_name.c_str());
         osol.precision(8);
         state.gf->Save(osol);
