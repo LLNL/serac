@@ -95,4 +95,7 @@ packages:
 
 # Globally lock in version of CMake
   cmake:
-    version: [3.9.6]
+    version: [3.14.5]
+    paths:
+      cmake: /usr/tce/packages/cmake/cmake-3.14.5
+    buildable: False
