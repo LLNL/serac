@@ -88,7 +88,7 @@ class Serac(Package):
     # Basic dependencies
     depends_on("mpi")
 
-    depends_on("axom~fortran~raja~umpire")
+    depends_on("axom~openmp~fortran~raja~umpire")
 
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cmake', when="+devtools")
