@@ -58,8 +58,8 @@ build_quartz_gcc_8_1_0:
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-gcc@8.1.0.cmake"
   extends: .build_quartz
 
-build_quartz_intel_19_0_4:
+build_quartz_intel_19_0_0:
   variables:
-    COMPILER: "intel@19.0.4"
-    HOST_CONFIG: "quartz-toss_3_x86_64_ib-intel@19.0.4.cmake"
+    COMPILER: "intel@19.0.0"
+    HOST_CONFIG: "quartz-toss_3_x86_64_ib-intel@19.0.0.cmake"
   extends: .build_quartz

@@ -10,13 +10,15 @@
 #include <iostream>
 
 #include "common/serac_types.hpp"
+#include "fmt/fmt.hpp"
 
-BaseSolver::BaseSolver() : m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0)
+BaseSolver::BaseSolver(MPI_Comm comm) : m_comm(comm), m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0)
 {
+  MPI_Comm_rank(m_comm, &m_rank);
   SetTimestepper(TimestepMethod::ForwardEuler);
 }
 
-BaseSolver::BaseSolver(int n) : BaseSolver()
+BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 {
   m_state.resize(n);
   m_gf_initialized.assign(n, false);
@@ -94,8 +96,6 @@ void BaseSolver::SetState(const std::vector<FiniteElementState> &state)
 {
   MFEM_ASSERT(state.size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
   m_state = state;
-
-  MPI_Comm_rank(m_state.front().space->GetComm(), &m_rank);
 }
 
 std::vector<FiniteElementState> BaseSolver::GetState() const { return m_state; }
@@ -164,9 +164,8 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
     }
 
     case OutputType::GLVis: {
-      std::ostringstream mesh_name;
-      mesh_name << m_root_name << "-mesh." << std::setfill('0') << std::setw(6) << m_rank - 1;
-      std::ofstream omesh(mesh_name.str().c_str());
+      std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}", m_root_name, m_rank);
+      std::ofstream omesh(mesh_name.c_str());
       omesh.precision(8);
       m_state.front().mesh->Print(omesh);
       break;
@@ -189,10 +188,8 @@ void BaseSolver::OutputState() const
 
     case OutputType::GLVis: {
       for (auto &state : m_state) {
-        std::ostringstream sol_name;
-        sol_name << m_root_name << "-" << state.name << "." << std::setfill('0') << std::setw(6) << m_cycle << "."
-                 << std::setfill('0') << std::setw(6) << m_rank - 1;
-        std::ofstream osol(sol_name.str().c_str());
+        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", m_root_name, state.name, m_cycle, m_rank);
+        std::ofstream osol(sol_name.c_str());
         osol.precision(8);
         state.gf->Save(osol);
       }

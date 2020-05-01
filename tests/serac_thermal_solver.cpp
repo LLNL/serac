@@ -139,6 +139,9 @@ TEST(thermal_solver, dyn_exp_solve)
   params.max_iter    = 100;
   therm_solver.SetLinearSolverParameters(params);
 
+  // Setup glvis output
+  therm_solver.InitializeOutput(OutputType::GLVis, "thermal_explicit");
+
   // Complete the setup including the dynamic operators
   therm_solver.CompleteSetup();
 
@@ -148,6 +151,9 @@ TEST(thermal_solver, dyn_exp_solve)
   double dt        = 0.0001;
   bool   last_step = false;
 
+  // Output the initial state
+  therm_solver.OutputState();
+
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
     t += dt_real;
@@ -156,6 +162,9 @@ TEST(thermal_solver, dyn_exp_solve)
     // Advance the timestep
     therm_solver.AdvanceTimestep(dt_real);
   }
+
+  // Output the final state
+  therm_solver.OutputState();
 
   // Get the state grid function
   auto state = therm_solver.GetState();
@@ -213,6 +222,9 @@ TEST(thermal_solver, dyn_imp_solve)
   params.max_iter    = 100;
   therm_solver.SetLinearSolverParameters(params);
 
+  // Setup glvis output
+  therm_solver.InitializeOutput(OutputType::VisIt, "thermal_implicit");
+
   // Complete the setup including the dynamic operators
   therm_solver.CompleteSetup();
 
@@ -222,6 +234,9 @@ TEST(thermal_solver, dyn_imp_solve)
   double dt        = 1.0;
   bool   last_step = false;
 
+  // Output the initial state
+  therm_solver.OutputState();
+
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
     t += dt_real;
@@ -230,6 +245,9 @@ TEST(thermal_solver, dyn_imp_solve)
     // Advance the timestep
     therm_solver.AdvanceTimestep(dt_real);
   }
+
+  // Output the final state
+  therm_solver.OutputState();
 
   // Get the state grid function
   auto state = therm_solver.GetState();

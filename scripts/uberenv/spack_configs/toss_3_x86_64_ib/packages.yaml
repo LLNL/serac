@@ -28,7 +28,7 @@ packages:
       # gcc mvapich2
       mvapich2@2.2%gcc@8.1.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-8.1.0
       # intel mvapich2
-      mvapich2@2.2%intel@19.0.4 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4
+      mvapich2@2.3%intel@19.0.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.3-intel-19.0.0
     buildable: False
   openmpi:
     buildable: False
