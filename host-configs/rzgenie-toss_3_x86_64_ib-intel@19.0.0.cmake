@@ -10,30 +10,30 @@
 
 #---------------------------------------
 # SYS_TYPE: toss_3_x86_64_ib
-# Compiler Spec: intel@19.0.4
-# CMake executable path: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/2020_03_20_17_10_57/gcc-8.1.0/cmake-3.9.6/bin/cmake
+# Compiler Spec: intel@19.0.0
+# CMake executable path: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cmake-3.9.6/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
 # Compilers
 #---------------------------------------
-set(CMAKE_C_COMPILER "/usr/tce/packages/intel/intel-19.0.4/bin/icc" CACHE PATH "")
+set(CMAKE_C_COMPILER "/usr/tce/packages/intel/intel-19.0.0/bin/icc" CACHE PATH "")
 
-set(CMAKE_CXX_COMPILER "/usr/tce/packages/intel/intel-19.0.4/bin/icpc" CACHE PATH "")
+set(CMAKE_CXX_COMPILER "/usr/tce/packages/intel/intel-19.0.0/bin/icpc" CACHE PATH "")
 
 #---------------------------------------
 # MPI
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-intel-19.0.0/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.4/bin/mpicxx" CACHE PATH "")
+set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-intel-19.0.0/bin/mpicxx" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_04_16_21_15_41/intel-19.0.4" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_05_01_09_12_15/intel-19.0.0" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
