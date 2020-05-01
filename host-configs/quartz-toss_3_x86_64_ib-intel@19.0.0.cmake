@@ -11,7 +11,7 @@
 #---------------------------------------
 # SYS_TYPE: toss_3_x86_64_ib
 # Compiler Spec: intel@19.0.0
-# CMake executable path: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/2020_03_25_19_18_28/gcc-8.1.0/cmake-3.9.6/bin/cmake
+# CMake executable path: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cmake-3.9.6/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
@@ -26,14 +26,14 @@ set(CMAKE_CXX_COMPILER "/usr/tce/packages/intel/intel-19.0.0/bin/icpc" CACHE PAT
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.0/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-intel-19.0.0/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.2-intel-19.0.0/bin/mpicxx" CACHE PATH "")
+set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-intel-19.0.0/bin/mpicxx" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_03_25_19_18_28/intel-19.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_04_30_20_38_34/intel-19.0.0" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
