@@ -11,7 +11,7 @@
 #---------------------------------------
 # SYS_TYPE: toss_3_x86_64_ib
 # Compiler Spec: clang@4.0.0
-# CMake executable path: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cmake-3.9.6/bin/cmake
+# CMake executable path: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/2020_03_20_17_10_57/gcc-8.1.0/cmake-3.9.6/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
@@ -33,7 +33,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0/bin/mp
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_04_16_21_15_41/clang-4.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_05_01_09_12_15/clang-4.0.0" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 

@@ -31,13 +31,12 @@ compilers:
     environment: {}
     extra_rpaths: []
     flags: {}
-    modules:
-    - intel/19.0.4
+    modules: []
     operating_system: rhel7
     paths:
-      cc: /usr/tce/packages/intel/intel-19.0.4/bin/icc
-      cxx: /usr/tce/packages/intel/intel-19.0.4/bin/icpc
-      f77: /usr/tce/packages/intel/intel-19.0.4/bin/ifort
-      fc: /usr/tce/packages/intel/intel-19.0.4/bin/ifort
-    spec: intel@19.0.4
+      cc: /usr/tce/packages/intel/intel-19.0.0/bin/icc
+      cxx: /usr/tce/packages/intel/intel-19.0.0/bin/icpc
+      f77: /usr/tce/packages/intel/intel-19.0.0/bin/ifort
+      fc: /usr/tce/packages/intel/intel-19.0.0/bin/ifort
+    spec: intel@19.0.0
     target: x86_64
