@@ -58,13 +58,7 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   std::shared_ptr<mfem::Vector> m_bc_rhs;
 
   /// Temperature essential boundary coefficient
-  std::shared_ptr<mfem::Coefficient> m_ess_bdr_coef;
-
-  /// Essential temperature boundary markers
-  mutable mfem::Array<int> m_ess_bdr;
-
-  /// Essential true DOFs
-  mfem::Array<int> m_ess_tdof_list;
+  std::vector<std::shared_ptr<BoundaryConditionData> > m_ess_bdr;
 
   /// Auxillary working vectors
   mutable mfem::Vector m_z;
@@ -76,7 +70,7 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
 
  public:
   /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const LinearSolverParameters &params);
+  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const LinearSolverParameters &params, const std::vector<std::shared_ptr<BoundaryConditionData> > &ess_bdr);
 
   /// Set the mass matrix
   void SetMMatrix(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> M_e_mat);
@@ -86,10 +80,6 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
 
   /// Set the load vector
   void SetLoadVector(std::shared_ptr<mfem::Vector> rhs);
-
-  /// Set the essential temperature boundary information
-  void SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef, const mfem::Array<int> &ess_bdr,
-                       const mfem::Array<int> &ess_tdof_list);
 
   /** Calculate du_dt = M^-1 (-Ku + f).
    *  This is all that is needed for explicit methods */

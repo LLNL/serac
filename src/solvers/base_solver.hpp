@@ -26,25 +26,10 @@ class BaseSolver {
   std::unique_ptr<mfem::BlockVector> m_block;
 
   /// Essential BC markers
-  mfem::Array<int> m_ess_bdr;
+  std::vector<std::shared_ptr<BoundaryConditionData> > m_ess_bdr;
 
   /// Natural BC markers
-  mfem::Array<int> m_nat_bdr;
-
-  /// Pointer to the essential BC coefficient
-  std::shared_ptr<mfem::Coefficient> m_ess_bdr_coef;
-
-  /// Pointer to the vector-valued essential BC coefficient
-  std::shared_ptr<mfem::VectorCoefficient> m_ess_bdr_vec_coef;
-
-  /// Pointer to the nautral BC coefficient
-  std::shared_ptr<mfem::Coefficient> m_nat_bdr_coef;
-
-  /// Pointer to the vector-valued natural BC coefficient
-  std::shared_ptr<mfem::VectorCoefficient> m_nat_bdr_vec_coef;
-
-  /// Array of the essential degree of freedom indicies
-  mfem::Array<int> m_ess_tdof_list;
+  std::vector<std::shared_ptr<BoundaryConditionData> > m_nat_bdr;
 
   /// Type of state variable output
   OutputType m_output_type;
@@ -82,21 +67,23 @@ class BaseSolver {
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
-  virtual void SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);
+  virtual void SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef, int component = -1);
 
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
   virtual void SetEssentialBCs(const std::vector<int> &                 ess_bdr,
-                               std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef);
+                               std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
+                               int component = -1);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
-  virtual void SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef);
+  virtual void SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef, int component = -1);
 
   /// Set the vector-valued natural boundary conditions from a list of boundary
   /// markers and a coefficient
   virtual void SetNaturalBCs(const std::vector<int> &                 nat_bdr,
-                             std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef);
+                             std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
+                             int component = -1);
 
   /// Set the state variables from a coefficient
   virtual void SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef);

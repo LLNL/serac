@@ -49,19 +49,22 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 }
 
 void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &                 disp_bdr,
-                                              std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+                                              std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
+                                              int component)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef);
+  SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
 
   // Get the list of essential DOFs
-
-  displacement.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
+  for (auto & ess_bc_data : m_ess_bdr) {
+    displacement.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs, component);
+  }
 }
 
 void NonlinearSolidSolver::SetTractionBCs(const std::vector<int> &                 trac_bdr,
-                                          std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef)
+                                          std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                                          int component)
 {
-  SetNaturalBCs(trac_bdr, trac_bdr_coef);
+  SetNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
 
 void NonlinearSolidSolver::SetHyperelasticMaterialParameters(double mu, double K)
@@ -105,13 +108,13 @@ void NonlinearSolidSolver::CompleteSetup()
   }
 
   // Add the traction integrator
-  if (m_nat_bdr_vec_coef != nullptr) {
-    m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*m_nat_bdr_vec_coef), m_nat_bdr);
+  for (auto & nat_bc_data : m_nat_bdr) {
+    m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->bc_markers);
   }
 
   // Add the essential boundary
-  if (m_ess_bdr_vec_coef != nullptr) {
-    m_H_form->SetEssentialBC(m_ess_bdr);
+  for (auto & ess_bc_data : m_ess_bdr) {
+    m_H_form->SetEssentialBC(ess_bc_data->bc_markers);
   }
 
   // If dynamic, create the mass and viscosity forms
@@ -176,7 +179,7 @@ void NonlinearSolidSolver::CompleteSetup()
     m_newton_solver.SetOperator(*m_nonlinear_oper);
   } else {
     m_newton_solver.iterative_mode = false;
-    m_timedep_oper = std::make_shared<NonlinearSolidDynamicOperator>(m_H_form, m_S_form, m_M_form, m_ess_tdof_list,
+    m_timedep_oper = std::make_shared<NonlinearSolidDynamicOperator>(m_H_form, m_S_form, m_M_form, m_ess_bdr,
                                                                      m_newton_solver, m_lin_params);
     m_ode_solver->Init(*m_timedep_oper);
   }

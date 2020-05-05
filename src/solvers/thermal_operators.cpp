@@ -7,9 +7,11 @@
 #include "thermal_operators.hpp"
 
 DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
-                                                     const LinearSolverParameters &               params)
+                                                     const LinearSolverParameters &               params,
+                                                     const std::vector<std::shared_ptr<BoundaryConditionData> > & ess_bdr)
     : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0),
       m_fespace(fespace),
+      m_ess_bdr(ess_bdr),
       m_z(fespace->GetTrueVSize()),
       m_y(fespace->GetTrueVSize()),
       m_x(fespace->GetTrueVSize()),
@@ -60,14 +62,6 @@ void DynamicConductionOperator::SetKMatrix(std::shared_ptr<mfem::HypreParMatrix>
 
 void DynamicConductionOperator::SetLoadVector(std::shared_ptr<mfem::Vector> rhs) { m_rhs = rhs; }
 
-void DynamicConductionOperator::SetEssentialBCs(std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                                                const mfem::Array<int> &ess_bdr, const mfem::Array<int> &ess_tdof_list)
-{
-  m_ess_bdr_coef  = ess_bdr_coef;
-  m_ess_bdr       = ess_bdr;
-  m_ess_tdof_list = ess_tdof_list;
-}
-
 // TODO: allow for changing thermal essential boundary conditions
 void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt) const
 {
@@ -78,7 +72,9 @@ void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt)
   m_M_solver->SetOperator(*m_M_mat);
 
   *m_bc_rhs = *m_rhs;
-  mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, m_y, *m_bc_rhs);
+  for (auto & ess_bc_data : m_ess_bdr) {
+    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, ess_bc_data->true_dofs, m_y, *m_bc_rhs);
+  }
 
   // Compute:
   //    du_dt = M^{-1}*-K(u)
@@ -104,7 +100,9 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     m_T_mat.reset(mfem::Add(1.0, *m_M_mat, dt, *m_K_mat));
 
     // Eliminate the essential DOFs from the T matrix
-    m_T_e_mat.reset(m_T_mat->EliminateRowsCols(m_ess_tdof_list));
+    for (auto & ess_bc_data : m_ess_bdr) {
+      m_T_e_mat.reset(m_T_mat->EliminateRowsCols(ess_bc_data->true_dofs));
+    }
     m_T_solver->SetOperator(*m_T_mat);
   }
 
@@ -112,13 +110,15 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   *m_bc_rhs = *m_rhs;
   m_x       = 0.0;
 
-  if (m_ess_bdr_coef != nullptr) {
-    m_ess_bdr_coef->SetTime(t);
-    m_state_gf->SetFromTrueDofs(m_y);
-    m_state_gf->ProjectBdrCoefficient(*m_ess_bdr_coef, m_ess_bdr);
-    m_state_gf->GetTrueDofs(m_y);
+  for (auto & ess_bc_data : m_ess_bdr) {
+    if (ess_bc_data->scalar_coef != nullptr) {
+      ess_bc_data->scalar_coef->SetTime(t);
+      m_state_gf->SetFromTrueDofs(m_y);
+      m_state_gf->ProjectBdrCoefficient(*ess_bc_data->scalar_coef, ess_bc_data->bc_markers);
+      m_state_gf->GetTrueDofs(m_y);
 
-    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, m_y, *m_bc_rhs);
+      mfem::EliminateBC(*m_K_mat, *m_K_e_mat, ess_bc_data->true_dofs, m_y, *m_bc_rhs);
+    }
   }
 
   m_K_mat->Mult(m_y, m_z);
