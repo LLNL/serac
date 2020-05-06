@@ -113,9 +113,13 @@ void NonlinearSolidSolver::CompleteSetup()
   }
 
   // Add the essential boundary
+  mfem::Array<int> essential_dofs(0);
   for (auto & ess_bc_data : m_ess_bdr) {
-    m_H_form->SetEssentialBC(ess_bc_data->bc_markers);
+    essential_dofs.Append(ess_bc_data->true_dofs);
   }
+
+  essential_dofs.Unique();
+  m_H_form->SetEssentialTrueDofs(essential_dofs);
 
   // If dynamic, create the mass and viscosity forms
   if (m_timestepper != TimestepMethod::QuasiStatic) {
