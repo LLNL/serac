@@ -67,10 +67,10 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 
  public:
   /// The constructor
-  NonlinearSolidReducedSystemOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form,
-                                      std::shared_ptr<mfem::ParBilinearForm>  S_form,
-                                      std::shared_ptr<mfem::ParBilinearForm>  M_form,
-                                      const std::vector<std::shared_ptr<BoundaryConditionData> > & ess_bdr);
+  NonlinearSolidReducedSystemOperator(std::shared_ptr<mfem::ParNonlinearForm>                     H_form,
+                                      std::shared_ptr<mfem::ParBilinearForm>                      S_form,
+                                      std::shared_ptr<mfem::ParBilinearForm>                      M_form,
+                                      const std::vector<std::shared_ptr<BoundaryConditionData> > &ess_bdr);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
   void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);
@@ -123,9 +123,9 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
 
  public:
   /// The constructor
-  NonlinearSolidDynamicOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form,
-                                std::shared_ptr<mfem::ParBilinearForm>  S_form,
-                                std::shared_ptr<mfem::ParBilinearForm> M_form, 
+  NonlinearSolidDynamicOperator(std::shared_ptr<mfem::ParNonlinearForm>                     H_form,
+                                std::shared_ptr<mfem::ParBilinearForm>                      S_form,
+                                std::shared_ptr<mfem::ParBilinearForm>                      M_form,
                                 const std::vector<std::shared_ptr<BoundaryConditionData> > &ess_bdr,
                                 mfem::NewtonSolver &newton_solver, const LinearSolverParameters &lin_params);
 

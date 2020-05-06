@@ -38,20 +38,18 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
 }
 
 void ElasticitySolver::SetDisplacementBCs(std::vector<int> &                       disp_bdr,
-                                          std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
-                                          int component)
+                                          std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
 
   // Get the list of essential DOFs
-  for (auto & ess_bc_data : m_ess_bdr) {
+  for (auto &ess_bc_data : m_ess_bdr) {
     displacement.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
   }
 }
 
 void ElasticitySolver::SetTractionBCs(std::vector<int> &                       trac_bdr,
-                                      std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                                      int component)
+                                      std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   SetNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
@@ -85,8 +83,9 @@ void ElasticitySolver::CompleteSetup()
 
   // Add the traction integrator
   if (m_nat_bdr.size() > 0) {
-    for (auto & nat_bc_data : m_nat_bdr) {
-      m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*nat_bc_data->vec_coef), nat_bc_data->bc_markers);
+    for (auto &nat_bc_data : m_nat_bdr) {
+      m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*nat_bc_data->vec_coef),
+                                      nat_bc_data->bc_markers);
     }
     m_l_form->Assemble();
     m_rhs = m_l_form->ParallelAssemble();
@@ -99,7 +98,7 @@ void ElasticitySolver::CompleteSetup()
   m_K_mat = m_K_form->ParallelAssemble();
 
   // Eliminate the essential DOFs
-  for (auto & ess_bc_data : m_ess_bdr) {
+  for (auto &ess_bc_data : m_ess_bdr) {
     m_K_e_mat = m_K_mat->EliminateRowsCols(ess_bc_data->true_dofs);
   }
 
@@ -166,7 +165,7 @@ void ElasticitySolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
-  for (auto & ess_bc_data : m_ess_bdr) {
+  for (auto &ess_bc_data : m_ess_bdr) {
     ess_bc_data->vec_coef->SetTime(m_time);
     displacement.gf->ProjectBdrCoefficient(*ess_bc_data->vec_coef, ess_bc_data->bc_markers);
     displacement.gf->GetTrueDofs(displacement.true_vec);

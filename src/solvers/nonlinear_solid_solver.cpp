@@ -49,20 +49,18 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 }
 
 void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &                 disp_bdr,
-                                              std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
-                                              int component)
+                                              std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
 
   // Get the list of essential DOFs
-  for (auto & ess_bc_data : m_ess_bdr) {
+  for (auto &ess_bc_data : m_ess_bdr) {
     displacement.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs, component);
   }
 }
 
 void NonlinearSolidSolver::SetTractionBCs(const std::vector<int> &                 trac_bdr,
-                                          std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                                          int component)
+                                          std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   SetNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
@@ -108,13 +106,13 @@ void NonlinearSolidSolver::CompleteSetup()
   }
 
   // Add the traction integrator
-  for (auto & nat_bc_data : m_nat_bdr) {
+  for (auto &nat_bc_data : m_nat_bdr) {
     m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->bc_markers);
   }
 
   // Add the essential boundary
   mfem::Array<int> essential_dofs(0);
-  for (auto & ess_bc_data : m_ess_bdr) {
+  for (auto &ess_bc_data : m_ess_bdr) {
     essential_dofs.Append(ess_bc_data->true_dofs);
   }
 

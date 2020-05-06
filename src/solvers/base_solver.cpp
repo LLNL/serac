@@ -25,7 +25,40 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 }
 
 void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bdr,
-                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
+                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef, int component)
+{
+  auto bc_data = std::make_shared<BoundaryConditionData>();
+
+  bc_data->bc_markers.SetSize(ess_bdr.size());
+
+  for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
+    bc_data->bc_markers[i] = ess_bdr[i];
+  }
+
+  bc_data->vec_coef  = ess_bdr_vec_coef;
+  bc_data->component = component;
+
+  m_ess_bdr.push_back(bc_data);
+}
+
+void BaseSolver::SetNaturalBCs(const std::vector<int> &                 nat_bdr,
+                               std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef, int component)
+{
+  auto bc_data = std::make_shared<BoundaryConditionData>();
+
+  bc_data->bc_markers.SetSize(nat_bdr.size());
+
+  for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
+    bc_data->bc_markers[i] = nat_bdr[i];
+  }
+
+  bc_data->vec_coef  = nat_bdr_vec_coef;
+  bc_data->component = component;
+
+  m_nat_bdr.push_back(bc_data);
+}
+
+void BaseSolver::SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
                                  int component)
 {
   auto bc_data = std::make_shared<BoundaryConditionData>();
@@ -36,15 +69,13 @@ void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bd
     bc_data->bc_markers[i] = ess_bdr[i];
   }
 
-  bc_data->vec_coef = ess_bdr_vec_coef;
-  bc_data->component = component;
+  bc_data->scalar_coef = ess_bdr_coef;
+  bc_data->component   = component;
 
   m_ess_bdr.push_back(bc_data);
-
 }
 
-void BaseSolver::SetNaturalBCs(const std::vector<int> &                 nat_bdr,
-                               std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
+void BaseSolver::SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
                                int component)
 {
   auto bc_data = std::make_shared<BoundaryConditionData>();
@@ -55,40 +86,8 @@ void BaseSolver::SetNaturalBCs(const std::vector<int> &                 nat_bdr,
     bc_data->bc_markers[i] = nat_bdr[i];
   }
 
-  bc_data->vec_coef = nat_bdr_vec_coef;
-  bc_data->component = component;
-
-  m_nat_bdr.push_back(bc_data);
-}
-
-void BaseSolver::SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef, int component)
-{
-  auto bc_data = std::make_shared<BoundaryConditionData>();
-
-  bc_data->bc_markers.SetSize(ess_bdr.size());
-
-  for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
-    bc_data->bc_markers[i] = ess_bdr[i];
-  }
-
-  bc_data->scalar_coef = ess_bdr_coef;
-  bc_data->component = component;
-
-  m_ess_bdr.push_back(bc_data);
-}
-
-void BaseSolver::SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef, int component)
-{
-  auto bc_data = std::make_shared<BoundaryConditionData>();
-
-  bc_data->bc_markers.SetSize(nat_bdr.size());
-
-  for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
-    bc_data->bc_markers[i] = nat_bdr[i];
-  }
-
   bc_data->scalar_coef = nat_bdr_coef;
-  bc_data->component = component;
+  bc_data->component   = component;
 
   m_nat_bdr.push_back(bc_data);
 }

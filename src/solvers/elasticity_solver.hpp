@@ -65,10 +65,12 @@ class ElasticitySolver : public BaseSolver {
   ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set the vector-valued essential displacement boundary conditions
-  void SetDisplacementBCs(std::vector<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component = -1);
+  void SetDisplacementBCs(std::vector<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
+                          int component = -1);
 
   /// Set the vector-valued natural traction boundary conditions
-  void SetTractionBCs(std::vector<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component = -1);
+  void SetTractionBCs(std::vector<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                      int component = -1);
 
   /// Driver for advancing the timestep
   void AdvanceTimestep(double &dt);

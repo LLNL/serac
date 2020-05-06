@@ -70,7 +70,8 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
 
  public:
   /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const LinearSolverParameters &params, const std::vector<std::shared_ptr<BoundaryConditionData> > &ess_bdr);
+  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const LinearSolverParameters &params,
+                            const std::vector<std::shared_ptr<BoundaryConditionData> > &ess_bdr);
 
   /// Set the mass matrix
   void SetMMatrix(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> M_e_mat);
