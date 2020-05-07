@@ -75,6 +75,13 @@ class BaseSolver {
   virtual void SetEssentialBCs(const std::vector<int> &                 ess_bdr,
                                std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef, int component = -1);
 
+  /// Set a list of true degrees of freedom from a coefficient
+  virtual void SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);
+
+  /// Set a list of true degrees of freedom from a vector coefficient
+  virtual void SetTrueDofs(const mfem::Array<int> &true_dofs,
+                           std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef);
+
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
   virtual void SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,

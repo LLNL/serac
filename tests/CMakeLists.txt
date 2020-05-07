@@ -109,4 +109,18 @@ if (ENABLE_GTEST)
         NUM_MPI_TASKS     1
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
+    #----------------------
+    # Component-wise BC test
+    #----------------------
+    blt_add_executable(
+        NAME       serac_component_bc
+        SOURCES    serac_component_bc.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers coefficients mpi mfem gtest )
+    blt_add_test(
+        NAME              serac_component_bc
+        COMMAND           serac_component_bc -m ${PROJECT_SOURCE_DIR}/data/square.mesh
+        NUM_MPI_TASKS     1
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
+
 endif()
