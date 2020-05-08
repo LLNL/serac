@@ -8,56 +8,51 @@
 #------------------------------------------------------------------------------
 # Axom
 #------------------------------------------------------------------------------
-if(AXOM_DIR)
-    serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
-    find_package(axom REQUIRED
-                      NO_DEFAULT_PATH 
-                      PATHS ${AXOM_DIR}/lib/cmake)
-else()
-    message(STATUS "Axom support is OFF")
-    set(AXOM_FOUND FALSE CACHE BOOL "")
+if(NOT AXOM_DIR)
+  MESSAGE(FATAL_ERROR "Could not find Axom. Axom requires explicit AXOM_DIR.")
 endif()
+
+serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
+
+find_package(axom REQUIRED
+                  NO_DEFAULT_PATH 
+                  PATHS ${AXOM_DIR}/lib/cmake)
 
 #------------------------------------------------------------------------------
 # Conduit (required by Axom)
 #------------------------------------------------------------------------------
-if (AXOM_FOUND)
-    if(NOT CONDUIT_DIR)
-        MESSAGE(FATAL_ERROR "Could not find Conduit. Conduit requires explicit CONDUIT_DIR.")
-    endif()
-
-    if(NOT WIN32)
-        set(_conduit_config "${CONDUIT_DIR}/lib/cmake/ConduitConfig.cmake")
-        if(NOT EXISTS ${_conduit_config})
-            MESSAGE(FATAL_ERROR "Could not find Conduit cmake include file ${_conduit_config}")
-        endif()
-
-        find_package(Conduit REQUIRED
-                    NO_DEFAULT_PATH
-                    PATHS ${CONDUIT_DIR}/lib/cmake)
-    else()
-        # Allow for several different configurations of Conduit
-        find_package(Conduit CONFIG 
-            REQUIRED
-            HINTS ${CONDUIT_DIR}/cmake/conduit 
-                  ${CONDUIT_DIR}/lib/cmake/conduit
-                  ${CONDUIT_DIR}/share/cmake/conduit
-                  ${CONDUIT_DIR}/share/conduit
-                  ${CONDUIT_DIR}/cmake)
-    endif()
-
-    # Manually set includes as system includes
-    set_property(TARGET conduit::conduit 
-                 APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                 "${CONDUIT_INSTALL_PREFIX}/include/")
-
-    set_property(TARGET conduit::conduit 
-                 APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                 "${CONDUIT_INSTALL_PREFIX}/include/conduit/")
-else()
-    set(CONDUIT_FOUND FALSE CACHE BOOL "")
+if(NOT CONDUIT_DIR)
+    MESSAGE(FATAL_ERROR "Could not find Conduit. Conduit requires explicit CONDUIT_DIR.")
 endif()
 
+if(NOT WIN32)
+    set(_conduit_config "${CONDUIT_DIR}/lib/cmake/ConduitConfig.cmake")
+    if(NOT EXISTS ${_conduit_config})
+        MESSAGE(FATAL_ERROR "Could not find Conduit cmake include file ${_conduit_config}")
+    endif()
+
+    find_package(Conduit REQUIRED
+                 NO_DEFAULT_PATH
+                 PATHS ${CONDUIT_DIR}/lib/cmake)
+else()
+    # Allow for several different configurations of Conduit
+    find_package(Conduit CONFIG 
+        REQUIRED
+        HINTS ${CONDUIT_DIR}/cmake/conduit 
+              ${CONDUIT_DIR}/lib/cmake/conduit
+              ${CONDUIT_DIR}/share/cmake/conduit
+              ${CONDUIT_DIR}/share/conduit
+              ${CONDUIT_DIR}/cmake)
+endif()
+
+# Manually set includes as system includes
+set_property(TARGET conduit::conduit 
+             APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+             "${CONDUIT_INSTALL_PREFIX}/include/")
+
+set_property(TARGET conduit::conduit 
+             APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+             "${CONDUIT_INSTALL_PREFIX}/include/conduit/")
 
 #------------------------------------------------------------------------------
 # MFEM
