@@ -49,13 +49,13 @@ TEST(nonlinear_solid_solver, qs_solve)
   ess_bdr[0] = 1;
 
   // define the displacement vector
-  auto disp_coef = std::make_shared<StdFunctionVectorCoefficient>(3, [](mfem::Vector &x, mfem::Vector &X) {
+  auto disp_coef = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &x, mfem::Vector &X) {
     X = x;
-    X[0] = x[0] * 0.95;
+    X[0] = x[0] * 5.0;
   });
 
   // Pass the BC information to the solver object setting only the z direction
-  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef, 2);
+  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef, 0);
 
   // Create an indicator function to set all vertices that are x=0
   StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector &x, mfem::Vector &X) {
