@@ -11,7 +11,7 @@
 #---------------------------------------
 # SYS_TYPE: toss_3_x86_64_ib
 # Compiler Spec: gcc@8.1.0
-# CMake executable path: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cmake-3.9.6/bin/cmake
+# CMake executable path: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/2020_03_20_17_10_57/gcc-8.1.0/cmake-3.9.6/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
