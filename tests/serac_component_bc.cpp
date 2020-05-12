@@ -30,7 +30,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
-  // declare pointer to parallel mesh object
+  // refine and declare pointer to parallel mesh object
   for (int i=0; i<3; ++i) {
     mesh->UniformRefinement();
   }
@@ -49,9 +49,8 @@ TEST(nonlinear_solid_solver, qs_solve)
   ess_bdr[0] = 1;
 
   // define the displacement vector
-  auto disp_coef = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &x, mfem::Vector &X) {
-    X = x;
-    X[0] = x[0] * 5.0;
+  auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector &x) {
+    return x[0] * -0.03;
   });
 
   // Pass the BC information to the solver object setting only the z direction
@@ -76,7 +75,7 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   // Set the linear solver params
   LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
+  params.rel_tol     = 1.0e-8;
   params.abs_tol     = 1.0e-8;
   params.print_level = 0;
   params.max_iter    = 5000;
@@ -84,8 +83,8 @@ TEST(nonlinear_solid_solver, qs_solve)
   params.lin_solver  = LinearSolver::MINRES;
 
   NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-3;
-  nl_params.abs_tol     = 1.0e-6;
+  nl_params.rel_tol     = 1.0e-6;
+  nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter    = 5000;
 
@@ -94,11 +93,17 @@ TEST(nonlinear_solid_solver, qs_solve)
   // Set the time step method
   solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
+  // Setup glvis output
+  solid_solver.InitializeOutput(OutputType::VisIt, "component_bc");
+
   // Complete the solver setup
   solid_solver.CompleteSetup();
 
   double dt = 1.0;
   solid_solver.AdvanceTimestep(dt);
+
+  // Output the state
+  solid_solver.OutputState();
 
   auto state = solid_solver.GetState();
 
@@ -108,7 +113,7 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(2.2309025, x_norm, 0.001);
+  EXPECT_NEAR(0.019668667836, x_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
