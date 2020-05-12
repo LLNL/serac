@@ -4,14 +4,14 @@ compilers:
     extra_rpaths: []
     flags: {}
     modules:
-    - clang/4.0.0
+    - clang/9.0.0
     operating_system: rhel7
     paths:
-      cc: /usr/tce/packages/clang/clang-4.0.0/bin/clang
-      cxx: /usr/tce/packages/clang/clang-4.0.0/bin/clang++
-      f77: /usr/tce/packages/gcc/gcc-4.9.3/bin/gfortran 
-      fc: /usr/tce/packages/gcc/gcc-4.9.3/bin/gfortran
-    spec: clang@4.0.0
+      cc: /usr/tce/packages/clang/clang-9.0.0/bin/clang
+      cxx: /usr/tce/packages/clang/clang-9.0.0/bin/clang++
+      f77: /usr/tce/packages/gcc/gcc-8.1.0/bin/gfortran 
+      fc: /usr/tce/packages/gcc/gcc-8.1.0/bin/gfortran
+    spec: clang@9.0.0
     target: x86_64
 - compiler:
     environment: {}
