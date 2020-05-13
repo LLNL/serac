@@ -37,7 +37,7 @@ void ThermalSolver::SetTemperatureBCs(const std::vector<int> &ess_bdr, std::shar
 {
   SetEssentialBCs(ess_bdr, ess_bdr_coef);
 
-  // Get the essential dof indicies and project the coefficient onto them
+  // Get the essential dof indices and project the coefficient onto them
   for (auto &ess_bc_data : m_ess_bdr) {
     temperature.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
   }
