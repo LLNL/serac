@@ -20,7 +20,7 @@ inline bool file_exists(const char* path)
   return (stat(path, &buffer) == 0);
 }
 
-TEST(nonlinear_solid_solver, qs_solve)
+TEST(component_bc, qs_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -31,7 +31,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   imesh.close();
 
   // refine and declare pointer to parallel mesh object
-  for (int i=0; i<3; ++i) {
+  for (int i=0; i<2; ++i) {
     mesh->UniformRefinement();
   }
 
@@ -50,7 +50,7 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   // define the displacement vector
   auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector &x) {
-    return x[0] * -0.03;
+    return x[0] * -3.0e-2;
   });
 
   // Pass the BC information to the solver object setting only the z direction
@@ -76,7 +76,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   // Set the linear solver params
   LinearSolverParameters params;
   params.rel_tol     = 1.0e-8;
-  params.abs_tol     = 1.0e-8;
+  params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 5000;
   params.prec        = Preconditioner::Jacobi;
@@ -113,7 +113,7 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(0.019668667836, x_norm, 0.001);
+  EXPECT_NEAR(0.018532217, x_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
