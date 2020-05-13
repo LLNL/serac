@@ -49,7 +49,17 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 }
 
 void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &                 disp_bdr,
-                                              std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
+                                              std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+{
+  SetEssentialBCs(disp_bdr, disp_bdr_coef, -1);
+
+  // Get the list of essential DOFs
+  for (auto &ess_bc_data : m_ess_bdr) {
+    displacement.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
+  }
+}
+
+void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
 
@@ -112,11 +122,36 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Add the essential boundary
   mfem::Array<int> essential_dofs(0);
+
+  // Build the dof array lookup tables
+  displacement.space->BuildDofToArrays();
+
+  // Project the essential boundary coefficients 
   for (auto &ess_bc_data : m_ess_bdr) {
+
+    // Generate the scalar dof list from the vector dof list
+    mfem::Array<int> dof_list(ess_bc_data->true_dofs.Size());
+    for (int i=0; i<ess_bc_data->true_dofs.Size(); ++i) {
+      dof_list[i]=displacement.space->VDofToDof(ess_bc_data->true_dofs[i]);
+    }
+
+    // Project the coefficient
+    if (ess_bc_data->component == -1) {
+      // If it contains all components, project the vector
+      displacement.gf->ProjectCoefficient(*ess_bc_data->vec_coef, dof_list);
+    } else {
+      // If it is only a single component, project the scalar
+      displacement.gf->ProjectCoefficient(*ess_bc_data->scalar_coef, dof_list, ess_bc_data->component);
+    } 
+
+    // Add the vector dofs to the total essential BC dof list
     essential_dofs.Append(ess_bc_data->true_dofs);
   }
 
+  // Remove any duplicates from the essential BC list
+  essential_dofs.Sort();
   essential_dofs.Unique();
+
   m_H_form->SetEssentialTrueDofs(essential_dofs);
 
   // If dynamic, create the mass and viscosity forms
