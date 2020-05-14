@@ -66,7 +66,7 @@ TEST(component_bc, qs_solve)
   });
 
   mfem::Array<int> ess_corner_bc_list;
-  MakeEssList(*pmesh, zero_bc, ess_corner_bc_list);
+  MakeTrueEssList(*solid_solver.GetState()[0].space, zero_bc, ess_corner_bc_list);
 
   solid_solver.SetTrueDofs(ess_corner_bc_list, disp_coef);
 

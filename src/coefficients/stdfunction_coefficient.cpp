@@ -30,6 +30,21 @@ void StdFunctionVectorCoefficient::Eval(mfem::Vector &V, mfem::ElementTransforma
   m_func(transip, V);
 }
 
+void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_tdof_list)
+{
+  mfem::ParGridFunction v_attr(&pfes);
+  v_attr.ProjectCoefficient(c);
+
+  ess_tdof_list.SetSize(0);
+
+  for (int vdof = 0; vdof < pfes.GetVSize(); ++vdof) {
+    int tdof = pfes.GetLocalTDofNumber(vdof);
+    if (v_attr[vdof] > 0. && tdof >= 0) {
+      ess_tdof_list.Append(tdof);
+    }
+  }
+}
+
 void MakeEssList(mfem::Mesh &m, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list)
 {
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());

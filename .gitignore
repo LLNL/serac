@@ -1,7 +1,7 @@
 /build*/
 *.swp
 /uberenv_libs*
-spack-build*
+spack*
 /src/docs/doxygen/html/
 /src/docs/doxygen/xml/
 /src/docs/sphinx/_build/
