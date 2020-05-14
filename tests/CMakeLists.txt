@@ -119,7 +119,7 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers coefficients mpi mfem gtest )
     blt_add_test(
         NAME              serac_component_bc
-        COMMAND           serac_component_bc -m ${PROJECT_SOURCE_DIR}/data/onehex.mesh
+        COMMAND           serac_component_bc -m ${PROJECT_SOURCE_DIR}/data/square.mesh
         NUM_MPI_TASKS     1
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 

@@ -49,7 +49,7 @@ TEST(component_bc, qs_solve)
   ess_bdr[0] = 1;
 
   // define the displacement vector
-  auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -5.0e-2; });
+  auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -1.0e-1; });
 
   // Pass the BC information to the solver object setting only the z direction
   solid_solver.SetDisplacementBCs(ess_bdr, disp_coef, 0);
@@ -111,7 +111,7 @@ TEST(component_bc, qs_solve)
 
   double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(0.03549456, x_norm, 0.0001);
+  EXPECT_NEAR(0.08363646, x_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
