@@ -60,7 +60,7 @@ TEST(component_bc, qs_solve)
   StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector &x, mfem::Vector &X) {
     X = 0.;
     for (int i = 0; i < X.Size(); i++)
-      if (abs(x[i]) < 1.e-13) {
+      if (std::abs(x[i]) < 1.e-13) {
         X[i] = 1.;
       }
   });
