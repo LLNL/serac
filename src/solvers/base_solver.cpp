@@ -50,7 +50,7 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &                 true_dofs,
 
   bc_data->true_dofs = true_dofs;
 
-  bc_data->vec_coef  = ess_bdr_vec_coef;
+  bc_data->vec_coef = ess_bdr_vec_coef;
 
   m_ess_bdr.push_back(bc_data);
 }
@@ -89,16 +89,15 @@ void BaseSolver::SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_pt
   m_ess_bdr.push_back(bc_data);
 }
 
-void BaseSolver::SetTrueDofs(const mfem::Array<int> &           true_dofs,
-                             std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   auto bc_data = std::make_shared<BoundaryConditionData>();
 
   bc_data->bc_markers.SetSize(0);
-  
+
   bc_data->true_dofs = true_dofs;
 
-  bc_data->scalar_coef  = ess_bdr_coef;
+  bc_data->scalar_coef = ess_bdr_coef;
 
   m_ess_bdr.push_back(bc_data);
 }

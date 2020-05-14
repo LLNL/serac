@@ -31,7 +31,7 @@ TEST(component_bc, qs_solve)
   imesh.close();
 
   // refine and declare pointer to parallel mesh object
-  for (int i=0; i<2; ++i) {
+  for (int i = 0; i < 2; ++i) {
     mesh->UniformRefinement();
   }
 
@@ -49,15 +49,13 @@ TEST(component_bc, qs_solve)
   ess_bdr[0] = 1;
 
   // define the displacement vector
-  auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector &x) {
-    return x[0] * -5.0e-2;
-  });
+  auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -5.0e-2; });
 
   // Pass the BC information to the solver object setting only the z direction
   solid_solver.SetDisplacementBCs(ess_bdr, disp_coef, 0);
 
   // Create an indicator function to set all vertices that are x=0
-  StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector &x, mfem::Vector &X) {
+  StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector& x, mfem::Vector& X) {
     X = 0.;
     for (int i = 0; i < X.Size(); i++)
       if (std::abs(x[i]) < 1.e-13) {

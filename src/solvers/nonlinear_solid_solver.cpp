@@ -66,7 +66,8 @@ void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &          
   }
 }
 
-void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
+void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &           disp_bdr,
+                                              std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
 
@@ -133,13 +134,12 @@ void NonlinearSolidSolver::CompleteSetup()
   // Build the dof array lookup tables
   displacement.space->BuildDofToArrays();
 
-  // Project the essential boundary coefficients 
+  // Project the essential boundary coefficients
   for (auto &ess_bc_data : m_ess_bdr) {
-
     // Generate the scalar dof list from the vector dof list
     mfem::Array<int> dof_list(ess_bc_data->true_dofs.Size());
-    for (int i=0; i<ess_bc_data->true_dofs.Size(); ++i) {
-      dof_list[i]=displacement.space->VDofToDof(ess_bc_data->true_dofs[i]);
+    for (int i = 0; i < ess_bc_data->true_dofs.Size(); ++i) {
+      dof_list[i] = displacement.space->VDofToDof(ess_bc_data->true_dofs[i]);
     }
 
     // Project the coefficient
@@ -149,7 +149,7 @@ void NonlinearSolidSolver::CompleteSetup()
     } else {
       // If it is only a single component, project the scalar
       displacement.gf->ProjectCoefficient(*ess_bc_data->scalar_coef, dof_list, ess_bc_data->component);
-    } 
+    }
 
     // Add the vector dofs to the total essential BC dof list
     essential_dofs.Append(ess_bc_data->true_dofs);
@@ -261,9 +261,9 @@ void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
   m_deformed_nodes->Set(1.0, *displacement.gf);
 
   if (m_timestepper == TimestepMethod::QuasiStatic) {
-    m_deformed_nodes->Add(1.0, *m_reference_nodes); 
+    m_deformed_nodes->Add(1.0, *m_reference_nodes);
   }
-  
+
   displacement.mesh->NewNodes(*m_deformed_nodes);
   velocity.mesh->NewNodes(*m_deformed_nodes);
 

@@ -67,12 +67,11 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
    \param[in] pfes A finite element space for the constrained grid function
    \param[in] c A VectorCoefficient that is porjected on to the mesh. All
    d.o.f's are examined and those that are the condition (> 0.) are appended toe
-   the vdof list. 
+   the vdof list.
    \param[out] ess_tdof_list The list of true dofs that should be
    part of the essential boundary conditions
 */
 void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_tdof_list);
-
 
 /**
    \brief MakeEssList takes in a mesh, a vector coefficient, and produces a list
