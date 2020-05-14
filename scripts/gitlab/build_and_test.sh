@@ -23,6 +23,10 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 # Dependencies
 if [[ "${1}" != "--build-only" && "${1}" != "--test-only" ]]
 then
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "~~~~~ Building Dependencies"
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
     python scripts/uberenv/uberenv.py --spec=${SPEC}
 fi
 
