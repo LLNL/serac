@@ -5,18 +5,11 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 
-#------------------------------------------------------------------------------
-# Axom
-#------------------------------------------------------------------------------
-if(NOT AXOM_DIR)
-  MESSAGE(FATAL_ERROR "Could not find Axom. Axom requires explicit AXOM_DIR.")
+# Policy to use <PackageName>_ROOT variable in find_<Package> commands
+# Policy added in 3.12+
+if(POLICY CMP0074)
+    set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)
 endif()
-
-serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
-
-find_package(axom REQUIRED
-                  NO_DEFAULT_PATH 
-                  PATHS ${AXOM_DIR}/lib/cmake)
 
 #------------------------------------------------------------------------------
 # Conduit (required by Axom)
@@ -53,6 +46,21 @@ set_property(TARGET conduit::conduit
 set_property(TARGET conduit::conduit 
              APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
              "${CONDUIT_INSTALL_PREFIX}/include/conduit/")
+
+
+#------------------------------------------------------------------------------
+# Axom
+#------------------------------------------------------------------------------
+if(NOT AXOM_DIR)
+  MESSAGE(FATAL_ERROR "Could not find Axom. Axom requires explicit AXOM_DIR.")
+endif()
+
+serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
+
+find_package(axom REQUIRED
+                  NO_DEFAULT_PATH 
+                  PATHS ${AXOM_DIR}/lib/cmake)
+
 
 #------------------------------------------------------------------------------
 # MFEM
