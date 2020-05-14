@@ -79,12 +79,18 @@ TEST(dynamic_solver, dyn_solve)
   nl_params.max_iter    = 500;
   dyn_solver.SetSolverParameters(params, nl_params);
 
+  // Initialize the VisIt output
+  dyn_solver.InitializeOutput(OutputType::VisIt, "dynamic_solid");
+
   // Construct the internal dynamic solver data structures
   dyn_solver.CompleteSetup();
 
   double t       = 0.0;
   double t_final = 6.0;
   double dt      = 3.0;
+
+  // Ouput the initial state
+  dyn_solver.OutputState();
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
@@ -97,6 +103,9 @@ TEST(dynamic_solver, dyn_solve)
     dyn_solver.AdvanceTimestep(dt_real);
   }
 
+  // Output the final state
+  dyn_solver.OutputState();
+
   // Check the final displacement and velocity L2 norms
   mfem::Vector zero(dim);
   zero = 0.0;
@@ -107,8 +116,8 @@ TEST(dynamic_solver, dyn_solve)
   double v_norm = state[0].gf->ComputeLpError(2.0, zerovec);
   double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.8727, x_norm, 0.0001);
-  EXPECT_NEAR(0.22314, v_norm, 0.0001);
+  EXPECT_NEAR(12.86733, x_norm, 0.0001);
+  EXPECT_NEAR(0.22298, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

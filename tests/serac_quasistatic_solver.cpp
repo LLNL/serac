@@ -87,11 +87,16 @@ TEST(nonlinear_solid_solver, qs_solve)
   // Set the time step method
   solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
+  // Initialize the output
+  solid_solver.InitializeOutput(OutputType::VisIt, "static_solid");
+
   // Complete the solver setup
   solid_solver.CompleteSetup();
 
   double dt = 1.0;
   solid_solver.AdvanceTimestep(dt);
+
+  solid_solver.OutputState();
 
   auto state = solid_solver.GetState();
 

@@ -50,7 +50,7 @@ TEST(component_bc, qs_solve)
 
   // define the displacement vector
   auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector &x) {
-    return x[0] * -3.0e-2;
+    return x[0] * -5.0e-2;
   });
 
   // Pass the BC information to the solver object setting only the z direction
@@ -113,7 +113,7 @@ TEST(component_bc, qs_solve)
 
   double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(0.018532217, x_norm, 0.0001);
+  EXPECT_NEAR(0.03549456, x_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

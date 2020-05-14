@@ -55,6 +55,12 @@ class NonlinearSolidSolver : public BaseSolver {
   /// Nonlinear solver parameters
   NonlinearSolverParameters m_nonlin_params;
 
+  /// Pointer to the reference mesh data
+  std::unique_ptr<mfem::ParGridFunction> m_reference_nodes;
+
+  /// Pointer to the deformed mesh data
+  std::unique_ptr<mfem::ParGridFunction> m_deformed_nodes;
+
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
 

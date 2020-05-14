@@ -33,6 +33,13 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   *displacement.gf   = 0.0;
   displacement.name  = "displacement";
 
+  // Initialize the mesh node pointers
+  m_reference_nodes = std::make_unique<mfem::ParGridFunction>(displacement.space.get());
+  pmesh->GetNodes(*m_reference_nodes);
+  pmesh->NewNodes(*m_reference_nodes);
+
+  m_deformed_nodes = std::make_unique<mfem::ParGridFunction>(*m_reference_nodes);
+
   // Initialize the true DOF vector
   int              true_size = velocity.space->TrueVSize();
   mfem::Array<int> true_offset(3);
@@ -236,6 +243,10 @@ void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
   velocity.gf->GetTrueDofs(velocity.true_vec);
   displacement.gf->GetTrueDofs(displacement.true_vec);
 
+  // Set the mesh nodes to the reference configuration
+  displacement.mesh->NewNodes(*m_reference_nodes);
+  velocity.mesh->NewNodes(*m_reference_nodes);
+
   if (m_timestepper == TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
   } else {
@@ -245,6 +256,17 @@ void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
   // Distribute the shared DOFs
   velocity.gf->SetFromTrueDofs(velocity.true_vec);
   displacement.gf->SetFromTrueDofs(displacement.true_vec);
+
+  // Update the mesh with the new deformed nodes
+  m_deformed_nodes->Set(1.0, *displacement.gf);
+
+  if (m_timestepper == TimestepMethod::QuasiStatic) {
+    m_deformed_nodes->Add(1.0, *m_reference_nodes); 
+  }
+  
+  displacement.mesh->NewNodes(*m_deformed_nodes);
+  velocity.mesh->NewNodes(*m_deformed_nodes);
+
   m_cycle += 1;
 }
 
