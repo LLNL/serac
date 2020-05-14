@@ -97,8 +97,8 @@ class Serac(CMakePackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    depends_on("mfem~shared~gzstream+hypre+metis+superlu-dist+lapack+mpi")
-    depends_on("mfem~shared~gzstream+hypre+metis+superlu-dist+lapack+mpi+debug", when="+debug")
+    depends_on("mfem~shared~zlib+hypre+metis+superlu-dist+lapack+mpi")
+    depends_on("mfem~shared~zlib+hypre+metis+superlu-dist+lapack+mpi+debug", when="+debug")
     depends_on("hypre~shared~superlu-dist+mpi")
     depends_on("hypre~shared~superlu-dist+mpi+debug", when="+debug")
 
