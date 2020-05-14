@@ -68,7 +68,7 @@ def path_replace(path, path_replacements):
     return path
 
 
-class Serac(Package):
+class Serac(CMakePackage):
     """FIXME: Put a proper description of your package here."""
 
     homepage = "https://www.github.com/LLNL/serac"
@@ -91,7 +91,6 @@ class Serac(Package):
     depends_on("axom~openmp~fortran~raja~umpire")
 
     # Devtool dependencies these need to match serac_devtools/package.py
-    depends_on('cmake', when="+devtools")
     depends_on('cppcheck', when="+devtools")
     depends_on('doxygen', when="+devtools")
     depends_on('python', when="+devtools")
@@ -117,7 +116,7 @@ class Serac(Package):
     # Libraries that we do not build debug
     depends_on("glvis~fonts", when='+glvis')
 
-    phases = ['hostconfig','cmake','build','install']
+    phases = ['hostconfig', 'cmake', 'build',' install']
 
     def _get_sys_type(self, spec):
         sys_type = spec.architecture
@@ -158,11 +157,15 @@ class Serac(Package):
         #######################
         c_compiler = env["SPACK_CC"]
         cpp_compiler = env["SPACK_CXX"]
-        f_compiler = None
 
-        if self.compiler.fc:
-            # even if this is set, it may not exist so do one more sanity check
-            f_compiler = which(env["SPACK_FC"])
+        # Even though we don't have fortran code in our project we sometimes
+        # use the Fortran compiler to determine which libstdc++ to use
+        f_compiler = ""
+        if "SPACK_FC" in env.keys():
+            # even if this is set, it may not exist
+            # do one more sanity check
+            if os.path.isfile(env["SPACK_FC"]):
+                f_compiler = env["SPACK_FC"]
 
         #######################################################################
         # By directly fetching the names of the actual compilers we appear
@@ -210,6 +213,26 @@ class Serac(Package):
         cfg.write(cmake_cache_entry("CMAKE_C_COMPILER", c_compiler))
         cfg.write(cmake_cache_entry("CMAKE_CXX_COMPILER", cpp_compiler))
 
+        # use global spack compiler flags
+        cflags = ' '.join(spec.compiler_flags['cflags'])
+        if cflags:
+            cfg.write(cmake_cache_entry("CMAKE_C_FLAGS", cflags))
+        cxxflags = ' '.join(spec.compiler_flags['cxxflags'])
+        if cxxflags:
+            cfg.write(cmake_cache_entry("CMAKE_CXX_FLAGS", cxxflags))
+
+        if ("gfortran" in f_compiler) and ("clang" in cpp_compiler):
+            libdir = pjoin(os.path.dirname(
+                           os.path.dirname(f_compiler)), "lib")
+            flags = ""
+            for _libpath in [libdir, libdir + "64"]:
+                if os.path.exists(_libpath):
+                    flags += " -Wl,-rpath,{0}".format(_libpath)
+            description = ("Adds a missing libstdc++ rpath")
+            if flags:
+                cfg.write(cmake_cache_entry("BLT_EXE_LINKER_FLAGS", flags,
+                                            description))
+
         #######################
         # MPI
         #######################
@@ -226,11 +249,9 @@ class Serac(Package):
             # starting with cmake 3.10, FindMPI expects MPIEXEC_EXECUTABLE
             # vs the older versions which expect MPIEXEC
             if self.spec["cmake"].satisfies('@3.10:'):
-                cfg.write(cmake_cache_entry("MPIEXEC_EXECUTABLE",
-                                            mpiexe_bin))
+                cfg.write(cmake_cache_entry("MPIEXEC_EXECUTABLE", mpiexe_bin))
             else:
-                cfg.write(cmake_cache_entry("MPIEXEC",
-                                                mpiexe_bin))
+                cfg.write(cmake_cache_entry("MPIEXEC", mpiexe_bin))
 
         #######################
         # Adding dependencies
@@ -332,35 +353,17 @@ class Serac(Package):
         print("Spack generated Serac host-config file: {0}".format(host_config_path))
 
 
-    def configure(self, spec, prefix):
-        with working_dir('spack-build', create=True):
-            host_config_path = self._get_host_config_path(spec)
+    def cmake_args(self):
+        host_config_path = self._get_host_config_path(self.spec)
 
-            cmake_args = []
-            cmake_args.extend(std_cmake_args)
-            cmake_args.extend(["-C", host_config_path, "../src"])
-            print("Configuring Serac...")
-            cmake(*cmake_args)
+        options = []
+        options.extend(['-C', host_config_path])
+        if self.run_tests is False:
+            options.append('-DENABLE_TESTS=OFF')
+        else:
+            options.append('-DENABLE_TESTS=ON')
+        return options
 
-
-    def build(self, spec, prefix):
-        with working_dir('spack-build'):
-            print("Building Serac...")
-            make()
-
-
-    @run_after('build')
-    @on_package_attributes(run_tests=True)
-    def test(self):
-        with working_dir('spack-build'):
-            print("Running Axom's Unit Tests...")
-            make("test")
-
-
-    def install(self, spec, prefix):
-        with working_dir('spack-build'):
-            make("install")
-            # install copy of host config for provenance
-            print("Installing Serac's CMake Host Config File...")
-            host_config_path = self._get_host_config_path(spec)
-            install(host_config_path, prefix)
+    @run_after('install')
+    def install_cmake_cache(self):
+        install(self._get_host_config_path(self.spec), prefix)

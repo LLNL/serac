@@ -294,18 +294,22 @@ class Mfem(Package):
             options += ['MFEM_USE_OCCA=%s' % yes_no('+occa'),
                         'MFEM_USE_RAJA=%s' % yes_no('+raja')]
 
-        # SERAC EDIT BEGIN
-        # setting CXXFLAGS to anything breaks the ability for MFEM_DEBUG to add flags
-        # cxxflags = spec.compiler_flags['cxxflags']
-        # if self.spec.satisfies('@4.0:'):
-        #     cxxflags.append(self.compiler.cxx11_flag)
 
-        # if cxxflags:
-        #     # The cxxflags are set by the spack c++ compiler wrapper. We also
-        #     # set CXXFLAGS explicitly, for clarity, and to properly export the
-        #     # cxxflags in the variable MFEM_CXXFLAGS in config.mk.
-        #     options += ['CXXFLAGS=%s' % ' '.join(cxxflags)]
-        # SERAC EDIT END
+        cxxflags = spec.compiler_flags['cxxflags']
+        if self.spec.satisfies('@4.0:'):
+            cxxflags.append(self.compiler.cxx11_flag)
+
+        if cxxflags:
+            # SERAC EDIT BEGIN
+            # setting CXXFLAGS to anything breaks the ability for MFEM_DEBUG to add flags
+            if '+debug' in spec:
+                cxxflags.extend(['-g', '-O0'])
+            # SERAC EDIT END
+
+            # The cxxflags are set by the spack c++ compiler wrapper. We also
+            # set CXXFLAGS explicitly, for clarity, and to properly export the
+            # cxxflags in the variable MFEM_CXXFLAGS in config.mk.
+            options += ['CXXFLAGS=%s' % ' '.join(cxxflags)]
 
         if '~static' in spec:
             options += ['STATIC=NO']
