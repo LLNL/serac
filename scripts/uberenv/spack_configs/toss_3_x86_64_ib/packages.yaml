@@ -24,11 +24,11 @@ packages:
   mvapich2:
     paths:
       # clang mvapich2
-      mvapich2@2.2%clang@4.0.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-clang-4.0.0
+      mvapich2@2.3%clang@9.0.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.3-clang-9.0.0
       # gcc mvapich2
-      mvapich2@2.2%gcc@8.1.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.2-gcc-8.1.0
+      mvapich2@2.3%gcc@8.1.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.1.0
       # intel mvapich2
-      mvapich2@2.3%intel@19.0.0 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.3-intel-19.0.0
+      mvapich2@2.3%intel@19.0.4 arch=linux-rhel7-ivybridge: /usr/tce/packages/mvapich2/mvapich2-2.3-intel-19.0.4
     buildable: False
   openmpi:
     buildable: False
@@ -71,6 +71,11 @@ packages:
    paths:
       bzip2: /usr
    buildable: False
+  cmake:
+    version: [3.14.5]
+    paths:
+      cmake: /usr/tce/packages/cmake/cmake-3.14.5
+    buildable: False
   gettext:
    paths:
       gettext: /usr
@@ -105,6 +110,10 @@ packages:
     buildable: False
 
   # Lock down versions of packages we depend on
+  axom:
+    version: [develop]
+  conduit:
+    version: [master]
   mfem:
     version: [4.0.0]
   hypre:
@@ -119,34 +128,23 @@ packages:
     version: [3.4]
 
 # Lock in versions of Devtools
-  cmake:
-    version: [3.9.6]
-    paths:
-      cmake: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cmake-3.9.6
-    buildable: False
-
-  astyle:
-    version: [3.1]
-    paths:
-      astyle: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/astyle-3.1
-    buildable: False
   cppcheck:
     version: [1.87]
     paths:
       cppcheck: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cppcheck-1.87
     buildable: False
   doxygen:
-    version: [1.8.15]
+    version: [1.8.17]
     paths:
-      doxygen: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.8.15
+      doxygen: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.8.17
     buildable: False
   python:
-    version: [3.7.4]
+    version: [3.7.7]
     paths:
-      python: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.7.4
+      python: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.7.7
     buildable: False
   py-sphinx:
-    version: [2.2.0]
+    version: [3.0.0]
     paths:
-      py-sphinx: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.7.4
+      py-sphinx: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/py-sphinx-3.0.0
     buildable: False

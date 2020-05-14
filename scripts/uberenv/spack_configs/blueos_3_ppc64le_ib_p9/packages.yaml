@@ -40,9 +40,6 @@ packages:
     version: [master]
   python:
     variants: ~dbm
-  cmake:
-    version: [3.9.6]
-    variants: ~openssl~ncurses
   py-numpy:
     variants: ~blas~lapack
   perl:
@@ -60,13 +57,11 @@ packages:
       cuda@8.0: /usr/tce/packages/cuda/cuda-8.0
     buildable: False
 # LLNL blueos mpi
-# note, we need to fake this as an existing mpi package
-# so even though this is spectrum mpi, we call it mvapich2
-  mvapich2:
+  spectrum-mpi:
     paths:
-      mvapich2@2.2%gcc@4.9.3: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-4.9.3/ 
-      mvapich2@2.2%clang@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2018.12.03/
-      mvapich2@2.2%xl@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/ 
+      spectrum-mpi@release%gcc@4.9.3: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-4.9.3/ 
+      spectrum-mpi@release%clang@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2018.12.03/
+      spectrum-mpi@release%xl@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/ 
     buildable: False
 
   autoconf:
@@ -81,6 +76,11 @@ packages:
    paths:
       bzip2: /usr
    buildable: False
+  cmake:
+    version: [3.14.5]
+    paths:
+      cmake: /usr/tce/packages/cmake/cmake-3.14.5
+    buildable: False
   gettext:
    paths:
       gettext: /usr
@@ -121,12 +121,6 @@ packages:
     version: [3.4]
 
 # Lock in versions of Devtools
-  cmake:
-    version: [3.9.6]
-    paths:
-      cmake: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cmake-3.9.6
-    buildable: False
-
   cppcheck:
     version: [1.87]
     paths:
