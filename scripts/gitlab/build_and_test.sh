@@ -17,6 +17,7 @@ build_root=${BUILD_ROOT:-""}
 sys_type=${SYS_TYPE:-""}
 compiler=${COMPILER:-""}
 hostconfig=${HOST_CONFIG:-""}
+spec=${SPEC:-""}
 
 if [[ -z ${build_root} ]]
 then
@@ -73,6 +74,12 @@ then
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Building Dependencies"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+    if [[ -z ${spec} ]]
+    then
+        echo "SPEC is undefined, aborting..."
+        exit 1
+    fi
 
     python scripts/uberenv/uberenv.py --spec=${SPEC}
 fi
