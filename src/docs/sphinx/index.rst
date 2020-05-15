@@ -4,6 +4,7 @@
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
 .. toctree::
+   memory_checking
    :maxdepth: 2
 
 =======
