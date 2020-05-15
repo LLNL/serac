@@ -7,6 +7,7 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
+  ACCOUNT: -p pdebug -A radiuss
 
 # There are no tests for now
 stages:
@@ -34,7 +35,7 @@ stages:
     #Use pre-existing allocation if any
     - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
     - ASSIGN_ID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
-    - EXEC_PREFIX="srun ${ASSIGN_ID}"
+    - EXEC_PREFIX="srun ${ACCOUNT} ${ASSIGN_ID}"
     #BUILD
     - RESOURCES="-t 5 -N 1"
     - echo -e "section_start:$(date +%s):build\r\e[0K
@@ -51,10 +52,7 @@ stages:
 .srun_build_with_deps_script:
   script:
     - *run_update_uberenv
-    #Use pre-existing allocation if any
-    - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
-    - ASSIGN_ID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
-    - EXEC_PREFIX="srun ${ASSIGN_ID}"
+    - EXEC_PREFIX="srun ${ACCOUNT}"
     #DEPENDENCIES
     - RESOURCES="-t 20 -N 1"
     - echo -e "section_start:$(date +%s):dependencies\r\e[0K
