@@ -93,7 +93,7 @@ then
     cmake \
       -C ${hostconfig_path} \
       ${project_dir}
-    cmake --build . -j 4
+    cmake --build . -j
 fi
 
 # Test
