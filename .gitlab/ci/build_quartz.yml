@@ -19,7 +19,7 @@ allocate_resources_build_quartz:
   extends: [.on_quartz, .pr_workflow]
   stage: allocate_resources
   script:
-    - salloc -N 1 -c 36 -p pdebug -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
+    - salloc ${ACCOUNT} -N 1 -c 36 -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
 
 ####
 # In post-build phase, deallocate resources
