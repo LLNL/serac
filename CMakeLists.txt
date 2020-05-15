@@ -52,6 +52,7 @@ include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
 include(${PROJECT_SOURCE_DIR}/cmake/SeracMacros.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracBasics.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/SeracCompilerFlags.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/thirdparty/SetupSeracThirdParty.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 

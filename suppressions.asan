@@ -1,0 +1,2 @@
+# Library that isn't built by us
+leak:libpsm2.so.2
