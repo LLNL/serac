@@ -22,6 +22,25 @@ stages:
 # Template
 .srun_build_script:
   script:
+    #Use pre-existing allocation if any
+    - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
+    - ASSIGN_ID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
+    - EXEC_PREFIX="srun ${ASSIGN_ID}"
+    #BUILD
+    - RESOURCES="-t 5 -N 1 -n 1 -c 12"
+    - echo -e "section_start:$(date +%s):build\r\e[0K
+      Build ${CI_PROJECT_NAME}"
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --build-only
+    - echo -e "section_end:$(date +%s):build\r\e[0K"
+    #TEST
+    - RESOURCES="-t 5 -N 1 -n 1 -c 12"
+    - echo -e "section_start:$(date +%s):tests\r\e[0K
+      Test ${CI_PROJECT_NAME}"
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --test-only
+    - echo -e "section_end:$(date +%s):tests\r\e[0K"
+
+.srun_build_with_deps_script:
+  script:
     - *run_update_uberenv
     #Use pre-existing allocation if any
     - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
