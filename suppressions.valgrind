@@ -1,0 +1,36 @@
+{
+   <mpi_init_leak>
+   Memcheck:Leak
+   ...
+   fun:PMPI_Init
+   fun:main
+}
+
+{
+   <mpi_init_leak2>
+   Memcheck:Leak
+   ...
+   fun:PMPI_Init
+}
+
+{
+   <mpi_init_param>
+   Memcheck:Param
+   rt_sigaction(act->sa_mask)
+   fun:__libc_sigaction
+   obj:/usr/lib64/libpsm2.so.2.1
+   obj:/usr/lib64/libpsm2.so.2.1
+   fun:psm2_ep_open
+   fun:psm_doinit
+   fun:MPID_Init
+   fun:MPIR_Init_thread
+   fun:PMPI_Init
+   fun:main
+}
+
+{
+   <psm2_lib>
+   Memcheck:Leak
+   ...
+   obj:/usr/lib64/libpsm2.so.2.1
+}
