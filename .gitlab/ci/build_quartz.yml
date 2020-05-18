@@ -37,11 +37,11 @@ release_resources_build_quartz:
 # Template
 .pr_build_on_quartz:
   stage: build
-  extends: [.pr_workflow, .srun_build_script, .on_quartz]
+  extends: [.srun_build_script, .on_quartz, .pr_workflow]
 
 .master_build_with_deps_on_quartz:
   stage: build_with_deps
-  extends: [.master_workflow, .srun_build_with_deps_script, .on_quartz]
+  extends: [.srun_build_with_deps_script, .on_quartz, .master_workflow]
 
 ####
 # Build jobs
