@@ -19,11 +19,24 @@ compiler=${COMPILER:-""}
 hostconfig=${HOST_CONFIG:-""}
 spec=${SPEC:-""}
 
-if [[ -z ${build_root} ]]
+# Dependencies
+if [[ "${option}" != "--build-only" && "${option}" != "--test-only" ]]
 then
-    build_root=$(pwd)
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "~~~~~ Building Dependencies"
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+    if [[ -z ${spec} ]]
+    then
+        echo "SPEC is undefined, aborting..."
+        exit 1
+    fi
+
+    python scripts/uberenv/uberenv.py --spec=${spec}
+
 fi
 
+# Host config file
 if [[ -z ${hostconfig} ]]
 then
     # Attempt to retrieve host-config from env. We need sys_type and compiler.
@@ -59,6 +72,12 @@ else
     hostconfig_path="${project_dir}/host-configs/${hostconfig}"
 fi
 
+# Build Directory
+if [[ -z ${build_root} ]]
+then
+    build_root=$(pwd)
+fi
+
 build_dir="${build_root}/build_${hostconfig//.cmake/}"
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -66,23 +85,6 @@ echo "~~~~~ Host-config: ${hostconfig_path}"
 echo "~~~~~ Build Dir:   ${build_dir}"
 echo "~~~~~ Project Dir: ${project_dir}"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-
-# Dependencies
-if [[ "${option}" != "--build-only" && "${option}" != "--test-only" ]]
-then
-    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    echo "~~~~~ Building Dependencies"
-    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-    if [[ -z ${spec} ]]
-    then
-        echo "SPEC is undefined, aborting..."
-        exit 1
-    fi
-
-    python scripts/uberenv/uberenv.py --spec=${SPEC}
-fi
 
 # Build
 if [[ "${option}" != "--deps-only" && "${option}" != "--test-only" ]]
