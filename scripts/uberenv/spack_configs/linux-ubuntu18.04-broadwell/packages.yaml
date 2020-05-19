@@ -20,6 +20,8 @@ packages:
     version: [5.1.0]
   glvis:
     version: [3.4]
+  cmake:
+    version: [3.14.5]
   opengl:
     paths:
       opengl@1.0.0: /usr
@@ -56,8 +58,4 @@ packages:
   flex:
     paths:
       flex: /usr
-    buildable: False
-  cmake:
-    paths:
-      cmake: /usr
     buildable: False
