@@ -74,17 +74,17 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
 void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_tdof_list);
 
 /**
-   \brief MakeEssList takes in a mesh, a vector coefficient, and produces a list
+   \brief MakeEssList takes in a FESpace, a vector coefficient, and produces a list
    of essential boundary conditions
 
-   \param[in] m Mesh
+   \param[in] pfes A finite element space for the constrained grid function
    \param[in] c A VectorCoefficient that is projected on to the mesh. All
    d.o.f's are examined and those that are the condition (> 0.) are appended to
    the vdof list.
-   \param[out] ess_vdof_list The list of vdofs that should be
+   \param[out] ess_tdof_list The list of vector dofs that should be
    part of the essential boundary conditions
 */
-void MakeEssList(mfem::Mesh &m, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list);
+void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list);
 
 /**
    \brief This method creates an array of size(local_elems), and assigns

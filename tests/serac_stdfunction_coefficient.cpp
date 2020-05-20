@@ -43,6 +43,7 @@ class StdFunctionCoefficientTest : public ::testing::Test {
 
     pfes_l2 = std::shared_ptr<ParFiniteElementSpace>(
         new ParFiniteElementSpace(pmesh.get(), new L2_FECollection(0, dim), 1, Ordering::byNODES));
+
   }
 
   void TearDown() {}
@@ -180,7 +181,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBC)
 
   Array<int> ess_vdof_list;
 
-  MakeEssList(*pmesh, zero_bc, ess_vdof_list);
+  MakeEssList(*pfes_v, zero_bc, ess_vdof_list);
 
   Vector u_ess(ess_vdof_list.Size());
   u_ess = 0.;
@@ -210,7 +211,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
   });
 
   Array<int> ess_origin_bc_list;
-  MakeEssList(*pmesh, origin_bc, ess_origin_bc_list);
+  MakeEssList(*pfes_v, origin_bc, ess_origin_bc_list);
 
   // Define bottom indicator list
   StdFunctionVectorCoefficient bottom_bc_z(pfes_v->GetVDim(), [](Vector &x, Vector &X) {
@@ -221,7 +222,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
     }
   });
   Array<int>                   ess_bottom_bc_list;
-  MakeEssList(*pmesh, bottom_bc_z, ess_bottom_bc_list);
+  MakeEssList(*pfes_v, bottom_bc_z, ess_bottom_bc_list);
 
   // Define top indicator list
   StdFunctionVectorCoefficient top_bc_z(pfes_v->GetVDim(), [](Vector &x, Vector &X) {
@@ -232,7 +233,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
     }
   });
   Array<int>                   ess_top_bc_list;
-  MakeEssList(*pmesh, top_bc_z, ess_top_bc_list);
+  MakeEssList(*pfes_v, top_bc_z, ess_top_bc_list);
 
   // Project displacement values z = 0.5*z
   StdFunctionVectorCoefficient vals(pfes_v->GetVDim(), [](Vector &x, Vector &disp) {
