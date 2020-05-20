@@ -38,18 +38,20 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
 }
 
 void ElasticitySolver::SetDisplacementBCs(std::vector<int> &                       disp_bdr,
-                                          std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+                                          std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef);
+  SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
 
   // Get the list of essential DOFs
-  displacement.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
+  for (auto &ess_bc_data : m_ess_bdr) {
+    displacement.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
+  }
 }
 
 void ElasticitySolver::SetTractionBCs(std::vector<int> &                       trac_bdr,
-                                      std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef)
+                                      std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
-  SetNaturalBCs(trac_bdr, trac_bdr_coef);
+  SetNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
 
 void ElasticitySolver::SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu)
@@ -80,8 +82,11 @@ void ElasticitySolver::CompleteSetup()
   m_l_form = new mfem::ParLinearForm(displacement.space.get());
 
   // Add the traction integrator
-  if (m_nat_bdr_vec_coef != nullptr) {
-    m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*m_nat_bdr_vec_coef), m_nat_bdr);
+  if (m_nat_bdr.size() > 0) {
+    for (auto &nat_bc_data : m_nat_bdr) {
+      m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*nat_bc_data->vec_coef),
+                                      nat_bc_data->bc_markers);
+    }
     m_l_form->Assemble();
     m_rhs = m_l_form->ParallelAssemble();
   } else {
@@ -93,7 +98,9 @@ void ElasticitySolver::CompleteSetup()
   m_K_mat = m_K_form->ParallelAssemble();
 
   // Eliminate the essential DOFs
-  m_K_e_mat = m_K_mat->EliminateRowsCols(m_ess_tdof_list);
+  for (auto &ess_bc_data : m_ess_bdr) {
+    m_K_e_mat = m_K_mat->EliminateRowsCols(ess_bc_data->true_dofs);
+  }
 
   // Initialize the eliminate BC RHS vector
   m_bc_rhs  = new mfem::HypreParVector(displacement.space.get());
@@ -158,11 +165,11 @@ void ElasticitySolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
-  if (m_ess_bdr_vec_coef != nullptr) {
-    m_ess_bdr_vec_coef->SetTime(m_time);
-    displacement.gf->ProjectBdrCoefficient(*m_ess_bdr_vec_coef, m_ess_bdr);
+  for (auto &ess_bc_data : m_ess_bdr) {
+    ess_bc_data->vec_coef->SetTime(m_time);
+    displacement.gf->ProjectBdrCoefficient(*ess_bc_data->vec_coef, ess_bc_data->bc_markers);
     displacement.gf->GetTrueDofs(displacement.true_vec);
-    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, displacement.true_vec, *m_bc_rhs);
+    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, ess_bc_data->true_dofs, displacement.true_vec, *m_bc_rhs);
   }
 
   m_K_solver->SetOperator(*m_K_mat);

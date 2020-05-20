@@ -37,8 +37,10 @@ void ThermalSolver::SetTemperatureBCs(const std::vector<int> &ess_bdr, std::shar
 {
   SetEssentialBCs(ess_bdr, ess_bdr_coef);
 
-  // Get the essential dof indicies and project the coefficient onto them
-  temperature.space->GetEssentialTrueDofs(m_ess_bdr, m_ess_tdof_list);
+  // Get the essential dof indices and project the coefficient onto them
+  for (auto &ess_bc_data : m_ess_bdr) {
+    temperature.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
+  }
 }
 
 void ThermalSolver::SetFluxBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
@@ -90,7 +92,9 @@ void ThermalSolver::CompleteSetup()
   m_K_mat.reset(m_K_form->ParallelAssemble());
 
   // Eliminate the essential DOFs from the stiffness matrix
-  m_K_e_mat.reset(m_K_mat->EliminateRowsCols(m_ess_tdof_list));
+  for (auto &ess_bc_data : m_ess_bdr) {
+    m_K_e_mat.reset(m_K_mat->EliminateRowsCols(ess_bc_data->true_dofs));
+  }
 
   // Initialize the eliminated BC RHS vector
   m_bc_rhs  = std::make_shared<mfem::HypreParVector>(temperature.space.get());
@@ -109,11 +113,10 @@ void ThermalSolver::CompleteSetup()
     m_M_mat.reset(m_M_form->ParallelAssemble());
 
     // Make the time integration operator and set the appropriate matricies
-    m_dyn_oper = std::make_unique<DynamicConductionOperator>(temperature.space, m_lin_params);
+    m_dyn_oper = std::make_unique<DynamicConductionOperator>(temperature.space, m_lin_params, m_ess_bdr);
     m_dyn_oper->SetMMatrix(m_M_mat, m_M_e_mat);
     m_dyn_oper->SetKMatrix(m_K_mat, m_K_e_mat);
     m_dyn_oper->SetLoadVector(m_rhs);
-    m_dyn_oper->SetEssentialBCs(m_ess_bdr_coef, m_ess_bdr, m_ess_tdof_list);
 
     m_ode_solver->Init(*m_dyn_oper);
   }
@@ -123,11 +126,11 @@ void ThermalSolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
-  if (m_ess_bdr_coef != nullptr) {
-    m_ess_bdr_coef->SetTime(m_time);
-    temperature.gf->ProjectBdrCoefficient(*m_ess_bdr_coef, m_ess_bdr);
+  for (auto &ess_bc_data : m_ess_bdr) {
+    ess_bc_data->scalar_coef->SetTime(m_time);
+    temperature.gf->ProjectBdrCoefficient(*ess_bc_data->scalar_coef, ess_bc_data->bc_markers);
     temperature.gf->GetTrueDofs(temperature.true_vec);
-    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, m_ess_tdof_list, temperature.true_vec, *m_bc_rhs);
+    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, ess_bc_data->true_dofs, temperature.true_vec, *m_bc_rhs);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning

@@ -30,22 +30,34 @@ void StdFunctionVectorCoefficient::Eval(mfem::Vector &V, mfem::ElementTransforma
   m_func(transip, V);
 }
 
-void MakeEssList(mfem::Mesh &m, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list)
+void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_tdof_list)
 {
-  mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
-  mfem::FiniteElementSpace fes(&m, &h1_fec, m.SpaceDimension());
+  ess_tdof_list.SetSize(0);
 
-  mfem::GridFunction v_attr(&fes);
+  mfem::Array<int> ess_vdof_list;
+
+  MakeEssList(pfes, c, ess_vdof_list);
+
+  for (int i = 0; i < ess_vdof_list.Size(); ++i) {
+    int tdof = pfes.GetLocalTDofNumber(ess_vdof_list[i]);
+    if (tdof >= 0) {
+      ess_tdof_list.Append(tdof);
+    }
+  }
+}
+
+void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list)
+{
+  mfem::ParGridFunction v_attr(&pfes);
   v_attr.ProjectCoefficient(c);
 
   ess_vdof_list.SetSize(0);
 
-  for (int v = 0; v < fes.GetNV(); v++)
-    for (int vd = 0; vd < fes.GetVDim(); vd++) {
-      if (v_attr[fes.DofToVDof(v, vd)] > 0.) {
-        ess_vdof_list.Append(fes.DofToVDof(v, vd));
-      }
+  for (int vdof = 0; vdof < pfes.GetVSize(); ++vdof) {
+    if (v_attr[vdof] > 0.) {
+      ess_vdof_list.Append(vdof);
     }
+  }
 }
 
 void MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,

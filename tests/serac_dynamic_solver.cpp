@@ -9,26 +9,22 @@
 #include <fstream>
 
 #include "mfem.hpp"
+#include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
 void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
 
 void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
 
-const char *mesh_file = "NO_MESH_GIVEN";
-
-inline bool file_exists(const char *path)
-{
-  struct stat buffer;
-  return (stat(path, &buffer) == 0);
-}
-
 TEST(dynamic_solver, dyn_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // mesh
+  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-hex.mesh";
+  const char *mesh_file      = base_mesh_file.c_str();
+
   // Open the mesh
-  ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
   auto          mesh = std::make_shared<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -79,12 +75,18 @@ TEST(dynamic_solver, dyn_solve)
   nl_params.max_iter    = 500;
   dyn_solver.SetSolverParameters(params, nl_params);
 
+  // Initialize the VisIt output
+  dyn_solver.InitializeOutput(OutputType::VisIt, "dynamic_solid");
+
   // Construct the internal dynamic solver data structures
   dyn_solver.CompleteSetup();
 
   double t       = 0.0;
   double t_final = 6.0;
   double dt      = 3.0;
+
+  // Ouput the initial state
+  dyn_solver.OutputState();
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
@@ -97,6 +99,9 @@ TEST(dynamic_solver, dyn_solve)
     dyn_solver.AdvanceTimestep(dt_real);
   }
 
+  // Output the final state
+  dyn_solver.OutputState();
+
   // Check the final displacement and velocity L2 norms
   mfem::Vector zero(dim);
   zero = 0.0;
@@ -107,8 +112,8 @@ TEST(dynamic_solver, dyn_solve)
   double v_norm = state[0].gf->ComputeLpError(2.0, zerovec);
   double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.8727, x_norm, 0.0001);
-  EXPECT_NEAR(0.22314, v_norm, 0.0001);
+  EXPECT_NEAR(12.86733, x_norm, 0.0001);
+  EXPECT_NEAR(0.22298, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -120,25 +125,9 @@ int main(int argc, char *argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
-  int myid;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
-  // Parse command line options
-  mfem::OptionsParser args(argc, argv);
-  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
-  args.Parse();
-  if (!args.Good()) {
-    if (myid == 0) {
-      args.PrintUsage(std::cout);
-    }
-    MPI_Finalize();
-    return 1;
-  }
-  if (myid == 0) {
-    args.PrintOptions(std::cout);
-  }
 
   result = RUN_ALL_TESTS();
+
   MPI_Finalize();
 
   return result;

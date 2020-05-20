@@ -8,26 +8,27 @@
 
 #include <fstream>
 
-#include "coefficients/loading_functions.hpp"
+#include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
-TEST(nonlinear_solid_solver, qs_solve)
+TEST(component_bc, qs_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // mesh
-  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-hex.mesh";
+  // Open the mesh
+  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/square.mesh";
   const char* mesh_file      = base_mesh_file.c_str();
 
-  // Open the mesh
   std::ifstream imesh(mesh_file);
   auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
-  // declare pointer to parallel mesh object
-  mesh->UniformRefinement();
+  // refine and declare pointer to parallel mesh object
+  for (int i = 0; i < 2; ++i) {
+    mesh->UniformRefinement();
+  }
 
   auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
 
@@ -39,42 +40,44 @@ TEST(nonlinear_solid_solver, qs_solve)
   // define a boundary attribute array and initialize to 0
   std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
 
-  // boundary attribute 1 (index 0) is fixed (Dirichlet)
+  // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   ess_bdr[0] = 1;
 
   // define the displacement vector
-  mfem::Vector disp(dim);
-  disp           = 0.0;
-  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
+  auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -1.0e-1; });
 
-  std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
-  trac_bdr[1] = 1;
+  // Pass the BC information to the solver object setting only the z direction
+  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef, 0);
 
-  // define the traction vector
-  mfem::Vector traction(dim);
-  traction           = 0.0;
-  traction(1)        = 1.0e-3;
-  auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
+  // Create an indicator function to set all vertices that are x=0
+  StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector& x, mfem::Vector& X) {
+    X = 0.;
+    for (int i = 0; i < X.Size(); i++)
+      if (std::abs(x[i]) < 1.e-13) {
+        X[i] = 1.;
+      }
+  });
 
-  // Pass the BC information to the solver object
-  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef);
-  solid_solver.SetTractionBCs(trac_bdr, traction_coef);
+  mfem::Array<int> ess_corner_bc_list;
+  MakeTrueEssList(*solid_solver.GetState()[0].space, zero_bc, ess_corner_bc_list);
+
+  solid_solver.SetTrueDofs(ess_corner_bc_list, disp_coef);
 
   // Set the material parameters
   solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
 
   // Set the linear solver params
   LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-8;
+  params.rel_tol     = 1.0e-8;
+  params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 5000;
   params.prec        = Preconditioner::Jacobi;
   params.lin_solver  = LinearSolver::MINRES;
 
   NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-3;
-  nl_params.abs_tol     = 1.0e-6;
+  nl_params.rel_tol     = 1.0e-6;
+  nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter    = 5000;
 
@@ -83,8 +86,8 @@ TEST(nonlinear_solid_solver, qs_solve)
   // Set the time step method
   solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
 
-  // Initialize the output
-  solid_solver.InitializeOutput(OutputType::VisIt, "static_solid");
+  // Setup glvis output
+  solid_solver.InitializeOutput(OutputType::VisIt, "component_bc");
 
   // Complete the solver setup
   solid_solver.CompleteSetup();
@@ -92,6 +95,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   double dt = 1.0;
   solid_solver.AdvanceTimestep(dt);
 
+  // Output the state
   solid_solver.OutputState();
 
   auto state = solid_solver.GetState();
@@ -102,7 +106,7 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(2.2309025, x_norm, 0.001);
+  EXPECT_NEAR(0.08363646, x_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

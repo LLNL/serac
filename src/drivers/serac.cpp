@@ -20,11 +20,10 @@
 #include <iostream>
 #include <memory>
 
-#include "serac_config.hpp"
-
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
 #include "mfem.hpp"
+#include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
 int main(int argc, char *argv[])
@@ -37,7 +36,7 @@ int main(int argc, char *argv[])
 
   // mesh
   std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-hex.mesh";
-  const char *mesh_file = base_mesh_file.c_str();
+  const char *mesh_file      = base_mesh_file.c_str();
 
   // serial and parallel refinement levels
   int ser_ref_levels = 0;

@@ -55,6 +55,12 @@ class NonlinearSolidSolver : public BaseSolver {
   /// Nonlinear solver parameters
   NonlinearSolverParameters m_nonlin_params;
 
+  /// Pointer to the reference mesh data
+  std::unique_ptr<mfem::ParGridFunction> m_reference_nodes;
+
+  /// Pointer to the deformed mesh data
+  std::unique_ptr<mfem::ParGridFunction> m_deformed_nodes;
+
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
 
@@ -65,8 +71,13 @@ class NonlinearSolidSolver : public BaseSolver {
   /// Set the displacement essential boundary conditions
   void SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
 
+  /// Set the displacement essential boundary conditions on a single component
+  void SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+                          int component);
+
   /// Set the traction boundary conditions
-  void SetTractionBCs(const std::vector<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef);
+  void SetTractionBCs(const std::vector<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                      int component = -1);
 
   /// Set the viscosity coefficient
   void SetViscosity(std::shared_ptr<mfem::Coefficient> visc_coef);
