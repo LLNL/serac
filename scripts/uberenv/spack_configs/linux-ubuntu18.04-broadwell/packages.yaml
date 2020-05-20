@@ -8,6 +8,10 @@ packages:
       gl: [opengl]
       glu: [openglu]
 # Lock down versions of packages we depend on
+  axom:
+    version: [develop]
+  conduit:
+    version: [master]
   mfem:
     version: [4.0.0]
   hypre:
