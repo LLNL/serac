@@ -9,8 +9,8 @@
 #include <fstream>
 
 #include "mfem.hpp"
-#include "solvers/elasticity_solver.hpp"
 #include "serac_config.hpp"
+#include "solvers/elasticity_solver.hpp"
 
 TEST(elastic_solver, static_solve)
 {
@@ -18,7 +18,7 @@ TEST(elastic_solver, static_solve)
 
   // mesh
   std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-quad.mesh";
-  const char *mesh_file      = base_mesh_file.c_str();
+  const char* mesh_file      = base_mesh_file.c_str();
 
   // Open the mesh
   std::ifstream imesh(mesh_file);

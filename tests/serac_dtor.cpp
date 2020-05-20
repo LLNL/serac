@@ -11,8 +11,8 @@
 #include <memory>
 
 #include "mfem.hpp"
-#include "solvers/thermal_solver.hpp"
 #include "serac_config.hpp"
+#include "solvers/thermal_solver.hpp"
 
 TEST(serac_dtor, test1)
 {

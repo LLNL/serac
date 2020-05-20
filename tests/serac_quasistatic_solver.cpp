@@ -10,8 +10,8 @@
 
 #include "coefficients/loading_functions.hpp"
 #include "mfem.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
 #include "serac_config.hpp"
+#include "solvers/nonlinear_solid_solver.hpp"
 
 TEST(nonlinear_solid_solver, qs_solve)
 {
@@ -19,7 +19,7 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   // mesh
   std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-hex.mesh";
-  const char *mesh_file      = base_mesh_file.c_str();
+  const char* mesh_file      = base_mesh_file.c_str();
 
   // Open the mesh
   std::ifstream imesh(mesh_file);

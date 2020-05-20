@@ -10,8 +10,8 @@
 #include <fstream>
 
 #include "mfem.hpp"
-#include "solvers/thermal_solver.hpp"
 #include "serac_config.hpp"
+#include "solvers/thermal_solver.hpp"
 
 double BoundaryTemperature(const mfem::Vector& x) { return x.Norml2(); }
 
@@ -30,7 +30,7 @@ TEST(thermal_solver, static_solve)
 
   // mesh
   std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/star.mesh";
-  const char *mesh_file      = base_mesh_file.c_str();
+  const char* mesh_file      = base_mesh_file.c_str();
 
   // Open the mesh
   std::fstream imesh(mesh_file);
@@ -97,7 +97,7 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // mesh
   std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/star.mesh";
-  const char *mesh_file      = base_mesh_file.c_str();
+  const char* mesh_file      = base_mesh_file.c_str();
 
   // Open the mesh
   std::fstream imesh(mesh_file);
@@ -183,7 +183,7 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // mesh
   std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/star.mesh";
-  const char *mesh_file      = base_mesh_file.c_str();
+  const char* mesh_file      = base_mesh_file.c_str();
 
   // Open the mesh
   std::fstream imesh(mesh_file);

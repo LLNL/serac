@@ -10,8 +10,8 @@
 
 #include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
 #include "serac_config.hpp"
+#include "solvers/nonlinear_solid_solver.hpp"
 
 TEST(component_bc, qs_solve)
 {
@@ -19,7 +19,7 @@ TEST(component_bc, qs_solve)
 
   // Open the mesh
   std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/square.mesh";
-  const char *mesh_file      = base_mesh_file.c_str();
+  const char* mesh_file      = base_mesh_file.c_str();
 
   std::ifstream imesh(mesh_file);
   auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);

@@ -9,8 +9,8 @@
 #include <fstream>
 
 #include "mfem.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
 #include "serac_config.hpp"
+#include "solvers/nonlinear_solid_solver.hpp"
 
 void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
 

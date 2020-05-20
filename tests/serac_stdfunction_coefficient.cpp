@@ -43,7 +43,6 @@ class StdFunctionCoefficientTest : public ::testing::Test {
 
     pfes_l2 = std::shared_ptr<ParFiniteElementSpace>(
         new ParFiniteElementSpace(pmesh.get(), new L2_FECollection(0, dim), 1, Ordering::byNODES));
-
   }
 
   void TearDown() {}

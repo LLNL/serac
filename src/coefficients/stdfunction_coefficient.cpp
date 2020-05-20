@@ -38,7 +38,7 @@ void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient 
 
   MakeEssList(pfes, c, ess_vdof_list);
 
-  for (int i=0; i<ess_vdof_list.Size(); ++i) {
+  for (int i = 0; i < ess_vdof_list.Size(); ++i) {
     int tdof = pfes.GetLocalTDofNumber(ess_vdof_list[i]);
     if (tdof >= 0) {
       ess_tdof_list.Append(tdof);
@@ -54,7 +54,7 @@ void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, 
   ess_vdof_list.SetSize(0);
 
   for (int vdof = 0; vdof < pfes.GetVSize(); ++vdof) {
-    if (v_attr[vdof] > 0. ) {
+    if (v_attr[vdof] > 0.) {
       ess_vdof_list.Append(vdof);
     }
   }
