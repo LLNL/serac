@@ -4,21 +4,22 @@
   tags:
     - shell
     - quartz
-  except:
-    refs:
-      - /_qnone/
-    variables:
-      - $SERAC_CI_QUARTZ == "OFF"
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_QUARTZ == "OFF"' #run except if ...
+      when: never
+    - if: '$CI_JOB_NAME =~ /release_resources/'
+      when: always
+    - when: on_success
 
 ####
 # In pre-build phase, allocate a node for builds
 allocate_resources_build_quartz:
   variables:
     GIT_STRATEGY: none
-  extends: .on_quartz
+  extends: [.on_quartz, .pr_workflow]
   stage: allocate_resources
   script:
-    - salloc -N 1 -c 36 -p pdebug -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
+    - salloc ${ACCOUNT} -N 1 -c 36 -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
 
 ####
 # In post-build phase, deallocate resources
@@ -26,40 +27,56 @@ allocate_resources_build_quartz:
 release_resources_build_quartz:
   variables:
     GIT_STRATEGY: none
-  extends: .on_quartz
+  extends: [.on_quartz, .pr_workflow]
   stage: release_resources
   script:
     - export JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
-    - ([[ -n "${JOBID}" ]] && scancel ${JOBID})
-  when: always
+    - if [[ -n "${JOBID}" ]]; then scancel ${JOBID}; fi
 
 ####
 # Template
-.build_quartz:
-  extends: .on_quartz
+.pr_build_on_quartz:
   stage: build
-  script:
-    - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
-    - JOBID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
-    - EXEC_PREFIX="srun ${JOBID} -t 20 -N 1 -n 1 -c 4"
-    - ${EXEC_PREFIX} scripts/gitlab/build_and_test.sh
+  extends: [.srun_build_script, .on_quartz, .pr_workflow]
+
+.master_build_with_deps_on_quartz:
+  stage: build_with_deps
+  extends: [.srun_build_with_deps_script, .on_quartz, .master_workflow]
 
 ####
 # Build jobs
-build_quartz_clang_9_0_0:
+clang_9_0_0 (PR build_on_quartz):
   variables:
     COMPILER: "clang@9.0.0"
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-clang@9.0.0.cmake"
-  extends: .build_quartz
+  extends: .pr_build_on_quartz
 
-build_quartz_gcc_8_1_0:
+gcc_8_1_0 (PR build_on_quartz):
   variables:
     COMPILER: "gcc@8.1.0"
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-gcc@8.1.0.cmake"
-  extends: .build_quartz
+  extends: .pr_build_on_quartz
 
-build_quartz_intel_19_0_4:
+intel_19_0_4 (PR build_on_quartz):
   variables:
     COMPILER: "intel@19.0.4"
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-intel@19.0.4.cmake"
-  extends: .build_quartz
+  extends: .pr_build_on_quartz
+
+clang_9_0_0 (Master build_with_deps_on_quartz):
+  variables:
+    COMPILER: "clang@9.0.0"
+    SPEC: "@develop%${COMPILER}"
+  extends: .master_build_with_deps_on_quartz
+
+gcc_8_1_0 (Master build_with_deps_on_quartz):
+  variables:
+    COMPILER: "gcc@8.1.0"
+    SPEC: "@develop%${COMPILER}"
+  extends: .master_build_with_deps_on_quartz
+
+intel_19_0_4 (Master build_with_deps_on_quartz):
+  variables:
+    COMPILER: "intel@19.0.4"
+    SPEC: "@develop%${COMPILER}"
+  extends: .master_build_with_deps_on_quartz
