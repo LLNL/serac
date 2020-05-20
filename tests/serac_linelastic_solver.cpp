@@ -10,21 +10,17 @@
 
 #include "mfem.hpp"
 #include "solvers/elasticity_solver.hpp"
-
-const char* mesh_file = "NO_MESH_GIVEN";
-
-inline bool file_exists(const char* path)
-{
-  struct stat buffer;
-  return (stat(path, &buffer) == 0);
-}
+#include "serac_config.hpp"
 
 TEST(elastic_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // mesh
+  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-quad.mesh";
+  const char *mesh_file      = base_mesh_file.c_str();
+
   // Open the mesh
-  ASSERT_TRUE(file_exists(mesh_file));
   std::ifstream imesh(mesh_file);
   auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -102,25 +98,9 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
-  int myid;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
-  // Parse command line options
-  mfem::OptionsParser args(argc, argv);
-  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.", true);
-  args.Parse();
-  if (!args.Good()) {
-    if (myid == 0) {
-      args.PrintUsage(std::cout);
-    }
-    MPI_Finalize();
-    return 1;
-  }
-  if (myid == 0) {
-    args.PrintOptions(std::cout);
-  }
 
   result = RUN_ALL_TESTS();
+
   MPI_Finalize();
 
   return result;

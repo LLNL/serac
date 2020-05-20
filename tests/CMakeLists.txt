@@ -20,7 +20,7 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_dynamic_solver
-        COMMAND           serac_dynamic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
+        COMMAND           serac_dynamic_solver
         NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
@@ -34,7 +34,7 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_linelastic_solver
-        COMMAND           serac_linelastic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-quad.mesh
+        COMMAND           serac_linelastic_solver
         NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
@@ -49,7 +49,7 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers coefficients mpi mfem gtest )
     blt_add_test(
         NAME              serac_quasistatic_solver
-        COMMAND           serac_quasistatic_solver -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
+        COMMAND           serac_quasistatic_solver
         NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
@@ -63,7 +63,7 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_thermal_solver
-        COMMAND           serac_thermal_solver -m ${PROJECT_SOURCE_DIR}/data/star.mesh
+        COMMAND           serac_thermal_solver
         NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
@@ -77,7 +77,7 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers mpi mfem gtest )
     blt_add_test(
         NAME              serac_dtor
-        COMMAND           serac_dtor -m ${PROJECT_SOURCE_DIR}/data/beam-hex.mesh
+        COMMAND           serac_dtor
         NUM_MPI_TASKS     2
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
@@ -119,7 +119,7 @@ if (ENABLE_GTEST)
         DEPENDS_ON solvers coefficients mpi mfem gtest )
     blt_add_test(
         NAME              serac_component_bc
-        COMMAND           serac_component_bc -m ${PROJECT_SOURCE_DIR}/data/square.mesh
+        COMMAND           serac_component_bc
         NUM_MPI_TASKS     1
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
