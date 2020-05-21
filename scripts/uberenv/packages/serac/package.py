@@ -107,7 +107,7 @@ class Serac(CMakePackage):
 
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["conduit@master",
+    cmake_debug_deps = ["conduit@master~shared~python",
                         "axom@develop~openmp~fortran~raja~umpire",
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
