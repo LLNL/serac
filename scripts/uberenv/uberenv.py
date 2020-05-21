@@ -60,6 +60,7 @@ import platform
 import json
 import datetime
 import glob
+import uname
 
 from optparse import OptionParser
 
@@ -224,6 +225,9 @@ def is_darwin():
 def is_windows():
     return "windows" in platform.system().lower()
 
+def is_wsl():
+    return 'Microsoft' in uname().release
+
 class UberEnv():
     """ Base class for package manager """
 
@@ -266,6 +270,8 @@ class UberEnv():
         res = None
         if is_darwin():
             res = "darwin"
+        elif is_wsl():
+            res = "wsl"
         elif "SYS_TYPE" in os.environ.keys():
             sys_type = os.environ["SYS_TYPE"].lower()
             res = sys_type
