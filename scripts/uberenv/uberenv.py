@@ -225,7 +225,7 @@ def is_windows():
     return "windows" in platform.system().lower()
 
 def is_wsl():
-    if "microsoft" in platform.uname().release.lower() and \
+    if "microsoft" in str(platform.uname()).lower() and \
        "linux" in platform.system().lower():
        return True
     return False

@@ -117,7 +117,7 @@ class Serac(CMakePackage):
 
 
     # Libraries that do not have a debug variant
-    depends_on("superlu@5.4.0-dist~shared")
+    depends_on("superlu-dist@5.4.0~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
