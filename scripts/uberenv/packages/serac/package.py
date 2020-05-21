@@ -87,8 +87,7 @@ class Serac(CMakePackage):
 
     # Basic dependencies
     depends_on("mpi")
-
-    depends_on("axom~openmp~fortran~raja~umpire")
+    depends_on("cmake@3.8:")
 
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")
@@ -97,24 +96,31 @@ class Serac(CMakePackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    depends_on("mfem~shared~zlib+hypre+metis+superlu-dist+lapack+mpi")
-    depends_on("mfem~shared~zlib+hypre+metis+superlu-dist+lapack+mpi+debug", when="+debug")
-    depends_on("hypre~shared~superlu-dist+mpi")
-    depends_on("hypre~shared~superlu-dist+mpi+debug", when="+debug")
+    debug_deps = ["mfem@4.0.0~shared~zlib+hypre+metis+superlu-dist+lapack+mpi",
+                  "hypre@2.11.1~shared~superlu-dist+mpi"]
+    for dep in debug_deps:
+        depends_on("{0}".format(dep))
+        depends_on("{0}+debug".format(dep), when="+debug")
+
+    depends_on("hypre@2.11.1~shared~superlu-dist+mpi")
+    depends_on("hypre@2.11.1~shared~superlu-dist+mpi+debug", when="+debug")
 
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    # TODO: figure out this syntax
-    depends_on("metis~shared")
-    # TODO: figure out if parmetis gets this by default by being a CMakePackage
-    depends_on("parmetis~shared")
+    cmake_debug_deps = ["conduit@master",
+                        "axom@develop~openmp~fortran~raja~umpire",
+                        "metis@5.1.0~shared",
+                        "parmetis@4.0.3~shared"]
+    for dep in cmake_debug_deps:
+        depends_on("{0}".format(dep))
+        depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
 
     # Libraries that do not have a debug variant
-    depends_on("superlu-dist~shared")
+    depends_on("superlu@5.4.0-dist~shared")
 
     # Libraries that we do not build debug
-    depends_on("glvis~fonts", when='+glvis')
+    depends_on("glvis@3.4~fonts", when='+glvis')
 
     phases = ['hostconfig', 'cmake', 'build',' install']
 
