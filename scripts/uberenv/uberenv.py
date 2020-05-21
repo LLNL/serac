@@ -60,7 +60,6 @@ import platform
 import json
 import datetime
 import glob
-import uname
 
 from optparse import OptionParser
 
@@ -226,7 +225,10 @@ def is_windows():
     return "windows" in platform.system().lower()
 
 def is_wsl():
-    return 'Microsoft' in uname().release
+    if "microsoft" in platform.uname().release.lower() and \
+       "linux" in platform.system().lower():
+       return True
+    return False
 
 class UberEnv():
     """ Base class for package manager """
