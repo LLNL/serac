@@ -19,7 +19,7 @@
  *  thermal load vector. */
 class ThermalSolver : public BaseSolver {
  protected:
-  FiniteElementState &temperature;
+  std::shared_ptr<FiniteElementState> m_temperature;
 
   /// Mass bilinear form object
   std::unique_ptr<mfem::ParBilinearForm> m_M_form;
@@ -90,6 +90,9 @@ class ThermalSolver : public BaseSolver {
 
   /// Set the body thermal source from a coefficient
   void SetSource(std::shared_ptr<mfem::Coefficient> source);
+
+  /// Get the temperature state
+  std::shared_ptr<FiniteElementState> GetTemperature() {return m_temperature;};
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic

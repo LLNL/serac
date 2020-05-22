@@ -47,6 +47,13 @@ enum class Preconditioner
   BoomerAMG
 };
 
+enum class CouplingScheme
+{
+  OperatorSplit,
+  FixedPoint,
+  FullyCoupled
+};
+
 // Parameter bundles
 
 struct LinearSolverParameters {
@@ -70,7 +77,7 @@ struct FiniteElementState {
   std::shared_ptr<mfem::ParFiniteElementSpace>   space;
   std::shared_ptr<mfem::FiniteElementCollection> coll;
   std::shared_ptr<mfem::ParGridFunction>         gf;
-  mfem::Vector                                   true_vec;
+  std::shared_ptr<mfem::Vector>                  true_vec;
   std::shared_ptr<mfem::ParMesh>                 mesh;
   std::string                                    name = "";
 };
