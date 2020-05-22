@@ -107,8 +107,7 @@ class Serac(CMakePackage):
 
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["conduit@master~shared~python",
-                        "axom@develop~openmp~fortran~raja~umpire",
+    cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
@@ -117,6 +116,7 @@ class Serac(CMakePackage):
 
 
     # Libraries that do not have a debug variant
+    depends_on("conduit@master~shared~python")
     depends_on("superlu-dist@5.4.0~shared")
 
     # Libraries that we do not build debug
