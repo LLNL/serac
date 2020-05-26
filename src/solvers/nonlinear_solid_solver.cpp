@@ -23,6 +23,8 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
                                                                  mfem::Ordering::byVDIM);
   m_velocity->gf    = std::make_shared<mfem::ParGridFunction>(m_velocity->space.get());
   *m_velocity->gf   = 0.0;
+  m_velocity->true_vec = std::make_shared<mfem::HypreParVector>(m_velocity->space.get());
+  *m_velocity->true_vec = 0.0;
   m_velocity->name  = "velocity";
 
   m_displacement->mesh  = pmesh;
@@ -31,6 +33,8 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
                                                                      pmesh->Dimension(), mfem::Ordering::byVDIM);
   m_displacement->gf    = std::make_shared<mfem::ParGridFunction>(m_displacement->space.get());
   *m_displacement->gf   = 0.0;
+  m_displacement->true_vec = std::make_shared<mfem::HypreParVector>(m_displacement->space.get());
+  *m_displacement->true_vec = 0.0;
   m_displacement->name  = "displacement";
 
   // Initialize the mesh node pointers
