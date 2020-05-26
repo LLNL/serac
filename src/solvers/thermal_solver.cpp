@@ -19,7 +19,7 @@ ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
   m_temperature->name     = "temperature";
 
   // and initial conditions
-  *m_temperature->gf      = 0.0;
+  *m_temperature->gf       = 0.0;
   *m_temperature->true_vec = 0.0;
 
   m_temperature->name = "temperature";

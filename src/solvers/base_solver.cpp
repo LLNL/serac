@@ -22,7 +22,7 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 {
   m_state.resize(n);
 
-  for (auto & state : m_state) {
+  for (auto &state : m_state) {
     state = std::make_shared<FiniteElementState>();
   }
 

@@ -95,10 +95,10 @@ class NonlinearSolidSolver : public BaseSolver {
   void SetSolverParameters(const LinearSolverParameters &lin_params, const NonlinearSolverParameters &nonlin_params);
 
   /// Get the displacement state
-  std::shared_ptr<FiniteElementState> GetDisplacement() {return m_displacement;};
+  std::shared_ptr<FiniteElementState> GetDisplacement() { return m_displacement; };
 
   /// Get the velocity state
-  std::shared_ptr<FiniteElementState> GetVelocity() {return m_velocity;};
+  std::shared_ptr<FiniteElementState> GetVelocity() { return m_velocity; };
 
   /// Complete the data structure initialization
   void CompleteSetup();

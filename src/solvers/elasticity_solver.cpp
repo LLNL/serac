@@ -31,7 +31,7 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
   displacement->true_vec = std::make_shared<mfem::HypreParVector>(displacement->space.get());
 
   // and initial conditions
-  *displacement->gf      = 0.0;
+  *displacement->gf       = 0.0;
   *displacement->true_vec = 0.0;
 
   displacement->name = "displacement";

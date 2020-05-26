@@ -92,7 +92,7 @@ class ThermalSolver : public BaseSolver {
   void SetSource(std::shared_ptr<mfem::Coefficient> source);
 
   /// Get the temperature state
-  std::shared_ptr<FiniteElementState> GetTemperature() {return m_temperature;};
+  std::shared_ptr<FiniteElementState> GetTemperature() { return m_temperature; };
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic

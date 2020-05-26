@@ -17,25 +17,25 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
       m_displacement(m_state[1]),
       m_newton_solver(pmesh->GetComm())
 {
-  m_velocity->mesh  = pmesh;
-  m_velocity->coll  = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
-  m_velocity->space = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), m_velocity->coll.get(), pmesh->Dimension(),
-                                                                 mfem::Ordering::byVDIM);
-  m_velocity->gf    = std::make_shared<mfem::ParGridFunction>(m_velocity->space.get());
-  *m_velocity->gf   = 0.0;
-  m_velocity->true_vec = std::make_shared<mfem::HypreParVector>(m_velocity->space.get());
+  m_velocity->mesh      = pmesh;
+  m_velocity->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
+  m_velocity->space     = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), m_velocity->coll.get(),
+                                                                    pmesh->Dimension(), mfem::Ordering::byVDIM);
+  m_velocity->gf        = std::make_shared<mfem::ParGridFunction>(m_velocity->space.get());
+  *m_velocity->gf       = 0.0;
+  m_velocity->true_vec  = std::make_shared<mfem::HypreParVector>(m_velocity->space.get());
   *m_velocity->true_vec = 0.0;
-  m_velocity->name  = "velocity";
+  m_velocity->name      = "velocity";
 
-  m_displacement->mesh  = pmesh;
-  m_displacement->coll  = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
-  m_displacement->space = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), m_displacement->coll.get(),
-                                                                     pmesh->Dimension(), mfem::Ordering::byVDIM);
-  m_displacement->gf    = std::make_shared<mfem::ParGridFunction>(m_displacement->space.get());
-  *m_displacement->gf   = 0.0;
-  m_displacement->true_vec = std::make_shared<mfem::HypreParVector>(m_displacement->space.get());
+  m_displacement->mesh      = pmesh;
+  m_displacement->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
+  m_displacement->space     = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), m_displacement->coll.get(),
+                                                                        pmesh->Dimension(), mfem::Ordering::byVDIM);
+  m_displacement->gf        = std::make_shared<mfem::ParGridFunction>(m_displacement->space.get());
+  *m_displacement->gf       = 0.0;
+  m_displacement->true_vec  = std::make_shared<mfem::HypreParVector>(m_displacement->space.get());
   *m_displacement->true_vec = 0.0;
-  m_displacement->name  = "displacement";
+  m_displacement->name      = "displacement";
 
   // Initialize the mesh node pointers
   m_reference_nodes = std::make_unique<mfem::ParGridFunction>(m_displacement->space.get());

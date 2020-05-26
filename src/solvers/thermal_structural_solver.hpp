@@ -8,9 +8,9 @@
 #define THERMSTRUCT_SOLVER
 
 #include "base_solver.hpp"
-#include "thermal_solver.hpp"
-#include "nonlinear_solid_solver.hpp"
 #include "mfem.hpp"
+#include "nonlinear_solid_solver.hpp"
+#include "thermal_solver.hpp"
 
 /// The coupled thermal-structural solver object
 class ThermalStructuralSolver : public BaseSolver {
