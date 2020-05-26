@@ -78,13 +78,11 @@ TEST(elastic_solver, static_solve)
   double dt = 1.0;
   elas_solver.AdvanceTimestep(dt);
 
-  auto state = elas_solver.GetState();
-
   mfem::Vector zero(pmesh->Dimension());
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = state[0].gf->ComputeLpError(2.0, zerovec);
+  double x_norm = elas_solver.GetState()[0]->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
 

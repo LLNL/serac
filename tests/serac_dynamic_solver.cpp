@@ -107,10 +107,8 @@ TEST(dynamic_solver, dyn_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  auto state = dyn_solver.GetState();
-
-  double v_norm = state[0].gf->ComputeLpError(2.0, zerovec);
-  double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
+  double v_norm = dyn_solver.GetVelocity()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = dyn_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(12.86733, x_norm, 0.0001);
   EXPECT_NEAR(0.22298, v_norm, 0.0001);

@@ -23,18 +23,18 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
       m_lambda(nullptr),
       m_body_force(nullptr)
 {
-  displacement.mesh = pmesh;
-  displacement.coll = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension(), mfem::Ordering::byVDIM);
-  displacement.space =
-      std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), displacement.coll.get(), pmesh->Dimension());
-  displacement.gf       = std::make_shared<mfem::ParGridFunction>(displacement.space.get());
-  displacement.true_vec = mfem::HypreParVector(displacement.space.get());
+  displacement->mesh = pmesh;
+  displacement->coll = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension(), mfem::Ordering::byVDIM);
+  displacement->space =
+      std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), displacement->coll.get(), pmesh->Dimension());
+  displacement->gf       = std::make_shared<mfem::ParGridFunction>(displacement->space.get());
+  displacement->true_vec = std::make_shared<mfem::HypreParVector>(displacement->space.get());
 
   // and initial conditions
-  *displacement.gf      = 0.0;
-  displacement.true_vec = 0.0;
+  *displacement->gf      = 0.0;
+  *displacement->true_vec = 0.0;
 
-  displacement.name = "displacement";
+  displacement->name = "displacement";
 }
 
 void ElasticitySolver::SetDisplacementBCs(std::vector<int> &                       disp_bdr,
@@ -44,7 +44,7 @@ void ElasticitySolver::SetDisplacementBCs(std::vector<int> &                    
 
   // Get the list of essential DOFs
   for (auto &ess_bc_data : m_ess_bdr) {
-    displacement.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
+    displacement->space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
   }
 }
 
@@ -70,7 +70,7 @@ void ElasticitySolver::CompleteSetup()
   MFEM_ASSERT(m_lambda != nullptr, "Lame lambda not set in ElasticitySolver!");
 
   // Define the parallel bilinear form
-  m_K_form = new mfem::ParBilinearForm(displacement.space.get());
+  m_K_form = new mfem::ParBilinearForm(displacement->space.get());
 
   // Add the elastic integrator
   m_K_form->AddDomainIntegrator(new mfem::ElasticityIntegrator(*m_lambda, *m_mu));
@@ -79,7 +79,7 @@ void ElasticitySolver::CompleteSetup()
 
   // Define the parallel linear form
 
-  m_l_form = new mfem::ParLinearForm(displacement.space.get());
+  m_l_form = new mfem::ParLinearForm(displacement->space.get());
 
   // Add the traction integrator
   if (m_nat_bdr.size() > 0) {
@@ -90,7 +90,7 @@ void ElasticitySolver::CompleteSetup()
     m_l_form->Assemble();
     m_rhs = m_l_form->ParallelAssemble();
   } else {
-    m_rhs  = new mfem::HypreParVector(displacement.space.get());
+    m_rhs  = new mfem::HypreParVector(displacement->space.get());
     *m_rhs = 0.0;
   }
 
@@ -103,22 +103,22 @@ void ElasticitySolver::CompleteSetup()
   }
 
   // Initialize the eliminate BC RHS vector
-  m_bc_rhs  = new mfem::HypreParVector(displacement.space.get());
+  m_bc_rhs  = new mfem::HypreParVector(displacement->space.get());
   *m_bc_rhs = 0.0;
 
   // Initialize the true vector
-  displacement.gf->GetTrueDofs(displacement.true_vec);
+  displacement->gf->GetTrueDofs(*displacement->true_vec);
 
   if (m_lin_params.prec == Preconditioner::BoomerAMG) {
-    MFEM_VERIFY(displacement.space->GetOrdering() == mfem::Ordering::byVDIM,
+    MFEM_VERIFY(displacement->space->GetOrdering() == mfem::Ordering::byVDIM,
                 "Attempting to use BoomerAMG with nodal ordering.");
 
     mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
     prec_amg->SetPrintLevel(m_lin_params.print_level);
-    prec_amg->SetElasticityOptions(displacement.space.get());
+    prec_amg->SetElasticityOptions(displacement->space.get());
     m_K_prec = prec_amg;
 
-    mfem::GMRESSolver *K_gmres = new mfem::GMRESSolver(displacement.space->GetComm());
+    mfem::GMRESSolver *K_gmres = new mfem::GMRESSolver(displacement->space->GetComm());
     K_gmres->SetRelTol(m_lin_params.rel_tol);
     K_gmres->SetAbsTol(m_lin_params.abs_tol);
     K_gmres->SetMaxIter(m_lin_params.max_iter);
@@ -134,7 +134,7 @@ void ElasticitySolver::CompleteSetup()
     K_hypreSmoother->SetPositiveDiagonal(true);
     m_K_prec = K_hypreSmoother;
 
-    mfem::MINRESSolver *K_minres = new mfem::MINRESSolver(displacement.space->GetComm());
+    mfem::MINRESSolver *K_minres = new mfem::MINRESSolver(displacement->space->GetComm());
     K_minres->SetRelTol(m_lin_params.rel_tol);
     K_minres->SetAbsTol(m_lin_params.abs_tol);
     K_minres->SetMaxIter(m_lin_params.max_iter);
@@ -147,7 +147,7 @@ void ElasticitySolver::CompleteSetup()
 void ElasticitySolver::AdvanceTimestep(__attribute__((unused)) double &dt)
 {
   // Initialize the true vector
-  displacement.gf->GetTrueDofs(displacement.true_vec);
+  displacement->gf->GetTrueDofs(*displacement->true_vec);
 
   if (m_timestepper == TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
@@ -156,7 +156,7 @@ void ElasticitySolver::AdvanceTimestep(__attribute__((unused)) double &dt)
   }
 
   // Distribute the shared DOFs
-  displacement.gf->SetFromTrueDofs(displacement.true_vec);
+  displacement->gf->SetFromTrueDofs(*displacement->true_vec);
   m_cycle += 1;
 }
 
@@ -167,14 +167,14 @@ void ElasticitySolver::QuasiStaticSolve()
   *m_bc_rhs = *m_rhs;
   for (auto &ess_bc_data : m_ess_bdr) {
     ess_bc_data->vec_coef->SetTime(m_time);
-    displacement.gf->ProjectBdrCoefficient(*ess_bc_data->vec_coef, ess_bc_data->bc_markers);
-    displacement.gf->GetTrueDofs(displacement.true_vec);
-    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, ess_bc_data->true_dofs, displacement.true_vec, *m_bc_rhs);
+    displacement->gf->ProjectBdrCoefficient(*ess_bc_data->vec_coef, ess_bc_data->bc_markers);
+    displacement->gf->GetTrueDofs(*displacement->true_vec);
+    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, ess_bc_data->true_dofs, *displacement->true_vec, *m_bc_rhs);
   }
 
   m_K_solver->SetOperator(*m_K_mat);
 
-  m_K_solver->Mult(*m_bc_rhs, displacement.true_vec);
+  m_K_solver->Mult(*m_bc_rhs, *displacement->true_vec);
 }
 
 ElasticitySolver::~ElasticitySolver()
