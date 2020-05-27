@@ -8,18 +8,6 @@ packages:
       gl: [opengl]
       glu: [openglu]
 # Lock down versions of packages we depend on
-  mfem:
-    version: [4.0.0]
-  hypre:
-    version: [2.11.1]
-  superlu-dist:
-    version: [5.4.0]
-  parmetis:
-    version: [4.0.3]
-  metis:
-    version: [5.1.0]
-  glvis:
-    version: [3.4]
   opengl:
     paths:
       opengl@1.0.0: /usr
