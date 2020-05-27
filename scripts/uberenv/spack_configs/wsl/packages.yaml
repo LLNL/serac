@@ -2,14 +2,24 @@ packages:
   all:
     compiler: [gcc, clang]
     providers:
-      mpi: [mpich]
+      mpi: [openmpi]
       blas: [openblas]
       lapack: [openblas]
       gl: [opengl]
       glu: [openglu]
 # Lock down versions of packages we depend on
-  cmake:
-    version: [3.14.5]
+  mfem:
+    version: [4.0.0]
+  hypre:
+    version: [2.11.1]
+  superlu-dist:
+    version: [5.4.0]
+  parmetis:
+    version: [4.0.3]
+  metis:
+    version: [5.1.0]
+  glvis:
+    version: [3.4]
   opengl:
     paths:
       opengl@1.0.0: /usr
@@ -19,6 +29,7 @@ packages:
       openglu@1.3.1: /usr
     buildable: False
 # System level packages to not build
+# apt install libopenmpi-dev libssl-dev libssl-1.1
   bzip2:
    paths:
       bzip2: /
@@ -47,3 +58,10 @@ packages:
     paths:
       flex: /usr
     buildable: False
+  openmpi:
+    paths:
+      openmpi: /usr
+  openssl:
+    paths:
+      openssl: /usr/lib/x86_64-linux-gnu/
+
