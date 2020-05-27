@@ -241,7 +241,7 @@ void NonlinearSolidSolver::QuasiStaticSolve()
 }
 
 // Advance the timestep
-void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
+void NonlinearSolidSolver::AdvanceTimestep(double &dt)
 {
   // Initialize the true vector
   m_velocity->gf->GetTrueDofs(*m_velocity->true_vec);
