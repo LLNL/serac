@@ -10,14 +10,12 @@ packages:
 # Lock down versions of packages we depend on
   opengl:
     paths:
-      opengl@1.0.0: /usr
+      opengl@1.0.0: /usr/lib/x86_64-linux-gnu/
     buildable: False
   openglu:
     paths:
-      openglu@1.3.1: /usr
+      openglu@1.3.1: /usr/lib/x86_64-linux-gnu/
     buildable: False
-# System level packages to not build
-# apt install libopenmpi-dev libssl-dev libssl-1.1
   bzip2:
    paths:
       bzip2: /
