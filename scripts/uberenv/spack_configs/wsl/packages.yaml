@@ -2,7 +2,7 @@ packages:
   all:
     compiler: [gcc, clang]
     providers:
-      mpi: [openmpi]
+      mpi: [mpich]
       blas: [openblas]
       lapack: [openblas]
       gl: [opengl]
@@ -52,4 +52,16 @@ packages:
   openssl:
     paths:
       openssl: /usr/lib/x86_64-linux-gnu/
+  openblas:
+    paths:
+      openblas: /usr/lib/x86_64-linux-gnu/
+    buildable: False
+  mpich:
+    paths:
+      mpich@3.3a2%gcc@7.5.0: /usr
+    buildable: False
+  cmake:
+    paths:
+      cmake@3.10.2: /usr
+    buildable: False
 
