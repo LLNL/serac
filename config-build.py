@@ -45,7 +45,7 @@ def extract_cmake_location(file_path):
         for line in content:
             if line.lower().startswith(cmake_line_prefix):
                 return line.split(" ")[4].strip()
-        print "Could not find a cmake entry in host config file."
+        print("Could not find a cmake entry in host config file.")
     return None
 
 
@@ -96,7 +96,7 @@ def parse_arguments():
     
     args, unknown_args = parser.parse_known_args()
     if unknown_args:
-        print "[config-build]: Passing the following arguments directly to cmake... %s" % unknown_args
+        print("[config-build]: Passing the following arguments directly to cmake... %s" % unknown_args)
 
     return args, unknown_args
 
@@ -110,12 +110,12 @@ def find_host_config(args, repodir):
     else:
         hostconfigpath = get_default_host_config()
         if hostconfigpath == "":
-            print "[config-build]: Error could not find default host-config for this platform."
-            print "   Either set one in this script or use the command line argument '-hc'."
+            print("[config-build]: Error could not find default host-config for this platform.")
+            print("   Either set one in this script or use the command line argument '-hc'.")
         else:
            hostconfigpath = os.path.join(repodir, "host-configs", hostconfigpath)
     assert os.path.exists( hostconfigpath ), "Could not find CMake host config file '%s'." % hostconfigpath
-    print "Using host config file: '%s'." % hostconfigpath
+    print("Using host config file: '%s'." % hostconfigpath)
     return hostconfigpath
 
 
@@ -218,13 +218,13 @@ def create_cmake_command_line(args, unknown_args, buildpath, hostconfigpath):
 # Run CMake
 ############################
 def run_cmake(buildpath, cmakeline):
-    print "Changing to build directory..."
+    print("Changing to build directory...")
     os.chdir(buildpath)
-    print "Executing CMake line: '%s'" % cmakeline
-    print 
+    print("Executing CMake line: '%s'" % cmakeline)
+    print()
     returncode = subprocess.call(cmakeline, shell=True)
     if not returncode == 0:
-        print "Error: CMake command failed with return code: {0}".format(returncode)
+        print("Error: CMake command failed with return code: {0}".format(returncode))
         return False
     return True
 
@@ -246,7 +246,7 @@ def main():
     if args.print_default_host_config:
        default_hc = get_default_host_config()
        if default_hc != "":
-          print os.path.splitext(default_hc)[0]
+          print(os.path.splitext(default_hc)[0])
           return True
        else:
           return False
