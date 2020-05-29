@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-"exec" "python" "-u" "-B" "$0" "$@"
+"exec" "python3" "-u" "-B" "$0" "$@"
 
 # Python wrapper script for generating the correct cmake line with the options specified by the user.
 #
