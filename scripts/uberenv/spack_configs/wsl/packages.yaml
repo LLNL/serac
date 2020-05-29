@@ -10,11 +10,11 @@ packages:
 # Lock down versions of packages we depend on
   opengl:
     paths:
-      opengl@1.0.0: /usr/lib/x86_64-linux-gnu/
+      opengl@1.0.0: /usr
     buildable: False
   openglu:
     paths:
-      openglu@1.3.1: /usr/lib/x86_64-linux-gnu/
+      openglu@1.3.1: /usr
     buildable: False
   bzip2:
    paths:
