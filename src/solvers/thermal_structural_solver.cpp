@@ -31,26 +31,24 @@ void ThermalStructuralSolver::CompleteSetup()
 
   m_therm_solver.CompleteSetup();
   m_solid_solver.CompleteSetup();
-
 }
 
-void ThermalStructuralSolver::SetTimestepper(TimestepMethod timestepper) 
+void ThermalStructuralSolver::SetTimestepper(TimestepMethod timestepper)
 {
   m_timestepper = timestepper;
   m_therm_solver.SetTimestepper(timestepper);
   m_solid_solver.SetTimestepper(timestepper);
 }
 
-
 // Advance the timestep
 void ThermalStructuralSolver::AdvanceTimestep(double &dt)
 {
   if (m_coupling == CouplingScheme::OperatorSplit) {
-
     double initial_dt = dt;
     m_therm_solver.AdvanceTimestep(dt);
     m_solid_solver.AdvanceTimestep(dt);
-    MFEM_VERIFY(std::abs(dt - initial_dt) < 1.0e-6, "Operator split coupled solvers cannot adaptively change the timestep");
+    MFEM_VERIFY(std::abs(dt - initial_dt) < 1.0e-6,
+                "Operator split coupled solvers cannot adaptively change the timestep");
 
   } else {
     MFEM_ABORT("Only operator split coupling is currently implemented");

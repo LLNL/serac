@@ -34,51 +34,76 @@ class ThermalStructuralSolver : public BaseSolver {
   ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set essential temperature boundary conditions (strongly enforced)
-  void SetTemperatureBCs(const std::vector<int> &temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef) {m_therm_solver.SetTemperatureBCs(temp_bdr, temp_bdr_coef);};
+  void SetTemperatureBCs(const std::vector<int> &temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+  {
+    m_therm_solver.SetTemperatureBCs(temp_bdr, temp_bdr_coef);
+  };
 
   /// Set flux boundary conditions (weakly enforced)
-  void SetFluxBCs(const std::vector<int> &flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef) {m_therm_solver.SetFluxBCs(flux_bdr, flux_bdr_coef);};
+  void SetFluxBCs(const std::vector<int> &flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
+  {
+    m_therm_solver.SetFluxBCs(flux_bdr, flux_bdr_coef);
+  };
 
   /// Set the thermal conductivity coefficient
-  void SetConductivity(std::shared_ptr<mfem::Coefficient> kappa) {m_therm_solver.SetConductivity(kappa);};
+  void SetConductivity(std::shared_ptr<mfem::Coefficient> kappa) { m_therm_solver.SetConductivity(kappa); };
 
   /// Set the temperature from a coefficient
-  void SetTemperature(mfem::Coefficient &temp) {m_therm_solver.SetTemperature(temp);};
+  void SetTemperature(mfem::Coefficient &temp) { m_therm_solver.SetTemperature(temp); };
 
   /// Set the body thermal source from a coefficient
-  void SetSource(std::shared_ptr<mfem::Coefficient> source) {m_therm_solver.SetSource(source);};
+  void SetSource(std::shared_ptr<mfem::Coefficient> source) { m_therm_solver.SetSource(source); };
 
   /// Set the linear solver parameters for both the M and K operators
-  void SetThermalSolverParameters(const LinearSolverParameters &params) {m_therm_solver.SetLinearSolverParameters(params);};
+  void SetThermalSolverParameters(const LinearSolverParameters &params)
+  {
+    m_therm_solver.SetLinearSolverParameters(params);
+  };
 
   /// Set the displacement essential boundary conditions
-  void SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef) {m_solid_solver.SetDisplacementBCs(disp_bdr, disp_bdr_coef);};
+  void SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+  {
+    m_solid_solver.SetDisplacementBCs(disp_bdr, disp_bdr_coef);
+  };
 
   /// Set the displacement essential boundary conditions on a single component
   void SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
-                          int component) {m_solid_solver.SetDisplacementBCs(disp_bdr, disp_bdr_coef, component);};
+                          int component)
+  {
+    m_solid_solver.SetDisplacementBCs(disp_bdr, disp_bdr_coef, component);
+  };
 
   /// Set the traction boundary conditions
   void SetTractionBCs(const std::vector<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      int component = -1) {m_solid_solver.SetTractionBCs(trac_bdr, trac_bdr_coef, component);};
+                      int component = -1)
+  {
+    m_solid_solver.SetTractionBCs(trac_bdr, trac_bdr_coef, component);
+  };
 
   /// Set the viscosity coefficient
-  void SetViscosity(std::shared_ptr<mfem::Coefficient> visc_coef) {m_solid_solver.SetViscosity(visc_coef);};
+  void SetViscosity(std::shared_ptr<mfem::Coefficient> visc_coef) { m_solid_solver.SetViscosity(visc_coef); };
 
   /// Set the hyperelastic material parameters
-  void SetHyperelasticMaterialParameters(double mu, double K) {m_solid_solver.SetHyperelasticMaterialParameters(mu, K);};
+  void SetHyperelasticMaterialParameters(double mu, double K)
+  {
+    m_solid_solver.SetHyperelasticMaterialParameters(mu, K);
+  };
 
   /// Set the initial displacement state (guess)
-  void SetDisplacement(mfem::VectorCoefficient &disp_state) {m_solid_solver.SetDisplacement(disp_state);};
+  void SetDisplacement(mfem::VectorCoefficient &disp_state) { m_solid_solver.SetDisplacement(disp_state); };
 
   /// Set the initial velocity state (guess)
-  void SetVelocity(mfem::VectorCoefficient &velo_state) {m_solid_solver.SetVelocity(velo_state);};
+  void SetVelocity(mfem::VectorCoefficient &velo_state) { m_solid_solver.SetVelocity(velo_state); };
 
   /// Set the solid linear and nonlinear solver params
-  void SetSolidSolverParameters(const LinearSolverParameters &lin_params, const NonlinearSolverParameters &nonlin_params) {m_solid_solver.SetSolverParameters(lin_params, nonlin_params);};
+  void SetSolidSolverParameters(const LinearSolverParameters &   lin_params,
+                                const NonlinearSolverParameters &nonlin_params)
+  {
+    m_solid_solver.SetSolverParameters(lin_params, nonlin_params);
+  };
 
   /// Set the coupling scheme
-  void SetCouplingScheme(CouplingScheme coupling) {m_coupling = coupling;};
+  void SetCouplingScheme(CouplingScheme coupling) { m_coupling = coupling; };
 
   /// Overwrite the base default set timestepper method
   void SetTimestepper(TimestepMethod timestepper);
@@ -87,6 +112,15 @@ class ThermalStructuralSolver : public BaseSolver {
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
    * = false, do not allocate the mass matrix or dynamic operator */
   void CompleteSetup();
+
+  /// Get the temperature state
+  std::shared_ptr<FiniteElementState> GetTemperature() { return m_temperature; };
+
+  /// Get the displacement state
+  std::shared_ptr<FiniteElementState> GetDisplacement() { return m_displacement; };
+
+  /// Get the velocity state
+  std::shared_ptr<FiniteElementState> GetVelocity() { return m_velocity; };
 
   /// Advance the timestep
   void AdvanceTimestep(double &dt);

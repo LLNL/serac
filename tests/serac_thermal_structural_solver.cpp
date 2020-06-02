@@ -8,13 +8,14 @@
 
 #include <fstream>
 
+#include "coefficients/linear_coefficient.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
+#include "solvers/thermal_structural_solver.hpp"
 
-void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
-
-void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
+void   InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
+void   InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
+double InitialTemperature(const mfem::Vector &x);
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -41,18 +42,28 @@ TEST(dynamic_solver, dyn_solve)
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
-  auto visc   = std::make_shared<mfem::ConstantCoefficient>(0.0);
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
+  auto temp   = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
+  auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
 
   // initialize the dynamic solver object
-  NonlinearSolidSolver dyn_solver(1, pmesh);
-  dyn_solver.SetDisplacementBCs(ess_bdr, deform);
-  dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  dyn_solver.SetViscosity(visc);
-  dyn_solver.SetDisplacement(*deform);
-  dyn_solver.SetVelocity(*velo);
-  dyn_solver.SetTimestepper(TimestepMethod::SDIRK33);
+  ThermalStructuralSolver ts_solver(1, pmesh);
+  ts_solver.SetDisplacementBCs(ess_bdr, deform);
+  ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
+  ts_solver.SetConductivity(kappa);
+  ts_solver.SetDisplacement(*deform);
+  ts_solver.SetVelocity(*velo);
+  ts_solver.SetTemperature(*temp);
+  ts_solver.SetTimestepper(TimestepMethod::SDIRK33);
+  ts_solver.SetCouplingScheme(CouplingScheme::OperatorSplit);
+
+  // Make a temperature-dependent viscosity
+  //auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(ts_solver.GetTemperature()->gf.get());
+  //LinearTransformationCoefficient visc_coef(temp_gf_coef, 0.001, 1.0);
+  auto visc = std::make_shared<mfem::ConstantCoefficient>(0.0);
+  ts_solver.SetViscosity(visc);
+
 
   // Set the linear solver parameters
   LinearSolverParameters params;
@@ -69,20 +80,21 @@ TEST(dynamic_solver, dyn_solve)
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter    = 500;
-  dyn_solver.SetSolverParameters(params, nl_params);
+  ts_solver.SetSolidSolverParameters(params, nl_params);
+  ts_solver.SetThermalSolverParameters(params);
 
   // Initialize the VisIt output
-  dyn_solver.InitializeOutput(OutputType::VisIt, "dynamic_solid");
+  ts_solver.InitializeOutput(OutputType::VisIt, "dynamic_thermal_solid");
 
   // Construct the internal dynamic solver data structures
-  dyn_solver.CompleteSetup();
+  ts_solver.CompleteSetup();
 
   double t       = 0.0;
   double t_final = 6.0;
-  double dt      = 3.0;
+  double dt      = 1.0;
 
   // Ouput the initial state
-  dyn_solver.OutputState();
+  ts_solver.OutputState();
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
@@ -92,19 +104,20 @@ TEST(dynamic_solver, dyn_solve)
     t += dt_real;
     last_step = (t >= t_final - 1e-8 * dt);
 
-    dyn_solver.AdvanceTimestep(dt_real);
+    ts_solver.AdvanceTimestep(dt_real);
   }
 
   // Output the final state
-  dyn_solver.OutputState();
+  ts_solver.OutputState();
 
   // Check the final displacement and velocity L2 norms
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double v_norm = dyn_solver.GetVelocity()->gf->ComputeLpError(2.0, zerovec);
-  double x_norm = dyn_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
+  double v_norm    = ts_solver.GetVelocity()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm    = ts_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
+  double temp_norm = ts_solver.GetTemperature()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(12.86733, x_norm, 0.0001);
   EXPECT_NEAR(0.22298, v_norm, 0.0001);
@@ -129,17 +142,17 @@ int main(int argc, char *argv[])
 
 void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
 {
-  // set the initial configuration to be the same as the reference, stress
-  // free, configuration
-  y = x;
+  y    = x;
+  y(1) = x(0) * 0.01;
 }
 
-void InitialVelocity(const mfem::Vector &x, mfem::Vector &v)
-{
-  const int    dim = x.Size();
-  const double s   = 0.1 / 64.;
+void InitialVelocity(__attribute__((unused)) const mfem::Vector &x, mfem::Vector &v) { v = 0.0; }
 
-  v          = 0.0;
-  v(dim - 1) = s * x(0) * x(0) * (8.0 - x(0));
-  v(0)       = -s * x(0) * x(0);
+double InitialTemperature(const mfem::Vector &x)
+{
+  double temp = 2.0;
+  if (x(0) < 1.0) {
+    temp = 5.0;
+  }
+  return temp;
 }

@@ -68,6 +68,20 @@ if (ENABLE_GTEST)
         WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
 
     #----------------------
+    # Thermal Structural Solver
+    #----------------------
+    blt_add_executable(
+        NAME       serac_thermal_structural_solver
+        SOURCES    serac_thermal_structural_solver.cpp
+        OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+        DEPENDS_ON solvers mpi mfem gtest )
+    blt_add_test(
+        NAME              serac_thermal_structural_solver
+        COMMAND           serac_thermal_structural_solver
+        NUM_MPI_TASKS     2
+        WORKING_DIRECTORY ${TEST_OUTPUT_DIRECTORY} )
+
+    #----------------------
     # Deconstructor test
     #----------------------
     blt_add_executable(
