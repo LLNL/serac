@@ -70,11 +70,9 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetCouplingScheme(CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity
-  //auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(ts_solver.GetTemperature()->gf.get());
-  //LinearTransformationCoefficient visc_coef(temp_gf_coef, 0.001, 1.0);
-  auto visc = std::make_shared<mfem::ConstantCoefficient>(0.0);
-  ts_solver.SetViscosity(visc);
-
+  auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(ts_solver.GetTemperature()->gf.get());
+  auto visc_coef = std::make_shared<LinearTransformationCoefficient>(temp_gf_coef, 0.1, 1.0);
+  ts_solver.SetViscosity(visc_coef);
 
   // Set the linear solver parameters
   LinearSolverParameters params;
@@ -130,8 +128,9 @@ TEST(dynamic_solver, dyn_solve)
   double x_norm    = ts_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
   double temp_norm = ts_solver.GetTemperature()->gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(13.28049, x_norm, 0.0001);
+  EXPECT_NEAR(0.005227, v_norm, 0.0001);
+  EXPECT_NEAR(6.491872, temp_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
