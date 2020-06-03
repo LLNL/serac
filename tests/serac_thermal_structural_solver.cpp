@@ -128,9 +128,9 @@ TEST(dynamic_solver, dyn_solve)
   double x_norm    = ts_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
   double temp_norm = ts_solver.GetTemperature()->gf->ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(13.28049, x_norm, 0.0001);
-  EXPECT_NEAR(0.005227, v_norm, 0.0001);
-  EXPECT_NEAR(6.491872, temp_norm, 0.0001);
+  EXPECT_NEAR(13.28049, x_norm, 0.001);
+  EXPECT_NEAR(0.005227, v_norm, 0.001);
+  EXPECT_NEAR(6.491872, temp_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
