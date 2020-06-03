@@ -47,9 +47,20 @@ TEST(dynamic_solver, dyn_solve)
   auto temp   = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
 
+  // set the traction boundary
+  std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
+  trac_bdr[1] = 1;
+
+  // define the traction vector
+  mfem::Vector traction(dim);
+  traction           = 0.0;
+  traction(1)        = 1.0e-3;
+  auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
+  
   // initialize the dynamic solver object
   ThermalStructuralSolver ts_solver(1, pmesh);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
+  ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
   ts_solver.SetConductivity(kappa);
   ts_solver.SetDisplacement(*deform);
@@ -143,7 +154,7 @@ int main(int argc, char *argv[])
 void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
 {
   y    = x;
-  y(1) = x(0) * 0.01;
+  y(1) = y(1) + x(0) * 0.01;
 }
 
 void InitialVelocity(__attribute__((unused)) const mfem::Vector &x, mfem::Vector &v) { v = 0.0; }
