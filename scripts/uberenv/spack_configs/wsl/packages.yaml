@@ -10,7 +10,7 @@ packages:
 # Lock down versions of packages we depend on
   opengl:
     paths:
-      opengl@1.0.0: /usr
+      opengl@1.7.0: /usr
     buildable: False
   openglu:
     paths:
@@ -56,10 +56,10 @@ packages:
     buildable: False
   mpich:
     paths:
-      mpich@3.3a2%gcc@7.5.0: /usr
+      mpich@3.3.2%gcc@9.3.0: /usr
     buildable: False
   cmake:
     paths:
-      cmake@3.10.2: /usr
+      cmake@3.16.3: /usr
     buildable: False
 
