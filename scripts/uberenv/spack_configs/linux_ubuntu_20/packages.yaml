@@ -40,13 +40,6 @@ packages:
     paths:
       autoconf: /usr
     buildable: False
-  flex:
-    paths:
-      flex: /usr
-    buildable: False
-  openmpi:
-    paths:
-      openmpi: /usr
   openssl:
     paths:
       openssl: /usr/lib/x86_64-linux-gnu/
@@ -62,4 +55,14 @@ packages:
     paths:
       cmake@3.16.3: /usr
     buildable: False
-
+# Lock in versions of Devtools
+  cppcheck:
+    version: [1.90]
+    paths:
+      cppcheck: /usr/bin/cppcheck
+    buildable: False
+  doxygen:
+    version: [1.8.17]
+    paths:
+      doxygen: /usr/bin/doxygen
+    buildable: False   
