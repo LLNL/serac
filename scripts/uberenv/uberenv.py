@@ -224,6 +224,12 @@ def is_darwin():
 def is_windows():
     return "windows" in platform.system().lower()
 
+def is_wsl():
+    if "microsoft" in str(platform.uname()).lower() and \
+       "linux" in platform.system().lower():
+       return True
+    return False
+
 class UberEnv():
     """ Base class for package manager """
 
@@ -266,6 +272,8 @@ class UberEnv():
         res = None
         if is_darwin():
             res = "darwin"
+        elif is_wsl():
+            res = "linux_ubuntu_18"
         elif "SYS_TYPE" in os.environ.keys():
             sys_type = os.environ["SYS_TYPE"].lower()
             res = sys_type

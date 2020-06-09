@@ -33,6 +33,23 @@ Serac is hosted on GitHub `here <https://github.com/LLNL/serac>`_. Serac uses gi
    # for some commands
    $ git clone --recursive https://github.com/LLNL/serac.git
 
+Preparing Windows WSL/Ubuntu 18.04 for Serac installation
+---------------------------------------------------------
+
+For faster installation of the Serac dependencies via Spack on Windows WSL/Ubuntu 18.04 systems, install cmake, MPICH, openblas, OpenGL, and the devtools
+using the following commands:
+
+.. code-block:: bash
+
+   $ sudo apt-get update
+   $ sudo apt-get upgrade
+   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen
+   $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
+
+Note that the last line is required since Spack expects the system libraries to exist in a directory named `lib`. The call to `uberenv` should 
+automatically pick the correct Spack configuration directory, and a minimal number of dependencies will be built. If your WSL system is Ubuntu 18.04,
+uberenv will detect it automatically and use the appropriate Spack config directory. Otherwise, an appropriate Spack config must be specified.
+
 Building Serac's Developer Tools
 --------------------------------
 

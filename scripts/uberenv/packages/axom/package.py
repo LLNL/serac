@@ -528,6 +528,8 @@ class Axom(CMakePackage, CudaPackage):
             options.append('-DENABLE_TESTS=OFF')
         else:
             options.append('-DENABLE_TESTS=ON')
+        src_dir = os.path.abspath(pjoin(self.stage.source_path, "src"))
+        options.append(src_dir)
         return options
 
     @run_after('install')
