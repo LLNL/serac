@@ -73,3 +73,13 @@ packages:
     paths:
       doxygen: /usr/bin/doxygen
     buildable: False   
+  python:
+    version: [3.6.9]
+    paths:
+      python: /usr
+    buildable: False
+  py-sphinx:
+    version: [1.6.7]
+    paths:
+      py-sphinx: /usr
+    buildable: False
