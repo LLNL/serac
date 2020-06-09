@@ -102,10 +102,6 @@ class Serac(CMakePackage):
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
 
-    depends_on("hypre@2.11.1~shared~superlu-dist+mpi")
-    depends_on("hypre@2.11.1~shared~superlu-dist+mpi+debug", when="+debug")
-
-
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",
                         "metis@5.1.0~shared",
