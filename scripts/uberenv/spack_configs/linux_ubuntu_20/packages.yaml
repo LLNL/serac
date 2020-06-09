@@ -59,10 +59,20 @@ packages:
   cppcheck:
     version: [1.90]
     paths:
-      cppcheck: /usr/bin/cppcheck
+      cppcheck: /usr
     buildable: False
   doxygen:
     version: [1.8.17]
     paths:
-      doxygen: /usr/bin/doxygen
+      doxygen: /usr
     buildable: False   
+  python:
+    version: [3.8.2]
+    paths:
+      python: /usr
+    buildable: False
+  py-sphinx:
+    version: [1.8.5]
+    paths:
+      py-sphinx: /usr
+    buildable: False

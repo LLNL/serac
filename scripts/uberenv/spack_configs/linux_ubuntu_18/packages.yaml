@@ -66,12 +66,12 @@ packages:
   cppcheck:
     version: [1.82]
     paths:
-      cppcheck: /usr/bin/cppcheck
+      cppcheck: /usr
     buildable: False
   doxygen:
     version: [1.8.13]
     paths:
-      doxygen: /usr/bin/doxygen
+      doxygen: /usr
     buildable: False   
   python:
     version: [3.6.9]
