@@ -62,4 +62,14 @@ packages:
     paths:
       cmake@3.10.2: /usr
     buildable: False
-
+# Lock in versions of Devtools
+  cppcheck:
+    version: [1.82]
+    paths:
+      cppcheck: /usr/bin/cppcheck
+    buildable: False
+  doxygen:
+    version: [1.8.13]
+    paths:
+      doxygen: /usr/bin/doxygen
+    buildable: False   
