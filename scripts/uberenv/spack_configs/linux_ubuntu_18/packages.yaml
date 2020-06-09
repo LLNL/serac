@@ -62,4 +62,24 @@ packages:
     paths:
       cmake@3.16.3: /usr
     buildable: False
-
+# Lock in versions of Devtools
+  cppcheck:
+    version: [1.82]
+    paths:
+      cppcheck: /usr
+    buildable: False
+  doxygen:
+    version: [1.8.13]
+    paths:
+      doxygen: /usr
+    buildable: False   
+  python:
+    version: [3.6.9]
+    paths:
+      python: /usr
+    buildable: False
+  py-sphinx:
+    version: [1.6.7]
+    paths:
+      py-sphinx: /usr
+    buildable: False

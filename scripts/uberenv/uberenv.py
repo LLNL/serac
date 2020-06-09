@@ -273,7 +273,7 @@ class UberEnv():
         if is_darwin():
             res = "darwin"
         elif is_wsl():
-            res = "wsl"
+            res = "linux_ubuntu_18"
         elif "SYS_TYPE" in os.environ.keys():
             sys_type = os.environ["SYS_TYPE"].lower()
             res = sys_type
