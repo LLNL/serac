@@ -26,10 +26,10 @@ class BaseSolver {
   std::unique_ptr<mfem::BlockVector> m_block;
 
   /// Essential BC markers
-  std::vector<std::shared_ptr<BoundaryConditionData> > m_ess_bdr;
+  std::vector<std::shared_ptr<BoundaryCondition> > m_ess_bdr;
 
   /// Natural BC markers
-  std::vector<std::shared_ptr<BoundaryConditionData> > m_nat_bdr;
+  std::vector<std::shared_ptr<BoundaryCondition> > m_nat_bdr;
 
   /// Type of state variable output
   OutputType m_output_type;

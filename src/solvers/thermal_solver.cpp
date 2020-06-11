@@ -38,8 +38,8 @@ void ThermalSolver::SetTemperatureBCs(const std::vector<int> &ess_bdr, std::shar
   SetEssentialBCs(ess_bdr, ess_bdr_coef);
 
   // Get the essential dof indices and project the coefficient onto them
-  for (auto &ess_bc_data : m_ess_bdr) {
-    temperature.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
+  for (auto &bc : m_ess_bdr) {
+    temperature.space->GetEssentialTrueDofs(bc->markers, bc->true_dofs);
   }
 }
 
@@ -92,8 +92,8 @@ void ThermalSolver::CompleteSetup()
   m_K_mat.reset(m_K_form->ParallelAssemble());
 
   // Eliminate the essential DOFs from the stiffness matrix
-  for (auto &ess_bc_data : m_ess_bdr) {
-    m_K_e_mat.reset(m_K_mat->EliminateRowsCols(ess_bc_data->true_dofs));
+  for (auto &bc : m_ess_bdr) {
+    bc->eliminated_matrix_entries.reset(m_K_mat->EliminateRowsCols(bc->true_dofs));
   }
 
   // Initialize the eliminated BC RHS vector
@@ -114,8 +114,7 @@ void ThermalSolver::CompleteSetup()
 
     // Make the time integration operator and set the appropriate matricies
     m_dyn_oper = std::make_unique<DynamicConductionOperator>(temperature.space, m_lin_params, m_ess_bdr);
-    m_dyn_oper->SetMMatrix(m_M_mat, m_M_e_mat);
-    m_dyn_oper->SetKMatrix(m_K_mat, m_K_e_mat);
+    m_dyn_oper->SetMatrices(m_M_mat, m_K_mat);
     m_dyn_oper->SetLoadVector(m_rhs);
 
     m_ode_solver->Init(*m_dyn_oper);
@@ -126,11 +125,11 @@ void ThermalSolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
-  for (auto &ess_bc_data : m_ess_bdr) {
-    ess_bc_data->scalar_coef->SetTime(m_time);
-    temperature.gf->ProjectBdrCoefficient(*ess_bc_data->scalar_coef, ess_bc_data->bc_markers);
+  for (auto &bc : m_ess_bdr) {
+    bc->scalar_coef->SetTime(m_time);
+    temperature.gf->ProjectBdrCoefficient(*bc->scalar_coef, bc->markers);
     temperature.gf->GetTrueDofs(temperature.true_vec);
-    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, ess_bc_data->true_dofs, temperature.true_vec, *m_bc_rhs);
+    mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, temperature.true_vec, *m_bc_rhs);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning

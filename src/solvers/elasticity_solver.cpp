@@ -43,8 +43,8 @@ void ElasticitySolver::SetDisplacementBCs(std::vector<int> &                    
   SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
 
   // Get the list of essential DOFs
-  for (auto &ess_bc_data : m_ess_bdr) {
-    displacement.space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
+  for (auto &bc : m_ess_bdr) {
+    displacement.space->GetEssentialTrueDofs(bc->markers, bc->true_dofs);
   }
 }
 
@@ -85,7 +85,7 @@ void ElasticitySolver::CompleteSetup()
   if (m_nat_bdr.size() > 0) {
     for (auto &nat_bc_data : m_nat_bdr) {
       m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*nat_bc_data->vec_coef),
-                                      nat_bc_data->bc_markers);
+                                      nat_bc_data->markers);
     }
     m_l_form->Assemble();
     m_rhs = m_l_form->ParallelAssemble();
@@ -98,8 +98,8 @@ void ElasticitySolver::CompleteSetup()
   m_K_mat = m_K_form->ParallelAssemble();
 
   // Eliminate the essential DOFs
-  for (auto &ess_bc_data : m_ess_bdr) {
-    m_K_e_mat = m_K_mat->EliminateRowsCols(ess_bc_data->true_dofs);
+  for (auto &bc : m_ess_bdr) {
+    m_K_e_mat = m_K_mat->EliminateRowsCols(bc->true_dofs);
   }
 
   // Initialize the eliminate BC RHS vector
@@ -165,11 +165,11 @@ void ElasticitySolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
-  for (auto &ess_bc_data : m_ess_bdr) {
-    ess_bc_data->vec_coef->SetTime(m_time);
-    displacement.gf->ProjectBdrCoefficient(*ess_bc_data->vec_coef, ess_bc_data->bc_markers);
+  for (auto &bc : m_ess_bdr) {
+    bc->vec_coef->SetTime(m_time);
+    displacement.gf->ProjectBdrCoefficient(*bc->vec_coef, bc->markers);
     displacement.gf->GetTrueDofs(displacement.true_vec);
-    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, ess_bc_data->true_dofs, displacement.true_vec, *m_bc_rhs);
+    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, bc->true_dofs, displacement.true_vec, *m_bc_rhs);
   }
 
   m_K_solver->SetOperator(*m_K_mat);
