@@ -339,6 +339,14 @@ class Conduit(Package):
         # SERAC PATCH BEGIN
         # we need to specify the c++ std
         cfg.write(cmake_cache_entry("BLT_CXX_STD", "c++11"))
+
+        # use global spack compiler flags
+        cflags = ' '.join(spec.compiler_flags['cflags'])
+        if cflags:
+            cfg.write(cmake_cache_entry("CMAKE_C_FLAGS", cflags))
+        cxxflags = ' '.join(spec.compiler_flags['cxxflags'])
+        if cxxflags:
+            cfg.write(cmake_cache_entry("CMAKE_CXX_FLAGS", cxxflags))
         # SERAC PATCH END
 
         cfg.write("# fortran compiler used by spack\n")
