@@ -97,7 +97,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // mesh
-  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/star.mesh";
+  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/star_with_2_bdr_attributes.mesh";
   const char* mesh_file      = base_mesh_file.c_str();
 
   // Open the mesh
