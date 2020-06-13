@@ -37,7 +37,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-intel-19.0.4/bin/m
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_05_14_10_41_18/intel-19.0.4" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_06_12_22_04_46/intel-19.0.4" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
@@ -53,7 +53,7 @@ set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-5.4.0" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.0.0" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
