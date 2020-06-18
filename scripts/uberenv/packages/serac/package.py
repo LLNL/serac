@@ -88,12 +88,13 @@ class Serac(CMakePackage):
     # Basic dependencies
     depends_on("mpi")
     depends_on("cmake@3.8:")
+    depends_on("lua@5.3.5")
 
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")
     depends_on('doxygen', when="+devtools")
     depends_on('python', when="+devtools")
-    depends_on('py-sphinx', when="+devtools")
+    depends_on('py-sphinx', when="+devtools")    
 
     # Libraries that support +debug
     debug_deps = ["mfem@4.1.0~shared+hypre+metis+superlu-dist+lapack+mpi",
@@ -303,6 +304,9 @@ class Serac(CMakePackage):
             glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
             cfg.write(cmake_cache_entry("GLVIS_EXECUTABLE", pjoin(glvis_bin_dir, "glvis")))
 
+        lua_dir = get_spec_path(spec, "lua", path_replacements)
+        cfg.write(cmake_cache_entry("LUA_DIR", lua_dir))
+            
         ##################################
         # Devtools
         ##################################

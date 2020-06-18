@@ -135,3 +135,33 @@ foreach(_target axom)
     endif()
 endforeach()
 
+#------------------------------------------------------------------------------
+# Check for Lua
+#------------------------------------------------------------------------------
+  find_path(
+  LUA_INCLUDE_DIRS lua.hpp
+  PATHS ${LUA_DIR}/include
+  NO_DEFAULT_PATH
+  NO_CMAKE_ENVIRONMENT_PATH
+  NO_CMAKE_PATH
+  NO_SYSTEM_ENVIRONMENT_PATH
+  NO_CMAKE_SYSTEM_PATH
+  )
+
+find_library(
+  LUA_LIBRARIES NAMES lua
+  PATHS ${LUA_DIR}/lib
+  NO_DEFAULT_PATH
+  NO_CMAKE_ENVIRONMENT_PATH
+  NO_CMAKE_PATH
+  NO_SYSTEM_ENVIRONMENT_PATH
+  NO_CMAKE_SYSTEM_PATH )
+
+message(STATUS "lua libraries ${LUA_LIBRARIES}]")
+
+blt_register_library(
+    NAME          lua
+    INCLUDES      ${LUA_INCLUDE_DIRS}
+    LIBRARIES     ${LUA_LIBRARIES}
+    TREAT_INCLUDES_AS_SYSTEM ON)
+

@@ -62,6 +62,10 @@ packages:
     paths:
       cmake@3.10.2: /usr
     buildable: False
+  readline:
+    paths:
+      readline: /usr/lib/x86-64-linux-gnu/
+    buildable: False
 # Lock in versions of Devtools
   cppcheck:
     version: [1.82]
