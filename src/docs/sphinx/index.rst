@@ -43,7 +43,7 @@ using the following commands:
 
    $ sudo apt-get update
    $ sudo apt-get upgrade
-   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen
+   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
 Note that the last line is required since Spack expects the system libraries to exist in a directory named `lib`. The call to `uberenv` should 
