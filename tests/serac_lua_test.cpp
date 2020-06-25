@@ -190,7 +190,7 @@ int GetGlobalNE(lua_State * L)
 std::shared_ptr<ThermalSolver> ThermalSolverFactory(int order,
 						    std::shared_ptr<mfem::ParMesh> pmesh,
 						    TimestepMethod method,
-						    std::shared_ptr<mfem::FunctionCoefficient> u_0,
+						    std::shared_ptr<mfem::Coefficient> u_0,
 						    std::shared_ptr<mfem::Coefficient> kappa,
 						    double rel_tol,
 						    double abs_tol,
@@ -209,6 +209,8 @@ std::shared_ptr<ThermalSolver> ThermalSolverFactory(int order,
 
   // Set the temperature BC in the thermal solver
   therm_solver->SetTemperatureBCs(temp_bdr, u_0);
+  if (method != TimestepMethod::QuasiStatic)
+    therm_solver->SetTemperature(*u_0);
 
   // Set the conductivity of the thermal operator
   therm_solver->SetConductivity(kappa);
@@ -230,6 +232,16 @@ std::shared_ptr<ThermalSolver> ThermalSolverFactory(int order,
 
 double BoundaryTemperature(const mfem::Vector& x) { return x.Norml2(); }
 
+double InitialTemperature(const mfem::Vector& x)
+{
+  if (x.Norml2() < 0.5) {
+    return 2.0;
+  } else {
+    return 1.0;
+  }
+}
+
+
 /// lua method to build a thermalsolver
 static int ThermalSolverBuilder(lua_State *L)
 {
@@ -238,11 +250,18 @@ static int ThermalSolverBuilder(lua_State *L)
 
   std::string timestepper = luaL_checkstring(L, 3);
   
-  TimestepMethod method = TimestepMethod::QuasiStatic;
-  MFEM_VERIFY(timestepper == "quasistatic", "Only Quasistatic has been implemented");
+  TimestepMethod method;
+  if (timestepper == "quasistatic")
+    method = TimestepMethod::QuasiStatic;
+  else if (timestepper == "forwardeuler")
+    method = TimestepMethod::ForwardEuler;
+  else if (timestepper == "backwardeuler")
+    method = TimestepMethod::BackwardEuler;  
+  else
+    mfem::mfem_error("Only Quasistatic and ForwardEuler can currently be created from this factory");
 
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
-  auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
+  auto u_0 = luautil::GetPointer<mfem::Coefficient>(L, 4, "Coefficient");
+  auto kappa = luautil::GetPointer<mfem::Coefficient>(L, 5, "Coefficient");
 
   double rel_tol = luaL_checknumber(L,6);
   double abs_tol = luaL_checknumber(L,7);
@@ -271,11 +290,33 @@ static int ThermalSolverStep(lua_State *L)
   double dt = luaL_checknumber(L, 2);
 
   solver->AdvanceTimestep(dt);
-  return 0;
+  lua_pushnumber(L, dt);
+  return 1;
+}
+
+/// Creates the two available coefficients in this test
+static int CoefficientFactory(lua_State *L)
+{
+  std::string type = luaL_checkstring(L, 1);
+  int lua_return = 0;
+  std::string lua_base_type = "Coefficient";
+  if (type == "function") {
+    std::string func = luaL_checkstring(L, 2);
+    if (func == "BoundaryTemperature")
+      lua_return = luautil::CreateLuaObject<mfem::Coefficient>(L, std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature), lua_base_type);
+    else if (func == "InitialTemperature")
+      lua_return = luautil::CreateLuaObject<mfem::Coefficient>(L, std::make_shared<mfem::FunctionCoefficient>(InitialTemperature), lua_base_type);
+    
+  } else if (type == "constant") {
+    double const_num = luaL_checknumber(L, 2);
+    lua_return = luautil::CreateLuaObject<mfem::Coefficient>(L, std::make_shared<mfem::ConstantCoefficient>(const_num), lua_base_type);
+  }
+
+  return lua_return;
 }
 
 /*
-Lua commands can be found in /tests/serac_lua_deck.lua
+Lua commands can be found in /tests/serac_lua_thermal_static_solve.lua
 */
 TEST(lua_test, static_solve)
 {
@@ -285,19 +326,20 @@ TEST(lua_test, static_solve)
   luaL_openlibs(L);               
 
   // register the new ParMesh metatable
-  luautil::RegisterLuaTypes(L, {"ParMesh", "ThermalSolver"});
+  luautil::RegisterLuaTypes(L, {"ParMesh", "ThermalSolver", "Coefficient"});
 
   luautil::RegisterFunctionWithLua(L, MeshReader, "MeshReader");
   luautil::RegisterFunctionWithLua(L, GetGlobalNE, "GetGlobalNE");    
   luautil::RegisterFunctionWithLua(L, ThermalSolverBuilder, "ThermalSolverBuilder");
-  luautil::RegisterFunctionWithLua(L, ThermalSolverStep, "ThermalSolverStep");    
+  luautil::RegisterFunctionWithLua(L, ThermalSolverStep, "ThermalSolverStep");
+  luautil::RegisterFunctionWithLua(L, CoefficientFactory, "CoefficientFactory");    
   
   // load in the underlying reader
   int error = luautil::ExecuteLuaFile(L, std::string(SERAC_SRC_DIR) + "/tests/serac_lua_test_reader.lua");
 
   std::cout << "Underlying reader loaded" << std::endl;
   
-  error = luautil::ExecuteLuaFile(L, std::string(SERAC_SRC_DIR) + "/tests/serac_lua_deck.lua");
+  error = luautil::ExecuteLuaFile(L, std::string(SERAC_SRC_DIR) + "/tests/serac_lua_thermal_static_solve.lua");
 
   // Call read_table automatically
   error = luautil::ExecuteLuaLine(L, "run_table(thermal_solver)");
@@ -320,6 +362,104 @@ TEST(lua_test, static_solve)
   }
   lua_close(L);
 }
+
+/*
+Lua commands can be found in /tests/serac_lua_thermal_dyn_exp_solve.lua
+*/
+TEST(lua_test, dyn_exp_solve)
+{
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  lua_State *L = luaL_newstate();   /* opens Lua */
+  luaL_openlibs(L);               
+
+  // register the new ParMesh metatable
+  luautil::RegisterLuaTypes(L, {"ParMesh", "ThermalSolver", "Coefficient"});
+
+  luautil::RegisterFunctionWithLua(L, MeshReader, "MeshReader");
+  luautil::RegisterFunctionWithLua(L, GetGlobalNE, "GetGlobalNE");    
+  luautil::RegisterFunctionWithLua(L, ThermalSolverBuilder, "ThermalSolverBuilder");
+  luautil::RegisterFunctionWithLua(L, ThermalSolverStep, "ThermalSolverStep");
+  luautil::RegisterFunctionWithLua(L, CoefficientFactory, "CoefficientFactory");    
+  
+  // load in the underlying reader
+  int error = luautil::ExecuteLuaFile(L, std::string(SERAC_SRC_DIR) + "/tests/serac_lua_test_reader.lua");
+
+  std::cout << "Underlying reader loaded" << std::endl;
+  
+  error = luautil::ExecuteLuaFile(L, std::string(SERAC_SRC_DIR) + "/tests/serac_lua_thermal_dyn_exp_solve.lua");
+
+  // Call read_table automatically
+  error = luautil::ExecuteLuaLine(L, "run_table(thermal_solver)");
+
+  std::cout << "Trying to get the solver state" << std::endl;
+  
+  // grab the global lua "solver" variable
+  lua_getglobal(L, "solver");
+  auto therm_solver = luautil::GetPointer<ThermalSolver>(L, -1, "ThermalSolver");
+  // Get the state grid function
+  if (therm_solver) {
+    auto state = therm_solver->GetState();
+    std::cout << "Got the state" << std::endl;
+  
+    // Measure the L2 norm of the solution and check the value
+    mfem::ConstantCoefficient zero(0.0);
+    double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
+    EXPECT_NEAR(2.6493029, u_norm, 0.00001);
+
+  }
+  lua_close(L);
+}
+
+/*
+Lua commands can be found in /tests/serac_lua_thermal_dyn_imp_solve.lua
+*/
+TEST(lua_test, dyn_imp_solve)
+{
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  lua_State *L = luaL_newstate();   /* opens Lua */
+  luaL_openlibs(L);               
+
+  // register the new ParMesh metatable
+  luautil::RegisterLuaTypes(L, {"ParMesh", "ThermalSolver", "Coefficient"});
+
+  luautil::RegisterFunctionWithLua(L, MeshReader, "MeshReader");
+  luautil::RegisterFunctionWithLua(L, GetGlobalNE, "GetGlobalNE");    
+  luautil::RegisterFunctionWithLua(L, ThermalSolverBuilder, "ThermalSolverBuilder");
+  luautil::RegisterFunctionWithLua(L, ThermalSolverStep, "ThermalSolverStep");
+  luautil::RegisterFunctionWithLua(L, CoefficientFactory, "CoefficientFactory");    
+  
+  // load in the underlying reader
+  int error = luautil::ExecuteLuaFile(L, std::string(SERAC_SRC_DIR) + "/tests/serac_lua_test_reader.lua");
+
+  std::cout << "Underlying reader loaded" << std::endl;
+  
+  error = luautil::ExecuteLuaFile(L, std::string(SERAC_SRC_DIR) + "/tests/serac_lua_thermal_dyn_imp_solve.lua");
+
+  // Call read_table automatically
+  error = luautil::ExecuteLuaLine(L, "run_table(thermal_solver)");
+
+  std::cout << "Trying to get the solver state" << std::endl;
+  
+  // grab the global lua "solver" variable
+  lua_getglobal(L, "solver");
+  auto therm_solver = luautil::GetPointer<ThermalSolver>(L, -1, "ThermalSolver");
+  // Get the state grid function
+  if (therm_solver) {
+    auto state = therm_solver->GetState();
+    std::cout << "Got the state" << std::endl;
+
+    // Measure the L2 norm of the solution and check the value
+    mfem::ConstantCoefficient zero(0.0);
+    double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
+    EXPECT_NEAR(2.18201099, u_norm, 0.00001);
+
+  }
+  lua_close(L);
+}
+
+
 
 int main(int argc, char* argv[])
 {
