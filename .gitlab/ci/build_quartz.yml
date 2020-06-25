@@ -67,16 +67,19 @@ clang_9_0_0 (Master build_with_deps_on_quartz):
   variables:
     COMPILER: "clang@9.0.0"
     SPEC: "@develop%${COMPILER}"
+    MIRROR: "/usr/workspace/smithdev/mirror"
   extends: .master_build_with_deps_on_quartz
 
 gcc_8_1_0 (Master build_with_deps_on_quartz):
   variables:
     COMPILER: "gcc@8.1.0"
     SPEC: "@develop%${COMPILER}"
+    MIRROR: "/usr/workspace/smithdev/mirror"
   extends: .master_build_with_deps_on_quartz
 
 intel_19_0_4 (Master build_with_deps_on_quartz):
   variables:
     COMPILER: "intel@19.0.4"
     SPEC: "@develop%${COMPILER}"
+    MIRROR: "/usr/workspace/smithdev/mirror"
   extends: .master_build_with_deps_on_quartz
