@@ -122,13 +122,16 @@ TEST(thermal_solver, static_solve_multiple_bcs)
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
+  auto u_1 = std::make_shared<mfem::ConstantCoefficient>(0.0);
 
-  std::vector<int> marked_1(pmesh->bdr_attributes.Max(), 1);
-  std::vector<int> marked_2(pmesh->bdr_attributes.Max(), 2);
+  std::vector<int> marked_1(pmesh->bdr_attributes.Max(), 0);
+  std::vector<int> marked_2(pmesh->bdr_attributes.Max(), 0);
+  marked_1[0] = 1;
+  marked_2[1] = 1;
 
   // Set the temperature BC in the thermal solver
   therm_solver.SetTemperatureBCs(marked_1, u_0);
-  therm_solver.SetTemperatureBCs(marked_2, u_0);
+  therm_solver.SetTemperatureBCs(marked_2, u_1);
 
   // Set the conductivity of the thermal operator
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
@@ -146,9 +149,15 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   // operator
   therm_solver.CompleteSetup();
 
+  // Initialize the output
+  therm_solver.InitializeOutput(OutputType::GLVis, "thermal_two_boundary");
+
   // Perform the static solve
   double dt = 1.0;
   therm_solver.AdvanceTimestep(dt);
+
+  // Output the state
+  therm_solver.OutputState();
 
   // Get the state grid function
   auto state = therm_solver.GetState();
@@ -156,7 +165,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
   double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
-  EXPECT_NEAR(2.56980679, u_norm, 0.00001);
+  EXPECT_NEAR(0.9168086318, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
