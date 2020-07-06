@@ -18,6 +18,7 @@ sys_type=${SYS_TYPE:-""}
 compiler=${COMPILER:-""}
 hostconfig=${HOST_CONFIG:-""}
 spec=${SPEC:-""}
+mirror=${MIRROR:-""}
 
 # Dependencies
 if [[ "${option}" != "--build-only" && "${option}" != "--test-only" ]]
@@ -32,7 +33,7 @@ then
         exit 1
     fi
 
-    python scripts/uberenv/uberenv.py --spec=${spec}
+    python scripts/uberenv/uberenv.py --spec=${spec} --mirror=${mirror}
 
 fi
 
