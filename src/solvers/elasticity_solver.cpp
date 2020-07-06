@@ -40,12 +40,7 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
 void ElasticitySolver::SetDisplacementBCs(std::vector<int> &                       disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
-
-  // Get the list of essential DOFs
-  for (auto &bc : m_ess_bdr) {
-    displacement.space->GetEssentialTrueDofs(bc->markers, bc->true_dofs);
-  }
+  SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement.space, component);
 }
 
 void ElasticitySolver::SetTractionBCs(std::vector<int> &                       trac_bdr,

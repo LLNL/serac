@@ -25,7 +25,9 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 }
 
 void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bdr,
-                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef, int component)
+                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef, 
+                                 mfem::ParFiniteElementSpace &fes, 
+                                 int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
 
@@ -33,10 +35,22 @@ void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bd
 
   for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
     bc->markers[i] = ess_bdr[i];
+
+   if (bc->markers[i] == 1) {
+      for (auto &existing_bc : m_ess_bdr) {
+        if (existing_bc->markers[i] == 1) {
+          mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
+          bc->markers[i] = 0;
+          break;
+        }
+      }
+    }    
   }
 
   bc->vec_coef  = ess_bdr_vec_coef;
   bc->component = component;
+
+  fes.GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
 
   m_ess_bdr.push_back(bc);
 }
@@ -73,7 +87,7 @@ void BaseSolver::SetNaturalBCs(const std::vector<int> &                 nat_bdr,
 }
 
 void BaseSolver::SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                                 int component)
+                                 mfem::ParFiniteElementSpace &fes, int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
 
@@ -81,10 +95,22 @@ void BaseSolver::SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_pt
 
   for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
     bc->markers[i] = ess_bdr[i];
+
+    if (bc->markers[i] == 1) {
+      for (auto &existing_bc : m_ess_bdr) {
+        if (existing_bc->markers[i] == 1) {
+          mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
+          bc->markers[i] = 0;
+          break;
+        }
+      }
+    }
   }
 
   bc->scalar_coef = ess_bdr_coef;
   bc->component   = component;
+
+  fes.GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
 
   m_ess_bdr.push_back(bc);
 }

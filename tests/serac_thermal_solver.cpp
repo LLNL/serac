@@ -196,8 +196,8 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
 
   // Set the temperature BC in the thermal solver
-  therm_solver.SetTemperatureBCs(temp_bdr, u_1);
   therm_solver.SetTemperatureBCs(temp_bdr, u_0);
+  therm_solver.SetTemperatureBCs(temp_bdr, u_1);
 
   // Set the conductivity of the thermal operator
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);

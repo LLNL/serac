@@ -35,12 +35,7 @@ void ThermalSolver::SetTemperature(mfem::Coefficient &temp)
 
 void ThermalSolver::SetTemperatureBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
-  SetEssentialBCs(ess_bdr, ess_bdr_coef);
-
-  // Get the essential dof indices and project the coefficient onto them
-  for (auto &bc : m_ess_bdr) {
-    temperature.space->GetEssentialTrueDofs(bc->markers, bc->true_dofs);
-  }
+  SetEssentialBCs(ess_bdr, ess_bdr_coef, *temperature.space);
 }
 
 void ThermalSolver::SetFluxBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)

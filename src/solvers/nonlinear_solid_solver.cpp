@@ -58,23 +58,13 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &                 disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef, -1);
-
-  // Get the list of essential DOFs
-  for (auto &bc : m_ess_bdr) {
-    displacement.space->GetEssentialTrueDofs(bc->markers, bc->true_dofs);
-  }
+  SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement.space, -1);
 }
 
 void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &           disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
-
-  // Get the list of essential DOFs
-  for (auto &bc : m_ess_bdr) {
-    displacement.space->GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
-  }
+  SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement.space, component);
 }
 
 void NonlinearSolidSolver::SetTractionBCs(const std::vector<int> &                 trac_bdr,
