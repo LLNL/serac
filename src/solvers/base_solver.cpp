@@ -239,10 +239,6 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
     }
 
     case OutputType::GLVis: {
-      std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}", m_root_name, m_rank);
-      std::ofstream omesh(mesh_name.c_str());
-      omesh.precision(8);
-      m_state.front().mesh->Print(omesh);
       break;
     }
 
@@ -262,6 +258,11 @@ void BaseSolver::OutputState() const
     }
 
     case OutputType::GLVis: {
+      std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", m_root_name, m_cycle, m_rank);
+      std::ofstream omesh(mesh_name.c_str());
+      omesh.precision(8);
+      m_state.front().mesh->Print(omesh);
+
       for (auto &state : m_state) {
         std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", m_root_name, state.name, m_cycle, m_rank);
         std::ofstream osol(sol_name.c_str());
