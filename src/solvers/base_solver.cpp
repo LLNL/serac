@@ -25,9 +25,8 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 }
 
 void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bdr,
-                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef, 
-                                 mfem::ParFiniteElementSpace &fes, 
-                                 int component)
+                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
+                                 mfem::ParFiniteElementSpace &fes, int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
 
@@ -36,7 +35,7 @@ void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bd
   for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
     bc->markers[i] = ess_bdr[i];
 
-   if (bc->markers[i] == 1) {
+    if (bc->markers[i] == 1) {
       for (auto &existing_bc : m_ess_bdr) {
         if (existing_bc->markers[i] == 1) {
           mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
@@ -44,7 +43,7 @@ void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bd
           break;
         }
       }
-    }    
+    }
   }
 
   bc->vec_coef  = ess_bdr_vec_coef;

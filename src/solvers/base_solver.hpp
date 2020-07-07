@@ -73,7 +73,7 @@ class BaseSolver {
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
   virtual void SetEssentialBCs(const std::vector<int> &                 ess_bdr,
-                               std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef, 
+                               std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
                                mfem::ParFiniteElementSpace &fes, int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
