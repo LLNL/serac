@@ -14,7 +14,7 @@ LinearToNonlinearFormIntegrator::LinearToNonlinearFormIntegrator(std::shared_ptr
 
 void LinearToNonlinearFormIntegrator::AssembleElementVector(const mfem::FiniteElement &                 el,
                                                             mfem::ElementTransformation &               Tr,
-                                                            __attribute__((unused)) const mfem::Vector &elfun,
+                                                            const mfem::Vector &,
                                                             mfem::Vector &                              elvect)
 {
   m_f->AssembleRHSElementVect(el, Tr, elvect);
@@ -23,7 +23,7 @@ void LinearToNonlinearFormIntegrator::AssembleElementVector(const mfem::FiniteEl
 
 void LinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElement &                 el,
                                                           mfem::ElementTransformation &               Tr,
-                                                          __attribute__((unused)) const mfem::Vector &elfun,
+                                                          const mfem::Vector &,
                                                           mfem::DenseMatrix &                         elmat)
 {
   const mfem::FiniteElement &trial_el = *(m_trial_fes->FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
@@ -39,7 +39,7 @@ BilinearToNonlinearFormIntegrator::BilinearToNonlinearFormIntegrator(std::shared
 
 void BilinearToNonlinearFormIntegrator::AssembleElementVector(const mfem::FiniteElement &                 el,
                                                               mfem::ElementTransformation &               Tr,
-                                                              __attribute__((unused)) const mfem::Vector &elfun,
+                                                              const mfem::Vector &elfun,
                                                               mfem::Vector &                              elvect)
 {
   mfem::DenseMatrix elmat;
@@ -50,7 +50,7 @@ void BilinearToNonlinearFormIntegrator::AssembleElementVector(const mfem::Finite
 
 void BilinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElement &                 el,
                                                             mfem::ElementTransformation &               Tr,
-                                                            __attribute__((unused)) const mfem::Vector &elfun,
+                                                            const mfem::Vector &,
                                                             mfem::DenseMatrix &                         elmat)
 {
   m_A->AssembleElementMatrix(el, Tr, elmat);
@@ -76,7 +76,7 @@ void MixedBilinearToNonlinearFormIntegrator::AssembleElementVector(const mfem::F
 
 void MixedBilinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElement &                 el,
                                                                  mfem::ElementTransformation &               Tr,
-                                                                 __attribute__((unused)) const mfem::Vector &elfun,
+                                                                 const mfem::Vector &,
                                                                  mfem::DenseMatrix &                         elmat)
 {
   const mfem::FiniteElement &trial_el = *(m_trial_fes->FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));

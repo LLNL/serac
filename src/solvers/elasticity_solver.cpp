@@ -138,7 +138,7 @@ void ElasticitySolver::CompleteSetup()
   }
 }
 
-void ElasticitySolver::AdvanceTimestep(__attribute__((unused)) double &dt)
+void ElasticitySolver::AdvanceTimestep(double &)
 {
   // Initialize the true vector
   displacement->gf->GetTrueDofs(*displacement->true_vec);
