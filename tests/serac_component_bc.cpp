@@ -186,13 +186,11 @@ TEST(component_bc, qs_attribute_solve)
   // Output the state
   solid_solver.OutputState();
 
-  auto state = solid_solver.GetState();
-
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.03330115, x_norm, 0.0001);
 

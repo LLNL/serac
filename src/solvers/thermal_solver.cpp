@@ -35,7 +35,7 @@ void ThermalSolver::SetTemperature(mfem::Coefficient &temp)
 
 void ThermalSolver::SetTemperatureBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
-  SetEssentialBCs(ess_bdr, ess_bdr_coef, *temperature->space);
+  SetEssentialBCs(ess_bdr, ess_bdr_coef, *m_temperature->space);
 }
 
 void ThermalSolver::SetFluxBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
@@ -122,9 +122,9 @@ void ThermalSolver::QuasiStaticSolve()
   *m_bc_rhs = *m_rhs;
   for (auto &bc : m_ess_bdr) {
     bc->scalar_coef->SetTime(m_time);
-    temperature.gf->ProjectBdrCoefficient(*bc->scalar_coef, bc->markers);
-    temperature.gf->GetTrueDofs(temperature->true_vec);
-    mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, temperature.true_vec, *m_bc_rhs);
+    m_temperature->gf->ProjectBdrCoefficient(*bc->scalar_coef, bc->markers);
+    m_temperature->gf->GetTrueDofs(*m_temperature->true_vec);
+    mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, *m_temperature->true_vec, *m_bc_rhs);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning

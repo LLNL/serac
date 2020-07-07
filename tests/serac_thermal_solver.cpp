@@ -156,12 +156,9 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   // Output the state
   therm_solver.OutputState();
 
-  // Get the state grid function
-  auto state = therm_solver.GetState();
-
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.GetTemperature()->gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(0.9168086318, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -225,12 +222,9 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   double dt = 1.0;
   therm_solver.AdvanceTimestep(dt);
 
-  // Get the state grid function
-  auto state = therm_solver.GetState();
-
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = state[0].gf->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.GetTemperature()->gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);

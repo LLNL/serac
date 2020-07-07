@@ -133,7 +133,7 @@ void NonlinearSolidSolver::CompleteSetup()
     // Generate the scalar dof list from the vector dof list
     mfem::Array<int> dof_list(bc->true_dofs.Size());
     for (int i = 0; i < bc->true_dofs.Size(); ++i) {
-      dof_list[i] = displacement->space->VDofToDof(bc->true_dofs[i]);
+      dof_list[i] = m_displacement->space->VDofToDof(bc->true_dofs[i]);
     }
 
     // Project the coefficient

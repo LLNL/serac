@@ -40,7 +40,7 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
 void ElasticitySolver::SetDisplacementBCs(std::vector<int> &                       disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement.space, component);
+  SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement->space, component);
 }
 
 void ElasticitySolver::SetTractionBCs(std::vector<int> &                       trac_bdr,
@@ -162,8 +162,8 @@ void ElasticitySolver::QuasiStaticSolve()
   for (auto &bc : m_ess_bdr) {
     bc->vec_coef->SetTime(m_time);
     displacement->gf->ProjectBdrCoefficient(*bc->vec_coef, bc->markers);
-    displacement->gf->GetTrueDofs(displacement.true_vec);
-    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, bc->true_dofs, displacement.true_vec, *m_bc_rhs);
+    displacement->gf->GetTrueDofs(*displacement->true_vec);
+    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, bc->true_dofs, *displacement->true_vec, *m_bc_rhs);
   }
 
   m_K_solver->SetOperator(*m_K_mat);
