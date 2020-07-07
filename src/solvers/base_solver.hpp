@@ -26,10 +26,10 @@ class BaseSolver {
   std::unique_ptr<mfem::BlockVector> m_block;
 
   /// Essential BC markers
-  std::vector<std::shared_ptr<BoundaryConditionData> > m_ess_bdr;
+  std::vector<std::shared_ptr<BoundaryCondition> > m_ess_bdr;
 
   /// Natural BC markers
-  std::vector<std::shared_ptr<BoundaryConditionData> > m_nat_bdr;
+  std::vector<std::shared_ptr<BoundaryCondition> > m_nat_bdr;
 
   /// Type of state variable output
   OutputType m_output_type;
@@ -68,12 +68,13 @@ class BaseSolver {
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
   virtual void SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                               int component = -1);
+                               mfem::ParFiniteElementSpace &fes, int component = -1);
 
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
   virtual void SetEssentialBCs(const std::vector<int> &                 ess_bdr,
-                               std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef, int component = -1);
+                               std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
+                               mfem::ParFiniteElementSpace &fes, int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
   virtual void SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);

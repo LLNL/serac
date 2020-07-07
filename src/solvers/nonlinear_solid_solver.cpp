@@ -62,23 +62,13 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &                 disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef, -1);
-
-  // Get the list of essential DOFs
-  for (auto &ess_bc_data : m_ess_bdr) {
-    m_displacement->space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs);
-  }
+  SetEssentialBCs(disp_bdr, disp_bdr_coef, *m_displacement->space, -1);
 }
 
 void NonlinearSolidSolver::SetDisplacementBCs(const std::vector<int> &           disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef, component);
-
-  // Get the list of essential DOFs
-  for (auto &ess_bc_data : m_ess_bdr) {
-    m_displacement->space->GetEssentialTrueDofs(ess_bc_data->bc_markers, ess_bc_data->true_dofs, component);
-  }
+  SetEssentialBCs(disp_bdr, disp_bdr_coef, *m_displacement->space, component);
 }
 
 void NonlinearSolidSolver::SetTractionBCs(const std::vector<int> &                 trac_bdr,
@@ -129,7 +119,7 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Add the traction integrator
   for (auto &nat_bc_data : m_nat_bdr) {
-    m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->bc_markers);
+    m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->markers);
   }
 
   // Add the essential boundary
@@ -139,24 +129,24 @@ void NonlinearSolidSolver::CompleteSetup()
   m_displacement->space->BuildDofToArrays();
 
   // Project the essential boundary coefficients
-  for (auto &ess_bc_data : m_ess_bdr) {
+  for (auto &bc : m_ess_bdr) {
     // Generate the scalar dof list from the vector dof list
-    mfem::Array<int> dof_list(ess_bc_data->true_dofs.Size());
-    for (int i = 0; i < ess_bc_data->true_dofs.Size(); ++i) {
-      dof_list[i] = m_displacement->space->VDofToDof(ess_bc_data->true_dofs[i]);
+    mfem::Array<int> dof_list(bc->true_dofs.Size());
+    for (int i = 0; i < bc->true_dofs.Size(); ++i) {
+      dof_list[i] = displacement->space->VDofToDof(bc->true_dofs[i]);
     }
 
     // Project the coefficient
-    if (ess_bc_data->component == -1) {
+    if (bc->component == -1) {
       // If it contains all components, project the vector
-      m_displacement->gf->ProjectCoefficient(*ess_bc_data->vec_coef, dof_list);
+      m_displacement->gf->ProjectCoefficient(*bc->vec_coef, dof_list);
     } else {
       // If it is only a single component, project the scalar
-      m_displacement->gf->ProjectCoefficient(*ess_bc_data->scalar_coef, dof_list, ess_bc_data->component);
+      m_displacement->gf->ProjectCoefficient(*bc->scalar_coef, dof_list, bc->component);
     }
 
     // Add the vector dofs to the total essential BC dof list
-    essential_dofs.Append(ess_bc_data->true_dofs);
+    essential_dofs.Append(bc->true_dofs);
   }
 
   // Remove any duplicates from the essential BC list

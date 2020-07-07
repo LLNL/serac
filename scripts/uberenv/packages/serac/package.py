@@ -96,15 +96,11 @@ class Serac(CMakePackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.0.0~shared~zlib+hypre+metis+superlu-dist+lapack+mpi",
+    debug_deps = ["mfem@4.1.0~shared+hypre+metis+superlu-dist+lapack+mpi",
                   "hypre@2.11.1~shared~superlu-dist+mpi"]
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
-
-    depends_on("hypre@2.11.1~shared~superlu-dist+mpi")
-    depends_on("hypre@2.11.1~shared~superlu-dist+mpi+debug", when="+debug")
-
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",

@@ -83,12 +83,13 @@ struct FiniteElementState {
 };
 
 // Boundary condition information
-struct BoundaryConditionData {
-  mfem::Array<int>                         bc_markers;
+struct BoundaryCondition {
+  mfem::Array<int>                         markers;
   mfem::Array<int>                         true_dofs;
   int                                      component;
   std::shared_ptr<mfem::Coefficient>       scalar_coef;
   std::shared_ptr<mfem::VectorCoefficient> vec_coef;
+  std::unique_ptr<mfem::HypreParMatrix>    eliminated_matrix_entries;
 };
 
 #endif
