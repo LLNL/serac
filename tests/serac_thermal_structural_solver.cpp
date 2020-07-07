@@ -9,13 +9,10 @@
 #include <fstream>
 
 #include "coefficients/linear_coefficient.hpp"
+#include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/thermal_structural_solver.hpp"
-
-void   InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
-void   InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
-double InitialTemperature(const mfem::Vector &x);
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -42,9 +39,23 @@ TEST(dynamic_solver, dyn_solve)
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
-  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
-  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
-  auto temp   = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
+  std::shared_ptr<mfem::VectorCoefficient> deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &x, mfem::Vector &y) {
+    y    = x;
+    y(1) = y(1) + x(0) * 0.01;
+  });
+
+  std::shared_ptr<mfem::VectorCoefficient> velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &, mfem::Vector &v) {
+    v = 0.0;
+  });
+
+  std::shared_ptr<mfem::Coefficient> temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { 
+    double temp = 2.0;
+    if (x(0) < 1.0) {
+      temp = 5.0;
+    }
+    return temp;
+  });
+
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
 
   // set the traction boundary
@@ -150,19 +161,4 @@ int main(int argc, char *argv[])
   return result;
 }
 
-void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
-{
-  y    = x;
-  y(1) = y(1) + x(0) * 0.01;
-}
 
-void InitialVelocity(__attribute__((unused)) const mfem::Vector &x, mfem::Vector &v) { v = 0.0; }
-
-double InitialTemperature(const mfem::Vector &x)
-{
-  double temp = 2.0;
-  if (x(0) < 1.0) {
-    temp = 5.0;
-  }
-  return temp;
-}

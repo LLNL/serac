@@ -74,7 +74,7 @@ if (ENABLE_GTEST)
         NAME       serac_thermal_structural_solver
         SOURCES    serac_thermal_structural_solver.cpp
         OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-        DEPENDS_ON solvers mpi mfem gtest )
+        DEPENDS_ON solvers mpi mfem gtest coefficients)
     blt_add_test(
         NAME              serac_thermal_structural_solver
         COMMAND           serac_thermal_structural_solver
