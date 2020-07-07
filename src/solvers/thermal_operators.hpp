@@ -36,14 +36,8 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   /// Pointer to the assembled M matrix
   std::shared_ptr<mfem::HypreParMatrix> m_M_mat;
 
-  /// Pointer to the eliminated M matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_M_e_mat;
-
   /// Pointer to the assembled K matrix
   std::shared_ptr<mfem::HypreParMatrix> m_K_mat;
-
-  /// Pointer to the eliminated K matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_K_e_mat;
 
   /// Pointer to the assembled T ( = M + dt K) matrix
   std::unique_ptr<mfem::HypreParMatrix> m_T_mat;
@@ -58,7 +52,7 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   std::shared_ptr<mfem::Vector> m_bc_rhs;
 
   /// Temperature essential boundary coefficient
-  std::vector<std::shared_ptr<BoundaryConditionData> > m_ess_bdr;
+  std::vector<std::shared_ptr<BoundaryCondition> > m_ess_bdr;
 
   /// Auxillary working vectors
   mutable mfem::Vector m_z;
@@ -71,13 +65,10 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
  public:
   /// Constructor. Height is the true degree of freedom size
   DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const LinearSolverParameters &params,
-                            const std::vector<std::shared_ptr<BoundaryConditionData> > &ess_bdr);
+                            const std::vector<std::shared_ptr<BoundaryCondition> > &ess_bdr);
 
   /// Set the mass matrix
-  void SetMMatrix(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> M_e_mat);
-
-  /// Set the stiffness matrix
-  void SetKMatrix(std::shared_ptr<mfem::HypreParMatrix> K_mat, std::shared_ptr<mfem::HypreParMatrix> K_e_mat);
+  void SetMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);
 
   /// Set the load vector
   void SetLoadVector(std::shared_ptr<mfem::Vector> rhs);

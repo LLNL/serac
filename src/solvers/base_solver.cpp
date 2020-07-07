@@ -25,98 +25,123 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 }
 
 void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bdr,
-                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef, int component)
+                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
+                                 mfem::ParFiniteElementSpace &fes, int component)
 {
-  auto bc_data = std::make_shared<BoundaryConditionData>();
+  auto bc = std::make_shared<BoundaryCondition>();
 
-  bc_data->bc_markers.SetSize(ess_bdr.size());
+  bc->markers.SetSize(ess_bdr.size());
 
   for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
-    bc_data->bc_markers[i] = ess_bdr[i];
+    bc->markers[i] = ess_bdr[i];
+
+    if (bc->markers[i] == 1) {
+      for (auto &existing_bc : m_ess_bdr) {
+        if (existing_bc->markers[i] == 1) {
+          mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
+          bc->markers[i] = 0;
+          break;
+        }
+      }
+    }
   }
 
-  bc_data->vec_coef  = ess_bdr_vec_coef;
-  bc_data->component = component;
+  bc->vec_coef  = ess_bdr_vec_coef;
+  bc->component = component;
 
-  m_ess_bdr.push_back(bc_data);
+  fes.GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
+
+  m_ess_bdr.push_back(bc);
 }
 
 void BaseSolver::SetTrueDofs(const mfem::Array<int> &                 true_dofs,
                              std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
-  auto bc_data = std::make_shared<BoundaryConditionData>();
+  auto bc = std::make_shared<BoundaryCondition>();
 
-  bc_data->bc_markers.SetSize(0);
+  bc->markers.SetSize(0);
 
-  bc_data->true_dofs = true_dofs;
+  bc->true_dofs = true_dofs;
 
-  bc_data->vec_coef = ess_bdr_vec_coef;
+  bc->vec_coef = ess_bdr_vec_coef;
 
-  m_ess_bdr.push_back(bc_data);
+  m_ess_bdr.push_back(bc);
 }
 
 void BaseSolver::SetNaturalBCs(const std::vector<int> &                 nat_bdr,
                                std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef, int component)
 {
-  auto bc_data = std::make_shared<BoundaryConditionData>();
+  auto bc = std::make_shared<BoundaryCondition>();
 
-  bc_data->bc_markers.SetSize(nat_bdr.size());
+  bc->markers.SetSize(nat_bdr.size());
 
   for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
-    bc_data->bc_markers[i] = nat_bdr[i];
+    bc->markers[i] = nat_bdr[i];
   }
 
-  bc_data->vec_coef  = nat_bdr_vec_coef;
-  bc_data->component = component;
+  bc->vec_coef  = nat_bdr_vec_coef;
+  bc->component = component;
 
-  m_nat_bdr.push_back(bc_data);
+  m_nat_bdr.push_back(bc);
 }
 
 void BaseSolver::SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                                 int component)
+                                 mfem::ParFiniteElementSpace &fes, int component)
 {
-  auto bc_data = std::make_shared<BoundaryConditionData>();
+  auto bc = std::make_shared<BoundaryCondition>();
 
-  bc_data->bc_markers.SetSize(ess_bdr.size());
+  bc->markers.SetSize(ess_bdr.size());
 
   for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
-    bc_data->bc_markers[i] = ess_bdr[i];
+    bc->markers[i] = ess_bdr[i];
+
+    if (bc->markers[i] == 1) {
+      for (auto &existing_bc : m_ess_bdr) {
+        if (existing_bc->markers[i] == 1) {
+          mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
+          bc->markers[i] = 0;
+          break;
+        }
+      }
+    }
   }
 
-  bc_data->scalar_coef = ess_bdr_coef;
-  bc_data->component   = component;
+  bc->scalar_coef = ess_bdr_coef;
+  bc->component   = component;
 
-  m_ess_bdr.push_back(bc_data);
+  fes.GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
+
+  m_ess_bdr.push_back(bc);
 }
 
 void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
-  auto bc_data = std::make_shared<BoundaryConditionData>();
+  auto bc = std::make_shared<BoundaryCondition>();
 
-  bc_data->bc_markers.SetSize(0);
+  bc->markers.SetSize(0);
 
-  bc_data->true_dofs = true_dofs;
+  bc->true_dofs = true_dofs;
 
-  bc_data->scalar_coef = ess_bdr_coef;
+  bc->scalar_coef = ess_bdr_coef;
 
-  m_ess_bdr.push_back(bc_data);
+  m_ess_bdr.push_back(bc);
 }
 
 void BaseSolver::SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
                                int component)
 {
-  auto bc_data = std::make_shared<BoundaryConditionData>();
+  auto bc = std::make_shared<BoundaryCondition>();
 
-  bc_data->bc_markers.SetSize(nat_bdr.size());
+  bc->markers.SetSize(nat_bdr.size());
 
   for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
-    bc_data->bc_markers[i] = nat_bdr[i];
+    bc->markers[i] = nat_bdr[i];
   }
 
-  bc_data->scalar_coef = nat_bdr_coef;
-  bc_data->component   = component;
+  bc->scalar_coef = nat_bdr_coef;
+  bc->component   = component;
 
-  m_nat_bdr.push_back(bc_data);
+  m_nat_bdr.push_back(bc);
 }
 
 void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
@@ -213,10 +238,6 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
     }
 
     case OutputType::GLVis: {
-      std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}", m_root_name, m_rank);
-      std::ofstream omesh(mesh_name.c_str());
-      omesh.precision(8);
-      m_state.front().mesh->Print(omesh);
       break;
     }
 
@@ -236,6 +257,11 @@ void BaseSolver::OutputState() const
     }
 
     case OutputType::GLVis: {
+      std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", m_root_name, m_cycle, m_rank);
+      std::ofstream omesh(mesh_name.c_str());
+      omesh.precision(8);
+      m_state.front().mesh->Print(omesh);
+
       for (auto &state : m_state) {
         std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", m_root_name, state.name, m_cycle, m_rank);
         std::ofstream osol(sol_name.c_str());
