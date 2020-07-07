@@ -78,9 +78,9 @@ void ElasticitySolver::CompleteSetup()
 
   // Add the traction integrator
   if (m_nat_bdr.size() > 0) {
-    for (auto &nat_bc_data : m_nat_bdr) {
-      m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*nat_bc_data->vec_coef),
-                                      nat_bc_data->markers);
+    for (auto &nat_bc : m_nat_bdr) {
+      m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*nat_bc->vec_coef),
+                                      nat_bc->markers);
     }
     m_l_form->Assemble();
     m_rhs = m_l_form->ParallelAssemble();
