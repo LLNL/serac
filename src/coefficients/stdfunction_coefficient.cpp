@@ -139,3 +139,28 @@ void TransformedVectorCoefficient::Eval(mfem::Vector &V, mfem::ElementTransforma
     m_bi_function(temp, temp2, V);
   }
 }
+
+TransformedScalarCoefficient::TransformedScalarCoefficient(mfem::Coefficient *                           s1,
+                                                           std::function<double(const double)> func)
+    : mfem::Coefficient(), m_s1(s1), m_s2(nullptr), m_mono_function(func), m_bi_function(nullptr)
+{
+}
+
+TransformedScalarCoefficient::TransformedScalarCoefficient(
+    mfem::Coefficient *s1, mfem::Coefficient *s2,
+    std::function<double(const double, const double)> func)
+    : mfem::Coefficient(), m_s1(s1), m_s2(s2), m_mono_function(nullptr), m_bi_function(func)
+{
+}
+
+double TransformedScalarCoefficient::Eval(mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip)
+{
+  double temp = m_s1->Eval(T, ip);
+
+  if (m_mono_function) {
+    return m_mono_function(temp);
+  } else {
+    double temp2 = m_s2->Eval(T, ip);
+    return m_bi_function(temp, temp2);
+  }
+}

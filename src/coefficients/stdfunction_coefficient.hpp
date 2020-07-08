@@ -194,4 +194,43 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
   std::function<void(mfem::Vector &, mfem::Vector &, mfem::Vector &)> m_bi_function;
 };
 
+/**
+   TransformedScalarCoefficient applies various operations to modify a
+   scalar Coefficient
+*/
+class TransformedScalarCoefficient : public mfem::Coefficient {
+ public:
+  /**
+     \brief Apply a scalar function, Func, to s1
+
+
+     \param[in] s1 A Coefficient to apply Func to
+     \param[in] func A function that takes in an input scalar, and returns the
+     output.
+  */
+  TransformedScalarCoefficient(mfem::Coefficient *s1, std::function<double(const double)> func);
+
+  /**
+     \brief Apply a scalar function, Func, to s1 and s2
+
+
+     \param[in] s1 A scalar Coefficient to apply Func to
+     \param[in] s2 A scalar Coefficient to apply Func to
+     \param[in] func A function that takes in two input scalars, and returns the
+     output.
+  */
+
+  TransformedScalarCoefficient(mfem::Coefficient *s1, mfem::Coefficient *s2,
+                               std::function<double(const double, const double)> func);
+
+  virtual double Eval(mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
+
+ private:
+  mfem::Coefficient *m_s1;
+  mfem::Coefficient *m_s2;
+
+  std::function<double(const double)>                 m_mono_function;
+  std::function<double(const double, const double)>   m_bi_function;
+};
+
 #endif

@@ -81,8 +81,11 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetCouplingScheme(CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity
+  double offset = 0.1;
+  double scale = 1.0;
+
   auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(ts_solver.GetTemperature()->gf.get());
-  auto visc_coef = std::make_shared<LinearTransformationCoefficient>(temp_gf_coef, 0.1, 1.0);
+  auto visc_coef = std::make_shared<TransformedScalarCoefficient>(temp_gf_coef.get(), [offset, scale](const double x) {return scale * x + offset; });
   ts_solver.SetViscosity(visc_coef);
 
   // Set the linear solver parameters
