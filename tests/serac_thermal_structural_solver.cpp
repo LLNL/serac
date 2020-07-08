@@ -8,7 +8,6 @@
 
 #include <fstream>
 
-#include "coefficients/linear_coefficient.hpp"
 #include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
