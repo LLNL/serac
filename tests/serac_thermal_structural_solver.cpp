@@ -39,16 +39,16 @@ TEST(dynamic_solver, dyn_solve)
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
-  std::shared_ptr<mfem::VectorCoefficient> deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &x, mfem::Vector &y) {
+  auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &x, mfem::Vector &y) {
     y    = x;
     y(1) = y(1) + x(0) * 0.01;
   });
 
-  std::shared_ptr<mfem::VectorCoefficient> velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &, mfem::Vector &v) {
+  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &, mfem::Vector &v) {
     v = 0.0;
   });
 
-  std::shared_ptr<mfem::Coefficient> temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { 
+  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { 
     double temp = 2.0;
     if (x(0) < 1.0) {
       temp = 5.0;
