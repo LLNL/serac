@@ -101,7 +101,7 @@ double AttributeModifierCoefficient::Eval(mfem::ElementTransformation &Tr, const
   Tr.Attribute = m_attr_list[Tr.ElementNo];
 
   // Evaluate with new attribute
-  double result = m_C->Eval(Tr, ip);
+  double result = m_C.Eval(Tr, ip);
 
   // Set back to original attribute (maybe it's not necessary?.. just to be
   // safe)

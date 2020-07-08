@@ -146,7 +146,7 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
      the element attributes
   */
   AttributeModifierCoefficient(const mfem::Array<int> &attr_list, mfem::Coefficient &c)
-      : m_attr_list(attr_list), m_C(&c)
+      : m_attr_list(attr_list), m_C(c)
   {
   }
 
@@ -154,7 +154,7 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
 
  protected:
   const mfem::Array<int> &m_attr_list;
-  mfem::Coefficient *     m_C;
+  mfem::Coefficient      &m_C;
 };
 
 /**
