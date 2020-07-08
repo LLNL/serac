@@ -44,11 +44,9 @@ TEST(dynamic_solver, dyn_solve)
     y(1) = y(1) + x(0) * 0.01;
   });
 
-  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &, mfem::Vector &v) {
-    v = 0.0;
-  });
+  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &, mfem::Vector &v) { v = 0.0; });
 
-  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { 
+  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector &x) {
     double temp = 2.0;
     if (x(0) < 1.0) {
       temp = 5.0;
@@ -67,7 +65,7 @@ TEST(dynamic_solver, dyn_solve)
   traction           = 0.0;
   traction(1)        = 1.0e-3;
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
-  
+
   // initialize the dynamic solver object
   ThermalStructuralSolver ts_solver(1, pmesh);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
@@ -82,10 +80,11 @@ TEST(dynamic_solver, dyn_solve)
 
   // Make a temperature-dependent viscosity
   double offset = 0.1;
-  double scale = 1.0;
+  double scale  = 1.0;
 
   auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(ts_solver.GetTemperature()->gf.get());
-  auto visc_coef = std::make_shared<TransformedScalarCoefficient>(temp_gf_coef, [offset, scale](const double x) {return scale * x + offset; });
+  auto visc_coef    = std::make_shared<TransformedScalarCoefficient>(
+      temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
   ts_solver.SetViscosity(visc_coef);
 
   // Set the linear solver parameters
@@ -163,5 +162,3 @@ int main(int argc, char *argv[])
 
   return result;
 }
-
-

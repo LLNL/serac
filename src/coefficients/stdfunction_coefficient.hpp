@@ -145,8 +145,7 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
      of coefficient at each element. \param[in] c The coefficient to "modify"
      the element attributes
   */
-  AttributeModifierCoefficient(const mfem::Array<int> &attr_list, mfem::Coefficient &c)
-      : m_attr_list(attr_list), m_C(c)
+  AttributeModifierCoefficient(const mfem::Array<int> &attr_list, mfem::Coefficient &c) : m_attr_list(attr_list), m_C(c)
   {
   }
 
@@ -154,7 +153,7 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
 
  protected:
   const mfem::Array<int> &m_attr_list;
-  mfem::Coefficient      &m_C;
+  mfem::Coefficient &     m_C;
 };
 
 /**
@@ -171,7 +170,8 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
      \param[in] func A function that takes in an input vector, and returns the
      output as the second argument.
   */
-  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient> v1, std::function<void(mfem::Vector &, mfem::Vector &)> func);
+  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>            v1,
+                               std::function<void(mfem::Vector &, mfem::Vector &)> func);
 
   /**
      \brief Apply a vector function, Func, to v1 and v2
@@ -230,8 +230,8 @@ class TransformedScalarCoefficient : public mfem::Coefficient {
   std::shared_ptr<mfem::Coefficient> m_s1;
   std::shared_ptr<mfem::Coefficient> m_s2;
 
-  std::function<double(const double)>                 m_mono_function;
-  std::function<double(const double, const double)>   m_bi_function;
+  std::function<double(const double)>               m_mono_function;
+  std::function<double(const double, const double)> m_bi_function;
 };
 
 #endif

@@ -6,8 +6,7 @@
 
 #include "hyperelastic_traction_integrator.hpp"
 
-void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElement &                        el1,
-                                                        const mfem::FiniteElement &,
+void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElement &el1, const mfem::FiniteElement &,
                                                         mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun,
                                                         mfem::Vector &elvec)
 {
@@ -77,8 +76,7 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElemen
   }
 }
 
-void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement &                        el1,
-                                                      const mfem::FiniteElement &el2,
+void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement &el1, const mfem::FiniteElement &el2,
                                                       mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun,
                                                       mfem::DenseMatrix &elmat)
 {
