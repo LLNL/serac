@@ -110,14 +110,14 @@ double AttributeModifierCoefficient::Eval(mfem::ElementTransformation &Tr, const
   return result;
 }
 
-TransformedVectorCoefficient::TransformedVectorCoefficient(mfem::VectorCoefficient *                           v1,
+TransformedVectorCoefficient::TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>                           v1,
                                                            std::function<void(mfem::Vector &, mfem::Vector &)> func)
     : mfem::VectorCoefficient(v1->GetVDim()), m_v1(v1), m_v2(nullptr), m_mono_function(func), m_bi_function(nullptr)
 {
 }
 
 TransformedVectorCoefficient::TransformedVectorCoefficient(
-    mfem::VectorCoefficient *v1, mfem::VectorCoefficient *v2,
+    std::shared_ptr<mfem::VectorCoefficient> v1, std::shared_ptr<mfem::VectorCoefficient> v2,
     std::function<void(mfem::Vector &, mfem::Vector &, mfem::Vector &)> func)
     : mfem::VectorCoefficient(v1->GetVDim()), m_v1(v1), m_v2(v2), m_mono_function(nullptr), m_bi_function(func)
 {
@@ -140,14 +140,14 @@ void TransformedVectorCoefficient::Eval(mfem::Vector &V, mfem::ElementTransforma
   }
 }
 
-TransformedScalarCoefficient::TransformedScalarCoefficient(mfem::Coefficient *                           s1,
+TransformedScalarCoefficient::TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient>                           s1,
                                                            std::function<double(const double)> func)
     : mfem::Coefficient(), m_s1(s1), m_s2(nullptr), m_mono_function(func), m_bi_function(nullptr)
 {
 }
 
 TransformedScalarCoefficient::TransformedScalarCoefficient(
-    mfem::Coefficient *s1, mfem::Coefficient *s2,
+    std::shared_ptr<mfem::Coefficient> s1, std::shared_ptr<mfem::Coefficient> s2,
     std::function<double(const double, const double)> func)
     : mfem::Coefficient(), m_s1(s1), m_s2(s2), m_mono_function(nullptr), m_bi_function(func)
 {

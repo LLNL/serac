@@ -13,6 +13,7 @@
 #define STD_FUNCTION_COEFFICIENT_HPP
 
 #include <functional>
+#include <memory>
 
 #include "mfem.hpp"
 
@@ -170,7 +171,7 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
      \param[in] func A function that takes in an input vector, and returns the
      output as the second argument.
   */
-  TransformedVectorCoefficient(mfem::VectorCoefficient *v1, std::function<void(mfem::Vector &, mfem::Vector &)> func);
+  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient> v1, std::function<void(mfem::Vector &, mfem::Vector &)> func);
 
   /**
      \brief Apply a vector function, Func, to v1 and v2
@@ -182,13 +183,13 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
      output as the third argument.
   */
 
-  TransformedVectorCoefficient(mfem::VectorCoefficient *v1, mfem::VectorCoefficient *v2,
+  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient> v1, std::shared_ptr<mfem::VectorCoefficient> v2,
                                std::function<void(mfem::Vector &, mfem::Vector &, mfem::Vector &)> func);
   virtual void Eval(mfem::Vector &V, mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
 
  private:
-  mfem::VectorCoefficient *m_v1;
-  mfem::VectorCoefficient *m_v2;
+  std::shared_ptr<mfem::VectorCoefficient> m_v1;
+  std::shared_ptr<mfem::VectorCoefficient> m_v2;
 
   std::function<void(mfem::Vector &, mfem::Vector &)>                 m_mono_function;
   std::function<void(mfem::Vector &, mfem::Vector &, mfem::Vector &)> m_bi_function;
@@ -208,7 +209,7 @@ class TransformedScalarCoefficient : public mfem::Coefficient {
      \param[in] func A function that takes in an input scalar, and returns the
      output.
   */
-  TransformedScalarCoefficient(mfem::Coefficient *s1, std::function<double(const double)> func);
+  TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::function<double(const double)> func);
 
   /**
      \brief Apply a scalar function, Func, to s1 and s2
@@ -220,14 +221,14 @@ class TransformedScalarCoefficient : public mfem::Coefficient {
      output.
   */
 
-  TransformedScalarCoefficient(mfem::Coefficient *s1, mfem::Coefficient *s2,
+  TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::shared_ptr<mfem::Coefficient> s2,
                                std::function<double(const double, const double)> func);
 
   virtual double Eval(mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
 
  private:
-  mfem::Coefficient *m_s1;
-  mfem::Coefficient *m_s2;
+  std::shared_ptr<mfem::Coefficient> m_s1;
+  std::shared_ptr<mfem::Coefficient> m_s2;
 
   std::function<double(const double)>                 m_mono_function;
   std::function<double(const double, const double)>   m_bi_function;
