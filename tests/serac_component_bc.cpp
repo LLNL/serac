@@ -18,7 +18,7 @@ TEST(component_bc, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/square.mesh";
+  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
   const char* mesh_file      = base_mesh_file.c_str();
 
   std::ifstream imesh(mesh_file);
@@ -116,7 +116,7 @@ TEST(component_bc, qs_attribute_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/square.mesh";
+  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
   const char* mesh_file      = base_mesh_file.c_str();
 
   std::ifstream imesh(mesh_file);

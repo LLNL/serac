@@ -16,7 +16,7 @@
 
 
 // Serac Locations
-#define SERAC_SRC_DIR "@SERAC_SRC_DIR@"
+#define SERAC_REPO_DIR "@SERAC_REPO_DIR@"
 #define SERAC_BIN_DIR "@SERAC_BIN_DIR@"
 
 // General defines
