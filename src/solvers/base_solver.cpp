@@ -39,6 +39,7 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &                 ess_bdr,
   bc->markers = 0;
 
   for (int attr : ess_bdr) {
+    MFEM_ASSERT(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
     for (auto &existing_bc : m_ess_bdr) {
       if (existing_bc->markers[attr-1] == 1) {
@@ -80,6 +81,7 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &                 nat_bdr,
   bc->markers = 0;
 
   for (int attr : nat_bdr) {  
+    MFEM_ASSERT(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
   }
 
@@ -98,6 +100,7 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<m
   bc->markers = 0;
 
   for (int attr : ess_bdr) {
+    MFEM_ASSERT(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
     for (auto &existing_bc : m_ess_bdr) {
       if (existing_bc->markers[attr-1] == 1) {
@@ -138,6 +141,7 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfe
   bc->markers = 0;
 
   for (int attr : nat_bdr) {  
+    MFEM_ASSERT(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
   }
 
