@@ -29,26 +29,24 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
   m_gf_initialized.assign(n, false);
 }
 
-void BaseSolver::SetEssentialBCs(const std::vector<int> &                 ess_bdr,
+void BaseSolver::SetEssentialBCs(const std::set<int> &                 ess_bdr,
                                  std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
                                  mfem::ParFiniteElementSpace &fes, int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
 
-  bc->markers.SetSize(ess_bdr.size());
+  bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
+  bc->markers = 0;
 
-  for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
-    bc->markers[i] = ess_bdr[i];
-
-    if (bc->markers[i] == 1) {
-      for (auto &existing_bc : m_ess_bdr) {
-        if (existing_bc->markers[i] == 1) {
-          mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
-          bc->markers[i] = 0;
-          break;
-        }
+  for (int attr : ess_bdr) {
+    bc->markers[attr-1] = 1;
+    for (auto &existing_bc : m_ess_bdr) {
+      if (existing_bc->markers[attr-1] == 1) {
+        mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
+        bc->markers[attr-1] = 0;
+        break;
       }
-    }
+    }    
   }
 
   bc->vec_coef  = ess_bdr_vec_coef;
@@ -73,15 +71,16 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &                 true_dofs,
   m_ess_bdr.push_back(bc);
 }
 
-void BaseSolver::SetNaturalBCs(const std::vector<int> &                 nat_bdr,
+void BaseSolver::SetNaturalBCs(const std::set<int> &                 nat_bdr,
                                std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef, int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
 
-  bc->markers.SetSize(nat_bdr.size());
+  bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
+  bc->markers = 0;
 
-  for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
-    bc->markers[i] = nat_bdr[i];
+  for (int attr : nat_bdr) {  
+    bc->markers[attr-1] = 1;
   }
 
   bc->vec_coef  = nat_bdr_vec_coef;
@@ -90,25 +89,23 @@ void BaseSolver::SetNaturalBCs(const std::vector<int> &                 nat_bdr,
   m_nat_bdr.push_back(bc);
 }
 
-void BaseSolver::SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
+void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
                                  mfem::ParFiniteElementSpace &fes, int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
 
-  bc->markers.SetSize(ess_bdr.size());
+  bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
+  bc->markers = 0;
 
-  for (unsigned int i = 0; i < ess_bdr.size(); ++i) {
-    bc->markers[i] = ess_bdr[i];
-
-    if (bc->markers[i] == 1) {
-      for (auto &existing_bc : m_ess_bdr) {
-        if (existing_bc->markers[i] == 1) {
-          mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
-          bc->markers[i] = 0;
-          break;
-        }
+  for (int attr : ess_bdr) {
+    bc->markers[attr-1] = 1;
+    for (auto &existing_bc : m_ess_bdr) {
+      if (existing_bc->markers[attr-1] == 1) {
+        mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
+        bc->markers[attr-1] = 0;
+        break;
       }
-    }
+    }    
   }
 
   bc->scalar_coef = ess_bdr_coef;
@@ -132,15 +129,16 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<
   m_ess_bdr.push_back(bc);
 }
 
-void BaseSolver::SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
+void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
                                int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
 
-  bc->markers.SetSize(nat_bdr.size());
+  bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
+  bc->markers = 0;
 
-  for (unsigned int i = 0; i < nat_bdr.size(); ++i) {
-    bc->markers[i] = nat_bdr[i];
+  for (int attr : nat_bdr) {  
+    bc->markers[attr-1] = 1;
   }
 
   bc->scalar_coef = nat_bdr_coef;
