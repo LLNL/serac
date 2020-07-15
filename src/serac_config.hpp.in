@@ -21,6 +21,7 @@
 
 // General defines
 #cmakedefine SERAC_DEBUG
+#cmakedefine SERAC_USE_LUMBERJACK
 
 
 // Compiler defines for TPLs
