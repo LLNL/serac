@@ -21,7 +21,7 @@ void exit_gracefully(bool error)
     error ? exit(EXIT_FAILURE) : exit(EXIT_SUCCESS);
 }
 
-void initialize_logger(MPI_Comm comm)
+bool initialize_logger(MPI_Comm comm)
 {
   namespace slic = axom::slic;
 
@@ -40,7 +40,7 @@ void initialize_logger(MPI_Comm comm)
   if (!slic::activateLogger(loggerName))
   {
     std::cerr << "Error: Failed to activate logger: " << loggerName << std::endl;
-    return;
+    return false;
   }
 
   // separate streams: warnings and errors (we); info and debug (id)
@@ -84,6 +84,8 @@ void initialize_logger(MPI_Comm comm)
   std::string msg = fmt::format("Logger activated: {0}", loggerName);
   SLIC_INFO_MASTER(rank, msg);
   serac::flush_logger();
+
+  return true;
 }
 
 void finalize_logger()

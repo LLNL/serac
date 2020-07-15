@@ -17,7 +17,7 @@ namespace serac {
   void exit_gracefully(bool error=false);
 
   // Logger functions
-  void initialize_logger(MPI_Comm comm);
+  bool initialize_logger(MPI_Comm comm);
   void finalize_logger();
   void flush_logger();
 }  // namespace serac

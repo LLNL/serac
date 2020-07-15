@@ -36,7 +36,10 @@ int main(int argc, char *argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Initialize SLIC logger
-  serac::initialize_logger(MPI_COMM_WORLD);
+  if(!serac::initialize_logger(MPI_COMM_WORLD))
+  {
+    serac::exit_gracefully(true);
+  }
 
   // mesh
   std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-hex.mesh";
