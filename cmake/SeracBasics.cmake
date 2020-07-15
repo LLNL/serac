@@ -14,6 +14,8 @@ if(ENABLE_ASAN)
     endif()
 endif()
 
+option(ENABLE_LUMBERJACK "Disable Axom's Lumberjack component" ON)
+
 #------------------------------------------------------------------------------
 # Create symlink in installed bin
 #------------------------------------------------------------------------------
