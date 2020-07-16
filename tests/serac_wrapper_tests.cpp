@@ -15,19 +15,6 @@
 
 using namespace mfem;
 
-int main(int argc, char *argv[])
-{
-  int result = 0;
-
-  ::testing::InitGoogleTest(&argc, argv);
-
-  MPI_Init(&argc, &argv);
-  result = RUN_ALL_TESTS();
-  MPI_Finalize();
-
-  return result;
-}
-
 class WrapperTests : public ::testing::Test {
  protected:
   void SetUp()
@@ -224,4 +211,25 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   for (int i = 0; i < t_nonlin.Size(); i++) {
     EXPECT_NEAR(t_mixed_nonlin[i], t_nonlin[i], 1.e-12);
   }
+}
+
+//------------------------------------------------------------------------------
+#include "axom/slic/core/UnitTestLogger.hpp"
+using axom::slic::UnitTestLogger;
+
+int main(int argc, char* argv[])
+{
+  int result = 0;
+
+  ::testing::InitGoogleTest(&argc, argv);
+
+  MPI_Init(&argc, &argv);
+
+  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+
+  result = RUN_ALL_TESTS();
+
+  MPI_Finalize();
+
+  return result;
 }
