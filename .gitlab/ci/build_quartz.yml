@@ -39,9 +39,9 @@ release_resources_build_quartz:
   stage: build
   extends: [.srun_build_script, .on_quartz, .pr_workflow]
 
-.master_build_with_deps_on_quartz:
+.develop_build_with_deps_on_quartz:
   stage: build_with_deps
-  extends: [.srun_build_with_deps_script, .on_quartz, .master_workflow]
+  extends: [.srun_build_with_deps_script, .on_quartz, .develop_workflow]
 
 ####
 # Build jobs
@@ -63,20 +63,20 @@ intel_19_0_4 (PR build_on_quartz):
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-intel@19.0.4.cmake"
   extends: .pr_build_on_quartz
 
-clang_9_0_0 (Master build_with_deps_on_quartz):
+clang_9_0_0 (Develop build_with_deps_on_quartz):
   variables:
     COMPILER: "clang@9.0.0"
     SPEC: "@develop%${COMPILER}"
-  extends: .master_build_with_deps_on_quartz
+  extends: .develop_build_with_deps_on_quartz
 
-gcc_8_1_0 (Master build_with_deps_on_quartz):
+gcc_8_1_0 (Develop build_with_deps_on_quartz):
   variables:
     COMPILER: "gcc@8.1.0"
     SPEC: "@develop%${COMPILER}"
-  extends: .master_build_with_deps_on_quartz
+  extends: .develop_build_with_deps_on_quartz
 
-intel_19_0_4 (Master build_with_deps_on_quartz):
+intel_19_0_4 (Develop build_with_deps_on_quartz):
   variables:
     COMPILER: "intel@19.0.4"
     SPEC: "@develop%${COMPILER}"
-  extends: .master_build_with_deps_on_quartz
+  extends: .develop_build_with_deps_on_quartz
