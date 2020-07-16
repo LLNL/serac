@@ -61,16 +61,16 @@ TEST(elastic_solver, static_solve)
   elas_solver.SetLameParameters(K_coef, mu_coef);
 
   // Define the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-4;
   params.abs_tol     = 1.0e-10;
   params.print_level = 0;
   params.max_iter    = 500;
-  params.prec        = Preconditioner::Jacobi;
-  params.lin_solver  = LinearSolver::MINRES;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
 
   elas_solver.SetLinearSolverParameters(params);
-  elas_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  elas_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // allocate the data structures
   elas_solver.CompleteSetup();

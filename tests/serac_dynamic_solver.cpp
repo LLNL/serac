@@ -56,19 +56,19 @@ TEST(dynamic_solver, dyn_solve)
   dyn_solver.SetViscosity(visc);
   dyn_solver.SetDisplacement(*deform);
   dyn_solver.SetVelocity(*velo);
-  dyn_solver.SetTimestepper(TimestepMethod::SDIRK33);
+  dyn_solver.SetTimestepper(serac::TimestepMethod::SDIRK33);
 
   // Set the linear solver parameters
-  LinearSolverParameters params;
-  params.prec        = Preconditioner::BoomerAMG;
+  serac::LinearSolverParameters params;
+  params.prec        = serac::Preconditioner::BoomerAMG;
   params.abs_tol     = 1.0e-8;
   params.rel_tol     = 1.0e-4;
   params.max_iter    = 500;
-  params.lin_solver  = LinearSolver::GMRES;
+  params.lin_solver  = serac::LinearSolver::GMRES;
   params.print_level = 0;
 
   // Set the nonlinear solver parameters
-  NonlinearSolverParameters nl_params;
+  serac::NonlinearSolverParameters nl_params;
   nl_params.rel_tol     = 1.0e-4;
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
@@ -76,7 +76,7 @@ TEST(dynamic_solver, dyn_solve)
   dyn_solver.SetSolverParameters(params, nl_params);
 
   // Initialize the VisIt output
-  dyn_solver.InitializeOutput(OutputType::VisIt, "dynamic_solid");
+  dyn_solver.InitializeOutput(serac::OutputType::VisIt, "dynamic_solid");
 
   // Construct the internal dynamic solver data structures
   dyn_solver.CompleteSetup();

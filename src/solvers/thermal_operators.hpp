@@ -52,7 +52,7 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   std::shared_ptr<mfem::Vector> m_bc_rhs;
 
   /// Temperature essential boundary coefficient
-  std::vector<std::shared_ptr<BoundaryCondition> > m_ess_bdr;
+  std::vector<std::shared_ptr<serac::BoundaryCondition> > m_ess_bdr;
 
   /// Auxillary working vectors
   mutable mfem::Vector m_z;
@@ -64,8 +64,8 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
 
  public:
   /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const LinearSolverParameters &params,
-                            const std::vector<std::shared_ptr<BoundaryCondition> > &ess_bdr);
+  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const serac::LinearSolverParameters &params,
+                            const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr);
 
   /// Set the mass matrix
   void SetMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);

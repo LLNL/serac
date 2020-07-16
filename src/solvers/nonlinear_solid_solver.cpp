@@ -94,8 +94,8 @@ void NonlinearSolidSolver::SetVelocity(mfem::VectorCoefficient &velo_state)
   m_gf_initialized[0] = true;
 }
 
-void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &   lin_params,
-                                               const NonlinearSolverParameters &nonlin_params)
+void NonlinearSolidSolver::SetSolverParameters(const serac::LinearSolverParameters &   lin_params,
+                                               const serac::NonlinearSolverParameters &nonlin_params)
 {
   m_lin_params    = lin_params;
   m_nonlin_params = nonlin_params;
@@ -107,7 +107,7 @@ void NonlinearSolidSolver::CompleteSetup()
   m_H_form = std::make_shared<mfem::ParNonlinearForm>(displacement.space.get());
 
   // Add the hyperelastic integrator
-  if (m_timestepper == TimestepMethod::QuasiStatic) {
+  if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     m_H_form->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(m_model.get()));
   } else {
     m_H_form->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(m_model.get()));
@@ -152,7 +152,7 @@ void NonlinearSolidSolver::CompleteSetup()
   m_H_form->SetEssentialTrueDofs(essential_dofs);
 
   // If dynamic, create the mass and viscosity forms
-  if (m_timestepper != TimestepMethod::QuasiStatic) {
+  if (m_timestepper != serac::TimestepMethod::QuasiStatic) {
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
@@ -169,7 +169,7 @@ void NonlinearSolidSolver::CompleteSetup()
   }
 
   // Set up the jacbian solver based on the linear solver options
-  if (m_lin_params.prec == Preconditioner::BoomerAMG) {
+  if (m_lin_params.prec == serac::Preconditioner::BoomerAMG) {
     MFEM_VERIFY(displacement.space->GetOrdering() == mfem::Ordering::byVDIM,
                 "Attempting to use BoomerAMG with nodal ordering.");
     auto prec_amg = std::make_shared<mfem::HypreBoomerAMG>();
@@ -207,7 +207,7 @@ void NonlinearSolidSolver::CompleteSetup()
   m_newton_solver.SetMaxIter(m_nonlin_params.max_iter);
 
   // Set the MFEM abstract operators for use with the internal MFEM solvers
-  if (m_timestepper == TimestepMethod::QuasiStatic) {
+  if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     m_newton_solver.iterative_mode = true;
     m_nonlinear_oper               = std::make_shared<NonlinearSolidQuasiStaticOperator>(m_H_form);
     m_newton_solver.SetOperator(*m_nonlinear_oper);
@@ -237,7 +237,7 @@ void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
   displacement.mesh->NewNodes(*m_reference_nodes);
   velocity.mesh->NewNodes(*m_reference_nodes);
 
-  if (m_timestepper == TimestepMethod::QuasiStatic) {
+  if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
   } else {
     m_ode_solver->Step(*m_block, m_time, dt);
@@ -250,7 +250,7 @@ void NonlinearSolidSolver::AdvanceTimestep(__attribute__((unused)) double &dt)
   // Update the mesh with the new deformed nodes
   m_deformed_nodes->Set(1.0, *displacement.gf);
 
-  if (m_timestepper == TimestepMethod::QuasiStatic) {
+  if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     m_deformed_nodes->Add(1.0, *m_reference_nodes);
   }
 

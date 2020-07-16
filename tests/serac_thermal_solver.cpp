@@ -51,7 +51,7 @@ TEST(thermal_solver, static_solve)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  therm_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -66,7 +66,7 @@ TEST(thermal_solver, static_solve)
   therm_solver.SetConductivity(kappa);
 
   // Define the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-6;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
@@ -118,7 +118,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  therm_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -138,7 +138,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   therm_solver.SetConductivity(kappa);
 
   // Define the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-6;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
@@ -150,7 +150,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   therm_solver.CompleteSetup();
 
   // Initialize the output
-  therm_solver.InitializeOutput(OutputType::GLVis, "thermal_two_boundary");
+  therm_solver.InitializeOutput(serac::OutputType::GLVis, "thermal_two_boundary");
 
   // Perform the static solve
   double dt = 1.0;
@@ -196,7 +196,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  therm_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -213,7 +213,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   therm_solver.SetConductivity(kappa);
 
   // Define the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-6;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
@@ -265,7 +265,7 @@ TEST(thermal_solver, dyn_exp_solve)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(TimestepMethod::ForwardEuler);
+  therm_solver.SetTimestepper(serac::TimestepMethod::ForwardEuler);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -280,7 +280,7 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.SetConductivity(kappa);
 
   // Define the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-6;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
@@ -288,7 +288,7 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.SetLinearSolverParameters(params);
 
   // Setup glvis output
-  therm_solver.InitializeOutput(OutputType::GLVis, "thermal_explicit");
+  therm_solver.InitializeOutput(serac::OutputType::GLVis, "thermal_explicit");
 
   // Complete the setup including the dynamic operators
   therm_solver.CompleteSetup();
@@ -351,7 +351,7 @@ TEST(thermal_solver, dyn_imp_solve)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(TimestepMethod::BackwardEuler);
+  therm_solver.SetTimestepper(serac::TimestepMethod::BackwardEuler);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -366,7 +366,7 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.SetConductivity(kappa);
 
   // Define the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-6;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
@@ -374,7 +374,7 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.SetLinearSolverParameters(params);
 
   // Setup glvis output
-  therm_solver.InitializeOutput(OutputType::VisIt, "thermal_implicit");
+  therm_solver.InitializeOutput(serac::OutputType::VisIt, "thermal_implicit");
 
   // Complete the setup including the dynamic operators
   therm_solver.CompleteSetup();

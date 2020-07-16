@@ -20,22 +20,22 @@ class BaseSolver {
   MPI_Comm m_comm;
 
   /// List of finite element data structures
-  std::vector<FiniteElementState> m_state;
+  std::vector<serac::FiniteElementState> m_state;
 
   /// Block vector storage of the true state
   std::unique_ptr<mfem::BlockVector> m_block;
 
   /// Essential BC markers
-  std::vector<std::shared_ptr<BoundaryCondition> > m_ess_bdr;
+  std::vector<std::shared_ptr<serac::BoundaryCondition> > m_ess_bdr;
 
   /// Natural BC markers
-  std::vector<std::shared_ptr<BoundaryCondition> > m_nat_bdr;
+  std::vector<std::shared_ptr<serac::BoundaryCondition> > m_nat_bdr;
 
   /// Type of state variable output
-  OutputType m_output_type;
+  serac::OutputType m_output_type;
 
   /// Time integration method
-  TimestepMethod m_timestepper;
+  serac::TimestepMethod m_timestepper;
 
   /// MFEM ode solver object
   std::unique_ptr<mfem::ODESolver> m_ode_solver;
@@ -100,13 +100,13 @@ class BaseSolver {
   virtual void SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void SetState(const std::vector<FiniteElementState> &state);
+  virtual void SetState(const std::vector<serac::FiniteElementState> &state);
 
   /// Get the list of state variable grid functions
-  virtual std::vector<FiniteElementState> GetState() const;
+  virtual std::vector<serac::FiniteElementState> GetState() const;
 
   /// Set the time integration method
-  virtual void SetTimestepper(TimestepMethod timestepper);
+  virtual void SetTimestepper(serac::TimestepMethod timestepper);
 
   /// Set the current time
   virtual void SetTime(const double time);
@@ -124,7 +124,7 @@ class BaseSolver {
   virtual void AdvanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const OutputType output_type, const std::string root_name);
+  virtual void InitializeOutput(const serac::OutputType output_type, const std::string root_name);
 
   /// output the state variables
   virtual void OutputState() const;

@@ -11,6 +11,8 @@
 
 #include "mfem.hpp"
 
+namespace serac {
+
 // Option bundling enums
 
 enum class OutputType
@@ -84,5 +86,7 @@ struct BoundaryCondition {
   std::shared_ptr<mfem::VectorCoefficient> vec_coef;
   std::unique_ptr<mfem::HypreParMatrix>    eliminated_matrix_entries;
 };
+
+} // namespace serac
 
 #endif

@@ -19,7 +19,7 @@
  *  thermal load vector. */
 class ThermalSolver : public BaseSolver {
  protected:
-  FiniteElementState &temperature;
+  serac::FiniteElementState &temperature;
 
   /// Mass bilinear form object
   std::unique_ptr<mfem::ParBilinearForm> m_M_form;
@@ -64,7 +64,7 @@ class ThermalSolver : public BaseSolver {
   std::unique_ptr<DynamicConductionOperator> m_dyn_oper;
 
   /// Linear solver parameters
-  LinearSolverParameters m_lin_params;
+  serac::LinearSolverParameters m_lin_params;
 
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
@@ -97,7 +97,7 @@ class ThermalSolver : public BaseSolver {
   void CompleteSetup();
 
   /// Set the linear solver parameters for both the M and K operators
-  void SetLinearSolverParameters(const LinearSolverParameters &params);
+  void SetLinearSolverParameters(const serac::LinearSolverParameters &params);
 
   /// Destructor
   virtual ~ThermalSolver() = default;
