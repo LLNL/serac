@@ -18,8 +18,7 @@ class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
   VectorScaledConstantCoefficient(const mfem::Vector &v) : mfem::VectorCoefficient(v.Size()), vec(v) {}
   using mfem::VectorCoefficient::Eval;
   void         SetScale(double s) { scale = s; }
-  virtual void Eval(mfem::Vector &V, __attribute__((unused)) mfem::ElementTransformation &T,
-                    __attribute__((unused)) const mfem::IntegrationPoint &ip)
+  virtual void Eval(mfem::Vector &V, mfem::ElementTransformation &, const mfem::IntegrationPoint &)
   {
     V = vec;
     V *= scale;
