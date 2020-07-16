@@ -187,7 +187,7 @@ We provide the following useful build targets that can be run from the build dir
 Copyright and License Information
 ======================================================
 
-Please see the `LICENSE <https://github.com/LLNL/serac/blob/master/LICENSE>`_ file in the repository.
+Please see the `LICENSE <https://github.com/LLNL/serac/blob/develop/LICENSE>`_ file in the repository.
 
 Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC.
 Produced at the Lawrence Livermore National Laboratory.
