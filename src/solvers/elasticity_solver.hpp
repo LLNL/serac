@@ -19,7 +19,7 @@
  *  and lambda and mu are the lame parameters */
 class ElasticitySolver : public BaseSolver {
  protected:
-  serac::FiniteElementState &displacement;
+  std::shared_ptr<serac::FiniteElementState> displacement;
 
   /// Stiffness bilinear form
   mfem::ParBilinearForm *m_K_form;

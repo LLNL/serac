@@ -21,6 +21,11 @@ BaseSolver::BaseSolver(MPI_Comm comm) : m_comm(comm), m_output_type(serac::Outpu
 BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 {
   m_state.resize(n);
+
+  for (auto &state : m_state) {
+    state = std::make_shared<serac::FiniteElementState>();
+  }
+
   m_gf_initialized.assign(n, false);
 }
 
@@ -151,7 +156,7 @@ void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> >
               "BaseSolver::SetState.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
-    m_state[i].gf->ProjectCoefficient(*state_coef[i]);
+    m_state[i]->gf->ProjectCoefficient(*state_coef[i]);
   }
 }
 
@@ -162,17 +167,17 @@ void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoeffici
               "BaseSolver::SetState.");
 
   for (unsigned int i = 0; i < state_vec_coef.size(); ++i) {
-    m_state[i].gf->ProjectCoefficient(*state_vec_coef[i]);
+    m_state[i]->gf->ProjectCoefficient(*state_vec_coef[i]);
   }
 }
 
-void BaseSolver::SetState(const std::vector<serac::FiniteElementState> &state)
+void BaseSolver::SetState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state)
 {
   MFEM_ASSERT(state.size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
   m_state = state;
 }
 
-std::vector<serac::FiniteElementState> BaseSolver::GetState() const { return m_state; }
+std::vector<std::shared_ptr<serac::FiniteElementState> > BaseSolver::GetState() const { return m_state; }
 
 void BaseSolver::SetTimestepper(const serac::TimestepMethod timestepper)
 {
@@ -230,9 +235,9 @@ void BaseSolver::InitializeOutput(const serac::OutputType output_type, std::stri
 
   switch (m_output_type) {
     case serac::OutputType::VisIt: {
-      m_visit_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.front().mesh.get());
+      m_visit_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.front()->mesh.get());
       for (const auto &state : m_state) {
-        m_visit_dc->RegisterField(state.name, state.gf.get());
+        m_visit_dc->RegisterField(state->name, state->gf.get());
       }
       break;
     }
@@ -260,13 +265,13 @@ void BaseSolver::OutputState() const
       std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", m_root_name, m_cycle, m_rank);
       std::ofstream omesh(mesh_name.c_str());
       omesh.precision(8);
-      m_state.front().mesh->Print(omesh);
+      m_state.front()->mesh->Print(omesh);
 
       for (auto &state : m_state) {
-        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", m_root_name, state.name, m_cycle, m_rank);
+        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", m_root_name, state->name, m_cycle, m_rank);
         std::ofstream osol(sol_name.c_str());
         osol.precision(8);
-        state.gf->Save(osol);
+        state->gf->Save(osol);
       }
       break;
     }

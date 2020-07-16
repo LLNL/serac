@@ -9,33 +9,33 @@
 const int num_fields = 1;
 
 ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), num_fields), temperature(m_state[0])
+    : BaseSolver(pmesh->GetComm(), num_fields), m_temperature(m_state[0])
 {
-  temperature.mesh     = pmesh;
-  temperature.coll     = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
-  temperature.space    = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), temperature.coll.get());
-  temperature.gf       = std::make_shared<mfem::ParGridFunction>(temperature.space.get());
-  temperature.true_vec = mfem::HypreParVector(temperature.space.get());
-  temperature.name     = "temperature";
+  m_temperature->mesh     = pmesh;
+  m_temperature->coll     = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
+  m_temperature->space    = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), m_temperature->coll.get());
+  m_temperature->gf       = std::make_shared<mfem::ParGridFunction>(m_temperature->space.get());
+  m_temperature->true_vec = std::make_shared<mfem::HypreParVector>(m_temperature->space.get());
+  m_temperature->name     = "temperature";
 
   // and initial conditions
-  *temperature.gf      = 0.0;
-  temperature.true_vec = 0.0;
+  *m_temperature->gf       = 0.0;
+  *m_temperature->true_vec = 0.0;
 
-  temperature.name = "temperature";
+  m_temperature->name = "temperature";
 }
 
 void ThermalSolver::SetTemperature(mfem::Coefficient &temp)
 {
   // Project the coefficient onto the grid function
   temp.SetTime(m_time);
-  temperature.gf->ProjectCoefficient(temp);
+  m_temperature->gf->ProjectCoefficient(temp);
   m_gf_initialized[0] = true;
 }
 
 void ThermalSolver::SetTemperatureBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
-  SetEssentialBCs(ess_bdr, ess_bdr_coef, *temperature.space);
+  SetEssentialBCs(ess_bdr, ess_bdr_coef, *m_temperature->space);
 }
 
 void ThermalSolver::SetFluxBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
@@ -68,18 +68,18 @@ void ThermalSolver::CompleteSetup()
   MFEM_ASSERT(m_kappa != nullptr, "Conductivity not set in ThermalSolver!");
 
   // Add the domain diffusion integrator to the K form and assemble the matrix
-  m_K_form = std::make_unique<mfem::ParBilinearForm>(temperature.space.get());
+  m_K_form = std::make_unique<mfem::ParBilinearForm>(m_temperature->space.get());
   m_K_form->AddDomainIntegrator(new mfem::DiffusionIntegrator(*m_kappa));
   m_K_form->Assemble(0);  // keep sparsity pattern of M and K the same
   m_K_form->Finalize();
 
   // Add the body source to the RS if specified
-  m_l_form = std::make_unique<mfem::ParLinearForm>(temperature.space.get());
+  m_l_form = std::make_unique<mfem::ParLinearForm>(m_temperature->space.get());
   if (m_source != nullptr) {
     m_l_form->AddDomainIntegrator(new mfem::DomainLFIntegrator(*m_source));
     m_rhs.reset(m_l_form->ParallelAssemble());
   } else {
-    m_rhs  = std::make_shared<mfem::HypreParVector>(temperature.space.get());
+    m_rhs  = std::make_shared<mfem::HypreParVector>(m_temperature->space.get());
     *m_rhs = 0.0;
   }
 
@@ -92,15 +92,15 @@ void ThermalSolver::CompleteSetup()
   }
 
   // Initialize the eliminated BC RHS vector
-  m_bc_rhs  = std::make_shared<mfem::HypreParVector>(temperature.space.get());
+  m_bc_rhs  = std::make_shared<mfem::HypreParVector>(m_temperature->space.get());
   *m_bc_rhs = 0.0;
 
   // Initialize the true vector
-  temperature.gf->GetTrueDofs(temperature.true_vec);
+  m_temperature->gf->GetTrueDofs(*m_temperature->true_vec);
 
   if (m_timestepper != serac::TimestepMethod::QuasiStatic) {
     // If dynamic, assemble the mass matrix
-    m_M_form = std::make_unique<mfem::ParBilinearForm>(temperature.space.get());
+    m_M_form = std::make_unique<mfem::ParBilinearForm>(m_temperature->space.get());
     m_M_form->AddDomainIntegrator(new mfem::MassIntegrator());
     m_M_form->Assemble(0);  // keep sparsity pattern of M and K the same
     m_M_form->Finalize();
@@ -108,7 +108,7 @@ void ThermalSolver::CompleteSetup()
     m_M_mat.reset(m_M_form->ParallelAssemble());
 
     // Make the time integration operator and set the appropriate matricies
-    m_dyn_oper = std::make_unique<DynamicConductionOperator>(temperature.space, m_lin_params, m_ess_bdr);
+    m_dyn_oper = std::make_unique<DynamicConductionOperator>(m_temperature->space, m_lin_params, m_ess_bdr);
     m_dyn_oper->SetMatrices(m_M_mat, m_K_mat);
     m_dyn_oper->SetLoadVector(m_rhs);
 
@@ -122,14 +122,14 @@ void ThermalSolver::QuasiStaticSolve()
   *m_bc_rhs = *m_rhs;
   for (auto &bc : m_ess_bdr) {
     bc->scalar_coef->SetTime(m_time);
-    temperature.gf->ProjectBdrCoefficient(*bc->scalar_coef, bc->markers);
-    temperature.gf->GetTrueDofs(temperature.true_vec);
-    mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, temperature.true_vec, *m_bc_rhs);
+    m_temperature->gf->ProjectBdrCoefficient(*bc->scalar_coef, bc->markers);
+    m_temperature->gf->GetTrueDofs(*m_temperature->true_vec);
+    mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, *m_temperature->true_vec, *m_bc_rhs);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
-  m_K_solver = std::make_shared<mfem::CGSolver>(temperature.space->GetComm());
+  m_K_solver = std::make_shared<mfem::CGSolver>(m_temperature->space->GetComm());
   m_K_prec   = std::make_shared<mfem::HypreSmoother>();
 
   m_K_solver->iterative_mode = false;
@@ -142,13 +142,13 @@ void ThermalSolver::QuasiStaticSolve()
   m_K_solver->SetOperator(*m_K_mat);
 
   // Perform the linear solve
-  m_K_solver->Mult(*m_bc_rhs, temperature.true_vec);
+  m_K_solver->Mult(*m_bc_rhs, *m_temperature->true_vec);
 }
 
 void ThermalSolver::AdvanceTimestep(double &dt)
 {
   // Initialize the true vector
-  temperature.gf->GetTrueDofs(temperature.true_vec);
+  m_temperature->gf->GetTrueDofs(*m_temperature->true_vec);
 
   if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
@@ -156,10 +156,10 @@ void ThermalSolver::AdvanceTimestep(double &dt)
     MFEM_ASSERT(m_gf_initialized[0], "Thermal state not initialized!");
 
     // Step the time integrator
-    m_ode_solver->Step(temperature.true_vec, m_time, dt);
+    m_ode_solver->Step(*m_temperature->true_vec, m_time, dt);
   }
 
   // Distribute the shared DOFs
-  temperature.gf->SetFromTrueDofs(temperature.true_vec);
+  m_temperature->gf->SetFromTrueDofs(*m_temperature->true_vec);
   m_cycle += 1;
 }
