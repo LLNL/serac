@@ -18,7 +18,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // mesh
-  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-hex.mesh";
+  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
   const char* mesh_file      = base_mesh_file.c_str();
 
   // Open the mesh
@@ -94,13 +94,11 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   solid_solver.OutputState();
 
-  auto state = solid_solver.GetState();
-
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
 
