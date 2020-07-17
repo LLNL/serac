@@ -23,11 +23,11 @@ stages:
 
 .pr_workflow:
   rules:
-    - if: '$CI_COMMIT_BRANCH != "master" && $BUILD_DEPS != "ON"' #run only if ...
+    - if: '$CI_COMMIT_BRANCH != "main" && $CI_COMMIT_BRANCH != "develop" && $BUILD_DEPS != "ON"' #run only if ...
 
-.master_workflow:
+.main_workflow:
   rules:
-    - if: '$CI_COMMIT_BRANCH == "master" || $BUILD_DEPS == "ON"' #run only if ...
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop" || $BUILD_DEPS == "ON"' #run only if ...
 
 ####
 # Template
