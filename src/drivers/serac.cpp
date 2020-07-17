@@ -36,9 +36,9 @@ int main(int argc, char *argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Initialize SLIC logger
-  if(!serac::initialize_logger(MPI_COMM_WORLD))
+  if(!serac::logger::Initialize(MPI_COMM_WORLD))
   {
-    serac::exit_gracefully(true);
+    serac::ExitGracefully(true);
   }
 
   // mesh
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
     if (rank == 0) {
       args.PrintUsage(std::cout);
     }
-    serac::exit_gracefully(true);
+    serac::ExitGracefully(true);
   }
   if (rank == 0) {
     args.PrintOptions(std::cout);
@@ -128,10 +128,10 @@ int main(int argc, char *argv[])
   SLIC_INFO_MASTER(rank, msg);
   std::ifstream imesh(mesh_file);
   if (!imesh) {
-    serac::flush_logger();
+    serac::logger::Flush();
     std::string msg = fmt::format("Can not open mesh file: {0}", mesh_file);
     SLIC_ERROR_MASTER(rank, msg);
-    serac::exit_gracefully();
+    serac::ExitGracefully();
   }
 
   auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
@@ -237,5 +237,5 @@ int main(int argc, char *argv[])
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
-  serac::exit_gracefully();
+  serac::ExitGracefully();
 } 

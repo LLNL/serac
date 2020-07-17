@@ -219,7 +219,7 @@ void BaseSolver::SetTimestepper(const TimestepMethod timestepper)
       break;
     default:
       SLIC_ERROR_MASTER(m_rank, "Timestep method not recognized!");
-      serac::exit_gracefully(true);
+      serac::ExitGracefully(true);
   }
 }
 
@@ -250,7 +250,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
 
     default:
       SLIC_ERROR_MASTER(m_rank, "OutputType not recognized!");
-      serac::exit_gracefully(true);
+      serac::ExitGracefully(true);
   }
 }
 
@@ -281,6 +281,6 @@ void BaseSolver::OutputState() const
 
     default:
       SLIC_ERROR_MASTER(m_rank, "OutputType not recognized!");
-      serac::exit_gracefully(true);
+      serac::ExitGracefully(true);
   }
 }

@@ -53,3 +53,9 @@ if (ENABLE_GTEST)
     endforeach()
 
 endif()
+
+# Make sure running serac driver doesn't completely fail
+blt_add_test(NAME          serac
+             COMMAND       serac
+             NUM_MPI_TASKS 1 )
+

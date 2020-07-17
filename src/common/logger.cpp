@@ -13,15 +13,17 @@
 
 namespace serac {
 
-void exit_gracefully(bool error)
+void ExitGracefully(bool error)
 {
-    serac::flush_logger();
-    serac::finalize_logger();
+    serac::logger::Flush();
+    serac::logger::Finalize();
     MPI_Finalize();
     error ? exit(EXIT_FAILURE) : exit(EXIT_SUCCESS);
 }
 
-bool initialize_logger(MPI_Comm comm)
+namespace logger {
+
+bool Initialize(MPI_Comm comm)
 {
   namespace slic = axom::slic;
 
@@ -48,7 +50,7 @@ bool initialize_logger(MPI_Comm comm)
   slic::LogStream* weStream;
 
   std::string fmt_id = "[<LEVEL>]: <MESSAGE>\n";
-  std::string fmt_we = "[<LEVEL> (<FILE>:<LINE>)]\n\n<MESSAGE>";
+  std::string fmt_we = "[<LEVEL> (<FILE>:<LINE>)]\n<MESSAGE>\n";
 
   // Only create a parallel logger when there is more than one rank
   if( numRanks > 1 )
@@ -83,19 +85,20 @@ bool initialize_logger(MPI_Comm comm)
 
   std::string msg = fmt::format("Logger activated: {0}", loggerName);
   SLIC_INFO_MASTER(rank, msg);
-  serac::flush_logger();
+  serac::logger::Flush();
 
   return true;
 }
 
-void finalize_logger()
+void Finalize()
 {
   axom::slic::finalize();
 }
 
-void flush_logger()
+void Flush()
 {
   axom::slic::flushStreams();
 }
 
+} // namespace logger
 } // namespace serac
