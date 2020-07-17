@@ -107,7 +107,10 @@ int main(int argc, char *argv[])
   } catch (const CLI::ParseError &e) {
     if (myid == 0) {
       app.exit(e);
-      std::cout << app.help() << '\n';
+      // Don't reprint the usage if CLI11 already has
+      if (e.get_name() != "CallForHelp") {
+        std::cout << app.help() << '\n';
+      }
     }
     MPI_Finalize();
     return 1;
