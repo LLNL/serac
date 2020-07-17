@@ -21,7 +21,7 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // mesh
-  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-hex.mesh";
+  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
   const char *mesh_file      = base_mesh_file.c_str();
 
   // Open the mesh
@@ -41,11 +41,7 @@ TEST(dynamic_solver, dyn_solve)
   // boundary attribute 1 (index 0) is fixed (Dirichlet)
   ess_bdr[0] = 1;
 
-  auto visc = std::make_shared<mfem::ConstantCoefficient>(0.0);
-
-  // define the inital state coefficients
-  std::vector<std::shared_ptr<mfem::VectorCoefficient> > initialstate(2);
-
+  auto visc   = std::make_shared<mfem::ConstantCoefficient>(0.0);
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
 
@@ -107,10 +103,8 @@ TEST(dynamic_solver, dyn_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  auto state = dyn_solver.GetState();
-
-  double v_norm = state[0].gf->ComputeLpError(2.0, zerovec);
-  double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
+  double v_norm = dyn_solver.GetVelocity()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = dyn_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(12.86733, x_norm, 0.0001);
   EXPECT_NEAR(0.22298, v_norm, 0.0001);

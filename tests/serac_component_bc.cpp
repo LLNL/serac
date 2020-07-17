@@ -18,7 +18,7 @@ TEST(component_bc, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/square.mesh";
+  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
   const char* mesh_file      = base_mesh_file.c_str();
 
   std::ifstream imesh(mesh_file);
@@ -59,7 +59,7 @@ TEST(component_bc, qs_solve)
   });
 
   mfem::Array<int> ess_corner_bc_list;
-  MakeTrueEssList(*solid_solver.GetState()[0].space, zero_bc, ess_corner_bc_list);
+  MakeTrueEssList(*solid_solver.GetDisplacement()->space, zero_bc, ess_corner_bc_list);
 
   solid_solver.SetTrueDofs(ess_corner_bc_list, disp_coef);
 
@@ -104,7 +104,7 @@ TEST(component_bc, qs_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.08363646, x_norm, 0.0001);
 
@@ -116,7 +116,7 @@ TEST(component_bc, qs_attribute_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string base_mesh_file = std::string(SERAC_SRC_DIR) + "/data/square.mesh";
+  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
   const char* mesh_file      = base_mesh_file.c_str();
 
   std::ifstream imesh(mesh_file);
@@ -186,13 +186,11 @@ TEST(component_bc, qs_attribute_solve)
   // Output the state
   solid_solver.OutputState();
 
-  auto state = solid_solver.GetState();
-
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = state[1].gf->ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.03330115, x_norm, 0.0001);
 

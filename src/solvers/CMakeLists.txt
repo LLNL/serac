@@ -10,6 +10,7 @@ set(solvers_sources
     nonlinear_solid_operators.cpp
     thermal_solver.cpp
     thermal_operators.cpp
+    thermal_structural_solver.cpp
     elasticity_solver.cpp
     )
 
@@ -19,6 +20,7 @@ set(solvers_headers
     nonlinear_solid_operators.hpp
     thermal_solver.hpp
     thermal_operators.hpp
+    thermal_structural_solver.hpp
     elasticity_solver.hpp
     )
 

@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
   // mesh
-  std::string mesh_file = std::string(SERAC_SRC_DIR) + "/data/beam-hex.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
 
   // serial and parallel refinement levels
   int ser_ref_levels = 0;

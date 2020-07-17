@@ -20,7 +20,7 @@ class BaseSolver {
   MPI_Comm m_comm;
 
   /// List of finite element data structures
-  std::vector<FiniteElementState> m_state;
+  std::vector<std::shared_ptr<FiniteElementState> > m_state;
 
   /// Block vector storage of the true state
   std::unique_ptr<mfem::BlockVector> m_block;
@@ -100,10 +100,10 @@ class BaseSolver {
   virtual void SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void SetState(const std::vector<FiniteElementState> &state);
+  virtual void SetState(const std::vector<std::shared_ptr<FiniteElementState> > state);
 
   /// Get the list of state variable grid functions
-  virtual std::vector<FiniteElementState> GetState() const;
+  virtual std::vector<std::shared_ptr<FiniteElementState> > GetState() const;
 
   /// Set the time integration method
   virtual void SetTimestepper(TimestepMethod timestepper);
