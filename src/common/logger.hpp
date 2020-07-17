@@ -14,12 +14,15 @@
 
 namespace serac {
   // Gracefully exit program
-  void exit_gracefully(bool error=false);
+  void ExitGracefully(bool error=false);
 
-  // Logger functions
-  bool initialize_logger(MPI_Comm comm);
-  void finalize_logger();
-  void flush_logger();
+// Logger functionality
+namespace logger {
+  bool Initialize(MPI_Comm comm);
+  void Finalize();
+  void Flush();
+
+}  // namespace logger
 }  // namespace serac
 
 // Utility SLIC macros
