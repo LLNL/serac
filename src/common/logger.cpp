@@ -50,7 +50,7 @@ bool Initialize(MPI_Comm comm)
   slic::LogStream* weStream;
 
   std::string fmt_id = "[<LEVEL>]: <MESSAGE>\n";
-  std::string fmt_we = "[<LEVEL> (<FILE>:<LINE>)]\n<MESSAGE>\n";
+  std::string fmt_we = "[<LEVEL> (<FILE>:<LINE>)]\n<MESSAGE>\n\n";
 
   // Only create a parallel logger when there is more than one rank
   if( numRanks > 1 )
