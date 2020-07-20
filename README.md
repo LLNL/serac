@@ -2,7 +2,7 @@ Serac
 ====
 
 [![Build
-Status](https://dev.azure.com/llnl-serac/serac/_apis/build/status/LLNL.serac?branchName=master)](https://dev.azure.com/llnl-serac/serac/_build/latest?definitionId=1&branchName=master)
+Status](https://dev.azure.com/llnl-serac/serac/_apis/build/status/LLNL.serac?branchName=develop)](https://dev.azure.com/llnl-serac/serac/_build/latest?definitionId=1&branchName=develop)
 [![Documentation Status](https://readthedocs.org/projects/serac/badge/?version=latest)](https://serac.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg)](./LICENSE)
 
