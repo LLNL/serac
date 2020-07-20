@@ -53,7 +53,7 @@ class BaseSolver {
   int m_rank;
 
   /// VisIt data collection pointer
-  std::unique_ptr<mfem::VisItDataCollection> m_visit_dc;
+  std::unique_ptr<mfem::DataCollection> m_dc;
 
   /// State variable initialization indicator
   std::vector<bool> m_gf_initialized;

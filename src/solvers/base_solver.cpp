@@ -237,10 +237,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
 
   switch (m_output_type) {
     case OutputType::VisIt: {
-      m_visit_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.front()->mesh.get());
-      for (const auto &state : m_state) {
-        m_visit_dc->RegisterField(state->name, state->gf.get());
-      }
+      m_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.front()->mesh.get());
       break;
     }
 
@@ -248,8 +245,19 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
       break;
     }
 
+    case OutputType::Sidre: {
+      m_dc = std::make_unique<mfem::SidreDataCollection>(m_root_name, m_state.front()->mesh.get());
+      break;
+    }
+
     default:
       mfem::mfem_error("OutputType not recognized!");
+  }
+
+  if ((m_output_type == OutputType::VisIt) || (m_output_type == OutputType::Sidre)) {
+    for (const auto &state : m_state) {
+          m_dc->RegisterField(state->name, state->gf.get());
+    }
   }
 }
 
@@ -257,9 +265,9 @@ void BaseSolver::OutputState() const
 {
   switch (m_output_type) {
     case OutputType::VisIt: {
-      m_visit_dc->SetCycle(m_cycle);
-      m_visit_dc->SetTime(m_time);
-      m_visit_dc->Save();
+      m_dc->SetCycle(m_cycle);
+      m_dc->SetTime(m_time);
+      m_dc->Save();
       break;
     }
 

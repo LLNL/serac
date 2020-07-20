@@ -149,6 +149,8 @@ class Mfem(Package):
             description='Build and install examples')
     variant('miniapps', default=False,
             description='Build and install miniapps')
+    variant('sidre', default=True,
+            description='Use Axom\'s sidre for data collection')
 
     conflicts('+shared', when='@:3.3.2')
     conflicts('~static~shared')
@@ -243,6 +245,8 @@ class Mfem(Package):
     depends_on('umpire@2.0.0:', when='+umpire')
     depends_on('umpire+cuda', when='+umpire+cuda')
 
+    depends_on('axom', when='+sidre')
+
     patch('mfem_ppc_build.patch', when='@3.2:3.3.0 arch=ppc64le')
     patch('mfem-3.4.patch', when='@3.4.0')
     patch('mfem-3.3-3.4-petsc-3.9.patch',
@@ -328,6 +332,10 @@ class Mfem(Package):
         if ('+metis' in spec) and spec['metis'].satisfies('@5:'):
             metis5_str = 'YES'
 
+        conduit_str = 'NO'
+        if ('+conduit' in spec) or ('+sidre' in spec):
+            conduit_str = 'YES'
+
         zlib_var = 'MFEM_USE_ZLIB' if (spec.satisfies('@4.1.0:')) else \
                    'MFEM_USE_GZSTREAM'
 
@@ -356,12 +364,13 @@ class Mfem(Package):
             'MFEM_USE_MPFR=%s' % yes_no('+mpfr'),
             'MFEM_USE_GNUTLS=%s' % yes_no('+gnutls'),
             'MFEM_USE_OPENMP=%s' % yes_no('+openmp'),
-            'MFEM_USE_CONDUIT=%s' % yes_no('+conduit'),
+            'MFEM_USE_CONDUIT=%s' % conduit_str,
             'MFEM_USE_CUDA=%s' % yes_no('+cuda'),
             'MFEM_USE_OCCA=%s' % yes_no('+occa'),
             'MFEM_USE_RAJA=%s' % yes_no('+raja'),
             'MFEM_USE_CEED=%s' % yes_no('+libceed'),
-            'MFEM_USE_UMPIRE=%s' % yes_no('+umpire')]
+            'MFEM_USE_UMPIRE=%s' % yes_no('+umpire'),
+            'MFEM_USE_SIDRE=%s' % yes_no('+sidre')]
 
         cxxflags = spec.compiler_flags['cxxflags']
 
@@ -562,12 +571,17 @@ class Mfem(Package):
                         'UMPIRE_LIB=%s' %
                         ld_flags_from_library_list(spec['umpire'].libs)]
 
+        if '+sidre' in spec:
+            options += ['SIDRE_OPT=-I%s' % spec['axom'].prefix.include,
+                        'SIDRE_LIB=%s' %
+                        ld_flags_from_library_list(spec['axom'].libs)]
+        
         timer_ids = {'std': '0', 'posix': '2', 'mac': '4', 'mpi': '6'}
         timer = spec.variants['timer'].value
         if timer != 'auto':
             options += ['MFEM_TIMER_TYPE=%s' % timer_ids[timer]]
 
-        if '+conduit' in spec:
+        if ('+conduit' in spec) or ('+sidre' in spec):
             conduit = spec['conduit']
             headers = HeaderList(find(conduit.prefix.include, 'conduit.hpp',
                                       recursive=True))

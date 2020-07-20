@@ -16,7 +16,8 @@
 enum class OutputType
 {
   GLVis,
-  VisIt
+  VisIt,
+  Sidre
 };
 
 enum class TimestepMethod
