@@ -37,11 +37,8 @@ TEST(component_bc, qs_solve)
   // Define the solver object
   NonlinearSolidSolver solid_solver(1, pmesh);
 
-  // define a boundary attribute array and initialize to 0
-  std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
-
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
-  ess_bdr[0] = 1;
+  std::set<int> ess_bdr = {1};
 
   // define the displacement vector
   auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -1.0e-1; });
@@ -135,13 +132,9 @@ TEST(component_bc, qs_attribute_solve)
   // Define the solver object
   NonlinearSolidSolver solid_solver(2, pmesh);
 
-  // define a boundary attribute array and initialize to 0
-  std::vector<int> ess_x_bdr(pmesh->bdr_attributes.Max(), 0);
-  std::vector<int> ess_y_bdr(pmesh->bdr_attributes.Max(), 0);
-
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
-  ess_x_bdr[0] = 1;
-  ess_y_bdr[1] = 1;
+  std::set<int> ess_x_bdr = {1};
+  std::set<int> ess_y_bdr = {2};
 
   // define the displacement vector
   auto disp_x_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * 3.0e-2; });

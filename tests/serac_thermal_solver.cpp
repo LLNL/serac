@@ -56,7 +56,7 @@ TEST(thermal_solver, static_solve)
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
 
-  std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
+  std::set<int> temp_bdr = {1};
 
   // Set the temperature BC in the thermal solver
   therm_solver.SetTemperatureBCs(temp_bdr, u_0);
@@ -121,10 +121,8 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
   auto u_1 = std::make_shared<mfem::ConstantCoefficient>(0.0);
 
-  std::vector<int> marked_1(pmesh->bdr_attributes.Max(), 0);
-  std::vector<int> marked_2(pmesh->bdr_attributes.Max(), 0);
-  marked_1[0] = 1;
-  marked_2[1] = 1;
+  std::set<int> marked_1 = {1};
+  std::set<int> marked_2 = {2};
 
   // Set the temperature BC in the thermal solver
   therm_solver.SetTemperatureBCs(marked_1, u_0);
@@ -196,7 +194,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
   auto u_1 = std::make_shared<mfem::FunctionCoefficient>(OtherBoundaryTemperature);
 
-  std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
+  std::set<int> temp_bdr = {1};
 
   // Set the temperature BC in the thermal solver
   therm_solver.SetTemperatureBCs(temp_bdr, u_0);
@@ -262,8 +260,7 @@ TEST(thermal_solver, dyn_exp_solve)
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
   therm_solver.SetTemperature(*u_0);
 
-  // Set the temperature BC in the thermal solver
-  std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
+  std::set<int> temp_bdr = {1};
   therm_solver.SetTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
@@ -345,8 +342,7 @@ TEST(thermal_solver, dyn_imp_solve)
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
   therm_solver.SetTemperature(*u_0);
 
-  // Set the temperature BC in the thermal solver
-  std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
+  std::set<int> temp_bdr = {1};
   therm_solver.SetTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator

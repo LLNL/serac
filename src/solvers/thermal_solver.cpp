@@ -33,12 +33,12 @@ void ThermalSolver::SetTemperature(mfem::Coefficient &temp)
   m_gf_initialized[0] = true;
 }
 
-void ThermalSolver::SetTemperatureBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+void ThermalSolver::SetTemperatureBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   SetEssentialBCs(ess_bdr, ess_bdr_coef, *m_temperature->space);
 }
 
-void ThermalSolver::SetFluxBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
+void ThermalSolver::SetFluxBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   SetNaturalBCs(nat_bdr, nat_bdr_coef);

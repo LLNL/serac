@@ -36,19 +36,14 @@ TEST(nonlinear_solid_solver, qs_solve)
   // Define the solver object
   NonlinearSolidSolver solid_solver(1, pmesh);
 
-  // define a boundary attribute array and initialize to 0
-  std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
-
-  // boundary attribute 1 (index 0) is fixed (Dirichlet)
-  ess_bdr[0] = 1;
+  std::set<int> ess_bdr = {1};
 
   // define the displacement vector
   mfem::Vector disp(dim);
   disp           = 0.0;
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
 
-  std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
-  trac_bdr[1] = 1;
+  std::set<int> trac_bdr = {2};
 
   // define the traction vector
   mfem::Vector traction(dim);
