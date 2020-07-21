@@ -149,8 +149,8 @@ class Mfem(Package):
             description='Build and install examples')
     variant('miniapps', default=False,
             description='Build and install miniapps')
-    variant('sidre', default=True,
-            description='Use Axom\'s sidre for data collection')
+    variant('sidre', default=False,
+            description='Enable Axom\'s sidre for data collection')
 
     conflicts('+shared', when='@:3.3.2')
     conflicts('~static~shared')
