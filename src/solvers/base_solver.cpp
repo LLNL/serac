@@ -264,7 +264,8 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
 void BaseSolver::OutputState() const
 {
   switch (m_output_type) {
-    case OutputType::VisIt: {
+    case OutputType::VisIt:
+    case OutputType::Sidre: {
       m_dc->SetCycle(m_cycle);
       m_dc->SetTime(m_time);
       m_dc->Save();
