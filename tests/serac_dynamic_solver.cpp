@@ -35,11 +35,7 @@ TEST(dynamic_solver, dyn_solve)
 
   int dim = pmesh->Dimension();
 
-  // define a boundary attribute array and initialize to 0
-  std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
-
-  // boundary attribute 1 (index 0) is fixed (Dirichlet)
-  ess_bdr[0] = 1;
+  std::set<int> ess_bdr = {1};
 
   auto visc   = std::make_shared<mfem::ConstantCoefficient>(0.0);
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);

@@ -32,11 +32,8 @@ TEST(dynamic_solver, dyn_solve)
 
   int dim = pmesh->Dimension();
 
-  // define a boundary attribute array and initialize to 0
-  std::vector<int> ess_bdr(pmesh->bdr_attributes.Max(), 0);
-
-  // boundary attribute 1 (index 0) is fixed (Dirichlet)
-  ess_bdr[0] = 1;
+  // define a boundary attribute set
+  std::set<int> ess_bdr = {1};
 
   auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &x, mfem::Vector &y) {
     y    = x;
@@ -56,8 +53,7 @@ TEST(dynamic_solver, dyn_solve)
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
 
   // set the traction boundary
-  std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
-  trac_bdr[1] = 1;
+  std::set<int> trac_bdr = {2};
 
   // define the traction vector
   mfem::Vector traction(dim);

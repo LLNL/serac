@@ -32,11 +32,7 @@ TEST(elastic_solver, static_solve)
 
   ElasticitySolver elas_solver(1, pmesh);
 
-  // define a boundary attribute array and initialize to 0
-  std::vector<int> disp_bdr(pmesh->bdr_attributes.Max(), 0);
-
-  // boundary attribute 1 (index 0) is fixed (Dirichlet)
-  disp_bdr[0] = 1;
+  std::set<int> disp_bdr = {1};
 
   // define the displacement vector
   mfem::Vector disp(pmesh->Dimension());
@@ -44,8 +40,7 @@ TEST(elastic_solver, static_solve)
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
   elas_solver.SetDisplacementBCs(disp_bdr, disp_coef);
 
-  std::vector<int> trac_bdr(pmesh->bdr_attributes.Max(), 0);
-  trac_bdr[1] = 1;
+  std::set<int> trac_bdr = {2};
 
   // define the traction vector
   mfem::Vector traction(pmesh->Dimension());

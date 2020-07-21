@@ -69,14 +69,14 @@ class NonlinearSolidSolver : public BaseSolver {
   NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set the displacement essential boundary conditions
-  void SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
+  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
 
   /// Set the displacement essential boundary conditions on a single component
-  void SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                           int component);
 
   /// Set the traction boundary conditions
-  void SetTractionBCs(const std::vector<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void SetTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1);
 
   /// Set the viscosity coefficient

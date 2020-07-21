@@ -46,8 +46,7 @@ TEST(serac_dtor, test1)
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector &x) { return x.Norml2(); });
 
-  std::vector<int> temp_bdr(pmesh->bdr_attributes.Max(), 1);
-
+  std::set<int> temp_bdr = {1};
   // Set the temperature BC in the thermal solver
   therm_solver->SetTemperatureBCs(temp_bdr, u_0);
 

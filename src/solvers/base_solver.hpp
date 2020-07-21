@@ -67,12 +67,12 @@ class BaseSolver {
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
-  virtual void SetEssentialBCs(const std::vector<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
+  virtual void SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
                                mfem::ParFiniteElementSpace &fes, int component = -1);
 
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
-  virtual void SetEssentialBCs(const std::vector<int> &                 ess_bdr,
+  virtual void SetEssentialBCs(const std::set<int> &                 ess_bdr,
                                std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
                                mfem::ParFiniteElementSpace &fes, int component = -1);
 
@@ -85,12 +85,12 @@ class BaseSolver {
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
-  virtual void SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
+  virtual void SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
                              int component = -1);
 
   /// Set the vector-valued natural boundary conditions from a list of boundary
   /// markers and a coefficient
-  virtual void SetNaturalBCs(const std::vector<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
+  virtual void SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
                              int component = -1);
 
   /// Set the state variables from a coefficient
