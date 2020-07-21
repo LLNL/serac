@@ -34,13 +34,13 @@ class ThermalStructuralSolver : public BaseSolver {
   ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set essential temperature boundary conditions (strongly enforced)
-  void SetTemperatureBCs(const std::vector<int> &temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+  void SetTemperatureBCs(const std::set<int> &temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
   {
     m_therm_solver.SetTemperatureBCs(temp_bdr, temp_bdr_coef);
   };
 
   /// Set flux boundary conditions (weakly enforced)
-  void SetFluxBCs(const std::vector<int> &flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
+  void SetFluxBCs(const std::set<int> &flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
   {
     m_therm_solver.SetFluxBCs(flux_bdr, flux_bdr_coef);
   };
@@ -61,20 +61,20 @@ class ThermalStructuralSolver : public BaseSolver {
   };
 
   /// Set the displacement essential boundary conditions
-  void SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
   {
     m_solid_solver.SetDisplacementBCs(disp_bdr, disp_bdr_coef);
   };
 
   /// Set the displacement essential boundary conditions on a single component
-  void SetDisplacementBCs(const std::vector<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                           int component)
   {
     m_solid_solver.SetDisplacementBCs(disp_bdr, disp_bdr_coef, component);
   };
 
   /// Set the traction boundary conditions
-  void SetTractionBCs(const std::vector<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void SetTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1)
   {
     m_solid_solver.SetTractionBCs(trac_bdr, trac_bdr_coef, component);

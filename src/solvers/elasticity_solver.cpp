@@ -37,13 +37,13 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
   displacement->name = "displacement";
 }
 
-void ElasticitySolver::SetDisplacementBCs(std::vector<int> &                       disp_bdr,
+void ElasticitySolver::SetDisplacementBCs(std::set<int> &                       disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement->space, component);
 }
 
-void ElasticitySolver::SetTractionBCs(std::vector<int> &                       trac_bdr,
+void ElasticitySolver::SetTractionBCs(std::set<int> &                       trac_bdr,
                                       std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   SetNaturalBCs(trac_bdr, trac_bdr_coef, component);
