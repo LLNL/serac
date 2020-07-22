@@ -80,27 +80,27 @@ namespace logger {
 * \brief Macro that logs given error message only on rank 0.
 *****************************************************************************
 */
-#define SLIC_ERROR_RANK0(rank,msg)   SLIC_ERROR_IF(rank==0, msg)
+#define SLIC_ERROR_ROOT(rank,msg)   SLIC_ERROR_IF(rank==0, msg)
 
 /*!
 *****************************************************************************
 * \brief Macro that logs given warning message only on rank 0.
 *****************************************************************************
 */
-#define SLIC_WARNING_RANK0(rank,msg) SLIC_WARNING_IF(rank==0, msg)
+#define SLIC_WARNING_ROOT(rank,msg) SLIC_WARNING_IF(rank==0, msg)
 
 /*!
 *****************************************************************************
 * \brief Macro that logs given info message only on rank 0.
 *****************************************************************************
 */
-#define SLIC_INFO_RANK0(rank,msg)    SLIC_INFO_IF(rank==0, msg)
+#define SLIC_INFO_ROOT(rank,msg)    SLIC_INFO_IF(rank==0, msg)
 
 /*!
 *****************************************************************************
 * \brief Macro that logs given debug message only on rank 0.
 *****************************************************************************
 */
-#define SLIC_DEBUG_RANK0(rank,msg)   SLIC_DEBUG_IF(rank==0, msg)
+#define SLIC_DEBUG_ROOT(rank,msg)   SLIC_DEBUG_IF(rank==0, msg)
 
 #endif

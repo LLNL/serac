@@ -85,7 +85,7 @@ bool Initialize(MPI_Comm comm)
   slic::setAbortOnWarning(false);
 
   std::string msg = fmt::format("Logger activated: {0}", loggerName);
-  SLIC_INFO_RANK0(rank, msg);
+  SLIC_INFO_ROOT(rank, msg);
   serac::logger::Flush();
 
   return true;
