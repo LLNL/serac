@@ -106,12 +106,12 @@ class ThermalStructuralSolver : public BaseSolver {
   void SetCouplingScheme(CouplingScheme coupling) { m_coupling = coupling; };
 
   /// Overwrite the base default set timestepper method
-  void SetTimestepper(TimestepMethod timestepper);
+  void SetTimestepper(TimestepMethod timestepper) override;
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
    * = false, do not allocate the mass matrix or dynamic operator */
-  void CompleteSetup();
+  void CompleteSetup() override;
 
   /// Get the temperature state
   std::shared_ptr<FiniteElementState> GetTemperature() { return m_temperature; };
@@ -123,7 +123,7 @@ class ThermalStructuralSolver : public BaseSolver {
   std::shared_ptr<FiniteElementState> GetVelocity() { return m_velocity; };
 
   /// Advance the timestep
-  void AdvanceTimestep(double &dt);
+  void AdvanceTimestep(double &dt) override;
 
   /// Destructor
   virtual ~ThermalStructuralSolver() = default;

@@ -100,7 +100,7 @@ class BaseSolver {
   virtual void SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void SetState(const std::vector<std::shared_ptr<FiniteElementState> > state);
+  virtual void SetState(const std::vector<std::shared_ptr<FiniteElementState> > &state);
 
   /// Get the list of state variable grid functions
   virtual std::vector<std::shared_ptr<FiniteElementState> > GetState() const;
@@ -124,7 +124,7 @@ class BaseSolver {
   virtual void AdvanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const OutputType output_type, const std::string root_name);
+  virtual void InitializeOutput(const OutputType output_type, const std::string &root_name);
 
   /// output the state variables
   virtual void OutputState() const;

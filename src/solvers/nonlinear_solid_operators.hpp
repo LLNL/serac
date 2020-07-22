@@ -23,7 +23,7 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
 
  public:
   /// The constructor
-  NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
+  explicit NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
 
   /// Required to use the native newton solver
   mfem::Operator &GetGradient(const mfem::Vector &x) const;

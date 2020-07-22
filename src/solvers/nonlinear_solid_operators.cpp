@@ -9,10 +9,7 @@
 #include "common/logger.hpp"
 
 NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form)
-    : mfem::Operator(H_form->FESpace()->GetTrueVSize())
-{
-  m_H_form = H_form;
-}
+    : mfem::Operator(H_form->FESpace()->GetTrueVSize()), m_H_form(H_form) {}
 
 // compute: y = H(x,p)
 void NonlinearSolidQuasiStaticOperator::Mult(const mfem::Vector &k, mfem::Vector &y) const

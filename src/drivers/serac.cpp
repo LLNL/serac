@@ -129,8 +129,8 @@ int main(int argc, char *argv[])
   std::ifstream imesh(mesh_file);
   if (!imesh) {
     serac::logger::Flush();
-    std::string msg = fmt::format("Can not open mesh file: {0}", mesh_file);
-    SLIC_ERROR_MASTER(rank, msg);
+    std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
+    SLIC_ERROR_MASTER(rank, err_msg);
     serac::ExitGracefully();
   }
 

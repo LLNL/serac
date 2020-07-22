@@ -65,15 +65,15 @@ class ElasticitySolver : public BaseSolver {
   ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set the vector-valued essential displacement boundary conditions
-  void SetDisplacementBCs(std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
+  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
                           int component = -1);
 
   /// Set the vector-valued natural traction boundary conditions
-  void SetTractionBCs(std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void SetTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1);
 
   /// Driver for advancing the timestep
-  void AdvanceTimestep(double &dt);
+  void AdvanceTimestep(double &dt) override;
 
   /// Set the elastic lame parameters
   void SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu);
@@ -82,7 +82,7 @@ class ElasticitySolver : public BaseSolver {
   void SetBodyForce(mfem::VectorCoefficient &force);
 
   /// Finish the setup and allocate the associate data structures
-  void CompleteSetup();
+  void CompleteSetup() override;
 
   /// Set the linear solver parameters object
   void SetLinearSolverParameters(const LinearSolverParameters &params);

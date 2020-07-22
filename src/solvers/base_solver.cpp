@@ -6,6 +6,7 @@
 
 #include "base_solver.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 
@@ -16,16 +17,14 @@
 BaseSolver::BaseSolver(MPI_Comm comm) : m_comm(comm), m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0)
 {
   MPI_Comm_rank(m_comm, &m_rank);
-  SetTimestepper(TimestepMethod::ForwardEuler);
+  BaseSolver::SetTimestepper(TimestepMethod::ForwardEuler);
 }
 
 BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 {
   m_state.resize(n);
 
-  for (auto &state : m_state) {
-    state = std::make_shared<FiniteElementState>();
-  }
+  std::generate(m_state.begin(), m_state.end(), std::make_shared<FiniteElementState>);
 
   m_gf_initialized.assign(n, false);
 }
@@ -42,13 +41,13 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &                 ess_bdr,
   for (int attr : ess_bdr) {
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
-    for (auto &existing_bc : m_ess_bdr) {
-      if (existing_bc->markers[attr-1] == 1) {
-        SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-        bc->markers[attr-1] = 0;
-        break;
-      }
-    }    
+    if (std::any_of(m_ess_bdr.begin(), m_ess_bdr.end(), 
+        [attr](const auto& existing_bc) {
+          return existing_bc->markers[attr-1] == 1;
+        })) {
+      SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
+      bc->markers[attr-1] = 0;
+    }
   }
 
   bc->vec_coef  = ess_bdr_vec_coef;
@@ -103,13 +102,13 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<m
   for (int attr : ess_bdr) {
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
-    for (auto &existing_bc : m_ess_bdr) {
-      if (existing_bc->markers[attr-1] == 1) {
-        SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-        bc->markers[attr-1] = 0;
-        break;
-      }
-    }    
+    if (std::any_of(m_ess_bdr.begin(), m_ess_bdr.end(), 
+        [attr](const auto& existing_bc) {
+          return existing_bc->markers[attr-1] == 1;
+        })) {
+      SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
+      bc->markers[attr-1] = 0;
+    }
   }
 
   bc->scalar_coef = ess_bdr_coef;
@@ -172,7 +171,7 @@ void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoeffici
   }
 }
 
-void BaseSolver::SetState(const std::vector<std::shared_ptr<FiniteElementState> > state)
+void BaseSolver::SetState(const std::vector<std::shared_ptr<FiniteElementState> > &state)
 {
   SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
   m_state = state;
@@ -229,7 +228,7 @@ double BaseSolver::GetTime() const { return m_time; }
 
 int BaseSolver::GetCycle() const { return m_cycle; }
 
-void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name)
+void BaseSolver::InitializeOutput(const OutputType output_type, const std::string &root_name)
 {
   m_root_name = root_name;
 

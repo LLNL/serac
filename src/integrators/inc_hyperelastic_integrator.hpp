@@ -31,7 +31,7 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
 
  public:
   /** @param[in] m  HyperelasticModel that will be integrated. */
-  IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model(m) {}
+  explicit IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model(m) {}
 
   /** @brief Computes the integral of W(Jacobian(Trt)) over a target zone
       @param[in] el     Type of FiniteElement.
