@@ -109,7 +109,7 @@ void NonlinearSolidSolver::SetSolverParameters(const LinearSolverParameters &   
 void NonlinearSolidSolver::CompleteSetup()
 {
   // Define the nonlinear form
-  m_H_form = std::make_shared<mfem::ParNonlinearForm>(m_displacement->space.get());
+  auto m_H_form = std::make_shared<mfem::ParNonlinearForm>(m_displacement->space.get());
 
   // Add the hyperelastic integrator
   if (m_timestepper == TimestepMethod::QuasiStatic) {
@@ -155,6 +155,12 @@ void NonlinearSolidSolver::CompleteSetup()
   essential_dofs.Unique();
 
   m_H_form->SetEssentialTrueDofs(essential_dofs);
+
+  // The abstract mass bilinear form
+  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
+
+  // The abstract viscosity bilinear form
+  std::shared_ptr<mfem::ParBilinearForm> m_S_form;
 
   // If dynamic, create the mass and viscosity forms
   if (m_timestepper != TimestepMethod::QuasiStatic) {

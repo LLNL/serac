@@ -43,7 +43,7 @@ void ElasticitySolver::SetTractionBCs(std::set<int> &                       trac
   SetNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
 
-void ElasticitySolver::SetLameParameters(const mfem::Coefficient &lambda, const mfem::Coefficient &mu)
+void ElasticitySolver::SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu)
 {
   m_lambda = &lambda;
   m_mu     = &mu;

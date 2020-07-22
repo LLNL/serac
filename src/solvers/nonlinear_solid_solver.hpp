@@ -19,15 +19,6 @@ class NonlinearSolidSolver : public BaseSolver {
   std::shared_ptr<FiniteElementState> m_velocity;
   std::shared_ptr<FiniteElementState> m_displacement;
 
-  /// The abstract nonlinear form
-  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
-
-  /// The abstract mass bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
-
-  /// The abstract viscosity bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> m_S_form;
-
   /// The quasi-static operator for use with the MFEM newton solvers
   std::shared_ptr<mfem::Operator> m_nonlinear_oper;
 
