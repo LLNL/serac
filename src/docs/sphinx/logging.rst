@@ -38,7 +38,7 @@ Serac creates the following logging streams under different conditions:
      * Parallel and SERAC_USE_LUMBERJACK is true
      * Debug and info messages to ``std::cout``
      * Warning and error messages to ``std::cerr``
-     * Passes messages to rank 0 and filters duplicates before outputting.
+     * Flushing causes messages to be scalably passed and filtered down to rank 0 then outputted.
 
    * SynchronizedStream
 
