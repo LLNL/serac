@@ -6,6 +6,8 @@
 
 #include "elasticity_solver.hpp"
 
+#include "common/logger.hpp"
+
 const int num_fields = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
@@ -61,8 +63,8 @@ void ElasticitySolver::SetLinearSolverParameters(const serac::LinearSolverParame
 
 void ElasticitySolver::CompleteSetup()
 {
-  MFEM_ASSERT(m_mu != nullptr, "Lame mu not set in ElasticitySolver!");
-  MFEM_ASSERT(m_lambda != nullptr, "Lame lambda not set in ElasticitySolver!");
+  SLIC_ASSERT_MSG(m_mu != nullptr, "Lame mu not set in ElasticitySolver!");
+  SLIC_ASSERT_MSG(m_lambda != nullptr, "Lame lambda not set in ElasticitySolver!");
 
   // Define the parallel bilinear form
   m_K_form = new mfem::ParBilinearForm(displacement->space.get());
@@ -104,8 +106,8 @@ void ElasticitySolver::CompleteSetup()
   displacement->gf->GetTrueDofs(*displacement->true_vec);
 
   if (m_lin_params.prec == serac::Preconditioner::BoomerAMG) {
-    MFEM_VERIFY(displacement->space->GetOrdering() == mfem::Ordering::byVDIM,
-                "Attempting to use BoomerAMG with nodal ordering.");
+    SLIC_WARNING_IF(displacement->space->GetOrdering() == mfem::Ordering::byVDIM,
+                    "Attempting to use BoomerAMG with nodal ordering.");
 
     mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
     prec_amg->SetPrintLevel(m_lin_params.print_level);
@@ -146,7 +148,8 @@ void ElasticitySolver::AdvanceTimestep(double &)
   if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
   } else {
-    mfem::mfem_error("Only quasistatics implemented for linear elasticity!");
+    SLIC_ERROR_MASTER(m_rank, "Only quasistatics implemented for linear elasticity!");
+    serac::ExitGracefully(true);
   }
 
   // Distribute the shared DOFs

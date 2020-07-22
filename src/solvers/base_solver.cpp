@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "common/logger.hpp"
 #include "common/serac_types.hpp"
 #include "fmt/fmt.hpp"
 
@@ -39,11 +40,11 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &                 ess_bdr,
   bc->markers = 0;
 
   for (int attr : ess_bdr) {
-    MFEM_ASSERT(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
+    SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
     for (auto &existing_bc : m_ess_bdr) {
       if (existing_bc->markers[attr-1] == 1) {
-        mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
+        SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
         bc->markers[attr-1] = 0;
         break;
       }
@@ -81,7 +82,7 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &                 nat_bdr,
   bc->markers = 0;
 
   for (int attr : nat_bdr) {  
-    MFEM_ASSERT(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
+    SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
   }
 
@@ -100,11 +101,11 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<m
   bc->markers = 0;
 
   for (int attr : ess_bdr) {
-    MFEM_ASSERT(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
+    SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
     for (auto &existing_bc : m_ess_bdr) {
       if (existing_bc->markers[attr-1] == 1) {
-        mfem::mfem_warning("Multiple definition of essential boundary! Using first definition given.");
+        SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
         bc->markers[attr-1] = 0;
         break;
       }
@@ -141,7 +142,7 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfe
   bc->markers = 0;
 
   for (int attr : nat_bdr) {  
-    MFEM_ASSERT(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
+    SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
   }
 
@@ -153,9 +154,8 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfe
 
 void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
 {
-  MFEM_ASSERT(state_coef.size() == m_state.size(),
-              "State and coefficient bundles not the same size in "
-              "BaseSolver::SetState.");
+  SLIC_ASSERT_MSG(state_coef.size() == m_state.size(),
+                  "State and coefficient bundles not the same size.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
     m_state[i]->gf->ProjectCoefficient(*state_coef[i]);
@@ -164,9 +164,8 @@ void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> >
 
 void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef)
 {
-  MFEM_ASSERT(state_vec_coef.size() == m_state.size(),
-              "State and coefficient bundles not the same size in "
-              "BaseSolver::SetState.");
+  SLIC_ASSERT_MSG(state_vec_coef.size() == m_state.size(),
+                  "State and coefficient bundles not the same size.");
 
   for (unsigned int i = 0; i < state_vec_coef.size(); ++i) {
     m_state[i]->gf->ProjectCoefficient(*state_vec_coef[i]);
@@ -175,7 +174,7 @@ void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoeffici
 
 void BaseSolver::SetState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state)
 {
-  MFEM_ASSERT(state.size() > 0, "State vector array of size 0 in BaseSolver::SetState.");
+  SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
   m_state = state;
 }
 
@@ -219,7 +218,8 @@ void BaseSolver::SetTimestepper(const serac::TimestepMethod timestepper)
       m_ode_solver = std::make_unique<mfem::SDIRK34Solver>();
       break;
     default:
-      mfem::mfem_error("Timestep method not recognized!");
+      SLIC_ERROR_MASTER(m_rank, "Timestep method not recognized!");
+      serac::ExitGracefully(true);
   }
 }
 
@@ -249,7 +249,8 @@ void BaseSolver::InitializeOutput(const serac::OutputType output_type, std::stri
     }
 
     default:
-      mfem::mfem_error("OutputType not recognized!");
+      SLIC_ERROR_MASTER(m_rank, "OutputType not recognized!");
+      serac::ExitGracefully(true);
   }
 }
 
@@ -279,6 +280,7 @@ void BaseSolver::OutputState() const
     }
 
     default:
-      mfem::mfem_error("OutputType not recognized!");
+      SLIC_ERROR_MASTER(m_rank, "OutputType not recognized!");
+      serac::ExitGracefully(true);
   }
 }

@@ -11,18 +11,10 @@
 
 #include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
+#include "axom/slic.hpp"
 
 using namespace mfem;
 using namespace std;
-
-int main(int argc, char **argv)
-{
-  MPI_Init(&argc, &argv);
-  ::testing::InitGoogleTest(&argc, argv);
-  int return_code = RUN_ALL_TESTS();
-  MPI_Finalize();
-  return return_code;
-}
 
 class StdFunctionCoefficientTest : public ::testing::Test {
  protected:
@@ -148,7 +140,7 @@ TEST_F(StdFunctionCoefficientTest, AttributeListSet)
   Array<int> attr_list;
   MakeAttributeList(*pmesh, attr_list, corner);
 
-  MFEM_VERIFY(attr_list.Size() > 0 && attr_list.Sum() > 0, "Didn't pick up anything");
+  SLIC_WARNING_IF(attr_list.Size() > 0 && attr_list.Sum() > 0, "Didn't pick up anything");
 
   for (int e = 0; e < pmesh->GetNE(); e++) {
     pmesh->GetElement(e)->SetAttribute(attr_list[e]);
@@ -259,4 +251,25 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
   ess_vdof_bc_list.Print();
   ess_vdof_list_vals.Print();
   nonzero.Print();
+}
+
+//------------------------------------------------------------------------------
+#include "axom/slic/core/UnitTestLogger.hpp"
+using axom::slic::UnitTestLogger;
+
+int main(int argc, char* argv[])
+{
+  int result = 0;
+
+  ::testing::InitGoogleTest(&argc, argv);
+
+  MPI_Init(&argc, &argv);
+
+  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+
+  result = RUN_ALL_TESTS();
+
+  MPI_Finalize();
+
+  return result;
 }

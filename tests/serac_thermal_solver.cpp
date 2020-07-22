@@ -29,11 +29,8 @@ TEST(thermal_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // mesh
-  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
-  const char* mesh_file      = base_mesh_file.c_str();
-
   // Open the mesh
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
   std::fstream imesh(mesh_file);
   auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -93,11 +90,8 @@ TEST(thermal_solver, static_solve_multiple_bcs)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // mesh
-  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/star_with_2_bdr_attributes.mesh";
-  const char* mesh_file      = base_mesh_file.c_str();
-
   // Open the mesh
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star_with_2_bdr_attributes.mesh";
   std::fstream imesh(mesh_file);
   auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -166,11 +160,8 @@ TEST(thermal_solver, static_solve_repeated_bcs)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // mesh
-  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
-  const char* mesh_file      = base_mesh_file.c_str();
-
   // Open the mesh
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
   std::fstream imesh(mesh_file);
   auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -232,11 +223,8 @@ TEST(thermal_solver, dyn_exp_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // mesh
-  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
-  const char* mesh_file      = base_mesh_file.c_str();
-
   // Open the mesh
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
   std::fstream imesh(mesh_file);
   auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -314,11 +302,8 @@ TEST(thermal_solver, dyn_imp_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // mesh
-  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
-  const char* mesh_file      = base_mesh_file.c_str();
-
   // Open the mesh
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
   std::fstream imesh(mesh_file);
   auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -392,6 +377,10 @@ TEST(thermal_solver, dyn_imp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+//------------------------------------------------------------------------------
+#include "axom/slic/core/UnitTestLogger.hpp"
+using axom::slic::UnitTestLogger;
+
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -399,6 +388,8 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+
+  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
 
   result = RUN_ALL_TESTS();
 

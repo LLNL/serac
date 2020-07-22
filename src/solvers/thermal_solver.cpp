@@ -6,6 +6,8 @@
 
 #include "thermal_solver.hpp"
 
+#include "common/logger.hpp"
+
 const int num_fields = 1;
 
 ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
@@ -65,7 +67,7 @@ void ThermalSolver::SetLinearSolverParameters(const serac::LinearSolverParameter
 
 void ThermalSolver::CompleteSetup()
 {
-  MFEM_ASSERT(m_kappa != nullptr, "Conductivity not set in ThermalSolver!");
+  SLIC_ASSERT_MSG(m_kappa != nullptr, "Conductivity not set in ThermalSolver!");
 
   // Add the domain diffusion integrator to the K form and assemble the matrix
   m_K_form = std::make_unique<mfem::ParBilinearForm>(m_temperature->space.get());
@@ -153,7 +155,7 @@ void ThermalSolver::AdvanceTimestep(double &dt)
   if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
   } else {
-    MFEM_ASSERT(m_gf_initialized[0], "Thermal state not initialized!");
+    SLIC_ASSERT_MSG(m_gf_initialized[0], "Thermal state not initialized!");
 
     // Step the time integrator
     m_ode_solver->Step(*m_temperature->true_vec, m_time, dt);

@@ -6,11 +6,18 @@
 
 set(common_headers
     serac_types.hpp
+    logger.hpp
+    )
+
+set(common_sources
+    logger.cpp
     )
 
 blt_add_library(
     NAME        common
     HEADERS     ${common_headers}
+    SOURCES     ${common_sources}
+    DEPENDS_ON  axom mpi
     )
 
-target_include_directories(common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_include_directories(common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

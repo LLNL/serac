@@ -17,13 +17,10 @@ TEST(nonlinear_solid_solver, qs_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // mesh
-  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
-  const char* mesh_file      = base_mesh_file.c_str();
-
   // Open the mesh
-  std::ifstream imesh(mesh_file);
-  auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  std::fstream imesh(mesh_file);
+  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
@@ -100,6 +97,10 @@ TEST(nonlinear_solid_solver, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+//------------------------------------------------------------------------------
+#include "axom/slic/core/UnitTestLogger.hpp"
+using axom::slic::UnitTestLogger;
+
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -107,6 +108,8 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+
+  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
 
   result = RUN_ALL_TESTS();
 

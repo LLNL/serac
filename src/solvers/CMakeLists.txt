@@ -28,7 +28,7 @@ blt_add_library(
     NAME        solvers
     SOURCES     ${solvers_sources}
     HEADERS     ${solvers_headers}
-    DEPENDS_ON  mfem integrators common fmt mpi
+    DEPENDS_ON  mfem integrators common axom fmt mpi
     )
 
 target_include_directories(solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

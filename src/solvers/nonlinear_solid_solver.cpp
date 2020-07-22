@@ -6,6 +6,7 @@
 
 #include "nonlinear_solid_solver.hpp"
 
+#include "common/logger.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
 
@@ -174,8 +175,8 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Set up the jacbian solver based on the linear solver options
   if (m_lin_params.prec == serac::Preconditioner::BoomerAMG) {
-    MFEM_VERIFY(m_displacement->space->GetOrdering() == mfem::Ordering::byVDIM,
-                "Attempting to use BoomerAMG with nodal ordering.");
+    SLIC_WARNING_IF(m_displacement->space->GetOrdering() == mfem::Ordering::byVDIM,
+                    "Attempting to use BoomerAMG with nodal ordering.");
     auto prec_amg = std::make_shared<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(m_lin_params.print_level);
     prec_amg->SetElasticityOptions(m_displacement->space.get());

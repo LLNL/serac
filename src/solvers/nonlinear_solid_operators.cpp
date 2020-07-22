@@ -6,6 +6,8 @@
 
 #include "nonlinear_solid_operators.hpp"
 
+#include "common/logger.hpp"
+
 NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form)
     : mfem::Operator(H_form->FESpace()->GetTrueVSize())
 {
@@ -100,7 +102,7 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
   m_reduced_oper->SetParameters(dt, &v, &x);
   mfem::Vector zero;  // empty vector is interpreted as zero r.h.s. by NewtonSolver
   m_newton_solver.Mult(zero, dv_dt);
-  MFEM_VERIFY(m_newton_solver.GetConverged(), "Newton solver did not converge.");
+  SLIC_WARNING_IF(m_newton_solver.GetConverged(), "Newton solver did not converge.");
   add(v, dt, dv_dt, dx_dt);
 }
 
