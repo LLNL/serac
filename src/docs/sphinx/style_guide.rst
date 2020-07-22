@@ -39,8 +39,8 @@ can come in handy to provide additional information:
     /** 
      * Calculate du_dt = M^-1 (-Ku + f).
      * This is all that is needed for explicit methods
-     * @param u The state vector (input to the differentiation)
-     * @param du The derivative of 'u' with respect to time
+     * @param[in] u The state vector (input to the differentiation)
+     * @param[out] du The derivative of \p u with respect to time
      * @see https://mfem.github.io/doxygen/html/classmfem_1_1TimeDependentOperator.html
      */
     virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
