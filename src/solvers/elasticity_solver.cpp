@@ -59,7 +59,7 @@ void ElasticitySolver::SetLameParameters(mfem::Coefficient &lambda, mfem::Coeffi
 
 void ElasticitySolver::SetBodyForce(mfem::VectorCoefficient &force) { m_body_force = &force; }
 
-void ElasticitySolver::SetLinearSolverParameters(const LinearSolverParameters &params) { m_lin_params = params; }
+void ElasticitySolver::SetLinearSolverParameters(const serac::LinearSolverParameters &params) { m_lin_params = params; }
 
 void ElasticitySolver::CompleteSetup()
 {
@@ -105,7 +105,7 @@ void ElasticitySolver::CompleteSetup()
   // Initialize the true vector
   displacement->gf->GetTrueDofs(*displacement->true_vec);
 
-  if (m_lin_params.prec == Preconditioner::BoomerAMG) {
+  if (m_lin_params.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement->space->GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
 
@@ -145,7 +145,7 @@ void ElasticitySolver::AdvanceTimestep(double &)
   // Initialize the true vector
   displacement->gf->GetTrueDofs(*displacement->true_vec);
 
-  if (m_timestepper == TimestepMethod::QuasiStatic) {
+  if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
   } else {
     SLIC_ERROR_MASTER(m_rank, "Only quasistatics implemented for linear elasticity!");

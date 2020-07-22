@@ -13,10 +13,10 @@
 #include "common/serac_types.hpp"
 #include "fmt/fmt.hpp"
 
-BaseSolver::BaseSolver(MPI_Comm comm) : m_comm(comm), m_output_type(OutputType::VisIt), m_time(0.0), m_cycle(0)
+BaseSolver::BaseSolver(MPI_Comm comm) : m_comm(comm), m_output_type(serac::OutputType::VisIt), m_time(0.0), m_cycle(0)
 {
   MPI_Comm_rank(m_comm, &m_rank);
-  SetTimestepper(TimestepMethod::ForwardEuler);
+  SetTimestepper(serac::TimestepMethod::ForwardEuler);
 }
 
 BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
@@ -24,7 +24,7 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
   m_state.resize(n);
 
   for (auto &state : m_state) {
-    state = std::make_shared<FiniteElementState>();
+    state = std::make_shared<serac::FiniteElementState>();
   }
 
   m_gf_initialized.assign(n, false);
@@ -34,7 +34,7 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &                 ess_bdr,
                                  std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
                                  mfem::ParFiniteElementSpace &fes, int component)
 {
-  auto bc = std::make_shared<BoundaryCondition>();
+  auto bc = std::make_shared<serac::BoundaryCondition>();
 
   bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
   bc->markers = 0;
@@ -62,7 +62,7 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &                 ess_bdr,
 void BaseSolver::SetTrueDofs(const mfem::Array<int> &                 true_dofs,
                              std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
-  auto bc = std::make_shared<BoundaryCondition>();
+  auto bc = std::make_shared<serac::BoundaryCondition>();
 
   bc->markers.SetSize(0);
 
@@ -76,7 +76,7 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &                 true_dofs,
 void BaseSolver::SetNaturalBCs(const std::set<int> &                 nat_bdr,
                                std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef, int component)
 {
-  auto bc = std::make_shared<BoundaryCondition>();
+  auto bc = std::make_shared<serac::BoundaryCondition>();
 
   bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
   bc->markers = 0;
@@ -95,7 +95,7 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &                 nat_bdr,
 void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
                                  mfem::ParFiniteElementSpace &fes, int component)
 {
-  auto bc = std::make_shared<BoundaryCondition>();
+  auto bc = std::make_shared<serac::BoundaryCondition>();
 
   bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
   bc->markers = 0;
@@ -122,7 +122,7 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<m
 
 void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
-  auto bc = std::make_shared<BoundaryCondition>();
+  auto bc = std::make_shared<serac::BoundaryCondition>();
 
   bc->markers.SetSize(0);
 
@@ -136,7 +136,7 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<
 void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
                                int component)
 {
-  auto bc = std::make_shared<BoundaryCondition>();
+  auto bc = std::make_shared<serac::BoundaryCondition>();
 
   bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
   bc->markers = 0;
@@ -172,49 +172,49 @@ void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoeffici
   }
 }
 
-void BaseSolver::SetState(const std::vector<std::shared_ptr<FiniteElementState> > state)
+void BaseSolver::SetState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state)
 {
   SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
   m_state = state;
 }
 
-std::vector<std::shared_ptr<FiniteElementState> > BaseSolver::GetState() const { return m_state; }
+std::vector<std::shared_ptr<serac::FiniteElementState> > BaseSolver::GetState() const { return m_state; }
 
-void BaseSolver::SetTimestepper(const TimestepMethod timestepper)
+void BaseSolver::SetTimestepper(const serac::TimestepMethod timestepper)
 {
   m_timestepper = timestepper;
 
   switch (m_timestepper) {
-    case TimestepMethod::QuasiStatic:
+    case serac::TimestepMethod::QuasiStatic:
       break;
-    case TimestepMethod::BackwardEuler:
+    case serac::TimestepMethod::BackwardEuler:
       m_ode_solver = std::make_unique<mfem::BackwardEulerSolver>();
       break;
-    case TimestepMethod::SDIRK33:
+    case serac::TimestepMethod::SDIRK33:
       m_ode_solver = std::make_unique<mfem::SDIRK33Solver>();
       break;
-    case TimestepMethod::ForwardEuler:
+    case serac::TimestepMethod::ForwardEuler:
       m_ode_solver = std::make_unique<mfem::ForwardEulerSolver>();
       break;
-    case TimestepMethod::RK2:
+    case serac::TimestepMethod::RK2:
       m_ode_solver = std::make_unique<mfem::RK2Solver>(0.5);
       break;
-    case TimestepMethod::RK3SSP:
+    case serac::TimestepMethod::RK3SSP:
       m_ode_solver = std::make_unique<mfem::RK3SSPSolver>();
       break;
-    case TimestepMethod::RK4:
+    case serac::TimestepMethod::RK4:
       m_ode_solver = std::make_unique<mfem::RK4Solver>();
       break;
-    case TimestepMethod::GeneralizedAlpha:
+    case serac::TimestepMethod::GeneralizedAlpha:
       m_ode_solver = std::make_unique<mfem::GeneralizedAlphaSolver>(0.5);
       break;
-    case TimestepMethod::ImplicitMidpoint:
+    case serac::TimestepMethod::ImplicitMidpoint:
       m_ode_solver = std::make_unique<mfem::ImplicitMidpointSolver>();
       break;
-    case TimestepMethod::SDIRK23:
+    case serac::TimestepMethod::SDIRK23:
       m_ode_solver = std::make_unique<mfem::SDIRK23Solver>();
       break;
-    case TimestepMethod::SDIRK34:
+    case serac::TimestepMethod::SDIRK34:
       m_ode_solver = std::make_unique<mfem::SDIRK34Solver>();
       break;
     default:
@@ -229,14 +229,14 @@ double BaseSolver::GetTime() const { return m_time; }
 
 int BaseSolver::GetCycle() const { return m_cycle; }
 
-void BaseSolver::InitializeOutput(const OutputType output_type, std::string root_name)
+void BaseSolver::InitializeOutput(const serac::OutputType output_type, std::string root_name)
 {
   m_root_name = root_name;
 
   m_output_type = output_type;
 
   switch (m_output_type) {
-    case OutputType::VisIt: {
+    case serac::OutputType::VisIt: {
       m_visit_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.front()->mesh.get());
       for (const auto &state : m_state) {
         m_visit_dc->RegisterField(state->name, state->gf.get());
@@ -244,7 +244,7 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
       break;
     }
 
-    case OutputType::GLVis: {
+    case serac::OutputType::GLVis: {
       break;
     }
 
@@ -257,14 +257,14 @@ void BaseSolver::InitializeOutput(const OutputType output_type, std::string root
 void BaseSolver::OutputState() const
 {
   switch (m_output_type) {
-    case OutputType::VisIt: {
+    case serac::OutputType::VisIt: {
       m_visit_dc->SetCycle(m_cycle);
       m_visit_dc->SetTime(m_time);
       m_visit_dc->Save();
       break;
     }
 
-    case OutputType::GLVis: {
+    case serac::OutputType::GLVis: {
       std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", m_root_name, m_cycle, m_rank);
       std::ofstream omesh(mesh_name.c_str());
       omesh.precision(8);

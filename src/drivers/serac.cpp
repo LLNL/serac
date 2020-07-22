@@ -53,13 +53,13 @@ int main(int argc, char *argv[])
   int order = 1;
 
   // Solver parameters
-  NonlinearSolverParameters nonlin_params;
+  serac::NonlinearSolverParameters nonlin_params;
   nonlin_params.rel_tol     = 1.0e-2;
   nonlin_params.abs_tol     = 1.0e-4;
   nonlin_params.max_iter    = 500;
   nonlin_params.print_level = 0;
 
-  LinearSolverParameters lin_params;
+  serac::LinearSolverParameters lin_params;
   lin_params.rel_tol     = 1.0e-6;
   lin_params.abs_tol     = 1.0e-8;
   lin_params.max_iter    = 5000;
@@ -112,18 +112,13 @@ int main(int argc, char *argv[])
   try {
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
-    if (rank == 0) {
-      app.exit(e);
-      // Don't reprint the usage if CLI11 already has
-      if (e.get_name() != "CallForHelp") {
-        std::cout << app.help() << '\n';
-      }
-    }
-    serac::ExitGracefully(true);
+    auto err_msg = (e.get_name() == "CallForHelp") ? app.help() : CLI::FailureMessage::simple(&app, e);
+    SLIC_ERROR_MASTER(rank, err_msg);
+    serac::ExitGracefully();
   }
-  if (rank == 0) {
-    std::cout << app.config_to_str(true, true) << '\n';
-  }
+
+  auto config_msg = app.config_to_str(true, true);
+  SLIC_INFO_MASTER(rank, config_msg);
 
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
@@ -198,16 +193,16 @@ int main(int argc, char *argv[])
 
   // Set the linear solver parameters
   if (gmres_solver == true) {
-    lin_params.prec       = Preconditioner::BoomerAMG;
-    lin_params.lin_solver = LinearSolver::GMRES;
+    lin_params.prec       = serac::Preconditioner::BoomerAMG;
+    lin_params.lin_solver = serac::LinearSolver::GMRES;
   } else {
-    lin_params.prec       = Preconditioner::Jacobi;
-    lin_params.lin_solver = LinearSolver::MINRES;
+    lin_params.prec       = serac::Preconditioner::Jacobi;
+    lin_params.lin_solver = serac::LinearSolver::MINRES;
   }
   solid_solver.SetSolverParameters(lin_params, nonlin_params);
 
   // Set the time step method
-  solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  solid_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Complete the solver setup
   solid_solver.CompleteSetup();
@@ -217,7 +212,7 @@ int main(int argc, char *argv[])
 
   bool last_step = false;
 
-  solid_solver.InitializeOutput(OutputType::VisIt, "serac");
+  solid_solver.InitializeOutput(serac::OutputType::VisIt, "serac");
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {

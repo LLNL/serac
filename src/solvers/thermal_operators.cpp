@@ -9,8 +9,8 @@
 #include "common/logger.hpp"
 
 DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace>            fespace,
-                                                     const LinearSolverParameters &                          params,
-                                                     const std::vector<std::shared_ptr<BoundaryCondition> > &ess_bdr)
+                                                     const serac::LinearSolverParameters &                          params,
+                                                     const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr)
     : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0),
       m_fespace(fespace),
       m_ess_bdr(ess_bdr),

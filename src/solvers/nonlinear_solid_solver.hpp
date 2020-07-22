@@ -16,8 +16,8 @@
 /// example 10p.
 class NonlinearSolidSolver : public BaseSolver {
  protected:
-  std::shared_ptr<FiniteElementState> m_velocity;
-  std::shared_ptr<FiniteElementState> m_displacement;
+  std::shared_ptr<serac::FiniteElementState> m_velocity;
+  std::shared_ptr<serac::FiniteElementState> m_displacement;
 
   /// The abstract nonlinear form
   std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
@@ -50,10 +50,10 @@ class NonlinearSolidSolver : public BaseSolver {
   std::shared_ptr<mfem::HyperelasticModel> m_model;
 
   /// Linear solver parameters
-  LinearSolverParameters m_lin_params;
+  serac::LinearSolverParameters m_lin_params;
 
   /// Nonlinear solver parameters
-  NonlinearSolverParameters m_nonlin_params;
+  serac::NonlinearSolverParameters m_nonlin_params;
 
   /// Pointer to the reference mesh data
   std::unique_ptr<mfem::ParGridFunction> m_reference_nodes;
@@ -92,13 +92,13 @@ class NonlinearSolidSolver : public BaseSolver {
   void SetVelocity(mfem::VectorCoefficient &velo_state);
 
   /// Set the linear and nonlinear solver params
-  void SetSolverParameters(const LinearSolverParameters &lin_params, const NonlinearSolverParameters &nonlin_params);
+  void SetSolverParameters(const serac::LinearSolverParameters &lin_params, const serac::NonlinearSolverParameters &nonlin_params);
 
   /// Get the displacement state
-  std::shared_ptr<FiniteElementState> GetDisplacement() { return m_displacement; };
+  std::shared_ptr<serac::FiniteElementState> GetDisplacement() { return m_displacement; };
 
   /// Get the velocity state
-  std::shared_ptr<FiniteElementState> GetVelocity() { return m_velocity; };
+  std::shared_ptr<serac::FiniteElementState> GetVelocity() { return m_velocity; };
 
   /// Complete the data structure initialization
   void CompleteSetup();

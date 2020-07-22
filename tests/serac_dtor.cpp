@@ -37,7 +37,7 @@ TEST(serac_dtor, test1)
   auto therm_solver = std::make_unique<ThermalSolver>(2, pmesh);
 
   // Set the time integration method
-  therm_solver->SetTimestepper(TimestepMethod::QuasiStatic);
+  therm_solver->SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector &x) { return x.Norml2(); });
@@ -51,7 +51,7 @@ TEST(serac_dtor, test1)
   therm_solver->SetConductivity(kappa);
 
   // Define the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-6;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
