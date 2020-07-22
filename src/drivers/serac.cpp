@@ -122,12 +122,12 @@ int main(int argc, char *argv[])
 
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
-  SLIC_INFO_MASTER(rank, msg);
+  SLIC_INFO_RANK0(rank, msg);
   std::ifstream imesh(mesh_file);
   if (!imesh) {
     serac::logger::Flush();
     std::string msg = fmt::format("Can not open mesh file: {0}", mesh_file);
-    SLIC_ERROR_MASTER(rank, msg);
+    SLIC_ERROR_RANK0(rank, msg);
     serac::ExitGracefully();
   }
 

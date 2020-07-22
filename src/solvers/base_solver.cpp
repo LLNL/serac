@@ -218,7 +218,7 @@ void BaseSolver::SetTimestepper(const serac::TimestepMethod timestepper)
       m_ode_solver = std::make_unique<mfem::SDIRK34Solver>();
       break;
     default:
-      SLIC_ERROR_MASTER(m_rank, "Timestep method not recognized!");
+      SLIC_ERROR_RANK0(m_rank, "Timestep method not recognized!");
       serac::ExitGracefully(true);
   }
 }
@@ -249,7 +249,7 @@ void BaseSolver::InitializeOutput(const serac::OutputType output_type, std::stri
     }
 
     default:
-      SLIC_ERROR_MASTER(m_rank, "OutputType not recognized!");
+      SLIC_ERROR_RANK0(m_rank, "OutputType not recognized!");
       serac::ExitGracefully(true);
   }
 }
@@ -280,7 +280,7 @@ void BaseSolver::OutputState() const
     }
 
     default:
-      SLIC_ERROR_MASTER(m_rank, "OutputType not recognized!");
+      SLIC_ERROR_RANK0(m_rank, "OutputType not recognized!");
       serac::ExitGracefully(true);
   }
 }

@@ -50,6 +50,9 @@ endforeach()
 set(SERAC_DEBUG FALSE)
 if(CMAKE_BUILD_TYPE MATCHES "(Debug|RelWithDebInfo)")
     set(SERAC_DEBUG TRUE)
+
+    # Controls various behaviors in Axom, like turning off/on SLIC debug and assert macros
+    set(AXOM_DEBUG TRUE)
 endif()
 
 

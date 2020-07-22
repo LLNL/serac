@@ -41,6 +41,7 @@ bool Initialize(MPI_Comm comm)
   slic::activateLogger(loggerName);
   if (!slic::activateLogger(loggerName))
   {
+    // Can't log through SLIC since it just failed to activate
     std::cerr << "Error: Failed to activate logger: " << loggerName << std::endl;
     return false;
   }
@@ -84,7 +85,7 @@ bool Initialize(MPI_Comm comm)
   slic::setAbortOnWarning(false);
 
   std::string msg = fmt::format("Logger activated: {0}", loggerName);
-  SLIC_INFO_MASTER(rank, msg);
+  SLIC_INFO_RANK0(rank, msg);
   serac::logger::Flush();
 
   return true;
