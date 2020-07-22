@@ -112,18 +112,13 @@ int main(int argc, char *argv[])
   try {
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
-    if (rank == 0) {
-      app.exit(e);
-      // Don't reprint the usage if CLI11 already has
-      if (e.get_name() != "CallForHelp") {
-        std::cout << app.help() << '\n';
-      }
-    }
-    serac::ExitGracefully(true);
+    auto err_msg = (e.get_name() == "CallForHelp") ? app.help() : CLI::FailureMessage::simple(&app, e);
+    SLIC_ERROR_MASTER(rank, err_msg);
+    serac::ExitGracefully();
   }
-  if (rank == 0) {
-    std::cout << app.config_to_str(true, true) << '\n';
-  }
+
+  auto config_msg = app.config_to_str(true, true);
+  SLIC_INFO_MASTER(rank, config_msg);
 
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
