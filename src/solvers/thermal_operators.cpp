@@ -6,6 +6,8 @@
 
 #include "thermal_operators.hpp"
 
+#include "common/logger.hpp"
+
 DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace>            fespace,
                                                      const LinearSolverParameters &                          params,
                                                      const std::vector<std::shared_ptr<BoundaryCondition> > &ess_bdr)
@@ -56,8 +58,8 @@ void DynamicConductionOperator::SetLoadVector(std::shared_ptr<mfem::Vector> rhs)
 // TODO: allow for changing thermal essential boundary conditions
 void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt) const
 {
-  MFEM_ASSERT(m_M_mat != nullptr, "Mass matrix not set in ConductionSolver::Mult!");
-  MFEM_ASSERT(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::Mult!");
+  SLIC_ASSERT_MSG(m_M_mat != nullptr, "Mass matrix not set in ConductionSolver::Mult!");
+  SLIC_ASSERT_MSG(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::Mult!");
 
   m_y = u;
   m_M_solver->SetOperator(*m_M_mat);
@@ -78,8 +80,8 @@ void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt)
 
 void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &du_dt)
 {
-  MFEM_ASSERT(m_M_mat != nullptr, "Mass matrix not set in ConductionSolver::ImplicitSolve!");
-  MFEM_ASSERT(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::ImplicitSolve!");
+  SLIC_ASSERT_MSG(m_M_mat != nullptr, "Mass matrix not set in ConductionSolver::ImplicitSolve!");
+  SLIC_ASSERT_MSG(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::ImplicitSolve!");
 
   // Save a copy of the current state vector
   m_y = u;

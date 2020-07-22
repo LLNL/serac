@@ -26,14 +26,21 @@
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
+#include "common/logger.hpp"
 
 int main(int argc, char *argv[])
 {
   // Initialize MPI.
-  int num_procs, myid;
+  int num_procs, rank;
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  // Initialize SLIC logger
+  if(!serac::logger::Initialize(MPI_COMM_WORLD))
+  {
+    serac::ExitGracefully(true);
+  }
 
   // mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
@@ -105,28 +112,28 @@ int main(int argc, char *argv[])
   try {
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
-    if (myid == 0) {
+    if (rank == 0) {
       app.exit(e);
       // Don't reprint the usage if CLI11 already has
       if (e.get_name() != "CallForHelp") {
         std::cout << app.help() << '\n';
       }
     }
-    MPI_Finalize();
-    return 1;
+    serac::ExitGracefully(true);
   }
-  if (myid == 0) {
+  if (rank == 0) {
     std::cout << app.config_to_str(true, true) << '\n';
   }
 
   // Open the mesh
+  std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
+  SLIC_INFO_MASTER(rank, msg);
   std::ifstream imesh(mesh_file);
   if (!imesh) {
-    if (myid == 0) {
-      std::cerr << "\nCan not open mesh file: " << mesh_file << '\n' << std::endl;
-    }
-    MPI_Finalize();
-    return 2;
+    serac::logger::Flush();
+    std::string msg = fmt::format("Can not open mesh file: {0}", mesh_file);
+    SLIC_ERROR_MASTER(rank, msg);
+    serac::ExitGracefully();
   }
 
   auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
@@ -218,7 +225,7 @@ int main(int argc, char *argv[])
     // compute current time
     t = t + dt_real;
 
-    if (myid == 0) {
+    if (rank == 0) {
       std::cout << "step " << ti << ", t = " << t << std::endl;
     }
 
@@ -232,7 +239,5 @@ int main(int argc, char *argv[])
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
-  MPI_Finalize();
-
-  return 0;
-}
+  serac::ExitGracefully();
+} 
