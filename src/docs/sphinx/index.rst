@@ -5,6 +5,7 @@
 
 .. toctree::
    memory_checking
+   style_guide
    :maxdepth: 2
 
 =======
