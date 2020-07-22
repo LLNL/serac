@@ -22,28 +22,28 @@ class ElasticitySolver : public BaseSolver {
   std::shared_ptr<FiniteElementState> displacement;
 
   /// Stiffness bilinear form
-  mfem::ParBilinearForm *m_K_form;
+  std::unique_ptr<mfem::ParBilinearForm> m_K_form;
 
   /// Load bilinear form
-  mfem::ParLinearForm *m_l_form;
+  std::unique_ptr<mfem::ParLinearForm> m_l_form;
 
   /// Stiffness matrix
-  mfem::HypreParMatrix *m_K_mat;
+  std::unique_ptr<mfem::HypreParMatrix> m_K_mat;
 
   /// Eliminated stiffness matrix
-  mfem::HypreParMatrix *m_K_e_mat;
+  std::unique_ptr<mfem::HypreParMatrix> m_K_e_mat;
 
   /// RHS vector
-  mfem::HypreParVector *m_rhs;
+  std::unique_ptr<mfem::HypreParVector> m_rhs;
 
   /// Eliminated RHS vector
-  mfem::HypreParVector *m_bc_rhs;
+  std::unique_ptr<mfem::HypreParVector> m_bc_rhs;
 
   /// Solver for the stiffness matrix
-  mfem::Solver *m_K_solver;
+  std::unique_ptr<mfem::Solver> m_K_solver;
 
   /// Preconditioner for the stiffness
-  mfem::Solver *m_K_prec;
+  std::unique_ptr<mfem::Solver> m_K_prec;
 
   /// Lame mu parameter coefficient
   mfem::Coefficient *m_mu;
