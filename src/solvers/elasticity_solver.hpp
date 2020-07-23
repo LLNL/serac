@@ -52,7 +52,7 @@ class ElasticitySolver : public BaseSolver {
   mfem::Coefficient *m_lambda;
 
   /// Body source coefficient
-  mfem::VectorCoefficient *m_body_force;
+  const mfem::VectorCoefficient *m_body_force;
 
   /// Linear solver parameters
   LinearSolverParameters m_lin_params;
@@ -62,7 +62,7 @@ class ElasticitySolver : public BaseSolver {
 
  public:
   /// Constructor using order and mesh
-  ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
+  ElasticitySolver(const int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set the vector-valued essential displacement boundary conditions
   void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
@@ -70,7 +70,7 @@ class ElasticitySolver : public BaseSolver {
 
   /// Set the vector-valued natural traction boundary conditions
   void SetTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      int component = -1);
+                      const int component = -1);
 
   /// Driver for advancing the timestep
   void AdvanceTimestep(double &dt) override;
@@ -79,7 +79,7 @@ class ElasticitySolver : public BaseSolver {
   void SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu);
 
   /// Set the vector-valued body force coefficient
-  void SetBodyForce(mfem::VectorCoefficient &force);
+  void SetBodyForce(const mfem::VectorCoefficient &force);
 
   /// Finish the setup and allocate the associate data structures
   void CompleteSetup() override;

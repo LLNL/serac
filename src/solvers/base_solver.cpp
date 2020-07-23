@@ -31,7 +31,7 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 
 void BaseSolver::SetEssentialBCs(const std::set<int> &                 ess_bdr,
                                  std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
-                                 mfem::ParFiniteElementSpace &fes, int component)
+                                 const mfem::ParFiniteElementSpace &fes, const int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
   bc->vec_coef  = ess_bdr_vec_coef;
@@ -40,7 +40,7 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &                 ess_bdr,
 }
 
 void BaseSolver::SetTrueDofs(const mfem::Array<int> &                 true_dofs,
-                             std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
+                             const std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
   auto bc = std::make_shared<BoundaryCondition>();
 
@@ -54,7 +54,7 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &                 true_dofs,
 }
 
 void BaseSolver::SetNaturalBCs(const std::set<int> &                 nat_bdr,
-                               std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef, int component)
+                               std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef, const int component)
 {
  auto bc = std::make_shared<BoundaryCondition>();
   bc->vec_coef  = nat_bdr_vec_coef;
@@ -63,7 +63,7 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &                 nat_bdr,
 }
 
 void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                                 mfem::ParFiniteElementSpace &fes, int component)
+                                 const mfem::ParFiniteElementSpace &fes, const int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
   bc->scalar_coef  = ess_bdr_coef;
@@ -85,7 +85,7 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<
 }
 
 void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
-                               int component)
+                               const int component)
 {
   auto bc = std::make_shared<BoundaryCondition>();
   bc->scalar_coef  = nat_bdr_coef;
@@ -227,12 +227,12 @@ void BaseSolver::OutputState() const
 }
 
 void BaseSolver::RegisterEssentialBC(std::shared_ptr<BoundaryCondition> bc, const std::set<int> &ess_bdr, 
-                                     mfem::ParFiniteElementSpace &fes, int component)
+                                     mfem::ParFiniteElementSpace fes, const int component)
 {
   bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
   bc->markers = 0;
 
-  for (int attr : ess_bdr) {
+  for (const int attr : ess_bdr) {
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
     if (std::any_of(m_ess_bdr.begin(), m_ess_bdr.end(), [attr](const auto& existing_bc) {
@@ -245,18 +245,21 @@ void BaseSolver::RegisterEssentialBC(std::shared_ptr<BoundaryCondition> bc, cons
 
   bc->component = component;
 
+  // This function can and should be marked const in MFEM
+  // TODO: Raise an issue against MFEM
+  // Just make a copy of the PFES for now to keep everything else const correct
   fes.GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
 
   m_ess_bdr.push_back(bc);
 }
 
 void BaseSolver::RegisterNaturalBC(std::shared_ptr<BoundaryCondition> bc, const std::set<int> &nat_bdr, 
-                                   int component)
+                                   const int component)
 {
   bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
   bc->markers = 0;
 
-  for (int attr : nat_bdr) {  
+  for (const int attr : nat_bdr) {  
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr-1] = 1;
   }

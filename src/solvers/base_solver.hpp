@@ -17,10 +17,10 @@
 class BaseSolver {
  private:
   void RegisterEssentialBC(std::shared_ptr<BoundaryCondition> bc, const std::set<int> &ess_bdr, 
-                           mfem::ParFiniteElementSpace &fes, int component);
+                           mfem::ParFiniteElementSpace fes, const int component);
 
   void RegisterNaturalBC(std::shared_ptr<BoundaryCondition> bc, const std::set<int> &nat_bdr, 
-                         int component);
+                         const int component);
 
  protected:
   /// The MPI communicator
@@ -75,13 +75,13 @@ class BaseSolver {
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
   virtual void SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                               mfem::ParFiniteElementSpace &fes, int component = -1);
+                               const mfem::ParFiniteElementSpace &fes, const int component = -1);
 
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
   virtual void SetEssentialBCs(const std::set<int> &                 ess_bdr,
                                std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
-                               mfem::ParFiniteElementSpace &fes, int component = -1);
+                               const mfem::ParFiniteElementSpace &fes, const int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
   virtual void SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);
@@ -93,12 +93,12 @@ class BaseSolver {
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
   virtual void SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
-                             int component = -1);
+                             const int component = -1);
 
   /// Set the vector-valued natural boundary conditions from a list of boundary
   /// markers and a coefficient
   virtual void SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
-                             int component = -1);
+                             const int component = -1);
 
   /// Set the state variables from a coefficient
   virtual void SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef);
@@ -113,7 +113,7 @@ class BaseSolver {
   virtual std::vector<std::shared_ptr<FiniteElementState> > GetState() const;
 
   /// Set the time integration method
-  virtual void SetTimestepper(TimestepMethod timestepper);
+  virtual void SetTimestepper(const TimestepMethod timestepper);
 
   /// Set the current time
   virtual void SetTime(const double time);

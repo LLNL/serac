@@ -10,7 +10,7 @@
 
 const int num_fields = 1;
 
-ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
+ElasticitySolver::ElasticitySolver(const int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), num_fields),
       displacement(m_state[0]),
       m_mu(nullptr),
@@ -49,7 +49,7 @@ void ElasticitySolver::SetLameParameters(mfem::Coefficient &lambda, mfem::Coeffi
   m_mu     = &mu;
 }
 
-void ElasticitySolver::SetBodyForce(mfem::VectorCoefficient &force) { m_body_force = &force; }
+void ElasticitySolver::SetBodyForce(const mfem::VectorCoefficient &force) { m_body_force = &force; }
 
 void ElasticitySolver::SetLinearSolverParameters(const LinearSolverParameters &params) { m_lin_params = params; }
 
