@@ -3,11 +3,6 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-.. toctree::
-   memory_checking
-   style_guide
-   :maxdepth: 2
-
 =======
 Serac
 =======
@@ -194,3 +189,11 @@ Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC.
 Produced at the Lawrence Livermore National Laboratory.
 
 LLNL-CODE-805541
+
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+
+   logging
+   memory_checking
+   style_guide

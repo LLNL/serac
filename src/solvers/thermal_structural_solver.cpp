@@ -21,19 +21,19 @@ ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem
   m_state[1] = m_velocity;
   m_state[2] = m_displacement;
 
-  m_coupling = CouplingScheme::OperatorSplit;
+  m_coupling = serac::CouplingScheme::OperatorSplit;
 }
 
 void ThermalStructuralSolver::CompleteSetup()
 {
-  MFEM_VERIFY(m_coupling == CouplingScheme::OperatorSplit,
+  MFEM_VERIFY(m_coupling == serac::CouplingScheme::OperatorSplit,
               "Only operator split is currently implemented in the thermal structural solver.");
 
   m_therm_solver.CompleteSetup();
   m_solid_solver.CompleteSetup();
 }
 
-void ThermalStructuralSolver::SetTimestepper(TimestepMethod timestepper)
+void ThermalStructuralSolver::SetTimestepper(serac::TimestepMethod timestepper)
 {
   m_timestepper = timestepper;
   m_therm_solver.SetTimestepper(timestepper);
@@ -43,7 +43,7 @@ void ThermalStructuralSolver::SetTimestepper(TimestepMethod timestepper)
 // Advance the timestep
 void ThermalStructuralSolver::AdvanceTimestep(double &dt)
 {
-  if (m_coupling == CouplingScheme::OperatorSplit) {
+  if (m_coupling == serac::CouplingScheme::OperatorSplit) {
     double initial_dt = dt;
     m_therm_solver.AdvanceTimestep(dt);
     m_solid_solver.AdvanceTimestep(dt);

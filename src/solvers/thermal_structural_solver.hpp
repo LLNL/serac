@@ -16,9 +16,9 @@
 class ThermalStructuralSolver : public BaseSolver {
  protected:
   /// The state variables
-  std::shared_ptr<FiniteElementState> m_temperature;
-  std::shared_ptr<FiniteElementState> m_velocity;
-  std::shared_ptr<FiniteElementState> m_displacement;
+  std::shared_ptr<serac::FiniteElementState> m_temperature;
+  std::shared_ptr<serac::FiniteElementState> m_velocity;
+  std::shared_ptr<serac::FiniteElementState> m_displacement;
 
   /// The thermal solver object
   ThermalSolver m_therm_solver;
@@ -27,7 +27,7 @@ class ThermalStructuralSolver : public BaseSolver {
   NonlinearSolidSolver m_solid_solver;
 
   /// The coupling strategy
-  CouplingScheme m_coupling;
+  serac::CouplingScheme m_coupling;
 
  public:
   /// Constructor from order and parallel mesh
@@ -55,7 +55,7 @@ class ThermalStructuralSolver : public BaseSolver {
   void SetSource(std::shared_ptr<mfem::Coefficient> source) { m_therm_solver.SetSource(source); };
 
   /// Set the linear solver parameters for both the M and K operators
-  void SetThermalSolverParameters(const LinearSolverParameters &params)
+  void SetThermalSolverParameters(const serac::LinearSolverParameters &params)
   {
     m_therm_solver.SetLinearSolverParameters(params);
   };
@@ -96,17 +96,17 @@ class ThermalStructuralSolver : public BaseSolver {
   void SetVelocity(mfem::VectorCoefficient &velo_state) { m_solid_solver.SetVelocity(velo_state); };
 
   /// Set the solid linear and nonlinear solver params
-  void SetSolidSolverParameters(const LinearSolverParameters &   lin_params,
-                                const NonlinearSolverParameters &nonlin_params)
+  void SetSolidSolverParameters(const serac::LinearSolverParameters &   lin_params,
+                                const serac::NonlinearSolverParameters &nonlin_params)
   {
     m_solid_solver.SetSolverParameters(lin_params, nonlin_params);
   };
 
   /// Set the coupling scheme
-  void SetCouplingScheme(CouplingScheme coupling) { m_coupling = coupling; };
+  void SetCouplingScheme(serac::CouplingScheme coupling) { m_coupling = coupling; };
 
   /// Overwrite the base default set timestepper method
-  void SetTimestepper(TimestepMethod timestepper);
+  void SetTimestepper(serac::TimestepMethod timestepper);
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
@@ -114,13 +114,13 @@ class ThermalStructuralSolver : public BaseSolver {
   void CompleteSetup();
 
   /// Get the temperature state
-  std::shared_ptr<FiniteElementState> GetTemperature() { return m_temperature; };
+  std::shared_ptr<serac::FiniteElementState> GetTemperature() { return m_temperature; };
 
   /// Get the displacement state
-  std::shared_ptr<FiniteElementState> GetDisplacement() { return m_displacement; };
+  std::shared_ptr<serac::FiniteElementState> GetDisplacement() { return m_displacement; };
 
   /// Get the velocity state
-  std::shared_ptr<FiniteElementState> GetVelocity() { return m_velocity; };
+  std::shared_ptr<serac::FiniteElementState> GetVelocity() { return m_velocity; };
 
   /// Advance the timestep
   void AdvanceTimestep(double &dt);

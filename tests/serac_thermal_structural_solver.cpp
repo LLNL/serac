@@ -67,8 +67,8 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetDisplacement(*deform);
   ts_solver.SetVelocity(*velo);
   ts_solver.SetTemperature(*temp);
-  ts_solver.SetTimestepper(TimestepMethod::SDIRK33);
-  ts_solver.SetCouplingScheme(CouplingScheme::OperatorSplit);
+  ts_solver.SetTimestepper(serac::TimestepMethod::SDIRK33);
+  ts_solver.SetCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity
   double offset = 0.1;
@@ -80,16 +80,16 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetViscosity(visc_coef);
 
   // Set the linear solver parameters
-  LinearSolverParameters params;
-  params.prec        = Preconditioner::BoomerAMG;
+  serac::LinearSolverParameters params;
+  params.prec        = serac::Preconditioner::BoomerAMG;
   params.abs_tol     = 1.0e-8;
   params.rel_tol     = 1.0e-4;
   params.max_iter    = 500;
-  params.lin_solver  = LinearSolver::GMRES;
+  params.lin_solver  = serac::LinearSolver::GMRES;
   params.print_level = 0;
 
   // Set the nonlinear solver parameters
-  NonlinearSolverParameters nl_params;
+  serac::NonlinearSolverParameters nl_params;
   nl_params.rel_tol     = 1.0e-4;
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
@@ -98,7 +98,7 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetThermalSolverParameters(params);
 
   // Initialize the VisIt output
-  ts_solver.InitializeOutput(OutputType::VisIt, "dynamic_thermal_solid");
+  ts_solver.InitializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");
 
   // Construct the internal dynamic solver data structures
   ts_solver.CompleteSetup();
