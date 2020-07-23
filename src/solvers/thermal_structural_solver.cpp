@@ -33,7 +33,7 @@ void ThermalStructuralSolver::CompleteSetup()
   m_solid_solver.CompleteSetup();
 }
 
-void ThermalStructuralSolver::SetTimestepper(serac::TimestepMethod timestepper)
+void ThermalStructuralSolver::SetTimestepper(const serac::TimestepMethod timestepper)
 {
   m_timestepper = timestepper;
   m_therm_solver.SetTimestepper(timestepper);

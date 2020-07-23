@@ -120,7 +120,10 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Add the traction integrator
   for (auto &nat_bc_data : m_nat_bdr) {
-    m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->markers);
+    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data->coef), 
+                    "Traction boundary condition had a non-vector coefficient.");
+    m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(
+      *std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data->coef)), nat_bc_data->markers);
   }
 
   // Add the essential boundary
@@ -140,10 +143,14 @@ void NonlinearSolidSolver::CompleteSetup()
     // Project the coefficient
     if (bc->component == -1) {
       // If it contains all components, project the vector
-      m_displacement->gf->ProjectCoefficient(*bc->vec_coef, dof_list);
+      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc->coef), 
+                    "Displacement boundary condition contained all components but had a non-vector coefficient.");
+      m_displacement->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc->coef), dof_list);
     } else {
       // If it is only a single component, project the scalar
-      m_displacement->gf->ProjectCoefficient(*bc->scalar_coef, dof_list, bc->component);
+      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc->coef), 
+                    "Displacement boundary condition contained a single component but had a non-scalar coefficient.");
+      m_displacement->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc->coef), dof_list, bc->component);
     }
 
     // Add the vector dofs to the total essential BC dof list

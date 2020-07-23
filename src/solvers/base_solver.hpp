@@ -15,13 +15,6 @@
 
 /// This is the abstract base class for a generic forward solver
 class BaseSolver {
- private:
-  void RegisterEssentialBC(std::shared_ptr<serac::BoundaryCondition> bc, const std::set<int> &ess_bdr, 
-                           mfem::ParFiniteElementSpace fes, const int component);
-
-  void RegisterNaturalBC(std::shared_ptr<serac::BoundaryCondition> bc, const std::set<int> &nat_bdr, 
-                         const int component);
-
  protected:
   /// The MPI communicator
   MPI_Comm m_comm;
@@ -74,37 +67,19 @@ class BaseSolver {
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
-  virtual void SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                               const mfem::ParFiniteElementSpace &fes, const int component = -1);
-
-  /// Set the vector-valued essential boundary conditions from a list of
-  /// boundary markers and a coefficient
-  virtual void SetEssentialBCs(const std::set<int> &                 ess_bdr,
-                               std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
+  virtual void SetEssentialBCs(const std::set<int> &ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
                                const mfem::ParFiniteElementSpace &fes, const int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
-  virtual void SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);
-
-  /// Set a list of true degrees of freedom from a vector coefficient
-  virtual void SetTrueDofs(const mfem::Array<int> &                 true_dofs,
-                           std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef);
+  virtual void SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
-  virtual void SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
-                             const int component = -1);
-
-  /// Set the vector-valued natural boundary conditions from a list of boundary
-  /// markers and a coefficient
-  virtual void SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
+  virtual void SetNaturalBCs(const std::set<int> &nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
                              const int component = -1);
 
   /// Set the state variables from a coefficient
-  virtual void SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef);
-
-  /// Set the state variables from a vector coefficient
-  virtual void SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef);
+  virtual void SetState(const std::vector<serac::BoundaryCondition::Coef> &state_coef);
 
   /// Set the state variables from an existing grid function
   virtual void SetState(const std::vector<std::shared_ptr<serac::FiniteElementState> > &state);

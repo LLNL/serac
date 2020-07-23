@@ -103,10 +103,10 @@ class ThermalStructuralSolver : public BaseSolver {
   };
 
   /// Set the coupling scheme
-  void SetCouplingScheme(serac::CouplingScheme coupling) { m_coupling = coupling; };
+  void SetCouplingScheme(const serac::CouplingScheme coupling) { m_coupling = coupling; };
 
   /// Overwrite the base default set timestepper method
-  void SetTimestepper(serac::TimestepMethod timestepper) override;
+  void SetTimestepper(const serac::TimestepMethod timestepper) override;
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
