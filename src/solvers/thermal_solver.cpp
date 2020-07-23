@@ -56,7 +56,7 @@ void ThermalSolver::SetSource(std::shared_ptr<mfem::Coefficient> source)
   m_source = source;
 }
 
-void ThermalSolver::SetLinearSolverParameters(const LinearSolverParameters &params)
+void ThermalSolver::SetLinearSolverParameters(const serac::LinearSolverParameters &params)
 {
   // Save the solver params object
   // TODO: separate the M and K solver params
@@ -98,7 +98,7 @@ void ThermalSolver::CompleteSetup()
   // Initialize the true vector
   m_temperature->gf->GetTrueDofs(*m_temperature->true_vec);
 
-  if (m_timestepper != TimestepMethod::QuasiStatic) {
+  if (m_timestepper != serac::TimestepMethod::QuasiStatic) {
     // If dynamic, assemble the mass matrix
     m_M_form = std::make_unique<mfem::ParBilinearForm>(m_temperature->space.get());
     m_M_form->AddDomainIntegrator(new mfem::MassIntegrator());
@@ -150,7 +150,7 @@ void ThermalSolver::AdvanceTimestep(double &dt)
   // Initialize the true vector
   m_temperature->gf->GetTrueDofs(*m_temperature->true_vec);
 
-  if (m_timestepper == TimestepMethod::QuasiStatic) {
+  if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
   } else {
     SLIC_ASSERT_MSG(m_gf_initialized[0], "Thermal state not initialized!");

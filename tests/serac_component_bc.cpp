@@ -62,15 +62,15 @@ TEST(component_bc, qs_solve)
   solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
 
   // Set the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-8;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 5000;
-  params.prec        = Preconditioner::Jacobi;
-  params.lin_solver  = LinearSolver::MINRES;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
 
-  NonlinearSolverParameters nl_params;
+  serac::NonlinearSolverParameters nl_params;
   nl_params.rel_tol     = 1.0e-6;
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
@@ -79,10 +79,10 @@ TEST(component_bc, qs_solve)
   solid_solver.SetSolverParameters(params, nl_params);
 
   // Set the time step method
-  solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  solid_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
-  solid_solver.InitializeOutput(OutputType::VisIt, "component_bc");
+  solid_solver.InitializeOutput(serac::OutputType::VisIt, "component_bc");
 
   // Complete the solver setup
   solid_solver.CompleteSetup();
@@ -144,15 +144,15 @@ TEST(component_bc, qs_attribute_solve)
   solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
 
   // Set the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-8;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 5000;
-  params.prec        = Preconditioner::Jacobi;
-  params.lin_solver  = LinearSolver::MINRES;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
 
-  NonlinearSolverParameters nl_params;
+  serac::NonlinearSolverParameters nl_params;
   nl_params.rel_tol     = 1.0e-6;
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
@@ -161,10 +161,10 @@ TEST(component_bc, qs_attribute_solve)
   solid_solver.SetSolverParameters(params, nl_params);
 
   // Set the time step method
-  solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  solid_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
-  solid_solver.InitializeOutput(OutputType::GLVis, "component_attr_bc");
+  solid_solver.InitializeOutput(serac::OutputType::GLVis, "component_attr_bc");
 
   // Complete the solver setup
   solid_solver.CompleteSetup();

@@ -19,7 +19,7 @@
  *  and lambda and mu are the lame parameters */
 class ElasticitySolver : public BaseSolver {
  protected:
-  std::shared_ptr<FiniteElementState> displacement;
+  std::shared_ptr<serac::FiniteElementState> displacement;
 
   /// Stiffness bilinear form
   std::unique_ptr<mfem::ParBilinearForm> m_K_form;
@@ -55,7 +55,7 @@ class ElasticitySolver : public BaseSolver {
   const mfem::VectorCoefficient *m_body_force;
 
   /// Linear solver parameters
-  LinearSolverParameters m_lin_params;
+  serac::LinearSolverParameters m_lin_params;
 
   /// Driver for a quasi-static solve
   void QuasiStaticSolve();
@@ -85,7 +85,7 @@ class ElasticitySolver : public BaseSolver {
   void CompleteSetup() override;
 
   /// Set the linear solver parameters object
-  void SetLinearSolverParameters(const LinearSolverParameters &params);
+  void SetLinearSolverParameters(const serac::LinearSolverParameters &params);
 
   /// The destructor
   virtual ~ElasticitySolver();
