@@ -148,7 +148,7 @@ void ElasticitySolver::AdvanceTimestep(double &)
   if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
   } else {
-    SLIC_ERROR_MASTER(m_rank, "Only quasistatics implemented for linear elasticity!");
+    SLIC_ERROR_ROOT(m_rank, "Only quasistatics implemented for linear elasticity!");
     serac::ExitGracefully(true);
   }
 
