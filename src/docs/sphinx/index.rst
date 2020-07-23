@@ -196,3 +196,4 @@ LLNL-CODE-805541
 
    logging
    memory_checking
+   style_guide
