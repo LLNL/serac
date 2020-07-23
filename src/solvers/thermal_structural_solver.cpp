@@ -11,7 +11,7 @@
 const int num_fields = 3;
 
 ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), num_fields), m_therm_solver(order, pmesh), m_solid_solver(order, pmesh)
+    : BaseSolver(pmesh->GetComm(), num_fields, order), m_therm_solver(order, pmesh), m_solid_solver(order, pmesh)
 {
   m_temperature  = m_therm_solver.GetTemperature();
   m_velocity     = m_solid_solver.GetVelocity();

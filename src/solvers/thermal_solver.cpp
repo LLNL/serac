@@ -11,7 +11,7 @@
 const int num_fields = 1;
 
 ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), num_fields), m_temperature(m_state[0])
+    : BaseSolver(pmesh->GetComm(), num_fields, order), m_temperature(m_state[0])
 {
   m_temperature->mesh     = pmesh;
   m_temperature->coll     = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());

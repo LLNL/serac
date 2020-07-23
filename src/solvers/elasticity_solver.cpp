@@ -11,7 +11,7 @@
 const int num_fields = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), num_fields),
+    : BaseSolver(pmesh->GetComm(), num_fields, order),
       displacement(m_state[0]),
       m_K_form(nullptr),
       m_l_form(nullptr),
@@ -25,6 +25,7 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
       m_lambda(nullptr),
       m_body_force(nullptr)
 {
+  pmesh->EnsureNodes();
   displacement->mesh = pmesh;
   displacement->coll = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension(), mfem::Ordering::byVDIM);
   displacement->space =
@@ -39,14 +40,14 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
   displacement->name = "displacement";
 }
 
-void ElasticitySolver::SetDisplacementBCs(std::set<int> &                       disp_bdr,
+void ElasticitySolver::SetDisplacementBCs(std::set<int> &                          disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement->space, component);
 }
 
-void ElasticitySolver::SetTractionBCs(std::set<int> &                       trac_bdr,
-                                      std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
+void ElasticitySolver::SetTractionBCs(std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                                      int component)
 {
   SetNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
@@ -148,7 +149,7 @@ void ElasticitySolver::AdvanceTimestep(double &)
   if (m_timestepper == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
   } else {
-    SLIC_ERROR_ROOT(m_rank, "Only quasistatics implemented for linear elasticity!");
+    SLIC_ERROR_ROOT(m_mpi_rank, "Only quasistatics implemented for linear elasticity!");
     serac::ExitGracefully(true);
   }
 

@@ -50,7 +50,13 @@ class BaseSolver {
   int m_cycle;
 
   /// MPI rank
-  int m_rank;
+  int m_mpi_rank;
+
+  /// MPI size
+  int m_mpi_size;
+
+  /// Order of basis functions
+  int m_order;
 
   /// VisIt data collection pointer
   std::unique_ptr<mfem::VisItDataCollection> m_visit_dc;
@@ -62,8 +68,8 @@ class BaseSolver {
   /// Empty constructor
   BaseSolver(MPI_Comm comm);
 
-  /// Constructor that creates n entries in m_state
-  BaseSolver(MPI_Comm comm, int n);
+  /// Constructor that creates n entries in m_state of order p
+  BaseSolver(MPI_Comm comm, int n, int p);
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
@@ -72,8 +78,7 @@ class BaseSolver {
 
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
-  virtual void SetEssentialBCs(const std::set<int> &                 ess_bdr,
-                               std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
+  virtual void SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
                                mfem::ParFiniteElementSpace &fes, int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
