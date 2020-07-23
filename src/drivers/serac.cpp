@@ -112,13 +112,14 @@ int main(int argc, char *argv[])
   try {
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
+    serac::logger::Flush();
     auto err_msg = (e.get_name() == "CallForHelp") ? app.help() : CLI::FailureMessage::simple(&app, e);
-    SLIC_ERROR_MASTER(rank, err_msg);
+    SLIC_ERROR_ROOT(rank, err_msg);
     serac::ExitGracefully();
   }
 
   auto config_msg = app.config_to_str(true, true);
-  SLIC_INFO_MASTER(rank, config_msg);
+  SLIC_INFO_ROOT(rank, config_msg);
 
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
