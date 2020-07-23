@@ -19,7 +19,7 @@ TEST(serac_dtor, test1)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
   std::fstream imesh(mesh_file);
   auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -40,7 +40,7 @@ TEST(serac_dtor, test1)
   therm_solver->SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector &x) { return x.Norml2(); });
+  auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x.Norml2(); });
 
   std::set<int> temp_bdr = {1};
   // Set the temperature BC in the thermal solver

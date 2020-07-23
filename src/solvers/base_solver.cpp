@@ -157,8 +157,7 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfe
 
 void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
 {
-  SLIC_ASSERT_MSG(state_coef.size() == m_state.size(),
-                  "State and coefficient bundles not the same size.");
+  SLIC_ASSERT_MSG(state_coef.size() == m_state.size(), "State and coefficient bundles not the same size.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
     m_state[i]->gf->ProjectCoefficient(*state_coef[i]);
@@ -167,8 +166,7 @@ void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> >
 
 void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef)
 {
-  SLIC_ASSERT_MSG(state_vec_coef.size() == m_state.size(),
-                  "State and coefficient bundles not the same size.");
+  SLIC_ASSERT_MSG(state_vec_coef.size() == m_state.size(), "State and coefficient bundles not the same size.");
 
   for (unsigned int i = 0; i < state_vec_coef.size(); ++i) {
     m_state[i]->gf->ProjectCoefficient(*state_vec_coef[i]);

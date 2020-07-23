@@ -94,6 +94,6 @@ struct BoundaryCondition {
   std::unique_ptr<mfem::HypreParMatrix>    eliminated_matrix_entries;
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

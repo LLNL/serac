@@ -17,7 +17,7 @@ TEST(elastic_solver, static_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-quad.mesh";
+  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-quad.mesh";
   std::fstream imesh(mesh_file);
   auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
