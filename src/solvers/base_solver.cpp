@@ -35,37 +35,38 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
   gf_initialized_.assign(n, false);
 }
 
-void BaseSolver::setEssentialBCs(const std::set<int>&                     ess_bdr,
-                                 std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
-                                 mfem::ParFiniteElementSpace& fes, int component)
+void BaseSolver::setEssentialBCs(const std::set<int> &ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
+                                 const mfem::ParFiniteElementSpace &fes, const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
   bc->markers.SetSize(state_.front()->mesh->bdr_attributes.Max());
   bc->markers = 0;
 
-  for (int attr : ess_bdr) {
+  for (const int attr : ess_bdr) {
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
-    bc->markers[attr - 1] = 1;
-    for (auto& existing_bc : ess_bdr_) {
-      if (existing_bc->markers[attr - 1] == 1) {
-        SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-        bc->markers[attr - 1] = 0;
-        break;
-      }
+    bc->markers[attr-1] = 1;
+    if (std::any_of(ess_bdr_.begin(), ess_bdr_.end(), [attr](const auto& existing_bc) {
+          return existing_bc->markers[attr-1] == 1;
+        })) {
+      SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
+      bc->markers[attr-1] = 0;
     }
   }
 
-  bc->vec_coef  = ess_bdr_vec_coef;
   bc->component = component;
 
-  fes.GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
+  // This function can and should be marked const in MFEM
+  // TODO: Raise an issue against MFEM
+  // Leave this explicit non-const action in as a stopgap
+  const_cast<mfem::ParFiniteElementSpace&>(fes).GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
+
+  bc->coef  = ess_bdr_coef;
 
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int>&                  true_dofs,
-                             std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
+void BaseSolver::setTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -73,105 +74,40 @@ void BaseSolver::setTrueDofs(const mfem::Array<int>&                  true_dofs,
 
   bc->true_dofs = true_dofs;
 
-  bc->vec_coef = ess_bdr_vec_coef;
+  bc->coef = ess_bdr_coef;
 
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
-                               int component)
+void BaseSolver::setNaturalBCs(const std::set<int> &nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
+                               const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
   bc->markers.SetSize(state_.front()->mesh->bdr_attributes.Max());
   bc->markers = 0;
 
-  for (int attr : nat_bdr) {
+  for (const int attr : nat_bdr) {  
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
-    bc->markers[attr - 1] = 1;
+    bc->markers[attr-1] = 1;
   }
-
-  bc->vec_coef  = nat_bdr_vec_coef;
-  bc->component = component;
+  bc->component   = component;
+  bc->coef  = nat_bdr_coef;
 
   nat_bdr_.push_back(bc);
 }
 
-void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                                 mfem::ParFiniteElementSpace& fes, int component)
+void BaseSolver::setState(const std::vector<serac::BoundaryCondition::Coef > &state_coef)
 {
-  auto bc = std::make_shared<serac::BoundaryCondition>();
-
-  bc->markers.SetSize(state_.front()->mesh->bdr_attributes.Max());
-  bc->markers = 0;
-
-  for (int attr : ess_bdr) {
-    SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
-    bc->markers[attr - 1] = 1;
-    for (auto& existing_bc : ess_bdr_) {
-      if (existing_bc->markers[attr - 1] == 1) {
-        SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-        bc->markers[attr - 1] = 0;
-        break;
-      }
-    }
-  }
-
-  bc->scalar_coef = ess_bdr_coef;
-  bc->component   = component;
-
-  fes.GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
-
-  ess_bdr_.push_back(bc);
-}
-
-void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
-{
-  auto bc = std::make_shared<serac::BoundaryCondition>();
-
-  bc->markers.SetSize(0);
-
-  bc->true_dofs = true_dofs;
-
-  bc->scalar_coef = ess_bdr_coef;
-
-  ess_bdr_.push_back(bc);
-}
-
-void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
-                               int component)
-{
-  auto bc = std::make_shared<serac::BoundaryCondition>();
-
-  bc->markers.SetSize(state_.front()->mesh->bdr_attributes.Max());
-  bc->markers = 0;
-
-  for (int attr : nat_bdr) {
-    SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
-    bc->markers[attr - 1] = 1;
-  }
-
-  bc->scalar_coef = nat_bdr_coef;
-  bc->component   = component;
-
-  nat_bdr_.push_back(bc);
-}
-
-void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::Coefficient> >& state_coef)
-{
-  SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
+  SLIC_ASSERT_MSG(state_coef.size() == state_.size(),
+                  "State and coefficient bundles not the same size.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
-    state_[i]->gf->ProjectCoefficient(*state_coef[i]);
-  }
-}
-
-void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> >& state_vec_coef)
-{
-  SLIC_ASSERT_MSG(state_vec_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
-
-  for (unsigned int i = 0; i < state_vec_coef.size(); ++i) {
-    state_[i]->gf->ProjectCoefficient(*state_vec_coef[i]);
+    // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
+    // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
+    std::visit([this, i](auto&& coef) {
+      state_[i]->gf->ProjectCoefficient(*coef);
+    }, state_coef[i]);
   }
 }
 
@@ -288,4 +224,4 @@ void BaseSolver::outputState() const
   }
 }
 
-}  // namespace serac
+} // namespace serac
