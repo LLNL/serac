@@ -29,10 +29,10 @@ class NonlinearSolidSolver : public BaseSolver {
   mfem::NewtonSolver m_newton_solver;
 
   /// The linear solver for the Jacobian
-  std::shared_ptr<mfem::Solver> m_J_solver;
+  std::unique_ptr<mfem::Solver> m_J_solver;
 
   /// The preconditioner for the Jacobian solver
-  std::shared_ptr<mfem::Solver> m_J_prec;
+  std::unique_ptr<mfem::Solver> m_J_prec;
 
   /// The viscosity coefficient
   std::shared_ptr<mfem::Coefficient> m_viscosity;

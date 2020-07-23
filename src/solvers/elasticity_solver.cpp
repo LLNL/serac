@@ -97,39 +97,35 @@ void ElasticitySolver::CompleteSetup()
   // Initialize the true vector
   displacement->gf->GetTrueDofs(*displacement->true_vec);
 
+  std::unique_ptr<mfem::IterativeSolver> iter_solver;
+
   if (m_lin_params.prec == Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement->space->GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
 
-    mfem::HypreBoomerAMG prec_amg;
-    prec_amg.SetPrintLevel(m_lin_params.print_level);
-    prec_amg.SetElasticityOptions(displacement->space.get());
-    m_K_prec = std::make_unique<mfem::HypreBoomerAMG>(prec_amg);
+    auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
+    prec_amg->SetPrintLevel(m_lin_params.print_level);
+    prec_amg->SetElasticityOptions(displacement->space.get());
+    m_K_prec = std::move(prec_amg);
 
-    mfem::GMRESSolver K_gmres(displacement->space->GetComm());
-    K_gmres.SetRelTol(m_lin_params.rel_tol);
-    K_gmres.SetAbsTol(m_lin_params.abs_tol);
-    K_gmres.SetMaxIter(m_lin_params.max_iter);
-    K_gmres.SetPrintLevel(m_lin_params.print_level);
-    K_gmres.SetPreconditioner(prec_amg);
-    m_K_solver = std::make_unique<mfem::GMRESSolver>(K_gmres);
-
+    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement->space->GetComm());
   }
   // If not AMG, just MINRES with Jacobi smoothing
   else {
-    mfem::HypreSmoother K_hypreSmoother;
-    K_hypreSmoother.SetType(mfem::HypreSmoother::l1Jacobi);
-    K_hypreSmoother.SetPositiveDiagonal(true);
-    m_K_prec = std::make_unique<mfem::HypreSmoother>(K_hypreSmoother);
+    auto K_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
+    K_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
+    K_hypreSmoother->SetPositiveDiagonal(true);
+    m_K_prec = std::move(K_hypreSmoother);
 
-    mfem::MINRESSolver K_minres(displacement->space->GetComm());
-    K_minres.SetRelTol(m_lin_params.rel_tol);
-    K_minres.SetAbsTol(m_lin_params.abs_tol);
-    K_minres.SetMaxIter(m_lin_params.max_iter);
-    K_minres.SetPrintLevel(m_lin_params.print_level);
-    K_minres.SetPreconditioner(K_hypreSmoother);
-    m_K_solver = std::make_unique<mfem::MINRESSolver>(K_minres);
+    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement->space->GetComm());
   }
+  
+  iter_solver->SetRelTol(m_lin_params.rel_tol);
+  iter_solver->SetAbsTol(m_lin_params.abs_tol);
+  iter_solver->SetMaxIter(m_lin_params.max_iter);
+  iter_solver->SetPrintLevel(m_lin_params.print_level);
+  iter_solver->SetPreconditioner(*m_K_prec);
+  m_K_solver = std::move(iter_solver);
 }
 
 void ElasticitySolver::AdvanceTimestep(double &)

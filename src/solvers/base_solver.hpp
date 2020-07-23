@@ -15,6 +15,13 @@
 
 /// This is the abstract base class for a generic forward solver
 class BaseSolver {
+ private:
+  void RegisterEssentialBC(std::shared_ptr<BoundaryCondition> bc, const std::set<int> &ess_bdr, 
+                           mfem::ParFiniteElementSpace &fes, int component);
+
+  void RegisterNaturalBC(std::shared_ptr<BoundaryCondition> bc, const std::set<int> &nat_bdr, 
+                         int component);
+
  protected:
   /// The MPI communicator
   MPI_Comm m_comm;
