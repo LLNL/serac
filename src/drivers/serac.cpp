@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
   app.add_option("--ty, --traction-y", ty,  "Cantilever tip traction in the y direction.", true);
   app.add_option("--tz, --traction-z", tz,  "Cantilever tip traction in the z direction.", true);
   app.add_flag("--slu, --superlu, !--no-slu, !--no-superlu", slu_solver,  "Use the SuperLU Solver.");
+  app.add_flag("--gmres, !--no-gmres", gmres_solver, "Use gmres, otherwise minimum residual is used.");
   app.add_option("--lrel, --linear-relative-tolerance", lin_params.rel_tol, 
                   "Relative tolerance for the lienar solve.", true);
   app.add_option("--labs, --linear-absolute-tolerance", lin_params.abs_tol, 
