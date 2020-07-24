@@ -120,10 +120,10 @@ void NonlinearSolidSolver::CompleteSetup()
 
   // Add the traction integrator
   for (auto &nat_bc_data : m_nat_bdr) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data->coef), 
+    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef), 
                     "Traction boundary condition had a non-vector coefficient.");
     m_H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(
-      *std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data->coef)), nat_bc_data->markers);
+      *std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef)), nat_bc_data.markers);
   }
 
   // Add the essential boundary
@@ -133,28 +133,28 @@ void NonlinearSolidSolver::CompleteSetup()
   m_displacement->space->BuildDofToArrays();
 
   // Project the essential boundary coefficients
-  for (auto &bc : m_ess_bdr) {
+  for (const auto &bc : m_ess_bdr) {
     // Generate the scalar dof list from the vector dof list
-    mfem::Array<int> dof_list(bc->true_dofs.Size());
-    for (int i = 0; i < bc->true_dofs.Size(); ++i) {
-      dof_list[i] = m_displacement->space->VDofToDof(bc->true_dofs[i]);
+    mfem::Array<int> dof_list(bc.true_dofs.Size());
+    for (int i = 0; i < bc.true_dofs.Size(); ++i) {
+      dof_list[i] = m_displacement->space->VDofToDof(bc.true_dofs[i]);
     }
 
     // Project the coefficient
-    if (bc->component == -1) {
+    if (bc.component == -1) {
       // If it contains all components, project the vector
-      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc->coef), 
+      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), 
                     "Displacement boundary condition contained all components but had a non-vector coefficient.");
-      m_displacement->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc->coef), dof_list);
+      m_displacement->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), dof_list);
     } else {
       // If it is only a single component, project the scalar
-      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc->coef), 
+      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef), 
                     "Displacement boundary condition contained a single component but had a non-scalar coefficient.");
-      m_displacement->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc->coef), dof_list, bc->component);
+      m_displacement->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef), dof_list, bc.component);
     }
 
     // Add the vector dofs to the total essential BC dof list
-    essential_dofs.Append(bc->true_dofs);
+    essential_dofs.Append(bc.true_dofs);
   }
 
   // Remove any duplicates from the essential BC list

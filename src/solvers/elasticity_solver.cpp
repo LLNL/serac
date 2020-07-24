@@ -73,9 +73,9 @@ void ElasticitySolver::CompleteSetup()
   // Add the traction integrator
   if (m_nat_bdr.size() > 0) {
     for (auto &nat_bc : m_nat_bdr) {
-      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc->coef), 
+      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef), 
                     "Traction boundary condition had a non-vector coefficient.");
-      m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc->coef)), nat_bc->markers);
+      m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef)), nat_bc.markers);
     }
     m_l_form->Assemble();
     m_rhs = std::unique_ptr<mfem::HypreParVector>(m_l_form->ParallelAssemble());
@@ -89,7 +89,7 @@ void ElasticitySolver::CompleteSetup()
 
   // Eliminate the essential DOFs
   for (auto &bc : m_ess_bdr) {
-    m_K_e_mat = std::unique_ptr<mfem::HypreParMatrix>(m_K_mat->EliminateRowsCols(bc->true_dofs));
+    m_K_e_mat = std::unique_ptr<mfem::HypreParMatrix>(m_K_mat->EliminateRowsCols(bc.true_dofs));
   }
 
   // Initialize the eliminate BC RHS vector
@@ -153,13 +153,13 @@ void ElasticitySolver::QuasiStaticSolve()
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
   for (auto &bc : m_ess_bdr) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc->coef), 
+    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), 
                     "Displacement boundary condition had a non-vector coefficient.");
-    auto vec_coef = std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc->coef);
+    auto vec_coef = std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef);
     vec_coef->SetTime(m_time);
-    displacement->gf->ProjectBdrCoefficient(*vec_coef, bc->markers);
+    displacement->gf->ProjectBdrCoefficient(*vec_coef, bc.markers);
     displacement->gf->GetTrueDofs(*displacement->true_vec);
-    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, bc->true_dofs, *displacement->true_vec, *m_bc_rhs);
+    mfem::EliminateBC(*m_K_mat, *m_K_e_mat, bc.true_dofs, *displacement->true_vec, *m_bc_rhs);
   }
 
   m_K_solver->SetOperator(*m_K_mat);

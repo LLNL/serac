@@ -32,63 +32,69 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
                                  const mfem::ParFiniteElementSpace &fes, const int component)
 {
-  auto bc = std::make_shared<serac::BoundaryCondition>();
+  // auto bc = std::make_shared<serac::BoundaryCondition>();
+  serac::BoundaryCondition bc;
 
-  bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
-  bc->markers = 0;
+  bc.markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
+  bc.markers = 0;
 
   for (const int attr : ess_bdr) {
-    SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
-    bc->markers[attr-1] = 1;
+    SLIC_ASSERT_MSG(attr <= bc.markers.Size(), "Attribute specified larger than what is found in the mesh.");
+    bc.markers[attr-1] = 1;
     if (std::any_of(m_ess_bdr.begin(), m_ess_bdr.end(), [attr](const auto& existing_bc) {
-          return existing_bc->markers[attr-1] == 1;
+          return existing_bc.markers[attr-1] == 1;
         })) {
       SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-      bc->markers[attr-1] = 0;
+      bc.markers[attr-1] = 0;
     }
   }
 
-  bc->component = component;
+  bc.component = component;
 
   // This function can and should be marked const in MFEM
   // TODO: Raise an issue against MFEM
   // Leave this explicit non-const action in as a stopgap
-  const_cast<mfem::ParFiniteElementSpace&>(fes).GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
+  const_cast<mfem::ParFiniteElementSpace&>(fes).GetEssentialTrueDofs(bc.markers, bc.true_dofs, component);
 
-  bc->coef  = ess_bdr_coef;
+  bc.coef  = ess_bdr_coef;
 
-  m_ess_bdr.push_back(bc);
+  m_ess_bdr.push_back(std::move(bc));
 }
 
-void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef)
+void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef, 
+                             const int component)
 {
-  auto bc = std::make_shared<serac::BoundaryCondition>();
+  // auto bc = std::make_shared<serac::BoundaryCondition>();
+  serac::BoundaryCondition bc;
 
-  bc->markers.SetSize(0);
+  bc.markers.SetSize(0);
 
-  bc->true_dofs = true_dofs;
+  bc.true_dofs = true_dofs;
 
-  bc->coef = ess_bdr_coef;
+  bc.coef = ess_bdr_coef;
 
-  m_ess_bdr.push_back(bc);
+  bc.component = component;
+
+  m_ess_bdr.push_back(std::move(bc));
 }
 
 void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
                                const int component)
 {
-  auto bc = std::make_shared<serac::BoundaryCondition>();
+  // auto bc = std::make_shared<serac::BoundaryCondition>();
+  serac::BoundaryCondition bc;
 
-  bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
-  bc->markers = 0;
+  bc.markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
+  bc.markers = 0;
 
   for (const int attr : nat_bdr) {  
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
-    bc->markers[attr-1] = 1;
+    bc.markers[attr-1] = 1;
   }
-  bc->component   = component;
-  bc->coef  = nat_bdr_coef;
+  bc.component   = component;
+  bc.coef  = nat_bdr_coef;
 
-  m_nat_bdr.push_back(bc);
+  m_nat_bdr.push_back(std::move(bc));
 }
 
 void BaseSolver::SetState(const std::vector<serac::BoundaryCondition::Coef > &state_coef)

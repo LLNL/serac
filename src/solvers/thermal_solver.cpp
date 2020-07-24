@@ -88,7 +88,7 @@ void ThermalSolver::CompleteSetup()
 
   // Eliminate the essential DOFs from the stiffness matrix
   for (auto &bc : m_ess_bdr) {
-    bc->eliminated_matrix_entries.reset(m_K_mat->EliminateRowsCols(bc->true_dofs));
+    bc.eliminated_matrix_entries.reset(m_K_mat->EliminateRowsCols(bc.true_dofs));
   }
 
   // Initialize the eliminated BC RHS vector
@@ -121,13 +121,13 @@ void ThermalSolver::QuasiStaticSolve()
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
   for (auto &bc : m_ess_bdr) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc->coef), 
+    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef), 
                     "Temperature boundary condition had a non-scalar coefficient.");
-    auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc->coef);
+    auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
     scalar_coef->SetTime(m_time);
-    m_temperature->gf->ProjectBdrCoefficient(*scalar_coef, bc->markers);
+    m_temperature->gf->ProjectBdrCoefficient(*scalar_coef, bc.markers);
     m_temperature->gf->GetTrueDofs(*m_temperature->true_vec);
-    mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, *m_temperature->true_vec, *m_bc_rhs);
+    mfem::EliminateBC(*m_K_mat, *bc.eliminated_matrix_entries, bc.true_dofs, *m_temperature->true_vec, *m_bc_rhs);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning

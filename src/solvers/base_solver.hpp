@@ -26,10 +26,12 @@ class BaseSolver {
   std::unique_ptr<mfem::BlockVector> m_block;
 
   /// Essential BC markers
-  std::vector<std::shared_ptr<serac::BoundaryCondition> > m_ess_bdr;
+  // std::vector<std::shared_ptr<serac::BoundaryCondition> > m_ess_bdr;
+  std::vector<serac::BoundaryCondition> m_ess_bdr;
 
   /// Natural BC markers
-  std::vector<std::shared_ptr<serac::BoundaryCondition> > m_nat_bdr;
+  // std::vector<std::shared_ptr<serac::BoundaryCondition> > m_nat_bdr;
+  std::vector<serac::BoundaryCondition> m_nat_bdr;
 
   /// Type of state variable output
   serac::OutputType m_output_type;
@@ -71,7 +73,8 @@ class BaseSolver {
                                const mfem::ParFiniteElementSpace &fes, const int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
-  virtual void SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef);
+  virtual void SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef, 
+                           const int component = -1);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient

@@ -56,7 +56,8 @@ TEST(component_bc, qs_solve)
   mfem::Array<int> ess_corner_bc_list;
   MakeTrueEssList(*solid_solver.GetDisplacement()->space, zero_bc, ess_corner_bc_list);
 
-  solid_solver.SetTrueDofs(ess_corner_bc_list, disp_coef);
+  // Set tdofs with displacement in first dimension
+  solid_solver.SetTrueDofs(ess_corner_bc_list, disp_coef, 0);
 
   // Set the material parameters
   solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);

@@ -10,7 +10,7 @@
 
 DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace>            fespace,
                                                      const serac::LinearSolverParameters &                          params,
-                                                     const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr)
+                                                     std::vector<serac::BoundaryCondition> &ess_bdr)
     : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0),
       m_fespace(fespace),
       m_ess_bdr(ess_bdr),
@@ -66,7 +66,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt)
 
   *m_bc_rhs = *m_rhs;
   for (auto &bc : m_ess_bdr) {
-    mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, m_y, *m_bc_rhs);
+    mfem::EliminateBC(*m_K_mat, *bc.eliminated_matrix_entries, bc.true_dofs, m_y, *m_bc_rhs);
   }
 
   // Compute:
@@ -94,7 +94,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
 
     // Eliminate the essential DOFs from the T matrix
     for (auto &bc : m_ess_bdr) {
-      m_T_e_mat.reset(m_T_mat->EliminateRowsCols(bc->true_dofs));
+      m_T_e_mat.reset(m_T_mat->EliminateRowsCols(bc.true_dofs));
     }
     m_T_solver->SetOperator(*m_T_mat);
   }
@@ -104,14 +104,14 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   m_x       = 0.0;
 
   for (auto &bc : m_ess_bdr) {
-    if (std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc->coef)) {
-      auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc->coef);
+    if (std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef)) {
+      auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
       scalar_coef->SetTime(t);
       m_state_gf->SetFromTrueDofs(m_y);
-      m_state_gf->ProjectBdrCoefficient(*scalar_coef, bc->markers);
+      m_state_gf->ProjectBdrCoefficient(*scalar_coef, bc.markers);
       m_state_gf->GetTrueDofs(m_y);
 
-      mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, m_y, *m_bc_rhs);
+      mfem::EliminateBC(*m_K_mat, *bc.eliminated_matrix_entries, bc.true_dofs, m_y, *m_bc_rhs);
     }
   }
 

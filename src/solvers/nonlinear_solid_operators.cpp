@@ -29,7 +29,7 @@ NonlinearSolidQuasiStaticOperator::~NonlinearSolidQuasiStaticOperator() {}
 
 NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
     std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
-    std::shared_ptr<mfem::ParBilinearForm> M_form, const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr,
+    std::shared_ptr<mfem::ParBilinearForm> M_form, const std::vector<serac::BoundaryCondition> &ess_bdr,
     mfem::NewtonSolver &newton_solver, const serac::LinearSolverParameters &lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
       m_M_form(M_form),
@@ -42,8 +42,8 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
 {
   // Assemble the mass matrix and eliminate the fixed DOFs
   m_M_mat.reset(m_M_form->ParallelAssemble());
-  for (auto &bc : m_ess_bdr) {
-    auto Me = std::unique_ptr<mfem::HypreParMatrix>(m_M_mat->EliminateRowsCols(bc->true_dofs));
+  for (const auto &bc : m_ess_bdr) {
+    auto Me = std::unique_ptr<mfem::HypreParMatrix>(m_M_mat->EliminateRowsCols(bc.true_dofs));
   }
 
   // Set the mass matrix solver options
@@ -73,8 +73,8 @@ void NonlinearSolidDynamicOperator::Mult(const mfem::Vector &vx, mfem::Vector &d
 
   m_H_form->Mult(x, m_z);
   m_S_form->TrueAddMult(v, m_z);
-  for (auto &bc : m_ess_bdr) {
-    m_z.SetSubVector(bc->true_dofs, 0.0);
+  for (const auto &bc : m_ess_bdr) {
+    m_z.SetSubVector(bc.true_dofs, 0.0);
   }
   m_z.Neg();  // z = -z
   m_M_solver.Mult(m_z, dv_dt);
@@ -108,7 +108,7 @@ NonlinearSolidDynamicOperator::~NonlinearSolidDynamicOperator() {}
 
 NonlinearSolidReducedSystemOperator::NonlinearSolidReducedSystemOperator(
     std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
-    std::shared_ptr<mfem::ParBilinearForm> M_form, const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr)
+    std::shared_ptr<mfem::ParBilinearForm> M_form, const std::vector<serac::BoundaryCondition> &ess_bdr)
     : mfem::Operator(M_form->ParFESpace()->TrueVSize()),
       m_M_form(M_form),
       m_S_form(S_form),
@@ -137,8 +137,8 @@ void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector &k, mfem::Vect
   m_H_form->Mult(m_z, y);
   m_M_form->TrueAddMult(k, y);
   m_S_form->TrueAddMult(m_w, y);
-  for (auto &bc : m_ess_bdr) {
-    y.SetSubVector(bc->true_dofs, 0.0);
+  for (const auto &bc : m_ess_bdr) {
+    y.SetSubVector(bc.true_dofs, 0.0);
   }
 }
 
@@ -155,8 +155,8 @@ mfem::Operator &NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   //
   // This call eliminates the appropriate DOFs in m_jacobian and returns the
   // eliminated DOFs in Je. We don't need this so it gets deleted.
-  for (auto &bc : m_ess_bdr) {
-    auto Je = std::unique_ptr<mfem::HypreParMatrix>(m_jacobian->EliminateRowsCols(bc->true_dofs));
+  for (const auto &bc : m_ess_bdr) {
+    auto Je = std::unique_ptr<mfem::HypreParMatrix>(m_jacobian->EliminateRowsCols(bc.true_dofs));
   }
   return *m_jacobian;
 }

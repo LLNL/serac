@@ -63,14 +63,14 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
   mutable mfem::Vector m_w, m_z;
 
   /// Essential degrees of freedom
-  const std::vector<std::shared_ptr<serac::BoundaryCondition> > &m_ess_bdr;
+  const std::vector<serac::BoundaryCondition> &m_ess_bdr;
 
  public:
   /// The constructor
   NonlinearSolidReducedSystemOperator(std::shared_ptr<mfem::ParNonlinearForm>                 H_form,
                                       std::shared_ptr<mfem::ParBilinearForm>                  S_form,
                                       std::shared_ptr<mfem::ParBilinearForm>                  M_form,
-                                      const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr);
+                                      const std::vector<serac::BoundaryCondition> &ess_bdr);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
   void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);
@@ -113,7 +113,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   mfem::NewtonSolver &m_newton_solver;
 
   /// The fixed boudnary degrees of freedom
-  const std::vector<std::shared_ptr<serac::BoundaryCondition> > &m_ess_bdr;
+  const std::vector<serac::BoundaryCondition> &m_ess_bdr;
 
   /// The linear solver parameters for the mass matrix
   serac::LinearSolverParameters m_lin_params;
@@ -126,7 +126,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   NonlinearSolidDynamicOperator(std::shared_ptr<mfem::ParNonlinearForm>                 H_form,
                                 std::shared_ptr<mfem::ParBilinearForm>                  S_form,
                                 std::shared_ptr<mfem::ParBilinearForm>                  M_form,
-                                const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr,
+                                const std::vector<serac::BoundaryCondition> &ess_bdr,
                                 mfem::NewtonSolver &newton_solver, const serac::LinearSolverParameters &lin_params);
 
   /// Required to use the native newton solver
