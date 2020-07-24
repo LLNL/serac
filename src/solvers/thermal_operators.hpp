@@ -16,51 +16,51 @@
 class DynamicConductionOperator : public mfem::TimeDependentOperator {
  protected:
   /// Finite Element space
-  std::shared_ptr<mfem::ParFiniteElementSpace> m_fespace;
+  std::shared_ptr<mfem::ParFiniteElementSpace> fespace_;
 
   /// Grid function for boundary condition projection
-  std::shared_ptr<mfem::ParGridFunction> m_state_gf;
+  std::shared_ptr<mfem::ParGridFunction> state_gf_;
 
   /// Solver for the mass matrix
-  std::unique_ptr<mfem::CGSolver> m_M_solver;
+  std::unique_ptr<mfem::CGSolver> M_solver_;
 
   /// Solver for the T matrix
-  std::unique_ptr<mfem::CGSolver> m_T_solver;
+  std::unique_ptr<mfem::CGSolver> T_solver_;
 
   /// Preconditioner for the M matrix
-  std::unique_ptr<mfem::HypreSmoother> m_M_prec;
+  std::unique_ptr<mfem::HypreSmoother> M_prec_;
 
   /// Preconditioner for the T matrix
-  std::unique_ptr<mfem::HypreSmoother> m_T_prec;
+  std::unique_ptr<mfem::HypreSmoother> T_prec_;
 
   /// Pointer to the assembled M matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_M_mat;
+  std::shared_ptr<mfem::HypreParMatrix> M_mat_;
 
   /// Pointer to the assembled K matrix
   std::shared_ptr<mfem::HypreParMatrix> m_K_mat;
 
   /// Pointer to the assembled T ( = M + dt K) matrix
-  std::unique_ptr<mfem::HypreParMatrix> m_T_mat;
+  std::unique_ptr<mfem::HypreParMatrix> T_mat_;
 
   /// Pointer to the eliminated T matrix
-  std::unique_ptr<mfem::HypreParMatrix> m_T_e_mat;
+  std::unique_ptr<mfem::HypreParMatrix> T_e_mat_;
 
   /// Assembled RHS vector
-  std::shared_ptr<mfem::Vector> m_rhs;
+  std::shared_ptr<mfem::Vector> rhs_;
 
   /// RHS vector including essential boundary elimination
-  std::shared_ptr<mfem::Vector> m_bc_rhs;
+  std::shared_ptr<mfem::Vector> bc_rhs_;
 
   /// Temperature essential boundary coefficient
-  std::vector<std::shared_ptr<serac::BoundaryCondition> > m_ess_bdr;
+  std::vector<std::shared_ptr<serac::BoundaryCondition> > ess_bdr_;
 
   /// Auxillary working vectors
-  mutable mfem::Vector m_z;
-  mutable mfem::Vector m_y;
-  mutable mfem::Vector m_x;
+  mutable mfem::Vector z_;
+  mutable mfem::Vector y_;
+  mutable mfem::Vector x_;
 
   /// Storage of old dt use to determine if we should recompute the T matrix
-  mutable double m_old_dt;
+  mutable double old_dt_;
 
  public:
   /// Constructor. Height is the true degree of freedom size

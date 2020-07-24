@@ -17,52 +17,52 @@
 class BaseSolver {
  protected:
   /// The MPI communicator
-  MPI_Comm m_comm;
+  MPI_Comm comm_;
 
   /// List of finite element data structures
-  std::vector<std::shared_ptr<serac::FiniteElementState> > m_state;
+  std::vector<std::shared_ptr<serac::FiniteElementState> > state_;
 
   /// Block vector storage of the true state
-  std::unique_ptr<mfem::BlockVector> m_block;
+  std::unique_ptr<mfem::BlockVector> block_;
 
   /// Essential BC markers
-  std::vector<std::shared_ptr<serac::BoundaryCondition> > m_ess_bdr;
+  std::vector<std::shared_ptr<serac::BoundaryCondition> > ess_bdr_;
 
   /// Natural BC markers
-  std::vector<std::shared_ptr<serac::BoundaryCondition> > m_nat_bdr;
+  std::vector<std::shared_ptr<serac::BoundaryCondition> > nat_bdr_;
 
   /// Type of state variable output
-  serac::OutputType m_output_type;
+  serac::OutputType output_type_;
 
   /// Time integration method
-  serac::TimestepMethod m_timestepper;
+  serac::TimestepMethod timestepper_;
 
   /// MFEM ode solver object
-  std::unique_ptr<mfem::ODESolver> m_ode_solver;
+  std::unique_ptr<mfem::ODESolver> ode_solver_;
 
   /// Root output name
-  std::string m_root_name;
+  std::string root_name_;
 
   /// Current time
-  double m_time;
+  double time_;
 
   /// Current cycle
-  int m_cycle;
+  int cycle_;
 
   /// MPI rank
-  int m_mpi_rank;
+  int mpi_rank_;
 
   /// MPI size
-  int m_mpi_size;
+  int mpi_size_;
 
   /// Order of basis functions
-  int m_order;
+  int order_;
 
   /// VisIt data collection pointer
-  std::unique_ptr<mfem::VisItDataCollection> m_visit_dc;
+  std::unique_ptr<mfem::VisItDataCollection> visit_dc_;
 
   /// State variable initialization indicator
-  std::vector<bool> m_gf_initialized;
+  std::vector<bool> gf_initialized_;
 
  public:
   /// Empty constructor

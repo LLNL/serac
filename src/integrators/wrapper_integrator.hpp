@@ -31,8 +31,8 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
                                    const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
 
  private:
-  std::shared_ptr<mfem::LinearFormIntegrator>  m_f;
-  std::shared_ptr<mfem::ParFiniteElementSpace> m_trial_fes;
+  std::shared_ptr<mfem::LinearFormIntegrator>  f_;
+  std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes_;
 };
 
 /// A class to convert linearform integrators into a nonlinear residual-based one
@@ -54,7 +54,7 @@ class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
                                    const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
 
  private:
-  std::shared_ptr<mfem::BilinearFormIntegrator> m_A;
+  std::shared_ptr<mfem::BilinearFormIntegrator> A_;
 };
 
 /// A class to convert a MixedBiolinearIntegrator into a nonlinear residual-based one
@@ -77,8 +77,8 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
                                    const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
 
  private:
-  std::shared_ptr<mfem::BilinearFormIntegrator> m_A;
-  std::shared_ptr<mfem::ParFiniteElementSpace>  m_trial_fes;
+  std::shared_ptr<mfem::BilinearFormIntegrator> A_;
+  std::shared_ptr<mfem::ParFiniteElementSpace>  trial_fes_;
 };
 
 #endif

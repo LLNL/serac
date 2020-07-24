@@ -15,7 +15,7 @@
 */
 class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
  private:
-  mfem::HyperelasticModel *model;
+  mfem::HyperelasticModel *model_;
 
   //   Jrt: the Jacobian of the target-to-reference-element transformation.
   //   Jpr: the Jacobian of the reference-to-physical-element transformation.
@@ -27,11 +27,11 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
   // PMatI: coordinates of the deformed configuration (dof x dim).
   // PMatO: reshaped view into the local element contribution to the operator
   //        output - the result of AssembleElementVector() (dof x dim).
-  mfem::DenseMatrix DSh, DS, Jrt, Jpr, Jpt, P, PMatI, PMatO;
+  mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, Jpt_, P_, PMatI_, PMatO_;
 
  public:
   /** @param[in] m  HyperelasticModel that will be integrated. */
-  IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model(m) {}
+  IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model_(m) {}
 
   /** @brief Computes the integral of W(Jacobian(Trt)) over a target zone
       @param[in] el     Type of FiniteElement.

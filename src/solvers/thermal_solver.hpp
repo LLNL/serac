@@ -19,52 +19,52 @@
  *  thermal load vector. */
 class ThermalSolver : public BaseSolver {
  protected:
-  std::shared_ptr<serac::FiniteElementState> m_temperature;
+  std::shared_ptr<serac::FiniteElementState> temperature_;
 
   /// Mass bilinear form object
-  std::unique_ptr<mfem::ParBilinearForm> m_M_form;
+  std::unique_ptr<mfem::ParBilinearForm> M_form_;
 
   /// Stiffness bilinear form object
-  std::unique_ptr<mfem::ParBilinearForm> m_K_form;
+  std::unique_ptr<mfem::ParBilinearForm> K_form_;
 
   /// Assembled mass matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_M_mat;
+  std::shared_ptr<mfem::HypreParMatrix> M_mat_;
 
   /// Eliminated mass matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_M_e_mat;
+  std::shared_ptr<mfem::HypreParMatrix> M_e_mat_;
 
   /// Assembled stiffness matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_K_mat;
+  std::shared_ptr<mfem::HypreParMatrix> K_mat_;
 
   /// Eliminated stiffness matrix
-  std::shared_ptr<mfem::HypreParMatrix> m_K_e_mat;
+  std::shared_ptr<mfem::HypreParMatrix> K_e_mat_;
 
   /// Thermal load linear form
-  std::unique_ptr<mfem::ParLinearForm> m_l_form;
+  std::unique_ptr<mfem::ParLinearForm> l_form_;
 
   /// Assembled BC load vector
-  std::shared_ptr<mfem::HypreParVector> m_bc_rhs;
+  std::shared_ptr<mfem::HypreParVector> bc_rhs_;
 
   /// Assembled RHS vector
-  std::shared_ptr<mfem::HypreParVector> m_rhs;
+  std::shared_ptr<mfem::HypreParVector> rhs_;
 
   /// Linear solver for the K operator
-  std::shared_ptr<mfem::CGSolver> m_K_solver;
+  std::shared_ptr<mfem::CGSolver> K_solver_;
 
   /// Preconditioner for the K operator
-  std::shared_ptr<mfem::HypreSmoother> m_K_prec;
+  std::shared_ptr<mfem::HypreSmoother> K_prec_;
 
   /// Conduction coefficient
-  std::shared_ptr<mfem::Coefficient> m_kappa;
+  std::shared_ptr<mfem::Coefficient> kappa_;
 
   /// Body source coefficient
-  std::shared_ptr<mfem::Coefficient> m_source;
+  std::shared_ptr<mfem::Coefficient> source_;
 
   /// Time integration operator
-  std::unique_ptr<DynamicConductionOperator> m_dyn_oper;
+  std::unique_ptr<DynamicConductionOperator> dyn_oper_;
 
   /// Linear solver parameters
-  serac::LinearSolverParameters m_lin_params;
+  serac::LinearSolverParameters lin_params_;
 
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
@@ -92,7 +92,7 @@ class ThermalSolver : public BaseSolver {
   void SetSource(std::shared_ptr<mfem::Coefficient> source);
 
   /// Get the temperature state
-  std::shared_ptr<serac::FiniteElementState> GetTemperature() { return m_temperature; };
+  std::shared_ptr<serac::FiniteElementState> GetTemperature() { return temperature_; };
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic

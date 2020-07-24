@@ -19,43 +19,43 @@
  *  and lambda and mu are the lame parameters */
 class ElasticitySolver : public BaseSolver {
  protected:
-  std::shared_ptr<serac::FiniteElementState> displacement;
+  std::shared_ptr<serac::FiniteElementState> displacement_;
 
   /// Stiffness bilinear form
-  mfem::ParBilinearForm *m_K_form;
+  mfem::ParBilinearForm *K_form_;
 
   /// Load bilinear form
-  mfem::ParLinearForm *m_l_form;
+  mfem::ParLinearForm *l_form_;
 
   /// Stiffness matrix
-  mfem::HypreParMatrix *m_K_mat;
+  mfem::HypreParMatrix *K_mat_;
 
   /// Eliminated stiffness matrix
-  mfem::HypreParMatrix *m_K_e_mat;
+  mfem::HypreParMatrix *K_e_mat_;
 
   /// RHS vector
-  mfem::HypreParVector *m_rhs;
+  mfem::HypreParVector *rhs_;
 
   /// Eliminated RHS vector
-  mfem::HypreParVector *m_bc_rhs;
+  mfem::HypreParVector *bc_rhs_;
 
   /// Solver for the stiffness matrix
-  mfem::Solver *m_K_solver;
+  mfem::Solver *K_solver_;
 
   /// Preconditioner for the stiffness
-  mfem::Solver *m_K_prec;
+  mfem::Solver *K_prec_;
 
   /// Lame mu parameter coefficient
-  mfem::Coefficient *m_mu;
+  mfem::Coefficient *mu_;
 
   /// Lame lambda parameter coefficient
-  mfem::Coefficient *m_lambda;
+  mfem::Coefficient *lambda_;
 
   /// Body source coefficient
-  mfem::VectorCoefficient *m_body_force;
+  mfem::VectorCoefficient *body_force_;
 
   /// Linear solver parameters
-  serac::LinearSolverParameters m_lin_params;
+  serac::LinearSolverParameters lin_params_;
 
   /// Driver for a quasi-static solve
   void QuasiStaticSolve();

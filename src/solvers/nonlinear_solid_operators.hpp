@@ -16,10 +16,10 @@
 class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
  protected:
   /// The nonlinear form
-  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
+  std::shared_ptr<mfem::ParNonlinearForm> H_form_;
 
   /// The linearized jacobian at the current state
-  mutable std::unique_ptr<mfem::Operator> m_Jacobian;
+  mutable std::unique_ptr<mfem::Operator> Jacobian_;
 
  public:
   /// The constructor
@@ -42,28 +42,28 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
 class NonlinearSolidReducedSystemOperator : public mfem::Operator {
  private:
   /// The bilinear form for the mass matrix
-  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
+  std::shared_ptr<mfem::ParBilinearForm> M_form_;
 
   /// The bilinear form for the viscous terms
-  std::shared_ptr<mfem::ParBilinearForm> m_S_form;
+  std::shared_ptr<mfem::ParBilinearForm> S_form_;
 
   /// The nonlinear form for the hyperelastic response
-  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
+  std::shared_ptr<mfem::ParNonlinearForm> H_form_;
 
   /// The linearized jacobian
-  mutable std::unique_ptr<mfem::HypreParMatrix> m_jacobian;
+  mutable std::unique_ptr<mfem::HypreParMatrix> jacobian_;
 
   /// The current timestep
-  double m_dt;
+  double dt_;
 
   /// The current displacement and velocity vectors
-  const mfem::Vector *m_v, *m_x;
+  const mfem::Vector *v_, *x_;
 
   /// Working vectors
-  mutable mfem::Vector m_w, m_z;
+  mutable mfem::Vector w_, z_;
 
   /// Essential degrees of freedom
-  const std::vector<std::shared_ptr<serac::BoundaryCondition> > &m_ess_bdr;
+  const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr_;
 
  public:
   /// The constructor
@@ -89,37 +89,37 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
  protected:
   /// The bilinear form for the mass matrix
-  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
+  std::shared_ptr<mfem::ParBilinearForm> M_form_;
 
   /// The bilinear form for the viscous terms
-  std::shared_ptr<mfem::ParBilinearForm> m_S_form;
+  std::shared_ptr<mfem::ParBilinearForm> S_form_;
 
   /// The nonlinear form for the hyperelastic response
-  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
+  std::shared_ptr<mfem::ParNonlinearForm> H_form_;
 
   /// The assembled mass matrix
-  std::unique_ptr<mfem::HypreParMatrix> m_M_mat;
+  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
 
   /// The CG solver for the mass matrix
-  mfem::CGSolver m_M_solver;
+  mfem::CGSolver M_solver_;
 
   /// The preconditioner for the CG mass matrix solver
-  mfem::HypreSmoother m_M_prec;
+  mfem::HypreSmoother M_prec_;
 
   /// The reduced system operator for applying the bilinear and nonlinear forms
-  std::unique_ptr<NonlinearSolidReducedSystemOperator> m_reduced_oper;
+  std::unique_ptr<NonlinearSolidReducedSystemOperator> reduced_oper_;
 
   /// The Newton solver for the nonlinear iterations
-  mfem::NewtonSolver &m_newton_solver;
+  mfem::NewtonSolver &newton_solver_;
 
   /// The fixed boudnary degrees of freedom
-  const std::vector<std::shared_ptr<serac::BoundaryCondition> > &m_ess_bdr;
+  const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr_;
 
   /// The linear solver parameters for the mass matrix
-  serac::LinearSolverParameters m_lin_params;
+  serac::LinearSolverParameters lin_params_;
 
   /// Working vector
-  mutable mfem::Vector m_z;
+  mutable mfem::Vector z_;
 
  public:
   /// The constructor

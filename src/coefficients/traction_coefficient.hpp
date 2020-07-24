@@ -11,17 +11,17 @@
 
 class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
  private:
-  mfem::Vector vec;
-  double       scale;
+  mfem::Vector vec_;
+  double       scale_;
 
  public:
-  VectorScaledConstantCoefficient(const mfem::Vector &v) : mfem::VectorCoefficient(v.Size()), vec(v) {}
+  VectorScaledConstantCoefficient(const mfem::Vector &v) : mfem::VectorCoefficient(v.Size()), vec_(v) {}
   using mfem::VectorCoefficient::Eval;
-  void         SetScale(double s) { scale = s; }
+  void         SetScale(double s) { scale_ = s; }
   virtual void Eval(mfem::Vector &V, mfem::ElementTransformation &, const mfem::IntegrationPoint &)
   {
-    V = vec;
-    V *= scale;
+    V = vec_;
+    V *= scale_;
   }
 };
 

@@ -16,50 +16,50 @@
 /// example 10p.
 class NonlinearSolidSolver : public BaseSolver {
  protected:
-  std::shared_ptr<serac::FiniteElementState> m_velocity;
-  std::shared_ptr<serac::FiniteElementState> m_displacement;
+  std::shared_ptr<serac::FiniteElementState> velocity_;
+  std::shared_ptr<serac::FiniteElementState> displacement_;
 
   /// The abstract nonlinear form
-  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
+  std::shared_ptr<mfem::ParNonlinearForm> H_form_;
 
   /// The abstract mass bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
+  std::shared_ptr<mfem::ParBilinearForm> M_form_;
 
   /// The abstract viscosity bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> m_S_form;
+  std::shared_ptr<mfem::ParBilinearForm> S_form_;
 
   /// The quasi-static operator for use with the MFEM newton solvers
-  std::shared_ptr<mfem::Operator> m_nonlinear_oper;
+  std::shared_ptr<mfem::Operator> nonlinear_oper_;
 
   /// The time dependent operator for use with the MFEM ODE solvers
-  std::shared_ptr<mfem::TimeDependentOperator> m_timedep_oper;
+  std::shared_ptr<mfem::TimeDependentOperator> timedep_oper_;
 
   /// The Newton solver for the nonlinear iterations
-  mfem::NewtonSolver m_newton_solver;
+  mfem::NewtonSolver newton_solver_;
 
   /// The linear solver for the Jacobian
-  std::shared_ptr<mfem::Solver> m_J_solver;
+  std::shared_ptr<mfem::Solver> J_solver_;
 
   /// The preconditioner for the Jacobian solver
-  std::shared_ptr<mfem::Solver> m_J_prec;
+  std::shared_ptr<mfem::Solver> J_prec_;
 
   /// The viscosity coefficient
-  std::shared_ptr<mfem::Coefficient> m_viscosity;
+  std::shared_ptr<mfem::Coefficient> viscosity_;
 
   /// The hyperelastic material model
-  std::shared_ptr<mfem::HyperelasticModel> m_model;
+  std::shared_ptr<mfem::HyperelasticModel> model_;
 
   /// Linear solver parameters
-  serac::LinearSolverParameters m_lin_params;
+  serac::LinearSolverParameters lin_params_;
 
   /// Nonlinear solver parameters
-  serac::NonlinearSolverParameters m_nonlin_params;
+  serac::NonlinearSolverParameters nonlin_params_;
 
   /// Pointer to the reference mesh data
-  std::unique_ptr<mfem::ParGridFunction> m_reference_nodes;
+  std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
 
   /// Pointer to the deformed mesh data
-  std::unique_ptr<mfem::ParGridFunction> m_deformed_nodes;
+  std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
 
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
@@ -96,10 +96,10 @@ class NonlinearSolidSolver : public BaseSolver {
                            const serac::NonlinearSolverParameters &nonlin_params);
 
   /// Get the displacement state
-  std::shared_ptr<serac::FiniteElementState> GetDisplacement() { return m_displacement; };
+  std::shared_ptr<serac::FiniteElementState> GetDisplacement() { return displacement_; };
 
   /// Get the velocity state
-  std::shared_ptr<serac::FiniteElementState> GetVelocity() { return m_velocity; };
+  std::shared_ptr<serac::FiniteElementState> GetVelocity() { return velocity_; };
 
   /// Complete the data structure initialization
   void CompleteSetup();

@@ -34,7 +34,7 @@ class StdFunctionCoefficient : public mfem::Coefficient {
   virtual double Eval(mfem::ElementTransformation &Tr, const mfem::IntegrationPoint &ip);
 
  private:
-  std::function<double(mfem::Vector &)> m_func;
+  std::function<double(mfem::Vector &)> func_;
 };
 
 /**
@@ -58,7 +58,7 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
   virtual void Eval(mfem::Vector &V, mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
 
  private:
-  std::function<void(mfem::Vector &, mfem::Vector &)> m_func;
+  std::function<void(mfem::Vector &, mfem::Vector &)> func_;
 };
 
 /**
@@ -145,15 +145,15 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
      of coefficient at each element. \param[in] c The coefficient to "modify"
      the element attributes
   */
-  AttributeModifierCoefficient(const mfem::Array<int> &attr_list, mfem::Coefficient &c) : m_attr_list(attr_list), m_C(c)
+  AttributeModifierCoefficient(const mfem::Array<int> &attr_list, mfem::Coefficient &c) : attr_list_(attr_list), C_(c)
   {
   }
 
   virtual double Eval(mfem::ElementTransformation &Tr, const mfem::IntegrationPoint &ip);
 
  protected:
-  const mfem::Array<int> &m_attr_list;
-  mfem::Coefficient &     m_C;
+  const mfem::Array<int> &attr_list_;
+  mfem::Coefficient &     C_;
 };
 
 /**
@@ -188,11 +188,11 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
   virtual void Eval(mfem::Vector &V, mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
 
  private:
-  std::shared_ptr<mfem::VectorCoefficient> m_v1;
-  std::shared_ptr<mfem::VectorCoefficient> m_v2;
+  std::shared_ptr<mfem::VectorCoefficient> v1_;
+  std::shared_ptr<mfem::VectorCoefficient> v2_;
 
-  std::function<void(mfem::Vector &, mfem::Vector &)>                 m_mono_function;
-  std::function<void(mfem::Vector &, mfem::Vector &, mfem::Vector &)> m_bi_function;
+  std::function<void(mfem::Vector &, mfem::Vector &)>                 mono_function_;
+  std::function<void(mfem::Vector &, mfem::Vector &, mfem::Vector &)> bi_function_;
 };
 
 /**
@@ -227,11 +227,11 @@ class TransformedScalarCoefficient : public mfem::Coefficient {
   virtual double Eval(mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
 
  private:
-  std::shared_ptr<mfem::Coefficient> m_s1;
-  std::shared_ptr<mfem::Coefficient> m_s2;
+  std::shared_ptr<mfem::Coefficient> s1_;
+  std::shared_ptr<mfem::Coefficient> s2_;
 
-  std::function<double(const double)>               m_mono_function;
-  std::function<double(const double, const double)> m_bi_function;
+  std::function<double(const double)>               mono_function_;
+  std::function<double(const double, const double)> bi_function_;
 };
 
 #endif
