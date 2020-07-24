@@ -121,8 +121,8 @@ void ThermalSolver::QuasiStaticSolve()
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
   for (auto &bc : m_ess_bdr) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef), 
-                    "Temperature boundary condition had a non-scalar coefficient.");
+    SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef), 
+                  "Temperature boundary condition had a non-scalar coefficient.");
     auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
     scalar_coef->SetTime(m_time);
     m_temperature->gf->ProjectBdrCoefficient(*scalar_coef, bc.markers);

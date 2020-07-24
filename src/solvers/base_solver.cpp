@@ -32,7 +32,6 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
                                  const mfem::ParFiniteElementSpace &fes, const int component)
 {
-  // auto bc = std::make_shared<serac::BoundaryCondition>();
   serac::BoundaryCondition bc;
 
   bc.markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
@@ -64,7 +63,6 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, serac::BoundaryCo
 void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef, 
                              const int component)
 {
-  // auto bc = std::make_shared<serac::BoundaryCondition>();
   serac::BoundaryCondition bc;
 
   bc.markers.SetSize(0);
@@ -73,6 +71,8 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryC
 
   bc.coef = ess_bdr_coef;
 
+  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(ess_bdr_coef) && (component == -1), 
+                  "If a scalar coefficient is used, a corresponding component must be selected.");
   bc.component = component;
 
   m_ess_bdr.push_back(std::move(bc));
@@ -81,7 +81,6 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryC
 void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
                                const int component)
 {
-  // auto bc = std::make_shared<serac::BoundaryCondition>();
   serac::BoundaryCondition bc;
 
   bc.markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());

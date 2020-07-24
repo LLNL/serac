@@ -73,7 +73,7 @@ void ElasticitySolver::CompleteSetup()
   // Add the traction integrator
   if (m_nat_bdr.size() > 0) {
     for (auto &nat_bc : m_nat_bdr) {
-      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef), 
+      SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef), 
                     "Traction boundary condition had a non-vector coefficient.");
       m_l_form->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef)), nat_bc.markers);
     }
@@ -153,8 +153,8 @@ void ElasticitySolver::QuasiStaticSolve()
   // Apply the boundary conditions
   *m_bc_rhs = *m_rhs;
   for (auto &bc : m_ess_bdr) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), 
-                    "Displacement boundary condition had a non-vector coefficient.");
+    SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), 
+                  "Displacement boundary condition had a non-vector coefficient.");
     auto vec_coef = std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef);
     vec_coef->SetTime(m_time);
     displacement->gf->ProjectBdrCoefficient(*vec_coef, bc.markers);
