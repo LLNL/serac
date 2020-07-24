@@ -9,9 +9,8 @@
 #include "common/logger.hpp"
 
 NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form)
-    : mfem::Operator(H_form->FESpace()->GetTrueVSize())
+    : mfem::Operator(H_form->FESpace()->GetTrueVSize()), m_H_form(H_form)
 {
-  m_H_form = H_form;
 }
 
 // compute: y = H(x,p)
@@ -32,8 +31,9 @@ NonlinearSolidQuasiStaticOperator::~NonlinearSolidQuasiStaticOperator() {}
 
 NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
     std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
-    std::shared_ptr<mfem::ParBilinearForm> M_form, const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr,
-    mfem::NewtonSolver &newton_solver, const serac::LinearSolverParameters &lin_params)
+    std::shared_ptr<mfem::ParBilinearForm>                         M_form,
+    const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr, mfem::NewtonSolver &newton_solver,
+    const serac::LinearSolverParameters &lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
       m_M_form(M_form),
       m_S_form(S_form),
@@ -111,7 +111,8 @@ NonlinearSolidDynamicOperator::~NonlinearSolidDynamicOperator() {}
 
 NonlinearSolidReducedSystemOperator::NonlinearSolidReducedSystemOperator(
     std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
-    std::shared_ptr<mfem::ParBilinearForm> M_form, const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr)
+    std::shared_ptr<mfem::ParBilinearForm>                         M_form,
+    const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr)
     : mfem::Operator(M_form->ParFESpace()->TrueVSize()),
       m_M_form(M_form),
       m_S_form(S_form),

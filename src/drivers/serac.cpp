@@ -23,10 +23,10 @@
 #include "CLI11/CLI11.hpp"
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
+#include "common/logger.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
-#include "common/logger.hpp"
 
 int main(int argc, char *argv[])
 {
@@ -37,8 +37,7 @@ int main(int argc, char *argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Initialize SLIC logger
-  if(!serac::logger::Initialize(MPI_COMM_WORLD))
-  {
+  if (!serac::logger::Initialize(MPI_COMM_WORLD)) {
     serac::ExitGracefully(true);
   }
 
@@ -83,30 +82,32 @@ int main(int argc, char *argv[])
 
   // specify all input arguments
   CLI::App app{"serac: a high order nonlinear thermomechanical simulation code"};
-  app.add_option("-m, --mesh", mesh_file,  "Mesh file to use.", true);
-  app.add_option("--rs, --refine-serial", ser_ref_levels,  "Number of times to refine the mesh uniformly in serial.", true);
-  app.add_option("--rp, --refine-parallel", par_ref_levels, 
-                  "Number of times to refine the mesh uniformly in parallel.", true);
-  app.add_option("-o, --order", order,  "Order degree of the finite elements.", true);
-  app.add_option("--mu, --shear-modulus", mu,  "Shear modulus in the Neo-Hookean hyperelastic model.", true);
-  app.add_option("-K, --bulk-modulus", K,  "Bulk modulus in the Neo-Hookean hyperelastic model.", true);
-  app.add_option("--tx, --traction-x", tx,  "Cantilever tip traction in the x direction.", true);
-  app.add_option("--ty, --traction-y", ty,  "Cantilever tip traction in the y direction.", true);
-  app.add_option("--tz, --traction-z", tz,  "Cantilever tip traction in the z direction.", true);
-  app.add_flag("--slu, --superlu, !--no-slu, !--no-superlu", slu_solver,  "Use the SuperLU Solver.");
-  app.add_option("--lrel, --linear-relative-tolerance", lin_params.rel_tol, 
-                  "Relative tolerance for the lienar solve.", true);
-  app.add_option("--labs, --linear-absolute-tolerance", lin_params.abs_tol, 
-                  "Absolute tolerance for the linear solve.", true);
-  app.add_option("--lit, --linear-iterations", lin_params.max_iter,  "Maximum iterations for the linear solve.", true);
-  app.add_option("--lpl, --linear-print-level", lin_params.print_level,  "Linear print level.", true);
-  app.add_option("--nrel, --newton-relative-tolerance", nonlin_params.rel_tol, 
-                  "Relative tolerance for the Newton solve.", true);
-  app.add_option("--nabs, --newton-absolute-tolerance", nonlin_params.abs_tol, 
-                  "Absolute tolerance for the Newton solve.", true);
-  app.add_option("--nit, --newton-iterations", nonlin_params.max_iter,  "Maximum iterations for the Newton solve.", true);
-  app.add_option("--npl, --newton-print-level", nonlin_params.print_level,  "Newton print level.", true);
-  app.add_option("--dt, --time-step", dt,  "Time step.", true);
+  app.add_option("-m, --mesh", mesh_file, "Mesh file to use.", true);
+  app.add_option("--rs, --refine-serial", ser_ref_levels, "Number of times to refine the mesh uniformly in serial.",
+                 true);
+  app.add_option("--rp, --refine-parallel", par_ref_levels, "Number of times to refine the mesh uniformly in parallel.",
+                 true);
+  app.add_option("-o, --order", order, "Order degree of the finite elements.", true);
+  app.add_option("--mu, --shear-modulus", mu, "Shear modulus in the Neo-Hookean hyperelastic model.", true);
+  app.add_option("-K, --bulk-modulus", K, "Bulk modulus in the Neo-Hookean hyperelastic model.", true);
+  app.add_option("--tx, --traction-x", tx, "Cantilever tip traction in the x direction.", true);
+  app.add_option("--ty, --traction-y", ty, "Cantilever tip traction in the y direction.", true);
+  app.add_option("--tz, --traction-z", tz, "Cantilever tip traction in the z direction.", true);
+  app.add_flag("--slu, --superlu, !--no-slu, !--no-superlu", slu_solver, "Use the SuperLU Solver.");
+  app.add_option("--lrel, --linear-relative-tolerance", lin_params.rel_tol, "Relative tolerance for the lienar solve.",
+                 true);
+  app.add_option("--labs, --linear-absolute-tolerance", lin_params.abs_tol, "Absolute tolerance for the linear solve.",
+                 true);
+  app.add_option("--lit, --linear-iterations", lin_params.max_iter, "Maximum iterations for the linear solve.", true);
+  app.add_option("--lpl, --linear-print-level", lin_params.print_level, "Linear print level.", true);
+  app.add_option("--nrel, --newton-relative-tolerance", nonlin_params.rel_tol,
+                 "Relative tolerance for the Newton solve.", true);
+  app.add_option("--nabs, --newton-absolute-tolerance", nonlin_params.abs_tol,
+                 "Absolute tolerance for the Newton solve.", true);
+  app.add_option("--nit, --newton-iterations", nonlin_params.max_iter, "Maximum iterations for the Newton solve.",
+                 true);
+  app.add_option("--npl, --newton-print-level", nonlin_params.print_level, "Newton print level.", true);
+  app.add_option("--dt, --time-step", dt, "Time step.", true);
 
   // Parse the arguments and check if they are good
   try {
@@ -236,4 +237,4 @@ int main(int argc, char *argv[])
   }
 
   serac::ExitGracefully();
-} 
+}

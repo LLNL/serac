@@ -21,7 +21,7 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
   std::fstream imesh(mesh_file);
   auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -105,7 +105,6 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-
 void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
 {
   // set the initial configuration to be the same as the reference, stress
@@ -127,7 +126,7 @@ void InitialVelocity(const mfem::Vector &x, mfem::Vector &v)
 #include "axom/slic/core/UnitTestLogger.hpp"
 using axom::slic::UnitTestLogger;
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
   int result = 0;
 

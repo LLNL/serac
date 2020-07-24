@@ -92,7 +92,8 @@ class NonlinearSolidSolver : public BaseSolver {
   void SetVelocity(mfem::VectorCoefficient &velo_state);
 
   /// Set the linear and nonlinear solver params
-  void SetSolverParameters(const serac::LinearSolverParameters &lin_params, const serac::NonlinearSolverParameters &nonlin_params);
+  void SetSolverParameters(const serac::LinearSolverParameters &   lin_params,
+                           const serac::NonlinearSolverParameters &nonlin_params);
 
   /// Get the displacement state
   std::shared_ptr<serac::FiniteElementState> GetDisplacement() { return m_displacement; };

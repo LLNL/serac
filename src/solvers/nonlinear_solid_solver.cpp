@@ -13,7 +13,7 @@
 const int num_fields = 2;
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), num_fields),
+    : BaseSolver(pmesh->GetComm(), num_fields, order),
       m_velocity(m_state[0]),
       m_displacement(m_state[1]),
       m_newton_solver(pmesh->GetComm())
@@ -60,19 +60,19 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   *m_velocity->true_vec = 0.0;
 }
 
-void NonlinearSolidSolver::SetDisplacementBCs(const std::set<int> &                 disp_bdr,
+void NonlinearSolidSolver::SetDisplacementBCs(const std::set<int> &                    disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef, *m_displacement->space, -1);
 }
 
-void NonlinearSolidSolver::SetDisplacementBCs(const std::set<int> &           disp_bdr,
+void NonlinearSolidSolver::SetDisplacementBCs(const std::set<int> &              disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
   SetEssentialBCs(disp_bdr, disp_bdr_coef, *m_displacement->space, component);
 }
 
-void NonlinearSolidSolver::SetTractionBCs(const std::set<int> &                 trac_bdr,
+void NonlinearSolidSolver::SetTractionBCs(const std::set<int> &                    trac_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   SetNaturalBCs(trac_bdr, trac_bdr_coef, component);

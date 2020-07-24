@@ -9,9 +9,9 @@
 
 #include <memory>
 
+#include "axom/slic.hpp"
 #include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
-#include "axom/slic.hpp"
 
 using namespace mfem;
 using namespace std;
@@ -257,7 +257,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
 #include "axom/slic/core/UnitTestLogger.hpp"
 using axom::slic::UnitTestLogger;
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
   int result = 0;
 
