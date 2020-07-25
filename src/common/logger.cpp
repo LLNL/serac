@@ -13,17 +13,17 @@
 
 namespace serac {
 
-void ExitGracefully(bool error)
+void exitGracefully(bool error)
 {
-  serac::logger::Flush();
-  serac::logger::Finalize();
+  serac::logger::flush();
+  serac::logger::finalize();
   MPI_Finalize();
   error ? exit(EXIT_FAILURE) : exit(EXIT_SUCCESS);
 }
 
 namespace logger {
 
-bool Initialize(MPI_Comm comm)
+bool initialize(MPI_Comm comm)
 {
   namespace slic = axom::slic;
 
@@ -81,14 +81,14 @@ bool Initialize(MPI_Comm comm)
 
   std::string msg = fmt::format("Logger activated: {0}", loggerName);
   SLIC_INFO_ROOT(rank, msg);
-  serac::logger::Flush();
+  serac::logger::flush();
 
   return true;
 }
 
-void Finalize() { axom::slic::finalize(); }
+void finalize() { axom::slic::finalize(); }
 
-void Flush() { axom::slic::flushStreams(); }
+void flush() { axom::slic::flushStreams(); }
 
 }  // namespace logger
 }  // namespace serac

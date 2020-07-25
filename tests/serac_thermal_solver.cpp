@@ -48,7 +48,7 @@ TEST(thermal_solver, static_solve)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
+  therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -72,11 +72,11 @@ TEST(thermal_solver, static_solve)
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
-  therm_solver.CompleteSetup();
+  therm_solver.completeSetup();
 
   // Perform the static solve
   double dt = 1.0;
-  therm_solver.AdvanceTimestep(dt);
+  therm_solver.advanceTimestep(dt);
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
@@ -109,7 +109,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
+  therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -136,17 +136,17 @@ TEST(thermal_solver, static_solve_multiple_bcs)
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
-  therm_solver.CompleteSetup();
+  therm_solver.completeSetup();
 
   // Initialize the output
-  therm_solver.InitializeOutput(serac::OutputType::GLVis, "thermal_two_boundary");
+  therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_two_boundary");
 
   // Perform the static solve
   double dt = 1.0;
-  therm_solver.AdvanceTimestep(dt);
+  therm_solver.advanceTimestep(dt);
 
   // Output the state
-  therm_solver.OutputState();
+  therm_solver.outputState();
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
@@ -179,7 +179,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
+  therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -205,11 +205,11 @@ TEST(thermal_solver, static_solve_repeated_bcs)
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
-  therm_solver.CompleteSetup();
+  therm_solver.completeSetup();
 
   // Perform the static solve
   double dt = 1.0;
-  therm_solver.AdvanceTimestep(dt);
+  therm_solver.advanceTimestep(dt);
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
@@ -242,7 +242,7 @@ TEST(thermal_solver, dyn_exp_solve)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(serac::TimestepMethod::ForwardEuler);
+  therm_solver.setTimestepper(serac::TimestepMethod::ForwardEuler);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -264,10 +264,10 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.SetLinearSolverParameters(params);
 
   // Setup glvis output
-  therm_solver.InitializeOutput(serac::OutputType::GLVis, "thermal_explicit");
+  therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_explicit");
 
   // Complete the setup including the dynamic operators
-  therm_solver.CompleteSetup();
+  therm_solver.completeSetup();
 
   // Set timestep options
   double t         = 0.0;
@@ -276,7 +276,7 @@ TEST(thermal_solver, dyn_exp_solve)
   bool   last_step = false;
 
   // Output the initial state
-  therm_solver.OutputState();
+  therm_solver.outputState();
 
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
@@ -284,11 +284,11 @@ TEST(thermal_solver, dyn_exp_solve)
     last_step = (t >= t_final - 1e-8 * dt);
 
     // Advance the timestep
-    therm_solver.AdvanceTimestep(dt_real);
+    therm_solver.advanceTimestep(dt_real);
   }
 
   // Output the final state
-  therm_solver.OutputState();
+  therm_solver.outputState();
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
@@ -321,7 +321,7 @@ TEST(thermal_solver, dyn_imp_solve)
   ThermalSolver therm_solver(2, pmesh);
 
   // Set the time integration method
-  therm_solver.SetTimestepper(serac::TimestepMethod::BackwardEuler);
+  therm_solver.setTimestepper(serac::TimestepMethod::BackwardEuler);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -343,10 +343,10 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.SetLinearSolverParameters(params);
 
   // Setup glvis output
-  therm_solver.InitializeOutput(serac::OutputType::VisIt, "thermal_implicit");
+  therm_solver.initializeOutput(serac::OutputType::VisIt, "thermal_implicit");
 
   // Complete the setup including the dynamic operators
-  therm_solver.CompleteSetup();
+  therm_solver.completeSetup();
 
   // Set timestep options
   double t         = 0.0;
@@ -355,7 +355,7 @@ TEST(thermal_solver, dyn_imp_solve)
   bool   last_step = false;
 
   // Output the initial state
-  therm_solver.OutputState();
+  therm_solver.outputState();
 
   for (int ti = 1; !last_step; ti++) {
     double dt_real = std::min(dt, t_final - t);
@@ -363,11 +363,11 @@ TEST(thermal_solver, dyn_imp_solve)
     last_step = (t >= t_final - 1e-8 * dt);
 
     // Advance the timestep
-    therm_solver.AdvanceTimestep(dt_real);
+    therm_solver.advanceTimestep(dt_real);
   }
 
   // Output the final state
-  therm_solver.OutputState();
+  therm_solver.outputState();
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);

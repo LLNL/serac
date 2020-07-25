@@ -67,7 +67,7 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetDisplacement(*deform);
   ts_solver.SetVelocity(*velo);
   ts_solver.SetTemperature(*temp);
-  ts_solver.SetTimestepper(serac::TimestepMethod::SDIRK33);
+  ts_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
   ts_solver.SetCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity
@@ -98,17 +98,17 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetThermalSolverParameters(params);
 
   // Initialize the VisIt output
-  ts_solver.InitializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");
+  ts_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");
 
   // Construct the internal dynamic solver data structures
-  ts_solver.CompleteSetup();
+  ts_solver.completeSetup();
 
   double t       = 0.0;
   double t_final = 6.0;
   double dt      = 1.0;
 
   // Ouput the initial state
-  ts_solver.OutputState();
+  ts_solver.outputState();
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
@@ -118,11 +118,11 @@ TEST(dynamic_solver, dyn_solve)
     t += dt_real;
     last_step = (t >= t_final - 1e-8 * dt);
 
-    ts_solver.AdvanceTimestep(dt_real);
+    ts_solver.advanceTimestep(dt_real);
   }
 
   // Output the final state
-  ts_solver.OutputState();
+  ts_solver.outputState();
 
   // Check the final displacement and velocity L2 norms
   mfem::Vector zero(dim);

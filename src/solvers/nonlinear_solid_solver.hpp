@@ -102,10 +102,10 @@ class NonlinearSolidSolver : public BaseSolver {
   std::shared_ptr<serac::FiniteElementState> GetVelocity() { return velocity_; };
 
   /// Complete the data structure initialization
-  void CompleteSetup();
+  void completeSetup();
 
   /// Advance the timestep
-  void AdvanceTimestep(double &dt);
+  void advanceTimestep(double &dt);
 
   /// Destructor
   virtual ~NonlinearSolidSolver();

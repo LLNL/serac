@@ -106,12 +106,12 @@ class ThermalStructuralSolver : public BaseSolver {
   void SetCouplingScheme(serac::CouplingScheme coupling) { coupling_ = coupling; };
 
   /// Overwrite the base default set timestepper method
-  void SetTimestepper(serac::TimestepMethod timestepper);
+  void setTimestepper(serac::TimestepMethod timestepper);
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
    * = false, do not allocate the mass matrix or dynamic operator */
-  void CompleteSetup();
+  void completeSetup();
 
   /// Get the temperature state
   std::shared_ptr<serac::FiniteElementState> GetTemperature() { return temperature_; };
@@ -123,7 +123,7 @@ class ThermalStructuralSolver : public BaseSolver {
   std::shared_ptr<serac::FiniteElementState> GetVelocity() { return velocity_; };
 
   /// Advance the timestep
-  void AdvanceTimestep(double &dt);
+  void advanceTimestep(double &dt);
 
   /// Destructor
   virtual ~ThermalStructuralSolver() = default;

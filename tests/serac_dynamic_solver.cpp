@@ -45,7 +45,7 @@ TEST(dynamic_solver, dyn_solve)
   dyn_solver.SetViscosity(visc);
   dyn_solver.SetDisplacement(*deform);
   dyn_solver.SetVelocity(*velo);
-  dyn_solver.SetTimestepper(serac::TimestepMethod::SDIRK33);
+  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
 
   // Set the linear solver parameters
   serac::LinearSolverParameters params;
@@ -65,17 +65,17 @@ TEST(dynamic_solver, dyn_solve)
   dyn_solver.SetSolverParameters(params, nl_params);
 
   // Initialize the VisIt output
-  dyn_solver.InitializeOutput(serac::OutputType::VisIt, "dynamic_solid");
+  dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");
 
   // Construct the internal dynamic solver data structures
-  dyn_solver.CompleteSetup();
+  dyn_solver.completeSetup();
 
   double t       = 0.0;
   double t_final = 6.0;
   double dt      = 3.0;
 
   // Ouput the initial state
-  dyn_solver.OutputState();
+  dyn_solver.outputState();
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
@@ -85,11 +85,11 @@ TEST(dynamic_solver, dyn_solve)
     t += dt_real;
     last_step = (t >= t_final - 1e-8 * dt);
 
-    dyn_solver.AdvanceTimestep(dt_real);
+    dyn_solver.advanceTimestep(dt_real);
   }
 
   // Output the final state
-  dyn_solver.OutputState();
+  dyn_solver.outputState();
 
   // Check the final displacement and velocity L2 norms
   mfem::Vector zero(dim);

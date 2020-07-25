@@ -73,7 +73,7 @@ class ElasticitySolver : public BaseSolver {
                       int component = -1);
 
   /// Driver for advancing the timestep
-  void AdvanceTimestep(double &dt);
+  void advanceTimestep(double &dt);
 
   /// Set the elastic lame parameters
   void SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu);
@@ -82,7 +82,7 @@ class ElasticitySolver : public BaseSolver {
   void SetBodyForce(mfem::VectorCoefficient &force);
 
   /// Finish the setup and allocate the associate data structures
-  void CompleteSetup();
+  void completeSetup();
 
   /// Set the linear solver parameters object
   void SetLinearSolverParameters(const serac::LinearSolverParameters &params);

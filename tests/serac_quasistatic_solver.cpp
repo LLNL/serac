@@ -73,18 +73,18 @@ TEST(nonlinear_solid_solver, qs_solve)
   solid_solver.SetSolverParameters(params, nl_params);
 
   // Set the time step method
-  solid_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
+  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the output
-  solid_solver.InitializeOutput(serac::OutputType::VisIt, "static_solid");
+  solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
 
   // Complete the solver setup
-  solid_solver.CompleteSetup();
+  solid_solver.completeSetup();
 
   double dt = 1.0;
-  solid_solver.AdvanceTimestep(dt);
+  solid_solver.advanceTimestep(dt);
 
-  solid_solver.OutputState();
+  solid_solver.outputState();
 
   mfem::Vector zero(dim);
   zero = 0.0;

@@ -73,66 +73,66 @@ class BaseSolver {
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
-  virtual void SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
+  virtual void setEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
                                mfem::ParFiniteElementSpace &fes, int component = -1);
 
   /// Set the vector-valued essential boundary conditions from a list of
   /// boundary markers and a coefficient
-  virtual void SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
+  virtual void setEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
                                mfem::ParFiniteElementSpace &fes, int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
-  virtual void SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);
+  virtual void setTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef);
 
   /// Set a list of true degrees of freedom from a vector coefficient
-  virtual void SetTrueDofs(const mfem::Array<int> &                 true_dofs,
+  virtual void setTrueDofs(const mfem::Array<int> &                 true_dofs,
                            std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
-  virtual void SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
+  virtual void setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
                              int component = -1);
 
   /// Set the vector-valued natural boundary conditions from a list of boundary
   /// markers and a coefficient
-  virtual void SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
+  virtual void setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
                              int component = -1);
 
   /// Set the state variables from a coefficient
-  virtual void SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef);
+  virtual void setState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef);
 
   /// Set the state variables from a vector coefficient
-  virtual void SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef);
+  virtual void setState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void SetState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state);
+  virtual void setState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state);
 
   /// Get the list of state variable grid functions
-  virtual std::vector<std::shared_ptr<serac::FiniteElementState> > GetState() const;
+  virtual std::vector<std::shared_ptr<serac::FiniteElementState> > getState() const;
 
   /// Set the time integration method
-  virtual void SetTimestepper(serac::TimestepMethod timestepper);
+  virtual void setTimestepper(serac::TimestepMethod timestepper);
 
   /// Set the current time
-  virtual void SetTime(const double time);
+  virtual void setTime(const double time);
 
   /// Get the current time
-  virtual double GetTime() const;
+  virtual double getTime() const;
 
   /// Get the current cycle
-  virtual int GetCycle() const;
+  virtual int getCycle() const;
 
   /// Complete the setup and allocate the necessary data structures
-  virtual void CompleteSetup() = 0;
+  virtual void completeSetup() = 0;
 
   /// Advance the state variables according to the chosen time integrator
-  virtual void AdvanceTimestep(double &dt) = 0;
+  virtual void advanceTimestep(double &dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const serac::OutputType output_type, const std::string root_name);
+  virtual void initializeOutput(const serac::OutputType output_type, const std::string root_name);
 
   /// output the state variables
-  virtual void OutputState() const;
+  virtual void outputState() const;
 
   /// Destructor
   virtual ~BaseSolver() = default;

@@ -37,13 +37,13 @@ void ThermalSolver::SetTemperature(mfem::Coefficient &temp)
 
 void ThermalSolver::SetTemperatureBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
-  SetEssentialBCs(ess_bdr, ess_bdr_coef, *temperature_->space);
+  setEssentialBCs(ess_bdr, ess_bdr_coef, *temperature_->space);
 }
 
 void ThermalSolver::SetFluxBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
 {
   // Set the natural (integral) boundary condition
-  SetNaturalBCs(nat_bdr, nat_bdr_coef);
+  setNaturalBCs(nat_bdr, nat_bdr_coef);
 }
 
 void ThermalSolver::SetConductivity(std::shared_ptr<mfem::Coefficient> kappa)
@@ -65,7 +65,7 @@ void ThermalSolver::SetLinearSolverParameters(const serac::LinearSolverParameter
   lin_params_ = params;
 }
 
-void ThermalSolver::CompleteSetup()
+void ThermalSolver::completeSetup()
 {
   SLIC_ASSERT_MSG(kappa_ != nullptr, "Conductivity not set in ThermalSolver!");
 
@@ -147,7 +147,7 @@ void ThermalSolver::QuasiStaticSolve()
   K_solver_->Mult(*bc_rhs_, *temperature_->true_vec);
 }
 
-void ThermalSolver::AdvanceTimestep(double &dt)
+void ThermalSolver::advanceTimestep(double &dt)
 {
   // Initialize the true vector
   temperature_->gf->GetTrueDofs(*temperature_->true_vec);

@@ -43,13 +43,13 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
 void ElasticitySolver::SetDisplacementBCs(std::set<int> &                          disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
 }
 
 void ElasticitySolver::SetTractionBCs(std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                                       int component)
 {
-  SetNaturalBCs(trac_bdr, trac_bdr_coef, component);
+  setNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
 
 void ElasticitySolver::SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu)
@@ -62,7 +62,7 @@ void ElasticitySolver::SetBodyForce(mfem::VectorCoefficient &force) { body_force
 
 void ElasticitySolver::SetLinearSolverParameters(const serac::LinearSolverParameters &params) { lin_params_ = params; }
 
-void ElasticitySolver::CompleteSetup()
+void ElasticitySolver::completeSetup()
 {
   SLIC_ASSERT_MSG(mu_ != nullptr, "Lame mu not set in ElasticitySolver!");
   SLIC_ASSERT_MSG(lambda_ != nullptr, "Lame lambda not set in ElasticitySolver!");
@@ -141,7 +141,7 @@ void ElasticitySolver::CompleteSetup()
   }
 }
 
-void ElasticitySolver::AdvanceTimestep(double &)
+void ElasticitySolver::advanceTimestep(double &)
 {
   // Initialize the true vector
   displacement_->gf->GetTrueDofs(*displacement_->true_vec);
@@ -150,7 +150,7 @@ void ElasticitySolver::AdvanceTimestep(double &)
     QuasiStaticSolve();
   } else {
     SLIC_ERROR_ROOT(mpi_rank_, "Only quasistatics implemented for linear elasticity!");
-    serac::ExitGracefully(true);
+    serac::exitGracefully(true);
   }
 
   // Distribute the shared DOFs

@@ -63,19 +63,19 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 void NonlinearSolidSolver::SetDisplacementBCs(const std::set<int> &                    disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, -1);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, -1);
 }
 
 void NonlinearSolidSolver::SetDisplacementBCs(const std::set<int> &              disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
-  SetEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
 }
 
 void NonlinearSolidSolver::SetTractionBCs(const std::set<int> &                    trac_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
-  SetNaturalBCs(trac_bdr, trac_bdr_coef, component);
+  setNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
 
 void NonlinearSolidSolver::SetHyperelasticMaterialParameters(double mu, double K)
@@ -106,7 +106,7 @@ void NonlinearSolidSolver::SetSolverParameters(const serac::LinearSolverParamete
   nonlin_params_ = nonlin_params;
 }
 
-void NonlinearSolidSolver::CompleteSetup()
+void NonlinearSolidSolver::completeSetup()
 {
   // Define the nonlinear form
   H_form_ = std::make_shared<mfem::ParNonlinearForm>(displacement_->space.get());
@@ -232,7 +232,7 @@ void NonlinearSolidSolver::QuasiStaticSolve()
 }
 
 // Advance the timestep
-void NonlinearSolidSolver::AdvanceTimestep(double &dt)
+void NonlinearSolidSolver::advanceTimestep(double &dt)
 {
   // Initialize the true vector
   velocity_->gf->GetTrueDofs(*velocity_->true_vec);

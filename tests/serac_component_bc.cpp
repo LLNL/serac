@@ -54,9 +54,9 @@ TEST(component_bc, qs_solve)
   });
 
   mfem::Array<int> ess_corner_bc_list;
-  MakeTrueEssList(*solid_solver.GetDisplacement()->space, zero_bc, ess_corner_bc_list);
+  makeTrueEssList(*solid_solver.GetDisplacement()->space, zero_bc, ess_corner_bc_list);
 
-  solid_solver.SetTrueDofs(ess_corner_bc_list, disp_coef);
+  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef);
 
   // Set the material parameters
   solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
@@ -79,21 +79,21 @@ TEST(component_bc, qs_solve)
   solid_solver.SetSolverParameters(params, nl_params);
 
   // Set the time step method
-  solid_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
+  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
-  solid_solver.InitializeOutput(serac::OutputType::VisIt, "component_bc");
+  solid_solver.initializeOutput(serac::OutputType::VisIt, "component_bc");
 
   // Complete the solver setup
-  solid_solver.CompleteSetup();
+  solid_solver.completeSetup();
 
   double dt = 1.0;
-  solid_solver.AdvanceTimestep(dt);
+  solid_solver.advanceTimestep(dt);
 
   // Output the state
-  solid_solver.OutputState();
+  solid_solver.outputState();
 
-  auto state = solid_solver.GetState();
+  auto state = solid_solver.getState();
 
   mfem::Vector zero(dim);
   zero = 0.0;
@@ -161,19 +161,19 @@ TEST(component_bc, qs_attribute_solve)
   solid_solver.SetSolverParameters(params, nl_params);
 
   // Set the time step method
-  solid_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
+  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
-  solid_solver.InitializeOutput(serac::OutputType::GLVis, "component_attr_bc");
+  solid_solver.initializeOutput(serac::OutputType::GLVis, "component_attr_bc");
 
   // Complete the solver setup
-  solid_solver.CompleteSetup();
+  solid_solver.completeSetup();
 
   double dt = 1.0;
-  solid_solver.AdvanceTimestep(dt);
+  solid_solver.advanceTimestep(dt);
 
   // Output the state
-  solid_solver.OutputState();
+  solid_solver.outputState();
 
   mfem::Vector zero(dim);
   zero = 0.0;

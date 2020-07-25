@@ -37,7 +37,7 @@ TEST(serac_dtor, test1)
   auto therm_solver = std::make_unique<ThermalSolver>(2, pmesh);
 
   // Set the time integration method
-  therm_solver->SetTimestepper(serac::TimestepMethod::QuasiStatic);
+  therm_solver->setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x.Norml2(); });
@@ -60,7 +60,7 @@ TEST(serac_dtor, test1)
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
-  therm_solver->CompleteSetup();
+  therm_solver->completeSetup();
 
   // Destruct the old thermal solver and build a new one
   therm_solver.reset(new ThermalSolver(1, pmesh));

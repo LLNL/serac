@@ -72,7 +72,7 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
    \param[out] ess_tdof_list The list of true dofs that should be
    part of the essential boundary conditions
 */
-void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_tdof_list);
+void makeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_tdof_list);
 
 /**
    \brief MakeEssList takes in a FESpace, a vector coefficient, and produces a list
@@ -85,7 +85,7 @@ void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient 
    \param[out] ess_tdof_list The list of vector dofs that should be
    part of the essential boundary conditions
 */
-void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list);
+void makeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list);
 
 /**
    \brief This method creates an array of size(local_elems), and assigns
@@ -103,7 +103,7 @@ void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, 
    attribute 2, otherwise attribute 1.
 
 */
-void MakeAttributeList(
+void makeAttributeList(
     mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
     std::function<int(double)> = [](double v) { return v > 0. ? 2 : 1; });
 
@@ -125,7 +125,7 @@ void MakeAttributeList(
    attribute 2.
 
 */
-void MakeBdrAttributeList(
+void makeBdrAttributeList(
     mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
     std::function<int(double)> = [](double v) { return v == 1. ? 2 : 1; });
 

@@ -17,7 +17,7 @@ BaseSolver::BaseSolver(MPI_Comm comm) : comm_(comm), output_type_(serac::OutputT
 {
   MPI_Comm_rank(comm_, &mpi_rank_);
   MPI_Comm_size(comm_, &mpi_size_);
-  SetTimestepper(serac::TimestepMethod::ForwardEuler);
+  setTimestepper(serac::TimestepMethod::ForwardEuler);
   order_ = 1;
 }
 
@@ -33,7 +33,7 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
   gf_initialized_.assign(n, false);
 }
 
-void BaseSolver::SetEssentialBCs(const std::set<int> &                    ess_bdr,
+void BaseSolver::setEssentialBCs(const std::set<int> &                    ess_bdr,
                                  std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
                                  mfem::ParFiniteElementSpace &fes, int component)
 {
@@ -62,7 +62,7 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &                    ess_bd
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::SetTrueDofs(const mfem::Array<int> &                 true_dofs,
+void BaseSolver::setTrueDofs(const mfem::Array<int> &                 true_dofs,
                              std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
@@ -76,7 +76,7 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &                 true_dofs,
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
+void BaseSolver::setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
                                int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
@@ -95,7 +95,7 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfe
   nat_bdr_.push_back(bc);
 }
 
-void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
+void BaseSolver::setEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
                                  mfem::ParFiniteElementSpace &fes, int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
@@ -123,7 +123,7 @@ void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<m
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+void BaseSolver::setTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -136,7 +136,7 @@ void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
+void BaseSolver::setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
                                int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
@@ -155,7 +155,7 @@ void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfe
   nat_bdr_.push_back(bc);
 }
 
-void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
+void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
 {
   SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 
@@ -164,7 +164,7 @@ void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::Coefficient> >
   }
 }
 
-void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef)
+void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef)
 {
   SLIC_ASSERT_MSG(state_vec_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 
@@ -173,15 +173,15 @@ void BaseSolver::SetState(const std::vector<std::shared_ptr<mfem::VectorCoeffici
   }
 }
 
-void BaseSolver::SetState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state)
+void BaseSolver::setState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state)
 {
   SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
   state_ = state;
 }
 
-std::vector<std::shared_ptr<serac::FiniteElementState> > BaseSolver::GetState() const { return state_; }
+std::vector<std::shared_ptr<serac::FiniteElementState> > BaseSolver::getState() const { return state_; }
 
-void BaseSolver::SetTimestepper(const serac::TimestepMethod timestepper)
+void BaseSolver::setTimestepper(const serac::TimestepMethod timestepper)
 {
   timestepper_ = timestepper;
 
@@ -220,17 +220,17 @@ void BaseSolver::SetTimestepper(const serac::TimestepMethod timestepper)
       break;
     default:
       SLIC_ERROR_ROOT(mpi_rank_, "Timestep method not recognized!");
-      serac::ExitGracefully(true);
+      serac::exitGracefully(true);
   }
 }
 
-void BaseSolver::SetTime(const double time) { time_ = time; }
+void BaseSolver::setTime(const double time) { time_ = time; }
 
-double BaseSolver::GetTime() const { return time_; }
+double BaseSolver::getTime() const { return time_; }
 
-int BaseSolver::GetCycle() const { return cycle_; }
+int BaseSolver::getCycle() const { return cycle_; }
 
-void BaseSolver::InitializeOutput(const serac::OutputType output_type, std::string root_name)
+void BaseSolver::initializeOutput(const serac::OutputType output_type, std::string root_name)
 {
   root_name_ = root_name;
 
@@ -251,11 +251,11 @@ void BaseSolver::InitializeOutput(const serac::OutputType output_type, std::stri
 
     default:
       SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
-      serac::ExitGracefully(true);
+      serac::exitGracefully(true);
   }
 }
 
-void BaseSolver::OutputState() const
+void BaseSolver::outputState() const
 {
   switch (output_type_) {
     case serac::OutputType::VisIt: {
@@ -282,6 +282,6 @@ void BaseSolver::OutputState() const
 
     default:
       SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
-      serac::ExitGracefully(true);
+      serac::exitGracefully(true);
   }
 }

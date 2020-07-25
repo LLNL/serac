@@ -62,19 +62,19 @@ TEST(elastic_solver, static_solve)
   params.lin_solver  = serac::LinearSolver::MINRES;
 
   elas_solver.SetLinearSolverParameters(params);
-  elas_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
+  elas_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // allocate the data structures
-  elas_solver.CompleteSetup();
+  elas_solver.completeSetup();
 
   double dt = 1.0;
-  elas_solver.AdvanceTimestep(dt);
+  elas_solver.advanceTimestep(dt);
 
   mfem::Vector zero(pmesh->Dimension());
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = elas_solver.GetState()[0]->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = elas_solver.getState()[0]->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
 

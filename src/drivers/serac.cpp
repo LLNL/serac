@@ -37,8 +37,8 @@ int main(int argc, char *argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   // Initialize SLIC logger
-  if (!serac::logger::Initialize(MPI_COMM_WORLD)) {
-    serac::ExitGracefully(true);
+  if (!serac::logger::initialize(MPI_COMM_WORLD)) {
+    serac::exitGracefully(true);
   }
 
   // mesh
@@ -113,10 +113,10 @@ int main(int argc, char *argv[])
   try {
     app.parse(argc, argv);
   } catch (const CLI::ParseError &e) {
-    serac::logger::Flush();
+    serac::logger::flush();
     auto err_msg = (e.get_name() == "CallForHelp") ? app.help() : CLI::FailureMessage::simple(&app, e);
     SLIC_ERROR_ROOT(rank, err_msg);
-    serac::ExitGracefully();
+    serac::exitGracefully();
   }
 
   auto config_msg = app.config_to_str(true, true);
@@ -127,10 +127,10 @@ int main(int argc, char *argv[])
   SLIC_INFO_ROOT(rank, msg);
   std::ifstream imesh(mesh_file);
   if (!imesh) {
-    serac::logger::Flush();
+    serac::logger::flush();
     std::string msg = fmt::format("Can not open mesh file: {0}", mesh_file);
     SLIC_ERROR_ROOT(rank, msg);
-    serac::ExitGracefully();
+    serac::exitGracefully();
   }
 
   auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  mfem::VectorFunctionCoefficient defo_coef(dim, InitialDeformation);
+  mfem::VectorFunctionCoefficient defo_coef(dim, initialDeformation);
 
   mfem::Vector velo(dim);
   velo = 0.0;
@@ -204,17 +204,17 @@ int main(int argc, char *argv[])
   solid_solver.SetSolverParameters(lin_params, nonlin_params);
 
   // Set the time step method
-  solid_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
+  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Complete the solver setup
-  solid_solver.CompleteSetup();
+  solid_solver.completeSetup();
 
   // initialize/set the time
   double t = 0.0;
 
   bool last_step = false;
 
-  solid_solver.InitializeOutput(serac::OutputType::VisIt, "serac");
+  solid_solver.initializeOutput(serac::OutputType::VisIt, "serac");
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {
@@ -229,12 +229,12 @@ int main(int argc, char *argv[])
     traction_coef->SetScale(t);
 
     // Solve the Newton system
-    solid_solver.AdvanceTimestep(dt_real);
+    solid_solver.advanceTimestep(dt_real);
 
-    solid_solver.OutputState();
+    solid_solver.outputState();
 
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
-  serac::ExitGracefully();
+  serac::exitGracefully();
 }
