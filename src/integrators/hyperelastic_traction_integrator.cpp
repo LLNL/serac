@@ -24,8 +24,9 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElemen
 
   PMatI_u_.UseExternalData(elfun.GetData(), dof, dim);
 
-  int                          intorder = 2 * el1.GetOrder() + 3;
-  const mfem::IntegrationRule& ir       = mfem::IntRules.Get(Tr.FaceGeom, intorder);
+  int intorder = 2 * el1.GetOrder() + 3;
+
+  const mfem::IntegrationRule& ir = mfem::IntRules.Get(Tr.FaceGeom, intorder);
 
   elvec = 0.0;
 

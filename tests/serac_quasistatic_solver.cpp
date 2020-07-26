@@ -20,7 +20,8 @@ TEST(nonlinear_solid_solver, qs_solve)
   // Open the mesh
   std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
   std::fstream imesh(mesh_file);
-  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
@@ -37,7 +38,8 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   // define the displacement vector
   mfem::Vector disp(dim);
-  disp           = 0.0;
+  disp = 0.0;
+
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
 
   std::set<int> trac_bdr = {2};

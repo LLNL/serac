@@ -113,7 +113,8 @@ TEST(component_bc, qs_attribute_solve)
   // Open the mesh
   std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
   std::fstream imesh(mesh_file);
-  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // refine and declare pointer to parallel mesh object

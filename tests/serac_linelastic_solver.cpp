@@ -19,7 +19,8 @@ TEST(elastic_solver, static_solve)
   // Open the mesh
   std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-quad.mesh";
   std::fstream imesh(mesh_file);
-  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
@@ -33,7 +34,8 @@ TEST(elastic_solver, static_solve)
 
   // define the displacement vector
   mfem::Vector disp(pmesh->Dimension());
-  disp           = 0.0;
+  disp = 0.0;
+
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
   elas_solver.setDisplacementBCs(disp_bdr, disp_coef);
 

@@ -46,12 +46,12 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
   // Initialize the true DOF vector
+  mfem::Array<int> true_offset(num_fields + 1);
   int              true_size = velocity_->space->TrueVSize();
-  mfem::Array<int> true_offset(3);
-  true_offset[0] = 0;
-  true_offset[1] = true_size;
-  true_offset[2] = 2 * true_size;
-  block_         = std::make_unique<mfem::BlockVector>(true_offset);
+  true_offset[0]             = 0;
+  true_offset[1]             = true_size;
+  true_offset[2]             = 2 * true_size;
+  block_                     = std::make_unique<mfem::BlockVector>(true_offset);
 
   block_->GetBlockView(1, *displacement_->true_vec);
   *displacement_->true_vec = 0.0;
