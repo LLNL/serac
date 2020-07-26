@@ -21,7 +21,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   velocity_->mesh      = pmesh;
   velocity_->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
   velocity_->space     = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), velocity_->coll.get(),
-                                                                    pmesh->Dimension(), mfem::Ordering::byVDIM);
+                                                                   pmesh->Dimension(), mfem::Ordering::byVDIM);
   velocity_->gf        = std::make_shared<mfem::ParGridFunction>(velocity_->space.get());
   *velocity_->gf       = 0.0;
   velocity_->true_vec  = std::make_shared<mfem::HypreParVector>(velocity_->space.get());
@@ -31,7 +31,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   displacement_->mesh      = pmesh;
   displacement_->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
   displacement_->space     = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), displacement_->coll.get(),
-                                                                        pmesh->Dimension(), mfem::Ordering::byVDIM);
+                                                                       pmesh->Dimension(), mfem::Ordering::byVDIM);
   displacement_->gf        = std::make_shared<mfem::ParGridFunction>(displacement_->space.get());
   *displacement_->gf       = 0.0;
   displacement_->true_vec  = std::make_shared<mfem::HypreParVector>(displacement_->space.get());
@@ -51,7 +51,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   true_offset[0] = 0;
   true_offset[1] = true_size;
   true_offset[2] = 2 * true_size;
-  block_        = std::make_unique<mfem::BlockVector>(true_offset);
+  block_         = std::make_unique<mfem::BlockVector>(true_offset);
 
   block_->GetBlockView(1, *displacement_->true_vec);
   *displacement_->true_vec = 0.0;
@@ -60,19 +60,19 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   *velocity_->true_vec = 0.0;
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int> &                    disp_bdr,
+void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, -1);
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int> &              disp_bdr,
+void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
   setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
 }
 
-void NonlinearSolidSolver::setTractionBCs(const std::set<int> &                    trac_bdr,
+void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   setNaturalBCs(trac_bdr, trac_bdr_coef, component);
@@ -85,22 +85,22 @@ void NonlinearSolidSolver::setHyperelasticMaterialParameters(double mu, double K
 
 void NonlinearSolidSolver::setViscosity(std::shared_ptr<mfem::Coefficient> visc) { viscosity_ = visc; }
 
-void NonlinearSolidSolver::setDisplacement(mfem::VectorCoefficient &disp_state)
+void NonlinearSolidSolver::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_->gf->ProjectCoefficient(disp_state);
   gf_initialized_[1] = true;
 }
 
-void NonlinearSolidSolver::setVelocity(mfem::VectorCoefficient &velo_state)
+void NonlinearSolidSolver::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_->gf->ProjectCoefficient(velo_state);
   gf_initialized_[0] = true;
 }
 
-void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParameters &   lin_params,
-                                               const serac::NonlinearSolverParameters &nonlin_params)
+void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParameters&    lin_params,
+                                               const serac::NonlinearSolverParameters& nonlin_params)
 {
   lin_params_    = lin_params;
   nonlin_params_ = nonlin_params;
@@ -119,7 +119,7 @@ void NonlinearSolidSolver::completeSetup()
   }
 
   // Add the traction integrator
-  for (auto &nat_bc_data : nat_bdr_) {
+  for (auto& nat_bc_data : nat_bdr_) {
     H_form_->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->markers);
   }
 
@@ -130,7 +130,7 @@ void NonlinearSolidSolver::completeSetup()
   displacement_->space->BuildDofToArrays();
 
   // Project the essential boundary coefficients
-  for (auto &bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     // Generate the scalar dof list from the vector dof list
     mfem::Array<int> dof_list(bc->true_dofs.Size());
     for (int i = 0; i < bc->true_dofs.Size(); ++i) {
@@ -218,8 +218,8 @@ void NonlinearSolidSolver::completeSetup()
     newton_solver_.SetOperator(*nonlinear_oper_);
   } else {
     newton_solver_.iterative_mode = false;
-    timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(H_form_, S_form_, M_form_, ess_bdr_,
-                                                                     newton_solver_, lin_params_);
+    timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(H_form_, S_form_, M_form_, ess_bdr_, newton_solver_,
+                                                                    lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }
 }
@@ -232,7 +232,7 @@ void NonlinearSolidSolver::QuasiStaticSolve()
 }
 
 // Advance the timestep
-void NonlinearSolidSolver::advanceTimestep(double &dt)
+void NonlinearSolidSolver::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   velocity_->gf->GetTrueDofs(*velocity_->true_vec);

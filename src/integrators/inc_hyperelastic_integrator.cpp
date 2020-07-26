@@ -6,8 +6,8 @@
 
 #include "inc_hyperelastic_integrator.hpp"
 
-double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement &  el,
-                                                           mfem::ElementTransformation &Ttr, const mfem::Vector &elfun)
+double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
+                                                           mfem::ElementTransformation& Ttr, const mfem::Vector& elfun)
 {
   int    dof = el.GetDof(), dim = el.GetDim();
   double energy;
@@ -18,7 +18,7 @@ double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEle
   Jpt_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
 
-  const mfem::IntegrationRule *ir = IntRule;
+  const mfem::IntegrationRule* ir = IntRule;
   if (!ir) {
     ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
@@ -26,7 +26,7 @@ double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEle
   energy = 0.0;
   model_->SetTransformation(Ttr);
   for (int i = 0; i < ir->GetNPoints(); i++) {
-    const mfem::IntegrationPoint &ip = ir->IntPoint(i);
+    const mfem::IntegrationPoint& ip = ir->IntPoint(i);
     Ttr.SetIntPoint(&ip);
     CalcInverse(Ttr.Jacobian(), Jrt_);
 
@@ -44,9 +44,9 @@ double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEle
   return energy;
 }
 
-void IncrementalHyperelasticIntegrator::AssembleElementVector(const mfem::FiniteElement &  el,
-                                                              mfem::ElementTransformation &Ttr,
-                                                              const mfem::Vector &elfun, mfem::Vector &elvect)
+void IncrementalHyperelasticIntegrator::AssembleElementVector(const mfem::FiniteElement&   el,
+                                                              mfem::ElementTransformation& Ttr,
+                                                              const mfem::Vector& elfun, mfem::Vector& elvect)
 {
   int dof = el.GetDof(), dim = el.GetDim();
 
@@ -59,7 +59,7 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(const mfem::Finite
   elvect.SetSize(dof * dim);
   PMatO_.UseExternalData(elvect.GetData(), dof, dim);
 
-  const mfem::IntegrationRule *ir = IntRule;
+  const mfem::IntegrationRule* ir = IntRule;
   if (!ir) {
     ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
@@ -67,7 +67,7 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(const mfem::Finite
   elvect = 0.0;
   model_->SetTransformation(Ttr);
   for (int i = 0; i < ir->GetNPoints(); i++) {
-    const mfem::IntegrationPoint &ip = ir->IntPoint(i);
+    const mfem::IntegrationPoint& ip = ir->IntPoint(i);
     Ttr.SetIntPoint(&ip);
     CalcInverse(Ttr.Jacobian(), Jrt_);
 
@@ -86,9 +86,9 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(const mfem::Finite
   }
 }
 
-void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteElement &  el,
-                                                            mfem::ElementTransformation &Ttr, const mfem::Vector &elfun,
-                                                            mfem::DenseMatrix &elmat)
+void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
+                                                            mfem::ElementTransformation& Ttr, const mfem::Vector& elfun,
+                                                            mfem::DenseMatrix& elmat)
 {
   int dof = el.GetDof(), dim = el.GetDim();
 
@@ -99,7 +99,7 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
   elmat.SetSize(dof * dim);
 
-  const mfem::IntegrationRule *ir = IntRule;
+  const mfem::IntegrationRule* ir = IntRule;
   if (!ir) {
     ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
@@ -107,7 +107,7 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
   elmat = 0.0;
   model_->SetTransformation(Ttr);
   for (int i = 0; i < ir->GetNPoints(); i++) {
-    const mfem::IntegrationPoint &ip = ir->IntPoint(i);
+    const mfem::IntegrationPoint& ip = ir->IntPoint(i);
     Ttr.SetIntPoint(&ip);
     CalcInverse(Ttr.Jacobian(), Jrt_);
 

@@ -26,10 +26,10 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
   NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
 
   /// Required to use the native newton solver
-  mfem::Operator &GetGradient(const mfem::Vector &x) const;
+  mfem::Operator& GetGradient(const mfem::Vector& x) const;
 
   /// Required for residual calculations
-  void Mult(const mfem::Vector &k, mfem::Vector &y) const;
+  void Mult(const mfem::Vector& k, mfem::Vector& y) const;
 
   /// The destructor
   virtual ~NonlinearSolidQuasiStaticOperator();
@@ -63,23 +63,23 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
   mutable mfem::Vector w_, z_;
 
   /// Essential degrees of freedom
-  const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr_;
+  const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr_;
 
  public:
   /// The constructor
   NonlinearSolidReducedSystemOperator(std::shared_ptr<mfem::ParNonlinearForm>                        H_form,
                                       std::shared_ptr<mfem::ParBilinearForm>                         S_form,
                                       std::shared_ptr<mfem::ParBilinearForm>                         M_form,
-                                      const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr);
+                                      const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
-  void SetParameters(double dt, const mfem::Vector *v, const mfem::Vector *x);
+  void SetParameters(double dt, const mfem::Vector* v, const mfem::Vector* x);
 
   /// Compute y = H(x + dt (v + dt k)) + M k + S (v + dt k).
-  virtual void Mult(const mfem::Vector &k, mfem::Vector &y) const;
+  virtual void Mult(const mfem::Vector& k, mfem::Vector& y) const;
 
   /// Compute J = M + dt S + dt^2 grad_H(x + dt (v + dt k)).
-  virtual mfem::Operator &GetGradient(const mfem::Vector &k) const;
+  virtual mfem::Operator& GetGradient(const mfem::Vector& k) const;
 
   /// The destructor
   virtual ~NonlinearSolidReducedSystemOperator();
@@ -110,10 +110,10 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   std::unique_ptr<NonlinearSolidReducedSystemOperator> reduced_oper_;
 
   /// The Newton solver for the nonlinear iterations
-  mfem::NewtonSolver &newton_solver_;
+  mfem::NewtonSolver& newton_solver_;
 
   /// The fixed boudnary degrees of freedom
-  const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr_;
+  const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr_;
 
   /// The linear solver parameters for the mass matrix
   serac::LinearSolverParameters lin_params_;
@@ -126,15 +126,15 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   NonlinearSolidDynamicOperator(std::shared_ptr<mfem::ParNonlinearForm>                        H_form,
                                 std::shared_ptr<mfem::ParBilinearForm>                         S_form,
                                 std::shared_ptr<mfem::ParBilinearForm>                         M_form,
-                                const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr,
-                                mfem::NewtonSolver &newton_solver, const serac::LinearSolverParameters &lin_params);
+                                const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr,
+                                mfem::NewtonSolver& newton_solver, const serac::LinearSolverParameters& lin_params);
 
   /// Required to use the native newton solver
-  virtual void Mult(const mfem::Vector &vx, mfem::Vector &dvx_dt) const;
+  virtual void Mult(const mfem::Vector& vx, mfem::Vector& dvx_dt) const;
 
   /// Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
   /// This is the only requirement for high-order SDIRK implicit integration.
-  virtual void ImplicitSolve(const double dt, const mfem::Vector &x, mfem::Vector &k);
+  virtual void ImplicitSolve(const double dt, const mfem::Vector& x, mfem::Vector& k);
 
   /// The destructor
   virtual ~NonlinearSolidDynamicOperator();

@@ -26,16 +26,16 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
   order_ = p;
   state_.resize(n);
 
-  for (auto &state : state_) {
+  for (auto& state : state_) {
     state = std::make_shared<serac::FiniteElementState>();
   }
 
   gf_initialized_.assign(n, false);
 }
 
-void BaseSolver::setEssentialBCs(const std::set<int> &                    ess_bdr,
+void BaseSolver::setEssentialBCs(const std::set<int>&                     ess_bdr,
                                  std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
-                                 mfem::ParFiniteElementSpace &fes, int component)
+                                 mfem::ParFiniteElementSpace& fes, int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -45,7 +45,7 @@ void BaseSolver::setEssentialBCs(const std::set<int> &                    ess_bd
   for (int attr : ess_bdr) {
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr - 1] = 1;
-    for (auto &existing_bc : ess_bdr_) {
+    for (auto& existing_bc : ess_bdr_) {
       if (existing_bc->markers[attr - 1] == 1) {
         SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
         bc->markers[attr - 1] = 0;
@@ -62,7 +62,7 @@ void BaseSolver::setEssentialBCs(const std::set<int> &                    ess_bd
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int> &                 true_dofs,
+void BaseSolver::setTrueDofs(const mfem::Array<int>&                  true_dofs,
                              std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
@@ -76,7 +76,7 @@ void BaseSolver::setTrueDofs(const mfem::Array<int> &                 true_dofs,
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
+void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
                                int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
@@ -95,8 +95,8 @@ void BaseSolver::setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfe
   nat_bdr_.push_back(bc);
 }
 
-void BaseSolver::setEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                                 mfem::ParFiniteElementSpace &fes, int component)
+void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
+                                 mfem::ParFiniteElementSpace& fes, int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -106,7 +106,7 @@ void BaseSolver::setEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<m
   for (int attr : ess_bdr) {
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc->markers[attr - 1] = 1;
-    for (auto &existing_bc : ess_bdr_) {
+    for (auto& existing_bc : ess_bdr_) {
       if (existing_bc->markers[attr - 1] == 1) {
         SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
         bc->markers[attr - 1] = 0;
@@ -123,7 +123,7 @@ void BaseSolver::setEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<m
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -136,7 +136,7 @@ void BaseSolver::setTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
+void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
                                int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
@@ -155,7 +155,7 @@ void BaseSolver::setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfe
   nat_bdr_.push_back(bc);
 }
 
-void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
+void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::Coefficient> >& state_coef)
 {
   SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 
@@ -164,7 +164,7 @@ void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::Coefficient> >
   }
 }
 
-void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> > &state_vec_coef)
+void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::VectorCoefficient> >& state_vec_coef)
 {
   SLIC_ASSERT_MSG(state_vec_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 
@@ -239,7 +239,7 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, std::stri
   switch (output_type_) {
     case serac::OutputType::VisIt: {
       visit_dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, state_.front()->mesh.get());
-      for (const auto &state : state_) {
+      for (const auto& state : state_) {
         visit_dc_->RegisterField(state->name, state->gf.get());
       }
       break;
@@ -271,7 +271,7 @@ void BaseSolver::outputState() const
       omesh.precision(8);
       state_.front()->mesh->Print(omesh);
 
-      for (auto &state : state_) {
+      for (auto& state : state_) {
         std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state->name, cycle_, mpi_rank_);
         std::ofstream osol(sol_name);
         osol.precision(8);

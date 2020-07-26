@@ -40,27 +40,27 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
   displacement_->name = "displacement";
 }
 
-void ElasticitySolver::setDisplacementBCs(std::set<int> &                          disp_bdr,
+void ElasticitySolver::setDisplacementBCs(std::set<int>&                           disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
   setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
 }
 
-void ElasticitySolver::setTractionBCs(std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+void ElasticitySolver::setTractionBCs(std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                                       int component)
 {
   setNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
 
-void ElasticitySolver::setLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu)
+void ElasticitySolver::setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu)
 {
   lambda_ = &lambda;
   mu_     = &mu;
 }
 
-void ElasticitySolver::setBodyForce(mfem::VectorCoefficient &force) { body_force_ = &force; }
+void ElasticitySolver::setBodyForce(mfem::VectorCoefficient& force) { body_force_ = &force; }
 
-void ElasticitySolver::setLinearSolverParameters(const serac::LinearSolverParameters &params) { lin_params_ = params; }
+void ElasticitySolver::setLinearSolverParameters(const serac::LinearSolverParameters& params) { lin_params_ = params; }
 
 void ElasticitySolver::completeSetup()
 {
@@ -81,7 +81,7 @@ void ElasticitySolver::completeSetup()
 
   // Add the traction integrator
   if (nat_bdr_.size() > 0) {
-    for (auto &nat_bc : nat_bdr_) {
+    for (auto& nat_bc : nat_bdr_) {
       l_form_->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(*nat_bc->vec_coef), nat_bc->markers);
     }
     l_form_->Assemble();
@@ -95,7 +95,7 @@ void ElasticitySolver::completeSetup()
   K_mat_ = K_form_->ParallelAssemble();
 
   // Eliminate the essential DOFs
-  for (auto &bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     K_e_mat_ = K_mat_->EliminateRowsCols(bc->true_dofs);
   }
 
@@ -110,12 +110,12 @@ void ElasticitySolver::completeSetup()
     SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
 
-    mfem::HypreBoomerAMG *prec_amg = new mfem::HypreBoomerAMG();
+    mfem::HypreBoomerAMG* prec_amg = new mfem::HypreBoomerAMG();
     prec_amg->SetPrintLevel(lin_params_.print_level);
     prec_amg->SetElasticityOptions(displacement_->space.get());
     K_prec_ = prec_amg;
 
-    mfem::GMRESSolver *K_gmres = new mfem::GMRESSolver(displacement_->space->GetComm());
+    mfem::GMRESSolver* K_gmres = new mfem::GMRESSolver(displacement_->space->GetComm());
     K_gmres->SetRelTol(lin_params_.rel_tol);
     K_gmres->SetAbsTol(lin_params_.abs_tol);
     K_gmres->SetMaxIter(lin_params_.max_iter);
@@ -126,12 +126,12 @@ void ElasticitySolver::completeSetup()
   }
   // If not AMG, just MINRES with Jacobi smoothing
   else {
-    mfem::HypreSmoother *K_hypreSmoother = new mfem::HypreSmoother;
+    mfem::HypreSmoother* K_hypreSmoother = new mfem::HypreSmoother;
     K_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     K_hypreSmoother->SetPositiveDiagonal(true);
     K_prec_ = K_hypreSmoother;
 
-    mfem::MINRESSolver *K_minres = new mfem::MINRESSolver(displacement_->space->GetComm());
+    mfem::MINRESSolver* K_minres = new mfem::MINRESSolver(displacement_->space->GetComm());
     K_minres->SetRelTol(lin_params_.rel_tol);
     K_minres->SetAbsTol(lin_params_.abs_tol);
     K_minres->SetMaxIter(lin_params_.max_iter);
@@ -141,7 +141,7 @@ void ElasticitySolver::completeSetup()
   }
 }
 
-void ElasticitySolver::advanceTimestep(double &)
+void ElasticitySolver::advanceTimestep(double&)
 {
   // Initialize the true vector
   displacement_->gf->GetTrueDofs(*displacement_->true_vec);
@@ -163,7 +163,7 @@ void ElasticitySolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
-  for (auto &bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     bc->vec_coef->SetTime(time_);
     displacement_->gf->ProjectBdrCoefficient(*bc->vec_coef, bc->markers);
     displacement_->gf->GetTrueDofs(*displacement_->true_vec);

@@ -34,13 +34,13 @@ class ThermalStructuralSolver : public BaseSolver {
   ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set essential temperature boundary conditions (strongly enforced)
-  void SetTemperatureBCs(const std::set<int> &temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+  void SetTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
   {
     therm_solver_.setTemperatureBCs(temp_bdr, temp_bdr_coef);
   };
 
   /// Set flux boundary conditions (weakly enforced)
-  void SetFluxBCs(const std::set<int> &flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
+  void SetFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
   {
     therm_solver_.setFluxBCs(flux_bdr, flux_bdr_coef);
   };
@@ -49,32 +49,32 @@ class ThermalStructuralSolver : public BaseSolver {
   void SetConductivity(std::shared_ptr<mfem::Coefficient> kappa) { therm_solver_.setConductivity(kappa); };
 
   /// Set the temperature from a coefficient
-  void SetTemperature(mfem::Coefficient &temp) { therm_solver_.setTemperature(temp); };
+  void SetTemperature(mfem::Coefficient& temp) { therm_solver_.setTemperature(temp); };
 
   /// Set the body thermal source from a coefficient
   void SetSource(std::shared_ptr<mfem::Coefficient> source) { therm_solver_.setSource(source); };
 
   /// Set the linear solver parameters for both the M and K operators
-  void SetThermalSolverParameters(const serac::LinearSolverParameters &params)
+  void SetThermalSolverParameters(const serac::LinearSolverParameters& params)
   {
     therm_solver_.setLinearSolverParameters(params);
   };
 
   /// Set the displacement essential boundary conditions
-  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+  void SetDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
   {
     solid_solver_.setDisplacementBCs(disp_bdr, disp_bdr_coef);
   };
 
   /// Set the displacement essential boundary conditions on a single component
-  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+  void SetDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                           int component)
   {
     solid_solver_.setDisplacementBCs(disp_bdr, disp_bdr_coef, component);
   };
 
   /// Set the traction boundary conditions
-  void SetTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void SetTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1)
   {
     solid_solver_.setTractionBCs(trac_bdr, trac_bdr_coef, component);
@@ -90,14 +90,14 @@ class ThermalStructuralSolver : public BaseSolver {
   };
 
   /// Set the initial displacement state (guess)
-  void SetDisplacement(mfem::VectorCoefficient &disp_state) { solid_solver_.setDisplacement(disp_state); };
+  void SetDisplacement(mfem::VectorCoefficient& disp_state) { solid_solver_.setDisplacement(disp_state); };
 
   /// Set the initial velocity state (guess)
-  void SetVelocity(mfem::VectorCoefficient &velo_state) { solid_solver_.setVelocity(velo_state); };
+  void SetVelocity(mfem::VectorCoefficient& velo_state) { solid_solver_.setVelocity(velo_state); };
 
   /// Set the solid linear and nonlinear solver params
-  void SetSolidSolverParameters(const serac::LinearSolverParameters &   lin_params,
-                                const serac::NonlinearSolverParameters &nonlin_params)
+  void SetSolidSolverParameters(const serac::LinearSolverParameters&    lin_params,
+                                const serac::NonlinearSolverParameters& nonlin_params)
   {
     solid_solver_.setSolverParameters(lin_params, nonlin_params);
   };
@@ -123,7 +123,7 @@ class ThermalStructuralSolver : public BaseSolver {
   std::shared_ptr<serac::FiniteElementState> GetVelocity() { return velocity_; };
 
   /// Advance the timestep
-  void advanceTimestep(double &dt);
+  void advanceTimestep(double& dt);
 
   /// Destructor
   virtual ~ThermalStructuralSolver() = default;

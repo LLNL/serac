@@ -28,7 +28,7 @@
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   // Initialize MPI.
   int num_procs, rank;
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
   // Parse the arguments and check if they are good
   try {
     app.parse(argc, argv);
-  } catch (const CLI::ParseError &e) {
+  } catch (const CLI::ParseError& e) {
     serac::logger::flush();
     auto err_msg = (e.get_name() == "CallForHelp") ? app.help() : CLI::FailureMessage::simple(&app, e);
     SLIC_ERROR_ROOT(rank, err_msg);

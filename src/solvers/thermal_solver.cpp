@@ -27,7 +27,7 @@ ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
   temperature_->name = "temperature";
 }
 
-void ThermalSolver::setTemperature(mfem::Coefficient &temp)
+void ThermalSolver::setTemperature(mfem::Coefficient& temp)
 {
   // Project the coefficient onto the grid function
   temp.SetTime(time_);
@@ -35,12 +35,12 @@ void ThermalSolver::setTemperature(mfem::Coefficient &temp)
   gf_initialized_[0] = true;
 }
 
-void ThermalSolver::setTemperatureBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+void ThermalSolver::setTemperatureBCs(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   setEssentialBCs(ess_bdr, ess_bdr_coef, *temperature_->space);
 }
 
-void ThermalSolver::setFluxBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
+void ThermalSolver::setFluxBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   setNaturalBCs(nat_bdr, nat_bdr_coef);
@@ -58,7 +58,7 @@ void ThermalSolver::setSource(std::shared_ptr<mfem::Coefficient> source)
   source_ = source;
 }
 
-void ThermalSolver::setLinearSolverParameters(const serac::LinearSolverParameters &params)
+void ThermalSolver::setLinearSolverParameters(const serac::LinearSolverParameters& params)
 {
   // Save the solver params object
   // TODO: separate the M and K solver params
@@ -89,7 +89,7 @@ void ThermalSolver::completeSetup()
   K_mat_.reset(K_form_->ParallelAssemble());
 
   // Eliminate the essential DOFs from the stiffness matrix
-  for (auto &bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     bc->eliminated_matrix_entries.reset(K_mat_->EliminateRowsCols(bc->true_dofs));
   }
 
@@ -122,7 +122,7 @@ void ThermalSolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
-  for (auto &bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     bc->scalar_coef->SetTime(time_);
     temperature_->gf->ProjectBdrCoefficient(*bc->scalar_coef, bc->markers);
     temperature_->gf->GetTrueDofs(*temperature_->true_vec);
@@ -147,7 +147,7 @@ void ThermalSolver::QuasiStaticSolve()
   K_solver_->Mult(*bc_rhs_, *temperature_->true_vec);
 }
 
-void ThermalSolver::advanceTimestep(double &dt)
+void ThermalSolver::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   temperature_->gf->GetTrueDofs(*temperature_->true_vec);

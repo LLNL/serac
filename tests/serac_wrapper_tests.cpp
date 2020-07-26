@@ -45,7 +45,7 @@ class WrapperTests : public ::testing::Test {
   std::shared_ptr<ParFiniteElementSpace> pfes_l2_;
 };
 
-void SolveLinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int> &ess_tdof_list, ParGridFunction &temp)
+void SolveLinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int>& ess_tdof_list, ParGridFunction& temp)
 {
   ConstantCoefficient one(1.);
 
@@ -76,7 +76,7 @@ void SolveLinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int> &ess_t
 }
 
 // Solve the same linear system using a newton solver
-void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int> &ess_tdof_list, ParGridFunction &temp)
+void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int>& ess_tdof_list, ParGridFunction& temp)
 {
   ConstantCoefficient one(1.);
 
@@ -106,7 +106,7 @@ void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int> &es
 }
 
 // Solve the same linear system using a newton solver but by using the MixedIntegrator calls
-void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int> &ess_tdof_list, ParGridFunction &temp)
+void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int>& ess_tdof_list, ParGridFunction& temp)
 {
   ConstantCoefficient one(1.);
 
@@ -139,7 +139,7 @@ void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int
 TEST_F(WrapperTests, nonlinear_linear_thermal)
 {
   // Create a coefficient that indicates the x == 0 border of the cube
-  StdFunctionCoefficient x_zero([](Vector &x) {
+  StdFunctionCoefficient x_zero([](Vector& x) {
     if (x[0] < 1.e-12) {
       return 1.;
     }
@@ -147,7 +147,7 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   });
 
   // Create a coefficient that indicates the x == 1 border of the cube
-  StdFunctionCoefficient x_one([](Vector &x) {
+  StdFunctionCoefficient x_one([](Vector& x) {
     if ((1. - x[0]) < 1.e-12) {
       return 1.;
     }
@@ -217,7 +217,7 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
 #include "axom/slic/core/UnitTestLogger.hpp"
 using axom::slic::UnitTestLogger;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   int result = 0;
 

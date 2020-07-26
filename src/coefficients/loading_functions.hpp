@@ -10,7 +10,7 @@
 #include "mfem.hpp"
 
 // set kinematic functions and boundary condition functions
-void referenceConfiguration(const mfem::Vector &x, mfem::Vector &y);
-void initialDeformation(const mfem::Vector &x, mfem::Vector &y);
+void referenceConfiguration(const mfem::Vector& x, mfem::Vector& y);
+void initialDeformation(const mfem::Vector& x, mfem::Vector& y);
 
 #endif

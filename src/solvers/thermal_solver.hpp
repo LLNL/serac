@@ -74,19 +74,19 @@ class ThermalSolver : public BaseSolver {
   ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set essential temperature boundary conditions (strongly enforced)
-  void setTemperatureBCs(const std::set<int> &temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);
+  void setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);
 
   /// Set flux boundary conditions (weakly enforced)
-  void setFluxBCs(const std::set<int> &flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef);
+  void setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef);
 
   /// Advance the timestep using the chosen integration scheme
-  void advanceTimestep(double &dt);
+  void advanceTimestep(double& dt);
 
   /// Set the thermal conductivity coefficient
   void setConductivity(std::shared_ptr<mfem::Coefficient> kappa);
 
   /// Set the temperature from a coefficient
-  void setTemperature(mfem::Coefficient &temp);
+  void setTemperature(mfem::Coefficient& temp);
 
   /// Set the body thermal source from a coefficient
   void setSource(std::shared_ptr<mfem::Coefficient> source);
@@ -100,7 +100,7 @@ class ThermalSolver : public BaseSolver {
   void completeSetup();
 
   /// Set the linear solver parameters for both the M and K operators
-  void setLinearSolverParameters(const serac::LinearSolverParameters &params);
+  void setLinearSolverParameters(const serac::LinearSolverParameters& params);
 
   /// Destructor
   virtual ~ThermalSolver() = default;

@@ -69,14 +69,14 @@ class NonlinearSolidSolver : public BaseSolver {
   NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set the displacement essential boundary conditions
-  void setDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
 
   /// Set the displacement essential boundary conditions on a single component
-  void setDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                           int component);
 
   /// Set the traction boundary conditions
-  void setTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1);
 
   /// Set the viscosity coefficient
@@ -86,14 +86,14 @@ class NonlinearSolidSolver : public BaseSolver {
   void setHyperelasticMaterialParameters(double mu, double K);
 
   /// Set the initial displacement state (guess)
-  void setDisplacement(mfem::VectorCoefficient &disp_state);
+  void setDisplacement(mfem::VectorCoefficient& disp_state);
 
   /// Set the initial velocity state (guess)
-  void setVelocity(mfem::VectorCoefficient &velo_state);
+  void setVelocity(mfem::VectorCoefficient& velo_state);
 
   /// Set the linear and nonlinear solver params
-  void setSolverParameters(const serac::LinearSolverParameters &   lin_params,
-                           const serac::NonlinearSolverParameters &nonlin_params);
+  void setSolverParameters(const serac::LinearSolverParameters&    lin_params,
+                           const serac::NonlinearSolverParameters& nonlin_params);
 
   /// Get the displacement state
   std::shared_ptr<serac::FiniteElementState> getDisplacement() { return displacement_; };
@@ -105,7 +105,7 @@ class NonlinearSolidSolver : public BaseSolver {
   void completeSetup();
 
   /// Advance the timestep
-  void advanceTimestep(double &dt);
+  void advanceTimestep(double& dt);
 
   /// Destructor
   virtual ~NonlinearSolidSolver();

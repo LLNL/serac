@@ -65,8 +65,8 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
  public:
   /// Constructor. Height is the true degree of freedom size
   DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace>                   fespace,
-                            const serac::LinearSolverParameters &                          params,
-                            const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr);
+                            const serac::LinearSolverParameters&                           params,
+                            const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr);
 
   /// Set the mass matrix
   void setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);
@@ -76,11 +76,11 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
 
   /** Calculate du_dt = M^-1 (-Ku + f).
    *  This is all that is needed for explicit methods */
-  virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
+  virtual void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const;
 
   /** Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
    *  for du_dt. This is needed for implicit methods */
-  virtual void ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &du_dt);
+  virtual void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
 
   /// Destructor
   virtual ~DynamicConductionOperator();

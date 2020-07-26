@@ -15,7 +15,7 @@
 */
 class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
  private:
-  mfem::HyperelasticModel *model_;
+  mfem::HyperelasticModel* model_;
 
   //   Jrt: the Jacobian of the target-to-reference-element transformation.
   //   Jpr: the Jacobian of the reference-to-physical-element transformation.
@@ -31,18 +31,18 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
 
  public:
   /** @param[in] m  HyperelasticModel that will be integrated. */
-  IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model_(m) {}
+  IncrementalHyperelasticIntegrator(mfem::HyperelasticModel* m) : model_(m) {}
 
   /** @brief Computes the integral of W(Jacobian(Trt)) over a target zone
       @param[in] el     Type of FiniteElement.
       @param[in] Ttr    Represents ref->target coordinates transformation.
       @param[in] elfun  Physical coordinates of the zone. */
-  virtual double GetElementEnergy(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-                                  const mfem::Vector &elfun);
+  virtual double GetElementEnergy(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
+                                  const mfem::Vector& elfun);
 
-  virtual void AssembleElementVector(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-                                     const mfem::Vector &elfun, mfem::Vector &elvect);
+  virtual void AssembleElementVector(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
+                                     const mfem::Vector& elfun, mfem::Vector& elvect);
 
-  virtual void AssembleElementGrad(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-                                   const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
+  virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
+                                   const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
 };

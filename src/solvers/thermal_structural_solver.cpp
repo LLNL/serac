@@ -41,7 +41,7 @@ void ThermalStructuralSolver::setTimestepper(serac::TimestepMethod timestepper)
 }
 
 // Advance the timestep
-void ThermalStructuralSolver::advanceTimestep(double &dt)
+void ThermalStructuralSolver::advanceTimestep(double& dt)
 {
   if (coupling_ == serac::CouplingScheme::OperatorSplit) {
     double initial_dt = dt;

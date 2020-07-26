@@ -9,8 +9,8 @@
 #include "common/logger.hpp"
 
 DynamicConductionOperator::DynamicConductionOperator(
-    std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const serac::LinearSolverParameters &params,
-    const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr)
+    std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const serac::LinearSolverParameters& params,
+    const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr)
     : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0),
       fespace_(fespace),
       ess_bdr_(ess_bdr),
@@ -49,14 +49,14 @@ DynamicConductionOperator::DynamicConductionOperator(
 void DynamicConductionOperator::setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat,
                                             std::shared_ptr<mfem::HypreParMatrix> K_mat)
 {
-  M_mat_ = M_mat;
+  M_mat_  = M_mat;
   m_K_mat = K_mat;
 }
 
 void DynamicConductionOperator::setLoadVector(std::shared_ptr<mfem::Vector> rhs) { rhs_ = rhs; }
 
 // TODO: allow for changing thermal essential boundary conditions
-void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt) const
+void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt) const
 {
   SLIC_ASSERT_MSG(M_mat_ != nullptr, "Mass matrix not set in ConductionSolver::Mult!");
   SLIC_ASSERT_MSG(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::Mult!");
@@ -65,7 +65,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt)
   M_solver_->SetOperator(*M_mat_);
 
   *bc_rhs_ = *rhs_;
-  for (auto &bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, y_, *bc_rhs_);
   }
 
@@ -78,7 +78,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt)
   M_solver_->Mult(z_, du_dt);
 }
 
-void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vector &u, mfem::Vector &du_dt)
+void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt)
 {
   SLIC_ASSERT_MSG(M_mat_ != nullptr, "Mass matrix not set in ConductionSolver::ImplicitSolve!");
   SLIC_ASSERT_MSG(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::ImplicitSolve!");
@@ -93,7 +93,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     T_mat_.reset(mfem::Add(1.0, *M_mat_, dt, *m_K_mat));
 
     // Eliminate the essential DOFs from the T matrix
-    for (auto &bc : ess_bdr_) {
+    for (auto& bc : ess_bdr_) {
       T_e_mat_.reset(T_mat_->EliminateRowsCols(bc->true_dofs));
     }
     T_solver_->SetOperator(*T_mat_);
@@ -103,7 +103,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   *bc_rhs_ = *rhs_;
   x_       = 0.0;
 
-  for (auto &bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     if (bc->scalar_coef != nullptr) {
       bc->scalar_coef->SetTime(t);
       state_gf_->SetFromTrueDofs(y_);

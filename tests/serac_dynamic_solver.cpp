@@ -12,9 +12,9 @@
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
-void initialDeformation(const mfem::Vector &x, mfem::Vector &y);
+void initialDeformation(const mfem::Vector& x, mfem::Vector& y);
 
-void initialVelocity(const mfem::Vector &x, mfem::Vector &v);
+void initialVelocity(const mfem::Vector& x, mfem::Vector& v);
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -105,14 +105,14 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void initialDeformation(const mfem::Vector &x, mfem::Vector &y)
+void initialDeformation(const mfem::Vector& x, mfem::Vector& y)
 {
   // set the initial configuration to be the same as the reference, stress
   // free, configuration
   y = x;
 }
 
-void initialVelocity(const mfem::Vector &x, mfem::Vector &v)
+void initialVelocity(const mfem::Vector& x, mfem::Vector& v)
 {
   const int    dim = x.Size();
   const double s   = 0.1 / 64.;
@@ -126,7 +126,7 @@ void initialVelocity(const mfem::Vector &x, mfem::Vector &v)
 #include "axom/slic/core/UnitTestLogger.hpp"
 using axom::slic::UnitTestLogger;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   int result = 0;
 
