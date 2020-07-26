@@ -14,7 +14,7 @@
 
 void initialDeformation(const mfem::Vector &x, mfem::Vector &y);
 
-void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
+void initialVelocity(const mfem::Vector &x, mfem::Vector &v);
 
 TEST(dynamic_solver, dyn_solve)
 {
