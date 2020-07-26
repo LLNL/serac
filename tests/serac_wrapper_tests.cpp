@@ -21,11 +21,11 @@ class WrapperTests : public ::testing::Test {
   {
     // Set up mesh
     dim_     = 3;
-    int nex_ = 4;
-    int ney_ = 4;
-    int nez_ = 4;
+    int nex = 4;
+    int ney = 4;
+    int nez = 4;
 
-    Mesh mesh(nex_, ney_, nez_, mfem::Element::HEXAHEDRON, true);
+    Mesh mesh(nex, ney, nez, mfem::Element::HEXAHEDRON, true);
     pmesh_  = std::shared_ptr<ParMesh>(new ParMesh(MPI_COMM_WORLD, mesh));
     pfes_   = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
         pmesh_.get(), new H1_FECollection(1, dim_, BasisType::GaussLobatto), 1, Ordering::byNODES));
