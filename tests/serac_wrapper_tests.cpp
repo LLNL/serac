@@ -20,7 +20,7 @@ class WrapperTests : public ::testing::Test {
   void SetUp()
   {
     // Set up mesh
-    dim_     = 3;
+    dim_    = 3;
     int nex = 4;
     int ney = 4;
     int nez = 4;
