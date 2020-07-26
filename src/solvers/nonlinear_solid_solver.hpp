@@ -69,37 +69,37 @@ class NonlinearSolidSolver : public BaseSolver {
   NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set the displacement essential boundary conditions
-  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
+  void setDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
 
   /// Set the displacement essential boundary conditions on a single component
-  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+  void setDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                           int component);
 
   /// Set the traction boundary conditions
-  void SetTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void setTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1);
 
   /// Set the viscosity coefficient
-  void SetViscosity(std::shared_ptr<mfem::Coefficient> visc_coef);
+  void setViscosity(std::shared_ptr<mfem::Coefficient> visc_coef);
 
   /// Set the hyperelastic material parameters
-  void SetHyperelasticMaterialParameters(double mu, double K);
+  void setHyperelasticMaterialParameters(double mu, double K);
 
   /// Set the initial displacement state (guess)
-  void SetDisplacement(mfem::VectorCoefficient &disp_state);
+  void setDisplacement(mfem::VectorCoefficient &disp_state);
 
   /// Set the initial velocity state (guess)
-  void SetVelocity(mfem::VectorCoefficient &velo_state);
+  void setVelocity(mfem::VectorCoefficient &velo_state);
 
   /// Set the linear and nonlinear solver params
-  void SetSolverParameters(const serac::LinearSolverParameters &   lin_params,
+  void setSolverParameters(const serac::LinearSolverParameters &   lin_params,
                            const serac::NonlinearSolverParameters &nonlin_params);
 
   /// Get the displacement state
-  std::shared_ptr<serac::FiniteElementState> GetDisplacement() { return displacement_; };
+  std::shared_ptr<serac::FiniteElementState> getDisplacement() { return displacement_; };
 
   /// Get the velocity state
-  std::shared_ptr<serac::FiniteElementState> GetVelocity() { return velocity_; };
+  std::shared_ptr<serac::FiniteElementState> getVelocity() { return velocity_; };
 
   /// Complete the data structure initialization
   void completeSetup();

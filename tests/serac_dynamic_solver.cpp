@@ -12,7 +12,7 @@
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
-void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
+void initialDeformation(const mfem::Vector &x, mfem::Vector &y);
 
 void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
 
@@ -35,16 +35,16 @@ TEST(dynamic_solver, dyn_solve)
   std::set<int> ess_bdr = {1};
 
   auto visc   = std::make_shared<mfem::ConstantCoefficient>(0.0);
-  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
-  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
+  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
+  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
   NonlinearSolidSolver dyn_solver(1, pmesh);
-  dyn_solver.SetDisplacementBCs(ess_bdr, deform);
-  dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  dyn_solver.SetViscosity(visc);
-  dyn_solver.SetDisplacement(*deform);
-  dyn_solver.SetVelocity(*velo);
+  dyn_solver.setDisplacementBCs(ess_bdr, deform);
+  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
+  dyn_solver.setViscosity(visc);
+  dyn_solver.setDisplacement(*deform);
+  dyn_solver.setVelocity(*velo);
   dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
 
   // Set the linear solver parameters
@@ -62,7 +62,7 @@ TEST(dynamic_solver, dyn_solve)
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter    = 500;
-  dyn_solver.SetSolverParameters(params, nl_params);
+  dyn_solver.setSolverParameters(params, nl_params);
 
   // Initialize the VisIt output
   dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");
@@ -96,8 +96,8 @@ TEST(dynamic_solver, dyn_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double v_norm = dyn_solver.GetVelocity()->gf->ComputeLpError(2.0, zerovec);
-  double x_norm = dyn_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
+  double v_norm = dyn_solver.getVelocity()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = dyn_solver.getDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(12.86733, x_norm, 0.0001);
   EXPECT_NEAR(0.22298, v_norm, 0.0001);
@@ -105,14 +105,14 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
+void initialDeformation(const mfem::Vector &x, mfem::Vector &y)
 {
   // set the initial configuration to be the same as the reference, stress
   // free, configuration
   y = x;
 }
 
-void InitialVelocity(const mfem::Vector &x, mfem::Vector &v)
+void initialVelocity(const mfem::Vector &x, mfem::Vector &v)
 {
   const int    dim = x.Size();
   const double s   = 0.1 / 64.;

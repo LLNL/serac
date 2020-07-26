@@ -164,8 +164,8 @@ int main(int argc, char *argv[])
   // initialize x_cur, boundary condition, deformation, and
   // incremental nodal displacment grid functions by projection the
   // VectorFunctionCoefficient function onto them
-  solid_solver.SetDisplacement(defo_coef);
-  solid_solver.SetVelocity(velo_coef);
+  solid_solver.setDisplacement(defo_coef);
+  solid_solver.setVelocity(velo_coef);
 
   std::set<int> ess_bdr = {1};
 
@@ -187,11 +187,11 @@ int main(int argc, char *argv[])
   auto traction_coef = std::make_shared<VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
-  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef);
-  solid_solver.SetTractionBCs(trac_bdr, traction_coef);
+  solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
+  solid_solver.setTractionBCs(trac_bdr, traction_coef);
 
   // Set the material parameters
-  solid_solver.SetHyperelasticMaterialParameters(mu, K);
+  solid_solver.setHyperelasticMaterialParameters(mu, K);
 
   // Set the linear solver parameters
   if (gmres_solver == true) {
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
     lin_params.prec       = serac::Preconditioner::Jacobi;
     lin_params.lin_solver = serac::LinearSolver::MINRES;
   }
-  solid_solver.SetSolverParameters(lin_params, nonlin_params);
+  solid_solver.setSolverParameters(lin_params, nonlin_params);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);

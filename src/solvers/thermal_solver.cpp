@@ -27,7 +27,7 @@ ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
   temperature_->name = "temperature";
 }
 
-void ThermalSolver::SetTemperature(mfem::Coefficient &temp)
+void ThermalSolver::setTemperature(mfem::Coefficient &temp)
 {
   // Project the coefficient onto the grid function
   temp.SetTime(time_);
@@ -35,30 +35,30 @@ void ThermalSolver::SetTemperature(mfem::Coefficient &temp)
   gf_initialized_[0] = true;
 }
 
-void ThermalSolver::SetTemperatureBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+void ThermalSolver::setTemperatureBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   setEssentialBCs(ess_bdr, ess_bdr_coef, *temperature_->space);
 }
 
-void ThermalSolver::SetFluxBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
+void ThermalSolver::setFluxBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   setNaturalBCs(nat_bdr, nat_bdr_coef);
 }
 
-void ThermalSolver::SetConductivity(std::shared_ptr<mfem::Coefficient> kappa)
+void ThermalSolver::setConductivity(std::shared_ptr<mfem::Coefficient> kappa)
 {
   // Set the conduction coefficient
   kappa_ = kappa;
 }
 
-void ThermalSolver::SetSource(std::shared_ptr<mfem::Coefficient> source)
+void ThermalSolver::setSource(std::shared_ptr<mfem::Coefficient> source)
 {
   // Set the body source integral coefficient
   source_ = source;
 }
 
-void ThermalSolver::SetLinearSolverParameters(const serac::LinearSolverParameters &params)
+void ThermalSolver::setLinearSolverParameters(const serac::LinearSolverParameters &params)
 {
   // Save the solver params object
   // TODO: separate the M and K solver params
@@ -111,8 +111,8 @@ void ThermalSolver::completeSetup()
 
     // Make the time integration operator and set the appropriate matricies
     dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space, lin_params_, ess_bdr_);
-    dyn_oper_->SetMatrices(M_mat_, K_mat_);
-    dyn_oper_->SetLoadVector(rhs_);
+    dyn_oper_->setMatrices(M_mat_, K_mat_);
+    dyn_oper_->setLoadVector(rhs_);
 
     ode_solver_->Init(*dyn_oper_);
   }

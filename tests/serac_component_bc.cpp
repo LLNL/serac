@@ -42,7 +42,7 @@ TEST(component_bc, qs_solve)
   auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -1.0e-1; });
 
   // Pass the BC information to the solver object setting only the z direction
-  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef, 0);
+  solid_solver.setDisplacementBCs(ess_bdr, disp_coef, 0);
 
   // Create an indicator function to set all vertices that are x=0
   StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector& x, mfem::Vector& X) {
@@ -54,12 +54,12 @@ TEST(component_bc, qs_solve)
   });
 
   mfem::Array<int> ess_corner_bc_list;
-  makeTrueEssList(*solid_solver.GetDisplacement()->space, zero_bc, ess_corner_bc_list);
+  makeTrueEssList(*solid_solver.getDisplacement()->space, zero_bc, ess_corner_bc_list);
 
   solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef);
 
   // Set the material parameters
-  solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
+  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
 
   // Set the linear solver params
   serac::LinearSolverParameters params;
@@ -76,7 +76,7 @@ TEST(component_bc, qs_solve)
   nl_params.print_level = 1;
   nl_params.max_iter    = 5000;
 
-  solid_solver.SetSolverParameters(params, nl_params);
+  solid_solver.setSolverParameters(params, nl_params);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -99,7 +99,7 @@ TEST(component_bc, qs_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.getDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.08363646, x_norm, 0.0001);
 
@@ -137,11 +137,11 @@ TEST(component_bc, qs_attribute_solve)
   auto disp_y_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[1] * -5.0e-2; });
 
   // Pass the BC information to the solver object setting only the z direction
-  solid_solver.SetDisplacementBCs(ess_x_bdr, disp_x_coef, 0);
-  solid_solver.SetDisplacementBCs(ess_y_bdr, disp_y_coef, 1);
+  solid_solver.setDisplacementBCs(ess_x_bdr, disp_x_coef, 0);
+  solid_solver.setDisplacementBCs(ess_y_bdr, disp_y_coef, 1);
 
   // Set the material parameters
-  solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
+  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
 
   // Set the linear solver params
   serac::LinearSolverParameters params;
@@ -158,7 +158,7 @@ TEST(component_bc, qs_attribute_solve)
   nl_params.print_level = 1;
   nl_params.max_iter    = 5000;
 
-  solid_solver.SetSolverParameters(params, nl_params);
+  solid_solver.setSolverParameters(params, nl_params);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -179,7 +179,7 @@ TEST(component_bc, qs_attribute_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.getDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.03330115, x_norm, 0.0001);
 

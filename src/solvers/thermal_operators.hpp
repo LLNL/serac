@@ -69,10 +69,10 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
                             const std::vector<std::shared_ptr<serac::BoundaryCondition> > &ess_bdr);
 
   /// Set the mass matrix
-  void SetMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);
+  void setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);
 
   /// Set the load vector
-  void SetLoadVector(std::shared_ptr<mfem::Vector> rhs);
+  void setLoadVector(std::shared_ptr<mfem::Vector> rhs);
 
   /** Calculate du_dt = M^-1 (-Ku + f).
    *  This is all that is needed for explicit methods */

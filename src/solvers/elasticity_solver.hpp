@@ -65,27 +65,27 @@ class ElasticitySolver : public BaseSolver {
   ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set the vector-valued essential displacement boundary conditions
-  void SetDisplacementBCs(std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
+  void setDisplacementBCs(std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
                           int component = -1);
 
   /// Set the vector-valued natural traction boundary conditions
-  void SetTractionBCs(std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void setTractionBCs(std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1);
 
   /// Driver for advancing the timestep
   void advanceTimestep(double &dt);
 
   /// Set the elastic lame parameters
-  void SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu);
+  void setLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu);
 
   /// Set the vector-valued body force coefficient
-  void SetBodyForce(mfem::VectorCoefficient &force);
+  void setBodyForce(mfem::VectorCoefficient &force);
 
   /// Finish the setup and allocate the associate data structures
   void completeSetup();
 
   /// Set the linear solver parameters object
-  void SetLinearSolverParameters(const serac::LinearSolverParameters &params);
+  void setLinearSolverParameters(const serac::LinearSolverParameters &params);
 
   /// The destructor
   virtual ~ElasticitySolver();

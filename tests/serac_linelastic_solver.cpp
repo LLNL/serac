@@ -35,7 +35,7 @@ TEST(elastic_solver, static_solve)
   mfem::Vector disp(pmesh->Dimension());
   disp           = 0.0;
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
-  elas_solver.SetDisplacementBCs(disp_bdr, disp_coef);
+  elas_solver.setDisplacementBCs(disp_bdr, disp_coef);
 
   std::set<int> trac_bdr = {2};
 
@@ -44,13 +44,13 @@ TEST(elastic_solver, static_solve)
   traction           = 0.0;
   traction(1)        = 1.0e-4;
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
-  elas_solver.SetTractionBCs(trac_bdr, traction_coef);
+  elas_solver.setTractionBCs(trac_bdr, traction_coef);
 
   // set the material properties
   mfem::ConstantCoefficient mu_coef(0.25);
   mfem::ConstantCoefficient K_coef(5.0);
 
-  elas_solver.SetLameParameters(K_coef, mu_coef);
+  elas_solver.setLameParameters(K_coef, mu_coef);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -61,7 +61,7 @@ TEST(elastic_solver, static_solve)
   params.prec        = serac::Preconditioner::Jacobi;
   params.lin_solver  = serac::LinearSolver::MINRES;
 
-  elas_solver.SetLinearSolverParameters(params);
+  elas_solver.setLinearSolverParameters(params);
   elas_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // allocate the data structures

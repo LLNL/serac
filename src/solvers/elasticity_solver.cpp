@@ -40,27 +40,27 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
   displacement_->name = "displacement";
 }
 
-void ElasticitySolver::SetDisplacementBCs(std::set<int> &                          disp_bdr,
+void ElasticitySolver::setDisplacementBCs(std::set<int> &                          disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
   setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
 }
 
-void ElasticitySolver::SetTractionBCs(std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+void ElasticitySolver::setTractionBCs(std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                                       int component)
 {
   setNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
 
-void ElasticitySolver::SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu)
+void ElasticitySolver::setLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu)
 {
   lambda_ = &lambda;
   mu_     = &mu;
 }
 
-void ElasticitySolver::SetBodyForce(mfem::VectorCoefficient &force) { body_force_ = &force; }
+void ElasticitySolver::setBodyForce(mfem::VectorCoefficient &force) { body_force_ = &force; }
 
-void ElasticitySolver::SetLinearSolverParameters(const serac::LinearSolverParameters &params) { lin_params_ = params; }
+void ElasticitySolver::setLinearSolverParameters(const serac::LinearSolverParameters &params) { lin_params_ = params; }
 
 void ElasticitySolver::completeSetup()
 {

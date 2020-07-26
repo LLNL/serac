@@ -20,43 +20,43 @@ class WrapperTests : public ::testing::Test {
   void SetUp()
   {
     // Set up mesh
-    dim     = 3;
-    int nex = 4;
-    int ney = 4;
-    int nez = 4;
+    dim_     = 3;
+    int nex_ = 4;
+    int ney_ = 4;
+    int nez_ = 4;
 
-    Mesh mesh(nex, ney, nez, mfem::Element::HEXAHEDRON, true);
-    pmesh  = std::shared_ptr<ParMesh>(new ParMesh(MPI_COMM_WORLD, mesh));
-    pfes   = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
-        pmesh.get(), new H1_FECollection(1, dim, BasisType::GaussLobatto), 1, Ordering::byNODES));
-    pfes_v = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
-        pmesh.get(), new H1_FECollection(1, dim, BasisType::GaussLobatto), dim, Ordering::byNODES));
+    Mesh mesh(nex_, ney_, nez_, mfem::Element::HEXAHEDRON, true);
+    pmesh_  = std::shared_ptr<ParMesh>(new ParMesh(MPI_COMM_WORLD, mesh));
+    pfes_   = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
+        pmesh_.get(), new H1_FECollection(1, dim_, BasisType::GaussLobatto), 1, Ordering::byNODES));
+    pfes_v_ = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
+        pmesh_.get(), new H1_FECollection(1, dim_, BasisType::GaussLobatto), dim_, Ordering::byNODES));
 
-    pfes_l2 = std::shared_ptr<ParFiniteElementSpace>(
-        new ParFiniteElementSpace(pmesh.get(), new L2_FECollection(0, dim), 1, Ordering::byNODES));
+    pfes_l2_ = std::shared_ptr<ParFiniteElementSpace>(
+        new ParFiniteElementSpace(pmesh_.get(), new L2_FECollection(0, dim_), 1, Ordering::byNODES));
   }
 
   void TearDown() {}
 
-  int                                    dim;
-  std::shared_ptr<ParMesh>               pmesh;
-  std::shared_ptr<ParFiniteElementSpace> pfes;
-  std::shared_ptr<ParFiniteElementSpace> pfes_v;
-  std::shared_ptr<ParFiniteElementSpace> pfes_l2;
+  int                                    dim_;
+  std::shared_ptr<ParMesh>               pmesh_;
+  std::shared_ptr<ParFiniteElementSpace> pfes_;
+  std::shared_ptr<ParFiniteElementSpace> pfes_v_;
+  std::shared_ptr<ParFiniteElementSpace> pfes_l2_;
 };
 
-void SolveLinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess_tdof_list, ParGridFunction &temp)
+void SolveLinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int> &ess_tdof_list, ParGridFunction &temp)
 {
   ConstantCoefficient one(1.);
 
-  ParBilinearForm A_lin(pfes.get());
+  ParBilinearForm A_lin(pfes_.get());
   A_lin.AddDomainIntegrator(new DiffusionIntegrator(one));
   A_lin.Assemble(0);
   A_lin.Finalize(0);
   std::unique_ptr<HypreParMatrix> A = std::unique_ptr<HypreParMatrix>(A_lin.ParallelAssemble());
 
   ConstantCoefficient coeff_zero(0.0);
-  ParLinearForm       f_lin(pfes.get());
+  ParLinearForm       f_lin(pfes_.get());
   f_lin.AddDomainIntegrator(new DomainLFIntegrator(coeff_zero));
   f_lin.Assemble();
   std::unique_ptr<HypreParVector> F = std::unique_ptr<HypreParVector>(f_lin.ParallelAssemble());
@@ -76,11 +76,11 @@ void SolveLinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess_td
 }
 
 // Solve the same linear system using a newton solver
-void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess_tdof_list, ParGridFunction &temp)
+void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int> &ess_tdof_list, ParGridFunction &temp)
 {
   ConstantCoefficient one(1.);
 
-  ParNonlinearForm A_nonlin(pfes.get());
+  ParNonlinearForm A_nonlin(pfes_.get());
   auto             diffusion = std::make_shared<DiffusionIntegrator>(one);
 
   A_nonlin.AddDomainIntegrator(new BilinearToNonlinearFormIntegrator(diffusion));
@@ -88,14 +88,14 @@ void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess
 
   ConstantCoefficient coeff_zero(0.0);
   auto                zero_integrator = std::make_shared<DomainLFIntegrator>(coeff_zero);
-  A_nonlin.AddDomainIntegrator(new LinearToNonlinearFormIntegrator(zero_integrator, pfes));
+  A_nonlin.AddDomainIntegrator(new LinearToNonlinearFormIntegrator(zero_integrator, pfes_));
 
   // The temperature solution vector already contains the essential boundary condition values
   std::unique_ptr<HypreParVector> T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
 
-  GMRESSolver solver(pfes->GetComm());
+  GMRESSolver solver(pfes_->GetComm());
 
-  NewtonSolver newton_solver(pfes->GetComm());
+  NewtonSolver newton_solver(pfes_->GetComm());
   newton_solver.SetSolver(solver);
   newton_solver.SetOperator(A_nonlin);
 
@@ -106,26 +106,26 @@ void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess
 }
 
 // Solve the same linear system using a newton solver but by using the MixedIntegrator calls
-void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes, Array<int> &ess_tdof_list, ParGridFunction &temp)
+void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int> &ess_tdof_list, ParGridFunction &temp)
 {
   ConstantCoefficient one(1.);
 
-  ParNonlinearForm A_nonlin(pfes.get());
+  ParNonlinearForm A_nonlin(pfes_.get());
   auto             diffusion = std::make_shared<DiffusionIntegrator>(one);
 
-  A_nonlin.AddDomainIntegrator(new MixedBilinearToNonlinearFormIntegrator(diffusion, pfes));
+  A_nonlin.AddDomainIntegrator(new MixedBilinearToNonlinearFormIntegrator(diffusion, pfes_));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
-  ParLinearForm f_lin(pfes.get());
+  ParLinearForm f_lin(pfes_.get());
   f_lin                             = 0.;
   std::unique_ptr<HypreParVector> F = std::unique_ptr<HypreParVector>(f_lin.ParallelAssemble());
 
   // The temperature solution vector already contains the essential boundary condition values
   std::unique_ptr<HypreParVector> T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
 
-  GMRESSolver solver(pfes->GetComm());
+  GMRESSolver solver(pfes_->GetComm());
 
-  NewtonSolver newton_solver(pfes->GetComm());
+  NewtonSolver newton_solver(pfes_->GetComm());
   newton_solver.SetSolver(solver);
   newton_solver.SetOperator(A_nonlin);
 
@@ -155,23 +155,23 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   });
 
   Array<int> bdr_attr_list_zero;
-  makeBdrAttributeList(*pmesh, bdr_attr_list_zero, x_zero);
+  makeBdrAttributeList(*pmesh_, bdr_attr_list_zero, x_zero);
 
   Array<int> bdr_attr_list_one;
-  makeBdrAttributeList(*pmesh, bdr_attr_list_one, x_one);
+  makeBdrAttributeList(*pmesh_, bdr_attr_list_one, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
-  Array<int> bdr_attr_list(pfes->GetNBE());
-  for (int be = 0; be < pfes->GetNBE(); be++) {
+  Array<int> bdr_attr_list(pfes_->GetNBE());
+  for (int be = 0; be < pfes_->GetNBE(); be++) {
     bdr_attr_list[be] = (bdr_attr_list_zero[be] - 1) + (bdr_attr_list_one[be] - 1) * 2 + 1;
   }
 
-  for (int be = 0; be < pfes->GetNBE(); be++) {
-    pmesh->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
+  for (int be = 0; be < pfes_->GetNBE(); be++) {
+    pmesh_->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
   }
 
   // Update attribute data structures
-  pmesh->SetAttributes();
+  pmesh_->SetAttributes();
 
   Array<int> bdr_attr_is_ess(3);
   bdr_attr_is_ess[0] = 0;
@@ -180,22 +180,22 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
 
   // Get all the essential degrees of freedom
   Array<int> ess_tdof_list;
-  pfes->GetEssentialTrueDofs(bdr_attr_is_ess, ess_tdof_list);
+  pfes_->GetEssentialTrueDofs(bdr_attr_is_ess, ess_tdof_list);
 
   // Boundary conditions evaluation
-  ParGridFunction t_ess(pfes.get());
+  ParGridFunction t_ess(pfes_.get());
   t_ess = 0.;
   t_ess.ProjectBdrCoefficient(x_one, bdr_attr_is_ess);
 
   // Solve a simple static thermal problem with standard linear integrators
-  ParGridFunction t_lin(pfes.get());
+  ParGridFunction t_lin(pfes_.get());
   t_lin = t_ess;
-  SolveLinear(pfes, ess_tdof_list, t_lin);
+  SolveLinear(pfes_, ess_tdof_list, t_lin);
 
   // Solve the same problem using a wrapped nonlinear integrators
-  ParGridFunction t_nonlin(pfes.get());
+  ParGridFunction t_nonlin(pfes_.get());
   t_nonlin = t_ess;
-  SolveNonlinear(pfes, ess_tdof_list, t_nonlin);
+  SolveNonlinear(pfes_, ess_tdof_list, t_nonlin);
 
   // Compare the linear and the nonlinear solution
   for (int i = 0; i < t_lin.Size(); i++) {
@@ -203,9 +203,9 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   }
 
   // Solve the same nonlinear problem with the MixedBilinearToNonlinearformIntegrator
-  ParGridFunction t_mixed_nonlin(pfes.get());
+  ParGridFunction t_mixed_nonlin(pfes_.get());
   t_mixed_nonlin = t_ess;
-  SolveMixedNonlinear(pfes, ess_tdof_list, t_mixed_nonlin);
+  SolveMixedNonlinear(pfes_, ess_tdof_list, t_mixed_nonlin);
 
   // Compare the mixed nonlinear linear and the nonlinear solution
   for (int i = 0; i < t_nonlin.Size(); i++) {

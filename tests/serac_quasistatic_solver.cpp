@@ -49,11 +49,11 @@ TEST(nonlinear_solid_solver, qs_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Pass the BC information to the solver object
-  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef);
-  solid_solver.SetTractionBCs(trac_bdr, traction_coef);
+  solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
+  solid_solver.setTractionBCs(trac_bdr, traction_coef);
 
   // Set the material parameters
-  solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
+  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
 
   // Set the linear solver params
   serac::LinearSolverParameters params;
@@ -70,7 +70,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   nl_params.print_level = 1;
   nl_params.max_iter    = 5000;
 
-  solid_solver.SetSolverParameters(params, nl_params);
+  solid_solver.setSolverParameters(params, nl_params);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -90,7 +90,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.getDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
 

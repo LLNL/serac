@@ -46,14 +46,14 @@ DynamicConductionOperator::DynamicConductionOperator(
   bc_rhs_   = std::make_shared<mfem::Vector>(fespace->GetTrueVSize());
 }
 
-void DynamicConductionOperator::SetMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat,
+void DynamicConductionOperator::setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat,
                                             std::shared_ptr<mfem::HypreParMatrix> K_mat)
 {
   M_mat_ = M_mat;
   m_K_mat = K_mat;
 }
 
-void DynamicConductionOperator::SetLoadVector(std::shared_ptr<mfem::Vector> rhs) { rhs_ = rhs; }
+void DynamicConductionOperator::setLoadVector(std::shared_ptr<mfem::Vector> rhs) { rhs_ = rhs; }
 
 // TODO: allow for changing thermal essential boundary conditions
 void DynamicConductionOperator::Mult(const mfem::Vector &u, mfem::Vector &du_dt) const

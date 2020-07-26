@@ -56,11 +56,11 @@ TEST(thermal_solver, static_solve)
   std::set<int> temp_bdr = {1};
 
   // Set the temperature BC in the thermal solver
-  therm_solver.SetTemperatureBCs(temp_bdr, u_0);
+  therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
-  therm_solver.SetConductivity(kappa);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -68,7 +68,7 @@ TEST(thermal_solver, static_solve)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
-  therm_solver.SetLinearSolverParameters(params);
+  therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -80,7 +80,7 @@ TEST(thermal_solver, static_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.GetTemperature()->gf->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.getTemperature()->gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -119,12 +119,12 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   std::set<int> marked_2 = {2};
 
   // Set the temperature BC in the thermal solver
-  therm_solver.SetTemperatureBCs(marked_1, u_0);
-  therm_solver.SetTemperatureBCs(marked_2, u_1);
+  therm_solver.setTemperatureBCs(marked_1, u_0);
+  therm_solver.setTemperatureBCs(marked_2, u_1);
 
   // Set the conductivity of the thermal operator
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
-  therm_solver.SetConductivity(kappa);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -132,7 +132,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
-  therm_solver.SetLinearSolverParameters(params);
+  therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -150,7 +150,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.GetTemperature()->gf->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.getTemperature()->gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(0.9168086318, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -188,12 +188,12 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   std::set<int> temp_bdr = {1};
 
   // Set the temperature BC in the thermal solver
-  therm_solver.SetTemperatureBCs(temp_bdr, u_0);
-  therm_solver.SetTemperatureBCs(temp_bdr, u_1);
+  therm_solver.setTemperatureBCs(temp_bdr, u_0);
+  therm_solver.setTemperatureBCs(temp_bdr, u_1);
 
   // Set the conductivity of the thermal operator
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
-  therm_solver.SetConductivity(kappa);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -201,7 +201,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
-  therm_solver.SetLinearSolverParameters(params);
+  therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -213,7 +213,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.GetTemperature()->gf->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.getTemperature()->gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -246,14 +246,14 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
-  therm_solver.SetTemperature(*u_0);
+  therm_solver.setTemperature(*u_0);
 
   std::set<int> temp_bdr = {1};
-  therm_solver.SetTemperatureBCs(temp_bdr, u_0);
+  therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
-  therm_solver.SetConductivity(kappa);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -261,7 +261,7 @@ TEST(thermal_solver, dyn_exp_solve)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
-  therm_solver.SetLinearSolverParameters(params);
+  therm_solver.setLinearSolverParameters(params);
 
   // Setup glvis output
   therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_explicit");
@@ -292,7 +292,7 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.GetTemperature()->gf->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.getTemperature()->gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.6493029, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -325,14 +325,14 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
-  therm_solver.SetTemperature(*u_0);
+  therm_solver.setTemperature(*u_0);
 
   std::set<int> temp_bdr = {1};
-  therm_solver.SetTemperatureBCs(temp_bdr, u_0);
+  therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
-  therm_solver.SetConductivity(kappa);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -340,7 +340,7 @@ TEST(thermal_solver, dyn_imp_solve)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
-  therm_solver.SetLinearSolverParameters(params);
+  therm_solver.setLinearSolverParameters(params);
 
   // Setup glvis output
   therm_solver.initializeOutput(serac::OutputType::VisIt, "thermal_implicit");
@@ -371,7 +371,7 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.GetTemperature()->gf->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.getTemperature()->gf->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);

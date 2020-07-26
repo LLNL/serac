@@ -21,36 +21,36 @@ class StdFunctionCoefficientTest : public ::testing::Test {
   void SetUp()
   {
     // Set up mesh
-    dim     = 3;
+    dim_    = 3;
     int nex = 4;
     int ney = 4;
     int nez = 4;
 
     Mesh mesh(nex, ney, nez, mfem::Element::HEXAHEDRON, true);
-    pmesh  = std::shared_ptr<ParMesh>(new ParMesh(MPI_COMM_WORLD, mesh));
-    pfes   = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
-        pmesh.get(), new H1_FECollection(1, dim, BasisType::GaussLobatto), 1, Ordering::byNODES));
-    pfes_v = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
-        pmesh.get(), new H1_FECollection(1, dim, BasisType::GaussLobatto), dim, Ordering::byNODES));
+    pmesh_  = std::shared_ptr<ParMesh>(new ParMesh(MPI_COMM_WORLD, mesh));
+    pfes_   = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
+        pmesh_.get(), new H1_FECollection(1, dim_, BasisType::GaussLobatto), 1, Ordering::byNODES));
+    pfes_v_ = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
+        pmesh_.get(), new H1_FECollection(1, dim_, BasisType::GaussLobatto), dim_, Ordering::byNODES));
 
-    pfes_l2 = std::shared_ptr<ParFiniteElementSpace>(
-        new ParFiniteElementSpace(pmesh.get(), new L2_FECollection(0, dim), 1, Ordering::byNODES));
+    pfes_l2_ = std::shared_ptr<ParFiniteElementSpace>(
+        new ParFiniteElementSpace(pmesh_.get(), new L2_FECollection(0, dim_), 1, Ordering::byNODES));
   }
 
   void TearDown() {}
 
-  int                                    dim;
-  std::shared_ptr<ParMesh>               pmesh;
-  std::shared_ptr<ParFiniteElementSpace> pfes;
-  std::shared_ptr<ParFiniteElementSpace> pfes_v;
-  std::shared_ptr<ParFiniteElementSpace> pfes_l2;
+  int                                    dim_;
+  std::shared_ptr<ParMesh>               pmesh_;
+  std::shared_ptr<ParFiniteElementSpace> pfes_;
+  std::shared_ptr<ParFiniteElementSpace> pfes_v_;
+  std::shared_ptr<ParFiniteElementSpace> pfes_l2_;
 };
 
 TEST_F(StdFunctionCoefficientTest, Xtest)
 {
-  ParGridFunction u(pfes_v.get());
-  ParGridFunction x(pfes_v.get());
-  pmesh->GetVertices(x);
+  ParGridFunction u(pfes_v_.get());
+  ParGridFunction x(pfes_v_.get());
+  pmesh_->GetVertices(x);
 
   double x_mult = 1.5;
   // Here we stretch the "x-component" of the coordinate by x_mult
@@ -60,9 +60,9 @@ TEST_F(StdFunctionCoefficientTest, Xtest)
   });
 
   u.ProjectCoefficient(x_stretch);
-  for (int d = 0; d < pfes_v->GetNDofs(); d++) {
-    for (int v = 0; v < dim; v++) {
-      int vdof_index = pfes_v->DofToVDof(d, v);
+  for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
+    for (int v = 0; v < dim_; v++) {
+      int vdof_index = pfes_v_->DofToVDof(d, v);
       if (v == 0) {
         EXPECT_NEAR(x[vdof_index] * x_mult, u[vdof_index], 1.e-12);
       } else {
@@ -94,7 +94,7 @@ TEST_F(StdFunctionCoefficientTest, AttributeList)
   StdFunctionCoefficient corner([](mfem::Vector x) { return (x[0] > 0.75 && x[1] > 0.75) ? 1. : 0.; });
 
   Array<int> attr_list;
-  makeAttributeList(*pmesh, attr_list, corner);
+  makeAttributeList(*pmesh_, attr_list, corner);
 
   MFEM_VERIFY(attr_list.Size() > 0 && attr_list.Sum() > 0, "Didn't pick up anything");
 
@@ -105,15 +105,15 @@ TEST_F(StdFunctionCoefficientTest, AttributeList)
   RestrictedCoefficient        restrict_coefficient(one, attr);
   AttributeModifierCoefficient load_bdr(attr_list, restrict_coefficient);
 
-  ParGridFunction c1(pfes_l2.get());
-  ParGridFunction c2(pfes_l2.get());
+  ParGridFunction c1(pfes_l2_.get());
+  ParGridFunction c2(pfes_l2_.get());
 
   c1.ProjectCoefficient(corner);
   c2.ProjectCoefficient(load_bdr);
 
   // Ouput for visualization
   std::unique_ptr<VisItDataCollection> visit = std::unique_ptr<VisItDataCollection>(
-      new VisItDataCollection("StdFunctionCoefficient.AttributeModifier", pmesh.get()));
+      new VisItDataCollection("StdFunctionCoefficient.AttributeModifier", pmesh_.get()));
 
   visit->RegisterField("c1", &c1);
   visit->RegisterField("c2", &c2);
@@ -138,17 +138,17 @@ TEST_F(StdFunctionCoefficientTest, AttributeListSet)
   StdFunctionCoefficient corner([](mfem::Vector x) { return (x[0] > 0.75 && x[1] > 0.75) ? 1. : 0.; });
 
   Array<int> attr_list;
-  makeAttributeList(*pmesh, attr_list, corner);
+  makeAttributeList(*pmesh_, attr_list, corner);
 
   SLIC_WARNING_IF(attr_list.Size() > 0 && attr_list.Sum() > 0, "Didn't pick up anything");
 
-  for (int e = 0; e < pmesh->GetNE(); e++) {
-    pmesh->GetElement(e)->SetAttribute(attr_list[e]);
+  for (int e = 0; e < pmesh_->GetNE(); e++) {
+    pmesh_->GetElement(e)->SetAttribute(attr_list[e]);
   }
 
   // Ouput for visualization
   std::unique_ptr<VisItDataCollection> visit =
-      std::unique_ptr<VisItDataCollection>(new VisItDataCollection("StdFunctionCoefficient.AttributeSet", pmesh.get()));
+      std::unique_ptr<VisItDataCollection>(new VisItDataCollection("StdFunctionCoefficient.AttributeSet", pmesh_.get()));
 
   visit->Save();
 }
@@ -167,20 +167,20 @@ TEST_F(StdFunctionCoefficientTest, EssentialBC)
       }
   });
 
-  ParGridFunction u_find_ess(pfes_v.get());
+  ParGridFunction u_find_ess(pfes_v_.get());
   u_find_ess.ProjectCoefficient(zero_bc);
 
   Array<int> ess_vdof_list;
 
-  makeEssList(*pfes_v, zero_bc, ess_vdof_list);
+  makeEssList(*pfes_v_, zero_bc, ess_vdof_list);
 
   Vector u_ess(ess_vdof_list.Size());
   u_ess = 0.;
 
   // Check and make sure all the vertices found in the mesh that satisfy this
   // criterion are in the attribute list
-  for (int v = 0; v < pmesh->GetNV(); v++) {
-    double *coords = pmesh->GetVertex(v);
+  for (int v = 0; v < pmesh_->GetNV(); v++) {
+    double *coords = pmesh_->GetVertex(v);
     if (coords[0] < 1.e-13) {
       EXPECT_NE(ess_vdof_list.Find(v), -1);
     }
@@ -202,10 +202,10 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
   });
 
   Array<int> ess_origin_bc_list;
-  makeEssList(*pfes_v, origin_bc, ess_origin_bc_list);
+  makeEssList(*pfes_v_, origin_bc, ess_origin_bc_list);
 
   // Define bottom indicator list
-  StdFunctionVectorCoefficient bottom_bc_z(pfes_v->GetVDim(), [](Vector &x, Vector &X) {
+  StdFunctionVectorCoefficient bottom_bc_z(pfes_v_->GetVDim(), [](Vector &x, Vector &X) {
     X = 0.;
 
     if (abs(x[2]) < 1.e-13) {
@@ -213,10 +213,10 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
     }
   });
   Array<int>                   ess_bottom_bc_list;
-  makeEssList(*pfes_v, bottom_bc_z, ess_bottom_bc_list);
+  makeEssList(*pfes_v_, bottom_bc_z, ess_bottom_bc_list);
 
   // Define top indicator list
-  StdFunctionVectorCoefficient top_bc_z(pfes_v->GetVDim(), [](Vector &x, Vector &X) {
+  StdFunctionVectorCoefficient top_bc_z(pfes_v_->GetVDim(), [](Vector &x, Vector &X) {
     X = 0.;
 
     if (abs(x[2] - 1.) < 1.e-13) {
@@ -224,15 +224,15 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
     }
   });
   Array<int>                   ess_top_bc_list;
-  makeEssList(*pfes_v, top_bc_z, ess_top_bc_list);
+  makeEssList(*pfes_v_, top_bc_z, ess_top_bc_list);
 
   // Project displacement values z = 0.5*z
-  StdFunctionVectorCoefficient vals(pfes_v->GetVDim(), [](Vector &x, Vector &disp) {
+  StdFunctionVectorCoefficient vals(pfes_v_->GetVDim(), [](Vector &x, Vector &disp) {
     disp    = 0.;
     disp[2] = x[2] * 0.5;
   });
 
-  ParGridFunction vals_eval(pfes_v.get());
+  ParGridFunction vals_eval(pfes_v_.get());
   vals_eval.ProjectCoefficient(vals);
 
   Array<int> ess_vdof_bc_list(ess_bottom_bc_list);
@@ -245,7 +245,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
   Vector ess_vdof_list_vals(ess_vdof_bc_list.Size());
   vals_eval.GetSubVector(ess_vdof_bc_list, ess_vdof_list_vals);
 
-  Vector nonzero(pfes_v->GetVSize());
+  Vector nonzero(pfes_v_->GetVSize());
   nonzero = 1.;
   nonzero.SetSubVector(ess_vdof_bc_list, ess_vdof_list_vals);
   ess_vdof_bc_list.Print();

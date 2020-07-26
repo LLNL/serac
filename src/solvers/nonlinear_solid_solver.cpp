@@ -60,46 +60,46 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   *velocity_->true_vec = 0.0;
 }
 
-void NonlinearSolidSolver::SetDisplacementBCs(const std::set<int> &                    disp_bdr,
+void NonlinearSolidSolver::setDisplacementBCs(const std::set<int> &                    disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, -1);
 }
 
-void NonlinearSolidSolver::SetDisplacementBCs(const std::set<int> &              disp_bdr,
+void NonlinearSolidSolver::setDisplacementBCs(const std::set<int> &              disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
   setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
 }
 
-void NonlinearSolidSolver::SetTractionBCs(const std::set<int> &                    trac_bdr,
+void NonlinearSolidSolver::setTractionBCs(const std::set<int> &                    trac_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   setNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
 
-void NonlinearSolidSolver::SetHyperelasticMaterialParameters(double mu, double K)
+void NonlinearSolidSolver::setHyperelasticMaterialParameters(double mu, double K)
 {
   model_.reset(new mfem::NeoHookeanModel(mu, K));
 }
 
-void NonlinearSolidSolver::SetViscosity(std::shared_ptr<mfem::Coefficient> visc) { viscosity_ = visc; }
+void NonlinearSolidSolver::setViscosity(std::shared_ptr<mfem::Coefficient> visc) { viscosity_ = visc; }
 
-void NonlinearSolidSolver::SetDisplacement(mfem::VectorCoefficient &disp_state)
+void NonlinearSolidSolver::setDisplacement(mfem::VectorCoefficient &disp_state)
 {
   disp_state.SetTime(time_);
   displacement_->gf->ProjectCoefficient(disp_state);
   gf_initialized_[1] = true;
 }
 
-void NonlinearSolidSolver::SetVelocity(mfem::VectorCoefficient &velo_state)
+void NonlinearSolidSolver::setVelocity(mfem::VectorCoefficient &velo_state)
 {
   velo_state.SetTime(time_);
   velocity_->gf->ProjectCoefficient(velo_state);
   gf_initialized_[0] = true;
 }
 
-void NonlinearSolidSolver::SetSolverParameters(const serac::LinearSolverParameters &   lin_params,
+void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParameters &   lin_params,
                                                const serac::NonlinearSolverParameters &nonlin_params)
 {
   lin_params_    = lin_params;

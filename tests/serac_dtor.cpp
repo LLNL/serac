@@ -44,11 +44,11 @@ TEST(serac_dtor, test1)
 
   std::set<int> temp_bdr = {1};
   // Set the temperature BC in the thermal solver
-  therm_solver->SetTemperatureBCs(temp_bdr, u_0);
+  therm_solver->setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
   auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
-  therm_solver->SetConductivity(kappa);
+  therm_solver->setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -56,7 +56,7 @@ TEST(serac_dtor, test1)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
-  therm_solver->SetLinearSolverParameters(params);
+  therm_solver->setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
