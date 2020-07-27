@@ -61,6 +61,8 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
   std::function<void(mfem::Vector &, mfem::Vector &)> m_func;
 };
 
+namespace serac {
+
 /**
    \brief MakeTrueEssList takes in a FESpace, a vector coefficient, and produces a list
    of essential boundary conditions
@@ -69,10 +71,10 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
    \param[in] c A VectorCoefficient that is projected on to the mesh. All
    d.o.f's are examined and those that are the condition (> 0.) are appended to
    the vdof list.
-   \param[out] ess_tdof_list The list of true dofs that should be
+   \return The list of true dofs that should be
    part of the essential boundary conditions
 */
-void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_tdof_list);
+mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c);
 
 /**
    \brief MakeEssList takes in a FESpace, a vector coefficient, and produces a list
@@ -128,6 +130,8 @@ void MakeAttributeList(
 void MakeBdrAttributeList(
     mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
     std::function<int(double)> = [](double v) { return v == 1. ? 2 : 1; });
+
+} // namespace serac
 
 /**
    \brief AttributemodifierCoefficient class

@@ -155,10 +155,10 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   });
 
   Array<int> bdr_attr_list_zero;
-  MakeBdrAttributeList(*pmesh, bdr_attr_list_zero, x_zero);
+  serac::MakeBdrAttributeList(*pmesh, bdr_attr_list_zero, x_zero);
 
   Array<int> bdr_attr_list_one;
-  MakeBdrAttributeList(*pmesh, bdr_attr_list_one, x_one);
+  serac::MakeBdrAttributeList(*pmesh, bdr_attr_list_one, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   Array<int> bdr_attr_list(pfes->GetNBE());

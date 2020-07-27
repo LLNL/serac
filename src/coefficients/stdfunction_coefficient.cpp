@@ -30,13 +30,13 @@ void StdFunctionVectorCoefficient::Eval(mfem::Vector &V, mfem::ElementTransforma
   m_func(transip, V);
 }
 
-void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_tdof_list)
+mfem::Array<int> serac::MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c)
 {
-  ess_tdof_list.SetSize(0);
+  mfem::Array<int> ess_tdof_list(0);
 
   mfem::Array<int> ess_vdof_list;
 
-  MakeEssList(pfes, c, ess_vdof_list);
+  serac::MakeEssList(pfes, c, ess_vdof_list);
 
   for (int i = 0; i < ess_vdof_list.Size(); ++i) {
     int tdof = pfes.GetLocalTDofNumber(ess_vdof_list[i]);
@@ -44,9 +44,11 @@ void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient 
       ess_tdof_list.Append(tdof);
     }
   }
+
+  return ess_tdof_list;
 }
 
-void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list)
+void serac::MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list)
 {
   mfem::ParGridFunction v_attr(&pfes);
   v_attr.ProjectCoefficient(c);
@@ -60,7 +62,7 @@ void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, 
   }
 }
 
-void MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+void serac::MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
                        std::function<int(double)> digitize)
 {
   mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
@@ -77,7 +79,7 @@ void MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coeffic
 }
 
 // Need to use H1_fec because boundary elements don't exist in L2
-void MakeBdrAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+void serac::MakeBdrAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
                           std::function<int(double)> digitize)
 {
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());

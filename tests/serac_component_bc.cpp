@@ -53,8 +53,7 @@ TEST(component_bc, qs_solve)
       }
   });
 
-  mfem::Array<int> ess_corner_bc_list;
-  MakeTrueEssList(*solid_solver.GetDisplacement()->space, zero_bc, ess_corner_bc_list);
+  auto ess_corner_bc_list = serac::MakeTrueEssList(*solid_solver.GetDisplacement()->space, zero_bc);
 
   // Set tdofs with displacement in first dimension
   solid_solver.SetTrueDofs(ess_corner_bc_list, disp_coef, 0);
