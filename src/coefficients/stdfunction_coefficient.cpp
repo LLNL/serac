@@ -6,6 +6,7 @@
 // # Author: Jonathan Wong @ LLNL.
 
 #include "stdfunction_coefficient.hpp"
+#include "common/logger.hpp"
 
 namespace serac {
 
@@ -123,7 +124,7 @@ TransformedVectorCoefficient::TransformedVectorCoefficient(
     std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> func)
     : mfem::VectorCoefficient(v1->GetVDim()), v1_(v1), v2_(v2), mono_function_(nullptr), bi_function_(func)
 {
-  MFEM_VERIFY(v1_->GetVDim() == v2_->GetVDim(), "v1 and v2 are not the same size");
+  SLIC_CHECK_MSG(v1_->GetVDim() == v2_->GetVDim(), "v1 and v2 are not the same size");
 }
 
 void TransformedVectorCoefficient::Eval(mfem::Vector& V, mfem::ElementTransformation& T,
