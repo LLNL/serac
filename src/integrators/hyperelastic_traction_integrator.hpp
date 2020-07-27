@@ -6,6 +6,8 @@
 
 #include "mfem.hpp"
 
+namespace serac {
+
 class HyperelasticTractionIntegrator : public mfem::NonlinearFormIntegrator {
  private:
   mfem::VectorCoefficient&  function_;
@@ -24,3 +26,5 @@ class HyperelasticTractionIntegrator : public mfem::NonlinearFormIntegrator {
 
   virtual ~HyperelasticTractionIntegrator() {}
 };
+
+} // namespace serac

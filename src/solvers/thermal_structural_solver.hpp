@@ -12,6 +12,8 @@
 #include "nonlinear_solid_solver.hpp"
 #include "thermal_solver.hpp"
 
+namespace serac {
+
 /// The coupled thermal-structural solver object
 class ThermalStructuralSolver : public BaseSolver {
  protected:
@@ -128,5 +130,7 @@ class ThermalStructuralSolver : public BaseSolver {
   /// Destructor
   virtual ~ThermalStructuralSolver() = default;
 };
+
+} // namespace serac
 
 #endif

@@ -14,6 +14,8 @@
 #include "serac_config.hpp"
 #include "solvers/thermal_solver.hpp"
 
+namespace serac {
+
 TEST(serac_dtor, test1)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -68,6 +70,8 @@ TEST(serac_dtor, test1)
 
   // Destruct the second thermal solver and leave the pointer empty
   therm_solver.reset(nullptr);
+}
+
 }
 
 //------------------------------------------------------------------------------

@@ -12,6 +12,8 @@
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
+namespace serac {
+
 void initialDeformation(const mfem::Vector& x, mfem::Vector& y);
 
 void initialVelocity(const mfem::Vector& x, mfem::Vector& v);
@@ -121,6 +123,8 @@ void initialVelocity(const mfem::Vector& x, mfem::Vector& v)
   v          = 0.0;
   v(dim - 1) = s * x(0) * x(0) * (8.0 - x(0));
   v(0)       = -s * x(0) * x(0);
+}
+
 }
 
 //------------------------------------------------------------------------------

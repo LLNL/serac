@@ -6,6 +6,8 @@
 
 #include "wrapper_integrator.hpp"
 
+namespace serac {
+
 LinearToNonlinearFormIntegrator::LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator>  f,
                                                                  std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes)
     : f_(f), trial_fes_(trial_fes)
@@ -78,3 +80,5 @@ void MixedBilinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::Fin
 
   A_->AssembleElementMatrix2(trial_el, el, Tr, elmat);
 }
+
+} // namespace serac

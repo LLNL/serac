@@ -6,6 +6,8 @@
 
 #include "inc_hyperelastic_integrator.hpp"
 
+namespace serac {
+
 double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
                                                            mfem::ElementTransformation& Ttr, const mfem::Vector& elfun)
 {
@@ -122,3 +124,5 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
     model_->AssembleH(Jpt_, DS_, ip.weight * Ttr.Weight(), elmat);
   }
 }
+
+} // namespace serac

@@ -14,6 +14,7 @@
 #include "mfem.hpp"
 
 using namespace mfem;
+using namespace serac;
 
 class WrapperTests : public ::testing::Test {
  protected:

@@ -17,6 +17,8 @@
 
 #include "mfem.hpp"
 
+namespace serac {
+
 /**
    \brief StdFunctionCoefficient is an easy way to make an mfem::Coefficient
    using a lambda
@@ -233,5 +235,7 @@ class TransformedScalarCoefficient : public mfem::Coefficient {
   std::function<double(const double)>               mono_function_;
   std::function<double(const double, const double)> bi_function_;
 };
+
+} // namespace serac
 
 #endif

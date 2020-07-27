@@ -12,6 +12,8 @@
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
 
+namespace serac {
+
 /// The abstract MFEM operator for a quasi-static solve
 class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
  protected:
@@ -139,5 +141,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   /// The destructor
   virtual ~NonlinearSolidDynamicOperator();
 };
+
+} // namespace serac
 
 #endif

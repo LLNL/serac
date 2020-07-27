@@ -11,6 +11,8 @@
 
 #include "mfem.hpp"
 
+namespace serac {
+
 /// A class to convert linearform integrators into a nonlinear residual-based one
 class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
  public:
@@ -80,5 +82,7 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
   std::shared_ptr<mfem::BilinearFormIntegrator> A_;
   std::shared_ptr<mfem::ParFiniteElementSpace>  trial_fes_;
 };
+
+} // namespace serac
 
 #endif

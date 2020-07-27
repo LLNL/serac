@@ -10,6 +10,8 @@
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
 
+namespace serac {
+
 const int num_fields = 2;
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
@@ -266,3 +268,5 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
 }
 
 NonlinearSolidSolver::~NonlinearSolidSolver() {}
+
+} // namespace serac

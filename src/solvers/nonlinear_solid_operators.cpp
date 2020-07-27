@@ -8,6 +8,8 @@
 
 #include "common/logger.hpp"
 
+namespace serac {
+
 NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form)
     : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(H_form)
 {
@@ -166,3 +168,5 @@ mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
 }
 
 NonlinearSolidReducedSystemOperator::~NonlinearSolidReducedSystemOperator() {}
+
+} // namespace serac

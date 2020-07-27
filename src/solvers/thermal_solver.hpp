@@ -11,6 +11,8 @@
 #include "mfem.hpp"
 #include "thermal_operators.hpp"
 
+namespace serac {
+
 /** This is a generic linear thermal diffusion oeprator of the form
  *
  *    M du/dt = -kappa Ku + f
@@ -105,5 +107,7 @@ class ThermalSolver : public BaseSolver {
   /// Destructor
   virtual ~ThermalSolver() = default;
 };
+
+} // namespace serac
 
 #endif

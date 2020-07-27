@@ -12,6 +12,8 @@
 #include "serac_config.hpp"
 #include "solvers/elasticity_solver.hpp"
 
+namespace serac {
+
 TEST(elastic_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -81,6 +83,8 @@ TEST(elastic_solver, static_solve)
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
+}
+
 }
 
 //------------------------------------------------------------------------------

@@ -9,6 +9,8 @@
 
 #include "mfem.hpp"
 
+namespace serac {
+
 class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
  private:
   mfem::Vector vec_;
@@ -24,5 +26,7 @@ class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
     V *= scale_;
   }
 };
+
+} // namespace serac
 
 #endif

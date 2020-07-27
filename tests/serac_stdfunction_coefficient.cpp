@@ -15,6 +15,7 @@
 
 using namespace mfem;
 using namespace std;
+using namespace serac;
 
 class StdFunctionCoefficientTest : public ::testing::Test {
  protected:

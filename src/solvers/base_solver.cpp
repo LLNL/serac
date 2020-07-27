@@ -13,6 +13,8 @@
 #include "common/serac_types.hpp"
 #include "fmt/fmt.hpp"
 
+namespace serac {
+
 BaseSolver::BaseSolver(MPI_Comm comm) : comm_(comm), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0)
 {
   MPI_Comm_rank(comm_, &mpi_rank_);
@@ -285,3 +287,5 @@ void BaseSolver::outputState() const
       serac::exitGracefully(true);
   }
 }
+
+} // namespace serac

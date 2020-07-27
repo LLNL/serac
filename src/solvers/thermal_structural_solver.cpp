@@ -8,6 +8,8 @@
 
 #include "common/serac_types.hpp"
 
+namespace serac {
+
 const int num_fields = 3;
 
 ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
@@ -56,3 +58,5 @@ void ThermalStructuralSolver::advanceTimestep(double& dt)
 
   cycle_ += 1;
 }
+
+} // namespace serac

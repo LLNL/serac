@@ -10,6 +10,8 @@
 #include "base_solver.hpp"
 #include "mfem.hpp"
 
+namespace serac {
+
 /** This is a generic linear elasticity oeprator of the form
  *
  *    -div(sigma(u)) = f
@@ -90,5 +92,7 @@ class ElasticitySolver : public BaseSolver {
   /// The destructor
   virtual ~ElasticitySolver();
 };
+
+} // namespace serac
 
 #endif

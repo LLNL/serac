@@ -8,6 +8,8 @@
 
 #include "common/logger.hpp"
 
+namespace serac {
+
 DynamicConductionOperator::DynamicConductionOperator(
     std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const serac::LinearSolverParameters& params,
     const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr)
@@ -124,3 +126,5 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
 }
 
 DynamicConductionOperator::~DynamicConductionOperator() {}
+
+} // namespace serac

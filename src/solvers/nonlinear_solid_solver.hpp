@@ -11,6 +11,8 @@
 #include "mfem.hpp"
 #include "nonlinear_solid_operators.hpp"
 
+namespace serac {
+
 /// The nonlinear hyperelastic quasi-static and dynamic
 /// hyperelastic solver object. It is derived from MFEM
 /// example 10p.
@@ -110,5 +112,7 @@ class NonlinearSolidSolver : public BaseSolver {
   /// Destructor
   virtual ~NonlinearSolidSolver();
 };
+
+} // namespace serac
 
 #endif

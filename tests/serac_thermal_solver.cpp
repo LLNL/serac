@@ -13,6 +13,8 @@
 #include "serac_config.hpp"
 #include "solvers/thermal_solver.hpp"
 
+namespace serac {
+
 double BoundaryTemperature(const mfem::Vector& x) { return x.Norml2(); }
 double OtherBoundaryTemperature(const mfem::Vector& x) { return 2 * x.Norml2(); }
 
@@ -378,6 +380,8 @@ TEST(thermal_solver, dyn_imp_solve)
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
+}
+
 }
 
 //------------------------------------------------------------------------------

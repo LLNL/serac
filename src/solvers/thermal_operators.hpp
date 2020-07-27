@@ -12,6 +12,8 @@
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
 
+namespace serac {
+
 /// The time dependent operator for advancing the discretized conduction ODE
 class DynamicConductionOperator : public mfem::TimeDependentOperator {
  protected:
@@ -87,3 +89,5 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
 };
 
 #endif
+
+} // namespace serac

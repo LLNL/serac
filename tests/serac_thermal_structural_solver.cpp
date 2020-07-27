@@ -13,6 +13,8 @@
 #include "serac_config.hpp"
 #include "solvers/thermal_structural_solver.hpp"
 
+namespace serac {
+
 TEST(dynamic_solver, dyn_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -138,6 +140,8 @@ TEST(dynamic_solver, dyn_solve)
   EXPECT_NEAR(6.491872, temp_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
+}
+
 }
 
 int main(int argc, char* argv[])

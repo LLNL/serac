@@ -13,6 +13,8 @@
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
+namespace serac {
+
 TEST(nonlinear_solid_solver, qs_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -97,6 +99,8 @@ TEST(nonlinear_solid_solver, qs_solve)
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
+}
+
 }
 
 //------------------------------------------------------------------------------

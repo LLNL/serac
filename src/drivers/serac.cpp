@@ -150,11 +150,11 @@ int main(int argc, char* argv[])
   int dim = pmesh->Dimension();
 
   // Define the solid solver object
-  NonlinearSolidSolver solid_solver(order, pmesh);
+  serac::NonlinearSolidSolver solid_solver(order, pmesh);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  mfem::VectorFunctionCoefficient defo_coef(dim, initialDeformation);
+  mfem::VectorFunctionCoefficient defo_coef(dim, serac::initialDeformation);
 
   mfem::Vector velo(dim);
   velo = 0.0;
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
     traction(2) = tz;
   }
 
-  auto traction_coef = std::make_shared<VectorScaledConstantCoefficient>(traction);
+  auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
   solid_solver.setDisplacementBCs(ess_bdr, disp_coef);

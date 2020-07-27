@@ -6,6 +6,8 @@
 
 #include "mfem.hpp"
 
+namespace serac {
+
 /** Incremental hyperelastic integrator for any given HyperelasticModel.
 
     Represents @f$ \int W(Jpt) dx @f$ over a target zone, where W is the
@@ -46,3 +48,5 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
   virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
                                    const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
 };
+
+} // namespace serac

@@ -7,6 +7,8 @@
 
 #include "stdfunction_coefficient.hpp"
 
+namespace serac {
+
 StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector&)> func) : func_(func) {}
 
 double StdFunctionCoefficient::Eval(mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip)
@@ -164,3 +166,5 @@ double TransformedScalarCoefficient::Eval(mfem::ElementTransformation& T, const 
     return bi_function_(temp, temp2);
   }
 }
+
+} // namespace serac

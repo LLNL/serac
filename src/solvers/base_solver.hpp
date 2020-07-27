@@ -13,6 +13,8 @@
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
 
+namespace serac {
+
 /// This is the abstract base class for a generic forward solver
 class BaseSolver {
  protected:
@@ -137,5 +139,7 @@ class BaseSolver {
   /// Destructor
   virtual ~BaseSolver() = default;
 };
+
+} // namespace serac
 
 #endif

@@ -8,6 +8,8 @@
 
 #include "common/logger.hpp"
 
+namespace serac {
+
 const int num_fields = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
@@ -186,3 +188,5 @@ ElasticitySolver::~ElasticitySolver()
   delete K_solver_;
   delete K_prec_;
 }
+
+} // namespace serac

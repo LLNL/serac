@@ -8,6 +8,8 @@
 
 #include "common/logger.hpp"
 
+namespace serac {
+
 const int num_fields = 1;
 
 ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
@@ -165,3 +167,5 @@ void ThermalSolver::advanceTimestep(double& dt)
   temperature_->gf->SetFromTrueDofs(*temperature_->true_vec);
   cycle_ += 1;
 }
+
+} // namespace serac
