@@ -10,7 +10,7 @@
 
 namespace serac {
 
-const int NUM_FIELDS = 1;
+constexpr int NUM_FIELDS = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),

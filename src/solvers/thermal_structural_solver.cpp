@@ -11,7 +11,7 @@
 
 namespace serac {
 
-const int NUM_FIELDS = 3;
+constexpr int NUM_FIELDS = 3;
 
 ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order), therm_solver_(order, pmesh), solid_solver_(order, pmesh)

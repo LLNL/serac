@@ -12,7 +12,7 @@
 
 namespace serac {
 
-const int NUM_FIELDS = 2;
+constexpr int NUM_FIELDS = 2;
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
