@@ -108,6 +108,6 @@ class ThermalSolver : public BaseSolver {
   virtual ~ThermalSolver() = default;
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

@@ -127,4 +127,4 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
 
 DynamicConductionOperator::~DynamicConductionOperator() {}
 
-} // namespace serac
+}  // namespace serac

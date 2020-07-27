@@ -142,7 +142,7 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-}
+}  // namespace serac
 
 int main(int argc, char* argv[])
 {

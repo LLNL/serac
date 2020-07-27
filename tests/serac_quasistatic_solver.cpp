@@ -101,7 +101,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-}
+}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"

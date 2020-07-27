@@ -49,4 +49,4 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
                                    const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
 };
 
-} // namespace serac
+}  // namespace serac

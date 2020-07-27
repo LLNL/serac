@@ -142,6 +142,6 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   virtual ~NonlinearSolidDynamicOperator();
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

@@ -81,4 +81,4 @@ void MixedBilinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::Fin
   A_->AssembleElementMatrix2(trial_el, el, Tr, elmat);
 }
 
-} // namespace serac
+}  // namespace serac

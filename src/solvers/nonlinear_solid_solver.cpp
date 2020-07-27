@@ -269,4 +269,4 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
 
 NonlinearSolidSolver::~NonlinearSolidSolver() {}
 
-} // namespace serac
+}  // namespace serac

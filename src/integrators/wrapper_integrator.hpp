@@ -83,6 +83,6 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
   std::shared_ptr<mfem::ParFiniteElementSpace>  trial_fes_;
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

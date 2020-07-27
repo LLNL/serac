@@ -167,4 +167,4 @@ double TransformedScalarCoefficient::Eval(mfem::ElementTransformation& T, const 
   }
 }
 
-} // namespace serac
+}  // namespace serac

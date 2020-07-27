@@ -168,4 +168,4 @@ void ThermalSolver::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-} // namespace serac
+}  // namespace serac

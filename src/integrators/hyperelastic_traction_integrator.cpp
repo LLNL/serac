@@ -103,4 +103,4 @@ void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement&
   }
 }
 
-} // namespace serac
+}  // namespace serac

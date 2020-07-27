@@ -169,4 +169,4 @@ mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
 
 NonlinearSolidReducedSystemOperator::~NonlinearSolidReducedSystemOperator() {}
 
-} // namespace serac
+}  // namespace serac

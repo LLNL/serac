@@ -27,4 +27,4 @@ class HyperelasticTractionIntegrator : public mfem::NonlinearFormIntegrator {
   virtual ~HyperelasticTractionIntegrator() {}
 };
 
-} // namespace serac
+}  // namespace serac

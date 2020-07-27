@@ -189,7 +189,7 @@ TEST(component_bc, qs_attribute_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-}
+}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"

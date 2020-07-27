@@ -131,6 +131,6 @@ class ThermalStructuralSolver : public BaseSolver {
   virtual ~ThermalStructuralSolver() = default;
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

@@ -382,7 +382,7 @@ TEST(thermal_solver, dyn_imp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-}
+}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"

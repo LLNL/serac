@@ -288,4 +288,4 @@ void BaseSolver::outputState() const
   }
 }
 
-} // namespace serac
+}  // namespace serac

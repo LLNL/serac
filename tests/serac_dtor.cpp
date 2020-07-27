@@ -72,7 +72,7 @@ TEST(serac_dtor, test1)
   therm_solver.reset(nullptr);
 }
 
-}
+}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"

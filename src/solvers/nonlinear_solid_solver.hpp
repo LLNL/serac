@@ -113,6 +113,6 @@ class NonlinearSolidSolver : public BaseSolver {
   virtual ~NonlinearSolidSolver();
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

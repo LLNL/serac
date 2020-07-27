@@ -15,6 +15,6 @@ namespace serac {
 void referenceConfiguration(const mfem::Vector& x, mfem::Vector& y);
 void initialDeformation(const mfem::Vector& x, mfem::Vector& y);
 
-} // namespace serac
+}  // namespace serac
 
 #endif

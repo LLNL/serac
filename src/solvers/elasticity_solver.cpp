@@ -189,4 +189,4 @@ ElasticitySolver::~ElasticitySolver()
   delete K_prec_;
 }
 
-} // namespace serac
+}  // namespace serac

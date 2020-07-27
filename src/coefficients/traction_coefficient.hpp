@@ -27,6 +27,6 @@ class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
   }
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

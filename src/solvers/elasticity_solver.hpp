@@ -93,6 +93,6 @@ class ElasticitySolver : public BaseSolver {
   virtual ~ElasticitySolver();
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

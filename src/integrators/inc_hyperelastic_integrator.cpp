@@ -125,4 +125,4 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
   }
 }
 
-} // namespace serac
+}  // namespace serac

@@ -236,6 +236,6 @@ class TransformedScalarCoefficient : public mfem::Coefficient {
   std::function<double(const double, const double)> bi_function_;
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

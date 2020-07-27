@@ -140,6 +140,6 @@ class BaseSolver {
   virtual ~BaseSolver() = default;
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

@@ -125,7 +125,7 @@ void initialVelocity(const mfem::Vector& x, mfem::Vector& v)
   v(0)       = -s * x(0) * x(0);
 }
 
-}
+}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
