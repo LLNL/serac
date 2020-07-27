@@ -10,10 +10,10 @@
 
 namespace serac {
 
-const int num_fields = 1;
+const int NUM_FIELDS = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), num_fields, order),
+    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
       displacement_(state_[0]),
       K_form_(nullptr),
       l_form_(nullptr),

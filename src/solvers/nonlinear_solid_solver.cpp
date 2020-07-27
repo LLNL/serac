@@ -12,10 +12,10 @@
 
 namespace serac {
 
-const int num_fields = 2;
+const int NUM_FIELDS = 2;
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), num_fields, order),
+    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
       velocity_(state_[0]),
       displacement_(state_[1]),
       newton_solver_(pmesh->GetComm())
@@ -48,7 +48,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
   // Initialize the true DOF vector
-  mfem::Array<int> true_offset(num_fields + 1);
+  mfem::Array<int> true_offset(NUM_FIELDS + 1);
   int              true_size = velocity_->space->TrueVSize();
   true_offset[0]             = 0;
   true_offset[1]             = true_size;

@@ -11,10 +11,10 @@
 
 namespace serac {
 
-const int num_fields = 3;
+const int NUM_FIELDS = 3;
 
 ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), num_fields, order), therm_solver_(order, pmesh), solid_solver_(order, pmesh)
+    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order), therm_solver_(order, pmesh), solid_solver_(order, pmesh)
 {
   temperature_  = therm_solver_.getTemperature();
   velocity_     = solid_solver_.getVelocity();
