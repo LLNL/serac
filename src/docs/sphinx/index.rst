@@ -194,6 +194,7 @@ LLNL-CODE-805541
    :hidden:
    :maxdepth: 2
 
+   docker_info
    logging
    memory_checking
    style_guide
