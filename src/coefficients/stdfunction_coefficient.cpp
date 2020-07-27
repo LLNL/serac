@@ -34,9 +34,7 @@ mfem::Array<int> serac::MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem:
 {
   mfem::Array<int> ess_tdof_list(0);
 
-  mfem::Array<int> ess_vdof_list;
-
-  serac::MakeEssList(pfes, c, ess_vdof_list);
+  mfem::Array<int> ess_vdof_list = serac::MakeEssList(pfes, c);
 
   for (int i = 0; i < ess_vdof_list.Size(); ++i) {
     int tdof = pfes.GetLocalTDofNumber(ess_vdof_list[i]);
@@ -48,27 +46,28 @@ mfem::Array<int> serac::MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem:
   return ess_tdof_list;
 }
 
-void serac::MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list)
+mfem::Array<int> serac::MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c)
 {
+  mfem::Array<int> ess_vdof_list(0);
+
   mfem::ParGridFunction v_attr(&pfes);
   v_attr.ProjectCoefficient(c);
-
-  ess_vdof_list.SetSize(0);
 
   for (int vdof = 0; vdof < pfes.GetVSize(); ++vdof) {
     if (v_attr[vdof] > 0.) {
       ess_vdof_list.Append(vdof);
     }
   }
+
+  return ess_vdof_list;
 }
 
-void serac::MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+mfem::Array<int> serac::MakeAttributeList(mfem::Mesh &m, mfem::Coefficient &c,
                        std::function<int(double)> digitize)
 {
   mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &l2_fec);
-
-  attr_list.SetSize(fes.GetNE());
+  mfem::Array<int> attr_list(fes.GetNE());
 
   mfem::GridFunction elem_attr(&fes);
   elem_attr.ProjectCoefficient(c);
@@ -76,16 +75,17 @@ void serac::MakeAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::
   for (int e = 0; e < fes.GetNE(); e++) {
     attr_list[e] = digitize(elem_attr[e]);
   }
+
+  return attr_list;
 }
 
 // Need to use H1_fec because boundary elements don't exist in L2
-void serac::MakeBdrAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+mfem::Array<int> serac::MakeBdrAttributeList(mfem::Mesh &m,  mfem::Coefficient &c,
                           std::function<int(double)> digitize)
 {
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &h1_fec);
-
-  attr_list.SetSize(fes.GetNBE());
+  mfem::Array<int> attr_list(fes.GetNBE());
   mfem::Vector elem_attr(fes.GetNBE());
 
   for (int e = 0; e < fes.GetNBE(); e++) {
@@ -94,6 +94,8 @@ void serac::MakeBdrAttributeList(mfem::Mesh &m, mfem::Array<int> &attr_list, mfe
     elem_attr[e] = dofs.Sum() / (dofs.Size() * 1.);
     attr_list[e] = digitize(elem_attr[e]);
   }
+
+  return attr_list;
 }
 
 double AttributeModifierCoefficient::Eval(mfem::ElementTransformation &Tr, const mfem::IntegrationPoint &ip)

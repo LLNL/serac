@@ -84,10 +84,10 @@ mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::Vector
    \param[in] c A VectorCoefficient that is projected on to the mesh. All
    d.o.f's are examined and those that are the condition (> 0.) are appended to
    the vdof list.
-   \param[out] ess_tdof_list The list of vector dofs that should be
+   \return The list of vector dofs that should be
    part of the essential boundary conditions
 */
-void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list);
+mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c);
 
 /**
    \brief This method creates an array of size(local_elems), and assigns
@@ -97,16 +97,17 @@ void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, 
    elements in the mesh
 
    \param[in] m The mesh
-   \param[inout] attr_list Should be an array that will hold the attributes that
-   correspond to each element \param[in] c The coefficient provided that will be
-   evaluated on the mesh \param[in] digitize An optional function that can be
+   \param[in] c The coefficient provided that will be
+   evaluated on the mesh 
+   \param[in] digitize An optional function that can be
    called to assign attributes based on the value of c at a given projection
    point. By default, values of c at a given d.o.f that are > 0. are assigned
    attribute 2, otherwise attribute 1.
+   \return An array holding the attributes that correspond to each element 
 
 */
-void MakeAttributeList(
-    mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+mfem::Array<int> MakeAttributeList(
+    mfem::Mesh &m, mfem::Coefficient &c,
     std::function<int(double)> = [](double v) { return v > 0. ? 2 : 1; });
 
 /**
@@ -117,18 +118,18 @@ void MakeAttributeList(
    elements in the mesh
 
    \param[in] m The mesh
-   \param[inout] attr_list Should be an array that will hold the attributes that
-   correspond to each element \param[in] c The coefficient provided that will be
-   evaluated on the mesh \param[in] digitize An optional function that can be
+   \param[in] c The coefficient provided that will be
+   evaluated on the mesh 
+   \param[in] digitize An optional function that can be
    called to assign attributes based on the value of c at a given projection
    point. By default, values of c at a given d.o.f that are ==1. are assigned
    attribute 2, otherwise attribute 1. This means that only if all the d.o.f's
    of an bdr_element are "tagged" 1, will this bdr element be assigned
    attribute 2.
-
+   \return An array holding the attributes that correspond to each element 
 */
-void MakeBdrAttributeList(
-    mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+mfem::Array<int> MakeBdrAttributeList(
+    mfem::Mesh &m, mfem::Coefficient &c,
     std::function<int(double)> = [](double v) { return v == 1. ? 2 : 1; });
 
 } // namespace serac

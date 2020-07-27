@@ -93,8 +93,8 @@ TEST_F(StdFunctionCoefficientTest, AttributeList)
 
   StdFunctionCoefficient corner([](mfem::Vector x) { return (x[0] > 0.75 && x[1] > 0.75) ? 1. : 0.; });
 
-  Array<int> attr_list;
-  serac::MakeAttributeList(*pmesh, attr_list, corner);
+  Array<int> attr_list = serac::MakeAttributeList(*pmesh, corner);
+  
 
   MFEM_VERIFY(attr_list.Size() > 0 && attr_list.Sum() > 0, "Didn't pick up anything");
 
@@ -137,8 +137,7 @@ TEST_F(StdFunctionCoefficientTest, AttributeListSet)
 
   StdFunctionCoefficient corner([](mfem::Vector x) { return (x[0] > 0.75 && x[1] > 0.75) ? 1. : 0.; });
 
-  Array<int> attr_list;
-  serac::MakeAttributeList(*pmesh, attr_list, corner);
+  Array<int> attr_list = serac::MakeAttributeList(*pmesh, corner);
 
   SLIC_WARNING_IF(attr_list.Size() > 0 && attr_list.Sum() > 0, "Didn't pick up anything");
 
@@ -170,9 +169,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBC)
   ParGridFunction u_find_ess(pfes_v.get());
   u_find_ess.ProjectCoefficient(zero_bc);
 
-  Array<int> ess_vdof_list;
-
-  serac::MakeEssList(*pfes_v, zero_bc, ess_vdof_list);
+  Array<int> ess_vdof_list = serac::MakeEssList(*pfes_v, zero_bc);
 
   Vector u_ess(ess_vdof_list.Size());
   u_ess = 0.;
@@ -201,8 +198,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
     }
   });
 
-  Array<int> ess_origin_bc_list;
-  serac::MakeEssList(*pfes_v, origin_bc, ess_origin_bc_list);
+  Array<int> ess_origin_bc_list = serac::MakeEssList(*pfes_v, origin_bc);
 
   // Define bottom indicator list
   StdFunctionVectorCoefficient bottom_bc_z(pfes_v->GetVDim(), [](Vector &x, Vector &X) {
@@ -212,8 +208,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
       X[2] = 1.;
     }
   });
-  Array<int>                   ess_bottom_bc_list;
-  serac::MakeEssList(*pfes_v, bottom_bc_z, ess_bottom_bc_list);
+  Array<int>                   ess_bottom_bc_list = serac::MakeEssList(*pfes_v, bottom_bc_z);
 
   // Define top indicator list
   StdFunctionVectorCoefficient top_bc_z(pfes_v->GetVDim(), [](Vector &x, Vector &X) {
@@ -223,8 +218,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
       X[2] = 1.;
     }
   });
-  Array<int>                   ess_top_bc_list;
-  serac::MakeEssList(*pfes_v, top_bc_z, ess_top_bc_list);
+  Array<int>                   ess_top_bc_list = serac::MakeEssList(*pfes_v, top_bc_z);
 
   // Project displacement values z = 0.5*z
   StdFunctionVectorCoefficient vals(pfes_v->GetVDim(), [](Vector &x, Vector &disp) {
