@@ -147,7 +147,8 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
      of coefficient at each element. \param[in] c The coefficient to "modify"
      the element attributes
   */
-  AttributeModifierCoefficient(const mfem::Array<int>& attr_list, mfem::Coefficient& c) : attr_list_(attr_list), coef_(c)
+  AttributeModifierCoefficient(const mfem::Array<int>& attr_list, mfem::Coefficient& c)
+      : attr_list_(attr_list), coef_(c)
   {
   }
 

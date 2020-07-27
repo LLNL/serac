@@ -6,6 +6,7 @@
 // # Author: Jonathan Wong @ LLNL.
 
 #include "stdfunction_coefficient.hpp"
+
 #include "common/logger.hpp"
 
 namespace serac {
