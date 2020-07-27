@@ -12,9 +12,11 @@
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
-void InitialDeformation(const mfem::Vector &x, mfem::Vector &y);
+namespace serac {
 
-void InitialVelocity(const mfem::Vector &x, mfem::Vector &v);
+void initialDeformation(const mfem::Vector& x, mfem::Vector& y);
+
+void initialVelocity(const mfem::Vector& x, mfem::Vector& v);
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -23,7 +25,8 @@ TEST(dynamic_solver, dyn_solve)
   // Open the mesh
   std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
   std::fstream imesh(mesh_file);
-  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   mesh->UniformRefinement();
@@ -35,17 +38,17 @@ TEST(dynamic_solver, dyn_solve)
   std::set<int> ess_bdr = {1};
 
   auto visc   = std::make_shared<mfem::ConstantCoefficient>(0.0);
-  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialDeformation);
-  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, InitialVelocity);
+  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
+  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
   NonlinearSolidSolver dyn_solver(1, pmesh);
-  dyn_solver.SetDisplacementBCs(ess_bdr, deform);
-  dyn_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  dyn_solver.SetViscosity(visc);
-  dyn_solver.SetDisplacement(*deform);
-  dyn_solver.SetVelocity(*velo);
-  dyn_solver.SetTimestepper(serac::TimestepMethod::SDIRK33);
+  dyn_solver.setDisplacementBCs(ess_bdr, deform);
+  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
+  dyn_solver.setViscosity(visc);
+  dyn_solver.setDisplacement(*deform);
+  dyn_solver.setVelocity(*velo);
+  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
 
   // Set the linear solver parameters
   serac::LinearSolverParameters params;
@@ -62,20 +65,20 @@ TEST(dynamic_solver, dyn_solve)
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter    = 500;
-  dyn_solver.SetSolverParameters(params, nl_params);
+  dyn_solver.setSolverParameters(params, nl_params);
 
   // Initialize the VisIt output
-  dyn_solver.InitializeOutput(serac::OutputType::VisIt, "dynamic_solid");
+  dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");
 
   // Construct the internal dynamic solver data structures
-  dyn_solver.CompleteSetup();
+  dyn_solver.completeSetup();
 
   double t       = 0.0;
   double t_final = 6.0;
   double dt      = 3.0;
 
   // Ouput the initial state
-  dyn_solver.OutputState();
+  dyn_solver.outputState();
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
@@ -85,19 +88,19 @@ TEST(dynamic_solver, dyn_solve)
     t += dt_real;
     last_step = (t >= t_final - 1e-8 * dt);
 
-    dyn_solver.AdvanceTimestep(dt_real);
+    dyn_solver.advanceTimestep(dt_real);
   }
 
   // Output the final state
-  dyn_solver.OutputState();
+  dyn_solver.outputState();
 
   // Check the final displacement and velocity L2 norms
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double v_norm = dyn_solver.GetVelocity()->gf->ComputeLpError(2.0, zerovec);
-  double x_norm = dyn_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
+  double v_norm = dyn_solver.getVelocity()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = dyn_solver.getDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(12.86733, x_norm, 0.0001);
   EXPECT_NEAR(0.22298, v_norm, 0.0001);
@@ -105,14 +108,14 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void InitialDeformation(const mfem::Vector &x, mfem::Vector &y)
+void initialDeformation(const mfem::Vector& x, mfem::Vector& y)
 {
   // set the initial configuration to be the same as the reference, stress
   // free, configuration
   y = x;
 }
 
-void InitialVelocity(const mfem::Vector &x, mfem::Vector &v)
+void initialVelocity(const mfem::Vector& x, mfem::Vector& v)
 {
   const int    dim = x.Size();
   const double s   = 0.1 / 64.;
@@ -122,11 +125,13 @@ void InitialVelocity(const mfem::Vector &x, mfem::Vector &v)
   v(0)       = -s * x(0) * x(0);
 }
 
+}  // namespace serac
+
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
 using axom::slic::UnitTestLogger;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   int result = 0;
 

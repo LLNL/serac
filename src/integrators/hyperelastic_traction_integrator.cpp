@@ -6,26 +6,29 @@
 
 #include "hyperelastic_traction_integrator.hpp"
 
-void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElement &el1, const mfem::FiniteElement &,
-                                                        mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun,
-                                                        mfem::Vector &elvec)
+namespace serac {
+
+void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElement& el1, const mfem::FiniteElement&,
+                                                        mfem::FaceElementTransformations& Tr, const mfem::Vector& elfun,
+                                                        mfem::Vector& elvec)
 {
   int dim = el1.GetDim();
   int dof = el1.GetDof();
 
-  shape.SetSize(dof);
+  shape_.SetSize(dof);
   elvec.SetSize(dim * dof);
 
-  DSh_u.SetSize(dof, dim);
-  DS_u.SetSize(dof, dim);
-  J0i.SetSize(dim);
-  F.SetSize(dim);
-  Finv.SetSize(dim);
+  DSh_u_.SetSize(dof, dim);
+  DS_u_.SetSize(dof, dim);
+  J0i_.SetSize(dim);
+  F_.SetSize(dim);
+  Finv_.SetSize(dim);
 
-  PMatI_u.UseExternalData(elfun.GetData(), dof, dim);
+  PMatI_u_.UseExternalData(elfun.GetData(), dof, dim);
 
-  int                          intorder = 2 * el1.GetOrder() + 3;
-  const mfem::IntegrationRule &ir       = mfem::IntRules.Get(Tr.FaceGeom, intorder);
+  int intorder = 2 * el1.GetOrder() + 3;
+
+  const mfem::IntegrationRule& ir = mfem::IntRules.Get(Tr.FaceGeom, intorder);
 
   elvec = 0.0;
 
@@ -37,7 +40,7 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElemen
   mfem::Vector fu(dim);
 
   for (int i = 0; i < ir.GetNPoints(); i++) {
-    const mfem::IntegrationPoint &ip = ir.IntPoint(i);
+    const mfem::IntegrationPoint& ip = ir.IntPoint(i);
     mfem::IntegrationPoint        eip;
     Tr.Loc1.Transform(ip, eip);
 
@@ -50,35 +53,35 @@ void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElemen
     nor /= norm;
 
     // Compute traction
-    function.Eval(trac, *Tr.Face, ip);
+    function_.Eval(trac, *Tr.Face, ip);
 
     Tr.Elem1->SetIntPoint(&eip);
-    CalcInverse(Tr.Elem1->Jacobian(), J0i);
+    CalcInverse(Tr.Elem1->Jacobian(), J0i_);
 
-    el1.CalcDShape(eip, DSh_u);
-    Mult(DSh_u, J0i, DS_u);
-    MultAtB(PMatI_u, DS_u, F);
+    el1.CalcDShape(eip, DSh_u_);
+    Mult(DSh_u_, J0i_, DS_u_);
+    MultAtB(PMatI_u_, DS_u_, F_);
 
     for (int d = 0; d < dim; d++) {
-      F(d, d) += 1.0;
+      F_(d, d) += 1.0;
     }
 
-    CalcInverse(F, Finv);
+    CalcInverse(F_, Finv_);
 
-    Finv.MultTranspose(nor, fnor);
+    Finv_.MultTranspose(nor, fnor);
 
-    el1.CalcShape(eip, shape);
+    el1.CalcShape(eip, shape_);
     for (int j = 0; j < dof; j++) {
       for (int k = 0; k < dim; k++) {
-        elvec(dof * k + j) -= trac(k) * shape(j) * ip.weight * Tr.Face->Weight() * F.Det() * fnor.Norml2();
+        elvec(dof * k + j) -= trac(k) * shape_(j) * ip.weight * Tr.Face->Weight() * F_.Det() * fnor.Norml2();
       }
     }
   }
 }
 
-void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement &el1, const mfem::FiniteElement &el2,
-                                                      mfem::FaceElementTransformations &Tr, const mfem::Vector &elfun,
-                                                      mfem::DenseMatrix &elmat)
+void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement& el1, const mfem::FiniteElement& el2,
+                                                      mfem::FaceElementTransformations& Tr, const mfem::Vector& elfun,
+                                                      mfem::DenseMatrix& elmat)
 {
   double       diff_step = 1.0e-8;
   mfem::Vector temp_out_1;
@@ -99,3 +102,5 @@ void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement 
     temp[j] = elfun[j];
   }
 }
+
+}  // namespace serac

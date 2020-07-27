@@ -31,7 +31,7 @@ namespace serac {
  * \param [in] error True if the program should return an error code
  *****************************************************************************
  */
-void ExitGracefully(bool error = false);
+void exitGracefully(bool error = false);
 
 // Logger functionality
 namespace logger {
@@ -47,7 +47,7 @@ namespace logger {
  * \param [in] comm MPI communicator that the logger will use
  *****************************************************************************
  */
-bool Initialize(MPI_Comm comm);
+bool initialize(MPI_Comm comm);
 
 /*!
  *****************************************************************************
@@ -56,7 +56,7 @@ bool Initialize(MPI_Comm comm);
  * Closes and finalizes the SLIC logger.
  *****************************************************************************
  */
-void Finalize();
+void finalize();
 
 /*!
  *****************************************************************************
@@ -67,7 +67,7 @@ void Finalize();
  * messages can be spread across MPI ranks.
  *****************************************************************************
  */
-void Flush();
+void flush();
 
 }  // namespace logger
 }  // namespace serac

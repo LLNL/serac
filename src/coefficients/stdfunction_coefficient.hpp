@@ -17,6 +17,8 @@
 
 #include "mfem.hpp"
 
+namespace serac {
+
 /**
    \brief StdFunctionCoefficient is an easy way to make an mfem::Coefficient
    using a lambda
@@ -29,12 +31,12 @@ class StdFunctionCoefficient : public mfem::Coefficient {
  public:
   /// Constructor that takes in an mfem Vector representing the coordinates and
   /// produces a double
-  StdFunctionCoefficient(std::function<double(mfem::Vector &)> func);
+  StdFunctionCoefficient(std::function<double(mfem::Vector&)> func);
 
-  virtual double Eval(mfem::ElementTransformation &Tr, const mfem::IntegrationPoint &ip);
+  virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
 
  private:
-  std::function<double(mfem::Vector &)> m_func;
+  std::function<double(mfem::Vector&)> func_;
 };
 
 /**
@@ -53,12 +55,12 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
      void(mfem::Vector &, mfem::Vector &). The first argument of the function is
      the position, and the second argument is the output of the function.
   */
-  StdFunctionVectorCoefficient(int dim, std::function<void(mfem::Vector &, mfem::Vector &)> func);
+  StdFunctionVectorCoefficient(int dim, std::function<void(mfem::Vector&, mfem::Vector&)> func);
 
-  virtual void Eval(mfem::Vector &V, mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
+  virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
  private:
-  std::function<void(mfem::Vector &, mfem::Vector &)> m_func;
+  std::function<void(mfem::Vector&, mfem::Vector&)> func_;
 };
 
 /**
@@ -72,7 +74,7 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
    \param[out] ess_tdof_list The list of true dofs that should be
    part of the essential boundary conditions
 */
-void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_tdof_list);
+void makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c, mfem::Array<int>& ess_tdof_list);
 
 /**
    \brief MakeEssList takes in a FESpace, a vector coefficient, and produces a list
@@ -85,7 +87,7 @@ void MakeTrueEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient 
    \param[out] ess_tdof_list The list of vector dofs that should be
    part of the essential boundary conditions
 */
-void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, mfem::Array<int> &ess_vdof_list);
+void makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c, mfem::Array<int>& ess_vdof_list);
 
 /**
    \brief This method creates an array of size(local_elems), and assigns
@@ -103,8 +105,8 @@ void MakeEssList(mfem::ParFiniteElementSpace &pfes, mfem::VectorCoefficient &c, 
    attribute 2, otherwise attribute 1.
 
 */
-void MakeAttributeList(
-    mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+void makeAttributeList(
+    mfem::Mesh& m, mfem::Array<int>& attr_list, mfem::Coefficient& c,
     std::function<int(double)> = [](double v) { return v > 0. ? 2 : 1; });
 
 /**
@@ -125,8 +127,8 @@ void MakeAttributeList(
    attribute 2.
 
 */
-void MakeBdrAttributeList(
-    mfem::Mesh &m, mfem::Array<int> &attr_list, mfem::Coefficient &c,
+void makeBdrAttributeList(
+    mfem::Mesh& m, mfem::Array<int>& attr_list, mfem::Coefficient& c,
     std::function<int(double)> = [](double v) { return v == 1. ? 2 : 1; });
 
 /**
@@ -145,15 +147,16 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
      of coefficient at each element. \param[in] c The coefficient to "modify"
      the element attributes
   */
-  AttributeModifierCoefficient(const mfem::Array<int> &attr_list, mfem::Coefficient &c) : m_attr_list(attr_list), m_C(c)
+  AttributeModifierCoefficient(const mfem::Array<int>& attr_list, mfem::Coefficient& c)
+      : attr_list_(attr_list), coef_(c)
   {
   }
 
-  virtual double Eval(mfem::ElementTransformation &Tr, const mfem::IntegrationPoint &ip);
+  virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
 
  protected:
-  const mfem::Array<int> &m_attr_list;
-  mfem::Coefficient &     m_C;
+  const mfem::Array<int>& attr_list_;
+  mfem::Coefficient&      coef_;
 };
 
 /**
@@ -170,8 +173,8 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
      \param[in] func A function that takes in an input vector, and returns the
      output as the second argument.
   */
-  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>            v1,
-                               std::function<void(mfem::Vector &, mfem::Vector &)> func);
+  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>          v1,
+                               std::function<void(mfem::Vector&, mfem::Vector&)> func);
 
   /**
      \brief Apply a vector function, Func, to v1 and v2
@@ -184,15 +187,15 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
   */
 
   TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient> v1, std::shared_ptr<mfem::VectorCoefficient> v2,
-                               std::function<void(mfem::Vector &, mfem::Vector &, mfem::Vector &)> func);
-  virtual void Eval(mfem::Vector &V, mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
+                               std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> func);
+  virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
  private:
-  std::shared_ptr<mfem::VectorCoefficient> m_v1;
-  std::shared_ptr<mfem::VectorCoefficient> m_v2;
+  std::shared_ptr<mfem::VectorCoefficient> v1_;
+  std::shared_ptr<mfem::VectorCoefficient> v2_;
 
-  std::function<void(mfem::Vector &, mfem::Vector &)>                 m_mono_function;
-  std::function<void(mfem::Vector &, mfem::Vector &, mfem::Vector &)> m_bi_function;
+  std::function<void(mfem::Vector&, mfem::Vector&)>                mono_function_;
+  std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> bi_function_;
 };
 
 /**
@@ -224,14 +227,16 @@ class TransformedScalarCoefficient : public mfem::Coefficient {
   TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::shared_ptr<mfem::Coefficient> s2,
                                std::function<double(const double, const double)> func);
 
-  virtual double Eval(mfem::ElementTransformation &T, const mfem::IntegrationPoint &ip);
+  virtual double Eval(mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
  private:
-  std::shared_ptr<mfem::Coefficient> m_s1;
-  std::shared_ptr<mfem::Coefficient> m_s2;
+  std::shared_ptr<mfem::Coefficient> s1_;
+  std::shared_ptr<mfem::Coefficient> s2_;
 
-  std::function<double(const double)>               m_mono_function;
-  std::function<double(const double, const double)> m_bi_function;
+  std::function<double(const double)>               mono_function_;
+  std::function<double(const double, const double)> bi_function_;
 };
+
+}  // namespace serac
 
 #endif

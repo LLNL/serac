@@ -16,6 +16,8 @@ with the following amendments:
     1. ``camelCase`` should be used for function names 
     #. ``ALL_CAPS`` should be used for constants (in addition to macros)
 
+The Google style guide is meant for style enforcement only. The design principles outlined in the 
+`C++ Core Guidelines <http://isocpp.github.io/CppCoreGuidelines/>`_ should be followed.
 
 Documentation
 -------------
