@@ -13,6 +13,8 @@
 #include "serac_config.hpp"
 #include "solvers/thermal_structural_solver.hpp"
 
+namespace serac {
+
 TEST(dynamic_solver, dyn_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -32,14 +34,14 @@ TEST(dynamic_solver, dyn_solve)
   // define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &x, mfem::Vector &y) {
+  auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector& x, mfem::Vector& y) {
     y    = x;
     y(1) = y(1) + x(0) * 0.01;
   });
 
-  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector &, mfem::Vector &v) { v = 0.0; });
+  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector&, mfem::Vector& v) { v = 0.0; });
 
-  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector &x) {
+  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) {
     double temp = 2.0;
     if (x(0) < 1.0) {
       temp = 5.0;
@@ -67,7 +69,7 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetDisplacement(*deform);
   ts_solver.SetVelocity(*velo);
   ts_solver.SetTemperature(*temp);
-  ts_solver.SetTimestepper(serac::TimestepMethod::SDIRK33);
+  ts_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
   ts_solver.SetCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity
@@ -98,17 +100,17 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetThermalSolverParameters(params);
 
   // Initialize the VisIt output
-  ts_solver.InitializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");
+  ts_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");
 
   // Construct the internal dynamic solver data structures
-  ts_solver.CompleteSetup();
+  ts_solver.completeSetup();
 
   double t       = 0.0;
   double t_final = 6.0;
   double dt      = 1.0;
 
   // Ouput the initial state
-  ts_solver.OutputState();
+  ts_solver.outputState();
 
   // Perform time-integration
   // (looping over the time iterations, ti, with a time-step dt).
@@ -118,11 +120,11 @@ TEST(dynamic_solver, dyn_solve)
     t += dt_real;
     last_step = (t >= t_final - 1e-8 * dt);
 
-    ts_solver.AdvanceTimestep(dt_real);
+    ts_solver.advanceTimestep(dt_real);
   }
 
   // Output the final state
-  ts_solver.OutputState();
+  ts_solver.outputState();
 
   // Check the final displacement and velocity L2 norms
   mfem::Vector zero(dim);
@@ -140,7 +142,9 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-int main(int argc, char *argv[])
+}  // namespace serac
+
+int main(int argc, char* argv[])
 {
   int result = 0;
 

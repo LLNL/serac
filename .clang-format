@@ -21,3 +21,5 @@ BraceWrapping:
   SplitEmptyFunction: true
   SplitEmptyRecord: true
   SplitEmptyNamespace: true
+DerivePointerAlignment: false
+PointerAlignment: Left
