@@ -10,6 +10,8 @@
 #include "base_solver.hpp"
 #include "mfem.hpp"
 
+namespace serac {
+
 /** This is a generic linear elasticity oeprator of the form
  *
  *    -div(sigma(u)) = f
@@ -19,43 +21,43 @@
  *  and lambda and mu are the lame parameters */
 class ElasticitySolver : public BaseSolver {
  protected:
-  std::shared_ptr<serac::FiniteElementState> displacement;
+  std::shared_ptr<serac::FiniteElementState> displacement_;
 
   /// Stiffness bilinear form
-  std::unique_ptr<mfem::ParBilinearForm> m_K_form;
+  std::unique_ptr<mfem::ParBilinearForm> K_form_;
 
   /// Load bilinear form
-  std::unique_ptr<mfem::ParLinearForm> m_l_form;
+  std::unique_ptr<mfem::ParLinearForm> l_form_;
 
   /// Stiffness matrix
-  std::unique_ptr<mfem::HypreParMatrix> m_K_mat;
+  std::unique_ptr<mfem::HypreParMatrix> K_mat_;
 
   /// Eliminated stiffness matrix
-  std::unique_ptr<mfem::HypreParMatrix> m_K_e_mat;
+  std::unique_ptr<mfem::HypreParMatrix> K_e_mat_;
 
   /// RHS vector
-  std::unique_ptr<mfem::HypreParVector> m_rhs;
+  std::unique_ptr<mfem::HypreParVector> rhs_;
 
   /// Eliminated RHS vector
-  std::unique_ptr<mfem::HypreParVector> m_bc_rhs;
+  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
 
   /// Solver for the stiffness matrix
-  std::unique_ptr<mfem::Solver> m_K_solver;
+  std::unique_ptr<mfem::Solver> K_solver_;
 
   /// Preconditioner for the stiffness
-  std::unique_ptr<mfem::Solver> m_K_prec;
+  std::unique_ptr<mfem::Solver> K_prec_;
 
   /// Lame mu parameter coefficient
-  mfem::Coefficient *m_mu;
+  mfem::Coefficient* mu_;
 
   /// Lame lambda parameter coefficient
-  mfem::Coefficient *m_lambda;
+  mfem::Coefficient* lambda_;
 
   /// Body source coefficient
-  const mfem::VectorCoefficient *m_body_force;
+  const mfem::VectorCoefficient* body_force_;
 
   /// Linear solver parameters
-  serac::LinearSolverParameters m_lin_params;
+  serac::LinearSolverParameters lin_params_;
 
   /// Driver for a quasi-static solve
   void QuasiStaticSolve();
@@ -65,30 +67,32 @@ class ElasticitySolver : public BaseSolver {
   ElasticitySolver(const int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set the vector-valued essential displacement boundary conditions
-  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
-                          int component = -1);
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
+                          const int component = -1);
 
   /// Set the vector-valued natural traction boundary conditions
-  void SetTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       const int component = -1);
 
   /// Driver for advancing the timestep
-  void AdvanceTimestep(double &dt) override;
+  void advanceTimestep(double& dt);
 
   /// Set the elastic lame parameters
-  void SetLameParameters(mfem::Coefficient &lambda, mfem::Coefficient &mu);
+  void setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu);
 
   /// Set the vector-valued body force coefficient
-  void SetBodyForce(const mfem::VectorCoefficient &force);
+  void setBodyForce(const mfem::VectorCoefficient& force);
 
   /// Finish the setup and allocate the associate data structures
-  void CompleteSetup() override;
+  void completeSetup() override;
 
   /// Set the linear solver parameters object
-  void SetLinearSolverParameters(const serac::LinearSolverParameters &params);
+  void setLinearSolverParameters(const serac::LinearSolverParameters& params);
 
   /// The destructor
   virtual ~ElasticitySolver();
 };
+
+}  // namespace serac
 
 #endif

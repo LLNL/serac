@@ -13,109 +13,117 @@
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
 
+namespace serac {
+
 /// This is the abstract base class for a generic forward solver
 class BaseSolver {
  protected:
   /// The MPI communicator
-  MPI_Comm m_comm;
+  MPI_Comm comm_;
 
   /// List of finite element data structures
-  std::vector<std::shared_ptr<serac::FiniteElementState> > m_state;
+  std::vector<std::shared_ptr<FiniteElementState> > state_;
 
   /// Block vector storage of the true state
-  std::unique_ptr<mfem::BlockVector> m_block;
+  std::unique_ptr<mfem::BlockVector> block_;
 
   /// Essential BC markers
-  // std::vector<std::shared_ptr<serac::BoundaryCondition> > m_ess_bdr;
-  std::vector<serac::BoundaryCondition> m_ess_bdr;
+  std::vector<BoundaryCondition> ess_bdr_;
 
   /// Natural BC markers
-  // std::vector<std::shared_ptr<serac::BoundaryCondition> > m_nat_bdr;
-  std::vector<serac::BoundaryCondition> m_nat_bdr;
+  std::vector<BoundaryCondition> nat_bdr_;
 
   /// Type of state variable output
-  serac::OutputType m_output_type;
+  OutputType output_type_;
 
   /// Time integration method
-  serac::TimestepMethod m_timestepper;
+  TimestepMethod timestepper_;
 
   /// MFEM ode solver object
-  std::unique_ptr<mfem::ODESolver> m_ode_solver;
+  std::unique_ptr<mfem::ODESolver> ode_solver_;
 
   /// Root output name
-  std::string m_root_name;
+  std::string root_name_;
 
   /// Current time
-  double m_time;
+  double time_;
 
   /// Current cycle
-  int m_cycle;
+  int cycle_;
 
   /// MPI rank
-  int m_rank;
+  int mpi_rank_;
+
+  /// MPI size
+  int mpi_size_;
+
+  /// Order of basis functions
+  int order_;
 
   /// VisIt data collection pointer
-  std::unique_ptr<mfem::VisItDataCollection> m_visit_dc;
+  std::unique_ptr<mfem::VisItDataCollection> visit_dc_;
 
   /// State variable initialization indicator
-  std::vector<bool> m_gf_initialized;
+  std::vector<bool> gf_initialized_;
 
  public:
   /// Empty constructor
   BaseSolver(MPI_Comm comm);
 
-  /// Constructor that creates n entries in m_state
-  BaseSolver(MPI_Comm comm, int n);
+  /// Constructor that creates n entries in m_state of order p
+  BaseSolver(MPI_Comm comm, int n, int p);
 
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
-  virtual void SetEssentialBCs(const std::set<int> &ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                               const mfem::ParFiniteElementSpace &fes, const int component = -1);
+  virtual void setEssentialBCs(const std::set<int>& ess_bdr, BoundaryCondition::Coef ess_bdr_coef,
+                               const mfem::ParFiniteElementSpace& fes, const int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
-  virtual void SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef, 
+  virtual void setTrueDofs(const mfem::Array<int>& true_dofs, BoundaryCondition::Coef ess_bdr_coef,
                            const int component = -1);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
-  virtual void SetNaturalBCs(const std::set<int> &nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
+  virtual void setNaturalBCs(const std::set<int>& nat_bdr, BoundaryCondition::Coef nat_bdr_coef,
                              const int component = -1);
 
   /// Set the state variables from a coefficient
-  virtual void SetState(const std::vector<serac::BoundaryCondition::Coef> &state_coef);
+  virtual void setState(const std::vector<BoundaryCondition::Coef>& state_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void SetState(const std::vector<std::shared_ptr<serac::FiniteElementState> > &state);
+  virtual void setState(const std::vector<std::shared_ptr<FiniteElementState> >& state);
 
   /// Get the list of state variable grid functions
-  virtual std::vector<std::shared_ptr<serac::FiniteElementState> > GetState() const;
+  virtual std::vector<std::shared_ptr<FiniteElementState> > getState() const;
 
   /// Set the time integration method
-  virtual void SetTimestepper(const serac::TimestepMethod timestepper);
+  virtual void setTimestepper(const TimestepMethod timestepper);
 
   /// Set the current time
-  virtual void SetTime(const double time);
+  virtual void setTime(const double time);
 
   /// Get the current time
-  virtual double GetTime() const;
+  virtual double getTime() const;
 
   /// Get the current cycle
-  virtual int GetCycle() const;
+  virtual int getCycle() const;
 
   /// Complete the setup and allocate the necessary data structures
-  virtual void CompleteSetup() = 0;
+  virtual void completeSetup() = 0;
 
   /// Advance the state variables according to the chosen time integrator
-  virtual void AdvanceTimestep(double &dt) = 0;
+  virtual void advanceTimestep(double& dt) = 0;
 
   /// Initialize the state variable output
-  virtual void InitializeOutput(const serac::OutputType output_type, const std::string &root_name);
+  virtual void initializeOutput(const OutputType output_type, const std::string& root_name);
 
   /// output the state variables
-  virtual void OutputState() const;
+  virtual void outputState() const;
 
   /// Destructor
   virtual ~BaseSolver() = default;
 };
+
+}  // namespace serac
 
 #endif

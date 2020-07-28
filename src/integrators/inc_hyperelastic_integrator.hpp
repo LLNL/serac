@@ -6,6 +6,8 @@
 
 #include "mfem.hpp"
 
+namespace serac {
+
 /** Incremental hyperelastic integrator for any given HyperelasticModel.
 
     Represents @f$ \int W(Jpt) dx @f$ over a target zone, where W is the
@@ -15,7 +17,7 @@
 */
 class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
  private:
-  mfem::HyperelasticModel *model;
+  mfem::HyperelasticModel* model_;
 
   //   Jrt: the Jacobian of the target-to-reference-element transformation.
   //   Jpr: the Jacobian of the reference-to-physical-element transformation.
@@ -27,22 +29,24 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
   // PMatI: coordinates of the deformed configuration (dof x dim).
   // PMatO: reshaped view into the local element contribution to the operator
   //        output - the result of AssembleElementVector() (dof x dim).
-  mfem::DenseMatrix DSh, DS, Jrt, Jpr, Jpt, P, PMatI, PMatO;
+  mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, Jpt_, P_, PMatI_, PMatO_;
 
  public:
   /** @param[in] m  HyperelasticModel that will be integrated. */
-  explicit IncrementalHyperelasticIntegrator(mfem::HyperelasticModel *m) : model(m) {}
+  explicit IncrementalHyperelasticIntegrator(mfem::HyperelasticModel* m) : model_(m) {}
 
   /** @brief Computes the integral of W(Jacobian(Trt)) over a target zone
       @param[in] el     Type of FiniteElement.
       @param[in] Ttr    Represents ref->target coordinates transformation.
       @param[in] elfun  Physical coordinates of the zone. */
-  virtual double GetElementEnergy(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-                                  const mfem::Vector &elfun);
+  virtual double GetElementEnergy(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
+                                  const mfem::Vector& elfun);
 
-  virtual void AssembleElementVector(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-                                     const mfem::Vector &elfun, mfem::Vector &elvect);
+  virtual void AssembleElementVector(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
+                                     const mfem::Vector& elfun, mfem::Vector& elvect);
 
-  virtual void AssembleElementGrad(const mfem::FiniteElement &el, mfem::ElementTransformation &Ttr,
-                                   const mfem::Vector &elfun, mfem::DenseMatrix &elmat);
+  virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
+                                   const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
 };
+
+}  // namespace serac
