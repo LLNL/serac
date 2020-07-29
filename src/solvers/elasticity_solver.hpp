@@ -54,7 +54,7 @@ class ElasticitySolver : public BaseSolver {
   mfem::Coefficient* lambda_;
 
   /// Body source coefficient
-  const mfem::VectorCoefficient* body_force_;
+  mfem::VectorCoefficient* body_force_;
 
   /// Linear solver parameters
   serac::LinearSolverParameters lin_params_;
@@ -81,7 +81,7 @@ class ElasticitySolver : public BaseSolver {
   void setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu);
 
   /// Set the vector-valued body force coefficient
-  void setBodyForce(const mfem::VectorCoefficient& force);
+  void setBodyForce(mfem::VectorCoefficient& force);
 
   /// Finish the setup and allocate the associate data structures
   void completeSetup() override;

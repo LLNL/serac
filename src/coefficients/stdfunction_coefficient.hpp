@@ -31,7 +31,7 @@ class StdFunctionCoefficient : public mfem::Coefficient {
  public:
   /// Constructor that takes in an mfem Vector representing the coordinates and
   /// produces a double
-  explicit StdFunctionCoefficient(std::function<double(mfem::Vector&)> func);
+  StdFunctionCoefficient(std::function<double(mfem::Vector&)> func);
 
   virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
 
