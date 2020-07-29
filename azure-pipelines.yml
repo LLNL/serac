@@ -19,13 +19,13 @@ strategy:
       COMPILER: 'g++'
       TEST_TARGET: 'linux_gcc8'
       HOST_CONFIG: 'docker-linux-ubuntu16.04-x86_64-gcc@8.1.0'
-   linux_clang6:
+   linux_clang4:
        VM_ImageName: 'ubuntu-16.04'
-       Compiler_ImageName: 'seracllnl/tpls:clang-6'
+       Compiler_ImageName: 'seracllnl/tpls:clang-4'
        CMAKE_EXTRA_FLAGS: ''
        COMPILER: 'clang++'
-       TEST_TARGET: 'linux_clang6'
-       HOST_CONFIG: 'docker-linux-ubuntu16.04-x86_64-clang@6.0.0'
+       TEST_TARGET: 'linux_clang4'
+       HOST_CONFIG: 'docker-linux-ubuntu16.04-x86_64-clang@4.0.0'
 
 pool:
   vmImage: $(VM_ImageName)
