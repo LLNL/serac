@@ -14,171 +14,165 @@
 #include "common/serac_types.hpp"
 #include "fmt/fmt.hpp"
 
-namespace serac {
-
-BaseSolver::BaseSolver(MPI_Comm comm) : comm_(comm), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0)
+BaseSolver::BaseSolver(MPI_Comm comm) : m_comm(comm), m_output_type(serac::OutputType::VisIt), m_time(0.0), m_cycle(0)
 {
-  MPI_Comm_rank(comm_, &mpi_rank_);
-  MPI_Comm_size(comm_, &mpi_size_);
-  BaseSolver::setTimestepper(serac::TimestepMethod::ForwardEuler);
-  order_ = 1;
+  MPI_Comm_rank(m_comm, &m_rank);
+  BaseSolver::SetTimestepper(serac::TimestepMethod::ForwardEuler);
 }
 
-BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
+BaseSolver::BaseSolver(MPI_Comm comm, int n) : BaseSolver(comm)
 {
-  order_ = p;
-  state_.resize(n);
+  m_state.resize(n);
 
-  std::generate(state_.begin(), state_.end(), std::make_shared<serac::FiniteElementState>);
+  std::generate(m_state.begin(), m_state.end(), std::make_shared<serac::FiniteElementState>);
 
-  gf_initialized_.assign(n, false);
+  m_gf_initialized.assign(n, false);
 }
 
-void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                                 const mfem::ParFiniteElementSpace& fes, const int component)
+void BaseSolver::SetEssentialBCs(const std::set<int> &ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
+                                 const mfem::ParFiniteElementSpace &fes, const int component)
 {
-  serac::BoundaryCondition bc;
+  auto bc = std::make_shared<serac::BoundaryCondition>();
 
-  bc.markers.SetSize(state_.front()->mesh->bdr_attributes.Max());
-  bc.markers = 0;
+  bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
+  bc->markers = 0;
 
   for (const int attr : ess_bdr) {
-    SLIC_ASSERT_MSG(attr <= bc.markers.Size(), "Attribute specified larger than what is found in the mesh.");
-    bc.markers[attr - 1] = 1;
-    if (std::any_of(ess_bdr_.begin(), ess_bdr_.end(),
-                    [attr](const auto& existing_bc) { return existing_bc.markers[attr - 1] == 1; })) {
+    SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
+    bc->markers[attr-1] = 1;
+    if (std::any_of(m_ess_bdr.begin(), m_ess_bdr.end(), [attr](const auto& existing_bc) {
+          return existing_bc->markers[attr-1] == 1;
+        })) {
       SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-      bc.markers[attr - 1] = 0;
+      bc->markers[attr-1] = 0;
     }
   }
 
-  bc.component = component;
+  bc->component = component;
 
   // This function can and should be marked const in MFEM
   // TODO: Raise an issue against MFEM
   // Leave this explicit non-const action in as a stopgap
-  const_cast<mfem::ParFiniteElementSpace&>(fes).GetEssentialTrueDofs(bc.markers, bc.true_dofs, component);
+  const_cast<mfem::ParFiniteElementSpace&>(fes).GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
 
-  bc.coef = ess_bdr_coef;
+  bc->coef  = ess_bdr_coef;
 
-  ess_bdr_.push_back(std::move(bc));
+  m_ess_bdr.push_back(bc);
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,
-                             const int component)
+void BaseSolver::SetTrueDofs(const mfem::Array<int> &true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef)
 {
-  serac::BoundaryCondition bc;
+  auto bc = std::make_shared<serac::BoundaryCondition>();
 
-  bc.markers.SetSize(0);
+  bc->markers.SetSize(0);
 
-  bc.true_dofs = true_dofs;
+  bc->true_dofs = true_dofs;
 
-  bc.coef = ess_bdr_coef;
+  bc->coef = ess_bdr_coef;
 
-  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(ess_bdr_coef) && (component == -1),
-                "If a scalar coefficient is used, a corresponding component must be selected.");
-  bc.component = component;
-
-  ess_bdr_.push_back(std::move(bc));
+  m_ess_bdr.push_back(bc);
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
+void BaseSolver::SetNaturalBCs(const std::set<int> &nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
                                const int component)
 {
-  serac::BoundaryCondition bc;
+  auto bc = std::make_shared<serac::BoundaryCondition>();
 
-  bc.markers.SetSize(state_.front()->mesh->bdr_attributes.Max());
-  bc.markers = 0;
+  bc->markers.SetSize(m_state.front()->mesh->bdr_attributes.Max());
+  bc->markers = 0;
 
-  for (const int attr : nat_bdr) {
+  for (const int attr : nat_bdr) {  
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
-    bc.markers[attr - 1] = 1;
+    bc->markers[attr-1] = 1;
   }
-  bc.component = component;
-  bc.coef      = nat_bdr_coef;
+  bc->component   = component;
+  bc->coef  = nat_bdr_coef;
 
-  nat_bdr_.push_back(std::move(bc));
+  m_nat_bdr.push_back(bc);
 }
 
-void BaseSolver::setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef)
+void BaseSolver::SetState(const std::vector<serac::BoundaryCondition::Coef > &state_coef)
 {
-  SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
+  SLIC_ASSERT_MSG(state_coef.size() == m_state.size(),
+                  "State and coefficient bundles not the same size.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit([this, i](auto&& coef) { state_[i]->gf->ProjectCoefficient(*coef); }, state_coef[i]);
+    std::visit([this, i](auto&& coef) {
+      m_state[i]->gf->ProjectCoefficient(*coef);
+    }, state_coef[i]);
   }
 }
 
-void BaseSolver::setState(const std::vector<std::shared_ptr<serac::FiniteElementState>>& state)
+void BaseSolver::SetState(const std::vector<std::shared_ptr<serac::FiniteElementState> > &state)
 {
   SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
-  state_ = state;
+  m_state = state;
 }
 
-std::vector<std::shared_ptr<serac::FiniteElementState>> BaseSolver::getState() const { return state_; }
+std::vector<std::shared_ptr<serac::FiniteElementState> > BaseSolver::GetState() const { return m_state; }
 
-void BaseSolver::setTimestepper(const serac::TimestepMethod timestepper)
+void BaseSolver::SetTimestepper(const serac::TimestepMethod timestepper)
 {
-  timestepper_ = timestepper;
+  m_timestepper = timestepper;
 
-  switch (timestepper_) {
+  switch (m_timestepper) {
     case serac::TimestepMethod::QuasiStatic:
       break;
     case serac::TimestepMethod::BackwardEuler:
-      ode_solver_ = std::make_unique<mfem::BackwardEulerSolver>();
+      m_ode_solver = std::make_unique<mfem::BackwardEulerSolver>();
       break;
     case serac::TimestepMethod::SDIRK33:
-      ode_solver_ = std::make_unique<mfem::SDIRK33Solver>();
+      m_ode_solver = std::make_unique<mfem::SDIRK33Solver>();
       break;
     case serac::TimestepMethod::ForwardEuler:
-      ode_solver_ = std::make_unique<mfem::ForwardEulerSolver>();
+      m_ode_solver = std::make_unique<mfem::ForwardEulerSolver>();
       break;
     case serac::TimestepMethod::RK2:
-      ode_solver_ = std::make_unique<mfem::RK2Solver>(0.5);
+      m_ode_solver = std::make_unique<mfem::RK2Solver>(0.5);
       break;
     case serac::TimestepMethod::RK3SSP:
-      ode_solver_ = std::make_unique<mfem::RK3SSPSolver>();
+      m_ode_solver = std::make_unique<mfem::RK3SSPSolver>();
       break;
     case serac::TimestepMethod::RK4:
-      ode_solver_ = std::make_unique<mfem::RK4Solver>();
+      m_ode_solver = std::make_unique<mfem::RK4Solver>();
       break;
     case serac::TimestepMethod::GeneralizedAlpha:
-      ode_solver_ = std::make_unique<mfem::GeneralizedAlphaSolver>(0.5);
+      m_ode_solver = std::make_unique<mfem::GeneralizedAlphaSolver>(0.5);
       break;
     case serac::TimestepMethod::ImplicitMidpoint:
-      ode_solver_ = std::make_unique<mfem::ImplicitMidpointSolver>();
+      m_ode_solver = std::make_unique<mfem::ImplicitMidpointSolver>();
       break;
     case serac::TimestepMethod::SDIRK23:
-      ode_solver_ = std::make_unique<mfem::SDIRK23Solver>();
+      m_ode_solver = std::make_unique<mfem::SDIRK23Solver>();
       break;
     case serac::TimestepMethod::SDIRK34:
-      ode_solver_ = std::make_unique<mfem::SDIRK34Solver>();
+      m_ode_solver = std::make_unique<mfem::SDIRK34Solver>();
       break;
     default:
-      SLIC_ERROR_ROOT(mpi_rank_, "Timestep method not recognized!");
-      serac::exitGracefully(true);
+      SLIC_ERROR_ROOT(m_rank, "Timestep method not recognized!");
+      serac::ExitGracefully(true);
   }
 }
 
-void BaseSolver::setTime(const double time) { time_ = time; }
+void BaseSolver::SetTime(const double time) { m_time = time; }
 
-double BaseSolver::getTime() const { return time_; }
+double BaseSolver::GetTime() const { return m_time; }
 
-int BaseSolver::getCycle() const { return cycle_; }
+int BaseSolver::GetCycle() const { return m_cycle; }
 
-void BaseSolver::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
+void BaseSolver::InitializeOutput(const serac::OutputType output_type, const std::string &root_name)
 {
-  root_name_ = root_name;
+  m_root_name = root_name;
 
-  output_type_ = output_type;
+  m_output_type = output_type;
 
-  switch (output_type_) {
+  switch (m_output_type) {
     case serac::OutputType::VisIt: {
-      visit_dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, state_.front()->mesh.get());
-      for (const auto& state : state_) {
-        visit_dc_->RegisterField(state->name, state->gf.get());
+      m_visit_dc = std::make_unique<mfem::VisItDataCollection>(m_root_name, m_state.front()->mesh.get());
+      for (const auto &state : m_state) {
+        m_visit_dc->RegisterField(state->name, state->gf.get());
       }
       break;
     }
@@ -188,30 +182,30 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
     }
 
     default:
-      SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
-      serac::exitGracefully(true);
+      SLIC_ERROR_ROOT(m_rank, "OutputType not recognized!");
+      serac::ExitGracefully(true);
   }
 }
 
-void BaseSolver::outputState() const
+void BaseSolver::OutputState() const
 {
-  switch (output_type_) {
+  switch (m_output_type) {
     case serac::OutputType::VisIt: {
-      visit_dc_->SetCycle(cycle_);
-      visit_dc_->SetTime(time_);
-      visit_dc_->Save();
+      m_visit_dc->SetCycle(m_cycle);
+      m_visit_dc->SetTime(m_time);
+      m_visit_dc->Save();
       break;
     }
 
     case serac::OutputType::GLVis: {
-      std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
-      std::ofstream omesh(mesh_name);
+      std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", m_root_name, m_cycle, m_rank);
+      std::ofstream omesh(mesh_name.c_str());
       omesh.precision(8);
-      state_.front()->mesh->Print(omesh);
+      m_state.front()->mesh->Print(omesh);
 
-      for (auto& state : state_) {
-        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state->name, cycle_, mpi_rank_);
-        std::ofstream osol(sol_name);
+      for (auto &state : m_state) {
+        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", m_root_name, state->name, m_cycle, m_rank);
+        std::ofstream osol(sol_name.c_str());
         osol.precision(8);
         state->gf->Save(osol);
       }
@@ -219,9 +213,7 @@ void BaseSolver::outputState() const
     }
 
     default:
-      SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
-      serac::exitGracefully(true);
+      SLIC_ERROR_ROOT(m_rank, "OutputType not recognized!");
+      serac::ExitGracefully(true);
   }
 }
-
-}  // namespace serac

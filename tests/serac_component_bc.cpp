@@ -13,14 +13,12 @@
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
-namespace serac {
-
 TEST(component_bc, qs_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
   std::fstream imesh(mesh_file);
   auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
@@ -44,7 +42,7 @@ TEST(component_bc, qs_solve)
   auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -1.0e-1; });
 
   // Pass the BC information to the solver object setting only the z direction
-  solid_solver.setDisplacementBCs(ess_bdr, disp_coef, 0);
+  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef, 0);
 
   // Create an indicator function to set all vertices that are x=0
   StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector& x, mfem::Vector& X) {
@@ -55,53 +53,53 @@ TEST(component_bc, qs_solve)
       }
   });
 
-  auto ess_corner_bc_list = makeTrueEssList(*solid_solver.getDisplacement()->space, zero_bc);
+  mfem::Array<int> ess_corner_bc_list;
+  MakeTrueEssList(*solid_solver.GetDisplacement()->space, zero_bc, ess_corner_bc_list);
 
-  // Set tdofs with displacement in first dimension
-  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, 0);
+  solid_solver.SetTrueDofs(ess_corner_bc_list, disp_coef);
 
   // Set the material parameters
-  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
+  solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
 
   // Set the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-8;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 5000;
-  params.prec        = Preconditioner::Jacobi;
-  params.lin_solver  = LinearSolver::MINRES;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
 
-  NonlinearSolverParameters nl_params;
+  serac::NonlinearSolverParameters nl_params;
   nl_params.rel_tol     = 1.0e-6;
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter    = 5000;
 
-  solid_solver.setSolverParameters(params, nl_params);
+  solid_solver.SetSolverParameters(params, nl_params);
 
   // Set the time step method
-  solid_solver.setTimestepper(TimestepMethod::QuasiStatic);
+  solid_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
-  solid_solver.initializeOutput(OutputType::VisIt, "component_bc");
+  solid_solver.InitializeOutput(serac::OutputType::VisIt, "component_bc");
 
   // Complete the solver setup
-  solid_solver.completeSetup();
+  solid_solver.CompleteSetup();
 
   double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.AdvanceTimestep(dt);
 
   // Output the state
-  solid_solver.outputState();
+  solid_solver.OutputState();
 
-  auto state = solid_solver.getState();
+  auto state = solid_solver.GetState();
 
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.getDisplacement()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.08363646, x_norm, 0.0001);
 
@@ -113,10 +111,9 @@ TEST(component_bc, qs_attribute_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
   std::fstream imesh(mesh_file);
-
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // refine and declare pointer to parallel mesh object
@@ -140,56 +137,54 @@ TEST(component_bc, qs_attribute_solve)
   auto disp_y_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[1] * -5.0e-2; });
 
   // Pass the BC information to the solver object setting only the z direction
-  solid_solver.setDisplacementBCs(ess_x_bdr, disp_x_coef, 0);
-  solid_solver.setDisplacementBCs(ess_y_bdr, disp_y_coef, 1);
+  solid_solver.SetDisplacementBCs(ess_x_bdr, disp_x_coef, 0);
+  solid_solver.SetDisplacementBCs(ess_y_bdr, disp_y_coef, 1);
 
   // Set the material parameters
-  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
+  solid_solver.SetHyperelasticMaterialParameters(0.25, 10.0);
 
   // Set the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-8;
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 5000;
-  params.prec        = Preconditioner::Jacobi;
-  params.lin_solver  = LinearSolver::MINRES;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
 
-  NonlinearSolverParameters nl_params;
+  serac::NonlinearSolverParameters nl_params;
   nl_params.rel_tol     = 1.0e-6;
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter    = 5000;
 
-  solid_solver.setSolverParameters(params, nl_params);
+  solid_solver.SetSolverParameters(params, nl_params);
 
   // Set the time step method
-  solid_solver.setTimestepper(TimestepMethod::QuasiStatic);
+  solid_solver.SetTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
-  solid_solver.initializeOutput(OutputType::GLVis, "component_attr_bc");
+  solid_solver.InitializeOutput(serac::OutputType::GLVis, "component_attr_bc");
 
   // Complete the solver setup
-  solid_solver.completeSetup();
+  solid_solver.CompleteSetup();
 
   double dt = 1.0;
-  solid_solver.advanceTimestep(dt);
+  solid_solver.AdvanceTimestep(dt);
 
   // Output the state
-  solid_solver.outputState();
+  solid_solver.OutputState();
 
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.getDisplacement()->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.GetDisplacement()->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.03330115, x_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-
-}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
