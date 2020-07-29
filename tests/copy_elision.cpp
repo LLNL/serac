@@ -15,11 +15,8 @@ class ArrayCtr {
   static std::size_t  default_;
 
  public:
-  ArrayCtr() { defaultCalled(); }
-  ArrayCtr(const ArrayCtr& other) : array_(other.array_) { copyCalled(); }
-
-  void defaultCalled() { default_++; }
-  void copyCalled() { copy_++; }
+  ArrayCtr() { default_++; }
+  ArrayCtr(const ArrayCtr& other) : array_(other.array_) { copy_++; }
 
   static auto numDefaultCalls() { return default_; }
   static auto numCopyCalls() { return copy_; }

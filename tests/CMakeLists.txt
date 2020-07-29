@@ -61,7 +61,7 @@ if (ENABLE_GTEST)
         blt_add_executable(NAME        ${test_name}
                            SOURCES     ${filename}
                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                           DEPENDS_ON  ${test_dependencies} gmock
+                           DEPENDS_ON  ${test_dependencies}
                            FOLDER      serac/tests )
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}
