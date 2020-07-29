@@ -88,11 +88,11 @@ struct FiniteElementState {
 // Boundary condition information
 struct BoundaryCondition {
   using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
-  mfem::Array<int>                         markers;
-  mfem::Array<int>                         true_dofs;
-  int                                      component;
-  Coef                                     coef;
-  std::unique_ptr<mfem::HypreParMatrix>    eliminated_matrix_entries;
+  mfem::Array<int>                      markers;
+  mfem::Array<int>                      true_dofs;
+  int                                   component;
+  Coef                                  coef;
+  std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries;
 };
 
 }  // namespace serac

@@ -58,12 +58,7 @@ TEST(component_bc, qs_solve)
   mfem::Array<int> ess_corner_bc_list;
   makeTrueEssList(*solid_solver.getDisplacement()->space, zero_bc, ess_corner_bc_list);
 
-<<<<<<< HEAD
-  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef);
-=======
-  // Set tdofs with displacement in first dimension
-  solid_solver.SetTrueDofs(ess_corner_bc_list, disp_coef, 0);
->>>>>>> 001d463... improvement: switched to direct objects for boundary conditions, fixed uninitialized value bug relating to SetTrueDofs with a scalar coefficient
+  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, 0);
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
