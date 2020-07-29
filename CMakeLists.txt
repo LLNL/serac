@@ -38,7 +38,7 @@ endif()
 
 # Tune BLT to our needs
 if (NOT BLT_CXX_STD)
-    set(BLT_CXX_STD "c++17" CACHE STRING "")
+    set(BLT_CXX_STD "c++14" CACHE STRING "")
 endif()
 set(ENABLE_ASTYLE      OFF CACHE BOOL "")
 set(ENABLE_CLANGQUERY  OFF CACHE BOOL "")

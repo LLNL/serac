@@ -104,11 +104,10 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   m_x       = 0.0;
 
   for (auto &bc : m_ess_bdr) {
-    if (std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc->coef)) {
-      auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc->coef);
-      scalar_coef->SetTime(t);
+    if (bc->scalar_coef != nullptr) {
+      bc->scalar_coef->SetTime(t);
       m_state_gf->SetFromTrueDofs(m_y);
-      m_state_gf->ProjectBdrCoefficient(*scalar_coef, bc->markers);
+      m_state_gf->ProjectBdrCoefficient(*bc->scalar_coef, bc->markers);
       m_state_gf->GetTrueDofs(m_y);
 
       mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, m_y, *m_bc_rhs);

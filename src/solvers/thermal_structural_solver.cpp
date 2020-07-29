@@ -6,59 +6,53 @@
 
 #include "thermal_structural_solver.hpp"
 
-#include "common/logger.hpp"
 #include "common/serac_types.hpp"
 
-namespace serac {
-
-constexpr int NUM_FIELDS = 3;
+const int num_fields = 3;
 
 ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order), therm_solver_(order, pmesh), solid_solver_(order, pmesh)
+    : BaseSolver(pmesh->GetComm(), num_fields), m_therm_solver(order, pmesh), m_solid_solver(order, pmesh)
 {
-  temperature_  = therm_solver_.getTemperature();
-  velocity_     = solid_solver_.getVelocity();
-  displacement_ = solid_solver_.getDisplacement();
+  m_temperature  = m_therm_solver.GetTemperature();
+  m_velocity     = m_solid_solver.GetVelocity();
+  m_displacement = m_solid_solver.GetDisplacement();
 
-  state_[0] = temperature_;
-  state_[1] = velocity_;
-  state_[2] = displacement_;
+  m_state[0] = m_temperature;
+  m_state[1] = m_velocity;
+  m_state[2] = m_displacement;
 
-  coupling_ = serac::CouplingScheme::OperatorSplit;
+  m_coupling = serac::CouplingScheme::OperatorSplit;
 }
 
-void ThermalStructuralSolver::completeSetup()
+void ThermalStructuralSolver::CompleteSetup()
 {
-  if (coupling_ != serac::CouplingScheme::OperatorSplit) {
-    SLIC_ERROR_ROOT(mpi_rank_, "Only operator split is currently implemented in the thermal structural solver.");
-  }
+  MFEM_VERIFY(m_coupling == serac::CouplingScheme::OperatorSplit,
+              "Only operator split is currently implemented in the thermal structural solver.");
 
-  therm_solver_.completeSetup();
-  solid_solver_.completeSetup();
+  m_therm_solver.CompleteSetup();
+  m_solid_solver.CompleteSetup();
 }
 
-void ThermalStructuralSolver::setTimestepper(const serac::TimestepMethod timestepper)
+void ThermalStructuralSolver::SetTimestepper(serac::TimestepMethod timestepper)
 {
-  timestepper_ = timestepper;
-  therm_solver_.setTimestepper(timestepper);
-  solid_solver_.setTimestepper(timestepper);
+  m_timestepper = timestepper;
+  m_therm_solver.SetTimestepper(timestepper);
+  m_solid_solver.SetTimestepper(timestepper);
 }
 
 // Advance the timestep
-void ThermalStructuralSolver::advanceTimestep(double& dt)
+void ThermalStructuralSolver::AdvanceTimestep(double &dt)
 {
-  if (coupling_ == serac::CouplingScheme::OperatorSplit) {
+  if (m_coupling == serac::CouplingScheme::OperatorSplit) {
     double initial_dt = dt;
-    therm_solver_.advanceTimestep(dt);
-    solid_solver_.advanceTimestep(dt);
-    if (std::abs(dt - initial_dt) > 1.0e-6) {
-      SLIC_ERROR_ROOT(mpi_rank_, "Operator split coupled solvers cannot adaptively change the timestep");
-    }
+    m_therm_solver.AdvanceTimestep(dt);
+    m_solid_solver.AdvanceTimestep(dt);
+    MFEM_VERIFY(std::abs(dt - initial_dt) < 1.0e-6,
+                "Operator split coupled solvers cannot adaptively change the timestep");
+
   } else {
-    SLIC_ERROR_ROOT(mpi_rank_, "Only operator split coupling is currently implemented");
+    MFEM_ABORT("Only operator split coupling is currently implemented");
   }
 
-  cycle_ += 1;
+  m_cycle += 1;
 }
-
-}  // namespace serac

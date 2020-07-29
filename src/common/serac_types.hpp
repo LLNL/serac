@@ -8,7 +8,6 @@
 #define SERAC_TYPES
 
 #include <memory>
-#include <variant>
 
 #include "mfem.hpp"
 
@@ -87,14 +86,14 @@ struct FiniteElementState {
 
 // Boundary condition information
 struct BoundaryCondition {
-  using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
-  mfem::Array<int>                      markers;
-  mfem::Array<int>                      true_dofs;
-  int                                   component;
-  Coef                                  coef;
-  std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries;
+  mfem::Array<int>                         markers;
+  mfem::Array<int>                         true_dofs;
+  int                                      component;
+  std::shared_ptr<mfem::Coefficient>       scalar_coef;
+  std::shared_ptr<mfem::VectorCoefficient> vec_coef;
+  std::unique_ptr<mfem::HypreParMatrix>    eliminated_matrix_entries;
 };
 
-}  // namespace serac
+} // namespace serac
 
 #endif
