@@ -12,7 +12,7 @@ namespace serac {
 
 DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
                                                      const serac::LinearSolverParameters&         params,
-                                                    std::vector<serac::BoundaryCondition>&       ess_bdr)
+                                                     std::vector<serac::BoundaryCondition>&       ess_bdr)
     : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0),
       fespace_(fespace),
       ess_bdr_(ess_bdr),
@@ -73,7 +73,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
 
   // Compute:
   //    du_dt = M^{-1}*-K(u)
-  // for du_dt 
+  // for du_dt
   K_mat_->Mult(y_, z_);
   z_.Neg();  // z = -zw z_.Add(1.0, *bc_rhs_);
   z_.Add(1.0, *bc_rhs_);

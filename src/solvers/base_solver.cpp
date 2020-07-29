@@ -81,15 +81,14 @@ void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryC
   ess_bdr_.push_back(std::move(bc));
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
-                               int component)
+void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef, int component)
 {
   serac::BoundaryCondition bc;
 
   bc.markers.SetSize(state_.front()->mesh->bdr_attributes.Max());
   bc.markers = 0;
 
-  for  (int attr : nat_bdr) {
+  for (int attr : nat_bdr) {
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc.markers[attr - 1] = 1;
   }
