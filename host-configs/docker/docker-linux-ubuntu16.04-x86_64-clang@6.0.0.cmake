@@ -21,10 +21,6 @@ set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE PATH "")
 
 set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE PATH "")
 
-set(CMAKE_CXX_FLAGS "-stdlib=libc++" CACHE PATH "")
-
-set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/lib" CACHE PATH "Adds a missing libstdc++ rpath")
-
 #---------------------------------------
 # MPI
 #---------------------------------------
