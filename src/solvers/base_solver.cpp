@@ -36,7 +36,7 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
 
 void BaseSolver::setEssentialBCs(const std::set<int>&                     ess_bdr,
                                  std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
-                                 const mfem::ParFiniteElementSpace &fes, const int component)
+                                 const mfem::ParFiniteElementSpace& fes, const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -66,7 +66,7 @@ void BaseSolver::setEssentialBCs(const std::set<int>&                     ess_bd
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int> &                 true_dofs,
+void BaseSolver::setTrueDofs(const mfem::Array<int>&                        true_dofs,
                              const std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
@@ -80,8 +80,8 @@ void BaseSolver::setTrueDofs(const mfem::Array<int> &                 true_dofs,
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int> &                 nat_bdr,
-                               std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef, const int component)
+void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
+                               const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -99,8 +99,8 @@ void BaseSolver::setNaturalBCs(const std::set<int> &                 nat_bdr,
   nat_bdr_.push_back(bc);
 }
 
-void BaseSolver::setEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                                 const mfem::ParFiniteElementSpace &fes, const int component)
+void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
+                                 const mfem::ParFiniteElementSpace& fes, const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -130,7 +130,7 @@ void BaseSolver::setEssentialBCs(const std::set<int> &ess_bdr, std::shared_ptr<m
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -143,7 +143,7 @@ void BaseSolver::setTrueDofs(const mfem::Array<int> &true_dofs, std::shared_ptr<
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
+void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
                                const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
@@ -162,7 +162,7 @@ void BaseSolver::setNaturalBCs(const std::set<int> &nat_bdr, std::shared_ptr<mfe
   nat_bdr_.push_back(bc);
 }
 
-void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::Coefficient> > &state_coef)
+void BaseSolver::setState(const std::vector<std::shared_ptr<mfem::Coefficient> >& state_coef)
 {
   SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 

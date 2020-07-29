@@ -88,6 +88,6 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   virtual ~DynamicConductionOperator();
 };
 
-} // namespace serac
+}  // namespace serac
 
 #endif

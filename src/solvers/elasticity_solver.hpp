@@ -75,7 +75,7 @@ class ElasticitySolver : public BaseSolver {
                       const int component = -1);
 
   /// Driver for advancing the timestep
-  void advanceTimestep(double& dt);
+  void advanceTimestep(double& dt) override;
 
   /// Set the elastic lame parameters
   void setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu);

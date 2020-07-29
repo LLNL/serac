@@ -42,13 +42,13 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
   displacement_->name = "displacement";
 }
 
-void ElasticitySolver::setDisplacementBCs(const std::set<int> &                       disp_bdr,
+void ElasticitySolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
 {
   setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
 }
 
-void ElasticitySolver::setTractionBCs(const std::set<int> &                       trac_bdr,
+void ElasticitySolver::setTractionBCs(const std::set<int>&                     trac_bdr,
                                       std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, const int component)
 {
   setNaturalBCs(trac_bdr, trac_bdr_coef, component);
@@ -130,7 +130,7 @@ void ElasticitySolver::completeSetup()
 
     iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->space->GetComm());
   }
-  
+
   iter_solver->SetRelTol(lin_params_.rel_tol);
   iter_solver->SetAbsTol(lin_params_.abs_tol);
   iter_solver->SetMaxIter(lin_params_.max_iter);

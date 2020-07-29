@@ -76,7 +76,7 @@ class ThermalStructuralSolver : public BaseSolver {
   };
 
   /// Set the traction boundary conditions
-  void SetTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void SetTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       const int component = -1)
   {
     solid_solver_.setTractionBCs(trac_bdr, trac_bdr_coef, component);
@@ -95,7 +95,7 @@ class ThermalStructuralSolver : public BaseSolver {
   void SetDisplacement(mfem::VectorCoefficient& disp_state) { solid_solver_.setDisplacement(disp_state); };
 
   /// Set the initial velocity state (guess)
-  void SetVelocity(mfem::VectorCoefficient &velo_state) { solid_solver_.setVelocity(velo_state); };
+  void SetVelocity(mfem::VectorCoefficient& velo_state) { solid_solver_.setVelocity(velo_state); };
 
   /// Set the solid linear and nonlinear solver params
   void SetSolidSolverParameters(const serac::LinearSolverParameters&    lin_params,
@@ -125,7 +125,7 @@ class ThermalStructuralSolver : public BaseSolver {
   std::shared_ptr<serac::FiniteElementState> GetVelocity() { return velocity_; };
 
   /// Advance the timestep
-  void advanceTimestep(double &dt) override;
+  void advanceTimestep(double& dt) override;
 
   /// Destructor
   virtual ~ThermalStructuralSolver() = default;
