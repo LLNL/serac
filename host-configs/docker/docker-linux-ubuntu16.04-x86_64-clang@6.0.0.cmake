@@ -30,11 +30,11 @@ set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/lib" CACHE PATH "Adds a missing libst
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/home/serac/serac_tpls/clang-6.0.0/mpich-3.3.2/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/home/serac/serac_tpls/clang-6.0.0/mpich-3.0.4/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/home/serac/serac_tpls/clang-6.0.0/mpich-3.3.2/bin/mpic++" CACHE PATH "")
+set(MPI_CXX_COMPILER "/home/serac/serac_tpls/clang-6.0.0/mpich-3.0.4/bin/mpic++" CACHE PATH "")
 
-set(MPIEXEC_EXECUTABLE "/home/serac/serac_tpls/clang-6.0.0/mpich-3.3.2/bin/mpiexec" CACHE PATH "")
+set(MPIEXEC_EXECUTABLE "/home/serac/serac_tpls/clang-6.0.0/mpich-3.0.4/bin/mpiexec" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies
