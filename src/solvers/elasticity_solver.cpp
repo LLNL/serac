@@ -14,18 +14,7 @@ constexpr int NUM_FIELDS = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
-      displacement_(state_[0]),
-      K_form_(nullptr),
-      l_form_(nullptr),
-      K_mat_(nullptr),
-      K_e_mat_(nullptr),
-      rhs_(nullptr),
-      bc_rhs_(nullptr),
-      K_solver_(nullptr),
-      K_prec_(nullptr),
-      mu_(nullptr),
-      lambda_(nullptr),
-      body_force_(nullptr)
+      displacement_(state_[0])
 {
   pmesh->EnsureNodes();
   displacement_->mesh = pmesh;

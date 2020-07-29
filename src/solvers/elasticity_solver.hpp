@@ -48,13 +48,13 @@ class ElasticitySolver : public BaseSolver {
   std::unique_ptr<mfem::Solver> K_prec_;
 
   /// Lame mu parameter coefficient
-  mfem::Coefficient* mu_;
+  mfem::Coefficient* mu_ = nullptr;
 
   /// Lame lambda parameter coefficient
-  mfem::Coefficient* lambda_;
+  mfem::Coefficient* lambda_ = nullptr;
 
   /// Body source coefficient
-  mfem::VectorCoefficient* body_force_;
+  mfem::VectorCoefficient* body_force_ = nullptr;
 
   /// Linear solver parameters
   serac::LinearSolverParameters lin_params_;

@@ -111,18 +111,18 @@ void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParamete
 void NonlinearSolidSolver::completeSetup()
 {
   // Define the nonlinear form
-  auto H_form_ = std::make_unique<mfem::ParNonlinearForm>(displacement_->space.get());
+  auto H_form = std::make_unique<mfem::ParNonlinearForm>(displacement_->space.get());
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    H_form_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
+    H_form->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
   } else {
-    H_form_->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
+    H_form->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
   }
 
   // Add the traction integrator
   for (auto& nat_bc_data : nat_bdr_) {
-    H_form_->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->markers);
+    H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->markers);
   }
 
   // Add the essential boundary
@@ -156,29 +156,29 @@ void NonlinearSolidSolver::completeSetup()
   essential_dofs.Sort();
   essential_dofs.Unique();
 
-  H_form_->SetEssentialTrueDofs(essential_dofs);
+  H_form->SetEssentialTrueDofs(essential_dofs);
 
   // The abstract mass bilinear form
-  std::unique_ptr<mfem::ParBilinearForm> M_form_;
+  std::unique_ptr<mfem::ParBilinearForm> M_form;
 
   // The abstract viscosity bilinear form
-  std::unique_ptr<mfem::ParBilinearForm> S_form_;
+  std::unique_ptr<mfem::ParBilinearForm> S_form;
 
   // If dynamic, create the mass and viscosity forms
   if (timestepper_ != serac::TimestepMethod::QuasiStatic) {
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
-    M_form_ = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
+    M_form = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
 
-    M_form_->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
-    M_form_->Assemble(0);
-    M_form_->Finalize(0);
+    M_form->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
+    M_form->Assemble(0);
+    M_form->Finalize(0);
 
-    S_form_ = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
-    S_form_->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
-    S_form_->Assemble(0);
-    S_form_->Finalize(0);
+    S_form = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
+    S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
+    S_form->Assemble(0);
+    S_form->Finalize(0);
   }
 
   // Set up the jacbian solver based on the linear solver options
@@ -219,12 +219,12 @@ void NonlinearSolidSolver::completeSetup()
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     newton_solver_.iterative_mode = true;
-    nonlinear_oper_               = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form_));
+    nonlinear_oper_               = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
     newton_solver_.SetOperator(*nonlinear_oper_);
   } else {
     newton_solver_.iterative_mode = false;
     timedep_oper_                 = std::make_shared<NonlinearSolidDynamicOperator>(
-        std::move(H_form_), std::move(S_form_), std::move(M_form_), ess_bdr_, newton_solver_, lin_params_);
+        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, newton_solver_, lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }
 }
