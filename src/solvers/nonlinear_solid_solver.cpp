@@ -223,8 +223,8 @@ void NonlinearSolidSolver::completeSetup()
     newton_solver_.SetOperator(*nonlinear_oper_);
   } else {
     newton_solver_.iterative_mode = false;
-    timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(std::move(H_form_), std::move(S_form_), std::move(M_form_), ess_bdr_, newton_solver_,
-                                                                    lin_params_);
+    timedep_oper_                 = std::make_shared<NonlinearSolidDynamicOperator>(
+        std::move(H_form_), std::move(S_form_), std::move(M_form_), ess_bdr_, newton_solver_, lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }
 }

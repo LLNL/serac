@@ -8,44 +8,44 @@
 
 #include "mfem.hpp"
 
-class ArrayCtr
-{
-  private:
-    mfem::Array<double> t;
-    static std::size_t copy_;
-    static std::size_t default_;
-  public:
-    ArrayCtr() {defaultCalled();}
-    ArrayCtr(const ArrayCtr& other) : t(other.t) {copyCalled();}
+class ArrayCtr {
+ private:
+  mfem::Array<double> array_;
+  static std::size_t  copy_;
+  static std::size_t  default_;
 
-    void defaultCalled() {default_++;}
-    void copyCalled() {copy_++;}
+ public:
+  ArrayCtr() { defaultCalled(); }
+  ArrayCtr(const ArrayCtr& other) : array_(other.array_) { copyCalled(); }
 
-    static auto numDefaultCalls() {return default_;}
-    static auto numCopyCalls() {return copy_;}
+  void defaultCalled() { default_++; }
+  void copyCalled() { copy_++; }
 
-    void Append(double elem) {t.Append(elem);}
+  static auto numDefaultCalls() { return default_; }
+  static auto numCopyCalls() { return copy_; }
 
+  void Append(double elem) { array_.Append(elem); }
 };
 
-std::size_t ArrayCtr::copy_ = 0;
+std::size_t ArrayCtr::copy_    = 0;
 std::size_t ArrayCtr::default_ = 0;
 
-ArrayCtr doubleArrayMaker() {
-    ArrayCtr result;
-    // Just a random loop - if nothing was done to the array before returning,
-    // the compiler might be able to do a non-returned value
-    for (auto i = 0; i < 10; i++) {
-        if (i % 2) {
-            result.Append(i + 7 % 3);
-        }
+ArrayCtr doubleArrayMaker()
+{
+  ArrayCtr result;
+  // Just a random loop - if nothing was done to the array before returning,
+  // the compiler might be able to do an unnamed returned value optimimization
+  for (auto i = 0; i < 10; i++) {
+    if (i % 2) {
+      result.Append(i + 7 % 3);
     }
-    return result;
+  }
+  return result;
 }
 
-TEST(NRVO, NRVO_mfem_array) 
+TEST(NRVO, NRVO_mfem_array)
 {
-    ArrayCtr arr = doubleArrayMaker();
-    ASSERT_EQ(1, ArrayCtr::numDefaultCalls());
-    ASSERT_EQ(0, ArrayCtr::numCopyCalls());
+  ArrayCtr arr = doubleArrayMaker();
+  ASSERT_EQ(ArrayCtr::numDefaultCalls(), 1);
+  ASSERT_EQ(ArrayCtr::numCopyCalls(), 0);
 }

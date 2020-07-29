@@ -112,8 +112,7 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
 NonlinearSolidDynamicOperator::~NonlinearSolidDynamicOperator() {}
 
 NonlinearSolidReducedSystemOperator::NonlinearSolidReducedSystemOperator(
-    const mfem::ParNonlinearForm& H_form, const mfem::ParBilinearForm& S_form,
-     mfem::ParBilinearForm&                         M_form,
+    const mfem::ParNonlinearForm& H_form, const mfem::ParBilinearForm& S_form, mfem::ParBilinearForm& M_form,
     const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr)
     : mfem::Operator(M_form.ParFESpace()->TrueVSize()),
       M_form_(M_form),

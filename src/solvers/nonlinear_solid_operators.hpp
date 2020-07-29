@@ -70,7 +70,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
  public:
   /// The constructor
   NonlinearSolidReducedSystemOperator(const mfem::ParNonlinearForm& H_form, const mfem::ParBilinearForm& S_form,
-     mfem::ParBilinearForm&                         M_form,
+                                      mfem::ParBilinearForm&                                         M_form,
                                       const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
