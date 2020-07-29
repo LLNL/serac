@@ -111,7 +111,7 @@ void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParamete
 void NonlinearSolidSolver::completeSetup()
 {
   // Define the nonlinear form
-  auto H_form_ = std::make_shared<mfem::ParNonlinearForm>(displacement_->space.get());
+  auto H_form_ = std::make_unique<mfem::ParNonlinearForm>(displacement_->space.get());
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
@@ -159,23 +159,23 @@ void NonlinearSolidSolver::completeSetup()
   H_form_->SetEssentialTrueDofs(essential_dofs);
 
   // The abstract mass bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> M_form_;
+  std::unique_ptr<mfem::ParBilinearForm> M_form_;
 
   // The abstract viscosity bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> S_form_;
+  std::unique_ptr<mfem::ParBilinearForm> S_form_;
 
   // If dynamic, create the mass and viscosity forms
   if (timestepper_ != serac::TimestepMethod::QuasiStatic) {
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
-    M_form_ = std::make_shared<mfem::ParBilinearForm>(displacement_->space.get());
+    M_form_ = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
 
     M_form_->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
     M_form_->Assemble(0);
     M_form_->Finalize(0);
 
-    S_form_ = std::make_shared<mfem::ParBilinearForm>(displacement_->space.get());
+    S_form_ = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
     S_form_->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
     S_form_->Assemble(0);
     S_form_->Finalize(0);
@@ -219,11 +219,11 @@ void NonlinearSolidSolver::completeSetup()
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     newton_solver_.iterative_mode = true;
-    nonlinear_oper_               = std::make_shared<NonlinearSolidQuasiStaticOperator>(H_form_);
+    nonlinear_oper_               = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form_));
     newton_solver_.SetOperator(*nonlinear_oper_);
   } else {
     newton_solver_.iterative_mode = false;
-    timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(H_form_, S_form_, M_form_, ess_bdr_, newton_solver_,
+    timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(std::move(H_form_), std::move(S_form_), std::move(M_form_), ess_bdr_, newton_solver_,
                                                                     lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }

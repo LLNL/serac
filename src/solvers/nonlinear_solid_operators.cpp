@@ -32,14 +32,14 @@ mfem::Operator& NonlinearSolidQuasiStaticOperator::GetGradient(const mfem::Vecto
 NonlinearSolidQuasiStaticOperator::~NonlinearSolidQuasiStaticOperator() {}
 
 NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
-    std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
-    std::shared_ptr<mfem::ParBilinearForm>                         M_form,
+    std::unique_ptr<mfem::ParNonlinearForm> H_form, std::unique_ptr<mfem::ParBilinearForm> S_form,
+    std::unique_ptr<mfem::ParBilinearForm>                         M_form,
     const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr, mfem::NewtonSolver& newton_solver,
     const serac::LinearSolverParameters& lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
-      M_form_(M_form),
-      S_form_(S_form),
-      H_form_(H_form),
+      M_form_(std::move(M_form)),
+      S_form_(std::move(S_form)),
+      H_form_(std::move(H_form)),
       newton_solver_(newton_solver),
       ess_bdr_(ess_bdr),
       lin_params_(lin_params),
@@ -63,7 +63,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(
 
   // Construct the reduced system operator and initialize the newton solver with
   // it
-  reduced_oper_ = std::make_unique<NonlinearSolidReducedSystemOperator>(H_form, S_form, M_form, ess_bdr_);
+  reduced_oper_ = std::make_unique<NonlinearSolidReducedSystemOperator>(*H_form_, *S_form_, *M_form_, ess_bdr_);
   newton_solver_.SetOperator(*reduced_oper_);
 }
 
@@ -112,10 +112,10 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
 NonlinearSolidDynamicOperator::~NonlinearSolidDynamicOperator() {}
 
 NonlinearSolidReducedSystemOperator::NonlinearSolidReducedSystemOperator(
-    std::shared_ptr<mfem::ParNonlinearForm> H_form, std::shared_ptr<mfem::ParBilinearForm> S_form,
-    std::shared_ptr<mfem::ParBilinearForm>                         M_form,
+    const mfem::ParNonlinearForm& H_form, const mfem::ParBilinearForm& S_form,
+     mfem::ParBilinearForm&                         M_form,
     const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr)
-    : mfem::Operator(M_form->ParFESpace()->TrueVSize()),
+    : mfem::Operator(M_form.ParFESpace()->TrueVSize()),
       M_form_(M_form),
       S_form_(S_form),
       H_form_(H_form),
@@ -140,9 +140,9 @@ void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector& k, mfem::Vect
   // compute: y = H(x + dt*(v + dt*k)) + M*k + S*(v + dt*k)
   add(*v_, dt_, k, w_);
   add(*x_, dt_, w_, z_);
-  H_form_->Mult(z_, y);
-  M_form_->TrueAddMult(k, y);
-  S_form_->TrueAddMult(w_, y);
+  H_form_.Mult(z_, y);
+  M_form_.TrueAddMult(k, y);
+  S_form_.TrueAddMult(w_, y);
   for (auto& bc : ess_bdr_) {
     y.SetSubVector(bc->true_dofs, 0.0);
   }
@@ -151,11 +151,11 @@ void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector& k, mfem::Vect
 mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vector& k) const
 {
   // Form the gradient of the complete nonlinear operator
-  auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_form_->SpMat(), dt_, S_form_->SpMat()));
+  auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_form_.SpMat(), dt_, S_form_.SpMat()));
   add(*v_, dt_, k, w_);
   add(*x_, dt_, w_, z_);
-  localJ->Add(dt_ * dt_, H_form_->GetLocalGradient(z_));
-  jacobian_.reset(M_form_->ParallelAssemble(localJ.get()));
+  localJ->Add(dt_ * dt_, H_form_.GetLocalGradient(z_));
+  jacobian_.reset(M_form_.ParallelAssemble(localJ.get()));
 
   // Eliminate the fixed boundary DOFs
   //
