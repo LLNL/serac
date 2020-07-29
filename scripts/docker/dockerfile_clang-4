@@ -1,4 +1,4 @@
-FROM axom/compilers:clang-6
+FROM axom/compilers:clang-4
 LABEL maintainer="bramwell1@llnl.gov"
 
 RUN sudo apt-get update -y
@@ -15,6 +15,6 @@ USER serac
 
 RUN git clone --recursive https://github.com/LLNL/serac.git
 
-RUN ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ --spec=%clang@6.0.0 --prefix=/home/serac/serac_tpls -k
+RUN ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ --spec=%clang@4.0.0 --prefix=/home/serac/serac_tpls -k
 
 RUN rm -rf serac
