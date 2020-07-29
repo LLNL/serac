@@ -12,6 +12,8 @@
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
 
+namespace serac {
+
 /// The abstract MFEM operator for a quasi-static solve
 class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
  protected:
@@ -23,7 +25,7 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
 
  public:
   /// The constructor
-  explicit NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
+  NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
 
   /// Required to use the native newton solver
   mfem::Operator& GetGradient(const mfem::Vector& x) const;
@@ -139,5 +141,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   /// The destructor
   virtual ~NonlinearSolidDynamicOperator();
 };
+
+}  // namespace serac
 
 #endif

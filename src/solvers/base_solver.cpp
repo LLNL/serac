@@ -6,7 +6,6 @@
 
 #include "base_solver.hpp"
 
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 
@@ -37,21 +36,22 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
 }
 
 void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                                 const mfem::ParFiniteElementSpace& fes, const int component)
+                                 mfem::ParFiniteElementSpace& fes, int component)
 {
-  // auto bc = std::make_shared<serac::BoundaryCondition>();
   serac::BoundaryCondition bc;
 
   bc.markers.SetSize(state_.front()->mesh->bdr_attributes.Max());
   bc.markers = 0;
 
-  for (const int attr : ess_bdr) {
+  for (int attr : ess_bdr) {
     SLIC_ASSERT_MSG(attr <= bc.markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc.markers[attr - 1] = 1;
-    if (std::any_of(ess_bdr_.begin(), ess_bdr_.end(),
-                    [attr](const auto& existing_bc) { return existing_bc.markers[attr - 1] == 1; })) {
-      SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-      bc.markers[attr - 1] = 0;
+    for (auto& existing_bc : ess_bdr_) {
+      if (existing_bc.markers[attr - 1] == 1) {
+        SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
+        bc.markers[attr - 1] = 0;
+        break;
+      }
     }
   }
 
@@ -67,9 +67,8 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCo
 }
 
 void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,
-                             const int component)
+                             int component)
 {
-  // auto bc = std::make_shared<serac::BoundaryCondition>();
   serac::BoundaryCondition bc;
 
   bc.markers.SetSize(0);
@@ -83,15 +82,14 @@ void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryC
 }
 
 void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
-                               const int component)
+                               int component)
 {
-  // auto bc = std::make_shared<serac::BoundaryCondition>();
   serac::BoundaryCondition bc;
 
   bc.markers.SetSize(state_.front()->mesh->bdr_attributes.Max());
   bc.markers = 0;
 
-  for (const int attr : nat_bdr) {
+  for  (int attr : nat_bdr) {
     SLIC_ASSERT_MSG(attr <= bc->markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc.markers[attr - 1] = 1;
   }
@@ -111,7 +109,7 @@ void BaseSolver::setState(const std::vector<serac::BoundaryCondition::Coef>& sta
   }
 }
 
-void BaseSolver::setState(std::vector<std::shared_ptr<serac::FiniteElementState> > state)
+void BaseSolver::setState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state)
 {
   SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
   state_ = state;
@@ -168,9 +166,10 @@ double BaseSolver::getTime() const { return time_; }
 
 int BaseSolver::getCycle() const { return cycle_; }
 
-void BaseSolver::initializeOutput(const serac::OutputType output_type, const std::string root_name)
+void BaseSolver::initializeOutput(const serac::OutputType output_type, std::string root_name)
 {
-  root_name_   = root_name;
+  root_name_ = root_name;
+
   output_type_ = output_type;
 
   switch (output_type_) {
@@ -204,13 +203,13 @@ void BaseSolver::outputState() const
 
     case serac::OutputType::GLVis: {
       std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
-      std::ofstream omesh(mesh_name.c_str());
+      std::ofstream omesh(mesh_name);
       omesh.precision(8);
       state_.front()->mesh->Print(omesh);
 
       for (auto& state : state_) {
         std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state->name, cycle_, mpi_rank_);
-        std::ofstream osol(sol_name.c_str());
+        std::ofstream osol(sol_name);
         osol.precision(8);
         state->gf->Save(osol);
       }

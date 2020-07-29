@@ -102,7 +102,7 @@ void ElasticitySolver::completeSetup()
 
   // Eliminate the essential DOFs
   for (auto& bc : ess_bdr_) {
-    K_e_mat_ = new mfem::HypreParMatrix(*K_mat_->EliminateRowsCols(bc.true_dofs));
+    K_e_mat_ = K_mat_->EliminateRowsCols(bc.true_dofs);
   }
 
   // Initialize the eliminate BC RHS vector

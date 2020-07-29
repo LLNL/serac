@@ -8,6 +8,8 @@
 
 #include "common/logger.hpp"
 
+namespace serac {
+
 NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form)
     : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(H_form)
 {
@@ -17,6 +19,7 @@ NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::shared
 void NonlinearSolidQuasiStaticOperator::Mult(const mfem::Vector& k, mfem::Vector& y) const
 {
   // Apply the nonlinear form H_form_->Mult(k, y);
+  H_form_->Mult(k, y);
 }
 
 // Compute the Jacobian from the nonlinear form
@@ -43,19 +46,26 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::shared_ptr<mfe
       lin_params_(lin_params),
       z_(height / 2)
 {
-  // Assemble the mass matrix and eliminate the fixed DOFs M_mat_.reset(M_form_->ParallelAssemble());
-  for (const auto& bc : ess_bdr_) {
+  // Assemble the mass matrix and eliminate the fixed DOFs
+  M_mat_.reset(M_form_->ParallelAssemble());
+  for (auto& bc : ess_bdr_) {
     auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.true_dofs));
   }
 
-  // Set the mass matrix solver options M_solver_.iterative_mode = false; M_solver_.SetRelTol(lin_params_.rel_tol);
-  // M_solver_.SetAbsTol(lin_params_.abs_tol); M_solver_.SetMaxIter(lin_params_.max_iter);
-  // M_solver_.SetPrintLevel(lin_params_.print_level); M_prec_.SetType(mfem::HypreSmoother::Jacobi);
-  // M_solver_.SetPreconditioner(M_prec_); M_solver_.SetOperator(*M_mat_);
+  // Set the mass matrix solver options
+  M_solver_.iterative_mode = false;
+  M_solver_.SetRelTol(lin_params_.rel_tol);
+  M_solver_.SetAbsTol(lin_params_.abs_tol);
+  M_solver_.SetMaxIter(lin_params_.max_iter);
+  M_solver_.SetPrintLevel(lin_params_.print_level);
+  M_prec_.SetType(mfem::HypreSmoother::Jacobi);
+  M_solver_.SetPreconditioner(M_prec_);
+  M_solver_.SetOperator(*M_mat_);
 
   // Construct the reduced system operator and initialize the newton solver with
-  // it reduced_oper_ = std::make_unique<NonlinearSolidReducedSystemOperator>(H_form, S_form, M_form, ess_bdr_);
-  // newton_solver_.SetOperator(*reduced_oper_);
+  // it
+  reduced_oper_ = std::make_unique<NonlinearSolidReducedSystemOperator>(H_form, S_form, M_form, ess_bdr_);
+  newton_solver_.SetOperator(*reduced_oper_);
 }
 
 void NonlinearSolidDynamicOperator::Mult(const mfem::Vector& vx, mfem::Vector& dvx_dt) const
@@ -66,12 +76,14 @@ void NonlinearSolidDynamicOperator::Mult(const mfem::Vector& vx, mfem::Vector& d
   mfem::Vector x(vx.GetData() + sc, sc);
   mfem::Vector dv_dt(dvx_dt.GetData() + 0, sc);
   mfem::Vector dx_dt(dvx_dt.GetData() + sc, sc);
+
   H_form_->Mult(x, z_);
   S_form_->TrueAddMult(v, z_);
-  for (const auto& bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     z_.SetSubVector(bc.true_dofs, 0.0);
   }
-  z_.Neg();  // z = -z M_solver_.Mult(z_, dv_dt);
+  z_.Neg();  // z = -z
+  M_solver_.Mult(z_, dv_dt);
 
   dx_dt = v;
 }
@@ -88,9 +100,11 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
   //    kv = -M^{-1}*[H(x + dt*kx) + S*(v + dt*kv)]
   //    kx = v + dt*kv
   // we reduce it to a nonlinear equation for kv, represented by the
-  // reduced_oper_. This equation is solved with the newton_solver_
-  // object (using J_solver_ and J_prec_ internally). reduced_oper_->SetParameters(dt, &v, &x);
-  mfem::Vector zero;  // empty vector is interpreted as zero r.h.s. by NewtonSolver newton_solver_.Mult(zero, dv_dt);
+  // m_reduced_oper. This equation is solved with the m_newton_solver
+  // object (using m_J_solver and m_J_prec internally).
+  reduced_oper_->SetParameters(dt, &v, &x);
+  mfem::Vector zero;  // empty vector is interpreted as zero r.h.s. by NewtonSolver
+  newton_solver_.Mult(zero, dv_dt);
   SLIC_WARNING_IF(newton_solver_.GetConverged(), "Newton solver did not converge.");
   add(v, dt, dv_dt, dx_dt);
 }
@@ -147,10 +161,12 @@ mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   //
   // This call eliminates the appropriate DOFs in jacobian_ and returns the
   // eliminated DOFs in Je. We don't need this so it gets deleted.
-  for (const auto& bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     auto Je = std::unique_ptr<mfem::HypreParMatrix>(jacobian_->EliminateRowsCols(bc.true_dofs));
   }
   return *jacobian_;
 }
 
 NonlinearSolidReducedSystemOperator::~NonlinearSolidReducedSystemOperator() {}
+
+} // namespace serac

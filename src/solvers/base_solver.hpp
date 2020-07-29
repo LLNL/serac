@@ -76,16 +76,16 @@ class BaseSolver {
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
   virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                               const mfem::ParFiniteElementSpace& fes, const int component = -1);
+                                mfem::ParFiniteElementSpace& fes,  int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
   virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,
-                           const int component = -1);
+                            int component = -1);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
   virtual void setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
-                             const int component = -1);
+                              int component = -1);
 
   /// Set the state variables from a coefficient
   virtual void setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef);

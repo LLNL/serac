@@ -111,7 +111,7 @@ void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParamete
 void NonlinearSolidSolver::completeSetup()
 {
   // Define the nonlinear form
-  auto H_form_ = std::make_shared<mfem::ParNonlinearForm>(displacement_->space.get());
+  H_form_ = std::make_shared<mfem::ParNonlinearForm>(displacement_->space.get());
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
@@ -136,7 +136,7 @@ void NonlinearSolidSolver::completeSetup()
   displacement_->space->BuildDofToArrays();
 
   // Project the essential boundary coefficients
-  for (const auto& bc : ess_bdr_) {
+  for (auto& bc : ess_bdr_) {
     // Generate the scalar dof list from the vector dof list
     mfem::Array<int> dof_list(bc.true_dofs.Size());
     for (int i = 0; i < bc.true_dofs.Size(); ++i) {
@@ -191,32 +191,35 @@ void NonlinearSolidSolver::completeSetup()
   }
 
   // Set up the jacbian solver based on the linear solver options
-  std::unique_ptr<mfem::IterativeSolver> iter_solver;
-
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
-    auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
+    auto prec_amg = std::make_shared<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
     prec_amg->SetElasticityOptions(displacement_->space.get());
-    J_prec_ = std::move(prec_amg);
+    J_prec_ = std::static_pointer_cast<mfem::Solver>(prec_amg);
 
-    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->space->GetComm());
+    auto J_gmres = std::make_shared<mfem::GMRESSolver>(displacement_->space->GetComm());
+    J_gmres->SetRelTol(lin_params_.rel_tol);
+    J_gmres->SetAbsTol(lin_params_.abs_tol);
+    J_gmres->SetMaxIter(lin_params_.max_iter);
+    J_gmres->SetPrintLevel(lin_params_.print_level);
+    J_gmres->SetPreconditioner(*J_prec_);
+    J_solver_ = std::static_pointer_cast<mfem::Solver>(J_gmres);
   } else {
-    auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
+    auto J_hypreSmoother = std::make_shared<mfem::HypreSmoother>();
     J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     J_hypreSmoother->SetPositiveDiagonal(true);
-    J_prec_ = std::move(J_hypreSmoother);
+    J_prec_ = std::static_pointer_cast<mfem::Solver>(J_hypreSmoother);
 
-    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->space->GetComm());
+    auto J_minres = std::make_shared<mfem::MINRESSolver>(displacement_->space->GetComm());
+    J_minres->SetRelTol(lin_params_.rel_tol);
+    J_minres->SetAbsTol(lin_params_.abs_tol);
+    J_minres->SetMaxIter(lin_params_.max_iter);
+    J_minres->SetPrintLevel(lin_params_.print_level);
+    J_minres->SetPreconditioner(*J_prec_);
+    J_solver_ = std::static_pointer_cast<mfem::Solver>(J_minres);
   }
-
-  iter_solver->SetRelTol(lin_params_.rel_tol);
-  iter_solver->SetAbsTol(lin_params_.abs_tol);
-  iter_solver->SetMaxIter(lin_params_.max_iter);
-  iter_solver->SetPrintLevel(lin_params_.print_level);
-  iter_solver->SetPreconditioner(*J_prec_);
-  J_solver_ = std::move(iter_solver);
 
   // Set the newton solve parameters
   newton_solver_.SetSolver(*J_solver_);
