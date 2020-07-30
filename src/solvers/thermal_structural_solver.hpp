@@ -70,14 +70,14 @@ class ThermalStructuralSolver : public BaseSolver {
 
   /// Set the displacement essential boundary conditions on a single component
   void SetDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
-                          int component)
+                          const int component)
   {
     solid_solver_.setDisplacementBCs(disp_bdr, disp_bdr_coef, component);
   };
 
   /// Set the traction boundary conditions
   void SetTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      int component = -1)
+                      const int component = -1)
   {
     solid_solver_.setTractionBCs(trac_bdr, trac_bdr_coef, component);
   };
@@ -108,12 +108,12 @@ class ThermalStructuralSolver : public BaseSolver {
   void SetCouplingScheme(serac::CouplingScheme coupling) { coupling_ = coupling; };
 
   /// Overwrite the base default set timestepper method
-  void setTimestepper(serac::TimestepMethod timestepper);
+  void setTimestepper(const serac::TimestepMethod timestepper) override;
 
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
    * = false, do not allocate the mass matrix or dynamic operator */
-  void completeSetup();
+  void completeSetup() override;
 
   /// Get the temperature state
   std::shared_ptr<serac::FiniteElementState> GetTemperature() { return temperature_; };
@@ -125,7 +125,7 @@ class ThermalStructuralSolver : public BaseSolver {
   std::shared_ptr<serac::FiniteElementState> GetVelocity() { return velocity_; };
 
   /// Advance the timestep
-  void advanceTimestep(double& dt);
+  void advanceTimestep(double& dt) override;
 
   /// Destructor
   virtual ~ThermalStructuralSolver() = default;

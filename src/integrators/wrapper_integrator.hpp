@@ -21,8 +21,8 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 
   \param[in] f A LinearFormIntegrator
    */
-  LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator>  f,
-                                  std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes);
+  explicit LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator>  f,
+                                           std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes);
 
   /// Compute the residual vector => -F
   virtual void AssembleElementVector(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
@@ -45,7 +45,7 @@ class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 
      \param[in] A A BilinearFormIntegrator
    */
-  BilinearToNonlinearFormIntegrator(std::shared_ptr<mfem::BilinearFormIntegrator> A);
+  explicit BilinearToNonlinearFormIntegrator(std::shared_ptr<mfem::BilinearFormIntegrator> A);
 
   /// Compute the residual vector
   virtual void AssembleElementVector(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,

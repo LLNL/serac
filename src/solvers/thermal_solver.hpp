@@ -82,7 +82,7 @@ class ThermalSolver : public BaseSolver {
   void setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef);
 
   /// Advance the timestep using the chosen integration scheme
-  void advanceTimestep(double& dt);
+  void advanceTimestep(double& dt) override;
 
   /// Set the thermal conductivity coefficient
   void setConductivity(std::shared_ptr<mfem::Coefficient> kappa);
@@ -99,7 +99,7 @@ class ThermalSolver : public BaseSolver {
   /** Complete the initialization and allocation of the data structures. This
    *  must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
    * = false, do not allocate the mass matrix or dynamic operator */
-  void completeSetup();
+  void completeSetup() override;
 
   /// Set the linear solver parameters for both the M and K operators
   void setLinearSolverParameters(const serac::LinearSolverParameters& params);

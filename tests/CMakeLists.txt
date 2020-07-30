@@ -52,10 +52,26 @@ if (ENABLE_GTEST)
                      NUM_MPI_TASKS 1 )
     endforeach()
 
+    set(language_tests
+        copy_elision.cpp)
+
+    foreach(filename ${language_tests})
+        get_filename_component(test_name ${filename} NAME_WE)
+
+        blt_add_executable(NAME        ${test_name}
+                           SOURCES     ${filename}
+                           OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                           DEPENDS_ON  ${test_dependencies}
+                           FOLDER      serac/tests )
+        blt_add_test(NAME          ${test_name}
+                     COMMAND       ${test_name}
+                     NUM_MPI_TASKS 1 )
+    endforeach()
+
+
 endif()
 
 # Make sure running serac driver doesn't completely fail
 blt_add_test(NAME          serac
              COMMAND       serac
              NUM_MPI_TASKS 1 )
-
