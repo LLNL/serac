@@ -208,7 +208,8 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
       X[2] = 1.;
     }
   });
-  Array<int>                   ess_bottom_bc_list = serac::makeEssList(*pfes_v_, bottom_bc_z);
+
+  Array<int> ess_bottom_bc_list = serac::makeEssList(*pfes_v_, bottom_bc_z);
 
   // Define top indicator list
   StdFunctionVectorCoefficient top_bc_z(pfes_v_->GetVDim(), [](Vector& x, Vector& X) {

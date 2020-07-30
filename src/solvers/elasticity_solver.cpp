@@ -13,8 +13,7 @@ namespace serac {
 constexpr int NUM_FIELDS = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
-      displacement_(state_[0])
+    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order), displacement_(state_[0])
 {
   pmesh->EnsureNodes();
   displacement_->mesh = pmesh;
@@ -32,7 +31,7 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
 }
 
 void ElasticitySolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
-                                          std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, int component)
+                                          std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
 {
   setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
 }
