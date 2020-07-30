@@ -17,7 +17,8 @@ The following instructions apply to the creation of a new compiler image.
        If no corresponding Axom compiler image exists, it should be 
        created before proceeding.
     #. Go to the ``scripts/docker`` directory and run ``build_new_image.sh``, passing the compiler
-       name and version, e.g. for Clang 10, run ``./build_new_image.sh clang 10``.  Minor versions can also be specified.
+       name and version, e.g. for Clang 10, run ``./build_new_image.sh clang 10``.  Minor versions can also be specified,
+       for example, GCC 9.3 can be specified with ``./build_new_image.sh gcc 9.3``.
        This will install all third-party libraries, which can take a long time.
     #. Once the build is complete, the script will prompt you to test the new host-config (in a new terminal window):
         1. Start by finding the ID of the new image.  Run ``docker images`` and copy the ``IMAGE ID`` corresponding
