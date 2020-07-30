@@ -44,6 +44,20 @@ compilers:
     flags: 
       cxxflags: -stdlib=libc++
     modules: []
+    operating_system: ubuntu18.04
+    paths:
+      cc:  /usr/bin/clang
+      cxx: /usr/bin/clang++
+      f77: /usr/bin/gfortran
+      fc:  /usr/bin/gfortran
+    spec: clang@10.0.0
+    target: x86_64
+- compiler:
+    environment: {}
+    extra_rpaths: []
+    flags: 
+      cxxflags: -stdlib=libc++
+    modules: []
     operating_system: ubuntu16.04
     paths:
       cc:  /usr/bin/clang
