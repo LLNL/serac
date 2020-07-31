@@ -10,7 +10,7 @@ RUN sudo useradd -m -s /bin/bash -G sudo serac
 WORKDIR "/home/serac"
 USER serac
 
-RUN git clone --recursive https://github.com/LLNL/serac.git && cd serac && git checkout ci/essman/clang_10_fixes && cd ..
+RUN git clone --recursive https://github.com/LLNL/serac.git
 
 # New containers will use Python3
 RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ --spec=%<NAME>@<VER>.0 --prefix=/home/serac/serac_tpls -k
