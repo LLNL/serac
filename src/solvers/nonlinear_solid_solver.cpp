@@ -80,7 +80,7 @@ void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                  
   setNaturalBCs(trac_bdr, trac_bdr_coef, component);
 }
 
-void NonlinearSolidSolver::setHyperelasticMaterialParameters(double mu, double K)
+void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, const double K)
 {
   model_.reset(new mfem::NeoHookeanModel(mu, K));
 }
@@ -111,18 +111,18 @@ void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParamete
 void NonlinearSolidSolver::completeSetup()
 {
   // Define the nonlinear form
-  H_form_ = std::make_shared<mfem::ParNonlinearForm>(displacement_->space.get());
+  auto H_form = std::make_unique<mfem::ParNonlinearForm>(displacement_->space.get());
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    H_form_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
+    H_form->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
   } else {
-    H_form_->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
+    H_form->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
   }
 
   // Add the traction integrator
   for (auto& nat_bc_data : nat_bdr_) {
-    H_form_->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->markers);
+    H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->markers);
   }
 
   // Add the essential boundary
@@ -156,55 +156,58 @@ void NonlinearSolidSolver::completeSetup()
   essential_dofs.Sort();
   essential_dofs.Unique();
 
-  H_form_->SetEssentialTrueDofs(essential_dofs);
+  H_form->SetEssentialTrueDofs(essential_dofs);
+
+  // The abstract mass bilinear form
+  std::unique_ptr<mfem::ParBilinearForm> M_form;
+
+  // The abstract viscosity bilinear form
+  std::unique_ptr<mfem::ParBilinearForm> S_form;
 
   // If dynamic, create the mass and viscosity forms
   if (timestepper_ != serac::TimestepMethod::QuasiStatic) {
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
-    M_form_ = std::make_shared<mfem::ParBilinearForm>(displacement_->space.get());
+    M_form = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
 
-    M_form_->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
-    M_form_->Assemble(0);
-    M_form_->Finalize(0);
+    M_form->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
+    M_form->Assemble(0);
+    M_form->Finalize(0);
 
-    S_form_ = std::make_shared<mfem::ParBilinearForm>(displacement_->space.get());
-    S_form_->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
-    S_form_->Assemble(0);
-    S_form_->Finalize(0);
+    S_form = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
+    S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
+    S_form->Assemble(0);
+    S_form->Finalize(0);
   }
 
   // Set up the jacbian solver based on the linear solver options
+  std::unique_ptr<mfem::IterativeSolver> iter_solver;
+
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
-    auto prec_amg = std::make_shared<mfem::HypreBoomerAMG>();
+    auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
     prec_amg->SetElasticityOptions(displacement_->space.get());
-    J_prec_ = std::static_pointer_cast<mfem::Solver>(prec_amg);
+    J_prec_ = std::move(prec_amg);
 
-    auto J_gmres = std::make_shared<mfem::GMRESSolver>(displacement_->space->GetComm());
-    J_gmres->SetRelTol(lin_params_.rel_tol);
-    J_gmres->SetAbsTol(lin_params_.abs_tol);
-    J_gmres->SetMaxIter(lin_params_.max_iter);
-    J_gmres->SetPrintLevel(lin_params_.print_level);
-    J_gmres->SetPreconditioner(*J_prec_);
-    J_solver_ = std::static_pointer_cast<mfem::Solver>(J_gmres);
+    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->space->GetComm());
   } else {
-    auto J_hypreSmoother = std::make_shared<mfem::HypreSmoother>();
+    auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
     J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     J_hypreSmoother->SetPositiveDiagonal(true);
-    J_prec_ = std::static_pointer_cast<mfem::Solver>(J_hypreSmoother);
+    J_prec_ = std::move(J_hypreSmoother);
 
-    auto J_minres = std::make_shared<mfem::MINRESSolver>(displacement_->space->GetComm());
-    J_minres->SetRelTol(lin_params_.rel_tol);
-    J_minres->SetAbsTol(lin_params_.abs_tol);
-    J_minres->SetMaxIter(lin_params_.max_iter);
-    J_minres->SetPrintLevel(lin_params_.print_level);
-    J_minres->SetPreconditioner(*J_prec_);
-    J_solver_ = std::static_pointer_cast<mfem::Solver>(J_minres);
+    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->space->GetComm());
   }
+
+  iter_solver->SetRelTol(lin_params_.rel_tol);
+  iter_solver->SetAbsTol(lin_params_.abs_tol);
+  iter_solver->SetMaxIter(lin_params_.max_iter);
+  iter_solver->SetPrintLevel(lin_params_.print_level);
+  iter_solver->SetPreconditioner(*J_prec_);
+  J_solver_ = std::move(iter_solver);
 
   // Set the newton solve parameters
   newton_solver_.SetSolver(*J_solver_);
@@ -216,12 +219,12 @@ void NonlinearSolidSolver::completeSetup()
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     newton_solver_.iterative_mode = true;
-    nonlinear_oper_               = std::make_shared<NonlinearSolidQuasiStaticOperator>(H_form_);
+    nonlinear_oper_               = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
     newton_solver_.SetOperator(*nonlinear_oper_);
   } else {
     newton_solver_.iterative_mode = false;
-    timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(H_form_, S_form_, M_form_, ess_bdr_, newton_solver_,
-                                                                    lin_params_);
+    timedep_oper_                 = std::make_shared<NonlinearSolidDynamicOperator>(
+        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, newton_solver_, lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }
 }

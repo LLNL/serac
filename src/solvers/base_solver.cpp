@@ -6,6 +6,7 @@
 
 #include "base_solver.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 
@@ -19,7 +20,7 @@ BaseSolver::BaseSolver(MPI_Comm comm) : comm_(comm), output_type_(serac::OutputT
 {
   MPI_Comm_rank(comm_, &mpi_rank_);
   MPI_Comm_size(comm_, &mpi_size_);
-  setTimestepper(serac::TimestepMethod::ForwardEuler);
+  BaseSolver::setTimestepper(serac::TimestepMethod::ForwardEuler);
   order_ = 1;
 }
 
@@ -28,16 +29,14 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
   order_ = p;
   state_.resize(n);
 
-  for (auto& state : state_) {
-    state = std::make_shared<serac::FiniteElementState>();
-  }
+  std::generate(state_.begin(), state_.end(), std::make_shared<serac::FiniteElementState>);
 
   gf_initialized_.assign(n, false);
 }
 
 void BaseSolver::setEssentialBCs(const std::set<int>&                     ess_bdr,
                                  std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
-                                 mfem::ParFiniteElementSpace& fes, int component)
+                                 const mfem::ParFiniteElementSpace& fes, const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -59,13 +58,16 @@ void BaseSolver::setEssentialBCs(const std::set<int>&                     ess_bd
   bc->vec_coef  = ess_bdr_vec_coef;
   bc->component = component;
 
-  fes.GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
+  // This function can and should be marked const in MFEM
+  // TODO: Raise an issue against MFEM
+  // Leave this explicit non-const action in as a stopgap
+  const_cast<mfem::ParFiniteElementSpace&>(fes).GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
 
   ess_bdr_.push_back(bc);
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int>&                  true_dofs,
-                             std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
+void BaseSolver::setTrueDofs(const mfem::Array<int>&                        true_dofs,
+                             const std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -79,7 +81,7 @@ void BaseSolver::setTrueDofs(const mfem::Array<int>&                  true_dofs,
 }
 
 void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
-                               int component)
+                               const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -98,7 +100,7 @@ void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfe
 }
 
 void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
-                                 mfem::ParFiniteElementSpace& fes, int component)
+                                 const mfem::ParFiniteElementSpace& fes, const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -120,7 +122,10 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, std::shared_ptr<m
   bc->scalar_coef = ess_bdr_coef;
   bc->component   = component;
 
-  fes.GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
+  // This function can and should be marked const in MFEM
+  // TODO: Raise an issue against MFEM
+  // Leave this explicit non-const action in as a stopgap
+  const_cast<mfem::ParFiniteElementSpace&>(fes).GetEssentialTrueDofs(bc->markers, bc->true_dofs, component);
 
   ess_bdr_.push_back(bc);
 }
@@ -139,7 +144,7 @@ void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, std::shared_ptr<
 }
 
 void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
-                               int component)
+                               const int component)
 {
   auto bc = std::make_shared<serac::BoundaryCondition>();
 
@@ -232,7 +237,7 @@ double BaseSolver::getTime() const { return time_; }
 
 int BaseSolver::getCycle() const { return cycle_; }
 
-void BaseSolver::initializeOutput(const serac::OutputType output_type, std::string root_name)
+void BaseSolver::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
 {
   root_name_ = root_name;
 
