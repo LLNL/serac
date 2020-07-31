@@ -34,13 +34,11 @@ void StdFunctionVectorCoefficient::Eval(mfem::Vector& V, mfem::ElementTransforma
   func_(transip, V);
 }
 
-void makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c, mfem::Array<int>& ess_tdof_list)
+mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c)
 {
-  ess_tdof_list.SetSize(0);
+  mfem::Array<int> ess_tdof_list(0);
 
-  mfem::Array<int> ess_vdof_list;
-
-  makeEssList(pfes, c, ess_vdof_list);
+  mfem::Array<int> ess_vdof_list = makeEssList(pfes, c);
 
   for (int i = 0; i < ess_vdof_list.Size(); ++i) {
     int tdof = pfes.GetLocalTDofNumber(ess_vdof_list[i]);
@@ -48,29 +46,31 @@ void makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient&
       ess_tdof_list.Append(tdof);
     }
   }
+
+  return ess_tdof_list;
 }
 
-void makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c, mfem::Array<int>& ess_vdof_list)
+mfem::Array<int> makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c)
 {
+  mfem::Array<int> ess_vdof_list(0);
+
   mfem::ParGridFunction v_attr(&pfes);
   v_attr.ProjectCoefficient(c);
-
-  ess_vdof_list.SetSize(0);
 
   for (int vdof = 0; vdof < pfes.GetVSize(); ++vdof) {
     if (v_attr[vdof] > 0.) {
       ess_vdof_list.Append(vdof);
     }
   }
+
+  return ess_vdof_list;
 }
 
-void makeAttributeList(mfem::Mesh& m, mfem::Array<int>& attr_list, mfem::Coefficient& c,
-                       std::function<int(double)> digitize)
+mfem::Array<int> makeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize)
 {
   mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &l2_fec);
-
-  attr_list.SetSize(fes.GetNE());
+  mfem::Array<int>         attr_list(fes.GetNE());
 
   mfem::GridFunction elem_attr(&fes);
   elem_attr.ProjectCoefficient(c);
@@ -78,17 +78,17 @@ void makeAttributeList(mfem::Mesh& m, mfem::Array<int>& attr_list, mfem::Coeffic
   for (int e = 0; e < fes.GetNE(); e++) {
     attr_list[e] = digitize(elem_attr[e]);
   }
+
+  return attr_list;
 }
 
 // Need to use H1_fec because boundary elements don't exist in L2
-void makeBdrAttributeList(mfem::Mesh& m, mfem::Array<int>& attr_list, mfem::Coefficient& c,
-                          std::function<int(double)> digitize)
+mfem::Array<int> makeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize)
 {
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &h1_fec);
-
-  attr_list.SetSize(fes.GetNBE());
-  mfem::Vector elem_attr(fes.GetNBE());
+  mfem::Array<int>         attr_list(fes.GetNBE());
+  mfem::Vector             elem_attr(fes.GetNBE());
 
   for (int e = 0; e < fes.GetNBE(); e++) {
     mfem::Vector dofs(fes.GetBE(e)->GetDof());
@@ -96,6 +96,8 @@ void makeBdrAttributeList(mfem::Mesh& m, mfem::Array<int>& attr_list, mfem::Coef
     elem_attr[e] = dofs.Sum() / (dofs.Size() * 1.);
     attr_list[e] = digitize(elem_attr[e]);
   }
+
+  return attr_list;
 }
 
 double AttributeModifierCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)

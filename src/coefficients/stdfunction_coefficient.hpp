@@ -71,10 +71,10 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
    \param[in] c A VectorCoefficient that is projected on to the mesh. All
    d.o.f's are examined and those that are the condition (> 0.) are appended to
    the vdof list.
-   \param[out] ess_tdof_list The list of true dofs that should be
+   \return The list of true dofs that should be
    part of the essential boundary conditions
 */
-void makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c, mfem::Array<int>& ess_tdof_list);
+mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c);
 
 /**
    \brief MakeEssList takes in a FESpace, a vector coefficient, and produces a list
@@ -84,10 +84,10 @@ void makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient&
    \param[in] c A VectorCoefficient that is projected on to the mesh. All
    d.o.f's are examined and those that are the condition (> 0.) are appended to
    the vdof list.
-   \param[out] ess_tdof_list The list of vector dofs that should be
+   \return The list of vector dofs that should be
    part of the essential boundary conditions
 */
-void makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c, mfem::Array<int>& ess_vdof_list);
+mfem::Array<int> makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c);
 
 /**
    \brief This method creates an array of size(local_elems), and assigns
@@ -97,17 +97,17 @@ void makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c, 
    elements in the mesh
 
    \param[in] m The mesh
-   \param[inout] attr_list Should be an array that will hold the attributes that
-   correspond to each element \param[in] c The coefficient provided that will be
-   evaluated on the mesh \param[in] digitize An optional function that can be
+   \param[in] c The coefficient provided that will be
+   evaluated on the mesh
+   \param[in] digitize An optional function that can be
    called to assign attributes based on the value of c at a given projection
    point. By default, values of c at a given d.o.f that are > 0. are assigned
    attribute 2, otherwise attribute 1.
+   \return An array holding the attributes that correspond to each element
 
 */
-void makeAttributeList(
-    mfem::Mesh& m, mfem::Array<int>& attr_list, mfem::Coefficient& c,
-    std::function<int(double)> = [](double v) { return v > 0. ? 2 : 1; });
+mfem::Array<int> makeAttributeList(
+    mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> = [](double v) { return v > 0. ? 2 : 1; });
 
 /**
    \brief This method creates an array of size(local_bdr_elems), and assigns
@@ -117,19 +117,18 @@ void makeAttributeList(
    elements in the mesh
 
    \param[in] m The mesh
-   \param[inout] attr_list Should be an array that will hold the attributes that
-   correspond to each element \param[in] c The coefficient provided that will be
-   evaluated on the mesh \param[in] digitize An optional function that can be
+   \param[in] c The coefficient provided that will be
+   evaluated on the mesh
+   \param[in] digitize An optional function that can be
    called to assign attributes based on the value of c at a given projection
    point. By default, values of c at a given d.o.f that are ==1. are assigned
    attribute 2, otherwise attribute 1. This means that only if all the d.o.f's
    of an bdr_element are "tagged" 1, will this bdr element be assigned
    attribute 2.
-
+   \return An array holding the attributes that correspond to each element
 */
-void makeBdrAttributeList(
-    mfem::Mesh& m, mfem::Array<int>& attr_list, mfem::Coefficient& c,
-    std::function<int(double)> = [](double v) { return v == 1. ? 2 : 1; });
+mfem::Array<int> makeBdrAttributeList(
+    mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> = [](double v) { return v == 1. ? 2 : 1; });
 
 /**
    \brief AttributemodifierCoefficient class

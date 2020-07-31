@@ -18,17 +18,8 @@ namespace serac {
 /// example 10p.
 class NonlinearSolidSolver : public BaseSolver {
  protected:
-  std::shared_ptr<serac::FiniteElementState> velocity_;
-  std::shared_ptr<serac::FiniteElementState> displacement_;
-
-  /// The abstract nonlinear form
-  std::shared_ptr<mfem::ParNonlinearForm> H_form_;
-
-  /// The abstract mass bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> M_form_;
-
-  /// The abstract viscosity bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> S_form_;
+  std::shared_ptr<FiniteElementState> velocity_;
+  std::shared_ptr<FiniteElementState> displacement_;
 
   /// The quasi-static operator for use with the MFEM newton solvers
   std::shared_ptr<mfem::Operator> nonlinear_oper_;
@@ -40,10 +31,10 @@ class NonlinearSolidSolver : public BaseSolver {
   mfem::NewtonSolver newton_solver_;
 
   /// The linear solver for the Jacobian
-  std::shared_ptr<mfem::Solver> J_solver_;
+  std::unique_ptr<mfem::Solver> J_solver_;
 
   /// The preconditioner for the Jacobian solver
-  std::shared_ptr<mfem::Solver> J_prec_;
+  std::unique_ptr<mfem::Solver> J_prec_;
 
   /// The viscosity coefficient
   std::shared_ptr<mfem::Coefficient> viscosity_;
@@ -52,10 +43,10 @@ class NonlinearSolidSolver : public BaseSolver {
   std::shared_ptr<mfem::HyperelasticModel> model_;
 
   /// Linear solver parameters
-  serac::LinearSolverParameters lin_params_;
+  LinearSolverParameters lin_params_;
 
   /// Nonlinear solver parameters
-  serac::NonlinearSolverParameters nonlin_params_;
+  NonlinearSolverParameters nonlin_params_;
 
   /// Pointer to the reference mesh data
   std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
@@ -94,20 +85,19 @@ class NonlinearSolidSolver : public BaseSolver {
   void setVelocity(mfem::VectorCoefficient& velo_state);
 
   /// Set the linear and nonlinear solver params
-  void setSolverParameters(const serac::LinearSolverParameters&    lin_params,
-                           const serac::NonlinearSolverParameters& nonlin_params);
+  void setSolverParameters(const LinearSolverParameters& lin_params, const NonlinearSolverParameters& nonlin_params);
 
   /// Get the displacement state
-  std::shared_ptr<serac::FiniteElementState> getDisplacement() { return displacement_; };
+  std::shared_ptr<FiniteElementState> getDisplacement() { return displacement_; };
 
   /// Get the velocity state
-  std::shared_ptr<serac::FiniteElementState> getVelocity() { return velocity_; };
+  std::shared_ptr<FiniteElementState> getVelocity() { return velocity_; };
 
   /// Complete the data structure initialization
-  void completeSetup();
+  void completeSetup() override;
 
   /// Advance the timestep
-  void advanceTimestep(double& dt);
+  void advanceTimestep(double& dt) override;
 
   /// Destructor
   virtual ~NonlinearSolidSolver();

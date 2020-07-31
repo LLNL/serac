@@ -76,16 +76,16 @@ class BaseSolver {
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
   virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                               mfem::ParFiniteElementSpace& fes, int component = -1);
+                               const mfem::ParFiniteElementSpace& fes, const int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
   virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,
-                           int component = -1);
+                           const int component = -1);
 
   /// Set the natural boundary conditions from a list of boundary markers and a
   /// coefficient
   virtual void setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
-                             int component = -1);
+                             const int component = -1);
 
   /// Set the state variables from a coefficient
   virtual void setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef);
@@ -97,7 +97,7 @@ class BaseSolver {
   virtual std::vector<std::shared_ptr<serac::FiniteElementState> > getState() const;
 
   /// Set the time integration method
-  virtual void setTimestepper(serac::TimestepMethod timestepper);
+  virtual void setTimestepper(const serac::TimestepMethod timestepper);
 
   /// Set the current time
   virtual void setTime(const double time);
@@ -115,7 +115,7 @@ class BaseSolver {
   virtual void advanceTimestep(double& dt) = 0;
 
   /// Initialize the state variable output
-  virtual void initializeOutput(const serac::OutputType output_type, const std::string root_name);
+  virtual void initializeOutput(const serac::OutputType output_type, const std::string& root_name);
 
   /// output the state variables
   virtual void outputState() const;

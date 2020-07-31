@@ -6,6 +6,7 @@
 
 #include "base_solver.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 
@@ -19,7 +20,7 @@ BaseSolver::BaseSolver(MPI_Comm comm) : comm_(comm), output_type_(serac::OutputT
 {
   MPI_Comm_rank(comm_, &mpi_rank_);
   MPI_Comm_size(comm_, &mpi_size_);
-  setTimestepper(serac::TimestepMethod::ForwardEuler);
+  BaseSolver::setTimestepper(serac::TimestepMethod::ForwardEuler);
   order_ = 1;
 }
 
@@ -28,15 +29,13 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
   order_ = p;
   state_.resize(n);
 
-  for (auto& state : state_) {
-    state = std::make_shared<serac::FiniteElementState>();
-  }
+  std::generate(state_.begin(), state_.end(), std::make_shared<serac::FiniteElementState>);
 
   gf_initialized_.assign(n, false);
 }
 
 void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                                 mfem::ParFiniteElementSpace& fes, int component)
+                                 const mfem::ParFiniteElementSpace& fes, const int component)
 {
   serac::BoundaryCondition bc;
 
@@ -81,7 +80,7 @@ void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryC
   ess_bdr_.push_back(std::move(bc));
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef, int component)
+void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef, const int component)
 {
   serac::BoundaryCondition bc;
 
@@ -165,7 +164,7 @@ double BaseSolver::getTime() const { return time_; }
 
 int BaseSolver::getCycle() const { return cycle_; }
 
-void BaseSolver::initializeOutput(const serac::OutputType output_type, std::string root_name)
+void BaseSolver::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
 {
   root_name_ = root_name;
 
