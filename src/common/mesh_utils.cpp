@@ -11,8 +11,8 @@
 
 namespace serac {
 
-std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, int refine_serial, int refine_parallel,
-                                                 MPI_Comm comm)
+std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, const int refine_serial,
+                                                 const int refine_parallel, const MPI_Comm comm)
 {
   // Get the MPI rank for logging purposes
   int rank = 0;

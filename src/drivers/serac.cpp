@@ -24,6 +24,7 @@
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
 #include "common/logger.hpp"
+#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
@@ -123,30 +124,7 @@ int main(int argc, char* argv[])
   auto config_msg = app.config_to_str(true, true);
   SLIC_INFO_ROOT(rank, config_msg);
 
-  // Open the mesh
-  std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
-  SLIC_INFO_ROOT(rank, msg);
-  std::ifstream imesh(mesh_file);
-  if (!imesh) {
-    serac::logger::flush();
-    std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
-    SLIC_ERROR_ROOT(rank, err_msg);
-    serac::exitGracefully();
-  }
-
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
-
-  // mesh refinement if specified in input
-  for (int lev = 0; lev < ser_ref_levels; lev++) {
-    mesh->UniformRefinement();
-  }
-
-  // create the parallel mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-  for (int lev = 0; lev < par_ref_levels; lev++) {
-    pmesh->UniformRefinement();
-  }
+  auto pmesh = serac::buildParallelMesh(mesh_file, ser_ref_levels, par_ref_levels);
 
   int dim = pmesh->Dimension();
 
