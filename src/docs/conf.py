@@ -37,6 +37,7 @@ if read_the_docs_build:
 
     # Call doxygen
     from subprocess import call
+    print("working directory: ", os.getcwd())
     call(['doxygen', "./src/docs/doxygen/Doxyfile.in"])
 
 # If extensions (or modules to document with autodoc) are in another directory,
