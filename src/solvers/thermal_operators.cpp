@@ -106,15 +106,15 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   x_       = 0.0;
 
   for (auto& bc : ess_bdr_) {
-    if (std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef)) {
-      auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
-      scalar_coef->SetTime(t);
-      state_gf_->SetFromTrueDofs(y_);
-      state_gf_->ProjectBdrCoefficient(*scalar_coef, bc.markers);
-      state_gf_->GetTrueDofs(y_);
+    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
+                  "Temperature boundary condition had a non-scalar coefficient.");
+    auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
+    scalar_coef->SetTime(t);
+    state_gf_->SetFromTrueDofs(y_);
+    state_gf_->ProjectBdrCoefficient(*scalar_coef, bc.markers);
+    state_gf_->GetTrueDofs(y_);
 
-      mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, y_, *bc_rhs_);
-    }
+    mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, y_, *bc_rhs_);
   }
   K_mat_->Mult(y_, z_);
   z_.Neg();
