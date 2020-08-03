@@ -35,8 +35,8 @@ namespace serac {
  * \return pmesh A shared_ptr containing the constructed and refined parallel mesh object
  *****************************************************************************
  */
-std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, const int ref_serial = 0,
-                                                 const int ref_parallel = 0, const MPI_Comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, const int refine_serial = 0,
+                                                 const int refine_parallel = 0, const MPI_Comm = MPI_COMM_WORLD);
 
 }  // namespace serac
 
