@@ -170,7 +170,7 @@ We provide the following useful build targets that can be run from the build dir
 * ``check``: Runs a set of code checks over source code (CppCheck and clang-format)
 
 ================================
-  Software Documentation
+Source Code Documentation
 ================================
   
 Doxygen documentation for the Serac source code is located in the `Doxygen directory <doxygen/html/index.html>`_.
