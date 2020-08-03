@@ -13,6 +13,32 @@
 
 import sys, os
 
+# Call doxygen in ReadtheDocs
+read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
+if read_the_docs_build:
+
+    # Makes sure directory exists for doxygen output
+    cwd=os.getcwd()
+    buildpath=os.path.join(cwd,"_build")
+    if (os.path.isdir(buildpath) == 0):
+        os.mkdir(buildpath)
+    htmlpath=os.path.join(buildpath,"html")
+    if (os.path.isdir(htmlpath) == 0):
+        os.mkdir(htmlpath)
+
+    # Modify Doxyfile for ReadTheDocs compatibility
+    with open('./docs/doxygen/Doxyfile.in', 'r') as f:
+        fdata = f.read()
+    fdata = fdata.replace('@PROJECT_SOURCE_DIR@', '.')
+    with open('./docs/doxygen/Doxyfile.in', 'w') as f:
+        f.write(fdata)
+    with open('./docs/doxygen/Doxyfile.in', 'a') as f:
+        f.write("\nOUTPUT_DIRECTORY=./_build/html/doxygen")
+
+    # Call doxygen
+    from subprocess import call
+    call(['doxygen', "./docs/doxygen/Doxyfile.in"])
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
