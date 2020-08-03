@@ -12,17 +12,17 @@
 #include "serac_config.hpp"
 #include "solvers/elasticity_solver.hpp"
 
+namespace serac {
+
 TEST(elastic_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // mesh
-  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-quad.mesh";
-  const char* mesh_file      = base_mesh_file.c_str();
-
   // Open the mesh
-  std::ifstream imesh(mesh_file);
-  auto          mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-quad.mesh";
+  std::fstream imesh(mesh_file);
+
+  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
   imesh.close();
 
   // declare pointer to parallel mesh object
@@ -36,9 +36,10 @@ TEST(elastic_solver, static_solve)
 
   // define the displacement vector
   mfem::Vector disp(pmesh->Dimension());
-  disp           = 0.0;
+  disp = 0.0;
+
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
-  elas_solver.SetDisplacementBCs(disp_bdr, disp_coef);
+  elas_solver.setDisplacementBCs(disp_bdr, disp_coef);
 
   std::set<int> trac_bdr = {2};
 
@@ -47,42 +48,48 @@ TEST(elastic_solver, static_solve)
   traction           = 0.0;
   traction(1)        = 1.0e-4;
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
-  elas_solver.SetTractionBCs(trac_bdr, traction_coef);
+  elas_solver.setTractionBCs(trac_bdr, traction_coef);
 
   // set the material properties
   mfem::ConstantCoefficient mu_coef(0.25);
   mfem::ConstantCoefficient K_coef(5.0);
 
-  elas_solver.SetLameParameters(K_coef, mu_coef);
+  elas_solver.setLameParameters(K_coef, mu_coef);
 
   // Define the linear solver params
-  LinearSolverParameters params;
+  serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-4;
   params.abs_tol     = 1.0e-10;
   params.print_level = 0;
   params.max_iter    = 500;
-  params.prec        = Preconditioner::Jacobi;
-  params.lin_solver  = LinearSolver::MINRES;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
 
-  elas_solver.SetLinearSolverParameters(params);
-  elas_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  elas_solver.setLinearSolverParameters(params);
+  elas_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // allocate the data structures
-  elas_solver.CompleteSetup();
+  elas_solver.completeSetup();
 
   double dt = 1.0;
-  elas_solver.AdvanceTimestep(dt);
+  elas_solver.advanceTimestep(dt);
 
   mfem::Vector zero(pmesh->Dimension());
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = elas_solver.GetState()[0]->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = elas_solver.getState()[0]->gf->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
+
+}  // namespace serac
+
+//------------------------------------------------------------------------------
+#include "axom/slic/core/UnitTestLogger.hpp"
+using axom::slic::UnitTestLogger;
 
 int main(int argc, char* argv[])
 {
@@ -91,6 +98,8 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+
+  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
 
   result = RUN_ALL_TESTS();
 

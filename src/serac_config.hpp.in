@@ -21,10 +21,13 @@
 
 // General defines
 #cmakedefine SERAC_DEBUG
+#cmakedefine SERAC_USE_LUMBERJACK
 
 
 // Compiler defines for TPLs
 #cmakedefine SERAC_USE_AXOM
+#cmakedefine AXOM_DEBUG
+
 #cmakedefine SERAC_USE_CONDUIT
 #cmakedefine SERAC_USE_FMT
 #cmakedefine SERAC_USE_HDF5

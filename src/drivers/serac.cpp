@@ -20,23 +20,29 @@
 #include <iostream>
 #include <memory>
 
+#include "CLI11/CLI11.hpp"
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
+#include "common/logger.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   // Initialize MPI.
-  int num_procs, myid;
+  int num_procs, rank;
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  // Initialize SLIC logger
+  if (!serac::logger::initialize(MPI_COMM_WORLD)) {
+    serac::exitGracefully(true);
+  }
 
   // mesh
-  std::string base_mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
-  const char *mesh_file      = base_mesh_file.c_str();
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
 
   // serial and parallel refinement levels
   int ser_ref_levels = 0;
@@ -46,13 +52,13 @@ int main(int argc, char *argv[])
   int order = 1;
 
   // Solver parameters
-  NonlinearSolverParameters nonlin_params;
+  serac::NonlinearSolverParameters nonlin_params;
   nonlin_params.rel_tol     = 1.0e-2;
   nonlin_params.abs_tol     = 1.0e-4;
   nonlin_params.max_iter    = 500;
   nonlin_params.print_level = 0;
 
-  LinearSolverParameters lin_params;
+  serac::LinearSolverParameters lin_params;
   lin_params.rel_tol     = 1.0e-6;
   lin_params.abs_tol     = 1.0e-8;
   lin_params.max_iter    = 5000;
@@ -75,56 +81,57 @@ int main(int argc, char *argv[])
   double dt      = 0.25;
 
   // specify all input arguments
-  mfem::OptionsParser args(argc, argv);
-  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.");
-  args.AddOption(&ser_ref_levels, "-rs", "--refine-serial", "Number of times to refine the mesh uniformly in serial.");
-  args.AddOption(&par_ref_levels, "-rp", "--refine-parallel",
-                 "Number of times to refine the mesh uniformly in parallel.");
-  args.AddOption(&order, "-o", "--order", "Order (degree) of the finite elements.");
-  args.AddOption(&mu, "-mu", "--shear-modulus", "Shear modulus in the Neo-Hookean hyperelastic model.");
-  args.AddOption(&K, "-K", "--bulk-modulus", "Bulk modulus in the Neo-Hookean hyperelastic model.");
-  args.AddOption(&tx, "-tx", "--traction-x", "Cantilever tip traction in the x direction.");
-  args.AddOption(&ty, "-ty", "--traction-y", "Cantilever tip traction in the y direction.");
-  args.AddOption(&tz, "-tz", "--traction-z", "Cantilever tip traction in the z direction.");
-  args.AddOption(&slu_solver, "-slu", "--superlu", "-no-slu", "--no-superlu", "Use the SuperLU Solver.");
-  args.AddOption(&gmres_solver, "-gmres", "--gmres", "-no-gmres", "--no-gmres",
-                 "Use gmres, otherwise minimum residual is used.");
-  args.AddOption(&lin_params.rel_tol, "-lrel", "--linear-relative-tolerance",
-                 "Relative tolerance for the lienar solve.");
-  args.AddOption(&lin_params.abs_tol, "-labs", "--linear-absolute-tolerance",
-                 "Absolute tolerance for the linear solve.");
-  args.AddOption(&lin_params.max_iter, "-lit", "--linear-iterations", "Maximum iterations for the linear solve.");
-  args.AddOption(&lin_params.print_level, "-lpl", "--linear-print-level", "Linear print level.");
-  args.AddOption(&nonlin_params.rel_tol, "-nrel", "--newton-relative-tolerance",
-                 "Relative tolerance for the Newton solve.");
-  args.AddOption(&nonlin_params.abs_tol, "-nabs", "--newton-absolute-tolerance",
-                 "Absolute tolerance for the Newton solve.");
-  args.AddOption(&nonlin_params.max_iter, "-nit", "--newton-iterations", "Maximum iterations for the Newton solve.");
-  args.AddOption(&nonlin_params.print_level, "-npl", "--newton-print-level", "Newton print level.");
-  args.AddOption(&t_final, "-tf", "--t-final", "Final time; start time is 0.");
-  args.AddOption(&dt, "-dt", "--time-step", "Time step.");
+  CLI::App app{"serac: a high order nonlinear thermomechanical simulation code"};
+  app.add_option("-m, --mesh", mesh_file, "Mesh file to use.", true);
+  app.add_option("--rs, --refine-serial", ser_ref_levels, "Number of times to refine the mesh uniformly in serial.",
+                 true);
+  app.add_option("--rp, --refine-parallel", par_ref_levels, "Number of times to refine the mesh uniformly in parallel.",
+                 true);
+  app.add_option("-o, --order", order, "Order degree of the finite elements.", true);
+  app.add_option("--mu, --shear-modulus", mu, "Shear modulus in the Neo-Hookean hyperelastic model.", true);
+  app.add_option("-K, --bulk-modulus", K, "Bulk modulus in the Neo-Hookean hyperelastic model.", true);
+  app.add_option("--tx, --traction-x", tx, "Cantilever tip traction in the x direction.", true);
+  app.add_option("--ty, --traction-y", ty, "Cantilever tip traction in the y direction.", true);
+  app.add_option("--tz, --traction-z", tz, "Cantilever tip traction in the z direction.", true);
+  app.add_flag("--slu, --superlu, !--no-slu, !--no-superlu", slu_solver, "Use the SuperLU Solver.");
+  app.add_flag("--gmres, !--no-gmres", gmres_solver, "Use gmres, otherwise minimum residual is used.");
+  app.add_option("--lrel, --linear-relative-tolerance", lin_params.rel_tol, "Relative tolerance for the lienar solve.",
+                 true);
+  app.add_option("--labs, --linear-absolute-tolerance", lin_params.abs_tol, "Absolute tolerance for the linear solve.",
+                 true);
+  app.add_option("--lit, --linear-iterations", lin_params.max_iter, "Maximum iterations for the linear solve.", true);
+  app.add_option("--lpl, --linear-print-level", lin_params.print_level, "Linear print level.", true);
+  app.add_option("--nrel, --newton-relative-tolerance", nonlin_params.rel_tol,
+                 "Relative tolerance for the Newton solve.", true);
+  app.add_option("--nabs, --newton-absolute-tolerance", nonlin_params.abs_tol,
+                 "Absolute tolerance for the Newton solve.", true);
+  app.add_option("--nit, --newton-iterations", nonlin_params.max_iter, "Maximum iterations for the Newton solve.",
+                 true);
+  app.add_option("--npl, --newton-print-level", nonlin_params.print_level, "Newton print level.", true);
+  app.add_option("--dt, --time-step", dt, "Time step.", true);
 
   // Parse the arguments and check if they are good
-  args.Parse();
-  if (!args.Good()) {
-    if (myid == 0) {
-      args.PrintUsage(std::cout);
-    }
-    MPI_Finalize();
-    return 1;
-  }
-  if (myid == 0) {
-    args.PrintOptions(std::cout);
+  try {
+    app.parse(argc, argv);
+  } catch (const CLI::ParseError& e) {
+    serac::logger::flush();
+    auto err_msg = (e.get_name() == "CallForHelp") ? app.help() : CLI::FailureMessage::simple(&app, e);
+    SLIC_ERROR_ROOT(rank, err_msg);
+    serac::exitGracefully();
   }
 
+  auto config_msg = app.config_to_str(true, true);
+  SLIC_INFO_ROOT(rank, config_msg);
+
   // Open the mesh
+  std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
+  SLIC_INFO_ROOT(rank, msg);
   std::ifstream imesh(mesh_file);
   if (!imesh) {
-    if (myid == 0) {
-      std::cerr << "\nCan not open mesh file: " << mesh_file << '\n' << std::endl;
-    }
-    MPI_Finalize();
-    return 2;
+    serac::logger::flush();
+    std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
+    SLIC_ERROR_ROOT(rank, err_msg);
+    serac::exitGracefully();
   }
 
   auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
@@ -144,11 +151,11 @@ int main(int argc, char *argv[])
   int dim = pmesh->Dimension();
 
   // Define the solid solver object
-  NonlinearSolidSolver solid_solver(order, pmesh);
+  serac::NonlinearSolidSolver solid_solver(order, pmesh);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  mfem::VectorFunctionCoefficient defo_coef(dim, InitialDeformation);
+  mfem::VectorFunctionCoefficient defo_coef(dim, serac::initialDeformation);
 
   mfem::Vector velo(dim);
   velo = 0.0;
@@ -158,8 +165,8 @@ int main(int argc, char *argv[])
   // initialize x_cur, boundary condition, deformation, and
   // incremental nodal displacment grid functions by projection the
   // VectorFunctionCoefficient function onto them
-  solid_solver.SetDisplacement(defo_coef);
-  solid_solver.SetVelocity(velo_coef);
+  solid_solver.setDisplacement(defo_coef);
+  solid_solver.setVelocity(velo_coef);
 
   std::set<int> ess_bdr = {1};
 
@@ -178,37 +185,37 @@ int main(int argc, char *argv[])
     traction(2) = tz;
   }
 
-  auto traction_coef = std::make_shared<VectorScaledConstantCoefficient>(traction);
+  auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
-  solid_solver.SetDisplacementBCs(ess_bdr, disp_coef);
-  solid_solver.SetTractionBCs(trac_bdr, traction_coef);
+  solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
+  solid_solver.setTractionBCs(trac_bdr, traction_coef);
 
   // Set the material parameters
-  solid_solver.SetHyperelasticMaterialParameters(mu, K);
+  solid_solver.setHyperelasticMaterialParameters(mu, K);
 
   // Set the linear solver parameters
   if (gmres_solver == true) {
-    lin_params.prec       = Preconditioner::BoomerAMG;
-    lin_params.lin_solver = LinearSolver::GMRES;
+    lin_params.prec       = serac::Preconditioner::BoomerAMG;
+    lin_params.lin_solver = serac::LinearSolver::GMRES;
   } else {
-    lin_params.prec       = Preconditioner::Jacobi;
-    lin_params.lin_solver = LinearSolver::MINRES;
+    lin_params.prec       = serac::Preconditioner::Jacobi;
+    lin_params.lin_solver = serac::LinearSolver::MINRES;
   }
-  solid_solver.SetSolverParameters(lin_params, nonlin_params);
+  solid_solver.setSolverParameters(lin_params, nonlin_params);
 
   // Set the time step method
-  solid_solver.SetTimestepper(TimestepMethod::QuasiStatic);
+  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Complete the solver setup
-  solid_solver.CompleteSetup();
+  solid_solver.completeSetup();
 
   // initialize/set the time
   double t = 0.0;
 
   bool last_step = false;
 
-  solid_solver.InitializeOutput(OutputType::VisIt, "serac");
+  solid_solver.initializeOutput(serac::OutputType::VisIt, "serac");
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {
@@ -216,21 +223,19 @@ int main(int argc, char *argv[])
     // compute current time
     t = t + dt_real;
 
-    if (myid == 0) {
+    if (rank == 0) {
       std::cout << "step " << ti << ", t = " << t << std::endl;
     }
 
     traction_coef->SetScale(t);
 
     // Solve the Newton system
-    solid_solver.AdvanceTimestep(dt_real);
+    solid_solver.advanceTimestep(dt_real);
 
-    solid_solver.OutputState();
+    solid_solver.outputState();
 
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
-  MPI_Finalize();
-
-  return 0;
+  serac::exitGracefully();
 }

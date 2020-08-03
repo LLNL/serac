@@ -4,9 +4,9 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-blt_add_executable( NAME serac
-                    SOURCES serac.cpp
-                    DEPENDS_ON solvers coefficients mfem mpi hdf5
+blt_add_executable( NAME       serac
+                    SOURCES    serac.cpp
+                    DEPENDS_ON common solvers coefficients mfem mpi cli11
                     )
 
 install( TARGETS serac

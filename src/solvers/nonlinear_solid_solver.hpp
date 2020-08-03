@@ -11,55 +11,48 @@
 #include "mfem.hpp"
 #include "nonlinear_solid_operators.hpp"
 
+namespace serac {
+
 /// The nonlinear hyperelastic quasi-static and dynamic
 /// hyperelastic solver object. It is derived from MFEM
 /// example 10p.
 class NonlinearSolidSolver : public BaseSolver {
  protected:
-  std::shared_ptr<FiniteElementState> m_velocity;
-  std::shared_ptr<FiniteElementState> m_displacement;
-
-  /// The abstract nonlinear form
-  std::shared_ptr<mfem::ParNonlinearForm> m_H_form;
-
-  /// The abstract mass bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> m_M_form;
-
-  /// The abstract viscosity bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> m_S_form;
+  std::shared_ptr<FiniteElementState> velocity_;
+  std::shared_ptr<FiniteElementState> displacement_;
 
   /// The quasi-static operator for use with the MFEM newton solvers
-  std::shared_ptr<mfem::Operator> m_nonlinear_oper;
+  std::shared_ptr<mfem::Operator> nonlinear_oper_;
 
   /// The time dependent operator for use with the MFEM ODE solvers
-  std::shared_ptr<mfem::TimeDependentOperator> m_timedep_oper;
+  std::shared_ptr<mfem::TimeDependentOperator> timedep_oper_;
 
   /// The Newton solver for the nonlinear iterations
-  mfem::NewtonSolver m_newton_solver;
+  mfem::NewtonSolver newton_solver_;
 
   /// The linear solver for the Jacobian
-  std::shared_ptr<mfem::Solver> m_J_solver;
+  std::unique_ptr<mfem::Solver> J_solver_;
 
   /// The preconditioner for the Jacobian solver
-  std::shared_ptr<mfem::Solver> m_J_prec;
+  std::unique_ptr<mfem::Solver> J_prec_;
 
   /// The viscosity coefficient
-  std::shared_ptr<mfem::Coefficient> m_viscosity;
+  std::shared_ptr<mfem::Coefficient> viscosity_;
 
   /// The hyperelastic material model
-  std::shared_ptr<mfem::HyperelasticModel> m_model;
+  std::shared_ptr<mfem::HyperelasticModel> model_;
 
   /// Linear solver parameters
-  LinearSolverParameters m_lin_params;
+  LinearSolverParameters lin_params_;
 
   /// Nonlinear solver parameters
-  NonlinearSolverParameters m_nonlin_params;
+  NonlinearSolverParameters nonlin_params_;
 
   /// Pointer to the reference mesh data
-  std::unique_ptr<mfem::ParGridFunction> m_reference_nodes;
+  std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
 
   /// Pointer to the deformed mesh data
-  std::unique_ptr<mfem::ParGridFunction> m_deformed_nodes;
+  std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
 
   /// Solve the Quasi-static operator
   void QuasiStaticSolve();
@@ -69,45 +62,47 @@ class NonlinearSolidSolver : public BaseSolver {
   NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /// Set the displacement essential boundary conditions
-  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
 
   /// Set the displacement essential boundary conditions on a single component
-  void SetDisplacementBCs(const std::set<int> &disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                           int component);
 
   /// Set the traction boundary conditions
-  void SetTractionBCs(const std::set<int> &trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+  void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1);
 
   /// Set the viscosity coefficient
-  void SetViscosity(std::shared_ptr<mfem::Coefficient> visc_coef);
+  void setViscosity(std::shared_ptr<mfem::Coefficient> visc_coef);
 
   /// Set the hyperelastic material parameters
-  void SetHyperelasticMaterialParameters(double mu, double K);
+  void setHyperelasticMaterialParameters(double mu, double K);
 
   /// Set the initial displacement state (guess)
-  void SetDisplacement(mfem::VectorCoefficient &disp_state);
+  void setDisplacement(mfem::VectorCoefficient& disp_state);
 
   /// Set the initial velocity state (guess)
-  void SetVelocity(mfem::VectorCoefficient &velo_state);
+  void setVelocity(mfem::VectorCoefficient& velo_state);
 
   /// Set the linear and nonlinear solver params
-  void SetSolverParameters(const LinearSolverParameters &lin_params, const NonlinearSolverParameters &nonlin_params);
+  void setSolverParameters(const LinearSolverParameters& lin_params, const NonlinearSolverParameters& nonlin_params);
 
   /// Get the displacement state
-  std::shared_ptr<FiniteElementState> GetDisplacement() { return m_displacement; };
+  std::shared_ptr<FiniteElementState> getDisplacement() { return displacement_; };
 
   /// Get the velocity state
-  std::shared_ptr<FiniteElementState> GetVelocity() { return m_velocity; };
+  std::shared_ptr<FiniteElementState> getVelocity() { return velocity_; };
 
   /// Complete the data structure initialization
-  void CompleteSetup();
+  void completeSetup() override;
 
   /// Advance the timestep
-  void AdvanceTimestep(double &dt);
+  void advanceTimestep(double& dt) override;
 
   /// Destructor
   virtual ~NonlinearSolidSolver();
 };
+
+}  // namespace serac
 
 #endif
