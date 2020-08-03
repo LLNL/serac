@@ -29,9 +29,8 @@ ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem
 
 void ThermalStructuralSolver::completeSetup()
 {
-  if (coupling_ != serac::CouplingScheme::OperatorSplit) {
-    SLIC_ERROR_ROOT(mpi_rank_, "Only operator split is currently implemented in the thermal structural solver.");
-  }
+  SLIC_ERROR_IF_ROOT(coupling_ != serac::CouplingScheme::OperatorSplit, mpi_rank_,
+                     "Only operator split is currently implemented in the thermal structural solver.");
 
   therm_solver_.completeSetup();
   solid_solver_.completeSetup();
@@ -51,9 +50,8 @@ void ThermalStructuralSolver::advanceTimestep(double& dt)
     double initial_dt = dt;
     therm_solver_.advanceTimestep(dt);
     solid_solver_.advanceTimestep(dt);
-    if (std::abs(dt - initial_dt) > 1.0e-6) {
-      SLIC_ERROR_ROOT(mpi_rank_, "Operator split coupled solvers cannot adaptively change the timestep");
-    }
+    SLIC_ERROR_IF_ROOT(std::abs(dt - initial_dt) > 1.0e-6, mpi_rank_,
+                       "Operator split coupled solvers cannot adaptively change the timestep");
   } else {
     SLIC_ERROR_ROOT(mpi_rank_, "Only operator split coupling is currently implemented");
   }

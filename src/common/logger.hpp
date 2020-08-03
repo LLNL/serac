@@ -102,4 +102,32 @@ void flush();
 */
 #define SLIC_DEBUG_ROOT(rank, msg) SLIC_DEBUG_IF(rank == 0, msg)
 
+/*!
+*****************************************************************************
+* \brief Macro that logs given error message only on rank 0 if EXP is true.
+*****************************************************************************
+*/
+#define SLIC_ERROR_IF_ROOT(EXP, rank, msg) SLIC_ERROR_IF((EXP) && (rank == 0), msg)
+
+/*!
+*****************************************************************************
+* \brief Macro that logs given warning message only on rank 0 if EXP is true.
+*****************************************************************************
+*/
+#define SLIC_WARNING_IF_ROOT(EXP, rank, msg) SLIC_WARNING_IF((EXP) && (rank == 0), msg)
+
+/*!
+*****************************************************************************
+* \brief Macro that logs given info message only on rank 0 if EXP is true.
+*****************************************************************************
+*/
+#define SLIC_INFO_IF_ROOT(EXP, rank, msg) SLIC_INFO_IF((EXP) && (rank == 0), msg)
+
+/*!
+*****************************************************************************
+* \brief Macro that logs given debug message only on rank 0 if EXP is true.
+*****************************************************************************
+*/
+#define SLIC_DEBUG_IF_ROOT(EXP, rank, msg) SLIC_DEBUG_IF((EXP) && (rank == 0), msg)
+
 #endif
