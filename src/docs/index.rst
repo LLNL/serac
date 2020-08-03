@@ -167,17 +167,13 @@ We provide the following useful build targets that can be run from the build dir
    * Sphinx: ``build-*/src/docs/sphinx/html/index.html``
 
 * ``style``: Runs styling over source code and replaces files in place
-* ``check``: Runs a set of code checks over source code (CppCheck and AStyle)
+* ``check``: Runs a set of code checks over source code (CppCheck and clang-format)
 
-
-.. TODO: fix the linking of the doxygen documentation
-.. 
-.. ================================
-..  Software Documentation
-.. ================================
-..  
-.. `Doxygen documentation <../doxygen/html/index.html>`_
-.. 
+================================
+  Software Documentation
+================================
+  
+Doxygen documentation for the Serac source code is located `here <../doxygen/html/html/index.html>`_.
 
 ======================================================
 Copyright and License Information
@@ -194,7 +190,7 @@ LLNL-CODE-805541
    :hidden:
    :maxdepth: 2
 
-   docker_info
-   logging
-   memory_checking
-   style_guide
+   sphinx/docker_info
+   sphinx/logging
+   sphinx/memory_checking
+   sphinx/style_guide
