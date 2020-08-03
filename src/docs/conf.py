@@ -26,6 +26,8 @@ if read_the_docs_build:
     if (os.path.isdir(htmlpath) == 0):
         os.mkdir(htmlpath)
 
+    print("current directory: ", os.getcwd())
+
     # Modify Doxyfile for ReadTheDocs compatibility
     with open('./doxygen/Doxyfile.in', 'r') as f:
         fdata = f.read()
