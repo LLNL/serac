@@ -162,9 +162,9 @@ We provide the following useful build targets that can be run from the build dir
 
 * ``test``: Runs our unit tests
 * ``docs``: Builds our documentation to the following locations:
-
-   * Doxygen: ``/build-*/src/docs/doxygen/html/html/index.html``
-   * Sphinx: ``build-*/src/docs/sphinx/html/index.html``
+   
+   * Sphinx: ``build-*/src/docs/html/index.html``
+   * Doxygen: ``/build-*/src/docs/html/doxygen/html/index.html``
 
 * ``style``: Runs styling over source code and replaces files in place
 * ``check``: Runs a set of code checks over source code (CppCheck and clang-format)
@@ -173,7 +173,7 @@ We provide the following useful build targets that can be run from the build dir
   Software Documentation
 ================================
   
-Doxygen documentation for the Serac source code is located `here <../doxygen/html/html/index.html>`_.
+Doxygen documentation for the Serac source code is located in the `Doxygen directory <doxygen/html/index.html>`_.
 
 ======================================================
 Copyright and License Information
