@@ -32,7 +32,7 @@ namespace serac {
  * \param [in] mesh_file The mesh file to open
  * \param [in] ref_serial The number of serial refinements
  * \param [in] ref_parallel The number of parallel refinements
- * \return pmesh A shared_ptr containing the constructed and refined parallel mesh object
+ * \return A shared_ptr containing the constructed and refined parallel mesh object
  *****************************************************************************
  */
 std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, const int refine_serial = 0,
