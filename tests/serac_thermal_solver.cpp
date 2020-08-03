@@ -9,6 +9,7 @@
 
 #include <fstream>
 
+#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/thermal_solver.hpp"
@@ -32,19 +33,9 @@ TEST(thermal_solver, static_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
-  std::fstream imesh(mesh_file);
-  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  // Refine in serial
-  mesh->UniformRefinement();
-
-  // Initialize the parallel mesh and delete the serial mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-
-  // Refine the parallel mesh
-  pmesh->UniformRefinement();
+  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
@@ -93,20 +84,9 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/star_with_2_bdr_attributes.mesh";
-  std::fstream imesh(mesh_file);
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star_with_2_bdr_attributes.mesh";
 
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
-
-  // Refine in serial
-  mesh->UniformRefinement();
-
-  // Initialize the parallel mesh and delete the serial mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-
-  // Refine the parallel mesh
-  pmesh->UniformRefinement();
+  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
@@ -164,20 +144,9 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
-  std::fstream imesh(mesh_file);
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
-
-  // Refine in serial
-  mesh->UniformRefinement();
-
-  // Initialize the parallel mesh and delete the serial mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-
-  // Refine the parallel mesh
-  pmesh->UniformRefinement();
+  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
@@ -228,20 +197,9 @@ TEST(thermal_solver, dyn_exp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
-  std::fstream imesh(mesh_file);
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
-
-  // Refine in serial
-  mesh->UniformRefinement();
-
-  // Initialize the parallel mesh and delete the serial mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-
-  // Refine the parallel mesh
-  pmesh->UniformRefinement();
+  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
@@ -308,19 +266,9 @@ TEST(thermal_solver, dyn_imp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
-  std::fstream imesh(mesh_file);
-  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  // Refine in serial
-  mesh->UniformRefinement();
-
-  // Initialize the parallel mesh and delete the serial mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-
-  // Refine the parallel mesh
-  pmesh->UniformRefinement();
+  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);

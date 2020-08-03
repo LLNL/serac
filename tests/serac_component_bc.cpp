@@ -9,6 +9,7 @@
 #include <fstream>
 
 #include "coefficients/stdfunction_coefficient.hpp"
+#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
@@ -20,17 +21,9 @@ TEST(component_bc, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
-  std::fstream imesh(mesh_file);
-  auto         mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
 
-  // refine and declare pointer to parallel mesh object
-  for (int i = 0; i < 2; ++i) {
-    mesh->UniformRefinement();
-  }
-
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
+  auto pmesh = buildParallelMesh(mesh_file, 2, 0);
 
   int dim = pmesh->Dimension();
 
