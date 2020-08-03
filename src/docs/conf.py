@@ -27,18 +27,18 @@ if read_the_docs_build:
         os.mkdir(htmlpath)
 
     # Modify Doxyfile for ReadTheDocs compatibility
-    with open('./src/docs/doxygen/Doxyfile.in', 'r') as f:
+    with open('./doxygen/Doxyfile.in', 'r') as f:
         fdata = f.read()
     fdata = fdata.replace('@PROJECT_SOURCE_DIR@', '.')
-    with open('./src/docs/doxygen/Doxyfile.in', 'w') as f:
+    with open('./doxygen/Doxyfile.in', 'w') as f:
         f.write(fdata)
-    with open('./src/docs/doxygen/Doxyfile.in', 'a') as f:
+    with open('./doxygen/Doxyfile.in', 'a') as f:
         f.write("\nOUTPUT_DIRECTORY=./_build/html/doxygen")
 
     # Call doxygen
     from subprocess import call
     print("working directory: ", os.getcwd())
-    call(['doxygen', "./src/docs/doxygen/Doxyfile.in"])
+    call(['doxygen', "./doxygen/Doxyfile.in"])
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
