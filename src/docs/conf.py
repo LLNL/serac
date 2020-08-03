@@ -20,7 +20,7 @@ if read_the_docs_build:
     # Modify Doxyfile for ReadTheDocs compatibility
     with open('./doxygen/Doxyfile.in', 'r') as f:
         fdata = f.read()
-    fdata = fdata.replace('@PROJECT_SOURCE_DIR@', os.pardir())
+    fdata = fdata.replace('@PROJECT_SOURCE_DIR@', os.pardir)
     with open('./doxygen/Doxyfile.in', 'w') as f:
         f.write(fdata)
     with open('./doxygen/Doxyfile.in', 'a') as f:
