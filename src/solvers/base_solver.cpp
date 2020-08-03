@@ -255,7 +255,7 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
     }
 
     case OutputType::Sidre: {
-      m_dc = std::make_unique<axom::sidre::SidreDataCollection>(m_root_name, m_state.front()->mesh.get());
+      dc_ = std::make_unique<axom::sidre::SidreDataCollection>(root_name_, state_.front()->mesh.get());
       break;
     }
 

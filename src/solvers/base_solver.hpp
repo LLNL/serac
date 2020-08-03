@@ -61,7 +61,7 @@ class BaseSolver {
   int order_;
 
   /// VisIt data collection pointer
-  std::unique_ptr<mfem::VisItDataCollection> dc_;
+  std::unique_ptr<mfem::DataCollection> dc_;
 
   /// State variable initialization indicator
   std::vector<bool> gf_initialized_;
