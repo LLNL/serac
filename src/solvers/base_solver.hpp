@@ -91,7 +91,7 @@ class BaseSolver {
   virtual void setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void setState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state);
+  virtual void setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state);
 
   /// Get the list of state variable grid functions
   virtual std::vector<std::shared_ptr<serac::FiniteElementState> > getState() const;

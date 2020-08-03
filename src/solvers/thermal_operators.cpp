@@ -107,7 +107,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
 
   for (auto& bc : ess_bdr_) {
     SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
-                  "Temperature boundary condition had a non-scalar coefficient.");
+                    "Temperature boundary condition had a non-scalar coefficient.");
     auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
     scalar_coef->SetTime(t);
     state_gf_->SetFromTrueDofs(y_);

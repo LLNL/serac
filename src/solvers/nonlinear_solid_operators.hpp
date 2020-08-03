@@ -70,7 +70,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
  public:
   /// The constructor
   NonlinearSolidReducedSystemOperator(const mfem::ParNonlinearForm& H_form, const mfem::ParBilinearForm& S_form,
-                                      mfem::ParBilinearForm&                                         M_form,
+                                      mfem::ParBilinearForm&                       M_form,
                                       const std::vector<serac::BoundaryCondition>& ess_bdr);
 
   /// Set current dt, v, x values - needed to compute action and Jacobian.
@@ -124,11 +124,11 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
 
  public:
   /// The constructor
-  NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>                        H_form,
-                                std::unique_ptr<mfem::ParBilinearForm>                         S_form,
-                                std::unique_ptr<mfem::ParBilinearForm>                         M_form,
-                                const std::vector<serac::BoundaryCondition>& ess_bdr,
-                                mfem::NewtonSolver& newton_solver, const serac::LinearSolverParameters& lin_params);
+  NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>      H_form,
+                                std::unique_ptr<mfem::ParBilinearForm>       S_form,
+                                std::unique_ptr<mfem::ParBilinearForm>       M_form,
+                                const std::vector<serac::BoundaryCondition>& ess_bdr, mfem::NewtonSolver& newton_solver,
+                                const serac::LinearSolverParameters& lin_params);
 
   /// Required to use the native newton solver
   virtual void Mult(const mfem::Vector& vx, mfem::Vector& dvx_dt) const;

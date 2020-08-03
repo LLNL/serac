@@ -45,12 +45,10 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCo
   for (int attr : ess_bdr) {
     SLIC_ASSERT_MSG(attr <= bc.markers.Size(), "Attribute specified larger than what is found in the mesh.");
     bc.markers[attr - 1] = 1;
-    for (auto& existing_bc : ess_bdr_) {
-      if (existing_bc.markers[attr - 1] == 1) {
-        SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-        bc.markers[attr - 1] = 0;
-        break;
-      }
+    if (std::any_of(ess_bdr_.cbegin(), ess_bdr_.cend(),
+                    [attr](auto&& existing_bc) { return existing_bc.markers[attr - 1] == 1; })) {
+      SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
+      bc.markers[attr - 1] = 0;
     }
   }
 
@@ -80,7 +78,8 @@ void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryC
   ess_bdr_.push_back(std::move(bc));
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef, const int component)
+void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
+                               const int component)
 {
   serac::BoundaryCondition bc;
 
@@ -107,7 +106,7 @@ void BaseSolver::setState(const std::vector<serac::BoundaryCondition::Coef>& sta
   }
 }
 
-void BaseSolver::setState(const std::vector<std::shared_ptr<serac::FiniteElementState> > state)
+void BaseSolver::setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state)
 {
   SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
   state_ = state;

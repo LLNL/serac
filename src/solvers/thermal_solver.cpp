@@ -25,8 +25,6 @@ ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
   // and initial conditions
   *temperature_->gf       = 0.0;
   *temperature_->true_vec = 0.0;
-
-  temperature_->name = "temperature";
 }
 
 void ThermalSolver::setTemperature(mfem::Coefficient& temp)
