@@ -26,12 +26,10 @@ if read_the_docs_build:
     if (os.path.isdir(htmlpath) == 0):
         os.mkdir(htmlpath)
 
-    print("current directory: ", os.getcwd())
-
     # Modify Doxyfile for ReadTheDocs compatibility
     with open('./doxygen/Doxyfile.in', 'r') as f:
         fdata = f.read()
-    fdata = fdata.replace('@PROJECT_SOURCE_DIR@', '.')
+    fdata = fdata.replace('@PROJECT_SOURCE_DIR@', '..')
     with open('./doxygen/Doxyfile.in', 'w') as f:
         f.write(fdata)
     with open('./doxygen/Doxyfile.in', 'a') as f:
