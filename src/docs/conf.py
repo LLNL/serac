@@ -17,19 +17,10 @@ import sys, os
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 if read_the_docs_build:
 
-    # Makes sure directory exists for doxygen output
-    #cwd=os.getcwd()
-    #buildpath=os.path.join(cwd,"_build")
-    #if (os.path.isdir(buildpath) == 0):
-    #    os.mkdir(buildpath)
-    #htmlpath=os.path.join(buildpath,"html")
-    #if (os.path.isdir(htmlpath) == 0):
-    #    os.mkdir(htmlpath)
-
     # Modify Doxyfile for ReadTheDocs compatibility
     with open('./doxygen/Doxyfile.in', 'r') as f:
         fdata = f.read()
-    fdata = fdata.replace('@PROJECT_SOURCE_DIR@', os.getcwd())
+    fdata = fdata.replace('@PROJECT_SOURCE_DIR@', os.pardir())
     with open('./doxygen/Doxyfile.in', 'w') as f:
         f.write(fdata)
     with open('./doxygen/Doxyfile.in', 'a') as f:
