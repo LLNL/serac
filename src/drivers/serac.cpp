@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
 
   auto pmesh = serac::buildParallelMesh(mesh_file, ser_ref_levels, par_ref_levels);
 
-int dim = pmesh->Dimension();
+  int dim = pmesh->Dimension();
 
   // Define the solid solver object
   serac::NonlinearSolidSolver solid_solver(order, pmesh);
