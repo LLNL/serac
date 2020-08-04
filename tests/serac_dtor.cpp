@@ -10,6 +10,7 @@
 #include <fstream>
 #include <memory>
 
+#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/thermal_solver.hpp"
@@ -21,20 +22,9 @@ TEST(serac_dtor, test1)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
-  std::fstream imesh(mesh_file);
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
 
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
-
-  // Refine in serial
-  mesh->UniformRefinement();
-
-  // Initialize the parallel mesh and delete the serial mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-
-  // Refine the parallel mesh
-  pmesh->UniformRefinement();
+  auto pmesh = buildParallelMesh(mesh_file, 1, 0);
 
   // Initialize the second order thermal solver on the parallel mesh
   auto therm_solver = std::make_unique<ThermalSolver>(2, pmesh);
