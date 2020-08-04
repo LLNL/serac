@@ -6,10 +6,19 @@
 
 #include "common/logger.hpp"
 
+#include <csignal>
 #include <cstdlib>
 
 #include "axom/slic.hpp"
 #include "mpi.h"
+
+namespace {
+  void signalHandler(int signal)
+  {
+    SLIC_INFO("Received signal " << signal << ", exiting");
+    serac::exitGracefully(true);
+  }
+} // namespace
 
 namespace serac {
 
@@ -30,6 +39,9 @@ bool initialize(MPI_Comm comm)
   if (!slic::isInitialized()) {
     slic::initialize();
   }
+
+  std::signal(SIGINT, signalHandler);
+  std::signal(SIGABRT, signalHandler);
 
   int numRanks, rank;
   MPI_Comm_size(comm, &numRanks);
