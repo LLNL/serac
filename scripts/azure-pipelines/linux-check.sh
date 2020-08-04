@@ -24,12 +24,18 @@ git submodule update
 echo HOST_CONFIG
 echo $HOST_CONFIG
 
+# Temporary workaround as BLT's run-clang-format.py script doesn't support Python3
+if [[ ! $(type -P "python") && $(type -P "python3") ]] ; then
+    ln -s python3 $HOME/python
+    export PATH="$HOME:$PATH"
+fi
+
 echo "~~~~~~ RUNNING CMAKE ~~~~~~~~"
 or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake -DENABLE_GTEST_DEATH_TESTS=ON
 or_die cd build-$HOST_CONFIG-debug
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
-    make check
+    or_die make check
 fi
 
 exit 0
