@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 #
 jobs:
-- job: Build & Test
+- job: Build_and_Test
   variables:
     DO_BUILD: 'yes'
     DO_TEST: 'yes'
@@ -54,7 +54,7 @@ jobs:
       testRunTitle: '$(TEST_TARGET) Tests'
       failTaskOnFailedTests: true
 
-- job: Check Style
+- job: Check_Style
   variables:
     DO_STYLE_CHECK: 'yes'
     VM_ImageName: 'ubuntu-18.04'
