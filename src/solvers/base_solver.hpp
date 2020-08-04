@@ -113,8 +113,6 @@ class BaseSolver {
 
   /**
    * Set the essential boundary conditions from a list of boundary markers and
-   */
-  /**
    * a coefficient
    */
   virtual void setEssentialBCs(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef,
@@ -122,8 +120,6 @@ class BaseSolver {
 
   /**
    * Set the vector-valued essential boundary conditions from a list of
-   */
-  /**
    * boundary markers and a coefficient
    */
   virtual void setEssentialBCs(const std::set<int>& ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_vec_coef,
@@ -142,8 +138,6 @@ class BaseSolver {
 
   /**
    * Set the natural boundary conditions from a list of boundary markers and a
-   */
-  /**
    * coefficient
    */
   virtual void setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef,
@@ -151,8 +145,6 @@ class BaseSolver {
 
   /**
    * Set the vector-valued natural boundary conditions from a list of boundary
-   */
-  /**
    * markers and a coefficient
    */
   virtual void setNaturalBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::VectorCoefficient> nat_bdr_vec_coef,
