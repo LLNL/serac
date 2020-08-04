@@ -8,7 +8,7 @@
  *******************************************************************************
  * \file mesh_utils.hpp
  *
- * \brief This file contains helper functions for importing and managing
+ * @brief This file contains helper functions for importing and managing
  *        various mesh objects.
  *******************************************************************************
  */
@@ -23,16 +23,16 @@
 namespace serac {
 /**
  *****************************************************************************
- * \brief Constructs an MFEM parallel mesh from a file and refines it
+ * @brief Constructs an MFEM parallel mesh from a file and refines it
  *
  * This opens and reads an external mesh file and constructs a parallel
  * MFEM ParMesh object. The mesh will be refined both serially and
  * in parallel as requested
  *
- * \param [in] mesh_file The mesh file to open
- * \param [in] ref_serial The number of serial refinements
- * \param [in] ref_parallel The number of parallel refinements
- * \return A shared_ptr containing the constructed and refined parallel mesh object
+ * @param [in] mesh_file The mesh file to open
+ * @param [in] ref_serial The number of serial refinements
+ * @param [in] ref_parallel The number of parallel refinements
+ * @return A shared_ptr containing the constructed and refined parallel mesh object
  *****************************************************************************
  */
 std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, const int refine_serial = 0,
