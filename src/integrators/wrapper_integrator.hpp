@@ -88,7 +88,7 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
                                      const mfem::Vector& elfun, mfem::Vector& elvect);
 
   /**
-   * Compute the tangent matrix\
+   * Compute the tangent matrix
    */
   virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
                                    const mfem::Vector& elfun, mfem::DenseMatrix& elmat);

@@ -114,13 +114,15 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
    */
   void setLoadVector(std::shared_ptr<mfem::Vector> rhs);
 
-  /** Calculate du_dt = M^-1 (-Ku + f).
-   *  This is all that is needed for explicit methods
+  /** 
+   * Calculate du_dt = M^-1 (-Ku + f).
+   * This is all that is needed for explicit methods
    */
   virtual void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const;
 
-  /** Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
-   *  for du_dt. This is needed for implicit methods
+  /** 
+   * Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
+   * for du_dt. This is needed for implicit methods
    */
   virtual void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
 

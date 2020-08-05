@@ -53,14 +53,8 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
 
 /**
  *  Nonlinear operator of the form:
- */
-/**
  *  k --> (M + dt*S)*k + H(x + dt*v + dt^2*k) + S*v,
- */
-/**
  *  where M and S are given BilinearForms, H is a given NonlinearForm, v and x
- */
-/**
  *  are given vectors, and dt is a scalar.S
  */
 class NonlinearSolidReducedSystemOperator : public mfem::Operator {
