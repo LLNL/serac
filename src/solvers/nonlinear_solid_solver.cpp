@@ -16,32 +16,35 @@ constexpr int NUM_FIELDS = 2;
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
-      velocity_(state_[0]),
-      displacement_(state_[1]),
+      velocity_(std::make_shared<FiniteElementState>(order, pmesh, "velocity", mfem::Ordering::byVDIM)),
+      displacement_(std::make_shared<FiniteElementState>(order, pmesh, "displacement", mfem::Ordering::byVDIM)),
       newton_solver_(pmesh->GetComm())
 {
-  velocity_->mesh      = pmesh;
-  velocity_->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
-  velocity_->space     = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), velocity_->coll.get(),
-                                                                   pmesh->Dimension(), mfem::Ordering::byVDIM);
-  velocity_->gf        = std::make_shared<mfem::ParGridFunction>(velocity_->space.get());
-  *velocity_->gf       = 0.0;
-  velocity_->true_vec  = std::make_shared<mfem::HypreParVector>(velocity_->space.get());
-  *velocity_->true_vec = 0.0;
-  velocity_->name      = "velocity";
+  // velocity_->getMesh()      = pmesh;
+  // velocity_->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
+  // velocity_->getSpace()     = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), velocity_->coll.get(),
+  //                                                                  pmesh->Dimension(), mfem::Ordering::byVDIM);
+  // velocity_->getGridFunc()        = std::make_shared<mfem::ParGridFunction>(velocity_->getSpace());
+  // *velocity_->getGridFunc()       = 0.0;
+  // velocity_->getTrueVec()  = std::make_shared<mfem::HypreParVector>(velocity_->getSpace());
+  // *velocity_->getTrueVec() = 0.0;
+  // velocity_->name      = "velocity";
 
-  displacement_->mesh      = pmesh;
-  displacement_->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
-  displacement_->space     = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), displacement_->coll.get(),
-                                                                       pmesh->Dimension(), mfem::Ordering::byVDIM);
-  displacement_->gf        = std::make_shared<mfem::ParGridFunction>(displacement_->space.get());
-  *displacement_->gf       = 0.0;
-  displacement_->true_vec  = std::make_shared<mfem::HypreParVector>(displacement_->space.get());
-  *displacement_->true_vec = 0.0;
-  displacement_->name      = "displacement";
+  state_[0] = velocity_;
+  state_[1]  = displacement_;
+
+  // displacement_->getMesh()      = pmesh;
+  // displacement_->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
+  // displacement_->getSpace()     = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), displacement_->coll.get(),
+  //                                                                      pmesh->Dimension(), mfem::Ordering::byVDIM);
+  // displacement_->getGridFunc()        = std::make_shared<mfem::ParGridFunction>(displacement_->getSpace());
+  // *displacement_->getGridFunc()       = 0.0;
+  // displacement_->getTrueVec()  = std::make_shared<mfem::HypreParVector>(displacement_->getSpace());
+  // *displacement_->getTrueVec() = 0.0;
+  // displacement_->name      = "displacement";
 
   // Initialize the mesh node pointers
-  reference_nodes_ = std::make_unique<mfem::ParGridFunction>(displacement_->space.get());
+  reference_nodes_ = std::make_unique<mfem::ParGridFunction>(displacement_->getSpace().get());
   pmesh->GetNodes(*reference_nodes_);
   pmesh->NewNodes(*reference_nodes_);
 
@@ -49,29 +52,29 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 
   // Initialize the true DOF vector
   mfem::Array<int> true_offset(NUM_FIELDS + 1);
-  int              true_size = velocity_->space->TrueVSize();
+  int              true_size = velocity_->getSpace()->TrueVSize();
   true_offset[0]             = 0;
   true_offset[1]             = true_size;
   true_offset[2]             = 2 * true_size;
   block_                     = std::make_unique<mfem::BlockVector>(true_offset);
 
-  block_->GetBlockView(1, *displacement_->true_vec);
-  *displacement_->true_vec = 0.0;
+  block_->GetBlockView(1, *displacement_->getTrueVec());
+  *displacement_->getTrueVec() = 0.0;
 
-  block_->GetBlockView(0, *velocity_->true_vec);
-  *velocity_->true_vec = 0.0;
+  block_->GetBlockView(0, *velocity_->getTrueVec());
+  *velocity_->getTrueVec() = 0.0;
 }
 
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, -1);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->getSpace(), -1);
 }
 
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->getSpace(), component);
 }
 
 void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
@@ -90,14 +93,14 @@ void NonlinearSolidSolver::setViscosity(std::shared_ptr<mfem::Coefficient> visc)
 void NonlinearSolidSolver::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
-  displacement_->gf->ProjectCoefficient(disp_state);
+  displacement_->project(disp_state);
   gf_initialized_[1] = true;
 }
 
 void NonlinearSolidSolver::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
-  velocity_->gf->ProjectCoefficient(velo_state);
+  velocity_->project(velo_state);
   gf_initialized_[0] = true;
 }
 
@@ -111,7 +114,7 @@ void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParamete
 void NonlinearSolidSolver::completeSetup()
 {
   // Define the nonlinear form
-  auto H_form = std::make_unique<mfem::ParNonlinearForm>(displacement_->space.get());
+  auto H_form = std::make_unique<mfem::ParNonlinearForm>(displacement_->getSpace().get());
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
@@ -133,14 +136,14 @@ void NonlinearSolidSolver::completeSetup()
   mfem::Array<int> essential_dofs(0);
 
   // Build the dof array lookup tables
-  displacement_->space->BuildDofToArrays();
+  displacement_->getSpace()->BuildDofToArrays();
 
   // Project the essential boundary coefficients
   for (auto& bc : ess_bdr_) {
     // Generate the scalar dof list from the vector dof list
     mfem::Array<int> dof_list(bc.true_dofs.Size());
     for (int i = 0; i < bc.true_dofs.Size(); ++i) {
-      dof_list[i] = displacement_->space->VDofToDof(bc.true_dofs[i]);
+      dof_list[i] = displacement_->getSpace()->VDofToDof(bc.true_dofs[i]);
     }
 
     // Project the coefficient
@@ -148,12 +151,12 @@ void NonlinearSolidSolver::completeSetup()
       // If it contains all components, project the vector
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef),
                       "Displacement boundary condition contained all components but had a non-vector coefficient.");
-      displacement_->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), dof_list);
+      displacement_->getGridFunc()->ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), dof_list);
     } else {
       // If it is only a single component, project the scalar
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
                       "Displacement boundary condition contained a single component but had a non-scalar coefficient.");
-      displacement_->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef), dof_list,
+      displacement_->getGridFunc()->ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef), dof_list,
                                             bc.component);
     }
 
@@ -184,13 +187,13 @@ void NonlinearSolidSolver::completeSetup()
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
-    M_form = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
+    M_form = std::make_unique<mfem::ParBilinearForm>(displacement_->getSpace().get());
 
     M_form->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
     M_form->Assemble(0);
     M_form->Finalize(0);
 
-    S_form = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
+    S_form = std::make_unique<mfem::ParBilinearForm>(displacement_->getSpace().get());
     S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
     S_form->Assemble(0);
     S_form->Finalize(0);
@@ -200,21 +203,21 @@ void NonlinearSolidSolver::completeSetup()
   std::unique_ptr<mfem::IterativeSolver> iter_solver;
 
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
-    SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
+    SLIC_WARNING_IF(displacement_->getSpace()->GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
-    prec_amg->SetElasticityOptions(displacement_->space.get());
+    prec_amg->SetElasticityOptions(displacement_->getSpace().get());
     J_prec_ = std::move(prec_amg);
 
-    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->space->GetComm());
+    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->getSpace()->GetComm());
   } else {
     auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
     J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     J_hypreSmoother->SetPositiveDiagonal(true);
     J_prec_ = std::move(J_hypreSmoother);
 
-    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->space->GetComm());
+    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->getSpace()->GetComm());
   }
 
   iter_solver->SetRelTol(lin_params_.rel_tol);
@@ -248,19 +251,19 @@ void NonlinearSolidSolver::completeSetup()
 void NonlinearSolidSolver::quasiStaticSolve()
 {
   mfem::Vector zero;
-  newton_solver_.Mult(zero, *displacement_->true_vec);
+  newton_solver_.Mult(zero, *displacement_->getTrueVec());
 }
 
 // Advance the timestep
 void NonlinearSolidSolver::advanceTimestep(double& dt)
 {
   // Initialize the true vector
-  velocity_->gf->GetTrueDofs(*velocity_->true_vec);
-  displacement_->gf->GetTrueDofs(*displacement_->true_vec);
+  velocity_->getGridFunc()->GetTrueDofs(*velocity_->getTrueVec());
+  displacement_->getGridFunc()->GetTrueDofs(*displacement_->getTrueVec());
 
   // Set the mesh nodes to the reference configuration
-  displacement_->mesh->NewNodes(*reference_nodes_);
-  velocity_->mesh->NewNodes(*reference_nodes_);
+  displacement_->getMesh()->NewNodes(*reference_nodes_);
+  velocity_->getMesh()->NewNodes(*reference_nodes_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     quasiStaticSolve();
@@ -269,18 +272,18 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   }
 
   // Distribute the shared DOFs
-  velocity_->gf->SetFromTrueDofs(*velocity_->true_vec);
-  displacement_->gf->SetFromTrueDofs(*displacement_->true_vec);
+  velocity_->getGridFunc()->SetFromTrueDofs(*velocity_->getTrueVec());
+  displacement_->getGridFunc()->SetFromTrueDofs(*displacement_->getTrueVec());
 
   // Update the mesh with the new deformed nodes
-  deformed_nodes_->Set(1.0, *displacement_->gf);
+  deformed_nodes_->Set(1.0, *displacement_->getGridFunc());
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     deformed_nodes_->Add(1.0, *reference_nodes_);
   }
 
-  displacement_->mesh->NewNodes(*deformed_nodes_);
-  velocity_->mesh->NewNodes(*deformed_nodes_);
+  displacement_->getMesh()->NewNodes(*deformed_nodes_);
+  velocity_->getMesh()->NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
 }

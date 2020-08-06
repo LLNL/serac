@@ -8,6 +8,7 @@
 #define SERAC_TYPES
 
 #include <memory>
+#include <optional>
 #include <variant>
 
 #include "mfem.hpp"
@@ -76,14 +77,76 @@ struct NonlinearSolverParameters {
 };
 
 // Finite element information bundle
-struct FiniteElementState {
-  std::shared_ptr<mfem::ParFiniteElementSpace>   space;
-  std::shared_ptr<mfem::FiniteElementCollection> coll;
-  std::shared_ptr<mfem::ParGridFunction>         gf;
-  std::shared_ptr<mfem::Vector>                  true_vec;
-  std::shared_ptr<mfem::ParMesh>                 mesh;
-  std::string                                    name = "";
+// struct FiniteElementState {
+//   std::shared_ptr<mfem::ParFiniteElementSpace>   space;
+//   std::shared_ptr<mfem::FiniteElementCollection> coll;
+//   std::shared_ptr<mfem::ParGridFunction>         gf;
+//   std::shared_ptr<mfem::Vector>                  true_vec;
+//   std::shared_ptr<mfem::ParMesh>                 mesh;
+//   std::string                                    name = "";
+// };
+
+
+// Git will git confused if the order of the classes are switched, so leave this in until merge
+using BCCoef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
+
+
+class FiniteElementState {
+ public:
+
+  FiniteElementState() = default;
+
+  template <typename Collection = mfem::H1_FECollection>
+  FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, const std::string& name,
+                     const mfem::Ordering::Type ordering = mfem::Ordering::byNODES, std::optional<int> mesh_dim = std::nullopt);
+
+
+  mfem::ParGridFunction* getGridFunc() { return gf_.get(); }           
+
+  mfem::ParMesh* getMesh() { return mesh_.get(); }
+
+  std::shared_ptr<mfem::ParFiniteElementSpace> getSpace() {return space_; }
+
+  mfem::Vector* getTrueVec() { return true_vec_.get(); }
+
+  std::string getName() { return name_; }
+
+  void project(const BCCoef& coef) {
+    // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
+    // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
+    std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(*concrete_coef); }, coef);
+  }
+
+  void project(mfem::Coefficient& coef) {
+    gf_->ProjectCoefficient(coef);
+  }
+
+  void project(mfem::VectorCoefficient& coef) {
+    gf_->ProjectCoefficient(coef);
+  }
+
+ private:
+  std::shared_ptr<mfem::ParMesh>                 mesh_;
+  std::shared_ptr<mfem::FiniteElementCollection> coll_;
+  std::shared_ptr<mfem::ParFiniteElementSpace>   space_;
+  std::shared_ptr<mfem::ParGridFunction>         gf_;
+  std::shared_ptr<mfem::Vector>                  true_vec_;
+  std::string                                    name_ = "";
 };
+
+template <typename Collection = mfem::H1_FECollection>
+FiniteElementState::FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, const std::string& name,
+                                       const mfem::Ordering::Type ordering, std::optional<int> mesh_dim)
+    : mesh_(pmesh),
+      coll_(std::make_shared<Collection>(order, pmesh->Dimension())),
+      space_(std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), coll_.get(), (mesh_dim) ? *mesh_dim : pmesh->Dimension(), ordering)),
+      gf_(std::make_shared<mfem::ParGridFunction>(space_.get())),
+      true_vec_(std::make_shared<mfem::HypreParVector>(space_.get())),
+      name_(name)
+{
+  *gf_      = 0.0;
+  *true_vec_ = 0.0;
+}
 
 // Boundary condition information
 struct BoundaryCondition {
