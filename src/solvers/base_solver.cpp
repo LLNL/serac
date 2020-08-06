@@ -37,7 +37,6 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
 void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
                                  const mfem::ParFiniteElementSpace& fes, const int component)
 {
-
   auto num_attrs = state_.front()->mesh->bdr_attributes.Max();
 
   serac::BoundaryCondition bc(ess_bdr_coef, component, ess_bdr, num_attrs);
@@ -58,18 +57,13 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCo
 void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,
                              int component)
 {
-  serac::BoundaryCondition bc(ess_bdr_coef, component);
-
-  bc.setTrueDofs(true_dofs);
-
-  ess_bdr_.push_back(std::move(bc));
+  ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
 }
 
 void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
                                const int component)
 {
-
-  auto num_attrs = state_.front()->mesh->bdr_attributes.Max();
+  auto                     num_attrs = state_.front()->mesh->bdr_attributes.Max();
   serac::BoundaryCondition bc(nat_bdr_coef, component, nat_bdr, num_attrs);
   nat_bdr_.push_back(std::move(bc));
 }

@@ -11,26 +11,22 @@
 
 namespace serac {
 
-BoundaryCondition::BoundaryCondition(Coef coef, const int component, const std::set<int>& attrs, const int num_attrs) : 
-                                     coef_(coef), component_(component), markers_(num_attrs)
+BoundaryCondition::BoundaryCondition(Coef coef, const int component, const std::set<int>& attrs, const int num_attrs)
+    : coef_(coef), component_(component), markers_(num_attrs)
 {
   markers_ = 0;
-  for (const int attr : attrs)
-  {
+  for (const int attr : attrs) {
     SLIC_ASSERT_MSG(attr <= num_attrs, "Attribute specified larger than what is found in the mesh.");
     markers_[attr - 1] = 1;
   }
 }
 
-BoundaryCondition::BoundaryCondition(Coef coef, const int component): coef_(coef), component_(component), markers_(0)
+BoundaryCondition::BoundaryCondition(Coef coef, const int component, const mfem::Array<int>& true_dofs)
+    : coef_(coef), component_(component), markers_(0), true_dofs_(true_dofs)
 {
-
 }
 
-void BoundaryCondition::setTrueDofs(const mfem::Array<int> dofs)
-{
-  true_dofs_ = dofs;
-}
+void BoundaryCondition::setTrueDofs(const mfem::Array<int> dofs) { true_dofs_ = dofs; }
 
 void BoundaryCondition::setTrueDofs(const mfem::ParFiniteElementSpace& fes)
 {
@@ -46,7 +42,7 @@ void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFinite
   SLIC_ASSERT_MSG(true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
   // Value semantics for convenience
   auto tdofs = *true_dofs_;
-  auto size = tdofs.Size();
+  auto size  = tdofs.Size();
   // FIXME: Why would the be a true dof array of size zero when running with MPI?
   if (size) {
     // Generate the scalar dof list from the vector dof list
@@ -64,8 +60,7 @@ void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFinite
       // If it is only a single component, project the scalar
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
                       "Essential boundary condition contained a single component but had a non-scalar coefficient.");
-      gf.ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(coef_), dof_list,
-                                            component_);
+      gf.ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(coef_), dof_list, component_);
     }
   }
 }
@@ -82,10 +77,12 @@ void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time,
   // markers_ should be const param but it's not
   // TODO: Raise an issue against MFEM
   auto non_const_markers = const_cast<mfem::Array<int>&>(markers_);
-  std::visit([&gf, &non_const_markers, time](auto&& coef) {
-    coef->SetTime(time);
-    gf.ProjectBdrCoefficient(*coef, non_const_markers);
-  }, coef_);
+  std::visit(
+      [&gf, &non_const_markers, time](auto&& coef) {
+        coef->SetTime(time);
+        gf.ProjectBdrCoefficient(*coef, non_const_markers);
+      },
+      coef_);
 }
 
 void BoundaryCondition::eliminate(mfem::HypreParMatrix& k_mat)
@@ -94,4 +91,4 @@ void BoundaryCondition::eliminate(mfem::HypreParMatrix& k_mat)
   eliminated_matrix_entries_.reset(k_mat.EliminateRowsCols(*true_dofs_));
 }
 
-} // namespace serac
+}  // namespace serac
