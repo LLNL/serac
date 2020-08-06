@@ -15,8 +15,8 @@
 namespace {
   void signalHandler(int signal)
   {
-    SLIC_INFO("Received signal " << signal << ", exiting");
-    serac::exitGracefully(true);
+    // Will clean up MPI via call to axom::Utilities::processAbort()
+    SLIC_ERROR("Received signal " << signal << ", exiting");
   }
 } // namespace
 
@@ -42,6 +42,7 @@ bool initialize(MPI_Comm comm)
 
   std::signal(SIGINT, signalHandler);
   std::signal(SIGABRT, signalHandler);
+  std::signal(SIGSEGV, signalHandler);
 
   int numRanks, rank;
   MPI_Comm_size(comm, &numRanks);
