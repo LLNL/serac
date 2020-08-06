@@ -125,8 +125,8 @@ void NonlinearSolidSolver::completeSetup()
     SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef),
                     "Traction boundary condition had a non-vector coefficient.");
     H_form->AddBdrFaceIntegrator(
-        new HyperelasticTractionIntegrator(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef)),
-        nat_bc_data.markers);
+        nat_bc_data.newIntegrator<HyperelasticTractionIntegrator>(),
+        nat_bc_data.getMarkers());
   }
 
   // Add the essential boundary
@@ -137,28 +137,11 @@ void NonlinearSolidSolver::completeSetup()
 
   // Project the essential boundary coefficients
   for (auto& bc : ess_bdr_) {
-    // Generate the scalar dof list from the vector dof list
-    mfem::Array<int> dof_list(bc.true_dofs.Size());
-    for (int i = 0; i < bc.true_dofs.Size(); ++i) {
-      dof_list[i] = displacement_->space->VDofToDof(bc.true_dofs[i]);
-    }
-
     // Project the coefficient
-    if (bc.component == -1) {
-      // If it contains all components, project the vector
-      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef),
-                      "Displacement boundary condition contained all components but had a non-vector coefficient.");
-      displacement_->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), dof_list);
-    } else {
-      // If it is only a single component, project the scalar
-      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
-                      "Displacement boundary condition contained a single component but had a non-scalar coefficient.");
-      displacement_->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef), dof_list,
-                                            bc.component);
-    }
+    bc.project(*(displacement_->gf), *(displacement_->space));
 
     // Add the vector dofs to the total essential BC dof list
-    essential_dofs.Append(bc.true_dofs);
+    essential_dofs.Append(bc.getTrueDofs());
   }
 
   // Remove any duplicates from the essential BC list

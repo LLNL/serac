@@ -11,6 +11,7 @@ set(common_headers
     )
 
 set(common_sources
+    boundary_condition.cpp
     logger.cpp
     mesh_utils.cpp
     )
