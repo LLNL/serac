@@ -122,7 +122,11 @@ void NonlinearSolidSolver::completeSetup()
 
   // Add the traction integrator
   for (auto& nat_bc_data : nat_bdr_) {
-    H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(*nat_bc_data->vec_coef), nat_bc_data->markers);
+    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef),
+                    "Traction boundary condition had a non-vector coefficient.");
+    H_form->AddBdrFaceIntegrator(
+        new HyperelasticTractionIntegrator(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef)),
+        nat_bc_data.markers);
   }
 
   // Add the essential boundary
@@ -134,22 +138,27 @@ void NonlinearSolidSolver::completeSetup()
   // Project the essential boundary coefficients
   for (auto& bc : ess_bdr_) {
     // Generate the scalar dof list from the vector dof list
-    mfem::Array<int> dof_list(bc->true_dofs.Size());
-    for (int i = 0; i < bc->true_dofs.Size(); ++i) {
-      dof_list[i] = displacement_->space->VDofToDof(bc->true_dofs[i]);
+    mfem::Array<int> dof_list(bc.true_dofs.Size());
+    for (int i = 0; i < bc.true_dofs.Size(); ++i) {
+      dof_list[i] = displacement_->space->VDofToDof(bc.true_dofs[i]);
     }
 
     // Project the coefficient
-    if (bc->component == -1) {
+    if (bc.component == -1) {
       // If it contains all components, project the vector
-      displacement_->gf->ProjectCoefficient(*bc->vec_coef, dof_list);
+      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef),
+                      "Displacement boundary condition contained all components but had a non-vector coefficient.");
+      displacement_->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), dof_list);
     } else {
       // If it is only a single component, project the scalar
-      displacement_->gf->ProjectCoefficient(*bc->scalar_coef, dof_list, bc->component);
+      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
+                      "Displacement boundary condition contained a single component but had a non-scalar coefficient.");
+      displacement_->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef), dof_list,
+                                            bc.component);
     }
 
     // Add the vector dofs to the total essential BC dof list
-    essential_dofs.Append(bc->true_dofs);
+    essential_dofs.Append(bc.true_dofs);
   }
 
   // Remove any duplicates from the essential BC list
@@ -163,6 +172,12 @@ void NonlinearSolidSolver::completeSetup()
 
   // The abstract viscosity bilinear form
   std::unique_ptr<mfem::ParBilinearForm> S_form;
+
+  // The abstract mass bilinear form
+  std::shared_ptr<mfem::ParBilinearForm> M_form_;
+
+  // The abstract viscosity bilinear form
+  std::shared_ptr<mfem::ParBilinearForm> S_form_;
 
   // If dynamic, create the mass and viscosity forms
   if (timestepper_ != serac::TimestepMethod::QuasiStatic) {
@@ -230,7 +245,7 @@ void NonlinearSolidSolver::completeSetup()
 }
 
 // Solve the Quasi-static Newton system
-void NonlinearSolidSolver::QuasiStaticSolve()
+void NonlinearSolidSolver::quasiStaticSolve()
 {
   mfem::Vector zero;
   newton_solver_.Mult(zero, *displacement_->true_vec);
@@ -248,7 +263,7 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   velocity_->mesh->NewNodes(*reference_nodes_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    QuasiStaticSolve();
+    quasiStaticSolve();
   } else {
     ode_solver_->Step(*block_, time_, dt);
   }

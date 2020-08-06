@@ -10,8 +10,8 @@
 
 #---------------------------------------
 # SYS_TYPE: linux-ubuntu16.04-ivybridge
-# Compiler Spec: clang@4.0.0
-# CMake executable path: /home/serac/serac_tpls/clang-4.0.0/cmake-3.10.1/bin/cmake
+# Compiler Spec: clang@6.0.0
+# CMake executable path: /home/serac/serac_tpls/clang-6.0.0/cmake-3.10.1/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
@@ -21,21 +21,25 @@ set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE PATH "")
 
 set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE PATH "")
 
+set(CMAKE_CXX_FLAGS "-stdlib=libc++" CACHE PATH "")
+
+set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/lib" CACHE PATH "Adds a missing libstdc++ rpath")
+
 #---------------------------------------
 # MPI
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/home/serac/serac_tpls/clang-4.0.0/mpich-3.3.2/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/home/serac/serac_tpls/clang-6.0.0/mpich-3.3.2/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/home/serac/serac_tpls/clang-4.0.0/mpich-3.3.2/bin/mpic++" CACHE PATH "")
+set(MPI_CXX_COMPILER "/home/serac/serac_tpls/clang-6.0.0/mpich-3.3.2/bin/mpic++" CACHE PATH "")
 
-set(MPIEXEC_EXECUTABLE "/home/serac/serac_tpls/clang-4.0.0/mpich-3.3.2/bin/mpiexec" CACHE PATH "")
+set(MPIEXEC_EXECUTABLE "/home/serac/serac_tpls/clang-6.0.0/mpich-3.3.2/bin/mpiexec" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/home/serac/serac_tpls/clang-4.0.0" CACHE PATH "")
+set(TPL_ROOT "/home/serac/serac_tpls/clang-6.0.0" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 

@@ -55,7 +55,7 @@ class NonlinearSolidSolver : public BaseSolver {
   std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
 
   /// Solve the Quasi-static operator
-  void QuasiStaticSolve();
+  void quasiStaticSolve();
 
  public:
   /// Constructor from order and parallel mesh
