@@ -10,9 +10,9 @@
 
 namespace serac {
 
-DynamicConductionOperator::DynamicConductionOperator(
-    std::shared_ptr<mfem::ParFiniteElementSpace> fespace, const serac::LinearSolverParameters& params,
-    const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr)
+DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
+                                                     const serac::LinearSolverParameters&         params,
+                                                     std::vector<serac::BoundaryCondition>&       ess_bdr)
     : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0),
       fespace_(fespace),
       ess_bdr_(ess_bdr),
@@ -51,8 +51,8 @@ DynamicConductionOperator::DynamicConductionOperator(
 void DynamicConductionOperator::setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat,
                                             std::shared_ptr<mfem::HypreParMatrix> K_mat)
 {
-  M_mat_  = M_mat;
-  m_K_mat = K_mat;
+  M_mat_ = M_mat;
+  K_mat_ = K_mat;
 }
 
 void DynamicConductionOperator::setLoadVector(std::shared_ptr<mfem::Vector> rhs) { rhs_ = rhs; }
@@ -61,21 +61,21 @@ void DynamicConductionOperator::setLoadVector(std::shared_ptr<mfem::Vector> rhs)
 void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt) const
 {
   SLIC_ASSERT_MSG(M_mat_ != nullptr, "Mass matrix not set in ConductionSolver::Mult!");
-  SLIC_ASSERT_MSG(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::Mult!");
+  SLIC_ASSERT_MSG(K_mat_ != nullptr, "Stiffness matrix not set in ConductionSolver::Mult!");
 
   y_ = u;
   M_solver_->SetOperator(*M_mat_);
 
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, y_, *bc_rhs_);
+    mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, y_, *bc_rhs_);
   }
 
   // Compute:
   //    du_dt = M^{-1}*-K(u)
   // for du_dt
-  m_K_mat->Mult(y_, z_);
-  z_.Neg();  // z = -zw  m_z.Add(1.0, *m_bc_rhs);
+  K_mat_->Mult(y_, z_);
+  z_.Neg();  // z = -zw z_.Add(1.0, *bc_rhs_);
   z_.Add(1.0, *bc_rhs_);
   M_solver_->Mult(z_, du_dt);
 }
@@ -83,7 +83,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
 void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt)
 {
   SLIC_ASSERT_MSG(M_mat_ != nullptr, "Mass matrix not set in ConductionSolver::ImplicitSolve!");
-  SLIC_ASSERT_MSG(m_K_mat != nullptr, "Stiffness matrix not set in ConductionSolver::ImplicitSolve!");
+  SLIC_ASSERT_MSG(K_mat_ != nullptr, "Stiffness matrix not set in ConductionSolver::ImplicitSolve!");
 
   // Save a copy of the current state vector
   y_ = u;
@@ -92,11 +92,11 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   //    du_dt = M^{-1}*[-K(u + dt*du_dt)]
   // for du_dt
   if (dt != old_dt_) {
-    T_mat_.reset(mfem::Add(1.0, *M_mat_, dt, *m_K_mat));
+    T_mat_.reset(mfem::Add(1.0, *M_mat_, dt, *K_mat_));
 
     // Eliminate the essential DOFs from the T matrix
     for (auto& bc : ess_bdr_) {
-      T_e_mat_.reset(T_mat_->EliminateRowsCols(bc->true_dofs));
+      T_e_mat_.reset(T_mat_->EliminateRowsCols(bc.true_dofs));
     }
     T_solver_->SetOperator(*T_mat_);
   }
@@ -106,17 +106,17 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   x_       = 0.0;
 
   for (auto& bc : ess_bdr_) {
-    if (bc->scalar_coef != nullptr) {
-      bc->scalar_coef->SetTime(t);
-      state_gf_->SetFromTrueDofs(y_);
-      state_gf_->ProjectBdrCoefficient(*bc->scalar_coef, bc->markers);
-      state_gf_->GetTrueDofs(y_);
+    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
+                    "Temperature boundary condition had a non-scalar coefficient.");
+    auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
+    scalar_coef->SetTime(t);
+    state_gf_->SetFromTrueDofs(y_);
+    state_gf_->ProjectBdrCoefficient(*scalar_coef, bc.markers);
+    state_gf_->GetTrueDofs(y_);
 
-      mfem::EliminateBC(*m_K_mat, *bc->eliminated_matrix_entries, bc->true_dofs, y_, *bc_rhs_);
-    }
+    mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, y_, *bc_rhs_);
   }
-
-  m_K_mat->Mult(y_, z_);
+  K_mat_->Mult(y_, z_);
   z_.Neg();
   z_.Add(1.0, *bc_rhs_);
   T_solver_->Mult(z_, du_dt);
