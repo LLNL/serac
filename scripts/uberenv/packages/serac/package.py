@@ -118,6 +118,8 @@ class Serac(CMakePackage):
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
 
+    conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
+
     phases = ['hostconfig', 'cmake', 'build',' install']
 
     def _get_sys_type(self, spec):
