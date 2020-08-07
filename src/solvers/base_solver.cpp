@@ -132,9 +132,9 @@ void BaseSolver::setTimestepper(const serac::TimestepMethod timestepper)
 
 void BaseSolver::setTime(const double time) { time_ = time; }
 
-double BaseSolver::getTime() const { return time_; }
+double BaseSolver::time() const { return time_; }
 
-int BaseSolver::getCycle() const { return cycle_; }
+int BaseSolver::cycle() const { return cycle_; }
 
 void BaseSolver::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
 {
