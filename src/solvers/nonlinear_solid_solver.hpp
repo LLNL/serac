@@ -134,12 +134,12 @@ class NonlinearSolidSolver : public BaseSolver {
   /**
    * Get the displacement state
    */
-  std::shared_ptr<FiniteElementState> getDisplacement() { return displacement_; };
+  std::shared_ptr<FiniteElementState> displacement() { return displacement_; };
 
   /**
    * Get the velocity state
    */
-  std::shared_ptr<FiniteElementState> getVelocity() { return velocity_; };
+  std::shared_ptr<FiniteElementState> velocity() { return velocity_; };
 
   /**
    * Complete the data structure initialization

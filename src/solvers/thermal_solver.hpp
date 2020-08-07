@@ -144,7 +144,7 @@ class ThermalSolver : public BaseSolver {
   /**
    * Get the temperature state
    */
-  std::shared_ptr<serac::FiniteElementState> getTemperature() { return temperature_; };
+  std::shared_ptr<serac::FiniteElementState> temperature() { return temperature_; };
 
   /** 
    * Complete the initialization and allocation of the data structures. This

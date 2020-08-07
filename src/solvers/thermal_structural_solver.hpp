@@ -164,17 +164,17 @@ class ThermalStructuralSolver : public BaseSolver {
   /**
    * Get the temperature state
    */
-  std::shared_ptr<serac::FiniteElementState> GetTemperature() { return temperature_; };
+  std::shared_ptr<serac::FiniteElementState> temperature() { return temperature_; };
 
   /**
    * Get the displacement state
    */
-  std::shared_ptr<serac::FiniteElementState> GetDisplacement() { return displacement_; };
+  std::shared_ptr<serac::FiniteElementState> displacement() { return displacement_; };
 
   /**
    * Get the velocity state
    */
-  std::shared_ptr<serac::FiniteElementState> GetVelocity() { return velocity_; };
+  std::shared_ptr<serac::FiniteElementState> velocity() { return velocity_; };
 
   /**
    * Advance the timestep
