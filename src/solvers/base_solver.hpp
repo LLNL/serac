@@ -15,16 +15,44 @@
 
 namespace serac {
 
+/**
+ * Wraps a (currently iterative) system solver and handles the configuration of linear
+ * or nonlinear solvers
+ */
 class SystemSolver {
  public:
+  // TODO: Eliminate this once a dependency injection approach is used for the solvers
   SystemSolver() = default;
+  /**
+   * Constructs a new solver wrapper
+   * @param[in] comm The MPI communicator object
+   * @param[in] lin_params The parameters for the linear solver
+   * @param[in] nonlin_params The optional parameters for the optional nonlinear solver
+   * @see serac::LinearSolverParameters
+   * @see serac::NonlinearSolverParameters
+   */
   SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
                const std::optional<NonlinearSolverParameters>& nonlin_params = std::nullopt);
+
+  /**
+   * Sets a preconditioner for the underlying linear solver object
+   * @param[in] prec The preconditioner, of which the object takes ownership
+   * @note The preconditioner must be moved into the call
+   * @code(.cpp)
+   * solver.setPreconditioner(std::move(prec));
+   * @endcode
+   */
   void setPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
   {
     prec_ = std::move(prec);
     iter_lin_solver_->SetPreconditioner(*prec_);
   }
+
+  /**
+   * Returns the underlying solver object
+   * @return The underlying nonlinear solver, if one was configured
+   * when the object was constructed, otherwise, the underlying linear solver
+   */
   mfem::IterativeSolver& solver() { return (nonlin_solver_) ? **nonlin_solver_ : *iter_lin_solver_; }
 
  private:

@@ -223,28 +223,7 @@ SystemSolver::SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_para
                            const std::optional<NonlinearSolverParameters>& nonlin_params)
 {
   // Preconditioner configuration is too varied, maybe a PrecondParams is needed?
-  // Maybe a redesign to better support custom preconditioners
-  // std::unique_ptr<mfem::Solver> prec;
-  // switch(lin_params.prec) {
-  //   case Preconditioner::Jacobi: {
-  //     auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
-  //     // FIXME: Make the exact type and positive diagonal configurable via lin_params????
-  //     hypre_smoother->SetType(mfem::HypreSmoother::l1Jacobi);
-  //     hypre_smoother->SetPositiveDiagonal(true);
-  //     prec = std::move(hypre_smoother);
-  //     break;
-  //   }
-  //   case Preconditioner::BoomerAMG: {
-  //     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
-  //     prec_amg->SetPrintLevel(lin_params.print_level);
-  //     prec_amg->SetElasticityOptions(displacement_->space.get());
-  //     prec = std::move(prec_amg);
-  //     break;
-  //   }
-  //   default:
-  //     SLIC_ERROR("Preconditioner type not recognized.");
-  //     exitGracefully(true);
-  // }
+  // Maybe a redesign to better support custom preconditioners as well
   switch (lin_params.lin_solver) {
     case LinearSolver::CG:
       iter_lin_solver_ = std::make_unique<mfem::CGSolver>(comm);
