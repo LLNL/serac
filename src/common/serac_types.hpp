@@ -89,15 +89,6 @@ struct FiniteElementState {
 };
 
 // Boundary condition information
-// struct BoundaryCondition {
-//   using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
-//   mfem::Array<int>                      markers;
-//   mfem::Array<int>                      true_dofs;
-//   int                                   component;
-//   Coef                                  coef;
-//   std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries;
-// };
-
 class BoundaryCondition {
  public:
   using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
@@ -144,10 +135,10 @@ class BoundaryCondition {
   /**
    * Projects the boundary condition over a grid function
    * @param[inout] gf The boundary condition to project over
-   * @param[in] space The finite element space that should be used to generate
+   * @param[in] fes The finite element space that should be used to generate
    * the scalar DOF list
    */
-  void project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace& space) const;
+  void project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace* fes = nullptr) const;
 
   /**
    * Projects the boundary condition over boundary DOFs of a grid function
@@ -162,6 +153,7 @@ class BoundaryCondition {
    * constructing it with the boundary condition's vector coefficient,
    * intended to be passed to mfem::*LinearForm::Add*Integrator
    * @return An owning pointer to the new integrator
+   * @pre Requires Integrator::Integrator(mfem::VectorCoefficient&)
    */
   template <typename Integrator>
   std::unique_ptr<Integrator> newIntegrator() const;
@@ -181,6 +173,7 @@ class BoundaryCondition {
   int                                   component_;
   mfem::Array<int>                      markers_;
   std::optional<mfem::Array<int>>       true_dofs_;  // Only if essential
+  std::optional<const mfem::ParFiniteElementSpace*>       space_;  // Only if essential
   std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
 };
 

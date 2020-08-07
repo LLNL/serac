@@ -31,13 +31,14 @@ void BoundaryCondition::setTrueDofs(const mfem::Array<int> dofs) { true_dofs_ = 
 void BoundaryCondition::setTrueDofs(const mfem::ParFiniteElementSpace& fes)
 {
   true_dofs_.emplace(0);
+  space_ = &fes;
   // This function can and should be marked const in MFEM
   // TODO: Raise an issue against MFEM
   // Leave this explicit non-const action in as a stopgap
   const_cast<mfem::ParFiniteElementSpace&>(fes).GetEssentialTrueDofs(markers_, *true_dofs_, component_);
 }
 
-void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace& space) const
+void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace* fes) const
 {
   SLIC_ASSERT_MSG(true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
   // Value semantics for convenience
@@ -46,8 +47,10 @@ void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFinite
   // FIXME: Why would the be a true dof array of size zero when running with MPI?
   if (size) {
     // Generate the scalar dof list from the vector dof list
+    auto space = (space_) ? *space_ : fes;
+    SLIC_ASSERT_MSG(space, "Only BCs associated with a space can be projected.");
     mfem::Array<int> dof_list(size);
-    std::transform(&tdofs[0], &tdofs[0] + size, &dof_list[0], [&space](int tdof) { return space.VDofToDof(tdof); });
+    std::transform(&tdofs[0], &tdofs[0] + size, &dof_list[0], [&space](int tdof) { return space->VDofToDof(tdof); });
 
     // dof_list should be const param but it's not
     // TODO: Raise an issue against MFEM
