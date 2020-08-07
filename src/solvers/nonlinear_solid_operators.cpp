@@ -35,7 +35,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
                                                              std::unique_ptr<mfem::ParBilinearForm>       S_form,
                                                              std::unique_ptr<mfem::ParBilinearForm>       M_form,
                                                              const std::vector<serac::BoundaryCondition>& ess_bdr,
-                                                             mfem::NewtonSolver&                          newton_solver,
+                                                             mfem::IterativeSolver&                          newton_solver,
                                                              const serac::LinearSolverParameters&         lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
       M_form_(std::move(M_form)),

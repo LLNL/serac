@@ -73,6 +73,7 @@ struct NonlinearSolverParameters {
   double abs_tol;
   int    max_iter;
   int    print_level;
+  bool iterative_mode;
 };
 
 // Finite element information bundle

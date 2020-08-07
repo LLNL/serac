@@ -15,6 +15,21 @@
 
 namespace serac {
 
+
+
+class SystemSolver {
+  public:
+    SystemSolver() = default;
+    SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_params, const std::optional<NonlinearSolverParameters>& nonlin_params = std::nullopt);
+    void setPreconditioner(std::unique_ptr<mfem::Solver>&& prec) { prec_ = std::move(prec); iter_lin_solver_->SetPreconditioner(*prec_); }
+    mfem::IterativeSolver& solver() {return (nonlin_solver_) ? **nonlin_solver_ : *iter_lin_solver_; }
+  private:
+    std::unique_ptr<mfem::IterativeSolver> iter_lin_solver_;
+    std::optional<std::unique_ptr<mfem::IterativeSolver>> nonlin_solver_;
+    std::unique_ptr<mfem::Solver> prec_;
+
+};
+
 /// This is the abstract base class for a generic forward solver
 class BaseSolver {
  protected:
@@ -65,6 +80,8 @@ class BaseSolver {
 
   /// State variable initialization indicator
   std::vector<bool> gf_initialized_;
+
+  SystemSolver solver_;
 
  public:
   /// Empty constructor

@@ -219,4 +219,65 @@ void BaseSolver::outputState() const
   }
 }
 
+
+
+SystemSolver::SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_params, const std::optional<NonlinearSolverParameters>& nonlin_params) {
+  
+  // Preconditioner configuration is too varied, maybe a PrecondParams is needed?
+  // Maybe a redesign to better support custom preconditioners
+  // std::unique_ptr<mfem::Solver> prec;
+  // switch(lin_params.prec) {
+  //   case Preconditioner::Jacobi: {
+  //     auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
+  //     // FIXME: Make the exact type and positive diagonal configurable via lin_params????
+  //     hypre_smoother->SetType(mfem::HypreSmoother::l1Jacobi);
+  //     hypre_smoother->SetPositiveDiagonal(true);
+  //     prec = std::move(hypre_smoother);
+  //     break;
+  //   }
+  //   case Preconditioner::BoomerAMG: {
+  //     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
+  //     prec_amg->SetPrintLevel(lin_params.print_level);
+  //     prec_amg->SetElasticityOptions(displacement_->space.get());
+  //     prec = std::move(prec_amg);
+  //     break;
+  //   }
+  //   default:
+  //     SLIC_ERROR("Preconditioner type not recognized.");
+  //     exitGracefully(true);
+  // }
+  
+  
+  // std::unique_ptr<mfem::IterativeSolver> iter_lin_solver_;
+  switch (lin_params.lin_solver) {
+    case LinearSolver::CG:
+      iter_lin_solver_ = std::make_unique<mfem::CGSolver>(comm);
+      break;
+    case LinearSolver::GMRES:
+      iter_lin_solver_ = std::make_unique<mfem::GMRESSolver>(comm);
+      break;
+    case LinearSolver::MINRES:
+      iter_lin_solver_ = std::make_unique<mfem::MINRESSolver>(comm);
+      break;
+    default:
+      SLIC_ERROR("Linear solver type not recognized.");
+      exitGracefully(true);
+  }
+  iter_lin_solver_->SetRelTol(lin_params.rel_tol);
+  iter_lin_solver_->SetAbsTol(lin_params.abs_tol);
+  iter_lin_solver_->SetMaxIter(lin_params.max_iter);
+  iter_lin_solver_->SetPrintLevel(lin_params.print_level);
+
+  if (nonlin_params) {
+    auto newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
+    newton_solver->SetSolver(*iter_lin_solver_);
+    newton_solver->SetRelTol(nonlin_params->rel_tol);
+    newton_solver->SetAbsTol(nonlin_params->abs_tol);
+    newton_solver->SetMaxIter(nonlin_params->max_iter);
+    newton_solver->SetPrintLevel(nonlin_params->print_level);
+    newton_solver->iterative_mode = nonlin_params->iterative_mode;
+    nonlin_solver_ = std::move(newton_solver);
+  }
+}
+
 }  // namespace serac

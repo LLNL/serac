@@ -111,7 +111,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   std::unique_ptr<NonlinearSolidReducedSystemOperator> reduced_oper_;
 
   /// The Newton solver for the nonlinear iterations
-  mfem::NewtonSolver& newton_solver_;
+  mfem::IterativeSolver& newton_solver_;
 
   /// The fixed boudnary degrees of freedom
   const std::vector<serac::BoundaryCondition>& ess_bdr_;
@@ -127,7 +127,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>      H_form,
                                 std::unique_ptr<mfem::ParBilinearForm>       S_form,
                                 std::unique_ptr<mfem::ParBilinearForm>       M_form,
-                                const std::vector<serac::BoundaryCondition>& ess_bdr, mfem::NewtonSolver& newton_solver,
+                                const std::vector<serac::BoundaryCondition>& ess_bdr, mfem::IterativeSolver& newton_solver,
                                 const serac::LinearSolverParameters& lin_params);
 
   /// Required to use the native newton solver
