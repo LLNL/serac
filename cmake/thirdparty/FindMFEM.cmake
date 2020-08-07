@@ -27,8 +27,8 @@ if(EXISTS ${_mfem_cmake_config})
     include(${_mfem_cmake_config})
 
     # TODO: This needs to be verified
-    set(MFEM_INCLUDE_DIRS  ${MFEM_INCLUDE_DIR} )
-    set(MFEM_LIBRARIES     ${MFEM_LIBRARY} )
+    set(MFEM_INCLUDE_DIRS  ${MFEM_INCLUDE_DIRS} )
+    set(MFEM_LIBRARIES     ${MFEM_LIBRARIES} )
 
 else()
     find_path(
