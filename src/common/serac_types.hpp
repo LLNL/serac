@@ -86,44 +86,40 @@ struct NonlinearSolverParameters {
 //   std::string                                    name = "";
 // };
 
-
 // Git will git confused if the order of the classes are switched, so leave this in until merge
 using BCCoef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
-
 class FiniteElementState {
  public:
-
   FiniteElementState() = default;
 
   template <typename Collection = mfem::H1_FECollection>
   FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, const std::string& name,
-                     const mfem::Ordering::Type ordering = mfem::Ordering::byNODES, std::optional<int> mesh_dim = std::nullopt);
+                     const mfem::Ordering::Type ordering = mfem::Ordering::byNODES,
+                     std::optional<int>         mesh_dim = std::nullopt);
 
+  mfem::ParGridFunction* gridFunc() { return gf_.get(); }
 
-  mfem::ParGridFunction* getGridFunc() { return gf_.get(); }           
+  mfem::ParMesh* mesh() { return mesh_.get(); }
 
-  mfem::ParMesh* getMesh() { return mesh_.get(); }
+  std::shared_ptr<mfem::ParFiniteElementSpace> space() { return space_; }
 
-  std::shared_ptr<mfem::ParFiniteElementSpace> getSpace() {return space_; }
+  mfem::Vector* trueVec() { return true_vec_.get(); }
 
-  mfem::Vector* getTrueVec() { return true_vec_.get(); }
+  std::string name() { return name_; }
 
-  std::string getName() { return name_; }
-
-  void project(const BCCoef& coef) {
+  void project(const BCCoef& coef)
+  {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
     std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(*concrete_coef); }, coef);
   }
 
-  void project(mfem::Coefficient& coef) {
-    gf_->ProjectCoefficient(coef);
-  }
+  void project(mfem::Coefficient& coef) { gf_->ProjectCoefficient(coef); }
 
-  void project(mfem::VectorCoefficient& coef) {
-    gf_->ProjectCoefficient(coef);
-  }
+  void project(mfem::VectorCoefficient& coef) { gf_->ProjectCoefficient(coef); }
+
+  void initializeTrueVec() { gf_->GetTrueDofs(*true_vec_); }
 
  private:
   std::shared_ptr<mfem::ParMesh>                 mesh_;
@@ -139,12 +135,13 @@ FiniteElementState::FiniteElementState(const int order, std::shared_ptr<mfem::Pa
                                        const mfem::Ordering::Type ordering, std::optional<int> mesh_dim)
     : mesh_(pmesh),
       coll_(std::make_shared<Collection>(order, pmesh->Dimension())),
-      space_(std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), coll_.get(), (mesh_dim) ? *mesh_dim : pmesh->Dimension(), ordering)),
+      space_(std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), coll_.get(),
+                                                           (mesh_dim) ? *mesh_dim : pmesh->Dimension(), ordering)),
       gf_(std::make_shared<mfem::ParGridFunction>(space_.get())),
       true_vec_(std::make_shared<mfem::HypreParVector>(space_.get())),
       name_(name)
 {
-  *gf_      = 0.0;
+  *gf_       = 0.0;
   *true_vec_ = 0.0;
 }
 
