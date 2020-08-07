@@ -69,7 +69,7 @@ class ThermalSolver : public BaseSolver {
   serac::LinearSolverParameters lin_params_;
 
   /// Solve the Quasi-static operator
-  void QuasiStaticSolve();
+  void quasiStaticSolve();
 
  public:
   /// Constructor from order and parallel mesh

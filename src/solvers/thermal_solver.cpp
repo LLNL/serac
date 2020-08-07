@@ -25,8 +25,6 @@ ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
   // and initial conditions
   *temperature_->gf       = 0.0;
   *temperature_->true_vec = 0.0;
-
-  temperature_->name = "temperature";
 }
 
 void ThermalSolver::setTemperature(mfem::Coefficient& temp)
@@ -92,7 +90,7 @@ void ThermalSolver::completeSetup()
 
   // Eliminate the essential DOFs from the stiffness matrix
   for (auto& bc : ess_bdr_) {
-    bc->eliminated_matrix_entries.reset(K_mat_->EliminateRowsCols(bc->true_dofs));
+    bc.eliminated_matrix_entries.reset(K_mat_->EliminateRowsCols(bc.true_dofs));
   }
 
   // Initialize the eliminated BC RHS vector
@@ -120,15 +118,18 @@ void ThermalSolver::completeSetup()
   }
 }
 
-void ThermalSolver::QuasiStaticSolve()
+void ThermalSolver::quasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    bc->scalar_coef->SetTime(time_);
-    temperature_->gf->ProjectBdrCoefficient(*bc->scalar_coef, bc->markers);
+    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
+                    "Temperature boundary condition had a non-scalar coefficient.");
+    auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
+    scalar_coef->SetTime(time_);
+    temperature_->gf->ProjectBdrCoefficient(*scalar_coef, bc.markers);
     temperature_->gf->GetTrueDofs(*temperature_->true_vec);
-    mfem::EliminateBC(*K_mat_, *bc->eliminated_matrix_entries, bc->true_dofs, *temperature_->true_vec, *bc_rhs_);
+    mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, *temperature_->true_vec, *bc_rhs_);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning
@@ -155,7 +156,7 @@ void ThermalSolver::advanceTimestep(double& dt)
   temperature_->gf->GetTrueDofs(*temperature_->true_vec);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    QuasiStaticSolve();
+    quasiStaticSolve();
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
