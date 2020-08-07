@@ -6,7 +6,7 @@
 
 /**
  * @file wrapper_integrator.hpp
- * 
+ *
  * @brief Wrappers to turn bilinear and linear integrators into nonlinear ones
  */
 
@@ -26,7 +26,7 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
  public:
   /**
    * @brief Recasts, A(u) = F as R(u) = A(u) - F
-   * 
+   *
    * @param[in] f A LinearFormIntegrator
    * @param[in] trial_fes The trial finite element space
    */
@@ -35,7 +35,7 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 
   /**
    * @brief Compute the residual vector => -F
-   * 
+   *
    * @param[in] el The finite element for local integration
    * @param[in] Tr The local FE transformation
    * @param[in] elfun The state to evaluate the residual
@@ -46,7 +46,7 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 
   /**
    * @brief Compute the tangent matrix = 0
-   * 
+   *
    * @param[in] el The finite element for local integration
    * @param[in] Tr The local FE transformation
    * @param[in] elfun The state to evaluate the residual
@@ -59,7 +59,7 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
   /**
    * @brief The linear form integrator to wrap
    */
-  std::shared_ptr<mfem::LinearFormIntegrator>  f_;
+  std::shared_ptr<mfem::LinearFormIntegrator> f_;
 
   /**
    * @brief The trial FE space
@@ -74,7 +74,7 @@ class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
  public:
   /**
    * @brief Recasts, A(u) = F as R(u) = A(u) - F
-   * 
+   *
    * @param[in] A A BilinearFormIntegrator
    */
   explicit BilinearToNonlinearFormIntegrator(std::shared_ptr<mfem::BilinearFormIntegrator> A);
@@ -91,7 +91,7 @@ class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 
   /**
    * @brief Compute the tangent matrix = 0
-   * 
+   *
    * @param[in] el The finite element for local integration
    * @param[in] Tr The local FE transformation
    * @param[in] elfun The state to evaluate the residual
@@ -103,7 +103,7 @@ class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
  private:
   /**
    * @brief The bilinear form to wrap
-   * 
+   *
    */
   std::shared_ptr<mfem::BilinearFormIntegrator> A_;
 };
@@ -115,7 +115,7 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
  public:
   /**
    * @brief Recasts, A(u) = F as R(u) = A(u) - F
-   * 
+   *
    * @param[in] A A MixedBilinearFormIntegrator
    * @param[in] trial_fes The trial finite element space
    */
@@ -124,7 +124,7 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
 
   /**
    * @brief Compute the residual vector => -F
-   * 
+   *
    * @param[in] el The finite element for local integration
    * @param[in] Tr The local FE transformation
    * @param[in] elfun The state to evaluate the residual
@@ -135,7 +135,7 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
 
   /**
    * @brief Compute the tangent matrix = 0
-   * 
+   *
    * @param[in] el The finite element for local integration
    * @param[in] Tr The local FE transformation
    * @param[in] elfun The state to evaluate the residual
@@ -153,7 +153,7 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
   /**
    * @brief The trial finite element space
    */
-  std::shared_ptr<mfem::ParFiniteElementSpace>  trial_fes_;
+  std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes_;
 };
 
 }  // namespace serac

@@ -6,7 +6,7 @@
 
 /**
  * @file nonlinear_solid_operators.hpp
- * 
+ *
  * @brief The operators that form the nonlinear solid PDE solver
  */
 
@@ -38,14 +38,14 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
  public:
   /**
    * @brief Construct a new Nonlinear Solid Quasi Static Operator object
-   * 
-   * @param[in] H_form The nonlinear form of the PDE 
+   *
+   * @param[in] H_form The nonlinear form of the PDE
    */
   explicit NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
 
   /**
    * @brief Get the Gradient of the nonlinear form
-   * 
+   *
    * @param[in] x The input state to evaluate the gradient
    * @return The global gradient operator of the nonlinear form at state x
    */
@@ -53,7 +53,7 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
 
   /**
    * @brief Residual evaluation of the nonlinear form
-   * 
+   *
    * @param[in] k The input statue to evalue the residual
    * @param[out] y The output residual of the nonlinear form
    */
@@ -118,7 +118,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
  public:
   /**
    * @brief Construct a new Nonlinear Solid Reduced System Operator object
-   * 
+   *
    * @param[in] H_form The nonlinear stiffness form
    * @param[in] S_form The linear viscosity form
    * @param[in] M_form The linear mass form
@@ -130,7 +130,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 
   /**
    * @brief Set current dt, v, x values - needed to compute action and Jacobian.
-   * 
+   *
    * @param[in] dt The current timestep
    * @param[in] v The current velocity
    * @param[in] x The current position
@@ -139,7 +139,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 
   /**
    * @brief Compute y = H(x + dt (v + dt k)) + M k + S (v + dt k).
-   * 
+   *
    * @param[in] k The input state to evaluate the residual
    * @param[out] y The output state to evalutae the residual
    */
@@ -147,7 +147,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 
   /**
    * @brief Compute J = M + dt S + dt^2 grad_H(x + dt (v + dt k)).
-   * 
+   *
    * @param[in] k The input state
    * @return The gradient operator
    */
@@ -155,7 +155,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
 
   /**
    * @brief Destroy the Nonlinear Solid Reduced System Operator object
-   * 
+   *
    */
   virtual ~NonlinearSolidReducedSystemOperator();
 };
@@ -223,7 +223,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
  public:
   /**
    * @brief Construct a new Nonlinear Solid Dynamic Operator object
-   * 
+   *
    * @param[in] H_form The nonlinear stiffness form
    * @param[in] S_form The linear viscosity form
    * @param[in] M_form The lineawr mass form
@@ -239,7 +239,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
 
   /**
    * @brief Evaluate the explicit time derivative
-   * 
+   *
    * @param[in] vx The current velocity and displacement state
    * @param[out] dvx_dt The explicit time derivative of the state vector
    */
@@ -247,11 +247,11 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
 
   /**
    * @brief Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
-   * 
+   *
    * This is the only requirement for high-order SDIRK implicit integration.
-   * 
+   *
    * @param[in] dt The timestep
-   * @param[in] x The state vector 
+   * @param[in] x The state vector
    * @param[out] k The implicit time derivative
    */
   virtual void ImplicitSolve(const double dt, const mfem::Vector& x, mfem::Vector& k);

@@ -154,7 +154,7 @@ class ThermalStructuralSolver : public BaseSolver {
    */
   void setTimestepper(const serac::TimestepMethod timestepper) override;
 
-  /** 
+  /**
    * Complete the initialization and allocation of the data structures. This
    * must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
    * = false, do not allocate the mass matrix or dynamic operator

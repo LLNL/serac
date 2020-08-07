@@ -6,7 +6,7 @@
 
 /**
  * @file traction_coefficient.hpp
- * 
+ *
  * @brief MFEM coefficients for handling traction boundaries
  */
 
@@ -19,7 +19,7 @@ namespace serac {
 
 /**
  * @brief A vector coefficient with a mutable scalar scaling factor
- * 
+ *
  */
 class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
  private:
@@ -31,26 +31,26 @@ class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
   /**
    * @brief The mutable scaling factor
    */
-  double       scale_;
+  double scale_;
 
  public:
   /**
    * @brief Construct a new Vector Scaled Constant Coefficient object
-   * 
-   * @param[in] v The vector to be scaled 
+   *
+   * @param[in] v The vector to be scaled
    */
   VectorScaledConstantCoefficient(const mfem::Vector& v) : mfem::VectorCoefficient(v.Size()), vec_(v) {}
 
   /**
    * @brief Set the Scale object
-   * 
-   * @param[in] s The new scale parameter 
+   *
+   * @param[in] s The new scale parameter
    */
-  void         SetScale(double s) { scale_ = s; }
+  void SetScale(double s) { scale_ = s; }
 
   /**
    * @brief The vector coefficient evaluation function
-   * 
+   *
    * @param[out] V The output scaled coefficient
    */
   virtual void Eval(mfem::Vector& V, mfem::ElementTransformation&, const mfem::IntegrationPoint&)

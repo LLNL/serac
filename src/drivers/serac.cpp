@@ -8,8 +8,8 @@
  * @file serac.cpp
  *
  * @brief Nonlinear implicit proxy app driver
- * 
- * The purpose of this code is to act as a proxy app for nonlinear implicit mechanics codes at LLNL. 
+ *
+ * The purpose of this code is to act as a proxy app for nonlinear implicit mechanics codes at LLNL.
  */
 
 #include <fstream>

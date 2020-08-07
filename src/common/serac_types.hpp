@@ -83,27 +83,27 @@ struct LinearSolverParameters {
   /**
    * @brief Relative tolerance
    */
-  double         rel_tol;
+  double rel_tol;
 
   /**
    * @brief Absolute tolerance
    */
-  double         abs_tol;
+  double abs_tol;
 
   /**
    * @brief Debugging print level
    */
-  int            print_level;
+  int print_level;
 
   /**
    * @brief Maximum number of iterations
    */
-  int            max_iter;
+  int max_iter;
 
   /**
    * @brief Linear solver selection
    */
-  LinearSolver   lin_solver;
+  LinearSolver lin_solver;
 
   /**
    * @brief Preconditioner selection
@@ -115,7 +115,6 @@ struct LinearSolverParameters {
  * @brief Nonlinear solution scheme parameters
  */
 struct NonlinearSolverParameters {
-
   /**
    * @brief Relative tolerance
    */
@@ -129,23 +128,22 @@ struct NonlinearSolverParameters {
   /**
    * @brief Maximum number of iterations
    */
-  int    max_iter;
+  int max_iter;
 
   /**
    * @brief Debug print level
    */
-  int    print_level;
+  int print_level;
 };
 
 /**
  * @brief Bundle of data containing a complete finite element state variable
  */
 struct FiniteElementState {
-
   /**
    * @brief Finite element space (basis functions and their transformations)
    */
-  std::shared_ptr<mfem::ParFiniteElementSpace>   space;
+  std::shared_ptr<mfem::ParFiniteElementSpace> space;
 
   /**
    * @brief Finite element collection (reference configuration basis functions)
@@ -155,50 +153,49 @@ struct FiniteElementState {
   /**
    * @brief Grid function (DOF vector and associated finite element space)
    */
-  std::shared_ptr<mfem::ParGridFunction>         gf;
+  std::shared_ptr<mfem::ParGridFunction> gf;
 
   /**
    * @brief True vector (Non-constrained DOF vector)
    */
-  std::shared_ptr<mfem::Vector>                  true_vec;
+  std::shared_ptr<mfem::Vector> true_vec;
 
   /**
    * @brief The parallel mesh
    */
-  std::shared_ptr<mfem::ParMesh>                 mesh;
+  std::shared_ptr<mfem::ParMesh> mesh;
 
   /**
    * @brief Name of the state variable
    */
-  std::string                                    name = "";
+  std::string name = "";
 };
 
 /**
  * @brief Boundary condition information bundle
  */
 struct BoundaryCondition {
-
   using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
   /**
    * @brief The attribute marker array where this BC is active
    */
-  mfem::Array<int>                      markers;
+  mfem::Array<int> markers;
 
   /**
    * @brief The true DOFs affected by this BC
    */
-  mfem::Array<int>                      true_dofs;
+  mfem::Array<int> true_dofs;
 
   /**
    * @brief The vector component affected by this BC (-1 implies all components)
    */
-  int                                   component;
+  int component;
 
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
    */
-  Coef                                  coef;
+  Coef coef;
 
   /**
    * @brief The eliminated entries for Dirichlet BCs

@@ -6,7 +6,7 @@
 
 /**
  * @file base_solver.hpp
- * 
+ *
  * @brief The base interface class for a generic PDE solver
  */
 
@@ -109,14 +109,14 @@ class BaseSolver {
  public:
   /**
    * @brief Empty constructor
-   * 
+   *
    * @param[in] comm MPI communicator
    */
   BaseSolver(MPI_Comm comm);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
-   * 
+   *
    * @param[in] comm MPI communicator
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
@@ -125,7 +125,7 @@ class BaseSolver {
 
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
-   * 
+   *
    * @param[in] ess_bdr The set of essential BC attributes
    * @param[in] ess_bdr_coef The essential BC value coefficient
    * @param[in] fes The finite element state for the state
@@ -136,7 +136,7 @@ class BaseSolver {
 
   /**
    * @brief Set a list of true degrees of freedom from a coefficient
-   * 
+   *
    * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
    * @param[in] component The component to set (-1 implies all components are set)
@@ -146,7 +146,7 @@ class BaseSolver {
 
   /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
-   * 
+   *
    * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
    * @param[in] component The component to set (-1 implies all components are set)
@@ -155,71 +155,71 @@ class BaseSolver {
                              const int component = -1);
   /**
    * @brief Set the state variables from a vector of coefficients
-   * 
+   *
    * @param[in] state_coef A vector of coefficients to project on the state grid functions
    */
   virtual void setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef);
 
   /**
    * @brief Set the state variables from an existing grid function
-   * 
-   * @param[in] state A vector of finite element states to initialze the solver 
+   *
+   * @param[in] state A vector of finite element states to initialze the solver
    */
   virtual void setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state);
 
   /**
    * @brief Get the list of state variable grid functions
-   * 
+   *
    * @return the current vector of finite element states
    */
   virtual std::vector<std::shared_ptr<serac::FiniteElementState> > getState() const;
 
   /**
    * @brief Set the time integration method
-   * 
+   *
    * @param[in] timestepper The timestepping method for the solver
    */
   virtual void setTimestepper(const serac::TimestepMethod timestepper);
 
   /**
    * @brief Set the current time
-   * 
+   *
    * @param[in] time The time
    */
   virtual void setTime(const double time);
 
   /**
    * @brief Get the current time
-   * 
+   *
    * @return The current time
    */
   virtual double time() const;
 
   /**
    * @brief Get the current cycle
-   * 
+   *
    * @return The current cycle
    */
   virtual int cycle() const;
 
   /**
    * @brief Complete the setup and allocate the necessary data structures
-   * 
-   * This finializes the underlying MFEM data structures in a solver and 
+   *
+   * This finializes the underlying MFEM data structures in a solver and
    * enables it to be run through a timestepping loop
    */
   virtual void completeSetup() = 0;
 
   /**
    * @brief Advance the state variables according to the chosen time integrator
-   * 
+   *
    * @param[in/out]
    */
   virtual void advanceTimestep(double& dt) = 0;
 
   /**
    * @brief Initialize the state variable output
-   * 
+   *
    * @param[in] output_type The type of output files to produce
    * @param[in] root_name The root name of the output files
    */
@@ -227,7 +227,7 @@ class BaseSolver {
 
   /**
    * @brief Output the current state of the PDE fields
-   * 
+   *
    */
   virtual void outputState() const;
 

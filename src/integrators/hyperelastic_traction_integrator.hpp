@@ -6,8 +6,8 @@
 
 /**
  * @file hyperelastic_traction_integrator.hpp
- * 
- * @brief Custom MFEM integrator for nonlinear finite deformation traction loads 
+ *
+ * @brief Custom MFEM integrator for nonlinear finite deformation traction loads
  */
 
 #include "mfem.hpp"
@@ -22,7 +22,7 @@ class HyperelasticTractionIntegrator : public mfem::NonlinearFormIntegrator {
   /**
    * @brief The vector coefficient for the traction load
    */
-  mfem::VectorCoefficient&  function_;
+  mfem::VectorCoefficient& function_;
 
   /**
    * @brief Working matrices for the traction calculations
@@ -32,37 +32,37 @@ class HyperelasticTractionIntegrator : public mfem::NonlinearFormIntegrator {
   /**
    * @brief Working vectors for the traction
    */
-  mutable mfem::Vector      shape_, nor_, fnor_, Sh_p_, Sh_u_;
+  mutable mfem::Vector shape_, nor_, fnor_, Sh_p_, Sh_u_;
 
  public:
   /**
    * @brief Construct a new Hyperelastic Traction Integrator object
-   * 
-   * @param[in] f The traction load coefficient 
+   *
+   * @param[in] f The traction load coefficient
    */
   explicit HyperelasticTractionIntegrator(mfem::VectorCoefficient& f) : function_(f) {}
 
   /**
    * @brief Assemble the nonlinear residual on a boundary element at a current state
-   * 
-   * @param[in] el1 The first element attached to the face 
-   * @param[in] el2 The second element attached to the face 
-   * @param[in] Tr The face element transformation 
-   * @param[in] elfun The current value of the underlying finite element state for residual evaluation 
-   * @param[out] elvec The evaluated residual 
+   *
+   * @param[in] el1 The first element attached to the face
+   * @param[in] el2 The second element attached to the face
+   * @param[in] Tr The face element transformation
+   * @param[in] elfun The current value of the underlying finite element state for residual evaluation
+   * @param[out] elvec The evaluated residual
    */
   virtual void AssembleFaceVector(const mfem::FiniteElement& el1, const mfem::FiniteElement& el2,
                                   mfem::FaceElementTransformations& Tr, const mfem::Vector& elfun, mfem::Vector& elvec);
 
-/**
- * @brief Assemble the gradient for the nonlinear residual at a current state
- * 
- * @param[in] el1 The first element attached to the face
- * @param[in] el2 The second element attached to the face
- * @param[in] Tr The face element transformation
- * @param[in] elfun The current value of the underlying finite element state for gradient evaluation
- * @param[out] elmat The local contribution to the Jacobian
- */
+  /**
+   * @brief Assemble the gradient for the nonlinear residual at a current state
+   *
+   * @param[in] el1 The first element attached to the face
+   * @param[in] el2 The second element attached to the face
+   * @param[in] Tr The face element transformation
+   * @param[in] elfun The current value of the underlying finite element state for gradient evaluation
+   * @param[out] elmat The local contribution to the Jacobian
+   */
   virtual void AssembleFaceGrad(const mfem::FiniteElement& el1, const mfem::FiniteElement& el2,
                                 mfem::FaceElementTransformations& Tr, const mfem::Vector& elfun,
                                 mfem::DenseMatrix& elmat);

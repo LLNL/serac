@@ -13,7 +13,7 @@
 
 namespace serac {
 
-/** 
+/**
  * This is a generic linear thermal diffusion oeprator of the form
  *
  *    M du/dt = -kappa Ku + f
@@ -146,7 +146,7 @@ class ThermalSolver : public BaseSolver {
    */
   std::shared_ptr<serac::FiniteElementState> temperature() { return temperature_; };
 
-  /** 
+  /**
    * Complete the initialization and allocation of the data structures. This
    * must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
    * = false, do not allocate the mass matrix or dynamic operator

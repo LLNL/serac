@@ -6,7 +6,7 @@
 
 /**
  * @file elasticity_solver.hpp
- * 
+ *
  * @brief A solver for the steady state solution of a linear elasticity PDE
  */
 
@@ -18,16 +18,16 @@
 
 namespace serac {
 
-/** 
+/**
  * @brief A solver for the steady state solution of a linear elasticity PDE
- * 
+ *
  * This is a generic linear elasticity oeprator of the form
  *
  *    -div(sigma(u)) = f
  *    sigma(u) = lambda div(u) + mu(grad(u) + grad(u)^T
  *
  *  where u is the displacement vector, f is the body force,
- *  and lambda and mu are the lame parameters 
+ *  and lambda and mu are the lame parameters
  */
 class ElasticitySolver : public BaseSolver {
  protected:
@@ -101,15 +101,15 @@ class ElasticitySolver : public BaseSolver {
  public:
   /**
    * @brief Construct a new Elasticity Solver object
-   * 
-   * @param[in] order The polynomial order of the solver 
+   *
+   * @param[in] order The polynomial order of the solver
    * @param[in] pmesh The parallel MFEM mesh
    */
   ElasticitySolver(const int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions
-   * 
+   *
    * @param[in] disp_bdr Set of boundary attributes to enforce the displacement conditions
    * @param[in] disp_bdr_coef Coefficient definining the displacement boundary
    * @param[in] component Component to set (-1 indicates all components)
@@ -119,7 +119,7 @@ class ElasticitySolver : public BaseSolver {
 
   /**
    * @brief Set the vector-valued natural traction boundary conditions
-   * 
+   *
    * @param[in] trac_bdr Set of boundary attributes to enforce the traction condition
    * @param[in] trac_bdr_coef The traction condition coefficient
    * @param[in] component Component to set (-1 indicates all components)
@@ -129,14 +129,14 @@ class ElasticitySolver : public BaseSolver {
 
   /**
    * @brief Driver for advancing the timestep
-   * 
-   * @param[in/out] dt The timestep to attempt, adaptive methods could return the actual timestep completed 
+   *
+   * @param[in/out] dt The timestep to attempt, adaptive methods could return the actual timestep completed
    */
   void advanceTimestep(double& dt) override;
 
   /**
    * @brief Set the elastic lame parameters
-   * 
+   *
    * @param[in] lambda The Lame lambda coefficient
    * @param[in] mu The Lame mu coefficient
    */
@@ -144,7 +144,7 @@ class ElasticitySolver : public BaseSolver {
 
   /**
    * @brief Set the Vector-valued body force
-   * 
+   *
    * @param[in] force The body force coefficient
    */
   void setBodyForce(mfem::VectorCoefficient& force);
@@ -155,8 +155,8 @@ class ElasticitySolver : public BaseSolver {
   void completeSetup() override;
 
   /**
-   * @brief Set the Linear Solver Parameters 
-   * 
+   * @brief Set the Linear Solver Parameters
+   *
    * @param[in] params The linear solver parameters
    */
   void setLinearSolverParameters(const serac::LinearSolverParameters& params);
