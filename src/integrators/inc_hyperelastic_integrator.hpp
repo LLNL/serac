@@ -4,12 +4,18 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file inc_hyperelastic_integrator.hpp
+ * 
+ * @brief The MFEM integrators for the incremetal hyperelastic formulation
+ */
+
 #include "mfem.hpp"
 
 namespace serac {
 
 /** 
- * Incremental hyperelastic integrator for any given HyperelasticModel.
+ * @brief Incremental hyperelastic integrator for any given HyperelasticModel.
  * 
  * Represents @f$ \int W(Jpt) dx @f$ over a target zone, where W is the
  * @a model's strain energy density function, and Jpt is the Jacobian of the
@@ -18,7 +24,11 @@ namespace serac {
  */
 class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
  private:
+  /**
+   * @brief The associated hyperelastic model
+   */
   mfem::HyperelasticModel* model_;
+
   /**
    * Jrt: the Jacobian of the target-to-reference-element transformation.
    * Jpr: the Jacobian of the reference-to-physical-element transformation.
@@ -34,7 +44,11 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
   mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, Jpt_, P_, PMatI_, PMatO_;
 
  public:
-  /** @param[in] m  HyperelasticModel that will be integrated. */
+  /** 
+   * @brief The constructor for the incremental hyperelastic integrator
+   * 
+   * @param[in] m  HyperelasticModel that will be integrated. 
+   */
   explicit IncrementalHyperelasticIntegrator(mfem::HyperelasticModel* m) : model_(m) {}
 
   /**
@@ -46,9 +60,25 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
   virtual double GetElementEnergy(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
                                   const mfem::Vector& elfun);
 
+  /**
+   * @brief The residual evaluation for the nonlinear incremental integrator
+   * 
+   * @param[in] el The finite element to integrate 
+   * @param[in] Ttr The element transformation operators
+   * @param[in] elfun The state vector to evaluate the residual
+   * @param[out] elvect The output residual
+   */
   virtual void AssembleElementVector(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
                                      const mfem::Vector& elfun, mfem::Vector& elvect);
 
+  /**
+   * @brief Assemble the local gradient 
+   * 
+   * @param[in] el The finite element to integrate 
+   * @param[in] Ttr The element transformation operators
+   * @param[in] elfun The state vector to evaluate the gradient
+   * @param[out] elmat The output local gradient
+   */
   virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
                                    const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
 };

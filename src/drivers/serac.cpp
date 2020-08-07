@@ -4,17 +4,13 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-//***********************************************************************
-//
-//   SERAC - Nonlinear Implicit Contact Proxy App
-//
-//   Description: The purpose of this code is to act as a proxy app
-//                for nonlinear implicit mechanics codes at LLNL. This
-//                initial version is copied from a previous version
-//                of the ExaConsist AM miniapp.
-//
-//
-//***********************************************************************
+/**
+ * @file serac.cpp
+ *
+ * @brief Nonlinear implicit proxy app driver
+ * 
+ * The purpose of this code is to act as a proxy app for nonlinear implicit mechanics codes at LLNL. 
+ */
 
 #include <fstream>
 #include <iostream>

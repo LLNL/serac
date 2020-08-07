@@ -3,10 +3,11 @@
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
-// # Author: Jonathan Wong @ LLNL.
 
 /**
-    @file StdFunctionCoefficient.hpp
+ * @file stdfunction_coefficient.hpp
+ * 
+ * @brief MFEM coefficients and helper functions based on std::functions
  */
 
 #ifndef STD_FUNCTION_COEFFICIENT_HPP
@@ -28,25 +29,40 @@ namespace serac {
  */
 class StdFunctionCoefficient : public mfem::Coefficient {
  public:
-  /// Constructor that takes in an mfem Vector representing the coordinates and
-  /// produces a double
+
+ /**
+  * @brief Constructor that takes in an mfem Vector representing the coordinates and produces a double
+  * 
+  * @param[in] func The scalar-returning std::function to define the coefficient 
+  */
   StdFunctionCoefficient(std::function<double(mfem::Vector&)> func);
 
+/**
+ * @brief Evalate the coefficient at a quadrature point
+ * 
+ * @param[in] Tr The element transformation for the evaluation
+ * @param[in] ip The integration point for the evaluation 
+ * @return The value of the coefficient at the quadrature point
+ */
   virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
 
  private:
+ /**
+  * @brief The function to evaluate for the coefficient
+  */
   std::function<double(mfem::Vector&)> func_;
 };
 
 /**
  * @brief StdFunctionVectorCoefficient is an easy way to make an
- * mfem::Coefficient using a lambda
+ * mfem::VectorCoefficient using a lambda
  */
 class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
  public:
   /**
    * @brief StdFunctionVectorCoefficient is an easy way to make an
    * mfem::Coefficient using a lambda
+   * 
    * @param[in] dim The dimension of the VectorCoefficient
    * @param[in] func Is a function that matches the following prototype
    * void(mfem::Vector &, mfem::Vector &). The first argument of the function is
@@ -54,15 +70,26 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
    */
   StdFunctionVectorCoefficient(int dim, std::function<void(mfem::Vector&, mfem::Vector&)> func);
 
+/**
+ * @brief Evalate the coefficient at a quadrature point
+ * 
+ * @param[out] V The evaluated coefficient vector at the quadrature point
+ * @param[in] T The element transformation for the evaluation
+ * @param[in] ip The integration point for the evaluation 
+ */
   virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
  private:
+  /**
+  * @brief The function to evaluate for the coefficient
+  */
   std::function<void(mfem::Vector&, mfem::Vector&)> func_;
 };
 
 /**
  * @brief MakeTrueEssList takes in a FESpace, a vector coefficient, and produces a list
  *  of essential boundary conditions
+ * 
  * @param[in] pfes A finite element space for the constrained grid function
  * @param[in] c A VectorCoefficient that is projected on to the mesh. All
  * d.o.f's are examined and those that are the condition (> 0.) are appended to
@@ -74,6 +101,7 @@ mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::Vector
 /**
  * @brief MakeEssList takes in a FESpace, a vector coefficient, and produces a list
  * of essential boundary conditions
+ * 
  * @param[in] pfes A finite element space for the constrained grid function
  * @param[in] c A VectorCoefficient that is projected on to the mesh. All
  * d.o.f's are examined and those that are the condition (> 0.) are appended to
@@ -89,6 +117,7 @@ mfem::Array<int> makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoef
  * 
  * This method is useful for creating lists of attributes that correspond to
  * elements in the mesh
+ * 
  * @param[in] m The mesh
  * @param[in] c The coefficient provided that will be evaluated on the mesh
  * @param[in] digitize An optional function that can be
@@ -106,6 +135,7 @@ mfem::Array<int> makeAttributeList(
  * 
  * This method is useful for creating lists of attributes that correspond to bdr
  * elements in the mesh
+ * 
  * @param[in] m The mesh
  * @param[in] c The coefficient provided that will be evaluated on the mesh
  * @param[in] digitize An optional function that can be
@@ -130,6 +160,7 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
   /**
    * @brief This class temporarily changes the attribute during coefficient
    * evaluation based on a given list.
+   * 
    * @param[in] attr_list A list of attributes values corresponding to the type
    * of coefficient at each element. 
    * @param[in] c The coefficient to "modify" the element attributes
@@ -139,21 +170,37 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
   {
   }
 
+/**
+ * @brief Evalate the coefficient at a quadrature point
+ * 
+ * @param[in] Tr The element transformation for the evaluation
+ * @param[in] ip The integration point for the evaluation 
+ * @return The value of the coefficient at the quadrature point
+ */
   virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
 
  protected:
+ /**
+  * @brief A list of attributes values corresponding to the type
+  * of coefficient at each element. 
+  */
   const mfem::Array<int>& attr_list_;
+
+  /**
+   * @brief The coefficient to "modify" the element attributes
+   */
   mfem::Coefficient&      coef_;
 };
 
 /**
- * TransformedVectorCoefficient applies various operations to modify a
+ * @brief Applies various operations to modify a
  * VectorCoefficient
  */
 class TransformedVectorCoefficient : public mfem::VectorCoefficient {
  public:
   /**
    * @brief Apply a vector function, Func, to v1
+   * 
    * @param[in] v1 A VectorCoefficient to apply Func to
    * @param[in] func A function that takes in an input vector, and returns the
    * output as the second argument.
@@ -163,32 +210,55 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
 
   /**
    * @brief Apply a vector function, Func, to v1 and v2
+   * 
    * @param[in] v1 A VectorCoefficient to apply Func to
    * @param[in] v2 A VectorCoefficient to apply Func to
    * @param[in] func A function that takes in two input vectors, and returns the
    * output as the third argument.
    */
-
   TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient> v1, std::shared_ptr<mfem::VectorCoefficient> v2,
                                std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> func);
+  
+/**
+ * @brief Evalate the coefficient at a quadrature point
+ * 
+ * @param[out] V The evaluated coefficient vector at the quadrature point
+ * @param[in] T The element transformation for the evaluation
+ * @param[in] ip The integration point for the evaluation 
+ */
   virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
  private:
+  /**
+   * @brief The first vector coefficient in the transformation
+   */
   std::shared_ptr<mfem::VectorCoefficient> v1_;
+
+  /**
+  * @brief The first vector coefficient in the transformation
+  */
   std::shared_ptr<mfem::VectorCoefficient> v2_;
 
+  /**
+  * @brief The one argument function for a transformed coefficient
+  */
   std::function<void(mfem::Vector&, mfem::Vector&)>                mono_function_;
+
+  /**
+  * @brief The two argument function for a transformed coefficient
+  */
   std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> bi_function_;
 };
 
 /**
- * TransformedScalarCoefficient applies various operations to modify a
+ * @brief TransformedScalarCoefficient applies various operations to modify a
  * scalar Coefficient
  */
 class TransformedScalarCoefficient : public mfem::Coefficient {
  public:
   /**
    * @brief Apply a scalar function, Func, to s1
+   * 
    * @param[in] s1 A Coefficient to apply Func to
    * @param[in] func A function that takes in an input scalar, and returns the
    * output.
@@ -197,22 +267,43 @@ class TransformedScalarCoefficient : public mfem::Coefficient {
 
   /**
    * @brief Apply a scalar function, Func, to s1 and s2
+   * 
    * @param[in] s1 A scalar Coefficient to apply Func to
    * @param[in] s2 A scalar Coefficient to apply Func to
    * @param[in] func A function that takes in two input scalars, and returns the
    * output.
    */
-
   TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::shared_ptr<mfem::Coefficient> s2,
                                std::function<double(const double, const double)> func);
 
+  /**
+  * @brief Evalate the coefficient at a quadrature point
+  * 
+  * @param[in] Tr The element transformation for the evaluation
+  * @param[in] ip The integration point for the evaluation 
+  * @return The value of the coefficient at the quadrature point
+  */
   virtual double Eval(mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
  private:
+  /**
+  * @brief The first scalar coefficient in the transformation
+  */
   std::shared_ptr<mfem::Coefficient> s1_;
+
+  /**
+  * @brief The second scalar coefficient in the transformation
+  */
   std::shared_ptr<mfem::Coefficient> s2_;
 
+  /**
+   * @brief The one argument transformation function
+   */
   std::function<double(const double)>               mono_function_;
+
+  /**
+   * @brief The two argument transformation function
+   */
   std::function<double(const double, const double)> bi_function_;
 };
 
