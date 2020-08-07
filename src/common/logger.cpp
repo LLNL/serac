@@ -13,12 +13,12 @@
 #include "mpi.h"
 
 namespace {
-  void signalHandler(int signal)
-  {
-    // Will clean up MPI via call to axom::Utilities::processAbort()
-    SLIC_ERROR("Received signal " << signal << ", exiting");
-  }
-} // namespace
+void signalHandler(int signal)
+{
+  // Will clean up MPI via call to axom::Utilities::processAbort()
+  SLIC_ERROR("Received signal " << signal << ", exiting");
+}
+}  // namespace
 
 namespace serac {
 
