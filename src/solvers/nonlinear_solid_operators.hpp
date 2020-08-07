@@ -97,15 +97,15 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
   /**
    * Essential degrees of freedom
    */
-  const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr_;
+  const std::vector<serac::BoundaryCondition>& ess_bdr_;
 
  public:
   /**
    * The constructor
    */
   NonlinearSolidReducedSystemOperator(const mfem::ParNonlinearForm& H_form, const mfem::ParBilinearForm& S_form,
-                                      mfem::ParBilinearForm&                                         M_form,
-                                      const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr);
+                                      mfem::ParBilinearForm&                       M_form,
+                                      const std::vector<serac::BoundaryCondition>& ess_bdr);
 
   /**
    * Set current dt, v, x values - needed to compute action and Jacobian.
@@ -176,7 +176,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   /**
    * The fixed boudnary degrees of freedom
    */
-  const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr_;
+  const std::vector<serac::BoundaryCondition>& ess_bdr_;
 
   /**
    * The linear solver parameters for the mass matrix
@@ -192,11 +192,11 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
   /**
    * The constructor
    */
-  NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>                        H_form,
-                                std::unique_ptr<mfem::ParBilinearForm>                         S_form,
-                                std::unique_ptr<mfem::ParBilinearForm>                         M_form,
-                                const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr,
-                                mfem::NewtonSolver& newton_solver, const serac::LinearSolverParameters& lin_params);
+  NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>      H_form,
+                                std::unique_ptr<mfem::ParBilinearForm>       S_form,
+                                std::unique_ptr<mfem::ParBilinearForm>       M_form,
+                                const std::vector<serac::BoundaryCondition>& ess_bdr, mfem::NewtonSolver& newton_solver,
+                                const serac::LinearSolverParameters& lin_params);
 
   /**
    * Required to use the native newton solver

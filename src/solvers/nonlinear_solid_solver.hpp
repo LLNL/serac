@@ -81,7 +81,7 @@ class NonlinearSolidSolver : public BaseSolver {
   /**
    * Solve the Quasi-static operator
    */
-  void QuasiStaticSolve();
+  void quasiStaticSolve();
 
  public:
   /**

@@ -57,7 +57,7 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   /**
    * Pointer to the assembled K matrix
    */
-  std::shared_ptr<mfem::HypreParMatrix> m_K_mat;
+  std::shared_ptr<mfem::HypreParMatrix> K_mat_;
 
   /**
    * Pointer to the assembled T ( = M + dt K) matrix
@@ -82,7 +82,7 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   /**
    * Temperature essential boundary coefficient
    */
-  std::vector<std::shared_ptr<serac::BoundaryCondition> > ess_bdr_;
+  std::vector<serac::BoundaryCondition>& ess_bdr_;
 
   /**
    * Auxillary working vectors
@@ -100,9 +100,9 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   /**
    * Constructor. Height is the true degree of freedom size
    */
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace>                   fespace,
-                            const serac::LinearSolverParameters&                           params,
-                            const std::vector<std::shared_ptr<serac::BoundaryCondition> >& ess_bdr);
+  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
+                            const serac::LinearSolverParameters&         params,
+                            std::vector<serac::BoundaryCondition>&       ess_bdr);
 
   /**
    * Set the mass matrix
