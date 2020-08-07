@@ -79,14 +79,44 @@ struct NonlinearSolverParameters {
 // Git will git confused if the order of the classes are switched, so leave this in until merge
 using BCCoef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
+/**
+ * Class for encapsulating the critical MFEM components of a solver
+ * namely Mesh, FiniteElementCollection, FiniteElementState,
+ * GridFunction, and a Vector of the solution
+ */
 class FiniteElementState {
  public:
+  // Currently required so BaseSolver can allocate its state_ vector
   FiniteElementState() = default;
 
+  /**
+   * Main constructor for building a new state object
+   * @param[in] order The order of the problem
+   * @param[in] pmesh The problem mesh
+   * @param[in] ordering The DOF ordering to use within the MFEM objects
+   * @param[in] mesh_dim The vector dimension that should be used for DOFs,
+   * if different from the dimension of the mesh
+   * @note If a FiniteElementCollection other than H1 is desired, use
+   * FiniteElementState::create
+   */
   template <typename Collection = mfem::H1_FECollection>
   FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh,
                      const mfem::Ordering::Type ordering = mfem::Ordering::byNODES,
                      std::optional<int>         mesh_dim = std::nullopt);
+
+  /**
+   * Helper function for nonstandard FECollection instantiations
+   * @see FiniteElementState::FiniteElementState
+   * @code{.cpp}
+   * FiniteElementState::create<mfem::H1Pos_FECollection>(order, pmesh, mfem::Ordering::byNODES, 1)
+   * @endcode
+   */
+  template <typename Collection>
+  static FiniteElementState create(const int order, std::shared_ptr<mfem::ParMesh> pmesh,
+                                   const mfem::Ordering::Type ordering, std::optional<int> mesh_dim)
+  {
+    return FiniteElementState(order, pmesh, ordering, mesh_dim);
+  }
 
   MPI_Comm comm() { return space_->GetComm(); }
 
