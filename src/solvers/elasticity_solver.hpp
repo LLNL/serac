@@ -41,12 +41,6 @@ class ElasticitySolver : public BaseSolver {
   /// Eliminated RHS vector
   std::unique_ptr<mfem::HypreParVector> bc_rhs_;
 
-  /// Solver for the stiffness matrix
-  std::unique_ptr<mfem::Solver> K_solver_;
-
-  /// Preconditioner for the stiffness
-  std::unique_ptr<mfem::Solver> K_prec_;
-
   /// Lame mu parameter coefficient
   mfem::Coefficient* mu_ = nullptr;
 

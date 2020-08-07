@@ -61,6 +61,7 @@ TEST(thermal_solver, static_solve)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
   therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
@@ -115,6 +116,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
   therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
@@ -174,6 +176,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
   therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
@@ -224,6 +227,7 @@ TEST(thermal_solver, dyn_exp_solve)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
   therm_solver.setLinearSolverParameters(params);
 
   // Setup glvis output

@@ -27,15 +27,6 @@ class NonlinearSolidSolver : public BaseSolver {
   /// The time dependent operator for use with the MFEM ODE solvers
   std::shared_ptr<mfem::TimeDependentOperator> timedep_oper_;
 
-  /// The Newton solver for the nonlinear iterations
-  mfem::IterativeSolver* newton_solver_;
-
-  /// The linear solver for the Jacobian
-  std::unique_ptr<mfem::Solver> J_solver_;
-
-  /// The preconditioner for the Jacobian solver
-  std::unique_ptr<mfem::Solver> J_prec_;
-
   /// The viscosity coefficient
   std::shared_ptr<mfem::Coefficient> viscosity_;
 

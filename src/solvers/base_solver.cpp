@@ -219,10 +219,9 @@ void BaseSolver::outputState() const
   }
 }
 
-
-
-SystemSolver::SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_params, const std::optional<NonlinearSolverParameters>& nonlin_params) {
-  
+SystemSolver::SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
+                           const std::optional<NonlinearSolverParameters>& nonlin_params)
+{
   // Preconditioner configuration is too varied, maybe a PrecondParams is needed?
   // Maybe a redesign to better support custom preconditioners
   // std::unique_ptr<mfem::Solver> prec;
@@ -246,9 +245,6 @@ SystemSolver::SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_para
   //     SLIC_ERROR("Preconditioner type not recognized.");
   //     exitGracefully(true);
   // }
-  
-  
-  // std::unique_ptr<mfem::IterativeSolver> iter_lin_solver_;
   switch (lin_params.lin_solver) {
     case LinearSolver::CG:
       iter_lin_solver_ = std::make_unique<mfem::CGSolver>(comm);
@@ -276,7 +272,7 @@ SystemSolver::SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_para
     newton_solver->SetMaxIter(nonlin_params->max_iter);
     newton_solver->SetPrintLevel(nonlin_params->print_level);
     newton_solver->iterative_mode = nonlin_params->iterative_mode;
-    nonlin_solver_ = std::move(newton_solver);
+    nonlin_solver_                = std::move(newton_solver);
   }
 }
 

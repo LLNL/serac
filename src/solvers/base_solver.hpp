@@ -15,19 +15,22 @@
 
 namespace serac {
 
-
-
 class SystemSolver {
-  public:
-    SystemSolver() = default;
-    SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_params, const std::optional<NonlinearSolverParameters>& nonlin_params = std::nullopt);
-    void setPreconditioner(std::unique_ptr<mfem::Solver>&& prec) { prec_ = std::move(prec); iter_lin_solver_->SetPreconditioner(*prec_); }
-    mfem::IterativeSolver& solver() {return (nonlin_solver_) ? **nonlin_solver_ : *iter_lin_solver_; }
-  private:
-    std::unique_ptr<mfem::IterativeSolver> iter_lin_solver_;
-    std::optional<std::unique_ptr<mfem::IterativeSolver>> nonlin_solver_;
-    std::unique_ptr<mfem::Solver> prec_;
+ public:
+  SystemSolver() = default;
+  SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
+               const std::optional<NonlinearSolverParameters>& nonlin_params = std::nullopt);
+  void setPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
+  {
+    prec_ = std::move(prec);
+    iter_lin_solver_->SetPreconditioner(*prec_);
+  }
+  mfem::IterativeSolver& solver() { return (nonlin_solver_) ? **nonlin_solver_ : *iter_lin_solver_; }
 
+ private:
+  std::unique_ptr<mfem::IterativeSolver>                iter_lin_solver_;
+  std::optional<std::unique_ptr<mfem::IterativeSolver>> nonlin_solver_;
+  std::unique_ptr<mfem::Solver>                         prec_;
 };
 
 /// This is the abstract base class for a generic forward solver
@@ -37,7 +40,7 @@ class BaseSolver {
   MPI_Comm comm_;
 
   /// List of finite element data structures
-  std::vector<std::shared_ptr<serac::FiniteElementState> > state_;
+  std::vector<std::shared_ptr<serac::FiniteElementState>> state_;
 
   /// Block vector storage of the true state
   std::unique_ptr<mfem::BlockVector> block_;
@@ -108,10 +111,10 @@ class BaseSolver {
   virtual void setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef);
 
   /// Set the state variables from an existing grid function
-  virtual void setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state);
+  virtual void setState(const std::vector<std::shared_ptr<serac::FiniteElementState>>& state);
 
   /// Get the list of state variable grid functions
-  virtual std::vector<std::shared_ptr<serac::FiniteElementState> > getState() const;
+  virtual std::vector<std::shared_ptr<serac::FiniteElementState>> getState() const;
 
   /// Set the time integration method
   virtual void setTimestepper(const serac::TimestepMethod timestepper);

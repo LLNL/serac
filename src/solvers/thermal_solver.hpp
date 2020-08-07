@@ -50,12 +50,6 @@ class ThermalSolver : public BaseSolver {
   /// Assembled RHS vector
   std::shared_ptr<mfem::HypreParVector> rhs_;
 
-  /// Linear solver for the K operator
-  std::shared_ptr<mfem::CGSolver> K_solver_;
-
-  /// Preconditioner for the K operator
-  std::shared_ptr<mfem::HypreSmoother> K_prec_;
-
   /// Conduction coefficient
   std::shared_ptr<mfem::Coefficient> kappa_;
 
