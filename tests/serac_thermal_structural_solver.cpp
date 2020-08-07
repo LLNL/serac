@@ -72,7 +72,7 @@ TEST(dynamic_solver, dyn_solve)
   double offset = 0.1;
   double scale  = 1.0;
 
-  auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(ts_solver.GetTemperature()->gridFunc());
+  auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(ts_solver.temperature()->gridFunc());
   auto visc_coef    = std::make_shared<TransformedScalarCoefficient>(
       temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
   ts_solver.SetViscosity(visc_coef);
@@ -127,9 +127,9 @@ TEST(dynamic_solver, dyn_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double v_norm    = ts_solver.GetVelocity()->gridFunc()->ComputeLpError(2.0, zerovec);
-  double x_norm    = ts_solver.GetDisplacement()->gridFunc()->ComputeLpError(2.0, zerovec);
-  double temp_norm = ts_solver.GetTemperature()->gridFunc()->ComputeLpError(2.0, zerovec);
+  double v_norm    = ts_solver.velocity()->gridFunc()->ComputeLpError(2.0, zerovec);
+  double x_norm    = ts_solver.displacement()->gridFunc()->ComputeLpError(2.0, zerovec);
+  double temp_norm = ts_solver.temperature()->gridFunc()->ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(13.28049, x_norm, 0.001);
   EXPECT_NEAR(0.005227, v_norm, 0.001);

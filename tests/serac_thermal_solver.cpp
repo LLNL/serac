@@ -73,7 +73,7 @@ TEST(thermal_solver, static_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.getTemperature()->gridFunc()->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature()->gridFunc()->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -133,7 +133,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.getTemperature()->gridFunc()->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature()->gridFunc()->ComputeLpError(2.0, zero);
   EXPECT_NEAR(0.9168086318, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -186,7 +186,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.getTemperature()->gridFunc()->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature()->gridFunc()->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -255,7 +255,7 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.getTemperature()->gridFunc()->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature()->gridFunc()->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.6493029, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -324,7 +324,7 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.getTemperature()->gridFunc()->ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature()->gridFunc()->ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
