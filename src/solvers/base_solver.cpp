@@ -100,9 +100,6 @@ void BaseSolver::setState(const std::vector<serac::BoundaryCondition::Coef>& sta
   SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
-    // // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
-    // // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    // std::visit([this, i](auto&& coef) { state_[i]->gridFunc()->ProjectCoefficient(*coef); }, state_coef[i]);
     state_[i]->project(state_coef[i]);
   }
 }

@@ -24,7 +24,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   state_[1] = displacement_;
 
   // Initialize the mesh node pointers
-  reference_nodes_ = std::make_unique<mfem::ParGridFunction>(displacement_->space().get());
+  reference_nodes_ = displacement_->createTensorOnSpace<mfem::ParGridFunction>();
   pmesh->GetNodes(*reference_nodes_);
   pmesh->NewNodes(*reference_nodes_);
 
@@ -94,7 +94,7 @@ void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParamete
 void NonlinearSolidSolver::completeSetup()
 {
   // Define the nonlinear form
-  auto H_form = std::make_unique<mfem::ParNonlinearForm>(displacement_->space().get());
+  auto H_form = displacement_->createTensorOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
@@ -168,13 +168,13 @@ void NonlinearSolidSolver::completeSetup()
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
-    M_form = std::make_unique<mfem::ParBilinearForm>(displacement_->space().get());
+    M_form = displacement_->createTensorOnSpace<mfem::ParBilinearForm>();
 
     M_form->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
     M_form->Assemble(0);
     M_form->Finalize(0);
 
-    S_form = std::make_unique<mfem::ParBilinearForm>(displacement_->space().get());
+    S_form = displacement_->createTensorOnSpace<mfem::ParBilinearForm>();
     S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
     S_form->Assemble(0);
     S_form->Finalize(0);
@@ -191,14 +191,14 @@ void NonlinearSolidSolver::completeSetup()
     prec_amg->SetElasticityOptions(displacement_->space().get());
     J_prec_ = std::move(prec_amg);
 
-    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->space()->GetComm());
+    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->comm());
   } else {
     auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
     J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     J_hypreSmoother->SetPositiveDiagonal(true);
     J_prec_ = std::move(J_hypreSmoother);
 
-    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->space()->GetComm());
+    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->comm());
   }
 
   iter_solver->SetRelTol(lin_params_.rel_tol);
@@ -253,8 +253,8 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   }
 
   // Distribute the shared DOFs
-  velocity_->gridFunc()->SetFromTrueDofs(*velocity_->trueVec());
-  displacement_->gridFunc()->SetFromTrueDofs(*displacement_->trueVec());
+  velocity_->distributeSharedDofs();
+  displacement_->distributeSharedDofs();
 
   // Update the mesh with the new deformed nodes
   deformed_nodes_->Set(1.0, *displacement_->gridFunc());

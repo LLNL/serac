@@ -98,6 +98,8 @@ class FiniteElementState {
                      const mfem::Ordering::Type ordering = mfem::Ordering::byNODES,
                      std::optional<int>         mesh_dim = std::nullopt);
 
+  MPI_Comm comm() { return space_->GetComm(); }
+
   mfem::ParGridFunction* gridFunc() { return gf_.get(); }
 
   mfem::ParMesh* mesh() { return mesh_.get(); }
@@ -120,6 +122,14 @@ class FiniteElementState {
   void project(mfem::VectorCoefficient& coef) { gf_->ProjectCoefficient(coef); }
 
   void initializeTrueVec() { gf_->GetTrueDofs(*true_vec_); }
+
+  void distributeSharedDofs() { gf_->SetFromTrueDofs(*true_vec_); }
+
+  template <typename Tensor>
+  std::unique_ptr<Tensor> createTensorOnSpace()
+  {
+    return std::make_unique<Tensor>(space_.get());
+  }
 
  private:
   std::shared_ptr<mfem::ParMesh>                 mesh_;

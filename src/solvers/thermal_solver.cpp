@@ -62,18 +62,18 @@ void ThermalSolver::completeSetup()
   SLIC_ASSERT_MSG(kappa_ != nullptr, "Conductivity not set in ThermalSolver!");
 
   // Add the domain diffusion integrator to the K form and assemble the matrix
-  K_form_ = std::make_unique<mfem::ParBilinearForm>(temperature_->space().get());
+  K_form_ = temperature_->createTensorOnSpace<mfem::ParBilinearForm>();
   K_form_->AddDomainIntegrator(new mfem::DiffusionIntegrator(*kappa_));
   K_form_->Assemble(0);  // keep sparsity pattern of M and K the same
   K_form_->Finalize();
 
   // Add the body source to the RS if specified
-  l_form_ = std::make_unique<mfem::ParLinearForm>(temperature_->space().get());
+  l_form_ = temperature_->createTensorOnSpace<mfem::ParLinearForm>();
   if (source_ != nullptr) {
     l_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*source_));
     rhs_.reset(l_form_->ParallelAssemble());
   } else {
-    rhs_  = std::make_shared<mfem::HypreParVector>(temperature_->space().get());
+    rhs_  = temperature_->createTensorOnSpace<mfem::HypreParVector>();
     *rhs_ = 0.0;
   }
 
@@ -86,7 +86,7 @@ void ThermalSolver::completeSetup()
   }
 
   // Initialize the eliminated BC RHS vector
-  bc_rhs_  = std::make_shared<mfem::HypreParVector>(temperature_->space().get());
+  bc_rhs_  = temperature_->createTensorOnSpace<mfem::HypreParVector>();
   *bc_rhs_ = 0.0;
 
   // Initialize the true vector
@@ -94,7 +94,7 @@ void ThermalSolver::completeSetup()
 
   if (timestepper_ != serac::TimestepMethod::QuasiStatic) {
     // If dynamic, assemble the mass matrix
-    M_form_ = std::make_unique<mfem::ParBilinearForm>(temperature_->space().get());
+    M_form_ = temperature_->createTensorOnSpace<mfem::ParBilinearForm>();
     M_form_->AddDomainIntegrator(new mfem::MassIntegrator());
     M_form_->Assemble(0);  // keep sparsity pattern of M and K the same
     M_form_->Finalize();
@@ -126,7 +126,7 @@ void ThermalSolver::quasiStaticSolve()
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
-  K_solver_ = std::make_shared<mfem::CGSolver>(temperature_->space()->GetComm());
+  K_solver_ = std::make_shared<mfem::CGSolver>(temperature_->comm());
   K_prec_   = std::make_shared<mfem::HypreSmoother>();
 
   K_solver_->iterative_mode = false;
@@ -157,7 +157,7 @@ void ThermalSolver::advanceTimestep(double& dt)
   }
 
   // Distribute the shared DOFs
-  temperature_->gridFunc()->SetFromTrueDofs(*temperature_->trueVec());
+  temperature_->distributeSharedDofs();
   cycle_ += 1;
 }
 
