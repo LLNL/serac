@@ -103,10 +103,10 @@ class BaseSolver {
   virtual void setTime(const double time);
 
   /// Get the current time
-  virtual double getTime() const;
+  virtual double time() const;
 
   /// Get the current cycle
-  virtual int getCycle() const;
+  virtual int cycle() const;
 
   /// Complete the setup and allocate the necessary data structures
   virtual void completeSetup() = 0;
