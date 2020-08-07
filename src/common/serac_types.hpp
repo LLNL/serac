@@ -76,16 +76,6 @@ struct NonlinearSolverParameters {
   int    print_level;
 };
 
-// Finite element information bundle
-// struct FiniteElementState {
-//   std::shared_ptr<mfem::ParFiniteElementSpace>   space;
-//   std::shared_ptr<mfem::FiniteElementCollection> coll;
-//   std::shared_ptr<mfem::ParGridFunction>         gf;
-//   std::shared_ptr<mfem::Vector>                  true_vec;
-//   std::shared_ptr<mfem::ParMesh>                 mesh;
-//   std::string                                    name = "";
-// };
-
 // Git will git confused if the order of the classes are switched, so leave this in until merge
 using BCCoef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
@@ -94,7 +84,7 @@ class FiniteElementState {
   FiniteElementState() = default;
 
   template <typename Collection = mfem::H1_FECollection>
-  FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, const std::string& name,
+  FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh,
                      const mfem::Ordering::Type ordering = mfem::Ordering::byNODES,
                      std::optional<int>         mesh_dim = std::nullopt);
 
@@ -107,6 +97,8 @@ class FiniteElementState {
   std::shared_ptr<mfem::ParFiniteElementSpace> space() { return space_; }
 
   mfem::Vector* trueVec() { return true_vec_.get(); }
+
+  void setName(const std::string& name) { name_ = name; }
 
   std::string name() { return name_; }
 
@@ -141,15 +133,14 @@ class FiniteElementState {
 };
 
 template <typename Collection = mfem::H1_FECollection>
-FiniteElementState::FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, const std::string& name,
+FiniteElementState::FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh,
                                        const mfem::Ordering::Type ordering, std::optional<int> mesh_dim)
     : mesh_(pmesh),
       coll_(std::make_shared<Collection>(order, pmesh->Dimension())),
       space_(std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), coll_.get(),
                                                            (mesh_dim) ? *mesh_dim : pmesh->Dimension(), ordering)),
       gf_(std::make_shared<mfem::ParGridFunction>(space_.get())),
-      true_vec_(std::make_shared<mfem::HypreParVector>(space_.get())),
-      name_(name)
+      true_vec_(std::make_shared<mfem::HypreParVector>(space_.get()))
 {
   *gf_       = 0.0;
   *true_vec_ = 0.0;

@@ -16,10 +16,13 @@ constexpr int NUM_FIELDS = 2;
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
-      velocity_(std::make_shared<FiniteElementState>(order, pmesh, "velocity", mfem::Ordering::byVDIM)),
-      displacement_(std::make_shared<FiniteElementState>(order, pmesh, "displacement", mfem::Ordering::byVDIM)),
+      velocity_(std::make_shared<FiniteElementState>(order, pmesh, mfem::Ordering::byVDIM)),
+      displacement_(std::make_shared<FiniteElementState>(order, pmesh, mfem::Ordering::byVDIM)),
       newton_solver_(pmesh->GetComm())
 {
+  velocity_->setName("velocity");
+  displacement_->setName("displacement");
+
   state_[0] = velocity_;
   state_[1] = displacement_;
 
