@@ -16,9 +16,9 @@ constexpr int NUM_FIELDS = 3;
 ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order), therm_solver_(order, pmesh), solid_solver_(order, pmesh)
 {
-  temperature_  = therm_solver_.getTemperature();
-  velocity_     = solid_solver_.getVelocity();
-  displacement_ = solid_solver_.getDisplacement();
+  temperature_  = therm_solver_.temperature();
+  velocity_     = solid_solver_.velocity();
+  displacement_ = solid_solver_.displacement();
 
   state_[0] = temperature_;
   state_[1] = velocity_;
