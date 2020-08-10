@@ -94,10 +94,12 @@ void BoundaryCondition::eliminateFrom(mfem::HypreParMatrix& k_mat)
   eliminated_matrix_entries_.reset(k_mat.EliminateRowsCols(*true_dofs_));
 }
 
-void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs)
+void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln,
+                                       mfem::Vector& rhs)
 {
   SLIC_ASSERT_MSG(true_dofs_, "Can only eliminate essential boundary conditions.");
-  SLIC_ASSERT_MSG(eliminated_matrix_entries_, "Must set eliminated matrix entries with eliminateFrom before applying to RHS.");
+  SLIC_ASSERT_MSG(eliminated_matrix_entries_,
+                  "Must set eliminated matrix entries with eliminateFrom before applying to RHS.");
   mfem::EliminateBC(k_mat_post_elim, *eliminated_matrix_entries_, *true_dofs_, soln, rhs);
 }
 

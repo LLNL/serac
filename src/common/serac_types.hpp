@@ -162,9 +162,9 @@ class BoundaryCondition {
    * Eliminates the rows and columns corresponding to the BC's true DOFS
    * from a stiffness matrix
    * @param[inout] k_mat The stiffness matrix to eliminate from,
-   * will be modified.  These eliminated matrix entries can be 
-   * used to eliminate an essential BC to an RHS vector with 
-   * BoundaryCondition::eliminateToRHS 
+   * will be modified.  These eliminated matrix entries can be
+   * used to eliminate an essential BC to an RHS vector with
+   * BoundaryCondition::eliminateToRHS
    */
   void eliminateFrom(mfem::HypreParMatrix& k_mat);
 
@@ -176,7 +176,7 @@ class BoundaryCondition {
    * @pre BoundaryCondition::eliminateFrom has been called
    */
   void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs);
-  
+
  private:
   Coef                                              coef_;
   int                                               component_;
