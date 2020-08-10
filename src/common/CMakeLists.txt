@@ -11,6 +11,7 @@ set(common_headers
     )
 
 set(common_sources
+    finite_element_state.cpp
     logger.cpp
     mesh_utils.cpp
     )

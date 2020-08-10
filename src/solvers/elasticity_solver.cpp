@@ -14,9 +14,10 @@ constexpr int NUM_FIELDS = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
-      displacement_(std::make_shared<FiniteElementState>(order, pmesh, mfem::Ordering::byVDIM))
+      displacement_(std::make_shared<FiniteElementState>(
+          order, pmesh, FESOptions{.ordering = mfem::Ordering::byVDIM, .name = "displacement"}))
 {
-  displacement_->setName("displacement");
+  // displacement_->setName("displacement");
   pmesh->EnsureNodes();
   state_[0] = displacement_;
 }

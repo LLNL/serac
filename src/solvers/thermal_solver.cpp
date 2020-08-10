@@ -14,9 +14,9 @@ constexpr int NUM_FIELDS = 1;
 
 ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
     : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
-      temperature_(std::make_shared<FiniteElementState>(order, pmesh, mfem::Ordering::byNODES, 1))
+      temperature_(
+          std::make_shared<FiniteElementState>(order, pmesh, FESOptions{.space_dim = 1, .name = "temperature"}))
 {
-  temperature_->setName("temperature");
   state_[0] = temperature_;
 }
 

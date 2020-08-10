@@ -80,6 +80,31 @@ struct NonlinearSolverParameters {
 using BCCoef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 /**
+ * Structure for optionally configuring a FiniteElementState
+ */
+// The optionals are explicitly default-constructed to allow the user to partially aggregrate-initialized
+// with only the options they care about
+struct FESOptions {
+  /**
+   * The vector dimension for the FiniteElementSpace - defaults to the dimension of the mesh
+   */
+  std::optional<int> space_dim = std::optional<int>();
+  /**
+   * The FECollection to use - defaults to an H1_FECollection
+   */
+  std::optional<std::shared_ptr<mfem::FiniteElementCollection>> coll =
+      std::optional<std::shared_ptr<mfem::FiniteElementCollection>>();
+  /**
+   * The DOF ordering that should be used interally by MFEM
+   */
+  mfem::Ordering::Type ordering = mfem::Ordering::byNODES;
+  /**
+   * The name of the field encapsulated by the state object
+   */
+  std::string name = "";
+};
+
+/**
  * Class for encapsulating the critical MFEM components of a solver
  * namely Mesh, FiniteElementCollection, FiniteElementState,
  * GridFunction, and a Vector of the solution
@@ -93,30 +118,10 @@ class FiniteElementState {
    * Main constructor for building a new state object
    * @param[in] order The order of the problem
    * @param[in] pmesh The problem mesh
-   * @param[in] ordering The DOF ordering to use within the MFEM objects
-   * @param[in] mesh_dim The vector dimension that should be used for DOFs,
-   * if different from the dimension of the mesh
-   * @note If a FiniteElementCollection other than H1 is desired, use
-   * FiniteElementState::create
+   * @param[in] options The options specified, namely those relating to the dimension of the FESpace, the type of
+   * FEColl, the DOF ordering that should be used, and the name of the field
    */
-  template <typename Collection = mfem::H1_FECollection>
-  FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh,
-                     const mfem::Ordering::Type ordering = mfem::Ordering::byNODES,
-                     std::optional<int>         mesh_dim = std::nullopt);
-
-  /**
-   * Helper function for nonstandard FECollection instantiations
-   * @see FiniteElementState::FiniteElementState
-   * @code{.cpp}
-   * FiniteElementState::create<mfem::H1Pos_FECollection>(order, pmesh, mfem::Ordering::byNODES, 1)
-   * @endcode
-   */
-  template <typename Collection>
-  static FiniteElementState create(const int order, std::shared_ptr<mfem::ParMesh> pmesh,
-                                   const mfem::Ordering::Type ordering, std::optional<int> mesh_dim)
-  {
-    return FiniteElementState(order, pmesh, ordering, mesh_dim);
-  }
+  FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, const FESOptions& options = FESOptions());
 
   MPI_Comm comm() { return space_->GetComm(); }
 
@@ -161,20 +166,6 @@ class FiniteElementState {
   std::shared_ptr<mfem::Vector>                  true_vec_;
   std::string                                    name_ = "";
 };
-
-template <typename Collection = mfem::H1_FECollection>
-FiniteElementState::FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh,
-                                       const mfem::Ordering::Type ordering, std::optional<int> mesh_dim)
-    : mesh_(pmesh),
-      coll_(std::make_shared<Collection>(order, pmesh->Dimension())),
-      space_(std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), coll_.get(),
-                                                           (mesh_dim) ? *mesh_dim : pmesh->Dimension(), ordering)),
-      gf_(std::make_shared<mfem::ParGridFunction>(space_.get())),
-      true_vec_(std::make_shared<mfem::HypreParVector>(space_.get()))
-{
-  *gf_       = 0.0;
-  *true_vec_ = 0.0;
-}
 
 // Boundary condition information
 struct BoundaryCondition {
