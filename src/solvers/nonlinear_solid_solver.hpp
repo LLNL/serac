@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file nonlinear_solid_solver.hpp
+ *
+ * @brief The solver object for finite deformation hyperelasticity
+ */
+
 #ifndef NONLINSOLID_SOLVER
 #define NONLINSOLID_SOLVER
 
@@ -14,6 +20,8 @@
 namespace serac {
 
 /**
+ * @brief The nonlinear solid solver class
+ *
  * The nonlinear hyperelastic quasi-static and dynamic
  * hyperelastic solver object. It is derived from MFEM
  * example 10p.
@@ -24,135 +32,167 @@ class NonlinearSolidSolver : public BaseSolver {
   std::shared_ptr<FiniteElementState> displacement_;
 
   /**
-   * The quasi-static operator for use with the MFEM newton solvers
+   * @brief The quasi-static operator for use with the MFEM newton solvers
    */
   std::shared_ptr<mfem::Operator> nonlinear_oper_;
 
   /**
-   * The time dependent operator for use with the MFEM ODE solvers
+   * @brief The time dependent operator for use with the MFEM ODE solvers
    */
   std::shared_ptr<mfem::TimeDependentOperator> timedep_oper_;
 
   /**
-   * The Newton solver for the nonlinear iterations
+   * @brief The Newton solver for the nonlinear iterations
    */
   mfem::NewtonSolver newton_solver_;
 
   /**
-   * The linear solver for the Jacobian
+   * @brief The linear solver for the Jacobian
    */
   std::unique_ptr<mfem::Solver> J_solver_;
 
   /**
-   * The preconditioner for the Jacobian solver
+   * @brief The preconditioner for the Jacobian solver
    */
   std::unique_ptr<mfem::Solver> J_prec_;
 
   /**
-   * The viscosity coefficient
+   * @brief The viscosity coefficient
    */
   std::shared_ptr<mfem::Coefficient> viscosity_;
 
   /**
-   * The hyperelastic material model
+   * @brief The hyperelastic material model
    */
   std::shared_ptr<mfem::HyperelasticModel> model_;
 
   /**
-   * Linear solver parameters
+   * @brief Linear solver parameters
    */
   LinearSolverParameters lin_params_;
 
   /**
-   * Nonlinear solver parameters
+   * @brief Nonlinear solver parameters
    */
   NonlinearSolverParameters nonlin_params_;
 
   /**
-   * Pointer to the reference mesh data
+   * @brief Pointer to the reference mesh data
    */
   std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
 
   /**
-   * Pointer to the deformed mesh data
+   * @brief Pointer to the deformed mesh data
    */
   std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
 
   /**
-   * Solve the Quasi-static operator
+   * @brief Solve the Quasi-static operator
    */
   void quasiStaticSolve();
 
  public:
   /**
-   * Constructor from order and parallel mesh
+   * @brief Construct a new Nonlinear Solid Solver object
+   *
+   * @param[in] order The order of the displacement field
+   * @param[in] pmesh The MFEM parallel mesh to solve on
    */
   NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
   /**
-   * Set the displacement essential boundary conditions
+   * @brief Set displacement boundary conditions
+   *
+   * @param[in] disp_bdr The set of boundary attributes to set the displacement on
+   * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
    */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
 
   /**
-   * Set the displacement essential boundary conditions on a single component
+   * @brief Set the displacement essential boundary conditions on a single component
+   *
+   * @param[in] disp_bdr The set of boundary attributes to set the displacement on
+   * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
+   * @param[in] component The component to set the displacment on
    */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                           int component);
 
   /**
-   * Set the traction boundary conditions
+   * @brief Set the traction boundary conditions
+   *
+   * @param[in] trac_bdr The set of boundary attributes to apply a traction to
+   * @param[in] trac_bdr_coef The vector valued traction coefficient
+   * @param[in] component The component to apply the traction on
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1);
 
   /**
-   * Set the viscosity coefficient
+   * @brief Set the viscosity coefficient
+   *
+   * @param[in] visc_coef The abstract viscosity coefficient
    */
   void setViscosity(std::shared_ptr<mfem::Coefficient> visc_coef);
 
   /**
-   * Set the hyperelastic material parameters
+   * @brief Set the hyperelastic material parameters
+   *
+   * @param[in] mu Set the mu Lame parameter for the hyperelastic solid
+   * @param[in] K Set the K Lame parameter for the hyperelastic solid
    */
   void setHyperelasticMaterialParameters(double mu, double K);
 
   /**
-   * Set the initial displacement state (guess)
+   * @brief Set the initial displacement value
+   *
+   * @param[in] disp_state The initial displacement state
    */
   void setDisplacement(mfem::VectorCoefficient& disp_state);
 
   /**
-   * Set the initial velocity state (guess)
+   * @brief Set the velocity state
+   *
+   * @param[in] velo_state The velocity state
    */
   void setVelocity(mfem::VectorCoefficient& velo_state);
 
   /**
-   * Set the linear and nonlinear solver params
+   * @brief Set the linear and nonlinear parameters object
+   *
+   * @param[in] lin_params The linear solver parameters
+   * @param[in] nonlin_params The nonlinear solver parameters
    */
   void setSolverParameters(const LinearSolverParameters& lin_params, const NonlinearSolverParameters& nonlin_params);
 
   /**
-   * Get the displacement state
+   * @brief Get the displacement state
+   *
+   * @return The displacement state field
    */
   std::shared_ptr<FiniteElementState> displacement() { return displacement_; };
 
   /**
-   * Get the velocity state
+   * @brief Get the velocity state
+   *
+   * @return The velocity state field
    */
   std::shared_ptr<FiniteElementState> velocity() { return velocity_; };
 
   /**
-   * Complete the data structure initialization
+   * @brief Complete the setup of all of the internal MFEM objects and prepare for timestepping
    */
   void completeSetup() override;
 
   /**
-   * Advance the timestep
+   * @brief Advance the timestep
+   *
+   * @param[in/out] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping schemes
    */
   void advanceTimestep(double& dt) override;
 
   /**
-   * Destructor
+   * @brief Destroy the Nonlinear Solid Solver object
    */
   virtual ~NonlinearSolidSolver();
 };
