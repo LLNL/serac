@@ -224,7 +224,7 @@ std::unique_ptr<Integrator> BoundaryCondition::newVecIntegrator() const
 {
   // Can't use std::visit here because integrators may only have a constructor accepting
   // one coef type and not the other - contained types are only known at runtime
-  // One solution could be to switch between implementations with std::enable_if_t and 
+  // One solution could be to switch between implementations with std::enable_if_t and
   // std::is_constructible_v
   SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
                 "Boundary condition had a non-vector coefficient when constructing an integrator.");
