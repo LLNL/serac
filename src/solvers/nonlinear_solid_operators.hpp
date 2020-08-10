@@ -24,17 +24,6 @@ namespace serac {
  * @brief The abstract MFEM operator for a quasi-static solve
  */
 class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
-protected:
-  /**
-   * @brief The nonlinear form
-   */
-  std::shared_ptr<mfem::ParNonlinearForm> H_form_;
-
-  /**
-   * @brief The linearized jacobian at the current state
-   */
-  mutable std::unique_ptr<mfem::Operator> Jacobian_;
-
 public:
   /**
    * @brief Construct a new Nonlinear Solid Quasi Static Operator object
@@ -63,6 +52,17 @@ public:
    * @brief Destroy the Nonlinear Solid Quasi Static Operator object
    */
   virtual ~NonlinearSolidQuasiStaticOperator();
+
+protected:
+  /**
+   * @brief The nonlinear form
+   */
+  std::shared_ptr<mfem::ParNonlinearForm> H_form_;
+
+  /**
+   * @brief The linearized jacobian at the current state
+   */
+  mutable std::unique_ptr<mfem::Operator> Jacobian_;
 };
 
 /**
@@ -74,47 +74,6 @@ public:
  *  are given vectors, and dt is a scalar.S
  */
 class NonlinearSolidReducedSystemOperator : public mfem::Operator {
-private:
-  /**
-   * @brief The bilinear form for the mass matrix
-   */
-  mfem::ParBilinearForm& M_form_;
-
-  /**
-   * @brief The bilinear form for the viscous terms
-   */
-  const mfem::ParBilinearForm& S_form_;
-
-  /**
-   * @brief The nonlinear form for the hyperelastic response
-   */
-  const mfem::ParNonlinearForm& H_form_;
-
-  /**
-   * @brief The linearized jacobian
-   */
-  mutable std::unique_ptr<mfem::HypreParMatrix> jacobian_;
-
-  /**
-   * @brief The current timestep
-   */
-  double dt_;
-
-  /**
-   * @brief The current displacement and velocity vectors
-   */
-  const mfem::Vector *v_, *x_;
-
-  /**
-   * @brief Working vectors
-   */
-  mutable mfem::Vector w_, z_;
-
-  /**
-   * @brief Essential degrees of freedom
-   */
-  const std::vector<serac::BoundaryCondition>& ess_bdr_;
-
 public:
   /**
    * @brief Construct a new Nonlinear Solid Reduced System Operator object
@@ -158,12 +117,94 @@ public:
    *
    */
   virtual ~NonlinearSolidReducedSystemOperator();
+
+private:
+  /**
+   * @brief The bilinear form for the mass matrix
+   */
+  mfem::ParBilinearForm& M_form_;
+
+  /**
+   * @brief The bilinear form for the viscous terms
+   */
+  const mfem::ParBilinearForm& S_form_;
+
+  /**
+   * @brief The nonlinear form for the hyperelastic response
+   */
+  const mfem::ParNonlinearForm& H_form_;
+
+  /**
+   * @brief The linearized jacobian
+   */
+  mutable std::unique_ptr<mfem::HypreParMatrix> jacobian_;
+
+  /**
+   * @brief The current timestep
+   */
+  double dt_;
+
+  /**
+   * @brief The current displacement and velocity vectors
+   */
+  const mfem::Vector *v_, *x_;
+
+  /**
+   * @brief Working vectors
+   */
+  mutable mfem::Vector w_, z_;
+
+  /**
+   * @brief Essential degrees of freedom
+   */
+  const std::vector<serac::BoundaryCondition>& ess_bdr_;
 };
 
 /**
  * @brief The abstract time dependent MFEM operator for explicit and implicit solves
  */
 class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
+public:
+  /**
+   * @brief Construct a new Nonlinear Solid Dynamic Operator object
+   *
+   * @param[in] H_form The nonlinear stiffness form
+   * @param[in] S_form The linear viscosity form
+   * @param[in] M_form The lineawr mass form
+   * @param[in] ess_bdr The essential boundary conditions
+   * @param[in] newton_solver The newton solver object
+   * @param[in] lin_params The linear solver parameters
+   */
+  NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>      H_form,
+                                std::unique_ptr<mfem::ParBilinearForm>       S_form,
+                                std::unique_ptr<mfem::ParBilinearForm>       M_form,
+                                const std::vector<serac::BoundaryCondition>& ess_bdr, mfem::NewtonSolver& newton_solver,
+                                const serac::LinearSolverParameters& lin_params);
+
+  /**
+   * @brief Evaluate the explicit time derivative
+   *
+   * @param[in] vx The current velocity and displacement state
+   * @param[out] dvx_dt The explicit time derivative of the state vector
+   */
+  virtual void Mult(const mfem::Vector& vx, mfem::Vector& dvx_dt) const;
+
+  /**
+   * @brief Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
+   *
+   * This is the only requirement for high-order SDIRK implicit integration.
+   *
+   * @param[in] dt The timestep
+   * @param[in] x The state vector
+   * @param[out] k The implicit time derivative
+   */
+  virtual void ImplicitSolve(const double dt, const mfem::Vector& x, mfem::Vector& k);
+
+  /**
+   * @brief Destroy the Nonlinear Solid Dynamic Operator object
+   */
+  virtual ~NonlinearSolidDynamicOperator();
+
 protected:
   /**
    * @brief The bilinear form for the mass matrix
@@ -219,47 +260,6 @@ protected:
    * @brief Working vector
    */
   mutable mfem::Vector z_;
-
-public:
-  /**
-   * @brief Construct a new Nonlinear Solid Dynamic Operator object
-   *
-   * @param[in] H_form The nonlinear stiffness form
-   * @param[in] S_form The linear viscosity form
-   * @param[in] M_form The lineawr mass form
-   * @param[in] ess_bdr The essential boundary conditions
-   * @param[in] newton_solver The newton solver object
-   * @param[in] lin_params The linear solver parameters
-   */
-  NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>      H_form,
-                                std::unique_ptr<mfem::ParBilinearForm>       S_form,
-                                std::unique_ptr<mfem::ParBilinearForm>       M_form,
-                                const std::vector<serac::BoundaryCondition>& ess_bdr, mfem::NewtonSolver& newton_solver,
-                                const serac::LinearSolverParameters& lin_params);
-
-  /**
-   * @brief Evaluate the explicit time derivative
-   *
-   * @param[in] vx The current velocity and displacement state
-   * @param[out] dvx_dt The explicit time derivative of the state vector
-   */
-  virtual void Mult(const mfem::Vector& vx, mfem::Vector& dvx_dt) const;
-
-  /**
-   * @brief Solve the Backward-Euler equation: k = f(x + dt*k, t), for the unknown k.
-   *
-   * This is the only requirement for high-order SDIRK implicit integration.
-   *
-   * @param[in] dt The timestep
-   * @param[in] x The state vector
-   * @param[out] k The implicit time derivative
-   */
-  virtual void ImplicitSolve(const double dt, const mfem::Vector& x, mfem::Vector& k);
-
-  /**
-   * @brief Destroy the Nonlinear Solid Dynamic Operator object
-   */
-  virtual ~NonlinearSolidDynamicOperator();
 };
 
 }  // namespace serac

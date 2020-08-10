@@ -18,22 +18,6 @@ namespace serac {
  * @brief Custom MFEM integrator for nonlinear finite deformation traction loads
  */
 class HyperelasticTractionIntegrator : public mfem::NonlinearFormIntegrator {
-private:
-  /**
-   * @brief The vector coefficient for the traction load
-   */
-  mfem::VectorCoefficient& function_;
-
-  /**
-   * @brief Working matrices for the traction calculations
-   */
-  mutable mfem::DenseMatrix DSh_u_, DS_u_, J0i_, F_, Finv_, FinvT_, PMatI_u_;
-
-  /**
-   * @brief Working vectors for the traction
-   */
-  mutable mfem::Vector shape_, nor_, fnor_, Sh_p_, Sh_u_;
-
 public:
   /**
    * @brief Construct a new Hyperelastic Traction Integrator object
@@ -71,6 +55,22 @@ public:
    * @brief Destroy the Hyperelastic Traction Integrator object
    */
   virtual ~HyperelasticTractionIntegrator() {}
+
+private:
+  /**
+   * @brief The vector coefficient for the traction load
+   */
+  mfem::VectorCoefficient& function_;
+
+  /**
+   * @brief Working matrices for the traction calculations
+   */
+  mutable mfem::DenseMatrix DSh_u_, DS_u_, J0i_, F_, Finv_, FinvT_, PMatI_u_;
+
+  /**
+   * @brief Working vectors for the traction
+   */
+  mutable mfem::Vector shape_, nor_, fnor_, Sh_p_, Sh_u_;
 };
 
 }  // namespace serac
