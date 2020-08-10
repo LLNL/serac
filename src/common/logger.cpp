@@ -19,18 +19,8 @@ namespace {
  */
 void signalHandler(int signal)
 {
-  int mpi_finalized;
-  MPI_Finalized(&mpi_finalized);
-  if (!mpi_finalized) {
-    MPI_Finalize();
-  }
-  // This works, but is it UB to call MPI_Comm_rank here?
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank == 0) {
-    std::cerr << "[SIGNAL]: Received signal " << signal << ", exiting" << std::endl;
-  }
-  exit(EXIT_FAILURE);
+  std::cerr << "[SIGNAL]: Received signal " << signal << ", exiting" << std::endl;
+  serac::exitGracefully(true);
 }
 
 /**
@@ -56,9 +46,15 @@ namespace serac {
 
 void exitGracefully(bool error)
 {
-  serac::logger::flush();
-  serac::logger::finalize();
-  MPI_Finalize();
+  if (axom::slic::isInitialized()) {
+    serac::logger::flush();
+    serac::logger::finalize();
+  }
+  int mpi_finalized;
+  MPI_Finalized(&mpi_finalized);
+  if (!mpi_finalized) {
+    MPI_Finalize();
+  }
   error ? exit(EXIT_FAILURE) : exit(EXIT_SUCCESS);
 }
 
