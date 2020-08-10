@@ -245,8 +245,8 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   displacement_->initializeTrueVec();
 
   // Set the mesh nodes to the reference configuration
-  displacement_->mesh()->NewNodes(*reference_nodes_);
-  velocity_->mesh()->NewNodes(*reference_nodes_);
+  displacement_->mesh().NewNodes(*reference_nodes_);
+  velocity_->mesh().NewNodes(*reference_nodes_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     quasiStaticSolve();
@@ -265,8 +265,8 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
     deformed_nodes_->Add(1.0, *reference_nodes_);
   }
 
-  displacement_->mesh()->NewNodes(*deformed_nodes_);
-  velocity_->mesh()->NewNodes(*deformed_nodes_);
+  displacement_->mesh().NewNodes(*deformed_nodes_);
+  velocity_->mesh().NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
 }

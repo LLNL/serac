@@ -111,9 +111,6 @@ struct FESOptions {
  */
 class FiniteElementState {
  public:
-  // Currently required so BaseSolver can allocate its state_ vector
-  FiniteElementState() = default;
-
   /**
    * Main constructor for building a new state object
    * @param[in] order The order of the problem
@@ -123,22 +120,45 @@ class FiniteElementState {
    */
   FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, FESOptions&& options = FESOptions());
 
+  /**
+   * Returns the MPI communicator for the state
+   */
   MPI_Comm comm() { return space_.GetComm(); }
 
+  /**
+   * Returns a non-owning reference to the internal grid function
+   */
   mfem::ParGridFunction& gridFunc() { return *gf_; }
 
-  mfem::ParMesh* mesh() { return mesh_.get(); }
+  /**
+   * Returns a non-owning reference to the internal mesh object
+   */
+  mfem::ParMesh& mesh() { return *mesh_; }
 
+  /**
+   * Returns a non-owning reference to the internal FESpace
+   */
   mfem::ParFiniteElementSpace& space() { return space_; }
 
+  /**
+   * Returns a non-owning const reference to the internal FESpace
+   */
   const mfem::ParFiniteElementSpace& space() const { return space_; }
 
+  /**
+   * Returns a non-owning reference to the vector of true DOFs
+   */
   mfem::HypreParVector& trueVec() { return true_vec_; }
 
-  void setName(const std::string& name) { name_ = name; }
-
+  /**
+   * Returns the name of the FEState (field)
+   */
   std::string name() { return name_; }
 
+  /**
+   * Projects a coefficient (vector or scalar) onto the field
+   * @param[in] coef The coefficient to project
+   */
   void project(const BCCoef& coef)
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
@@ -146,14 +166,35 @@ class FiniteElementState {
     std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(*concrete_coef); }, coef);
   }
 
+  /**
+   * Projects a coefficient (vector or scalar) onto the field
+   * @param[in] coef The coefficient to project
+   */
   void project(mfem::Coefficient& coef) { gf_->ProjectCoefficient(coef); }
 
+  /**
+   * Projects a coefficient (vector or scalar) onto the field
+   * @param[in] coef The coefficient to project
+   */
   void project(mfem::VectorCoefficient& coef) { gf_->ProjectCoefficient(coef); }
 
+  /**
+   * Initialize the true DOF vector by extracting true DOFs from the internal
+   * grid function into the internal true DOF vector
+   */
   void initializeTrueVec() { gf_->GetTrueDofs(true_vec_); }
 
+  /**
+   * Set the internal grid function using the true DOF values
+   */
   void distributeSharedDofs() { gf_->SetFromTrueDofs(true_vec_); }
 
+  /**
+   * Utility function for creating a tensor, e.g. mfem::HypreParVector,
+   * mfem::ParBilinearForm, etc on the FESpace encapsulated by an FEState object
+   * @return An owning pointer to a heap-allocated tensor
+   * @pre Tensor must have the constructor Tensor::Tensor(ParFiniteElementSpace*)
+   */
   template <typename Tensor>
   std::unique_ptr<Tensor> createTensorOnSpace()
   {

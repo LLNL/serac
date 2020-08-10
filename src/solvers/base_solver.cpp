@@ -39,7 +39,7 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCo
 {
   serac::BoundaryCondition bc;
 
-  bc.markers.SetSize(state_.front()->mesh()->bdr_attributes.Max());
+  bc.markers.SetSize(state_.front()->mesh().bdr_attributes.Max());
   bc.markers = 0;
 
   for (int attr : ess_bdr) {
@@ -83,7 +83,7 @@ void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCond
 {
   serac::BoundaryCondition bc;
 
-  bc.markers.SetSize(state_.front()->mesh()->bdr_attributes.Max());
+  bc.markers.SetSize(state_.front()->mesh().bdr_attributes.Max());
   bc.markers = 0;
 
   for (int attr : nat_bdr) {
@@ -169,7 +169,7 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
 
   switch (output_type_) {
     case serac::OutputType::VisIt: {
-      visit_dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, state_.front()->mesh());
+      visit_dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front()->mesh());
       for (const auto& state : state_) {
         visit_dc_->RegisterField(state->name(), &state->gridFunc());
       }
@@ -200,7 +200,7 @@ void BaseSolver::outputState() const
       std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
       std::ofstream omesh(mesh_name);
       omesh.precision(8);
-      state_.front()->mesh()->Print(omesh);
+      state_.front()->mesh().Print(omesh);
 
       for (auto& state : state_) {
         std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state->name(), cycle_, mpi_rank_);
