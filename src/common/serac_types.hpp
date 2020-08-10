@@ -116,6 +116,10 @@ class BoundaryCondition {
 
   mfem::Array<int>& getMarkers() { return markers_; }
 
+  /**
+   * "Manually" set the DOF indices without specifying the field to which they apply
+   * @param[in] dofs The indices of the DOFs constrained by the boundary condition
+   */
   void setTrueDofs(const mfem::Array<int> dofs);
 
   /**
@@ -125,8 +129,11 @@ class BoundaryCondition {
    */
   void setTrueDofs(FiniteElementState& state);
 
-  // FIXME: Assert that this is an essential BC
-  const mfem::Array<int>& getTrueDofs() const { return *true_dofs_; }
+  const mfem::Array<int>& getTrueDofs() const
+  {
+    SLIC_ERROR_IF(!true_dofs_, "True DOFs only available with essential BC.");
+    return *true_dofs_;
+  }
 
   // FIXME: Temporary way of maintaining single definition of essential bdr
   // until single class created to encapsulate all BCs
@@ -140,6 +147,11 @@ class BoundaryCondition {
    */
   void project(mfem::ParGridFunction& gf, mfem::ParFiniteElementSpace& fes) const;
 
+  /**
+   * Projects the boundary condition over a grid function
+   * @pre A corresponding field (FiniteElementState) has been associated
+   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
+   */
   void project() const;
 
   /**
@@ -151,11 +163,30 @@ class BoundaryCondition {
   void projectBdr(mfem::ParGridFunction& gf, const double time, bool should_be_scalar = true) const;
 
   /**
+   * Projects the boundary condition over boundary DOFs of a grid function
+   * @param[in] time The time for the coefficient, used for time-varying coefficients
+   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
+   * @pre A corresponding field (FiniteElementState) has been associated
+   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
+   */
+  void projectBdr(const double time, bool should_be_scalar = true) const;
+
+  /**
    * Allocates an integrator of type "Integrator" on the heap,
    * constructing it with the boundary condition's vector coefficient,
    * intended to be passed to mfem::*LinearForm::Add*Integrator
    * @return An owning pointer to the new integrator
    * @pre Requires Integrator::Integrator(mfem::VectorCoefficient&)
+   */
+  template <typename Integrator>
+  std::unique_ptr<Integrator> newVecIntegrator() const;
+
+  /**
+   * Allocates an integrator of type "Integrator" on the heap,
+   * constructing it with the boundary condition's coefficient,
+   * intended to be passed to mfem::*LinearForm::Add*Integrator
+   * @return An owning pointer to the new integrator
+   * @pre Requires Integrator::Integrator(mfem::Coefficient&)
    */
   template <typename Integrator>
   std::unique_ptr<Integrator> newIntegrator() const;
@@ -180,22 +211,32 @@ class BoundaryCondition {
   void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs);
 
  private:
-  Coef                                              coef_;
-  int                                               component_;
-  mfem::Array<int>                                  markers_;
-  std::optional<mfem::Array<int>>                   true_dofs_;  // Only if essential
-  std::optional<FiniteElementState*> state_;      // Only if essential
-  std::unique_ptr<mfem::HypreParMatrix>             eliminated_matrix_entries_;
+  Coef                                  coef_;
+  int                                   component_;
+  mfem::Array<int>                      markers_;
+  std::optional<mfem::Array<int>>       true_dofs_;  // Only if essential
+  std::optional<FiniteElementState*>    state_;      // Only if essential
+  std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
 };
+
+template <typename Integrator>
+std::unique_ptr<Integrator> BoundaryCondition::newVecIntegrator() const
+{
+  // Can't use std::visit here because integrators may only have a constructor accepting
+  // one coef type and not the other - contained types are only known at runtime
+  // One solution could be to switch between implementations with std::enable_if_t and 
+  // std::is_constructible_v
+  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
+                "Boundary condition had a non-vector coefficient when constructing an integrator.");
+  return std::make_unique<Integrator>(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_));
+}
 
 template <typename Integrator>
 std::unique_ptr<Integrator> BoundaryCondition::newIntegrator() const
 {
-  // FIXME: So far this is only used for traction integrators...
-  // will this always be used with VectorCoef in the general case??
-  SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
-                  "Boundary condition had a non-vector coefficient when constructing an integrator.");
-  return std::make_unique<Integrator>(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_));
+  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
+                "Boundary condition had a non-vector coefficient when constructing an integrator.");
+  return std::make_unique<Integrator>(*std::get<std::shared_ptr<mfem::Coefficient>>(coef_));
 }
 
 }  // namespace serac

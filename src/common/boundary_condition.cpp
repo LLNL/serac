@@ -38,12 +38,6 @@ void BoundaryCondition::setTrueDofs(FiniteElementState& state)
   state.space->GetEssentialTrueDofs(markers_, *true_dofs_, component_);
 }
 
-void BoundaryCondition::project() const
-{
-  SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
-  project(*((*state_)->gf), *((*state_)->space));
-}
-
 void BoundaryCondition::project(mfem::ParGridFunction& gf, mfem::ParFiniteElementSpace& space) const
 {
   SLIC_ERROR_IF(!true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
@@ -73,6 +67,12 @@ void BoundaryCondition::project(mfem::ParGridFunction& gf, mfem::ParFiniteElemen
   }
 }
 
+void BoundaryCondition::project() const
+{
+  SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
+  project(*((*state_)->gf), *((*state_)->space));
+}
+
 void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar) const
 {
   if (should_be_scalar) {
@@ -93,6 +93,12 @@ void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time,
       coef_);
 }
 
+void BoundaryCondition::projectBdr(const double time, bool should_be_scalar) const
+{
+  SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
+  projectBdr(*((*state_)->gf), time, should_be_scalar);
+}
+
 void BoundaryCondition::eliminateFrom(mfem::HypreParMatrix& k_mat)
 {
   SLIC_ERROR_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
@@ -104,7 +110,7 @@ void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, co
 {
   SLIC_ERROR_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
   SLIC_ERROR_IF(!eliminated_matrix_entries_,
-                  "Must set eliminated matrix entries with eliminateFrom before applying to RHS.");
+                "Must set eliminated matrix entries with eliminateFrom before applying to RHS.");
   mfem::EliminateBC(k_mat_post_elim, *eliminated_matrix_entries_, *true_dofs_, soln, rhs);
 }
 
