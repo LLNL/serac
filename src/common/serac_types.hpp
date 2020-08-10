@@ -169,12 +169,12 @@ class BoundaryCondition {
   mfem::HypreParMatrix& getEliminated() { return *eliminated_matrix_entries_; }
 
  private:
-  Coef                                  coef_;
-  int                                   component_;
-  mfem::Array<int>                      markers_;
-  std::optional<mfem::Array<int>>       true_dofs_;  // Only if essential
-  std::optional<const mfem::ParFiniteElementSpace*>       space_;  // Only if essential
-  std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
+  Coef                                              coef_;
+  int                                               component_;
+  mfem::Array<int>                                  markers_;
+  std::optional<mfem::Array<int>>                   true_dofs_;  // Only if essential
+  std::optional<const mfem::ParFiniteElementSpace*> space_;      // Only if essential
+  std::unique_ptr<mfem::HypreParMatrix>             eliminated_matrix_entries_;
 };
 
 template <typename Integrator>
