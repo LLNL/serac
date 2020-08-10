@@ -35,7 +35,7 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
 }
 
 void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                                 const mfem::ParFiniteElementSpace& fes, const int component)
+                                 FiniteElementState& state, const int component)
 {
   auto num_attrs = state_.front()->mesh->bdr_attributes.Max();
 
@@ -49,7 +49,7 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCo
     }
   }
 
-  bc.setTrueDofs(fes);
+  bc.setTrueDofs(state);
 
   ess_bdr_.emplace_back(std::move(bc));
 }

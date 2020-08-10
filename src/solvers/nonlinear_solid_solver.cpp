@@ -65,13 +65,13 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, -1);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, -1);
 }
 
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
@@ -137,7 +137,7 @@ void NonlinearSolidSolver::completeSetup()
   // Project the essential boundary coefficients
   for (auto& bc : ess_bdr_) {
     // Project the coefficient
-    bc.project(*(displacement_->gf), displacement_->space.get());
+    bc.project(*(displacement_->gf), *(displacement_->space));
 
     // Add the vector dofs to the total essential BC dof list
     essential_dofs.Append(bc.getTrueDofs());

@@ -28,29 +28,34 @@ BoundaryCondition::BoundaryCondition(Coef coef, const int component, const mfem:
 
 void BoundaryCondition::setTrueDofs(const mfem::Array<int> dofs) { true_dofs_ = dofs; }
 
-void BoundaryCondition::setTrueDofs(const mfem::ParFiniteElementSpace& fes)
+void BoundaryCondition::setTrueDofs(FiniteElementState& state)
 {
   true_dofs_.emplace(0);
-  space_ = &fes;
+  state_ = &state;
   // This function can and should be marked const in MFEM
   // TODO: Raise an issue against MFEM
   // Leave this explicit non-const action in as a stopgap
-  const_cast<mfem::ParFiniteElementSpace&>(fes).GetEssentialTrueDofs(markers_, *true_dofs_, component_);
+  state.space->GetEssentialTrueDofs(markers_, *true_dofs_, component_);
 }
 
-void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace* fes) const
+void BoundaryCondition::project() const
 {
-  SLIC_ASSERT_MSG(true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
+  SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
+  project(*((*state_)->gf), *((*state_)->space));
+}
+
+void BoundaryCondition::project(mfem::ParGridFunction& gf, mfem::ParFiniteElementSpace& space) const
+{
+  SLIC_ERROR_IF(!true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
   // Value semantics for convenience
   auto tdofs = *true_dofs_;
   auto size  = tdofs.Size();
   // FIXME: Why would the be a true dof array of size zero when running with MPI?
   if (size) {
     // Generate the scalar dof list from the vector dof list
-    auto space = (space_) ? *space_ : fes;
     SLIC_ASSERT_MSG(space, "Only BCs associated with a space can be projected.");
     mfem::Array<int> dof_list(size);
-    std::transform(&tdofs[0], &tdofs[0] + size, &dof_list[0], [&space](int tdof) { return space->VDofToDof(tdof); });
+    std::transform(&tdofs[0], &tdofs[0] + size, &dof_list[0], [&space](int tdof) { return space.VDofToDof(tdof); });
 
     // dof_list should be const param but it's not
     // TODO: Raise an issue against MFEM
@@ -90,15 +95,15 @@ void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time,
 
 void BoundaryCondition::eliminateFrom(mfem::HypreParMatrix& k_mat)
 {
-  SLIC_ASSERT_MSG(true_dofs_, "Can only eliminate essential boundary conditions.");
+  SLIC_ERROR_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
   eliminated_matrix_entries_.reset(k_mat.EliminateRowsCols(*true_dofs_));
 }
 
 void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln,
                                        mfem::Vector& rhs)
 {
-  SLIC_ASSERT_MSG(true_dofs_, "Can only eliminate essential boundary conditions.");
-  SLIC_ASSERT_MSG(eliminated_matrix_entries_,
+  SLIC_ERROR_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
+  SLIC_ERROR_IF(!eliminated_matrix_entries_,
                   "Must set eliminated matrix entries with eliminateFrom before applying to RHS.");
   mfem::EliminateBC(k_mat_post_elim, *eliminated_matrix_entries_, *true_dofs_, soln, rhs);
 }

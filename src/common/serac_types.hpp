@@ -121,9 +121,9 @@ class BoundaryCondition {
   /**
    * Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
    * determine the DOFs for the boundary condition
-   * @param[in] fes The finite element space for which the DOFs should be obtained
+   * @param[in] state The finite element state for which the DOFs should be obtained
    */
-  void setTrueDofs(const mfem::ParFiniteElementSpace& fes);
+  void setTrueDofs(FiniteElementState& state);
 
   // FIXME: Assert that this is an essential BC
   const mfem::Array<int>& getTrueDofs() const { return *true_dofs_; }
@@ -138,7 +138,9 @@ class BoundaryCondition {
    * @param[in] fes The finite element space that should be used to generate
    * the scalar DOF list
    */
-  void project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace* fes = nullptr) const;
+  void project(mfem::ParGridFunction& gf, mfem::ParFiniteElementSpace& fes) const;
+
+  void project() const;
 
   /**
    * Projects the boundary condition over boundary DOFs of a grid function
@@ -182,7 +184,7 @@ class BoundaryCondition {
   int                                               component_;
   mfem::Array<int>                                  markers_;
   std::optional<mfem::Array<int>>                   true_dofs_;  // Only if essential
-  std::optional<const mfem::ParFiniteElementSpace*> space_;      // Only if essential
+  std::optional<FiniteElementState*> state_;      // Only if essential
   std::unique_ptr<mfem::HypreParMatrix>             eliminated_matrix_entries_;
 };
 

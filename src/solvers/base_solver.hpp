@@ -76,7 +76,7 @@ class BaseSolver {
   /// Set the essential boundary conditions from a list of boundary markers and
   /// a coefficient
   virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                               const mfem::ParFiniteElementSpace& fes, const int component = -1);
+                               FiniteElementState& state, const int component = -1);
 
   /// Set a list of true degrees of freedom from a coefficient
   virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,

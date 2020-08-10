@@ -37,7 +37,7 @@ void ThermalSolver::setTemperature(mfem::Coefficient& temp)
 
 void ThermalSolver::setTemperatureBCs(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
 {
-  setEssentialBCs(ess_bdr, ess_bdr_coef, *temperature_->space);
+  setEssentialBCs(ess_bdr, ess_bdr_coef, *temperature_);
 }
 
 void ThermalSolver::setFluxBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
