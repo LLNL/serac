@@ -122,7 +122,7 @@ void ThermalSolver::quasiStaticSolve()
     scalar_coef->SetTime(time_);
     temperature_->gridFunc().ProjectBdrCoefficient(*scalar_coef, bc.markers);
     temperature_->initializeTrueVec();
-    mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, *temperature_->trueVec(), *bc_rhs_);
+    mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, temperature_->trueVec(), *bc_rhs_);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning
@@ -140,7 +140,7 @@ void ThermalSolver::quasiStaticSolve()
   K_solver_->SetOperator(*K_mat_);
 
   // Perform the linear solve
-  K_solver_->Mult(*bc_rhs_, *temperature_->trueVec());
+  K_solver_->Mult(*bc_rhs_, temperature_->trueVec());
 }
 
 void ThermalSolver::advanceTimestep(double& dt)
@@ -154,7 +154,7 @@ void ThermalSolver::advanceTimestep(double& dt)
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
     // Step the time integrator
-    ode_solver_->Step(*temperature_->trueVec(), time_, dt);
+    ode_solver_->Step(temperature_->trueVec(), time_, dt);
   }
 
   // Distribute the shared DOFs

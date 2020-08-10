@@ -151,12 +151,12 @@ void ElasticitySolver::QuasiStaticSolve()
     vec_coef->SetTime(time_);
     displacement_->gridFunc().ProjectBdrCoefficient(*vec_coef, bc.markers);
     displacement_->initializeTrueVec();
-    mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.true_dofs, *displacement_->trueVec(), *bc_rhs_);
+    mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.true_dofs, displacement_->trueVec(), *bc_rhs_);
   }
 
   K_solver_->SetOperator(*K_mat_);
 
-  K_solver_->Mult(*bc_rhs_, *displacement_->trueVec());
+  K_solver_->Mult(*bc_rhs_, displacement_->trueVec());
 }
 
 ElasticitySolver::~ElasticitySolver() {}

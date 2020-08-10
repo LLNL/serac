@@ -12,15 +12,13 @@ FiniteElementState::FiniteElementState(const int order, std::shared_ptr<mfem::Pa
     : mesh_(pmesh),
       coll_(options.coll ? std::move(*options.coll)
                          : std::make_unique<mfem::H1_FECollection>(order, pmesh->Dimension())),
-      // space_(std::make_shared<mfem::ParFiniteElementSpace>(
-      //     pmesh.get(), coll_.get(), options.space_dim ? *options.space_dim : pmesh->Dimension(), options.ordering)),
       space_(pmesh.get(), coll_.get(), options.space_dim ? *options.space_dim : pmesh->Dimension(), options.ordering),
-      gf_(std::make_shared<mfem::ParGridFunction>(&space_)),
-      true_vec_(std::make_shared<mfem::HypreParVector>(&space_)),
+      gf_(std::make_unique<mfem::ParGridFunction>(&space_)),
+      true_vec_(&space_),
       name_(options.name)
 {
-  *gf_       = 0.0;
-  *true_vec_ = 0.0;
+  *gf_      = 0.0;
+  true_vec_ = 0.0;
 }
 
 }  // namespace serac

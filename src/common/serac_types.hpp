@@ -133,7 +133,7 @@ class FiniteElementState {
 
   const mfem::ParFiniteElementSpace& space() const { return space_; }
 
-  mfem::Vector* trueVec() { return true_vec_.get(); }
+  mfem::HypreParVector& trueVec() { return true_vec_; }
 
   void setName(const std::string& name) { name_ = name; }
 
@@ -150,9 +150,9 @@ class FiniteElementState {
 
   void project(mfem::VectorCoefficient& coef) { gf_->ProjectCoefficient(coef); }
 
-  void initializeTrueVec() { gf_->GetTrueDofs(*true_vec_); }
+  void initializeTrueVec() { gf_->GetTrueDofs(true_vec_); }
 
-  void distributeSharedDofs() { gf_->SetFromTrueDofs(*true_vec_); }
+  void distributeSharedDofs() { gf_->SetFromTrueDofs(true_vec_); }
 
   template <typename Tensor>
   std::unique_ptr<Tensor> createTensorOnSpace()
@@ -164,8 +164,8 @@ class FiniteElementState {
   std::shared_ptr<mfem::ParMesh>                 mesh_;
   std::unique_ptr<mfem::FiniteElementCollection> coll_;
   mfem::ParFiniteElementSpace                    space_;
-  std::shared_ptr<mfem::ParGridFunction>         gf_;
-  std::shared_ptr<mfem::Vector>                  true_vec_;
+  std::unique_ptr<mfem::ParGridFunction>         gf_;
+  mfem::HypreParVector                           true_vec_;
   std::string                                    name_ = "";
 };
 

@@ -40,11 +40,11 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   true_offset[2]             = 2 * true_size;
   block_                     = std::make_unique<mfem::BlockVector>(true_offset);
 
-  block_->GetBlockView(1, *displacement_->trueVec());
-  *displacement_->trueVec() = 0.0;
+  block_->GetBlockView(1, displacement_->trueVec());
+  displacement_->trueVec() = 0.0;
 
-  block_->GetBlockView(0, *velocity_->trueVec());
-  *velocity_->trueVec() = 0.0;
+  block_->GetBlockView(0, velocity_->trueVec());
+  velocity_->trueVec() = 0.0;
 }
 
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
@@ -234,7 +234,7 @@ void NonlinearSolidSolver::completeSetup()
 void NonlinearSolidSolver::quasiStaticSolve()
 {
   mfem::Vector zero;
-  newton_solver_.Mult(zero, *displacement_->trueVec());
+  newton_solver_.Mult(zero, displacement_->trueVec());
 }
 
 // Advance the timestep
