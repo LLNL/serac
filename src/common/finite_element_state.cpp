@@ -8,13 +8,15 @@
 
 namespace serac {
 
-FiniteElementState::FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, const FESOptions& options)
+FiniteElementState::FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, FESOptions&& options)
     : mesh_(pmesh),
-      coll_(options.coll ? *options.coll : std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension())),
-      space_(std::make_shared<mfem::ParFiniteElementSpace>(
-          pmesh.get(), coll_.get(), options.space_dim ? *options.space_dim : pmesh->Dimension(), options.ordering)),
-      gf_(std::make_shared<mfem::ParGridFunction>(space_.get())),
-      true_vec_(std::make_shared<mfem::HypreParVector>(space_.get())),
+      coll_(options.coll ? std::move(*options.coll)
+                         : std::make_unique<mfem::H1_FECollection>(order, pmesh->Dimension())),
+      // space_(std::make_shared<mfem::ParFiniteElementSpace>(
+      //     pmesh.get(), coll_.get(), options.space_dim ? *options.space_dim : pmesh->Dimension(), options.ordering)),
+      space_(pmesh.get(), coll_.get(), options.space_dim ? *options.space_dim : pmesh->Dimension(), options.ordering),
+      gf_(std::make_shared<mfem::ParGridFunction>(&space_)),
+      true_vec_(std::make_shared<mfem::HypreParVector>(&space_)),
       name_(options.name)
 {
   *gf_       = 0.0;

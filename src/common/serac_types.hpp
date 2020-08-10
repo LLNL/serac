@@ -92,8 +92,8 @@ struct FESOptions {
   /**
    * The FECollection to use - defaults to an H1_FECollection
    */
-  std::optional<std::shared_ptr<mfem::FiniteElementCollection>> coll =
-      std::optional<std::shared_ptr<mfem::FiniteElementCollection>>();
+  std::optional<std::unique_ptr<mfem::FiniteElementCollection>> coll =
+      std::optional<std::unique_ptr<mfem::FiniteElementCollection>>();
   /**
    * The DOF ordering that should be used interally by MFEM
    */
@@ -121,15 +121,17 @@ class FiniteElementState {
    * @param[in] options The options specified, namely those relating to the dimension of the FESpace, the type of
    * FEColl, the DOF ordering that should be used, and the name of the field
    */
-  FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, const FESOptions& options = FESOptions());
+  FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, FESOptions&& options = FESOptions());
 
-  MPI_Comm comm() { return space_->GetComm(); }
+  MPI_Comm comm() { return space_.GetComm(); }
 
-  mfem::ParGridFunction* gridFunc() { return gf_.get(); }
+  mfem::ParGridFunction& gridFunc() { return *gf_; }
 
   mfem::ParMesh* mesh() { return mesh_.get(); }
 
-  std::shared_ptr<mfem::ParFiniteElementSpace> space() { return space_; }
+  mfem::ParFiniteElementSpace& space() { return space_; }
+
+  const mfem::ParFiniteElementSpace& space() const { return space_; }
 
   mfem::Vector* trueVec() { return true_vec_.get(); }
 
@@ -155,13 +157,13 @@ class FiniteElementState {
   template <typename Tensor>
   std::unique_ptr<Tensor> createTensorOnSpace()
   {
-    return std::make_unique<Tensor>(space_.get());
+    return std::make_unique<Tensor>(&space_);
   }
 
  private:
   std::shared_ptr<mfem::ParMesh>                 mesh_;
-  std::shared_ptr<mfem::FiniteElementCollection> coll_;
-  std::shared_ptr<mfem::ParFiniteElementSpace>   space_;
+  std::unique_ptr<mfem::FiniteElementCollection> coll_;
+  mfem::ParFiniteElementSpace                    space_;
   std::shared_ptr<mfem::ParGridFunction>         gf_;
   std::shared_ptr<mfem::Vector>                  true_vec_;
   std::string                                    name_ = "";

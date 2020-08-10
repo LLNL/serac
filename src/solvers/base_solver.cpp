@@ -29,7 +29,7 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
   order_ = p;
   state_.resize(n);
 
-  std::generate(state_.begin(), state_.end(), std::make_shared<serac::FiniteElementState>);
+  // std::generate(state_.begin(), state_.end(), std::make_shared<serac::FiniteElementState>);
 
   gf_initialized_.assign(n, false);
 }
@@ -171,7 +171,7 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
     case serac::OutputType::VisIt: {
       visit_dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, state_.front()->mesh());
       for (const auto& state : state_) {
-        visit_dc_->RegisterField(state->name(), state->gridFunc());
+        visit_dc_->RegisterField(state->name(), &state->gridFunc());
       }
       break;
     }
@@ -206,7 +206,7 @@ void BaseSolver::outputState() const
         std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state->name(), cycle_, mpi_rank_);
         std::ofstream osol(sol_name);
         osol.precision(8);
-        state->gridFunc()->Save(osol);
+        state->gridFunc().Save(osol);
       }
       break;
     }

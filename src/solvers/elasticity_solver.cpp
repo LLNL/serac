@@ -17,7 +17,6 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
       displacement_(std::make_shared<FiniteElementState>(
           order, pmesh, FESOptions{.ordering = mfem::Ordering::byVDIM, .name = "displacement"}))
 {
-  // displacement_->setName("displacement");
   pmesh->EnsureNodes();
   state_[0] = displacement_;
 }
@@ -25,7 +24,7 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
 void ElasticitySolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space(), component);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, displacement_->space(), component);
 }
 
 void ElasticitySolver::setTractionBCs(const std::set<int>&                     trac_bdr,
@@ -95,12 +94,12 @@ void ElasticitySolver::completeSetup()
   std::unique_ptr<mfem::IterativeSolver> iter_solver;
 
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
-    SLIC_WARNING_IF(displacement_->space()->GetOrdering() == mfem::Ordering::byVDIM,
+    SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
 
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
-    prec_amg->SetElasticityOptions(displacement_->space().get());
+    prec_amg->SetElasticityOptions(&displacement_->space());
     K_prec_ = std::move(prec_amg);
 
     iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->comm());
@@ -150,7 +149,7 @@ void ElasticitySolver::QuasiStaticSolve()
                     "Displacement boundary condition had a non-vector coefficient.");
     auto vec_coef = std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef);
     vec_coef->SetTime(time_);
-    displacement_->gridFunc()->ProjectBdrCoefficient(*vec_coef, bc.markers);
+    displacement_->gridFunc().ProjectBdrCoefficient(*vec_coef, bc.markers);
     displacement_->initializeTrueVec();
     mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.true_dofs, *displacement_->trueVec(), *bc_rhs_);
   }

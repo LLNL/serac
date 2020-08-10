@@ -18,7 +18,7 @@ namespace serac {
 class DynamicConductionOperator : public mfem::TimeDependentOperator {
  protected:
   /// Finite Element space
-  std::shared_ptr<mfem::ParFiniteElementSpace> fespace_;
+  mfem::ParFiniteElementSpace& fespace_;
 
   /// Grid function for boundary condition projection
   std::shared_ptr<mfem::ParGridFunction> state_gf_;
@@ -66,9 +66,8 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
 
  public:
   /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
-                            const serac::LinearSolverParameters&         params,
-                            std::vector<serac::BoundaryCondition>&       ess_bdr);
+  DynamicConductionOperator(mfem::ParFiniteElementSpace& fespace, const serac::LinearSolverParameters& params,
+                            std::vector<serac::BoundaryCondition>& ess_bdr);
 
   /// Set the mass matrix
   void setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);

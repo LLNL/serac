@@ -34,7 +34,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 
   // Initialize the true DOF vector
   mfem::Array<int> true_offset(NUM_FIELDS + 1);
-  int              true_size = velocity_->space()->TrueVSize();
+  int              true_size = velocity_->space().TrueVSize();
   true_offset[0]             = 0;
   true_offset[1]             = true_size;
   true_offset[2]             = 2 * true_size;
@@ -50,13 +50,13 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space(), -1);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, displacement_->space(), -1);
 }
 
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space(), component);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, displacement_->space(), component);
 }
 
 void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
@@ -118,14 +118,14 @@ void NonlinearSolidSolver::completeSetup()
   mfem::Array<int> essential_dofs(0);
 
   // Build the dof array lookup tables
-  displacement_->space()->BuildDofToArrays();
+  displacement_->space().BuildDofToArrays();
 
   // Project the essential boundary coefficients
   for (auto& bc : ess_bdr_) {
     // Generate the scalar dof list from the vector dof list
     mfem::Array<int> dof_list(bc.true_dofs.Size());
     for (int i = 0; i < bc.true_dofs.Size(); ++i) {
-      dof_list[i] = displacement_->space()->VDofToDof(bc.true_dofs[i]);
+      dof_list[i] = displacement_->space().VDofToDof(bc.true_dofs[i]);
     }
 
     // Project the coefficient
@@ -133,14 +133,14 @@ void NonlinearSolidSolver::completeSetup()
       // If it contains all components, project the vector
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef),
                       "Displacement boundary condition contained all components but had a non-vector coefficient.");
-      displacement_->gridFunc()->ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef),
-                                                    dof_list);
+      displacement_->gridFunc().ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef),
+                                                   dof_list);
     } else {
       // If it is only a single component, project the scalar
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
                       "Displacement boundary condition contained a single component but had a non-scalar coefficient.");
-      displacement_->gridFunc()->ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef), dof_list,
-                                                    bc.component);
+      displacement_->gridFunc().ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef), dof_list,
+                                                   bc.component);
     }
 
     // Add the vector dofs to the total essential BC dof list
@@ -186,11 +186,11 @@ void NonlinearSolidSolver::completeSetup()
   std::unique_ptr<mfem::IterativeSolver> iter_solver;
 
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
-    SLIC_WARNING_IF(displacement_->space()->GetOrdering() == mfem::Ordering::byVDIM,
+    SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
-    prec_amg->SetElasticityOptions(displacement_->space().get());
+    prec_amg->SetElasticityOptions(&displacement_->space());
     J_prec_ = std::move(prec_amg);
 
     iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->comm());
@@ -259,7 +259,7 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   displacement_->distributeSharedDofs();
 
   // Update the mesh with the new deformed nodes
-  deformed_nodes_->Set(1.0, *displacement_->gridFunc());
+  deformed_nodes_->Set(1.0, displacement_->gridFunc());
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     deformed_nodes_->Add(1.0, *reference_nodes_);
