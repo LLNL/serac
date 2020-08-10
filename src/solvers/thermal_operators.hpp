@@ -93,7 +93,9 @@ protected:
   /**
    * @brief Auxillary working vectors
    */
-  mutable mfem::Vector z_, y_, x_;
+  mutable mfem::Vector z_;
+  mutable mfem::Vector y_;
+  mutable mfem::Vector x_;
 
   /**
    * @brief Storage of old dt use to determine if we should recompute the T matrix

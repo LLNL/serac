@@ -27,12 +27,22 @@ private:
   /**
    * @brief Working matrices for the traction calculations
    */
-  mutable mfem::DenseMatrix DSh_u_, DS_u_, J0i_, F_, Finv_, FinvT_, PMatI_u_;
+  mutable mfem::DenseMatrix DSh_u_;
+  mutable mfem::DenseMatrix DS_u_;
+  mutable mfem::DenseMatrix J0i_;
+  mutable mfem::DenseMatrix F_;
+  mutable mfem::DenseMatrix Finv_;
+  mutable mfem::DenseMatrix FinvT_;
+  mutable mfem::DenseMatrix PMatI_u_;
 
   /**
    * @brief Working vectors for the traction
    */
-  mutable mfem::Vector shape_, nor_, fnor_, Sh_p_, Sh_u_;
+  mutable mfem::Vector shape_;
+  mutable mfem::Vector nor_;
+  mutable mfem::Vector fnor_;
+  mutable mfem::Vector Sh_p_;
+  mutable mfem::Vector Sh_u_;
 
 public:
   /**
