@@ -155,12 +155,6 @@ void NonlinearSolidSolver::completeSetup()
   // The abstract viscosity bilinear form
   std::unique_ptr<mfem::ParBilinearForm> S_form;
 
-  // The abstract mass bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> M_form_;
-
-  // The abstract viscosity bilinear form
-  std::shared_ptr<mfem::ParBilinearForm> S_form_;
-
   // If dynamic, create the mass and viscosity forms
   if (timestepper_ != serac::TimestepMethod::QuasiStatic) {
     const double              ref_density = 1.0;  // density in the reference configuration
