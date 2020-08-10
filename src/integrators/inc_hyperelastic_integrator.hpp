@@ -7,7 +7,7 @@
 /**
  * @file inc_hyperelastic_integrator.hpp
  *
- * @brief The MFEM integrators for the incremetal hyperelastic formulation
+ * @brief The MFEM integrators for the incremental hyperelastic formulation
  */
 
 #include "mfem.hpp"

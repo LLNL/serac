@@ -276,7 +276,7 @@ public:
                                std::function<double(const double, const double)> func);
 
   /**
-   * @brief Evalate the coefficient at a quadrature point
+   * @brief Evaluate the coefficient at a quadrature point
    *
    * @param[in] Tr The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
