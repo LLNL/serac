@@ -24,7 +24,7 @@ namespace serac {
  * @brief The operator-split thermal structural solver
  */
 class ThermalStructuralSolver : public BaseSolver {
- protected:
+protected:
   /**
    * @brief The temperature finite element state
    */
@@ -55,7 +55,7 @@ class ThermalStructuralSolver : public BaseSolver {
    */
   serac::CouplingScheme coupling_;
 
- public:
+public:
   /**
    * @brief Construct a new Thermal Structural Solver object
    *

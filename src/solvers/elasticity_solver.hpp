@@ -30,7 +30,7 @@ namespace serac {
  *  and lambda and mu are the lame parameters
  */
 class ElasticitySolver : public BaseSolver {
- protected:
+protected:
   std::shared_ptr<serac::FiniteElementState> displacement_;
 
   /**
@@ -98,7 +98,7 @@ class ElasticitySolver : public BaseSolver {
    */
   void QuasiStaticSolve();
 
- public:
+public:
   /**
    * @brief Construct a new Elasticity Solver object
    *

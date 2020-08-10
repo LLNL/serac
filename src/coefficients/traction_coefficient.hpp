@@ -22,7 +22,7 @@ namespace serac {
  *
  */
 class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
- private:
+private:
   /**
    * @brief The vector to be scaled
    */
@@ -33,7 +33,7 @@ class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
    */
   double scale_;
 
- public:
+public:
   /**
    * @brief Construct a new Vector Scaled Constant Coefficient object
    *

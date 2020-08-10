@@ -23,7 +23,7 @@ namespace serac {
  * given by the current mesh at the time of the evaluation of the integrator.
  */
 class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
- private:
+private:
   /**
    * @brief The associated hyperelastic model
    */
@@ -43,7 +43,7 @@ class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
    */
   mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, Jpt_, P_, PMatI_, PMatO_;
 
- public:
+public:
   /**
    * @brief The constructor for the incremental hyperelastic integrator
    *

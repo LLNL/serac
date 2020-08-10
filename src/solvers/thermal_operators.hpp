@@ -24,7 +24,7 @@ namespace serac {
  * @brief The time dependent operator for advancing the discretized conduction ODE
  */
 class DynamicConductionOperator : public mfem::TimeDependentOperator {
- protected:
+protected:
   /**
    * @brief Finite Element space
    */
@@ -100,7 +100,7 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
    */
   mutable double old_dt_;
 
- public:
+public:
   /**
    * @brief Construct a new Dynamic Conduction Operator object
    *

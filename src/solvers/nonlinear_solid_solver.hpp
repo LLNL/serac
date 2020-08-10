@@ -27,7 +27,7 @@ namespace serac {
  * example 10p.
  */
 class NonlinearSolidSolver : public BaseSolver {
- protected:
+protected:
   std::shared_ptr<FiniteElementState> velocity_;
   std::shared_ptr<FiniteElementState> displacement_;
 
@@ -91,7 +91,7 @@ class NonlinearSolidSolver : public BaseSolver {
    */
   void quasiStaticSolve();
 
- public:
+public:
   /**
    * @brief Construct a new Nonlinear Solid Solver object
    *

@@ -17,7 +17,7 @@ using namespace mfem;
 using namespace serac;
 
 class WrapperTests : public ::testing::Test {
- protected:
+protected:
   void SetUp()
   {
     // Set up mesh

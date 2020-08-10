@@ -30,7 +30,7 @@ namespace serac {
  *  thermal load vector.
  */
 class ThermalSolver : public BaseSolver {
- protected:
+protected:
   /**
    * @brief The temperature finite element state
    */
@@ -116,7 +116,7 @@ class ThermalSolver : public BaseSolver {
    */
   void quasiStaticSolve();
 
- public:
+public:
   /**
    * @brief Construct a new Thermal Solver object
    *

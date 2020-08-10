@@ -24,7 +24,7 @@ namespace serac {
  * @brief The abstract MFEM operator for a quasi-static solve
  */
 class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
- protected:
+protected:
   /**
    * @brief The nonlinear form
    */
@@ -35,7 +35,7 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
    */
   mutable std::unique_ptr<mfem::Operator> Jacobian_;
 
- public:
+public:
   /**
    * @brief Construct a new Nonlinear Solid Quasi Static Operator object
    *
@@ -74,7 +74,7 @@ class NonlinearSolidQuasiStaticOperator : public mfem::Operator {
  *  are given vectors, and dt is a scalar.S
  */
 class NonlinearSolidReducedSystemOperator : public mfem::Operator {
- private:
+private:
   /**
    * @brief The bilinear form for the mass matrix
    */
@@ -115,7 +115,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
    */
   const std::vector<serac::BoundaryCondition>& ess_bdr_;
 
- public:
+public:
   /**
    * @brief Construct a new Nonlinear Solid Reduced System Operator object
    *
@@ -164,7 +164,7 @@ class NonlinearSolidReducedSystemOperator : public mfem::Operator {
  * @brief The abstract time dependent MFEM operator for explicit and implicit solves
  */
 class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
- protected:
+protected:
   /**
    * @brief The bilinear form for the mass matrix
    */
@@ -220,7 +220,7 @@ class NonlinearSolidDynamicOperator : public mfem::TimeDependentOperator {
    */
   mutable mfem::Vector z_;
 
- public:
+public:
   /**
    * @brief Construct a new Nonlinear Solid Dynamic Operator object
    *

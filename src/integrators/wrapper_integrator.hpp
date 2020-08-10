@@ -23,7 +23,7 @@ namespace serac {
  *  @brief A class to convert linearform integrators into a nonlinear residual-based one
  */
 class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
- public:
+public:
   /**
    * @brief Recasts, A(u) = F as R(u) = A(u) - F
    *
@@ -55,7 +55,7 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
   virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
                                    const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
 
- private:
+private:
   /**
    * @brief The linear form integrator to wrap
    */
@@ -71,7 +71,7 @@ class LinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
  * @brief A class to convert linearform integrators into a nonlinear residual-based one
  */
 class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
- public:
+public:
   /**
    * @brief Recasts, A(u) = F as R(u) = A(u) - F
    *
@@ -100,7 +100,7 @@ class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
   virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
                                    const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
 
- private:
+private:
   /**
    * @brief The bilinear form to wrap
    *
@@ -112,7 +112,7 @@ class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
  * @brief A class to convert a MixedBiolinearIntegrator into a nonlinear residual-based one
  */
 class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
- public:
+public:
   /**
    * @brief Recasts, A(u) = F as R(u) = A(u) - F
    *
@@ -144,7 +144,7 @@ class MixedBilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegra
   virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
                                    const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
 
- private:
+private:
   /**
    * @brief The bilinear integrator to wrap
    */

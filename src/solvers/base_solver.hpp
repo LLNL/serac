@@ -25,7 +25,7 @@ namespace serac {
  * @brief This is the abstract base class for a generic forward solver
  */
 class BaseSolver {
- protected:
+protected:
   /**
    * @brief The MPI communicator
    */
@@ -106,7 +106,7 @@ class BaseSolver {
    */
   std::vector<bool> gf_initialized_;
 
- public:
+public:
   /**
    * @brief Empty constructor
    *

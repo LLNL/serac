@@ -28,7 +28,7 @@ namespace serac {
  * mfem.
  */
 class StdFunctionCoefficient : public mfem::Coefficient {
- public:
+public:
   /**
    * @brief Constructor that takes in an mfem Vector representing the coordinates and produces a double
    *
@@ -45,7 +45,7 @@ class StdFunctionCoefficient : public mfem::Coefficient {
    */
   virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
 
- private:
+private:
   /**
    * @brief The function to evaluate for the coefficient
    */
@@ -57,7 +57,7 @@ class StdFunctionCoefficient : public mfem::Coefficient {
  * mfem::VectorCoefficient using a lambda
  */
 class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
- public:
+public:
   /**
    * @brief StdFunctionVectorCoefficient is an easy way to make an
    * mfem::Coefficient using a lambda
@@ -78,7 +78,7 @@ class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
    */
   virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
- private:
+private:
   /**
    * @brief The function to evaluate for the coefficient
    */
@@ -155,7 +155,7 @@ mfem::Array<int> makeBdrAttributeList(
  * evaluation
  */
 class AttributeModifierCoefficient : public mfem::Coefficient {
- public:
+public:
   /**
    * @brief This class temporarily changes the attribute during coefficient
    * evaluation based on a given list.
@@ -178,7 +178,7 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
    */
   virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
 
- protected:
+protected:
   /**
    * @brief A list of attributes values corresponding to the type
    * of coefficient at each element.
@@ -196,7 +196,7 @@ class AttributeModifierCoefficient : public mfem::Coefficient {
  * VectorCoefficient
  */
 class TransformedVectorCoefficient : public mfem::VectorCoefficient {
- public:
+public:
   /**
    * @brief Apply a vector function, Func, to v1
    *
@@ -227,7 +227,7 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
    */
   virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
- private:
+private:
   /**
    * @brief The first vector coefficient in the transformation
    */
@@ -254,7 +254,7 @@ class TransformedVectorCoefficient : public mfem::VectorCoefficient {
  * scalar Coefficient
  */
 class TransformedScalarCoefficient : public mfem::Coefficient {
- public:
+public:
   /**
    * @brief Apply a scalar function, Func, to s1
    *
@@ -284,7 +284,7 @@ class TransformedScalarCoefficient : public mfem::Coefficient {
    */
   virtual double Eval(mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
- private:
+private:
   /**
    * @brief The first scalar coefficient in the transformation
    */
