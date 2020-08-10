@@ -159,15 +159,24 @@ class BoundaryCondition {
   std::unique_ptr<Integrator> newIntegrator() const;
 
   /**
-   * Eliminates the boundary condition from a stiffness matrix
-   * and stores the result
-   * @param[in] k_mat The stiffness matrix to eliminate from
+   * Eliminates the rows and columns corresponding to the BC's true DOFS
+   * from a stiffness matrix
+   * @param[inout] k_mat The stiffness matrix to eliminate from,
+   * will be modified.  These eliminated matrix entries can be 
+   * used to eliminate an essential BC to an RHS vector with 
+   * BoundaryCondition::eliminateToRHS 
    */
-  // TODO: Check if MFEM should let this be const
-  void eliminate(mfem::HypreParMatrix& k_mat);
+  void eliminateFrom(mfem::HypreParMatrix& k_mat);
 
-  mfem::HypreParMatrix& getEliminated() { return *eliminated_matrix_entries_; }
-
+  /**
+   * Eliminates boundary condition from solution to RHS
+   * @param[in] k_mat_post_elim A stiffness matrix post-eliminated
+   * @param[in] soln The solution vector
+   * @param[out] rhs The RHS vector for the system
+   * @pre BoundaryCondition::eliminateFrom has been called
+   */
+  void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs);
+  
  private:
   Coef                                              coef_;
   int                                               component_;

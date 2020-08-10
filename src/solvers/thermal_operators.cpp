@@ -68,7 +68,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
 
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    mfem::EliminateBC(*K_mat_, bc.getEliminated(), bc.getTrueDofs(), y_, *bc_rhs_);
+    bc.eliminateToRHS(*K_mat_, y_, *bc_rhs_);
   }
 
   // Compute:
@@ -109,8 +109,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     bc.projectBdr(*state_gf_, t);
     state_gf_->SetFromTrueDofs(y_);
     state_gf_->GetTrueDofs(y_);
-
-    mfem::EliminateBC(*K_mat_, bc.getEliminated(), bc.getTrueDofs(), y_, *bc_rhs_);
+    bc.eliminateToRHS(*K_mat_, y_, *bc_rhs_);
   }
   K_mat_->Mult(y_, z_);
   z_.Neg();

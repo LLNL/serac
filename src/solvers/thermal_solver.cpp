@@ -90,7 +90,7 @@ void ThermalSolver::completeSetup()
 
   // Eliminate the essential DOFs from the stiffness matrix
   for (auto& bc : ess_bdr_) {
-    bc.eliminate(*K_mat_);
+    bc.eliminateFrom(*K_mat_);
   }
 
   // Initialize the eliminated BC RHS vector
@@ -125,7 +125,7 @@ void ThermalSolver::quasiStaticSolve()
   for (auto& bc : ess_bdr_) {
     bc.projectBdr(*(temperature_->gf), time_);
     temperature_->gf->GetTrueDofs(*temperature_->true_vec);
-    mfem::EliminateBC(*K_mat_, bc.getEliminated(), bc.getTrueDofs(), *temperature_->true_vec, *bc_rhs_);
+    bc.eliminateToRHS(*K_mat_, *temperature_->true_vec, *bc_rhs_);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning
