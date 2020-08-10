@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file Logger.hpp
+ * @file logger.hpp
  *
  * @brief This file contains the all the necessary functions and macros required
  *        for logging as well as a helper function to exit the program gracefully.

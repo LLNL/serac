@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file nonlinear_solid_solver.hpp
+ * @file thermal_operators.hpp
  *
  * @brief The MFEM oeprators for the thermal conduction solver
  */
