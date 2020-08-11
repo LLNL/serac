@@ -208,7 +208,7 @@ struct BoundaryCondition {
  * or nonlinear solvers
  */
 class SystemSolver : public mfem::Solver {
- public:
+public:
   // TODO: Eliminate this once a dependency injection approach is used for the solvers
   SystemSolver() = default;
   /**
@@ -236,14 +236,14 @@ class SystemSolver : public mfem::Solver {
     iter_lin_solver_->SetPreconditioner(*prec_);
   }
 
-  /** 
+  /**
    * Updates the solver with the provided operator
-   * @param[in] op The operator (system matrix) to use, "A" in Ax = b 
+   * @param[in] op The operator (system matrix) to use, "A" in Ax = b
    * @note Implements mfem::Operator::SetOperator
    */
   void SetOperator(const mfem::Operator& op) override { solver().SetOperator(op); }
 
-  /** 
+  /**
    * Solves the system
    * @param[in] x The system's RHS vector, "b" in Ax = b
    * @param[out] y The system's solution vector, "x" in Ax = b
@@ -256,10 +256,10 @@ class SystemSolver : public mfem::Solver {
    * @return The underlying nonlinear solver, if one was configured
    * when the object was constructed, otherwise, the underlying linear solver
    */
-  mfem::IterativeSolver& solver() { return (nonlin_solver_) ? **nonlin_solver_ : *iter_lin_solver_; }
+  mfem::IterativeSolver&       solver() { return (nonlin_solver_) ? **nonlin_solver_ : *iter_lin_solver_; }
   const mfem::IterativeSolver& solver() const { return (nonlin_solver_) ? **nonlin_solver_ : *iter_lin_solver_; }
 
- private:
+private:
   std::unique_ptr<mfem::IterativeSolver>                iter_lin_solver_;
   std::optional<std::unique_ptr<mfem::IterativeSolver>> nonlin_solver_;
   std::unique_ptr<mfem::Solver>                         prec_;

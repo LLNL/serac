@@ -44,7 +44,7 @@ protected:
    * @brief Solver for the T matrix
    */
   SystemSolver T_solver_;
-  
+
   /**
    * @brief Pointer to the assembled M matrix
    */
