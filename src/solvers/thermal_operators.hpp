@@ -24,16 +24,10 @@ class DynamicConductionOperator : public mfem::TimeDependentOperator {
   std::shared_ptr<mfem::ParGridFunction> state_gf_;
 
   /// Solver for the mass matrix
-  std::unique_ptr<mfem::CGSolver> M_solver_;
+  SystemSolver M_solver_;
 
   /// Solver for the T matrix
-  std::unique_ptr<mfem::CGSolver> T_solver_;
-
-  /// Preconditioner for the M matrix
-  std::unique_ptr<mfem::HypreSmoother> M_prec_;
-
-  /// Preconditioner for the T matrix
-  std::unique_ptr<mfem::HypreSmoother> T_prec_;
+  SystemSolver T_solver_;
 
   /// Pointer to the assembled M matrix
   std::shared_ptr<mfem::HypreParMatrix> M_mat_;

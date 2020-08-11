@@ -151,9 +151,9 @@ void ElasticitySolver::QuasiStaticSolve()
     mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.true_dofs, *displacement_->true_vec, *bc_rhs_);
   }
 
-  solver_.solver().SetOperator(*K_mat_);
+  solver_.SetOperator(*K_mat_);
 
-  solver_.solver().Mult(*bc_rhs_, *displacement_->true_vec);
+  solver_.Mult(*bc_rhs_, *displacement_->true_vec);
 }
 
 ElasticitySolver::~ElasticitySolver() {}

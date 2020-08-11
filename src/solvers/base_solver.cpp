@@ -250,8 +250,7 @@ SystemSolver::SystemSolver(MPI_Comm comm, const LinearSolverParameters& lin_para
     newton_solver->SetAbsTol(nonlin_params->abs_tol);
     newton_solver->SetMaxIter(nonlin_params->max_iter);
     newton_solver->SetPrintLevel(nonlin_params->print_level);
-    newton_solver->iterative_mode = nonlin_params->iterative_mode;
-    nonlin_solver_                = std::move(newton_solver);
+    nonlin_solver_ = std::move(newton_solver);
   }
 }
 

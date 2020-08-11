@@ -142,10 +142,10 @@ void ThermalSolver::quasiStaticSolve()
   solver_.setPreconditioner(std::move(hypre_smoother));
 
   solver_.solver().iterative_mode = false;
-  solver_.solver().SetOperator(*K_mat_);
+  solver_.SetOperator(*K_mat_);
 
   // Perform the linear solve
-  solver_.solver().Mult(*bc_rhs_, *temperature_->true_vec);
+  solver_.Mult(*bc_rhs_, *temperature_->true_vec);
 }
 
 void ThermalSolver::advanceTimestep(double& dt)

@@ -193,8 +193,7 @@ void NonlinearSolidSolver::completeSetup()
     S_form->Finalize(0);
   }
 
-  nonlin_params_.iterative_mode = (timestepper_ == serac::TimestepMethod::QuasiStatic);
-  solver_                       = SystemSolver(displacement_->space->GetComm(), lin_params_, nonlin_params_);
+  solver_ = SystemSolver(displacement_->space->GetComm(), lin_params_, nonlin_params_);
   // Set up the jacbian solver based on the linear solver options
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
@@ -212,11 +211,13 @@ void NonlinearSolidSolver::completeSetup()
 
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    nonlinear_oper_ = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
-    solver_.solver().SetOperator(*nonlinear_oper_);
+    nonlinear_oper_                 = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
+    solver_.solver().iterative_mode = true;
+    solver_.SetOperator(*nonlinear_oper_);
   } else {
     timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(
         std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, solver_.solver(), lin_params_);
+    solver_.solver().iterative_mode = false;
     ode_solver_->Init(*timedep_oper_);
   }
 }
@@ -225,7 +226,7 @@ void NonlinearSolidSolver::completeSetup()
 void NonlinearSolidSolver::quasiStaticSolve()
 {
   mfem::Vector zero;
-  solver_.solver().Mult(zero, *displacement_->true_vec);
+  solver_.Mult(zero, *displacement_->true_vec);
 }
 
 // Advance the timestep
