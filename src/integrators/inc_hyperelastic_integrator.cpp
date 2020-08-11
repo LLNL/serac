@@ -96,9 +96,9 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
                                                             mfem::ElementTransformation& Ttr, const mfem::Vector& elfun,
                                                             mfem::DenseMatrix& elmat)
 {
-  #ifdef SERAC_USE_CALIPER
+#ifdef SERAC_USE_CALIPER
   CALI_CXX_MARK_FUNCTION;
-  #endif
+#endif
 
   int dof = el.GetDof(), dim = el.GetDim();
 
