@@ -16,11 +16,14 @@ set(integrators_headers
     wrapper_integrator.hpp
     )
 
+set(integrators_depends mfem mpi)
+blt_list_append( TO integrators_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
+
 blt_add_library(
     NAME        integrators
     SOURCES     ${integrators_sources}
     HEADERS     ${integrators_headers}
-    DEPENDS_ON  mfem mpi caliper
+    DEPENDS_ON  ${integrators_depends}
     #DEPENDS_ON  mpi mfem hypre blas lapack parmetis metis 
     )
 
