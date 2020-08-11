@@ -74,6 +74,9 @@ class Serac(CMakePackage):
     homepage = "https://www.github.com/LLNL/serac"
     git      = "ssh://git@github.com:LLNL/serac.git"
 
+    variant('caliper', default=False, 
+            description='Build with hooks for Caliper performance analysis')
+
     version('develop', branch='develop', submodules=True, preferred=True)
 
     variant('debug', default=False,
@@ -113,6 +116,7 @@ class Serac(CMakePackage):
 
     # Libraries that do not have a debug variant
     depends_on("conduit@master~shared~python")
+    depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@5.4.0~shared")
 
     # Libraries that we do not build debug

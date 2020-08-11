@@ -101,6 +101,28 @@ else()
     set(TRIBOL_FOUND FALSE CACHE BOOL "")
 endif()
 
+#------------------------------------------------------------------------------
+# Caliper
+#------------------------------------------------------------------------------
+if(caliper_DIR)
+    serac_assert_is_directory(VARIABLE_NAME caliper_DIR)
+
+    find_package(caliper REQUIRED NO_DEFAULT_PATH 
+                  PATHS ${caliper_DIR}/share/cmake/caliper)
+    message(STATUS "Caliper support is ON")
+    set(CALIPER_FOUND TRUE CACHE BOOL "")
+
+    blt_register_library(
+        NAME          caliper
+        INCLUDES      ${caliper_INCLUDE_DIR}
+        LIBRARIES     ${caliper_LIB_DIR}/libcaliper.a pfm
+        TREAT_INCLUDES_AS_SYSTEM ON)
+    get_target_property(OUT caliper LINK_LIBRARIES)
+    message(STATUS "caliper is at ${OUT}")
+else()
+    message(STATUS "Caliper support is OFF")
+    set(CALIPER_FOUND FALSE CACHE BOOL "")
+endif()
 
 #------------------------------------------------------------------------------
 # Remove exported OpenMP flags because they are not language agnostic
@@ -134,4 +156,3 @@ foreach(_target axom)
         endforeach()
     endif()
 endforeach()
-

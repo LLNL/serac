@@ -4,6 +4,10 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#ifdef SERAC_USE_CALIPER
+#include "caliper/cali.h"
+#endif
+
 #include "inc_hyperelastic_integrator.hpp"
 
 namespace serac {
@@ -92,6 +96,10 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
                                                             mfem::ElementTransformation& Ttr, const mfem::Vector& elfun,
                                                             mfem::DenseMatrix& elmat)
 {
+  #ifdef SERAC_USE_CALIPER
+  CALI_CXX_MARK_FUNCTION;
+  #endif
+
   int dof = el.GetDof(), dim = el.GetDim();
 
   DSh_.SetSize(dof, dim);

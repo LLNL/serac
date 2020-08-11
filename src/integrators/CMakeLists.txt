@@ -20,7 +20,7 @@ blt_add_library(
     NAME        integrators
     SOURCES     ${integrators_sources}
     HEADERS     ${integrators_headers}
-    DEPENDS_ON  mfem mpi
+    DEPENDS_ON  mfem mpi caliper
     #DEPENDS_ON  mpi mfem hypre blas lapack parmetis metis 
     )
 
