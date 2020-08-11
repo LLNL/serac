@@ -70,7 +70,7 @@ void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFinite
 void BoundaryCondition::project() const
 {
   SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
-  project(*((*state_)->gf), *((*state_)->space));
+  project(*(state_->gf), *(state_->space));
 }
 
 void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar) const
@@ -96,7 +96,7 @@ void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time,
 void BoundaryCondition::projectBdr(const double time, const bool should_be_scalar) const
 {
   SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
-  projectBdr(*((*state_)->gf), time, should_be_scalar);
+  projectBdr(*(state_->gf), time, should_be_scalar);
 }
 
 void BoundaryCondition::eliminateFrom(mfem::HypreParMatrix& k_mat)
