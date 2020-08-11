@@ -10,9 +10,9 @@
 
 namespace serac {
 
-DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace& fespace,
-                                                     const serac::LinearSolverParameters&         params,
-                                                     std::vector<serac::BoundaryCondition>&       ess_bdr)
+DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace&           fespace,
+                                                     const serac::LinearSolverParameters&   params,
+                                                     std::vector<serac::BoundaryCondition>& ess_bdr)
     : mfem::TimeDependentOperator(fespace.GetTrueVSize(), 0.0),
       // fespace_(fespace),
       ess_bdr_(ess_bdr),
@@ -44,18 +44,17 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
   T_solver_->SetPrintLevel(params.print_level);
   T_solver_->SetPreconditioner(*T_prec_);
 
-  state_gf_ = std::make_shared<mfem::ParGridFunction>(&fespace);
-  bc_rhs_   = std::make_shared<mfem::Vector>(fespace.GetTrueVSize());
+  state_gf_ = std::make_unique<mfem::ParGridFunction>(&fespace);
+  bc_rhs_   = std::make_unique<mfem::Vector>(fespace.GetTrueVSize());
 }
 
-void DynamicConductionOperator::setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat,
-                                            std::shared_ptr<mfem::HypreParMatrix> K_mat)
+void DynamicConductionOperator::setMatrices(mfem::HypreParMatrix* M_mat, mfem::HypreParMatrix* K_mat)
 {
   M_mat_ = M_mat;
   K_mat_ = K_mat;
 }
 
-void DynamicConductionOperator::setLoadVector(std::shared_ptr<mfem::Vector> rhs) { rhs_ = rhs; }
+void DynamicConductionOperator::setLoadVector(mfem::Vector* rhs) { rhs_ = rhs; }
 
 // TODO: allow for changing thermal essential boundary conditions
 void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt) const

@@ -105,7 +105,7 @@ public:
    *
    * @param[in] source The source function coefficient
    */
-  void SetSource(std::shared_ptr<mfem::Coefficient>&& source) { therm_solver_.setSource(std::move(source)); };
+  void SetSource(std::unique_ptr<mfem::Coefficient>&& source) { therm_solver_.setSource(std::move(source)); };
 
   /**
    * @brief Set the linear solver parameters for both the M and K matrices
@@ -159,7 +159,10 @@ public:
    *
    * @param[in] visc_coef The abstract viscosity coefficient
    */
-  void SetViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { solid_solver_.setViscosity(std::move(visc_coef)); };
+  void SetViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
+  {
+    solid_solver_.setViscosity(std::move(visc_coef));
+  };
 
   /**
    * @brief Set the hyperelastic material parameters

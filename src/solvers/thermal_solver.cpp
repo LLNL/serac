@@ -46,16 +46,16 @@ void ThermalSolver::setFluxBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfe
   setNaturalBCs(nat_bdr, nat_bdr_coef);
 }
 
-void ThermalSolver::setConductivity(std::shared_ptr<mfem::Coefficient> kappa)
+void ThermalSolver::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
 {
   // Set the conduction coefficient
-  kappa_ = kappa;
+  kappa_ = std::move(kappa);
 }
 
-void ThermalSolver::setSource(std::shared_ptr<mfem::Coefficient> source)
+void ThermalSolver::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 {
   // Set the body source integral coefficient
-  source_ = source;
+  source_ = std::move(source);
 }
 
 void ThermalSolver::setLinearSolverParameters(const serac::LinearSolverParameters& params)
@@ -81,7 +81,7 @@ void ThermalSolver::completeSetup()
     l_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*source_));
     rhs_.reset(l_form_->ParallelAssemble());
   } else {
-    rhs_  = std::make_shared<mfem::HypreParVector>(temperature_->space.get());
+    rhs_  = std::make_unique<mfem::HypreParVector>(temperature_->space.get());
     *rhs_ = 0.0;
   }
 
@@ -94,7 +94,7 @@ void ThermalSolver::completeSetup()
   }
 
   // Initialize the eliminated BC RHS vector
-  bc_rhs_  = std::make_shared<mfem::HypreParVector>(temperature_->space.get());
+  bc_rhs_  = std::make_unique<mfem::HypreParVector>(temperature_->space.get());
   *bc_rhs_ = 0.0;
 
   // Initialize the true vector
@@ -111,8 +111,8 @@ void ThermalSolver::completeSetup()
 
     // Make the time integration operator and set the appropriate matricies
     dyn_oper_ = std::make_unique<DynamicConductionOperator>(*temperature_->space, lin_params_, ess_bdr_);
-    dyn_oper_->setMatrices(M_mat_, K_mat_);
-    dyn_oper_->setLoadVector(rhs_);
+    dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
+    dyn_oper_->setLoadVector(rhs_.get());
 
     ode_solver_->Init(*dyn_oper_);
   }
@@ -134,8 +134,8 @@ void ThermalSolver::quasiStaticSolve()
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
-  K_solver_ = std::make_shared<mfem::CGSolver>(temperature_->space->GetComm());
-  K_prec_   = std::make_shared<mfem::HypreSmoother>();
+  K_solver_ = std::make_unique<mfem::CGSolver>(temperature_->space->GetComm());
+  K_prec_   = std::make_unique<mfem::HypreSmoother>();
 
   K_solver_->iterative_mode = false;
   K_solver_->SetRelTol(lin_params_.rel_tol);
