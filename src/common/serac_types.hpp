@@ -14,6 +14,7 @@
 #define SERAC_TYPES
 
 #include <memory>
+#include <optional>
 #include <variant>
 
 #include "mfem.hpp"
