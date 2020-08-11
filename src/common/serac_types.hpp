@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <optional>
+#include <type_traits>
 #include <variant>
 
 #include "mfem.hpp"
@@ -123,7 +124,7 @@ class FiniteElementState {
   /**
    * Returns the MPI communicator for the state
    */
-  MPI_Comm comm() { return space_.GetComm(); }
+  MPI_Comm comm() const { return space_.GetComm(); }
 
   /**
    * Returns a non-owning reference to the internal grid function
@@ -153,7 +154,7 @@ class FiniteElementState {
   /**
    * Returns the name of the FEState (field)
    */
-  std::string name() { return name_; }
+  std::string name() const { return name_; }
 
   /**
    * Projects a coefficient (vector or scalar) onto the field
@@ -198,6 +199,8 @@ class FiniteElementState {
   template <typename Tensor>
   std::unique_ptr<Tensor> createTensorOnSpace()
   {
+    static_assert(std::is_constructible_v<Tensor, mfem::ParFiniteElementSpace*>,
+                  "Tensor must be constructible with a ptr to ParFESpace");
     return std::make_unique<Tensor>(&space_);
   }
 
