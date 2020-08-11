@@ -251,10 +251,10 @@ public:
    * This is the only requirement for high-order SDIRK implicit integration.
    *
    * @param[in] dt The timestep
-   * @param[in] x The state vector
-   * @param[out] k The implicit time derivative
+   * @param[in] vx The state vector
+   * @param[out] dvx_dt The implicit time derivative
    */
-  virtual void ImplicitSolve(const double dt, const mfem::Vector& x, mfem::Vector& k);
+  virtual void ImplicitSolve(const double dt, const mfem::Vector& vx, mfem::Vector& dvx_dt);
 
   /**
    * @brief Destroy the Nonlinear Solid Dynamic Operator object

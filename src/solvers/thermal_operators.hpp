@@ -53,12 +53,12 @@ protected:
   /**
    * @brief Non-owning pointer to the assembled M matrix
    */
-  mfem::HypreParMatrix* M_mat_;
+  mfem::HypreParMatrix* M_mat_ = nullptr;
 
   /**
    * @brief Non-owning pointer to the assembled K matrix
    */
-  mfem::HypreParMatrix* K_mat_;
+  mfem::HypreParMatrix* K_mat_ = nullptr;
 
   /**
    * @brief Pointer to the assembled T ( = M + dt K) matrix
@@ -73,7 +73,7 @@ protected:
   /**
    * @brief Non-owning ptr to assembled RHS vector
    */
-  mfem::Vector* rhs_;
+  mfem::Vector* rhs_ = nullptr;
 
   /**
    * @brief RHS vector including essential boundary elimination
