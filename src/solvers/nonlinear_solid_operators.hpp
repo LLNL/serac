@@ -170,7 +170,7 @@ public:
    *
    * @param[in] H_form The nonlinear stiffness form
    * @param[in] S_form The linear viscosity form
-   * @param[in] M_form The lineawr mass form
+   * @param[in] M_form The linear mass form
    * @param[in] ess_bdr The essential boundary conditions
    * @param[in] newton_solver The newton solver object
    * @param[in] lin_params The linear solver parameters
