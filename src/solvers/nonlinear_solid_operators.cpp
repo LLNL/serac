@@ -58,7 +58,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
   M_solver_.solver().iterative_mode = false;
 
   M_prec->SetType(mfem::HypreSmoother::Jacobi);
-  M_solver_.setPreconditioner(std::move(M_prec));
+  M_solver_.SetPreconditioner(std::move(M_prec));
 
   M_solver_.SetOperator(*M_mat_);
 

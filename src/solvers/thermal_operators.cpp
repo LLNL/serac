@@ -27,7 +27,7 @@ DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFi
   M_solver_.solver().iterative_mode = false;
   auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
   M_prec->SetType(mfem::HypreSmoother::Jacobi);
-  M_solver_.setPreconditioner(std::move(M_prec));
+  M_solver_.SetPreconditioner(std::move(M_prec));
 
   // Use the same options for the T (= M + dt K) solver
   T_solver_ = SystemSolver(fespace_->GetComm(), params);
@@ -35,7 +35,7 @@ DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFi
   T_solver_.solver().iterative_mode = false;
 
   auto T_prec = std::make_unique<mfem::HypreSmoother>();
-  T_solver_.setPreconditioner(std::move(T_prec));
+  T_solver_.SetPreconditioner(std::move(T_prec));
 
   state_gf_ = std::make_shared<mfem::ParGridFunction>(fespace_.get());
   bc_rhs_   = std::make_shared<mfem::Vector>(fespace->GetTrueVSize());

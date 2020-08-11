@@ -195,12 +195,12 @@ void NonlinearSolidSolver::completeSetup()
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
     prec_amg->SetElasticityOptions(displacement_->space.get());
-    solver_.setPreconditioner(std::move(prec_amg));
+    solver_.SetPreconditioner(std::move(prec_amg));
   } else {
     auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
     J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     J_hypreSmoother->SetPositiveDiagonal(true);
-    solver_.setPreconditioner(std::move(J_hypreSmoother));
+    solver_.SetPreconditioner(std::move(J_hypreSmoother));
   }
 
   // Set the MFEM abstract operators for use with the internal MFEM solvers

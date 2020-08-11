@@ -228,10 +228,10 @@ public:
    * @param[in] prec The preconditioner, of which the object takes ownership
    * @note The preconditioner must be moved into the call
    * @code(.cpp)
-   * solver.setPreconditioner(std::move(prec));
+   * solver.SetPreconditioner(std::move(prec));
    * @endcode
    */
-  void setPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
+  void SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
   {
     prec_ = std::move(prec);
     iter_lin_solver_->SetPreconditioner(*prec_);
@@ -246,11 +246,11 @@ public:
 
   /**
    * Solves the system
-   * @param[in] x The system's RHS vector, "b" in Ax = b
-   * @param[out] y The system's solution vector, "x" in Ax = b
+   * @param[in] b RHS of the system of equations
+   * @param[out] x Solution to the system of equations
    * @note Implements mfem::Operator::Mult
    */
-  void Mult(const mfem::Vector& x, mfem::Vector& y) const override { solver().Mult(x, y); }
+  void Mult(const mfem::Vector& b, mfem::Vector& x) const override { solver().Mult(b, x); }
 
   /**
    * Returns the underlying solver object

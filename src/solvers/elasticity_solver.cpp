@@ -108,14 +108,14 @@ void ElasticitySolver::completeSetup()
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
     prec_amg->SetElasticityOptions(displacement_->space.get());
-    solver_.setPreconditioner(std::move(prec_amg));
+    solver_.SetPreconditioner(std::move(prec_amg));
   }
   // If not AMG, just MINRES with Jacobi smoothing
   else {
     auto K_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
     K_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     K_hypreSmoother->SetPositiveDiagonal(true);
-    solver_.setPreconditioner(std::move(K_hypreSmoother));
+    solver_.SetPreconditioner(std::move(K_hypreSmoother));
   }
 }
 

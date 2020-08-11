@@ -139,7 +139,7 @@ void ThermalSolver::quasiStaticSolve()
   auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
   hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);
 
-  solver_.setPreconditioner(std::move(hypre_smoother));
+  solver_.SetPreconditioner(std::move(hypre_smoother));
 
   solver_.solver().iterative_mode = false;
   solver_.SetOperator(*K_mat_);
