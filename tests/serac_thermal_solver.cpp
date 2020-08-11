@@ -297,6 +297,7 @@ TEST(thermal_solver, dyn_imp_solve)
   params.abs_tol     = 1.0e-12;
   params.print_level = 0;
   params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
   therm_solver.setLinearSolverParameters(params);
 
   // Setup glvis output
