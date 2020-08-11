@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file serac_types.hpp
+ *
+ * @brief This file contains common serac data structures
+ */
+
 #ifndef SERAC_TYPES
 #define SERAC_TYPES
 
@@ -14,14 +20,18 @@
 
 namespace serac {
 
-// Option bundling enums
-
+/**
+ * @brief Output file type associated with a solver
+ */
 enum class OutputType
 {
   GLVis,
   VisIt
 };
 
+/**
+ * @brief Timestep method of a solver
+ */
 enum class TimestepMethod
 {
   BackwardEuler,
@@ -37,6 +47,9 @@ enum class TimestepMethod
   QuasiStatic
 };
 
+/**
+ * @brief Linear solution method
+ */
 enum class LinearSolver
 {
   CG,
@@ -44,12 +57,18 @@ enum class LinearSolver
   MINRES
 };
 
+/**
+ * @brief Preconditioning method
+ */
 enum class Preconditioner
 {
   Jacobi,
   BoomerAMG
 };
 
+/**
+ * @brief Abstract multiphysics coupling scheme
+ */
 enum class CouplingScheme
 {
   OperatorSplit,
@@ -57,41 +76,130 @@ enum class CouplingScheme
   FullyCoupled
 };
 
-// Parameter bundles
-
+/**
+ * @brief Parameters for a linear solution scheme
+ */
 struct LinearSolverParameters {
-  double         rel_tol;
-  double         abs_tol;
-  int            print_level;
-  int            max_iter;
-  LinearSolver   lin_solver;
+  /**
+   * @brief Relative tolerance
+   */
+  double rel_tol;
+
+  /**
+   * @brief Absolute tolerance
+   */
+  double abs_tol;
+
+  /**
+   * @brief Debugging print level
+   */
+  int print_level;
+
+  /**
+   * @brief Maximum number of iterations
+   */
+  int max_iter;
+
+  /**
+   * @brief Linear solver selection
+   */
+  LinearSolver lin_solver;
+
+  /**
+   * @brief Preconditioner selection
+   */
   Preconditioner prec;
 };
 
+/**
+ * @brief Nonlinear solution scheme parameters
+ */
 struct NonlinearSolverParameters {
+  /**
+   * @brief Relative tolerance
+   */
   double rel_tol;
+
+  /**
+   * @brief Absolute tolerance
+   */
   double abs_tol;
-  int    max_iter;
-  int    print_level;
+
+  /**
+   * @brief Maximum number of iterations
+   */
+  int max_iter;
+
+  /**
+   * @brief Debug print level
+   */
+  int print_level;
 };
 
-// Finite element information bundle
+/**
+ * @brief Bundle of data containing a complete finite element state variable
+ */
 struct FiniteElementState {
-  std::shared_ptr<mfem::ParFiniteElementSpace>   space;
+  /**
+   * @brief Finite element space (basis functions and their transformations)
+   */
+  std::shared_ptr<mfem::ParFiniteElementSpace> space;
+
+  /**
+   * @brief Finite element collection (reference configuration basis functions)
+   */
   std::shared_ptr<mfem::FiniteElementCollection> coll;
-  std::shared_ptr<mfem::ParGridFunction>         gf;
-  std::shared_ptr<mfem::Vector>                  true_vec;
-  std::shared_ptr<mfem::ParMesh>                 mesh;
-  std::string                                    name = "";
+
+  /**
+   * @brief Grid function (DOF vector and associated finite element space)
+   */
+  std::shared_ptr<mfem::ParGridFunction> gf;
+
+  /**
+   * @brief True vector (Non-constrained DOF vector)
+   */
+  std::shared_ptr<mfem::Vector> true_vec;
+
+  /**
+   * @brief The parallel mesh
+   */
+  std::shared_ptr<mfem::ParMesh> mesh;
+
+  /**
+   * @brief Name of the state variable
+   */
+  std::string name = "";
 };
 
-// Boundary condition information
+/**
+ * @brief Boundary condition information bundle
+ */
 struct BoundaryCondition {
   using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
-  mfem::Array<int>                      markers;
-  mfem::Array<int>                      true_dofs;
-  int                                   component;
-  Coef                                  coef;
+
+  /**
+   * @brief The attribute marker array where this BC is active
+   */
+  mfem::Array<int> markers;
+
+  /**
+   * @brief The true DOFs affected by this BC
+   */
+  mfem::Array<int> true_dofs;
+
+  /**
+   * @brief The vector component affected by this BC (-1 implies all components)
+   */
+  int component;
+
+  /**
+   * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
+   */
+  Coef coef;
+
+  /**
+   * @brief The eliminated entries for Dirichlet BCs
+   */
   std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries;
 };
 

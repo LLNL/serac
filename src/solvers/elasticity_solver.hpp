@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file elasticity_solver.hpp
+ *
+ * @brief A solver for the steady state solution of a linear elasticity PDE
+ */
+
 #ifndef LINEARELASTIC_SOLVER
 #define LINEARELASTIC_SOLVER
 
@@ -12,78 +18,142 @@
 
 namespace serac {
 
-/** This is a generic linear elasticity oeprator of the form
+/**
+ * @brief A solver for the steady state solution of a linear elasticity PDE
+ *
+ * This is a generic linear elasticity oeprator of the form
  *
  *    -div(sigma(u)) = f
  *    sigma(u) = lambda div(u) + mu(grad(u) + grad(u)^T
  *
  *  where u is the displacement vector, f is the body force,
- *  and lambda and mu are the lame parameters */
+ *  and lambda and mu are the lame parameters
+ */
 class ElasticitySolver : public BaseSolver {
- protected:
+protected:
   std::shared_ptr<serac::FiniteElementState> displacement_;
 
-  /// Stiffness bilinear form
+  /**
+   * @brief Stiffness bilinear form
+   */
   std::unique_ptr<mfem::ParBilinearForm> K_form_;
 
-  /// Load bilinear form
+  /**
+   * @brief Load bilinear form
+   */
   std::unique_ptr<mfem::ParLinearForm> l_form_;
 
-  /// Stiffness matrix
+  /**
+   * @brief Stiffness matrix
+   */
   std::unique_ptr<mfem::HypreParMatrix> K_mat_;
 
-  /// Eliminated stiffness matrix
+  /**
+   * @brief Stiffness matrix post essential boundary DOF elimination
+   */
   std::unique_ptr<mfem::HypreParMatrix> K_e_mat_;
 
-  /// RHS vector
+  /**
+   * @brief RHS load vector
+   */
   std::unique_ptr<mfem::HypreParVector> rhs_;
 
-  /// Eliminated RHS vector
+  /**
+   * @brief Eliminated RHS load vector
+   */
   std::unique_ptr<mfem::HypreParVector> bc_rhs_;
 
-  /// Lame mu parameter coefficient
+  /**
+   * @brief Lame mu elasticity parameter
+   */
   mfem::Coefficient* mu_ = nullptr;
 
-  /// Lame lambda parameter coefficient
+  /**
+   * @brief Lame lambda elasticity parameter
+   */
   mfem::Coefficient* lambda_ = nullptr;
 
-  /// Body source coefficient
+  /**
+   * @brief Body force coefficient
+   */
   mfem::VectorCoefficient* body_force_ = nullptr;
 
-  /// Linear solver parameters
+  /**
+   * @brief Linear solver parameters
+   */
   serac::LinearSolverParameters lin_params_;
 
-  /// Driver for a quasi-static solve
+  /**
+   * @brief Quasi-static solve driver
+   */
   void QuasiStaticSolve();
 
- public:
-  /// Constructor using order and mesh
+public:
+  /**
+   * @brief Construct a new Elasticity Solver object
+   *
+   * @param[in] order The polynomial order of the solver
+   * @param[in] pmesh The parallel MFEM mesh
+   */
   ElasticitySolver(const int order, std::shared_ptr<mfem::ParMesh> pmesh);
 
-  /// Set the vector-valued essential displacement boundary conditions
+  /**
+   * @brief Set the vector-valued essential displacement boundary conditions
+   *
+   * @param[in] disp_bdr Set of boundary attributes to enforce the displacement conditions
+   * @param[in] disp_bdr_coef Coefficient definining the displacement boundary
+   * @param[in] component Component to set (-1 indicates all components)
+   */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
                           const int component = -1);
 
-  /// Set the vector-valued natural traction boundary conditions
+  /**
+   * @brief Set the vector-valued natural traction boundary conditions
+   *
+   * @param[in] trac_bdr Set of boundary attributes to enforce the traction condition
+   * @param[in] trac_bdr_coef The traction condition coefficient
+   * @param[in] component Component to set (-1 indicates all components)
+   */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       const int component = -1);
 
-  /// Driver for advancing the timestep
+  /**
+   * @brief Driver for advancing the timestep
+   *
+   * @param[in/out] dt The timestep to attempt, adaptive methods could return the actual timestep completed
+   */
   void advanceTimestep(double& dt) override;
 
-  /// Set the elastic lame parameters
+  /**
+   * @brief Set the elastic lame parameters
+   *
+   * @param[in] lambda The Lame lambda coefficient
+   * @param[in] mu The Lame mu coefficient
+   */
   void setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu);
 
-  /// Set the vector-valued body force coefficient
+  /**
+   * @brief Set the Vector-valued body force
+   *
+   * @param[in] force The body force coefficient
+   */
   void setBodyForce(mfem::VectorCoefficient& force);
 
-  /// Finish the setup and allocate the associate data structures
+  /**
+   * @brief Finish the setup of the solver and allocate and initialize the associated MFEM data structures
+   */
   void completeSetup() override;
 
-  /// Set the linear solver parameters object
+  /**
+   * @brief Set the Linear Solver Parameters
+   *
+   * @param[in] params The linear solver parameters
+   */
   void setLinearSolverParameters(const serac::LinearSolverParameters& params);
 
-  /// The destructor
+  /**
+   * @brief The destructor
+   */
   virtual ~ElasticitySolver();
 };
 
