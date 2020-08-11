@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <type_traits>
 #include <variant>
 
 #include "common/logger.hpp"
@@ -145,7 +146,7 @@ class BoundaryCondition {
    * @param[in] fes The finite element space that should be used to generate
    * the scalar DOF list
    */
-  void project(mfem::ParGridFunction& gf, mfem::ParFiniteElementSpace& fes) const;
+  void project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace& fes) const;
 
   /**
    * Projects the boundary condition over a grid function
@@ -160,7 +161,7 @@ class BoundaryCondition {
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    */
-  void projectBdr(mfem::ParGridFunction& gf, const double time, bool should_be_scalar = true) const;
+  void projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar = true) const;
 
   /**
    * Projects the boundary condition over boundary DOFs of a grid function
@@ -169,7 +170,7 @@ class BoundaryCondition {
    * @pre A corresponding field (FiniteElementState) has been associated
    * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
    */
-  void projectBdr(const double time, bool should_be_scalar = true) const;
+  void projectBdr(const double time, const bool should_be_scalar = true) const;
 
   /**
    * Allocates an integrator of type "Integrator" on the heap,
@@ -226,6 +227,7 @@ std::unique_ptr<Integrator> BoundaryCondition::newVecIntegrator() const
   // one coef type and not the other - contained types are only known at runtime
   // One solution could be to switch between implementations with std::enable_if_t and
   // std::is_constructible_v
+  static_assert(std::is_constructible_v<Integrator, mfem::VectorCoefficient&>);
   SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
                 "Boundary condition had a non-vector coefficient when constructing an integrator.");
   return std::make_unique<Integrator>(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_));
@@ -234,6 +236,7 @@ std::unique_ptr<Integrator> BoundaryCondition::newVecIntegrator() const
 template <typename Integrator>
 std::unique_ptr<Integrator> BoundaryCondition::newIntegrator() const
 {
+  static_assert(std::is_constructible_v<Integrator, mfem::Coefficient&>);
   SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
                 "Boundary condition had a non-vector coefficient when constructing an integrator.");
   return std::make_unique<Integrator>(*std::get<std::shared_ptr<mfem::Coefficient>>(coef_));

@@ -38,7 +38,7 @@ void BoundaryCondition::setTrueDofs(FiniteElementState& state)
   state.space->GetEssentialTrueDofs(markers_, *true_dofs_, component_);
 }
 
-void BoundaryCondition::project(mfem::ParGridFunction& gf, mfem::ParFiniteElementSpace& space) const
+void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace& space) const
 {
   SLIC_ERROR_IF(!true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
   // Value semantics for convenience
@@ -93,7 +93,7 @@ void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time,
       coef_);
 }
 
-void BoundaryCondition::projectBdr(const double time, bool should_be_scalar) const
+void BoundaryCondition::projectBdr(const double time, const bool should_be_scalar) const
 {
   SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   projectBdr(*((*state_)->gf), time, should_be_scalar);
