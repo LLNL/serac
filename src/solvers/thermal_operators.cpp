@@ -10,19 +10,19 @@
 
 namespace serac {
 
-DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
+DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace& fespace,
                                                      const serac::LinearSolverParameters&         params,
                                                      std::vector<serac::BoundaryCondition>&       ess_bdr)
-    : mfem::TimeDependentOperator(fespace->GetTrueVSize(), 0.0),
-      fespace_(fespace),
+    : mfem::TimeDependentOperator(fespace.GetTrueVSize(), 0.0),
+      // fespace_(fespace),
       ess_bdr_(ess_bdr),
-      z_(fespace->GetTrueVSize()),
-      y_(fespace->GetTrueVSize()),
-      x_(fespace->GetTrueVSize()),
+      z_(fespace.GetTrueVSize()),
+      y_(fespace.GetTrueVSize()),
+      x_(fespace.GetTrueVSize()),
       old_dt_(-1.0)
 {
   // Set the mass solver options (CG and Jacobi for now)
-  M_solver_ = std::make_unique<mfem::CGSolver>(fespace_->GetComm());
+  M_solver_ = std::make_unique<mfem::CGSolver>(fespace.GetComm());
   M_prec_   = std::make_unique<mfem::HypreSmoother>();
 
   M_solver_->iterative_mode = false;
@@ -34,7 +34,7 @@ DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFi
   M_solver_->SetPreconditioner(*M_prec_);
 
   // Use the same options for the T (= M + dt K) solver
-  T_solver_ = std::make_unique<mfem::CGSolver>(fespace_->GetComm());
+  T_solver_ = std::make_unique<mfem::CGSolver>(fespace.GetComm());
   T_prec_   = std::make_unique<mfem::HypreSmoother>();
 
   T_solver_->iterative_mode = false;
@@ -44,8 +44,8 @@ DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFi
   T_solver_->SetPrintLevel(params.print_level);
   T_solver_->SetPreconditioner(*T_prec_);
 
-  state_gf_ = std::make_shared<mfem::ParGridFunction>(fespace_.get());
-  bc_rhs_   = std::make_shared<mfem::Vector>(fespace->GetTrueVSize());
+  state_gf_ = std::make_shared<mfem::ParGridFunction>(&fespace);
+  bc_rhs_   = std::make_shared<mfem::Vector>(fespace.GetTrueVSize());
 }
 
 void DynamicConductionOperator::setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat,

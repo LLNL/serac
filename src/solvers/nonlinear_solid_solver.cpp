@@ -85,7 +85,7 @@ void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, co
   model_.reset(new mfem::NeoHookeanModel(mu, K));
 }
 
-void NonlinearSolidSolver::setViscosity(std::shared_ptr<mfem::Coefficient> visc) { viscosity_ = visc; }
+void NonlinearSolidSolver::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc) { viscosity_ = std::move(visc); }
 
 void NonlinearSolidSolver::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
@@ -228,11 +228,11 @@ void NonlinearSolidSolver::completeSetup()
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     newton_solver_.iterative_mode = true;
-    nonlinear_oper_               = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
+    nonlinear_oper_               = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
     newton_solver_.SetOperator(*nonlinear_oper_);
   } else {
     newton_solver_.iterative_mode = false;
-    timedep_oper_                 = std::make_shared<NonlinearSolidDynamicOperator>(
+    timedep_oper_                 = std::make_unique<NonlinearSolidDynamicOperator>(
         std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, newton_solver_, lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }

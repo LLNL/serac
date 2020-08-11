@@ -10,8 +10,8 @@
 
 namespace serac {
 
-NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form)
-    : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(H_form)
+NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form)
+    : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(std::move(H_form))
 {
 }
 

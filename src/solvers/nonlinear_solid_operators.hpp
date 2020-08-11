@@ -28,7 +28,7 @@ protected:
   /**
    * @brief The nonlinear form
    */
-  std::shared_ptr<mfem::ParNonlinearForm> H_form_;
+  std::unique_ptr<mfem::ParNonlinearForm> H_form_;
 
   /**
    * @brief The linearized jacobian at the current state
@@ -41,7 +41,7 @@ public:
    *
    * @param[in] H_form The nonlinear form of the PDE
    */
-  explicit NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
+  explicit NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form);
 
   /**
    * @brief Get the Gradient of the nonlinear form

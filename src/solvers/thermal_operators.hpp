@@ -26,11 +26,6 @@ namespace serac {
 class DynamicConductionOperator : public mfem::TimeDependentOperator {
 protected:
   /**
-   * @brief Finite Element space
-   */
-  std::shared_ptr<mfem::ParFiniteElementSpace> fespace_;
-
-  /**
    * @brief Grid function for boundary condition projection
    */
   std::shared_ptr<mfem::ParGridFunction> state_gf_;
@@ -110,7 +105,7 @@ public:
    * @param[in] params The linear solver parameters
    * @param[in] ess_bdr The essential boundary condition objects
    */
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
+  DynamicConductionOperator(mfem::ParFiniteElementSpace& fespace,
                             const serac::LinearSolverParameters&         params,
                             std::vector<serac::BoundaryCondition>&       ess_bdr);
 
