@@ -188,12 +188,7 @@ protected:
   /**
    * @brief The CG solver for the mass matrix
    */
-  mfem::CGSolver M_solver_;
-
-  /**
-   * @brief The preconditioner for the CG mass matrix solver
-   */
-  mfem::HypreSmoother M_prec_;
+  SystemSolver M_solver_;
 
   /**
    * @brief The reduced system operator for applying the bilinear and nonlinear forms

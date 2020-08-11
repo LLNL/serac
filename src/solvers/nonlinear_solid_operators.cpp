@@ -52,14 +52,14 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
     auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.true_dofs));
   }
 
-  // Set the mass matrix solver options
-  M_solver_.iterative_mode = false;
-  M_solver_.SetRelTol(lin_params_.rel_tol);
-  M_solver_.SetAbsTol(lin_params_.abs_tol);
-  M_solver_.SetMaxIter(lin_params_.max_iter);
-  M_solver_.SetPrintLevel(lin_params_.print_level);
-  M_prec_.SetType(mfem::HypreSmoother::Jacobi);
-  M_solver_.SetPreconditioner(M_prec_);
+  M_solver_ = SystemSolver(H_form_->ParFESpace()->GetComm(), lin_params);
+
+  auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
+  M_solver_.solver().iterative_mode = false;
+
+  M_prec->SetType(mfem::HypreSmoother::Jacobi);
+  M_solver_.setPreconditioner(std::move(M_prec));
+
   M_solver_.SetOperator(*M_mat_);
 
   // Construct the reduced system operator and initialize the newton solver with
