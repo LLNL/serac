@@ -18,7 +18,7 @@ using namespace std;
 using namespace serac;
 
 class StdFunctionCoefficientTest : public ::testing::Test {
- protected:
+protected:
   void SetUp()
   {
     // Set up mesh
