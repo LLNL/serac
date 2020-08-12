@@ -5,14 +5,17 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(common_headers
+    common.hpp
     serac_types.hpp
     logger.hpp
     mesh_utils.hpp
+    terminator.hpp
     )
 
 set(common_sources
     logger.cpp
     mesh_utils.cpp
+    terminator.cpp
     )
 
 blt_add_library(
