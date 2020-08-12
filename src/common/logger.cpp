@@ -8,9 +8,6 @@
 
 #include "common/terminator.hpp"
 
-// #include "axom/slic.hpp"
-// #include "mpi.h"
-
 namespace serac {
 
 namespace logger {
