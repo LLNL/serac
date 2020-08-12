@@ -6,7 +6,7 @@
 
 #include "elasticity_solver.hpp"
 
-#include "common/logger.hpp"
+#include "common/common.hpp"
 
 namespace serac {
 

@@ -23,7 +23,7 @@
 #include "CLI11/CLI11.hpp"
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
-#include "common/logger.hpp"
+#include "common/common.hpp"
 #include "common/mesh_utils.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"

@@ -10,8 +10,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "common/logger.hpp"
-#include "common/serac_types.hpp"
+#include "common/common.hpp"
 #include "fmt/fmt.hpp"
 
 namespace serac {
