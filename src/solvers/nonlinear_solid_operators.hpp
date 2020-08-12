@@ -17,6 +17,7 @@
 
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
+#include "solvers/algebraic_solver.hpp"
 
 namespace serac {
 
@@ -188,7 +189,7 @@ protected:
   /**
    * @brief The CG solver for the mass matrix
    */
-  SystemSolver M_solver_;
+  AlgebraicSolver M_solver_;
 
   /**
    * @brief The reduced system operator for applying the bilinear and nonlinear forms

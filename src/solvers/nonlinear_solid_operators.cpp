@@ -52,7 +52,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
     auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.true_dofs));
   }
 
-  M_solver_ = SystemSolver(H_form_->ParFESpace()->GetComm(), lin_params);
+  M_solver_ = AlgebraicSolver(H_form_->ParFESpace()->GetComm(), lin_params);
 
   auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
   M_solver_.solver().iterative_mode = false;

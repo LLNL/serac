@@ -187,7 +187,7 @@ void NonlinearSolidSolver::completeSetup()
     S_form->Finalize(0);
   }
 
-  solver_ = SystemSolver(displacement_->space->GetComm(), lin_params_, nonlin_params_);
+  solver_ = AlgebraicSolver(displacement_->space->GetComm(), lin_params_, nonlin_params_);
   // Set up the jacbian solver based on the linear solver options
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,

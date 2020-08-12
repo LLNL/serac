@@ -18,6 +18,7 @@
 
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
+#include "solvers/algebraic_solver.hpp"
 
 namespace serac {
 
@@ -109,7 +110,7 @@ protected:
   /**
    * @brief System solver instance
    */
-  SystemSolver solver_;
+  AlgebraicSolver solver_;
 
 public:
   /**

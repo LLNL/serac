@@ -134,7 +134,7 @@ void ThermalSolver::quasiStaticSolve()
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
-  solver_ = SystemSolver(temperature_->space->GetComm(), lin_params_);
+  solver_ = AlgebraicSolver(temperature_->space->GetComm(), lin_params_);
 
   auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
   hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);
