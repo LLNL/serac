@@ -14,7 +14,6 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
                                                      const serac::LinearSolverParameters&   params,
                                                      std::vector<serac::BoundaryCondition>& ess_bdr)
     : mfem::TimeDependentOperator(fespace.GetTrueVSize(), 0.0),
-      // fespace_(fespace),
       ess_bdr_(ess_bdr),
       z_(fespace.GetTrueVSize()),
       y_(fespace.GetTrueVSize()),
