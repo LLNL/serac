@@ -125,7 +125,7 @@ void NonlinearSolidSolver::completeSetup()
     SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef),
                     "Traction boundary condition had a non-vector coefficient.");
     H_form->AddBdrFaceIntegrator(nat_bc_data.newVecIntegrator<HyperelasticTractionIntegrator>().release(),
-                                 nat_bc_data.getMarkers());
+                                 nat_bc_data.markers());
   }
 
   // Add the essential boundary
@@ -137,7 +137,7 @@ void NonlinearSolidSolver::completeSetup()
   // Project the essential boundary coefficients
   for (auto& bc : ess_bdr_) {
     // Project the coefficient
-    bc.project(*(displacement_->gf), *(displacement_->space));
+    bc.project(*displacement_->gf, *displacement_->space);
 
     // Add the vector dofs to the total essential BC dof list
     essential_dofs.Append(bc.getTrueDofs());

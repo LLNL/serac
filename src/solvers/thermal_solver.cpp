@@ -90,7 +90,7 @@ void ThermalSolver::completeSetup()
 
   // Eliminate the essential DOFs from the stiffness matrix
   for (auto& bc : ess_bdr_) {
-    bc.eliminateFrom(*K_mat_);
+    bc.eliminateFromMatrix(*K_mat_);
   }
 
   // Initialize the eliminated BC RHS vector
@@ -123,7 +123,7 @@ void ThermalSolver::quasiStaticSolve()
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    bc.projectBdr(*(temperature_->gf), time_);
+    bc.projectBdr(*temperature_->gf, time_);
     temperature_->gf->GetTrueDofs(*temperature_->true_vec);
     bc.eliminateToRHS(*K_mat_, *temperature_->true_vec, *bc_rhs_);
   }

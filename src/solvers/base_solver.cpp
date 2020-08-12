@@ -43,7 +43,7 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCo
 
   for (int attr : ess_bdr) {
     if (std::any_of(ess_bdr_.cbegin(), ess_bdr_.cend(),
-                    [attr](auto&& existing_bc) { return existing_bc.getMarkers()[attr - 1] == 1; })) {
+                    [attr](auto&& existing_bc) { return existing_bc.markers()[attr - 1] == 1; })) {
       SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
       bc.removeAttr(attr);
     }

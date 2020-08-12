@@ -5,6 +5,8 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(common_headers
+    boundary_condition.hpp
+    common.hpp
     serac_types.hpp
     logger.hpp
     mesh_utils.hpp

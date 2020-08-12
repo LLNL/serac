@@ -75,7 +75,7 @@ void ElasticitySolver::completeSetup()
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef),
                       "Traction boundary condition had a non-vector coefficient.");
       l_form_->AddBoundaryIntegrator(nat_bc.newVecIntegrator<mfem::VectorBoundaryLFIntegrator>().release(),
-                                     nat_bc.getMarkers());
+                                     nat_bc.markers());
     }
     l_form_->Assemble();
     rhs_.reset(l_form_->ParallelAssemble());
@@ -154,7 +154,7 @@ void ElasticitySolver::QuasiStaticSolve()
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
     bool should_be_scalar = false;
-    bc.projectBdr(*(displacement_->gf), time_, should_be_scalar);
+    bc.projectBdr(*displacement_->gf, time_, should_be_scalar);
     displacement_->gf->GetTrueDofs(*displacement_->true_vec);
     mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.getTrueDofs(), *displacement_->true_vec, *bc_rhs_);
   }

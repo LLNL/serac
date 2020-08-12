@@ -16,7 +16,7 @@
 #include <map>
 #include <memory>
 
-#include "common/serac_types.hpp"
+#include "common/common.hpp"
 #include "mfem.hpp"
 
 namespace serac {
