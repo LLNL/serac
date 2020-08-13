@@ -9,12 +9,12 @@
 #include "mfem.hpp"
 
 class ArrayCtr {
- private:
+private:
   mfem::Array<double> array_;
   static std::size_t  copy_;
   static std::size_t  default_;
 
- public:
+public:
   ArrayCtr() { default_++; }
   ArrayCtr(const ArrayCtr& other) : array_(other.array_) { copy_++; }
 

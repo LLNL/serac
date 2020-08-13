@@ -6,7 +6,7 @@
 
 #include "elasticity_solver.hpp"
 
-#include "common/logger.hpp"
+#include "common/common.hpp"
 
 namespace serac {
 
@@ -24,7 +24,7 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
 void ElasticitySolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, displacement_->space(), component);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void ElasticitySolver::setTractionBCs(const std::set<int>&                     trac_bdr,
@@ -65,9 +65,8 @@ void ElasticitySolver::completeSetup()
     for (auto& nat_bc : nat_bdr_) {
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef),
                       "Traction boundary condition had a non-vector coefficient.");
-      l_form_->AddBoundaryIntegrator(
-          new mfem::VectorBoundaryLFIntegrator(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef)),
-          nat_bc.markers);
+      l_form_->AddBoundaryIntegrator(nat_bc.newVecIntegrator<mfem::VectorBoundaryLFIntegrator>().release(),
+                                     nat_bc.markers());
     }
     l_form_->Assemble();
     rhs_.reset(l_form_->ParallelAssemble());
@@ -81,7 +80,7 @@ void ElasticitySolver::completeSetup()
 
   // Eliminate the essential DOFs
   for (auto& bc : ess_bdr_) {
-    K_e_mat_.reset(K_mat_->EliminateRowsCols(bc.true_dofs));
+    K_e_mat_.reset(K_mat_->EliminateRowsCols(bc.getTrueDofs()));
   }
 
   // Initialize the eliminate BC RHS vector
@@ -91,8 +90,7 @@ void ElasticitySolver::completeSetup()
   // Initialize the true vector
   displacement_->initializeTrueVec();
 
-  std::unique_ptr<mfem::IterativeSolver> iter_solver;
-
+  solver_ = AlgebraicSolver(displacement_->space().GetComm(), lin_params_);
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
@@ -100,26 +98,15 @@ void ElasticitySolver::completeSetup()
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
     prec_amg->SetElasticityOptions(&displacement_->space());
-    K_prec_ = std::move(prec_amg);
-
-    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->comm());
+    solver_.SetPreconditioner(std::move(prec_amg));
   }
   // If not AMG, just MINRES with Jacobi smoothing
   else {
     auto K_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
     K_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     K_hypreSmoother->SetPositiveDiagonal(true);
-    K_prec_ = std::move(K_hypreSmoother);
-
-    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->comm());
+    solver_.SetPreconditioner(std::move(K_hypreSmoother));
   }
-
-  iter_solver->SetRelTol(lin_params_.rel_tol);
-  iter_solver->SetAbsTol(lin_params_.abs_tol);
-  iter_solver->SetMaxIter(lin_params_.max_iter);
-  iter_solver->SetPrintLevel(lin_params_.print_level);
-  iter_solver->SetPreconditioner(*K_prec_);
-  K_solver_ = std::move(iter_solver);
 }
 
 void ElasticitySolver::advanceTimestep(double&)
@@ -145,18 +132,15 @@ void ElasticitySolver::QuasiStaticSolve()
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef),
-                    "Displacement boundary condition had a non-vector coefficient.");
-    auto vec_coef = std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef);
-    vec_coef->SetTime(time_);
-    displacement_->gridFunc().ProjectBdrCoefficient(*vec_coef, bc.markers);
-    displacement_->initializeTrueVec();
-    mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.true_dofs, displacement_->trueVec(), *bc_rhs_);
+    bool should_be_scalar = false;
+    bc.projectBdr(displacement_->gridFunc(), time_, should_be_scalar);
+    displacement_->gridFunc().GetTrueDofs(displacement_->trueVec());
+    mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.getTrueDofs(), displacement_->trueVec(), *bc_rhs_);
   }
 
-  K_solver_->SetOperator(*K_mat_);
+  solver_.SetOperator(*K_mat_);
 
-  K_solver_->Mult(*bc_rhs_, displacement_->trueVec());
+  solver_.Mult(*bc_rhs_, displacement_->trueVec());
 }
 
 ElasticitySolver::~ElasticitySolver() {}

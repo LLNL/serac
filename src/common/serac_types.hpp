@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file serac_types.hpp
+ *
+ * @brief This file contains common serac data structures
+ */
+
 #ifndef SERAC_TYPES
 #define SERAC_TYPES
 
@@ -12,18 +18,22 @@
 #include <type_traits>
 #include <variant>
 
+#include "common/logger.hpp"
 #include "mfem.hpp"
 
 namespace serac {
-
-// Option bundling enums
-
+/**
+ * @brief Output file type associated with a solver
+ */
 enum class OutputType
 {
   GLVis,
   VisIt
 };
 
+/**
+ * @brief Timestep method of a solver
+ */
 enum class TimestepMethod
 {
   BackwardEuler,
@@ -39,6 +49,9 @@ enum class TimestepMethod
   QuasiStatic
 };
 
+/**
+ * @brief Linear solution method
+ */
 enum class LinearSolver
 {
   CG,
@@ -46,12 +59,18 @@ enum class LinearSolver
   MINRES
 };
 
+/**
+ * @brief Preconditioning method
+ */
 enum class Preconditioner
 {
   Jacobi,
   BoomerAMG
 };
 
+/**
+ * @brief Abstract multiphysics coupling scheme
+ */
 enum class CouplingScheme
 {
   OperatorSplit,
@@ -59,22 +78,64 @@ enum class CouplingScheme
   FullyCoupled
 };
 
-// Parameter bundles
-
+/**
+ * @brief Parameters for a linear solution scheme
+ */
 struct LinearSolverParameters {
-  double         rel_tol;
-  double         abs_tol;
-  int            print_level;
-  int            max_iter;
-  LinearSolver   lin_solver;
+  /**
+   * @brief Relative tolerance
+   */
+  double rel_tol;
+
+  /**
+   * @brief Absolute tolerance
+   */
+  double abs_tol;
+
+  /**
+   * @brief Debugging print level
+   */
+  int print_level;
+
+  /**
+   * @brief Maximum number of iterations
+   */
+  int max_iter;
+
+  /**
+   * @brief Linear solver selection
+   */
+  LinearSolver lin_solver;
+
+  /**
+   * @brief Preconditioner selection
+   */
   Preconditioner prec;
 };
 
+/**
+ * @brief Nonlinear solution scheme parameters
+ */
 struct NonlinearSolverParameters {
+  /**
+   * @brief Relative tolerance
+   */
   double rel_tol;
+
+  /**
+   * @brief Absolute tolerance
+   */
   double abs_tol;
-  int    max_iter;
-  int    print_level;
+
+  /**
+   * @brief Maximum number of iterations
+   */
+  int max_iter;
+
+  /**
+   * @brief Debug print level
+   */
+  int print_level;
 };
 
 // Git will git confused if the order of the classes are switched, so leave this in until merge
@@ -111,7 +172,7 @@ struct FESOptions {
  * GridFunction, and a Vector of the solution
  */
 class FiniteElementState {
- public:
+public:
   /**
    * Main constructor for building a new state object
    * @param[in] order The order of the problem
@@ -204,23 +265,13 @@ class FiniteElementState {
     return std::make_unique<Tensor>(&space_);
   }
 
- private:
+private:
   std::shared_ptr<mfem::ParMesh>                 mesh_;
   std::unique_ptr<mfem::FiniteElementCollection> coll_;
   mfem::ParFiniteElementSpace                    space_;
   std::unique_ptr<mfem::ParGridFunction>         gf_;
   mfem::HypreParVector                           true_vec_;
   std::string                                    name_ = "";
-};
-
-// Boundary condition information
-struct BoundaryCondition {
-  using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
-  mfem::Array<int>                      markers;
-  mfem::Array<int>                      true_dofs;
-  int                                   component;
-  Coef                                  coef;
-  std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries;
 };
 
 }  // namespace serac

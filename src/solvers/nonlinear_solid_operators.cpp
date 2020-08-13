@@ -35,7 +35,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
                                                              std::unique_ptr<mfem::ParBilinearForm>       S_form,
                                                              std::unique_ptr<mfem::ParBilinearForm>       M_form,
                                                              const std::vector<serac::BoundaryCondition>& ess_bdr,
-                                                             mfem::NewtonSolver&                          newton_solver,
+                                                             mfem::IterativeSolver&                       newton_solver,
                                                              const serac::LinearSolverParameters&         lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
       M_form_(std::move(M_form)),
@@ -49,17 +49,17 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
   // Assemble the mass matrix and eliminate the fixed DOFs
   M_mat_.reset(M_form_->ParallelAssemble());
   for (auto& bc : ess_bdr_) {
-    auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.true_dofs));
+    auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.getTrueDofs()));
   }
 
-  // Set the mass matrix solver options
-  M_solver_.iterative_mode = false;
-  M_solver_.SetRelTol(lin_params_.rel_tol);
-  M_solver_.SetAbsTol(lin_params_.abs_tol);
-  M_solver_.SetMaxIter(lin_params_.max_iter);
-  M_solver_.SetPrintLevel(lin_params_.print_level);
-  M_prec_.SetType(mfem::HypreSmoother::Jacobi);
-  M_solver_.SetPreconditioner(M_prec_);
+  M_solver_ = AlgebraicSolver(H_form_->ParFESpace()->GetComm(), lin_params);
+
+  auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
+  M_solver_.solver().iterative_mode = false;
+
+  M_prec->SetType(mfem::HypreSmoother::Jacobi);
+  M_solver_.SetPreconditioner(std::move(M_prec));
+
   M_solver_.SetOperator(*M_mat_);
 
   // Construct the reduced system operator and initialize the newton solver with
@@ -80,7 +80,7 @@ void NonlinearSolidDynamicOperator::Mult(const mfem::Vector& vx, mfem::Vector& d
   H_form_->Mult(x, z_);
   S_form_->TrueAddMult(v, z_);
   for (auto& bc : ess_bdr_) {
-    z_.SetSubVector(bc.true_dofs, 0.0);
+    z_.SetSubVector(bc.getTrueDofs(), 0.0);
   }
   z_.Neg();  // z = -z
   M_solver_.Mult(z_, dv_dt);
@@ -144,7 +144,7 @@ void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector& k, mfem::Vect
   M_form_.TrueAddMult(k, y);
   S_form_.TrueAddMult(w_, y);
   for (const auto& bc : ess_bdr_) {
-    y.SetSubVector(bc.true_dofs, 0.0);
+    y.SetSubVector(bc.getTrueDofs(), 0.0);
   }
 }
 
@@ -162,7 +162,7 @@ mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   // This call eliminates the appropriate DOFs in jacobian_ and returns the
   // eliminated DOFs in Je. We don't need this so it gets deleted.
   for (auto& bc : ess_bdr_) {
-    auto Je = std::unique_ptr<mfem::HypreParMatrix>(jacobian_->EliminateRowsCols(bc.true_dofs));
+    auto Je = std::unique_ptr<mfem::HypreParMatrix>(jacobian_->EliminateRowsCols(bc.getTrueDofs()));
   }
   return *jacobian_;
 }

@@ -4,87 +4,146 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file thermal_operators.hpp
+ *
+ * @brief The MFEM oeprators for the thermal conduction solver
+ */
+
 #ifndef CONDUCTION_OPER
 #define CONDUCTION_OPER
 
 #include <memory>
 
-#include "common/serac_types.hpp"
+#include "common/common.hpp"
 #include "mfem.hpp"
+#include "solvers/algebraic_solver.hpp"
 
 namespace serac {
 
-/// The time dependent operator for advancing the discretized conduction ODE
+/**
+ * @brief The time dependent operator for advancing the discretized conduction ODE
+ */
 class DynamicConductionOperator : public mfem::TimeDependentOperator {
- protected:
-  /// Finite Element space
+public:
+  /**
+   * @brief Construct a new Dynamic Conduction Operator object
+   *
+   * @param[in] fespace The temperature field finite element space
+   * @param[in] params The linear solver parameters
+   * @param[in] ess_bdr The essential boundary condition objects
+   */
+  DynamicConductionOperator(mfem::ParFiniteElementSpace& fespace, const serac::LinearSolverParameters& params,
+                            std::vector<serac::BoundaryCondition>& ess_bdr);
+
+  /**
+   * @brief Set the mass and stiffness matrices
+   *
+   * @param[in] M_mat The mass matrix
+   * @param[in] K_mat The stiffness matrix
+   */
+  void setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);
+
+  /**
+   * @brief Set the thermal flux load vector
+   *
+   * @param[in] The thermal flux (RHS vector)
+   */
+  void setLoadVector(std::shared_ptr<mfem::Vector> rhs);
+
+  /**
+   * @brief Calculate du_dt = M^-1 (-Ku + f)
+   *
+   * This is all that is required for explicit time integration methods
+   *
+   * @param[in] u The input state vector
+   * @param[out] du_dt The output time derivative of the state vector
+   */
+  virtual void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const;
+
+  /**
+   * @brief Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
+   *
+   * This is required for implicit time integration schemes
+   *
+   * @param[in] dt The timestep
+   * @param[in] u The input state vector
+   * @param[out] du_dt The output time derivative of the state vector
+   */
+  virtual void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
+
+  /**
+   * @brief Destroy the Dynamic Conduction Operator object
+   */
+  virtual ~DynamicConductionOperator();
+
+protected:
+  /**
+   * @brief Finite Element space
+   */
   mfem::ParFiniteElementSpace& fespace_;
 
-  /// Grid function for boundary condition projection
+  /**
+   * @brief Grid function for boundary condition projection
+   */
   std::shared_ptr<mfem::ParGridFunction> state_gf_;
 
-  /// Solver for the mass matrix
-  std::unique_ptr<mfem::CGSolver> M_solver_;
+  /**
+   * @brief Solver for the mass matrix
+   */
+  AlgebraicSolver M_solver_;
 
-  /// Solver for the T matrix
-  std::unique_ptr<mfem::CGSolver> T_solver_;
+  /**
+   * @brief Solver for the T matrix
+   */
+  AlgebraicSolver T_solver_;
 
-  /// Preconditioner for the M matrix
-  std::unique_ptr<mfem::HypreSmoother> M_prec_;
-
-  /// Preconditioner for the T matrix
-  std::unique_ptr<mfem::HypreSmoother> T_prec_;
-
-  /// Pointer to the assembled M matrix
+  /**
+   * @brief Pointer to the assembled M matrix
+   */
   std::shared_ptr<mfem::HypreParMatrix> M_mat_;
 
-  /// Pointer to the assembled K matrix
+  /**
+   * @brief Pointer to the assembled K matrix
+   */
   std::shared_ptr<mfem::HypreParMatrix> K_mat_;
 
-  /// Pointer to the assembled T ( = M + dt K) matrix
+  /**
+   * @brief Pointer to the assembled T ( = M + dt K) matrix
+   */
   std::unique_ptr<mfem::HypreParMatrix> T_mat_;
 
-  /// Pointer to the eliminated T matrix
+  /**
+   * @brief Pointer to the eliminated T matrix
+   */
   std::unique_ptr<mfem::HypreParMatrix> T_e_mat_;
 
-  /// Assembled RHS vector
+  /**
+   * @brief Assembled RHS vector
+   */
   std::shared_ptr<mfem::Vector> rhs_;
 
-  /// RHS vector including essential boundary elimination
+  /**
+   * @brief RHS vector including essential boundary elimination
+   */
   std::shared_ptr<mfem::Vector> bc_rhs_;
 
-  /// Temperature essential boundary coefficient
+  /**
+   * @brief Temperature essential boundary coefficient
+   */
   std::vector<serac::BoundaryCondition>& ess_bdr_;
 
-  /// Auxillary working vectors
+  /**
+   * @brief Auxillary working vectors
+   */
   mutable mfem::Vector z_;
   mutable mfem::Vector y_;
   mutable mfem::Vector x_;
 
-  /// Storage of old dt use to determine if we should recompute the T matrix
+  /**
+   * @brief Storage of old dt use to determine if we should recompute the T matrix
+   */
   mutable double old_dt_;
-
- public:
-  /// Constructor. Height is the true degree of freedom size
-  DynamicConductionOperator(mfem::ParFiniteElementSpace& fespace, const serac::LinearSolverParameters& params,
-                            std::vector<serac::BoundaryCondition>& ess_bdr);
-
-  /// Set the mass matrix
-  void setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);
-
-  /// Set the load vector
-  void setLoadVector(std::shared_ptr<mfem::Vector> rhs);
-
-  /** Calculate du_dt = M^-1 (-Ku + f).
-   *  This is all that is needed for explicit methods */
-  virtual void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const;
-
-  /** Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
-   *  for du_dt. This is needed for implicit methods */
-  virtual void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
-
-  /// Destructor
-  virtual ~DynamicConductionOperator();
 };
 
 }  // namespace serac
