@@ -7,6 +7,7 @@
 set(common_headers
     boundary_condition.hpp
     common.hpp
+    finite_element_state.hpp
     serac_types.hpp
     logger.hpp
     mesh_utils.hpp

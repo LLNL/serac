@@ -33,7 +33,7 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
   gf_initialized_.assign(n, false);
 }
 
-void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
+void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
                                  FiniteElementState& state, const int component)
 {
   auto num_attrs = state_.front()->mesh().bdr_attributes.Max();
@@ -53,13 +53,12 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCo
   ess_bdr_.emplace_back(std::move(bc));
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,
-                             int component)
+void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
 {
   ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
+void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
                                const int component)
 {
   auto                     num_attrs = state_.front()->mesh().bdr_attributes.Max();
@@ -67,7 +66,7 @@ void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCond
   nat_bdr_.push_back(std::move(bc));
 }
 
-void BaseSolver::setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef)
+void BaseSolver::setState(const std::vector<serac::GeneralCoefficient>& state_coef)
 {
   SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 

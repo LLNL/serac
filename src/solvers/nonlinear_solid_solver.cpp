@@ -121,7 +121,7 @@ void NonlinearSolidSolver::completeSetup()
   // Project the essential boundary coefficients
   for (auto& bc : ess_bdr_) {
     // Project the coefficient
-    bc.project(displacement_->gridFunc(), displacement_->space());
+    bc.project(*displacement_);
 
     // Add the vector dofs to the total essential BC dof list
     essential_dofs.Append(bc.getTrueDofs());

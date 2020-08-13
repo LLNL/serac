@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "common/serac_types.hpp"
+#include "common/finite_element_state.hpp"
 
 namespace serac {
 

@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <variant>
 
+#include "common/finite_element_state.hpp"
 #include "common/serac_types.hpp"
 
 namespace serac {
@@ -83,6 +84,8 @@ public:
    * the scalar DOF list
    */
   void project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace& fes) const;
+
+  void project(FiniteElementState& state) const;
 
   /**
    * Projects the boundary condition over a grid function

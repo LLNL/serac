@@ -117,7 +117,7 @@ void ThermalSolver::quasiStaticSolve()
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
     bc.projectBdr(temperature_->gridFunc(), time_);
-    temperature_->gridFunc().GetTrueDofs(temperature_->trueVec());
+    temperature_->initializeTrueVec();
     bc.eliminateToRHS(*K_mat_, temperature_->trueVec(), *bc_rhs_);
   }
 
