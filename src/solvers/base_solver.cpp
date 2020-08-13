@@ -27,9 +27,6 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
 {
   order_ = p;
   state_.resize(n);
-
-  // std::generate(state_.begin(), state_.end(), std::make_shared<serac::FiniteElementState>);
-
   gf_initialized_.assign(n, false);
 }
 
