@@ -17,6 +17,7 @@
 
 #include "common/common.hpp"
 #include "mfem.hpp"
+#include "solvers/algebraic_solver.hpp"
 
 namespace serac {
 
@@ -91,22 +92,12 @@ protected:
   /**
    * @brief Solver for the mass matrix
    */
-  std::unique_ptr<mfem::CGSolver> M_solver_;
+  AlgebraicSolver M_solver_;
 
   /**
    * @brief Solver for the T matrix
    */
-  std::unique_ptr<mfem::CGSolver> T_solver_;
-
-  /**
-   * @brief Preconditioner for the M matrix
-   */
-  std::unique_ptr<mfem::HypreSmoother> M_prec_;
-
-  /**
-   * @brief Preconditioner for the T matrix
-   */
-  std::unique_ptr<mfem::HypreSmoother> T_prec_;
+  AlgebraicSolver T_solver_;
 
   /**
    * @brief Pointer to the assembled M matrix

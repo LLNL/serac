@@ -17,6 +17,7 @@
 
 #include "common/common.hpp"
 #include "mfem.hpp"
+#include "solvers/algebraic_solver.hpp"
 
 namespace serac {
 
@@ -178,8 +179,8 @@ public:
   NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>      H_form,
                                 std::unique_ptr<mfem::ParBilinearForm>       S_form,
                                 std::unique_ptr<mfem::ParBilinearForm>       M_form,
-                                const std::vector<serac::BoundaryCondition>& ess_bdr, mfem::NewtonSolver& newton_solver,
-                                const serac::LinearSolverParameters& lin_params);
+                                const std::vector<serac::BoundaryCondition>& ess_bdr,
+                                mfem::IterativeSolver& newton_solver, const serac::LinearSolverParameters& lin_params);
 
   /**
    * @brief Evaluate the explicit time derivative
@@ -229,12 +230,7 @@ protected:
   /**
    * @brief The CG solver for the mass matrix
    */
-  mfem::CGSolver M_solver_;
-
-  /**
-   * @brief The preconditioner for the CG mass matrix solver
-   */
-  mfem::HypreSmoother M_prec_;
+  AlgebraicSolver M_solver_;
 
   /**
    * @brief The reduced system operator for applying the bilinear and nonlinear forms
@@ -244,7 +240,7 @@ protected:
   /**
    * @brief The Newton solver for the nonlinear iterations
    */
-  mfem::NewtonSolver& newton_solver_;
+  mfem::IterativeSolver& newton_solver_;
 
   /**
    * @brief The fixed boudnary degrees of freedom

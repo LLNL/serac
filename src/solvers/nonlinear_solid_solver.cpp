@@ -15,10 +15,7 @@ namespace serac {
 constexpr int NUM_FIELDS = 2;
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
-      velocity_(state_[0]),
-      displacement_(state_[1]),
-      newton_solver_(pmesh->GetComm())
+    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order), velocity_(state_[0]), displacement_(state_[1])
 {
   velocity_->mesh      = pmesh;
   velocity_->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
@@ -172,50 +169,31 @@ void NonlinearSolidSolver::completeSetup()
     S_form->Finalize(0);
   }
 
+  solver_ = AlgebraicSolver(displacement_->space->GetComm(), lin_params_, nonlin_params_);
   // Set up the jacbian solver based on the linear solver options
-  std::unique_ptr<mfem::IterativeSolver> iter_solver;
-
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
     prec_amg->SetElasticityOptions(displacement_->space.get());
-    J_prec_ = std::move(prec_amg);
-
-    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->space->GetComm());
+    solver_.SetPreconditioner(std::move(prec_amg));
   } else {
     auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
     J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     J_hypreSmoother->SetPositiveDiagonal(true);
-    J_prec_ = std::move(J_hypreSmoother);
-
-    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->space->GetComm());
+    solver_.SetPreconditioner(std::move(J_hypreSmoother));
   }
-
-  iter_solver->SetRelTol(lin_params_.rel_tol);
-  iter_solver->SetAbsTol(lin_params_.abs_tol);
-  iter_solver->SetMaxIter(lin_params_.max_iter);
-  iter_solver->SetPrintLevel(lin_params_.print_level);
-  iter_solver->SetPreconditioner(*J_prec_);
-  J_solver_ = std::move(iter_solver);
-
-  // Set the newton solve parameters
-  newton_solver_.SetSolver(*J_solver_);
-  newton_solver_.SetPrintLevel(nonlin_params_.print_level);
-  newton_solver_.SetRelTol(nonlin_params_.rel_tol);
-  newton_solver_.SetAbsTol(nonlin_params_.abs_tol);
-  newton_solver_.SetMaxIter(nonlin_params_.max_iter);
 
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    newton_solver_.iterative_mode = true;
-    nonlinear_oper_               = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
-    newton_solver_.SetOperator(*nonlinear_oper_);
+    nonlinear_oper_                 = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
+    solver_.solver().iterative_mode = true;
+    solver_.SetOperator(*nonlinear_oper_);
   } else {
-    newton_solver_.iterative_mode = false;
-    timedep_oper_                 = std::make_shared<NonlinearSolidDynamicOperator>(
-        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, newton_solver_, lin_params_);
+    timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(
+        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, solver_.solver(), lin_params_);
+    solver_.solver().iterative_mode = false;
     ode_solver_->Init(*timedep_oper_);
   }
 }
@@ -224,7 +202,7 @@ void NonlinearSolidSolver::completeSetup()
 void NonlinearSolidSolver::quasiStaticSolve()
 {
   mfem::Vector zero;
-  newton_solver_.Mult(zero, *displacement_->true_vec);
+  solver_.Mult(zero, *displacement_->true_vec);
 }
 
 // Advance the timestep

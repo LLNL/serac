@@ -35,7 +35,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
                                                              std::unique_ptr<mfem::ParBilinearForm>       S_form,
                                                              std::unique_ptr<mfem::ParBilinearForm>       M_form,
                                                              const std::vector<serac::BoundaryCondition>& ess_bdr,
-                                                             mfem::NewtonSolver&                          newton_solver,
+                                                             mfem::IterativeSolver&                       newton_solver,
                                                              const serac::LinearSolverParameters&         lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
       M_form_(std::move(M_form)),
@@ -52,14 +52,14 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
     auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.getTrueDofs()));
   }
 
-  // Set the mass matrix solver options
-  M_solver_.iterative_mode = false;
-  M_solver_.SetRelTol(lin_params_.rel_tol);
-  M_solver_.SetAbsTol(lin_params_.abs_tol);
-  M_solver_.SetMaxIter(lin_params_.max_iter);
-  M_solver_.SetPrintLevel(lin_params_.print_level);
-  M_prec_.SetType(mfem::HypreSmoother::Jacobi);
-  M_solver_.SetPreconditioner(M_prec_);
+  M_solver_ = AlgebraicSolver(H_form_->ParFESpace()->GetComm(), lin_params);
+
+  auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
+  M_solver_.solver().iterative_mode = false;
+
+  M_prec->SetType(mfem::HypreSmoother::Jacobi);
+  M_solver_.SetPreconditioner(std::move(M_prec));
+
   M_solver_.SetOperator(*M_mat_);
 
   // Construct the reduced system operator and initialize the newton solver with

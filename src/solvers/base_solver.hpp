@@ -18,6 +18,7 @@
 
 #include "common/common.hpp"
 #include "mfem.hpp"
+#include "solvers/algebraic_solver.hpp"
 
 namespace serac {
 
@@ -235,6 +236,11 @@ protected:
    * @brief State variable initialization indicator
    */
   std::vector<bool> gf_initialized_;
+
+  /**
+   * @brief System solver instance
+   */
+  AlgebraicSolver solver_;
 };
 
 }  // namespace serac

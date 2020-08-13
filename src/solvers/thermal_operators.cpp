@@ -22,27 +22,20 @@ DynamicConductionOperator::DynamicConductionOperator(std::shared_ptr<mfem::ParFi
       old_dt_(-1.0)
 {
   // Set the mass solver options (CG and Jacobi for now)
-  M_solver_ = std::make_unique<mfem::CGSolver>(fespace_->GetComm());
-  M_prec_   = std::make_unique<mfem::HypreSmoother>();
+  M_solver_ = AlgebraicSolver(fespace_->GetComm(), params);
 
-  M_solver_->iterative_mode = false;
-  M_solver_->SetRelTol(params.rel_tol);
-  M_solver_->SetAbsTol(params.abs_tol);
-  M_solver_->SetMaxIter(params.max_iter);
-  M_solver_->SetPrintLevel(params.print_level);
-  M_prec_->SetType(mfem::HypreSmoother::Jacobi);
-  M_solver_->SetPreconditioner(*M_prec_);
+  M_solver_.solver().iterative_mode = false;
+  auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
+  M_prec->SetType(mfem::HypreSmoother::Jacobi);
+  M_solver_.SetPreconditioner(std::move(M_prec));
 
   // Use the same options for the T (= M + dt K) solver
-  T_solver_ = std::make_unique<mfem::CGSolver>(fespace_->GetComm());
-  T_prec_   = std::make_unique<mfem::HypreSmoother>();
+  T_solver_ = AlgebraicSolver(fespace_->GetComm(), params);
 
-  T_solver_->iterative_mode = false;
-  T_solver_->SetRelTol(params.rel_tol);
-  T_solver_->SetAbsTol(params.abs_tol);
-  T_solver_->SetMaxIter(params.max_iter);
-  T_solver_->SetPrintLevel(params.print_level);
-  T_solver_->SetPreconditioner(*T_prec_);
+  T_solver_.solver().iterative_mode = false;
+
+  auto T_prec = std::make_unique<mfem::HypreSmoother>();
+  T_solver_.SetPreconditioner(std::move(T_prec));
 
   state_gf_ = std::make_shared<mfem::ParGridFunction>(fespace_.get());
   bc_rhs_   = std::make_shared<mfem::Vector>(fespace->GetTrueVSize());
@@ -53,6 +46,7 @@ void DynamicConductionOperator::setMatrices(std::shared_ptr<mfem::HypreParMatrix
 {
   M_mat_ = M_mat;
   K_mat_ = K_mat;
+  M_solver_.SetOperator(*M_mat_);
 }
 
 void DynamicConductionOperator::setLoadVector(std::shared_ptr<mfem::Vector> rhs) { rhs_ = rhs; }
@@ -64,7 +58,6 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
   SLIC_ASSERT_MSG(K_mat_ != nullptr, "Stiffness matrix not set in ConductionSolver::Mult!");
 
   y_ = u;
-  M_solver_->SetOperator(*M_mat_);
 
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
@@ -77,7 +70,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
   K_mat_->Mult(y_, z_);
   z_.Neg();  // z = -zw z_.Add(1.0, *bc_rhs_);
   z_.Add(1.0, *bc_rhs_);
-  M_solver_->Mult(z_, du_dt);
+  M_solver_.Mult(z_, du_dt);
 }
 
 void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt)
@@ -98,7 +91,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     for (auto& bc : ess_bdr_) {
       T_e_mat_.reset(T_mat_->EliminateRowsCols(bc.getTrueDofs()));
     }
-    T_solver_->SetOperator(*T_mat_);
+    T_solver_.SetOperator(*T_mat_);
   }
 
   // Apply the boundary conditions
@@ -114,7 +107,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   K_mat_->Mult(y_, z_);
   z_.Neg();
   z_.Add(1.0, *bc_rhs_);
-  T_solver_->Mult(z_, du_dt);
+  T_solver_.Mult(z_, du_dt);
 
   // Save the dt used to compute the T matrix
   old_dt_ = dt;

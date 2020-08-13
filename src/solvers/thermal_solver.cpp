@@ -130,20 +130,18 @@ void ThermalSolver::quasiStaticSolve()
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
-  K_solver_ = std::make_shared<mfem::CGSolver>(temperature_->space->GetComm());
-  K_prec_   = std::make_shared<mfem::HypreSmoother>();
+  solver_ = AlgebraicSolver(temperature_->space->GetComm(), lin_params_);
 
-  K_solver_->iterative_mode = false;
-  K_solver_->SetRelTol(lin_params_.rel_tol);
-  K_solver_->SetAbsTol(lin_params_.abs_tol);
-  K_solver_->SetMaxIter(lin_params_.max_iter);
-  K_solver_->SetPrintLevel(lin_params_.print_level);
-  K_prec_->SetType(mfem::HypreSmoother::Jacobi);
-  K_solver_->SetPreconditioner(*K_prec_);
-  K_solver_->SetOperator(*K_mat_);
+  auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
+  hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);
+
+  solver_.SetPreconditioner(std::move(hypre_smoother));
+
+  solver_.solver().iterative_mode = false;
+  solver_.SetOperator(*K_mat_);
 
   // Perform the linear solve
-  K_solver_->Mult(*bc_rhs_, *temperature_->true_vec);
+  solver_.Mult(*bc_rhs_, *temperature_->true_vec);
 }
 
 void ThermalSolver::advanceTimestep(double& dt)

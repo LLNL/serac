@@ -99,8 +99,7 @@ void ElasticitySolver::completeSetup()
   // Initialize the true vector
   displacement_->gf->GetTrueDofs(*displacement_->true_vec);
 
-  std::unique_ptr<mfem::IterativeSolver> iter_solver;
-
+  solver_ = AlgebraicSolver(displacement_->space->GetComm(), lin_params_);
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
@@ -108,26 +107,15 @@ void ElasticitySolver::completeSetup()
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
     prec_amg->SetElasticityOptions(displacement_->space.get());
-    K_prec_ = std::move(prec_amg);
-
-    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->space->GetComm());
+    solver_.SetPreconditioner(std::move(prec_amg));
   }
   // If not AMG, just MINRES with Jacobi smoothing
   else {
     auto K_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
     K_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     K_hypreSmoother->SetPositiveDiagonal(true);
-    K_prec_ = std::move(K_hypreSmoother);
-
-    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->space->GetComm());
+    solver_.SetPreconditioner(std::move(K_hypreSmoother));
   }
-
-  iter_solver->SetRelTol(lin_params_.rel_tol);
-  iter_solver->SetAbsTol(lin_params_.abs_tol);
-  iter_solver->SetMaxIter(lin_params_.max_iter);
-  iter_solver->SetPrintLevel(lin_params_.print_level);
-  iter_solver->SetPreconditioner(*K_prec_);
-  K_solver_ = std::move(iter_solver);
 }
 
 void ElasticitySolver::advanceTimestep(double&)
@@ -159,9 +147,9 @@ void ElasticitySolver::QuasiStaticSolve()
     mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.getTrueDofs(), *displacement_->true_vec, *bc_rhs_);
   }
 
-  K_solver_->SetOperator(*K_mat_);
+  solver_.SetOperator(*K_mat_);
 
-  K_solver_->Mult(*bc_rhs_, *displacement_->true_vec);
+  solver_.Mult(*bc_rhs_, *displacement_->true_vec);
 }
 
 ElasticitySolver::~ElasticitySolver() {}

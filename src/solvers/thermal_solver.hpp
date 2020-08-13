@@ -162,16 +162,6 @@ protected:
   std::shared_ptr<mfem::HypreParVector> rhs_;
 
   /**
-   * @brief Linear solver for the K operator
-   */
-  std::shared_ptr<mfem::CGSolver> K_solver_;
-
-  /**
-   * @brief Preconditioner for the K operator
-   */
-  std::shared_ptr<mfem::HypreSmoother> K_prec_;
-
-  /**
    * @brief Conduction coefficient
    */
   std::shared_ptr<mfem::Coefficient> kappa_;
