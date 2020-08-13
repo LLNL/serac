@@ -27,55 +27,6 @@ namespace serac {
  * example 10p.
  */
 class NonlinearSolidSolver : public BaseSolver {
-protected:
-  std::shared_ptr<FiniteElementState> velocity_;
-  std::shared_ptr<FiniteElementState> displacement_;
-
-  /**
-   * @brief The quasi-static operator for use with the MFEM newton solvers
-   */
-  std::shared_ptr<mfem::Operator> nonlinear_oper_;
-
-  /**
-   * @brief The time dependent operator for use with the MFEM ODE solvers
-   */
-  std::shared_ptr<mfem::TimeDependentOperator> timedep_oper_;
-
-  /**
-   * @brief The viscosity coefficient
-   */
-  std::shared_ptr<mfem::Coefficient> viscosity_;
-
-  /**
-   * @brief The hyperelastic material model
-   */
-  std::shared_ptr<mfem::HyperelasticModel> model_;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  LinearSolverParameters lin_params_;
-
-  /**
-   * @brief Nonlinear solver parameters
-   */
-  NonlinearSolverParameters nonlin_params_;
-
-  /**
-   * @brief Pointer to the reference mesh data
-   */
-  std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
-
-  /**
-   * @brief Pointer to the deformed mesh data
-   */
-  std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
-
-  /**
-   * @brief Solve the Quasi-static operator
-   */
-  void quasiStaticSolve();
-
 public:
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -180,6 +131,70 @@ public:
    * @brief Destroy the Nonlinear Solid Solver object
    */
   virtual ~NonlinearSolidSolver();
+
+protected:
+  std::shared_ptr<FiniteElementState> velocity_;
+  std::shared_ptr<FiniteElementState> displacement_;
+
+  /**
+   * @brief The quasi-static operator for use with the MFEM newton solvers
+   */
+  std::shared_ptr<mfem::Operator> nonlinear_oper_;
+
+  /**
+   * @brief The time dependent operator for use with the MFEM ODE solvers
+   */
+  std::shared_ptr<mfem::TimeDependentOperator> timedep_oper_;
+
+  /**
+   * @brief The Newton solver for the nonlinear iterations
+   */
+  mfem::NewtonSolver newton_solver_;
+
+  /**
+   * @brief The linear solver for the Jacobian
+   */
+  std::unique_ptr<mfem::Solver> J_solver_;
+
+  /**
+   * @brief The preconditioner for the Jacobian solver
+   */
+  std::unique_ptr<mfem::Solver> J_prec_;
+
+  /**
+   * @brief The viscosity coefficient
+   */
+  std::shared_ptr<mfem::Coefficient> viscosity_;
+
+  /**
+   * @brief The hyperelastic material model
+   */
+  std::shared_ptr<mfem::HyperelasticModel> model_;
+
+  /**
+   * @brief Linear solver parameters
+   */
+  LinearSolverParameters lin_params_;
+
+  /**
+   * @brief Nonlinear solver parameters
+   */
+  NonlinearSolverParameters nonlin_params_;
+
+  /**
+   * @brief Pointer to the reference mesh data
+   */
+  std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
+
+  /**
+   * @brief Pointer to the deformed mesh data
+   */
+  std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
+
+  /**
+   * @brief Solve the Quasi-static operator
+   */
+  void quasiStaticSolve();
 };
 
 }  // namespace serac

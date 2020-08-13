@@ -6,7 +6,7 @@
 
 #include "elasticity_solver.hpp"
 
-#include "common/logger.hpp"
+#include "common/common.hpp"
 
 namespace serac {
 
@@ -33,7 +33,7 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pme
 void ElasticitySolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void ElasticitySolver::setTractionBCs(const std::set<int>&                     trac_bdr,
@@ -74,9 +74,8 @@ void ElasticitySolver::completeSetup()
     for (auto& nat_bc : nat_bdr_) {
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef),
                       "Traction boundary condition had a non-vector coefficient.");
-      l_form_->AddBoundaryIntegrator(
-          new mfem::VectorBoundaryLFIntegrator(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc.coef)),
-          nat_bc.markers);
+      l_form_->AddBoundaryIntegrator(nat_bc.newVecIntegrator<mfem::VectorBoundaryLFIntegrator>().release(),
+                                     nat_bc.markers());
     }
     l_form_->Assemble();
     rhs_.reset(l_form_->ParallelAssemble());
@@ -90,7 +89,7 @@ void ElasticitySolver::completeSetup()
 
   // Eliminate the essential DOFs
   for (auto& bc : ess_bdr_) {
-    K_e_mat_.reset(K_mat_->EliminateRowsCols(bc.true_dofs));
+    K_e_mat_.reset(K_mat_->EliminateRowsCols(bc.getTrueDofs()));
   }
 
   // Initialize the eliminate BC RHS vector
@@ -142,13 +141,10 @@ void ElasticitySolver::QuasiStaticSolve()
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef),
-                    "Displacement boundary condition had a non-vector coefficient.");
-    auto vec_coef = std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef);
-    vec_coef->SetTime(time_);
-    displacement_->gf->ProjectBdrCoefficient(*vec_coef, bc.markers);
+    bool should_be_scalar = false;
+    bc.projectBdr(*displacement_->gf, time_, should_be_scalar);
     displacement_->gf->GetTrueDofs(*displacement_->true_vec);
-    mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.true_dofs, *displacement_->true_vec, *bc_rhs_);
+    mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.getTrueDofs(), *displacement_->true_vec, *bc_rhs_);
   }
 
   solver_.SetOperator(*K_mat_);

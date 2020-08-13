@@ -30,64 +30,6 @@ namespace serac {
  *  and lambda and mu are the lame parameters
  */
 class ElasticitySolver : public BaseSolver {
-protected:
-  std::shared_ptr<serac::FiniteElementState> displacement_;
-
-  /**
-   * @brief Stiffness bilinear form
-   */
-  std::unique_ptr<mfem::ParBilinearForm> K_form_;
-
-  /**
-   * @brief Load bilinear form
-   */
-  std::unique_ptr<mfem::ParLinearForm> l_form_;
-
-  /**
-   * @brief Stiffness matrix
-   */
-  std::unique_ptr<mfem::HypreParMatrix> K_mat_;
-
-  /**
-   * @brief Stiffness matrix post essential boundary DOF elimination
-   */
-  std::unique_ptr<mfem::HypreParMatrix> K_e_mat_;
-
-  /**
-   * @brief RHS load vector
-   */
-  std::unique_ptr<mfem::HypreParVector> rhs_;
-
-  /**
-   * @brief Eliminated RHS load vector
-   */
-  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
-
-  /**
-   * @brief Lame mu elasticity parameter
-   */
-  mfem::Coefficient* mu_ = nullptr;
-
-  /**
-   * @brief Lame lambda elasticity parameter
-   */
-  mfem::Coefficient* lambda_ = nullptr;
-
-  /**
-   * @brief Body force coefficient
-   */
-  mfem::VectorCoefficient* body_force_ = nullptr;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  serac::LinearSolverParameters lin_params_;
-
-  /**
-   * @brief Quasi-static solve driver
-   */
-  void QuasiStaticSolve();
-
 public:
   /**
    * @brief Construct a new Elasticity Solver object
@@ -155,6 +97,74 @@ public:
    * @brief The destructor
    */
   virtual ~ElasticitySolver();
+
+protected:
+  std::shared_ptr<serac::FiniteElementState> displacement_;
+
+  /**
+   * @brief Stiffness bilinear form
+   */
+  std::unique_ptr<mfem::ParBilinearForm> K_form_;
+
+  /**
+   * @brief Load bilinear form
+   */
+  std::unique_ptr<mfem::ParLinearForm> l_form_;
+
+  /**
+   * @brief Stiffness matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> K_mat_;
+
+  /**
+   * @brief Stiffness matrix post essential boundary DOF elimination
+   */
+  std::unique_ptr<mfem::HypreParMatrix> K_e_mat_;
+
+  /**
+   * @brief RHS load vector
+   */
+  std::unique_ptr<mfem::HypreParVector> rhs_;
+
+  /**
+   * @brief Eliminated RHS load vector
+   */
+  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
+
+  /**
+   * @brief Linear solver for the stiffness matrix
+   */
+  std::unique_ptr<mfem::Solver> K_solver_;
+
+  /**
+   * @brief Preconditioner for the stiffness matrix
+   */
+  std::unique_ptr<mfem::Solver> K_prec_;
+
+  /**
+   * @brief Lame mu elasticity parameter
+   */
+  mfem::Coefficient* mu_ = nullptr;
+
+  /**
+   * @brief Lame lambda elasticity parameter
+   */
+  mfem::Coefficient* lambda_ = nullptr;
+
+  /**
+   * @brief Body force coefficient
+   */
+  mfem::VectorCoefficient* body_force_ = nullptr;
+
+  /**
+   * @brief Linear solver parameters
+   */
+  serac::LinearSolverParameters lin_params_;
+
+  /**
+   * @brief Quasi-static solve driver
+   */
+  void QuasiStaticSolve();
 };
 
 }  // namespace serac
