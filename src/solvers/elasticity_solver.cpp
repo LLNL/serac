@@ -90,7 +90,7 @@ void ElasticitySolver::completeSetup()
   // Initialize the true vector
   displacement_->initializeTrueVec();
 
-  solver_ = AlgebraicSolver(displacement_->space().GetComm(), lin_params_);
+  solver_ = AlgebraicSolver(displacement_->comm(), lin_params_);
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");

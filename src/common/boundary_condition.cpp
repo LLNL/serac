@@ -12,7 +12,8 @@
 
 namespace serac {
 
-BoundaryCondition::BoundaryCondition(Coef coef, const int component, const std::set<int>& attrs, const int num_attrs)
+BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int component, const std::set<int>& attrs,
+                                     const int num_attrs)
     : coef_(coef), component_(component), markers_(num_attrs)
 {
   markers_ = 0;
@@ -22,7 +23,7 @@ BoundaryCondition::BoundaryCondition(Coef coef, const int component, const std::
   }
 }
 
-BoundaryCondition::BoundaryCondition(Coef coef, const int component, const mfem::Array<int>& true_dofs)
+BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs)
     : coef_(coef), component_(component), markers_(0), true_dofs_(true_dofs)
 {
 }
@@ -99,14 +100,14 @@ void BoundaryCondition::projectBdr(const double time, const bool should_be_scala
   projectBdr(*state_, time, should_be_scalar);
 }
 
-void BoundaryCondition::eliminateFromMatrix(mfem::HypreParMatrix& k_mat)
+void BoundaryCondition::eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const
 {
   SLIC_ERROR_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
   eliminated_matrix_entries_.reset(k_mat.EliminateRowsCols(*true_dofs_));
 }
 
 void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln,
-                                       mfem::Vector& rhs)
+                                       mfem::Vector& rhs) const
 {
   SLIC_ERROR_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
   SLIC_ERROR_IF(!eliminated_matrix_entries_,
@@ -115,7 +116,7 @@ void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, co
 }
 
 void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
-                              const double time, const bool should_be_scalar)
+                              const double time, const bool should_be_scalar) const
 {
   projectBdr(state, time, should_be_scalar);
   state.initializeTrueVec();

@@ -29,8 +29,6 @@ namespace serac {
  */
 class BoundaryCondition {
 public:
-  using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
-
   /**
    * Constructor for setting up a boundary condition using a set of attributes
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
@@ -39,7 +37,7 @@ public:
    * @param[in] attrs The set of boundary condition attributes in the mesh that the BC applies to
    * @param[in] num_attrs The total number of boundary attributes for the mesh
    */
-  BoundaryCondition(Coef coef, const int component, const std::set<int>& attrs, const int num_attrs = 0);
+  BoundaryCondition(GeneralCoefficient coef, const int component, const std::set<int>& attrs, const int num_attrs = 0);
 
   /**
    * Minimal constructor for setting the true DOFs directly
@@ -48,7 +46,7 @@ public:
    * should be -1 for all components
    * @param[in] true_dofs The indices of the relevant DOFs
    */
-  BoundaryCondition(Coef coef, const int component, const mfem::Array<int>& true_dofs);
+  BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs);
 
   const mfem::Array<int>& markers() const { return markers_; }
 
@@ -145,7 +143,7 @@ public:
    * used to eliminate an essential BC to an RHS vector with
    * BoundaryCondition::eliminateToRHS
    */
-  void eliminateFromMatrix(mfem::HypreParMatrix& k_mat);
+  void eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const;
 
   /**
    * Eliminates boundary condition from solution to RHS
@@ -154,7 +152,7 @@ public:
    * @param[out] rhs The RHS vector for the system
    * @pre BoundaryCondition::eliminateFrom has been called
    */
-  void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs);
+  void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs) const;
 
   /**
    * Applies an essential boundary condition to RHS
@@ -166,13 +164,13 @@ public:
    * @pre BoundaryCondition::eliminateFrom has been called
    */
   void apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
-             const double time = 0.0, const bool should_be_scalar = true);
+             const double time = 0.0, const bool should_be_scalar = true) const;
 
 private:
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
    */
-  Coef coef_;
+  GeneralCoefficient coef_;
   /**
    * @brief The vector component affected by this BC (-1 implies all components)
    */
@@ -194,7 +192,7 @@ private:
   /**
    * @brief The eliminated entries for Dirichlet BCs
    */
-  std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
+  mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
 };
 
 template <typename Integrator>
