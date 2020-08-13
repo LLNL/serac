@@ -30,82 +30,6 @@ namespace serac {
  *  thermal load vector.
  */
 class ThermalSolver : public BaseSolver {
-protected:
-  /**
-   * @brief The temperature finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> temperature_;
-
-  /**
-   * @brief Mass bilinear form object
-   */
-  std::unique_ptr<mfem::ParBilinearForm> M_form_;
-
-  /**
-   * @brief Stiffness bilinear form object
-   */
-  std::unique_ptr<mfem::ParBilinearForm> K_form_;
-
-  /**
-   * @brief Assembled mass matrix
-   */
-  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
-
-  /**
-   * @brief Assembled stiffness matrix
-   */
-  std::unique_ptr<mfem::HypreParMatrix> K_mat_;
-
-  /**
-   * @brief Thermal load linear form
-   */
-  std::unique_ptr<mfem::ParLinearForm> l_form_;
-
-  /**
-   * @brief Assembled BC load vector
-   */
-  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
-
-  /**
-   * @brief Assembled RHS vector
-   */
-  std::unique_ptr<mfem::HypreParVector> rhs_;
-
-  /**
-   * @brief Linear solver for the K operator
-   */
-  std::unique_ptr<mfem::CGSolver> K_solver_;
-
-  /**
-   * @brief Preconditioner for the K operator
-   */
-  std::unique_ptr<mfem::HypreSmoother> K_prec_;
-
-  /**
-   * @brief Conduction coefficient
-   */
-  std::unique_ptr<mfem::Coefficient> kappa_;
-
-  /**
-   * @brief Body source coefficient
-   */
-  std::unique_ptr<mfem::Coefficient> source_;
-
-  /**
-   * @brief Time integration operator
-   */
-  std::unique_ptr<DynamicConductionOperator> dyn_oper_;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  serac::LinearSolverParameters lin_params_;
-
-  /**
-   * @brief Solve the Quasi-static operator
-   */
-  void quasiStaticSolve();
-
 public:
   /**
    * @brief Construct a new Thermal Solver object
@@ -185,6 +109,82 @@ public:
    * @brief Destroy the Thermal Solver object
    */
   virtual ~ThermalSolver() = default;
+
+protected:
+  /**
+   * @brief The temperature finite element state
+   */
+  std::shared_ptr<serac::FiniteElementState> temperature_;
+
+  /**
+   * @brief Mass bilinear form object
+   */
+  std::unique_ptr<mfem::ParBilinearForm> M_form_;
+
+  /**
+   * @brief Stiffness bilinear form object
+   */
+  std::unique_ptr<mfem::ParBilinearForm> K_form_;
+
+  /**
+   * @brief Assembled mass matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
+
+  /**
+   * @brief Assembled stiffness matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> K_mat_;
+
+  /**
+   * @brief Thermal load linear form
+   */
+  std::unique_ptr<mfem::ParLinearForm> l_form_;
+
+  /**
+   * @brief Assembled BC load vector
+   */
+  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
+
+  /**
+   * @brief Assembled RHS vector
+   */
+  std::unique_ptr<mfem::HypreParVector> rhs_;
+
+  /**
+   * @brief Linear solver for the K operator
+   */
+  std::unique_ptr<mfem::CGSolver> K_solver_;
+
+  /**
+   * @brief Preconditioner for the K operator
+   */
+  std::unique_ptr<mfem::HypreSmoother> K_prec_;
+
+  /**
+   * @brief Conduction coefficient
+   */
+  std::unique_ptr<mfem::Coefficient> kappa_;
+
+  /**
+   * @brief Body source coefficient
+   */
+  std::unique_ptr<mfem::Coefficient> source_;
+
+  /**
+   * @brief Time integration operator
+   */
+  std::unique_ptr<DynamicConductionOperator> dyn_oper_;
+
+  /**
+   * @brief Linear solver parameters
+   */
+  serac::LinearSolverParameters lin_params_;
+
+  /**
+   * @brief Solve the Quasi-static operator
+   */
+  void quasiStaticSolve();
 };
 
 }  // namespace serac

@@ -24,37 +24,6 @@ namespace serac {
  * @brief The operator-split thermal structural solver
  */
 class ThermalStructuralSolver : public BaseSolver {
-protected:
-  /**
-   * @brief The temperature finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> temperature_;
-
-  /**
-   * @brief The velocity finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> velocity_;
-
-  /**
-   * @brief The displacement finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> displacement_;
-
-  /**
-   * @brief The single physics thermal solver
-   */
-  ThermalSolver therm_solver_;
-
-  /**
-   * @brief The single physics nonlinear solid solver
-   */
-  NonlinearSolidSolver solid_solver_;
-
-  /**
-   * @brief The coupling strategy
-   */
-  serac::CouplingScheme coupling_;
-
 public:
   /**
    * @brief Construct a new Thermal Structural Solver object
@@ -257,6 +226,37 @@ public:
    * @brief Destroy the Thermal Structural Solver object
    */
   virtual ~ThermalStructuralSolver() = default;
+
+protected:
+  /**
+   * @brief The temperature finite element state
+   */
+  std::shared_ptr<serac::FiniteElementState> temperature_;
+
+  /**
+   * @brief The velocity finite element state
+   */
+  std::shared_ptr<serac::FiniteElementState> velocity_;
+
+  /**
+   * @brief The displacement finite element state
+   */
+  std::shared_ptr<serac::FiniteElementState> displacement_;
+
+  /**
+   * @brief The single physics thermal solver
+   */
+  ThermalSolver therm_solver_;
+
+  /**
+   * @brief The single physics nonlinear solid solver
+   */
+  NonlinearSolidSolver solid_solver_;
+
+  /**
+   * @brief The coupling strategy
+   */
+  serac::CouplingScheme coupling_;
 };
 
 }  // namespace serac

@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
 set(solvers_sources
+    algebraic_solver.cpp
     base_solver.cpp
     nonlinear_solid_solver.cpp
     nonlinear_solid_operators.cpp
@@ -15,6 +16,7 @@ set(solvers_sources
     )
 
 set(solvers_headers
+    algebraic_solver.hpp
     base_solver.hpp
     nonlinear_solid_solver.hpp
     nonlinear_solid_operators.hpp

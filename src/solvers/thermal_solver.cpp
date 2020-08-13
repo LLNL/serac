@@ -37,7 +37,7 @@ void ThermalSolver::setTemperature(mfem::Coefficient& temp)
 
 void ThermalSolver::setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
-  setEssentialBCs(temp_bdr, temp_bdr_coef, *temperature_->space);
+  setEssentialBCs(temp_bdr, temp_bdr_coef, *temperature_);
 }
 
 void ThermalSolver::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
@@ -90,7 +90,7 @@ void ThermalSolver::completeSetup()
 
   // Eliminate the essential DOFs from the stiffness matrix
   for (auto& bc : ess_bdr_) {
-    bc.eliminated_matrix_entries.reset(K_mat_->EliminateRowsCols(bc.true_dofs));
+    bc.eliminateFromMatrix(*K_mat_);
   }
 
   // Initialize the eliminated BC RHS vector
@@ -123,31 +123,25 @@ void ThermalSolver::quasiStaticSolve()
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
-                    "Temperature boundary condition had a non-scalar coefficient.");
-    auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
-    scalar_coef->SetTime(time_);
-    temperature_->gf->ProjectBdrCoefficient(*scalar_coef, bc.markers);
+    bc.projectBdr(*temperature_->gf, time_);
     temperature_->gf->GetTrueDofs(*temperature_->true_vec);
-    mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, *temperature_->true_vec, *bc_rhs_);
+    bc.eliminateToRHS(*K_mat_, *temperature_->true_vec, *bc_rhs_);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
-  K_solver_ = std::make_unique<mfem::CGSolver>(temperature_->space->GetComm());
-  K_prec_   = std::make_unique<mfem::HypreSmoother>();
+  solver_ = AlgebraicSolver(temperature_->space->GetComm(), lin_params_);
 
-  K_solver_->iterative_mode = false;
-  K_solver_->SetRelTol(lin_params_.rel_tol);
-  K_solver_->SetAbsTol(lin_params_.abs_tol);
-  K_solver_->SetMaxIter(lin_params_.max_iter);
-  K_solver_->SetPrintLevel(lin_params_.print_level);
-  K_prec_->SetType(mfem::HypreSmoother::Jacobi);
-  K_solver_->SetPreconditioner(*K_prec_);
-  K_solver_->SetOperator(*K_mat_);
+  auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
+  hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);
+
+  solver_.SetPreconditioner(std::move(hypre_smoother));
+
+  solver_.solver().iterative_mode = false;
+  solver_.SetOperator(*K_mat_);
 
   // Perform the linear solve
-  K_solver_->Mult(*bc_rhs_, *temperature_->true_vec);
+  solver_.Mult(*bc_rhs_, *temperature_->true_vec);
 }
 
 void ThermalSolver::advanceTimestep(double& dt)
