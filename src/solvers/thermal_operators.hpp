@@ -17,7 +17,7 @@
 
 #include "common/common.hpp"
 #include "mfem.hpp"
-#include "solvers/algebraic_solver.hpp"
+#include "solvers/equation_solver.hpp"
 
 namespace serac {
 
@@ -86,12 +86,12 @@ protected:
   /**
    * @brief Solver for the mass matrix
    */
-  AlgebraicSolver M_solver_;
+  EquationSolver M_solver_;
 
   /**
    * @brief Solver for the T matrix
    */
-  AlgebraicSolver T_solver_;
+  EquationSolver T_solver_;
 
   /**
    * @brief Non-owning pointer to the assembled M matrix

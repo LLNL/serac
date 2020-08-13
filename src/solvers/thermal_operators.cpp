@@ -21,7 +21,7 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
       old_dt_(-1.0)
 {
   // Set the mass solver options (CG and Jacobi for now)
-  M_solver_ = AlgebraicSolver(fespace.GetComm(), params);
+  M_solver_ = EquationSolver(fespace.GetComm(), params);
 
   M_solver_.solver().iterative_mode = false;
   auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
@@ -29,7 +29,7 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
   M_solver_.SetPreconditioner(std::move(M_prec));
 
   // Use the same options for the T (= M + dt K) solver
-  T_solver_ = AlgebraicSolver(fespace.GetComm(), params);
+  T_solver_ = EquationSolver(fespace.GetComm(), params);
 
   T_solver_.solver().iterative_mode = false;
 

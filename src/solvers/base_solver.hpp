@@ -18,7 +18,7 @@
 
 #include "common/common.hpp"
 #include "mfem.hpp"
-#include "solvers/algebraic_solver.hpp"
+#include "solvers/equation_solver.hpp"
 
 namespace serac {
 
@@ -240,7 +240,7 @@ protected:
   /**
    * @brief System solver instance
    */
-  AlgebraicSolver solver_;
+  EquationSolver solver_;
 };
 
 }  // namespace serac
