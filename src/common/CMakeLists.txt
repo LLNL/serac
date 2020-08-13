@@ -10,12 +10,14 @@ set(common_headers
     serac_types.hpp
     logger.hpp
     mesh_utils.hpp
+    terminator.hpp
     )
 
 set(common_sources
     boundary_condition.cpp
     logger.cpp
     mesh_utils.cpp
+    terminator.cpp
     )
 
 blt_add_library(

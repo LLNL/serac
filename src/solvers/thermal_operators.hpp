@@ -24,6 +24,59 @@ namespace serac {
  * @brief The time dependent operator for advancing the discretized conduction ODE
  */
 class DynamicConductionOperator : public mfem::TimeDependentOperator {
+public:
+  /**
+   * @brief Construct a new Dynamic Conduction Operator object
+   *
+   * @param[in] fespace The temperature field finite element space
+   * @param[in] params The linear solver parameters
+   * @param[in] ess_bdr The essential boundary condition objects
+   */
+  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
+                            const serac::LinearSolverParameters&         params,
+                            std::vector<serac::BoundaryCondition>&       ess_bdr);
+
+  /**
+   * @brief Set the mass and stiffness matrices
+   *
+   * @param[in] M_mat The mass matrix
+   * @param[in] K_mat The stiffness matrix
+   */
+  void setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);
+
+  /**
+   * @brief Set the thermal flux load vector
+   *
+   * @param[in] The thermal flux (RHS vector)
+   */
+  void setLoadVector(std::shared_ptr<mfem::Vector> rhs);
+
+  /**
+   * @brief Calculate du_dt = M^-1 (-Ku + f)
+   *
+   * This is all that is required for explicit time integration methods
+   *
+   * @param[in] u The input state vector
+   * @param[out] du_dt The output time derivative of the state vector
+   */
+  virtual void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const;
+
+  /**
+   * @brief Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
+   *
+   * This is required for implicit time integration schemes
+   *
+   * @param[in] dt The timestep
+   * @param[in] u The input state vector
+   * @param[out] du_dt The output time derivative of the state vector
+   */
+  virtual void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
+
+  /**
+   * @brief Destroy the Dynamic Conduction Operator object
+   */
+  virtual ~DynamicConductionOperator();
+
 protected:
   /**
    * @brief Finite Element space
@@ -101,59 +154,6 @@ protected:
    * @brief Storage of old dt use to determine if we should recompute the T matrix
    */
   mutable double old_dt_;
-
-public:
-  /**
-   * @brief Construct a new Dynamic Conduction Operator object
-   *
-   * @param[in] fespace The temperature field finite element space
-   * @param[in] params The linear solver parameters
-   * @param[in] ess_bdr The essential boundary condition objects
-   */
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
-                            const serac::LinearSolverParameters&         params,
-                            std::vector<serac::BoundaryCondition>&       ess_bdr);
-
-  /**
-   * @brief Set the mass and stiffness matrices
-   *
-   * @param[in] M_mat The mass matrix
-   * @param[in] K_mat The stiffness matrix
-   */
-  void setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);
-
-  /**
-   * @brief Set the thermal flux load vector
-   *
-   * @param[in] The thermal flux (RHS vector)
-   */
-  void setLoadVector(std::shared_ptr<mfem::Vector> rhs);
-
-  /**
-   * @brief Calculate du_dt = M^-1 (-Ku + f)
-   *
-   * This is all that is required for explicit time integration methods
-   *
-   * @param[in] u The input state vector
-   * @param[out] du_dt The output time derivative of the state vector
-   */
-  virtual void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const;
-
-  /**
-   * @brief Solve the Backward-Euler equation: du_dt = M^-1[-K(u + dt * du_dt)]
-   *
-   * This is required for implicit time integration schemes
-   *
-   * @param[in] dt The timestep
-   * @param[in] u The input state vector
-   * @param[out] du_dt The output time derivative of the state vector
-   */
-  virtual void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
-
-  /**
-   * @brief Destroy the Dynamic Conduction Operator object
-   */
-  virtual ~DynamicConductionOperator();
 };
 
 }  // namespace serac

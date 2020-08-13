@@ -6,20 +6,9 @@
 
 #include "common/logger.hpp"
 
-#include <cstdlib>
-
-#include "axom/slic.hpp"
-#include "mpi.h"
+#include "common/terminator.hpp"
 
 namespace serac {
-
-void exitGracefully(bool error)
-{
-  serac::logger::flush();
-  serac::logger::finalize();
-  MPI_Finalize();
-  error ? exit(EXIT_FAILURE) : exit(EXIT_SUCCESS);
-}
 
 namespace logger {
 
@@ -30,6 +19,8 @@ bool initialize(MPI_Comm comm)
   if (!slic::isInitialized()) {
     slic::initialize();
   }
+
+  terminator::registerSignals();
 
   int numRanks, rank;
   MPI_Comm_size(comm, &numRanks);
