@@ -21,6 +21,7 @@
 #include "coefficients/traction_coefficient.hpp"
 #include "common/common.hpp"
 #include "common/mesh_utils.hpp"
+#include "common/profiling.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"
@@ -37,6 +38,9 @@ int main(int argc, char* argv[])
   if (!serac::logger::initialize(MPI_COMM_WORLD)) {
     serac::exitGracefully(true);
   }
+
+  // Initialize profiling if enabled
+  serac::profiling::initializeCaliper();
 
   // mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";

@@ -117,8 +117,6 @@ if(caliper_DIR)
         INCLUDES      ${caliper_INCLUDE_DIR}
         LIBRARIES     ${caliper_LIB_DIR}/libcaliper.a pfm
         TREAT_INCLUDES_AS_SYSTEM ON)
-    get_target_property(OUT caliper LINK_LIBRARIES)
-    message(STATUS "caliper is at ${OUT}")
 else()
     message(STATUS "Caliper support is OFF")
     set(CALIPER_FOUND FALSE CACHE BOOL "")

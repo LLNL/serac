@@ -10,6 +10,7 @@ set(common_headers
     serac_types.hpp
     logger.hpp
     mesh_utils.hpp
+    profiling.hpp
     terminator.hpp
     )
 
@@ -17,6 +18,7 @@ set(common_sources
     boundary_condition.cpp
     logger.cpp
     mesh_utils.cpp
+    profiling.cpp
     terminator.cpp
     )
 
@@ -24,7 +26,7 @@ blt_add_library(
     NAME        common
     HEADERS     ${common_headers}
     SOURCES     ${common_sources}
-    DEPENDS_ON  axom mpi mfem
+    DEPENDS_ON  axom mpi mfem caliper
     )
 
 target_include_directories(common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
