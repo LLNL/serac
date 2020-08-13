@@ -19,15 +19,6 @@
 #include "mpi.h"
 
 namespace serac {
-/**
- * @brief Exits the program gracefully after cleaning up necessary tasks.
- *
- * This performs finalization work needed by the program such as finalizing MPI
- * and flushing and closing the SLIC logger.
- *
- * @param[in] error True if the program should return an error code
- */
-void exitGracefully(bool error = false);
 
 // Logger functionality
 namespace logger {

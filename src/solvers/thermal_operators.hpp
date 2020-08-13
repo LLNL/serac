@@ -15,8 +15,9 @@
 
 #include <memory>
 
-#include "common/serac_types.hpp"
+#include "common/common.hpp"
 #include "mfem.hpp"
+#include "solvers/algebraic_solver.hpp"
 
 namespace serac {
 
@@ -24,84 +25,6 @@ namespace serac {
  * @brief The time dependent operator for advancing the discretized conduction ODE
  */
 class DynamicConductionOperator : public mfem::TimeDependentOperator {
-protected:
-  /**
-   * @brief Finite Element space
-   */
-  std::shared_ptr<mfem::ParFiniteElementSpace> fespace_;
-
-  /**
-   * @brief Grid function for boundary condition projection
-   */
-  std::shared_ptr<mfem::ParGridFunction> state_gf_;
-
-  /**
-   * @brief Solver for the mass matrix
-   */
-  std::unique_ptr<mfem::CGSolver> M_solver_;
-
-  /**
-   * @brief Solver for the T matrix
-   */
-  std::unique_ptr<mfem::CGSolver> T_solver_;
-
-  /**
-   * @brief Preconditioner for the M matrix
-   */
-  std::unique_ptr<mfem::HypreSmoother> M_prec_;
-
-  /**
-   * @brief Preconditioner for the T matrix
-   */
-  std::unique_ptr<mfem::HypreSmoother> T_prec_;
-
-  /**
-   * @brief Pointer to the assembled M matrix
-   */
-  std::shared_ptr<mfem::HypreParMatrix> M_mat_;
-
-  /**
-   * @brief Pointer to the assembled K matrix
-   */
-  std::shared_ptr<mfem::HypreParMatrix> K_mat_;
-
-  /**
-   * @brief Pointer to the assembled T ( = M + dt K) matrix
-   */
-  std::unique_ptr<mfem::HypreParMatrix> T_mat_;
-
-  /**
-   * @brief Pointer to the eliminated T matrix
-   */
-  std::unique_ptr<mfem::HypreParMatrix> T_e_mat_;
-
-  /**
-   * @brief Assembled RHS vector
-   */
-  std::shared_ptr<mfem::Vector> rhs_;
-
-  /**
-   * @brief RHS vector including essential boundary elimination
-   */
-  std::shared_ptr<mfem::Vector> bc_rhs_;
-
-  /**
-   * @brief Temperature essential boundary coefficient
-   */
-  std::vector<serac::BoundaryCondition>& ess_bdr_;
-
-  /**
-   * @brief Auxillary working vectors
-   */
-  mutable mfem::Vector z_;
-  mutable mfem::Vector y_;
-  mutable mfem::Vector x_;
-
-  /**
-   * @brief Storage of old dt use to determine if we should recompute the T matrix
-   */
-  mutable double old_dt_;
-
 public:
   /**
    * @brief Construct a new Dynamic Conduction Operator object
@@ -154,6 +77,74 @@ public:
    * @brief Destroy the Dynamic Conduction Operator object
    */
   virtual ~DynamicConductionOperator();
+
+protected:
+  /**
+   * @brief Finite Element space
+   */
+  std::shared_ptr<mfem::ParFiniteElementSpace> fespace_;
+
+  /**
+   * @brief Grid function for boundary condition projection
+   */
+  std::shared_ptr<mfem::ParGridFunction> state_gf_;
+
+  /**
+   * @brief Solver for the mass matrix
+   */
+  AlgebraicSolver M_solver_;
+
+  /**
+   * @brief Solver for the T matrix
+   */
+  AlgebraicSolver T_solver_;
+
+  /**
+   * @brief Pointer to the assembled M matrix
+   */
+  std::shared_ptr<mfem::HypreParMatrix> M_mat_;
+
+  /**
+   * @brief Pointer to the assembled K matrix
+   */
+  std::shared_ptr<mfem::HypreParMatrix> K_mat_;
+
+  /**
+   * @brief Pointer to the assembled T ( = M + dt K) matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> T_mat_;
+
+  /**
+   * @brief Pointer to the eliminated T matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> T_e_mat_;
+
+  /**
+   * @brief Assembled RHS vector
+   */
+  std::shared_ptr<mfem::Vector> rhs_;
+
+  /**
+   * @brief RHS vector including essential boundary elimination
+   */
+  std::shared_ptr<mfem::Vector> bc_rhs_;
+
+  /**
+   * @brief Temperature essential boundary coefficient
+   */
+  std::vector<serac::BoundaryCondition>& ess_bdr_;
+
+  /**
+   * @brief Auxillary working vectors
+   */
+  mutable mfem::Vector z_;
+  mutable mfem::Vector y_;
+  mutable mfem::Vector x_;
+
+  /**
+   * @brief Storage of old dt use to determine if we should recompute the T matrix
+   */
+  mutable double old_dt_;
 };
 
 }  // namespace serac

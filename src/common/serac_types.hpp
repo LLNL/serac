@@ -14,8 +14,8 @@
 #define SERAC_TYPES
 
 #include <memory>
-#include <variant>
 
+#include "common/logger.hpp"
 #include "mfem.hpp"
 
 namespace serac {
@@ -169,38 +169,6 @@ struct FiniteElementState {
    * @brief Name of the state variable
    */
   std::string name = "";
-};
-
-/**
- * @brief Boundary condition information bundle
- */
-struct BoundaryCondition {
-  using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
-
-  /**
-   * @brief The attribute marker array where this BC is active
-   */
-  mfem::Array<int> markers;
-
-  /**
-   * @brief The true DOFs affected by this BC
-   */
-  mfem::Array<int> true_dofs;
-
-  /**
-   * @brief The vector component affected by this BC (-1 implies all components)
-   */
-  int component;
-
-  /**
-   * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
-   */
-  Coef coef;
-
-  /**
-   * @brief The eliminated entries for Dirichlet BCs
-   */
-  std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries;
 };
 
 }  // namespace serac

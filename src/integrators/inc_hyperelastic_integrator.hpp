@@ -23,26 +23,6 @@ namespace serac {
  * given by the current mesh at the time of the evaluation of the integrator.
  */
 class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
-private:
-  /**
-   * @brief The associated hyperelastic model
-   */
-  mfem::HyperelasticModel* model_;
-
-  /**
-   * Jrt: the Jacobian of the target-to-reference-element transformation.
-   * Jpr: the Jacobian of the reference-to-physical-element transformation.
-   * Jpt: the Jacobian of the target-to-physical-element transformation.
-   * P: represents dW_d(Jtp) (dim x dim).
-   * DSh: gradients of reference shape functions (dof x dim).
-   * DS: gradients of the shape functions in the target (stress-free)
-   * configuration (dof x dim).
-   * PMatI: coordinates of the deformed configuration (dof x dim).
-   * PMatO: reshaped view into the local element contribution to the operator
-   * output - the result of AssembleElementVector() (dof x dim).
-   */
-  mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, Jpt_, P_, PMatI_, PMatO_;
-
 public:
   /**
    * @brief The constructor for the incremental hyperelastic integrator
@@ -81,6 +61,26 @@ public:
    */
   virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
                                    const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
+
+private:
+  /**
+   * @brief The associated hyperelastic model
+   */
+  mfem::HyperelasticModel* model_;
+
+  /**
+   * Jrt: the Jacobian of the target-to-reference-element transformation.
+   * Jpr: the Jacobian of the reference-to-physical-element transformation.
+   * Jpt: the Jacobian of the target-to-physical-element transformation.
+   * P: represents dW_d(Jtp) (dim x dim).
+   * DSh: gradients of reference shape functions (dof x dim).
+   * DS: gradients of the shape functions in the target (stress-free)
+   * configuration (dof x dim).
+   * PMatI: coordinates of the deformed configuration (dof x dim).
+   * PMatO: reshaped view into the local element contribution to the operator
+   * output - the result of AssembleElementVector() (dof x dim).
+   */
+  mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, Jpt_, P_, PMatI_, PMatO_;
 };
 
 }  // namespace serac

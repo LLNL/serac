@@ -16,8 +16,9 @@
 #include <map>
 #include <memory>
 
-#include "common/serac_types.hpp"
+#include "common/common.hpp"
 #include "mfem.hpp"
+#include "solvers/algebraic_solver.hpp"
 
 namespace serac {
 
@@ -25,87 +26,6 @@ namespace serac {
  * @brief This is the abstract base class for a generic forward solver
  */
 class BaseSolver {
-protected:
-  /**
-   * @brief The MPI communicator
-   */
-  MPI_Comm comm_;
-
-  /**
-   * @brief List of finite element data structures
-   */
-  std::vector<std::shared_ptr<serac::FiniteElementState> > state_;
-
-  /**
-   * @brief Block vector storage of the true state
-   */
-  std::unique_ptr<mfem::BlockVector> block_;
-
-  /**
-   * @brief Essential BC markers
-   */
-  std::vector<serac::BoundaryCondition> ess_bdr_;
-
-  /**
-   * @brief Natural BC markers
-   */
-  std::vector<serac::BoundaryCondition> nat_bdr_;
-
-  /**
-   * @brief Type of state variable output
-   */
-  serac::OutputType output_type_;
-
-  /**
-   *@brief Time integration method
-   */
-  serac::TimestepMethod timestepper_;
-
-  /**
-   * @brief MFEM ode solver object
-   */
-  std::unique_ptr<mfem::ODESolver> ode_solver_;
-
-  /**
-   * @brief Root output name
-   */
-  std::string root_name_;
-
-  /**
-   * @brief Current time
-   */
-  double time_;
-
-  /**
-   * @brief Current cycle
-   */
-  int cycle_;
-
-  /**
-   * @brief MPI rank
-   */
-  int mpi_rank_;
-
-  /**
-   * @brief MPI size
-   */
-  int mpi_size_;
-
-  /**
-   * @brief Order of basis functions
-   */
-  int order_;
-
-  /**
-   * @brief VisIt data collection pointer
-   */
-  std::unique_ptr<mfem::VisItDataCollection> visit_dc_;
-
-  /**
-   * @brief State variable initialization indicator
-   */
-  std::vector<bool> gf_initialized_;
-
 public:
   /**
    * @brief Empty constructor
@@ -132,7 +52,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                               const mfem::ParFiniteElementSpace& fes, const int component = -1);
+                               FiniteElementState& state, const int component = -1);
 
   /**
    * @brief Set a list of true degrees of freedom from a coefficient
@@ -235,6 +155,92 @@ public:
    * @brief Destroy the Base Solver object
    */
   virtual ~BaseSolver() = default;
+
+protected:
+  /**
+   * @brief The MPI communicator
+   */
+  MPI_Comm comm_;
+
+  /**
+   * @brief List of finite element data structures
+   */
+  std::vector<std::shared_ptr<serac::FiniteElementState> > state_;
+
+  /**
+   * @brief Block vector storage of the true state
+   */
+  std::unique_ptr<mfem::BlockVector> block_;
+
+  /**
+   * @brief Essential BC markers
+   */
+  std::vector<serac::BoundaryCondition> ess_bdr_;
+
+  /**
+   * @brief Natural BC markers
+   */
+  std::vector<serac::BoundaryCondition> nat_bdr_;
+
+  /**
+   * @brief Type of state variable output
+   */
+  serac::OutputType output_type_;
+
+  /**
+   *@brief Time integration method
+   */
+  serac::TimestepMethod timestepper_;
+
+  /**
+   * @brief MFEM ode solver object
+   */
+  std::unique_ptr<mfem::ODESolver> ode_solver_;
+
+  /**
+   * @brief Root output name
+   */
+  std::string root_name_;
+
+  /**
+   * @brief Current time
+   */
+  double time_;
+
+  /**
+   * @brief Current cycle
+   */
+  int cycle_;
+
+  /**
+   * @brief MPI rank
+   */
+  int mpi_rank_;
+
+  /**
+   * @brief MPI size
+   */
+  int mpi_size_;
+
+  /**
+   * @brief Order of basis functions
+   */
+  int order_;
+
+  /**
+   * @brief VisIt data collection pointer
+   */
+  std::unique_ptr<mfem::VisItDataCollection> visit_dc_;
+
+  /**
+   * @brief State variable initialization indicator
+   */
+  std::vector<bool> gf_initialized_;
+
+  /**
+   * @brief System solver instance
+   */
+  AlgebraicSolver solver_;
 };
 
 }  // namespace serac

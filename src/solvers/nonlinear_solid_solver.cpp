@@ -15,10 +15,7 @@ namespace serac {
 constexpr int NUM_FIELDS = 2;
 
 NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
-      velocity_(state_[0]),
-      displacement_(state_[1]),
-      newton_solver_(pmesh->GetComm())
+    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order), velocity_(state_[0]), displacement_(state_[1])
 {
   velocity_->mesh      = pmesh;
   velocity_->coll      = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension());
@@ -65,13 +62,13 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, -1);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, -1);
 }
 
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_->space, component);
+  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
@@ -124,9 +121,8 @@ void NonlinearSolidSolver::completeSetup()
   for (auto& nat_bc_data : nat_bdr_) {
     SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef),
                     "Traction boundary condition had a non-vector coefficient.");
-    H_form->AddBdrFaceIntegrator(
-        new HyperelasticTractionIntegrator(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef)),
-        nat_bc_data.markers);
+    H_form->AddBdrFaceIntegrator(nat_bc_data.newVecIntegrator<HyperelasticTractionIntegrator>().release(),
+                                 nat_bc_data.markers());
   }
 
   // Add the essential boundary
@@ -137,28 +133,11 @@ void NonlinearSolidSolver::completeSetup()
 
   // Project the essential boundary coefficients
   for (auto& bc : ess_bdr_) {
-    // Generate the scalar dof list from the vector dof list
-    mfem::Array<int> dof_list(bc.true_dofs.Size());
-    for (int i = 0; i < bc.true_dofs.Size(); ++i) {
-      dof_list[i] = displacement_->space->VDofToDof(bc.true_dofs[i]);
-    }
-
     // Project the coefficient
-    if (bc.component == -1) {
-      // If it contains all components, project the vector
-      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef),
-                      "Displacement boundary condition contained all components but had a non-vector coefficient.");
-      displacement_->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(bc.coef), dof_list);
-    } else {
-      // If it is only a single component, project the scalar
-      SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
-                      "Displacement boundary condition contained a single component but had a non-scalar coefficient.");
-      displacement_->gf->ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef), dof_list,
-                                            bc.component);
-    }
+    bc.project(*displacement_->gf, *displacement_->space);
 
     // Add the vector dofs to the total essential BC dof list
-    essential_dofs.Append(bc.true_dofs);
+    essential_dofs.Append(bc.getTrueDofs());
   }
 
   // Remove any duplicates from the essential BC list
@@ -190,50 +169,31 @@ void NonlinearSolidSolver::completeSetup()
     S_form->Finalize(0);
   }
 
+  solver_ = AlgebraicSolver(displacement_->space->GetComm(), lin_params_, nonlin_params_);
   // Set up the jacbian solver based on the linear solver options
-  std::unique_ptr<mfem::IterativeSolver> iter_solver;
-
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
     prec_amg->SetElasticityOptions(displacement_->space.get());
-    J_prec_ = std::move(prec_amg);
-
-    iter_solver = std::make_unique<mfem::GMRESSolver>(displacement_->space->GetComm());
+    solver_.SetPreconditioner(std::move(prec_amg));
   } else {
     auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
     J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
     J_hypreSmoother->SetPositiveDiagonal(true);
-    J_prec_ = std::move(J_hypreSmoother);
-
-    iter_solver = std::make_unique<mfem::MINRESSolver>(displacement_->space->GetComm());
+    solver_.SetPreconditioner(std::move(J_hypreSmoother));
   }
-
-  iter_solver->SetRelTol(lin_params_.rel_tol);
-  iter_solver->SetAbsTol(lin_params_.abs_tol);
-  iter_solver->SetMaxIter(lin_params_.max_iter);
-  iter_solver->SetPrintLevel(lin_params_.print_level);
-  iter_solver->SetPreconditioner(*J_prec_);
-  J_solver_ = std::move(iter_solver);
-
-  // Set the newton solve parameters
-  newton_solver_.SetSolver(*J_solver_);
-  newton_solver_.SetPrintLevel(nonlin_params_.print_level);
-  newton_solver_.SetRelTol(nonlin_params_.rel_tol);
-  newton_solver_.SetAbsTol(nonlin_params_.abs_tol);
-  newton_solver_.SetMaxIter(nonlin_params_.max_iter);
 
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    newton_solver_.iterative_mode = true;
-    nonlinear_oper_               = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
-    newton_solver_.SetOperator(*nonlinear_oper_);
+    nonlinear_oper_                 = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
+    solver_.solver().iterative_mode = true;
+    solver_.SetOperator(*nonlinear_oper_);
   } else {
-    newton_solver_.iterative_mode = false;
-    timedep_oper_                 = std::make_shared<NonlinearSolidDynamicOperator>(
-        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, newton_solver_, lin_params_);
+    timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(
+        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, solver_.solver(), lin_params_);
+    solver_.solver().iterative_mode = false;
     ode_solver_->Init(*timedep_oper_);
   }
 }
@@ -242,7 +202,7 @@ void NonlinearSolidSolver::completeSetup()
 void NonlinearSolidSolver::quasiStaticSolve()
 {
   mfem::Vector zero;
-  newton_solver_.Mult(zero, *displacement_->true_vec);
+  solver_.Mult(zero, *displacement_->true_vec);
 }
 
 // Advance the timestep

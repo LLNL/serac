@@ -22,17 +22,6 @@ namespace serac {
  *
  */
 class VectorScaledConstantCoefficient : public mfem::VectorCoefficient {
-private:
-  /**
-   * @brief The vector to be scaled
-   */
-  mfem::Vector vec_;
-
-  /**
-   * @brief The mutable scaling factor
-   */
-  double scale_;
-
 public:
   /**
    * @brief Construct a new Vector Scaled Constant Coefficient object
@@ -58,6 +47,17 @@ public:
     V = vec_;
     V *= scale_;
   }
+
+private:
+  /**
+   * @brief The vector to be scaled
+   */
+  mfem::Vector vec_;
+
+  /**
+   * @brief The mutable scaling factor
+   */
+  double scale_;
 };
 
 }  // namespace serac
