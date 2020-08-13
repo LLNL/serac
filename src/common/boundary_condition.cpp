@@ -114,4 +114,12 @@ void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, co
   mfem::EliminateBC(k_mat_post_elim, *eliminated_matrix_entries_, *true_dofs_, soln, rhs);
 }
 
+void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
+                              const double time, const bool should_be_scalar)
+{
+  projectBdr(state, time, should_be_scalar);
+  state.initializeTrueVec();
+  eliminateToRHS(k_mat_post_elim, state.trueVec(), rhs);
+}
+
 }  // namespace serac
