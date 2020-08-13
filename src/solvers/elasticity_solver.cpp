@@ -133,7 +133,7 @@ void ElasticitySolver::QuasiStaticSolve()
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
     bool should_be_scalar = false;
-    bc.projectBdr(displacement_->gridFunc(), time_, should_be_scalar);
+    bc.projectBdr(*displacement_, time_, should_be_scalar);
     displacement_->initializeTrueVec();
     mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.getTrueDofs(), displacement_->trueVec(), *bc_rhs_);
   }

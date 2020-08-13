@@ -116,7 +116,7 @@ void ThermalSolver::quasiStaticSolve()
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    bc.projectBdr(temperature_->gridFunc(), time_);
+    bc.projectBdr(*temperature_, time_);
     temperature_->initializeTrueVec();
     bc.eliminateToRHS(*K_mat_, temperature_->trueVec(), *bc_rhs_);
   }

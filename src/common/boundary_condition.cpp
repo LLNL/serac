@@ -36,7 +36,7 @@ void BoundaryCondition::setTrueDofs(FiniteElementState& state)
   state.space().GetEssentialTrueDofs(markers_, *true_dofs_, component_);
 }
 
-void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace& space) const
+void BoundaryCondition::project(FiniteElementState& state) const
 {
   SLIC_ERROR_IF(!true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
   // Value semantics for convenience
@@ -46,23 +46,22 @@ void BoundaryCondition::project(mfem::ParGridFunction& gf, const mfem::ParFinite
     // Generate the scalar dof list from the vector dof list
     SLIC_ASSERT_MSG(space, "Only BCs associated with a space can be projected.");
     mfem::Array<int> dof_list(size);
-    std::transform(&tdofs[0], &tdofs[0] + size, &dof_list[0], [&space](int tdof) { return space.VDofToDof(tdof); });
+    std::transform(&tdofs[0], &tdofs[0] + size, &dof_list[0],
+                   [&space = std::as_const(state.space())](int tdof) { return space.VDofToDof(tdof); });
 
     if (component_ == -1) {
       // If it contains all components, project the vector
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
                       "Essential boundary condition contained all components but had a non-vector coefficient.");
-      gf.ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_), dof_list);
+      state.gridFunc().ProjectCoefficient(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_), dof_list);
     } else {
       // If it is only a single component, project the scalar
       SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
                       "Essential boundary condition contained a single component but had a non-scalar coefficient.");
-      gf.ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(coef_), dof_list, component_);
+      state.gridFunc().ProjectCoefficient(*std::get<std::shared_ptr<mfem::Coefficient>>(coef_), dof_list, component_);
     }
   }
 }
-
-void BoundaryCondition::project(FiniteElementState& state) const { project(state.gridFunc(), state.space()); }
 
 void BoundaryCondition::project() const
 {
@@ -81,19 +80,23 @@ void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time,
   }
 
   // markers_ should be const param but it's not
-  auto non_const_markers = const_cast<mfem::Array<int>&>(markers_);
   std::visit(
-      [&gf, &non_const_markers, time](auto&& coef) {
+      [&gf, &markers = const_cast<mfem::Array<int>&>(markers_), time](auto&& coef) {
         coef->SetTime(time);
-        gf.ProjectBdrCoefficient(*coef, non_const_markers);
+        gf.ProjectBdrCoefficient(*coef, markers);
       },
       coef_);
+}
+
+void BoundaryCondition::projectBdr(FiniteElementState& state, const double time, const bool should_be_scalar) const
+{
+  projectBdr(state.gridFunc(), time, should_be_scalar);
 }
 
 void BoundaryCondition::projectBdr(const double time, const bool should_be_scalar) const
 {
   SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
-  projectBdr(state_->gridFunc(), time, should_be_scalar);
+  projectBdr(*state_, time, should_be_scalar);
 }
 
 void BoundaryCondition::eliminateFromMatrix(mfem::HypreParMatrix& k_mat)

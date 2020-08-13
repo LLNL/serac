@@ -78,13 +78,11 @@ public:
   void removeAttr(const int attr) { markers_[attr - 1] = 0; }
 
   /**
-   * Projects the boundary condition over a grid function
-   * @param[inout] gf The boundary condition to project over
+   * Projects the boundary condition over a field
+   * @param[inout] state The field to project over
    * @param[in] fes The finite element space that should be used to generate
    * the scalar DOF list
    */
-  void project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace& fes) const;
-
   void project(FiniteElementState& state) const;
 
   /**
@@ -96,14 +94,22 @@ public:
 
   /**
    * Projects the boundary condition over boundary DOFs of a grid function
-   * @param[inout] gf The boundary condition to project over
+   * @param[inout] gf The grid function representing the field to project over
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    */
   void projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar = true) const;
 
   /**
-   * Projects the boundary condition over boundary DOFs of a grid function
+   * Projects the boundary condition over boundary DOFs of a field
+   * @param[inout] state The field to project over
+   * @param[in] time The time for the coefficient, used for time-varying coefficients
+   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
+   */
+  void projectBdr(FiniteElementState& state, const double time, const bool should_be_scalar = true) const;
+
+  /**
+   * Projects the boundary condition over boundary DOFs
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    * @pre A corresponding field (FiniteElementState) has been associated
