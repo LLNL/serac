@@ -49,7 +49,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
   // Assemble the mass matrix and eliminate the fixed DOFs
   M_mat_.reset(M_form_->ParallelAssemble());
   for (auto& bc : ess_bdr_) {
-    auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.true_dofs));
+    auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.getTrueDofs()));
   }
 
   // Set the mass matrix solver options
@@ -80,7 +80,7 @@ void NonlinearSolidDynamicOperator::Mult(const mfem::Vector& vx, mfem::Vector& d
   H_form_->Mult(x, z_);
   S_form_->TrueAddMult(v, z_);
   for (auto& bc : ess_bdr_) {
-    z_.SetSubVector(bc.true_dofs, 0.0);
+    z_.SetSubVector(bc.getTrueDofs(), 0.0);
   }
   z_.Neg();  // z = -z
   M_solver_.Mult(z_, dv_dt);
@@ -144,7 +144,7 @@ void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector& k, mfem::Vect
   M_form_.TrueAddMult(k, y);
   S_form_.TrueAddMult(w_, y);
   for (const auto& bc : ess_bdr_) {
-    y.SetSubVector(bc.true_dofs, 0.0);
+    y.SetSubVector(bc.getTrueDofs(), 0.0);
   }
 }
 
@@ -162,7 +162,7 @@ mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   // This call eliminates the appropriate DOFs in jacobian_ and returns the
   // eliminated DOFs in Je. We don't need this so it gets deleted.
   for (auto& bc : ess_bdr_) {
-    auto Je = std::unique_ptr<mfem::HypreParMatrix>(jacobian_->EliminateRowsCols(bc.true_dofs));
+    auto Je = std::unique_ptr<mfem::HypreParMatrix>(jacobian_->EliminateRowsCols(bc.getTrueDofs()));
   }
   return *jacobian_;
 }

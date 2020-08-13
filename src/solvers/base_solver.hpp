@@ -16,7 +16,7 @@
 #include <map>
 #include <memory>
 
-#include "common/serac_types.hpp"
+#include "common/common.hpp"
 #include "mfem.hpp"
 
 namespace serac {
@@ -51,7 +51,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
-                               const mfem::ParFiniteElementSpace& fes, const int component = -1);
+                               FiniteElementState& state, const int component = -1);
 
   /**
    * @brief Set a list of true degrees of freedom from a coefficient

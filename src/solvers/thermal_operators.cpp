@@ -68,7 +68,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
 
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, y_, *bc_rhs_);
+    bc.eliminateToRHS(*K_mat_, y_, *bc_rhs_);
   }
 
   // Compute:
@@ -96,7 +96,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
 
     // Eliminate the essential DOFs from the T matrix
     for (auto& bc : ess_bdr_) {
-      T_e_mat_.reset(T_mat_->EliminateRowsCols(bc.true_dofs));
+      T_e_mat_.reset(T_mat_->EliminateRowsCols(bc.getTrueDofs()));
     }
     T_solver_->SetOperator(*T_mat_);
   }
@@ -106,15 +106,10 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   x_       = 0.0;
 
   for (auto& bc : ess_bdr_) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(bc.coef),
-                    "Temperature boundary condition had a non-scalar coefficient.");
-    auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(bc.coef);
-    scalar_coef->SetTime(t);
+    bc.projectBdr(*state_gf_, t);
     state_gf_->SetFromTrueDofs(y_);
-    state_gf_->ProjectBdrCoefficient(*scalar_coef, bc.markers);
     state_gf_->GetTrueDofs(y_);
-
-    mfem::EliminateBC(*K_mat_, *bc.eliminated_matrix_entries, bc.true_dofs, y_, *bc_rhs_);
+    bc.eliminateToRHS(*K_mat_, y_, *bc_rhs_);
   }
   K_mat_->Mult(y_, z_);
   z_.Neg();
