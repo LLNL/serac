@@ -145,7 +145,7 @@ one of the following commands:
    $ python ./config-build.py -hc <config_dependent_name>.cmake
 
    # If you are on an LC machine and want to use our dependencies
-   $ python ./config-build.py -hc host-config/<machine name>-<SYS_TYPE>-<compiler>.cmake
+   $ python ./config-build.py -hc host-configs/<machine name>-<SYS_TYPE>-<compiler>.cmake
 
 Once the build has been configured, Serac can be built with the following commands:
 
