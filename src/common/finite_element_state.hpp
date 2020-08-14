@@ -22,11 +22,15 @@
 namespace serac {
 
 /**
- * Structure for optionally configuring a FiniteElementState
+ * @brief Structure for optionally configuring a FiniteElementState
  */
 // The optionals are explicitly default-constructed to allow the user to partially aggregrate-initialized
 // with only the options they care about
-struct FESOptions {
+struct FEStateOptions {
+  /**
+   * The polynomial order that should be used for the problem
+   */
+  int order = 1;
   /**
    * The vector dimension for the FiniteElementSpace - defaults to the dimension of the mesh
    */
@@ -39,7 +43,7 @@ struct FESOptions {
   /**
    * The DOF ordering that should be used interally by MFEM
    */
-  mfem::Ordering::Type ordering = mfem::Ordering::byNODES;
+  mfem::Ordering::Type ordering = mfem::Ordering::byVDIM;
   /**
    * The name of the field encapsulated by the state object
    */
@@ -47,20 +51,21 @@ struct FESOptions {
 };
 
 /**
- * Class for encapsulating the critical MFEM components of a solver
- * namely Mesh, FiniteElementCollection, FiniteElementState,
+ * @brief Class for encapsulating the critical MFEM components of a solver
+ *
+ * Namely: Mesh, FiniteElementCollection, FiniteElementState,
  * GridFunction, and a Vector of the solution
  */
 class FiniteElementState {
 public:
   /**
    * Main constructor for building a new state object
-   * @param[in] order The order of the problem
    * @param[in] pmesh The problem mesh
-   * @param[in] options The options specified, namely those relating to the dimension of the FESpace, the type of
-   * FEColl, the DOF ordering that should be used, and the name of the field
+   * @param[in] options The options specified, namely those relating to the order of the problem,
+   * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
+   * and the name of the field
    */
-  FiniteElementState(const int order, std::shared_ptr<mfem::ParMesh> pmesh, FESOptions&& options = FESOptions());
+  FiniteElementState(std::shared_ptr<mfem::ParMesh> pmesh, FEStateOptions&& options = FEStateOptions());
 
   /**
    * Returns the MPI communicator for the state
