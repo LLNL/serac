@@ -122,7 +122,7 @@ Some helpful uberenv options:
 * ``--spec=+glvis``
 * ``--spec=%clang@4.0.0``
 * ``--spec=%clang@4.0.0+debug``
-* ``--spack-config-dir=<Path to spack configuration directory>
+* ``--spack-config-dir=<Path to spack configuration directory>``
 * ``--prefix=<Path to uberenv build directory (defaults to ./uberenv_libs)>``
 
 If you already have a spack instance you would like to reuse, you can do so changing the uberenv
