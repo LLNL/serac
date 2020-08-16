@@ -44,8 +44,8 @@ MPICH, openblas, OpenGL, and the devtools using the following commands:
 
 Note that the last line is required since Spack expects the system libraries to exist in a directory named `lib`. During the third
 party library build phase, the appropriate Spack config directory must be specified using either 
-`python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_18` or
-`python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_20` as appropriate.
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_18`` or
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_20`` as appropriate.
 
 Building Serac's Developer Tools
 --------------------------------
