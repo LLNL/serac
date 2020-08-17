@@ -143,7 +143,7 @@ public:
    * @pre Tensor must have the constructor Tensor::Tensor(ParFiniteElementSpace*)
    */
   template <typename Tensor>
-  std::unique_ptr<Tensor> createTensorOnSpace()
+  std::unique_ptr<Tensor> createOnSpace()
   {
     static_assert(std::is_constructible_v<Tensor, mfem::ParFiniteElementSpace*>,
                   "Tensor must be constructible with a ptr to ParFESpace");

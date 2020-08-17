@@ -23,7 +23,7 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   state_[1] = displacement_;
 
   // Initialize the mesh node pointers
-  reference_nodes_ = displacement_->createTensorOnSpace<mfem::ParGridFunction>();
+  reference_nodes_ = displacement_->createOnSpace<mfem::ParGridFunction>();
   pmesh->GetNodes(*reference_nodes_);
   pmesh->NewNodes(*reference_nodes_);
 
@@ -93,7 +93,7 @@ void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParamete
 void NonlinearSolidSolver::completeSetup()
 {
   // Define the nonlinear form
-  auto H_form = displacement_->createTensorOnSpace<mfem::ParNonlinearForm>();
+  auto H_form = displacement_->createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
@@ -142,13 +142,13 @@ void NonlinearSolidSolver::completeSetup()
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
-    M_form = displacement_->createTensorOnSpace<mfem::ParBilinearForm>();
+    M_form = displacement_->createOnSpace<mfem::ParBilinearForm>();
 
     M_form->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
     M_form->Assemble(0);
     M_form->Finalize(0);
 
-    S_form = displacement_->createTensorOnSpace<mfem::ParBilinearForm>();
+    S_form = displacement_->createOnSpace<mfem::ParBilinearForm>();
     S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
     S_form->Assemble(0);
     S_form->Finalize(0);

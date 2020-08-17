@@ -48,7 +48,7 @@ void ElasticitySolver::completeSetup()
   SLIC_ASSERT_MSG(lambda_ != nullptr, "Lame lambda not set in ElasticitySolver!");
 
   // Define the parallel bilinear form
-  K_form_ = displacement_->createTensorOnSpace<mfem::ParBilinearForm>();
+  K_form_ = displacement_->createOnSpace<mfem::ParBilinearForm>();
 
   // Add the elastic integrator
   K_form_->AddDomainIntegrator(new mfem::ElasticityIntegrator(*lambda_, *mu_));
@@ -57,7 +57,7 @@ void ElasticitySolver::completeSetup()
 
   // Define the parallel linear form
 
-  l_form_ = displacement_->createTensorOnSpace<mfem::ParLinearForm>();
+  l_form_ = displacement_->createOnSpace<mfem::ParLinearForm>();
 
   // Add the traction integrator
   if (nat_bdr_.size() > 0) {
@@ -70,7 +70,7 @@ void ElasticitySolver::completeSetup()
     l_form_->Assemble();
     rhs_.reset(l_form_->ParallelAssemble());
   } else {
-    rhs_  = displacement_->createTensorOnSpace<mfem::HypreParVector>();
+    rhs_  = displacement_->createOnSpace<mfem::HypreParVector>();
     *rhs_ = 0.0;
   }
 
@@ -83,7 +83,7 @@ void ElasticitySolver::completeSetup()
   }
 
   // Initialize the eliminate BC RHS vector
-  bc_rhs_  = displacement_->createTensorOnSpace<mfem::HypreParVector>();
+  bc_rhs_  = displacement_->createOnSpace<mfem::HypreParVector>();
   *bc_rhs_ = 0.0;
 
   // Initialize the true vector
