@@ -32,8 +32,8 @@ Serac is hosted on `GitHub <https://github.com/LLNL/serac>`_. Serac uses git sub
 Preparing Windows WSL/Ubuntu 18.04 for Serac installation
 ---------------------------------------------------------
 
-For faster installation of the Serac dependencies via Spack on Windows WSL/Ubuntu 18.04 systems, install cmake, MPICH, openblas, OpenGL, and the devtools
-using the following commands:
+For faster installation of the Serac dependencies via Spack on Windows WSL/Ubuntu 18.04 and WSL/Ubuntu 20.04 systems, install cmake, 
+MPICH, openblas, OpenGL, and the devtools using the following commands:
 
 .. code-block:: bash
 
@@ -42,9 +42,10 @@ using the following commands:
    $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
-Note that the last line is required since Spack expects the system libraries to exist in a directory named `lib`. The call to `uberenv` should 
-automatically pick the correct Spack configuration directory, and a minimal number of dependencies will be built. If your WSL system is Ubuntu 18.04,
-uberenv will detect it automatically and use the appropriate Spack config directory. Otherwise, an appropriate Spack config must be specified.
+Note that the last line is required since Spack expects the system libraries to exist in a directory named `lib`. During the third
+party library build phase, the appropriate Spack config directory must be specified using either 
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_18`` or
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_20`` as appropriate.
 
 Building Serac's Developer Tools
 --------------------------------
@@ -121,6 +122,7 @@ Some helpful uberenv options:
 * ``--spec=+glvis``
 * ``--spec=%clang@4.0.0``
 * ``--spec=%clang@4.0.0+debug``
+* ``--spack-config-dir=<Path to spack configuration directory>``
 * ``--prefix=<Path to uberenv build directory (defaults to ./uberenv_libs)>``
 
 If you already have a spack instance you would like to reuse, you can do so changing the uberenv
@@ -145,7 +147,7 @@ one of the following commands:
    $ python ./config-build.py -hc <config_dependent_name>.cmake
 
    # If you are on an LC machine and want to use our dependencies
-   $ python ./config-build.py -hc host-config/<machine name>-<SYS_TYPE>-<compiler>.cmake
+   $ python ./config-build.py -hc host-configs/<machine name>-<SYS_TYPE>-<compiler>.cmake
 
 Once the build has been configured, Serac can be built with the following commands:
 
