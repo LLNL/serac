@@ -57,7 +57,7 @@ private:
   /**
    * @brief The mutable scaling factor
    */
-  double scale_;
+  double scale_ = 1.0;
 };
 
 }  // namespace serac

@@ -82,7 +82,10 @@ void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, co
   model_.reset(new mfem::NeoHookeanModel(mu, K));
 }
 
-void NonlinearSolidSolver::setViscosity(std::shared_ptr<mfem::Coefficient> visc) { viscosity_ = visc; }
+void NonlinearSolidSolver::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
+{
+  viscosity_ = std::move(visc_coef);
+}
 
 void NonlinearSolidSolver::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
@@ -169,7 +172,7 @@ void NonlinearSolidSolver::completeSetup()
     S_form->Finalize(0);
   }
 
-  solver_ = AlgebraicSolver(displacement_->space->GetComm(), lin_params_, nonlin_params_);
+  solver_ = EquationSolver(displacement_->space->GetComm(), lin_params_, nonlin_params_);
   // Set up the jacbian solver based on the linear solver options
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
@@ -187,13 +190,13 @@ void NonlinearSolidSolver::completeSetup()
 
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    nonlinear_oper_                 = std::make_shared<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
     solver_.solver().iterative_mode = true;
+    nonlinear_oper_                 = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
     solver_.SetOperator(*nonlinear_oper_);
   } else {
-    timedep_oper_ = std::make_shared<NonlinearSolidDynamicOperator>(
-        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, solver_.solver(), lin_params_);
     solver_.solver().iterative_mode = false;
+    timedep_oper_                   = std::make_unique<NonlinearSolidDynamicOperator>(
+        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, solver_.solver(), lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }
 }

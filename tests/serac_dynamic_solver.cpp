@@ -32,7 +32,7 @@ TEST(dynamic_solver, dyn_solve)
 
   std::set<int> ess_bdr = {1};
 
-  auto visc   = std::make_shared<mfem::ConstantCoefficient>(0.0);
+  auto visc   = std::make_unique<mfem::ConstantCoefficient>(0.0);
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
@@ -40,7 +40,7 @@ TEST(dynamic_solver, dyn_solve)
   NonlinearSolidSolver dyn_solver(1, pmesh);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
-  dyn_solver.setViscosity(visc);
+  dyn_solver.setViscosity(std::move(visc));
   dyn_solver.setDisplacement(*deform);
   dyn_solver.setVelocity(*velo);
   dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
