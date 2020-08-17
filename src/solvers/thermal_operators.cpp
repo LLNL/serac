@@ -10,19 +10,19 @@
 
 namespace serac {
 
-DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace&           fespace,
+DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace&           fe_space,
                                                      const serac::LinearSolverParameters&   params,
                                                      std::vector<serac::BoundaryCondition>& ess_bdr)
-    : mfem::TimeDependentOperator(fespace.GetTrueVSize(), 0.0),
-      fespace_(fespace),
+    : mfem::TimeDependentOperator(fe_space.GetTrueVSize(), 0.0),
+      fe_space_(fe_space),
       ess_bdr_(ess_bdr),
-      z_(fespace.GetTrueVSize()),
-      y_(fespace.GetTrueVSize()),
-      x_(fespace.GetTrueVSize()),
+      z_(fe_space.GetTrueVSize()),
+      y_(fe_space.GetTrueVSize()),
+      x_(fe_space.GetTrueVSize()),
       old_dt_(-1.0)
 {
   // Set the mass solver options (CG and Jacobi for now)
-  M_solver_ = AlgebraicSolver(fespace.GetComm(), params);
+  M_solver_ = AlgebraicSolver(fe_space.GetComm(), params);
 
   M_solver_.solver().iterative_mode = false;
   auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
@@ -30,15 +30,15 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
   M_solver_.SetPreconditioner(std::move(M_prec));
 
   // Use the same options for the T (= M + dt K) solver
-  T_solver_ = AlgebraicSolver(fespace_.GetComm(), params);
+  T_solver_ = AlgebraicSolver(fe_space_.GetComm(), params);
 
   T_solver_.solver().iterative_mode = false;
 
   auto T_prec = std::make_unique<mfem::HypreSmoother>();
   T_solver_.SetPreconditioner(std::move(T_prec));
 
-  state_gf_ = std::make_shared<mfem::ParGridFunction>(&fespace_);
-  bc_rhs_   = std::make_shared<mfem::Vector>(fespace.GetTrueVSize());
+  state_gf_ = std::make_shared<mfem::ParGridFunction>(&fe_space_);
+  bc_rhs_   = std::make_shared<mfem::Vector>(fe_space.GetTrueVSize());
 }
 
 void DynamicConductionOperator::setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat,
