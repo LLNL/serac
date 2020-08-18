@@ -7,6 +7,7 @@
 set(common_headers
     boundary_condition.hpp
     common.hpp
+    initialize.hpp
     serac_types.hpp
     logger.hpp
     mesh_utils.hpp
@@ -15,6 +16,7 @@ set(common_headers
 
 set(common_sources
     boundary_condition.cpp
+    initialize.cpp
     logger.cpp
     mesh_utils.cpp
     terminator.cpp
