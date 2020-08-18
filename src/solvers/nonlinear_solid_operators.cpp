@@ -10,8 +10,8 @@
 
 namespace serac {
 
-NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form)
-    : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(H_form)
+NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form)
+    : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(std::move(H_form))
 {
 }
 
@@ -52,7 +52,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
     auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.getTrueDofs()));
   }
 
-  M_solver_ = AlgebraicSolver(H_form_->ParFESpace()->GetComm(), lin_params);
+  M_solver_ = EquationSolver(H_form_->ParFESpace()->GetComm(), lin_params);
 
   auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
   M_solver_.solver().iterative_mode = false;

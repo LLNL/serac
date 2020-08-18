@@ -29,27 +29,27 @@ void ThermalSolver::setTemperature(mfem::Coefficient& temp)
   gf_initialized_[0] = true;
 }
 
-void ThermalSolver::setTemperatureBCs(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+void ThermalSolver::setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
-  setEssentialBCs(ess_bdr, ess_bdr_coef, *temperature_);
+  setEssentialBCs(temp_bdr, temp_bdr_coef, *temperature_);
 }
 
-void ThermalSolver::setFluxBCs(const std::set<int>& nat_bdr, std::shared_ptr<mfem::Coefficient> nat_bdr_coef)
+void ThermalSolver::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
-  setNaturalBCs(nat_bdr, nat_bdr_coef);
+  setNaturalBCs(flux_bdr, flux_bdr_coef);
 }
 
-void ThermalSolver::setConductivity(std::shared_ptr<mfem::Coefficient> kappa)
+void ThermalSolver::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
 {
   // Set the conduction coefficient
-  kappa_ = kappa;
+  kappa_ = std::move(kappa);
 }
 
-void ThermalSolver::setSource(std::shared_ptr<mfem::Coefficient> source)
+void ThermalSolver::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 {
   // Set the body source integral coefficient
-  source_ = source;
+  source_ = std::move(source);
 }
 
 void ThermalSolver::setLinearSolverParameters(const serac::LinearSolverParameters& params)
@@ -105,8 +105,8 @@ void ThermalSolver::completeSetup()
 
     // Make the time integration operator and set the appropriate matricies
     dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, ess_bdr_);
-    dyn_oper_->setMatrices(M_mat_, K_mat_);
-    dyn_oper_->setLoadVector(rhs_);
+    dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
+    dyn_oper_->setLoadVector(rhs_.get());
 
     ode_solver_->Init(*dyn_oper_);
   }
@@ -122,7 +122,7 @@ void ThermalSolver::quasiStaticSolve()
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
-  solver_ = AlgebraicSolver(temperature_->comm(), lin_params_);
+  solver_ = EquationSolver(temperature_->comm(), lin_params_);
 
   auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
   hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);

@@ -69,7 +69,7 @@ public:
    *
    * @param[in] visc_coef The abstract viscosity coefficient
    */
-  void setViscosity(std::shared_ptr<mfem::Coefficient> visc_coef);
+  void setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef);
 
   /**
    * @brief Set the hyperelastic material parameters
@@ -139,12 +139,12 @@ protected:
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers
    */
-  std::shared_ptr<mfem::Operator> nonlinear_oper_;
+  std::unique_ptr<mfem::Operator> nonlinear_oper_;
 
   /**
    * @brief The time dependent operator for use with the MFEM ODE solvers
    */
-  std::shared_ptr<mfem::TimeDependentOperator> timedep_oper_;
+  std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
 
   /**
    * @brief The Newton solver for the nonlinear iterations
@@ -164,12 +164,12 @@ protected:
   /**
    * @brief The viscosity coefficient
    */
-  std::shared_ptr<mfem::Coefficient> viscosity_;
+  std::unique_ptr<mfem::Coefficient> viscosity_;
 
   /**
    * @brief The hyperelastic material model
    */
-  std::shared_ptr<mfem::HyperelasticModel> model_;
+  std::unique_ptr<mfem::HyperelasticModel> model_;
 
   /**
    * @brief Linear solver parameters
