@@ -14,19 +14,18 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh, NUM_FIELDS, order),
-      velocity_(std::make_shared<FiniteElementState>(*pmesh, FEStateOptions{.order = order, .name = "velocity"})),
-      displacement_(
-          std::make_shared<FiniteElementState>(*pmesh, FEStateOptions{.order = order, .name = "displacement"}))
+NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
+    : BaseSolver(mesh, NUM_FIELDS, order),
+      velocity_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "velocity"})),
+      displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
   state_[0] = velocity_;
   state_[1] = displacement_;
 
   // Initialize the mesh node pointers
   reference_nodes_ = displacement_->createOnSpace<mfem::ParGridFunction>();
-  pmesh->GetNodes(*reference_nodes_);
-  pmesh->NewNodes(*reference_nodes_);
+  mesh->GetNodes(*reference_nodes_);
+  mesh->NewNodes(*reference_nodes_);
 
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 

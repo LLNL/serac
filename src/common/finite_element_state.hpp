@@ -60,12 +60,12 @@ class FiniteElementState {
 public:
   /**
    * Main constructor for building a new state object
-   * @param[in] pmesh The problem mesh
+   * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] options The options specified, namely those relating to the order of the problem,
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementState(mfem::ParMesh& pmesh, FEStateOptions&& options = FEStateOptions());
+  FiniteElementState(mfem::ParMesh& mesh, FEStateOptions&& options = FEStateOptions());
 
   /**
    * Returns the MPI communicator for the state

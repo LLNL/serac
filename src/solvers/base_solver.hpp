@@ -30,18 +30,18 @@ public:
   /**
    * @brief Empty constructor
    *
-   * @param[in] pmesh The primary mesh
+   * @param[in] mesh The primary mesh
    */
-  BaseSolver(std::shared_ptr<mfem::ParMesh> pmesh);
+  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
    *
-   * @param[in] pmesh The primary mesh
+   * @param[in] mesh The primary mesh
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    */
-  BaseSolver(std::shared_ptr<mfem::ParMesh> pmesh, int n, int p);
+  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
