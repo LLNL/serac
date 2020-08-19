@@ -38,7 +38,7 @@
 #endif
 
 namespace serac::profiling {
-void initializeCaliper(const std::string& options = "runtime-report");
+void initializeCaliper(const std::string& options = "");
 
 void terminateCaliper();
 }  // namespace serac::profiling

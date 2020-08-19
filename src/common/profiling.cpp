@@ -6,9 +6,13 @@
 
 #include "common/profiling.hpp"
 
+#include <optional>
+
+#include "common/logger.hpp"
+
 #ifdef SERAC_USE_CALIPER
 namespace {
-cali::ConfigManager mgr;
+std::optional<cali::ConfigManager> mgr;
 }  // namespace
 #endif
 
@@ -17,9 +21,16 @@ namespace serac::profiling {
 void initializeCaliper(const std::string& options)
 {
 #ifdef SERAC_USE_CALIPER
-  mgr.add(options.c_str());
-  mgr.add("event-trace");
-  mgr.start();
+  mgr               = cali::ConfigManager();
+  auto check_result = mgr->check(options.c_str());
+  if (check_result.empty()) {
+    mgr->add(options.c_str());
+  } else {
+    SLIC_WARNING("Caliper options invalid, ignoring: " << check_result);
+  }
+  // Defaults, should probably always be enabled
+  mgr->add("event-trace, runtime-report");
+  mgr->start();
 #else
   // Silence warning
   static_cast<void>(options);
@@ -29,7 +40,10 @@ void initializeCaliper(const std::string& options)
 void terminateCaliper()
 {
 #ifdef SERAC_USE_CALIPER
-  mgr.flush();
+  if (mgr) {
+    mgr->stop();
+    mgr->flush();
+  }
 #endif
 }
 
