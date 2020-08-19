@@ -117,11 +117,6 @@ protected:
   std::unique_ptr<mfem::HypreParMatrix> K_mat_;
 
   /**
-   * @brief Stiffness matrix post essential boundary DOF elimination
-   */
-  std::unique_ptr<mfem::HypreParMatrix> K_e_mat_;
-
-  /**
    * @brief RHS load vector
    */
   std::unique_ptr<mfem::HypreParVector> rhs_;

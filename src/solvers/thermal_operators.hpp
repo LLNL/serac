@@ -29,11 +29,11 @@ public:
   /**
    * @brief Construct a new Dynamic Conduction Operator object
    *
-   * @param[in] fespace The temperature field finite element space
+   * @param[in] fe_space The temperature field finite element space
    * @param[in] params The linear solver parameters
    * @param[in] ess_bdr The essential boundary condition objects
    */
-  DynamicConductionOperator(mfem::ParFiniteElementSpace& fespace, const serac::LinearSolverParameters& params,
+  DynamicConductionOperator(mfem::ParFiniteElementSpace& fe_space, const serac::LinearSolverParameters& params,
                             std::vector<serac::BoundaryCondition>& ess_bdr);
 
   /**
