@@ -38,6 +38,100 @@ compilers:
       fc: //usr/tce/packages/xl/xl-beta-2018.10.29/bin/xlf2003-gpu
     spec: xl@coral
     target: ppc64le
-
-
+- compiler:
+    environment: {}
+    extra_rpaths: []
+    flags: {}
+    modules: []
+    operating_system: rhel7
+    paths:
+      cc:  /usr/tce/packages/clang/clang-8.0.1/bin/clang
+      cxx: /usr/tce/packages/clang/clang-8.0.1/bin/clang++
+      f77: /usr/tce/packages/xl/xl-2019.12.23/bin/xlf2003
+      fc:  /usr/tce/packages/xl/xl-2019.12.23/bin/xlf2003
+    spec: clang@8.0.1_nvcc_xlf
+    target: ppc64le
+- compiler:
+    environment: {}
+    extra_rpaths: []
+    flags: {}
+    modules: []
+    operating_system: rhel7
+    paths:
+      cc:  /usr/tce/packages/clang/clang-8.0.1/bin/clang
+      cxx: /usr/tce/packages/clang/clang-8.0.1/bin/clang++
+      f77: /usr/tce/packages/xl/xl-2019.12.23/bin/xlf2003
+      fc:  /usr/tce/packages/xl/xl-2019.12.23/bin/xlf2003
+    spec: clang@coral
+    target: ppc64le
+- compiler:
+    environment: {}
+    extra_rpaths: []
+    flags: {}
+    modules: []
+    operating_system: rhel7
+    paths:
+      cc:  /usr/tce/packages/xl/xl-2019.08.20/bin/xlc
+      cxx: /usr/tce/packages/xl/xl-2019.08.20/bin/xlC
+      f77: /usr/tce/packages/xl/xl-2019.08.20/bin/xlf2003
+      fc:  /usr/tce/packages/xl/xl-2019.08.20/bin/xlf2003
+    spec: xl@nvcc
+    target: ppc64le
  
+- compiler:
+    spec: clang@coral2018.08.08
+    paths:
+      cc: /usr/tce/packages/clang/clang-coral-2018.08.08/bin/clang
+      cxx: /usr/tce/packages/clang/clang-coral-2018.08.08/bin/clang++
+      f77: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlf2003_r
+      fc: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlf2003_r
+    flags: {}
+    operating_system: rhel7
+    target: ppc64le
+    modules: []
+    environment: {}
+    extra_rpaths: []
+
+- compiler:
+    spec: clang@9.0.0
+    paths:
+      cc: /usr/tce/packages/clang/clang-9.0.0/bin/clang
+      cxx: /usr/tce/packages/clang/clang-9.0.0/bin/clang++
+      f77: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlf2003_r
+      fc: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlf2003_r
+    flags: {}
+    operating_system: rhel7
+    target: ppc64le
+    modules: []
+    environment: {}
+    extra_rpaths: []
+
+- compiler:
+    spec: xl@beta2019.06.20
+    paths:
+      cc: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlc
+      cxx: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlc++
+      f77: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlf2003_r
+      fc: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlf2003_r
+    flags: {}
+    operating_system: rhel7
+    target: ppc64le
+    modules: []
+    environment: {}
+    extra_rpaths: []
+
+- compiler:
+    # Spack issue #18111 - doesn't parse name properly
+    spec: clang@2019.10.03ibm
+    paths:
+      cc: /usr/tce/packages/clang/clang-ibm-2019.10.03/bin/clang
+      cxx: /usr/tce/packages/clang/clang-ibm-2019.10.03/bin/clang++
+      # Spack doesn't recognize that this is a mixed toolchain... issue #18156
+      f77: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlf2003_r
+      fc: /usr/tce/packages/xl/xl-beta-2019.06.20/bin/xlf2003_r
+    flags: {}
+    operating_system: rhel7
+    target: ppc64le
+    modules: []
+    environment: {}
+    extra_rpaths: []
