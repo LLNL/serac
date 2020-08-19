@@ -32,7 +32,7 @@ TEST(dynamic_solver, dyn_solve)
 
   std::set<int> ess_bdr = {1};
 
-  auto visc   = std::make_shared<mfem::ConstantCoefficient>(0.0);
+  auto visc   = std::make_unique<mfem::ConstantCoefficient>(0.0);
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
@@ -40,7 +40,7 @@ TEST(dynamic_solver, dyn_solve)
   NonlinearSolidSolver dyn_solver(1, pmesh);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
-  dyn_solver.setViscosity(visc);
+  dyn_solver.setViscosity(std::move(visc));
   dyn_solver.setDisplacement(*deform);
   dyn_solver.setVelocity(*velo);
   dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
@@ -94,8 +94,8 @@ TEST(dynamic_solver, dyn_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double v_norm = dyn_solver.velocity()->gf->ComputeLpError(2.0, zerovec);
-  double x_norm = dyn_solver.displacement()->gf->ComputeLpError(2.0, zerovec);
+  double v_norm = dyn_solver.velocity()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = dyn_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(12.86733, x_norm, 0.0001);
   EXPECT_NEAR(0.22298, v_norm, 0.0001);

@@ -18,7 +18,7 @@
 
 #include "common/common.hpp"
 #include "mfem.hpp"
-#include "solvers/algebraic_solver.hpp"
+#include "solvers/equation_solver.hpp"
 
 namespace serac {
 
@@ -51,7 +51,7 @@ public:
    * @param[in] fes The finite element state for the state
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
+  virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
                                FiniteElementState& state, const int component = -1);
 
   /**
@@ -61,7 +61,7 @@ public:
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,
+  virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
                            const int component = -1);
 
   /**
@@ -71,14 +71,14 @@ public:
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  virtual void setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
+  virtual void setNaturalBCs(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
                              const int component = -1);
   /**
    * @brief Set the state variables from a vector of coefficients
    *
    * @param[in] state_coef A vector of coefficients to project on the state grid functions
    */
-  virtual void setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef);
+  virtual void setState(const std::vector<serac::GeneralCoefficient>& state_coef);
 
   /**
    * @brief Set the state variables from an existing grid function
@@ -240,7 +240,7 @@ protected:
   /**
    * @brief System solver instance
    */
-  AlgebraicSolver solver_;
+  EquationSolver solver_;
 };
 
 }  // namespace serac

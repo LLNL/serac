@@ -45,7 +45,7 @@ TEST(dynamic_solver, dyn_solve)
     return temp;
   });
 
-  auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
+  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
 
   // set the traction boundary
   std::set<int> trac_bdr = {2};
@@ -61,7 +61,7 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  ts_solver.SetConductivity(kappa);
+  ts_solver.SetConductivity(std::move(kappa));
   ts_solver.SetDisplacement(*deform);
   ts_solver.SetVelocity(*velo);
   ts_solver.SetTemperature(*temp);
@@ -72,10 +72,10 @@ TEST(dynamic_solver, dyn_solve)
   double offset = 0.1;
   double scale  = 1.0;
 
-  auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(ts_solver.temperature()->gf.get());
-  auto visc_coef    = std::make_shared<TransformedScalarCoefficient>(
+  auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature()->gridFunc());
+  auto visc_coef    = std::make_unique<TransformedScalarCoefficient>(
       temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
-  ts_solver.SetViscosity(visc_coef);
+  ts_solver.SetViscosity(std::move(visc_coef));
 
   // Set the linear solver parameters
   serac::LinearSolverParameters params;
@@ -127,9 +127,9 @@ TEST(dynamic_solver, dyn_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double v_norm    = ts_solver.velocity()->gf->ComputeLpError(2.0, zerovec);
-  double x_norm    = ts_solver.displacement()->gf->ComputeLpError(2.0, zerovec);
-  double temp_norm = ts_solver.temperature()->gf->ComputeLpError(2.0, zerovec);
+  double v_norm    = ts_solver.velocity()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm    = ts_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double temp_norm = ts_solver.temperature()->gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(13.28049, x_norm, 0.001);
   EXPECT_NEAR(0.005227, v_norm, 0.001);

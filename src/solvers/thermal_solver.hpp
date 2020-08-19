@@ -67,7 +67,7 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void setConductivity(std::shared_ptr<mfem::Coefficient> kappa);
+  void setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa);
 
   /**
    * @brief Set the temperature state vector from a coefficient
@@ -81,7 +81,7 @@ public:
    *
    * @param[in] source The source function coefficient
    */
-  void setSource(std::shared_ptr<mfem::Coefficient> source);
+  void setSource(std::unique_ptr<mfem::Coefficient>&& source);
 
   /**
    * @brief Get the temperature state
@@ -129,22 +129,12 @@ protected:
   /**
    * @brief Assembled mass matrix
    */
-  std::shared_ptr<mfem::HypreParMatrix> M_mat_;
-
-  /**
-   * @brief Eliminated mass matrix
-   */
-  std::shared_ptr<mfem::HypreParMatrix> M_e_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
 
   /**
    * @brief Assembled stiffness matrix
    */
-  std::shared_ptr<mfem::HypreParMatrix> K_mat_;
-
-  /**
-   * @brief Eliminated stiffness matrix
-   */
-  std::shared_ptr<mfem::HypreParMatrix> K_e_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> K_mat_;
 
   /**
    * @brief Thermal load linear form
@@ -154,22 +144,32 @@ protected:
   /**
    * @brief Assembled BC load vector
    */
-  std::shared_ptr<mfem::HypreParVector> bc_rhs_;
+  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
 
   /**
    * @brief Assembled RHS vector
    */
-  std::shared_ptr<mfem::HypreParVector> rhs_;
+  std::unique_ptr<mfem::HypreParVector> rhs_;
+
+  /**
+   * @brief Linear solver for the K operator
+   */
+  std::unique_ptr<mfem::CGSolver> K_solver_;
+
+  /**
+   * @brief Preconditioner for the K operator
+   */
+  std::unique_ptr<mfem::HypreSmoother> K_prec_;
 
   /**
    * @brief Conduction coefficient
    */
-  std::shared_ptr<mfem::Coefficient> kappa_;
+  std::unique_ptr<mfem::Coefficient> kappa_;
 
   /**
    * @brief Body source coefficient
    */
-  std::shared_ptr<mfem::Coefficient> source_;
+  std::unique_ptr<mfem::Coefficient> source_;
 
   /**
    * @brief Time integration operator

@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <variant>
 
+#include "common/finite_element_state.hpp"
 #include "common/serac_types.hpp"
 
 namespace serac {
@@ -28,8 +29,6 @@ namespace serac {
  */
 class BoundaryCondition {
 public:
-  using Coef = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
-
   /**
    * Constructor for setting up a boundary condition using a set of attributes
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
@@ -38,7 +37,7 @@ public:
    * @param[in] attrs The set of boundary condition attributes in the mesh that the BC applies to
    * @param[in] num_attrs The total number of boundary attributes for the mesh
    */
-  BoundaryCondition(Coef coef, const int component, const std::set<int>& attrs, const int num_attrs = 0);
+  BoundaryCondition(GeneralCoefficient coef, const int component, const std::set<int>& attrs, const int num_attrs = 0);
 
   /**
    * Minimal constructor for setting the true DOFs directly
@@ -47,7 +46,7 @@ public:
    * should be -1 for all components
    * @param[in] true_dofs The indices of the relevant DOFs
    */
-  BoundaryCondition(Coef coef, const int component, const mfem::Array<int>& true_dofs);
+  BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs);
 
   const mfem::Array<int>& markers() const { return markers_; }
 
@@ -77,12 +76,12 @@ public:
   void removeAttr(const int attr) { markers_[attr - 1] = 0; }
 
   /**
-   * Projects the boundary condition over a grid function
-   * @param[inout] gf The boundary condition to project over
+   * Projects the boundary condition over a field
+   * @param[inout] state The field to project over
    * @param[in] fes The finite element space that should be used to generate
    * the scalar DOF list
    */
-  void project(mfem::ParGridFunction& gf, const mfem::ParFiniteElementSpace& fes) const;
+  void project(FiniteElementState& state) const;
 
   /**
    * Projects the boundary condition over a grid function
@@ -93,14 +92,22 @@ public:
 
   /**
    * Projects the boundary condition over boundary DOFs of a grid function
-   * @param[inout] gf The boundary condition to project over
+   * @param[inout] gf The grid function representing the field to project over
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    */
   void projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar = true) const;
 
   /**
-   * Projects the boundary condition over boundary DOFs of a grid function
+   * Projects the boundary condition over boundary DOFs of a field
+   * @param[inout] state The field to project over
+   * @param[in] time The time for the coefficient, used for time-varying coefficients
+   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
+   */
+  void projectBdr(FiniteElementState& state, const double time, const bool should_be_scalar = true) const;
+
+  /**
+   * Projects the boundary condition over boundary DOFs
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    * @pre A corresponding field (FiniteElementState) has been associated
@@ -136,22 +143,34 @@ public:
    * used to eliminate an essential BC to an RHS vector with
    * BoundaryCondition::eliminateToRHS
    */
-  void eliminateFromMatrix(mfem::HypreParMatrix& k_mat);
+  void eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const;
 
   /**
    * Eliminates boundary condition from solution to RHS
-   * @param[in] k_mat_post_elim A stiffness matrix post-eliminated
+   * @param[in] k_mat_post_elim A stiffness matrix post-elimination
    * @param[in] soln The solution vector
    * @param[out] rhs The RHS vector for the system
    * @pre BoundaryCondition::eliminateFrom has been called
    */
-  void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs);
+  void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs) const;
+
+  /**
+   * Applies an essential boundary condition to RHS
+   * @param[in] k_mat_post_elim A stiffness (system) matrix post-elimination
+   * @param[out] rhs The RHS vector for the system
+   * @param[inout] state The state from which the solution DOF values are extracted and used to eliminate
+   * @param[in] time Simulation time, used for time-varying boundary coefficients
+   * @param[in] should_be_scalar Whether the boundary coefficient should be a scalar coefficient
+   * @pre BoundaryCondition::eliminateFrom has been called
+   */
+  void apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
+             const double time = 0.0, const bool should_be_scalar = true) const;
 
 private:
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
    */
-  Coef coef_;
+  GeneralCoefficient coef_;
   /**
    * @brief The vector component affected by this BC (-1 implies all components)
    */
@@ -173,7 +192,7 @@ private:
   /**
    * @brief The eliminated entries for Dirichlet BCs
    */
-  std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
+  mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
 };
 
 template <typename Integrator>
