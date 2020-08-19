@@ -12,10 +12,10 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
+ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
+    : BaseSolver(mesh, NUM_FIELDS, order),
       temperature_(std::make_shared<FiniteElementState>(
-          pmesh,
+          *mesh,
           FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}))
 {
   state_[0] = temperature_;

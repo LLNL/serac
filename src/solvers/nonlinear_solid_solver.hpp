@@ -32,9 +32,9 @@ public:
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] order The order of the displacement field
-   * @param[in] pmesh The MFEM parallel mesh to solve on
+   * @param[in] mesh The MFEM parallel mesh to solve on
    */
-  NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
+  NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set displacement boundary conditions

@@ -30,18 +30,18 @@ public:
   /**
    * @brief Empty constructor
    *
-   * @param[in] comm MPI communicator
+   * @param[in] mesh The primary mesh
    */
-  BaseSolver(MPI_Comm comm);
+  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
    *
-   * @param[in] comm MPI communicator
+   * @param[in] mesh The primary mesh
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    */
-  BaseSolver(MPI_Comm comm, int n, int p);
+  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
@@ -161,6 +161,11 @@ protected:
    * @brief The MPI communicator
    */
   MPI_Comm comm_;
+
+  /**
+   * @brief The primary mesh
+   */
+  std::shared_ptr<mfem::ParMesh> mesh_;
 
   /**
    * @brief List of finite element data structures

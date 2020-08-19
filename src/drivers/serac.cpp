@@ -111,12 +111,12 @@ int main(int argc, char* argv[])
   auto config_msg = app.config_to_str(true, true);
   SLIC_INFO_ROOT(rank, config_msg);
 
-  auto pmesh = serac::buildParallelMesh(mesh_file, ser_ref_levels, par_ref_levels);
+  auto mesh = serac::buildParallelMesh(mesh_file, ser_ref_levels, par_ref_levels);
 
-  int dim = pmesh->Dimension();
+  int dim = mesh->Dimension();
 
   // Define the solid solver object
-  serac::NonlinearSolidSolver solid_solver(order, pmesh);
+  serac::NonlinearSolidSolver solid_solver(order, mesh);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
