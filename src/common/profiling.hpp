@@ -38,9 +38,18 @@
 #endif
 
 namespace serac::profiling {
+/**
+ * @brief Initializes performance monitoring using the Caliper library
+ * @param options The Caliper ConfigManager config string, optional
+ * @see https://software.llnl.gov/Caliper/ConfigManagerAPI.html#configmanager-configuration-string-syntax
+ */
 void initializeCaliper(const std::string& options = "");
 
+/**
+ * @brief Concludes performance monitoring and writes collected data to a file
+ */
 void terminateCaliper();
+
 }  // namespace serac::profiling
 
 #endif
