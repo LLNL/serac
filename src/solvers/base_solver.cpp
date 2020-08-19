@@ -27,16 +27,13 @@ BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
 {
   order_ = p;
   state_.resize(n);
-
-  std::generate(state_.begin(), state_.end(), std::make_shared<serac::FiniteElementState>);
-
   gf_initialized_.assign(n, false);
 }
 
-void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
+void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
                                  FiniteElementState& state, const int component)
 {
-  auto num_attrs = state_.front()->mesh->bdr_attributes.Max();
+  auto num_attrs = state_.front()->mesh().bdr_attributes.Max();
 
   serac::BoundaryCondition bc(ess_bdr_coef, component, ess_bdr, num_attrs);
 
@@ -53,28 +50,25 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCo
   ess_bdr_.emplace_back(std::move(bc));
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,
-                             int component)
+void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
 {
   ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
 }
 
-void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
+void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
                                const int component)
 {
-  auto                     num_attrs = state_.front()->mesh->bdr_attributes.Max();
+  auto                     num_attrs = state_.front()->mesh().bdr_attributes.Max();
   serac::BoundaryCondition bc(nat_bdr_coef, component, nat_bdr, num_attrs);
   nat_bdr_.push_back(std::move(bc));
 }
 
-void BaseSolver::setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef)
+void BaseSolver::setState(const std::vector<serac::GeneralCoefficient>& state_coef)
 {
   SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
-    // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
-    // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit([this, i](auto&& coef) { state_[i]->gf->ProjectCoefficient(*coef); }, state_coef[i]);
+    state_[i]->project(state_coef[i]);
   }
 }
 
@@ -143,9 +137,9 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
 
   switch (output_type_) {
     case serac::OutputType::VisIt: {
-      visit_dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, state_.front()->mesh.get());
+      visit_dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front()->mesh());
       for (const auto& state : state_) {
-        visit_dc_->RegisterField(state->name, state->gf.get());
+        visit_dc_->RegisterField(state->name(), &state->gridFunc());
       }
       break;
     }
@@ -174,13 +168,13 @@ void BaseSolver::outputState() const
       std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
       std::ofstream omesh(mesh_name);
       omesh.precision(8);
-      state_.front()->mesh->Print(omesh);
+      state_.front()->mesh().Print(omesh);
 
       for (auto& state : state_) {
-        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state->name, cycle_, mpi_rank_);
+        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state->name(), cycle_, mpi_rank_);
         std::ofstream osol(sol_name);
         osol.precision(8);
-        state->gf->Save(osol);
+        state->gridFunc().Save(osol);
       }
       break;
     }
