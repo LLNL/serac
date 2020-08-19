@@ -65,7 +65,7 @@ public:
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementState(std::shared_ptr<mfem::ParMesh> pmesh, FEStateOptions&& options = FEStateOptions());
+  FiniteElementState(mfem::ParMesh& pmesh, FEStateOptions&& options = FEStateOptions());
 
   /**
    * Returns the MPI communicator for the state
@@ -80,7 +80,7 @@ public:
   /**
    * Returns a non-owning reference to the internal mesh object
    */
-  mfem::ParMesh& mesh() { return *mesh_; }
+  mfem::ParMesh& mesh() { return mesh_; }
 
   /**
    * Returns a non-owning reference to the internal FESpace
@@ -151,7 +151,7 @@ public:
   }
 
 private:
-  std::shared_ptr<mfem::ParMesh>                 mesh_;
+  mfem::ParMesh&                                 mesh_;
   std::unique_ptr<mfem::FiniteElementCollection> coll_;
   mfem::ParFiniteElementSpace                    space_;
   std::unique_ptr<mfem::ParGridFunction>         gf_;

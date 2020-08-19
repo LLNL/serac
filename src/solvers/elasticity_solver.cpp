@@ -13,8 +13,9 @@ namespace serac {
 constexpr int NUM_FIELDS = 1;
 
 ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order),
-      displacement_(std::make_shared<FiniteElementState>(pmesh, FEStateOptions{.order = order, .name = "displacement"}))
+    : BaseSolver(pmesh, NUM_FIELDS, order),
+      displacement_(
+          std::make_shared<FiniteElementState>(*pmesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
   pmesh->EnsureNodes();
   state_[0] = displacement_;
