@@ -83,6 +83,11 @@ public:
   mfem::ParMesh& mesh() { return *mesh_; }
 
   /**
+   * Returns a owning shared_ptr to the internal mesh object
+   */ 
+  std::shared_ptr<mfem::ParMesh> meshPointer() { return mesh_; }
+   
+  /**
    * Returns a non-owning reference to the internal FESpace
    */
   mfem::ParFiniteElementSpace& space() { return space_; }
