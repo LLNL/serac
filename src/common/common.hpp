@@ -15,6 +15,7 @@
 
 #include "common/boundary_condition.hpp"
 #include "common/finite_element_state.hpp"
+#include "common/initialize.hpp"
 #include "common/logger.hpp"
 #include "common/serac_types.hpp"
 #include "common/terminator.hpp"

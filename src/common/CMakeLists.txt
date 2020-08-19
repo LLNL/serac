@@ -8,6 +8,7 @@ set(common_headers
     boundary_condition.hpp
     common.hpp
     finite_element_state.hpp
+    initialize.hpp
     serac_types.hpp
     logger.hpp
     mesh_utils.hpp
@@ -17,6 +18,7 @@ set(common_headers
 set(common_sources
     finite_element_state.cpp
     boundary_condition.cpp
+    initialize.cpp
     logger.cpp
     mesh_utils.cpp
     terminator.cpp
