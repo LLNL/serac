@@ -83,7 +83,7 @@ public:
   mfem::ParMesh& mesh() { return *mesh_; }
 
   /**
-   * Returns a owning shared_ptr to the internal mesh object
+   * Returns an owning shared_ptr to the internal mesh object
    */ 
   std::shared_ptr<mfem::ParMesh> meshPointer() { return mesh_; }
    
