@@ -114,8 +114,7 @@ packages:
     buildable: False
   mvapich2:
     paths:
-      mvapich2%clang@ibm: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/
-      mvapich2%clang@coral: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-coral-2018.08.08/
+      mvapich2%clang: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/
       mvapich2%xl@coral: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-xl-2020.06.25
     buildable: False
   netlib-lapack:

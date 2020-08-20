@@ -146,6 +146,9 @@ compilers:
         SPACK_TARGET_ARGS: ""
     extra_rpaths: []
     flags:
+      # Required as stdlib (from GCC) does not match compiler
+      cflags: --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1
+      cxxflags: --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1
       # Required as spack cannot recognize compiler-specific linker
       # flags in mixed toolchains
       ldlibs: -lgfortran
@@ -156,6 +159,8 @@ compilers:
       cxx: /usr/tce/packages/clang/clang-upstream-2019.08.15/bin/clang++
       # Required to guarantee consistency with underscored LAPACK
       # references in MFEM
+      # Also Spack's current mixed toolchain support is insufficient
+      # to trip superlu-dist's conditional removal of underscores
       f77: /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran
       fc: /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran
     spec: clang@upstream_gfortran
