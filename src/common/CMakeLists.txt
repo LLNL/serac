@@ -26,11 +26,15 @@ set(common_sources
     terminator.cpp
     )
 
+set(common_depends axom mpi mfem)
+blt_list_append( TO common_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
+
 blt_add_library(
     NAME        common
     HEADERS     ${common_headers}
     SOURCES     ${common_sources}
-    DEPENDS_ON  axom mpi mfem caliper
+    DEPENDS_ON  ${common_depends}
     )
+
 
 target_include_directories(common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
