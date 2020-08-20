@@ -29,9 +29,9 @@ public:
    * @brief Construct a new Thermal Structural Solver object
    *
    * @param[in] order The order of the temperature and displacement discretizations
-   * @param[in] pmesh The parallel mesh object on which to solve
+   * @param[in] mesh The parallel mesh object on which to solve
    */
-  ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
+  ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)

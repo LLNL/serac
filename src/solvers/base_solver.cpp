@@ -15,7 +15,8 @@
 
 namespace serac {
 
-BaseSolver::BaseSolver(MPI_Comm comm) : comm_(comm), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0)
+BaseSolver::BaseSolver(std::shared_ptr<mfem::ParMesh> mesh)
+    : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0)
 {
   MPI_Comm_rank(comm_, &mpi_rank_);
   MPI_Comm_size(comm_, &mpi_size_);
@@ -23,7 +24,7 @@ BaseSolver::BaseSolver(MPI_Comm comm) : comm_(comm), output_type_(serac::OutputT
   order_ = 1;
 }
 
-BaseSolver::BaseSolver(MPI_Comm comm, int n, int p) : BaseSolver(comm)
+BaseSolver::BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BaseSolver(mesh)
 {
   order_ = p;
   state_.resize(n);
