@@ -35,9 +35,9 @@ public:
    * @brief Construct a new Elasticity Solver object
    *
    * @param[in] order The polynomial order of the solver
-   * @param[in] pmesh The parallel MFEM mesh
+   * @param[in] mesh The parallel MFEM mesh
    */
-  ElasticitySolver(const int order, std::shared_ptr<mfem::ParMesh> pmesh);
+  ElasticitySolver(const int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions

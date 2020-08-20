@@ -35,9 +35,9 @@ public:
    * @brief Construct a new Thermal Solver object
    *
    * @param[in] order The order of the thermal field discretization
-   * @param[in] pmesh The MFEM parallel mesh to solve the PDE on
+   * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    */
-  ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> pmesh);
+  ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
