@@ -4,6 +4,6 @@
 "package_final_phase" : "hostconfig",
 "package_source_dir" : "../..",
 "spack_url": "https://github.com/spack/spack",
-"spack_commit": "764cafc1ceeda30724c368edef3fe5a1d82275c1",
+"spack_commit": "ccf94ded67e688770dc8d0388d8f75d0d6641e1e",
 "spack_activate" : {}
 }

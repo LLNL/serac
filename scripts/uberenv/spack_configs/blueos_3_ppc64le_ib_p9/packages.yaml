@@ -114,11 +114,14 @@ packages:
     buildable: False
   mvapich2:
     paths:
-      mvapich2: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/
+      mvapich2%clang@ibm: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/
+      mvapich2%clang@coral: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-coral-2018.08.08/
+      mvapich2%xl@coral: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-xl-2020.06.25
     buildable: False
   netlib-lapack:
     paths:
-      netlib-lapack: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib
+      # This is the one that has the trailing underscores, needed for MFEM compat
+      netlib-lapack: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
     buildable: False
 
 # Lock in versions of Devtools
@@ -147,4 +150,3 @@ packages:
     paths:
       uncrustify: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/uncrustify-0.61
     buildable: False
-
