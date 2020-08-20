@@ -21,9 +21,9 @@ set(CMAKE_C_COMPILER "/usr/tce/packages/clang/clang-upstream-2019.08.15/bin/clan
 
 set(CMAKE_CXX_COMPILER "/usr/tce/packages/clang/clang-upstream-2019.08.15/bin/clang++" CACHE PATH "")
 
-set(CMAKE_C_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1 -DON_BLUEOS" CACHE PATH "")
+set(CMAKE_C_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE PATH "")
 
-set(CMAKE_CXX_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1 -DON_BLUEOS" CACHE PATH "")
+set(CMAKE_CXX_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE PATH "")
 
 set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/tce/packages/gcc/gcc-8.3.1/lib" CACHE PATH "Adds a missing libstdc++ rpath")
 
@@ -39,7 +39,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/g/g16/essman1/serac/scripts/uberenv/uberenv_libs/clang-upstream_gfortran" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_08_20_12_44_51/clang-upstream_gfortran" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
@@ -64,5 +64,3 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0" CACHE PATH "")
 set(ENABLE_DOCS OFF CACHE BOOL "")
 
 set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-9.0.0/bin/clang-format" CACHE PATH "")
-
-
