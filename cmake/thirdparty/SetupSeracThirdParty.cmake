@@ -104,19 +104,18 @@ endif()
 #------------------------------------------------------------------------------
 # Caliper
 #------------------------------------------------------------------------------
-if(caliper_DIR)
-    serac_assert_is_directory(VARIABLE_NAME caliper_DIR)
+if(CALIPER_DIR)
+    serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
 
     find_package(caliper REQUIRED NO_DEFAULT_PATH 
-                  PATHS ${caliper_DIR}/share/cmake/caliper)
+                  PATHS ${CALIPER_DIR})
     message(STATUS "Caliper support is ON")
     set(CALIPER_FOUND TRUE CACHE BOOL "")
 
-    blt_register_library(
-        NAME          caliper
-        INCLUDES      ${caliper_INCLUDE_DIR}
-        LIBRARIES     ${caliper_LIB_DIR}/libcaliper.a pfm
-        TREAT_INCLUDES_AS_SYSTEM ON)
+    # Set the include directories as Caliper does not completely
+    # configure the "caliper" target
+    set_target_properties(caliper PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES ${caliper_INCLUDE_PATH})
 else()
     message(STATUS "Caliper support is OFF")
     set(CALIPER_FOUND FALSE CACHE BOOL "")
