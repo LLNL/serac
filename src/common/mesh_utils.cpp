@@ -10,6 +10,8 @@
 #include "common/terminator.hpp"
 #include "fmt/fmt.hpp"
 
+#include <fstream>
+
 namespace serac {
 
 std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, const int refine_serial,

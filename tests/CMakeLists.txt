@@ -54,6 +54,7 @@ if (ENABLE_GTEST)
 
     set(language_tests
         copy_elision.cpp
+        expr_templates.cpp
         mfem_array_std_algo.cpp)
 
     foreach(filename ${language_tests})
