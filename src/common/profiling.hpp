@@ -22,18 +22,18 @@
 #include "caliper/cali-manager.h"
 #include "caliper/cali.h"
 
-#define MARK_FUNCTION CALI_CXX_MARK_FUNCTION
-#define MARK_LOOP_START(id, name) CALI_CXX_MARK_LOOP_BEGIN(id, name)
-#define MARK_LOOP_ITER(id, i) CALI_CXX_MARK_LOOP_ITERATION(id, i)
-#define MARK_LOOP_END(id) CALI_CXX_MARK_LOOP_END(id)
+#define SERAC_MARK_FUNCTION CALI_CXX_MARK_FUNCTION
+#define SERAC_MARK_LOOP_START(id, name) CALI_CXX_MARK_LOOP_BEGIN(id, name)
+#define SERAC_MARK_LOOP_ITER(id, i) CALI_CXX_MARK_LOOP_ITERATION(id, i)
+#define SERAC_MARK_LOOP_END(id) CALI_CXX_MARK_LOOP_END(id)
 
 #else  // SERAC_USE_CALIPER not defined
 
 // Define all these as nothing so annotated code will still compile
-#define MARK_FUNCTION
-#define MARK_LOOP_START(id, name)
-#define MARK_LOOP_ITER(id, i)
-#define MARK_LOOP_END(id)
+#define SERAC_MARK_FUNCTION
+#define SERAC_MARK_LOOP_START(id, name)
+#define SERAC_MARK_LOOP_ITER(id, i)
+#define SERAC_MARK_LOOP_END(id)
 
 #endif
 
