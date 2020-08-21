@@ -1,4 +1,4 @@
-
+--- # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # This file controls default concretization preferences for Spack.
 #
@@ -13,7 +13,6 @@
 #
 # Per-user settings (overrides default and site settings):
 #   ~/.spack/packages.yaml
-# -------------------------------------------------------------------------
 packages:
   all:
     # This defaults us to machine specific flags of ivybridge which allows
@@ -23,7 +22,6 @@ packages:
     providers:
       awk: [gawk]
       blas: [openblas]
-      lapack: [openblas]
       daal: [intel-daal]
       elf: [elfutils]
       golang: [gcc]
@@ -40,36 +38,36 @@ packages:
       szip: [libszip, libaec]
       tbb: [intel-tbb]
       jpeg: [libjpeg-turbo, libjpeg]
-# Spack may grab for mpi & we don't want to use them
+  # Spack may grab for mpi & we don't want to use them
   charm:
     buildable: False
   mpilander:
-    buildable: False  
-# System level packages to not build
+    buildable: False
+  # System level packages to not build
   autotools:
     paths:
       autotools: /usr/bin/
-    buildable: False 
+    buildable: False
   bzip2:
-   paths:
+    paths:
       bzip2: /usr/bin/
-   buildable: False
+    buildable: False
   gettext:
-   paths:
+    paths:
       gettext: /usr/bin/
-   buildable: False
+    buildable: False
   m4:
-   paths:
+    paths:
       m4: /usr/bin/
-   buildable: False
+    buildable: False
   pkg-config:
     paths:
       pkg-config: /usr/bin/
-    buildable: False 
+    buildable: False
   tar:
-   paths:
+    paths:
       tar: /usr/bin/
-   buildable: False
+    buildable: False
   graphviz:
     paths:
       graphviz: /usr/bin/
@@ -78,9 +76,9 @@ packages:
     paths:
       openblas: /usr
     buildable: False
-   mpich:
+  mpich:
     paths:
       mpich@3.2: /usr
-# Globally lock in version of CMake
+  # Globally lock in version of CMake
   cmake:
     version: [3.10.1]
