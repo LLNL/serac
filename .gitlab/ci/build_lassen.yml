@@ -25,7 +25,7 @@
 clang_upstream_gfortran (PR build_on_lassen):
   variables:
     COMPILER: "clang@upstream_gfortran"
-    HOST_CONFIG: "lassen-lassen_3_ppc64le_ib_p9-clang@upstream_gfortran.cmake"
+    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-clang@upstream_gfortran.cmake"
   extends: .pr_build_on_lassen
 
 clang_upstream_gfortran (Main build_with_deps_on_lassen):
