@@ -27,16 +27,7 @@
 
 int main(int argc, char* argv[])
 {
-  // Initialize MPI.
-  int num_procs, rank;
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  // Initialize SLIC logger
-  if (!serac::logger::initialize(MPI_COMM_WORLD)) {
-    serac::exitGracefully(true);
-  }
+  auto [num_procs, rank] = serac::initialize(argc, argv);
 
   // mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
@@ -120,12 +111,12 @@ int main(int argc, char* argv[])
   auto config_msg = app.config_to_str(true, true);
   SLIC_INFO_ROOT(rank, config_msg);
 
-  auto pmesh = serac::buildParallelMesh(mesh_file, ser_ref_levels, par_ref_levels);
+  auto mesh = serac::buildParallelMesh(mesh_file, ser_ref_levels, par_ref_levels);
 
-  int dim = pmesh->Dimension();
+  int dim = mesh->Dimension();
 
   // Define the solid solver object
-  serac::NonlinearSolidSolver solid_solver(order, pmesh);
+  serac::NonlinearSolidSolver solid_solver(order, mesh);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions

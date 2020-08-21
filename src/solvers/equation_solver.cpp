@@ -4,14 +4,14 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "solvers/algebraic_solver.hpp"
+#include "solvers/equation_solver.hpp"
 
 #include "common/common.hpp"
 
 namespace serac {
 
-AlgebraicSolver::AlgebraicSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
-                                 const std::optional<NonlinearSolverParameters>& nonlin_params)
+EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
+                               const std::optional<NonlinearSolverParameters>& nonlin_params)
 {
   // Preconditioner configuration is too varied, maybe a PrecondParams is needed?
   // Maybe a redesign to better support custom preconditioners as well

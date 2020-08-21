@@ -517,7 +517,9 @@ class SpackEnv(UberEnv):
             if self.opts["ignore_ssl_errors"]:
                 install_cmd += "-k "
             if not self.opts["install"]:
-                install_cmd += "dev-build --quiet -d {} -u {} ".format(self.pkg_src_dir,self.pkg_final_phase)
+                install_cmd += "dev-build --quiet -d {} ".format(self.pkg_src_dir)
+                if self.pkg_final_phase:
+                    install_cmd += "-u {} ".format(self.pkg_final_phase)                
             else:
                 install_cmd += "install "
                 if self.opts["run_tests"]:

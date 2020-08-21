@@ -53,7 +53,8 @@ if (ENABLE_GTEST)
     endforeach()
 
     set(language_tests
-        copy_elision.cpp)
+        copy_elision.cpp
+        mfem_array_std_algo.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)

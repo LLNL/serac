@@ -40,12 +40,12 @@ std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, c
   }
 
   // create the parallel mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(comm, *mesh);
+  auto par_mesh = std::make_shared<mfem::ParMesh>(comm, *mesh);
   for (int lev = 0; lev < refine_parallel; lev++) {
-    pmesh->UniformRefinement();
+    par_mesh->UniformRefinement();
   }
 
-  return pmesh;
+  return par_mesh;
 }
 
 }  // namespace serac
