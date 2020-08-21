@@ -5,13 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file algebraic_solver.hpp
+ * @file equation_solver.hpp
  *
  * @brief This file contains the declaration of an iterative solver wrapper
  */
 
-#ifndef ALGEBRAIC_SOLVER
-#define ALGEBRAIC_SOLVER
+#ifndef EQUATION_SOLVER
+#define EQUATION_SOLVER
 
 #include <memory>
 #include <optional>
@@ -26,10 +26,10 @@ namespace serac {
  * Wraps a (currently iterative) system solver and handles the configuration of linear
  * or nonlinear solvers.  This class solves a generic global system of (possibly) nonlinear algebraic equations.
  */
-class AlgebraicSolver : public mfem::Solver {
+class EquationSolver : public mfem::Solver {
 public:
   // TODO: Eliminate this once a dependency injection approach is used for the solvers
-  AlgebraicSolver() = default;
+  EquationSolver() = default;
   /**
    * Constructs a new solver wrapper
    * @param[in] comm The MPI communicator object
@@ -38,8 +38,8 @@ public:
    * @see serac::LinearSolverParameters
    * @see serac::NonlinearSolverParameters
    */
-  AlgebraicSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
-                  const std::optional<NonlinearSolverParameters>& nonlin_params = std::nullopt);
+  EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
+                 const std::optional<NonlinearSolverParameters>& nonlin_params = std::nullopt);
 
   /**
    * Sets a preconditioner for the underlying linear solver object

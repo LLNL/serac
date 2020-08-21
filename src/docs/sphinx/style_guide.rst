@@ -19,6 +19,16 @@ with the following amendments:
 The Google style guide is meant for style enforcement only. The design principles outlined in the 
 `C++ Core Guidelines <http://isocpp.github.io/CppCoreGuidelines/>`_ should be followed.
 
+Of particular importance are the guidelines proposed for managing object lifetime:
+
+    1. Use raw pointers and references [only] to denote non-ownership (R.3 - R.4)
+    #. Prefer ``unique_ptr`` to ``shared_ptr`` (R.21)
+
+For example, if an object ``A`` creates a subobject ``B`` whose constructor requires a reference
+to one of ``A``'s instance variables ``Foo f``, ``B`` should store a non-owning reference to ``f``,
+either ``Foo&`` or ``Foo*``.  This should be ``const`` if at all possible.  In this case, shared ownership
+is not required because the lifetime of ``B`` is entirely dependent on the lifetime of ``A``.
+
 Documentation
 -------------
 

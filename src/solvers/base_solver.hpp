@@ -18,7 +18,7 @@
 
 #include "common/common.hpp"
 #include "mfem.hpp"
-#include "solvers/algebraic_solver.hpp"
+#include "solvers/equation_solver.hpp"
 
 namespace serac {
 
@@ -30,18 +30,18 @@ public:
   /**
    * @brief Empty constructor
    *
-   * @param[in] comm MPI communicator
+   * @param[in] mesh The primary mesh
    */
-  BaseSolver(MPI_Comm comm);
+  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
    *
-   * @param[in] comm MPI communicator
+   * @param[in] mesh The primary mesh
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    */
-  BaseSolver(MPI_Comm comm, int n, int p);
+  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
@@ -51,7 +51,7 @@ public:
    * @param[in] fes The finite element state for the state
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::BoundaryCondition::Coef ess_bdr_coef,
+  virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
                                FiniteElementState& state, const int component = -1);
 
   /**
@@ -61,7 +61,7 @@ public:
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::BoundaryCondition::Coef ess_bdr_coef,
+  virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
                            const int component = -1);
 
   /**
@@ -71,14 +71,14 @@ public:
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  virtual void setNaturalBCs(const std::set<int>& nat_bdr, serac::BoundaryCondition::Coef nat_bdr_coef,
+  virtual void setNaturalBCs(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
                              const int component = -1);
   /**
    * @brief Set the state variables from a vector of coefficients
    *
    * @param[in] state_coef A vector of coefficients to project on the state grid functions
    */
-  virtual void setState(const std::vector<serac::BoundaryCondition::Coef>& state_coef);
+  virtual void setState(const std::vector<serac::GeneralCoefficient>& state_coef);
 
   /**
    * @brief Set the state variables from an existing grid function
@@ -163,6 +163,11 @@ protected:
   MPI_Comm comm_;
 
   /**
+   * @brief The primary mesh
+   */
+  std::shared_ptr<mfem::ParMesh> mesh_;
+
+  /**
    * @brief List of finite element data structures
    */
   std::vector<std::shared_ptr<serac::FiniteElementState> > state_;
@@ -240,7 +245,7 @@ protected:
   /**
    * @brief System solver instance
    */
-  AlgebraicSolver solver_;
+  EquationSolver solver_;
 };
 
 }  // namespace serac

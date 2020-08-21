@@ -12,22 +12,12 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> pmesh)
-    : BaseSolver(pmesh->GetComm(), NUM_FIELDS, order), displacement_(state_[0])
+ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
+    : BaseSolver(mesh, NUM_FIELDS, order),
+      displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
-  pmesh->EnsureNodes();
-  displacement_->mesh = pmesh;
-  displacement_->coll = std::make_shared<mfem::H1_FECollection>(order, pmesh->Dimension(), mfem::Ordering::byVDIM);
-  displacement_->space =
-      std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), displacement_->coll.get(), pmesh->Dimension());
-  displacement_->gf       = std::make_shared<mfem::ParGridFunction>(displacement_->space.get());
-  displacement_->true_vec = std::make_shared<mfem::HypreParVector>(displacement_->space.get());
-
-  // and initial conditions
-  *displacement_->gf       = 0.0;
-  *displacement_->true_vec = 0.0;
-
-  displacement_->name = "displacement";
+  mesh->EnsureNodes();
+  state_[0] = displacement_;
 }
 
 void ElasticitySolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
@@ -58,7 +48,7 @@ void ElasticitySolver::completeSetup()
   SLIC_ASSERT_MSG(lambda_ != nullptr, "Lame lambda not set in ElasticitySolver!");
 
   // Define the parallel bilinear form
-  K_form_ = std::make_unique<mfem::ParBilinearForm>(displacement_->space.get());
+  K_form_ = displacement_->createOnSpace<mfem::ParBilinearForm>();
 
   // Add the elastic integrator
   K_form_->AddDomainIntegrator(new mfem::ElasticityIntegrator(*lambda_, *mu_));
@@ -67,7 +57,7 @@ void ElasticitySolver::completeSetup()
 
   // Define the parallel linear form
 
-  l_form_ = std::make_unique<mfem::ParLinearForm>(displacement_->space.get());
+  l_form_ = displacement_->createOnSpace<mfem::ParLinearForm>();
 
   // Add the traction integrator
   if (nat_bdr_.size() > 0) {
@@ -80,7 +70,7 @@ void ElasticitySolver::completeSetup()
     l_form_->Assemble();
     rhs_.reset(l_form_->ParallelAssemble());
   } else {
-    rhs_  = std::make_unique<mfem::HypreParVector>(displacement_->space.get());
+    rhs_  = displacement_->createOnSpace<mfem::HypreParVector>();
     *rhs_ = 0.0;
   }
 
@@ -89,24 +79,24 @@ void ElasticitySolver::completeSetup()
 
   // Eliminate the essential DOFs
   for (auto& bc : ess_bdr_) {
-    K_e_mat_.reset(K_mat_->EliminateRowsCols(bc.getTrueDofs()));
+    bc.eliminateFromMatrix(*K_mat_);
   }
 
   // Initialize the eliminate BC RHS vector
-  bc_rhs_  = std::make_unique<mfem::HypreParVector>(displacement_->space.get());
+  bc_rhs_  = displacement_->createOnSpace<mfem::HypreParVector>();
   *bc_rhs_ = 0.0;
 
   // Initialize the true vector
-  displacement_->gf->GetTrueDofs(*displacement_->true_vec);
+  displacement_->initializeTrueVec();
 
-  solver_ = AlgebraicSolver(displacement_->space->GetComm(), lin_params_);
+  solver_ = EquationSolver(displacement_->comm(), lin_params_);
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
-    SLIC_WARNING_IF(displacement_->space->GetOrdering() == mfem::Ordering::byVDIM,
+    SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
 
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
-    prec_amg->SetElasticityOptions(displacement_->space.get());
+    prec_amg->SetElasticityOptions(&displacement_->space());
     solver_.SetPreconditioner(std::move(prec_amg));
   }
   // If not AMG, just MINRES with Jacobi smoothing
@@ -121,7 +111,7 @@ void ElasticitySolver::completeSetup()
 void ElasticitySolver::advanceTimestep(double&)
 {
   // Initialize the true vector
-  displacement_->gf->GetTrueDofs(*displacement_->true_vec);
+  displacement_->initializeTrueVec();
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
@@ -131,7 +121,7 @@ void ElasticitySolver::advanceTimestep(double&)
   }
 
   // Distribute the shared DOFs
-  displacement_->gf->SetFromTrueDofs(*displacement_->true_vec);
+  displacement_->distributeSharedDofs();
   cycle_ += 1;
 }
 
@@ -142,14 +132,12 @@ void ElasticitySolver::QuasiStaticSolve()
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
     bool should_be_scalar = false;
-    bc.projectBdr(*displacement_->gf, time_, should_be_scalar);
-    displacement_->gf->GetTrueDofs(*displacement_->true_vec);
-    mfem::EliminateBC(*K_mat_, *K_e_mat_, bc.getTrueDofs(), *displacement_->true_vec, *bc_rhs_);
+    bc.apply(*K_mat_, *bc_rhs_, *displacement_, time_, should_be_scalar);
   }
 
   solver_.SetOperator(*K_mat_);
 
-  solver_.Mult(*bc_rhs_, *displacement_->true_vec);
+  solver_.Mult(*bc_rhs_, displacement_->trueVec());
 }
 
 ElasticitySolver::~ElasticitySolver() {}
