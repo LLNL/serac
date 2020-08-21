@@ -8,14 +8,17 @@ variables:
   PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
   ACCOUNT: -p pdebug -A eng
+  L_ACCOUNT: -q pdebug -G eng
   MIRROR: "/usr/workspace/smithdev/mirror"
 
 # There are no tests for now
 stages:
-  - allocate_resources
-  - build
-  - release_resources
-  - build_with_deps
+  - q_allocate_resources
+  - q_build
+  - q_release_resources
+  - q_build_with_deps
+  - l_build
+  - l_build_with_deps
 
 # Whether and how to update uberenv
 .run_update_uberenv: &run_update_uberenv |
@@ -73,8 +76,40 @@ stages:
     - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --test-only
     - echo -e "section_end:$(date +%s):tests\r\e[0K"
 
+
+.build_blueos_3_ppc64le_ib_p9_script:
+  script:
+    #BUILD
+    - echo -e "section_start:$(date +%s):build\r\e[0K
+      Build ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 5 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --build-only
+    - echo -e "section_end:$(date +%s):build\r\e[0K"
+    #TEST
+    - echo -e "section_start:$(date +%s):tests\r\e[0K
+      Test ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 5 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --test-only
+    - echo -e "section_end:$(date +%s):tests\r\e[0K"
+
+.build_with_deps_blueos_3_ppc64le_ib_p9_script:
+  script:
+    - *run_update_uberenv
+    #DEPENDENCIES
+    - echo -e "section_start:$(date +%s):dependencies\r\e[0K
+      Build dependencies and generate host-config file (uberenv)"
+    - lalloc 1 -W 20 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --deps-only
+    - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
+    #BUILD
+    - echo -e "section_start:$(date +%s):build\r\e[0K
+      Build ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 5 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --build-only
+    - echo -e "section_end:$(date +%s):build\r\e[0K"
+    #TEST
+    - echo -e "section_start:$(date +%s):tests\r\e[0K
+      Test ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 5 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --test-only
+    - echo -e "section_end:$(date +%s):tests\r\e[0K"
+
 # This is where jobs are included
 include:
   - local: .gitlab/ci/build_quartz.yml
-
-
+  - local: .gitlab/ci/build_lassen.yml

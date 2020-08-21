@@ -19,15 +19,18 @@ packages:
     compiler: [gcc, intel, pgi, clang, xl, nag]
     providers:
       awk: [gawk]
-      blas: [openblas]
+      blas: [netlib-lapack]
       daal: [intel-daal]
       elf: [elfutils]
       golang: [gcc]
       ipp: [intel-ipp]
       java: [jdk]
-      lapack: [openblas]
+      lapack: [netlib-lapack]
       mkl: [intel-mkl]
       mpe: [mpe2]
+      # IBM Spectrum MPI is the only supported MPI 
+      # library on LC's Sierra and CORAL EA systems.
+      # Using mvapich2 due to spack issue #4119
       mpi: [mvapich2]
       opencl: [pocl]
       openfoam: [openfoam-com, openfoam-org, foam-extend]
@@ -105,6 +108,20 @@ packages:
    paths:
       tar: /usr
    buildable: False
+  spectrum-mpi:
+    paths:
+      spectrum-mpi: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-coral-2018.08.08/
+    buildable: False
+  mvapich2:
+    paths:
+      mvapich2%clang: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/
+      mvapich2%xl@coral: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-xl-2020.06.25
+    buildable: False
+  netlib-lapack:
+    paths:
+      # This is the one that has the trailing underscores, needed for MFEM compat
+      netlib-lapack: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
+    buildable: False
 
 # Lock in versions of Devtools
   cppcheck:
@@ -118,18 +135,17 @@ packages:
       doxygen: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.14
     buildable: False
   python:
-    version: [3.7.4]
+    version: [3.8.2]
     paths:
-      python: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
+      python: /usr/tce/packages/python/python-3.8.2/
     buildable: False
   py-sphinx:
     version: [2.2.0]
     paths:
-      py-sphinx: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
+      py-sphinx: /usr/tce/packages/python/python-3.8.2/
     buildable: False
   uncrustify:
     version: [0.61]
     paths:
       uncrustify: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/uncrustify-0.61
     buildable: False
-

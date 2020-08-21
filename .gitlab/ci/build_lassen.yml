@@ -1,0 +1,35 @@
+####
+# This is the share configuration of jobs for lassen
+.on_lassen:
+  variables:
+  tags:
+    - shell
+    - lassen
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /_lnone/ || $ON_LASSEN == "OFF"' #run except if ...
+      when: never
+    - when: on_success
+
+####
+# Template
+.pr_build_on_lassen:
+  stage: l_build
+  extends: [.build_blueos_3_ppc64le_ib_p9_script, .on_lassen, .pr_workflow]
+
+.main_build_with_deps_on_lassen:
+  stage: l_build_with_deps
+  extends: [.build_with_deps_blueos_3_ppc64le_ib_p9_script, .on_lassen, .main_workflow]
+
+####
+# Build jobs
+clang_upstream_gfortran (PR build_on_lassen):
+  variables:
+    COMPILER: "clang@upstream_gfortran"
+    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-clang@upstream_gfortran.cmake"
+  extends: .pr_build_on_lassen
+
+clang_upstream_gfortran (Main build_with_deps_on_lassen):
+  variables:
+    COMPILER: "clang@upstream_gfortran"
+    SPEC: "@develop%${COMPILER}"
+  extends: .main_build_with_deps_on_lassen
