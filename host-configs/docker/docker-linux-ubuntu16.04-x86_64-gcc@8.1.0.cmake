@@ -26,11 +26,11 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++" CACHE PATH "")
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/usr/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/home/serac/serac_tpls/gcc-8.1.0/mpich-3.3.2/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/usr/bin/mpic++" CACHE PATH "")
+set(MPI_CXX_COMPILER "/home/serac/serac_tpls/gcc-8.1.0/mpich-3.3.2/bin/mpic++" CACHE PATH "")
 
-set(MPIEXEC_EXECUTABLE "/usr/bin/mpiexec" CACHE PATH "")
+set(MPIEXEC_EXECUTABLE "/home/serac/serac_tpls/gcc-8.1.0/mpich-3.3.2/bin/mpiexec" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies
@@ -43,7 +43,7 @@ set(CONDUIT_DIR "${TPL_ROOT}/conduit-master" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.11.1" CACHE PATH "")
 
 set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
 
