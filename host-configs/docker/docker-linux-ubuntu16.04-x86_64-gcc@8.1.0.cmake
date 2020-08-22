@@ -26,11 +26,11 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++" CACHE PATH "")
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/home/serac/serac_tpls/gcc-8.1.0/mpich-3.3.2/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/usr/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/home/serac/serac_tpls/gcc-8.1.0/mpich-3.3.2/bin/mpic++" CACHE PATH "")
+set(MPI_CXX_COMPILER "/usr/bin/mpic++" CACHE PATH "")
 
-set(MPIEXEC_EXECUTABLE "/home/serac/serac_tpls/gcc-8.1.0/mpich-3.3.2/bin/mpiexec" CACHE PATH "")
+set(MPIEXEC_EXECUTABLE "/usr/bin/mpiexec" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies

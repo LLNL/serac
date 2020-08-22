@@ -76,9 +76,6 @@ packages:
     paths:
       openblas: /usr
     buildable: False
-  mpich:
-    paths:
-      mpich@3.2: /usr
   # Globally lock in version of CMake
   cmake:
     version: [3.10.1]
