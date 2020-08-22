@@ -1,4 +1,3 @@
---- # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
 # This file controls default concretization preferences for Spack.
 #
@@ -13,6 +12,7 @@
 #
 # Per-user settings (overrides default and site settings):
 #   ~/.spack/packages.yaml
+# -------------------------------------------------------------------------
 packages:
   all:
     # This defaults us to machine specific flags of ivybridge which allows
