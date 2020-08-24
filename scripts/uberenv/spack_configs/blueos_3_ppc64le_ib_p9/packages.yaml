@@ -81,9 +81,9 @@ packages:
       bzip2: /usr
    buildable: False
   cmake:
-    version: [3.14.5]
+    version: [3.18.0]
     paths:
-      cmake: /usr/tce/packages/cmake/cmake-3.14.5
+      cmake: /usr/tce/packages/cmake/cmake-3.18.0
     buildable: False
   gettext:
    paths:

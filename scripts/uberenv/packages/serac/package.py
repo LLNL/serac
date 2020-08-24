@@ -265,7 +265,10 @@ class Serac(CMakePackage, CudaPackage):
             if not spec.satisfies('cuda_arch=none'):
                 cuda_arch = spec.variants['cuda_arch'].value
                 flag = '-arch sm_{0}'.format(cuda_arch[0])
-                cfg.write(cmake_cache_string("CMAKE_CUDA_FLAGS", flag))
+                # CXX flags will be propagated to the host compiler
+                cuda_flags = ' '.join([flag, cxxflags])
+                cfg.write(cmake_cache_string("CMAKE_CUDA_FLAGS", cuda_flags))
+                cfg.write(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES", ' '.join(cuda_arch)))
 
             if '+deviceconst' in spec:
                 cfg.write(cmake_cache_option("ENABLE_DEVICE_CONST", True))

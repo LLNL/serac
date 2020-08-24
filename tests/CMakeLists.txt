@@ -69,24 +69,6 @@ if (ENABLE_GTEST)
                      NUM_MPI_TASKS 1 )
     endforeach()
 
-    if (ENABLE_CUDA)
-        set(cuda_tests
-            cuda_smoketest.cpp)
-
-        foreach(filename ${language_tests})
-            get_filename_component(test_name ${filename} NAME_WE)
-
-            blt_add_executable(NAME        ${test_name}
-                            SOURCES     ${filename}
-                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                            DEPENDS_ON  ${test_dependencies} cuda
-                            FOLDER      serac/tests )
-            blt_add_test(NAME          ${test_name}
-                        COMMAND       ${test_name}
-                        NUM_MPI_TASKS 1 )
-    endif()
-
-
 endif()
 
 # Make sure running serac driver doesn't completely fail
