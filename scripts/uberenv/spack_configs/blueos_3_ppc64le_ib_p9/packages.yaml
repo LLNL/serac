@@ -55,9 +55,10 @@ packages:
           pkg-config: /usr
 # LLNL blueos CUDA
   cuda:
+    version: [11.0.182, 11.0.2]
     paths:
-      cuda@9.0.176: /usr/tce/packages/cuda/cuda-9.0.176
-      cuda@8.0: /usr/tce/packages/cuda/cuda-8.0
+      cuda@11.0.182: /usr/tce/packages/cuda/cuda-11.0.182
+      cuda@11.0.2: /usr/tce/packages/cuda/cuda-11.0.2
     buildable: False
 # LLNL blueos mpi
   spectrum-mpi:
