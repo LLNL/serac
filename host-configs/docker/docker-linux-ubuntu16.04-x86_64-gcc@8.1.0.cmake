@@ -43,7 +43,7 @@ set(CONDUIT_DIR "${TPL_ROOT}/conduit-master" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.11.1" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2" CACHE PATH "")
 
 set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
 
