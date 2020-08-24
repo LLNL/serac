@@ -145,8 +145,3 @@ packages:
     paths:
       py-sphinx: /usr/tce/packages/python/python-3.8.2/
     buildable: False
-  uncrustify:
-    version: [0.61]
-    paths:
-      uncrustify: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/uncrustify-0.61
-    buildable: False
