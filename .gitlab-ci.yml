@@ -8,7 +8,7 @@ variables:
   PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
   ACCOUNT: -p pdebug -A eng
-  L_ACCOUNT: -q pdebug
+  L_ACCOUNT: -q pdebug -G eng
   MIRROR: "/usr/workspace/smithdev/mirror"
 
 # There are no tests for now
