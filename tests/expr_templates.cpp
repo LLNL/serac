@@ -6,8 +6,6 @@
 
 #include "common/expression_templates.hpp"
 
-
-
 #if 0
   // Save a copy of the current state vector
   y_ = u;
@@ -41,13 +39,14 @@
   T_solver_.Mult(z_, du_dt);
 #endif
 
-int main() {
-
+int main()
+{
   constexpr int m = 8;
   constexpr int n = 10;
-  mfem::Vector a(m);
-  mfem::Vector b(m);
-  mfem::Vector c(n);
+  mfem::Vector  a(m);
+  a = 0.0;
+  mfem::Vector      b(m);
+  mfem::Vector      c(n);
   mfem::DenseMatrix K(m, n);
 
   for (int i = 0; i < m; i++) {
@@ -58,27 +57,33 @@ int main() {
   for (int i = 0; i < m; i++) {
     c[i] = i * i * i;
     for (int j = 0; j < n; j++) {
-      K(i,j) = 2 * (i == j) - (i == (j+1)) - (i == (j-1));
+      K(i, j) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
     }
   }
 
-  auto f = [](auto a, auto b, auto Kc) {
-    return -a + b * 3.0 - 0.3 * Kc;
-  };
+  // // auto f = [](auto a, auto b, auto Kc) { return -a + b * 3.0 - 0.3 * Kc; };
 
-  auto result = evaluate(-a + b * 3.0 - 0.3 * (K * c));
+  // auto result = evaluate(-a + b * 3.0 - 0.3 * (K * c));
 
   mfem::Vector Kc(m);
   K.Mult(c, Kc);
 
+  auto g = [](auto&& a, auto&& b, auto&& Kc) { return -a + b * 3.0 - 0.3 * Kc; };
+
+  auto thingy = g(a, b, Kc);
+
+  auto size = thingy.Size();
+
+  std::cout << size << "\n";
+
   // why does this segfault?
   // auto result2 = evaluate(f(a, b, Kc));
+  auto result2 = evaluate(thingy);
   // for (int i = 0; i < m; i++) {
-  //   std::cout << result[i] << ' ' << result2[i] << ' ' << f(a[i], b[i], Kc[i]) << std::endl;
+  //   std::cout << /* result[i] << ' ' << */ result2[i] /* << ' ' << f(a[i], b[i], Kc[i]) */ << std::endl;
   // }
 
-  for (int i = 0; i < m; i++) {
-    std::cout << result[i] << ' ' << f(a[i], b[i], Kc[i]) << std::endl;
-  }
-
+  // for (int i = 0; i < m; i++) {
+  //   std::cout << result[i] << ' ' << f(a[i], b[i], Kc[i]) << std::endl;
+  // }
 }
