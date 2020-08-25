@@ -57,17 +57,6 @@ gcc_8_1_0 (PR build_on_quartz):
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-gcc@8.1.0.cmake"
   extends: .pr_build_on_quartz
 
-# Intel C++ compiler has poor C++17 support and will no longer be
-# supported until issues are resolved.
-# See CMPLRIL0-32507
-# https://community.intel.com/t5/Intel-C-Compiler/Converting-constructor-issue-with-std-variant/td-p/1182651
-intel_19_0_4 (PR build_on_quartz):
-  variables:
-    COMPILER: "intel@19.0.4"
-    HOST_CONFIG: "quartz-toss_3_x86_64_ib-intel@19.0.4.cmake"
-  extends: .pr_build_on_quartz
-  allow_failure: true
-
 clang_9_0_0 (Main build_with_deps_on_quartz):
   variables:
     COMPILER: "clang@9.0.0"
@@ -80,13 +69,3 @@ gcc_8_1_0 (Main build_with_deps_on_quartz):
     SPEC: "@develop%${COMPILER}"
   extends: .main_build_with_deps_on_quartz
 
-# Intel C++ compiler has poor C++17 support and will no longer be
-# supported until issues are resolved.
-# See CMPLRIL0-32507
-# https://community.intel.com/t5/Intel-C-Compiler/Converting-constructor-issue-with-std-variant/td-p/1182651
-intel_19_0_4 (Main build_with_deps_on_quartz):
-  variables:
-    COMPILER: "intel@19.0.4"
-    SPEC: "@develop%${COMPILER}"
-  extends: .main_build_with_deps_on_quartz
-  allow_failure: true

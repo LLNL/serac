@@ -100,7 +100,7 @@ class Serac(CMakePackage):
 
     # Libraries that support +debug
     debug_deps = ["mfem@4.1.0~shared+hypre+metis+superlu-dist+lapack+mpi",
-                  "hypre@2.11.1~shared~superlu-dist+mpi"]
+                  "hypre@2.18.2~shared~superlu-dist+mpi"]
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
