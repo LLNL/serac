@@ -7,8 +7,8 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
-  ACCOUNT: -p pdebug -A eng
-  L_ACCOUNT: -q pdebug -G eng
+  SLURM_ACCOUNT: -p pdebug -A eng
+  LSF_ACCOUNT: -q pdebug -G eng
   MIRROR: "/usr/workspace/smithdev/mirror"
 
 # There are no tests for now
@@ -39,77 +39,58 @@ stages:
     #Use pre-existing allocation if any
     - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
     - ASSIGN_ID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
-    - EXEC_PREFIX="srun ${ACCOUNT} ${ASSIGN_ID}"
+    - EXEC_PREFIX="srun ${SLURM_ACCOUNT} ${ASSIGN_ID}"
     #BUILD
     - RESOURCES="-t 5 -N 1"
-    - echo -e "section_start:$(date +%s):build\r\e[0K
-      Build ${CI_PROJECT_NAME}"
+    - echo -e "Build ${CI_PROJECT_NAME}"
     - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --build-only
-    - echo -e "section_end:$(date +%s):build\r\e[0K"
     #TEST
     - RESOURCES="-t 5 -N 1"
-    - echo -e "section_start:$(date +%s):tests\r\e[0K
-      Test ${CI_PROJECT_NAME}"
+    - echo -e "Test ${CI_PROJECT_NAME}"
     - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --test-only
-    - echo -e "section_end:$(date +%s):tests\r\e[0K"
 
 .srun_build_with_deps_script:
   script:
     - *run_update_uberenv
-    - EXEC_PREFIX="srun ${ACCOUNT}"
+    - EXEC_PREFIX="srun ${SLURM_ACCOUNT}"
     #DEPENDENCIES
     - RESOURCES="-t 20 -N 1"
-    - echo -e "section_start:$(date +%s):dependencies\r\e[0K
-      Build dependencies and generate host-config file (uberenv)"
+    - echo -e "Build dependencies and generate host-config file (uberenv)"
     - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --deps-only
-    - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD
     - RESOURCES="-t 5 -N 1"
-    - echo -e "section_start:$(date +%s):build\r\e[0K
-      Build ${CI_PROJECT_NAME}"
+    - echo -e "Build ${CI_PROJECT_NAME}"
     - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --build-only
-    - echo -e "section_end:$(date +%s):build\r\e[0K"
     #TEST
     - RESOURCES="-t 5 -N 1"
-    - echo -e "section_start:$(date +%s):tests\r\e[0K
-      Test ${CI_PROJECT_NAME}"
+    - echo -e "Test ${CI_PROJECT_NAME}"
     - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --test-only
-    - echo -e "section_end:$(date +%s):tests\r\e[0K"
 
 
 .build_blueos_3_ppc64le_ib_p9_script:
   script:
     #BUILD
-    - echo -e "section_start:$(date +%s):build\r\e[0K
-      Build ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 5 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --build-only
+    - echo -e "Build ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 5 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --build-only
     - echo -e "section_end:$(date +%s):build\r\e[0K"
     #TEST
-    - echo -e "section_start:$(date +%s):tests\r\e[0K
-      Test ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 5 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --test-only
-    - echo -e "section_end:$(date +%s):tests\r\e[0K"
+    - echo -e "Test ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 5 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --test-only
 
 .build_with_deps_blueos_3_ppc64le_ib_p9_script:
   script:
     - *run_update_uberenv
     #DEPENDENCIES
-    - echo -e "section_start:$(date +%s):dependencies\r\e[0K
-      Build dependencies and generate host-config file (uberenv)"
-    - lalloc 1 -W 20 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --deps-only
-    - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
+    - echo -e "Build dependencies and generate host-config file (uberenv)"
+    - lalloc 1 -W 20 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --deps-only
     #BUILD
-    - echo -e "section_start:$(date +%s):build\r\e[0K
-      Build ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 5 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --build-only
-    - echo -e "section_end:$(date +%s):build\r\e[0K"
+    - echo -e "Build ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 5 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --build-only
     #TEST
-    - echo -e "section_start:$(date +%s):tests\r\e[0K
-      Test ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 5 ${L_ACCOUNT} scripts/gitlab/build_and_test.sh --test-only
-    - echo -e "section_end:$(date +%s):tests\r\e[0K"
+    - echo -e "Test ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 5 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --test-only
 
 # This is where jobs are included
 include:
-  - local: .gitlab/ci/build_quartz.yml
-  - local: .gitlab/ci/build_lassen.yml
+  - local: .gitlab/build_quartz.yml
+  - local: .gitlab/build_lassen.yml

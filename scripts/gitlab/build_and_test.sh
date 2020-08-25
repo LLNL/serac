@@ -23,6 +23,7 @@ mirror=${MIRROR:-""}
 # Dependencies
 if [[ "${option}" != "--build-only" && "${option}" != "--test-only" ]]
 then
+    echo -e "section_start:$(date +%s):dependencies\r\e[0K"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Building Dependencies"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -34,7 +35,7 @@ then
     fi
 
     python scripts/uberenv/uberenv.py --spec=${spec} --mirror=${mirror}
-
+    echo -e "section_end:$(date +%s):dependencies\r\e[0K"
 fi
 
 # Host config file
@@ -90,6 +91,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 # Build
 if [[ "${option}" != "--deps-only" && "${option}" != "--test-only" ]]
 then
+    echo -e "section_start:$(date +%s):build\r\e[0K"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Building Serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -104,11 +106,13 @@ then
       -C ${hostconfig_path} \
       ${project_dir}
     cmake --build . -j
+    echo -e "section_end:$(date +%s):build\r\e[0K"
 fi
 
 # Test
 if [[ "${option}" != "--deps-only" && "${option}" != "--build-only" ]]
 then
+    echo -e "section_start:$(date +%s):tests\r\e[0K"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Testing Serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -123,4 +127,5 @@ then
     cd ${build_dir}
 
     ctest --output-on-failure -T test
+    echo -e "section_end:$(date +%s):tests\r\e[0K"
 fi

@@ -47,100 +47,110 @@ packages:
     variants: ~blas~lapack
   perl:
     buildable: False
-    paths:
-      perl: /usr
+    externals:
+    - spec: perl
+      prefix: /usr
   pkg-config:
       buildable: False
-      paths:
-          pkg-config: /usr
+      externals:
+      - spec: pkg-config
+        prefix: /usr
 # LLNL blueos CUDA
   cuda:
-    paths:
-      cuda@9.0.176: /usr/tce/packages/cuda/cuda-9.0.176
-      cuda@8.0: /usr/tce/packages/cuda/cuda-8.0
+    externals:
+      - spec: cuda@9.0.176
+        prefix: /usr/tce/packages/cuda/cuda-9.0.176
+      - spec: cuda@8.0
+        prefix: /usr/tce/packages/cuda/cuda-8.0
     buildable: False
 # LLNL blueos mpi
   spectrum-mpi:
-    paths:
-      spectrum-mpi@release%gcc@4.9.3: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-4.9.3/ 
-      spectrum-mpi@release%clang@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2018.12.03/
-      spectrum-mpi@release%xl@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/ 
+    externals:
+      - spec: spectrum-mpi@release%gcc@4.9.3
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-4.9.3/ 
+      - spec: spectrum-mpi@release%clang@coral
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2018.12.03/
+      -spec: spectrum-mpi@release%xl@coral
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/ 
     buildable: False
 
   autoconf:
-    paths:
-      autoconf: /usr
+    externals:
+      - spec: autoconf
+        prefix: /usr
     buildable: False 
   automake:
-    paths:
-      automake: /usr
+    externals:
+      - spec: automake
+        prefix: /usr
     buildable: False
   bzip2:
-   paths:
-      bzip2: /usr
+   externals:
+      - spec: bzip2
+        prefix: /usr
    buildable: False
   cmake:
     version: [3.14.5]
-    paths:
-      cmake: /usr/tce/packages/cmake/cmake-3.14.5
+    externals:
+      - spec: cmake@3.14.5
+        prefix: /usr/tce/packages/cmake/cmake-3.14.5
     buildable: False
   gettext:
-   paths:
-      gettext: /usr
+   externals:
+      - spec: gettext
+        prefix: /usr
    buildable: False
   libtool:
-   paths:
-      libtool: /usr
+   externals:
+      - spec: libtool
+        prefix: /usr
    buildable: False
   m4:
-   paths:
-      m4: /usr
+   externals:
+      - spec: m4
+        prefix: /usr
    buildable: False
-  perl:
-    paths:
-      perl: /usr
-    buildable: False 
-  pkg-config:
-    paths:
-      pkg-config: /usr
-    buildable: False 
   tar:
-   paths:
-      tar: /usr
+   externals:
+      - spec: tar
+        prefix: /usr
    buildable: False
-  spectrum-mpi:
-    paths:
-      spectrum-mpi: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-coral-2018.08.08/
-    buildable: False
   mvapich2:
-    paths:
-      mvapich2%clang: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/
-      mvapich2%xl@coral: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-xl-2020.06.25
+    externals:
+      - spec: mvapich2%clang
+        prefix: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/
+      - spec: mvapich2%xl@coral
+        prefix: /usr/tce/packages/mvapich2/mvapich2-2020.01.09-xl-2020.06.25
     buildable: False
   netlib-lapack:
-    paths:
+    externals:
       # This is the one that has the trailing underscores, needed for MFEM compat
-      netlib-lapack: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
+      - spec: netlib-lapack@3.9.0
+        prefix: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
     buildable: False
 
 # Lock in versions of Devtools
   cppcheck:
     version: [1.87]
-    paths:
-      cppcheck: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-1.87
+    externals:
+      - spec: cppcheck@1.87
+        prefix: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-1.87
     buildable: False
   doxygen:
     version: [1.8.14]
-    paths:
-      doxygen: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.14
+    externals:
+      - spec: doxygen@1.8.14
+        prefix: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.14
     buildable: False
   python:
     version: [3.8.2]
-    paths:
-      python: /usr/tce/packages/python/python-3.8.2/
+    externals:
+      - spec: python@3.8.2
+        prefix: /usr/tce/packages/python/python-3.8.2/
     buildable: False
   py-sphinx:
     version: [2.2.0]
-    paths:
-      py-sphinx: /usr/tce/packages/python/python-3.8.2/
+    externals:
+      - spec: py-sphinx@2.2.0
+        prefix: /usr/tce/packages/python/python-3.8.2/
     buildable: False
