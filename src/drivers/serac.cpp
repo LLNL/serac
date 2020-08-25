@@ -30,9 +30,6 @@ int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
 
-  // Initialize profiling if enabled
-  serac::profiling::initializeCaliper();
-
   // mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
 
