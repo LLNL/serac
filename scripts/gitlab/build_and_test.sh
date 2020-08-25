@@ -23,7 +23,7 @@ mirror=${MIRROR:-""}
 # Dependencies
 if [[ "${option}" != "--build-only" && "${option}" != "--test-only" ]]
 then
-    echo -e "section_start:$(date +%s):dependencies\r\e[0K"
+    echo -e "section_start:$(date +%s):dependencies\r\e[0KBuild Serac dependencies"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Building Dependencies"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -91,7 +91,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 # Build
 if [[ "${option}" != "--deps-only" && "${option}" != "--test-only" ]]
 then
-    echo -e "section_start:$(date +%s):build\r\e[0K"
+    echo -e "section_start:$(date +%s):build\r\e[0KBuild serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Building Serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -112,7 +112,7 @@ fi
 # Test
 if [[ "${option}" != "--deps-only" && "${option}" != "--build-only" ]]
 then
-    echo -e "section_start:$(date +%s):tests\r\e[0K"
+    echo -e "section_start:$(date +%s):tests\r\e[0KTest serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Testing Serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
