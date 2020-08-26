@@ -17,25 +17,6 @@ build_root=${BUILD_ROOT:-""}
 sys_type=${SYS_TYPE:-""}
 compiler=${COMPILER:-""}
 hostconfig=${HOST_CONFIG:-""}
-spec=${SPEC:-""}
-mirror=${MIRROR:-""}
-
-# Dependencies
-if [[ "${option}" != "--build-only" && "${option}" != "--test-only" ]]
-then
-    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    echo "~~~~~ Building Dependencies"
-    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-
-    if [[ -z ${spec} ]]
-    then
-        echo "SPEC is undefined, aborting..."
-        exit 1
-    fi
-
-    python scripts/uberenv/uberenv.py --spec=${spec} --mirror=${mirror}
-
-fi
 
 # Host config file
 if [[ -z ${hostconfig} ]]
@@ -88,7 +69,7 @@ echo "~~~~~ Project Dir: ${project_dir}"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 # Build
-if [[ "${option}" != "--deps-only" && "${option}" != "--test-only" ]]
+if [[ "${option}" != "--test-only" ]]
 then
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Building Serac"
@@ -107,7 +88,7 @@ then
 fi
 
 # Test
-if [[ "${option}" != "--deps-only" && "${option}" != "--build-only" ]]
+if [[ "${option}" != "--build-only" ]]
 then
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Testing Serac"

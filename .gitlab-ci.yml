@@ -8,7 +8,6 @@ variables:
   PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
   ACCOUNT: -p pdebug -A eng
-  MIRROR: "/usr/workspace/smithdev/mirror"
 
 # There are no tests for now
 stages:
@@ -58,7 +57,7 @@ stages:
     - RESOURCES="-t 20 -N 1"
     - echo -e "section_start:$(date +%s):dependencies\r\e[0K
       Build dependencies and generate host-config file (uberenv)"
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --deps-only
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_tpls.py --spec=${SPEC} --directory=${CI_PROJECT_NAME}
     - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD
     - RESOURCES="-t 5 -N 1"
