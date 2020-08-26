@@ -7,6 +7,7 @@
 #include "common/initialize.hpp"
 
 #include "common/logger.hpp"
+#include "common/profiling.hpp"
 #include "common/terminator.hpp"
 
 namespace serac {
@@ -26,6 +27,9 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
   if (!logger::initialize(comm)) {
     serac::exitGracefully(true);
   }
+
+  // Start the profiler (no-op if not enabled)
+  profiling::initializeCaliper();
 
   return {num_procs, rank};
 }

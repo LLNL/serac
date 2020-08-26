@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "common/logger.hpp"
+#include "common/profiling.hpp"
 
 namespace {
 /**
@@ -50,6 +51,7 @@ void exitGracefully(bool error)
   if (!mpi_finalized) {
     MPI_Finalize();
   }
+  profiling::terminateCaliper();
   error ? exit(EXIT_FAILURE) : exit(EXIT_SUCCESS);
 }
 

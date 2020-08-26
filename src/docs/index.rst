@@ -195,4 +195,5 @@ LLNL-CODE-805541
    sphinx/docker_info
    sphinx/logging
    sphinx/memory_checking
+   sphinx/profiling
    sphinx/style_guide

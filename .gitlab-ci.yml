@@ -9,7 +9,6 @@ variables:
   BUILD_ROOT: ${CI_PROJECT_DIR}
   SLURM_ACCOUNT: -p pdebug -A eng
   LSF_ACCOUNT: -q pdebug -G eng
-  MIRROR: "/usr/workspace/smithdev/mirror"
 
 # There are no tests for now
 stages:
@@ -55,8 +54,10 @@ stages:
     - EXEC_PREFIX="srun ${SLURM_ACCOUNT}"
     #DEPENDENCIES
     - RESOURCES="-t 20 -N 1"
-    - echo -e "Build dependencies and generate host-config file (uberenv)"
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --deps-only
+    - echo -e "section_start:$(date +%s):dependencies\r\e[0K
+      Build dependencies and generate host-config file (uberenv)"
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_tpls.py --spec=${SPEC} --directory=${CI_PROJECT_NAME}
+    - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD
     - RESOURCES="-t 5 -N 1"
     - echo -e "Build ${CI_PROJECT_NAME}"
