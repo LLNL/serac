@@ -41,6 +41,9 @@ class Mfem(Package):
     # If this quick verification procedure fails, additional discussion
     # will be required to verify the new version.
 
+    # Version spec used in serac based on mfem@develop commit SHA
+    version('4.1.0p1', SHA='bb3c788a05f430bcfed03065ba39868974964924')
+
     # 'develop' is a special version that is always larger (or newer) than any
     # other version.
     version('develop', branch='master')
