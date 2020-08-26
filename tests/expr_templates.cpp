@@ -41,10 +41,9 @@
 
 int main()
 {
-  constexpr int m = 8;
-  constexpr int n = 10;
-  mfem::Vector  a(m);
-  a = 0.0;
+  constexpr int     m = 8;
+  constexpr int     n = 10;
+  mfem::Vector      a(m);
   mfem::Vector      b(m);
   mfem::Vector      c(n);
   mfem::DenseMatrix K(m, n);
@@ -61,29 +60,19 @@ int main()
     }
   }
 
-  // // auto f = [](auto a, auto b, auto Kc) { return -a + b * 3.0 - 0.3 * Kc; };
+  auto f = [](const auto& a, const auto& b, const auto& Kc) { return -a + b * 3.0 - 0.3 * Kc; };
 
-  // auto result = evaluate(-a + b * 3.0 - 0.3 * (K * c));
+  auto result = evaluate(-a + b * 3.0 - 0.3 * (K * c));
 
   mfem::Vector Kc(m);
   K.Mult(c, Kc);
 
-  auto g = [](auto&& a, auto&& b, auto&& Kc) { return -a + b * 3.0 - 0.3 * Kc; };
+  auto result2 = evaluate(f(a, b, Kc));
+  for (int i = 0; i < m; i++) {
+    std::cout << result[i] << ' ' << result2[i] << ' ' << f(a[i], b[i], Kc[i]) << std::endl;
+  }
 
-  auto thingy = g(a, b, Kc);
-
-  auto size = thingy.Size();
-
-  std::cout << size << "\n";
-
-  // why does this segfault?
-  // auto result2 = evaluate(f(a, b, Kc));
-  auto result2 = evaluate(thingy);
-  // for (int i = 0; i < m; i++) {
-  //   std::cout << /* result[i] << ' ' << */ result2[i] /* << ' ' << f(a[i], b[i], Kc[i]) */ << std::endl;
-  // }
-
-  // for (int i = 0; i < m; i++) {
-  //   std::cout << result[i] << ' ' << f(a[i], b[i], Kc[i]) << std::endl;
-  // }
+  for (int i = 0; i < m; i++) {
+    std::cout << result[i] << ' ' << f(a[i], b[i], Kc[i]) << std::endl;
+  }
 }

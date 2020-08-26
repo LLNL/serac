@@ -35,9 +35,9 @@ template <typename vec, bool owns>
 using vec_arg_t = typename std::conditional<owns, std::remove_const_t<vec>&&, const vec&>::type;
 
 template <typename vec, bool owns>
-struct UnaryNegation : VectorExpr<UnaryNegation<vec, owns> > {
+struct UnaryNegation : VectorExpr<UnaryNegation<vec, owns>> {
   const vec_t<vec, owns> v_;
-  UnaryNegation(vec_arg_t<vec, owns> v) : v_(v) {}
+  UnaryNegation(vec_arg_t<vec, owns> v) : v_(std::forward<vec_t<vec, owns>>(v)) {}
   double operator[](size_t i) const { return -v_[i]; }
   size_t Size() const { return v_.Size(); }
 };
@@ -56,10 +56,10 @@ auto operator-(VectorExpr<T>&& u)
 auto operator-(const mfem::Vector& u) { return UnaryNegation(u); }
 
 template <typename vec, bool owns>
-struct ScalarMultiplication : VectorExpr<ScalarMultiplication<vec, owns> > {
+struct ScalarMultiplication : VectorExpr<ScalarMultiplication<vec, owns>> {
   const double           a_;
   const vec_t<vec, owns> v_;
-  ScalarMultiplication(const double a, vec_arg_t<vec, owns> v) : a_(a), v_(v) {}
+  ScalarMultiplication(const double a, vec_arg_t<vec, owns> v) : a_(a), v_(std::forward<vec_t<vec, owns>>(v)) {}
   double operator[](size_t i) const { return a_ * v_[i]; }
   size_t Size() const { return v_.Size(); }
 };
@@ -81,17 +81,21 @@ auto operator*(const double a, VectorExpr<T>&& u)
   return ScalarMultiplication(a, std::move(u));
 }
 
-auto operator*(const double a, mfem::Vector& u) { return ScalarMultiplication(a, std::move(u)); }
+auto operator*(const double a, const mfem::Vector& u) { return ScalarMultiplication(a, u); }
 
-auto operator*(mfem::Vector& u, const double a) { return ScalarMultiplication(a, std::move(u)); }
+auto operator*(const mfem::Vector& u, const double a) { return ScalarMultiplication(a, u); }
 
 template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns>
-struct VectorAddition : VectorExpr<VectorAddition<lhs, rhs, lhs_owns, rhs_owns> > {
-  const vec_t<lhs, lhs_owns> u;
-  const vec_t<rhs, rhs_owns> v;
-  VectorAddition(vec_arg_t<lhs, lhs_owns> u, vec_arg_t<rhs, rhs_owns> v) : u(u), v(v) { assert(u.Size() == v.Size()); }
-  double operator[](size_t i) const { return u[i] + v[i]; }
-  size_t Size() const { return v.Size(); }
+struct VectorAddition : VectorExpr<VectorAddition<lhs, rhs, lhs_owns, rhs_owns>> {
+  const vec_t<lhs, lhs_owns> u_;
+  const vec_t<rhs, rhs_owns> v_;
+  VectorAddition(vec_arg_t<lhs, lhs_owns> u, vec_arg_t<rhs, rhs_owns> v)
+      : u_(std::forward<vec_t<lhs, lhs_owns>>(u)), v_(std::forward<vec_t<rhs, rhs_owns>>(v))
+  {
+    assert(u_.Size() == v_.Size());
+  }
+  double operator[](size_t i) const { return u_[i] + v_[i]; }
+  size_t Size() const { return v_.Size(); }
 };
 template <typename S, typename T>
 VectorAddition(const S&, const T&) -> VectorAddition<S, T, false, false>;
@@ -126,15 +130,16 @@ auto operator+(VectorExpr<T>&& u, const mfem::Vector& v)
 auto operator+(const mfem::Vector& u, const mfem::Vector& v) { return VectorAddition(u, v); }
 
 template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns>
-struct VectorSubtraction : VectorExpr<VectorSubtraction<lhs, rhs, lhs_owns, rhs_owns> > {
-  const vec_t<lhs, lhs_owns> u;
-  const vec_t<rhs, rhs_owns> v;
-  VectorSubtraction(vec_arg_t<lhs, lhs_owns> u, vec_arg_t<rhs, rhs_owns> v) : u(u), v(v)
+struct VectorSubtraction : VectorExpr<VectorSubtraction<lhs, rhs, lhs_owns, rhs_owns>> {
+  const vec_t<lhs, lhs_owns> u_;
+  const vec_t<rhs, rhs_owns> v_;
+  VectorSubtraction(vec_arg_t<lhs, lhs_owns> u, vec_arg_t<rhs, rhs_owns> v)
+      : u_(std::forward<vec_t<lhs, lhs_owns>>(u)), v_(std::forward<vec_t<rhs, rhs_owns>>(v))
   {
-    assert(u.Size() == v.Size());
+    assert(u_.Size() == v_.Size());
   }
-  double operator[](size_t i) const { return u[i] - v[i]; }
-  size_t Size() const { return v.Size(); }
+  double operator[](size_t i) const { return u_[i] - v_[i]; }
+  size_t Size() const { return v_.Size(); }
 };
 template <typename S, typename T>
 VectorSubtraction(const S&, const T&) -> VectorSubtraction<S, T, false, false>;
@@ -169,11 +174,11 @@ auto operator-(VectorExpr<T>&& u, const mfem::Vector& v)
 auto operator-(const mfem::Vector& u, const mfem::Vector& v) { return VectorSubtraction(u, v); }
 
 template <typename vec, bool owns>
-struct Matvec : VectorExpr<Matvec<vec, owns> > {
+struct Matvec : VectorExpr<Matvec<vec, owns>> {
   const mfem::Operator&  A_;
   const vec_t<vec, owns> v_;
   mfem::Vector           result;
-  Matvec(const mfem::Operator& A, vec_arg_t<vec, owns> v) : A_(A), v_(v)
+  Matvec(const mfem::Operator& A, vec_arg_t<vec, owns> v) : A_(A), v_(std::forward<vec_t<vec, owns>>(v))
   {
     result.SetSize(A_.Height());
     if constexpr (std::is_same<vec, mfem::Vector>::value) {
