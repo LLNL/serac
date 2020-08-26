@@ -48,7 +48,7 @@ void BoundaryCondition::project(FiniteElementState& state) const
     SLIC_ASSERT_MSG(space, "Only BCs associated with a space can be projected.");
     mfem::Array<int> dof_list(size);
     std::transform(tdofs.begin(), tdofs.end(), dof_list.begin(),
-                   [&space = std::as_const(state.space())](int tdof) { return space.VDofToDof(tdof); });
+                   [& space = std::as_const(state.space())](int tdof) { return space.VDofToDof(tdof); });
 
     if (component_ == -1) {
       // If it contains all components, project the vector
@@ -121,6 +121,34 @@ void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vecto
   projectBdr(state, time, should_be_scalar);
   state.initializeTrueVec();
   eliminateToRHS(k_mat_post_elim, state.trueVec(), rhs);
+}
+
+const mfem::Coefficient& BoundaryCondition::scalarCoefficient() const
+{
+  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
+                "Asing for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
+  return *std::get<std::shared_ptr<mfem::Coefficient>>(coef_);
+}
+
+mfem::Coefficient& BoundaryCondition::scalarCoefficient()
+{
+  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
+                "Asing for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
+  return *std::get<std::shared_ptr<mfem::Coefficient>>(coef_);
+}
+
+const mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient() const
+{
+  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
+                "Asing for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
+  return *std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
+}
+
+mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
+{
+  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
+                "Asing for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
+  return *std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
 }
 
 }  // namespace serac
