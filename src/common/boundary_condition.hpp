@@ -53,6 +53,46 @@ public:
   mfem::Array<int>& markers() { return markers_; }
 
   /**
+   * @brief Accessor for the underlying vector coefficient
+   *
+   * This method performs an internal check to verify the underlying GeneralCoefficient
+   * is in fact a vector.
+   *
+   * @return A non-owning reference to the underlying vector coefficient
+   */
+  const mfem::VectorCoefficient& vectorCoefficient() const;
+
+  /**
+   * @brief Accessor for the underlying vector coefficient
+   *
+   * This method performs an internal check to verify the underlying GeneralCoefficient
+   * is in fact a vector.
+   *
+   * @return A non-owning reference to the underlying vector coefficient
+   */
+  mfem::VectorCoefficient& vectorCoefficient();
+
+  /**
+   * @brief Accessor for the underlying scalar coefficient
+   *
+   * This method performs an internal check to verify the underlying GeneralCoefficient
+   * is in fact a scalar.
+   *
+   * @return A non-owning reference to the underlying scalar coefficient
+   */
+  const mfem::Coefficient& scalarCoefficient() const;
+
+  /**
+   * @brief Accessor for the underlying scalar coefficient
+   *
+   * This method performs an internal check to verify the underlying GeneralCoefficient
+   * is in fact a scalar.
+   *
+   * @return A non-owning reference to the underlying scalar coefficient
+   */
+  mfem::Coefficient& scalarCoefficient();
+
+  /**
    * "Manually" set the DOF indices without specifying the field to which they apply
    * @param[in] dofs The indices of the DOFs constrained by the boundary condition
    */
@@ -194,28 +234,6 @@ private:
    */
   mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
 };
-
-template <typename Integrator>
-std::unique_ptr<Integrator> BoundaryCondition::newVecIntegrator() const
-{
-  // Can't use std::visit here because integrators may only have a constructor accepting
-  // one coef type and not the other - contained types are only known at runtime
-  // One solution could be to switch between implementations with std::enable_if_t and
-  // std::is_constructible_v
-  static_assert(std::is_constructible_v<Integrator, mfem::VectorCoefficient&>);
-  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
-                "Boundary condition had a non-vector coefficient when constructing an integrator.");
-  return std::make_unique<Integrator>(*std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_));
-}
-
-template <typename Integrator>
-std::unique_ptr<Integrator> BoundaryCondition::newIntegrator() const
-{
-  static_assert(std::is_constructible_v<Integrator, mfem::Coefficient&>);
-  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
-                "Boundary condition had a non-vector coefficient when constructing an integrator.");
-  return std::make_unique<Integrator>(*std::get<std::shared_ptr<mfem::Coefficient>>(coef_));
-}
 
 }  // namespace serac
 

@@ -107,9 +107,7 @@ void NonlinearSolidSolver::completeSetup()
 
   // Add the traction integrator
   for (auto& nat_bc_data : nat_bdr_) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(nat_bc_data.coef),
-                    "Traction boundary condition had a non-vector coefficient.");
-    H_form->AddBdrFaceIntegrator(nat_bc_data.newVecIntegrator<HyperelasticTractionIntegrator>().release(),
+    H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
                                  nat_bc_data.markers());
   }
 
