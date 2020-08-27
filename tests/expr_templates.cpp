@@ -54,8 +54,8 @@ int main()
   }
 
   for (int i = 0; i < m; i++) {
-    c[i] = i * i * i;
     for (int j = 0; j < n; j++) {
+      c[j]    = j * j * j;
       K(i, j) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
     }
   }
