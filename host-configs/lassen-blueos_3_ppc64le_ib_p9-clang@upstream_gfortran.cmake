@@ -61,8 +61,11 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0" CACHE PATH "")
 # Devtools
 #------------------------------------------------------------------------------
 
-set(ENABLE_DOCS OFF CACHE BOOL "")
+set(ENABLE_DOCS ON CACHE BOOL "")
+
+set(DOXYGEN_EXECUTABLE "/usr/bin/doxygen" CACHE PATH "")
+
+set(SPHINX_EXECUTABLE "/usr/tce/packages/python/python-3.8.2/bin/sphinx-build" CACHE PATH "")
 
 set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-9.0.0/bin/clang-format" CACHE PATH "")
-
 
