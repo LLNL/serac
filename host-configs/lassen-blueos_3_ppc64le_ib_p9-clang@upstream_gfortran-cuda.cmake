@@ -41,6 +41,8 @@ set(CMAKE_CUDA_FLAGS "-arch sm_70 --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.
 
 set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "")
 
+set(ON_BLUEOS ON CACHE BOOL "")
+
 #---------------------------------------
 # MPI
 #---------------------------------------
@@ -53,7 +55,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_08_24_10_44_22/clang-upstream_gfortran" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_08_27_11_50_19/clang-upstream_gfortran" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
@@ -69,7 +71,7 @@ set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-5.4.0" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools

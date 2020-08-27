@@ -70,7 +70,7 @@ packages:
         prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-4.9.3/ 
       - spec: spectrum-mpi@release%clang@coral
         prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2018.12.03/
-      -spec: spectrum-mpi@release%xl@coral
+      - spec: spectrum-mpi@release%xl@coral
         prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/ 
     buildable: False
 
@@ -91,14 +91,14 @@ packages:
     buildable: False
   cmake:
     externals:
-    - spec: cmake@3.14.5
-      prefix: /usr/tce/packages/cmake/cmake-3.14.5
+    - spec: cmake@3.18.0
+      prefix: /usr/tce/packages/cmake/cmake-3.18.0
     buildable: False
   gettext:
     externals:
       - spec: gettext
         prefix: /usr
-   buildable: False
+    buildable: False
   libtool:
     externals:
       - spec: libtool
