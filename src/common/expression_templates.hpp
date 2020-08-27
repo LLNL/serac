@@ -17,7 +17,7 @@ struct VectorExpr {
   const T& asDerived() const { return static_cast<const T&>(*this); }
   T&       asDerived() { return static_cast<T&>(*this); }
 
-  explicit operator mfem::Vector () 
+  operator mfem::Vector () 
   {
     mfem::Vector result(Size());
     for (size_t i = 0; i < Size(); i++) {
