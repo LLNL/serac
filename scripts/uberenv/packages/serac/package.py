@@ -277,6 +277,19 @@ class Serac(CMakePackage, CudaPackage):
             if '+deviceconst' in spec:
                 cfg.write(cmake_cache_option("ENABLE_DEVICE_CONST", True))
 
+            sys_type = spec.architecture
+            # if on llnl systems, we can use the SYS_TYPE
+            if "SYS_TYPE" in env:
+                sys_type = env["SYS_TYPE"]
+
+            # are we on a specific machine
+            on_blueos = 'blueos' in sys_type
+
+            if on_blueos:
+                # Currently used for conditionally removing CUDA
+                # implicit link directories
+                cfg.write(cmake_cache_option("ON_BLUEOS", True))
+
         else:
             cfg.write(cmake_cache_option("ENABLE_CUDA", False))
 

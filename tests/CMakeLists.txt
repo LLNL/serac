@@ -69,6 +69,15 @@ if (ENABLE_GTEST)
                      NUM_MPI_TASKS 1 )
     endforeach()
 
+    # CUDA smoke test
+    blt_add_library( NAME       serac_cuda_smoketest_kernel
+                     SOURCES    serac_cuda_smoketest_kernel.cpp 
+                     DEPENDS_ON cuda)
+    blt_add_executable( NAME       serac_cuda_smoketest
+                        SOURCES    serac_cuda_smoketest.cpp 
+                        DEPENDS_ON serac_cuda_smoketest_kernel gtest cuda_runtime)
+    blt_add_test( NAME          serac_cuda_smoketest
+                  COMMAND       serac_cuda_smoketest )
 
 endif()
 

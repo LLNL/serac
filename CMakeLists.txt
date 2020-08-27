@@ -44,6 +44,12 @@ set(ENABLE_ASTYLE      OFF CACHE BOOL "")
 set(ENABLE_CLANGQUERY  OFF CACHE BOOL "")
 set(ENABLE_UNCRUSTIFY  OFF CACHE BOOL "")
 
+if (ENABLE_CUDA AND ON_BLUEOS)
+    # Very specific fix for working around CMake adding implicit link directories returned by the BlueOS
+    # compilers to link CUDA executables 
+    set(BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;/usr/tce/packages/gcc/gcc-4.9.3/lib64" CACHE STRING "")
+endif()
+
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
 #------------------------------------------------------------------------------
