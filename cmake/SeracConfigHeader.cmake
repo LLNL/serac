@@ -78,3 +78,48 @@ configure_file(
 )
 
 install(FILES ${CMAKE_BINARY_DIR}/include/serac_config.hpp DESTINATION include)
+
+#------------------------------------------------------------------------------
+# Generate serac-config.cmake for importing serac into other CMake packages
+#------------------------------------------------------------------------------
+
+# Set up some paths, preserve existing cache values (if present)
+set(SERAC_INSTALL_INCLUDE_DIR "include" CACHE STRING "")
+set(SERAC_INSTALL_CONFIG_DIR "lib" CACHE STRING "")
+set(SERAC_INSTALL_LIB_DIR "lib" CACHE STRING "")
+set(SERAC_INSTALL_BIN_DIR "bin" CACHE STRING "")
+set(SERAC_INSTALL_CMAKE_MODULE_DIR "${SERAC_INSTALL_CONFIG_DIR}/cmake" CACHE STRING "")
+
+set(SERAC_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE STRING "" FORCE)
+
+
+include(CMakePackageConfigHelpers)
+
+# Add version helper
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/serac-config-version.cmake
+    VERSION ${SERAC_VERSION_FULL}
+    COMPATIBILITY AnyNewerVersion
+)
+
+# Set up cmake package config file
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/serac-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/serac-config.cmake
+  INSTALL_DESTINATION 
+    ${SERAC_INSTALL_CONFIG_DIR}
+  PATH_VARS
+    SERAC_INSTALL_INCLUDE_DIR
+    SERAC_INSTALL_LIB_DIR
+    SERAC_INSTALL_BIN_DIR
+    SERAC_INSTALL_CMAKE_MODULE_DIR
+  )
+
+# Install config files
+install(
+  FILES 
+    ${CMAKE_CURRENT_BINARY_DIR}/serac-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/serac-config-version.cmake
+  DESTINATION 
+    ${SERAC_INSTALL_CMAKE_MODULE_DIR}
+)

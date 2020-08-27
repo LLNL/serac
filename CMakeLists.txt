@@ -77,3 +77,11 @@ endif()
 serac_add_code_checks(PREFIX   serac
                       INCLUDES /src/ /tests/
                       EXCLUDES cmake/blt uberenv_libs)
+
+#------------------------------------------------------------------------------
+# Export Targets
+#------------------------------------------------------------------------------
+install(TARGETS              coefficients common integrators solvers 
+        EXPORT               serac-targets
+        DESTINATION          lib)
+install(EXPORT serac-targets DESTINATION lib/cmake)

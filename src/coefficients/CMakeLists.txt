@@ -22,4 +22,9 @@ blt_add_library(
     DEPENDS_ON  axom mfem mpi
     )
 
-target_include_directories(coefficients PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_include_directories(coefficients PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+    $<INSTALL_INTERFACE:include>
+)
+
+install(FILES ${coefficients_headers} DESTINATION include/coefficients )
