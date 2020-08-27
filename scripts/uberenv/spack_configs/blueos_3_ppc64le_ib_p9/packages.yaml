@@ -51,10 +51,10 @@ packages:
     - spec: perl
       prefix: /usr
   pkg-config:
-      buildable: False
-      externals:
-      - spec: pkg-config
-        prefix: /usr
+    buildable: False
+    externals:
+    - spec: pkg-config
+      prefix: /usr
 # LLNL blueos CUDA
   cuda:
     externals:
@@ -85,35 +85,35 @@ packages:
         prefix: /usr
     buildable: False
   bzip2:
-   externals:
+    externals:
       - spec: bzip2
         prefix: /usr
-   buildable: False
+    buildable: False
   cmake:
-    version: [3.18.0]
-    paths:
-      cmake: /usr/tce/packages/cmake/cmake-3.18.0
+    externals:
+    - spec: cmake@3.14.5
+      prefix: /usr/tce/packages/cmake/cmake-3.14.5
     buildable: False
   gettext:
-   externals:
+    externals:
       - spec: gettext
         prefix: /usr
    buildable: False
   libtool:
-   externals:
+    externals:
       - spec: libtool
         prefix: /usr
-   buildable: False
+    buildable: False
   m4:
-   externals:
+    externals:
       - spec: m4
         prefix: /usr
-   buildable: False
+    buildable: False
   tar:
-   externals:
+    externals:
       - spec: tar
         prefix: /usr
-   buildable: False
+    buildable: False
   mvapich2:
     externals:
       - spec: mvapich2%clang
