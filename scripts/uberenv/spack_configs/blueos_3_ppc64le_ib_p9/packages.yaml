@@ -90,16 +90,9 @@ packages:
         prefix: /usr
    buildable: False
   cmake:
-<<<<<<< HEAD
     version: [3.18.0]
     paths:
       cmake: /usr/tce/packages/cmake/cmake-3.18.0
-=======
-    version: [3.14.5]
-    externals:
-      - spec: cmake@3.14.5
-        prefix: /usr/tce/packages/cmake/cmake-3.14.5
->>>>>>> ci/essman/lassen-build
     buildable: False
   gettext:
    externals:

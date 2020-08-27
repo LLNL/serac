@@ -69,6 +69,7 @@ if (ENABLE_GTEST)
                      NUM_MPI_TASKS 1 )
     endforeach()
 
+
 endif()
 
 # Make sure running serac driver doesn't completely fail
