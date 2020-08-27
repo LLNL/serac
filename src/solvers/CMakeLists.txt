@@ -36,5 +36,11 @@ blt_add_library(
 target_include_directories(solvers PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>
-)
+    )
+
 install(FILES ${solvers_headers} DESTINATION include/solvers )
+
+install(TARGETS              solvers
+        EXPORT               serac-targets
+        DESTINATION          lib
+        )

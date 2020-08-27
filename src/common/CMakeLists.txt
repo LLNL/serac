@@ -40,6 +40,11 @@ blt_add_library(
 target_include_directories(common PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>
-)
+    )
 
 install(FILES ${common_headers} DESTINATION include/common )
+
+install(TARGETS              common
+        EXPORT               serac-targets
+        DESTINATION          lib
+        )
