@@ -16,6 +16,15 @@ struct VectorExpr {
 
   const T& asDerived() const { return static_cast<const T&>(*this); }
   T&       asDerived() { return static_cast<T&>(*this); }
+
+  explicit operator mfem::Vector () 
+  {
+    mfem::Vector result(Size());
+    for (size_t i = 0; i < Size(); i++) {
+      result[i] = (*this)[i];
+    }
+    return result;
+  }
 };
 
 template <typename T>
