@@ -67,7 +67,11 @@ int main()
   mfem::Vector Kc(m);
   K.Mult(c, Kc);
 
-  auto result2 = evaluate(f(a, b, Kc));
+  auto g = [](const auto& a, const auto& b, const auto& Kc) { 
+    auto b3 = static_cast<mfem::Vector>(b * 3.0);
+    return -a + b3 - 0.3 * Kc; 
+  };
+  auto result2 = evaluate(g(a, b, Kc));
   for (int i = 0; i < m; i++) {
     std::cout << result[i] << ' ' << result2[i] << ' ' << f(a[i], b[i], Kc[i]) << std::endl;
   }
