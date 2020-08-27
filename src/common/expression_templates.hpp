@@ -78,7 +78,7 @@ auto operator*(VectorExpr<T>&& u, const double a)
 template <typename T>
 auto operator*(const double a, VectorExpr<T>&& u)
 {
-  return ScalarMultiplication(a, std::move(u));
+  return ScalarMultiplication(a, std::move(u.asDerived()));
 }
 
 auto operator*(const double a, const mfem::Vector& u) { return ScalarMultiplication(a, u); }
