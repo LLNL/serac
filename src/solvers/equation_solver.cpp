@@ -43,6 +43,9 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
     newton_solver->SetPrintLevel(nonlin_params->print_level);
     nonlin_solver_ = std::move(newton_solver);
   }
+
+  height = solver().Height();
+  width  = solver().Width();
 }
 
 }  // namespace serac

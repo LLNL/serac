@@ -6,6 +6,7 @@
 
 #include "thermal_operators.hpp"
 
+#include "common/expression_templates.hpp"
 #include "common/logger.hpp"
 
 namespace serac {
@@ -59,16 +60,13 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
 
   *bc_rhs_ = *rhs_;
   for (auto& bc : ess_bdr_) {
-    bc.eliminateToRHS(*K_mat_, y_, *bc_rhs_);
+    bc.eliminateToRHS(*K_mat_, u, *bc_rhs_);
   }
 
   // Compute:
   //    du_dt = M^{-1}*-K(u)
   // for du_dt
-  K_mat_->Mult(y_, z_);
-  z_.Neg();  // z = -zw z_.Add(1.0, *bc_rhs_);
-  z_.Add(1.0, *bc_rhs_);
-  M_solver_.Mult(z_, du_dt);
+  du_dt = M_solver_ * (-(*K_mat_ * y_) + *bc_rhs_);
 }
 
 void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt)
@@ -102,10 +100,8 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     state_gf_->GetTrueDofs(y_);
     bc.eliminateToRHS(*K_mat_, y_, *bc_rhs_);
   }
-  K_mat_->Mult(y_, z_);
-  z_.Neg();
-  z_.Add(1.0, *bc_rhs_);
-  T_solver_.Mult(z_, du_dt);
+  
+  du_dt = T_solver_ * (-(*K_mat_ * y_) + *bc_rhs_);
 
   // Save the dt used to compute the T matrix
   old_dt_ = dt;

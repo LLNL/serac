@@ -54,10 +54,10 @@ private:
 template <typename T>
 auto operator-(VectorExpr<T>&& u)
 {
-  return UnaryNegation<T, true>(u.asDerived());
+  return UnaryNegation<T, true>(std::move(u.asDerived()));
 }
 
-auto operator-(const mfem::Vector& u) { return UnaryNegation<mfem::Vector, false>(u); }
+inline auto operator-(const mfem::Vector& u) { return UnaryNegation<mfem::Vector, false>(u); }
 
 template <typename vec, bool owns>
 class ScalarMultiplication : public VectorExpr<ScalarMultiplication<vec, owns>> {
@@ -83,9 +83,9 @@ auto operator*(const double a, VectorExpr<T>&& u)
   return operator*(std::move(u), a);
 }
 
-auto operator*(const double a, const mfem::Vector& u) { return ScalarMultiplication<mfem::Vector, false>(a, u); }
+inline auto operator*(const double a, const mfem::Vector& u) { return ScalarMultiplication<mfem::Vector, false>(a, u); }
 
-auto operator*(const mfem::Vector& u, const double a) { return operator*(a, u); }
+inline auto operator*(const mfem::Vector& u, const double a) { return operator*(a, u); }
 
 template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns, typename BinOp>
 class BinaryVectorExpr : public VectorExpr<BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, BinOp>> {
@@ -127,7 +127,7 @@ auto operator+(VectorExpr<T>&& u, const mfem::Vector& v)
   return operator+(v, std::move(u));
 }
 
-auto operator+(const mfem::Vector& u, const mfem::Vector& v)
+inline auto operator+(const mfem::Vector& u, const mfem::Vector& v)
 {
   return VectorAddition<mfem::Vector, mfem::Vector, false, false>(u, v);
 }
@@ -150,7 +150,7 @@ auto operator-(VectorExpr<T>&& u, const mfem::Vector& v)
   return operator-(v, std::move(u));
 }
 
-auto operator-(const mfem::Vector& u, const mfem::Vector& v)
+inline auto operator-(const mfem::Vector& u, const mfem::Vector& v)
 {
   return VectorSubtraction<mfem::Vector, mfem::Vector, false, false>(u, v);
 }
@@ -158,23 +158,23 @@ auto operator-(const mfem::Vector& u, const mfem::Vector& v)
 template <typename vec, bool owns>
 class Matvec : public VectorExpr<Matvec<vec, owns>> {
 public:
-  Matvec(const mfem::Operator& A, vec_arg_t<vec, owns> v) : A_(A), v_(std::forward<vec_t<vec, owns>>(v))
+  Matvec(const mfem::Operator& A, vec_arg_t<vec, owns> v)
+      : A_(A), v_(std::forward<vec_t<vec, owns>>(v)), result_(A_.Height())
   {
-    result.SetSize(A_.Height());
     if constexpr (std::is_same<vec, mfem::Vector>::value) {
-      A_.Mult(v_, result);
+      A_.Mult(v_, result_);
     } else {
       mfem::Vector tmp = evaluate(v_);
-      A_.Mult(tmp, result);
+      A_.Mult(tmp, result_);
     }
   }
-  double operator[](size_t i) const { return result[i]; }
-  size_t Size() const { return result.Size(); }
+  double operator[](size_t i) const { return result_[i]; }
+  size_t Size() const { return result_.Size(); }
 
 private:
   const mfem::Operator&  A_;
   const vec_t<vec, owns> v_;
-  mfem::Vector           result;
+  mfem::Vector           result_;
 };
 
 template <typename T>
@@ -183,6 +183,6 @@ auto operator*(const mfem::Operator& A, VectorExpr<T>&& v)
   return Matvec<T, true>(A, std::move(v.asDerived()));
 }
 
-auto operator*(const mfem::Operator& A, const mfem::Vector& v) { return Matvec<mfem::Vector, false>(A, v); }
+inline auto operator*(const mfem::Operator& A, const mfem::Vector& v) { return Matvec<mfem::Vector, false>(A, v); }
 
 #endif
