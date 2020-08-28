@@ -12,8 +12,7 @@ __global__ void vector_add_kernel(float* out, float* a, float* b, int n)
 
 void checked_op(int err, const char* msg)
 {
-  if (err)
-  {
+  if (err) {
     printf("CUDA %s error: %d\n", msg, err);
   }
 }
