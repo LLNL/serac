@@ -24,12 +24,23 @@ tag_name="${name}-${maj_ver}"
 
 dockerfile_name="dockerfile_$tag_name"
 
-sed -e "s/<VER>/$ver/g" -e "s/<NAME>/$name/g"  -e "s/<MAJ_VER>/$maj_ver/g" dockerfile.in > "$dockerfile_name"
+distro_name="ubuntu16"
+
+# Clang 10 uses an ubuntu 18 image
+if [[ ("$name" == "clang") && ("$maj_ver" -eq 10) ]]; then
+    distro_name="ubuntu18"
+fi
+
+branch_name=$(git rev-parse --abbrev-ref HEAD)
+
+sed -e "s/<VER>/$ver/g" \
+    -e "s/<NAME>/$name/g" \
+    -e "s/<MAJ_VER>/$maj_ver/g" \
+    -e "s=<BRANCH>=$branch_name=g" \
+    -e "s/<DISTRO>/$distro_name/g" dockerfile.in > "$dockerfile_name"
 
 docker build -t "seracllnl/tpls:$tag_name" - < "$dockerfile_name" || exit 1
 
-echo "Build complete, use the generated host-config to test the build process, then press Enter."
+echo "Build complete, use the generated host-config to test the build process, then run the following command to push to Docker:"
 
-read placeholder
-
-docker push seracllnl/tpls:"$tag_name"
+echo "docker push seracllnl/tpls:$tag_name"

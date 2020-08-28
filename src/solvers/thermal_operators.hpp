@@ -17,7 +17,7 @@
 
 #include "common/common.hpp"
 #include "mfem.hpp"
-#include "solvers/algebraic_solver.hpp"
+#include "solvers/equation_solver.hpp"
 
 namespace serac {
 
@@ -29,13 +29,12 @@ public:
   /**
    * @brief Construct a new Dynamic Conduction Operator object
    *
-   * @param[in] fespace The temperature field finite element space
+   * @param[in] fe_space The temperature field finite element space
    * @param[in] params The linear solver parameters
    * @param[in] ess_bdr The essential boundary condition objects
    */
-  DynamicConductionOperator(std::shared_ptr<mfem::ParFiniteElementSpace> fespace,
-                            const serac::LinearSolverParameters&         params,
-                            std::vector<serac::BoundaryCondition>&       ess_bdr);
+  DynamicConductionOperator(mfem::ParFiniteElementSpace& fe_space, const serac::LinearSolverParameters& params,
+                            std::vector<serac::BoundaryCondition>& ess_bdr);
 
   /**
    * @brief Set the mass and stiffness matrices
@@ -43,14 +42,14 @@ public:
    * @param[in] M_mat The mass matrix
    * @param[in] K_mat The stiffness matrix
    */
-  void setMatrices(std::shared_ptr<mfem::HypreParMatrix> M_mat, std::shared_ptr<mfem::HypreParMatrix> K_mat);
+  void setMatrices(const mfem::HypreParMatrix* M_mat, mfem::HypreParMatrix* K_mat);
 
   /**
    * @brief Set the thermal flux load vector
    *
    * @param[in] The thermal flux (RHS vector)
    */
-  void setLoadVector(std::shared_ptr<mfem::Vector> rhs);
+  void setLoadVector(const mfem::Vector* rhs);
 
   /**
    * @brief Calculate du_dt = M^-1 (-Ku + f)
@@ -80,34 +79,29 @@ public:
 
 protected:
   /**
-   * @brief Finite Element space
-   */
-  std::shared_ptr<mfem::ParFiniteElementSpace> fespace_;
-
-  /**
    * @brief Grid function for boundary condition projection
    */
-  std::shared_ptr<mfem::ParGridFunction> state_gf_;
+  std::unique_ptr<mfem::ParGridFunction> state_gf_;
 
   /**
    * @brief Solver for the mass matrix
    */
-  AlgebraicSolver M_solver_;
+  EquationSolver M_solver_;
 
   /**
    * @brief Solver for the T matrix
    */
-  AlgebraicSolver T_solver_;
+  EquationSolver T_solver_;
 
   /**
-   * @brief Pointer to the assembled M matrix
+   * @brief Non-owning pointer to the assembled M matrix
    */
-  std::shared_ptr<mfem::HypreParMatrix> M_mat_;
+  const mfem::HypreParMatrix* M_mat_ = nullptr;
 
   /**
-   * @brief Pointer to the assembled K matrix
+   * @brief Non-owning pointer to the assembled K matrix
    */
-  std::shared_ptr<mfem::HypreParMatrix> K_mat_;
+  mfem::HypreParMatrix* K_mat_ = nullptr;
 
   /**
    * @brief Pointer to the assembled T ( = M + dt K) matrix
@@ -120,14 +114,14 @@ protected:
   std::unique_ptr<mfem::HypreParMatrix> T_e_mat_;
 
   /**
-   * @brief Assembled RHS vector
+   * @brief Non-owning ptr to assembled RHS vector
    */
-  std::shared_ptr<mfem::Vector> rhs_;
+  const mfem::Vector* rhs_ = nullptr;
 
   /**
    * @brief RHS vector including essential boundary elimination
    */
-  std::shared_ptr<mfem::Vector> bc_rhs_;
+  std::unique_ptr<mfem::Vector> bc_rhs_;
 
   /**
    * @brief Temperature essential boundary coefficient

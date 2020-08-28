@@ -5,41 +5,41 @@
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
-# SPDX-License-Identifier: (BSD-3-Clause)
+# SPDX-License-Identifier: (BSD-3-Clause) 
 ####################################################################
 
 #---------------------------------------
-# SYS_TYPE: linux-ubuntu16.04-ivybridge
-# Compiler Spec: clang@6.0.0
-# CMake executable path: /home/serac/serac_tpls/clang-6.0.0/cmake-3.10.1/bin/cmake
+# SYS_TYPE: blueos_3_ppc64le_ib_p9
+# Compiler Spec: clang@upstream_gfortran
+# CMake executable path: /usr/tce/packages/cmake/cmake-3.14.5/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
 # Compilers
 #---------------------------------------
-set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE PATH "")
+set(CMAKE_C_COMPILER "/usr/tce/packages/clang/clang-upstream-2019.08.15/bin/clang" CACHE PATH "")
 
-set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE PATH "")
+set(CMAKE_CXX_COMPILER "/usr/tce/packages/clang/clang-upstream-2019.08.15/bin/clang++" CACHE PATH "")
 
-set(CMAKE_CXX_FLAGS "-stdlib=libc++" CACHE PATH "")
+set(CMAKE_C_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE PATH "")
 
-set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/lib" CACHE PATH "Adds a missing libstdc++ rpath")
+set(CMAKE_CXX_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE PATH "")
+
+set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/tce/packages/gcc/gcc-8.3.1/lib" CACHE PATH "Adds a missing libstdc++ rpath")
 
 #---------------------------------------
 # MPI
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/home/serac/serac_tpls/clang-6.0.0/mpich-3.3.2/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/home/serac/serac_tpls/clang-6.0.0/mpich-3.3.2/bin/mpic++" CACHE PATH "")
-
-set(MPIEXEC_EXECUTABLE "/home/serac/serac_tpls/clang-6.0.0/mpich-3.3.2/bin/mpiexec" CACHE PATH "")
+set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/bin/mpicxx" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/home/serac/serac_tpls/clang-6.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_08_20_12_44_51/clang-upstream_gfortran" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
@@ -61,5 +61,11 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0" CACHE PATH "")
 # Devtools
 #------------------------------------------------------------------------------
 
-set(ENABLE_DOCS OFF CACHE BOOL "")
+set(ENABLE_DOCS ON CACHE BOOL "")
+
+set(DOXYGEN_EXECUTABLE "/usr/bin/doxygen" CACHE PATH "")
+
+set(SPHINX_EXECUTABLE "/usr/tce/packages/python/python-3.8.2/bin/sphinx-build" CACHE PATH "")
+
+set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-9.0.0/bin/clang-format" CACHE PATH "")
 

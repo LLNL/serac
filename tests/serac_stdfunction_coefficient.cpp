@@ -55,7 +55,7 @@ TEST_F(StdFunctionCoefficientTest, Xtest)
 
   double x_mult = 1.5;
   // Here we stretch the "x-component" of the coordinate by x_mult
-  StdFunctionVectorCoefficient x_stretch(3, [x_mult](mfem::Vector& p, mfem::Vector& u) {
+  StdFunctionVectorCoefficient x_stretch(3, [x_mult](const mfem::Vector& p, mfem::Vector& u) {
     u = p;
     u[0] *= x_mult;
   });
@@ -158,7 +158,7 @@ TEST_F(StdFunctionCoefficientTest, AttributeListSet)
 TEST_F(StdFunctionCoefficientTest, EssentialBC)
 {
   // Create an indicator function to set all vertices that are x=0
-  StdFunctionVectorCoefficient zero_bc(3, [](Vector& x, Vector& X) {
+  StdFunctionVectorCoefficient zero_bc(3, [](const Vector& x, Vector& X) {
     X = 0.;
     for (int i = 0; i < 3; i++)
       if (abs(x[i]) < 1.e-13) {
@@ -190,7 +190,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBC)
 TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
 {
   // Create an indicator function to set vertex at the origin
-  StdFunctionVectorCoefficient origin_bc(3, [](Vector& x, Vector& X) {
+  StdFunctionVectorCoefficient origin_bc(3, [](const Vector& x, Vector& X) {
     X = 0.;
 
     if (abs(x[0]) < 1.e-13 && abs(x[1]) < 1.e-13 && abs(x[2]) < 1.e-13) {
@@ -201,7 +201,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
   Array<int> ess_origin_bc_list = serac::makeEssList(*pfes_v_, origin_bc);
 
   // Define bottom indicator list
-  StdFunctionVectorCoefficient bottom_bc_z(pfes_v_->GetVDim(), [](Vector& x, Vector& X) {
+  StdFunctionVectorCoefficient bottom_bc_z(pfes_v_->GetVDim(), [](const Vector& x, Vector& X) {
     X = 0.;
 
     if (abs(x[2]) < 1.e-13) {
@@ -212,7 +212,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
   Array<int> ess_bottom_bc_list = serac::makeEssList(*pfes_v_, bottom_bc_z);
 
   // Define top indicator list
-  StdFunctionVectorCoefficient top_bc_z(pfes_v_->GetVDim(), [](Vector& x, Vector& X) {
+  StdFunctionVectorCoefficient top_bc_z(pfes_v_->GetVDim(), [](const Vector& x, Vector& X) {
     X = 0.;
 
     if (abs(x[2] - 1.) < 1.e-13) {
@@ -222,7 +222,7 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
   Array<int>                   ess_top_bc_list = serac::makeEssList(*pfes_v_, top_bc_z);
 
   // Project displacement values z = 0.5*z
-  StdFunctionVectorCoefficient vals(pfes_v_->GetVDim(), [](Vector& x, Vector& disp) {
+  StdFunctionVectorCoefficient vals(pfes_v_->GetVDim(), [](const Vector& x, Vector& disp) {
     disp    = 0.;
     disp[2] = x[2] * 0.5;
   });

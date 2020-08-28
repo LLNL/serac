@@ -17,7 +17,7 @@
 
 #include "common/common.hpp"
 #include "mfem.hpp"
-#include "solvers/algebraic_solver.hpp"
+#include "solvers/equation_solver.hpp"
 
 namespace serac {
 
@@ -31,7 +31,7 @@ public:
    *
    * @param[in] H_form The nonlinear form of the PDE
    */
-  explicit NonlinearSolidQuasiStaticOperator(std::shared_ptr<mfem::ParNonlinearForm> H_form);
+  explicit NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form);
 
   /**
    * @brief Get the Gradient of the nonlinear form
@@ -58,7 +58,7 @@ protected:
   /**
    * @brief The nonlinear form
    */
-  std::shared_ptr<mfem::ParNonlinearForm> H_form_;
+  std::unique_ptr<mfem::ParNonlinearForm> H_form_;
 
   /**
    * @brief The linearized jacobian at the current state
@@ -196,10 +196,10 @@ public:
    * This is the only requirement for high-order SDIRK implicit integration.
    *
    * @param[in] dt The timestep
-   * @param[in] x The state vector
-   * @param[out] k The implicit time derivative
+   * @param[in] vx The state block vector of velocities and displacements
+   * @param[out] dvx_dt The time rate of vx
    */
-  virtual void ImplicitSolve(const double dt, const mfem::Vector& x, mfem::Vector& k);
+  virtual void ImplicitSolve(const double dt, const mfem::Vector& vx, mfem::Vector& dvx_dt);
 
   /**
    * @brief Destroy the Nonlinear Solid Dynamic Operator object
@@ -230,7 +230,7 @@ protected:
   /**
    * @brief The CG solver for the mass matrix
    */
-  AlgebraicSolver M_solver_;
+  EquationSolver M_solver_;
 
   /**
    * @brief The reduced system operator for applying the bilinear and nonlinear forms

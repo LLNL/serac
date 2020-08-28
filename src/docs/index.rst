@@ -53,9 +53,10 @@ and the following commands for Ubuntu 18.04:
    $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
-Note that the last line is required since Spack expects the system libraries to exist in a directory named `lib`. If the appropriate Spack config 
-directory is specified (e.g. `scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_20/`), a minimal number of 
-dependencies will be built.
+Note that the last line is required since Spack expects the system libraries to exist in a directory named `lib`. During the third
+party library build phase, the appropriate Spack config directory must be specified using either 
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_18`` or
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_20`` as appropriate.
 
 Building Serac's Developer Tools
 --------------------------------
@@ -132,6 +133,7 @@ Some helpful uberenv options:
 * ``--spec=+glvis``
 * ``--spec=%clang@4.0.0``
 * ``--spec=%clang@4.0.0+debug``
+* ``--spack-config-dir=<Path to spack configuration directory>``
 * ``--prefix=<Path to uberenv build directory (defaults to ./uberenv_libs)>``
 
 If you already have a spack instance you would like to reuse, you can do so changing the uberenv
@@ -204,4 +206,5 @@ LLNL-CODE-805541
    sphinx/docker_info
    sphinx/logging
    sphinx/memory_checking
+   sphinx/profiling
    sphinx/style_guide

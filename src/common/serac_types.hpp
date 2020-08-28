@@ -14,12 +14,12 @@
 #define SERAC_TYPES
 
 #include <memory>
+#include <variant>
 
 #include "common/logger.hpp"
 #include "mfem.hpp"
 
 namespace serac {
-
 /**
  * @brief Output file type associated with a solver
  */
@@ -136,40 +136,7 @@ struct NonlinearSolverParameters {
   int print_level;
 };
 
-/**
- * @brief Bundle of data containing a complete finite element state variable
- */
-struct FiniteElementState {
-  /**
-   * @brief Finite element space (basis functions and their transformations)
-   */
-  std::shared_ptr<mfem::ParFiniteElementSpace> space;
-
-  /**
-   * @brief Finite element collection (reference configuration basis functions)
-   */
-  std::shared_ptr<mfem::FiniteElementCollection> coll;
-
-  /**
-   * @brief Grid function (DOF vector and associated finite element space)
-   */
-  std::shared_ptr<mfem::ParGridFunction> gf;
-
-  /**
-   * @brief True vector (Non-constrained DOF vector)
-   */
-  std::shared_ptr<mfem::Vector> true_vec;
-
-  /**
-   * @brief The parallel mesh
-   */
-  std::shared_ptr<mfem::ParMesh> mesh;
-
-  /**
-   * @brief Name of the state variable
-   */
-  std::string name = "";
-};
+using GeneralCoefficient = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 }  // namespace serac
 

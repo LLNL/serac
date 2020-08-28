@@ -74,6 +74,9 @@ class Serac(CMakePackage):
     homepage = "https://www.github.com/LLNL/serac"
     git      = "ssh://git@github.com:LLNL/serac.git"
 
+    variant('caliper', default=False, 
+            description='Build with hooks for Caliper performance analysis')
+
     version('develop', branch='develop', submodules=True, preferred=True)
 
     variant('debug', default=False,
@@ -96,8 +99,8 @@ class Serac(CMakePackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.1.0~shared+hypre+metis+superlu-dist+lapack+mpi",
-                  "hypre@2.11.1~shared~superlu-dist+mpi"]
+    debug_deps = ["mfem@4.1.0p1~shared+hypre+metis+superlu-dist+lapack+mpi",
+                  "hypre@2.18.2~shared~superlu-dist+mpi"]
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
@@ -113,6 +116,7 @@ class Serac(CMakePackage):
 
     # Libraries that do not have a debug variant
     depends_on("conduit@master~shared~python")
+    depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@5.4.0~shared")
 
     # Libraries that we do not build debug
@@ -300,6 +304,10 @@ class Serac(CMakePackage):
 
         mfem_dir = get_spec_path(spec, "mfem", path_replacements)
         cfg.write(cmake_cache_entry("MFEM_DIR", mfem_dir))
+
+        if "+caliper" in spec:
+            caliper_dir = get_spec_path(spec, "caliper", path_replacements)
+            cfg.write(cmake_cache_entry("CALIPER_DIR", caliper_dir))
 
         if "+glvis" in spec:
             glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
