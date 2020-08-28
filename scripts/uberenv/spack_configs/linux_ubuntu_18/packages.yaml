@@ -56,7 +56,7 @@ packages:
     buildable: False
   mpich:
     paths:
-      mpich@3.3a2%gcc@7.5.0: /usr
+      mpich@3.3a2%gcc@8.4.0: /usr
     buildable: False
   cmake:
     paths:
