@@ -53,7 +53,7 @@ and the following commands for Ubuntu 18.04:
    $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
-Note that the last line is required since Spack expects the system libraries to exist in a directory named `lib`. During the third
+Note that the last line is required since Spack expects the system libraries to exist in a directory named ``lib``. During the third
 party library build phase, the appropriate Spack config directory must be specified using either 
 ``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_18`` or
 ``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_20`` as appropriate.
