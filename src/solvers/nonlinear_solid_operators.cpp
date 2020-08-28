@@ -6,6 +6,7 @@
 
 #include "nonlinear_solid_operators.hpp"
 
+#include "common/expression_templates.hpp"
 #include "common/logger.hpp"
 
 namespace serac {
@@ -77,14 +78,13 @@ void NonlinearSolidDynamicOperator::Mult(const mfem::Vector& vx, mfem::Vector& d
   mfem::Vector dv_dt(dvx_dt.GetData() + 0, sc);
   mfem::Vector dx_dt(dvx_dt.GetData() + sc, sc);
 
-  H_form_->Mult(x, z_);
+  z_ = *H_form_ * x;
   S_form_->TrueAddMult(v, z_);
   for (auto& bc : ess_bdr_) {
     z_.SetSubVector(bc.getTrueDofs(), 0.0);
   }
-  z_.Neg();  // z = -z
-  M_solver_.Mult(z_, dv_dt);
 
+  dv_dt = M_solver_ * -z_;
   dx_dt = v;
 }
 
@@ -104,9 +104,9 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
   // object (using m_J_solver and m_J_prec internally).
   reduced_oper_->SetParameters(dt, &v, &x);
   mfem::Vector zero;  // empty vector is interpreted as zero r.h.s. by NewtonSolver
-  newton_solver_.Mult(zero, dv_dt);
+  dv_dt = newton_solver_ * zero;
   SLIC_WARNING_IF(newton_solver_.GetConverged(), "Newton solver did not converge.");
-  add(v, dt, dv_dt, dx_dt);
+  dx_dt = v + (dt * dv_dt);
 }
 
 // destructor
@@ -138,9 +138,9 @@ void NonlinearSolidReducedSystemOperator::SetParameters(double dt, const mfem::V
 void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector& k, mfem::Vector& y) const
 {
   // compute: y = H(x + dt*(v + dt*k)) + M*k + S*(v + dt*k)
-  add(*v_, dt_, k, w_);
-  add(*x_, dt_, w_, z_);
-  H_form_.Mult(z_, y);
+  w_ = *v_ + (dt_ * k);
+  z_ = *x_ + (dt_ * w_);
+  y = H_form_ * z_;
   M_form_.TrueAddMult(k, y);
   S_form_.TrueAddMult(w_, y);
   for (const auto& bc : ess_bdr_) {
@@ -152,8 +152,8 @@ mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
 {
   // Form the gradient of the complete nonlinear operator
   auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_form_.SpMat(), dt_, S_form_.SpMat()));
-  add(*v_, dt_, k, w_);
-  add(*x_, dt_, w_, z_);
+  w_ = *v_ + (dt_ * k);
+  z_ = *x_ + (dt_ * w_);
   localJ->Add(dt_ * dt_, H_form_.GetLocalGradient(z_));
   jacobian_.reset(M_form_.ParallelAssemble(localJ.get()));
 

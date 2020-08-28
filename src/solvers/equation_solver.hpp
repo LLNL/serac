@@ -60,7 +60,12 @@ public:
    * @param[in] op The operator (system matrix) to use, "A" in Ax = b
    * @note Implements mfem::Operator::SetOperator
    */
-  void SetOperator(const mfem::Operator& op) override { solver().SetOperator(op); }
+  void SetOperator(const mfem::Operator& op) override
+  {
+    solver().SetOperator(op);
+    height = solver().Height();
+    width  = solver().Width();
+  }
 
   /**
    * Solves the system
