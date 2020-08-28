@@ -69,17 +69,16 @@ int main()
 
   auto sum = [](const mfem::Vector& vec) {
     double sum = 0.0;
-    for (int i = 0; i < vec.Size(); i++)
-    {
+    for (int i = 0; i < vec.Size(); i++) {
       sum += vec[i];
     }
     return sum;
   };
 
-  auto g = [sum](const auto& a, const auto& b, const auto& Kc) { 
+  auto g = [sum](const auto& a, const auto& b, const auto& Kc) {
     auto b3 = b * 3.0;
-    auto s = sum(b3);
-    return -a + std::move(b3) - 0.3 * s * Kc; 
+    auto s  = sum(b3);
+    return -a + std::move(b3) - 0.3 * s * Kc;
   };
   auto result2 = evaluate(g(a, b, Kc));
   for (int i = 0; i < m; i++) {
