@@ -17,7 +17,7 @@ allocate_resources_build_quartz:
   variables:
     GIT_STRATEGY: none
   extends: [.on_quartz, .pr_workflow]
-  stage: allocate_resources
+  stage: q_allocate_resources
   script:
     - salloc ${ACCOUNT} -N 1 -c 36 -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
 
@@ -28,7 +28,7 @@ release_resources_build_quartz:
   variables:
     GIT_STRATEGY: none
   extends: [.on_quartz, .pr_workflow]
-  stage: release_resources
+  stage: q_release_resources
   script:
     - export JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
     - if [[ -n "${JOBID}" ]]; then scancel ${JOBID}; fi
@@ -36,12 +36,16 @@ release_resources_build_quartz:
 ####
 # Template
 .pr_build_on_quartz:
-  stage: build
+  stage: q_build
   extends: [.srun_build_script, .on_quartz, .pr_workflow]
 
 .main_build_with_deps_on_quartz:
-  stage: build_with_deps
+  stage: q_build_with_deps
   extends: [.srun_build_with_deps_script, .on_quartz, .main_workflow]
+
+.main_build_devtools_on_quartz:
+  stage: q_build_devtools
+  extends: [.srun_build_devtools_script, .on_quartz, .main_workflow]
 
 ####
 # Build jobs
@@ -69,3 +73,8 @@ gcc_8_1_0 (Main build_with_deps_on_quartz):
     SPEC: "@develop%${COMPILER}"
   extends: .main_build_with_deps_on_quartz
 
+gcc_8_1_0 (Main build_devtools_on_quartz):
+  variables:
+    COMPILER: "gcc@8.1.0"
+    SPEC: "@develop%${COMPILER}"
+  extends: .main_build_devtools_on_quartz

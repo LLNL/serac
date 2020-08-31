@@ -71,6 +71,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 # Build
 if [[ "${option}" != "--test-only" ]]
 then
+    echo -e "section_start:$(date +%s):build\r\e[0KBuild serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Building Serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -85,11 +86,13 @@ then
       -C ${hostconfig_path} \
       ${project_dir}
     cmake --build . -j
+    echo -e "section_end:$(date +%s):build\r\e[0K"
 fi
 
 # Test
 if [[ "${option}" != "--build-only" ]]
 then
+    echo -e "section_start:$(date +%s):tests\r\e[0KTest serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Testing Serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -104,4 +107,5 @@ then
     cd ${build_dir}
 
     ctest --output-on-failure -T test
+    echo -e "section_end:$(date +%s):tests\r\e[0K"
 fi

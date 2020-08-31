@@ -95,3 +95,13 @@ packages:
    paths:
       tar: /usr
    buildable: False
+  python:
+    version: [3.8.2]
+    paths:
+        python@3.8.2: /usr/tce/packages/python/python-3.8.2/
+    buildable: False
+  py-sphinx:
+    version: [2.2.0]
+    paths:
+      py-sphinx@2.2.0: /usr/tce/packages/python/python-3.8.2/
+    buildable: False
