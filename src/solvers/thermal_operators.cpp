@@ -100,7 +100,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     state_gf_->GetTrueDofs(y_);
     bc.eliminateToRHS(*K_mat_, y_, *bc_rhs_);
   }
-  
+
   du_dt = T_solver_ * (-(*K_mat_ * y_) + *bc_rhs_);
 
   // Save the dt used to compute the T matrix

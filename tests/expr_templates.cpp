@@ -4,88 +4,178 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <gtest/gtest.h>
+
 #include "common/expression_templates.hpp"
+#include "common/logger.hpp"
 
-#if 0
-  // Save a copy of the current state vector
-  y_ = u;
-
-  // Solve the equation:
-  //    du_dt = M^{-1}*[-K(u + dt*du_dt)]
-  // for du_dt
-  if (dt != old_dt_) {
-    T_mat_.reset(mfem::Add(1.0, *M_mat_, dt, *K_mat_));
-
-    // Eliminate the essential DOFs from the T matrix
-    for (auto& bc : ess_bdr_) {
-      T_e_mat_.reset(T_mat_->EliminateRowsCols(bc.getTrueDofs()));
-    }
-    T_solver_.SetOperator(*T_mat_);
-  }
-
-  // Apply the boundary conditions
-  *bc_rhs_ = *rhs_;
-  x_       = 0.0;
-
-  for (auto& bc : ess_bdr_) {
-    bc.projectBdr(*state_gf_, t);
-    state_gf_->SetFromTrueDofs(y_);
-    state_gf_->GetTrueDofs(y_);
-    bc.eliminateToRHS(*K_mat_, y_, *bc_rhs_);
-  }
-  K_mat_->Mult(y_, z_);
-  z_.Neg();
-  z_.Add(1.0, *bc_rhs_);
-  T_solver_.Mult(z_, du_dt);
-#endif
-
-int main()
+TEST(expr_templates, basic_add)
 {
-  constexpr int     m = 8;
-  constexpr int     n = 10;
-  mfem::Vector      a(m);
-  mfem::Vector      b(m);
-  mfem::Vector      c(n);
-  mfem::DenseMatrix K(m, n);
-
-  for (int i = 0; i < m; i++) {
-    a[i] = i;
-    b[i] = i * i;
+  constexpr int size = 10;
+  mfem::Vector  lhs(size);
+  mfem::Vector  rhs(size);
+  for (int i = 0; i < size; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
   }
 
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < n; j++) {
-      c[j]    = j * j * j;
-      K(i, j) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
+  mfem::Vector mfem_result(size);
+  add(lhs, rhs, mfem_result);
+
+  mfem::Vector expr_result = lhs + rhs;
+
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+}
+
+TEST(expr_templates, basic_add_lambda)
+{
+  constexpr int size = 10;
+  mfem::Vector  lhs(size);
+  mfem::Vector  rhs(size);
+  for (int i = 0; i < size; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+
+  mfem::Vector mfem_result(size);
+  add(lhs, rhs, mfem_result);
+
+  auto lambda_add = [](const auto& lhs, const auto& rhs) { return lhs + rhs; };
+
+  mfem::Vector expr_result = lambda_add(lhs, rhs);
+
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+}
+
+TEST(expr_templates, move_from_temp_lambda)
+{
+  constexpr int size = 10;
+  mfem::Vector  lhs(size);
+  mfem::Vector  rhs(size);
+  for (int i = 0; i < size; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+
+  mfem::Vector mfem_result(size);
+  add(lhs, 3.5, rhs, mfem_result);
+
+  auto lambda_add = [](const auto& lhs, const auto& rhs) {
+    auto r35 = rhs * 3.5;
+    return lhs + std::move(r35);
+  };
+
+  mfem::Vector expr_result = lambda_add(lhs, rhs);
+
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+}
+
+TEST(expr_templates, basic_matvec)
+{
+  constexpr int     rows = 10;
+  constexpr int     cols = 12;
+  mfem::Vector      vec_in(cols);
+  mfem::DenseMatrix matrix(rows, cols);
+  for (int i = 0; i < cols; i++) {
+    vec_in[i] = i * 4 + 1;
+    for (int j = 0; j < rows; j++) {
+      matrix(j, i) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
     }
   }
 
-  auto f = [](const auto& a, const auto& b, const auto& Kc) { return -a + b * 3.0 - 0.3 * Kc; };
+  mfem::Vector mfem_result(rows);
+  matrix.Mult(vec_in, mfem_result);
 
-  auto result = evaluate(-a + b * 3.0 - 0.3 * (K * c));
+  mfem::Vector expr_result = matrix * vec_in;
 
-  mfem::Vector Kc(m);
-  K.Mult(c, Kc);
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < cols; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+}
 
-  auto sum = [](const mfem::Vector& vec) {
-    double sum = 0.0;
-    for (int i = 0; i < vec.Size(); i++) {
-      sum += vec[i];
-    }
-    return sum;
-  };
-
-  auto g = [sum](const auto& a, const auto& b, const auto& Kc) {
-    auto b3 = b * 3.0;
-    auto s  = sum(b3);
-    return -a + std::move(b3) - 0.3 * s * Kc;
-  };
-  auto result2 = evaluate(g(a, b, Kc));
-  for (int i = 0; i < m; i++) {
-    std::cout << result[i] << ' ' << result2[i] << ' ' << f(a[i], b[i], Kc[i]) << std::endl;
+TEST(expr_templates, complex_expr)
+{
+  constexpr int rows = 10;
+  mfem::Vector  lhs(rows);
+  mfem::Vector  rhs(rows);
+  for (int i = 0; i < rows; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
   }
 
-  for (int i = 0; i < m; i++) {
-    std::cout << result[i] << ' ' << f(a[i], b[i], Kc[i]) << std::endl;
+  constexpr int     cols = 12;
+  mfem::Vector      vec_in(cols);
+  mfem::DenseMatrix matrix(rows, cols);
+  for (int i = 0; i < cols; i++) {
+    vec_in[i] = i * 4 + 1;
+    for (int j = 0; j < rows; j++) {
+      matrix(j, i) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
+    }
+  }
+
+  mfem::Vector matvec(rows);
+  matrix.Mult(vec_in, matvec);
+
+  mfem::Vector vec_negate_scale(rows);
+  add(-1.0, lhs, 3.0, rhs, vec_negate_scale);
+
+  mfem::Vector mfem_result(rows);
+  add(vec_negate_scale, -0.3, matvec, mfem_result);
+
+  mfem::Vector expr_result = -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in);
+
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < cols; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+}
+
+TEST(expr_templates, complex_expr_lambda)
+{
+  constexpr int rows = 10;
+  mfem::Vector  lhs(rows);
+  mfem::Vector  rhs(rows);
+  for (int i = 0; i < rows; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+
+  constexpr int     cols = 12;
+  mfem::Vector      vec_in(cols);
+  mfem::DenseMatrix matrix(rows, cols);
+  for (int i = 0; i < cols; i++) {
+    vec_in[i] = i * 4 + 1;
+    for (int j = 0; j < rows; j++) {
+      matrix(j, i) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
+    }
+  }
+
+  mfem::Vector matvec(rows);
+  matrix.Mult(vec_in, matvec);
+
+  mfem::Vector vec_negate_scale(rows);
+  add(-1.0, lhs, 3.0, rhs, vec_negate_scale);
+
+  mfem::Vector mfem_result(rows);
+  add(vec_negate_scale, -0.3, matvec, mfem_result);
+
+  auto lambda_expr = [](const auto& lhs, const auto& rhs, const auto& matrix, const auto& vec_in) {
+    return -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in);
+  };
+
+  mfem::Vector expr_result = lambda_expr(lhs, rhs, matrix, vec_in);
+
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < cols; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
 }

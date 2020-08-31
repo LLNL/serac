@@ -140,7 +140,7 @@ void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector& k, mfem::Vect
   // compute: y = H(x + dt*(v + dt*k)) + M*k + S*(v + dt*k)
   w_ = *v_ + (dt_ * k);
   z_ = *x_ + (dt_ * w_);
-  y = H_form_ * z_;
+  y  = H_form_ * z_;
   M_form_.TrueAddMult(k, y);
   S_form_.TrueAddMult(w_, y);
   for (const auto& bc : ess_bdr_) {
@@ -152,8 +152,8 @@ mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
 {
   // Form the gradient of the complete nonlinear operator
   auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_form_.SpMat(), dt_, S_form_.SpMat()));
-  w_ = *v_ + (dt_ * k);
-  z_ = *x_ + (dt_ * w_);
+  w_          = *v_ + (dt_ * k);
+  z_          = *x_ + (dt_ * w_);
   localJ->Add(dt_ * dt_, H_form_.GetLocalGradient(z_));
   jacobian_.reset(M_form_.ParallelAssemble(localJ.get()));
 
