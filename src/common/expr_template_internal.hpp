@@ -52,7 +52,15 @@ public:
       : v_(std::forward<vec_t<vec, owns>>(v)), op_(std::move(op))
   {
   }
+  /**
+   * @brief Returns the fully evaluated value for the vector
+   * expression at index @p i
+   * @param i The index to evaluate at
+   */
   double operator[](size_t i) const { return op_(v_[i]); }
+  /**
+   * @brief Returns the size of the vector expression
+   */
   size_t Size() const { return v_.Size(); }
 
 private:
@@ -96,11 +104,19 @@ public:
   BinaryVectorExpr(vec_arg_t<lhs, lhs_owns> u, vec_arg_t<rhs, rhs_owns> v)
       : u_(std::forward<vec_t<lhs, lhs_owns>>(u)), v_(std::forward<vec_t<rhs, rhs_owns>>(v))
   {
-    // MFEM uses int to represent a size typw, so cast to size_t for consistency
+    // MFEM uses int to represent a size type, so cast to size_t for consistency
     SLIC_ERROR_IF(static_cast<std::size_t>(u_.Size()) != static_cast<std::size_t>(v_.Size()),
                   "Vector sizes in binary operation must be equal");
   }
+  /**
+   * @brief Returns the fully evaluated value for the vector
+   * expression at index @p i
+   * @param i The index to evaluate at
+   */
   double operator[](size_t i) const { return op_(u_[i], v_[i]); }
+  /**
+   * @brief Returns the size of the vector expression
+   */
   size_t Size() const { return v_.Size(); }
 
 private:
@@ -139,7 +155,15 @@ public:
       A_.Mult(tmp, result_);
     }
   }
+  /**
+   * @brief Returns the fully evaluated value for the vector
+   * expression at index @p i
+   * @param i The index to evaluate at
+   */
   double operator[](size_t i) const { return result_[i]; }
+  /**
+   * @brief Returns the size of the vector expression
+   */
   size_t Size() const { return result_.Size(); }
 
 private:
