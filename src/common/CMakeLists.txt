@@ -7,13 +7,15 @@
 set(common_headers
     boundary_condition.hpp
     common.hpp
-    expression_templates.hpp
+    expr_template_internal.hpp
+    expr_template_ops.hpp
     finite_element_state.hpp
     initialize.hpp
     serac_types.hpp
     logger.hpp
     mesh_utils.hpp
     terminator.hpp
+    vector_expression.hpp
     )
 
 set(common_sources

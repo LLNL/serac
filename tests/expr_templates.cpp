@@ -6,8 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "common/expression_templates.hpp"
-#include "common/logger.hpp"
+#include "common/expr_template_ops.hpp"
 
 TEST(expr_templates, basic_add)
 {
