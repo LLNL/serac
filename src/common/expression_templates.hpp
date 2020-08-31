@@ -1,13 +1,17 @@
+// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 #ifndef EXPR_TEMPLATES
 #define EXPR_TEMPLATES
 
-#include <assert.h>
-
 #include <functional>
-#include <iostream>
 #include <type_traits>
 #include <utility>
 
+#include "common/logger.hpp"
 #include "mfem.hpp"
 
 template <typename T>
@@ -40,16 +44,32 @@ using vec_t = typename std::conditional<owns, vec, const vec&>::type;
 template <typename vec, bool owns>
 using vec_arg_t = typename std::conditional<owns, std::remove_const_t<vec>&&, const vec&>::type;
 
-template <typename vec, bool owns>
-class UnaryNegation : public VectorExpr<UnaryNegation<vec, owns>> {
+template <typename vec, bool owns, typename UnOp>
+class UnaryVectorExpr : public VectorExpr<UnaryVectorExpr<vec, owns, UnOp>> {
 public:
-  UnaryNegation(vec_arg_t<vec, owns> v) : v_(std::forward<vec_t<vec, owns>>(v)) {}
-  double operator[](size_t i) const { return -v_[i]; }
+  UnaryVectorExpr(vec_arg_t<vec, owns> v, UnOp&& op = UnOp{})
+      : v_(std::forward<vec_t<vec, owns>>(v)), op_(std::move(op))
+  {
+  }
+  double operator[](size_t i) const { return op_(v_[i]); }
   size_t Size() const { return v_.Size(); }
 
 private:
   const vec_t<vec, owns> v_;
+  const UnOp             op_;
 };
+
+class ScalarMultOp {
+public:
+  ScalarMultOp(const double scalar) : scalar_(scalar) {}
+  double operator()(const double arg) const { return arg * scalar_; }
+
+private:
+  double scalar_;
+};
+
+template <typename vec, bool owns>
+using UnaryNegation = UnaryVectorExpr<vec, owns, std::negate<double>>;
 
 template <typename T>
 auto operator-(VectorExpr<T>&& u)
@@ -59,22 +79,10 @@ auto operator-(VectorExpr<T>&& u)
 
 inline auto operator-(const mfem::Vector& u) { return UnaryNegation<mfem::Vector, false>(u); }
 
-template <typename vec, bool owns>
-class ScalarMultiplication : public VectorExpr<ScalarMultiplication<vec, owns>> {
-public:
-  ScalarMultiplication(const double a, vec_arg_t<vec, owns> v) : a_(a), v_(std::forward<vec_t<vec, owns>>(v)) {}
-  double operator[](size_t i) const { return a_ * v_[i]; }
-  size_t Size() const { return v_.Size(); }
-
-private:
-  const double           a_;
-  const vec_t<vec, owns> v_;
-};
-
 template <typename T>
 auto operator*(VectorExpr<T>&& u, const double a)
 {
-  return ScalarMultiplication<T, true>(a, std::move(u.asDerived()));
+  return UnaryVectorExpr<T, true, ScalarMultOp>(std::move(u.asDerived()), ScalarMultOp{a});
 }
 
 template <typename T>
@@ -83,7 +91,10 @@ auto operator*(const double a, VectorExpr<T>&& u)
   return operator*(std::move(u), a);
 }
 
-inline auto operator*(const double a, const mfem::Vector& u) { return ScalarMultiplication<mfem::Vector, false>(a, u); }
+inline auto operator*(const double a, const mfem::Vector& u)
+{
+  return UnaryVectorExpr<mfem::Vector, false, ScalarMultOp>(u, ScalarMultOp{a});
+}
 
 inline auto operator*(const mfem::Vector& u, const double a) { return operator*(a, u); }
 
@@ -93,14 +104,17 @@ public:
   BinaryVectorExpr(vec_arg_t<lhs, lhs_owns> u, vec_arg_t<rhs, rhs_owns> v)
       : u_(std::forward<vec_t<lhs, lhs_owns>>(u)), v_(std::forward<vec_t<rhs, rhs_owns>>(v))
   {
-    assert(u_.Size() == v_.Size());
+    // MFEM uses int to represent a size typw, so cast to size_t for consistency
+    SLIC_ERROR_IF(static_cast<std::size_t>(u_.Size()) != static_cast<std::size_t>(v_.Size()),
+                  "Vector sizes in binary operation must be equal");
   }
-  double operator[](size_t i) const { return BinOp{}(u_[i], v_[i]); }
+  double operator[](size_t i) const { return op_(u_[i], v_[i]); }
   size_t Size() const { return v_.Size(); }
 
 private:
   const vec_t<lhs, lhs_owns> u_;
   const vec_t<rhs, rhs_owns> v_;
+  const BinOp                op_ = BinOp{};
 };
 
 template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns>
