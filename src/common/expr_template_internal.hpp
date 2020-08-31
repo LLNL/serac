@@ -4,46 +4,47 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#ifndef EXPR_TEMPLATES
-#define EXPR_TEMPLATES
+/**
+ * @file expr_templates_internal.hpp
+ *
+ * @brief The internal implementation for a set of template classes used to
+ * represent the evaluation of unary and binary operations on vectors
+ */
+
+#ifndef EXPR_TEMPLATES_INTERNAL
+#define EXPR_TEMPLATES_INTERNAL
 
 #include <functional>
 #include <type_traits>
 #include <utility>
 
 #include "common/logger.hpp"
-#include "mfem.hpp"
+#include "common/vector_expression.hpp"
 
-template <typename T>
-class VectorExpr {
-public:
-  double operator[](size_t i) const { return asDerived()[i]; }
-  size_t Size() const { return asDerived().Size(); }
+namespace serac::internal {
 
-  operator mfem::Vector() const
-  {
-    mfem::Vector result(Size());
-    for (size_t i = 0; i < Size(); i++) {
-      result[i] = (*this)[i];
-    }
-    return result;
-  }
-  const T& asDerived() const { return static_cast<const T&>(*this); }
-  T&       asDerived() { return static_cast<T&>(*this); }
-};
-
-template <typename T>
-mfem::Vector evaluate(const VectorExpr<T>& expr)
-{
-  return expr;
-}
-
+// Type alias for what should be stored by a vector expression - an object
+// if ownership is desired, otherwise, a reference
 template <typename vec, bool owns>
 using vec_t = typename std::conditional<owns, vec, const vec&>::type;
 
+// Type alias for the constructior argument to a vector expression - an
+// rvalue reference if ownership is desired (will be moved from), otherwise,
+// and lvalue reference
 template <typename vec, bool owns>
 using vec_arg_t = typename std::conditional<owns, std::remove_const_t<vec>&&, const vec&>::type;
 
+/**
+ * @brief Derived VectorExpr class for representing the application of a unary
+ * operator to a vector
+ * @tparam vec The base vector type, e.g., mfem::Vector, or another VectorExpr
+ * @tparam owns Whether the object owns its vector
+ * @tparam UnOp The type of the unary operator
+ * @pre UnOp must be a functor with the following signature:
+ * @code{.cpp}
+ * double UnOp::operator()(const double arg);
+ * @endcode
+ */
 template <typename vec, bool owns, typename UnOp>
 class UnaryVectorExpr : public VectorExpr<UnaryVectorExpr<vec, owns, UnOp>> {
 public:
@@ -59,6 +60,9 @@ private:
   const UnOp             op_;
 };
 
+/**
+ * @brief Functor class for binding a scalar to a multiplication operatior
+ */
 class ScalarMultOp {
 public:
   ScalarMultOp(const double scalar) : scalar_(scalar) {}
@@ -71,33 +75,21 @@ private:
 template <typename vec, bool owns>
 using UnaryNegation = UnaryVectorExpr<vec, owns, std::negate<double>>;
 
-template <typename T>
-auto operator-(VectorExpr<T>&& u)
-{
-  return UnaryNegation<T, true>(std::move(u.asDerived()));
-}
-
-inline auto operator-(const mfem::Vector& u) { return UnaryNegation<mfem::Vector, false>(u); }
-
-template <typename T>
-auto operator*(VectorExpr<T>&& u, const double a)
-{
-  return UnaryVectorExpr<T, true, ScalarMultOp>(std::move(u.asDerived()), ScalarMultOp{a});
-}
-
-template <typename T>
-auto operator*(const double a, VectorExpr<T>&& u)
-{
-  return operator*(std::move(u), a);
-}
-
-inline auto operator*(const double a, const mfem::Vector& u)
-{
-  return UnaryVectorExpr<mfem::Vector, false, ScalarMultOp>(u, ScalarMultOp{a});
-}
-
-inline auto operator*(const mfem::Vector& u, const double a) { return operator*(a, u); }
-
+/**
+ * @brief Derived VectorExpr class for representing the application of a binary
+ * operator to two vectors
+ * @tparam lhs The base vector type for the expression LHS, e.g., mfem::Vector,
+ * or another VectorExpr
+ * @tparam rhs The base vector type for the expression RHS, e.g., mfem::Vector,
+ * or another VectorExpr
+ * @tparam lhs_owns Whether the object owns its LHS vector
+ * @tparam rhs_owns Whether the object owns its RHS vector
+ * @tparam BinOp The type of the binary operator
+ * @pre UnOp must be a functor with the following signature:
+ * @code{.cpp}
+ * double BinOp::operator()(const double lhs, const double rhs);
+ * @endcode
+ */
 template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns, typename BinOp>
 class BinaryVectorExpr : public VectorExpr<BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, BinOp>> {
 public:
@@ -123,52 +115,6 @@ using VectorAddition = BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, std::plus<
 template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns>
 using VectorSubtraction = BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, std::minus<double>>;
 
-template <typename S, typename T>
-auto operator+(VectorExpr<S>&& u, VectorExpr<T>&& v)
-{
-  return VectorAddition<S, T, true, true>(std::move(u.asDerived()), std::move(v.asDerived()));
-}
-
-template <typename T>
-auto operator+(const mfem::Vector& u, VectorExpr<T>&& v)
-{
-  return VectorAddition<mfem::Vector, T, false, true>(u, std::move(v.asDerived()));
-}
-
-template <typename T>
-auto operator+(VectorExpr<T>&& u, const mfem::Vector& v)
-{
-  return operator+(v, std::move(u));
-}
-
-inline auto operator+(const mfem::Vector& u, const mfem::Vector& v)
-{
-  return VectorAddition<mfem::Vector, mfem::Vector, false, false>(u, v);
-}
-
-template <typename S, typename T>
-auto operator-(VectorExpr<S>&& u, VectorExpr<T>&& v)
-{
-  return VectorSubtraction<S, T, true, true>(std::move(u.asDerived()), std::move(v.asDerived()));
-}
-
-template <typename T>
-auto operator-(const mfem::Vector& u, VectorExpr<T>&& v)
-{
-  return VectorSubtraction<mfem::Vector, T, false, true>(u, std::move(v.asDerived()));
-}
-
-template <typename T>
-auto operator-(VectorExpr<T>&& u, const mfem::Vector& v)
-{
-  return operator-(v, std::move(u));
-}
-
-inline auto operator-(const mfem::Vector& u, const mfem::Vector& v)
-{
-  return VectorSubtraction<mfem::Vector, mfem::Vector, false, false>(u, v);
-}
-
 template <typename vec, bool owns>
 class Matvec : public VectorExpr<Matvec<vec, owns>> {
 public:
@@ -191,12 +137,6 @@ private:
   mfem::Vector           result_;
 };
 
-template <typename T>
-auto operator*(const mfem::Operator& A, VectorExpr<T>&& v)
-{
-  return Matvec<T, true>(A, std::move(v.asDerived()));
-}
-
-inline auto operator*(const mfem::Operator& A, const mfem::Vector& v) { return Matvec<mfem::Vector, false>(A, v); }
+}  // namespace serac::internal
 
 #endif
