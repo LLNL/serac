@@ -11,7 +11,7 @@
 #---------------------------------------
 # SYS_TYPE: blueos_3_ppc64le_ib_p9
 # Compiler Spec: clang@upstream_gfortran
-# CMake executable path: /usr/tce/packages/cmake/cmake-3.14.5/bin/cmake
+# CMake executable path: /usr/tce/packages/cmake/cmake-3.18.0/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
@@ -27,6 +27,22 @@ set(CMAKE_CXX_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE PATH
 
 set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/tce/packages/gcc/gcc-8.3.1/lib" CACHE PATH "Adds a missing libstdc++ rpath")
 
+#------------------------------------------------------------------------------
+# Cuda
+#------------------------------------------------------------------------------
+
+set(ENABLE_CUDA ON CACHE BOOL "")
+
+set(CUDA_TOOLKIT_ROOT_DIR "/usr/tce/packages/cuda/cuda-11.0.182" CACHE PATH "")
+
+set(CMAKE_CUDA_COMPILER "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" CACHE PATH "")
+
+set(CMAKE_CUDA_FLAGS "-arch sm_70 --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE STRING "")
+
+set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "")
+
+set(BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;/usr/tce/packages/gcc/gcc-4.9.3/lib64" CACHE STRING "")
+
 #---------------------------------------
 # MPI
 #---------------------------------------
@@ -39,7 +55,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_08_20_12_44_51/clang-upstream_gfortran" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_08_27_11_50_19/clang-upstream_gfortran" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
@@ -47,7 +63,7 @@ set(CONDUIT_DIR "${TPL_ROOT}/conduit-master" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.11.1" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2" CACHE PATH "")
 
 set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
 
@@ -55,7 +71,7 @@ set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-5.4.0" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools

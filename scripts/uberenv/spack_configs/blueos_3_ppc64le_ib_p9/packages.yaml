@@ -51,17 +51,17 @@ packages:
     - spec: perl
       prefix: /usr
   pkg-config:
-      buildable: False
-      externals:
-      - spec: pkg-config
-        prefix: /usr
+    buildable: False
+    externals:
+    - spec: pkg-config
+      prefix: /usr
 # LLNL blueos CUDA
   cuda:
     externals:
-      - spec: cuda@9.0.176
-        prefix: /usr/tce/packages/cuda/cuda-9.0.176
-      - spec: cuda@8.0
-        prefix: /usr/tce/packages/cuda/cuda-8.0
+      - spec: cuda@11.0.182
+        prefix: /usr/tce/packages/cuda/cuda-11.0.182
+      - spec: cuda@11.0.2
+        prefix: /usr/tce/packages/cuda/cuda-11.0.2
     buildable: False
 # LLNL blueos mpi
   spectrum-mpi:
@@ -70,7 +70,7 @@ packages:
         prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-4.9.3/ 
       - spec: spectrum-mpi@release%clang@coral
         prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2018.12.03/
-      -spec: spectrum-mpi@release%xl@coral
+      - spec: spectrum-mpi@release%xl@coral
         prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/ 
     buildable: False
 
@@ -85,36 +85,35 @@ packages:
         prefix: /usr
     buildable: False
   bzip2:
-   externals:
+    externals:
       - spec: bzip2
         prefix: /usr
-   buildable: False
+    buildable: False
   cmake:
-    version: [3.14.5]
     externals:
-      - spec: cmake@3.14.5
-        prefix: /usr/tce/packages/cmake/cmake-3.14.5
+    - spec: cmake@3.18.0
+      prefix: /usr/tce/packages/cmake/cmake-3.18.0
     buildable: False
   gettext:
-   externals:
+    externals:
       - spec: gettext
         prefix: /usr
-   buildable: False
+    buildable: False
   libtool:
-   externals:
+    externals:
       - spec: libtool
         prefix: /usr
-   buildable: False
+    buildable: False
   m4:
-   externals:
+    externals:
       - spec: m4
         prefix: /usr
-   buildable: False
+    buildable: False
   tar:
-   externals:
+    externals:
       - spec: tar
         prefix: /usr
-   buildable: False
+    buildable: False
   mvapich2:
     externals:
       - spec: mvapich2%clang
