@@ -76,4 +76,3 @@ As with the previous example, this should be resolved by moving the ``mfem::Vect
         auto a3 = evaluate(a * 3.0); // a is of type mfem::Vector
         return std::move(a3) - b; // return value is of expression type
     };
-
