@@ -274,9 +274,6 @@ class Serac(CMakePackage, CudaPackage):
                 cfg.write(cmake_cache_string("CMAKE_CUDA_FLAGS", cuda_flags))
                 cfg.write(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES", ' '.join(cuda_arch)))
 
-            if '+deviceconst' in spec:
-                cfg.write(cmake_cache_option("ENABLE_DEVICE_CONST", True))
-
             sys_type = spec.architecture
             # if on llnl systems, we can use the SYS_TYPE
             if "SYS_TYPE" in env:
@@ -286,10 +283,11 @@ class Serac(CMakePackage, CudaPackage):
             on_blueos = 'blueos' in sys_type
 
             if on_blueos:
-                # Currently used for conditionally removing CUDA
-                # implicit link directories
-                cfg.write(cmake_cache_option("ON_BLUEOS", True))
-
+                # Very specific fix for working around CMake adding implicit link directories returned by the BlueOS
+                # compilers to link CUDA executables 
+                cfg.write(cmake_cache_string("BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
+                                             "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;"
+                                             "/usr/tce/packages/gcc/gcc-4.9.3/lib64"))
         else:
             cfg.write(cmake_cache_option("ENABLE_CUDA", False))
 

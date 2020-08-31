@@ -61,11 +61,15 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0" CACHE PATH "")
 # Devtools
 #------------------------------------------------------------------------------
 
+# Root directory for generated developer tools
+set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2020_08_31_12_14_52/gcc-8.3.1/" CACHE PATH "")
+
 set(ENABLE_DOCS ON CACHE BOOL "")
 
-set(DOXYGEN_EXECUTABLE "/usr/bin/doxygen" CACHE PATH "")
+set(DOXYGEN_EXECUTABLE "${DEVTOOLS_ROOT}/doxygen-1.8.17/bin/doxygen" CACHE PATH "")
 
 set(SPHINX_EXECUTABLE "/usr/tce/packages/python/python-3.8.2/bin/sphinx-build" CACHE PATH "")
 
 set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-9.0.0/bin/clang-format" CACHE PATH "")
 
+set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-1.87/bin/cppcheck" CACHE PATH "")

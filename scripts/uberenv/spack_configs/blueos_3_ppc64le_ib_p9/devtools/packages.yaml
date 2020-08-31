@@ -98,7 +98,7 @@ packages:
   python:
     version: [3.8.2]
     paths:
-        python@3.8.2: /usr/tce/packages/python/python-3.8.2/
+      python@3.8.2: /usr/tce/packages/python/python-3.8.2/
     buildable: False
   py-sphinx:
     version: [2.2.0]
