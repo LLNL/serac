@@ -6,8 +6,6 @@
 
 #include "mesh_utils.hpp"
 
-#include <fstream>
-
 #include "common/logger.hpp"
 #include "common/terminator.hpp"
 #include "fmt/fmt.hpp"
