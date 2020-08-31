@@ -14,6 +14,7 @@ variables:
 stages:
   - q_allocate_resources
   - q_build
+  - q_build_devtools
   - q_release_resources
   - q_build_with_deps
   - l_build
@@ -66,6 +67,16 @@ stages:
     - RESOURCES="-t 5 -N 1"
     - echo -e "Test ${CI_PROJECT_NAME}"
     - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --test-only
+
+.srun_build_devtools_script:
+  script:
+    - *run_update_uberenv
+    - EXEC_PREFIX="srun ${SLURM_ACCOUNT}"
+    - RESOURCES="-t 30 -N 1"
+    - echo -e "section_start:$(date +%s):devtools\r\e[0K
+      Build devtools"
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_devtools.py --directory=${CI_PROJECT_NAME}
+    - echo -e "section_end:$(date +%s):devtools\r\e[0K"
 
 
 .build_blueos_3_ppc64le_ib_p9_script:
