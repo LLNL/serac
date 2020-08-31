@@ -81,4 +81,14 @@ serac_add_code_checks(PREFIX   serac
 #------------------------------------------------------------------------------
 # Export Targets
 #------------------------------------------------------------------------------
-install(EXPORT serac-targets DESTINATION lib/cmake)
+add_library(serac INTERFACE)
+target_link_libraries(serac INTERFACE coefficients solvers common integrators)
+install(TARGETS              serac
+        EXPORT               serac-targets
+        DESTINATION          lib
+        )
+
+install(EXPORT serac-targets 
+        NAMESPACE serac::
+        DESTINATION lib/cmake
+        )
