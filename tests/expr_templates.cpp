@@ -77,6 +77,32 @@ TEST(expr_templates, move_from_temp_lambda)
   }
 }
 
+TEST(expr_templates, move_from_temp_vec_lambda)
+{
+  constexpr int size = 10;
+  mfem::Vector  lhs(size);
+  mfem::Vector  rhs(size);
+  for (int i = 0; i < size; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+
+  mfem::Vector mfem_result(size);
+  add(lhs, 3.5, rhs, mfem_result);
+
+  auto lambda_add = [](const auto& lhs, const auto& rhs) {
+    mfem::Vector r35 = rhs * 3.5;
+    return lhs + std::move(r35);
+  };
+
+  mfem::Vector expr_result = lambda_add(lhs, rhs);
+
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+}
+
 TEST(expr_templates, basic_matvec)
 {
   constexpr int     rows = 10;
