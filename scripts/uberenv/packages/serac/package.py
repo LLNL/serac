@@ -35,6 +35,10 @@ def cmake_cache_entry(name, value, comment=""):
 
     return 'set(%s "%s" CACHE PATH "%s")\n\n' % (name,value,comment)
 
+def cmake_cache_string(name, string, comment=""):
+    """Generate a string for a cmake cache variable"""
+
+    return 'set(%s "%s" CACHE STRING "%s")\n\n' % (name,string,comment)
 
 def cmake_cache_option(name, boolean_value, comment=""):
     """Generate a string for a cmake configuration option"""
@@ -68,7 +72,7 @@ def path_replace(path, path_replacements):
     return path
 
 
-class Serac(CMakePackage):
+class Serac(CMakePackage, CudaPackage):
     """FIXME: Put a proper description of your package here."""
 
     homepage = "https://www.github.com/LLNL/serac"
@@ -134,9 +138,12 @@ class Serac(CMakePackage):
         return sys_type
 
     def _get_host_config_path(self, spec):
-        host_config_path = "%s-%s-%s.cmake" % (socket.gethostname().rstrip('1234567890'),
+        var=''
+        if '+cuda' in spec:
+            var= '-'.join([var,'cuda'])
+        host_config_path = "%s-%s-%s%s.cmake" % (socket.gethostname().rstrip('1234567890'),
                                                self._get_sys_type(spec),
-                                               spec.compiler)
+                                               spec.compiler, var)
         dest_dir = self.stage.source_path
         host_config_path = os.path.abspath(pjoin(dest_dir, host_config_path))
         return host_config_path
@@ -240,6 +247,49 @@ class Serac(CMakePackage):
             if flags:
                 cfg.write(cmake_cache_entry("BLT_EXE_LINKER_FLAGS", flags,
                                             description))
+
+        #######################
+        # CUDA
+        #######################
+
+        if "+cuda" in spec:
+            cfg.write("#------------------{0}\n".format("-" * 60))
+            cfg.write("# Cuda\n")
+            cfg.write("#------------------{0}\n\n".format("-" * 60))
+
+            cfg.write(cmake_cache_option("ENABLE_CUDA", True))
+
+            cudatoolkitdir = spec['cuda'].prefix
+            cfg.write(cmake_cache_entry("CUDA_TOOLKIT_ROOT_DIR",
+                                        cudatoolkitdir))
+            cudacompiler = "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc"
+            cfg.write(cmake_cache_entry("CMAKE_CUDA_COMPILER",
+                                        cudacompiler))
+
+            if not spec.satisfies('cuda_arch=none'):
+                cuda_arch = spec.variants['cuda_arch'].value
+                flag = '-arch sm_{0}'.format(cuda_arch[0])
+                # CXX flags will be propagated to the host compiler
+                cuda_flags = ' '.join([flag, cxxflags])
+                cfg.write(cmake_cache_string("CMAKE_CUDA_FLAGS", cuda_flags))
+                cfg.write(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES", ' '.join(cuda_arch)))
+
+            sys_type = spec.architecture
+            # if on llnl systems, we can use the SYS_TYPE
+            if "SYS_TYPE" in env:
+                sys_type = env["SYS_TYPE"]
+
+            # are we on a specific machine
+            on_blueos = 'blueos' in sys_type
+
+            if on_blueos:
+                # Very specific fix for working around CMake adding implicit link directories returned by the BlueOS
+                # compilers to link CUDA executables 
+                cfg.write(cmake_cache_string("BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
+                                             "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;"
+                                             "/usr/tce/packages/gcc/gcc-4.9.3/lib64"))
+        else:
+            cfg.write(cmake_cache_option("ENABLE_CUDA", False))
 
         #######################
         # MPI
