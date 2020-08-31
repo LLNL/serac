@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 #------------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 @PACKAGE_INIT@
 
@@ -100,4 +100,3 @@ if(NOT SERAC_FOUND)
   set(SERAC_FOUND TRUE)
 
 endif()
-

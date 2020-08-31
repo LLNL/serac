@@ -17,6 +17,18 @@ function or_die () {
     fi
 }
 
+function test_examples () {
+    make install
+    pushd ../install/examples/cmake
+        mkdir build
+        pushd build
+            or_die cmake -C ../host-config.cmake ..
+            or_die make
+            or_die ./serac_example
+        popd
+    popd
+}
+
 or_die cd serac
 git submodule init 
 git submodule update 
@@ -26,7 +38,7 @@ echo $HOST_CONFIG
 
 if [[ "$DO_BUILD" == "yes" ]] ; then
     echo "~~~~~~ RUNNING CMAKE ~~~~~~~~"
-    or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake -DENABLE_GTEST_DEATH_TESTS=ON
+    or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake -ip install -DENABLE_GTEST_DEATH_TESTS=ON
     or_die cd build-$HOST_CONFIG-debug
     echo "~~~~~~ BUILDING ~~~~~~~~"
     if [[ ${CMAKE_EXTRA_FLAGS} == *COVERAGE* ]] ; then
@@ -37,6 +49,7 @@ if [[ "$DO_BUILD" == "yes" ]] ; then
     if [[ "${DO_TEST}" == "yes" ]] ; then
         echo "~~~~~~ RUNNING TESTS ~~~~~~~~"
         make CTEST_OUTPUT_ON_FAILURE=1 test ARGS='-T Test -VV -j8'
+        test_examples
     fi
 fi
 
