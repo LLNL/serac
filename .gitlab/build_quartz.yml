@@ -43,6 +43,10 @@ release_resources_build_quartz:
   stage: q_build_with_deps
   extends: [.srun_build_with_deps_script, .on_quartz, .main_workflow]
 
+.main_build_devtools_on_quartz:
+  stage: q_build_devtools
+  extends: [.srun_build_devtools_script, .on_quartz, .main_workflow]
+
 ####
 # Build jobs
 clang_9_0_0 (PR build_on_quartz):
@@ -69,3 +73,8 @@ gcc_8_1_0 (Main build_with_deps_on_quartz):
     SPEC: "@develop%${COMPILER}"
   extends: .main_build_with_deps_on_quartz
 
+gcc_8_1_0 (Main build_devtools_on_quartz):
+  variables:
+    COMPILER: "gcc@8.1.0"
+    SPEC: "@develop%${COMPILER}"
+  extends: .main_build_devtools_on_quartz
