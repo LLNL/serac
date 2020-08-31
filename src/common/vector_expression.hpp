@@ -16,6 +16,7 @@
 
 #include "mfem.hpp"
 
+namespace serac {
 /**
  * @brief A base class representing a vector expression
  * @tparam T The base vector type, e.g., mfem::Vector, or another VectorExpr
@@ -75,5 +76,7 @@ mfem::Vector evaluate(const VectorExpr<T>& expr)
 {
   return expr;
 }
+
+}  // namespace serac
 
 #endif

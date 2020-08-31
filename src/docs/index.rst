@@ -193,6 +193,7 @@ LLNL-CODE-805541
    :maxdepth: 2
 
    sphinx/docker_info
+   sphinx/expr_templates
    sphinx/logging
    sphinx/memory_checking
    sphinx/style_guide
