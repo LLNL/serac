@@ -233,58 +233,90 @@ private:
 
 class BoundaryConditionManager {
 public:
+  /**
+   * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
+   *
+   * @param[in] ess_bdr The set of essential BC attributes
+   * @param[in] ess_bdr_coef The essential BC value coefficient
+   * @param[in] state The finite element state to which the BC should be applied
+   * @param[in] component The component to set (-1 implies all components are set)
+   */
   void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, FiniteElementState& state,
                     const int component = -1);
 
+  /**
+   * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
+   *
+   * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
+   * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
+   * @param[in] state The finite element state to which the BC should be applied
+   * @param[in] component The component to set (-1 implies all components are set)
+   */
   void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, FiniteElementState& state,
-                  const int component = -1)
-  {
-    auto num_attrs = state.mesh().bdr_attributes.Max();
-    nat_bdr_.emplace_back(nat_bdr_coef, component, nat_bdr, num_attrs);
-    all_dofs_valid = false;
-  }
+                  const int component = -1);
 
-  void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component = -1)
-  {
-    ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
-    all_dofs_valid = false;
-  }
+  /**
+   * @brief Set a list of true degrees of freedom from a coefficient
+   *
+   * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
+   * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
+   * @param[in] component The component to set (-1 implies all components are set)
+   */
+  void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component = -1);
 
+  /**
+   * @brief Returns all the degrees of freedom associated with all the essential BCs
+   * @return A const reference to the list of DOF indices, without duplicates and sorted
+   */
   const mfem::Array<int>& allDofs() const
   {
-    if (!all_dofs_valid) {
+    if (!all_dofs_valid_) {
       updateAllDofs();
     }
-    return all_dofs;
+    return all_dofs_;
   }
 
+  /**
+   * @brief Eliminates all essential BCs from a matrix
+   * @param[inout] matrix The matrix to eliminate from, will be modified
+   * @return The eliminated matrix entries
+   * @note The sum of the eliminated matrix and the modified parameter is
+   * equal to the initial state of the parameter
+   */
   std::unique_ptr<mfem::HypreParMatrix> eliminateAllFromMatrix(mfem::HypreParMatrix& matrix) const
   {
     return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allDofs()));
   }
 
-  auto& essentials() { return ess_bdr_; }
-  auto& naturals() { return nat_bdr_; }
+  /**
+   * @brief Accessor for the essential BC objects
+   */
+  std::vector<BoundaryCondition>& essentials() { return ess_bdr_; }
+  /**
+   * @brief Accessor for the natural BC objects
+   */
+  std::vector<BoundaryCondition>& naturals() { return nat_bdr_; }
 
-  const auto& essentials() const { return ess_bdr_; }
-  const auto& naturals() const { return nat_bdr_; }
+  /**
+   * @brief Accessor for the essential BC objects
+   */
+  const std::vector<BoundaryCondition>& essentials() const { return ess_bdr_; }
+  /**
+   * @brief Accessor for the natural BC objects
+   */
+  const std::vector<BoundaryCondition>& naturals() const { return nat_bdr_; }
 
 private:
-  void updateAllDofs() const
-  {
-    all_dofs.DeleteAll();
-    for (const auto& bc : ess_bdr_) {
-      all_dofs.Append(bc.getTrueDofs());
-    }
-    all_dofs.Sort();
-    all_dofs.Unique();
-    all_dofs_valid = true;
-  }
+  /**
+   * @brief Updates the "cached" list of all DOF indices
+   */
+  void updateAllDofs() const;
+
   std::vector<BoundaryCondition> ess_bdr_;
   std::vector<BoundaryCondition> nat_bdr_;
-  std::set<int>                  attrs_in_use;
-  mutable mfem::Array<int>       all_dofs;
-  mutable bool                   all_dofs_valid = false;
+  std::set<int>                  attrs_in_use_;
+  mutable mfem::Array<int>       all_dofs_;
+  mutable bool                   all_dofs_valid_ = false;
 };
 
 }  // namespace serac

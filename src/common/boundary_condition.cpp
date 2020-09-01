@@ -158,7 +158,7 @@ void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac:
   auto num_attrs = state.mesh().bdr_attributes.Max();
 
   std::set<int> filtered_attrs;
-  std::set_difference(ess_bdr.begin(), ess_bdr.end(), attrs_in_use.begin(), attrs_in_use.end(),
+  std::set_difference(ess_bdr.begin(), ess_bdr.end(), attrs_in_use_.begin(), attrs_in_use_.end(),
                       std::inserter(filtered_attrs, filtered_attrs.begin()));
 
   // Check if anything was removed
@@ -169,8 +169,34 @@ void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac:
   BoundaryCondition bc(ess_bdr_coef, component, filtered_attrs, num_attrs);
   bc.setTrueDofs(state);
   ess_bdr_.emplace_back(std::move(bc));
-  attrs_in_use.insert(ess_bdr.begin(), ess_bdr.end());
-  all_dofs_valid = false;
+  attrs_in_use_.insert(ess_bdr.begin(), ess_bdr.end());
+  all_dofs_valid_ = false;
+}
+
+void BoundaryConditionManager::addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
+                                          FiniteElementState& state, const int component)
+{
+  auto num_attrs = state.mesh().bdr_attributes.Max();
+  nat_bdr_.emplace_back(nat_bdr_coef, component, nat_bdr, num_attrs);
+  all_dofs_valid_ = false;
+}
+
+void BoundaryConditionManager::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
+                                           int component)
+{
+  ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
+  all_dofs_valid_ = false;
+}
+
+void BoundaryConditionManager::updateAllDofs() const
+{
+  all_dofs_.DeleteAll();
+  for (const auto& bc : ess_bdr_) {
+    all_dofs_.Append(bc.getTrueDofs());
+  }
+  all_dofs_.Sort();
+  all_dofs_.Unique();
+  all_dofs_valid_ = true;
 }
 
 }  // namespace serac
