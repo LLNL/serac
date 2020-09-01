@@ -78,9 +78,6 @@ class Serac(CMakePackage, CudaPackage):
     homepage = "https://www.github.com/LLNL/serac"
     git      = "ssh://git@github.com:LLNL/serac.git"
 
-    variant('caliper', default=False, 
-            description='Build with hooks for Caliper performance analysis')
-
     version('develop', branch='develop', submodules=True, preferred=True)
 
     variant('debug', default=False,
@@ -89,8 +86,12 @@ class Serac(CMakePackage, CudaPackage):
     variant("devtools",  default=False,
             description="Build development tools (such as Sphinx, AStyle, etc...)")
 
+    variant('caliper', default=False, 
+            description='Build with hooks for Caliper performance analysis')
     variant('glvis', default=False,
             description='Build the glvis visualization executable')
+    variant('netcdf', default=False,
+            description='Enable Cubit/Genesis reader')
 
     # Basic dependencies
     depends_on("mpi")
@@ -103,11 +104,12 @@ class Serac(CMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.1.0p1~shared+hypre+metis+superlu-dist+lapack+mpi",
+    debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
+    depends_on("mfem+netcdf", when="+netcdf")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",
@@ -122,6 +124,8 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("conduit@master~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@5.4.0~shared")
+    depends_on("netcdf-c@4.7.3~shared", when="+netcdf")
+    depends_on("hdf5@1.8.21~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
@@ -362,6 +366,11 @@ class Serac(CMakePackage, CudaPackage):
         if "+glvis" in spec:
             glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
             cfg.write(cmake_cache_entry("GLVIS_EXECUTABLE", pjoin(glvis_bin_dir, "glvis")))
+
+        if "+netcdf" in spec:
+            # The actual package name is netcdf-c
+            netcdf_dir = get_spec_path(spec, "netcdf-c", path_replacements)
+            cfg.write(cmake_cache_entry("NETCDF_DIR", netcdf_dir))
 
         ##################################
         # Devtools

@@ -295,17 +295,27 @@ def set_group_and_perms(directory):
     Sets the proper group and access permissions of given input
     directory. 
     """
-    print "[changing group and access perms of: %s]" % directory
-    # change group to smithdev
-    print "[changing group to smithdev]"
-    sexe("chgrp -f -R smithdev %s" % (directory),echo=True,error_prefix="WARNING:")
-    # change group perms to rwX
-    print "[changing perms for smithdev members to rwX]"
-    sexe("chmod -f -R g+rwX %s" % (directory),echo=True,error_prefix="WARNING:")
-    # change perms for all to rX
-    print "[changing perms for all users to rX]"
-    sexe("chmod -f -R a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
-    print "[done setting perms for: %s]" % directory
+    skip = True
+    shared_dirs = [get_shared_base_dir()]
+    for shared_dir in shared_dirs:
+        if directory.startswith(shared_dir):
+            skip = False
+            break
+
+    if skip:
+        print "[Skipping update of group and access permissions. Provided directory was not a known shared location: {0}]".format(directory)
+    else:
+        print "[changing group and access perms of: %s]" % directory
+        # change group to smithdev
+        print "[changing group to smithdev]"
+        sexe("chgrp -f -R smithdev %s" % (directory),echo=True,error_prefix="WARNING:")
+        # change group perms to rwX
+        print "[changing perms for smithdev members to rwX]"
+        sexe("chmod -f -R g+rwX %s" % (directory),echo=True,error_prefix="WARNING:")
+        # change perms for all to rX
+        print "[changing perms for all users to rX]"
+        sexe("chmod -f -R a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
+        print "[done setting perms for: %s]" % directory
     return 0
 
 
@@ -379,8 +389,6 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec):
  
     # set proper perms for installed tpls
     set_group_and_perms(prefix)
-    # set proper perms for the mirror files
-    set_group_and_perms(mirror_dir)
     return res
 
 
