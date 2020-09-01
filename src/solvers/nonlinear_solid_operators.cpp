@@ -53,15 +53,15 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
     auto Me = std::unique_ptr<mfem::HypreParMatrix>(M_mat_->EliminateRowsCols(bc.getTrueDofs()));
   }
 
-  M_solver_ = EquationSolver(H_form_->ParFESpace()->GetComm(), lin_params);
+  M_inv_ = EquationSolver(H_form_->ParFESpace()->GetComm(), lin_params);
 
-  auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
-  M_solver_.solver().iterative_mode = false;
+  auto M_prec                    = std::make_unique<mfem::HypreSmoother>();
+  M_inv_.solver().iterative_mode = false;
 
   M_prec->SetType(mfem::HypreSmoother::Jacobi);
-  M_solver_.SetPreconditioner(std::move(M_prec));
+  M_inv_.SetPreconditioner(std::move(M_prec));
 
-  M_solver_.SetOperator(*M_mat_);
+  M_inv_.SetOperator(*M_mat_);
 
   // Construct the reduced system operator and initialize the newton solver with
   // it
@@ -84,7 +84,7 @@ void NonlinearSolidDynamicOperator::Mult(const mfem::Vector& vx, mfem::Vector& d
     z_.SetSubVector(bc.getTrueDofs(), 0.0);
   }
 
-  dv_dt = M_solver_ * -z_;
+  dv_dt = M_inv_ * -z_;
   dx_dt = v;
 }
 
