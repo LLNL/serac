@@ -129,7 +129,7 @@ void ThermalSolver::quasiStaticSolve()
 
   solver_.SetPreconditioner(std::move(hypre_smoother));
 
-  solver_.solver().iterative_mode = false;
+  solver_.linearSolver()->iterative_mode = false;
   solver_.SetOperator(*K_mat_);
 
   // Perform the linear solve

@@ -55,7 +55,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
   M_solver_ = EquationSolver(H_form_->ParFESpace()->GetComm(), lin_params);
 
   auto M_prec                       = std::make_unique<mfem::HypreSmoother>();
-  M_solver_.solver().iterative_mode = false;
+  M_solver_.linearSolver()->iterative_mode = false;
 
   M_prec->SetType(mfem::HypreSmoother::Jacobi);
   M_solver_.SetPreconditioner(std::move(M_prec));
@@ -105,7 +105,7 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
   reduced_oper_->SetParameters(dt, &v, &x);
   mfem::Vector zero;  // empty vector is interpreted as zero r.h.s. by NewtonSolver
   newton_solver_.Mult(zero, dv_dt);
-  SLIC_WARNING_IF(newton_solver_.GetConverged(), "Newton solver did not converge.");
+  SLIC_WARNING_IF(!newton_solver_.GetConverged(), "Newton solver did not converge.");
   add(v, dt, dv_dt, dx_dt);
 }
 

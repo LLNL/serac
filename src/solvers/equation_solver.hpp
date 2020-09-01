@@ -49,18 +49,14 @@ public:
    * solver.SetPreconditioner(std::move(prec));
    * @endcode
    */
-  void SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
-  {
-    prec_ = std::move(prec);
-    iter_lin_solver_->SetPreconditioner(*prec_);
-  }
+  void SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec);
 
   /**
    * Updates the solver with the provided operator
    * @param[in] op The operator (system matrix) to use, "A" in Ax = b
    * @note Implements mfem::Operator::SetOperator
    */
-  void SetOperator(const mfem::Operator& op) override { solver().SetOperator(op); }
+  void SetOperator(const mfem::Operator& op) override;
 
   /**
    * Solves the system
@@ -68,27 +64,25 @@ public:
    * @param[out] x Solution to the system of equations
    * @note Implements mfem::Operator::Mult
    */
-  void Mult(const mfem::Vector& b, mfem::Vector& x) const override { solver().Mult(b, x); }
+  void Mult(const mfem::Vector& b, mfem::Vector& x) const override;
 
   /**
    * Returns the underlying solver object
-   * @return The underlying nonlinear solver, if one was configured
-   * when the object was constructed, otherwise, the underlying linear solver
+   * @return A non-owning pointer to the underlying nonlinear solver
    */
-  mfem::IterativeSolver&       solver() { return (nonlin_solver_) ? **nonlin_solver_ : *iter_lin_solver_; }
-  const mfem::IterativeSolver& solver() const { return (nonlin_solver_) ? **nonlin_solver_ : *iter_lin_solver_; }
+  mfem::IterativeSolver*       nonlinearSolver() { return nonlin_solver_.get(); }
+  const mfem::IterativeSolver* nonlinearSolver() const { return nonlin_solver_.get(); }
 
   /**
-   * Returns the underlying linear solver object, even if the class instance
-   * has been configured as a nonlinear solver
-   * @return The underlying linear solver
+   * Returns the underlying linear solver object
+   * @return A non-owning pointer to the underlying linear solver
    */
-  mfem::IterativeSolver&       linearSolver() { return *iter_lin_solver_; }
-  const mfem::IterativeSolver& linearSolver() const { return *iter_lin_solver_; }
+  mfem::Solver*       linearSolver() { return lin_solver_.get(); }
+  const mfem::Solver* linearSolver() const { return lin_solver_.get(); }
 
 private:
-  std::unique_ptr<mfem::IterativeSolver>                iter_lin_solver_;
-  std::optional<std::unique_ptr<mfem::IterativeSolver>> nonlin_solver_;
+  std::unique_ptr<mfem::Solver>                         lin_solver_;
+  std::unique_ptr<mfem::IterativeSolver>                nonlin_solver_;
   std::unique_ptr<mfem::Solver>                         prec_;
 };
 
