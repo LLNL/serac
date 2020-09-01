@@ -10,8 +10,8 @@
 
 namespace serac {
 
-NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form)
-    : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(std::move(H_form))
+NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form, const std::vector<serac::BoundaryCondition>& bdr)
+    : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(std::move(H_form)), ess_bdr_(bdr)
 {
 }
 
@@ -20,12 +20,20 @@ void NonlinearSolidQuasiStaticOperator::Mult(const mfem::Vector& k, mfem::Vector
 {
   // Apply the nonlinear form H_form_->Mult(k, y);
   H_form_->Mult(k, y);
+  for (const auto& bc : ess_bdr_) {
+    y.SetSubVector(bc.getTrueDofs(), 0.0);
+  }
 }
 
 // Compute the Jacobian from the nonlinear form
 mfem::Operator& NonlinearSolidQuasiStaticOperator::GetGradient(const mfem::Vector& x) const
 {
-  return H_form_->GetGradient(x);
+  mfem::Operator& grad = H_form_->GetGradient(x);
+  mfem::HypreParMatrix& par_csr_grad = dynamic_cast<mfem::HypreParMatrix&>(grad);
+  for (const auto& bc : ess_bdr_) {
+    par_csr_grad.EliminateRowsCols(bc.getTrueDofs());
+  }
+  return par_csr_grad;
 }
 
 // destructor
@@ -154,6 +162,7 @@ mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_form_.SpMat(), dt_, S_form_.SpMat()));
   add(*v_, dt_, k, w_);
   add(*x_, dt_, w_, z_);
+  // No boundary conditions imposed here
   localJ->Add(dt_ * dt_, H_form_.GetLocalGradient(z_));
   jacobian_.reset(M_form_.ParallelAssemble(localJ.get()));
 

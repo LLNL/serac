@@ -112,7 +112,7 @@ void NonlinearSolidSolver::completeSetup()
   }
 
   // Add the essential boundary
-  mfem::Array<int> essential_dofs(0);
+  // mfem::Array<int> essential_dofs(0);
 
   // Build the dof array lookup tables
   displacement_->space().BuildDofToArrays();
@@ -123,14 +123,14 @@ void NonlinearSolidSolver::completeSetup()
     bc.project(*displacement_);
 
     // Add the vector dofs to the total essential BC dof list
-    essential_dofs.Append(bc.getTrueDofs());
+    // essential_dofs.Append(bc.getTrueDofs());
   }
 
   // Remove any duplicates from the essential BC list
-  essential_dofs.Sort();
-  essential_dofs.Unique();
+  // essential_dofs.Sort();
+  // essential_dofs.Unique();
 
-  H_form->SetEssentialTrueDofs(essential_dofs);
+  // H_form->SetEssentialTrueDofs(essential_dofs);
 
   // The abstract mass bilinear form
   std::unique_ptr<mfem::ParBilinearForm> M_form;
@@ -174,7 +174,7 @@ void NonlinearSolidSolver::completeSetup()
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     solver_.solver().iterative_mode = true;
-    nonlinear_oper_                 = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
+    nonlinear_oper_                 = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form), ess_bdr_);
     solver_.SetOperator(*nonlinear_oper_);
   } else {
     solver_.solver().iterative_mode = false;

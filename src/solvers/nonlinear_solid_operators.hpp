@@ -31,7 +31,7 @@ public:
    *
    * @param[in] H_form The nonlinear form of the PDE
    */
-  explicit NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form);
+  explicit NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form, const std::vector<serac::BoundaryCondition>& bdr);
 
   /**
    * @brief Get the Gradient of the nonlinear form
@@ -64,6 +64,11 @@ protected:
    * @brief The linearized jacobian at the current state
    */
   mutable std::unique_ptr<mfem::Operator> Jacobian_;
+
+  /**
+   * @brief The fixed boudnary degrees of freedom
+   */
+  const std::vector<serac::BoundaryCondition>& ess_bdr_;
 };
 
 /**
