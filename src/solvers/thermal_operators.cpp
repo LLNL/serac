@@ -10,11 +10,11 @@
 
 namespace serac {
 
-DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace&           fe_space,
-                                                     const serac::LinearSolverParameters&   params,
-                                                     std::vector<serac::BoundaryCondition>& ess_bdr)
+DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace&         fe_space,
+                                                     const serac::LinearSolverParameters& params,
+                                                     const BoundaryConditionManager&      bcs)
     : mfem::TimeDependentOperator(fe_space.GetTrueVSize(), 0.0),
-      ess_bdr_(ess_bdr),
+      bcs_(bcs),
       z_(fe_space.GetTrueVSize()),
       y_(fe_space.GetTrueVSize()),
       x_(fe_space.GetTrueVSize()),
@@ -58,7 +58,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
   y_ = u;
 
   *bc_rhs_ = *rhs_;
-  for (auto& bc : ess_bdr_) {
+  for (const auto& bc : bcs_.essentials()) {
     bc.eliminateToRHS(*K_mat_, y_, *bc_rhs_);
   }
 
@@ -86,9 +86,8 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     T_mat_.reset(mfem::Add(1.0, *M_mat_, dt, *K_mat_));
 
     // Eliminate the essential DOFs from the T matrix
-    for (auto& bc : ess_bdr_) {
-      T_e_mat_.reset(T_mat_->EliminateRowsCols(bc.getTrueDofs()));
-    }
+    bcs_.eliminateAllFromMatrix(*T_mat_);
+
     T_solver_.SetOperator(*T_mat_);
   }
 
@@ -96,7 +95,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   *bc_rhs_ = *rhs_;
   x_       = 0.0;
 
-  for (auto& bc : ess_bdr_) {
+  for (const auto& bc : bcs_.essentials()) {
     bc.projectBdr(*state_gf_, t);
     state_gf_->SetFromTrueDofs(y_);
     state_gf_->GetTrueDofs(y_);

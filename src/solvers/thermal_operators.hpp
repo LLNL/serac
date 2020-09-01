@@ -34,7 +34,7 @@ public:
    * @param[in] ess_bdr The essential boundary condition objects
    */
   DynamicConductionOperator(mfem::ParFiniteElementSpace& fe_space, const serac::LinearSolverParameters& params,
-                            std::vector<serac::BoundaryCondition>& ess_bdr);
+                            const BoundaryConditionManager& bcs);
 
   /**
    * @brief Set the mass and stiffness matrices
@@ -109,11 +109,6 @@ protected:
   std::unique_ptr<mfem::HypreParMatrix> T_mat_;
 
   /**
-   * @brief Pointer to the eliminated T matrix
-   */
-  std::unique_ptr<mfem::HypreParMatrix> T_e_mat_;
-
-  /**
    * @brief Non-owning ptr to assembled RHS vector
    */
   const mfem::Vector* rhs_ = nullptr;
@@ -126,7 +121,7 @@ protected:
   /**
    * @brief Temperature essential boundary coefficient
    */
-  std::vector<serac::BoundaryCondition>& ess_bdr_;
+  const BoundaryConditionManager& bcs_;
 
   /**
    * @brief Auxillary working vectors

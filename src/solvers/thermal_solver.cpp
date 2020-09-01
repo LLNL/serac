@@ -104,7 +104,7 @@ void ThermalSolver::completeSetup()
     M_mat_.reset(M_form_->ParallelAssemble());
 
     // Make the time integration operator and set the appropriate matricies
-    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_.essentials());
+    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_);
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 

@@ -241,20 +241,50 @@ public:
   {
     auto num_attrs = state.mesh().bdr_attributes.Max();
     nat_bdr_.emplace_back(nat_bdr_coef, component, nat_bdr, num_attrs);
+    all_dofs_valid = false;
   }
 
   void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component = -1)
   {
     ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
+    all_dofs_valid = false;
+  }
+
+  const mfem::Array<int>& allDofs() const
+  {
+    if (!all_dofs_valid) {
+      updateAllDofs();
+    }
+    return all_dofs;
+  }
+
+  std::unique_ptr<mfem::HypreParMatrix> eliminateAllFromMatrix(mfem::HypreParMatrix& matrix) const
+  {
+    return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allDofs()));
   }
 
   auto& essentials() { return ess_bdr_; }
   auto& naturals() { return nat_bdr_; }
 
+  const auto& essentials() const { return ess_bdr_; }
+  const auto& naturals() const { return nat_bdr_; }
+
 private:
+  void updateAllDofs() const
+  {
+    all_dofs.DeleteAll();
+    for (const auto& bc : ess_bdr_) {
+      all_dofs.Append(bc.getTrueDofs());
+    }
+    all_dofs.Sort();
+    all_dofs.Unique();
+    all_dofs_valid = true;
+  }
   std::vector<BoundaryCondition> ess_bdr_;
   std::vector<BoundaryCondition> nat_bdr_;
   std::set<int>                  attrs_in_use;
+  mutable mfem::Array<int>       all_dofs;
+  mutable bool                   all_dofs_valid = false;
 };
 
 }  // namespace serac

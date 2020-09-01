@@ -170,6 +170,7 @@ void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac:
   bc.setTrueDofs(state);
   ess_bdr_.emplace_back(std::move(bc));
   attrs_in_use.insert(ess_bdr.begin(), ess_bdr.end());
+  all_dofs_valid = false;
 }
 
 }  // namespace serac
