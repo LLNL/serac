@@ -111,10 +111,6 @@ public:
     return *true_dofs_;
   }
 
-  // FIXME: Temporary way of maintaining single definition of essential bdr
-  // until single class created to encapsulate all BCs
-  void removeAttr(const int attr) { markers_[attr - 1] = 0; }
-
   /**
    * Projects the boundary condition over a field
    * @param[inout] state The field to project over
@@ -233,6 +229,32 @@ private:
    * @brief The eliminated entries for Dirichlet BCs
    */
   mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
+};
+
+class BoundaryConditionManager {
+public:
+  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, FiniteElementState& state,
+                    const int component = -1);
+
+  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, FiniteElementState& state,
+                  const int component = -1)
+  {
+    auto num_attrs = state.mesh().bdr_attributes.Max();
+    nat_bdr_.emplace_back(nat_bdr_coef, component, nat_bdr, num_attrs);
+  }
+
+  void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component = -1)
+  {
+    ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
+  }
+
+  auto& essentials() { return ess_bdr_; }
+  auto& naturals() { return nat_bdr_; }
+
+private:
+  std::vector<BoundaryCondition> ess_bdr_;
+  std::vector<BoundaryCondition> nat_bdr_;
+  std::set<int>                  attrs_in_use;
 };
 
 }  // namespace serac

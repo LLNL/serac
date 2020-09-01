@@ -60,8 +60,8 @@ void ElasticitySolver::completeSetup()
   l_form_ = displacement_->createOnSpace<mfem::ParLinearForm>();
 
   // Add the traction integrator
-  if (nat_bdr_.size() > 0) {
-    for (auto& nat_bc : nat_bdr_) {
+  if (bcs_.naturals().size() > 0) {
+    for (auto& nat_bc : bcs_.naturals()) {
       l_form_->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(nat_bc.vectorCoefficient()),
                                      nat_bc.markers());
     }
@@ -76,7 +76,7 @@ void ElasticitySolver::completeSetup()
   K_mat_ = std::unique_ptr<mfem::HypreParMatrix>(K_form_->ParallelAssemble());
 
   // Eliminate the essential DOFs
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     bc.eliminateFromMatrix(*K_mat_);
   }
 
@@ -128,7 +128,7 @@ void ElasticitySolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     bool should_be_scalar = false;
     bc.apply(*K_mat_, *bc_rhs_, *displacement_, time_, should_be_scalar);
   }

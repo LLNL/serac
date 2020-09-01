@@ -83,7 +83,7 @@ void ThermalSolver::completeSetup()
   K_mat_.reset(K_form_->ParallelAssemble());
 
   // Eliminate the essential DOFs from the stiffness matrix
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     bc.eliminateFromMatrix(*K_mat_);
   }
 
@@ -104,7 +104,7 @@ void ThermalSolver::completeSetup()
     M_mat_.reset(M_form_->ParallelAssemble());
 
     // Make the time integration operator and set the appropriate matricies
-    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, ess_bdr_);
+    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_.essentials());
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 
@@ -116,7 +116,7 @@ void ThermalSolver::quasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     bc.apply(*K_mat_, *bc_rhs_, *temperature_, time_);
   }
 

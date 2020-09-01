@@ -106,7 +106,7 @@ void NonlinearSolidSolver::completeSetup()
   }
 
   // Add the traction integrator
-  for (auto& nat_bc_data : nat_bdr_) {
+  for (auto& nat_bc_data : bcs_.naturals()) {
     H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
                                  nat_bc_data.markers());
   }
@@ -118,7 +118,7 @@ void NonlinearSolidSolver::completeSetup()
   displacement_->space().BuildDofToArrays();
 
   // Project the essential boundary coefficients
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     // Project the coefficient
     bc.project(*displacement_);
 
@@ -174,12 +174,12 @@ void NonlinearSolidSolver::completeSetup()
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     solver_.solver().iterative_mode = true;
-    nonlinear_oper_                 = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form), ess_bdr_);
+    nonlinear_oper_ = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form), bcs_.essentials());
     solver_.SetOperator(*nonlinear_oper_);
   } else {
     solver_.solver().iterative_mode = false;
     timedep_oper_                   = std::make_unique<NonlinearSolidDynamicOperator>(
-        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, solver_.solver(), lin_params_);
+        std::move(H_form), std::move(S_form), std::move(M_form), bcs_.essentials(), solver_.solver(), lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }
 }

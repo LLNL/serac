@@ -7,6 +7,7 @@
 #include "common/boundary_condition.hpp"
 
 #include <algorithm>
+#include <iterator>
 
 #include "common/logger.hpp"
 
@@ -149,6 +150,26 @@ mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
   SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
                 "Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
   return *std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
+}
+
+void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
+                                            FiniteElementState& state, const int component)
+{
+  auto num_attrs = state.mesh().bdr_attributes.Max();
+
+  std::set<int> filtered_attrs;
+  std::set_difference(ess_bdr.begin(), ess_bdr.end(), attrs_in_use.begin(), attrs_in_use.end(),
+                      std::inserter(filtered_attrs, filtered_attrs.begin()));
+
+  // Check if anything was removed
+  if (filtered_attrs.size() < ess_bdr.size()) {
+    SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
+  }
+
+  BoundaryCondition bc(ess_bdr_coef, component, filtered_attrs, num_attrs);
+  bc.setTrueDofs(state);
+  ess_bdr_.emplace_back(std::move(bc));
+  attrs_in_use.insert(ess_bdr.begin(), ess_bdr.end());
 }
 
 }  // namespace serac

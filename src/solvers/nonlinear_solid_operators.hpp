@@ -31,7 +31,8 @@ public:
    *
    * @param[in] H_form The nonlinear form of the PDE
    */
-  explicit NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form, const std::vector<serac::BoundaryCondition>& bdr);
+  explicit NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm>      H_form,
+                                             const std::vector<serac::BoundaryCondition>& bdr);
 
   /**
    * @brief Get the Gradient of the nonlinear form

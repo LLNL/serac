@@ -10,7 +10,8 @@
 
 namespace serac {
 
-NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form, const std::vector<serac::BoundaryCondition>& bdr)
+NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form,
+                                                                     const std::vector<serac::BoundaryCondition>& bdr)
     : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(std::move(H_form)), ess_bdr_(bdr)
 {
 }
@@ -28,7 +29,7 @@ void NonlinearSolidQuasiStaticOperator::Mult(const mfem::Vector& k, mfem::Vector
 // Compute the Jacobian from the nonlinear form
 mfem::Operator& NonlinearSolidQuasiStaticOperator::GetGradient(const mfem::Vector& x) const
 {
-  mfem::Operator& grad = H_form_->GetGradient(x);
+  mfem::Operator&       grad         = H_form_->GetGradient(x);
   mfem::HypreParMatrix& par_csr_grad = dynamic_cast<mfem::HypreParMatrix&>(grad);
   for (const auto& bc : ess_bdr_) {
     par_csr_grad.EliminateRowsCols(bc.getTrueDofs());

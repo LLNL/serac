@@ -34,34 +34,18 @@ BaseSolver::BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : Base
 void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
                                  FiniteElementState& state, const int component)
 {
-  auto num_attrs = state_.front()->mesh().bdr_attributes.Max();
-
-  serac::BoundaryCondition bc(ess_bdr_coef, component, ess_bdr, num_attrs);
-
-  for (int attr : ess_bdr) {
-    if (std::any_of(ess_bdr_.cbegin(), ess_bdr_.cend(),
-                    [attr](auto&& existing_bc) { return existing_bc.markers()[attr - 1] == 1; })) {
-      SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-      bc.removeAttr(attr);
-    }
-  }
-
-  bc.setTrueDofs(state);
-
-  ess_bdr_.emplace_back(std::move(bc));
+  bcs_.addEssential(ess_bdr, ess_bdr_coef, state, component);
 }
 
 void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
 {
-  ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
+  bcs_.setTrueDofs(true_dofs, ess_bdr_coef, component);
 }
 
 void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
                                const int component)
 {
-  auto                     num_attrs = state_.front()->mesh().bdr_attributes.Max();
-  serac::BoundaryCondition bc(nat_bdr_coef, component, nat_bdr, num_attrs);
-  nat_bdr_.push_back(std::move(bc));
+  bcs_.addNatural(nat_bdr, nat_bdr_coef, *(state_.front()), component);
 }
 
 void BaseSolver::setState(const std::vector<serac::GeneralCoefficient>& state_coef)

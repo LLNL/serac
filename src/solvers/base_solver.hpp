@@ -178,16 +178,6 @@ protected:
   std::unique_ptr<mfem::BlockVector> block_;
 
   /**
-   * @brief Essential BC markers
-   */
-  std::vector<serac::BoundaryCondition> ess_bdr_;
-
-  /**
-   * @brief Natural BC markers
-   */
-  std::vector<serac::BoundaryCondition> nat_bdr_;
-
-  /**
    * @brief Type of state variable output
    */
   serac::OutputType output_type_;
@@ -246,6 +236,8 @@ protected:
    * @brief System solver instance
    */
   EquationSolver solver_;
+
+  BoundaryConditionManager bcs_;
 };
 
 }  // namespace serac
