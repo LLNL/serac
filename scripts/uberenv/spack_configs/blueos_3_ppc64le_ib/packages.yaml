@@ -1,4 +1,3 @@
-
 # -------------------------------------------------------------------------
 # This file controls default concretization preferences for Spack.
 #
@@ -38,18 +37,23 @@ packages:
       jpeg: [libjpeg-turbo, libjpeg]
   conduit:
     version: [master]
+
 # LLNL blueos CUDA
   cuda:
-    paths:
-      cuda@9.0.176: /usr/tce/packages/cuda/cuda-9.0.176
-      cuda@8.0: /usr/tce/packages/cuda/cuda-8.0
-    buildable: False
+    buildable: false
+    externals:
+    - spec: cuda@9.0.176
+      prefix: /usr/tce/packages/cuda/cuda-9.0.176
+    - spec: cuda@8.0
+      prefix: /usr/tce/packages/cuda/cuda-8.0
+
 # LLNL blueos mpi
   spectrum-mpi:
-    paths:
-      spectrum-mpi@release%gcc@4.9.3: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-4.9.3/ 
-      spectrum-mpi@release%clang@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2018.12.03/
-      spectrum-mpi@release%xl@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/ 
-    buildable: False
-
-
+    buildable: false
+    externals:
+    - spec: spectrum-mpi@release%gcc@4.9.3
+      prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-4.9.3/
+    - spec: spectrum-mpi@release%clang@coral
+      prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2018.12.03/
+    - spec: spectrum-mpi@release%xl@coral
+      prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/
