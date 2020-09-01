@@ -60,7 +60,14 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
   if (nonlinearSolver() != nullptr) {
     nonlinearSolver()->SetOperator(op); 
   } else {
-    linearSolver()->SetOperator(op);
+    auto iterative_solver = dynamic_cast<mfem::SuperLUSolver*>(lin_solver_.get());
+    if (iterative_solver != nullptr ) {
+      auto hypre_mat = dynamic_cast<const mfem::HypreParMatrix*>(&op);
+      SLIC_ERROR_IF(hypre_mat == nullptr, "Attempting to use SuperLU without a hypre matrix operator!");
+      superlu_mat_.reset(new mfem::SuperLURowLocMatrix(*hypre_mat));
+    } else {
+      linearSolver()->SetOperator(op);
+    }
   }
 }
 
@@ -80,8 +87,6 @@ void EquationSolver::SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
   if (iterative_solver != nullptr) {  
     prec_ = std::move(prec);
     iterative_solver->SetPreconditioner(*prec_);
-  } else {
-    SLIC_WARNING("Trying to set a preconditioner on a direct solver!");
   } 
 }
 

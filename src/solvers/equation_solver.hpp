@@ -84,6 +84,7 @@ private:
   std::unique_ptr<mfem::Solver>                         lin_solver_;
   std::unique_ptr<mfem::IterativeSolver>                nonlin_solver_;
   std::unique_ptr<mfem::Solver>                         prec_;
+  std::unique_ptr<mfem::SuperLURowLocMatrix>            superlu_mat_;
 };
 
 }  // namespace serac
