@@ -151,17 +151,12 @@ inline auto operator-(mfem::Vector&& u, const mfem::Vector& v) { return operator
 template <typename T>
 auto operator*(const mfem::Operator& A, serac::VectorExpr<T>&& v)
 {
-  return serac::internal::OperatorExpr<T, true>(A, std::move(v.asDerived()));
+  return serac::internal::OperatorExpr<T>(A, std::move(v.asDerived()));
 }
 
 inline auto operator*(const mfem::Operator& A, const mfem::Vector& v)
 {
-  return serac::internal::OperatorExpr<mfem::Vector, false>(A, v);
-}
-
-inline auto operator*(const mfem::Operator& A, mfem::Vector&& v)
-{
-  return serac::internal::OperatorExpr<mfem::Vector, true>(A, std::move(v));
+  return serac::internal::OperatorExpr<mfem::Vector>(A, v);
 }
 
 #endif

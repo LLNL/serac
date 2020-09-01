@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file expression_templates.hpp
+ * @file vector_expression.hpp
  *
  * @brief A set of template classes used to represent the evaluation of unary and binary operations
  * on vectors

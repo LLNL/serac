@@ -135,25 +135,19 @@ using VectorSubtraction = BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, std::mi
  * @brief Derived VectorExpr class for the application of an mfem::Operator to a vector,
  * e.g., matrix-vector multiplication
  * @tparam vec The base vector type, e.g., mfem::Vector, or another VectorExpr
- * @tparam owns Whether the object owns its vector
  * @pre The mfem::Operator must have its `height` member variable set to a
  * nonzero value
  * @note This class does not participate in lazy evaluation, that is, it
  * will perform the full operation (`mfem::Operator::Mult`) when the object
  * is constructed
  */
-template <typename vec, bool owns>
-class OperatorExpr : public VectorExpr<OperatorExpr<vec, owns>> {
+template <typename vec>
+class OperatorExpr : public VectorExpr<OperatorExpr<vec>> {
 public:
-  OperatorExpr(const mfem::Operator& A, vec_arg_t<vec, owns> v)
-      : A_(A), v_(std::forward<vec_t<vec, owns>>(v)), result_(A_.Height())
+  OperatorExpr(const mfem::Operator& A, const vec& v) : result_(A.Height())
   {
-    if constexpr (std::is_same<vec, mfem::Vector>::value) {
-      A_.Mult(v_, result_);
-    } else {
-      mfem::Vector tmp = evaluate(v_);
-      A_.Mult(tmp, result_);
-    }
+    // No-op if `vec` is a already an mfem::Vector, otherwise explicitly convert
+    A.Mult(static_cast<mfem::Vector>(v), result_);
   }
   /**
    * @brief Returns the fully evaluated value for the vector
@@ -167,9 +161,7 @@ public:
   size_t Size() const { return result_.Size(); }
 
 private:
-  const mfem::Operator&  A_;
-  const vec_t<vec, owns> v_;
-  mfem::Vector           result_;
+  mfem::Vector result_;
 };
 
 }  // namespace serac::internal
