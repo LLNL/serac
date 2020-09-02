@@ -24,8 +24,8 @@ namespace serac {
  */
 template <typename T>
 class VectorExpr {
-#ifndef NDEBUG
-#warning The use of expression templates in debug builds has a significant performance cost (up to 20x)
+#ifdef NDEBUG
+#warning The use of expression templates has a significant performance cost (up to 4x slower in release builds)
 #endif
 public:
   /**
