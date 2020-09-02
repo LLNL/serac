@@ -108,14 +108,20 @@ doing the following:
 * Installs our Spack packages into the local Spack
 * Simplifies whole dependency build into one command
 
-Uberenv will create a directory ``uberenv_libs`` containing a Spack instance with the required Serac
-dependencies installed. It also generates a host-config file (``<config_dependent_name>.cmake``)
+Uberenv will create a directory containing a Spack instance with the required Serac
+dependencies installed. 
+
+.. note::
+   This directory **must not** be within the Serac repo - the example below
+   uses a directory called ``serac_libs`` at the same level as the Serac repository.
+
+It also generates a host-config file (``<config_dependent_name>.cmake``)
 at the root of Serac repository. This host-config defines all the required information for building
 Serac.
 
 .. code-block:: bash
 
-   $ python scripts/uberenv/uberenv.py
+   $ python scripts/uberenv/uberenv.py --prefix=../serac_libs
 
 .. note::
   On LC machines, it is good practice to do the build step in parallel on a compute node.
@@ -134,7 +140,7 @@ Some helpful uberenv options:
 * ``--spec=%clang@4.0.0``
 * ``--spec=%clang@4.0.0+debug``
 * ``--spack-config-dir=<Path to spack configuration directory>``
-* ``--prefix=<Path to uberenv build directory (defaults to ./uberenv_libs)>``
+* ``--prefix=<Path to uberenv build directory>`` - this **must be outside** of your local Serac repository 
 
 If you already have a spack instance you would like to reuse, you can do so changing the uberenv
 command as follow:
