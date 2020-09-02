@@ -327,18 +327,18 @@ private:
    * already-registered BCs
    * @see https://mfem.org/mesh-formats/
    */
-  std::set<int>                  attrs_in_use_;
+  std::set<int> attrs_in_use_;
 
   /**
-   * @brief The set of true DOF indices corresponding 
+   * @brief The set of true DOF indices corresponding
    * to all registered BCs
    */
-  mutable mfem::Array<int>       all_dofs_;
+  mutable mfem::Array<int> all_dofs_;
 
   /**
    * @brief Whether the set of stored total DOFs is valid
    */
-  mutable bool                   all_dofs_valid_ = false;
+  mutable bool all_dofs_valid_ = false;
 };
 
 }  // namespace serac

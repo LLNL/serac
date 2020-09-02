@@ -4,22 +4,22 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <memory>
-
 #include <gtest/gtest.h>
 
-#include "mfem.hpp"
+#include <memory>
+
 #include "common/common.hpp"
+#include "mfem.hpp"
 
 namespace serac {
 
 TEST(boundary_cond, simple_repeated_dofs)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  constexpr int N = 15;
-  constexpr int ATTR = 1;
-  mfem::Mesh mesh(N, N, mfem::Element::TRIANGLE);
-  mfem::ParMesh par_mesh(MPI_COMM_WORLD, mesh);
+  constexpr int      N    = 15;
+  constexpr int      ATTR = 1;
+  mfem::Mesh         mesh(N, N, mfem::Element::TRIANGLE);
+  mfem::ParMesh      par_mesh(MPI_COMM_WORLD, mesh);
   FiniteElementState state(par_mesh);
 
   for (int i = 0; i < par_mesh.GetNE(); i++) {
@@ -27,7 +27,7 @@ TEST(boundary_cond, simple_repeated_dofs)
   }
 
   BoundaryConditionManager bcs;
-  auto coef = std::make_shared<mfem::ConstantCoefficient>(1);
+  auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
   bcs.addEssential({ATTR}, coef, state, 1);
   const auto before_dofs = bcs.allDofs();
 
@@ -40,8 +40,7 @@ TEST(boundary_cond, simple_repeated_dofs)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-
-} // namespace serac
+}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
