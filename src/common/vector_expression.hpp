@@ -24,6 +24,9 @@ namespace serac {
  */
 template <typename T>
 class VectorExpr {
+#ifndef NDEBUG
+#warning The use of expression templates in debug builds has a significant performance cost (up to 20x)
+#endif
 public:
   /**
    * @brief Returns the fully evaluated value for the vector
