@@ -90,8 +90,9 @@ class Serac(CMakePackage, CudaPackage):
             description='Build with hooks for Caliper performance analysis')
     variant('glvis', default=False,
             description='Build the glvis visualization executable')
-    variant('netcdf', default=False,
-            description='Enable Cubit/Genesis reader')
+    # netcdf variant commented out until a bug in the spack concretizer is fixed
+    #variant('netcdf', default=True,
+    #        description='Enable Cubit/Genesis reader')
 
     # Basic dependencies
     depends_on("mpi")
@@ -104,12 +105,12 @@ class Serac(CMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi",
+    debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
-    depends_on("mfem+netcdf", when="+netcdf")
+    #depends_on("mfem+netcdf", when="+netcdf")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",
@@ -119,12 +120,11 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0}".format(dep))
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
-
     # Libraries that do not have a debug variant
     depends_on("conduit@master~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@5.4.0~shared")
-    depends_on("netcdf-c@4.7.3~shared", when="+netcdf")
+    depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
     depends_on("hdf5@1.8.21~shared")
 
     # Libraries that we do not build debug
@@ -270,7 +270,9 @@ class Serac(CMakePackage, CudaPackage):
             cfg.write(cmake_cache_entry("CMAKE_CUDA_COMPILER",
                                         cudacompiler))
 
-            if not spec.satisfies('cuda_arch=none'):
+            if spec.satisfies('cuda_arch=none'):
+                cfg.write("# No cuda_arch specified in Spack spec, this is likely to fail\n\n")
+            else:
                 cuda_arch = spec.variants['cuda_arch'].value
                 flag = '-arch sm_{0}'.format(cuda_arch[0])
                 # CXX flags will be propagated to the host compiler
@@ -383,12 +385,14 @@ class Serac(CMakePackage, CudaPackage):
         # Add common prefix to path replacement list
         if "+devtools" in spec:
             # Grab common devtools root and strip the trailing slash
-            path1 = os.path.realpath(spec["python"].prefix)
+            path1 = os.path.realpath(spec["cppcheck"].prefix)
             path2 = os.path.realpath(spec["doxygen"].prefix)
-            devtools_root = os.path.commonprefix([path1, path2])[:-1]
-            path_replacements[devtools_root] = "${DEVTOOLS_ROOT}"
-            cfg.write("# Root directory for generated developer tools\n")
-            cfg.write(cmake_cache_entry("DEVTOOLS_ROOT",devtools_root))
+            devtools_root = os.path.commonprefix([path1, path2])
+            if len(devtools_root) > 1:
+                devtools_root = devtools_root[:-1]
+                path_replacements[devtools_root] = "${DEVTOOLS_ROOT}"
+                cfg.write("# Root directory for generated developer tools\n")
+                cfg.write(cmake_cache_entry("DEVTOOLS_ROOT",devtools_root))
 
         if "doxygen" in spec or "py-sphinx" in spec:
             cfg.write(cmake_cache_option("ENABLE_DOCS", True))
