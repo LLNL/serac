@@ -1,6 +1,6 @@
 packages:
   all:
-    compiler: [gcc, clang]
+    compiler: [gcc]
     providers:
       mpi: [mpich]
       blas: [openblas]
@@ -8,7 +8,15 @@ packages:
       gl: [opengl]
       glu: [openglu]
 
-# Lock down versions of packages we depend on
+  # Lock down which MPI we are using
+  mpi:
+    buildable: false
+  mpich:
+    externals:
+    - spec: mpich@3.3.2%gcc@9.3.0
+      prefix: /usr
+
+  # Lock down versions of packages we depend on
   opengl:
     buildable: false
     externals:
@@ -58,17 +66,13 @@ packages:
     externals:
     - spec: openblas
       prefix: /usr/lib/x86_64-linux-gnu/
-  mpich:
-    buildable: false
-    externals:
-    - spec: mpich@3.3.2%gcc@9.3.0
-      prefix: /usr
+
+  # Lock in versions of Devtools
   cmake:
     buildable: false
     externals:
     - spec: cmake@3.16.3
       prefix: /usr
-# Lock in versions of Devtools
   cppcheck:
     version: [1.9]
     buildable: false

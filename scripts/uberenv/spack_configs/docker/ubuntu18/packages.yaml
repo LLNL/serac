@@ -40,10 +40,12 @@ packages:
       jpeg: [libjpeg-turbo, libjpeg]
 
   # Spack may grab for mpi & we don't want to use them
-  charm:
+  mpi:
     buildable: false
-  mpilander:
-    buildable: false
+  mpich:
+    externals:
+    - spec: mpich@3.3
+      prefix: /usr
 
   # System level packages to not build
   autotools:
@@ -85,10 +87,6 @@ packages:
     buildable: false
     externals:
     - spec: openblas
-      prefix: /usr
-  mpich:
-    externals:
-    - spec: mpich@3.3
       prefix: /usr
 
   # Globally lock in version of CMake

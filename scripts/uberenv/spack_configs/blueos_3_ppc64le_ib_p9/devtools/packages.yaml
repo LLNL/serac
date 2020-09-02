@@ -15,35 +15,21 @@
 # -------------------------------------------------------------------------
 packages:
   all:
-    compiler: [gcc, intel, pgi, clang, xl, nag]
+    compiler: [gcc]
     providers:
       blas: [netlib-lapack]
       lapack: [netlib-lapack]
-      mpi: [mvapich2]
+      mpi: [spectrum-mpi]
   cuda:
     buildable: false
-  mvapich2:
-    buildable: false
-  openmpi:
-    buildable: false
-  mpich:
+
+  # LLNL blueos mpi
+  mpi:
     buildable: false
   spectrum-mpi:
-    buildable: false
-  charmpp:
-    buildable: false
-  charm:
-    buildable: false
-  intel-mpi:
-    buildable: false
-  intel-parallel-studio:
-    buildable: false
-  fujitsu-mpi:
-    buildable: false
-  mpilander:
-    buildable: false
-  mpt:
-    buildable: false
+    externals:
+      - spec: spectrum-mpi@release%clang@upstream_gfortran
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-8.3.1
 
   # blas is a bit more complicated because its a virtual package so fake it with
   # the following per spack docs
@@ -53,7 +39,7 @@ packages:
     - spec: netlib-lapack@3.6.1
       prefix: /usr
 
-# System level packages to not build
+  # System level packages to not build
   autoconf:
     buildable: false
     externals:
@@ -69,12 +55,6 @@ packages:
     externals:
     - spec: bzip2
       prefix: /usr
-  cmake:
-    version: [3.14.5]
-    buildable: false
-    externals:
-    - spec: cmake
-      prefix: /usr/tce/packages/cmake/cmake-3.14.5
   gettext:
     buildable: false
     externals:
@@ -105,6 +85,14 @@ packages:
     externals:
     - spec: tar
       prefix: /usr
+
+  # Lock in versions of Devtools
+  cmake:
+    version: [3.14.5]
+    buildable: false
+    externals:
+    - spec: cmake
+      prefix: /usr/tce/packages/cmake/cmake-3.14.5
   python:
     version: [3.8.2]
     buildable: false

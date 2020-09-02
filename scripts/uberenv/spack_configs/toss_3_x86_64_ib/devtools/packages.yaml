@@ -23,30 +23,12 @@ packages:
       blas: [netlib-lapack]
       lapack: [netlib-lapack]
       mpi: [mvapich2]
-  cuda:
+  mpi:
     buildable: false
   mvapich2:
-    buildable: false
-  openmpi:
-    buildable: false
-  mpich:
-    buildable: false
-  spectrum-mpi:
-    buildable: false
-  charmpp:
-    buildable: false
-  charm:
-    buildable: false
-  intel-mpi:
-    buildable: false
-  intel-parallel-studio:
-    buildable: false
-  fujitsu-mpi:
-    buildable: false
-  mpilander:
-    buildable: false
-  mpt:
-    buildable: false
+    externals:
+    - spec: mvapich2@2.3%gcc@8.3.1 arch=linux-rhel7-ivybridge
+      prefix: /usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.3.1
 
   # blas is a bit more complicated because its a virtual package so fake it with
   # the following per spack docs
@@ -77,10 +59,20 @@ packages:
     externals:
     - spec: gettext
       prefix: /usr
+  graphviz:
+    buildable: false
+    externals:
+    - spec: graphviz
+      prefix: /usr
   libtool:
     buildable: false
     externals:
     - spec: libtool
+      prefix: /usr
+  libx11:
+    buildable: false
+    externals:
+    - spec: libx11
       prefix: /usr
   m4:
     buildable: false
@@ -102,6 +94,29 @@ packages:
     externals:
     - spec: tar
       prefix: /usr
+  readline:
+    buildable: false
+    externals:
+    - spec: readline
+      prefix: /usr
+  unzip:
+    buildable: false
+    externals:
+    - spec: unzip
+      prefix: /usr
+  zlib:
+    buildable: false
+    externals:
+    - spec: zlib
+      prefix: /usr
+
+  # Packages we may want to build in the future with specific versions
+  cmake:
+    version: [3.14.5]
+    buildable: false
+    externals:
+    - spec: cmake
+      prefix: /usr/tce/packages/cmake/cmake-3.14.5
   python:
     buildable: false
     externals:
@@ -113,11 +128,3 @@ packages:
     externals:
     - spec: py-sphinx@2.2.0
       prefix: /usr/tce/packages/python/python-3.8.2/
-
-# Globally lock in version of CMake
-  cmake:
-    version: [3.14.5]
-    buildable: false
-    externals:
-    - spec: cmake
-      prefix: /usr/tce/packages/cmake/cmake-3.14.5

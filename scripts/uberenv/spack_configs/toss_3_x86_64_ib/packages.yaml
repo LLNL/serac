@@ -22,35 +22,14 @@ packages:
       prefix: /usr
 
   # Lock down which MPI we are using
-  mvapich2:
+  mpi:
     buildable: false
+  mvapich2:
     externals:
     - spec: mvapich2@2.3%clang@9.0.0 arch=linux-rhel7-ivybridge
       prefix: /usr/tce/packages/mvapich2/mvapich2-2.3-clang-9.0.0
     - spec: mvapich2@2.3%gcc@8.1.0 arch=linux-rhel7-ivybridge
       prefix: /usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.1.0
-    - spec: mvapich2@2.3%intel@19.0.4 arch=linux-rhel7-ivybridge
-      prefix: /usr/tce/packages/mvapich2/mvapich2-2.3-intel-19.0.4
-  openmpi:
-    buildable: false
-  mpich:
-    buildable: false
-  spectrum-mpi:
-    buildable: false
-  charmpp:
-    buildable: false
-  charm:
-    buildable: false
-  intel-mpi:
-    buildable: false
-  intel-parallel-studio:
-    buildable: false
-  fujitsu-mpi:
-    buildable: false
-  mpilander:
-    buildable: false
-  mpt:
-    buildable: false
 
   # blas is a bit more complicated because its a virtual package so fake it with
   # the following per spack docs
@@ -59,7 +38,8 @@ packages:
     externals:
     - spec: netlib-lapack@3.6.1
       prefix: /usr
-# System level packages to not build
+
+  # System level packages to not build
   autoconf:
     buildable: false
     externals:
@@ -75,21 +55,25 @@ packages:
     externals:
     - spec: bzip2
       prefix: /usr
-  cmake:
-    version: [3.14.5]
-    buildable: false
-    externals:
-    - spec: cmake
-      prefix: /usr/tce/packages/cmake/cmake-3.14.5
   gettext:
     buildable: false
     externals:
     - spec: gettext
       prefix: /usr
+  graphviz:
+    buildable: false
+    externals:
+    - spec: graphviz
+      prefix: /usr
   libtool:
     buildable: false
     externals:
     - spec: libtool
+      prefix: /usr
+  libx11:
+    buildable: false
+    externals:
+    - spec: libx11
       prefix: /usr
   m4:
     buildable: false
@@ -111,18 +95,29 @@ packages:
     externals:
     - spec: tar
       prefix: /usr
-  graphviz:
+  readline:
     buildable: false
     externals:
-    - spec: graphviz
+    - spec: readline
       prefix: /usr
-  libx11:
+  unzip:
     buildable: false
     externals:
-    - spec: libx11
+    - spec: unzip
+      prefix: /usr
+  zlib:
+    buildable: false
+    externals:
+    - spec: zlib
       prefix: /usr
 
 # Lock in versions of Devtools
+  cmake:
+    version: [3.14.5]
+    buildable: false
+    externals:
+    - spec: cmake
+      prefix: /usr/tce/packages/cmake/cmake-3.14.5
   cppcheck:
     version: [1.87]
     buildable: false
@@ -136,14 +131,13 @@ packages:
     - spec: doxygen
       prefix: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.8.17
   python:
-    version: [3.7.7]
     buildable: false
     externals:
-    - spec: python
-      prefix: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/python-3.7.7
+    - spec: python@3.8.2
+      prefix: /usr/tce/packages/python/python-3.8.2
   py-sphinx:
-    version: [3.0.0]
+    version: [2.2.0]
     buildable: false
     externals:
-    - spec: py-sphinx
-      prefix: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/py-sphinx-3.0.0
+    - spec: py-sphinx@2.2.0
+      prefix: /usr/tce/packages/python/python-3.8.2/
