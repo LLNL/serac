@@ -262,7 +262,7 @@ public:
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component = -1);
+  void addTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component = -1);
 
   /**
    * @brief Returns all the degrees of freedom associated with all the essential BCs
@@ -312,10 +312,32 @@ private:
    */
   void updateAllDofs() const;
 
+  /**
+   * @brief The vector of essential boundary conditions
+   */
   std::vector<BoundaryCondition> ess_bdr_;
+
+  /**
+   * @brief The vector of natural boundary conditions
+   */
   std::vector<BoundaryCondition> nat_bdr_;
+
+  /**
+   * @brief The set of boundary attributes associated with
+   * already-registered BCs
+   * @see https://mfem.org/mesh-formats/
+   */
   std::set<int>                  attrs_in_use_;
+
+  /**
+   * @brief The set of true DOF indices corresponding 
+   * to all registered BCs
+   */
   mutable mfem::Array<int>       all_dofs_;
+
+  /**
+   * @brief Whether the set of stored total DOFs is valid
+   */
   mutable bool                   all_dofs_valid_ = false;
 };
 

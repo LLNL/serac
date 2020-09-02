@@ -237,6 +237,9 @@ protected:
    */
   EquationSolver solver_;
 
+  /**
+   * @brief Boundary condition manager instance
+   */
   BoundaryConditionManager bcs_;
 };
 

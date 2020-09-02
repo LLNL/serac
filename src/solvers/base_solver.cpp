@@ -39,7 +39,7 @@ void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::GeneralCoe
 
 void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
 {
-  bcs_.setTrueDofs(true_dofs, ess_bdr_coef, component);
+  bcs_.addTrueDofs(true_dofs, ess_bdr_coef, component);
 }
 
 void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
