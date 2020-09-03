@@ -352,6 +352,11 @@ class Serac(CMakePackage, CudaPackage):
         metis_dir = get_spec_path(spec, "metis", path_replacements)
         cfg.write(cmake_cache_entry("METIS_DIR", metis_dir))
 
+        #if "+netcdf" in spec:
+        # The actual package name is netcdf-c
+        netcdf_dir = get_spec_path(spec, "netcdf-c", path_replacements)
+        cfg.write(cmake_cache_entry("NETCDF_DIR", netcdf_dir))
+
         parmetis_dir = get_spec_path(spec, "parmetis", path_replacements)
         cfg.write(cmake_cache_entry("PARMETIS_DIR", parmetis_dir))
 
@@ -368,11 +373,6 @@ class Serac(CMakePackage, CudaPackage):
         if "+glvis" in spec:
             glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
             cfg.write(cmake_cache_entry("GLVIS_EXECUTABLE", pjoin(glvis_bin_dir, "glvis")))
-
-        if "+netcdf" in spec:
-            # The actual package name is netcdf-c
-            netcdf_dir = get_spec_path(spec, "netcdf-c", path_replacements)
-            cfg.write(cmake_cache_entry("NETCDF_DIR", netcdf_dir))
 
         ##################################
         # Devtools
