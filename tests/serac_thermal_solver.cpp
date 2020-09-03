@@ -57,7 +57,7 @@ TEST(thermal_solver, static_solve)
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
-  params.lin_solver  = LinearSolver::SuperLU;
+  params.lin_solver = LinearSolver::SuperLU;
   therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic

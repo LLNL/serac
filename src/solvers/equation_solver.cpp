@@ -13,81 +13,95 @@ namespace serac {
 EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
                                const std::optional<NonlinearSolverParameters>& nonlin_params)
 {
-  // Preconditioner configuration is too varied, maybe a PrecondParams is needed?
-  // Maybe a redesign to better support custom preconditioners as well
-  
   if (lin_params.lin_solver == LinearSolver::SuperLU) {
     lin_solver_ = std::make_unique<mfem::SuperLUSolver>(comm);
   } else {
-    std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
-    
-    switch (lin_params.lin_solver) {
-      case LinearSolver::CG:
-        iter_lin_solver = std::make_unique<mfem::CGSolver>(comm);
-        break;
-      case LinearSolver::GMRES:
-        iter_lin_solver = std::make_unique<mfem::GMRESSolver>(comm);
-        break;
-      case LinearSolver::MINRES:
-        iter_lin_solver = std::make_unique<mfem::MINRESSolver>(comm);
-        break;
-      default:
-        SLIC_ERROR("Linear solver type not recognized.");
-        exitGracefully(true);
-    }
-
-    iter_lin_solver->SetRelTol(lin_params.rel_tol);
-    iter_lin_solver->SetAbsTol(lin_params.abs_tol);
-    iter_lin_solver->SetMaxIter(lin_params.max_iter);
-    iter_lin_solver->SetPrintLevel(lin_params.print_level);
-
-    lin_solver_ = std::move(iter_lin_solver);
-  } 
+    lin_solver_ = buildIterLinSolver(comm, lin_params);
+  }
 
   if (nonlin_params) {
-    auto newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
-    newton_solver->SetSolver(*lin_solver_);
-    newton_solver->SetRelTol(nonlin_params->rel_tol);
-    newton_solver->SetAbsTol(nonlin_params->abs_tol);
-    newton_solver->SetMaxIter(nonlin_params->max_iter);
-    newton_solver->SetPrintLevel(nonlin_params->print_level);
-    nonlin_solver_ = std::move(newton_solver);
+    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_params, linearSolver());
   }
 }
 
+std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterLinSolver(MPI_Comm                      comm,
+                                                                          const LinearSolverParameters& lin_params)
+{
+  std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
+
+  switch (lin_params.lin_solver) {
+    case LinearSolver::CG:
+      iter_lin_solver = std::make_unique<mfem::CGSolver>(comm);
+      break;
+    case LinearSolver::GMRES:
+      iter_lin_solver = std::make_unique<mfem::GMRESSolver>(comm);
+      break;
+    case LinearSolver::MINRES:
+      iter_lin_solver = std::make_unique<mfem::MINRESSolver>(comm);
+      break;
+    default:
+      SLIC_ERROR("Linear solver type not recognized.");
+      exitGracefully(true);
+  }
+
+  iter_lin_solver->SetRelTol(lin_params.rel_tol);
+  iter_lin_solver->SetAbsTol(lin_params.abs_tol);
+  iter_lin_solver->SetMaxIter(lin_params.max_iter);
+  iter_lin_solver->SetPrintLevel(lin_params.print_level);
+
+  return iter_lin_solver;
+}
+
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                         comm,
+                                                                      const NonlinearSolverParameters& nonlin_params,
+                                                                      mfem::Solver&                    lin_solver)
+{
+  auto newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
+  newton_solver->SetSolver(lin_solver);
+  newton_solver->SetRelTol(nonlin_params.rel_tol);
+  newton_solver->SetAbsTol(nonlin_params.abs_tol);
+  newton_solver->SetMaxIter(nonlin_params.max_iter);
+  newton_solver->SetPrintLevel(nonlin_params.print_level);
+  return newton_solver;
+}
+
 void EquationSolver::SetOperator(const mfem::Operator& op)
-{ 
-  if (nonlinearSolver() != nullptr) {
-    nonlinearSolver()->SetOperator(op); 
+{
+  if (nonlin_solver_) {
+    nonlin_solver_->SetOperator(op);
   } else {
-    auto iterative_solver = dynamic_cast<mfem::SuperLUSolver*>(lin_solver_.get());
-    if (iterative_solver != nullptr ) {
-      auto hypre_mat = dynamic_cast<const mfem::HypreParMatrix*>(&op);
-      SLIC_ERROR_IF(hypre_mat == nullptr, "Attempting to use SuperLU without a hypre matrix operator!");
-      superlu_mat_.reset(new mfem::SuperLURowLocMatrix(*hypre_mat));
-    } else {
-      linearSolver()->SetOperator(op);
-    }
+    std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
+  }
+}
+
+void EquationSolver::SetOperator(const mfem::HypreParMatrix& matrix)
+{
+  if (std::holds_alternative<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)) {
+    superlu_mat_ = matrix;
+    SetOperator(*superlu_mat_);
+  }
+  // Otherwise just upcast and call as usual
+  else {
+    SetOperator(static_cast<const mfem::Operator&>(matrix));
   }
 }
 
 void EquationSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
-{ 
-  if (nonlinearSolver() != nullptr) {
-    nonlinearSolver()->Mult(b, x); 
+{
+  if (nonlin_solver_) {
+    nonlin_solver_->Mult(b, x);
   } else {
-    linearSolver()->Mult(b, x); 
+    std::visit([&b, &x](auto&& solver) { solver->Mult(b, x); }, lin_solver_);
   }
 }
 
 void EquationSolver::SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
 {
   // If the linear solver is iterative, set the preconditioner
-  auto iterative_solver = dynamic_cast<mfem::IterativeSolver*>(lin_solver_.get());
-  if (iterative_solver != nullptr) {  
+  if (std::holds_alternative<std::unique_ptr<mfem::IterativeSolver>>(lin_solver_)) {
     prec_ = std::move(prec);
-    iterative_solver->SetPreconditioner(*prec_);
-  } 
+    std::get<std::unique_ptr<mfem::IterativeSolver>>(lin_solver_)->SetPreconditioner(*prec_);
+  }
 }
 
 }  // namespace serac

@@ -59,6 +59,14 @@ public:
   void SetOperator(const mfem::Operator& op) override;
 
   /**
+   * @brief An overload for "intercepting" HypreParMatrices
+   * such that they can be converted to a SuperLURowLocMatrix
+   * when running in SuperLU mode
+   * @param[in] op The operator (system matrix) to use, "A" in Ax = b
+   */
+  void SetOperator(const mfem::HypreParMatrix& matrix);
+
+  /**
    * Solves the system
    * @param[in] b RHS of the system of equations
    * @param[out] x Solution to the system of equations
@@ -68,23 +76,66 @@ public:
 
   /**
    * Returns the underlying solver object
-   * @return A non-owning pointer to the underlying nonlinear solver
+   * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::IterativeSolver*       nonlinearSolver() { return nonlin_solver_.get(); }
-  const mfem::IterativeSolver* nonlinearSolver() const { return nonlin_solver_.get(); }
+  mfem::IterativeSolver&       nonlinearSolver() { return *nonlin_solver_; }
+  const mfem::IterativeSolver& nonlinearSolver() const { return *nonlin_solver_; }
 
   /**
    * Returns the underlying linear solver object
-   * @return A non-owning pointer to the underlying linear solver
+   * @return A non-owning reference to the underlying linear solver
    */
-  mfem::Solver*       linearSolver() { return lin_solver_.get(); }
-  const mfem::Solver* linearSolver() const { return lin_solver_.get(); }
+  mfem::Solver& linearSolver()
+  {
+    mfem::Solver* result;
+    std::visit([&result](auto&& solver) { result = solver.get(); }, lin_solver_);
+    return *result;
+  }
+  const mfem::Solver& linearSolver() const
+  {
+    mfem::Solver* result;
+    std::visit([&result](auto&& solver) { result = solver.get(); }, lin_solver_);
+    return *result;
+  }
 
 private:
-  std::unique_ptr<mfem::Solver>                         lin_solver_;
-  std::unique_ptr<mfem::IterativeSolver>                nonlin_solver_;
-  std::unique_ptr<mfem::Solver>                         prec_;
-  std::unique_ptr<mfem::SuperLURowLocMatrix>            superlu_mat_;
+  /**
+   * @brief Builds an iterative solver given a set of linear solver parameters
+   * @param[in] comm The MPI communicator object
+   * @param[in] lin_params The parameters for the linear solver
+   */
+  static std::unique_ptr<mfem::IterativeSolver> buildIterLinSolver(MPI_Comm                      comm,
+                                                                   const LinearSolverParameters& lin_params);
+
+  /**
+   * @brief Builds an Newton-Raphson solver given a set of nonlinear solver parameters
+   * @param[in] comm The MPI communicator object
+   * @param[in] nonlin_params The parameters for the linear solver
+   * @param[in] lin_solver The base linear solver object
+   */
+  static std::unique_ptr<mfem::NewtonSolver> buildNewtonSolver(MPI_Comm                         comm,
+                                                               const NonlinearSolverParameters& nonlin_params,
+                                                               mfem::Solver&                    lin_solver);
+
+  /**
+   * @brief The preconditioner (used for an iterative solver only)
+   */
+  std::unique_ptr<mfem::Solver> prec_;
+
+  /**
+   * @brief The linear solver object, either direct (SuperLU) or iterative
+   */
+  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<mfem::SuperLUSolver>> lin_solver_;
+
+  /**
+   * @brief The optional nonlinear Newton-Raphson solver object
+   */
+  std::unique_ptr<mfem::NewtonSolver> nonlin_solver_;
+
+  /**
+   * @brief The operator (system matrix) used with a SuperLU solver
+   */
+  std::optional<mfem::SuperLURowLocMatrix> superlu_mat_;
 };
 
 }  // namespace serac
