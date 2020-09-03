@@ -48,14 +48,16 @@ set(BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2019.08.15/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2020.01.09-clang-ibm-2019.10.03/bin/mpicxx" CACHE PATH "")
+set(MPI_CXX_COMPILER "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2019.08.15/bin/mpicxx" CACHE PATH "")
+
+set(MPIEXEC_EXECUTABLE "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2019.08.15/bin/mpiexec" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_08_27_11_50_19/clang-upstream_gfortran" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_09_02_21_58_06/clang-upstream_gfortran" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
@@ -66,6 +68,8 @@ set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2" CACHE PATH "")
 
 set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
+
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
 
 set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
@@ -78,14 +82,13 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 #------------------------------------------------------------------------------
 
 # Root directory for generated developer tools
-set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2020_08_31_12_14_52/gcc-8.3.1/" CACHE PATH "")
+set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2020_09_02_17_37_26/gcc-8.3.1" CACHE PATH "")
 
-set(ENABLE_DOCS ON CACHE BOOL "")
-
-set(DOXYGEN_EXECUTABLE "${DEVTOOLS_ROOT}/doxygen-1.8.17/bin/doxygen" CACHE PATH "")
-
-set(SPHINX_EXECUTABLE "/usr/tce/packages/python/python-3.8.2/bin/sphinx-build" CACHE PATH "")
+# Docs dont work on lassen, there is a prompt that waits for user input
+set(ENABLE_DOCS OFF CACHE BOOL "")
 
 set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format" CACHE PATH "")
 
-set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-1.87/bin/cppcheck" CACHE PATH "")
+set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-2.1/bin/cppcheck" CACHE PATH "")
+
+
