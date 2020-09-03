@@ -76,15 +76,11 @@ then
     echo "~~~~~ Building Serac"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-    rm -rf ${build_dir}
-    mkdir -p ${build_dir}
+    ./config-build.py -hc ${hostconfig_path}
 
     echo "~~~~~ Moving to ${build_dir}"
     cd ${build_dir}
 
-    cmake \
-      -C ${hostconfig_path} \
-      ${project_dir}
     cmake --build . -j
     echo -e "section_end:$(date +%s):build\r\e[0K"
 fi

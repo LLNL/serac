@@ -37,7 +37,7 @@ set(CUDA_TOOLKIT_ROOT_DIR "/usr/tce/packages/cuda/cuda-11.0.182" CACHE PATH "")
 
 set(CMAKE_CUDA_COMPILER "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" CACHE PATH "")
 
-set(CMAKE_CUDA_FLAGS "-arch sm_70 --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE STRING "")
+set(CMAKE_CUDA_FLAGS "-forward-unknown-to-host-compiler -arch sm_70 --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE STRING "")
 
 set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "")
 
