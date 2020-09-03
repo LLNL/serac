@@ -276,7 +276,7 @@ class Serac(CMakePackage, CudaPackage):
                 cuda_arch = spec.variants['cuda_arch'].value
                 flag = '-arch sm_{0}'.format(cuda_arch[0])
                 # CXX flags will be propagated to the host compiler
-                cuda_flags = "-forward-unknown-to-host-compiler " + ' '.join([flag, cxxflags])
+                cuda_flags = ' '.join([flag, cxxflags])
                 cfg.write(cmake_cache_string("CMAKE_CUDA_FLAGS", cuda_flags))
                 cfg.write(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES", ' '.join(cuda_arch)))
 
