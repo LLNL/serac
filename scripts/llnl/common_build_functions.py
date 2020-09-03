@@ -379,16 +379,23 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec):
         if os.path.exists(host_config) and not os.path.exists(dst):
             shutil.copy2(host_config, dst)
 
+    src_build_failed = False
     if not tpl_build_failed:
         # build the serac against the new tpls
         res = build_and_test_host_configs(prefix, timestamp, True)
         if res != 0:
             print "[ERROR: build and test of serac vs tpls test failed.]\n"
+            src_build_failed = True
         else:
             print "[SUCCESS: build and test of serac vs tpls test passed.]\n"
  
     # set proper perms for installed tpls
     set_group_and_perms(prefix)
+
+    if tpl_build_failed:
+        print "[ERROR: Failed to build all specs of third party libraries]"
+    if src_build_failed:
+        print "[ERROR: Failed to build all specs of source code against new host-configs]"
     return res
 
 
