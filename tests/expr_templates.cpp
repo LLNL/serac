@@ -106,7 +106,7 @@ TEST(expr_templates, move_from_temp_vec_lambda)
   }
 }
 
-TEST(expr_templates, basic_matvec)
+TEST(expr_templates, small_matvec)
 {
   constexpr int     rows = 10;
   constexpr int     cols = 12;
@@ -130,7 +130,7 @@ TEST(expr_templates, basic_matvec)
   }
 }
 
-TEST(expr_templates, complex_expr)
+TEST(expr_templates, small_mixed_expr)
 {
   constexpr int rows = 10;
   mfem::Vector  lhs(rows);
@@ -150,21 +150,98 @@ TEST(expr_templates, complex_expr)
     }
   }
 
-  mfem::Vector matvec(rows);
-  matrix.Mult(vec_in, matvec);
-
-  mfem::Vector vec_negate_scale(rows);
-  add(-1.0, lhs, 3.0, rhs, vec_negate_scale);
+  constexpr int trials     = 100;
+  double        mfem_total = 0.0;
+  double        expr_total = 0.0;
 
   mfem::Vector mfem_result(rows);
-  add(vec_negate_scale, -0.3, matvec, mfem_result);
+  mfem::Vector expr_result(rows);
 
-  mfem::Vector expr_result = -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in);
+  // Add lhs + rhs once
+  for (int i = 0; i < trials; i++) {
+    auto mfem_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      mfem::Vector matvec(rows);
+      matrix.Mult(vec_in, matvec);
+
+      mfem::Vector vec_negate_scale(rows);
+      add(-1.0, lhs, 3.0, rhs, vec_negate_scale);
+
+      add(vec_negate_scale, -0.3, matvec, mfem_result);
+    }
+    mfem_total += (std::chrono::steady_clock::now() - mfem_start).count();
+    auto expr_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      expr_result = -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in);
+    }
+    expr_total += (std::chrono::steady_clock::now() - expr_start).count();
+  }
+  const auto mfem_avg = mfem_total / trials;
+  const auto expr_avg = expr_total / trials;
+  std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
   for (int i = 0; i < cols; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+
+}
+
+TEST(expr_templates, large_mixed_expr)
+{
+  constexpr int rows = 10000;
+  mfem::Vector  lhs(rows);
+  mfem::Vector  rhs(rows);
+  for (int i = 0; i < rows; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+
+  constexpr int     cols = 1200;
+  mfem::Vector      vec_in(cols);
+  mfem::DenseMatrix matrix(rows, cols);
+  for (int i = 0; i < cols; i++) {
+    vec_in[i] = i * 4 + 1;
+    for (int j = 0; j < rows; j++) {
+      matrix(j, i) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
+    }
+  }
+
+  constexpr int trials     = 10;
+  double        mfem_total = 0.0;
+  double        expr_total = 0.0;
+
+  mfem::Vector mfem_result(rows);
+  mfem::Vector expr_result(rows);
+
+  // Add lhs + rhs once
+  for (int i = 0; i < trials; i++) {
+    auto mfem_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      mfem::Vector matvec(rows);
+      matrix.Mult(vec_in, matvec);
+
+      mfem::Vector vec_negate_scale(rows);
+      add(-1.0, lhs, 3.0, rhs, vec_negate_scale);
+
+      add(vec_negate_scale, -0.3, matvec, mfem_result);
+    }
+    mfem_total += (std::chrono::steady_clock::now() - mfem_start).count();
+    auto expr_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      expr_result = -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in);
+    }
+    expr_total += (std::chrono::steady_clock::now() - expr_start).count();
+  }
+  const auto mfem_avg = mfem_total / trials;
+  const auto expr_avg = expr_total / trials;
+  std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < cols; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+
 }
 
 TEST(expr_templates, complex_expr_lambda)
@@ -208,7 +285,7 @@ TEST(expr_templates, complex_expr_lambda)
   }
 }
 
-TEST(expr_templates, vec_single_add_time_check)
+TEST(expr_templates, small_vec_single_add_time_check)
 {
   constexpr int rows = 10;
   mfem::Vector  lhs(rows);
@@ -225,7 +302,7 @@ TEST(expr_templates, vec_single_add_time_check)
   for (int i = 0; i < trials; i++) {
     auto mfem_start = std::chrono::steady_clock::now();
     for (int j = 0; j < trials; j++) {
-      mfem::Vector mfem_result;
+      mfem::Vector mfem_result(rows);
       add(lhs, rhs, mfem_result);
     }
     mfem_total += (std::chrono::steady_clock::now() - mfem_start).count();
@@ -240,7 +317,39 @@ TEST(expr_templates, vec_single_add_time_check)
   std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
 }
 
-TEST(expr_templates, vec_multi_add_time_check)
+TEST(expr_templates, large_vec_single_add_time_check)
+{
+  constexpr int rows = 100000;
+  mfem::Vector  lhs(rows);
+  mfem::Vector  rhs(rows);
+  for (int i = 0; i < rows; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+  constexpr int trials     = 10;
+  double        mfem_total = 0.0;
+  double        expr_total = 0.0;
+
+  // Add lhs + rhs once
+  for (int i = 0; i < trials; i++) {
+    auto mfem_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      mfem::Vector mfem_result(rows);
+      add(lhs, rhs, mfem_result);
+    }
+    mfem_total += (std::chrono::steady_clock::now() - mfem_start).count();
+    auto expr_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      const mfem::Vector expr_result = lhs + rhs;
+    }
+    expr_total += (std::chrono::steady_clock::now() - expr_start).count();
+  }
+  const auto mfem_avg = mfem_total / trials;
+  const auto expr_avg = expr_total / trials;
+  std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+}
+
+TEST(expr_templates, small_vec_multi_add_time_check)
 {
   constexpr int rows = 10;
   mfem::Vector  lhs(rows);
@@ -258,7 +367,48 @@ TEST(expr_templates, vec_multi_add_time_check)
   for (int i = 0; i < trials; i++) {
     auto mfem_start = std::chrono::steady_clock::now();
     for (int j = 0; j < trials; j++) {
-      mfem::Vector mfem_result;
+      mfem::Vector mfem_result(rows);
+      add(lhs, rhs, mfem_result);
+      add(mfem_result, lhs, mfem_result);
+      add(mfem_result, rhs, mfem_result);
+      add(mfem_result, lhs, mfem_result);
+      add(mfem_result, rhs, mfem_result);
+      add(mfem_result, lhs, mfem_result);
+      add(mfem_result, rhs, mfem_result);
+      add(mfem_result, lhs, mfem_result);
+      add(mfem_result, rhs, mfem_result);
+    }
+    mfem_total += (std::chrono::steady_clock::now() - mfem_start).count();
+    auto expr_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      const mfem::Vector expr_result = lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs;
+    }
+    expr_total += (std::chrono::steady_clock::now() - expr_start).count();
+  }
+  const auto mfem_avg = mfem_total / trials;
+  const auto expr_avg = expr_total / trials;
+  std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+}
+
+TEST(expr_templates, large_vec_multi_add_time_check)
+{
+  constexpr int rows = 100000;
+  mfem::Vector  lhs(rows);
+  mfem::Vector  rhs(rows);
+  for (int i = 0; i < rows; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+  constexpr int trials     = 10;
+  double        mfem_total = 0.0;
+  double        expr_total = 0.0;
+
+  // Add lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs
+  // Unrealistic, but aims to simulate larger expressions
+  for (int i = 0; i < trials; i++) {
+    auto mfem_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      mfem::Vector mfem_result(rows);
       add(lhs, rhs, mfem_result);
       add(mfem_result, lhs, mfem_result);
       add(mfem_result, rhs, mfem_result);
