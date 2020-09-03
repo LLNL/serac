@@ -60,7 +60,7 @@ then
     build_root=$(pwd)
 fi
 
-build_dir="${build_root}/build_${hostconfig//.cmake/}"
+build_dir="${build_root}/build_${hostconfig//.cmake/}-debug"
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "~~~~~ Host-config: ${hostconfig_path}"
