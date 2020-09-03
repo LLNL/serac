@@ -157,7 +157,7 @@ TEST(expr_templates, small_mixed_expr)
   mfem::Vector mfem_result(rows);
   mfem::Vector expr_result(rows);
 
-  // Add lhs + rhs once
+  // -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in)
   for (int i = 0; i < trials; i++) {
     auto mfem_start = std::chrono::steady_clock::now();
     for (int j = 0; j < trials; j++) {
@@ -184,7 +184,6 @@ TEST(expr_templates, small_mixed_expr)
   for (int i = 0; i < cols; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
-
 }
 
 TEST(expr_templates, large_mixed_expr)
@@ -214,7 +213,7 @@ TEST(expr_templates, large_mixed_expr)
   mfem::Vector mfem_result(rows);
   mfem::Vector expr_result(rows);
 
-  // Add lhs + rhs once
+  // -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in)
   for (int i = 0; i < trials; i++) {
     auto mfem_start = std::chrono::steady_clock::now();
     for (int j = 0; j < trials; j++) {
@@ -241,7 +240,6 @@ TEST(expr_templates, large_mixed_expr)
   for (int i = 0; i < cols; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
-
 }
 
 TEST(expr_templates, complex_expr_lambda)
