@@ -407,7 +407,7 @@ class Serac(CMakePackage, CudaPackage):
         else:
             cfg.write(cmake_cache_option("ENABLE_DOCS", False))
 
-        clangformatpath = "/usr/tce/packages/clang/clang-9.0.0/bin/clang-format"
+        clangformatpath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format"
         if os.path.exists(clangformatpath):
             cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", clangformatpath))
 
