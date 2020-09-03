@@ -1,85 +1,108 @@
 packages:
   all:
-    compiler: [gcc, clang]
+    compiler: [gcc]
     providers:
       mpi: [mpich]
       blas: [openblas]
       lapack: [openblas]
       gl: [opengl]
       glu: [openglu]
+
+  # Lock down which MPI we are using
+  mpi:
+    buildable: false
+  mpich:
+    externals:
+    - spec: mpich@3.3a2%gcc@8.4.0
+      prefix: /usr
+
 # Lock down versions of packages we depend on
   opengl:
-    paths:
-      opengl@1.0.0: /usr
-    buildable: False
+    buildable: false
+    externals:
+    - spec: opengl@1.0.0
+      prefix: /usr
   openglu:
-    paths:
-      openglu@1.3.1: /usr
-    buildable: False
+    buildable: false
+    externals:
+    - spec: openglu@1.3.1
+      prefix: /usr
   bzip2:
-   paths:
-      bzip2: /
-   buildable: False
+    buildable: false
+    externals:
+    - spec: bzip2
+      prefix: /
   gettext:
-   paths:
-      gettext: /usr
-   buildable: False
+    buildable: false
+    externals:
+    - spec: gettext
+      prefix: /usr
   perl:
-    paths:
-      perl: /usr
-    buildable: False 
+    buildable: false
+    externals:
+    - spec: perl
+      prefix: /usr
   tar:
-    paths:
-      tar: /
-    buildable: False
+    buildable: false
+    externals:
+    - spec: tar
+      prefix: /
   libx11:
-    paths:
-      libx11: /usr
-    buildable: False
+    buildable: false
+    externals:
+    - spec: libx11
+      prefix: /usr
   autoconf:
-    paths:
-      autoconf: /usr
-    buildable: False
+    buildable: false
+    externals:
+    - spec: autoconf
+      prefix: /usr
   flex:
-    paths:
-      flex: /usr
-    buildable: False
+    buildable: false
+    externals:
+    - spec: flex
+      prefix: /usr
   openmpi:
-    paths:
-      openmpi: /usr
+    externals:
+    - spec: openmpi
+      prefix: /usr
   openssl:
-    paths:
-      openssl: /usr/lib/x86_64-linux-gnu/
+    externals:
+    - spec: openssl
+      prefix: /usr/lib/x86_64-linux-gnu/
   openblas:
-    paths:
-      openblas: /usr/lib/x86_64-linux-gnu/
-    buildable: False
-  mpich:
-    paths:
-      mpich@3.3a2%gcc@7.5.0: /usr
-    buildable: False
+    buildable: false
+    externals:
+    - spec: openblas
+      prefix: /usr/lib/x86_64-linux-gnu/
+
+  # Lock in versions of Devtools
   cmake:
-    paths:
-      cmake@3.10.2: /usr
-    buildable: False
-# Lock in versions of Devtools
+    buildable: false
+    externals:
+    - spec: cmake@3.10.2
+      prefix: /usr
   cppcheck:
     version: [1.82]
-    paths:
-      cppcheck: /usr
-    buildable: False
+    buildable: false
+    externals:
+    - spec: cppcheck
+      prefix: /usr
   doxygen:
     version: [1.8.13]
-    paths:
-      doxygen: /usr
-    buildable: False   
+    buildable: false
+    externals:
+    - spec: doxygen
+      prefix: /usr
   python:
     version: [3.6.9]
-    paths:
-      python: /usr
-    buildable: False
+    buildable: false
+    externals:
+    - spec: python
+      prefix: /usr
   py-sphinx:
     version: [1.6.7]
-    paths:
-      py-sphinx: /usr
-    buildable: False
+    buildable: false
+    externals:
+    - spec: py-sphinx
+      prefix: /usr

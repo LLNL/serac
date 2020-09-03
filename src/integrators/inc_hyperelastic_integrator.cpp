@@ -6,6 +6,8 @@
 
 #include "inc_hyperelastic_integrator.hpp"
 
+#include "common/profiling.hpp"
+
 namespace serac {
 
 double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
@@ -92,6 +94,8 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
                                                             mfem::ElementTransformation& Ttr, const mfem::Vector& elfun,
                                                             mfem::DenseMatrix& elmat)
 {
+  SERAC_MARK_FUNCTION;
+
   int dof = el.GetDof(), dim = el.GetDim();
 
   DSh_.SetSize(dof, dim);
@@ -108,7 +112,9 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
 
   elmat = 0.0;
   model_->SetTransformation(Ttr);
+  SERAC_MARK_LOOP_START(ip_loop_id, "IntegrationPt Loop");
   for (int i = 0; i < ir->GetNPoints(); i++) {
+    SERAC_MARK_LOOP_ITER(ip_loop_id, i);
     const mfem::IntegrationPoint& ip = ir->IntPoint(i);
     Ttr.SetIntPoint(&ip);
     CalcInverse(Ttr.Jacobian(), Jrt_);
@@ -123,6 +129,7 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
 
     model_->AssembleH(Jpt_, DS_, ip.weight * Ttr.Weight(), elmat);
   }
+  SERAC_MARK_LOOP_END(ip_loop_id);
 }
 
 }  // namespace serac

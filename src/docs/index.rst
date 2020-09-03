@@ -29,11 +29,11 @@ Serac is hosted on `GitHub <https://github.com/LLNL/serac>`_. Serac uses git sub
    # for some commands
    $ git clone --recursive https://github.com/LLNL/serac.git
 
-Preparing Windows WSL/Ubuntu 18.04 for Serac installation
+Preparing Windows WSL/Ubuntu for Serac installation
 ---------------------------------------------------------
 
-For faster installation of the Serac dependencies via Spack on Windows WSL/Ubuntu 18.04 and WSL/Ubuntu 20.04 systems, install cmake, 
-MPICH, openblas, OpenGL, and the devtools using the following commands:
+For faster installation of the Serac dependencies via Spack on Windows WSL/Ubuntu systems, install cmake, MPICH, openblas, OpenGL, and the devtools
+using the following commands for Ubuntu 20.04:
 
 .. code-block:: bash
 
@@ -42,7 +42,18 @@ MPICH, openblas, OpenGL, and the devtools using the following commands:
    $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
-Note that the last line is required since Spack expects the system libraries to exist in a directory named `lib`. During the third
+and the following commands for Ubuntu 18.04:
+
+.. code-block:: bash
+
+   $ sudo apt-get update
+   $ sudo apt-get upgrade
+   $ sudo apt-get install g++-8 gcc-8
+   $ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
+   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev
+   $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
+
+Note that the last line is required since Spack expects the system libraries to exist in a directory named ``lib``. During the third
 party library build phase, the appropriate Spack config directory must be specified using either 
 ``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_18`` or
 ``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_20`` as appropriate.
@@ -196,4 +207,5 @@ LLNL-CODE-805541
    sphinx/expr_templates
    sphinx/logging
    sphinx/memory_checking
+   sphinx/profiling
    sphinx/style_guide
