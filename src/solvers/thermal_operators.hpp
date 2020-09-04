@@ -86,27 +86,27 @@ protected:
   /**
    * @brief Solver for the mass matrix
    */
-  EquationSolver M_solver_;
+  EquationSolver M_inv_;
 
   /**
    * @brief Solver for the T matrix
    */
-  EquationSolver T_solver_;
+  EquationSolver T_inv_;
 
   /**
    * @brief Non-owning pointer to the assembled M matrix
    */
-  const mfem::HypreParMatrix* M_mat_ = nullptr;
+  const mfem::HypreParMatrix* M_ = nullptr;
 
   /**
    * @brief Non-owning pointer to the assembled K matrix
    */
-  mfem::HypreParMatrix* K_mat_ = nullptr;
+  mfem::HypreParMatrix* K_ = nullptr;
 
   /**
    * @brief Pointer to the assembled T ( = M + dt K) matrix
    */
-  std::unique_ptr<mfem::HypreParMatrix> T_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> T_;
 
   /**
    * @brief Non-owning ptr to assembled RHS vector

@@ -38,47 +38,57 @@ packages:
       szip: [libszip, libaec]
       tbb: [intel-tbb]
       jpeg: [libjpeg-turbo, libjpeg]
+
   # Spack may grab for mpi & we don't want to use them
-  charm:
-    buildable: False
-  mpilander:
-    buildable: False
+  mpi:
+    buildable: false
+  mpich:
+    externals:
+    - spec: mpich@3.3
+      prefix: /usr
+
   # System level packages to not build
   autotools:
-    paths:
-      autotools: /usr/bin/
-    buildable: False
+    buildable: false
+    externals:
+    - spec: autotools
+      prefix: /usr/bin/
   bzip2:
-    paths:
-      bzip2: /usr/bin/
-    buildable: False
+    buildable: false
+    externals:
+    - spec: bzip2
+      prefix: /usr/bin/
   gettext:
-    paths:
-      gettext: /usr/bin/
-    buildable: False
+    buildable: false
+    externals:
+    - spec: gettext
+      prefix: /usr/bin/
   m4:
-    paths:
-      m4: /usr/bin/
-    buildable: False
+    buildable: false
+    externals:
+    - spec: m4
+      prefix: /usr/bin/
   pkg-config:
-    paths:
-      pkg-config: /usr/bin/
-    buildable: False
+    buildable: false
+    externals:
+    - spec: pkg-config
+      prefix: /usr/bin/
   tar:
-    paths:
-      tar: /usr/bin/
-    buildable: False
+    buildable: false
+    externals:
+    - spec: tar
+      prefix: /usr/bin/
   graphviz:
-    paths:
-      graphviz: /usr/bin/
-    buildable: False
+    buildable: false
+    externals:
+    - spec: graphviz
+      prefix: /usr/bin/
   openblas:
-    paths:
-      openblas: /usr
-    buildable: False
-  mpich:
-    paths:
-      mpich@3.3: /usr
+    buildable: false
+    externals:
+    - spec: openblas
+      prefix: /usr
+
   # Globally lock in version of CMake
   cmake:
     version: [3.10.1]

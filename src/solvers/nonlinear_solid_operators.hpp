@@ -106,7 +106,7 @@ public:
    * @brief Compute y = H(x + dt (v + dt k)) + M k + S (v + dt k).
    *
    * @param[in] k The input state to evaluate the residual
-   * @param[out] y The output state to evalutae the residual
+   * @param[out] y The output state to evaluate the residual
    */
   virtual void Mult(const mfem::Vector& k, mfem::Vector& y) const;
 
@@ -151,7 +151,7 @@ private:
   double dt_;
 
   /**
-   * @brief The current displacement and velocity vectors
+   * @brief The current velocity and displacement vectors
    */
   const mfem::Vector *v_, *x_;
 
@@ -234,7 +234,7 @@ protected:
   /**
    * @brief The CG solver for the mass matrix
    */
-  EquationSolver M_solver_;
+  EquationSolver M_inv_;
 
   /**
    * @brief The reduced system operator for applying the bilinear and nonlinear forms
