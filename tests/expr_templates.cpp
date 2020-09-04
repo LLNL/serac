@@ -125,7 +125,7 @@ TEST(expr_templates, small_matvec)
   mfem::Vector expr_result = matrix * vec_in;
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
-  for (int i = 0; i < cols; i++) {
+  for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
 }
@@ -181,7 +181,7 @@ TEST(expr_templates, small_mixed_expr)
   std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
-  for (int i = 0; i < cols; i++) {
+  for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
 }
@@ -237,7 +237,7 @@ TEST(expr_templates, large_mixed_expr)
   std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
-  for (int i = 0; i < cols; i++) {
+  for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
 }
@@ -278,7 +278,7 @@ TEST(expr_templates, complex_expr_lambda)
   mfem::Vector expr_result = lambda_expr(lhs, rhs, matrix, vec_in);
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
-  for (int i = 0; i < cols; i++) {
+  for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
 }
