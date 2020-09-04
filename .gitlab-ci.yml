@@ -12,13 +12,13 @@ variables:
 
 # There are no tests for now
 stages:
-  - q_allocate_resources
-  - q_build
-  - q_build_devtools
-  - q_release_resources
-  - q_build_with_deps
   - l_build
   - l_build_with_deps
+  - q_allocate_resources
+  - q_build
+  - q_build_with_deps
+  - q_build_devtools
+  - q_release_resources
 
 # Whether and how to update uberenv
 .run_update_uberenv: &run_update_uberenv |
