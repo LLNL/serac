@@ -31,7 +31,7 @@ def parse_args():
     parser.add_option("--host-config",
                       dest="hostconfig",
                       default="",
-                      help="Build a specific hostconfig (defaults to all valid hostconfigs for machine)")
+                      help="Build a specific hostconfig (defaults to env $HOST_CONFIG, then to $SYS_TYPE/$COMPILER available)")
 
     ###############
     # parse args
