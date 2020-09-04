@@ -30,7 +30,7 @@ namespace serac {
 class BoundaryCondition {
 public:
   /**
-   * Constructor for setting up a boundary condition using a set of attributes
+   * @brief Constructor for setting up a boundary condition using a set of attributes
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
    * should be -1 for all components
@@ -40,7 +40,7 @@ public:
   BoundaryCondition(GeneralCoefficient coef, const int component, const std::set<int>& attrs, const int num_attrs = 0);
 
   /**
-   * Minimal constructor for setting the true DOFs directly
+   * @brief Minimal constructor for setting the true DOFs directly
    * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
    * @param[in] component The zero-indexed vector component if the BC applies to just one component,
    * should be -1 for all components
@@ -48,8 +48,16 @@ public:
    */
   BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs);
 
+  /**
+   * @brief Returns a non-owning reference to the array of boundary
+   * attribute markers
+   */
   const mfem::Array<int>& markers() const { return markers_; }
 
+  /**
+   * @brief Returns a non-owning reference to the array of boundary
+   * attribute markers
+   */
   mfem::Array<int>& markers() { return markers_; }
 
   /**
@@ -93,18 +101,22 @@ public:
   mfem::Coefficient& scalarCoefficient();
 
   /**
-   * "Manually" set the DOF indices without specifying the field to which they apply
+   * @brief "Manually" set the DOF indices without specifying the field to which they apply
    * @param[in] dofs The indices of the DOFs constrained by the boundary condition
    */
   void setTrueDofs(const mfem::Array<int> dofs);
 
   /**
-   * Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
+   * @brief Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
    * determine the DOFs for the boundary condition
    * @param[in] state The finite element state for which the DOFs should be obtained
    */
   void setTrueDofs(FiniteElementState& state);
 
+  /**
+   * @brief Returns the DOF indices for an essential boundary condition
+   * @return A non-owning reference to the array of indices
+   */
   const mfem::Array<int>& getTrueDofs() const
   {
     SLIC_ERROR_IF(!true_dofs_, "True DOFs only available with essential BC.");
@@ -116,22 +128,20 @@ public:
   void removeAttr(const int attr) { markers_[attr - 1] = 0; }
 
   /**
-   * Projects the boundary condition over a field
+   * @brief Projects the boundary condition over a field
    * @param[inout] state The field to project over
-   * @param[in] fes The finite element space that should be used to generate
-   * the scalar DOF list
    */
   void project(FiniteElementState& state) const;
 
   /**
-   * Projects the boundary condition over a grid function
+   * @brief Projects the boundary condition over a grid function
    * @pre A corresponding field (FiniteElementState) has been associated
    * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
    */
   void project() const;
 
   /**
-   * Projects the boundary condition over boundary DOFs of a grid function
+   * @brief Projects the boundary condition over boundary DOFs of a grid function
    * @param[inout] gf The grid function representing the field to project over
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
@@ -139,7 +149,7 @@ public:
   void projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar = true) const;
 
   /**
-   * Projects the boundary condition over boundary DOFs of a field
+   * @brief Projects the boundary condition over boundary DOFs of a field
    * @param[inout] state The field to project over
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
@@ -147,7 +157,7 @@ public:
   void projectBdr(FiniteElementState& state, const double time, const bool should_be_scalar = true) const;
 
   /**
-   * Projects the boundary condition over boundary DOFs
+   * @brief Projects the boundary condition over boundary DOFs
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    * @pre A corresponding field (FiniteElementState) has been associated
@@ -156,7 +166,7 @@ public:
   void projectBdr(const double time, const bool should_be_scalar = true) const;
 
   /**
-   * Allocates an integrator of type "Integrator" on the heap,
+   * @brief Allocates an integrator of type "Integrator" on the heap,
    * constructing it with the boundary condition's vector coefficient,
    * intended to be passed to mfem::*LinearForm::Add*Integrator
    * @return An owning pointer to the new integrator
@@ -166,7 +176,7 @@ public:
   std::unique_ptr<Integrator> newVecIntegrator() const;
 
   /**
-   * Allocates an integrator of type "Integrator" on the heap,
+   * @brief Allocates an integrator of type "Integrator" on the heap,
    * constructing it with the boundary condition's coefficient,
    * intended to be passed to mfem::*LinearForm::Add*Integrator
    * @return An owning pointer to the new integrator
@@ -176,7 +186,7 @@ public:
   std::unique_ptr<Integrator> newIntegrator() const;
 
   /**
-   * Eliminates the rows and columns corresponding to the BC's true DOFS
+   * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
    * from a stiffness matrix
    * @param[inout] k_mat The stiffness matrix to eliminate from,
    * will be modified.  These eliminated matrix entries can be
@@ -186,7 +196,7 @@ public:
   void eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const;
 
   /**
-   * Eliminates boundary condition from solution to RHS
+   * @brief Eliminates boundary condition from solution to RHS
    * @param[in] k_mat_post_elim A stiffness matrix post-elimination
    * @param[in] soln The solution vector
    * @param[out] rhs The RHS vector for the system
@@ -195,7 +205,7 @@ public:
   void eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln, mfem::Vector& rhs) const;
 
   /**
-   * Applies an essential boundary condition to RHS
+   * @brief Applies an essential boundary condition to RHS
    * @param[in] k_mat_post_elim A stiffness (system) matrix post-elimination
    * @param[out] rhs The RHS vector for the system
    * @param[inout] state The state from which the solution DOF values are extracted and used to eliminate
