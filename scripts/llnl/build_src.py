@@ -87,7 +87,7 @@ def main():
 
           test_root = get_build_and_test_root(repo_dir, timestamp)
           os.mkdir(test_root)
-          res = build_and_test_host_config(test_root, hostconfig_path)
+          res = build_and_test_host_config(test_root, hostconfig_path, True)
         else:
           res = build_and_test_host_configs(repo_dir, timestamp, False)
 

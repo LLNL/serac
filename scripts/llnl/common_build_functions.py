@@ -167,7 +167,7 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     return res
 
 
-def build_and_test_host_config(test_root,host_config):
+def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
     host_config_root = get_host_config_root(host_config)
 
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
@@ -198,6 +198,10 @@ def build_and_test_host_config(test_root,host_config):
                 output_file = bld_output_file,
                 echo=True)
 
+    if report_to_stdout:
+        with open(bld_output_file, 'r') as build_out:
+            print(build_out.read())
+
     if res != 0:
         print("[ERROR: Build for host-config: %s failed]\n" % host_config)
         return res
@@ -213,6 +217,10 @@ def build_and_test_host_config(test_root,host_config):
                output_file = tst_output_file,
                echo=True)
 
+    if report_to_stdout:
+        with open(tst_output_file, 'r') as test_out:
+            print(test_out.read())
+
     if res != 0:
         print("[ERROR: Tests for host-config: %s failed]\n" % host_config)
         return res
@@ -225,6 +233,10 @@ def build_and_test_host_config(test_root,host_config):
     res = sexe("cd %s && make docs " % build_dir,
                output_file = docs_output_file,
                echo=True)
+
+    if report_to_stdout:
+        with open(docs_output_file, 'r') as docs_out:
+            print(docs_out.read())
 
     if res != 0:
         print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
