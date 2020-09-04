@@ -37,5 +37,7 @@ clang_upstream_gfortran (PR build_on_lassen):
 clang_upstream_gfortran (Main build_with_deps_on_lassen):
   variables:
     COMPILER: "clang@upstream_gfortran"
-    SPEC: "@develop%${COMPILER}"
+    SPEC: "\"@develop+cuda%${COMPILER} cuda_arch=70\""
+    # The "-cuda" at the end of the host-config needs to be hardcoded for now
+    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}-cuda.cmake"
   extends: [.main_build_with_deps_on_lassen, .with_cuda]
