@@ -66,30 +66,46 @@ def main():
         original_wd = os.getcwd()
         os.chdir(repo_dir)
         timestamp = get_timestamp()
+        # Command-line arg has highest priority
         if opts["hostconfig"] != "":
           hostconfig = opts["hostconfig"]
+        
+        # Then check the environment
+        elif os.environ.get("HOST_CONFIG") != None:
+            hostconfig = os.environ["HOST_CONFIG"]
+        
+        # Otherwise try to build it
+        else:
+            import socket
+            hostname = socket.gethostname()
+            # Remove any numbers after the end
+            hostname = hostname.rstrip('0123456789')
+            sys_type = os.environ["SYS_TYPE"]
+            # Remove everything including and after the last hyphen
+            sys_type = sys_type.rsplit('-', 1)[0]
+            compiler = os.environ["COMPILER"]
+            compiler = compiler.rsplit('-', 1)[0]
+            hostconfig = "{}-{}-{}.cmake".format(hostname, sys_type, compiler)
 
-          # First try with where uberenv generates host-configs.
-          hostconfig_path = os.path.join(repo_dir, hostconfig + ".cmake")
-          if not os.path.isfile(hostconfig_path):
+        # First try with where uberenv generates host-configs.
+        hostconfig_path = os.path.join(repo_dir, hostconfig + ".cmake")
+        if not os.path.isfile(hostconfig_path):
             print("[WARNING: Spack generated host-config not found, trying with predefined]")
 
-          # Then look into project predefined host-configs.
-          hostconfig_path = os.path.join(repo_dir, "host-configs", hostconfig + ".cmake")
-          if not os.path.isfile(hostconfig_path):
+        # Then look into project predefined host-configs.
+        hostconfig_path = os.path.join(repo_dir, "host-configs", hostconfig + ".cmake")
+        if not os.path.isfile(hostconfig_path):
             print("[WARNING: Predefined host-config not found, trying with Docker]")
 
-          # Otherwise look into project predefined Docker host-configs.
-          hostconfig_path = os.path.join(repo_dir, "host-configs", "docker", hostconfig + ".cmake")
-          if not os.path.isfile(hostconfig_path):
+        # Otherwise look into project predefined Docker host-configs.
+        hostconfig_path = os.path.join(repo_dir, "host-configs", "docker", hostconfig + ".cmake")
+        if not os.path.isfile(hostconfig_path):
             print("[WARNING: Predefined Docker host-config not found, exiting]")
             return 1
 
-          test_root = get_build_and_test_root(repo_dir, timestamp)
-          os.mkdir(test_root)
-          res = build_and_test_host_config(test_root, hostconfig_path, True)
-        else:
-          res = build_and_test_host_configs(repo_dir, timestamp, False)
+        test_root = get_build_and_test_root(repo_dir, timestamp)
+        os.mkdir(test_root)
+        res = build_and_test_host_config(test_root, hostconfig_path, True)
 
     finally:
         os.chdir(original_wd)
