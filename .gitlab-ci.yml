@@ -19,10 +19,6 @@ stages:
   - q_build_with_deps
   - q_build_devtools
   - q_release_resources
-<<<<<<< HEAD
-=======
-  - q_build_with_deps
->>>>>>> develop
 
 # Whether and how to update uberenv
 .run_update_uberenv: &run_update_uberenv |
