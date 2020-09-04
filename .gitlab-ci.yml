@@ -95,7 +95,7 @@ stages:
     #DEPENDENCIES
     - echo -e "section_start:$(date +%s):dependencies\r\e[0K
       Build dependencies and generate host-config file (uberenv)"
-    - lalloc 1 -W 20 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py --spec=${SPEC} --directory=${CI_PROJECT_NAME}
+    - lalloc 1 -W 20 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py --spec=${SPEC} ${EXTRA_SPEC} --directory=${CI_PROJECT_NAME}
     - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD
     - echo -e "Build ${CI_PROJECT_NAME}"
