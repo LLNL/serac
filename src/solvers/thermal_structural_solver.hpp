@@ -65,7 +65,7 @@ public:
   /**
    * @brief Set the temperature state vector from a coefficient
    *
-   * @param[in] The temperature coefficient
+   * @param[in] temp The temperature coefficient
    */
   void SetTemperature(mfem::Coefficient& temp) { therm_solver_.setTemperature(temp); };
 
@@ -218,7 +218,7 @@ public:
   /**
    * @brief Advance the timestep
    *
-   * @param[in/out] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping schemes
+   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping schemes
    */
   void advanceTimestep(double& dt) override;
 
