@@ -72,13 +72,13 @@ def main():
         os.chdir(repo_dir)
         timestamp = get_timestamp()
 
-        if ops["build_all"] != "":
+        if opts["build_all"] != "":
             res = build_and_test_host_configs(repo_dir, job_name, timestamp, False)
         # Otherwise try to build a specific host-config
         else:
             # Command-line arg has highest priority
             if opts["hostconfig"] != "":
-            hostconfig = opts["hostconfig"]
+                hostconfig = opts["hostconfig"]
             
             # Then check the environment
             elif os.environ.get("HOST_CONFIG") != None:
