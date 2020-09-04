@@ -12,13 +12,13 @@ variables:
 
 # There are no tests for now
 stages:
+  - l_build
+  - l_build_with_deps
   - q_allocate_resources
   - q_build
   - q_build_devtools
   - q_release_resources
   - q_build_with_deps
-  - l_build
-  - l_build_with_deps
 
 # Whether and how to update uberenv
 .run_update_uberenv: &run_update_uberenv |
@@ -93,8 +93,10 @@ stages:
   script:
     - *run_update_uberenv
     #DEPENDENCIES
-    - echo -e "Build dependencies and generate host-config file (uberenv)"
-    - lalloc 1 -W 20 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --deps-only
+    - echo -e "section_start:$(date +%s):dependencies\r\e[0K
+      Build dependencies and generate host-config file (uberenv)"
+    - lalloc 1 -W 20 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_PROJECT_NAME}
+    - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD
     - echo -e "Build ${CI_PROJECT_NAME}"
     - lalloc 1 -W 5 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --build-only
