@@ -36,6 +36,7 @@ packages:
       tbb: [intel-tbb]
       jpeg: [libjpeg-turbo, libjpeg]
     variants: ~openmp
+
 # custom variants
   conduit:
     version: [master]
@@ -47,13 +48,17 @@ packages:
   hwloc:
     variants: ~libxml2
   perl:
-    paths:
-      perl: /usr/
-    buildable: False
+    buildable: false
+    externals:
+    - spec: perl
+      prefix: /usr/
+
 # CUDA standard MacOS install paths
   cuda:
-    paths:
-      cuda@8.0: /Developer/NVIDIA/CUDA-8.0
-      cuda@9.0: /Developer/NVIDIA/CUDA-9.0
-    buildable: False
+    buildable: false
 
+    externals:
+    - spec: cuda@8.0
+      prefix: /Developer/NVIDIA/CUDA-8.0
+    - spec: cuda@9.0
+      prefix: /Developer/NVIDIA/CUDA-9.0

@@ -15,13 +15,10 @@
 
     "toss_3_x86_64_ib":
     [ "clang@9.0.0+devtools",
-      "gcc@8.1.0+devtools",
-      "intel@19.0.4+devtools" ],
+      "gcc@8.1.0+devtools" ],
 
     "blueos_3_ppc64le_ib_p9":
-    [ "clang@coral+devtools",
-      "gcc@4.9.3+devtools",
-      "xl@coral+devtools" ],
+    [ "clang@upstream_gfortran+devtools+cuda cuda_arch=70" ],
 
     "darwin-x86_64":
     [ "clang@9.0.0+devtools" ]
