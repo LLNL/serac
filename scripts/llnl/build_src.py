@@ -85,24 +85,24 @@ def main():
             sys_type = sys_type.rsplit('-', 1)[0]
             compiler = os.environ["COMPILER"]
             compiler = compiler.rsplit('-', 1)[0]
-            hostconfig = "{}-{}-{}.cmake".format(hostname, sys_type, compiler)
+            hostconfig = "%s-%s-%s.cmake" % (hostname, sys_type, compiler)
 
         # First try with where uberenv generates host-configs.
         hostconfig_path = os.path.join(repo_dir, hostconfig)
         if not os.path.isfile(hostconfig_path):
-            print("[INFO: Looking for hostconfig at {}]".fornat(hostconfig_path))
+            print("[INFO: Looking for hostconfig at %s]" % hostconfig_path)
             print("[WARNING: Spack generated host-config not found, trying with predefined]")
 
         # Then look into project predefined host-configs.
         hostconfig_path = os.path.join(repo_dir, "host-configs", hostconfig)
         if not os.path.isfile(hostconfig_path):
-            print("[INFO: Looking for hostconfig at {}]".fornat(hostconfig_path))
+            print("[INFO: Looking for hostconfig at %s]" % hostconfig_path)
             print("[WARNING: Predefined host-config not found, trying with Docker]")
 
         # Otherwise look into project predefined Docker host-configs.
         hostconfig_path = os.path.join(repo_dir, "host-configs", "docker", hostconfig)
         if not os.path.isfile(hostconfig_path):
-            print("[INFO: Looking for hostconfig at {}]".fornat(hostconfig_path))
+            print("[INFO: Looking for hostconfig at %s]" % hostconfig_path)
             print("[WARNING: Predefined Docker host-config not found, exiting]")
             return 1
 
