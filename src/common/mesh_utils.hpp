@@ -27,8 +27,8 @@ namespace serac {
  * in parallel as requested
  *
  * @param[in] mesh_file The mesh file to open
- * @param[in] ref_serial The number of serial refinements
- * @param[in] ref_parallel The number of parallel refinements
+ * @param[in] refine_serial The number of serial refinements
+ * @param[in] refine_parallel The number of parallel refinements
  * @param[in] MPI_Comm The MPI communicator
  * @return A shared_ptr containing the constructed and refined parallel mesh object
  */

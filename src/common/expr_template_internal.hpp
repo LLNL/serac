@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file expr_templates_internal.hpp
+ * \@file expr_templates_internal.hpp
  *
  * @brief The internal implementation for a set of template classes used to
  * represent the evaluation of unary and binary operations on vectors
@@ -23,14 +23,22 @@
 
 namespace serac::internal {
 
-// Type alias for what should be stored by a vector expression - an object
-// if ownership is desired, otherwise, a reference
+/**
+ * @brief Type alias for what should be stored by a vector expression - an object
+ * if ownership is desired, otherwise, a reference
+ * @tparam vec The base vector expression type
+ * @tparam owns Whether the object "intends" to take ownership of the constructor argument
+ */
 template <typename vec, bool owns>
 using vec_t = typename std::conditional<owns, vec, const vec&>::type;
 
-// Type alias for the constructior argument to a vector expression - an
-// rvalue reference if ownership is desired (will be moved from), otherwise,
-// and lvalue reference
+/**
+ * @brief Type alias for the constructior argument to a vector expression - an
+ * rvalue reference if ownership is desired (will be moved from), otherwise,
+ * an lvalue reference
+ * @tparam vec The base vector expression type
+ * @tparam owns Whether the function "intends" to take ownership of the argument
+ */
 template <typename vec, bool owns>
 using vec_arg_t = typename std::conditional<owns, std::remove_const_t<vec>&&, const vec&>::type;
 
@@ -48,6 +56,9 @@ using vec_arg_t = typename std::conditional<owns, std::remove_const_t<vec>&&, co
 template <typename vec, bool owns, typename UnOp>
 class UnaryVectorExpr : public VectorExpr<UnaryVectorExpr<vec, owns, UnOp>> {
 public:
+  /**
+   * @brief Constructs an element-wise unary expression on a vector
+   */
   UnaryVectorExpr(vec_arg_t<vec, owns> v, UnOp&& op = UnOp{})
       : v_(std::forward<vec_t<vec, owns>>(v)), op_(std::move(op))
   {
@@ -73,13 +84,23 @@ private:
  */
 class ScalarMultOp {
 public:
+  /**
+   * @brief Constructs a partial application of a scalar multiplication
+   */
   ScalarMultOp(const double scalar) : scalar_(scalar) {}
+
+  /**
+   * @brief Applies the partial application to the remaining argument
+   */
   double operator()(const double arg) const { return arg * scalar_; }
 
 private:
   double scalar_;
 };
 
+/**
+ * @brief Type alias for a vector negation operation
+ */
 template <typename vec, bool owns>
 using UnaryNegation = UnaryVectorExpr<vec, owns, std::negate<double>>;
 
@@ -101,6 +122,9 @@ using UnaryNegation = UnaryVectorExpr<vec, owns, std::negate<double>>;
 template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns, typename BinOp>
 class BinaryVectorExpr : public VectorExpr<BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, BinOp>> {
 public:
+  /**
+   * @brief Constructs an element-wise binary expression on two vectors
+   */
   BinaryVectorExpr(vec_arg_t<lhs, lhs_owns> u, vec_arg_t<rhs, rhs_owns> v)
       : u_(std::forward<vec_t<lhs, lhs_owns>>(u)), v_(std::forward<vec_t<rhs, rhs_owns>>(v))
   {
@@ -125,9 +149,15 @@ private:
   const BinOp                op_ = BinOp{};
 };
 
+/**
+ * @brief Type alias for a vector addition operation
+ */
 template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns>
 using VectorAddition = BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, std::plus<double>>;
 
+/**
+ * @brief Type alias for a vector subtraction operation
+ */
 template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns>
 using VectorSubtraction = BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, std::minus<double>>;
 
@@ -144,6 +174,9 @@ using VectorSubtraction = BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, std::mi
 template <typename vec>
 class OperatorExpr : public VectorExpr<OperatorExpr<vec>> {
 public:
+  /**
+   * @brief Constructs a "mfem::Operator::Mult" expression
+   */
   OperatorExpr(const mfem::Operator& A, const vec& v) : result_(A.Height())
   {
     // No-op if `vec` is a already an mfem::Vector, otherwise explicitly convert

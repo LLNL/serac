@@ -17,6 +17,26 @@
 
 #include "serac_config.hpp"
 
+/**
+ * @def SERAC_MARK_FUNCTION
+ * Marks a function for Caliper profiling
+ */
+
+/**
+ * @def SERAC_MARK_LOOP_START(id, name)
+ * Marks the beginning of a loop block for Caliper profiling
+ */
+
+/**
+ * @def SERAC_MARK_LOOP_ITER(id, i)
+ * Marks the beginning of a loop iteration for Caliper profiling
+ */
+
+/**
+ * @def SERAC_MARK_LOOP_END(id)
+ * Marks the end of a loop block for Caliper profiling
+ */
+
 #ifdef SERAC_USE_CALIPER
 
 #include "caliper/cali-manager.h"
