@@ -11,6 +11,12 @@
     - when: on_success
 
 ####
+# Load required CUDA module
+.with_cuda:
+  before_script:
+    - module load cuda/11.0.2
+
+####
 # Template
 .pr_build_on_lassen:
   stage: l_build
@@ -26,10 +32,10 @@ clang_upstream_gfortran (PR build_on_lassen):
   variables:
     COMPILER: "clang@upstream_gfortran"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-clang@upstream_gfortran-cuda.cmake"
-  extends: .pr_build_on_lassen
+  extends: .pr_build_on_lassen, .with_cuda
 
 clang_upstream_gfortran (Main build_with_deps_on_lassen):
   variables:
     COMPILER: "clang@upstream_gfortran"
     SPEC: "@develop%${COMPILER}"
-  extends: .main_build_with_deps_on_lassen
+  extends: .main_build_with_deps_on_lassen, .with_cuda
