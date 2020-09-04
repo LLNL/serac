@@ -80,10 +80,6 @@ def main():
             if opts["hostconfig"] != "":
                 hostconfig = opts["hostconfig"]
             
-            # Then check the environment
-            elif os.environ.get("HOST_CONFIG") != None:
-                hostconfig = os.environ["HOST_CONFIG"]
-            
             # Otherwise try to build it
             else:
                 import socket

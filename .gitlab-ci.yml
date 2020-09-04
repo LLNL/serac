@@ -19,6 +19,10 @@ stages:
   - q_build_with_deps
   - q_build_devtools
   - q_release_resources
+<<<<<<< HEAD
+=======
+  - q_build_with_deps
+>>>>>>> develop
 
 # Whether and how to update uberenv
 .run_update_uberenv: &run_update_uberenv |
@@ -83,12 +87,11 @@ stages:
     #DEPENDENCIES
     - echo -e "section_start:$(date +%s):dependencies\r\e[0K
       Build dependencies and generate host-config file (uberenv)"
-    - lalloc 1 -W 20 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py --spec=${SPEC} --directory=${CI_PROJECT_NAME}
+    - lalloc 1 -W 20 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_PROJECT_NAME}
     - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD + TEST
     - echo -e "Build and test ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 10 ${LSF_ACCOUNT} scripts/llnl/build_src.py
-
+    - lalloc 1 -W 10 ${LSF_ACCOUNT} scripts/llnl/build_src.py --host-config ${HOST_CONFIG}
 # This is where jobs are included
 include:
   - local: .gitlab/build_quartz.yml
