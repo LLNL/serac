@@ -72,6 +72,8 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
   } else {
     std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
   }
+  height = op.Height();
+  width  = op.Width();
 }
 
 void EquationSolver::SetOperator(const mfem::HypreParMatrix& matrix)

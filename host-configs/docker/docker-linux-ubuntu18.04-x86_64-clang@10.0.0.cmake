@@ -25,6 +25,8 @@ set(CMAKE_CXX_FLAGS "-stdlib=libc++" CACHE PATH "")
 
 set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/lib" CACHE PATH "Adds a missing libstdc++ rpath")
 
+set(ENABLE_CUDA OFF CACHE BOOL "")
+
 #---------------------------------------
 # MPI
 #---------------------------------------
@@ -51,11 +53,13 @@ set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2" CACHE PATH "")
 
 set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
 
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
+
 set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-5.4.0" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
