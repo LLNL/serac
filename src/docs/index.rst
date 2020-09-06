@@ -49,7 +49,7 @@ Building Serac's Developer Tools
 
 .. note::
   This can be skipped if you are not doing Serac development or if you are on an LC machine.
-  They are installed in a public space defined in ``host-config/<machine name>-<SYS_TYPE>-<compiler>.cmake``
+  They are installed in a group space defined in ``host-config/<machine name>-<SYS_TYPE>-<compiler>.cmake``
 
 Serac developers utilize some industry standard development tools in their everyday work.  We build
 these with Spack and have them installed in a public space on commonly used LC machines. These are
@@ -148,8 +148,8 @@ you can do so by changing the uberenv command as follows:
 Building Serac's Dependencies by Hand
 -------------------------------------
 
-To build Serac's dependencies by hand, a ``host-config`` (CMake configuration file) is required by the BLT 
-build system. A good place to start is by copying an existing host config in the 
+To build Serac's dependencies by hand, use of a ``host-config`` CMake configuration file is 
+stongly encouraged. A good place to start is by copying an existing host config in the 
 ``host-config`` directory and modifying it according to your system setup.
 
 Building Serac
