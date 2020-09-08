@@ -62,7 +62,7 @@ public:
   /**
    * @brief Driver for advancing the timestep
    *
-   * @param[in/out] dt The timestep to attempt, adaptive methods could return the actual timestep completed
+   * @param[inout] dt The timestep to attempt, adaptive methods could return the actual timestep completed
    */
   void advanceTimestep(double& dt) override;
 
@@ -99,6 +99,9 @@ public:
   virtual ~ElasticitySolver();
 
 protected:
+  /**
+   * @brief Displacement field
+   */
   std::shared_ptr<serac::FiniteElementState> displacement_;
 
   /**
