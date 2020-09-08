@@ -30,6 +30,7 @@ void StdFunctionVectorCoefficient::Eval(mfem::Vector& V, mfem::ElementTransforma
                                         const mfem::IntegrationPoint& ip)
 {
   mfem::Vector transip(T.GetSpaceDim());
+  V.SetSize(vdim);
   T.Transform(ip, transip);
   func_(transip, V);
 }

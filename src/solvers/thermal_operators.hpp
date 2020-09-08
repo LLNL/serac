@@ -47,7 +47,7 @@ public:
   /**
    * @brief Set the thermal flux load vector
    *
-   * @param[in] The thermal flux (RHS vector)
+   * @param[in] rhs The thermal flux (RHS vector)
    */
   void setLoadVector(const mfem::Vector* rhs);
 

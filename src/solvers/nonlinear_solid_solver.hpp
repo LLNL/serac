@@ -123,7 +123,7 @@ public:
   /**
    * @brief Advance the timestep
    *
-   * @param[in/out] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping schemes
+   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping schemes
    */
   void advanceTimestep(double& dt) override;
 
@@ -133,7 +133,14 @@ public:
   virtual ~NonlinearSolidSolver();
 
 protected:
+  /**
+   * @brief Velocity field
+   */
   std::shared_ptr<FiniteElementState> velocity_;
+
+  /**
+   * @brief Displacement field
+   */
   std::shared_ptr<FiniteElementState> displacement_;
 
   /**

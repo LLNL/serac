@@ -24,7 +24,7 @@ In particular, Serac currently provides the following operations:
 3. Vector negation with ``-a``
 4. Scalar multiplication with ``s * a`` or ``a * s`` for scalar ``s`` and vector ``a``.
 5. Application of an ``mfem::Operator`` with ``op * a`` for ``mfem::Operator op`` and vector ``a`` - note that 
-because ``mfem::Matrix`` inherits from ``mfem::Operator`` this functionality includes matrix-vector multiplication.
+    because ``mfem::Matrix`` inherits from ``mfem::Operator`` this functionality includes matrix-vector multiplication.
 
 
 Note that all of these expressions can be composed, that is, an expression can be used as an argument
