@@ -20,6 +20,7 @@ allocate_resources_build_quartz:
   stage: q_allocate_resources
   script:
     - salloc ${ACCOUNT} -N 1 -c 36 -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
+  needs: []
 
 ####
 # In post-build phase, deallocate resources
