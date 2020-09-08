@@ -21,10 +21,12 @@
 .pr_build_on_lassen:
   stage: l_build
   extends: [.build_blueos_3_ppc64le_ib_p9_script, .on_lassen, .pr_workflow]
+  needs: []
 
 .main_build_with_deps_on_lassen:
   stage: l_build_with_deps
   extends: [.build_with_deps_blueos_3_ppc64le_ib_p9_script, .on_lassen, .main_workflow]
+  needs: []
 
 ####
 # Build jobs

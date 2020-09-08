@@ -16,9 +16,9 @@ stages:
   - l_build_with_deps
   - q_allocate_resources
   - q_build
+  - q_build_with_deps
   - q_build_devtools
   - q_release_resources
-  - q_build_with_deps
 
 # Whether and how to update uberenv
 .run_update_uberenv: &run_update_uberenv |
@@ -40,14 +40,12 @@ stages:
     - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
     - ASSIGN_ID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
     - EXEC_PREFIX="srun ${SLURM_ACCOUNT} ${ASSIGN_ID}"
-    #BUILD
-    - RESOURCES="-t 5 -N 1"
-    - echo -e "Build ${CI_PROJECT_NAME}"
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --build-only
-    #TEST
-    - RESOURCES="-t 5 -N 1"
-    - echo -e "Test ${CI_PROJECT_NAME}"
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --test-only
+   #BUILD + TEST
+    - RESOURCES="-t 10 -N 1"
+    - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
+      Build and test ${CI_PROJECT_NAME}"
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py --host-config ${HOST_CONFIG}
+    - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
 
 .srun_build_with_deps_script:
   script:
@@ -59,14 +57,13 @@ stages:
       Build dependencies and generate host-config file (uberenv)"
     - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_tpls.py --spec=${SPEC} --directory=${CI_PROJECT_NAME}
     - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
-    #BUILD
-    - RESOURCES="-t 5 -N 1"
-    - echo -e "Build ${CI_PROJECT_NAME}"
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --build-only
-    #TEST
-    - RESOURCES="-t 5 -N 1"
-    - echo -e "Test ${CI_PROJECT_NAME}"
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/gitlab/build_and_test.sh --test-only
+    #BUILD + TEST
+    - RESOURCES="-t 10 -N 1"
+    - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
+      Build and test ${CI_PROJECT_NAME}"
+    # Autodetects hostconfig created by build_tpls
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py
+    - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
 
 .srun_build_devtools_script:
   script:
@@ -81,13 +78,11 @@ stages:
 
 .build_blueos_3_ppc64le_ib_p9_script:
   script:
-    #BUILD
-    - echo -e "Build ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 5 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --build-only
-    - echo -e "section_end:$(date +%s):build\r\e[0K"
-    #TEST
-    - echo -e "Test ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 5 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --test-only
+    #BUILD + TEST
+    - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
+      Build and test ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 10 ${LSF_ACCOUNT} scripts/llnl/build_src.py --host-config ${HOST_CONFIG}
+    - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
 
 .build_with_deps_blueos_3_ppc64le_ib_p9_script:
   script:
@@ -97,12 +92,11 @@ stages:
       Build dependencies and generate host-config file (uberenv)"
     - lalloc 1 -W 20 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_PROJECT_NAME}
     - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
-    #BUILD
-    - echo -e "Build ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 5 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --build-only
-    #TEST
-    - echo -e "Test ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 5 ${LSF_ACCOUNT} scripts/gitlab/build_and_test.sh --test-only
+    #BUILD + TEST
+    - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
+      Build and test ${CI_PROJECT_NAME}"
+    - lalloc 1 -W 10 ${LSF_ACCOUNT} scripts/llnl/build_src.py --host-config ${HOST_CONFIG}
+    - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
 
 # This is where jobs are included
 include:
