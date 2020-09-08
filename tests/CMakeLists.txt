@@ -54,6 +54,7 @@ if (ENABLE_GTEST)
 
     set(language_tests
         copy_elision.cpp
+        time_integration_with_constraints.cpp 
         mfem_array_std_algo.cpp)
 
     foreach(filename ${language_tests})
