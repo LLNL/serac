@@ -178,8 +178,8 @@ void NonlinearSolidSolver::completeSetup()
     solver_.SetOperator(*nonlinear_oper_);
   } else {
     solver_.nonlinearSolver().iterative_mode = false;
-    timedep_oper_                            = std::make_unique<NonlinearSolidDynamicOperator>(
-        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, solver_.nonlinearSolver(), lin_params_);
+    timedep_oper_ = std::make_unique<NonlinearSolidDynamicOperator>(std::move(H_form), std::move(S_form),
+                                                                    std::move(M_form), ess_bdr_, solver_, lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }
 }

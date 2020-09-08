@@ -104,8 +104,8 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] lin_params The parameters for the linear solver
    */
-  static std::unique_ptr<mfem::IterativeSolver> buildIterLinSolver(MPI_Comm                      comm,
-                                                                   const LinearSolverParameters& lin_params);
+  static std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                      comm,
+                                                                           const LinearSolverParameters& lin_params);
 
   /**
    * @brief Builds an Newton-Raphson solver given a set of nonlinear solver parameters
@@ -117,6 +117,50 @@ private:
                                                                const NonlinearSolverParameters& nonlin_params,
                                                                mfem::Solver&                    lin_solver);
 
+  /**
+   * @brief A wrapper class for combining a nonlinear solver with a SuperLU direct solver
+   */
+  class SuperLUNonlinearOperatorWrapper : public mfem::Operator {
+  public:
+    /**
+     * @brief Constructs a wrapper over an mfem::Operator
+     * @param[in] oper The operator to wrap
+     */
+    SuperLUNonlinearOperatorWrapper(const mfem::Operator& oper) : oper_(oper)
+    {
+      height = oper_.Height();
+      width  = oper_.Width();
+    }
+    /**
+     * @brief Applies the operator
+     * @param[in] b The input vector
+     * @param[out] x The output vector
+     * @note Implements mfem::Operator::Mult, forwards directly to underlying operator
+     */
+    void Mult(const mfem::Vector& b, mfem::Vector& x) const override { oper_.Mult(b, x); }
+
+    /**
+     * @brief Obtains the gradient of the underlying operator
+     * as a SuperLU matrix
+     * @param[in] x The point at which the gradient should be evaluated
+     * @return A non-owning reference to an mfem::SuperLURowLocMatrix (upcasts
+     * to match interface)
+     * @note Implements mfem::Operator::GetGradient
+     */
+    mfem::Operator& GetGradient(const mfem::Vector& x) const override;
+
+  private:
+    /**
+     * @brief The underlying operator
+     */
+    const mfem::Operator& oper_;
+
+    /**
+     * @brief The owner of the SuperLU matrix for the gradient, stored
+     * as a member variable for lifetime purposes
+     */
+    mutable std::unique_ptr<mfem::SuperLURowLocMatrix> superlu_grad_mat_;
+  };
   /**
    * @brief The preconditioner (used for an iterative solver only)
    */
@@ -136,6 +180,11 @@ private:
    * @brief The operator (system matrix) used with a SuperLU solver
    */
   std::optional<mfem::SuperLURowLocMatrix> superlu_mat_;
+
+  /**
+   * @brief A wrapper class that allows a direct solver to be used underneath a Newton-Raphson solver
+   */
+  std::unique_ptr<SuperLUNonlinearOperatorWrapper> superlu_wrapper_;
 };
 
 }  // namespace serac

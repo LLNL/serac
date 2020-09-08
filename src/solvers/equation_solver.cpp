@@ -15,8 +15,9 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
 {
   if (lin_params.lin_solver == LinearSolver::SuperLU) {
     lin_solver_ = std::make_unique<mfem::SuperLUSolver>(comm);
+    std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetColumnPermutation(mfem::superlu::PARMETIS);
   } else {
-    lin_solver_ = buildIterLinSolver(comm, lin_params);
+    lin_solver_ = buildIterativeLinearSolver(comm, lin_params);
   }
 
   if (nonlin_params) {
@@ -24,8 +25,8 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
   }
 }
 
-std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterLinSolver(MPI_Comm                      comm,
-                                                                          const LinearSolverParameters& lin_params)
+std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
+    MPI_Comm comm, const LinearSolverParameters& lin_params)
 {
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
 
@@ -68,7 +69,12 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm  
 void EquationSolver::SetOperator(const mfem::Operator& op)
 {
   if (nonlin_solver_) {
-    nonlin_solver_->SetOperator(op);
+    if (std::holds_alternative<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)) {
+      superlu_wrapper_ = std::make_unique<SuperLUNonlinearOperatorWrapper>(op);
+      nonlin_solver_->SetOperator(*superlu_wrapper_);
+    } else {
+      nonlin_solver_->SetOperator(op);
+    }
   } else {
     std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
   }
@@ -104,6 +110,16 @@ void EquationSolver::SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
     prec_ = std::move(prec);
     std::get<std::unique_ptr<mfem::IterativeSolver>>(lin_solver_)->SetPreconditioner(*prec_);
   }
+}
+
+mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(const mfem::Vector& x) const
+{
+  mfem::Operator&       grad      = oper_.GetGradient(x);
+  mfem::HypreParMatrix* matr_grad = dynamic_cast<mfem::HypreParMatrix*>(&grad);
+
+  SLIC_ERROR_IF(matr_grad == nullptr, "Nonlinear operator gradient must be a HypreParMatrix");
+  superlu_grad_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*matr_grad);
+  return *superlu_grad_mat_;
 }
 
 }  // namespace serac

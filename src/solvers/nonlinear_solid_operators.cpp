@@ -36,7 +36,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
                                                              std::unique_ptr<mfem::ParBilinearForm>       S_form,
                                                              std::unique_ptr<mfem::ParBilinearForm>       M_form,
                                                              const std::vector<serac::BoundaryCondition>& ess_bdr,
-                                                             mfem::IterativeSolver&                       newton_solver,
+                                                             EquationSolver&                              newton_solver,
                                                              const serac::LinearSolverParameters&         lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
       M_form_(std::move(M_form)),
@@ -105,7 +105,7 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
   reduced_oper_->SetParameters(dt, &v, &x);
   mfem::Vector zero;  // empty vector is interpreted as zero r.h.s. by NewtonSolver
   dv_dt = newton_solver_ * zero;
-  SLIC_WARNING_IF(!newton_solver_.GetConverged(), "Newton solver did not converge.");
+  SLIC_WARNING_IF(!newton_solver_.nonlinearSolver().GetConverged(), "Newton solver did not converge.");
   dx_dt = v + (dt * dv_dt);
 }
 
