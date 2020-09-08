@@ -17,7 +17,7 @@ allocate_resources_build_quartz:
   variables:
     GIT_STRATEGY: none
   extends: [.on_quartz, .pr_workflow]
-  stage: allocate_resources
+  stage: q_allocate_resources
   script:
     - salloc ${ACCOUNT} -N 1 -c 36 -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
 
@@ -28,7 +28,7 @@ release_resources_build_quartz:
   variables:
     GIT_STRATEGY: none
   extends: [.on_quartz, .pr_workflow]
-  stage: release_resources
+  stage: q_release_resources
   script:
     - export JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
     - if [[ -n "${JOBID}" ]]; then scancel ${JOBID}; fi
@@ -36,12 +36,16 @@ release_resources_build_quartz:
 ####
 # Template
 .pr_build_on_quartz:
-  stage: build
+  stage: q_build
   extends: [.srun_build_script, .on_quartz, .pr_workflow]
 
 .main_build_with_deps_on_quartz:
-  stage: build_with_deps
+  stage: q_build_with_deps
   extends: [.srun_build_with_deps_script, .on_quartz, .main_workflow]
+
+.main_build_devtools_on_quartz:
+  stage: q_build_devtools
+  extends: [.srun_build_devtools_script, .on_quartz, .main_workflow]
 
 ####
 # Build jobs
@@ -57,17 +61,6 @@ gcc_8_1_0 (PR build_on_quartz):
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-gcc@8.1.0.cmake"
   extends: .pr_build_on_quartz
 
-# Intel C++ compiler has poor C++17 support and will no longer be
-# supported until issues are resolved.
-# See CMPLRIL0-32507
-# https://community.intel.com/t5/Intel-C-Compiler/Converting-constructor-issue-with-std-variant/td-p/1182651
-intel_19_0_4 (PR build_on_quartz):
-  variables:
-    COMPILER: "intel@19.0.4"
-    HOST_CONFIG: "quartz-toss_3_x86_64_ib-intel@19.0.4.cmake"
-  extends: .pr_build_on_quartz
-  allow_failure: true
-
 clang_9_0_0 (Main build_with_deps_on_quartz):
   variables:
     COMPILER: "clang@9.0.0"
@@ -80,13 +73,8 @@ gcc_8_1_0 (Main build_with_deps_on_quartz):
     SPEC: "@develop%${COMPILER}"
   extends: .main_build_with_deps_on_quartz
 
-# Intel C++ compiler has poor C++17 support and will no longer be
-# supported until issues are resolved.
-# See CMPLRIL0-32507
-# https://community.intel.com/t5/Intel-C-Compiler/Converting-constructor-issue-with-std-variant/td-p/1182651
-intel_19_0_4 (Main build_with_deps_on_quartz):
+gcc_8_1_0 (Main build_devtools_on_quartz):
   variables:
-    COMPILER: "intel@19.0.4"
+    COMPILER: "gcc@8.1.0"
     SPEC: "@develop%${COMPILER}"
-  extends: .main_build_with_deps_on_quartz
-  allow_failure: true
+  extends: .main_build_devtools_on_quartz

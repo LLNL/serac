@@ -48,7 +48,7 @@ public:
    *
    * @param[in] ess_bdr The set of essential BC attributes
    * @param[in] ess_bdr_coef The essential BC value coefficient
-   * @param[in] fes The finite element state for the state
+   * @param[in] state The finite element state over which the BC should be applied
    * @param[in] component The component to set (-1 implies all components are set)
    */
   virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
@@ -133,7 +133,7 @@ public:
   /**
    * @brief Advance the state variables according to the chosen time integrator
    *
-   * @param[in/out]
+   * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
    */
   virtual void advanceTimestep(double& dt) = 0;
 

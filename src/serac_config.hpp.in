@@ -34,6 +34,7 @@
 #cmakedefine SERAC_USE_MFEM
 #cmakedefine SERAC_USE_MPI
 #cmakedefine SERAC_USE_TRIBOL
+#cmakedefine SERAC_USE_CALIPER
 
 
 #endif  /* SERAC_CONFIG_CPP */

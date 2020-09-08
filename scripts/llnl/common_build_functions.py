@@ -295,25 +295,38 @@ def set_group_and_perms(directory):
     Sets the proper group and access permissions of given input
     directory. 
     """
-    print "[changing group and access perms of: %s]" % directory
-    # change group to smithdev
-    print "[changing group to smithdev]"
-    sexe("chgrp -f -R smithdev %s" % (directory),echo=True,error_prefix="WARNING:")
-    # change group perms to rwX
-    print "[changing perms for smithdev members to rwX]"
-    sexe("chmod -f -R g+rwX %s" % (directory),echo=True,error_prefix="WARNING:")
-    # change perms for all to rX
-    print "[changing perms for all users to rX]"
-    sexe("chmod -f -R a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
-    print "[done setting perms for: %s]" % directory
+    skip = True
+    shared_dirs = [get_shared_base_dir()]
+    for shared_dir in shared_dirs:
+        if directory.startswith(shared_dir):
+            skip = False
+            break
+
+    if skip:
+        print "[Skipping update of group and access permissions. Provided directory was not a known shared location: {0}]".format(directory)
+    else:
+        print "[changing group and access perms of: %s]" % directory
+        # change group to smithdev
+        print "[changing group to smithdev]"
+        sexe("chgrp -f -R smithdev %s" % (directory),echo=True,error_prefix="WARNING:")
+        # change group perms to rwX
+        print "[changing perms for smithdev members to rwX]"
+        sexe("chmod -f -R g+rwX %s" % (directory),echo=True,error_prefix="WARNING:")
+        # change perms for all to rX
+        print "[changing perms for all users to rX]"
+        sexe("chmod -f -R a+rX %s" % (directory),echo=True,error_prefix="WARNING:")
+        print "[done setting perms for: %s]" % directory
     return 0
 
 
-def full_build_and_test_of_tpls(builds_dir, timestamp):
+def full_build_and_test_of_tpls(builds_dir, timestamp, spec):
     project_file = "scripts/uberenv/project.json"
     config_dir = "scripts/uberenv/spack_configs/{0}".format(get_system_type())
 
-    specs = get_specs_for_current_machine()
+    if spec:
+        specs = [spec]
+    else:
+        specs = get_specs_for_current_machine()
     print "[Building and testing tpls for specs: "
     for spec in specs:
         print "{0}".format(spec)
@@ -366,18 +379,23 @@ def full_build_and_test_of_tpls(builds_dir, timestamp):
         if os.path.exists(host_config) and not os.path.exists(dst):
             shutil.copy2(host_config, dst)
 
+    src_build_failed = False
     if not tpl_build_failed:
         # build the serac against the new tpls
         res = build_and_test_host_configs(prefix, timestamp, True)
         if res != 0:
             print "[ERROR: build and test of serac vs tpls test failed.]\n"
+            src_build_failed = True
         else:
             print "[SUCCESS: build and test of serac vs tpls test passed.]\n"
  
     # set proper perms for installed tpls
     set_group_and_perms(prefix)
-    # set proper perms for the mirror files
-    set_group_and_perms(mirror_dir)
+
+    if tpl_build_failed:
+        print "[ERROR: Failed to build all specs of third party libraries]"
+    if src_build_failed:
+        print "[ERROR: Failed to build all specs of source code against new host-configs]"
     return res
 
 

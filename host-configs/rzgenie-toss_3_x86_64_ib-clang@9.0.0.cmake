@@ -27,6 +27,8 @@ set(CMAKE_CXX_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.1.0" CACHE PATH
 
 set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/tce/packages/gcc/gcc-8.1.0/lib -Wl,-rpath,/usr/tce/packages/gcc/gcc-8.1.0/lib64" CACHE PATH "Adds a missing libstdc++ rpath")
 
+set(ENABLE_CUDA OFF CACHE BOOL "")
+
 #---------------------------------------
 # MPI
 #---------------------------------------
@@ -39,7 +41,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-clang-9.0.0/bin/mp
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_06_12_22_00_45/clang-9.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_09_02_16_25_34/clang-9.0.0" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
@@ -47,7 +49,7 @@ set(CONDUIT_DIR "${TPL_ROOT}/conduit-master" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.11.1" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2" CACHE PATH "")
 
 set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
 
@@ -55,7 +57,7 @@ set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-5.4.0" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
@@ -68,9 +70,9 @@ set(ENABLE_DOCS ON CACHE BOOL "")
 
 set(DOXYGEN_EXECUTABLE "${DEVTOOLS_ROOT}/doxygen-1.8.17/bin/doxygen" CACHE PATH "")
 
-set(SPHINX_EXECUTABLE "${DEVTOOLS_ROOT}/python-3.7.7/bin/sphinx-build" CACHE PATH "")
+set(SPHINX_EXECUTABLE "/collab/usr/gapps/python/build/spack-toss3.4/opt/spack/linux-rhel7-ivybridge/gcc-4.9.3/python-3.8.2-6me27g5yfvrxpcsemax25kovzjbf22vt/bin/sphinx-build" CACHE PATH "")
 
-set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-9.0.0/bin/clang-format" CACHE PATH "")
+set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format" CACHE PATH "")
 
 set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-1.87/bin/cppcheck" CACHE PATH "")
 
