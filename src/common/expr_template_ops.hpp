@@ -146,7 +146,10 @@ inline auto operator-(const mfem::Vector& u, mfem::Vector&& v)
   return serac::internal::VectorSubtraction<mfem::Vector, mfem::Vector, false, true>(u, std::move(v));
 }
 
-inline auto operator-(mfem::Vector&& u, const mfem::Vector& v) { return operator-(v, std::move(u)); }
+inline auto operator-(mfem::Vector&& u, const mfem::Vector& v)
+{
+  return serac::internal::VectorSubtraction<mfem::Vector, mfem::Vector, true, false>(std::move(u), v);
+}
 
 template <typename T>
 auto operator*(const mfem::Operator& A, serac::VectorExpr<T>&& v)
