@@ -67,8 +67,10 @@ TEST(expr_templates, subtraction_not_commutative)
     c[i] = i * i * i * 7 + 23;
   }
 
-  mfem::Vector result1 = a + c - b;
-  mfem::Vector result2 = c - b + a;
+  // Tests that switching the order of operations
+  // does not change the result
+  mfem::Vector result1 = a + c - b;  // Parsed as (a + c) - b
+  mfem::Vector result2 = c - b + a;  // Parsed as (c - b) + a
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(result1[i], result2[i]);
   }
