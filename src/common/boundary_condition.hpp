@@ -49,6 +49,17 @@ public:
   BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs);
 
   /**
+   * @brief Returns the tag for the BC
+   */
+  const std::string& tag() const { return tag_; }
+
+  /**
+   * @brief Sets the tag for the BC
+   * @param[in] The new tag
+   */
+  void setTag(const std::string_view tag) { tag_ = tag; }
+
+  /**
    * @brief Returns a non-owning reference to the array of boundary
    * attribute markers
    */
@@ -239,6 +250,10 @@ private:
    * @brief The eliminated entries for Dirichlet BCs
    */
   mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
+  /**
+   * @brief A label for the BC, for filtering purposes
+   */
+  std::string tag_;
 };
 
 }  // namespace serac

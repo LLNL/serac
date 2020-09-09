@@ -52,7 +52,7 @@ public:
    */
   virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
                            const int component = -1);
-  
+
   /**
    * @brief Set the state variables from a vector of coefficients
    *

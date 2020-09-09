@@ -42,6 +42,14 @@ void BoundaryConditionManager::addNatural(const std::set<int>& nat_bdr, serac::G
   all_dofs_valid_ = false;
 }
 
+void BoundaryConditionManager::addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef,
+                                          FiniteElementState& state, const int component)
+{
+  auto num_attrs = state.mesh().bdr_attributes.Max();
+  other_bdr_.emplace_back(bdr_coef, component, bdr_attr, num_attrs);
+  all_dofs_valid_ = false;
+}
+
 void BoundaryConditionManager::addTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
                                            int component)
 {

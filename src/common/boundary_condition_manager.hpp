@@ -47,6 +47,17 @@ public:
                   const int component = -1);
 
   /**
+   * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
+   *
+   * @param[in] bdr_attr The set of mesh attributes denoting a natural boundary
+   * @param[in] bdr_coef The coefficient defining the natural boundary function
+   * @param[in] state The finite element state to which the BC should be applied
+   * @param[in] component The component to set (-1 implies all components are set)
+   */
+  void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, FiniteElementState& state,
+                  const int component = -1);
+
+  /**
    * @brief Set a list of true degrees of freedom from a coefficient
    *
    * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
@@ -87,6 +98,10 @@ public:
    * @brief Accessor for the natural BC objects
    */
   std::vector<BoundaryCondition>& naturals() { return nat_bdr_; }
+  /**
+   * @brief Accessor for the generic BC objects
+   */
+  std::vector<BoundaryCondition>& generics() { return other_bdr_; }
 
   /**
    * @brief Accessor for the essential BC objects
@@ -96,6 +111,10 @@ public:
    * @brief Accessor for the natural BC objects
    */
   const std::vector<BoundaryCondition>& naturals() const { return nat_bdr_; }
+  /**
+   * @brief Accessor for the generic BC objects
+   */
+  const std::vector<BoundaryCondition>& generics() const { return other_bdr_; }
 
 private:
   /**
@@ -112,6 +131,11 @@ private:
    * @brief The vector of natural boundary conditions
    */
   std::vector<BoundaryCondition> nat_bdr_;
+
+  /**
+   * @brief The vector of generic (not Dirichlet or Neumann) boundary conditions
+   */
+  std::vector<BoundaryCondition> other_bdr_;
 
   /**
    * @brief The set of boundary attributes associated with

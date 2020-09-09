@@ -67,7 +67,7 @@ protected:
   mutable std::unique_ptr<mfem::Operator> Jacobian_;
 
   /**
-   * @brief The fixed boudnary degrees of freedom
+   * @brief The boundary conditions
    */
   const BoundaryConditionManager& bcs_;
 };

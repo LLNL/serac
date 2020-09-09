@@ -22,8 +22,8 @@ TEST(boundary_cond, simple_repeated_dofs)
   mfem::ParMesh      par_mesh(MPI_COMM_WORLD, mesh);
   FiniteElementState state(par_mesh);
 
-  for (int i = 0; i < par_mesh.GetNE(); i++) {
-    par_mesh.SetAttribute(i, ATTR);
+  for (int i = 0; i < par_mesh.GetNBE(); i++) {
+    par_mesh.GetBdrElement(i)->SetAttribute(ATTR);
   }
 
   BoundaryConditionManager bcs;
