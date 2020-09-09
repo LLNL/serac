@@ -13,10 +13,16 @@
  */
 
 #include "common/common.hpp"
+#include "mfem.hpp"
+#include "axom/core.hpp"
 
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
+
+  SLIC_INFO_ROOT(rank, "MFEM version: " << mfem::GetVersionStr());
+
+  axom::about();
 
   SLIC_INFO_ROOT(rank, "Serac loaded successfully.");
 
