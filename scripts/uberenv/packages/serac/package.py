@@ -90,6 +90,8 @@ class Serac(CMakePackage, CudaPackage):
             description='Build with hooks for Caliper performance analysis')
     variant('glvis', default=False,
             description='Build the glvis visualization executable')
+    variant('petsc', default=False,
+            description='Enable PETSC')
     # netcdf variant commented out until a bug in the spack concretizer is fixed
     #variant('netcdf', default=True,
     #        description='Enable Cubit/Genesis reader')
@@ -107,6 +109,11 @@ class Serac(CMakePackage, CudaPackage):
     # Libraries that support +debug
     debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
+
+    depends_on("petsc@3.13~shared+mpi+metis+hypre+superlu-dist+hdf5", when="+petsc")
+    depends_on("petsc@3.13~shared+mpi+metis+hypre+superlu-dist+hdf5+debug", when="+petsc+debug")
+    depends_on("mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf+petsc", when="+petsc")
+
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
@@ -123,7 +130,7 @@ class Serac(CMakePackage, CudaPackage):
     # Libraries that do not have a debug variant
     depends_on("conduit@master~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
-    depends_on("superlu-dist@5.4.0~shared")
+    depends_on("superlu-dist@6.1.0~shared")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
     depends_on("hdf5@1.8.21~shared")
 
