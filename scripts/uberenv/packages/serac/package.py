@@ -110,8 +110,8 @@ class Serac(CMakePackage, CudaPackage):
     debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
-    depends_on("petsc@3.13~shared+mpi+metis+hypre+superlu-dist+hdf5", when="+petsc")
-    depends_on("petsc@3.13~shared+mpi+metis+hypre+superlu-dist+hdf5+debug", when="+petsc+debug")
+    depends_on("petsc@3.13.0~shared+mpi+metis+hypre+superlu-dist+hdf5", when="+petsc")
+    depends_on("petsc@3.13.0~shared+mpi+metis+hypre+superlu-dist+hdf5+debug", when="+petsc+debug")
     depends_on("mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf+petsc", when="+petsc")
 
     for dep in debug_deps:
