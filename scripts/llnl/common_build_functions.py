@@ -167,7 +167,7 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     return res
 
 
-def test_examples(build_dir, install_dir, report_to_stdout = False):
+def test_examples(host_config, build_dir, install_dir, report_to_stdout = False):
     print("[starting to build examples]")
     examples_output_file =  pjoin(build_dir,"output.log.make.examples.txt")
     print("[log file: %s]" % examples_output_file)
@@ -289,7 +289,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
         return res
 
     # build the examples
-    res = test_examples(build_dir, install_dir, report_to_stdout)
+    res = test_examples(host_config, build_dir, install_dir, report_to_stdout)
 
     if res != 0:
         print("[ERROR: Building examples for host-config: %s failed]\n\n" % host_config)
