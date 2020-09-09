@@ -7,7 +7,6 @@
 #include "common/boundary_condition.hpp"
 
 #include <algorithm>
-#include <iterator>
 
 #include "common/logger.hpp"
 
@@ -150,53 +149,6 @@ mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
   SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
                 "Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
   return *std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
-}
-
-void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
-                                            FiniteElementState& state, const int component)
-{
-  auto num_attrs = state.mesh().bdr_attributes.Max();
-
-  std::set<int> filtered_attrs;
-  std::set_difference(ess_bdr.begin(), ess_bdr.end(), attrs_in_use_.begin(), attrs_in_use_.end(),
-                      std::inserter(filtered_attrs, filtered_attrs.begin()));
-
-  // Check if anything was removed
-  if (filtered_attrs.size() < ess_bdr.size()) {
-    SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
-  }
-
-  BoundaryCondition bc(ess_bdr_coef, component, filtered_attrs, num_attrs);
-  bc.setTrueDofs(state);
-  ess_bdr_.emplace_back(std::move(bc));
-  attrs_in_use_.insert(ess_bdr.begin(), ess_bdr.end());
-  all_dofs_valid_ = false;
-}
-
-void BoundaryConditionManager::addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                                          FiniteElementState& state, const int component)
-{
-  auto num_attrs = state.mesh().bdr_attributes.Max();
-  nat_bdr_.emplace_back(nat_bdr_coef, component, nat_bdr, num_attrs);
-  all_dofs_valid_ = false;
-}
-
-void BoundaryConditionManager::addTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                                           int component)
-{
-  ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
-  all_dofs_valid_ = false;
-}
-
-void BoundaryConditionManager::updateAllDofs() const
-{
-  all_dofs_.DeleteAll();
-  for (const auto& bc : ess_bdr_) {
-    all_dofs_.Append(bc.getTrueDofs());
-  }
-  all_dofs_.Sort();
-  all_dofs_.Unique();
-  all_dofs_valid_ = true;
 }
 
 }  // namespace serac
