@@ -54,6 +54,26 @@ TEST(expr_templates, basic_add_lambda)
   }
 }
 
+TEST(expr_templates, subtraction_not_commutative)
+{
+  constexpr int size = 10;
+  mfem::Vector  a(size);
+  mfem::Vector  b(size);
+  mfem::Vector  c(size);
+
+  for (int i = 0; i < size; i++) {
+    a[i] = i * 4 + 1;
+    b[i] = i * i * 3 + 2;
+    c[i] = i * i * i * 7 + 23;
+  }
+
+  mfem::Vector result1 = a + c - b;
+  mfem::Vector result2 = c - b + a;
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(result1[i], result2[i]);
+  }
+}
+
 TEST(expr_templates, move_from_temp_lambda)
 {
   constexpr int size = 10;
