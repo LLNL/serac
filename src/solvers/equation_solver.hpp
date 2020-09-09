@@ -159,7 +159,7 @@ private:
      * @brief The owner of the SuperLU matrix for the gradient, stored
      * as a member variable for lifetime purposes
      */
-    mutable std::unique_ptr<mfem::SuperLURowLocMatrix> superlu_grad_mat_;
+    mutable std::optional<mfem::SuperLURowLocMatrix> superlu_grad_mat_;
   };
   /**
    * @brief The preconditioner (used for an iterative solver only)

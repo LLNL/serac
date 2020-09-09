@@ -118,7 +118,7 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   mfem::HypreParMatrix* matr_grad = dynamic_cast<mfem::HypreParMatrix*>(&grad);
 
   SLIC_ERROR_IF(matr_grad == nullptr, "Nonlinear operator gradient must be a HypreParMatrix");
-  superlu_grad_mat_ = std::make_unique<mfem::SuperLURowLocMatrix>(*matr_grad);
+  superlu_grad_mat_.emplace(*matr_grad);
   return *superlu_grad_mat_;
 }
 
