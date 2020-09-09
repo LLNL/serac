@@ -235,8 +235,6 @@ double second_order_ode_test(int num_steps)
   invH.Invert();
   invT.Invert();
 
-  std::cout << invT << std::endl;
-
   auto duc_dt = [](double t) {
     static constexpr double eps = 1.0e-4;
     return mfem::Vector((uc(t + eps) - uc(t - eps)) * (1.0 / (2.0 * eps)));
@@ -264,13 +262,8 @@ double second_order_ode_test(int num_steps)
     mfem::Vector fc = M * d2uc_dt2(t) + C * duc_dt(t) + K * uc(t);
     mfem::Vector fp = C * (duf_dt + d2uf_dt2 * (1.0 - gamma) * dt) + 
                       K * (uf + duf_dt * dt + d2uf_dt2 * (0.5 - beta) * dt * dt);
-    mfem::Vector f = fext(t) - fc + fp;
+    mfem::Vector f = fext(t) - fc - fp;
     f[1]           = 0;
-
-    if (i < 2) {
-      std::cout << t << std::endl;
-      std::cout << fc << fp << fext(t) << f << std::endl;
-    }
 
     uf += duf_dt * dt + (0.5 - beta) * d2uf_dt2 * dt * dt;
     duf_dt += (1.0 - gamma) * d2uf_dt2 * dt;
@@ -285,13 +278,11 @@ double second_order_ode_test(int num_steps)
   }
 
   mfem::Vector solution(3);
-  solution[0] = -1.0124;
+  solution[0] = -1.0106975024794817575;
   solution[1] = 0.0;
-  solution[2] = -0.823848;
+  solution[2] = -0.82245512013213784019;
 
   mfem::Vector error = u - solution;
-
-  std::cout <<  error << std::endl;
 
   return error.Norml2();
 }
@@ -310,21 +301,9 @@ int main()
 //    num_steps <<= 1;
 //  }
 
-  second_order_ode_test(20);
+  std::cout << second_order_ode_test(20) << std::endl;
+  std::cout << second_order_ode_test(40) << std::endl;
+  std::cout << second_order_ode_test(80) << std::endl;
 
-  mfem::Vector a(3), b(3), c(3);
-
-  a[0] = a[1] = a[2] = 1;
-  b[0] = b[1] = b[2] = 2;
-  c[0] = c[1] = c[2] = 4;
-
-  auto expr1 = a + c - b;
-  // VectorSubtraction<mfem::Vector, BinaryVectorExpr<mfem::Vector, mfem::Vector, false, false, std::plus<double>>, false, true>
-
-  auto expr2 = c - b + a;
-  // VectorAddition<mfem::Vector, BinaryVectorExpr<mfem::Vector, mfem::Vector, false, false, std::minus<double>>, false, true>
-
-  std::cout << mfem::Vector(expr1) << std::endl;
-  std::cout << mfem::Vector(expr2) << std::endl;
 
 }
