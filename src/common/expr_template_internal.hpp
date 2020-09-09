@@ -30,7 +30,7 @@ namespace serac::internal {
  * @tparam owns Whether the object "intends" to take ownership of the constructor argument
  */
 template <typename vec, bool owns>
-using vec_t = typename std::conditional<owns, vec, const vec&>::type;
+using vec_t = typename std::conditional<owns, std::decay_t<vec>, const std::decay_t<vec>&>::type;
 
 /**
  * @brief Type alias for the constructior argument to a vector expression - an
@@ -40,22 +40,25 @@ using vec_t = typename std::conditional<owns, vec, const vec&>::type;
  * @tparam owns Whether the function "intends" to take ownership of the argument
  */
 template <typename vec, bool owns>
-using vec_arg_t = typename std::conditional<owns, std::remove_const_t<vec>&&, const vec&>::type;
+using vec_arg_t = typename std::conditional<owns, std::decay_t<vec>&&, const vec&>::type;
+
+template <typename vec>
+inline constexpr bool owns_v = !std::is_same_v<vec, mfem::Vector> || std::is_rvalue_reference_v<vec>;
 
 /**
  * @brief Derived VectorExpr class for representing the application of a unary
  * operator to a vector
  * @tparam vec The base vector type, e.g., mfem::Vector, or another VectorExpr
- * @tparam owns Whether the object owns its vector
  * @tparam UnOp The type of the unary operator
  * @pre UnOp must be a functor with the following signature:
  * @code{.cpp}
  * double UnOp::operator()(const double arg);
  * @endcode
  */
-template <typename vec, bool owns, typename UnOp>
-class UnaryVectorExpr : public VectorExpr<UnaryVectorExpr<vec, owns, UnOp>> {
+template <typename vec, typename UnOp>
+class UnaryVectorExpr : public VectorExpr<UnaryVectorExpr<vec, UnOp>> {
 public:
+  constexpr static bool owns = owns_v<vec>;
   /**
    * @brief Constructs an element-wise unary expression on a vector
    */
@@ -101,8 +104,8 @@ private:
 /**
  * @brief Type alias for a vector negation operation
  */
-template <typename vec, bool owns>
-using UnaryNegation = UnaryVectorExpr<vec, owns, std::negate<double>>;
+template <typename vec>
+using UnaryNegation = UnaryVectorExpr<vec, std::negate<double>>;
 
 /**
  * @brief Derived VectorExpr class for representing the application of a binary
@@ -111,17 +114,17 @@ using UnaryNegation = UnaryVectorExpr<vec, owns, std::negate<double>>;
  * or another VectorExpr
  * @tparam rhs The base vector type for the expression RHS, e.g., mfem::Vector,
  * or another VectorExpr
- * @tparam lhs_owns Whether the object owns its LHS vector
- * @tparam rhs_owns Whether the object owns its RHS vector
  * @tparam BinOp The type of the binary operator
  * @pre UnOp must be a functor with the following signature:
  * @code{.cpp}
  * double BinOp::operator()(const double lhs, const double rhs);
  * @endcode
  */
-template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns, typename BinOp>
-class BinaryVectorExpr : public VectorExpr<BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, BinOp>> {
+template <typename lhs, typename rhs, typename BinOp>
+class BinaryVectorExpr : public VectorExpr<BinaryVectorExpr<lhs, rhs, BinOp>> {
 public:
+  constexpr static bool lhs_owns = owns_v<lhs>;
+  constexpr static bool rhs_owns = owns_v<rhs>;
   /**
    * @brief Constructs an element-wise binary expression on two vectors
    */
@@ -152,14 +155,14 @@ private:
 /**
  * @brief Type alias for a vector addition operation
  */
-template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns>
-using VectorAddition = BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, std::plus<double>>;
+template <typename lhs, typename rhs>
+using VectorAddition = BinaryVectorExpr<lhs, rhs, std::plus<double>>;
 
 /**
  * @brief Type alias for a vector subtraction operation
  */
-template <typename lhs, typename rhs, bool lhs_owns, bool rhs_owns>
-using VectorSubtraction = BinaryVectorExpr<lhs, rhs, lhs_owns, rhs_owns, std::minus<double>>;
+template <typename lhs, typename rhs>
+using VectorSubtraction = BinaryVectorExpr<lhs, rhs, std::minus<double>>;
 
 /**
  * @brief Derived VectorExpr class for the application of an mfem::Operator to a vector,
