@@ -183,7 +183,7 @@ def test_examples(build_dir, install_dir, report_to_stdout = False):
         print("[ERROR: Install for host-config: %s failed]\n" % host_config)
         return res
 
-    example_dir = pjoin(install_dir, "examples", "cmake")
+    example_dir = pjoin(install_dir, "examples", "using-with-cmake")
     res = sexe("cd %s && mkdir build && cd build && cmake -C %s/host-config.cmake %s" % (example_dir, example_dir, example_dir),
                 output_file = examples_output_file,
                 echo=True)

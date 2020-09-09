@@ -11,9 +11,9 @@ configure_file(
 
 install(
     FILES
-        cmake/CMakeLists.txt
-        cmake/serac.cpp
+        using-with-cmake/CMakeLists.txt
+        using-with-cmake/serac_example.cpp
         ${CMAKE_BINARY_DIR}/examples/cmake/host-config.cmake
     DESTINATION
-        examples/cmake
+        examples/using-with-cmake
 )
