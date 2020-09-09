@@ -126,7 +126,7 @@ mfem::Array<int> makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoef
  * @return An array holding the attributes that correspond to each element
  */
 mfem::Array<int> makeAttributeList(
-    mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> = [](double v) { return v > 0. ? 2 : 1; });
+    mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = [](double v) { return v > 0. ? 2 : 1; });
 
 /**
  * @brief This method creates an array of size(local_bdr_elems), and assigns
@@ -146,7 +146,8 @@ mfem::Array<int> makeAttributeList(
  * @return An array holding the attributes that correspond to each element
  */
 mfem::Array<int> makeBdrAttributeList(
-    mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> = [](double v) { return v == 1. ? 2 : 1; });
+    mfem::Mesh& m, mfem::Coefficient& c,
+    std::function<int(double)> digitize = [](double v) { return v == 1. ? 2 : 1; });
 
 /**
  * @brief AttributemodifierCoefficient class
@@ -278,7 +279,7 @@ public:
   /**
    * @brief Evaluate the coefficient at a quadrature point
    *
-   * @param[in] Tr The element transformation for the evaluation
+   * @param[in] T The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
    * @return The value of the coefficient at the quadrature point
    */
