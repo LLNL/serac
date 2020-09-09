@@ -23,13 +23,13 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> mes
 void ElasticitySolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, component);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void ElasticitySolver::setTractionBCs(const std::set<int>&                     trac_bdr,
                                       std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, const int component)
 {
-  setNaturalBCs(trac_bdr, trac_bdr_coef, component);
+  bcs_.addNatural(trac_bdr, trac_bdr_coef, *displacement_, component);
 }
 
 void ElasticitySolver::setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu)

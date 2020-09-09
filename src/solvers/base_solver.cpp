@@ -31,21 +31,9 @@ BaseSolver::BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : Base
   gf_initialized_.assign(n, false);
 }
 
-void BaseSolver::setEssentialBCs(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
-                                 FiniteElementState& state, const int component)
-{
-  bcs_.addEssential(ess_bdr, ess_bdr_coef, state, component);
-}
-
 void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
 {
   bcs_.addTrueDofs(true_dofs, ess_bdr_coef, component);
-}
-
-void BaseSolver::setNaturalBCs(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                               const int component)
-{
-  bcs_.addNatural(nat_bdr, nat_bdr_coef, *(state_.front()), component);
 }
 
 void BaseSolver::setState(const std::vector<serac::GeneralCoefficient>& state_coef)
