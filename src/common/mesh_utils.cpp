@@ -8,9 +8,9 @@
 
 #include <fstream>
 
-#include "common/logger.hpp"
-#include "common/terminator.hpp"
 #include "fmt/fmt.hpp"
+#include "infrastructure/logger.hpp"
+#include "infrastructure/terminator.hpp"
 
 namespace serac {
 

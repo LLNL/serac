@@ -4,11 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "common/boundary_condition.hpp"
+#include "solvers/problem_description/boundary_condition.hpp"
 
 #include <algorithm>
-
-#include "common/logger.hpp"
 
 namespace serac {
 

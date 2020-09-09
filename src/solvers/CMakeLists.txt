@@ -2,11 +2,12 @@
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
-# SPDX-License-Identifier: (BSD-3-Clause) 
+# SPDX-License-Identifier: (BSD-3-Clause)
+
+add_subdirectory(problem_description)
 
 set(solvers_sources
     base_solver.cpp
-    equation_solver.cpp
     nonlinear_solid_solver.cpp
     nonlinear_solid_operators.cpp
     thermal_solver.cpp
@@ -17,7 +18,6 @@ set(solvers_sources
 
 set(solvers_headers
     base_solver.hpp
-    equation_solver.hpp
     nonlinear_solid_solver.hpp
     nonlinear_solid_operators.hpp
     thermal_solver.hpp
@@ -30,7 +30,7 @@ blt_add_library(
     NAME        solvers
     SOURCES     ${solvers_sources}
     HEADERS     ${solvers_headers}
-    DEPENDS_ON  mfem integrators common axom fmt mpi
+    DEPENDS_ON  mfem integrators common infrastructure problem_description axom fmt mpi
     )
 
 target_include_directories(solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

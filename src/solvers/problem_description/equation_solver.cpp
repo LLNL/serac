@@ -4,9 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "solvers/equation_solver.hpp"
+#include "solvers/problem_description/equation_solver.hpp"
 
-#include "common/common.hpp"
+#include "common/serac_types.hpp"
+#include "infrastructure/logger.hpp"
+#include "infrastructure/terminator.hpp"
 
 namespace serac {
 

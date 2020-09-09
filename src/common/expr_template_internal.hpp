@@ -18,8 +18,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "common/logger.hpp"
 #include "common/vector_expression.hpp"
+#include "infrastructure/logger.hpp"
 
 namespace serac::internal {
 

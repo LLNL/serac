@@ -4,11 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "common/initialize.hpp"
+#include "infrastructure/initialize.hpp"
 
-#include "common/logger.hpp"
-#include "common/profiling.hpp"
-#include "common/terminator.hpp"
+#include "infrastructure/logger.hpp"
+#include "infrastructure/profiling.hpp"
+#include "infrastructure/terminator.hpp"
 
 namespace serac {
 

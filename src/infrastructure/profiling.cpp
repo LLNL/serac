@@ -4,11 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "common/profiling.hpp"
+#include "infrastructure/profiling.hpp"
 
 #include <optional>
 
-#include "common/logger.hpp"
+#include "infrastructure/logger.hpp"
 
 #ifdef SERAC_USE_CALIPER
 namespace {

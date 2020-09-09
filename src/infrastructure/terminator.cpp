@@ -4,14 +4,14 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "common/terminator.hpp"
+#include "infrastructure/terminator.hpp"
 
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
 
-#include "common/logger.hpp"
-#include "common/profiling.hpp"
+#include "infrastructure/logger.hpp"
+#include "infrastructure/profiling.hpp"
 
 namespace {
 /**

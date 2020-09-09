@@ -16,10 +16,17 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
+#include <variant>
 
 #include "common/serac_types.hpp"
+#include "mfem.hpp"
 
 namespace serac {
+
+/**
+ * @brief A sum type for encapsulating either a scalar or vector coeffient
+ */
+using GeneralCoefficient = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 /**
  * @brief Structure for optionally configuring a FiniteElementState

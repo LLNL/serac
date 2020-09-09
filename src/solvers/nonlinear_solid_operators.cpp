@@ -7,7 +7,7 @@
 #include "nonlinear_solid_operators.hpp"
 
 #include "common/expr_template_ops.hpp"
-#include "common/logger.hpp"
+#include "infrastructure/logger.hpp"
 
 namespace serac {
 

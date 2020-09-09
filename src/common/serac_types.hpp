@@ -13,12 +13,6 @@
 #ifndef SERAC_TYPES
 #define SERAC_TYPES
 
-#include <memory>
-#include <variant>
-
-#include "common/logger.hpp"
-#include "mfem.hpp"
-
 namespace serac {
 /**
  * @brief Output file type associated with a solver
@@ -135,11 +129,6 @@ struct NonlinearSolverParameters {
    */
   int print_level;
 };
-
-/**
- * @brief A sum type for encapsulating either a scalar or vector coeffient
- */
-using GeneralCoefficient = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 }  // namespace serac
 

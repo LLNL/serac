@@ -6,7 +6,7 @@
 
 #include "thermal_solver.hpp"
 
-#include "common/logger.hpp"
+#include "infrastructure/logger.hpp"
 
 namespace serac {
 

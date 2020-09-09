@@ -6,7 +6,7 @@
 
 #include "inc_hyperelastic_integrator.hpp"
 
-#include "common/profiling.hpp"
+#include "infrastructure/profiling.hpp"
 
 namespace serac {
 

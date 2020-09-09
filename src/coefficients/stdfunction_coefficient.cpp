@@ -7,7 +7,7 @@
 
 #include "stdfunction_coefficient.hpp"
 
-#include "common/logger.hpp"
+#include "infrastructure/logger.hpp"
 
 namespace serac {
 

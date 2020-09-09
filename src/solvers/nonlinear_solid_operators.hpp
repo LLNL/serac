@@ -15,9 +15,11 @@
 
 #include <memory>
 
-#include "common/common.hpp"
+#include "common/serac_types.hpp"
 #include "mfem.hpp"
-#include "solvers/equation_solver.hpp"
+#include "solvers/problem_description/boundary_condition.hpp"
+#include "solvers/problem_description/equation_solver.hpp"
+#include "solvers/problem_description/finite_element_state.hpp"
 
 namespace serac {
 

@@ -9,6 +9,7 @@ add_subdirectory(solvers)
 add_subdirectory(integrators)
 add_subdirectory(coefficients)
 add_subdirectory(drivers)
+add_subdirectory(infrastructure)
 
 if (ENABLE_DOCS)
     add_subdirectory(docs)

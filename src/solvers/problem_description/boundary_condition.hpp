@@ -19,8 +19,9 @@
 #include <type_traits>
 #include <variant>
 
-#include "common/finite_element_state.hpp"
 #include "common/serac_types.hpp"
+#include "infrastructure/logger.hpp"
+#include "solvers/problem_description/finite_element_state.hpp"
 
 namespace serac {
 

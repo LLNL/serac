@@ -6,7 +6,7 @@
 
 #include "nonlinear_solid_solver.hpp"
 
-#include "common/logger.hpp"
+#include "infrastructure/logger.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
 
