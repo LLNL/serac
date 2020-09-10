@@ -34,7 +34,7 @@ TEST(component_bc, qs_solve)
   std::set<int> ess_bdr = {1};
 
   // define the displacement vector
-  auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -1.0e-1; });
+  auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x, double /* t */) { return x[0] * -1.0e-1; });
 
   // Pass the BC information to the solver object setting only the z direction
   solid_solver.setDisplacementBCs(ess_bdr, disp_coef, 0);
@@ -128,8 +128,8 @@ TEST(component_bc, qs_attribute_solve)
   std::set<int> ess_y_bdr = {2};
 
   // define the displacement vector
-  auto disp_x_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * 3.0e-2; });
-  auto disp_y_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[1] * -5.0e-2; });
+  auto disp_x_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x, double /* t */) { return x[0] * 3.0e-2; });
+  auto disp_y_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x, double /* t */) { return x[1] * -5.0e-2; });
 
   // Pass the BC information to the solver object setting only the z direction
   solid_solver.setDisplacementBCs(ess_x_bdr, disp_x_coef, 0);

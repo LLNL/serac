@@ -92,7 +92,7 @@ TEST_F(StdFunctionCoefficientTest, AttributeList)
   // create an indicator coefficient that paints the upper-right corner of a
   // cube
 
-  StdFunctionCoefficient corner([](mfem::Vector x) { return (x[0] > 0.75 && x[1] > 0.75) ? 1. : 0.; });
+  StdFunctionCoefficient corner([](mfem::Vector x, double /* t */) { return (x[0] > 0.75 && x[1] > 0.75) ? 1. : 0.; });
 
   Array<int> attr_list = serac::makeAttributeList(*pmesh_, corner);
 
@@ -135,7 +135,7 @@ TEST_F(StdFunctionCoefficientTest, AttributeListSet)
   // create an indicator coefficient that paints the upper-right corner of a
   // cube
 
-  StdFunctionCoefficient corner([](mfem::Vector x) { return (x[0] > 0.75 && x[1] > 0.75) ? 1. : 0.; });
+  StdFunctionCoefficient corner([](mfem::Vector x, double /* t */) { return (x[0] > 0.75 && x[1] > 0.75) ? 1. : 0.; });
 
   Array<int> attr_list = serac::makeAttributeList(*pmesh_, corner);
 
@@ -246,6 +246,58 @@ TEST_F(StdFunctionCoefficientTest, EssentialBCCube)
   ess_vdof_bc_list.Print();
   ess_vdof_list_vals.Print();
   nonzero.Print();
+}
+
+TEST_F(StdFunctionCoefficientTest, ScalarValuedTimeDerivatives) {
+
+  auto y_func = [](const mfem::Vector & x, double t){
+    return x[0] * sin(2 * M_PI * t);
+  };
+
+  auto dy_dt_func = [](const mfem::Vector & x, double t){
+    return 2 * M_PI * x[0] * cos(2 * M_PI * t);
+  };
+
+  auto d2y_dt2_func = [](const mfem::Vector & x, double t){
+    return -4 * M_PI * M_PI * x[0] * sin(2 * M_PI * t);
+  };
+
+  StdFunctionCoefficient y(y_func);
+  StdFunctionCoefficient dy_dt = d_dt(y);
+  StdFunctionCoefficient d2y_dt2 = d2_dt2(y);
+
+  ParGridFunction u(pfes_.get());
+  ParGridFunction x(pfes_v_.get());
+  pmesh_->GetVertices(x);
+
+  y.SetTime(0.5);
+  u.ProjectCoefficient(y);
+  mfem::Vector vertex(dim_);
+  for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
+    for (int v = 0; v < dim_; v++) {
+      vertex(v) = x[pfes_v_->DofToVDof(d, v)];
+    }
+    EXPECT_NEAR(y_func(vertex, 0.5), u[d], 1.e-8);
+  }
+
+  dy_dt.SetTime(0.5);
+  u.ProjectCoefficient(dy_dt);
+  for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
+    for (int v = 0; v < dim_; v++) {
+      vertex(v) = x[pfes_v_->DofToVDof(d, v)];
+    }
+    EXPECT_NEAR(dy_dt_func(vertex, 0.5), u[d], 1.e-6);
+  }
+
+  d2y_dt2.SetTime(0.5);
+  u.ProjectCoefficient(d2y_dt2);
+  for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
+    for (int v = 0; v < dim_; v++) {
+      vertex(v) = x[pfes_v_->DofToVDof(d, v)];
+    }
+    EXPECT_NEAR(d2y_dt2_func(vertex, 0.5), u[d], 1.e-6);
+  }
+
 }
 
 //------------------------------------------------------------------------------

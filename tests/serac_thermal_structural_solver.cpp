@@ -37,7 +37,7 @@ TEST(dynamic_solver, dyn_solve)
 
   auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector&, mfem::Vector& v) { v = 0.0; });
 
-  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) {
+  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x, double /* t */) {
     double temp = 2.0;
     if (x(0) < 1.0) {
       temp = 5.0;

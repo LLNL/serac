@@ -11,13 +11,13 @@
 
 namespace serac {
 
-StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector&)> func) : func_(func) {}
+StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector&, double)> func) : func_(func) {}
 
 double StdFunctionCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
   mfem::Vector transip(Tr.GetSpaceDim());
   Tr.Transform(ip, transip);
-  return func_(transip);
+  return func_(transip, GetTime());
 }
 
 StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(int                                               dim,

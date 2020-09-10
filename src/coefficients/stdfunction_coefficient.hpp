@@ -29,12 +29,13 @@ namespace serac {
  */
 class StdFunctionCoefficient : public mfem::Coefficient {
 public:
+
   /**
    * @brief Constructor that takes in an mfem Vector representing the coordinates and produces a double
    *
-   * @param[in] func The scalar-returning std::function to define the coefficient
+   * @param[in] func: a function of space and time that returns a double
    */
-  StdFunctionCoefficient(std::function<double(mfem::Vector&)> func);
+  StdFunctionCoefficient(std::function<double(mfem::Vector&, double)> func);
 
   /**
    * @brief Evalate the coefficient at a quadrature point
@@ -45,12 +46,27 @@ public:
    */
   virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
 
+  friend StdFunctionCoefficient d_dt(const StdFunctionCoefficient &, const double);
+  friend StdFunctionCoefficient d2_dt2(const StdFunctionCoefficient &, const double);
+
 private:
   /**
    * @brief The function to evaluate for the coefficient
    */
-  std::function<double(mfem::Vector&)> func_;
+  std::function<double(mfem::Vector&, double)> func_;
 };
+
+inline StdFunctionCoefficient d_dt(const StdFunctionCoefficient & y, const double dt = 1.0e-8) {
+  return StdFunctionCoefficient([dt, y = y.func_](mfem::Vector& x, double t) {
+    return (y(x, t + dt) - y(x, t - dt)) / (2.0 * dt);
+  });
+}
+
+inline StdFunctionCoefficient d2_dt2(const StdFunctionCoefficient & y, const double dt = 1.0e-4) {
+  return StdFunctionCoefficient([dt, y = y.func_](mfem::Vector& x, double t) {
+    return (y(x, t + dt) - 2 * y(x, t) + y(x, t - dt)) / (dt * dt);
+  });
+}
 
 /**
  * @brief StdFunctionVectorCoefficient is an easy way to make an
@@ -306,6 +322,8 @@ private:
    */
   std::function<double(const double, const double)> bi_function_;
 };
+
+
 
 }  // namespace serac
 
