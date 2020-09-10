@@ -17,9 +17,9 @@
 
 #include "common/serac_types.hpp"
 #include "mfem.hpp"
-#include "solvers/problem_description/boundary_condition.hpp"
-#include "solvers/problem_description/equation_solver.hpp"
-#include "solvers/problem_description/finite_element_state.hpp"
+#include "solvers/physics_utilities/boundary_condition.hpp"
+#include "solvers/physics_utilities/equation_solver.hpp"
+#include "solvers/physics_utilities/finite_element_state.hpp"
 
 namespace serac {
 

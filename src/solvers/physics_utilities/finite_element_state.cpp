@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "solvers/problem_description/finite_element_state.hpp"
+#include "solvers/physics_utilities/finite_element_state.hpp"
 
 namespace serac {
 

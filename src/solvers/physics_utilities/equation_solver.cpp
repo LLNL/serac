@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "solvers/problem_description/equation_solver.hpp"
+#include "solvers/physics_utilities/equation_solver.hpp"
 
 #include "common/serac_types.hpp"
 #include "infrastructure/logger.hpp"

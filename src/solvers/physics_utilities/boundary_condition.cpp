@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "solvers/problem_description/boundary_condition.hpp"
+#include "solvers/physics_utilities/boundary_condition.hpp"
 
 #include <algorithm>
 

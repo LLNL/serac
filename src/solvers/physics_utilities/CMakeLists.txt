@@ -4,26 +4,26 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(problem_description_headers
+set(physics_utilities_headers
     boundary_condition.hpp
     equation_solver.hpp
     finite_element_state.hpp
     )
 
-set(problem_description_sources
+set(physics_utilities_sources
     boundary_condition.cpp
     equation_solver.cpp
     finite_element_state.cpp
     )
 
-set(problem_description_depends infrastructure mfem mpi axom)
+set(physics_utilities_depends infrastructure mfem mpi axom)
 
 blt_add_library(
-    NAME        problem_description
-    HEADERS     ${problem_description_headers}
-    SOURCES     ${problem_description_sources}
-    DEPENDS_ON  ${problem_description_depends}
+    NAME        physics_utilities
+    HEADERS     ${physics_utilities_headers}
+    SOURCES     ${physics_utilities_sources}
+    DEPENDS_ON  ${physics_utilities_depends}
     )
 
 
-target_include_directories(problem_description PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+target_include_directories(physics_utilities PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../..)

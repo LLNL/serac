@@ -21,7 +21,7 @@
 
 #include "common/serac_types.hpp"
 #include "infrastructure/logger.hpp"
-#include "solvers/problem_description/finite_element_state.hpp"
+#include "solvers/physics_utilities/finite_element_state.hpp"
 
 namespace serac {
 

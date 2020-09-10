@@ -4,14 +4,13 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-add_subdirectory(problem_description)
+add_subdirectory(physics_utilities)
+add_subdirectory(physics_operators)
 
 set(solvers_sources
     base_solver.cpp
     nonlinear_solid_solver.cpp
-    nonlinear_solid_operators.cpp
     thermal_solver.cpp
-    thermal_operators.cpp
     thermal_structural_solver.cpp
     elasticity_solver.cpp
     )
@@ -19,9 +18,7 @@ set(solvers_sources
 set(solvers_headers
     base_solver.hpp
     nonlinear_solid_solver.hpp
-    nonlinear_solid_operators.hpp
     thermal_solver.hpp
-    thermal_operators.hpp
     thermal_structural_solver.hpp
     elasticity_solver.hpp
     )
@@ -30,7 +27,7 @@ blt_add_library(
     NAME        solvers
     SOURCES     ${solvers_sources}
     HEADERS     ${solvers_headers}
-    DEPENDS_ON  mfem integrators common infrastructure problem_description axom fmt mpi
+    DEPENDS_ON  mfem integrators common infrastructure physics_utilities physics_operators axom fmt mpi
     )
 
 target_include_directories(solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
