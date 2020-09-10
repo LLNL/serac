@@ -6,14 +6,15 @@
 
 template <typename T>
 struct has_print {
-  template <typename C> static float test(decltype(&C::Print)) ;
-  template <typename C> static double test(...);    
-  enum { value = sizeof(test<T>(0)) == sizeof(float) };
+  template <typename C>
+  static float test(decltype(&C::Print));
+  template <typename C>
+  static double test(...);
+  static constexpr bool value = sizeof(test<T>(0)) == sizeof(float);
 };
 
-template < typename T, typename U = std::enable_if_t< has_print<T>::value > >
-std::ostream& operator<<(std::ostream& out, const T & vec)
-{
+template <typename T, typename U = std::enable_if_t<has_print<T>::value> >
+std::ostream& operator<<(std::ostream& out, const T& vec) {
   vec.Print(out);
   return out;
 }
@@ -26,6 +27,18 @@ mfem::Vector uc(double t)
   u[2] = 0;
   return u;
 }
+
+mfem::Vector duc_dt(double t)
+{
+  static constexpr double eps = 1.0e-4;
+  return mfem::Vector((uc(t + eps) - uc(t - eps)) * (1.0 / (2.0 * eps)));
+};
+
+mfem::Vector d2uc_dt2(double t)
+{
+  static constexpr double eps = 1.0e-4;
+  return mfem::Vector((uc(t - eps) - 2 * uc(t) + uc(t + eps)) * (1.0 / (eps * eps)));
+};
 
 mfem::Vector fext(double t)
 {
@@ -48,14 +61,13 @@ public:
   void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) { implicit_func(t, dt, u, du_dt); }
 };
 
-#if 0
-double first_order_test(int num_steps)
+double first_order_test_mfem(int num_steps)
 {
   // clang-format off
   mfem::DenseMatrix M(3, 3);
-  M(0, 0) = 2; M(0, 1) = 2; M(0, 2) = 0;
+  M(0, 0) = 2; M(0, 1) = 1; M(0, 2) = 0;
   M(1, 0) = 1; M(1, 1) = 4; M(1, 2) = 1;
-  M(2, 0) = 0; M(2, 1) = 2; M(2, 2) = 2;
+  M(2, 0) = 0; M(2, 1) = 1; M(2, 2) = 2;
 
   double k = 100;
   mfem::DenseMatrix K(3, 3);
@@ -78,7 +90,9 @@ double first_order_test(int num_steps)
 
   FirstOrderODE ode(3);
   ode.explicit_func = [&](const double t, const mfem::Vector& u, mfem::Vector& du_dt) {
-    du_dt = invH * (fext(t) - K * u - M * uc(t));
+    mfem::Vector uf = u;
+    uf[1] = 0;
+    du_dt = invH * (fext(t) - K * uf - K * uc(t) - M * duc_dt(t));
   };
   ode.implicit_func = [&, dt_prev = -1.0, invT = mfem::DenseMatrix(3, 3)](
                           const double t, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) mutable {
@@ -91,30 +105,25 @@ double first_order_test(int num_steps)
       invT.Invert();
     }
 
-    double eps = dt / 1000.0;
-
     mfem::Vector uf     = u;
     mfem::Vector duf_dt = du_dt;
     duf_dt[1] = uf[1] = 0;
 
-    mfem::Vector duc_dt = (uc(t + eps) - uc(t - eps)) * (1.0 / (2.0 * eps));
-    mfem::Vector f      = fext(t) - M * duc_dt - K * uc(t) - K * (uf + dt * duf_dt);
-    f[1]                = 0;
+    mfem::Vector f = fext(t) - M * duc_dt(t) - K * uc(t) - K * uf;
+    f[1]           = 0;
 
-    std::cout << t << " " << dt << std::endl;
+    du_dt = invT * f;
 
-    du_dt   = invT * f;
     dt_prev = dt;
   };
 
-  auto backward_euler = mfem::BackwardEulerSolver();
-  backward_euler.Init(ode);
+  auto time_integrator = mfem::ImplicitMidpointSolver();
+  time_integrator.Init(ode);
 
   mfem::Vector u = uc(0);
   double       t = 0.0;
-  while (t < tmax) {
-    double dt_actual = std::min(dt, tmax - t);
-    backward_euler.Step(u, t, dt_actual);
+  for (int i = 0; i < num_steps; i++) {
+    time_integrator.Step(u, t, dt);
     u[1] = uc(t)[1];
   }
 
@@ -125,9 +134,10 @@ double first_order_test(int num_steps)
 
   mfem::Vector error = u - solution;
 
+  std::cout << error << std::endl;
+
   return error.Norml2();
 }
-#endif
 
 double first_order_ode_test(int num_steps)
 {
@@ -159,11 +169,6 @@ double first_order_ode_test(int num_steps)
 
   invH.Invert();
   invT.Invert();
-
-  auto duc_dt = [](double t) {
-    static constexpr double eps = 1.0e-4;
-    return mfem::Vector((uc(t + eps) - uc(t - eps)) * (1.0 / (2.0 * eps)));
-  };
 
   double       t      = 0.0;
   mfem::Vector u      = uc(t);
@@ -235,33 +240,23 @@ double second_order_ode_test(int num_steps)
   invH.Invert();
   invT.Invert();
 
-  auto duc_dt = [](double t) {
-    static constexpr double eps = 1.0e-4;
-    return mfem::Vector((uc(t + eps) - uc(t - eps)) * (1.0 / (2.0 * eps)));
-  };
-
-  auto d2uc_dt2 = [](double t) {
-    static constexpr double eps = 1.0e-4;
-    return mfem::Vector((uc(t - eps) - 2 * uc(t) + uc(t + eps)) * (1.0 / (eps * eps)));
-  };
-
-  double       t       = 0.0;
-  mfem::Vector u       = uc(t);
-  mfem::Vector du_dt   = duc_dt(t);
-  mfem::Vector d2u_dt2 = invH * (fext(t) - K * u - C * duc_dt(t) - M * d2uc_dt2(t));
-  du_dt[1]             = duc_dt(t)[1];
-  d2u_dt2[1]           = d2uc_dt2(t)[1];
-  mfem::Vector uf      = u;
-  mfem::Vector duf_dt  = du_dt;
-  mfem::Vector d2uf_dt2  = d2u_dt2;
+  double       t        = 0.0;
+  mfem::Vector u        = uc(t);
+  mfem::Vector du_dt    = duc_dt(t);
+  mfem::Vector d2u_dt2  = invH * (fext(t) - K * u - C * duc_dt(t) - M * d2uc_dt2(t));
+  du_dt[1]              = duc_dt(t)[1];
+  d2u_dt2[1]            = d2uc_dt2(t)[1];
+  mfem::Vector uf       = u;
+  mfem::Vector duf_dt   = du_dt;
+  mfem::Vector d2uf_dt2 = d2u_dt2;
   uf[1] = duf_dt[1] = d2uf_dt2[1] = 0.0;
 
   for (int i = 0; i < num_steps; i++) {
     t += dt;
 
     mfem::Vector fc = M * d2uc_dt2(t) + C * duc_dt(t) + K * uc(t);
-    mfem::Vector fp = C * (duf_dt + d2uf_dt2 * (1.0 - gamma) * dt) + 
-                      K * (uf + duf_dt * dt + d2uf_dt2 * (0.5 - beta) * dt * dt);
+    mfem::Vector fp =
+        C * (duf_dt + d2uf_dt2 * (1.0 - gamma) * dt) + K * (uf + duf_dt * dt + d2uf_dt2 * (0.5 - beta) * dt * dt);
     mfem::Vector f = fext(t) - fc - fp;
     f[1]           = 0;
 
@@ -273,7 +268,7 @@ double second_order_ode_test(int num_steps)
     uf += beta * d2uf_dt2 * dt * dt;
     duf_dt += gamma * d2uf_dt2 * dt;
 
-    u = uf + uc(t);
+    u     = uf + uc(t);
     du_dt = duf_dt + duc_dt(t);
   }
 
@@ -289,21 +284,19 @@ double second_order_ode_test(int num_steps)
 
 int main()
 {
-//  int num_steps = 10;
-//  for (int i = 0; i < 5; i++) {
-//    std::cout << "error with " << std::setw(3) << num_steps << " steps: " << first_order_ode_test(num_steps)
-//              << std::endl;
-//    num_steps <<= 1;
-//  }
-//  int num_steps = 10;
-//  for (int i = 0; i < 5; i++) {
-//    std::cout << "error with " << std::setw(3) << num_steps << " steps: " << second_order_ode_test(num_steps) << std::endl;
-//    num_steps <<= 1;
-//  }
+#if 0
+  std::cout << "first order ODE errors:\n";
+  std::cout << "20 steps: " << first_order_ode_test(20) << std::endl;
+  std::cout << "40 steps: " << first_order_ode_test(40) << std::endl;
+  std::cout << "80 steps: " << first_order_ode_test(80) << std::endl;
 
-  std::cout << second_order_ode_test(20) << std::endl;
-  std::cout << second_order_ode_test(40) << std::endl;
-  std::cout << second_order_ode_test(80) << std::endl;
+  std::cout << "second order ODE errors:\n";
+  std::cout << "20 steps: " << second_order_ode_test(20) << std::endl;
+  std::cout << "40 steps: " << second_order_ode_test(40) << std::endl;
+  std::cout << "80 steps: " << second_order_ode_test(80) << std::endl;
+#endif
 
-
+  std::cout << "100 steps: " << first_order_test_mfem(100) << std::endl;
+  std::cout << "200 steps: " << first_order_test_mfem(200) << std::endl;
+  std::cout << "400 steps: " << first_order_test_mfem(400) << std::endl;
 }
