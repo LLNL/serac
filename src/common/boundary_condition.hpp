@@ -51,13 +51,20 @@ public:
   /**
    * @brief Returns the tag for the BC
    */
-  const std::string& tag() const { return tag_; }
+  int tag() const { return tag_; }
 
   /**
    * @brief Sets the tag for the BC
+   * @tparam Tag The template type for the tag (label)
    * @param[in] The new tag
+   * @pre Template type "Tag" must be an enumeration
    */
-  void setTag(const std::string_view tag) { tag_ = tag; }
+  template <typename Tag>
+  void setTag(const Tag tag)
+  {
+    static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
+    tag_ = static_cast<int>(tag);
+  }
 
   /**
    * @brief Returns a non-owning reference to the array of boundary
@@ -252,8 +259,9 @@ private:
   mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
   /**
    * @brief A label for the BC, for filtering purposes
+   * @note This should always correspond to an enum
    */
-  std::string tag_;
+  int tag_;
 };
 
 }  // namespace serac

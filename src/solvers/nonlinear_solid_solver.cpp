@@ -59,7 +59,7 @@ void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&              
 void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
-  bcs_.addNatural(trac_bdr, trac_bdr_coef, *displacement_, component);
+  bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
 void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, const double K)

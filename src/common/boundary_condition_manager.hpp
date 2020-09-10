@@ -137,6 +137,7 @@ FilterView(Iter, Iter, Pred &&) -> FilterView<Iter, Pred>;
 
 class BoundaryConditionManager {
 public:
+  BoundaryConditionManager(const mfem::ParMesh& mesh) : num_attrs_(mesh.bdr_attributes.Max()) {}
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
    *
@@ -153,23 +154,28 @@ public:
    *
    * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
-   * @param[in] state The finite element state to which the BC should be applied
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, FiniteElementState& state,
-                  const int component = -1);
+  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, const int component = -1);
 
   /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
    *
+   * @tparam The type of the tag to use
    * @param[in] bdr_attr The set of mesh attributes denoting a natural boundary
    * @param[in] bdr_coef The coefficient defining the natural boundary function
-   * @param[in] state The finite element state to which the BC should be applied
    * @param[in] tag The tag for the generic boundary condition, for identification purposes
    * @param[in] component The component to set (-1 implies all components are set)
+   * @pre Template type "Tag" must be an enumeration
    */
-  void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, FiniteElementState& state,
-                  const std::string_view tag, const int component = -1);
+  template <typename Tag>
+  void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, const Tag tag,
+                  const int component = -1)
+  {
+    other_bdr_.emplace_back(bdr_coef, component, bdr_attr, num_attrs_);
+    other_bdr_.back().setTag(tag);
+    all_dofs_valid_ = false;
+  }
 
   /**
    * @brief Set a list of true degrees of freedom from a coefficient
@@ -230,8 +236,10 @@ public:
    */
   const std::vector<BoundaryCondition>& generics() const { return other_bdr_; }
 
-  const auto genericsWithTag(const std::string& tag)
+  template <typename Tag>
+  const auto genericsWithTag(const Tag tag)
   {
+    static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
     return FilterView(other_bdr_.begin(), other_bdr_.end(), [tag](const auto& bc) { return bc.tag() == tag; });
   }
 
@@ -240,6 +248,11 @@ private:
    * @brief Updates the "cached" list of all DOF indices
    */
   void updateAllDofs() const;
+
+  /**
+   * @brief The total number of boundary attributes for a mesh
+   */
+  const int num_attrs_;
 
   /**
    * @brief The vector of essential boundary conditions

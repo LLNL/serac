@@ -37,7 +37,7 @@ void ThermalSolver::setTemperatureBCs(const std::set<int>& temp_bdr, std::shared
 void ThermalSolver::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
-  bcs_.addNatural(flux_bdr, flux_bdr_coef, *temperature_, -1);
+  bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
 }
 
 void ThermalSolver::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
