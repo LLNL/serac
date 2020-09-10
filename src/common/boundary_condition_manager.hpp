@@ -236,6 +236,12 @@ public:
    */
   const std::vector<BoundaryCondition>& generics() const { return other_bdr_; }
 
+  /**
+   * @brief View over all "other"/generic boundary conditions with a specific tag
+   * @tparam Tag The template type for the tag
+   * @param tag The tag to filter with
+   * @pre Tag must be an enumeration type
+   */
   template <typename Tag>
   const auto genericsWithTag(const Tag tag)
   {
