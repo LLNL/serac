@@ -40,6 +40,38 @@ TEST(boundary_cond, simple_repeated_dofs)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+TEST(boundary_cond, filter_generics)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  constexpr int      N = 15;
+  mfem::Mesh         mesh(N, N, mfem::Element::TRIANGLE);
+  mfem::ParMesh      par_mesh(MPI_COMM_WORLD, mesh);
+  FiniteElementState state(par_mesh);
+
+  BoundaryConditionManager bcs;
+  auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
+  for (int i = 0; i < N; i++) {
+    bcs.addGeneric({}, coef, state, "tag1", 1);
+    bcs.addGeneric({}, coef, state, "tag2", 1);
+  }
+
+  int bcs_with_tag1 = 0;
+  for (const auto& bc : bcs.genericsWithTag("tag1")) {
+    EXPECT_EQ("tag1", bc.tag());
+    bcs_with_tag1++;
+  }
+  EXPECT_EQ(bcs_with_tag1, N);
+
+  int bcs_with_tag2 = 0;
+  for (const auto& bc : bcs.genericsWithTag("tag2")) {
+    EXPECT_EQ("tag2", bc.tag());
+    bcs_with_tag2++;
+  }
+  EXPECT_EQ(bcs_with_tag2, N);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
 }  // namespace serac
 
 //------------------------------------------------------------------------------
