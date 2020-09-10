@@ -64,7 +64,7 @@ void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                  
 
 void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, const double K)
 {
-  model_.reset(new mfem::NeoHookeanModel(mu, K));
+  model_ = std::make_unique<mfem::NeoHookeanModel>(mu, K);
 }
 
 void NonlinearSolidSolver::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
