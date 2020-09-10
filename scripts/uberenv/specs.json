@@ -18,8 +18,7 @@
       "gcc@8.1.0+devtools" ],
 
     "rzansel":
-    [ "clang@ibm_gfortran+devtools",
-      "clang@ibm_gfortran+devtools+cuda cuda_arch=70",
+    [ "clang@ibm_gfortran+devtools+cuda cuda_arch=70",
       "clang@upstream_gfortran+devtools+cuda cuda_arch=70" ],
 
     "blueos_3_ppc64le_ib_p9":
