@@ -63,6 +63,10 @@ macro(serac_add_code_checks)
                         CLANGFORMAT_CFG_FILE ${PROJECT_SOURCE_DIR}/.clang-format
                         CPPCHECK_FLAGS  --enable=all --inconclusive)
 
+    blt_add_clang_tidy_target(  NAME              serac_guidelines_check
+                                CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*"
+                                SRC_FILES         ${_sources})
+
 endmacro(serac_add_code_checks)
 
 #------------------------------------------------------------------------------

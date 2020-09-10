@@ -6,7 +6,7 @@
 
 #include "common/logger.hpp"
 
-#include "common/terminator.hpp"
+#include "common/initialize.hpp"
 
 namespace serac {
 
@@ -20,13 +20,9 @@ bool initialize(MPI_Comm comm)
     slic::initialize();
   }
 
-  terminator::registerSignals();
+  auto [num_ranks, rank] = getMPIInfo(comm);
 
-  int numRanks, rank;
-  MPI_Comm_size(comm, &numRanks);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  std::string loggerName = numRanks > 1 ? "serac_parallel_logger" : "serac_serial_logger";
+  std::string loggerName = num_ranks > 1 ? "serac_parallel_logger" : "serac_serial_logger";
   slic::createLogger(loggerName);
   slic::activateLogger(loggerName);
   if (!slic::activateLogger(loggerName)) {
@@ -36,14 +32,14 @@ bool initialize(MPI_Comm comm)
   }
 
   // separate streams: warnings and errors (we); info and debug (id)
-  slic::LogStream* idStream;
-  slic::LogStream* weStream;
+  slic::LogStream* idStream = nullptr;
+  slic::LogStream* weStream = nullptr;
 
   std::string fmt_id = "[<LEVEL>]: <MESSAGE>\n";
   std::string fmt_we = "[<LEVEL> (<FILE>:<LINE>)]\n<MESSAGE>\n\n";
 
   // Only create a parallel logger when there is more than one rank
-  if (numRanks > 1) {
+  if (num_ranks > 1) {
     fmt_id = "[<RANK>]" + fmt_id;
     fmt_we = "[<RANK>]" + fmt_we;
 

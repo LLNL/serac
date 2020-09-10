@@ -12,13 +12,26 @@
 
 namespace serac {
 
+std::pair<int, int> getMPIInfo(MPI_Comm comm)
+{
+  int num_procs = 0;
+  int rank      = 0;
+  if (MPI_Comm_size(comm, &num_procs) != MPI_SUCCESS) {
+    serac::exitGracefully(true);
+  }
+
+  if (MPI_Comm_rank(comm, &rank) != MPI_SUCCESS) {
+    serac::exitGracefully(true);
+  }
+  return {num_procs, rank};
+}
+
 std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
 {
   // Initialize MPI.
-  int num_procs, rank;
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(comm, &num_procs);
-  MPI_Comm_rank(comm, &rank);
+  if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
+    serac::exitGracefully(true);
+  }
 
   // Initialize the signal handler
   terminator::registerSignals();
@@ -31,7 +44,7 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
   // Start the profiler (no-op if not enabled)
   profiling::initializeCaliper();
 
-  return {num_procs, rank};
+  return getMPIInfo(comm);
 }
 
 }  // namespace serac

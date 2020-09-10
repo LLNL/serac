@@ -195,7 +195,7 @@ protected:
   /**
    *@brief Time integration method
    */
-  serac::TimestepMethod timestepper_;
+  serac::TimestepMethod timestepper_ = TimestepMethod::QuasiStatic;
 
   /**
    * @brief MFEM ode solver object
@@ -206,6 +206,16 @@ protected:
    * @brief Root output name
    */
   std::string root_name_;
+
+  /**
+   * @brief Number of significant figures to output for floating-point
+   */
+  static constexpr int FLOAT_PRECISION_ = 8;
+
+  /**
+   * @brief Damping amount for ODE integration methods
+   */
+  static constexpr double DAMPING_ = 0.5;
 
   /**
    * @brief Current time
