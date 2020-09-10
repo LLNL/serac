@@ -15,6 +15,11 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <string>
+
+#include "mfem.hpp"
+#include "axom/inlet.hpp"
+#include "axom/common.hpp"
 
 #include "CLI11/CLI11.hpp"
 #include "coefficients/loading_functions.hpp"
@@ -22,10 +27,69 @@
 #include "infrastructure/initialize.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
-#include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
 #include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
+
+axom::inlet::Inlet define_input_deck(std::string input_file_path)
+{
+  // Initialize Inlet
+  auto luareader = std::make_shared<axom::inlet::LuaReader>();
+  luareader->parseFile(input_file_path);
+  axom::sidre::DataStore datastore;
+  auto inlet = std::make_unique<axom::inlet::Inlet>(luareader, datastore.getRoot());
+
+  // Define schema
+  inlet->addString("mesh", "Path to Mesh file")
+       ->registerVerifier([&]() -> bool {
+         std::string msg, path;
+         bool found = inlet->get("mesh", path);
+         if (!found) {
+           msg = fmt::format("Required input file variable was not found: mesh");
+           SLIC_WARNING_ROOT(msg);
+           return false;
+         }
+         if(!axom::utilities::filesystem::pathExists(path)) {
+           msg = fmt::format("Given input file does not exist: {0}", path);
+           SLIC_WARNING_ROOT(msg);
+           return false;
+         }
+         return true;
+       });
+
+  std::string path;
+  bool found = inlet->get("mesh", path);
+  std::cout << std::boolalpha << found << ":" << path << std::endl;
+  serac::exitGracefully();
+
+  // app.add_option("-m, --mesh", mesh_file, "Mesh file to use.", true);
+  // app.add_option("--rs, --refine-serial", ser_ref_levels, "Number of times to refine the mesh uniformly in serial.",
+  //                true);
+  // app.add_option("--rp, --refine-parallel", par_ref_levels, "Number of times to refine the mesh uniformly in parallel.",
+  //                true);
+  // app.add_option("-o, --order", order, "Order degree of the finite elements.", true);
+  // app.add_option("--mu, --shear-modulus", mu, "Shear modulus in the Neo-Hookean hyperelastic model.", true);
+  // app.add_option("-K, --bulk-modulus", K, "Bulk modulus in the Neo-Hookean hyperelastic model.", true);
+  // app.add_option("--tx, --traction-x", tx, "Cantilever tip traction in the x direction.", true);
+  // app.add_option("--ty, --traction-y", ty, "Cantilever tip traction in the y direction.", true);
+  // app.add_option("--tz, --traction-z", tz, "Cantilever tip traction in the z direction.", true);
+  // app.add_flag("--slu, --superlu, !--no-slu, !--no-superlu", slu_solver, "Use the SuperLU Solver.");
+  // app.add_flag("--gmres, !--no-gmres", gmres_solver, "Use gmres, otherwise minimum residual is used.");
+  // app.add_option("--lrel, --linear-relative-tolerance", lin_params.rel_tol, "Relative tolerance for the lienar solve.",
+  //                true);
+  // app.add_option("--labs, --linear-absolute-tolerance", lin_params.abs_tol, "Absolute tolerance for the linear solve.",
+  //                true);
+  // app.add_option("--lit, --linear-iterations", lin_params.max_iter, "Maximum iterations for the linear solve.", true);
+  // app.add_option("--lpl, --linear-print-level", lin_params.print_level, "Linear print level.", true);
+  // app.add_option("--nrel, --newton-relative-tolerance", nonlin_params.rel_tol,
+  //                "Relative tolerance for the Newton solve.", true);
+  // app.add_option("--nabs, --newton-absolute-tolerance", nonlin_params.abs_tol,
+  //                "Absolute tolerance for the Newton solve.", true);
+  // app.add_option("--nit, --newton-iterations", nonlin_params.max_iter, "Maximum iterations for the Newton solve.",
+  //                true);
+  // app.add_option("--npl, --newton-print-level", nonlin_params.print_level, "Newton print level.", true);
+  // app.add_option("--dt, --time-step", dt, "Time step.", true);
+}
 
 int main(int argc, char* argv[])
 {
@@ -72,33 +136,8 @@ int main(int argc, char* argv[])
 
   // specify all input arguments
   CLI::App app{"serac: a high order nonlinear thermomechanical simulation code"};
-  app.add_option("-m, --mesh", mesh_file, "Mesh file to use.", true);
-  app.add_option("--rs, --refine-serial", ser_ref_levels, "Number of times to refine the mesh uniformly in serial.",
-                 true);
-  app.add_option("--rp, --refine-parallel", par_ref_levels, "Number of times to refine the mesh uniformly in parallel.",
-                 true);
-  app.add_option("-o, --order", order, "Order degree of the finite elements.", true);
-  app.add_option("--mu, --shear-modulus", mu, "Shear modulus in the Neo-Hookean hyperelastic model.", true);
-  app.add_option("-K, --bulk-modulus", K, "Bulk modulus in the Neo-Hookean hyperelastic model.", true);
-  app.add_option("--tx, --traction-x", tx, "Cantilever tip traction in the x direction.", true);
-  app.add_option("--ty, --traction-y", ty, "Cantilever tip traction in the y direction.", true);
-  app.add_option("--tz, --traction-z", tz, "Cantilever tip traction in the z direction.", true);
-  app.add_flag("--slu, --superlu, !--no-slu, !--no-superlu", slu_solver, "Use the SuperLU Solver.");
-  app.add_flag("--gmres, !--no-gmres", gmres_solver, "Use gmres, otherwise minimum residual is used.");
-  app.add_option("--lrel, --linear-relative-tolerance", lin_params.rel_tol, "Relative tolerance for the lienar solve.",
-                 true);
-  app.add_option("--labs, --linear-absolute-tolerance", lin_params.abs_tol, "Absolute tolerance for the linear solve.",
-                 true);
-  app.add_option("--lit, --linear-iterations", lin_params.max_iter, "Maximum iterations for the linear solve.", true);
-  app.add_option("--lpl, --linear-print-level", lin_params.print_level, "Linear print level.", true);
-  app.add_option("--nrel, --newton-relative-tolerance", nonlin_params.rel_tol,
-                 "Relative tolerance for the Newton solve.", true);
-  app.add_option("--nabs, --newton-absolute-tolerance", nonlin_params.abs_tol,
-                 "Absolute tolerance for the Newton solve.", true);
-  app.add_option("--nit, --newton-iterations", nonlin_params.max_iter, "Maximum iterations for the Newton solve.",
-                 true);
-  app.add_option("--npl, --newton-print-level", nonlin_params.print_level, "Newton print level.", true);
-  app.add_option("--dt, --time-step", dt, "Time step.", true);
+  std::string input_file_path;
+  app.add_option("-i, --input-file", input_file_path, "Input file to use.")->required()->check(CLI::ExistingFile);
 
   // Parse the arguments and check if they are good
   try {
