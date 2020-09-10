@@ -54,6 +54,93 @@ TEST(expr_templates, basic_add_lambda)
   }
 }
 
+TEST(expr_templates, subtraction_not_commutative)
+{
+  constexpr int size = 10;
+  mfem::Vector  a(size);
+  mfem::Vector  b(size);
+  mfem::Vector  c(size);
+
+  for (int i = 0; i < size; i++) {
+    a[i] = i * 4 + 1;
+    b[i] = i * i * 3 + 2;
+    c[i] = i * i * i * 7 + 23;
+  }
+
+  // Tests that switching the order of operations
+  // does not change the result
+  mfem::Vector result1 = a + c - b;  // Parsed as (a + c) - b
+  mfem::Vector result2 = c - b + a;  // Parsed as (c - b) + a
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(result1[i], result2[i]);
+  }
+
+  mfem::Vector result3 = a - c;
+  mfem::Vector result4 = c - a;
+  for (int i = 0; i < size; i++) {
+    EXPECT_FALSE(result3[i] == result4[i]);
+  }
+}
+
+TEST(expr_templates, subtraction_not_commutative_rvalue)
+{
+  constexpr int size           = 3;
+  double        a_values[size] = {-12.2692, 6.23918, -12.2692};
+  double        b_values[size] = {0.0850848, -0.17017, 0.0850848};
+
+  auto fext = [](const double t) {
+    mfem::Vector force(3);
+    force[0] = -10 * t;
+    force[1] = 0;
+    force[2] = 10 * t * t;
+    return force;
+  };
+
+  mfem::Vector a(a_values, size);
+  mfem::Vector b(b_values, size);
+  mfem::Vector c        = fext(0.0);
+  mfem::Vector resulta1 = c - a - b;
+  mfem::Vector resulta2 = fext(0.0) - a - b;
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(resulta1[i], resulta2[i]);
+  }
+}
+
+TEST(expr_templates, addition_commutative)
+{
+  constexpr int size = 10;
+  mfem::Vector  a(size);
+  mfem::Vector  b(size);
+
+  for (int i = 0; i < size; i++) {
+    a[i] = i * 4 + 1;
+    b[i] = i * i * 3 + 2;
+  }
+
+  mfem::Vector result1 = a + b;
+  mfem::Vector result2 = b + a;
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(result1[i], result2[i]);
+  }
+}
+
+TEST(expr_templates, scalar_mult_commutative)
+{
+  constexpr int size = 10;
+  mfem::Vector  a(size);
+  double        scalar = 0.3;
+
+  for (int i = 0; i < size; i++) {
+    a[i] = i * 4 + 1;
+  }
+
+  mfem::Vector result1 = scalar * a;
+  mfem::Vector result2 = a * scalar;
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(result1[i], result2[i]);
+  }
+}
+
 TEST(expr_templates, move_from_temp_lambda)
 {
   constexpr int size = 10;
