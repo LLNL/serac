@@ -394,8 +394,9 @@ class Serac(CMakePackage, CudaPackage):
                 cfg.write("# Root directory for generated developer tools\n")
                 cfg.write(cmake_cache_entry("DEVTOOLS_ROOT",devtools_root))
 	
-        if socket.gethostname().startswith("lassen"):
-            cfg.write("# Docs dont work on lassen, there is a prompt that waits for user input\n")
+        hostname = socket.gethostname()
+        if hostname.startswith("lassen") or hostname.startswith("rzansel"):
+            cfg.write("# Docs dont work on lassen or rzansel, there is a prompt that waits for user input\n")
             cfg.write(cmake_cache_option("ENABLE_DOCS", False))
         elif "doxygen" in spec or "py-sphinx" in spec:
             cfg.write(cmake_cache_option("ENABLE_DOCS", True))
