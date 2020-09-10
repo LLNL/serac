@@ -179,8 +179,8 @@ public:
   NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>      H_form,
                                 std::unique_ptr<mfem::ParBilinearForm>       S_form,
                                 std::unique_ptr<mfem::ParBilinearForm>       M_form,
-                                const std::vector<serac::BoundaryCondition>& ess_bdr,
-                                mfem::IterativeSolver& newton_solver, const serac::LinearSolverParameters& lin_params);
+                                const std::vector<serac::BoundaryCondition>& ess_bdr, EquationSolver& newton_solver,
+                                const serac::LinearSolverParameters& lin_params);
 
   /**
    * @brief Evaluate the explicit time derivative
@@ -240,7 +240,7 @@ protected:
   /**
    * @brief The Newton solver for the nonlinear iterations
    */
-  mfem::IterativeSolver& newton_solver_;
+  EquationSolver& newton_solver_;
 
   /**
    * @brief The fixed boudnary degrees of freedom
