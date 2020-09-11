@@ -16,7 +16,8 @@ ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
     : BaseSolver(mesh, NUM_FIELDS, order),
       temperature_(std::make_shared<FiniteElementState>(
           *mesh,
-          FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}))
+          FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})),
+      ode(temperature_->space().GetTrueVSize())
 {
   state_[0] = temperature_;
 }
@@ -104,6 +105,50 @@ void ThermalSolver::completeSetup()
     M_mat_.reset(M_form_->ParallelAssemble());
 
     // Make the time integration operator and set the appropriate matricies
+    ode.explicit_func = []() {
+
+    };
+
+    ode.implicit_func = []() {
+
+    };
+
+    ode.explicit_func = [&](const double t, const mfem::Vector& u, mfem::Vector& du_dt) {
+      mfem::Vector uf = u;
+      uf[1]           = 0;
+      du_dt           = invH * (fext(t) - K * uf - K * uc(t) - M * duc_dt(t));
+    };
+    ode.implicit_func = [&, dt_prev = -1.0, invT = mfem::DenseMatrix(3, 3)](
+                            const double t, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) mutable {
+      if (dt != dt_prev) {
+        // T = M + dt K
+        T.reset(mfem::Add(1.0, *M_, dt, *K_));
+
+        // Eliminate the off-diagonal entries associated with essential DOFs
+        for (auto& bc : ess_bdr_) {
+          delete T->EliminateRowsCols(bc.getTrueDofs()));
+        }
+        inv_T.SetOperator(*T);
+      }
+
+      uc = 0;
+      duc_dt = 0;
+      for (auto& bc : ess_bdr_) {
+        bc.projectBdr(*state_gf_, t);
+        state_gf_->SetFromTrueDofs(uc);
+        state_gf_->GetTrueDofs(uc);
+      }
+      uf = u - uc;
+
+      mfem::Vector f = fext(t) - M * duc_dt(t) - K * uc(t) - K * uf;
+      f[1]           = 0;
+
+      du_dt = invT * f;
+
+      dt_prev = dt;
+
+    };
+
     dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, ess_bdr_);
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());

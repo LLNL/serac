@@ -13,9 +13,12 @@
 #ifndef CONDUCTION_SOLVER
 #define CONDUCTION_SOLVER
 
-#include "base_solver.hpp"
 #include "mfem.hpp"
-#include "thermal_operators.hpp"
+
+#include "common/odes.hpp"
+
+#include "solvers/base_solver.hpp"
+#include "solvers/thermal_operators.hpp"
 
 namespace serac {
 
@@ -175,6 +178,11 @@ protected:
    * @brief Time integration operator
    */
   std::unique_ptr<DynamicConductionOperator> dyn_oper_;
+
+  /**
+   * @brief the system of ordinary differential equations
+   */
+  FirstOrderODE ode;
 
   /**
    * @brief Linear solver parameters

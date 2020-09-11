@@ -1,7 +1,10 @@
 #include <functional>
 #include <iomanip>
 
+#include "coefficients/stdfunction_coefficient.hpp"
+#include "common/odes.hpp"
 #include "common/expr_template_ops.hpp"
+#include "solvers/equation_solver.hpp"
 #include "mfem.hpp"
 
 template <typename T>
@@ -9,12 +12,13 @@ struct has_print {
   template <typename C>
   static float test(decltype(&C::Print));
   template <typename C>
-  static double test(...);
+  static double         test(...);
   static constexpr bool value = sizeof(test<T>(0)) == sizeof(float);
 };
 
 template <typename T, typename U = std::enable_if_t<has_print<T>::value> >
-std::ostream& operator<<(std::ostream& out, const T& vec) {
+std::ostream& operator<<(std::ostream& out, const T& vec)
+{
   vec.Print(out);
   return out;
 }
@@ -49,6 +53,61 @@ mfem::Vector fext(double t)
   return force;
 }
 
+#if 0
+class LinearFirstOrderODE : public mfem::TimeDependentOperator {
+ public:
+  mfem::HypreParMatrix& M_;
+  mfem::HypreParMatrix& K_;
+
+  mfem::Vector& f_;
+  mutable mfem::Vector u_;
+
+  serac::EquationSolver invT;
+  serac::EquationSolver invH;
+
+  mfem::Array<int>              constrained_dofs;
+  serac::StdFunctionCoefficient uc;
+  serac::StdFunctionCoefficient duc_dt;
+
+  LinearFirstOrderODE(mfem::HypreParMatrix& M, mfem::HypreParMatrix& K, mfem::Vector& f)
+      : mfem::TimeDependentOperator(M.Height(), 0.0),
+        M_(M),
+        K_(K),
+        f_(f){};
+
+  void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const
+  {
+    u_ = u;
+    for (int i = 0; i < constrained_dofs.Size(); i++) {
+      u_[i] = uc(t)[i];
+    }
+    du_dt = invH * (f_ - K_ * u_ - M_ * duc_dt);
+  }
+
+  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt)
+  {
+    if (dt != dt_prev) {
+      invT = M;
+      invT.AddMatrix(dt, K, 0, 0);
+      for (int i = 0; i < 3; i++) {
+        invT(i, 1) = invT(1, i) = (i == 1);
+      }
+      invT.Invert();
+    }
+
+    mfem::Vector uf     = u;
+    mfem::Vector duf_dt = du_dt;
+    duf_dt[1] = uf[1] = 0;
+
+    mfem::Vector f = fext(t) - M * duc_dt(t) - K * uc(t) - K * uf;
+    f[1]           = 0;
+
+    du_dt = invT * f;
+
+    dt_prev = dt;
+  }
+};
+
 class FirstOrderODE : public mfem::TimeDependentOperator {
 public:
   using explicit_signature = void(const double, const mfem::Vector&, mfem::Vector&);
@@ -60,6 +119,8 @@ public:
   void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const { explicit_func(t, u, du_dt); }
   void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) { implicit_func(t, dt, u, du_dt); }
 };
+#endif
+
 
 double first_order_test_mfem(int num_steps)
 {
@@ -91,8 +152,8 @@ double first_order_test_mfem(int num_steps)
   FirstOrderODE ode(3);
   ode.explicit_func = [&](const double t, const mfem::Vector& u, mfem::Vector& du_dt) {
     mfem::Vector uf = u;
-    uf[1] = 0;
-    du_dt = invH * (fext(t) - K * uf - K * uc(t) - M * duc_dt(t));
+    uf[1]           = 0;
+    du_dt           = invH * (fext(t) - K * uf - K * uc(t) - M * duc_dt(t));
   };
   ode.implicit_func = [&, dt_prev = -1.0, invT = mfem::DenseMatrix(3, 3)](
                           const double t, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) mutable {
