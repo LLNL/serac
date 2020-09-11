@@ -67,7 +67,7 @@ public:
     /**
      * @brief Comparison operation, checks for iterator inequality
      */
-    bool operator!=(const FilterViewIterator& other) { return curr_ != other.curr_; }
+    bool operator!=(const FilterViewIterator& other) const { return curr_ != other.curr_; }
 
   private:
     /**
