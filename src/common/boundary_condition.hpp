@@ -17,6 +17,8 @@
 #include <optional>
 #include <set>
 #include <type_traits>
+#include <typeinfo>
+#include <utility>
 #include <variant>
 
 #include "common/finite_element_state.hpp"
@@ -49,9 +51,20 @@ public:
   BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs);
 
   /**
-   * @brief Returns the tag for the BC
+   * @brief Determines whether a boundary condition is associated with a tag
+   * @tparam Tag The type of the tag to compare against
+   * @param[in] The tag to compare against
+   * @pre Template type "Tag" must be an enumeration
    */
-  int tag() const { return tag_; }
+  template <typename Tag>
+  bool tagEquals(const Tag tag) const
+  {
+    static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
+    SLIC_ERROR_IF(!tag_, "No tag has been configured for this boundary condition");
+    bool tags_same_type = typeid(tag).hash_code() == tag_->second;
+    SLIC_WARNING_IF(!tags_same_type, "Attempting to compare tags of two different enum types (always false)");
+    return (static_cast<int>(tag) == tag_->first) && tags_same_type;
+  }
 
   /**
    * @brief Sets the tag for the BC
@@ -63,7 +76,7 @@ public:
   void setTag(const Tag tag)
   {
     static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
-    tag_ = static_cast<int>(tag);
+    tag_ = {static_cast<int>(tag), typeid(tag).hash_code()};
   }
 
   /**
@@ -258,10 +271,11 @@ private:
    */
   mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
   /**
-   * @brief A label for the BC, for filtering purposes
+   * @brief A label for the BC, for filtering purposes, in addition to its type hash
    * @note This should always correspond to an enum
+   * The first element is the enum val, the second is the hash of the corresponding enum type
    */
-  int tag_;
+  std::optional<std::pair<int, std::size_t>> tag_;
 };
 
 }  // namespace serac

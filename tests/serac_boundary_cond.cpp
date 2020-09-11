@@ -42,8 +42,14 @@ TEST(boundary_cond, simple_repeated_dofs)
 
 enum TestTag
 {
-  Tag1,
-  Tag2
+  Tag1 = 0,
+  Tag2 = 1
+};
+
+enum OtherTag
+{
+  Fake1 = 0,
+  Fake2 = 1
 };
 
 TEST(boundary_cond, filter_generics)
@@ -62,14 +68,17 @@ TEST(boundary_cond, filter_generics)
 
   int bcs_with_tag1 = 0;
   for (const auto& bc : bcs.genericsWithTag(TestTag::Tag1)) {
-    EXPECT_EQ(TestTag::Tag1, bc.tag());
+    EXPECT_TRUE(bc.tagEquals(TestTag::Tag1));
+    // Also check that a different enum with the same underlying value will fail
+    EXPECT_FALSE(bc.tagEquals(OtherTag::Fake1));
     bcs_with_tag1++;
   }
   EXPECT_EQ(bcs_with_tag1, N);
 
   int bcs_with_tag2 = 0;
   for (const auto& bc : bcs.genericsWithTag(TestTag::Tag2)) {
-    EXPECT_EQ(TestTag::Tag2, bc.tag());
+    EXPECT_TRUE(bc.tagEquals(TestTag::Tag2));
+    EXPECT_FALSE(bc.tagEquals(OtherTag::Fake2));
     bcs_with_tag2++;
   }
   EXPECT_EQ(bcs_with_tag2, N);
