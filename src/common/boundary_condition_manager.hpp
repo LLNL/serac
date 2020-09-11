@@ -184,16 +184,16 @@ public:
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  void addTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component = -1);
+  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component = -1);
 
   /**
    * @brief Returns all the degrees of freedom associated with all the essential BCs
    * @return A const reference to the list of DOF indices, without duplicates and sorted
    */
-  const mfem::Array<int>& allDofs() const
+  const mfem::Array<int>& allEssentialDofs() const
   {
     if (!all_dofs_valid_) {
-      updateAllDofs();
+      updateAllEssentialDofs();
     }
     return all_dofs_;
   }
@@ -205,9 +205,9 @@ public:
    * @note The sum of the eliminated matrix and the modified parameter is
    * equal to the initial state of the parameter
    */
-  std::unique_ptr<mfem::HypreParMatrix> eliminateAllFromMatrix(mfem::HypreParMatrix& matrix) const
+  std::unique_ptr<mfem::HypreParMatrix> eliminateAllEssentialDofsFromMatrix(mfem::HypreParMatrix& matrix) const
   {
-    return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allDofs()));
+    return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allEssentialDofs()));
   }
 
   /**
@@ -253,7 +253,7 @@ private:
   /**
    * @brief Updates the "cached" list of all DOF indices
    */
-  void updateAllDofs() const;
+  void updateAllEssentialDofs() const;
 
   /**
    * @brief The total number of boundary attributes for a mesh

@@ -33,7 +33,7 @@ BaseSolver::BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : Base
 
 void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
 {
-  bcs_.addTrueDofs(true_dofs, ess_bdr_coef, component);
+  bcs_.addEssentialTrueDofs(true_dofs, ess_bdr_coef, component);
 }
 
 void BaseSolver::setState(const std::vector<serac::GeneralCoefficient>& state_coef)

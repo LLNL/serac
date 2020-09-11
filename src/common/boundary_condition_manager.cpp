@@ -39,14 +39,14 @@ void BoundaryConditionManager::addNatural(const std::set<int>& nat_bdr, serac::G
   all_dofs_valid_ = false;
 }
 
-void BoundaryConditionManager::addTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
+void BoundaryConditionManager::addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
                                            int component)
 {
   ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
   all_dofs_valid_ = false;
 }
 
-void BoundaryConditionManager::updateAllDofs() const
+void BoundaryConditionManager::updateAllEssentialDofs() const
 {
   all_dofs_.DeleteAll();
   for (const auto& bc : ess_bdr_) {

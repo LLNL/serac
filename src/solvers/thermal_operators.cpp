@@ -85,7 +85,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     T_.reset(mfem::Add(1.0, *M_, dt, *K_));
 
     // Eliminate the essential DOFs from the T matrix
-    bcs_.eliminateAllFromMatrix(*T_);
+    bcs_.eliminateAllEssentialDofsFromMatrix(*T_);
     T_inv_.SetOperator(*T_);
   }
 
