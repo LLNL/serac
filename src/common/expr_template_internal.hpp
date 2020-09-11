@@ -24,30 +24,31 @@
 namespace serac::internal {
 
 /**
+ * @brief Determines whether a given type should be owned by a vector expression
+ * @tparam vec The vector expression type
+ * @note A vector should be owned if it is not an (optionally const) reference
+ * to an mfem::Vector.  Note that std::remove_const does not apply here because
+ * const is not a top-level qualifier on a const reference
+ */
+template <typename vec>
+inline constexpr bool owns_v = !std::is_same_v<vec, const mfem::Vector&> && !std::is_same_v<vec, mfem::Vector&>;
+
+/**
  * @brief Type alias for what should be stored by a vector expression - an object
  * if ownership is desired, otherwise, a reference
  * @tparam vec The base vector expression type
- * @tparam owns Whether the object "intends" to take ownership of the constructor argument
  */
-template <typename vec, bool owns>
-using vec_t = typename std::conditional<owns, std::decay_t<vec>, const std::decay_t<vec>&>::type;
+template <typename vec>
+using vec_t = typename std::conditional_t<owns_v<vec>, std::decay_t<vec>, const std::decay_t<vec>&>;
 
 /**
  * @brief Type alias for the constructor argument to a vector expression - an
  * rvalue reference if ownership is desired (will be moved from), otherwise,
  * an lvalue reference
  * @tparam vec The base vector expression type
- * @tparam owns Whether the function "intends" to take ownership of the argument
- */
-template <typename vec, bool owns>
-using vec_arg_t = typename std::conditional<owns, std::decay_t<vec>&&, const vec&>::type;
-
-/**
- * @brief Determines whether a given type should be owned by a vector expression
- * @tparam vec The vector expression type
  */
 template <typename vec>
-inline constexpr bool owns_v = !std::is_same_v<vec, mfem::Vector> || std::is_rvalue_reference_v<vec>;
+using vec_arg_t = typename std::conditional_t<owns_v<vec>, std::decay_t<vec>&&, const vec&>;
 
 /**
  * @brief Derived VectorExpr class for representing the application of a unary
@@ -62,14 +63,10 @@ inline constexpr bool owns_v = !std::is_same_v<vec, mfem::Vector> || std::is_rva
 template <typename vec, typename UnOp>
 class UnaryVectorExpr : public VectorExpr<UnaryVectorExpr<vec, UnOp>> {
 public:
-  constexpr static bool owns = owns_v<vec>;
   /**
    * @brief Constructs an element-wise unary expression on a vector
    */
-  UnaryVectorExpr(vec_arg_t<vec, owns> v, UnOp&& op = UnOp{})
-      : v_(std::forward<vec_t<vec, owns>>(v)), op_(std::move(op))
-  {
-  }
+  UnaryVectorExpr(vec_arg_t<vec> v, UnOp&& op = UnOp{}) : v_(std::forward<vec_t<vec>>(v)), op_(std::move(op)) {}
   /**
    * @brief Returns the fully evaluated value for the vector
    * expression at index @p i
@@ -82,8 +79,8 @@ public:
   size_t Size() const { return v_.Size(); }
 
 private:
-  const vec_t<vec, owns> v_;
-  const UnOp             op_;
+  const vec_t<vec> v_;
+  const UnOp       op_;
 };
 
 /**
@@ -156,13 +153,11 @@ using UnaryNegation = UnaryVectorExpr<vec, std::negate<double>>;
 template <typename lhs, typename rhs, typename BinOp>
 class BinaryVectorExpr : public VectorExpr<BinaryVectorExpr<lhs, rhs, BinOp>> {
 public:
-  constexpr static bool lhs_owns = owns_v<lhs>;
-  constexpr static bool rhs_owns = owns_v<rhs>;
   /**
    * @brief Constructs an element-wise binary expression on two vectors
    */
-  BinaryVectorExpr(vec_arg_t<lhs, lhs_owns> u, vec_arg_t<rhs, rhs_owns> v)
-      : u_(std::forward<vec_t<lhs, lhs_owns>>(u)), v_(std::forward<vec_t<rhs, rhs_owns>>(v))
+  BinaryVectorExpr(vec_arg_t<lhs> u, vec_arg_t<rhs> v)
+      : u_(std::forward<vec_t<lhs>>(u)), v_(std::forward<vec_t<rhs>>(v))
   {
     // MFEM uses int to represent a size type, so cast to size_t for consistency
     SLIC_ERROR_IF(static_cast<std::size_t>(u_.Size()) != static_cast<std::size_t>(v_.Size()),
@@ -180,9 +175,9 @@ public:
   size_t Size() const { return v_.Size(); }
 
 private:
-  const vec_t<lhs, lhs_owns> u_;
-  const vec_t<rhs, rhs_owns> v_;
-  const BinOp                op_ = BinOp{};
+  const vec_t<lhs> u_;
+  const vec_t<rhs> v_;
+  const BinOp      op_ = BinOp{};
 };
 
 /**
