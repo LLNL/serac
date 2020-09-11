@@ -110,14 +110,14 @@ class Serac(CMakePackage, CudaPackage):
     debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
-    depends_on("petsc@3.13.0~shared+mpi+metis+hypre+superlu-dist+hdf5", when="+petsc")
-    depends_on("petsc@3.13.0~shared+mpi+metis+hypre+superlu-dist+hdf5+debug", when="+petsc+debug")
-    depends_on("mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf+petsc", when="+petsc")
+    depends_on("petsc~shared", when="+petsc")
+    depends_on("petsc+debug", when="+petsc+debug")
 
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
     #depends_on("mfem+netcdf", when="+netcdf")
+    depends_on("mfem+petsc", when="+petsc")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",
@@ -130,7 +130,7 @@ class Serac(CMakePackage, CudaPackage):
     # Libraries that do not have a debug variant
     depends_on("conduit@master~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
-    depends_on("superlu-dist@6.1.0~shared")
+    depends_on("superlu-dist@6.1.1~shared")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
     depends_on("hdf5@1.8.21~shared")
 
@@ -363,6 +363,9 @@ class Serac(CMakePackage, CudaPackage):
         # The actual package name is netcdf-c
         netcdf_dir = get_spec_path(spec, "netcdf-c", path_replacements)
         cfg.write(cmake_cache_entry("NETCDF_DIR", netcdf_dir))
+
+        petsc_dir = get_spec_path(spec, "petsc", path_replacements)
+        cfg.write(cmake_cache_entry("PETSC_DIR", petsc_dir))
 
         parmetis_dir = get_spec_path(spec, "parmetis", path_replacements)
         cfg.write(cmake_cache_entry("PARMETIS_DIR", parmetis_dir))
