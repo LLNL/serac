@@ -162,7 +162,7 @@ void NonlinearSolidSolver::completeSetup()
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     solver_.nonlinearSolver().iterative_mode = true;
-    nonlinear_oper_                          = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form), bcs_);
+    nonlinear_oper_ = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form), bcs_);
     solver_.SetOperator(*nonlinear_oper_);
   } else {
     solver_.nonlinearSolver().iterative_mode = false;
