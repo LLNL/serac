@@ -52,7 +52,43 @@ inline auto operator*(const double a, mfem::Vector&& u)
   return serac::internal::UnaryVectorExpr<mfem::Vector&&, ScalarMultOp>(std::move(u), ScalarMultOp{a});
 }
 
-inline auto operator*(mfem::Vector&& u, const double a) { return operator*(a, std::move(u)); }
+template <typename T>
+auto operator/(serac::VectorExpr<T>&& u, const double a)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<T, ScalarDivOp<true>>(std::move(u.asDerived()), ScalarDivOp{a});
+}
+
+inline auto operator/(const mfem::Vector& u, const double a)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<mfem::Vector, ScalarDivOp<true>>(u, ScalarDivOp{a});
+}
+
+inline auto operator/(mfem::Vector&& u, const double a)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<mfem::Vector&&, ScalarDivOp<true>>(std::move(u), ScalarDivOp{a});
+}
+
+template <typename T>
+auto operator/(const double a, serac::VectorExpr<T>&& u)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<T, ScalarDivOp<false>>(std::move(u.asDerived()), ScalarDivOp<false>{a});
+}
+
+inline auto operator/(const double a, const mfem::Vector& u)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<mfem::Vector, ScalarDivOp<false>>(u, ScalarDivOp<false>{a});
+}
+
+inline auto operator/(const double a, mfem::Vector&& u)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<mfem::Vector&&, ScalarDivOp<false>>(std::move(u), ScalarDivOp<false>{a});
+}
 
 template <typename S, typename T>
 auto operator+(serac::VectorExpr<S>&& u, serac::VectorExpr<T>&& v)

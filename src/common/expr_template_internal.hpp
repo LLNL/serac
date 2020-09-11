@@ -33,7 +33,7 @@ template <typename vec, bool owns>
 using vec_t = typename std::conditional<owns, std::decay_t<vec>, const std::decay_t<vec>&>::type;
 
 /**
- * @brief Type alias for the constructior argument to a vector expression - an
+ * @brief Type alias for the constructor argument to a vector expression - an
  * rvalue reference if ownership is desired (will be moved from), otherwise,
  * an lvalue reference
  * @tparam vec The base vector expression type
@@ -42,6 +42,10 @@ using vec_t = typename std::conditional<owns, std::decay_t<vec>, const std::deca
 template <typename vec, bool owns>
 using vec_arg_t = typename std::conditional<owns, std::decay_t<vec>&&, const vec&>::type;
 
+/**
+ * @brief Determines whether a given type should be owned by a vector expression
+ * @tparam vec The vector expression type
+ */
 template <typename vec>
 inline constexpr bool owns_v = !std::is_same_v<vec, mfem::Vector> || std::is_rvalue_reference_v<vec>;
 
@@ -83,7 +87,7 @@ private:
 };
 
 /**
- * @brief Functor class for binding a scalar to a multiplication operatior
+ * @brief Functor class for binding a scalar to a multiplication operation
  */
 class ScalarMultOp {
 public:
@@ -96,6 +100,35 @@ public:
    * @brief Applies the partial application to the remaining argument
    */
   double operator()(const double arg) const { return arg * scalar_; }
+
+private:
+  double scalar_;
+};
+
+/**
+ * @brief Functor class for binding a scalar to a division operation
+ * @tparam is_divisor Whether the scalar is the divisor (vec divided by scalar)
+ * or the dividend (scalar divided by vector)
+ */
+template <bool is_divisor = true>
+class ScalarDivOp {
+public:
+  /**
+   * @brief Constructs a partial application of a scalar division
+   */
+  ScalarDivOp(const double scalar) : scalar_(scalar) {}
+
+  /**
+   * @brief Applies the partial application to the remaining argument
+   */
+  double operator()(const double arg) const
+  {
+    if constexpr (is_divisor) {
+      return arg / scalar_;
+    } else {
+      return scalar_ / arg;
+    }
+  }
 
 private:
   double scalar_;
