@@ -184,7 +184,8 @@ public:
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component = -1);
+  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
+                            int component = -1);
 
   /**
    * @brief Returns all the degrees of freedom associated with all the essential BCs

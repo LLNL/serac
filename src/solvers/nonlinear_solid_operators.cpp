@@ -40,7 +40,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
                                                              std::unique_ptr<mfem::ParBilinearForm>  S_form,
                                                              std::unique_ptr<mfem::ParBilinearForm>  M_form,
                                                              const BoundaryConditionManager&         bcs,
-                                                             mfem::IterativeSolver&                  newton_solver,
+                                                             EquationSolver&                         newton_solver,
                                                              const serac::LinearSolverParameters&    lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
       M_form_(std::move(M_form)),
@@ -57,8 +57,8 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
 
   M_inv_ = EquationSolver(H_form_->ParFESpace()->GetComm(), lin_params);
 
-  auto M_prec                    = std::make_unique<mfem::HypreSmoother>();
-  M_inv_.solver().iterative_mode = false;
+  auto M_prec                          = std::make_unique<mfem::HypreSmoother>();
+  M_inv_.linearSolver().iterative_mode = false;
 
   M_prec->SetType(mfem::HypreSmoother::Jacobi);
   M_inv_.SetPreconditioner(std::move(M_prec));
@@ -105,7 +105,7 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
   reduced_oper_->SetParameters(dt, &v, &x);
   mfem::Vector zero;  // empty vector is interpreted as zero r.h.s. by NewtonSolver
   dv_dt = newton_solver_ * zero;
-  SLIC_WARNING_IF(newton_solver_.GetConverged(), "Newton solver did not converge.");
+  SLIC_WARNING_IF(!newton_solver_.nonlinearSolver().GetConverged(), "Newton solver did not converge.");
   dx_dt = v + (dt * dv_dt);
 }
 
