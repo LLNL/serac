@@ -9,7 +9,7 @@
 #include <fstream>
 
 #include "coefficients/stdfunction_coefficient.hpp"
-#include "common/mesh_utils.hpp"
+#include "math/mesh_utils.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/nonlinear_solid_solver.hpp"

@@ -15,10 +15,10 @@
 
 #include <memory>
 
-#include "common/serac_types.hpp"
 #include "mfem.hpp"
 #include "solvers/physics_utilities/boundary_condition.hpp"
 #include "solvers/physics_utilities/equation_solver.hpp"
+#include "solvers/physics_utilities/solver_config.hpp"
 
 namespace serac {
 

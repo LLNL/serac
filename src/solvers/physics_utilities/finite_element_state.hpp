@@ -18,8 +18,8 @@
 #include <type_traits>
 #include <variant>
 
-#include "common/serac_types.hpp"
 #include "mfem.hpp"
+#include "solvers/physics_utilities/solver_config.hpp"
 
 namespace serac {
 

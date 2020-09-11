@@ -13,7 +13,7 @@
 #ifndef EXPR_TEMPLATE_OPS
 #define EXPR_TEMPLATE_OPS
 
-#include "common/expr_template_internal.hpp"
+#include "math/expr_template_internal.hpp"
 
 template <typename T>
 auto operator-(serac::VectorExpr<T>&& u)

@@ -8,6 +8,7 @@ set(physics_utilities_headers
     boundary_condition.hpp
     equation_solver.hpp
     finite_element_state.hpp
+    solver_config.hpp
     )
 
 set(physics_utilities_sources

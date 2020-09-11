@@ -5,13 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file serac_types.hpp
+ * @file solver_config.hpp
  *
- * @brief This file contains common serac data structures
+ * @brief This file contains enumerations and record types for physics solver configuration
  */
 
-#ifndef SERAC_TYPES
-#define SERAC_TYPES
+#ifndef SOLVER_CONFIG
+#define SOLVER_CONFIG
 
 namespace serac {
 /**

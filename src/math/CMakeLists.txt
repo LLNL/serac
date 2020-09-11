@@ -4,26 +4,25 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(common_headers
+set(math_headers
     expr_template_internal.hpp
     expr_template_ops.hpp
-    serac_types.hpp
     mesh_utils.hpp
     vector_expression.hpp
     )
 
-set(common_sources
+set(math_sources
     mesh_utils.cpp
     )
 
-set(common_depends mfem mpi fmt)
+set(math_depends mfem mpi fmt)
 
 blt_add_library(
-    NAME        common
-    HEADERS     ${common_headers}
-    SOURCES     ${common_sources}
-    DEPENDS_ON  ${common_depends}
+    NAME        math
+    HEADERS     ${math_headers}
+    SOURCES     ${math_sources}
+    DEPENDS_ON  ${math_depends}
     )
 
 
-target_include_directories(common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_include_directories(math PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

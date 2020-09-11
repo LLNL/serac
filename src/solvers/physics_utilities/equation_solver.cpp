@@ -6,7 +6,6 @@
 
 #include "solvers/physics_utilities/equation_solver.hpp"
 
-#include "common/serac_types.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
 

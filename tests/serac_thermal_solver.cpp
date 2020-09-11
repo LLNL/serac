@@ -9,7 +9,7 @@
 
 #include <fstream>
 
-#include "common/mesh_utils.hpp"
+#include "math/mesh_utils.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
 #include "solvers/thermal_solver.hpp"

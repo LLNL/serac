@@ -6,7 +6,7 @@
 
 blt_add_executable( NAME       serac
                     SOURCES    serac.cpp
-                    DEPENDS_ON common infrastructure solvers coefficients mfem mpi cli11
+                    DEPENDS_ON math infrastructure solvers coefficients mfem mpi cli11
                     )
 
 install( TARGETS serac
