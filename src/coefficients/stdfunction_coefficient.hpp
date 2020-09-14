@@ -32,7 +32,14 @@ class StdFunctionCoefficient : public mfem::Coefficient {
 public:
 
   /**
-   * @brief Constructor that takes in an mfem Vector representing the coordinates and produces a double
+   * @brief Constructor that takes in a time-independent function of space that returns a double
+   *
+   * @param[in] func: a function of space and time that returns a double
+   */
+  StdFunctionCoefficient(std::function<double(mfem::Vector&)> func);
+
+  /**
+   * @brief Constructor that takes in a time-dependent function of space that returns a double
    *
    * @param[in] func: a function of space and time that returns a double
    */
@@ -46,6 +53,8 @@ public:
    * @return The value of the coefficient at the quadrature point
    */
   virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
+  
+  bool is_time_dependent() const { return is_time_dependent_; } 
 
   friend StdFunctionCoefficient d_dt(const StdFunctionCoefficient &, const double);
   friend StdFunctionCoefficient d2_dt2(const StdFunctionCoefficient &, const double);
@@ -55,6 +64,7 @@ private:
    * @brief The function to evaluate for the coefficient
    */
   std::function<double(mfem::Vector&, double)> func_;
+  bool is_time_dependent_;
 };
 
 inline StdFunctionCoefficient d_dt(const StdFunctionCoefficient & y, const double dt = 1.0e-8) {

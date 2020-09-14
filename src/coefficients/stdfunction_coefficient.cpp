@@ -11,7 +11,14 @@
 
 namespace serac {
 
-StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector&, double)> func) : func_(func) {}
+StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector&)> func)
+    : func_([=](mfem::Vector& v, double /* t */) { return func(v); }), is_time_dependent_(false)
+{
+}
+StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector&, double)> func)
+    : func_(func), is_time_dependent_(true)
+{
+}
 
 double StdFunctionCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
@@ -20,8 +27,8 @@ double StdFunctionCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem:
   return func_(transip, GetTime());
 }
 
-StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(int                                               dim,
-                                                           std::function<void(mfem::Vector&, mfem::Vector&, double)> func)
+StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(
+    int dim, std::function<void(mfem::Vector&, mfem::Vector&, double)> func)
     : mfem::VectorCoefficient(dim), func_(func)
 {
 }

@@ -332,28 +332,43 @@ TEST_F(StdFunctionCoefficientTest, VectorValuedTimeDerivatives) {
       vertex(v) = x[pfes_v_->DofToVDof(d, v)];
       actual_value(v) = u[pfes_v_->DofToVDof(d, v)];
     }
+
     y_func(vertex, expected_value, 0.5);
 
-    EXPECT_NEAR(expected_value - actual_value).Norml2(), 1.0, 1.e-8);
+    for (int v = 0; v < dim_; v++) {
+      EXPECT_NEAR(expected_value[v], actual_value[v], 1.e-8);
+    }
   }
 
-  //dy_dt.SetTime(0.5);
-  //u.ProjectCoefficient(dy_dt);
-  //for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
-  //  for (int v = 0; v < dim_; v++) {
-  //    vertex(v) = x[pfes_v_->DofToVDof(d, v)];
-  //  }
-  //  EXPECT_NEAR(dy_dt_func(vertex, 0.5), u[d], 1.e-6);
-  //}
+  dy_dt.SetTime(0.5);
+  u.ProjectCoefficient(dy_dt);
+  for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
+    for (int v = 0; v < dim_; v++) {
+      vertex(v) = x[pfes_v_->DofToVDof(d, v)];
+      actual_value(v) = u[pfes_v_->DofToVDof(d, v)];
+    }
 
-  //d2y_dt2.SetTime(0.5);
-  //u.ProjectCoefficient(d2y_dt2);
-  //for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
-  //  for (int v = 0; v < dim_; v++) {
-  //    vertex(v) = x[pfes_v_->DofToVDof(d, v)];
-  //  }
-  //  EXPECT_NEAR(d2y_dt2_func(vertex, 0.5), u[d], 1.e-6);
-  //}
+    dy_dt_func(vertex, expected_value, 0.5);
+
+    for (int v = 0; v < dim_; v++) {
+      EXPECT_NEAR(expected_value[v], actual_value[v], 1.e-6);
+    }
+  }
+
+  d2y_dt2.SetTime(0.5);
+  u.ProjectCoefficient(d2y_dt2);
+  for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
+    for (int v = 0; v < dim_; v++) {
+      vertex(v) = x[pfes_v_->DofToVDof(d, v)];
+      actual_value(v) = u[pfes_v_->DofToVDof(d, v)];
+    }
+
+    d2y_dt2_func(vertex, expected_value, 0.5);
+
+    for (int v = 0; v < dim_; v++) {
+      EXPECT_NEAR(expected_value[v], actual_value[v], 1.e-6);
+    }
+  }
 
 }
 
