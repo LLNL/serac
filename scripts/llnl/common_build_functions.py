@@ -182,6 +182,10 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
                output_file = cfg_output_file,
                echo=True)
     
+    if report_to_stdout:
+        with open(cfg_output_file, 'r') as build_out:
+            print(build_out.read())
+
     if res != 0:
         print("[ERROR: Configure for host-config: %s failed]\n" % host_config)
         return res
