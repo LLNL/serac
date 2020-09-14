@@ -96,7 +96,7 @@ def parse_args():
     # where to install
     parser.add_option("--prefix",
                       dest="prefix",
-                      default="../uberenv_libs",
+                      default=None,
                       help="destination directory")
 
     # what compiler to use
@@ -322,6 +322,10 @@ class SpackEnv(UberEnv):
         self.pkgs = pjoin(self.uberenv_path, "packages","*")
 
         # setup destination paths
+        if self.opts["prefix"] is None:
+            print("[ERROR: --prefix flag for library destination is required]")
+            sys.exit(-1)
+            
         self.dest_dir = os.path.abspath(self.opts["prefix"])
         self.dest_spack = pjoin(self.dest_dir,"spack")
         print("[installing to: {0}]".format(self.dest_dir))
