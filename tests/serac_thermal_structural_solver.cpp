@@ -30,14 +30,14 @@ TEST(dynamic_solver, dyn_solve)
   // define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector& x, mfem::Vector& y, double /* t */) {
+  auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector& x, mfem::Vector& y) {
     y    = x;
     y(1) = y(1) + x(0) * 0.01;
   });
 
-  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector&, mfem::Vector& v, double /* t */) { v = 0.0; });
+  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector&, mfem::Vector& v) { v = 0.0; });
 
-  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x, double /* t */) {
+  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) {
     double temp = 2.0;
     if (x(0) < 1.0) {
       temp = 5.0;

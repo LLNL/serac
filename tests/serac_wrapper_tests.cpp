@@ -139,7 +139,7 @@ void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int
 TEST_F(WrapperTests, nonlinear_linear_thermal)
 {
   // Create a coefficient that indicates the x == 0 border of the cube
-  StdFunctionCoefficient x_zero([](const Vector& x, double /* t */) {
+  StdFunctionCoefficient x_zero([](const Vector& x) {
     if (x[0] < 1.e-12) {
       return 1.;
     }
@@ -147,7 +147,7 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   });
 
   // Create a coefficient that indicates the x == 1 border of the cube
-  StdFunctionCoefficient x_one([](const Vector& x, double /* t */) {
+  StdFunctionCoefficient x_one([](const Vector& x) {
     if ((1. - x[0]) < 1.e-12) {
       return 1.;
     }
