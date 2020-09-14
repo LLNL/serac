@@ -300,6 +300,63 @@ TEST_F(StdFunctionCoefficientTest, ScalarValuedTimeDerivatives) {
 
 }
 
+TEST_F(StdFunctionCoefficientTest, VectorValuedTimeDerivatives) {
+
+  auto y_func = [](const mfem::Vector & x, mfem::Vector & y, double t){
+    y = x * sin(2 * M_PI * t);
+  };
+
+  auto dy_dt_func = [](const mfem::Vector & x, mfem::Vector & y, double t){
+    y = 2 * M_PI * x * cos(2 * M_PI * t);
+  };
+
+  auto d2y_dt2_func = [](const mfem::Vector & x, mfem::Vector & y, double t){
+    y = -4 * M_PI * M_PI * x * sin(2 * M_PI * t);
+  };
+
+  StdFunctionVectorCoefficient y(dim_, y_func);
+  StdFunctionVectorCoefficient dy_dt = d_dt(y);
+  StdFunctionVectorCoefficient d2y_dt2 = d2_dt2(y);
+
+  ParGridFunction u(pfes_v_.get());
+  ParGridFunction x(pfes_v_.get());
+  pmesh_->GetVertices(x);
+
+  y.SetTime(0.5);
+  u.ProjectCoefficient(y);
+  mfem::Vector vertex(dim_);
+  mfem::Vector expected_value(dim_);
+  mfem::Vector actual_value(dim_);
+  for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
+    for (int v = 0; v < dim_; v++) {
+      vertex(v) = x[pfes_v_->DofToVDof(d, v)];
+      actual_value(v) = u[pfes_v_->DofToVDof(d, v)];
+    }
+    y_func(vertex, expected_value, 0.5);
+
+    EXPECT_NEAR(expected_value - actual_value).Norml2(), 1.0, 1.e-8);
+  }
+
+  //dy_dt.SetTime(0.5);
+  //u.ProjectCoefficient(dy_dt);
+  //for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
+  //  for (int v = 0; v < dim_; v++) {
+  //    vertex(v) = x[pfes_v_->DofToVDof(d, v)];
+  //  }
+  //  EXPECT_NEAR(dy_dt_func(vertex, 0.5), u[d], 1.e-6);
+  //}
+
+  //d2y_dt2.SetTime(0.5);
+  //u.ProjectCoefficient(d2y_dt2);
+  //for (int d = 0; d < pfes_v_->GetNDofs(); d++) {
+  //  for (int v = 0; v < dim_; v++) {
+  //    vertex(v) = x[pfes_v_->DofToVDof(d, v)];
+  //  }
+  //  EXPECT_NEAR(d2y_dt2_func(vertex, 0.5), u[d], 1.e-6);
+  //}
+
+}
+
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
 using axom::slic::UnitTestLogger;
