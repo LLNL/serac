@@ -19,7 +19,7 @@
 
 #include "mfem.hpp"
 #include "axom/inlet.hpp"
-#include "axom/common.hpp"
+#include "axom/core.hpp"
 
 #include "CLI11/CLI11.hpp"
 #include "coefficients/loading_functions.hpp"
@@ -31,34 +31,34 @@
 #include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
 
-axom::inlet::Inlet define_input_deck(std::string input_file_path)
+std::unique_ptr<axom::inlet::Inlet> define_input_deck(std::string input_file_path, int mpirank)
 {
   // Initialize Inlet
   auto luareader = std::make_shared<axom::inlet::LuaReader>();
   luareader->parseFile(input_file_path);
   axom::sidre::DataStore datastore;
-  auto inlet = std::make_unique<axom::inlet::Inlet>(luareader, datastore.getRoot());
+  auto serac_inlet = std::make_unique<axom::inlet::Inlet>(luareader, datastore.getRoot());
 
   // Define schema
-  inlet->addString("mesh", "Path to Mesh file")
-       ->registerVerifier([&]() -> bool {
+  serac_inlet->addString("mesh", "Path to Mesh file")
+             ->registerVerifier([&]() -> bool {
          std::string msg, path;
-         bool found = inlet->get("mesh", path);
+         bool found = serac_inlet->get("mesh", path);
          if (!found) {
            msg = fmt::format("Required input file variable was not found: mesh");
-           SLIC_WARNING_ROOT(msg);
+           SLIC_WARNING_ROOT(mpirank, msg);
            return false;
          }
          if(!axom::utilities::filesystem::pathExists(path)) {
            msg = fmt::format("Given input file does not exist: {0}", path);
-           SLIC_WARNING_ROOT(msg);
+           SLIC_WARNING_ROOT(mpirank, msg);
            return false;
          }
          return true;
        });
 
   std::string path;
-  bool found = inlet->get("mesh", path);
+  bool found = serac_inlet->get("mesh", path);
   std::cout << std::boolalpha << found << ":" << path << std::endl;
   serac::exitGracefully();
 
@@ -89,6 +89,8 @@ axom::inlet::Inlet define_input_deck(std::string input_file_path)
   //                true);
   // app.add_option("--npl, --newton-print-level", nonlin_params.print_level, "Newton print level.", true);
   // app.add_option("--dt, --time-step", dt, "Time step.", true);
+
+  return serac_inlet;
 }
 
 int main(int argc, char* argv[])
@@ -149,8 +151,8 @@ int main(int argc, char* argv[])
     serac::exitGracefully();
   }
 
-  auto config_msg = app.config_to_str(true, true);
-  SLIC_INFO_ROOT(rank, config_msg);
+  // Read input deck
+  auto serac_inlet = define_input_deck(input_file_path, rank);
 
   auto mesh = serac::buildMeshFromFile(mesh_file, ser_ref_levels, par_ref_levels);
 
