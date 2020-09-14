@@ -21,7 +21,7 @@ double StdFunctionCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem:
 }
 
 StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(int                                               dim,
-                                                           std::function<void(mfem::Vector&, mfem::Vector&)> func)
+                                                           std::function<void(mfem::Vector&, mfem::Vector&, double)> func)
     : mfem::VectorCoefficient(dim), func_(func)
 {
 }
@@ -32,7 +32,7 @@ void StdFunctionVectorCoefficient::Eval(mfem::Vector& V, mfem::ElementTransforma
   mfem::Vector transip(T.GetSpaceDim());
   V.SetSize(vdim);
   T.Transform(ip, transip);
-  func_(transip, V);
+  func_(transip, V, GetTime());
 }
 
 mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c)

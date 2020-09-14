@@ -40,7 +40,7 @@ TEST(component_bc, qs_solve)
   solid_solver.setDisplacementBCs(ess_bdr, disp_coef, 0);
 
   // Create an indicator function to set all vertices that are x=0
-  StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector& x, mfem::Vector& X) {
+  StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector& x, mfem::Vector& X, double /* t */) {
     X = 0.;
     for (int i = 0; i < X.Size(); i++)
       if (std::abs(x[i]) < 1.e-13) {

@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "mfem.hpp"
+#include "common/expr_template_ops.hpp"
 
 namespace serac {
 
@@ -83,7 +84,7 @@ public:
    * void(mfem::Vector &, mfem::Vector &). The first argument of the function is
    * the position, and the second argument is the output of the function.
    */
-  StdFunctionVectorCoefficient(int dim, std::function<void(mfem::Vector&, mfem::Vector&)> func);
+  StdFunctionVectorCoefficient(int dim, std::function<void(mfem::Vector&, mfem::Vector&, double)> func);
 
   /**
    * @brief Evalate the coefficient at a quadrature point
@@ -94,12 +95,41 @@ public:
    */
   virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
 
+  friend StdFunctionVectorCoefficient d_dt(const StdFunctionVectorCoefficient &, const double);
+  friend StdFunctionVectorCoefficient d2_dt2(const StdFunctionVectorCoefficient &, const double);
+
 private:
   /**
    * @brief The function to evaluate for the coefficient
    */
-  std::function<void(mfem::Vector&, mfem::Vector&)> func_;
+  std::function<void(mfem::Vector&, mfem::Vector&, double)> func_;
 };
+
+inline StdFunctionVectorCoefficient d_dt(const StdFunctionVectorCoefficient & y, const double dt = 1.0e-8) {
+  return StdFunctionVectorCoefficient(y.vdim, [dt, y = y.func_](mfem::Vector& x, mfem::Vector & return_value, double t) {
+    // if mfem would use return statements instead of 
+    // always using out parameters, we could just write
+    // return (y(x, t + dt) - y(x, t - dt)) / (2.0 * dt);
+
+    // instead, we get this:
+    mfem::Vector yl, yr;
+    y(x, yl, t - dt);
+    y(x, yr, t + dt);
+    return_value = (yr - yl) * (1.0 / (2.0 * dt));
+  });
+}
+
+inline StdFunctionVectorCoefficient d2_dt2(const StdFunctionVectorCoefficient & y, const double dt = 1.0e-4) {
+  return StdFunctionVectorCoefficient(y.vdim, [dt, y = y.func_](mfem::Vector& x, mfem::Vector& return_value, double t) {
+    // return_value = (y(x, t + dt) - 2 * y(x, t) + y(x, t - dt)) / (dt * dt);
+    
+    mfem::Vector yl, ym, yr;
+    y(x, yl, t - dt);
+    y(x, ym, t     );
+    y(x, yr, t + dt);
+    return_value = (yr - 2 * ym + yl) * (1.0 / (dt * dt));
+  });
+}
 
 /**
  * @brief MakeTrueEssList takes in a FESpace, a vector coefficient, and produces a list
