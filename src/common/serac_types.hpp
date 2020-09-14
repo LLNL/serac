@@ -54,7 +54,8 @@ enum class LinearSolver
 {
   CG,
   GMRES,
-  MINRES
+  MINRES,
+  SuperLU
 };
 
 /**

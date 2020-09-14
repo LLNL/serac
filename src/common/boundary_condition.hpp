@@ -17,6 +17,8 @@
 #include <optional>
 #include <set>
 #include <type_traits>
+#include <typeinfo>
+#include <utility>
 #include <variant>
 
 #include "common/finite_element_state.hpp"
@@ -47,6 +49,35 @@ public:
    * @param[in] true_dofs The indices of the relevant DOFs
    */
   BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs);
+
+  /**
+   * @brief Determines whether a boundary condition is associated with a tag
+   * @tparam Tag The type of the tag to compare against
+   * @param[in] The tag to compare against
+   * @pre Template type "Tag" must be an enumeration
+   */
+  template <typename Tag>
+  bool tagEquals(const Tag tag) const
+  {
+    static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
+    SLIC_ERROR_IF(!tag_, "No tag has been configured for this boundary condition");
+    bool tags_same_type = typeid(tag).hash_code() == tag_->second;
+    SLIC_WARNING_IF(!tags_same_type, "Attempting to compare tags of two different enum types (always false)");
+    return (static_cast<int>(tag) == tag_->first) && tags_same_type;
+  }
+
+  /**
+   * @brief Sets the tag for the BC
+   * @tparam Tag The template type for the tag (label)
+   * @param[in] The new tag
+   * @pre Template type "Tag" must be an enumeration
+   */
+  template <typename Tag>
+  void setTag(const Tag tag)
+  {
+    static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
+    tag_ = {static_cast<int>(tag), typeid(tag).hash_code()};
+  }
 
   /**
    * @brief Returns a non-owning reference to the array of boundary
@@ -122,10 +153,6 @@ public:
     SLIC_ERROR_IF(!true_dofs_, "True DOFs only available with essential BC.");
     return *true_dofs_;
   }
-
-  // FIXME: Temporary way of maintaining single definition of essential bdr
-  // until single class created to encapsulate all BCs
-  void removeAttr(const int attr) { markers_[attr - 1] = 0; }
 
   /**
    * @brief Projects the boundary condition over a field
@@ -243,6 +270,12 @@ private:
    * @brief The eliminated entries for Dirichlet BCs
    */
   mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
+  /**
+   * @brief A label for the BC, for filtering purposes, in addition to its type hash
+   * @note This should always correspond to an enum
+   * The first element is the enum val, the second is the hash of the corresponding enum type
+   */
+  std::optional<std::pair<int, std::size_t>> tag_;
 };
 
 }  // namespace serac
