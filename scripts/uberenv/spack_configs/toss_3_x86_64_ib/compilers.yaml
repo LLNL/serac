@@ -1,20 +1,18 @@
 compilers:
 - compiler:
-    # the "rh/usr" added to the path is a temporary work around until
-    # a fix propagates back to TOSS3
     environment: {}
     extra_rpaths: []
     flags:
-      cflags: --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1/rh/usr
-      cxxflags: --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1/rh/usr
+      cflags: --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1
+      cxxflags: --gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1
     modules:
     - clang/10.0.0
     operating_system: rhel7
     paths:
       cc: /usr/tce/packages/clang/clang-10.0.0/bin/clang
       cxx: /usr/tce/packages/clang/clang-10.0.0/bin/clang++
-      f77: /usr/tce/packages/gcc/gcc-8.3.1/rh/usr/bin/gfortran 
-      fc: /usr/tce/packages/gcc/gcc-8.3.1/rh/usr/bin/gfortran
+      f77: /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran 
+      fc: /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran
     spec: clang@10.0.0
     target: x86_64
 - compiler:
