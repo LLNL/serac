@@ -100,6 +100,15 @@ void BoundaryCondition::projectBdr(const double time, const bool should_be_scala
   projectBdr(*state_, time, should_be_scalar);
 }
 
+void BoundaryCondition::projectBdrToDofs(mfem::Vector & dof_values, const double time, const bool should_be_scalar) const
+{
+  SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
+  auto gf = state_->gridFunc();
+  projectBdr(gf, time, should_be_scalar);
+  gf.SetFromTrueDofs(dof_values);
+  gf.GetTrueDofs(dof_values);
+}
+
 void BoundaryCondition::eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const
 {
   SLIC_ERROR_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");

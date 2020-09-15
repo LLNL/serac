@@ -193,6 +193,15 @@ public:
   void projectBdr(const double time, const bool should_be_scalar = true) const;
 
   /**
+   * @brief Projects the boundary condition over boundary to a DoF vector
+   * @param[in] time The time for the coefficient, used for time-varying coefficients
+   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
+   * @pre A corresponding field (FiniteElementState) has been associated
+   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
+   */
+  void projectBdrToDofs(mfem::Vector & dof_values, const double time, const bool should_be_scalar = true) const;
+
+  /**
    * @brief Allocates an integrator of type "Integrator" on the heap,
    * constructing it with the boundary condition's vector coefficient,
    * intended to be passed to mfem::*LinearForm::Add*Integrator

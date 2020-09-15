@@ -10,7 +10,7 @@
 
 namespace serac {
 
-constexpr int NUM_FIELDS = 1;
+constexpr int NUM_FIELDS = 2;
 
 ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
     : BaseSolver(mesh, NUM_FIELDS, order),

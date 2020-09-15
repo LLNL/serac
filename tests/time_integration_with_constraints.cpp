@@ -118,6 +118,7 @@ public:
   FirstOrderODE(int n) : mfem::TimeDependentOperator(n, 0.0){};
   void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const { explicit_func(t, u, du_dt); }
   void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) { implicit_func(t, dt, u, du_dt); }
+
 };
 #endif
 
@@ -178,13 +179,15 @@ double first_order_test_mfem(int num_steps)
     dt_prev = dt;
   };
 
-  auto time_integrator = mfem::ImplicitMidpointSolver();
-  time_integrator.Init(ode);
+  ode.SetMethod< mfem::ImplicitMidpointSolver >();
+
+//  auto time_integrator = mfem::ImplicitMidpointSolver();
+//  time_integrator.Init(ode);
 
   mfem::Vector u = uc(0);
   double       t = 0.0;
   for (int i = 0; i < num_steps; i++) {
-    time_integrator.Step(u, t, dt);
+    ode.Step(u, t, dt);
     u[1] = uc(t)[1];
   }
 
