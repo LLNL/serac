@@ -96,7 +96,7 @@ def parse_args():
     # where to install
     parser.add_option("--prefix",
                       dest="prefix",
-                      default="uberenv_libs",
+                      default="../uberenv_libs",
                       help="destination directory")
 
     # what compiler to use
