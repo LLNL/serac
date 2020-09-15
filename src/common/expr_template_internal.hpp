@@ -104,10 +104,10 @@ private:
 
 /**
  * @brief Functor class for binding a scalar to a division operation
- * @tparam is_divisor Whether the scalar is the divisor (vec divided by scalar)
+ * @tparam is_denominator Whether the scalar is the divisor/denominator (vec divided by scalar)
  * or the dividend (scalar divided by vector)
  */
-template <bool is_divisor = true>
+template <bool is_denominator = true>
 class ScalarDivOp {
 public:
   /**
@@ -120,7 +120,7 @@ public:
    */
   double operator()(const double arg) const
   {
-    if constexpr (is_divisor) {
+    if constexpr (is_denominator) {
       return arg / scalar_;
     } else {
       return scalar_ / arg;
