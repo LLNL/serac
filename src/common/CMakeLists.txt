@@ -6,6 +6,7 @@
 
 set(common_headers
     boundary_condition.hpp
+    boundary_condition_manager.hpp
     common.hpp
     expr_template_internal.hpp
     expr_template_ops.hpp
@@ -22,6 +23,7 @@ set(common_headers
 set(common_sources
     finite_element_state.cpp
     boundary_condition.cpp
+    boundary_condition_manager.cpp
     initialize.cpp
     logger.cpp
     mesh_utils.cpp
