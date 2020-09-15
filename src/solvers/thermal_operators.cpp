@@ -11,11 +11,11 @@
 
 namespace serac {
 
-DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace&           fe_space,
-                                                     const serac::LinearSolverParameters&   params,
-                                                     std::vector<serac::BoundaryCondition>& ess_bdr)
+DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace&         fe_space,
+                                                     const serac::LinearSolverParameters& params,
+                                                     const BoundaryConditionManager&      bcs)
     : mfem::TimeDependentOperator(fe_space.GetTrueVSize(), 0.0),
-      ess_bdr_(ess_bdr),
+      bcs_(bcs),
       z_(fe_space.GetTrueVSize()),
       y_(fe_space.GetTrueVSize()),
       x_(fe_space.GetTrueVSize()),
@@ -24,15 +24,15 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
   // Set the mass solver options (CG and Jacobi for now)
   M_inv_ = EquationSolver(fe_space.GetComm(), params);
 
-  M_inv_.solver().iterative_mode = false;
-  auto M_prec                    = std::make_unique<mfem::HypreSmoother>();
+  M_inv_.linearSolver().iterative_mode = false;
+  auto M_prec                          = std::make_unique<mfem::HypreSmoother>();
   M_prec->SetType(mfem::HypreSmoother::Jacobi);
   M_inv_.SetPreconditioner(std::move(M_prec));
 
   // Use the same options for the T (= M + dt K) solver
   T_inv_ = EquationSolver(fe_space.GetComm(), params);
 
-  T_inv_.solver().iterative_mode = false;
+  T_inv_.linearSolver().iterative_mode = false;
 
   auto T_prec = std::make_unique<mfem::HypreSmoother>();
   T_inv_.SetPreconditioner(std::move(T_prec));
@@ -59,7 +59,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
   y_ = u;
 
   *bc_rhs_ = *rhs_;
-  for (auto& bc : ess_bdr_) {
+  for (const auto& bc : bcs_.essentials()) {
     bc.eliminateToRHS(*K_, u, *bc_rhs_);
   }
 
@@ -85,9 +85,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     T_.reset(mfem::Add(1.0, *M_, dt, *K_));
 
     // Eliminate the essential DOFs from the T matrix
-    for (auto& bc : ess_bdr_) {
-      T_e_mat_.reset(T_->EliminateRowsCols(bc.getTrueDofs()));
-    }
+    bcs_.eliminateAllEssentialDofsFromMatrix(*T_);
     T_inv_.SetOperator(*T_);
   }
 
@@ -95,7 +93,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   *bc_rhs_ = *rhs_;
   x_       = 0.0;
 
-  for (auto& bc : ess_bdr_) {
+  for (const auto& bc : bcs_.essentials()) {
     bc.projectBdr(*state_gf_, t);
     state_gf_->SetFromTrueDofs(y_);
     state_gf_->GetTrueDofs(y_);

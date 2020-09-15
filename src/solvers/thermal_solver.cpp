@@ -31,13 +31,13 @@ void ThermalSolver::setTemperature(mfem::Coefficient& temp)
 
 void ThermalSolver::setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
-  setEssentialBCs(temp_bdr, temp_bdr_coef, *temperature_);
+  bcs_.addEssential(temp_bdr, temp_bdr_coef, *temperature_);
 }
 
 void ThermalSolver::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
-  setNaturalBCs(flux_bdr, flux_bdr_coef);
+  bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
 }
 
 void ThermalSolver::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
@@ -83,7 +83,7 @@ void ThermalSolver::completeSetup()
   K_mat_.reset(K_form_->ParallelAssemble());
 
   // Eliminate the essential DOFs from the stiffness matrix
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     bc.eliminateFromMatrix(*K_mat_);
   }
 
@@ -104,7 +104,7 @@ void ThermalSolver::completeSetup()
     M_mat_.reset(M_form_->ParallelAssemble());
 
     // Make the time integration operator and set the appropriate matricies
-    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, ess_bdr_);
+    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_);
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 
@@ -116,7 +116,7 @@ void ThermalSolver::quasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     bc.apply(*K_mat_, *bc_rhs_, *temperature_, time_);
   }
 
@@ -129,7 +129,7 @@ void ThermalSolver::quasiStaticSolve()
 
   solver_.SetPreconditioner(std::move(hypre_smoother));
 
-  solver_.solver().iterative_mode = false;
+  solver_.linearSolver().iterative_mode = false;
   solver_.SetOperator(*K_mat_);
 
   // Perform the linear solve
