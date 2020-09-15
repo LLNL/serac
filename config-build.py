@@ -61,6 +61,12 @@ def parse_arguments():
                         default="",
                         help="specify path for build directory.  If not specified, will create in current directory.")
 
+    parser.add_argument("-ip",
+                        "--installpath",
+                        type=str,
+                        default="",
+                        help="specify path for install directory. If not specified, will create in current directory.")
+
     parser.add_argument("-bt",
                         "--buildtype",
                         type=str,
@@ -152,6 +158,32 @@ def setup_build_dir(args, platform_info):
     return buildpath
 
 
+#####################
+# Setup Install Dir
+#####################
+def setup_install_dir(args, platform_info):
+    # For install directory, we will clean up old ones, but we don't need to create it, cmake will do that.
+    if args.installpath != "":
+        installpath = os.path.abspath(args.installpath)
+    else:
+        # use platform info & build type
+        installpath = "-".join(
+            ["install", platform_info, args.buildtype.lower()]
+        )
+
+    installpath = os.path.abspath(installpath)
+
+    if os.path.exists(installpath):
+        print(
+            "Install directory '%s' already exists, deleting..." % installpath
+        )
+        shutil.rmtree(installpath)
+
+    print("Creating install path '%s'..." % installpath)
+    os.makedirs(installpath)
+    return installpath
+
+
 ############################
 # Check if executable exists 
 ############################
@@ -164,7 +196,7 @@ def executable_exists(path):
 ############################
 # Build CMake command line
 ############################
-def create_cmake_command_line(args, unknown_args, buildpath, hostconfigpath):
+def create_cmake_command_line(args, unknown_args, buildpath, installpath, hostconfigpath):
 
     import stat
 
@@ -191,6 +223,8 @@ def create_cmake_command_line(args, unknown_args, buildpath, hostconfigpath):
 
     # Add build type (opt or debug)
     cmakeline += " -DCMAKE_BUILD_TYPE=" + args.buildtype
+    # Set install dir
+    cmakeline += " -DCMAKE_INSTALL_PREFIX=%s" % installpath
 
     if args.exportcompilercommands:
         cmakeline += " -DCMAKE_EXPORT_COMPILE_COMMANDS=on"
@@ -254,8 +288,9 @@ def main():
     basehostconfigpath = find_host_config(args, repodir)
     platform_info = get_platform_info(basehostconfigpath)
     buildpath = setup_build_dir(args, platform_info)
+    installpath = setup_install_dir(args, platform_info)
 
-    cmakeline = create_cmake_command_line(args, unknown_args, buildpath, basehostconfigpath)
+    cmakeline = create_cmake_command_line(args, unknown_args, buildpath, installpath, basehostconfigpath)
     return run_cmake(buildpath, cmakeline)
 
 if __name__ == '__main__':

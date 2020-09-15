@@ -244,7 +244,7 @@ public:
    * @pre Tag must be an enumeration type
    */
   template <typename Tag>
-  const auto genericsWithTag(const Tag tag)
+  auto genericsWithTag(const Tag tag)
   {
     static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
     return FilterView(other_bdr_.begin(), other_bdr_.end(), [tag](const auto& bc) { return bc.tagEquals(tag); });

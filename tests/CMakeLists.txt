@@ -89,6 +89,6 @@ if (ENABLE_GTEST)
 endif()
 
 # Make sure running serac driver doesn't completely fail
-blt_add_test(NAME          serac
-             COMMAND       serac
+blt_add_test(NAME          serac_driver
+             COMMAND       serac_driver
              NUM_MPI_TASKS 1 )
