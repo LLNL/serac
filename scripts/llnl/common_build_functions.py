@@ -167,18 +167,64 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     return res
 
 
+def test_examples(host_config, build_dir, install_dir, report_to_stdout = False):
+    print("[starting to build examples]")
+    examples_output_file =  pjoin(build_dir,"output.log.make.examples.txt")
+    print("[log file: %s]" % examples_output_file)
+    res = sexe("cd %s && make VERBOSE=1 install " % build_dir,
+                output_file = examples_output_file,
+                echo=True)
+
+    if report_to_stdout:
+        with open(examples_output_file, 'r') as ex_out:
+            print(ex_out.read())
+
+    if res != 0:
+        print("[ERROR: Install for host-config: %s failed]\n" % host_config)
+        return res
+
+    example_dir = pjoin(install_dir, "examples", "using-with-cmake")
+    res = sexe("cd %s && mkdir build && cd build && cmake -C %s/host-config.cmake %s" % (example_dir, example_dir, example_dir),
+                output_file = examples_output_file,
+                echo=True)
+
+    if report_to_stdout:
+        with open(examples_output_file, 'r') as ex_out:
+            print(ex_out.read())
+
+    if res != 0:
+        print("[ERROR: Configure examples for host-config: %s failed]\n" % host_config)
+        return res
+
+    install_build_dir = pjoin(example_dir, "build")
+    res = sexe("cd %s && make && %s/serac_example" % (install_build_dir, install_build_dir),
+                output_file = examples_output_file,
+                echo=True)
+
+    if report_to_stdout:
+        with open(examples_output_file, 'r') as ex_out:
+            print(ex_out.read())
+
+    if res != 0:
+        print("[ERROR: Make examples for host-config: %s failed]\n" % host_config)
+        return res
+
+    return 0
+
 def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
     host_config_root = get_host_config_root(host_config)
 
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
+    install_dir = pjoin(test_root,"install-%s"   % host_config_root)
     print("[Testing build, test, and docs of host config file: %s]" % host_config)
     print("[ build dir: %s]"   % build_dir)
+    print("[ install dir: %s]"   % install_dir)
 
     # configure
     cfg_output_file = pjoin(test_root,"output.log.%s.configure.txt" % host_config_root)
     print("[starting configure of %s]" % host_config)
     print("[log file: %s]" % cfg_output_file)
-    res = sexe("python config-build.py  -bp %s -hc %s" % (build_dir, host_config),
+    res = sexe("python config-build.py  -bp %s -hc %s -ip %s" % (build_dir, host_config, install_dir),
                output_file = cfg_output_file,
                echo=True)
     
@@ -242,6 +288,13 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
         print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
         return res
 
+    # build the examples
+    res = test_examples(host_config, build_dir, install_dir, report_to_stdout)
+
+    if res != 0:
+        print("[ERROR: Building examples for host-config: %s failed]\n\n" % host_config)
+        return res
+    
     print("[SUCCESS: Build, test, and install for host-config: {0} complete]\n".format(host_config))
 
     set_group_and_perms(build_dir)
