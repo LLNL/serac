@@ -55,7 +55,7 @@ stages:
     - RESOURCES="-t 30 -N 1"
     - echo -e "section_start:$(date +%s):dependencies\r\e[0K
       Build dependencies and generate host-config file (uberenv)"
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_tpls.py --spec=${SPEC} --directory=${CI_PROJECT_NAME}../serac_tpls
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_tpls.py --spec=${SPEC} --directory=${CI_PROJECT_NAME}/../serac_tpls
     - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD + TEST
     - RESOURCES="-t 10 -N 1"
@@ -90,7 +90,7 @@ stages:
     #DEPENDENCIES
     - echo -e "section_start:$(date +%s):dependencies\r\e[0K
       Build dependencies and generate host-config file (uberenv)"
-    - lalloc 1 -W 30 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_PROJECT_NAME}../serac_tpls
+    - lalloc 1 -W 30 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_PROJECT_NAME}/../serac_tpls
     - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD + TEST
     - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
