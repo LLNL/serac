@@ -16,9 +16,9 @@
 #include <memory>
 
 #include "mfem.hpp"
-#include "solvers/physics_utilities/boundary_condition.hpp"
-#include "solvers/physics_utilities/equation_solver.hpp"
-#include "solvers/physics_utilities/solver_config.hpp"
+#include "physics/utilities/boundary_condition.hpp"
+#include "physics/utilities/equation_solver.hpp"
+#include "physics/utilities/solver_config.hpp"
 
 namespace serac {
 

@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 add_subdirectory(math)
-add_subdirectory(solvers)
+add_subdirectory(physics)
 add_subdirectory(integrators)
 add_subdirectory(coefficients)
 add_subdirectory(drivers)

@@ -15,7 +15,7 @@
 
 #include "base_solver.hpp"
 #include "mfem.hpp"
-#include "physics_operators/nonlinear_solid_operators.hpp"
+#include "physics/operators/nonlinear_solid_operators.hpp"
 
 namespace serac {
 

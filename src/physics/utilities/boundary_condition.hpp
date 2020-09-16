@@ -20,8 +20,8 @@
 #include <variant>
 
 #include "infrastructure/logger.hpp"
-#include "solvers/physics_utilities/finite_element_state.hpp"
-#include "solvers/physics_utilities/solver_config.hpp"
+#include "physics/utilities/finite_element_state.hpp"
+#include "physics/utilities/solver_config.hpp"
 
 namespace serac {
 

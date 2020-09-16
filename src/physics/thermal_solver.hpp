@@ -15,7 +15,7 @@
 
 #include "base_solver.hpp"
 #include "mfem.hpp"
-#include "physics_operators/thermal_operators.hpp"
+#include "physics/operators/thermal_operators.hpp"
 
 namespace serac {
 

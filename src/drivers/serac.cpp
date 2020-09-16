@@ -25,7 +25,7 @@
 #include "math/mesh_utils.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
+#include "physics/nonlinear_solid_solver.hpp"
 
 int main(int argc, char* argv[])
 {

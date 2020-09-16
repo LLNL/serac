@@ -7,7 +7,7 @@
 #include "thermal_structural_solver.hpp"
 
 #include "infrastructure/logger.hpp"
-#include "solvers/physics_utilities/solver_config.hpp"
+#include "physics/utilities/solver_config.hpp"
 
 namespace serac {
 

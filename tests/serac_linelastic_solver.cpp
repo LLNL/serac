@@ -11,7 +11,7 @@
 #include "math/mesh_utils.hpp"
 #include "mfem.hpp"
 #include "serac_config.hpp"
-#include "solvers/elasticity_solver.hpp"
+#include "physics/elasticity_solver.hpp"
 
 namespace serac {
 

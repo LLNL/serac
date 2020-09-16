@@ -4,8 +4,8 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-add_subdirectory(physics_utilities)
-add_subdirectory(physics_operators)
+add_subdirectory(utilities)
+add_subdirectory(operators)
 
 set(solvers_sources
     base_solver.cpp
