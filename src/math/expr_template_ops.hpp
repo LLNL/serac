@@ -15,21 +15,30 @@
 
 #include "math/expr_template_internal.hpp"
 
+/**
+ * @brief A utility for conditionally enabling templates if a given type
+ * is an mfem::Vector
+ */
+template <typename MFEMVec>
+using enable_if_mfem_vec = std::enable_if_t<std::is_same_v<std::decay_t<MFEMVec>, mfem::Vector>>;
+
 template <typename T>
 auto operator-(serac::VectorExpr<T>&& u)
 {
-  return serac::internal::UnaryNegation<T, true>(std::move(u.asDerived()));
+  return serac::internal::UnaryNegation<T>(std::move(u.asDerived()));
 }
 
-inline auto operator-(const mfem::Vector& u) { return serac::internal::UnaryNegation<mfem::Vector, false>(u); }
-
-inline auto operator-(mfem::Vector&& u) { return serac::internal::UnaryNegation<mfem::Vector, true>(std::move(u)); }
+template <typename MFEMVec, typename = enable_if_mfem_vec<MFEMVec>>
+auto operator-(MFEMVec&& u)
+{
+  return serac::internal::UnaryNegation<MFEMVec>(std::forward<MFEMVec>(u));
+}
 
 template <typename T>
 auto operator*(serac::VectorExpr<T>&& u, const double a)
 {
   using serac::internal::ScalarMultOp;
-  return serac::internal::UnaryVectorExpr<T, true, ScalarMultOp>(std::move(u.asDerived()), ScalarMultOp{a});
+  return serac::internal::UnaryVectorExpr<T, ScalarMultOp>(std::move(u.asDerived()), ScalarMultOp{a});
 }
 
 template <typename T>
@@ -38,117 +47,95 @@ auto operator*(const double a, serac::VectorExpr<T>&& u)
   return operator*(std::move(u), a);
 }
 
-inline auto operator*(const double a, const mfem::Vector& u)
+template <typename MFEMVec, typename = enable_if_mfem_vec<MFEMVec>>
+auto operator*(const double a, MFEMVec&& u)
 {
   using serac::internal::ScalarMultOp;
-  return serac::internal::UnaryVectorExpr<mfem::Vector, false, ScalarMultOp>(u, ScalarMultOp{a});
+  return serac::internal::UnaryVectorExpr<MFEMVec, ScalarMultOp>(std::forward<MFEMVec>(u), ScalarMultOp{a});
 }
 
-inline auto operator*(const mfem::Vector& u, const double a) { return operator*(a, u); }
-
-inline auto operator*(const double a, mfem::Vector&& u)
+template <typename MFEMVec, typename = enable_if_mfem_vec<MFEMVec>>
+auto operator*(MFEMVec&& u, const double a)
 {
-  using serac::internal::ScalarMultOp;
-  return serac::internal::UnaryVectorExpr<mfem::Vector, true, ScalarMultOp>(std::move(u), ScalarMultOp{a});
+  return operator*(a, std::forward<MFEMVec>(u));
 }
 
-inline auto operator*(mfem::Vector&& u, const double a) { return operator*(a, std::move(u)); }
+template <typename T>
+auto operator/(serac::VectorExpr<T>&& u, const double a)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<T, ScalarDivOp<true>>(std::move(u.asDerived()), ScalarDivOp{a});
+}
+
+template <typename MFEMVec, typename = enable_if_mfem_vec<MFEMVec>>
+auto operator/(MFEMVec&& u, const double a)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<MFEMVec, ScalarDivOp<true>>(std::forward<MFEMVec>(u), ScalarDivOp{a});
+}
+
+template <typename T>
+auto operator/(const double a, serac::VectorExpr<T>&& u)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<T, ScalarDivOp<false>>(std::move(u.asDerived()), ScalarDivOp<false>{a});
+}
+
+template <typename MFEMVec, typename = enable_if_mfem_vec<MFEMVec>>
+auto operator/(const double a, MFEMVec&& u)
+{
+  using serac::internal::ScalarDivOp;
+  return serac::internal::UnaryVectorExpr<MFEMVec, ScalarDivOp<false>>(std::forward<MFEMVec>(u), ScalarDivOp<false>{a});
+}
 
 template <typename S, typename T>
 auto operator+(serac::VectorExpr<S>&& u, serac::VectorExpr<T>&& v)
 {
-  return serac::internal::VectorAddition<S, T, true, true>(std::move(u.asDerived()), std::move(v.asDerived()));
+  return serac::internal::VectorAddition<S, T>(std::move(u.asDerived()), std::move(v.asDerived()));
 }
 
-template <typename T>
-auto operator+(const mfem::Vector& u, serac::VectorExpr<T>&& v)
+template <typename T, typename MFEMVec, typename = enable_if_mfem_vec<MFEMVec>>
+auto operator+(MFEMVec&& u, serac::VectorExpr<T>&& v)
 {
-  return serac::internal::VectorAddition<mfem::Vector, T, false, true>(u, std::move(v.asDerived()));
+  return serac::internal::VectorAddition<MFEMVec, T>(std::forward<MFEMVec>(u), std::move(v.asDerived()));
 }
 
-template <typename T>
-auto operator+(serac::VectorExpr<T>&& u, const mfem::Vector& v)
+template <typename T, typename MFEMVec, typename = enable_if_mfem_vec<MFEMVec>>
+auto operator+(serac::VectorExpr<T>&& u, MFEMVec&& v)
 {
-  return operator+(v, std::move(u));
+  return operator+(std::forward<MFEMVec>(v), std::move(u));
 }
 
-inline auto operator+(const mfem::Vector& u, const mfem::Vector& v)
+template <typename MFEMVecL, typename MFEMVecR, typename = enable_if_mfem_vec<MFEMVecL>,
+          typename = enable_if_mfem_vec<MFEMVecR>>
+auto operator+(MFEMVecL&& u, MFEMVecR&& v)
 {
-  return serac::internal::VectorAddition<mfem::Vector, mfem::Vector, false, false>(u, v);
+  return serac::internal::VectorAddition<MFEMVecL, MFEMVecR>(std::forward<MFEMVecL>(u), std::forward<MFEMVecR>(v));
 }
-
-template <typename T>
-auto operator+(mfem::Vector&& u, serac::VectorExpr<T>&& v)
-{
-  return serac::internal::VectorAddition<mfem::Vector, T, true, true>(std::move(u), std::move(v.asDerived()));
-}
-
-template <typename T>
-auto operator+(serac::VectorExpr<T>&& u, mfem::Vector&& v)
-{
-  return operator+(std::move(v), std::move(u));
-}
-
-inline auto operator+(mfem::Vector&& u, mfem::Vector&& v)
-{
-  return serac::internal::VectorAddition<mfem::Vector, mfem::Vector, true, true>(std::move(u), std::move(v));
-}
-
-inline auto operator+(const mfem::Vector& u, mfem::Vector&& v)
-{
-  return serac::internal::VectorAddition<mfem::Vector, mfem::Vector, false, true>(u, std::move(v));
-}
-
-inline auto operator+(mfem::Vector&& u, const mfem::Vector& v) { return operator+(v, std::move(u)); }
 
 template <typename S, typename T>
 auto operator-(serac::VectorExpr<S>&& u, serac::VectorExpr<T>&& v)
 {
-  return serac::internal::VectorSubtraction<S, T, true, true>(std::move(u.asDerived()), std::move(v.asDerived()));
+  return serac::internal::VectorSubtraction<S, T>(std::move(u.asDerived()), std::move(v.asDerived()));
 }
 
-template <typename T>
-auto operator-(const mfem::Vector& u, serac::VectorExpr<T>&& v)
+template <typename T, typename MFEMVec, typename = enable_if_mfem_vec<MFEMVec>>
+auto operator-(MFEMVec&& u, serac::VectorExpr<T>&& v)
 {
-  return serac::internal::VectorSubtraction<mfem::Vector, T, false, true>(u, std::move(v.asDerived()));
+  return serac::internal::VectorSubtraction<MFEMVec, T>(std::forward<MFEMVec>(u), std::move(v.asDerived()));
 }
 
-template <typename T>
-auto operator-(serac::VectorExpr<T>&& u, const mfem::Vector& v)
+template <typename T, typename MFEMVec, typename = enable_if_mfem_vec<MFEMVec>>
+auto operator-(serac::VectorExpr<T>&& u, MFEMVec&& v)
 {
-  return serac::internal::VectorSubtraction<T, mfem::Vector, true, false>(std::move(u.asDerived()), v);
+  return serac::internal::VectorSubtraction<T, MFEMVec>(std::move(u.asDerived()), std::forward<MFEMVec>(v));
 }
 
-inline auto operator-(const mfem::Vector& u, const mfem::Vector& v)
+template <typename MFEMVecL, typename MFEMVecR, typename = enable_if_mfem_vec<MFEMVecL>,
+          typename = enable_if_mfem_vec<MFEMVecR>>
+auto operator-(MFEMVecL&& u, MFEMVecR&& v)
 {
-  return serac::internal::VectorSubtraction<mfem::Vector, mfem::Vector, false, false>(u, v);
-}
-
-template <typename T>
-auto operator-(mfem::Vector&& u, serac::VectorExpr<T>&& v)
-{
-  return serac::internal::VectorSubtraction<mfem::Vector, T, true, true>(std::move(u), std::move(v.asDerived()));
-}
-
-template <typename T>
-auto operator-(serac::VectorExpr<T>&& u, mfem::Vector&& v)
-{
-  return serac::internal::VectorSubtraction<T, mfem::Vector, true, true>(std::move(u.asDerived()), std::move(v));
-}
-
-inline auto operator-(mfem::Vector&& u, mfem::Vector&& v)
-{
-  return serac::internal::VectorSubtraction<mfem::Vector, mfem::Vector, true, true>(std::move(u), std::move(v));
-}
-
-inline auto operator-(const mfem::Vector& u, mfem::Vector&& v)
-{
-  return serac::internal::VectorSubtraction<mfem::Vector, mfem::Vector, false, true>(u, std::move(v));
-}
-
-inline auto operator-(mfem::Vector&& u, const mfem::Vector& v)
-{
-  return serac::internal::VectorSubtraction<mfem::Vector, mfem::Vector, true, false>(std::move(u), v);
+  return serac::internal::VectorSubtraction<MFEMVecL, MFEMVecR>(std::forward<MFEMVecL>(u), std::forward<MFEMVecR>(v));
 }
 
 template <typename T>

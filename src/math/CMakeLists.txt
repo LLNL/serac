@@ -25,4 +25,14 @@ blt_add_library(
     )
 
 
-target_include_directories(math PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_include_directories(math PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+    $<INSTALL_INTERFACE:include>
+    )
+
+install(FILES ${math_headers} DESTINATION include/math )
+
+install(TARGETS              math
+        EXPORT               serac-targets
+        DESTINATION          lib
+        )

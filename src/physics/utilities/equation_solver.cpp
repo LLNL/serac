@@ -17,6 +17,9 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
   if (lin_params.lin_solver == LinearSolver::SuperLU) {
     lin_solver_ = std::make_unique<mfem::SuperLUSolver>(comm);
     std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetColumnPermutation(mfem::superlu::PARMETIS);
+    if (lin_params.print_level == 0) {
+      std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetPrintStatistics(false);
+    }
   } else {
     lin_solver_ = buildIterativeLinearSolver(comm, lin_params);
   }

@@ -6,6 +6,7 @@
 
 set(physics_utilities_headers
     boundary_condition.hpp
+    boundary_condition_manager.hpp
     equation_solver.hpp
     finite_element_state.hpp
     solver_config.hpp
@@ -13,6 +14,7 @@ set(physics_utilities_headers
 
 set(physics_utilities_sources
     boundary_condition.cpp
+    boundary_condition_manager.cpp
     equation_solver.cpp
     finite_element_state.cpp
     )
@@ -26,5 +28,14 @@ blt_add_library(
     DEPENDS_ON  ${physics_utilities_depends}
     )
 
+target_include_directories(physics_utilities PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
+    $<INSTALL_INTERFACE:include>
+    )
 
-target_include_directories(physics_utilities PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../..)
+install(FILES ${physics_utilities_headers} DESTINATION include/physics/utilities )
+
+install(TARGETS              physics_utilities
+        EXPORT               serac-targets
+        DESTINATION          lib
+        )

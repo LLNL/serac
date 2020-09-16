@@ -16,7 +16,7 @@
 #include <memory>
 
 #include "mfem.hpp"
-#include "physics/utilities/boundary_condition.hpp"
+#include "physics/utilities/boundary_condition_manager.hpp"
 #include "physics/utilities/equation_solver.hpp"
 #include "physics/utilities/finite_element_state.hpp"
 #include "physics/utilities/solver_config.hpp"
@@ -33,7 +33,8 @@ public:
    *
    * @param[in] H_form The nonlinear form of the PDE
    */
-  explicit NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form);
+  explicit NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form,
+                                             const BoundaryConditionManager&         bcs);
 
   /**
    * @brief Get the Gradient of the nonlinear form
@@ -66,6 +67,11 @@ protected:
    * @brief The linearized jacobian at the current state
    */
   mutable std::unique_ptr<mfem::Operator> Jacobian_;
+
+  /**
+   * @brief The boundary conditions
+   */
+  const BoundaryConditionManager& bcs_;
 };
 
 /**
@@ -87,8 +93,7 @@ public:
    * @param[in] ess_bdr The essential boundary conditions
    */
   NonlinearSolidReducedSystemOperator(const mfem::ParNonlinearForm& H_form, const mfem::ParBilinearForm& S_form,
-                                      mfem::ParBilinearForm&                       M_form,
-                                      const std::vector<serac::BoundaryCondition>& ess_bdr);
+                                      mfem::ParBilinearForm& M_form, const BoundaryConditionManager& bcs);
 
   /**
    * @brief Set current dt, v, x values - needed to compute action and Jacobian.
@@ -160,7 +165,7 @@ private:
   /**
    * @brief Essential degrees of freedom
    */
-  const std::vector<serac::BoundaryCondition>& ess_bdr_;
+  const BoundaryConditionManager& bcs_;
 };
 
 /**
@@ -178,11 +183,10 @@ public:
    * @param[in] newton_solver The newton solver object
    * @param[in] lin_params The linear solver parameters
    */
-  NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm>      H_form,
-                                std::unique_ptr<mfem::ParBilinearForm>       S_form,
-                                std::unique_ptr<mfem::ParBilinearForm>       M_form,
-                                const std::vector<serac::BoundaryCondition>& ess_bdr, EquationSolver& newton_solver,
-                                const serac::LinearSolverParameters& lin_params);
+  NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form,
+                                std::unique_ptr<mfem::ParBilinearForm>  S_form,
+                                std::unique_ptr<mfem::ParBilinearForm> M_form, const BoundaryConditionManager& bcs,
+                                EquationSolver& newton_solver, const serac::LinearSolverParameters& lin_params);
 
   /**
    * @brief Evaluate the explicit time derivative
@@ -247,7 +251,7 @@ protected:
   /**
    * @brief The fixed boudnary degrees of freedom
    */
-  const std::vector<serac::BoundaryCondition>& ess_bdr_;
+  const BoundaryConditionManager& bcs_;
 
   /**
    * @brief The linear solver parameters for the mass matrix

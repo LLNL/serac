@@ -10,7 +10,7 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies solvers coefficients axom mpi mfem gtest)
+    set(test_dependencies physics coefficients axom mpi mfem gtest)
 
     set(solver_tests
         serac_dynamic_solver.cpp
@@ -18,7 +18,8 @@ if (ENABLE_GTEST)
         serac_quasistatic_solver.cpp
         serac_thermal_solver.cpp
         serac_thermal_structural_solver.cpp
-        serac_dtor.cpp)
+        serac_dtor.cpp
+        serac_boundary_cond.cpp)
 
     foreach(filename ${solver_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -87,6 +88,6 @@ if (ENABLE_GTEST)
 endif()
 
 # Make sure running serac driver doesn't completely fail
-blt_add_test(NAME          serac
-             COMMAND       serac
+blt_add_test(NAME          serac_driver
+             COMMAND       serac_driver
              NUM_MPI_TASKS 1 )

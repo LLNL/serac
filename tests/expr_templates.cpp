@@ -31,6 +31,39 @@ TEST(expr_templates, basic_add)
   }
 }
 
+TEST(expr_templates, basic_div)
+{
+  constexpr int    size   = 10;
+  constexpr double scalar = 0.3;
+  mfem::Vector     a(size);
+  mfem::Vector     mfem_result(size);
+  for (int i = 0; i < size; i++) {
+    a[i]           = i * 4 + 1;
+    mfem_result[i] = a[i];
+  }
+
+  // Dividing a vector by a scalar
+  mfem_result /= scalar;
+
+  mfem::Vector expr_result = a / scalar;
+
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+
+  // Dividing a scalar by a vector
+  mfem_result = a;
+  for (int i = 0; i < size; i++) {
+    a[i] = scalar / a[i];
+  }
+
+  expr_result = scalar / a;
+
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+}
+
 TEST(expr_templates, basic_add_lambda)
 {
   constexpr int size = 10;
@@ -273,6 +306,64 @@ TEST(expr_templates, small_mixed_expr)
   }
 }
 
+TEST(expr_templates, small_mixed_expr_single_alloc)
+{
+  constexpr int rows = 10;
+  mfem::Vector  lhs(rows);
+  mfem::Vector  rhs(rows);
+  for (int i = 0; i < rows; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+
+  constexpr int     cols = 12;
+  mfem::Vector      vec_in(cols);
+  mfem::DenseMatrix matrix(rows, cols);
+  for (int i = 0; i < cols; i++) {
+    vec_in[i] = i * 4 + 1;
+    for (int j = 0; j < rows; j++) {
+      matrix(j, i) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
+    }
+  }
+
+  constexpr int trials     = 100;
+  double        mfem_total = 0.0;
+  double        expr_total = 0.0;
+
+  mfem::Vector mfem_result(rows);
+  mfem::Vector expr_result(rows);
+
+  // Scratchpad vectors
+  mfem::Vector matvec(rows);
+  mfem::Vector vec_negate_scale(rows);
+
+  // -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in)
+  for (int i = 0; i < trials; i++) {
+    auto mfem_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      matrix.Mult(vec_in, matvec);
+
+      add(-1.0, lhs, 3.0, rhs, vec_negate_scale);
+
+      add(vec_negate_scale, -0.3, matvec, mfem_result);
+    }
+    mfem_total += (std::chrono::steady_clock::now() - mfem_start).count();
+    auto expr_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      evaluate(-lhs + rhs * 3.0 - 0.3 * (matrix * vec_in), expr_result);
+    }
+    expr_total += (std::chrono::steady_clock::now() - expr_start).count();
+  }
+  const auto mfem_avg = mfem_total / trials;
+  const auto expr_avg = expr_total / trials;
+  std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < rows; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+}
+
 TEST(expr_templates, large_mixed_expr)
 {
   constexpr int rows = 10000;
@@ -316,6 +407,64 @@ TEST(expr_templates, large_mixed_expr)
     auto expr_start = std::chrono::steady_clock::now();
     for (int j = 0; j < trials; j++) {
       expr_result = -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in);
+    }
+    expr_total += (std::chrono::steady_clock::now() - expr_start).count();
+  }
+  const auto mfem_avg = mfem_total / trials;
+  const auto expr_avg = expr_total / trials;
+  std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < rows; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+}
+
+TEST(expr_templates, large_mixed_expr_single_alloc)
+{
+  constexpr int rows = 10000;
+  mfem::Vector  lhs(rows);
+  mfem::Vector  rhs(rows);
+  for (int i = 0; i < rows; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+
+  constexpr int     cols = 1200;
+  mfem::Vector      vec_in(cols);
+  mfem::DenseMatrix matrix(rows, cols);
+  for (int i = 0; i < cols; i++) {
+    vec_in[i] = i * 4 + 1;
+    for (int j = 0; j < rows; j++) {
+      matrix(j, i) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
+    }
+  }
+
+  constexpr int trials     = 10;
+  double        mfem_total = 0.0;
+  double        expr_total = 0.0;
+
+  mfem::Vector mfem_result(rows);
+  mfem::Vector expr_result(rows);
+
+  // Scratchpad vectors
+  mfem::Vector matvec(rows);
+  mfem::Vector vec_negate_scale(rows);
+
+  // -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in)
+  for (int i = 0; i < trials; i++) {
+    auto mfem_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      matrix.Mult(vec_in, matvec);
+
+      add(-1.0, lhs, 3.0, rhs, vec_negate_scale);
+
+      add(vec_negate_scale, -0.3, matvec, mfem_result);
+    }
+    mfem_total += (std::chrono::steady_clock::now() - mfem_start).count();
+    auto expr_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      evaluate(-lhs + rhs * 3.0 - 0.3 * (matrix * vec_in), expr_result);
     }
     expr_total += (std::chrono::steady_clock::now() - expr_start).count();
   }

@@ -7,7 +7,7 @@
 add_subdirectory(utilities)
 add_subdirectory(operators)
 
-set(solvers_sources
+set(physics_sources
     base_solver.cpp
     nonlinear_solid_solver.cpp
     thermal_solver.cpp
@@ -15,7 +15,7 @@ set(solvers_sources
     elasticity_solver.cpp
     )
 
-set(solvers_headers
+set(physics_headers
     base_solver.hpp
     nonlinear_solid_solver.hpp
     thermal_solver.hpp
@@ -24,10 +24,20 @@ set(solvers_headers
     )
 
 blt_add_library(
-    NAME        solvers
-    SOURCES     ${solvers_sources}
-    HEADERS     ${solvers_headers}
+    NAME        physics
+    SOURCES     ${physics_sources}
+    HEADERS     ${physics_headers}
     DEPENDS_ON  mfem integrators math infrastructure physics_utilities physics_operators axom fmt mpi
     )
 
-target_include_directories(solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_include_directories(physics PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+    $<INSTALL_INTERFACE:include>
+    )
+
+install(FILES ${physics_headers} DESTINATION include/physics )
+
+install(TARGETS              physics
+        EXPORT               serac-targets
+        DESTINATION          lib
+        )

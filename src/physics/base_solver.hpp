@@ -17,7 +17,7 @@
 #include <memory>
 
 #include "mfem.hpp"
-#include "physics/utilities/boundary_condition.hpp"
+#include "physics/utilities/boundary_condition_manager.hpp"
 #include "physics/utilities/equation_solver.hpp"
 #include "physics/utilities/finite_element_state.hpp"
 #include "physics/utilities/solver_config.hpp"
@@ -46,17 +46,6 @@ public:
   BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
   /**
-   * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
-   *
-   * @param[in] ess_bdr The set of essential BC attributes
-   * @param[in] ess_bdr_coef The essential BC value coefficient
-   * @param[in] state The finite element state over which the BC should be applied
-   * @param[in] component The component to set (-1 implies all components are set)
-   */
-  virtual void setEssentialBCs(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
-                               FiniteElementState& state, const int component = -1);
-
-  /**
    * @brief Set a list of true degrees of freedom from a coefficient
    *
    * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
@@ -66,15 +55,6 @@ public:
   virtual void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
                            const int component = -1);
 
-  /**
-   * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
-   *
-   * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
-   * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
-   * @param[in] component The component to set (-1 implies all components are set)
-   */
-  virtual void setNaturalBCs(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                             const int component = -1);
   /**
    * @brief Set the state variables from a vector of coefficients
    *
@@ -180,16 +160,6 @@ protected:
   std::unique_ptr<mfem::BlockVector> block_;
 
   /**
-   * @brief Essential BC markers
-   */
-  std::vector<serac::BoundaryCondition> ess_bdr_;
-
-  /**
-   * @brief Natural BC markers
-   */
-  std::vector<serac::BoundaryCondition> nat_bdr_;
-
-  /**
    * @brief Type of state variable output
    */
   serac::OutputType output_type_;
@@ -248,6 +218,11 @@ protected:
    * @brief System solver instance
    */
   EquationSolver solver_;
+
+  /**
+   * @brief Boundary condition manager instance
+   */
+  BoundaryConditionManager bcs_;
 };
 
 }  // namespace serac

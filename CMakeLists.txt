@@ -71,9 +71,30 @@ if(ENABLE_TESTS)
 endif()
 
 #------------------------------------------------------------------------------
+# Configure examples
+#------------------------------------------------------------------------------
+
+add_subdirectory(examples)
+
+#------------------------------------------------------------------------------
 # Add Code Checks
 #------------------------------------------------------------------------------
 
 serac_add_code_checks(PREFIX   serac
                       INCLUDES /src/ /tests/
                       EXCLUDES cmake/blt uberenv_libs)
+
+#------------------------------------------------------------------------------
+# Export Targets
+#------------------------------------------------------------------------------
+add_library(serac INTERFACE)
+target_link_libraries(serac INTERFACE coefficients physics common integrators)
+install(TARGETS              serac
+        EXPORT               serac-targets
+        DESTINATION          lib
+        )
+
+install(EXPORT serac-targets 
+        NAMESPACE serac::
+        DESTINATION lib/cmake
+        )

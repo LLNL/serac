@@ -24,13 +24,13 @@ ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> mes
 void ElasticitySolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, component);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void ElasticitySolver::setTractionBCs(const std::set<int>&                     trac_bdr,
                                       std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, const int component)
 {
-  setNaturalBCs(trac_bdr, trac_bdr_coef, component);
+  bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
 void ElasticitySolver::setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu)
@@ -61,8 +61,8 @@ void ElasticitySolver::completeSetup()
   l_form_ = displacement_->createOnSpace<mfem::ParLinearForm>();
 
   // Add the traction integrator
-  if (nat_bdr_.size() > 0) {
-    for (auto& nat_bc : nat_bdr_) {
+  if (bcs_.naturals().size() > 0) {
+    for (auto& nat_bc : bcs_.naturals()) {
       l_form_->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(nat_bc.vectorCoefficient()),
                                      nat_bc.markers());
     }
@@ -77,7 +77,7 @@ void ElasticitySolver::completeSetup()
   K_mat_ = std::unique_ptr<mfem::HypreParMatrix>(K_form_->ParallelAssemble());
 
   // Eliminate the essential DOFs
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     bc.eliminateFromMatrix(*K_mat_);
   }
 
@@ -129,7 +129,7 @@ void ElasticitySolver::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     bool should_be_scalar = false;
     bc.apply(*K_mat_, *bc_rhs_, *displacement_, time_, should_be_scalar);
   }

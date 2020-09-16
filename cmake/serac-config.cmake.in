@@ -1,0 +1,102 @@
+# Copyright (c) 2017-2020, Lawrence Livermore National Security, LLC and
+# other serac Project Developers. See the top-level COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (BSD-3-Clause)
+#------------------------------------------------------------------------------
+
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+
+@PACKAGE_INIT@
+
+if(NOT SERAC_FOUND)
+
+  #----------------------------------------------------------------------------
+  # Set version and paths
+  #----------------------------------------------------------------------------
+  
+  set(SERAC_VERSION       "@SERAC_VERSION_FULL@")
+  set(SERAC_VERSION_MAJOR "@SERAC_VERSION_MAJOR@")
+  set(SERAC_VERSION_MINOR "@SERAC_VERSION_MINOR@")
+  set(SERAC_VERSION_PATCH "@SERAC_VERSION_PATCH@")
+  
+  set(SERAC_INSTALL_PREFIX "@SERAC_INSTALL_PREFIX@")
+  set(SERAC_INCLUDE_DIRS "${SERAC_INSTALL_PREFIX}/include")
+
+  #----------------------------------------------------------------------------
+  # Set user configuration options and features
+  #----------------------------------------------------------------------------
+
+  # SERAC external TPLs
+  set(SERAC_USE_AXOM           "@SERAC_USE_AXOM@")
+  set(SERAC_USE_CONDUIT        "@SERAC_USE_CONDUIT@")
+  set(SERAC_USE_FMT            "@SERAC_USE_FMT@")
+  set(SERAC_USE_HDF5           "@SERAC_USE_HDF5@")
+  set(SERAC_USE_MFEM           "@SERAC_USE_MFEM@")
+  set(SERAC_USE_MPI            "@SERAC_USE_MPI@")
+  set(SERAC_USE_TRIBOL         "@SERAC_USE_TRIBOL@")
+  set(SERAC_USE_CALIPER        "@SERAC_USE_CALIPER@")
+
+  #----------------------------------------------------------------------------
+  # Bring in required  dependencies for this serac configuration
+  #----------------------------------------------------------------------------
+  include(CMakeFindDependencyMacro)
+
+  # axom
+  # also covers fmt
+  if(SERAC_USE_AXOM)
+    set(SERAC_AXOM_DIR "@AXOM_DIR@")
+    if(NOT AXOM_DIR) 
+      set(AXOM_DIR ${SERAC_AXOM_DIR}) 
+    endif()
+    find_dependency(Axom REQUIRED NO_DEFAULT_PATH PATHS PATHS "${AXOM_DIR}/lib/cmake")
+  endif()
+
+  # conduit
+  if(SERAC_USE_CONDUIT)
+    set(SERAC_CONDUIT_DIR  "@CONDUIT_DIR@")
+    if(NOT CONDUIT_DIR) 
+      set(CONDUIT_DIR ${SERAC_CONDUIT_DIR}) 
+    endif()
+    find_dependency(Conduit REQUIRED NO_DEFAULT_PATH PATHS "${CONDUIT_DIR}/lib/cmake")
+  endif()
+
+  # hdf5
+  if(SERAC_USE_HDF5)
+    set(SERAC_HDF5_DIR     "@HDF5_DIR@")
+    # Note: Targets not currently imported
+  endif()
+
+  # mfem
+  if(SERAC_USE_MFEM)
+    set(SERAC_MFEM_DIR     "@MFEM_DIR@")
+    # Note: Targets not currently imported
+  endif()
+
+   # tribol
+  if(SERAC_USE_TRIBOL)
+    set(SERAC_TRIBOL_DIR   "@TRIBOL_DIR@")
+    find_dependency(tribol REQUIRED NO_DEFAULT_PATH PATHS "${TRIBOL_DIR}/lib/cmake")
+  endif()
+
+   # caliper
+  if(SERAC_USE_CALIPER)
+    set(SERAC_CALIPER_DIR     "@CALIPER_DIR@")
+    if(NOT CALIPER_DIR) 
+      set(CALIPER_DIR ${SERAC_CALIPER_DIR}) 
+    endif()
+    find_dependency(caliper REQUIRED NO_DEFAULT_PATH PATHS "${CALIPER_DIR}")
+  endif()
+
+
+  #----------------------------------------------------------------------------
+  # Include targets exported by cmake
+  #----------------------------------------------------------------------------
+  get_filename_component(SERAC_CMAKE_CONFIG_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+  include(${SERAC_CMAKE_CONFIG_DIR}/serac-targets.cmake)
+
+  #----------------------------------------------------------------------------
+  # Indicate that serac is correctly set up
+  #----------------------------------------------------------------------------
+  set(SERAC_FOUND TRUE)
+
+endif()
