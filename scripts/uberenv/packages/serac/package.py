@@ -404,8 +404,8 @@ class Serac(CMakePackage, CudaPackage):
                 cfg.write("# Root directory for generated developer tools\n")
                 cfg.write(cmake_cache_entry("DEVTOOLS_ROOT",devtools_root))
 	
-        if socket.gethostname().startswith("lassen"):
-            cfg.write("# Docs dont work on lassen, there is a prompt that waits for user input\n")
+        if spec.satisfies('target=ppc64le:'):
+            cfg.write("# Docs dont work on blueos machines, there is a prompt that waits for user input\n")
             cfg.write(cmake_cache_option("ENABLE_DOCS", False))
         elif "doxygen" in spec or "py-sphinx" in spec:
             cfg.write(cmake_cache_option("ENABLE_DOCS", True))

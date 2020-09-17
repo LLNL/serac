@@ -68,6 +68,7 @@ public:
 
 /**
  * @brief Fully evaluates a vector expression into an actual mfem::Vector
+ * @param expr The expression to evaluate
  * @return The fully evaluated vector
  * @see VectorExpr::operator mfem::Vector
  */
@@ -75,6 +76,21 @@ template <typename T>
 mfem::Vector evaluate(const VectorExpr<T>& expr)
 {
   return expr;
+}
+
+/**
+ * @brief Fully evaluates a vector expression into an actual mfem::Vector
+ * @param expr The expression to evaluate
+ * @param vec The vector to populate with the expression result
+ */
+template <typename T>
+void evaluate(const VectorExpr<T>& expr, mfem::Vector& result)
+{
+  SLIC_ERROR_IF(expr.Size() != static_cast<std::size_t>(result.Size()),
+                "Vector sizes in expression assignment must be equal");
+  for (size_t i = 0; i < expr.Size(); i++) {
+    result[i] = expr[i];
+  }
 }
 
 }  // namespace serac
