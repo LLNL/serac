@@ -184,7 +184,7 @@ protected:
   /**
    * @brief the system of ordinary differential equations
    */
-  std::unique_ptr<LinearFirstOrderODE> ode;
+  std::unique_ptr<LinearFirstOrderODE> ode_;
 
   /**
    * @brief Linear solver parameters

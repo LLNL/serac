@@ -103,13 +103,15 @@ void ThermalSolverRework::completeSetup()
 
     M_mat_.reset(M_form_->ParallelAssemble());
 
-    //ode = std::make_unique< LinearFirstOrderODE >(*M_mat_, *K_mat_, *rhs_, bcs_, lin_params_, std::move(ode_solver_));
+    ode_ = std::make_unique< LinearFirstOrderODE >(*M_mat_, *K_mat_, *rhs_, bcs_, lin_params_);
 
-    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_);
-    dyn_oper_->setMatrices(M_mat_.get(), Kf_.get());
-    dyn_oper_->setLoadVector(rhs_.get());
+    ode_solver_->Init(*ode_);
 
-    ode_solver_->Init(*dyn_oper_);
+    //dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_);
+    //dyn_oper_->setMatrices(M_mat_.get(), Kf_.get());
+    //dyn_oper_->setLoadVector(rhs_.get());
+
+    //ode_solver_->Init(*dyn_oper_);
   }
 }
 
@@ -149,6 +151,7 @@ void ThermalSolverRework::advanceTimestep(double& dt)
 
     // Step the time integrator
     ode_solver_->Step(temperature_->trueVec(), time_, dt);
+    //ode_->Step(temperature_->trueVec(), time_, dt);
   }
 
   // Distribute the shared DOFs
