@@ -13,8 +13,6 @@
 #include "serac_config.hpp"
 #include "solvers/elasticity_solver.hpp"
 
-// Can also test mesh_utils here
-
 namespace serac {
 
 TEST(mesh, load_exodus)

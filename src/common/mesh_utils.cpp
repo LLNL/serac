@@ -24,6 +24,8 @@ std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, c
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
   SLIC_INFO_ROOT(rank, msg);
+  // This inherits from std::ifstream, and will work the same way as a std::ifstream,
+  // but is required for Exodus meshes
   mfem::named_ifgzstream imesh(mesh_file);
 
   if (!imesh) {
