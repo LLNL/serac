@@ -1,4 +1,5 @@
 #include <functional>
+#include <variant>
 
 #include "common/boundary_condition_manager.hpp"
 #include "common/expr_template_ops.hpp"
@@ -40,8 +41,11 @@ class LinearFirstOrderODE : public mfem::TimeDependentOperator {
   mfem::HypreParMatrix& K_;
   mfem::Vector& f_;
   serac::BoundaryConditionManager& bcs_;
-  serac::EquationSolver& invH_;
-  serac::EquationSolver& invT_;
+
+  serac::EquationSolver invH_;
+  serac::EquationSolver invT_;
+
+  std::unique_ptr<mfem::ODESolver> method_;
 
   mutable mfem::Vector uf;
   mutable mfem::Vector uc;
@@ -54,20 +58,33 @@ class LinearFirstOrderODE : public mfem::TimeDependentOperator {
 
   LinearFirstOrderODE(mfem::HypreParMatrix& M, mfem::HypreParMatrix& K,
                       mfem::Vector& f, serac::BoundaryConditionManager& bcs,
-                      serac::EquationSolver& invH, serac::EquationSolver& invT)
+                      const serac::LinearSolverParameters& params,
+                      std::unique_ptr<mfem::ODESolver> && method)
       : M_(M),
         K_(K),
         f_(f),
         bcs_(bcs),
-        invH_(invH),
-        invT_(invT),
+        method_(std::move(method)),
         previous_dt(-1.0),
         epsilon(1.0e-8) {
+
+    invH_ = serac::EquationSolver(M.GetComm(), params);
+    invH_.linearSolver().iterative_mode = false;
+    auto preconditioner = std::make_unique<mfem::HypreSmoother>();
+    preconditioner->SetType(mfem::HypreSmoother::Jacobi);
+    invH_.SetPreconditioner(std::move(preconditioner));
+
+    invT_ = serac::EquationSolver(M.GetComm(), params);
+    preconditioner = std::make_unique<mfem::HypreSmoother>();
+    preconditioner->SetType(mfem::HypreSmoother::Jacobi);
+    invT_.SetPreconditioner(std::move(preconditioner));
+
     uf = mfem::Vector(f.Size());
     uc = mfem::Vector(f.Size());
     uc_plus = mfem::Vector(f.Size());
     uc_minus = mfem::Vector(f.Size());
     duc_dt = mfem::Vector(f.Size());
+
   }
 
   void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const {
@@ -116,15 +133,15 @@ class LinearFirstOrderODE : public mfem::TimeDependentOperator {
     previous_dt = dt;
   }
 
-  template <typename T, typename... arg_types>
-  void SetMethod(arg_types&&... args) {
-    method = std::make_unique<T>(args...);
-    method->Init(*this);
+//  template <typename T, typename... arg_types>
+//  void SetMethod(arg_types&&... args) {
+//    method_ = std::make_unique<T>(args...);
+//    method_->Init(*this);
+//  }
+
+  void Step(mfem::Vector& u, double& t, double& dt) { 
+    method_->Step(u, t, dt); 
   }
-
-  void Step(mfem::Vector& u, double& t, double& dt) { method->Step(u, t, dt); }
-
-  std::unique_ptr<mfem::ODESolver> method;
 };
 
 class LinearSecondOrderODE : public mfem::SecondOrderTimeDependentOperator {

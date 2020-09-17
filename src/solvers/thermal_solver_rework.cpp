@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "thermal_solver.hpp"
+#include "thermal_solver_rework.hpp"
 
 #include "common/logger.hpp"
 
@@ -12,7 +12,7 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
+ThermalSolverRework::ThermalSolverRework(int order, std::shared_ptr<mfem::ParMesh> mesh)
     : BaseSolver(mesh, NUM_FIELDS, order),
       temperature_(std::make_shared<FiniteElementState>(
           *mesh,
@@ -21,7 +21,7 @@ ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
   state_[0] = temperature_;
 }
 
-void ThermalSolver::setTemperature(mfem::Coefficient& temp)
+void ThermalSolverRework::setTemperature(mfem::Coefficient& temp)
 {
   // Project the coefficient onto the grid function
   temp.SetTime(time_);
@@ -29,45 +29,53 @@ void ThermalSolver::setTemperature(mfem::Coefficient& temp)
   gf_initialized_[0] = true;
 }
 
-void ThermalSolver::setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+void ThermalSolverRework::setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
   bcs_.addEssential(temp_bdr, temp_bdr_coef, *temperature_);
 }
 
-void ThermalSolver::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
+void ThermalSolverRework::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
 }
 
-void ThermalSolver::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
+void ThermalSolverRework::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
 {
   // Set the conduction coefficient
   kappa_ = std::move(kappa);
 }
 
-void ThermalSolver::setSource(std::unique_ptr<mfem::Coefficient>&& source)
+void ThermalSolverRework::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 {
   // Set the body source integral coefficient
   source_ = std::move(source);
 }
 
-void ThermalSolver::setLinearSolverParameters(const serac::LinearSolverParameters& params)
+void ThermalSolverRework::setLinearSolverParameters(const serac::LinearSolverParameters& params)
 {
   // Save the solver params object
   // TODO: separate the M and K solver params
   lin_params_ = params;
 }
 
-void ThermalSolver::completeSetup()
+void ThermalSolverRework::completeSetup()
 {
-  SLIC_ASSERT_MSG(kappa_ != nullptr, "Conductivity not set in ThermalSolver!");
+  SLIC_ASSERT_MSG(kappa_ != nullptr, "Conductivity not set in ThermalSolverRework!");
 
   // Add the domain diffusion integrator to the K form and assemble the matrix
   K_form_ = temperature_->createOnSpace<mfem::ParBilinearForm>();
   K_form_->AddDomainIntegrator(new mfem::DiffusionIntegrator(*kappa_));
   K_form_->Assemble(0);  // keep sparsity pattern of M and K the same
   K_form_->Finalize();
+
+  K_mat_.reset(K_form_->ParallelAssemble());
+  Kf_.reset(K_form_->ParallelAssemble());
+
+  // Eliminate the essential DOFs from the stiffness matrix
+  for (auto& bc : bcs_.essentials()) {
+    bc.eliminateFromMatrix(*Kf_);
+  }
 
   // Add the body source to the RS if specified
   l_form_ = temperature_->createOnSpace<mfem::ParLinearForm>();
@@ -77,14 +85,6 @@ void ThermalSolver::completeSetup()
   } else {
     rhs_  = temperature_->createOnSpace<mfem::HypreParVector>();
     *rhs_ = 0.0;
-  }
-
-  // Assemble the stiffness matrix
-  K_mat_.reset(K_form_->ParallelAssemble());
-
-  // Eliminate the essential DOFs from the stiffness matrix
-  for (auto& bc : bcs_.essentials()) {
-    bc.eliminateFromMatrix(*K_mat_);
   }
 
   // Initialize the eliminated BC RHS vector
@@ -103,20 +103,22 @@ void ThermalSolver::completeSetup()
 
     M_mat_.reset(M_form_->ParallelAssemble());
 
+    //ode = std::make_unique< LinearFirstOrderODE >(*M_mat_, *K_mat_, *rhs_, bcs_, lin_params_, std::move(ode_solver_));
+
     dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_);
-    dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
+    dyn_oper_->setMatrices(M_mat_.get(), Kf_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 
     ode_solver_->Init(*dyn_oper_);
   }
 }
 
-void ThermalSolver::quasiStaticSolve()
+void ThermalSolverRework::quasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
   for (auto& bc : bcs_.essentials()) {
-    bc.apply(*K_mat_, *bc_rhs_, *temperature_, time_);
+    bc.apply(*Kf_, *bc_rhs_, *temperature_, time_);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning
@@ -129,13 +131,13 @@ void ThermalSolver::quasiStaticSolve()
   solver_.SetPreconditioner(std::move(hypre_smoother));
 
   solver_.linearSolver().iterative_mode = false;
-  solver_.SetOperator(*K_mat_);
+  solver_.SetOperator(*Kf_);
 
   // Perform the linear solve
   solver_.Mult(*bc_rhs_, temperature_->trueVec());
 }
 
-void ThermalSolver::advanceTimestep(double& dt)
+void ThermalSolverRework::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   temperature_->initializeTrueVec();

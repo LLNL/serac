@@ -15,6 +15,8 @@
 
 #include "mfem.hpp"
 
+#include "common/odes.hpp"
+
 #include "solvers/base_solver.hpp"
 #include "solvers/thermal_operators.hpp"
 
@@ -30,7 +32,7 @@ namespace serac {
  *  where M is a mass matrix, K is a stiffness matrix, and f is a
  *  thermal load vector.
  */
-class ThermalSolver : public BaseSolver {
+class ThermalSolverRework : public BaseSolver {
 public:
   /**
    * @brief Construct a new Thermal Solver object
@@ -38,7 +40,7 @@ public:
    * @param[in] order The order of the thermal field discretization
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    */
-  ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  ThermalSolverRework(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -109,7 +111,7 @@ public:
   /**
    * @brief Destroy the Thermal Solver object
    */
-  virtual ~ThermalSolver() = default;
+  virtual ~ThermalSolverRework() = default;
 
 protected:
   /**
@@ -131,11 +133,13 @@ protected:
    * @brief Assembled mass matrix
    */
   std::unique_ptr<mfem::HypreParMatrix> M_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> Mf_;
 
   /**
    * @brief Assembled stiffness matrix
    */
   std::unique_ptr<mfem::HypreParMatrix> K_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> Kf_;
 
   /**
    * @brief Thermal load linear form
@@ -176,6 +180,11 @@ protected:
    * @brief Time integration operator
    */
   std::unique_ptr<DynamicConductionOperator> dyn_oper_;
+
+  /**
+   * @brief the system of ordinary differential equations
+   */
+  std::unique_ptr<LinearFirstOrderODE> ode;
 
   /**
    * @brief Linear solver parameters

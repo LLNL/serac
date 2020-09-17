@@ -17,6 +17,7 @@ if (ENABLE_GTEST)
         serac_linelastic_solver.cpp
         serac_quasistatic_solver.cpp
         serac_thermal_solver.cpp
+        serac_thermal_solver_rework.cpp
         serac_thermal_structural_solver.cpp
         serac_dtor.cpp
         serac_boundary_cond.cpp)
