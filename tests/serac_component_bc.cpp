@@ -23,7 +23,7 @@ TEST(component_bc, qs_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 2, 0);
+  auto pmesh = buildMeshFromFile(mesh_file, 2, 0);
 
   int dim = pmesh->Dimension();
 
