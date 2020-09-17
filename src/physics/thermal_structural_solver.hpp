@@ -13,10 +13,10 @@
 #ifndef THERMSTRUCT_SOLVER
 #define THERMSTRUCT_SOLVER
 
-#include "base_solver.hpp"
 #include "mfem.hpp"
-#include "nonlinear_solid_solver.hpp"
-#include "thermal_solver.hpp"
+#include "physics/base_solver.hpp"
+#include "physics/nonlinear_solid_solver.hpp"
+#include "physics/thermal_solver.hpp"
 
 namespace serac {
 

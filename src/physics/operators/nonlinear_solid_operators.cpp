@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "nonlinear_solid_operators.hpp"
+#include "physics/operators/nonlinear_solid_operators.hpp"
 
 #include "infrastructure/logger.hpp"
 #include "math/expr_template_ops.hpp"

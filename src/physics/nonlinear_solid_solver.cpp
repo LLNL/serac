@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "nonlinear_solid_solver.hpp"
+#include "physics/nonlinear_solid_solver.hpp"
 
 #include "infrastructure/logger.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"

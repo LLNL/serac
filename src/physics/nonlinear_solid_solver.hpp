@@ -13,7 +13,7 @@
 #ifndef NONLINSOLID_SOLVER
 #define NONLINSOLID_SOLVER
 
-#include "base_solver.hpp"
+#include "physics/base_solver.hpp"
 #include "mfem.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
 

@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "thermal_structural_solver.hpp"
+#include "physics/thermal_structural_solver.hpp"
 
 #include "infrastructure/logger.hpp"
 #include "physics/utilities/solver_config.hpp"
