@@ -36,7 +36,7 @@ message(STATUS "Configuring Serac version ${SERAC_VERSION_FULL}")
 #------------------------------------------------------------------------------
 # Create variable for every TPL
 #------------------------------------------------------------------------------
-set(TPL_DEPS AXOM CONDUIT FMT HDF5 MFEM MPI TRIBOL CALIPER )
+set(TPL_DEPS AXOM CONDUIT FMT HDF5 MFEM MPI TRIBOL CALIPER PETSC )
 foreach(dep ${TPL_DEPS})
     if( ${dep}_FOUND OR ENABLE_${dep} )
         set(SERAC_USE_${dep} TRUE)
