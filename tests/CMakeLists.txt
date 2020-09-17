@@ -56,7 +56,6 @@ if (ENABLE_GTEST)
 
     set(language_tests
         copy_elision.cpp
-        expr_templates.cpp
         mfem_array_std_algo.cpp)
 
     foreach(filename ${language_tests})
@@ -70,6 +69,22 @@ if (ENABLE_GTEST)
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}
                      NUM_MPI_TASKS 1 )
+    endforeach()
+
+    set(utility_tests
+        expr_templates.cpp)
+
+    foreach(filename ${utility_tests})
+        get_filename_component(test_name ${filename} NAME_WE)
+
+        blt_add_executable(NAME        ${test_name}
+                           SOURCES     ${filename}
+                           OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                           DEPENDS_ON  ${test_dependencies}
+                           FOLDER      serac/tests )
+        blt_add_test(NAME          ${test_name}
+                     COMMAND       ${test_name}
+                     NUM_MPI_TASKS 4 )
     endforeach()
 
     if(ENABLE_CUDA)

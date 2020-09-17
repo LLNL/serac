@@ -93,6 +93,46 @@ void evaluate(const VectorExpr<T>& expr, mfem::Vector& result)
   }
 }
 
+/**
+ * @brief Fully evaluates a vector expression into an actual mfem::Vector
+ * @param expr The expression to evaluate
+ * @param vec The vector to populate with the expression result
+ * @param comm The MPI_Comm to use for parallel evaluation
+ * @note The performance in a release build is comparable to the serial
+ * implementation, though because this populates the vector on all ranks
+ * the cost of the data copies may exceed any parallelization benefit
+ * for the actual calculation
+ */
+template <typename T>
+void evaluate(const VectorExpr<T>& expr, mfem::Vector& result, MPI_Comm comm)
+{
+  const auto SIZE = expr.Size();
+  SLIC_ERROR_IF(SIZE != static_cast<std::size_t>(result.Size()), "Vector sizes in expression assignment must be equal");
+  int num_procs = 0;
+  int rank      = 0;
+  MPI_Comm_size(comm, &num_procs);
+  MPI_Comm_rank(comm, &rank);
+
+  double* result_arr = result;
+
+  // If the array size is not divisible by # elements, add one
+  const long long per_proc = (SIZE / num_procs) + (SIZE % num_procs != 0) ? 1 : 0;
+
+  // Truncate the number of elements for the last process
+  const long long n_entries = (rank == num_procs - 1) ? SIZE - ((num_procs - 1) * per_proc) : per_proc;
+
+  // Fill in this rank's segment of the vector
+  for (long long i = 0; i < n_entries; i++) {
+    result_arr[i + (per_proc * rank)] = expr[i + (per_proc * rank)];
+  }
+
+  // Transmit each segment of the vector to all the other processes
+  for (int i = 0; i < num_procs; i++) {
+    const long long n_ele = (i == num_procs - 1) ? SIZE - ((num_procs - 1) * per_proc) : per_proc;
+    MPI_Bcast(&result_arr[per_proc * i], n_ele, MPI_DOUBLE, i, comm);
+  }
+}
+
 }  // namespace serac
 
 #endif

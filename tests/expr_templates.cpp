@@ -13,6 +13,7 @@
 
 TEST(expr_templates, basic_add)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
   mfem::Vector  lhs(size);
   mfem::Vector  rhs(size);
@@ -29,10 +30,35 @@ TEST(expr_templates, basic_add)
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(expr_templates, basic_add_parallel)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  constexpr int size = 10;
+  mfem::Vector  lhs(size);
+  mfem::Vector  rhs(size);
+  for (int i = 0; i < size; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+
+  mfem::Vector mfem_result(size);
+  add(lhs, rhs, mfem_result);
+
+  mfem::Vector expr_result(size);
+  evaluate(lhs + rhs, expr_result, MPI_COMM_WORLD);
+
+  for (int i = 0; i < size; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, basic_div)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int    size   = 10;
   constexpr double scalar = 0.3;
   mfem::Vector     a(size);
@@ -62,10 +88,12 @@ TEST(expr_templates, basic_div)
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, basic_add_lambda)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
   mfem::Vector  lhs(size);
   mfem::Vector  rhs(size);
@@ -85,10 +113,12 @@ TEST(expr_templates, basic_add_lambda)
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, subtraction_not_commutative)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
   mfem::Vector  a(size);
   mfem::Vector  b(size);
@@ -113,10 +143,12 @@ TEST(expr_templates, subtraction_not_commutative)
   for (int i = 0; i < size; i++) {
     EXPECT_FALSE(result3[i] == result4[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, subtraction_not_commutative_rvalue)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size           = 3;
   double        a_values[size] = {-12.2692, 6.23918, -12.2692};
   double        b_values[size] = {0.0850848, -0.17017, 0.0850848};
@@ -137,10 +169,12 @@ TEST(expr_templates, subtraction_not_commutative_rvalue)
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(resulta1[i], resulta2[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, addition_commutative)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
   mfem::Vector  a(size);
   mfem::Vector  b(size);
@@ -155,10 +189,12 @@ TEST(expr_templates, addition_commutative)
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(result1[i], result2[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, scalar_mult_commutative)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
   mfem::Vector  a(size);
   double        scalar = 0.3;
@@ -172,10 +208,12 @@ TEST(expr_templates, scalar_mult_commutative)
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(result1[i], result2[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, move_from_temp_lambda)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
   mfem::Vector  lhs(size);
   mfem::Vector  rhs(size);
@@ -198,10 +236,12 @@ TEST(expr_templates, move_from_temp_lambda)
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, move_from_temp_vec_lambda)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int size = 10;
   mfem::Vector  lhs(size);
   mfem::Vector  rhs(size);
@@ -224,10 +264,12 @@ TEST(expr_templates, move_from_temp_vec_lambda)
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, small_matvec)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int     rows = 10;
   constexpr int     cols = 12;
   mfem::Vector      vec_in(cols);
@@ -248,10 +290,12 @@ TEST(expr_templates, small_matvec)
   for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, small_mixed_expr)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10;
   mfem::Vector  lhs(rows);
   mfem::Vector  rhs(rows);
@@ -304,10 +348,12 @@ TEST(expr_templates, small_mixed_expr)
   for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, small_mixed_expr_single_alloc)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10;
   mfem::Vector  lhs(rows);
   mfem::Vector  rhs(rows);
@@ -362,10 +408,12 @@ TEST(expr_templates, small_mixed_expr_single_alloc)
   for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, large_mixed_expr)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10000;
   mfem::Vector  lhs(rows);
   mfem::Vector  rhs(rows);
@@ -418,10 +466,12 @@ TEST(expr_templates, large_mixed_expr)
   for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, large_mixed_expr_single_alloc)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10000;
   mfem::Vector  lhs(rows);
   mfem::Vector  rhs(rows);
@@ -476,10 +526,72 @@ TEST(expr_templates, large_mixed_expr_single_alloc)
   for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(expr_templates, large_mixed_expr_single_alloc_parallel)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  constexpr int rows = 10000;
+  mfem::Vector  lhs(rows);
+  mfem::Vector  rhs(rows);
+  for (int i = 0; i < rows; i++) {
+    lhs[i] = i * 4 + 1;
+    rhs[i] = i * i * 3 + 2;
+  }
+
+  constexpr int     cols = 1200;
+  mfem::Vector      vec_in(cols);
+  mfem::DenseMatrix matrix(rows, cols);
+  for (int i = 0; i < cols; i++) {
+    vec_in[i] = i * 4 + 1;
+    for (int j = 0; j < rows; j++) {
+      matrix(j, i) = 2 * (i == j) - (i == (j + 1)) - (i == (j - 1));
+    }
+  }
+
+  constexpr int trials     = 10;
+  double        mfem_total = 0.0;
+  double        expr_total = 0.0;
+
+  mfem::Vector mfem_result(rows);
+  mfem::Vector expr_result(rows);
+
+  // Scratchpad vectors
+  mfem::Vector matvec(rows);
+  mfem::Vector vec_negate_scale(rows);
+
+  // -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in)
+  for (int i = 0; i < trials; i++) {
+    auto mfem_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      matrix.Mult(vec_in, matvec);
+
+      add(-1.0, lhs, 3.0, rhs, vec_negate_scale);
+
+      add(vec_negate_scale, -0.3, matvec, mfem_result);
+    }
+    mfem_total += (std::chrono::steady_clock::now() - mfem_start).count();
+    auto expr_start = std::chrono::steady_clock::now();
+    for (int j = 0; j < trials; j++) {
+      evaluate(-lhs + rhs * 3.0 - 0.3 * (matrix * vec_in), expr_result, MPI_COMM_WORLD);
+    }
+    expr_total += (std::chrono::steady_clock::now() - expr_start).count();
+  }
+  const auto mfem_avg = mfem_total / trials;
+  const auto expr_avg = expr_total / trials;
+  std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+
+  EXPECT_EQ(mfem_result.Size(), expr_result.Size());
+  for (int i = 0; i < rows; i++) {
+    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, complex_expr_lambda)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10;
   mfem::Vector  lhs(rows);
   mfem::Vector  rhs(rows);
@@ -517,10 +629,12 @@ TEST(expr_templates, complex_expr_lambda)
   for (int i = 0; i < rows; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, small_vec_single_add_time_check)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10;
   mfem::Vector  lhs(rows);
   mfem::Vector  rhs(rows);
@@ -549,10 +663,12 @@ TEST(expr_templates, small_vec_single_add_time_check)
   const auto mfem_avg = mfem_total / trials;
   const auto expr_avg = expr_total / trials;
   std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, large_vec_single_add_time_check)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 100000;
   mfem::Vector  lhs(rows);
   mfem::Vector  rhs(rows);
@@ -581,10 +697,12 @@ TEST(expr_templates, large_vec_single_add_time_check)
   const auto mfem_avg = mfem_total / trials;
   const auto expr_avg = expr_total / trials;
   std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, small_vec_multi_add_time_check)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 10;
   mfem::Vector  lhs(rows);
   mfem::Vector  rhs(rows);
@@ -622,10 +740,12 @@ TEST(expr_templates, small_vec_multi_add_time_check)
   const auto mfem_avg = mfem_total / trials;
   const auto expr_avg = expr_total / trials;
   std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 TEST(expr_templates, large_vec_multi_add_time_check)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
   constexpr int rows = 100000;
   mfem::Vector  lhs(rows);
   mfem::Vector  rhs(rows);
@@ -663,4 +783,26 @@ TEST(expr_templates, large_vec_multi_add_time_check)
   const auto mfem_avg = mfem_total / trials;
   const auto expr_avg = expr_total / trials;
   std::cout << "Expression templates took " << (expr_avg / mfem_avg) << " times as long as the raw MFEM calls\n";
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+//------------------------------------------------------------------------------
+#include "axom/slic/core/UnitTestLogger.hpp"
+using axom::slic::UnitTestLogger;
+
+int main(int argc, char* argv[])
+{
+  int result = 0;
+
+  ::testing::InitGoogleTest(&argc, argv);
+
+  MPI_Init(&argc, &argv);
+
+  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+
+  result = RUN_ALL_TESTS();
+
+  MPI_Finalize();
+
+  return result;
 }
