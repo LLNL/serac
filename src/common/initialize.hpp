@@ -22,6 +22,7 @@ namespace serac {
  * @brief Returns the number of processes and rank for an MPI communicator
  * @param comm The MPI communicator to initialize with
  * @return A pair containing the size and rank relative to the provided MPI communicator
+ * @pre The logger must be initialized (to display error messages)
  */
 std::pair<int, int> getMPIInfo(MPI_Comm comm = MPI_COMM_WORLD);
 
