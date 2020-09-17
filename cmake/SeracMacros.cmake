@@ -16,6 +16,10 @@
 # Creates various child build targets that follow this pattern:
 #  serac_<check|style>
 #  serac_<cppcheck|clangformat>_<check|style>
+#
+# This also creates targets for running clang-tidy on the src/ and test/
+# directories, with a more permissive set of checks for the tests,
+# called serac_guidelines_check and serac_guidelines_check_tests, respectively
 #------------------------------------------------------------------------------
 macro(serac_add_code_checks)
 
@@ -63,9 +67,20 @@ macro(serac_add_code_checks)
                         CLANGFORMAT_CFG_FILE ${PROJECT_SOURCE_DIR}/.clang-format
                         CPPCHECK_FLAGS  --enable=all --inconclusive)
 
+
+    set(_src_sources)
+    file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp")
+
     blt_add_clang_tidy_target(  NAME              serac_guidelines_check
                                 CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*"
-                                SRC_FILES         ${_sources})
+                                SRC_FILES         ${_src_sources})
+
+    set(_test_sources)
+    file(GLOB_RECURSE _test_sources "tests/*.cpp" "tests/*.hpp")
+
+    blt_add_clang_tidy_target(  NAME              serac_guidelines_check_tests
+                                CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
+                                SRC_FILES         ${_test_sources})
 
 endmacro(serac_add_code_checks)
 
