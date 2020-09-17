@@ -13,8 +13,8 @@
 #ifndef CONDUCTION_SOLVER
 #define CONDUCTION_SOLVER
 
-#include "physics/base_solver.hpp"
 #include "mfem.hpp"
+#include "physics/base_solver.hpp"
 #include "physics/operators/thermal_operators.hpp"
 
 namespace serac {

@@ -13,8 +13,8 @@
 #ifndef NONLINSOLID_SOLVER
 #define NONLINSOLID_SOLVER
 
-#include "physics/base_solver.hpp"
 #include "mfem.hpp"
+#include "physics/base_solver.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
 
 namespace serac {

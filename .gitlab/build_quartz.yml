@@ -43,6 +43,7 @@ release_resources_build_quartz:
 .main_build_with_deps_on_quartz:
   stage: q_build_with_deps
   extends: [.srun_build_with_deps_script, .on_quartz, .main_workflow]
+  needs: []
 
 .main_build_devtools_on_quartz:
   stage: q_build_devtools
