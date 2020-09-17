@@ -94,10 +94,12 @@ def parse_args():
                       help="Install `package_name`, not just its dependencies.")
 
     # where to install
+    # SERAC EDIT BEGIN
     parser.add_option("--prefix",
                       dest="prefix",
-                      default="uberenv_libs",
+                      default=None,
                       help="destination directory")
+    # SERAC EDIT END
 
     # what compiler to use
     parser.add_option("--spec",
@@ -322,6 +324,12 @@ class SpackEnv(UberEnv):
         self.pkgs = pjoin(self.uberenv_path, "packages","*")
 
         # setup destination paths
+        # SERAC EDIT BEGIN
+        if self.opts["prefix"] is None:
+            print("[ERROR: --prefix flag for library destination is required]")
+            sys.exit(-1)
+        # SERAC EDIT END
+
         self.dest_dir = os.path.abspath(self.opts["prefix"])
         self.dest_spack = pjoin(self.dest_dir,"spack")
         print("[installing to: {0}]".format(self.dest_dir))

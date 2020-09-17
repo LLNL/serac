@@ -47,19 +47,19 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, -1);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, -1);
 }
 
 void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
-  setEssentialBCs(disp_bdr, disp_bdr_coef, *displacement_, component);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
-  setNaturalBCs(trac_bdr, trac_bdr_coef, component);
+  bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
 void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, const double K)
@@ -106,31 +106,19 @@ void NonlinearSolidSolver::completeSetup()
   }
 
   // Add the traction integrator
-  for (auto& nat_bc_data : nat_bdr_) {
+  for (auto& nat_bc_data : bcs_.naturals()) {
     H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
                                  nat_bc_data.markers());
   }
-
-  // Add the essential boundary
-  mfem::Array<int> essential_dofs(0);
 
   // Build the dof array lookup tables
   displacement_->space().BuildDofToArrays();
 
   // Project the essential boundary coefficients
-  for (auto& bc : ess_bdr_) {
+  for (auto& bc : bcs_.essentials()) {
     // Project the coefficient
     bc.project(*displacement_);
-
-    // Add the vector dofs to the total essential BC dof list
-    essential_dofs.Append(bc.getTrueDofs());
   }
-
-  // Remove any duplicates from the essential BC list
-  essential_dofs.Sort();
-  essential_dofs.Unique();
-
-  H_form->SetEssentialTrueDofs(essential_dofs);
 
   // The abstract mass bilinear form
   std::unique_ptr<mfem::ParBilinearForm> M_form;
@@ -158,7 +146,7 @@ void NonlinearSolidSolver::completeSetup()
   solver_ = EquationSolver(displacement_->comm(), lin_params_, nonlin_params_);
   // Set up the jacbian solver based on the linear solver options
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
-    SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byVDIM,
+    SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byNODES,
                     "Attempting to use BoomerAMG with nodal ordering.");
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params_.print_level);
@@ -173,13 +161,13 @@ void NonlinearSolidSolver::completeSetup()
 
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    solver_.solver().iterative_mode = true;
-    nonlinear_oper_                 = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form));
+    solver_.nonlinearSolver().iterative_mode = true;
+    nonlinear_oper_ = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form), bcs_);
     solver_.SetOperator(*nonlinear_oper_);
   } else {
-    solver_.solver().iterative_mode = false;
-    timedep_oper_                   = std::make_unique<NonlinearSolidDynamicOperator>(
-        std::move(H_form), std::move(S_form), std::move(M_form), ess_bdr_, solver_.solver(), lin_params_);
+    solver_.nonlinearSolver().iterative_mode = false;
+    timedep_oper_ = std::make_unique<NonlinearSolidDynamicOperator>(std::move(H_form), std::move(S_form),
+                                                                    std::move(M_form), bcs_, solver_, lin_params_);
     ode_solver_->Init(*timedep_oper_);
   }
 }

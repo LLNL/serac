@@ -10,16 +10,22 @@
 
 #---------------------------------------
 # SYS_TYPE: toss_3_x86_64_ib
-# Compiler Spec: gcc@8.1.0
+# Compiler Spec: clang@10.0.0
 # CMake executable path: /usr/tce/packages/cmake/cmake-3.14.5/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
 # Compilers
 #---------------------------------------
-set(CMAKE_C_COMPILER "/usr/tce/packages/gcc/gcc-8.1.0/bin/gcc" CACHE PATH "")
+set(CMAKE_C_COMPILER "/usr/tce/packages/clang/clang-10.0.0/bin/clang" CACHE PATH "")
 
-set(CMAKE_CXX_COMPILER "/usr/tce/packages/gcc/gcc-8.1.0/bin/g++" CACHE PATH "")
+set(CMAKE_CXX_COMPILER "/usr/tce/packages/clang/clang-10.0.0/bin/clang++" CACHE PATH "")
+
+set(CMAKE_C_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1/rh/usr" CACHE PATH "")
+
+set(CMAKE_CXX_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1/rh/usr" CACHE PATH "")
+
+set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/tce/packages/gcc/gcc-8.3.1/rh/usr/lib -Wl,-rpath,/usr/tce/packages/gcc/gcc-8.3.1/rh/usr/lib64" CACHE PATH "Adds a missing libstdc++ rpath")
 
 set(ENABLE_CUDA OFF CACHE BOOL "")
 
@@ -28,14 +34,14 @@ set(ENABLE_CUDA OFF CACHE BOOL "")
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.1.0/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-clang-10.0.0/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.1.0/bin/mpicxx" CACHE PATH "")
+set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-clang-10.0.0/bin/mpicxx" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_09_02_18_06_54/gcc-8.1.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_09_14_14_42_03/clang-10.0.0" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
 
@@ -60,7 +66,7 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 #------------------------------------------------------------------------------
 
 # Root directory for generated developer tools
-set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/toss_3_x86_64_ib/2020_05_12_15_09_12/gcc-8.1.0" CACHE PATH "")
+set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/toss_3_x86_64_ib/2020_05_12_14_57_11/gcc-8.1.0" CACHE PATH "")
 
 set(ENABLE_DOCS ON CACHE BOOL "")
 
