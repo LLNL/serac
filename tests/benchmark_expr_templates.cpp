@@ -171,7 +171,8 @@ static void BM_large_expr_single_alloc_par_EXPR(benchmark::State& state)
 
   for (auto _ : state) {
     // This code gets timed
-    evaluate(lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs, expr_result, MPI_COMM_WORLD);
+    evaluate(lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs, expr_result,
+             MPI_COMM_WORLD);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
