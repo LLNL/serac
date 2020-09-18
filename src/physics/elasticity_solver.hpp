@@ -13,8 +13,8 @@
 #ifndef LINEARELASTIC_SOLVER
 #define LINEARELASTIC_SOLVER
 
-#include "base_solver.hpp"
 #include "mfem.hpp"
+#include "physics/base_solver.hpp"
 
 namespace serac {
 

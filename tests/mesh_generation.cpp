@@ -6,25 +6,17 @@
 
 #include <gtest/gtest.h>
 
-#include <fstream>
-
 #include "math/mesh_utils.hpp"
-#include "mfem.hpp"
-#include "physics/elasticity_solver.hpp"
-#include "serac_config.hpp"
 
-namespace serac {
-
-TEST(mesh, load_exodus)
+TEST(meshgen, successful_creation)
 {
-  MPI_Barrier(MPI_COMM_WORLD);
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/bortel_echem.e";
-
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
-  MPI_Barrier(MPI_COMM_WORLD);
+  // the disk and ball meshes don't exactly hit the number
+  // of elements specified, they refine to get as close as possible
+  ASSERT_EQ(serac::buildDiskMesh(1000)->GetNE(), 1024);
+  ASSERT_EQ(serac::buildBallMesh(6000)->GetNE(), 4096);
+  ASSERT_EQ(serac::buildRectangleMesh(20, 20)->GetNE(), 400);
+  ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20)->GetNE(), 8000);
 }
-
-}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
@@ -38,7 +30,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  UnitTestLogger logger;  // create & initialize test logger, finalized when
+                          // exiting main scope
 
   result = RUN_ALL_TESTS();
 

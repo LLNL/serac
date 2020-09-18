@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
   auto config_msg = app.config_to_str(true, true);
   SLIC_INFO_ROOT(rank, config_msg);
 
-  auto mesh = serac::buildParallelMesh(mesh_file, ser_ref_levels, par_ref_levels);
+  auto mesh = serac::buildMeshFromFile(mesh_file, ser_ref_levels, par_ref_levels);
 
   int dim = mesh->Dimension();
 
