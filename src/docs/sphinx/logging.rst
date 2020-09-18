@@ -9,7 +9,7 @@ Logging
 
 Logging is done through Axom's `SLIC <https://axom.readthedocs.io/en/develop/axom/slic/docs/sphinx/index.html>`_
 component. SLIC provides a lot of configurable logging functionality which we have consolidated the header
-``src/common/Logger.hpp`` and implemented in ``src/common/Logger.cpp``.
+``src/infrastructure/logger.hpp`` and implemented in ``src/infrastructure/logger.cpp``.
 
 .. note::
   On parallel runs, messages can be out of order if flush is not called often enough.
