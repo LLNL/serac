@@ -126,7 +126,6 @@ endif()
 #------------------------------------------------------------------------------
 if(PETSC_DIR)
     serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
-    set(PETSC_ARCH "/")
     include(cmake/thirdparty/FindPETSc.cmake)
     message(STATUS "PETSc support is ON")
     set(PETSC_FOUND TRUE CACHE BOOL "")

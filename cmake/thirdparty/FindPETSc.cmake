@@ -1,161 +1,132 @@
-#################################################################
-# Try to find PETSc                                             #
-#                                                               #
-# Once done this will define:                                   #
-#  PETSC_FOUND         - system has PETSc                       #
-#  PETSC_DIR           - PETSc directory                        #
-#  PETSC_ARCH          - PETSc architecture                     #
-#  PETSC_INC           - PETSc include directory                #
-#  PETSC_LIB           - PETSc library (static or dynamic)      #
-#  PETSC_VARIABLES     - Content of PETSc 'petscvariables' file #
-#                                                               #
-#  PETSC_MUMPS         - Was PETSc compiled with MUMPS?         #
-#  PETSC_MUMPS_INC     - PETSc MUMPS include file               #
-#  PETSC_MUMPS_LIB     - PETSc MUMPS libraries                  #
-#                                                               #
-#  PETSC_SCALAPACK     - Was PETSc compiled with ScaLAPACK?     #
-#  PETSC_SCALAPACK_LIB - PETSc ScaLAPACK libraries              #
-#                                                               #
-#  PETSC_PARMETIS      - Was PETSc compiled with ParMETIS?      #
-#  PETSC_PARMETIS_LIB  - PETSc ParMETIS libraries               #
-#                                                               #
-#  PETSC_METIS         - Was PETSc compiled with Metis?         #
-#  PETSC_METIS_LIB     - PETSc METIS libraries                  #
-#                                                               #
-#  PETSC_MPIUNI        - Was PETSc compiled with MPIUNI?        #
-#  PETSC_MPIUNI_INC    - MPIUNI include file                    #
-#                                                               #
-# Usage:                                                        #
-#  find_package(PETSc)                                          #
-#                                                               #
-# Setting these changes the behavior of the search              #
-#  PETSC_DIR           - PETSc directory                        #
-#  PETSC_ARCH          - PETSc architecture                     #
-#################################################################
+# The MIT License (MIT)
 
-## Try to set PETSC_DIR and PETSC_ARCH ##
-#########################################
-if(NOT DEFINED PETSC_DIR)
-  set(PETSC_DIR $ENV{PETSC_DIR})
-endif()
-if(NOT DEFINED PETSC_ARCH)
-  set(PETSC_ARCH $ENV{PETSC_ARCH})
-endif()
+# Copyright (c) 2016-2019 Simon Praetorius
+#               2019      Felix Müller
 
-## Includes ##
-##############
-if(EXISTS "${PETSC_DIR}/include" AND
-   EXISTS "${PETSC_DIR}/${PETSC_ARCH}/include")
-  set(PETSC_INC "${PETSC_DIR}/include" "${PETSC_DIR}/${PETSC_ARCH}/include")
-else()
-  message(SEND_ERROR "PETSc includes not found")
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# FindPETSc.cmake
+#
+# Finds the PETSc library
+#
+# This will define the following variables
+#
+#    PETSc_FOUND
+#    PETSc_VERSION
+#
+# and the following imported targets
+#
+#    PETSc::PETSc
+#
+# Author: Simon Praetorius <simon.praetorius@tu-dresden.de>
+
+include(FindPkgConfig)
+
+if (NOT PKG_CONFIG_FOUND)
+  message(FATAL_ERROR "Can not find PkgConfig!")
 endif()
 
-## Library ##
-#############
-if(EXISTS "${PETSC_DIR}/${PETSC_ARCH}/lib/libpetsc.so")
-  set(PETSC_LIB "${PETSC_DIR}/${PETSC_ARCH}/lib/libpetsc.so")
-elseif(EXISTS "${PETSC_DIR}/${PETSC_ARCH}/lib/libpetsc.a")
-  set(PETSC_LIB "${PETSC_DIR}/${PETSC_ARCH}/lib/libpetsc.a")
-else()
-  message(SEND_ERROR "PETSc library not found")
-endif()
+mark_as_advanced(PETSc_FOUND PETSc_VERSION PETSC_PKG_CONFIG)
 
-## PETSc variables ##
-#####################
-if(EXISTS ${PETSC_DIR}/${PETSC_ARCH}/conf/petscvariables)
-  file(STRINGS ${PETSC_DIR}/${PETSC_ARCH}/conf/petscvariables
+find_path(PETSC_PKG_CONFIG "PETSc.pc"
+  HINTS
+    ${PETSC_DIR}
+    ${PETSC_ROOT}
+    ENV PETSC_DIR
+    ENV PETSC_ROOT
+    ENV PKG_CONFIG_PATH
+  PATHS
+    /etc/alternatives
+    /usr/lib/petsc
+    /usr/lib/petsc/linux-gnu-cxx-opt
+    /usr/lib/petsc/linux-gnu-c-opt
+  PATH_SUFFIXES lib/pkgconfig/
+)
+
+if (PETSC_PKG_CONFIG)
+  set(ENV{PKG_CONFIG_PATH} "${PETSC_PKG_CONFIG}:$ENV{PKG_CONFIG_PATH}")
+endif (PETSC_PKG_CONFIG)
+
+if (PETSc_FIND_VERSION)
+  pkg_check_modules(PETSC PETSc>=${PETSc_FIND_VERSION})
+else ()
+  pkg_check_modules(PETSC PETSc)
+endif ()
+
+if (PETSC_STATIC_FOUND)
+  set(_prefix PETSC_STATIC)
+elseif (PETSC_FOUND)
+  set(_prefix PETSC)
+endif ()
+
+set(PETSc_VERSION "${${_prefix}_VERSION}")
+if ((PETSC_STATIC_FOUND OR PETSC_FOUND) AND NOT TARGET PETSc::PETSc)
+  add_library(PETSc::PETSc INTERFACE IMPORTED GLOBAL)
+  if (${_prefix}_INCLUDE_DIRS)
+    set_property(TARGET PETSc::PETSc PROPERTY
+                 INTERFACE_INCLUDE_DIRECTORIES "${${_prefix}_INCLUDE_DIRS}")
+  endif ()
+  if (${_prefix}_LINK_LIBRARIES)
+    set_property(TARGET PETSc::PETSc PROPERTY
+                 INTERFACE_LINK_LIBRARIES "${${_prefix}_LINK_LIBRARIES}")
+  else ()
+    # extract the absolute paths of link libraries from the LDFLAGS
+    include(PkgConfigLinkLibraries)
+    pkg_config_link_libraries(${_prefix} _libs)
+    set_property(TARGET PETSc::PETSc PROPERTY
+                 INTERFACE_LINK_LIBRARIES "${_libs}")
+    unset(_libs)
+  endif ()
+  if (${_prefix}_LDFLAGS_OTHER)
+    set_property(TARGET PETSc::PETSc PROPERTY
+                 INTERFACE_LINK_OPTIONS "${${_prefix}_LDFLAGS_OTHER}")
+  endif ()
+  if (${_prefix}_CFLAGS_OTHER)
+    set_property(TARGET PETSc::PETSc PROPERTY
+                 INTERFACE_COMPILE_OPTIONS "${${_prefix}_CFLAGS_OTHER}")
+  endif ()
+  # workaround for PETSc macros redefining MPI functions
+  set_property(TARGET PETSc::PETSc PROPERTY
+               INTERFACE_COMPILE_DEFINITIONS "PETSC_HAVE_BROKEN_RECURSIVE_MACRO=1")
+endif ()
+unset(_prefix)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(PETSc
+  REQUIRED_VARS PETSc_VERSION
+  VERSION_VAR PETSc_VERSION
+)
+
+# SERAC EDIT BEGIN
+
+# PETSc variables
+if(EXISTS ${PETSC_DIR}/conf/petscvariables)
+  file(STRINGS ${PETSC_DIR}/conf/petscvariables
     PETSC_VARIABLES NEWLINE_CONSUME)
-elseif(EXISTS ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscvariables)
-  file(STRINGS ${PETSC_DIR}/${PETSC_ARCH}/lib/petsc/conf/petscvariables
+elseif(EXISTS ${PETSC_DIR}/lib/petsc/conf/petscvariables)
+  file(STRINGS ${PETSC_DIR}/lib/petsc/conf/petscvariables
     PETSC_VARIABLES NEWLINE_CONSUME)
 else()
   message(SEND_ERROR "PETSc variables not found")
 endif()
 
-## MUMPS ##
-###########
-if(EXISTS ${PETSC_DIR}/${PETSC_ARCH}/lib/libmumps_common.a)
-  set(PETSC_MUMPS TRUE)
-  set(PETSC_MUMPS_INC ${PETSC_INC})
-  set(PETSC_MUMPS_LIB
-    ${PETSC_DIR}/${PETSC_ARCH}/lib/libcmumps.a
-    ${PETSC_DIR}/${PETSC_ARCH}/lib/libdmumps.a
-    ${PETSC_DIR}/${PETSC_ARCH}/lib/libsmumps.a
-    ${PETSC_DIR}/${PETSC_ARCH}/lib/libzmumps.a
-    ${PETSC_DIR}/${PETSC_ARCH}/lib/libmumps_common.a
-    ${PETSC_DIR}/${PETSC_ARCH}/lib/libpord.a)
-
-  if(EXISTS ${PETSC_DIR}/${PETSC_ARCH}/lib/libmpiseq.a)
-    set(PETSC_MUMPS_SEQ ${PETSC_DIR}/${PETSC_ARCH}/lib/libmpiseq.a)
-  else()
-    set(PETSC_MUMPS_SEQ "")
-  endif()
-
-else()
-  set(PETSC_MUMPS FALSE)
-  set(PETSC_MUMPS_INC "")
-  set(PETSC_MUMPS_LIB "")
-  set(PETSC_MUMPS_SEQ "")
-endif()
-
-## ScaLAPACK ##
-###############
-if(EXISTS ${PETSC_DIR}/${PETSC_ARCH}/lib/libscalapack.a)
-  set(PETSC_SCALAPACK TRUE)
-  set(PETSC_SCALAPACK_LIB ${PETSC_DIR}/${PETSC_ARCH}/lib/libscalapack.a)
-else()
-  set(PETSC_SCALAPACK FALSE)
-  set(PETSC_SCALAPACK_LIB "")
-endif()
-
-## ParMETIS ##
-##############
-if(EXISTS ${PETSC_DIR}/${PETSC_ARCH}/lib/libparmetis.so)
-  set(PETSC_PARMETIS TRUE)
-  set(PETSC_PARMETIS_LIB ${PETSC_DIR}/${PETSC_ARCH}/lib/libparmetis.so)
-else()
-  set(PETSC_PARMETIS FALSE)
-  set(PETSC_PARMETIS_LIB "")
-endif()
-
-## METIS ##
-############
-if(EXISTS ${PETSC_DIR}/${PETSC_ARCH}/lib/libmetis.so)
-  set(PETSC_METIS TRUE)
-  set(PETSC_METIS_LIB ${PETSC_DIR}/${PETSC_ARCH}/lib/libmetis.so)
-else()
-  set(PETSC_METIS FALSE)
-  set(PETSC_METIS_LIB "")
-endif()
-
-## MPI Uni ##
-#############
-string(REGEX MATCH "MPI_IS_MPIUNI = [^\n\r]*" PETSC_MPIUNI ${PETSC_VARIABLES})
-if(PETSC_MPIUNI)
-  string(REPLACE "MPI_IS_MPIUNI = " "" PETSC_MPIUNI ${PETSC_MPIUNI})
-  string(STRIP ${PETSC_MPIUNI} PETSC_MPIUNI)
-  string(COMPARE EQUAL ${PETSC_MPIUNI} "1" PETSC_MPIUNI)
-
-  string(REGEX MATCH "MPI_INCLUDE = -I[^\n\r]*"
-    PETSC_MPIUNI_INC ${PETSC_VARIABLES})
-  string(REPLACE "MPI_INCLUDE = -I" "" PETSC_MPIUNI_INC ${PETSC_MPIUNI_INC})
-  string(STRIP ${PETSC_MPIUNI_INC} PETSC_MPIUNI_INC)
-else()
-  set(PETSC_MPIUNI     FALSE)
-  set(PETSC_MPIUNI_INC "")
-endif()
-
-## CMake check and done ##
-##########################
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(PETSc
-  "PETSc could not be found: be sure to set PETSC_DIR and PETSC_ARCH in your environment variables"
-  PETSC_LIB PETSC_INC PETSC_DIR PETSC_ARCH)
-
-
-## PETSC dependency resolution ##
-#################################
+# PETSC dependency resolution
 string(REGEX MATCH "PETSC_EXTERNAL_LIB_BASIC = [^\n\r]*" PETSC_EXTERNAL_LIB_BASIC ${PETSC_VARIABLES})
 string(REPLACE "PETSC_EXTERNAL_LIB_BASIC = " "" PETSC_EXTERNAL_LIB_BASIC ${PETSC_EXTERNAL_LIB_BASIC})
 string(STRIP ${PETSC_EXTERNAL_LIB_BASIC} PETSC_EXTERNAL_LIB_BASIC)
@@ -164,9 +135,13 @@ string(REGEX MATCH "PETSC_CC_INCLUDES = [^\n\r]*" PETSC_CC_INCLUDES ${PETSC_VARI
 string(REPLACE "PETSC_CC_INCLUDES = " "" PETSC_CC_INCLUDES ${PETSC_CC_INCLUDES})
 string(STRIP ${PETSC_CC_INCLUDES} PETSC_CC_INCLUDES)
 
+get_target_property(PETSC_INCLUDE_DIRS PETSc::PETSc INTERFACE_INCLUDE_DIRECTORIES)
+get_target_property(PETSC_LIB PETSc::PETSc INTERFACE_LINK_LIBRARIES)
 
 blt_register_library(
     NAME          PETSc
-    INCLUDES      ${PETSC_INC} ${PETSC_CC_INCLUDES}
+    INCLUDES      ${PETSC_INCLUDE_DIRS} ${PETSC_CC_INCLUDES}
     LIBRARIES     ${PETSC_LIB} ${PETSC_EXTERNAL_LIB_BASIC}
     TREAT_INCLUDES_AS_SYSTEM ON)
+
+# SERAC EDIT END
