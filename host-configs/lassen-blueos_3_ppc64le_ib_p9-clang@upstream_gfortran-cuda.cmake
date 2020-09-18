@@ -71,6 +71,8 @@ set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
 
 set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
 
+set(PETSC_DIR "/usr/tcetmp/packages/petsc/petsc-3.13.0" CACHE PATH "")
+
 set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-5.4.0" CACHE PATH "")
@@ -90,5 +92,3 @@ set(ENABLE_DOCS OFF CACHE BOOL "")
 set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format" CACHE PATH "")
 
 set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-2.1/bin/cppcheck" CACHE PATH "")
-
-

@@ -115,6 +115,10 @@ packages:
       - spec: netlib-lapack@3.9.0
         prefix: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
     buildable: false
+  petsc:
+    externals:
+      - spec: petsc@3.13.0
+        prefix: /usr/tcetmp/packages/petsc/petsc-3.13.0/lib/
 
   # Lock in versions of Devtools
   cmake:
