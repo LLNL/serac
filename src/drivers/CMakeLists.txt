@@ -6,7 +6,7 @@
 
 blt_add_executable( NAME       serac_driver
                     SOURCES    serac.cpp
-                    DEPENDS_ON math infrastructure physics coefficients mfem mpi cli11
+                    DEPENDS_ON numerics infrastructure physics coefficients mfem mpi cli11
                     )
 
 install( TARGETS serac_driver

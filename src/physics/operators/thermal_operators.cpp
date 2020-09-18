@@ -7,7 +7,7 @@
 #include "physics/operators/thermal_operators.hpp"
 
 #include "infrastructure/logger.hpp"
-#include "math/expr_template_ops.hpp"
+#include "numerics/expr_template_ops.hpp"
 
 namespace serac {
 

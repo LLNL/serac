@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "math/mesh_utils.hpp"
+#include "numerics/mesh_utils.hpp"
 
 #include <fstream>
 

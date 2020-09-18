@@ -22,8 +22,8 @@
 #include "infrastructure/initialize.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
-#include "math/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
 #include "physics/nonlinear_solid_solver.hpp"
 #include "serac_config.hpp"
 

@@ -19,7 +19,7 @@
 #include <utility>
 
 #include "infrastructure/logger.hpp"
-#include "math/vector_expression.hpp"
+#include "numerics/vector_expression.hpp"
 
 namespace serac::internal {
 

@@ -27,7 +27,7 @@ blt_add_library(
     NAME        physics
     SOURCES     ${physics_sources}
     HEADERS     ${physics_headers}
-    DEPENDS_ON  mfem integrators math infrastructure physics_utilities physics_operators axom fmt mpi
+    DEPENDS_ON  mfem integrators numerics infrastructure physics_utilities physics_operators axom fmt mpi
     )
 
 target_include_directories(physics PUBLIC 

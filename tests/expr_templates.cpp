@@ -9,7 +9,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "math/expr_template_ops.hpp"
+#include "numerics/expr_template_ops.hpp"
 
 TEST(expr_templates, basic_add)
 {

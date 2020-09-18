@@ -9,8 +9,8 @@
 
 #include <fstream>
 
-#include "math/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
 #include "physics/thermal_solver.hpp"
 #include "serac_config.hpp"
 

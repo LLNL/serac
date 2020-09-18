@@ -4,35 +4,35 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(math_headers
+set(numerics_headers
     expr_template_internal.hpp
     expr_template_ops.hpp
     mesh_utils.hpp
     vector_expression.hpp
     )
 
-set(math_sources
+set(numerics_sources
     mesh_utils.cpp
     )
 
-set(math_depends mfem mpi fmt)
+set(numerics_depends mfem mpi fmt)
 
 blt_add_library(
-    NAME        math
-    HEADERS     ${math_headers}
-    SOURCES     ${math_sources}
-    DEPENDS_ON  ${math_depends}
+    NAME        numerics
+    HEADERS     ${numerics_headers}
+    SOURCES     ${numerics_sources}
+    DEPENDS_ON  ${numerics_depends}
     )
 
 
-target_include_directories(math PUBLIC 
+target_include_directories(numerics PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     $<INSTALL_INTERFACE:include>
     )
 
-install(FILES ${math_headers} DESTINATION include/math )
+install(FILES ${numerics_headers} DESTINATION include/numerics )
 
-install(TARGETS              math
+install(TARGETS              numerics
         EXPORT               serac-targets
         DESTINATION          lib
         )
