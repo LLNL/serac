@@ -57,8 +57,8 @@ if (ENABLE_GTEST)
     set(language_tests
         mesh_generation.cpp
         copy_elision.cpp
-        expr_templates.cpp
-        mfem_array_std_algo.cpp)
+        mfem_array_std_algo.cpp
+        expr_templates.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -85,6 +85,16 @@ if (ENABLE_GTEST)
                             FOLDER      serac/tests)
         blt_add_test( NAME          serac_cuda_smoketest
                       COMMAND       serac_cuda_smoketest )
+    endif()
+
+    if(ENABLE_BENCHMARKS)
+        blt_add_executable( NAME    benchmark_expr_templates
+                            SOURCES benchmark_expr_templates.cpp
+                            DEPENDS_ON gbenchmark ${test_dependencies}
+                            FOLDER      serac/tests)
+        blt_add_benchmark(  NAME    benchmark_expr_templates
+                            COMMAND benchmark_expr_templates "--benchmark_min_time=0.0 --v=3 --benchmark_format=console"
+                            NUM_MPI_TASKS 4)
     endif()
 
 endif()
