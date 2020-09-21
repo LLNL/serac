@@ -11,6 +11,7 @@ set(physics_sources
     base_solver.cpp
     nonlinear_solid_solver.cpp
     thermal_solver.cpp
+    thermal_solver_rework.cpp
     thermal_structural_solver.cpp
     elasticity_solver.cpp
     )
@@ -19,6 +20,7 @@ set(physics_headers
     base_solver.hpp
     nonlinear_solid_solver.hpp
     thermal_solver.hpp
+    thermal_solver_rework.hpp
     thermal_structural_solver.hpp
     elasticity_solver.hpp
     )

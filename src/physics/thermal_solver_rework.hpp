@@ -10,15 +10,14 @@
  * @brief An object containing the solver for a thermal conduction PDE
  */
 
-#ifndef CONDUCTION_SOLVER
-#define CONDUCTION_SOLVER
+#ifndef CONDUCTION_SOLVER_REWORK
+#define CONDUCTION_SOLVER_REWORK
 
 #include "mfem.hpp"
 
-#include "common/odes.hpp"
-
-#include "solvers/base_solver.hpp"
-#include "solvers/thermal_operators.hpp"
+#include "physics/base_solver.hpp"
+#include "physics/operators/odes.hpp"
+#include "physics/operators/thermal_operators.hpp"
 
 namespace serac {
 

@@ -9,10 +9,10 @@
 
 #include <fstream>
 
-#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/thermal_solver_rework.hpp"
 #include "serac_config.hpp"
-#include "solvers/thermal_solver_rework.hpp"
 
 namespace serac {
 
@@ -35,7 +35,7 @@ TEST(thermal_solver_rework, static_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolverRework therm_solver(2, pmesh);
@@ -87,7 +87,7 @@ TEST(thermal_solver_rework, static_solve_multiple_bcs)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star_with_2_bdr_attributes.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolverRework therm_solver(2, pmesh);
@@ -148,7 +148,7 @@ TEST(thermal_solver_rework, static_solve_repeated_bcs)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolverRework therm_solver(2, pmesh);
@@ -202,7 +202,7 @@ TEST(thermal_solver_rework, dyn_exp_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolverRework therm_solver(2, pmesh);
@@ -272,7 +272,7 @@ TEST(thermal_solver_rework, dyn_imp_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolverRework therm_solver(2, pmesh);

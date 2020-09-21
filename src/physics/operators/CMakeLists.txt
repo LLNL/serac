@@ -7,6 +7,7 @@
 set(physics_operators_headers
     nonlinear_solid_operators.hpp
     thermal_operators.hpp
+    odes.hpp
     )
 
 set(physics_operators_sources

@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "thermal_solver_rework.hpp"
+#include "physics/thermal_solver_rework.hpp"
 
-#include "common/logger.hpp"
+#include "infrastructure/logger.hpp"
 
 namespace serac {
 

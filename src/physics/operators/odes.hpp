@@ -1,10 +1,11 @@
 #include <functional>
 #include <variant>
 
-#include "common/boundary_condition_manager.hpp"
-#include "common/expr_template_ops.hpp"
 #include "mfem.hpp"
-#include "solvers/equation_solver.hpp"
+
+#include "numerics/expr_template_ops.hpp"
+#include "physics/utilities/equation_solver.hpp"
+#include "physics/utilities/boundary_condition_manager.hpp"
 
 class FirstOrderODE : public mfem::TimeDependentOperator {
 public:
