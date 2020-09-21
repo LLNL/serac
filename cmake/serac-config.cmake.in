@@ -68,8 +68,16 @@ if(NOT SERAC_FOUND)
 
   # mfem
   if(SERAC_USE_MFEM)
-    set(SERAC_MFEM_DIR     "@MFEM_DIR@")
-    # Note: Targets not currently imported
+    set(SERAC_MFEM_DIR              "@MFEM_DIR@")
+    set(SERAC_MFEM_INCLUDE_DIRS     "@MFEM_INCLUDE_DIRS@")
+    set(SERAC_MFEM_LIBRARIES        "@MFEM_LIBRARIES@")
+    if(NOT MFEM_INCLUDE_DIRS) 
+      set(MFEM_INCLUDE_DIRS ${SERAC_MFEM_INCLUDE_DIRS}) 
+    endif()
+    if(NOT MFEM_LIBRARIES) 
+      set(MFEM_LIBRARIES ${SERAC_MFEM_LIBRARIES}) 
+    endif()
+    find_package_handle_standard_args(MFEM DEFAULT_MSG MFEM_LIBRARIES MFEM_INCLUDE_DIRS)
   endif()
 
    # tribol
