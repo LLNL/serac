@@ -116,7 +116,7 @@ void evaluate(const VectorExpr<T>& expr, mfem::Vector& result, MPI_Comm comm)
   double* result_arr = result;
 
   // If the array size is not divisible by # elements, add one
-  const long long per_proc = (SIZE / num_procs) + (SIZE % num_procs != 0) ? 1 : 0;
+  const long long per_proc = ((SIZE / num_procs) + (SIZE % num_procs != 0)) ? 1 : 0;
 
   // Truncate the number of elements for the last process
   const long long n_entries = (rank == num_procs - 1) ? SIZE - ((num_procs - 1) * per_proc) : per_proc;
