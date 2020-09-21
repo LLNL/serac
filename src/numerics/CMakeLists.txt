@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+../src/numerics/CMakeLists.txt# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -15,7 +15,7 @@ set(numerics_sources
     mesh_utils.cpp
     )
 
-set(numerics_depends mfem mpi fmt)
+set(numerics_depends infrastructure axom mfem mpi fmt)
 
 blt_add_library(
     NAME        numerics
