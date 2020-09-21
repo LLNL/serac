@@ -26,9 +26,11 @@ In particular, Serac currently provides the following operations:
 5. Application of an ``mfem::Operator`` with ``op * a`` for ``mfem::Operator op`` and vector ``a`` - note that 
     because ``mfem::Matrix`` inherits from ``mfem::Operator`` this functionality includes matrix-vector multiplication.
 
-
 Note that all of these expressions can be composed, that is, an expression can be used as an argument
 to another expression.  This allows for chaining, e.g., ``-a + b + 0.3 * c``.
+
+Memory Safety
+-------------
 
 Because these expression objects are imperfect closures (as with lambdas in C++), care should be taken to
 ensure that objects are not used after they go out of scope.  
@@ -76,3 +78,29 @@ As with the previous example, this should be resolved by moving the ``mfem::Vect
         auto a3 = evaluate(a * 3.0); // a is of type mfem::Vector
         return std::move(a3) - b; // return value is of expression type
     };
+
+
+Avoiding Allocations
+--------------------
+
+Currently, assigning an expression template to a vector, e.g. ``mfem::Vector c = a + b``
+will result in an allocation.  To avoid this, use the ``evaluate`` function:
+
+.. code-block:: cpp
+
+    // Preallocate
+    mfem::Vector c(size);
+    evaluate(a + b, c);
+
+
+
+Distributed Expression Templates
+--------------------------------
+
+.. note::
+    This functionality is under active development and may change significantly.
+
+Distributed expression templates (with ``mfem::HypreParVector``) are **experimentally** supported. 
+Mixed operations (where some operands are global ``mfem::Vector``s and others are distributed vectors)
+are not supported.  Additionally, an expression cannot be assigned to a ``HypreParVector``.  Use the 
+``evaluate`` function described above.
