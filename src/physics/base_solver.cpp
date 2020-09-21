@@ -118,6 +118,20 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
       break;
     }
 
+    case serac::OutputType::ParaView: {
+      pv_dc_                  = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front()->mesh());
+      int max_order_in_fields = 0;
+      for (const auto& state : state_) {
+        pv_dc_->RegisterField(state->name(), &state->gridFunc());
+        max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
+      }
+      pv_dc_->SetLevelsOfDetail(max_order_in_fields);
+      pv_dc_->SetHighOrderOutput(true);
+      pv_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
+      pv_dc_->SetCompression(true);
+      break;
+    }
+
     case serac::OutputType::GLVis: {
       break;
     }
@@ -135,6 +149,13 @@ void BaseSolver::outputState() const
       visit_dc_->SetCycle(cycle_);
       visit_dc_->SetTime(time_);
       visit_dc_->Save();
+      break;
+    }
+
+    case serac::OutputType::ParaView: {
+      pv_dc_->SetCycle(cycle_);
+      pv_dc_->SetTime(time_);
+      pv_dc_->Save();
       break;
     }
 

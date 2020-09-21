@@ -205,6 +205,11 @@ protected:
   int order_;
 
   /**
+   * @brief ParaView data collection pointer
+   */
+  std::unique_ptr<mfem::ParaViewDataCollection> pv_dc_;
+
+  /**
    * @brief VisIt data collection pointer
    */
   std::unique_ptr<mfem::VisItDataCollection> visit_dc_;
