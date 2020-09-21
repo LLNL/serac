@@ -34,6 +34,29 @@ static std::pair<mfem::DenseMatrix, mfem::Vector> sample_matvec(const int rows, 
   return {matrix, vec_in};
 }
 
+static auto build_partitioning(MPI_Comm comm, const int size)
+{
+  int num_procs = 0;
+  int rank      = 0;
+  MPI_Comm_size(comm, &num_procs);
+  MPI_Comm_rank(comm, &rank);
+  bool assumed_partition = HYPRE_AssumedPartitionCheck();
+  auto partitioning      = std::make_unique<int[]>(assumed_partition ? 2 : (num_procs + 1));
+  auto per_proc          = (size / num_procs) + ((size % num_procs != 0) ? 1 : 0);
+
+  if (assumed_partition) {
+    auto n_entries  = (rank == num_procs - 1) ? size - ((num_procs - 1) * per_proc) : per_proc;
+    partitioning[0] = per_proc * rank;
+    partitioning[1] = (per_proc * rank) + n_entries;
+  } else {
+    for (int i = 0; i < num_procs; i++) {
+      partitioning[i] = per_proc * i;
+    }
+    partitioning[num_procs] = size;
+  }
+  return std::make_pair(std::move(partitioning), per_proc * rank);
+}
+
 static void BM_mixed_expr_MFEM(benchmark::State& state)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -178,12 +201,38 @@ static void BM_large_expr_single_alloc_par_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+static void BM_large_expr_single_alloc_hypre_par_EXPR(benchmark::State& state)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Number of rows is the argument that varies
+  const int rows  = state.range(0);
+  auto [lhs, rhs] = sample_vectors(rows);
+
+  auto [partitioning, start] = build_partitioning(MPI_COMM_WORLD, rows);
+
+  mfem::HypreParVector lhs_par(MPI_COMM_WORLD, rows, lhs + start, partitioning.get());
+  mfem::HypreParVector rhs_par(MPI_COMM_WORLD, rows, rhs + start, partitioning.get());
+
+  mfem::HypreParVector expr_result(MPI_COMM_WORLD, rows, partitioning.get());
+
+  for (auto _ : state) {
+    // This code gets timed
+    evaluate(lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs, expr_result);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
 BENCHMARK(BM_mixed_expr_MFEM)->RangeMultiplier(2)->Range(10, 10 << 10);
 BENCHMARK(BM_mixed_expr_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
 BENCHMARK(BM_mixed_expr_single_alloc_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
 BENCHMARK(BM_large_expr_MFEM)->RangeMultiplier(2)->Range(10, 10 << 10);
 BENCHMARK(BM_large_expr_single_alloc_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
-BENCHMARK(BM_large_expr_single_alloc_par_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
+
+// Too slow
+BENCHMARK(BM_large_expr_single_alloc_par_EXPR)->RangeMultiplier(2)->Range(10, 10 << 5);
+BENCHMARK(BM_large_expr_single_alloc_hypre_par_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
