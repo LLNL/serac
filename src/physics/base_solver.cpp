@@ -146,16 +146,16 @@ void BaseSolver::outputState() const
 {
   switch (output_type_) {
     case serac::OutputType::VisIt: {
-      visit_dc_->SetCycle(cycle_);
-      visit_dc_->SetTime(time_);
-      visit_dc_->Save();
+      dc_->SetCycle(cycle_);
+      dc_->SetTime(time_);
+      dc_->Save();
       break;
     }
 
     case serac::OutputType::ParaView: {
-      pv_dc_->SetCycle(cycle_);
-      pv_dc_->SetTime(time_);
-      pv_dc_->Save();
+      dc_->SetCycle(cycle_);
+      dc_->SetTime(time_);
+      dc_->Save();
       break;
     }
 

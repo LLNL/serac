@@ -205,14 +205,9 @@ protected:
   int order_;
 
   /**
-   * @brief ParaView data collection pointer
+   * @brief DataCollecttion pointer
    */
-  std::unique_ptr<mfem::ParaViewDataCollection> pv_dc_;
-
-  /**
-   * @brief VisIt data collection pointer
-   */
-  std::unique_ptr<mfem::VisItDataCollection> visit_dc_;
+  std::unique_ptr<mfem::DataCollection> dc_;
 
   /**
    * @brief State variable initialization indicator
