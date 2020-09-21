@@ -8,8 +8,8 @@
 
 #include <memory>
 
-#include "common/common.hpp"
 #include "mfem.hpp"
+#include "physics/utilities/boundary_condition_manager.hpp"
 
 namespace serac {
 
