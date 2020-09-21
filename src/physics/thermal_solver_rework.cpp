@@ -151,6 +151,12 @@ void ThermalSolverRework::advanceTimestep(double& dt)
 
     // Step the time integrator
     ode_solver_->Step(temperature_->trueVec(), time_, dt);
+
+    
+    for (const auto& bc : bcs_.essentials()) {
+      bc.projectBdrToDofs(temperature_->trueVec(), time_);
+    }
+
     //ode_->Step(temperature_->trueVec(), time_, dt);
   }
 

@@ -102,8 +102,8 @@ void BoundaryCondition::projectBdrToDofs(mfem::Vector & dof_values, const double
 {
   SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   auto gf = state_->gridFunc();
-  projectBdr(gf, time, should_be_scalar);
   gf.SetFromTrueDofs(dof_values);
+  projectBdr(gf, time, should_be_scalar);
   gf.GetTrueDofs(dof_values);
 }
 

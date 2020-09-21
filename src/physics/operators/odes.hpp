@@ -103,7 +103,7 @@ public:
       bc.projectBdrToDofs(uc_plus, t + epsilon);
       bc.projectBdrToDofs(uc_minus, t - epsilon);
     }
-    duc_dt = (uc_plus - uc_minus) * (1.0 / (2.0 * epsilon));
+    duc_dt = (uc_plus - uc_minus) / (2.0 * epsilon);
 
     du_dt = invMf_ * (f_ - K_ * uf - K_ * uc - M_ * duc_dt);
   }
