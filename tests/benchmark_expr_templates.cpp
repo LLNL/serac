@@ -8,7 +8,7 @@
 
 #include <utility>
 
-#include "common/expr_template_ops.hpp"
+#include "numerics/expr_template_ops.hpp"
 
 static std::pair<mfem::Vector, mfem::Vector> sample_vectors(const int entries)
 {
