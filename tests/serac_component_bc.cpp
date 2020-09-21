@@ -9,10 +9,10 @@
 #include <fstream>
 
 #include "coefficients/stdfunction_coefficient.hpp"
-#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/nonlinear_solid_solver.hpp"
 #include "serac_config.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
 
 namespace serac {
 
@@ -23,7 +23,7 @@ TEST(component_bc, qs_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 2, 0);
+  auto pmesh = buildMeshFromFile(mesh_file, 2, 0);
 
   int dim = pmesh->Dimension();
 

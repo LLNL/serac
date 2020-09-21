@@ -10,10 +10,10 @@
 #include <fstream>
 #include <memory>
 
-#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/thermal_solver.hpp"
 #include "serac_config.hpp"
-#include "solvers/thermal_solver.hpp"
 
 namespace serac {
 
@@ -24,7 +24,7 @@ TEST(serac_dtor, test1)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 0);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
   // Initialize the second order thermal solver on the parallel mesh
   auto therm_solver = std::make_unique<ThermalSolver>(2, pmesh);

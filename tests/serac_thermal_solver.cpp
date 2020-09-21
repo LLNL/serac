@@ -9,13 +9,14 @@
 
 #include <fstream>
 
-#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/thermal_solver.hpp"
 #include "serac_config.hpp"
-#include "solvers/thermal_solver.hpp"
 
 namespace serac {
 
+double One(const mfem::Vector& /*x*/) { return 1.0; }
 double BoundaryTemperature(const mfem::Vector& x) { return x.Norml2(); }
 double OtherBoundaryTemperature(const mfem::Vector& x) { return 2 * x.Norml2(); }
 
@@ -32,10 +33,7 @@ TEST(thermal_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
-
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildBallMesh(10000);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
@@ -44,7 +42,7 @@ TEST(thermal_solver, static_solve)
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
+  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(One);
 
   std::set<int> temp_bdr = {1};
 
@@ -75,7 +73,7 @@ TEST(thermal_solver, static_solve)
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
   double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
-  EXPECT_NEAR(2.56980679, u_norm, 0.00001);
+  EXPECT_NEAR(2.02263, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -87,7 +85,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star_with_2_bdr_attributes.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
@@ -148,7 +146,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
@@ -202,7 +200,7 @@ TEST(thermal_solver, dyn_exp_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
@@ -272,7 +270,7 @@ TEST(thermal_solver, dyn_imp_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 1);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalSolver therm_solver(2, pmesh);
@@ -349,7 +347,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  UnitTestLogger logger;  // create & initialize test logger, finalized when
+                          // exiting main scope
 
   result = RUN_ALL_TESTS();
 

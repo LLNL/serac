@@ -8,10 +8,10 @@
 
 #include <fstream>
 
-#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/elasticity_solver.hpp"
 #include "serac_config.hpp"
-#include "solvers/elasticity_solver.hpp"
 
 namespace serac {
 
@@ -22,7 +22,7 @@ TEST(elastic_solver, static_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-quad.mesh";
 
-  auto pmesh = buildParallelMesh(mesh_file, 1, 0);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
   ElasticitySolver elas_solver(1, pmesh);
 

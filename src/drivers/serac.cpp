@@ -19,11 +19,13 @@
 #include "CLI11/CLI11.hpp"
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
-#include "common/common.hpp"
-#include "common/mesh_utils.hpp"
+#include "infrastructure/initialize.hpp"
+#include "infrastructure/logger.hpp"
+#include "infrastructure/terminator.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/nonlinear_solid_solver.hpp"
 #include "serac_config.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -111,7 +113,7 @@ int main(int argc, char* argv[])
   auto config_msg = app.config_to_str(true, true);
   SLIC_INFO_ROOT(rank, config_msg);
 
-  auto mesh = serac::buildParallelMesh(mesh_file, ser_ref_levels, par_ref_levels);
+  auto mesh = serac::buildMeshFromFile(mesh_file, ser_ref_levels, par_ref_levels);
 
   int dim = mesh->Dimension();
 
