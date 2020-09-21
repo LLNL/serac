@@ -13,8 +13,8 @@
 #ifndef WRAPPER_INTEGRATOR_HPP
 #define WRAPPER_INTEGRATOR_HPP
 
-#include <memory>
 #include <functional>
+#include <memory>
 
 #include "mfem.hpp"
 
@@ -158,7 +158,7 @@ private:
 };
 
 /**
- * @brief A class to convert NonlinearFormIntegrator to one where the input parameter undergoes variable substitution
+ * @brief A class to convert NonlinearFormIntegrator to one where the input parameter undergoes a change of variables
  */
 class SubstitutionNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 public:
@@ -166,10 +166,13 @@ public:
    * @brief Recasts, A(u(x)) = F as R(u(x)) = A(u(x)) - F = R(x)
    *
    * @param[in] R A BilinearFormIntegrator
+   * @param[in] substitute A function that performs a change of variables to what R expects
+   * @param[in] substitute_grad A function that performs a change of variables for the gradient
    */
-  explicit SubstitutionNonlinearFormIntegrator(std::shared_ptr<mfem::NonlinearFormIntegrator> R,
-					       std::function<std::shared_ptr<mfem::Vector>(const mfem::Vector &)> substitute,
-					       std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::DenseMatrix &)> substitute_back);
+  explicit SubstitutionNonlinearFormIntegrator(
+      std::shared_ptr<mfem::NonlinearFormIntegrator>                              R,
+      std::function<std::shared_ptr<mfem::Vector>(const mfem::Vector&)>           substitute,
+      std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::DenseMatrix&)> substitute_grad);
 
   /**
    * @brief Compute the residual vector with input, substitute_function(x)
@@ -204,16 +207,14 @@ private:
    *
    */
 
-  std::function<std::shared_ptr<mfem::Vector>(const mfem::Vector &)> substitute_function_;
+  std::function<std::shared_ptr<mfem::Vector>(const mfem::Vector&)> substitute_function_;
 
   /**
-   * @brief The substitution to perform change of variables for the tangent back to x
+   * @brief The substitution to perform change of variables for the gradient
    */
-  std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::DenseMatrix &)> substitute_function_back_;
-
+  std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::DenseMatrix&)> substitute_function_grad_;
 };
 
-  
 }  // namespace serac
 
 #endif

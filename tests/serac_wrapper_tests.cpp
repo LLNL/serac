@@ -259,28 +259,28 @@ TEST_F(WrapperTests, Substitution)
   ParGridFunction t_ess(pfes_.get());
   t_ess = 0.;
   t_ess.ProjectBdrCoefficient(x_one, bdr_attr_is_ess);
-  
+
   // Solve Nonlinear
-  
+
   ConstantCoefficient one(1.);
 
-  auto diffusion = std::make_shared<DiffusionIntegrator>(one);
-  auto nonlinear_diffusion = std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion);
-  double multiplier = 2.;
-  double offset = 1.;
-  auto substitute = [=] (const mfem::Vector &x) {
-    auto v= std::make_shared<mfem::Vector>(x);
-    (*v)*= multiplier;
-    (*v)+= offset;
+  auto   diffusion           = std::make_shared<DiffusionIntegrator>(one);
+  auto   nonlinear_diffusion = std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion);
+  double multiplier          = 2.;
+  double offset              = 1.;
+  auto   substitute          = [=](const mfem::Vector& x) {
+    auto v = std::make_shared<mfem::Vector>(x);
+    (*v) *= multiplier;
+    (*v) += offset;
     return v;
   };
-  auto substitute_back = [=](const mfem::DenseMatrix &x) {
-    auto m =  std::make_shared<mfem::DenseMatrix>(x);
+  auto substitute_back = [=](const mfem::DenseMatrix& x) {
+    auto m = std::make_shared<mfem::DenseMatrix>(x);
     (*m) *= multiplier;
     return m;
   };
-  auto substitute_diffusion = std::make_unique<SubstitutionNonlinearFormIntegrator>(std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion),
-										    substitute, substitute_back);
+  auto substitute_diffusion = std::make_unique<SubstitutionNonlinearFormIntegrator>(
+      std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion), substitute, substitute_back);
 
   ParGridFunction temp(pfes_.get());
   {
@@ -290,7 +290,7 @@ TEST_F(WrapperTests, Substitution)
 
     // The temperature solution vector already contains the essential boundary condition values
     temp = t_ess;
-  
+
     auto T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
 
     GMRESSolver solver(pfes_->GetComm());
@@ -314,8 +314,8 @@ TEST_F(WrapperTests, Substitution)
     // The temperature solution vector already contains the essential boundary condition values
     temp2 = t_ess;
     temp2 -= offset;
-    temp2 *= 1./multiplier;
-  
+    temp2 *= 1. / multiplier;
+
     auto T = std::unique_ptr<HypreParVector>(temp2.GetTrueDofs());
 
     GMRESSolver solver(pfes_->GetComm());
@@ -331,12 +331,10 @@ TEST_F(WrapperTests, Substitution)
   }
 
   auto check = substitute(temp2);
-  for (int i = 0; i < temp.Size(); i++)
-    EXPECT_NEAR(temp[i], (*check)[i], 1.e-8);
+  for (int i = 0; i < temp.Size(); i++) EXPECT_NEAR(temp[i], (*check)[i], 1.e-8);
   temp.Print();
   std::cout << multiplier << std::endl;
   temp2.Print();
-  
 }
 
 //------------------------------------------------------------------------------

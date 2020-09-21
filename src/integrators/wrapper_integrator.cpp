@@ -81,18 +81,19 @@ void MixedBilinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::Fin
   A_->AssembleElementMatrix2(trial_el, el, Tr, elmat);
 }
 
-  SubstitutionNonlinearFormIntegrator::SubstitutionNonlinearFormIntegrator(std::shared_ptr<mfem::NonlinearFormIntegrator> R,
-									   std::function<std::shared_ptr<mfem::Vector> (const mfem::Vector &)> substitute,
-									   std::function<std::shared_ptr<mfem::DenseMatrix> (const mfem::DenseMatrix &)> substitute_back)
-    : R_(R), substitute_function_(substitute), substitute_function_back_(substitute_back)
+SubstitutionNonlinearFormIntegrator::SubstitutionNonlinearFormIntegrator(
+    std::shared_ptr<mfem::NonlinearFormIntegrator>                              R,
+    std::function<std::shared_ptr<mfem::Vector>(const mfem::Vector&)>           substitute,
+    std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::DenseMatrix&)> substitute_grad)
+    : R_(R), substitute_function_(substitute), substitute_function_grad_(substitute_grad)
 {
 }
 
 void SubstitutionNonlinearFormIntegrator::AssembleElementVector(const mfem::FiniteElement&   el,
-                                                              mfem::ElementTransformation& Tr,
-                                                              const mfem::Vector& elfun, mfem::Vector& elvect)
+                                                                mfem::ElementTransformation& Tr,
+                                                                const mfem::Vector& elfun, mfem::Vector& elvect)
 {
-  auto substituted = substitute_function_(elfun);
+  auto              substituted = substitute_function_(elfun);
   mfem::DenseMatrix elmat;
   R_->AssembleElementGrad(el, Tr, elfun, elmat);
   elvect.SetSize(elmat.Height());
@@ -100,14 +101,12 @@ void SubstitutionNonlinearFormIntegrator::AssembleElementVector(const mfem::Fini
 }
 
 void SubstitutionNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
-							      mfem::ElementTransformation& Tr,
-							      const mfem::Vector& elfun,
-							      mfem::DenseMatrix&           elmat)
+                                                              mfem::ElementTransformation& Tr,
+                                                              const mfem::Vector& elfun, mfem::DenseMatrix& elmat)
 {
   R_->AssembleElementGrad(el, Tr, elfun, elmat);
-  auto dense_back_substitute = substitute_function_back_(elmat);
-  elmat = *dense_back_substitute;
+  auto dense_grad_substitute = substitute_function_grad_(elmat);
+  elmat                      = *dense_grad_substitute;
 }
-  
-  
+
 }  // namespace serac
