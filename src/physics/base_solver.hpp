@@ -205,7 +205,7 @@ protected:
   int order_;
 
   /**
-   * @brief DataCollecttion pointer
+   * @brief DataCollection pointer
    */
   std::unique_ptr<mfem::DataCollection> dc_;
 
