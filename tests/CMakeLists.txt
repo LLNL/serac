@@ -20,7 +20,8 @@ if (ENABLE_GTEST)
         serac_thermal_solver_rework.cpp
         serac_thermal_structural_solver.cpp
         serac_dtor.cpp
-        serac_boundary_cond.cpp)
+        serac_boundary_cond.cpp
+        serac_mesh.cpp)
 
     foreach(filename ${solver_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -55,6 +56,7 @@ if (ENABLE_GTEST)
     endforeach()
 
     set(language_tests
+        mesh_generation.cpp
         copy_elision.cpp
         time_integration_with_constraints.cpp 
         expr_templates.cpp

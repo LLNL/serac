@@ -325,7 +325,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs):
         build_dir = get_build_dir(test_root, host_config)
 
         start_time = time.time()
-        if build_and_test_host_config(test_root,host_config) == 0:
+        if build_and_test_host_config(test_root,host_config, True) == 0:
             ok.append(host_config)
             log_success(build_dir, timestamp)
         else:

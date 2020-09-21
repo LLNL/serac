@@ -99,7 +99,8 @@ dependencies installed.
 
 .. note::
    This directory **must not** be within the Serac repo - the example below
-   uses a directory called ``serac_libs`` at the same level as the Serac repository.
+   uses a directory called ``serac_libs`` at the same level as the Serac repository. The
+   ``--prefix`` input argument is required.
 
 It also generates a host-config file (``<config_dependent_name>.cmake``)
 at the root of Serac repository. This host-config defines all the required information for building
@@ -140,7 +141,7 @@ Some helpful uberenv options include :
 * ``--spec=+devtools`` (also build the devtools with one command)
 * ``--spec=%clang@9.0.0`` (build with a specific compiler as defined in the ``compiler.yaml`` file)
 * ``--spack-config-dir=<Path to spack configuration directory>`` (use specific Spack configuration files)
-* ``--prefix=<Path> (defaults to ./uberenv_libs)>`` (build and install the dependencies in a particular location) - this **must be outside** of your local Serac repository 
+* ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository 
 
 The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@9.0.0+debug+glvis+devtools``.
 

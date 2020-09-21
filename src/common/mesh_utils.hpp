@@ -32,8 +32,51 @@ namespace serac {
  * @param[in] MPI_Comm The MPI communicator
  * @return A shared_ptr containing the constructed and refined parallel mesh object
  */
-std::shared_ptr<mfem::ParMesh> buildParallelMesh(const std::string& mesh_file, const int refine_serial = 0,
+std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial = 0,
                                                  const int refine_parallel = 0, const MPI_Comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Constructs a 2D MFEM mesh of a unit disk, centered at the origin
+ *
+ * This routine creates a mesh by refining a coarse disk mesh until the
+ * number of elements is as close as possible to the user-specified number of elements
+ *
+ * @param[in] approx_number_of_elements
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Constructs a 3D MFEM mesh of a unit ball, centered at the origin
+ *
+ * This routine creates a mesh by refining a coarse ball mesh until the
+ * number of elements is as close as possible to the user-specified number of elements
+ *
+ * @param[in] approx_number_of_elements
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Constructs a 2D MFEM mesh of a rectangle
+ *
+ * @param[in] elements_in_x the number of elements in the x-direction
+ * @param[in] elements_in_y the number of elements in the y-direction
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y,
+                                                  const MPI_Comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Constructs a 3D MFEM mesh of a cuboid
+ *
+ * @param[in] elements_in_x the number of elements in the x-direction
+ * @param[in] elements_in_y the number of elements in the y-direction
+ * @param[in] elements_in_z the number of elements in the z-direction
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
+                                               const MPI_Comm = MPI_COMM_WORLD);
 
 }  // namespace serac
 
