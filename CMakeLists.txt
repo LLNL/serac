@@ -43,6 +43,7 @@ endif()
 set(ENABLE_ASTYLE      OFF CACHE BOOL "")
 set(ENABLE_CLANGQUERY  OFF CACHE BOOL "")
 set(ENABLE_UNCRUSTIFY  OFF CACHE BOOL "")
+set(ENABLE_BENCHMARKS  OFF CACHE BOOL "")
 
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
@@ -88,7 +89,7 @@ serac_add_code_checks(PREFIX   serac
 # Export Targets
 #------------------------------------------------------------------------------
 add_library(serac INTERFACE)
-target_link_libraries(serac INTERFACE coefficients solvers common integrators)
+target_link_libraries(serac INTERFACE coefficients physics infrastructure numerics physics_utilities physics_operators integrators)
 install(TARGETS              serac
         EXPORT               serac-targets
         DESTINATION          lib
