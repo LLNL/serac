@@ -20,6 +20,7 @@ namespace serac {
 enum class OutputType
 {
   GLVis,
+  ParaView,
   VisIt
 };
 
