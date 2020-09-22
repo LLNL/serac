@@ -17,10 +17,10 @@
 
 /**
  * @brief A utility for conditionally enabling templates if a given type
- * is an mfem::Vector
+ * is an mfem::Vector (including by inheritance)
  */
 template <typename MFEMVec>
-using enable_if_mfem_vec = std::enable_if_t<std::is_same_v<std::decay_t<MFEMVec>, mfem::Vector>>;
+using enable_if_mfem_vec = std::enable_if_t<std::is_base_of_v<mfem::Vector, std::decay_t<MFEMVec>>>;
 
 template <typename T>
 auto operator-(serac::VectorExpr<T>&& u)
