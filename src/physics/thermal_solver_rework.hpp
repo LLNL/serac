@@ -132,13 +132,11 @@ protected:
    * @brief Assembled mass matrix
    */
   std::unique_ptr<mfem::HypreParMatrix> M_;
-  std::unique_ptr<mfem::HypreParMatrix> Mf_;
 
   /**
    * @brief Assembled stiffness matrix
    */
   std::unique_ptr<mfem::HypreParMatrix> K_;
-  std::unique_ptr<mfem::HypreParMatrix> Kf_;
 
   /**
    * @brief Thermal load linear form
@@ -154,11 +152,6 @@ protected:
    * @brief Assembled RHS vector
    */
   std::unique_ptr<mfem::HypreParVector> rhs_;
-
-  /**
-   * @brief Preconditioner for the K operator
-   */
-  std::unique_ptr<mfem::HypreSmoother> K_prec_;
 
   /**
    * @brief Conduction coefficient
