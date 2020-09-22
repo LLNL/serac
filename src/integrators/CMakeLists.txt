@@ -16,7 +16,7 @@ set(integrators_headers
     wrapper_integrator.hpp
     )
 
-set(integrators_depends mfem mpi)
+set(integrators_depends infrastructure mfem mpi)
 blt_list_append( TO integrators_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
 blt_add_library(
@@ -24,7 +24,6 @@ blt_add_library(
     SOURCES     ${integrators_sources}
     HEADERS     ${integrators_headers}
     DEPENDS_ON  ${integrators_depends}
-    #DEPENDS_ON  mpi mfem hypre blas lapack parmetis metis 
     )
 
 target_include_directories(integrators PUBLIC 
