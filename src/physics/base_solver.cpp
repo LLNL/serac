@@ -120,8 +120,8 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
     }
 
     case serac::OutputType::ParaView: {
-      auto pv_dc = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front()->mesh());
-      int max_order_in_fields = 0;
+      auto pv_dc               = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front()->mesh());
+      int  max_order_in_fields = 0;
       for (const auto& state : state_) {
         pv_dc->RegisterField(state->name(), &state->gridFunc());
         max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
