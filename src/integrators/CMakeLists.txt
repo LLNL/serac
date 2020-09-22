@@ -23,6 +23,7 @@ blt_add_library(
     NAME        integrators
     SOURCES     ${integrators_sources}
     HEADERS     ${integrators_headers}
+    DEPENDS_ON  ${integrators_depends}
     )
 
 target_include_directories(integrators PUBLIC 
