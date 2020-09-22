@@ -109,7 +109,7 @@ public:
     }
     duc_dt = (uc_plus - uc_minus) / (2.0 * epsilon);
 
-    du_dt = invMf_ * (f_ - K_ * uf - K_ * uc - M_ * duc_dt);
+    du_dt = invMf_ * (f_ - M_ * duc_dt - K_ * uf - K_ * uc);
   }
 
   void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt)
@@ -148,8 +148,9 @@ class LinearSecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
   mfem::HypreParMatrix&            K_;
   mfem::Vector&                    f_;
   serac::BoundaryConditionManager& bcs_;
-  serac::EquationSolver&           invMf_;
-  serac::EquationSolver&           invT_;
+
+  serac::EquationSolver           invMf_;
+  serac::EquationSolver           invT_;
 
   mutable mfem::Vector                  uf;
   mutable mfem::Vector                  duf_dt;
@@ -159,24 +160,40 @@ class LinearSecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
   mutable mfem::Vector                  uc_plus;
   mutable mfem::Vector                  uc_minus;
   std::unique_ptr<mfem::HypreParMatrix> T_;
+  std::unique_ptr<mfem::HypreParMatrix> Mf_;
   double                                previous_dt0;
   double                                previous_dt1;
   double                                epsilon;
 
   LinearSecondOrderODE(mfem::HypreParMatrix& M, mfem::HypreParMatrix& C, mfem::HypreParMatrix& K, mfem::Vector& f,
-                       serac::BoundaryConditionManager& bcs, serac::EquationSolver& invMf, serac::EquationSolver& invT)
+                       serac::BoundaryConditionManager& bcs, const serac::LinearSolverParameters& params)
       : mfem::SecondOrderTimeDependentOperator(f.Size(), 0.0),
         M_(M),
         C_(C),
         K_(K),
         f_(f),
         bcs_(bcs),
-        invMf_(invMf),
-        invT_(invT),
+        invMf_(M.GetComm(), params),
+        invT_(M.GetComm(), params),
         previous_dt0(-1.0),
         previous_dt1(-1.0),
         epsilon(1.0e-4)
   {
+    auto preconditioner = std::make_unique<mfem::HypreSmoother>();
+    preconditioner->SetType(mfem::HypreSmoother::Jacobi);
+
+    Mf_ = std::make_unique<mfem::HypreParMatrix>(M);
+    bcs_.eliminateAllEssentialDofsFromMatrix(*Mf_);
+    invMf_.linearSolver().iterative_mode = false;
+    invMf_.SetPreconditioner(std::move(preconditioner));
+    invMf_.SetOperator(*Mf_);
+
+    preconditioner = std::make_unique<mfem::HypreSmoother>();
+    preconditioner->SetType(mfem::HypreSmoother::Jacobi);
+
+    invT_.linearSolver().iterative_mode = false;
+    invT_.SetPreconditioner(std::move(preconditioner));
+
     uf       = mfem::Vector(f.Size());
     duf_dt   = mfem::Vector(f.Size());
     uc       = mfem::Vector(f.Size());
@@ -206,15 +223,17 @@ class LinearSecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
     duc_dt   = (uc_plus - uc_minus) / (2.0 * epsilon);
     d2uc_dt2 = (uc_plus - 2 * uc + uc_minus) / (epsilon * epsilon);
 
-    d2u_dt2 = invMf_ * (f_ - K_ * uf - K_ * uc - M_ * duc_dt);
+    d2u_dt2 = invMf_ * (f_ - (M_ * d2uc_dt2 - C_ * duc_dt - K_ * uc) - (C_ * duf_dt - K_ * uf));
   }
 
   void ImplicitSolve(const double dt0, const double dt1, const mfem::Vector& u, const mfem::Vector& du_dt,
                      mfem::Vector& d2u_dt2)
   {
     if (dt0 != previous_dt0 || dt1 != previous_dt1) {
-      T_.reset(mfem::Add(1.0, M_, dt0, C_));
-      T_.reset(mfem::Add(1.0, *T_, dt1 * dt1, K_));
+      // T = M + dt1 * C + 0.5 * (dt0 * dt0) * K 
+      T_.reset(mfem::Add(1.0, M_, dt1, C_));
+      T_.reset(mfem::Add(1.0, *T_, 0.5 * dt0 * dt0, K_));
+
       bcs_.eliminateAllEssentialDofsFromMatrix(*T_);
       invT_.SetOperator(*T_);
     }
@@ -236,7 +255,7 @@ class LinearSecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
     duc_dt   = (uc_plus - uc_minus) / (2.0 * epsilon);
     d2uc_dt2 = (uc_plus - 2 * uc + uc_minus) / (epsilon * epsilon);
 
-    d2u_dt2 = invT_ * (f_ - M_ * d2uc_dt2 - K_ * uc - K_ * uf);
+    d2u_dt2 = invT_ * (f_ - (M_ * d2uc_dt2 - C_ * duc_dt - K_ * uc) - (C_ * duf_dt - K_ * uf));
 
     previous_dt0 = dt0;
     previous_dt1 = dt1;
