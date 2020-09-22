@@ -101,11 +101,11 @@ if (ENABLE_GTEST)
         blt_add_executable( NAME        petsc_smoketest
                             SOURCES     petsc_smoketest.cpp
                             OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                            DEPENDS_ON  PETSc mpi gtest
+                            DEPENDS_ON  PETSc ${test_dependencies}
                             FOLDER      serac/tests )
         blt_add_test(NAME          petsc_smoketest
                     COMMAND       petsc_smoketest
-                    NUM_MPI_TASKS 1 )
+                    NUM_MPI_TASKS 4 )
     endif()
 
 endif()
