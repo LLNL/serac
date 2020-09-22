@@ -268,13 +268,14 @@ TEST_F(WrapperTests, Substitution)
   auto   nonlinear_diffusion = std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion);
   double multiplier          = 2.;
   double offset              = 1.;
-  auto   substitute          = [=](const mfem::Vector& x) {
+  auto   substitute = [=](const mfem::FiniteElement& el, mfem::ElementTransformation& Tr, const mfem::Vector& x) {
     auto v = std::make_shared<mfem::Vector>(x);
     (*v) *= multiplier;
     (*v) += offset;
     return v;
   };
-  auto substitute_back = [=](const mfem::DenseMatrix& x) {
+  auto substitute_back = [=](const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                             const mfem::DenseMatrix& x) {
     auto m = std::make_shared<mfem::DenseMatrix>(x);
     (*m) *= multiplier;
     return m;
@@ -330,8 +331,9 @@ TEST_F(WrapperTests, Substitution)
     temp2 = *T;
   }
 
-  auto check = substitute(temp2);
-  for (int i = 0; i < temp.Size(); i++) EXPECT_NEAR(temp[i], (*check)[i], 1.e-8);
+  for (int i = 0; i < temp.Size(); i++) {
+    EXPECT_NEAR(temp[i], temp2[i] * multiplier + offset, 1.e-8);
+  }
   temp.Print();
   std::cout << multiplier << std::endl;
   temp2.Print();

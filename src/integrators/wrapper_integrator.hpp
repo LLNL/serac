@@ -170,9 +170,13 @@ public:
    * @param[in] substitute_grad A function that performs a change of variables for the gradient
    */
   explicit SubstitutionNonlinearFormIntegrator(
-      std::shared_ptr<mfem::NonlinearFormIntegrator>                              R,
-      std::function<std::shared_ptr<mfem::Vector>(const mfem::Vector&)>           substitute,
-      std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::DenseMatrix&)> substitute_grad);
+      std::shared_ptr<mfem::NonlinearFormIntegrator> R,
+      std::function<std::shared_ptr<mfem::Vector>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                                  const mfem::Vector&)>
+          substitute,
+      std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                                       const mfem::DenseMatrix&)>
+          substitute_grad);
 
   /**
    * @brief Compute the residual vector with input, substitute_function(x)
@@ -207,12 +211,16 @@ private:
    *
    */
 
-  std::function<std::shared_ptr<mfem::Vector>(const mfem::Vector&)> substitute_function_;
+  std::function<std::shared_ptr<mfem::Vector>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                              const mfem::Vector&)>
+      substitute_function_;
 
   /**
    * @brief The substitution to perform change of variables for the gradient
    */
-  std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::DenseMatrix&)> substitute_function_grad_;
+  std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                                   const mfem::DenseMatrix&)>
+      substitute_function_grad_;
 };
 
 }  // namespace serac
