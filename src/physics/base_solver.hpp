@@ -205,9 +205,9 @@ protected:
   int order_;
 
   /**
-   * @brief VisIt data collection pointer
+   * @brief DataCollection pointer
    */
-  std::unique_ptr<mfem::VisItDataCollection> visit_dc_;
+  std::unique_ptr<mfem::DataCollection> dc_;
 
   /**
    * @brief State variable initialization indicator
