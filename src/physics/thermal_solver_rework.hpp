@@ -131,13 +131,13 @@ protected:
   /**
    * @brief Assembled mass matrix
    */
-  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> M_;
   std::unique_ptr<mfem::HypreParMatrix> Mf_;
 
   /**
    * @brief Assembled stiffness matrix
    */
-  std::unique_ptr<mfem::HypreParMatrix> K_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> K_;
   std::unique_ptr<mfem::HypreParMatrix> Kf_;
 
   /**
@@ -154,11 +154,6 @@ protected:
    * @brief Assembled RHS vector
    */
   std::unique_ptr<mfem::HypreParVector> rhs_;
-
-  /**
-   * @brief Linear solver for the K operator
-   */
-  std::unique_ptr<mfem::CGSolver> K_solver_;
 
   /**
    * @brief Preconditioner for the K operator

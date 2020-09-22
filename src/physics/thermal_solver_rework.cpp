@@ -69,13 +69,7 @@ void ThermalSolverRework::completeSetup()
   K_form_->Assemble(0);  // keep sparsity pattern of M and K the same
   K_form_->Finalize();
 
-  K_mat_.reset(K_form_->ParallelAssemble());
-  Kf_.reset(K_form_->ParallelAssemble());
-
-  // Eliminate the essential DOFs from the stiffness matrix
-  for (auto& bc : bcs_.essentials()) {
-    bc.eliminateFromMatrix(*Kf_);
-  }
+  K_.reset(K_form_->ParallelAssemble());
 
   // Add the body source to the RS if specified
   l_form_ = temperature_->createOnSpace<mfem::ParLinearForm>();
@@ -94,24 +88,26 @@ void ThermalSolverRework::completeSetup()
   // Initialize the true vector
   temperature_->initializeTrueVec();
 
-  if (timestepper_ != serac::TimestepMethod::QuasiStatic) {
+  if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+
+    // Eliminate the essential DOFs from the stiffness matrix
+    for (auto& bc : bcs_.essentials()) {
+      bc.eliminateFromMatrix(*K_);
+    }
+
+  } else {
+
     // If dynamic, assemble the mass matrix
     M_form_ = temperature_->createOnSpace<mfem::ParBilinearForm>();
     M_form_->AddDomainIntegrator(new mfem::MassIntegrator());
     M_form_->Assemble(0);  // keep sparsity pattern of M and K the same
     M_form_->Finalize();
 
-    M_mat_.reset(M_form_->ParallelAssemble());
+    M_.reset(M_form_->ParallelAssemble());
 
-    ode_ = std::make_unique< LinearFirstOrderODE >(*M_mat_, *K_mat_, *rhs_, bcs_, lin_params_);
+    ode_ = std::make_unique< LinearFirstOrderODE >(*M_, *K_, *rhs_, bcs_, lin_params_);
 
     ode_solver_->Init(*ode_);
-
-    //dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_);
-    //dyn_oper_->setMatrices(M_mat_.get(), Kf_.get());
-    //dyn_oper_->setLoadVector(rhs_.get());
-
-    //ode_solver_->Init(*dyn_oper_);
   }
 }
 
@@ -120,7 +116,7 @@ void ThermalSolverRework::quasiStaticSolve()
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
   for (auto& bc : bcs_.essentials()) {
-    bc.apply(*Kf_, *bc_rhs_, *temperature_, time_);
+    bc.apply(*K_, *bc_rhs_, *temperature_, time_);
   }
 
   // Solve the stiffness using CG with Jacobi preconditioning
@@ -133,7 +129,7 @@ void ThermalSolverRework::quasiStaticSolve()
   solver_.SetPreconditioner(std::move(hypre_smoother));
 
   solver_.linearSolver().iterative_mode = false;
-  solver_.SetOperator(*Kf_);
+  solver_.SetOperator(*K_);
 
   // Perform the linear solve
   solver_.Mult(*bc_rhs_, temperature_->trueVec());
@@ -149,15 +145,13 @@ void ThermalSolverRework::advanceTimestep(double& dt)
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
-    // Step the time integrator
+    // integrate forward in time
     ode_solver_->Step(temperature_->trueVec(), time_, dt);
 
-    
+    // 
     for (const auto& bc : bcs_.essentials()) {
       bc.projectBdrToDofs(temperature_->trueVec(), time_);
     }
-
-    //ode_->Step(temperature_->trueVec(), time_, dt);
   }
 
   // Distribute the shared DOFs
