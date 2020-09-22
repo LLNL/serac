@@ -111,24 +111,26 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
 
   switch (output_type_) {
     case serac::OutputType::VisIt: {
-      visit_dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front()->mesh());
+      dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front()->mesh());
+
       for (const auto& state : state_) {
-        visit_dc_->RegisterField(state->name(), &state->gridFunc());
+        dc_->RegisterField(state->name(), &state->gridFunc());
       }
       break;
     }
 
     case serac::OutputType::ParaView: {
-      pv_dc_                  = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front()->mesh());
+      auto pv_dc = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front()->mesh());
       int max_order_in_fields = 0;
       for (const auto& state : state_) {
-        pv_dc_->RegisterField(state->name(), &state->gridFunc());
+        pv_dc->RegisterField(state->name(), &state->gridFunc());
         max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
       }
-      pv_dc_->SetLevelsOfDetail(max_order_in_fields);
-      pv_dc_->SetHighOrderOutput(true);
-      pv_dc_->SetDataFormat(mfem::VTKFormat::BINARY);
-      pv_dc_->SetCompression(true);
+      pv_dc->SetLevelsOfDetail(max_order_in_fields);
+      pv_dc->SetHighOrderOutput(true);
+      pv_dc->SetDataFormat(mfem::VTKFormat::BINARY);
+      pv_dc->SetCompression(true);
+      dc_ = std::move(pv_dc);
       break;
     }
 
