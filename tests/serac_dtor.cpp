@@ -40,8 +40,8 @@ TEST(serac_dtor, test1)
   therm_solver->setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver->setConductivity(std::move(kappa));
+  mfem::ConstantCoefficient kappa(0.5);
+  therm_solver->setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;

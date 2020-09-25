@@ -67,7 +67,7 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa);
+  void setConductivity(mfem::Coefficient& kappa);
 
   /**
    * @brief Set the temperature state vector from a coefficient
@@ -81,7 +81,7 @@ public:
    *
    * @param[in] source The source function coefficient
    */
-  void setSource(std::unique_ptr<mfem::Coefficient>&& source);
+  void setSource(mfem::Coefficient& source);
 
   /**
    * @brief Get the temperature state
@@ -163,13 +163,15 @@ protected:
 
   /**
    * @brief Conduction coefficient
+   * @note This is a non-owning pointer to a driver-manager coef
    */
-  std::unique_ptr<mfem::Coefficient> kappa_;
+  mfem::Coefficient* kappa_ = nullptr;
 
   /**
    * @brief Body source coefficient
+   * @note This is a non-owning pointer to a driver-manager coef
    */
-  std::unique_ptr<mfem::Coefficient> source_;
+  mfem::Coefficient* source_ = nullptr;
 
   /**
    * @brief Time integration operator

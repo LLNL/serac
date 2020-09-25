@@ -45,7 +45,7 @@ TEST(dynamic_solver, dyn_solve)
     return temp;
   });
 
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
+  mfem::ConstantCoefficient kappa(0.5);
 
   // set the traction boundary
   std::set<int> trac_bdr = {2};
@@ -61,7 +61,7 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  ts_solver.SetConductivity(std::move(kappa));
+  ts_solver.SetConductivity(kappa);
   ts_solver.SetDisplacement(deform);
   ts_solver.SetVelocity(velo);
   ts_solver.SetTemperature(temp);
@@ -73,9 +73,8 @@ TEST(dynamic_solver, dyn_solve)
   double scale  = 1.0;
 
   auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature()->gridFunc());
-  auto visc_coef    = std::make_unique<TransformedScalarCoefficient>(
-      temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
-  ts_solver.SetViscosity(std::move(visc_coef));
+  TransformedScalarCoefficient visc_coef(temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
+  ts_solver.SetViscosity(visc_coef);
 
   // Set the linear solver parameters
   serac::LinearSolverParameters params;

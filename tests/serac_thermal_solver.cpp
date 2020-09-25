@@ -50,8 +50,8 @@ TEST(thermal_solver, static_solve)
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  mfem::ConstantCoefficient kappa(0.5);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -105,8 +105,8 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   therm_solver.setTemperatureBCs(marked_2, u_1);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  mfem::ConstantCoefficient kappa(0.5);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -165,8 +165,8 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   therm_solver.setTemperatureBCs(temp_bdr, u_1);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  mfem::ConstantCoefficient kappa(0.5);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -216,8 +216,8 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  mfem::ConstantCoefficient kappa(0.5);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -286,8 +286,8 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  mfem::ConstantCoefficient kappa(0.5);
+  therm_solver.setConductivity(kappa);
 
   // Define the linear solver params
   serac::LinearSolverParameters params;

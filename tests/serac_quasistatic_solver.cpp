@@ -119,7 +119,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   mfem::Vector disp(dim);
   disp = 0.0;
 
-  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
+  mfem::VectorConstantCoefficient disp_coef(disp);
 
   std::set<int> trac_bdr = {2};
 
@@ -127,7 +127,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   mfem::Vector traction(dim);
   traction           = 0.0;
   traction(1)        = 1.0e-3;
-  auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
+  mfem::VectorConstantCoefficient traction_coef(traction);
 
   // Pass the BC information to the solver object
   solid_solver.setDisplacementBCs(ess_bdr, disp_coef);

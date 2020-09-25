@@ -67,7 +67,7 @@ public:
    *
    * @param[in] visc_coef The abstract viscosity coefficient
    */
-  void setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef);
+  void setViscosity(mfem::Coefficient& visc_coef);
 
   /**
    * @brief Set the hyperelastic material parameters
@@ -168,8 +168,9 @@ protected:
 
   /**
    * @brief The viscosity coefficient
+   * @note This is a non-owning pointer to a driver-manager coef
    */
-  std::unique_ptr<mfem::Coefficient> viscosity_;
+  mfem::Coefficient* viscosity_ = nullptr;
 
   /**
    * @brief The hyperelastic material model

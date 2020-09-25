@@ -40,16 +40,16 @@ void ThermalSolver::setFluxBCs(const std::set<int>& flux_bdr, mfem::Coefficient&
   bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
 }
 
-void ThermalSolver::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
+void ThermalSolver::setConductivity(mfem::Coefficient& kappa)
 {
   // Set the conduction coefficient
-  kappa_ = std::move(kappa);
+  kappa_ = &kappa;
 }
 
-void ThermalSolver::setSource(std::unique_ptr<mfem::Coefficient>&& source)
+void ThermalSolver::setSource(mfem::Coefficient& source)
 {
   // Set the body source integral coefficient
-  source_ = std::move(source);
+  source_ = &source;
 }
 
 void ThermalSolver::setLinearSolverParameters(const serac::LinearSolverParameters& params)
