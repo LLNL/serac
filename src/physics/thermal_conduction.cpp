@@ -29,7 +29,8 @@ void ThermalConduction::setTemperature(mfem::Coefficient& temp)
   gf_initialized_[0] = true;
 }
 
-void ThermalConduction::setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+void ThermalConduction::setTemperatureBCs(const std::set<int>&               temp_bdr,
+                                          std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
   bcs_.addEssential(temp_bdr, temp_bdr_coef, *temperature_);
 }

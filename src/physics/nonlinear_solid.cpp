@@ -45,19 +45,19 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh)
 }
 
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
-                                              std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+                                        std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, -1);
 }
 
-void NonlinearSolid::setDisplacementBCs(const std::set<int>&               disp_bdr,
-                                              std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
+void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+                                        int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void NonlinearSolid::setTractionBCs(const std::set<int>&                     trac_bdr,
-                                          std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
+                                    std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
@@ -67,10 +67,7 @@ void NonlinearSolid::setHyperelasticMaterialParameters(const double mu, const do
   model_.reset(new mfem::NeoHookeanModel(mu, K));
 }
 
-void NonlinearSolid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
-{
-  viscosity_ = std::move(visc_coef);
-}
+void NonlinearSolid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
 
 void NonlinearSolid::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
@@ -87,7 +84,7 @@ void NonlinearSolid::setVelocity(mfem::VectorCoefficient& velo_state)
 }
 
 void NonlinearSolid::setSolverParameters(const serac::LinearSolverParameters&    lin_params,
-                                               const serac::NonlinearSolverParameters& nonlin_params)
+                                         const serac::NonlinearSolverParameters& nonlin_params)
 {
   lin_params_    = lin_params;
   nonlin_params_ = nonlin_params;
