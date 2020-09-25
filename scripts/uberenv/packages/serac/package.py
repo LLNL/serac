@@ -364,8 +364,9 @@ class Serac(CMakePackage, CudaPackage):
         netcdf_dir = get_spec_path(spec, "netcdf-c", path_replacements)
         cfg.write(cmake_cache_entry("NETCDF_DIR", netcdf_dir))
 
-        petsc_dir = get_spec_path(spec, "petsc", path_replacements)
-        cfg.write(cmake_cache_entry("PETSC_DIR", petsc_dir))
+        if "+petsc" in spec:
+            petsc_dir = get_spec_path(spec, "petsc", path_replacements)
+            cfg.write(cmake_cache_entry("PETSC_DIR", petsc_dir))
 
         parmetis_dir = get_spec_path(spec, "parmetis", path_replacements)
         cfg.write(cmake_cache_entry("PARMETIS_DIR", parmetis_dir))
