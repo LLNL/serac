@@ -72,8 +72,8 @@ TEST(dynamic_solver, dyn_solve)
   double offset = 0.1;
   double scale  = 1.0;
 
-  auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature()->gridFunc());
-  TransformedScalarCoefficient visc_coef(temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
+  mfem::GridFunctionCoefficient temp_gf_coef(&ts_solver.temperature()->gridFunc());
+  TransformedScalarCoefficient  visc_coef(temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
   ts_solver.SetViscosity(visc_coef);
 
   // Set the linear solver parameters

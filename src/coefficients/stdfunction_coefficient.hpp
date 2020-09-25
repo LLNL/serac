@@ -205,8 +205,7 @@ public:
    * @param[in] func A function that takes in an input vector, and returns the
    * output as the second argument.
    */
-  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>          v1,
-                               std::function<void(mfem::Vector&, mfem::Vector&)> func);
+  TransformedVectorCoefficient(mfem::VectorCoefficient& v1, std::function<void(mfem::Vector&, mfem::Vector&)> func);
 
   /**
    * @brief Apply a vector function, Func, to v1 and v2
@@ -216,7 +215,7 @@ public:
    * @param[in] func A function that takes in two input vectors, and returns the
    * output as the third argument.
    */
-  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient> v1, std::shared_ptr<mfem::VectorCoefficient> v2,
+  TransformedVectorCoefficient(mfem::VectorCoefficient& v1, mfem::VectorCoefficient& v2,
                                std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> func);
 
   /**
@@ -231,13 +230,15 @@ public:
 private:
   /**
    * @brief The first vector coefficient in the transformation
+   * @note This is a non-owning pointer to a driver-manager coef
    */
-  std::shared_ptr<mfem::VectorCoefficient> v1_;
+  mfem::VectorCoefficient* v1_ = nullptr;
 
   /**
    * @brief The first vector coefficient in the transformation
+   * @note This is a non-owning pointer to a driver-manager coef
    */
-  std::shared_ptr<mfem::VectorCoefficient> v2_;
+  mfem::VectorCoefficient* v2_ = nullptr;
 
   /**
    * @brief The one argument function for a transformed coefficient
@@ -263,7 +264,7 @@ public:
    * @param[in] func A function that takes in an input scalar, and returns the
    * output.
    */
-  TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::function<double(const double)> func);
+  TransformedScalarCoefficient(mfem::Coefficient& s1, std::function<double(const double)> func);
 
   /**
    * @brief Apply a scalar function, Func, to s1 and s2
@@ -273,7 +274,7 @@ public:
    * @param[in] func A function that takes in two input scalars, and returns the
    * output.
    */
-  TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::shared_ptr<mfem::Coefficient> s2,
+  TransformedScalarCoefficient(mfem::Coefficient& s1, mfem::Coefficient& s2,
                                std::function<double(const double, const double)> func);
 
   /**
@@ -288,13 +289,15 @@ public:
 private:
   /**
    * @brief The first scalar coefficient in the transformation
+   * @note This is a non-owning pointer to a driver-manager coef
    */
-  std::shared_ptr<mfem::Coefficient> s1_;
+  mfem::Coefficient* s1_ = nullptr;
 
   /**
    * @brief The second scalar coefficient in the transformation
+   * @note This is a non-owning pointer to a driver-manager coef
    */
-  std::shared_ptr<mfem::Coefficient> s2_;
+  mfem::Coefficient* s2_ = nullptr;
 
   /**
    * @brief The one argument transformation function
