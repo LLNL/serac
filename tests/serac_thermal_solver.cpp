@@ -229,7 +229,7 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.setLinearSolverParameters(params);
 
   // Setup glvis output
-  therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_explicit");
+  therm_solver.initializeOutput(serac::OutputType::ParaView, "thermal_explicit");
 
   // Complete the setup including the dynamic operators
   therm_solver.completeSetup();
