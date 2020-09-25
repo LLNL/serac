@@ -10,8 +10,8 @@
  * @brief The solver object for finite deformation hyperelasticity
  */
 
-#ifndef NONLINSOLID_SOLVER
-#define NONLINSOLID_SOLVER
+#ifndef NONLIN_SOLID
+#define NONLIN_SOLID
 
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
@@ -26,7 +26,7 @@ namespace serac {
  * hyperelastic solver object. It is derived from MFEM
  * example 10p.
  */
-class NonlinearSolidSolver : public BaseSolver {
+class NonlinearSolid : public BasePhysics {
 public:
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -34,7 +34,7 @@ public:
    * @param[in] order The order of the displacement field
    * @param[in] mesh The MFEM parallel mesh to solve on
    */
-  NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set displacement boundary conditions
@@ -130,7 +130,7 @@ public:
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
-  virtual ~NonlinearSolidSolver();
+  virtual ~NonlinearSolid();
 
 protected:
   /**

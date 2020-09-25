@@ -28,7 +28,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   int dim = pmesh->Dimension();
 
   // Define the solver object
-  NonlinearSolidSolver solid_solver(1, pmesh);
+  NonlinearSolid solid_solver(1, pmesh);
 
   std::set<int> ess_bdr = {1};
 

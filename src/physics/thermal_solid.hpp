@@ -10,8 +10,8 @@
  * @brief An object containing an operator-split thermal structural solver
  */
 
-#ifndef THERMSTRUCT_SOLVER
-#define THERMSTRUCT_SOLVER
+#ifndef THERMAL_SOLID
+#define THERMAL_SOLID
 
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
@@ -23,7 +23,7 @@ namespace serac {
 /**
  * @brief The operator-split thermal structural solver
  */
-class ThermalStructuralSolver : public BaseSolver {
+class ThermalSolid : public BasePhysics {
 public:
   /**
    * @brief Construct a new Thermal Structural Solver object
@@ -31,7 +31,7 @@ public:
    * @param[in] order The order of the temperature and displacement discretizations
    * @param[in] mesh The parallel mesh object on which to solve
    */
-  ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -225,7 +225,7 @@ public:
   /**
    * @brief Destroy the Thermal Structural Solver object
    */
-  virtual ~ThermalStructuralSolver() = default;
+  virtual ~ThermalSolid() = default;
 
 protected:
   /**
@@ -246,12 +246,12 @@ protected:
   /**
    * @brief The single physics thermal solver
    */
-  ThermalSolver therm_solver_;
+  ThermalConduction therm_solver_;
 
   /**
    * @brief The single physics nonlinear solid solver
    */
-  NonlinearSolidSolver solid_solver_;
+  NonlinearSolid solid_solver_;
 
   /**
    * @brief The coupling strategy

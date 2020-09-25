@@ -16,28 +16,28 @@
 
 namespace serac {
 
-BaseSolver::BaseSolver(std::shared_ptr<mfem::ParMesh> mesh)
+BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
     : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0), bcs_(*mesh)
 {
   MPI_Comm_rank(comm_, &mpi_rank_);
   MPI_Comm_size(comm_, &mpi_size_);
-  BaseSolver::setTimestepper(serac::TimestepMethod::ForwardEuler);
+  BasePhysics::setTimestepper(serac::TimestepMethod::ForwardEuler);
   order_ = 1;
 }
 
-BaseSolver::BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BaseSolver(mesh)
+BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
 {
   order_ = p;
   state_.resize(n);
   gf_initialized_.assign(n, false);
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
+void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
 {
   bcs_.addEssentialTrueDofs(true_dofs, ess_bdr_coef, component);
 }
 
-void BaseSolver::setState(const std::vector<serac::GeneralCoefficient>& state_coef)
+void BasePhysics::setState(const std::vector<serac::GeneralCoefficient>& state_coef)
 {
   SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 
@@ -46,15 +46,15 @@ void BaseSolver::setState(const std::vector<serac::GeneralCoefficient>& state_co
   }
 }
 
-void BaseSolver::setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state)
+void BasePhysics::setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state)
 {
   SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
   state_ = state;
 }
 
-std::vector<std::shared_ptr<serac::FiniteElementState> > BaseSolver::getState() const { return state_; }
+std::vector<std::shared_ptr<serac::FiniteElementState> > BasePhysics::getState() const { return state_; }
 
-void BaseSolver::setTimestepper(const serac::TimestepMethod timestepper)
+void BasePhysics::setTimestepper(const serac::TimestepMethod timestepper)
 {
   timestepper_ = timestepper;
 
@@ -97,13 +97,13 @@ void BaseSolver::setTimestepper(const serac::TimestepMethod timestepper)
   }
 }
 
-void BaseSolver::setTime(const double time) { time_ = time; }
+void BasePhysics::setTime(const double time) { time_ = time; }
 
-double BaseSolver::time() const { return time_; }
+double BasePhysics::time() const { return time_; }
 
-int BaseSolver::cycle() const { return cycle_; }
+int BasePhysics::cycle() const { return cycle_; }
 
-void BaseSolver::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
+void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
 {
   root_name_ = root_name;
 
@@ -144,7 +144,7 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
   }
 }
 
-void BaseSolver::outputState() const
+void BasePhysics::outputState() const
 {
   switch (output_type_) {
     case serac::OutputType::VisIt: {

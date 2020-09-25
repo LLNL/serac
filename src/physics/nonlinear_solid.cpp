@@ -14,8 +14,8 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BaseSolver(mesh, NUM_FIELDS, order),
+NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh)
+    : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "velocity"})),
       displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
@@ -44,56 +44,56 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   velocity_->trueVec() = 0.0;
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
+void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, -1);
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
+void NonlinearSolid::setDisplacementBCs(const std::set<int>&               disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
-void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
+void NonlinearSolid::setTractionBCs(const std::set<int>&                     trac_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
-void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, const double K)
+void NonlinearSolid::setHyperelasticMaterialParameters(const double mu, const double K)
 {
   model_.reset(new mfem::NeoHookeanModel(mu, K));
 }
 
-void NonlinearSolidSolver::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
+void NonlinearSolid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
 {
   viscosity_ = std::move(visc_coef);
 }
 
-void NonlinearSolidSolver::setDisplacement(mfem::VectorCoefficient& disp_state)
+void NonlinearSolid::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_->project(disp_state);
   gf_initialized_[1] = true;
 }
 
-void NonlinearSolidSolver::setVelocity(mfem::VectorCoefficient& velo_state)
+void NonlinearSolid::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_->project(velo_state);
   gf_initialized_[0] = true;
 }
 
-void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParameters&    lin_params,
+void NonlinearSolid::setSolverParameters(const serac::LinearSolverParameters&    lin_params,
                                                const serac::NonlinearSolverParameters& nonlin_params)
 {
   lin_params_    = lin_params;
   nonlin_params_ = nonlin_params;
 }
 
-void NonlinearSolidSolver::completeSetup()
+void NonlinearSolid::completeSetup()
 {
   // Define the nonlinear form
   auto H_form = displacement_->createOnSpace<mfem::ParNonlinearForm>();
@@ -173,14 +173,14 @@ void NonlinearSolidSolver::completeSetup()
 }
 
 // Solve the Quasi-static Newton system
-void NonlinearSolidSolver::quasiStaticSolve()
+void NonlinearSolid::quasiStaticSolve()
 {
   mfem::Vector zero;
   solver_.Mult(zero, displacement_->trueVec());
 }
 
 // Advance the timestep
-void NonlinearSolidSolver::advanceTimestep(double& dt)
+void NonlinearSolid::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   velocity_->initializeTrueVec();
@@ -211,6 +211,6 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-NonlinearSolidSolver::~NonlinearSolidSolver() {}
+NonlinearSolid::~NonlinearSolid() {}
 
 }  // namespace serac

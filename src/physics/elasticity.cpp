@@ -13,37 +13,37 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ElasticitySolver::ElasticitySolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BaseSolver(mesh, NUM_FIELDS, order),
+Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh)
+    : BasePhysics(mesh, NUM_FIELDS, order),
       displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
   mesh->EnsureNodes();
   state_[0] = displacement_;
 }
 
-void ElasticitySolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
+void Elasticity::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
-void ElasticitySolver::setTractionBCs(const std::set<int>&                     trac_bdr,
+void Elasticity::setTractionBCs(const std::set<int>&                     trac_bdr,
                                       std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, const int component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
-void ElasticitySolver::setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu)
+void Elasticity::setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu)
 {
   lambda_ = &lambda;
   mu_     = &mu;
 }
 
-void ElasticitySolver::setBodyForce(mfem::VectorCoefficient& force) { body_force_ = &force; }
+void Elasticity::setBodyForce(mfem::VectorCoefficient& force) { body_force_ = &force; }
 
-void ElasticitySolver::setLinearSolverParameters(const serac::LinearSolverParameters& params) { lin_params_ = params; }
+void Elasticity::setLinearSolverParameters(const serac::LinearSolverParameters& params) { lin_params_ = params; }
 
-void ElasticitySolver::completeSetup()
+void Elasticity::completeSetup()
 {
   SLIC_ASSERT_MSG(mu_ != nullptr, "Lame mu not set in ElasticitySolver!");
   SLIC_ASSERT_MSG(lambda_ != nullptr, "Lame lambda not set in ElasticitySolver!");
@@ -107,7 +107,7 @@ void ElasticitySolver::completeSetup()
   }
 }
 
-void ElasticitySolver::advanceTimestep(double&)
+void Elasticity::advanceTimestep(double&)
 {
   // Initialize the true vector
   displacement_->initializeTrueVec();
@@ -125,7 +125,7 @@ void ElasticitySolver::advanceTimestep(double&)
 }
 
 // Solve the Quasi-static system
-void ElasticitySolver::QuasiStaticSolve()
+void Elasticity::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
@@ -139,6 +139,6 @@ void ElasticitySolver::QuasiStaticSolve()
   solver_.Mult(*bc_rhs_, displacement_->trueVec());
 }
 
-ElasticitySolver::~ElasticitySolver() {}
+Elasticity::~Elasticity() {}
 
 }  // namespace serac

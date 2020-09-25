@@ -13,8 +13,8 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 3;
 
-ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BaseSolver(mesh, NUM_FIELDS, order), therm_solver_(order, mesh), solid_solver_(order, mesh)
+ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh)
+    : BasePhysics(mesh, NUM_FIELDS, order), therm_solver_(order, mesh), solid_solver_(order, mesh)
 {
   temperature_  = therm_solver_.temperature();
   velocity_     = solid_solver_.velocity();
@@ -27,7 +27,7 @@ ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
-void ThermalStructuralSolver::completeSetup()
+void ThermalSolid::completeSetup()
 {
   SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit, mpi_rank_,
                      "Only operator split is currently implemented in the thermal structural solver.");
@@ -36,7 +36,7 @@ void ThermalStructuralSolver::completeSetup()
   solid_solver_.completeSetup();
 }
 
-void ThermalStructuralSolver::setTimestepper(serac::TimestepMethod timestepper)
+void ThermalSolid::setTimestepper(serac::TimestepMethod timestepper)
 {
   timestepper_ = timestepper;
   therm_solver_.setTimestepper(timestepper);
@@ -44,7 +44,7 @@ void ThermalStructuralSolver::setTimestepper(serac::TimestepMethod timestepper)
 }
 
 // Advance the timestep
-void ThermalStructuralSolver::advanceTimestep(double& dt)
+void ThermalSolid::advanceTimestep(double& dt)
 {
   if (coupling_ == serac::CouplingScheme::OperatorSplit) {
     double initial_dt = dt;

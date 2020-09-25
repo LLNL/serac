@@ -57,7 +57,7 @@ TEST(dynamic_solver, dyn_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // initialize the dynamic solver object
-  ThermalStructuralSolver ts_solver(1, pmesh);
+  ThermalSolid ts_solver(1, pmesh);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
