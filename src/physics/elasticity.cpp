@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/elasticity_solver.hpp"
+#include "physics/elasticity.hpp"
 
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"

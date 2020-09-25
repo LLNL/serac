@@ -12,7 +12,7 @@
 
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/thermal_solver.hpp"
+#include "physics/thermal_conduction.hpp"
 #include "serac_config.hpp"
 
 namespace serac {

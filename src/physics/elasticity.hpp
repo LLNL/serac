@@ -14,7 +14,7 @@
 #define LINEARELASTIC_SOLVER
 
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
+#include "physics/base_physics.hpp"
 
 namespace serac {
 

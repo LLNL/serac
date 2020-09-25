@@ -14,7 +14,7 @@
 #define CONDUCTION_SOLVER
 
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
+#include "physics/base_physics.hpp"
 #include "physics/operators/thermal_operators.hpp"
 
 namespace serac {

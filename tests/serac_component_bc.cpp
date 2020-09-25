@@ -11,7 +11,7 @@
 #include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid_solver.hpp"
+#include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
 
 namespace serac {

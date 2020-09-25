@@ -14,9 +14,9 @@
 #define THERMSTRUCT_SOLVER
 
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
-#include "physics/nonlinear_solid_solver.hpp"
-#include "physics/thermal_solver.hpp"
+#include "physics/base_physics.hpp"
+#include "physics/nonlinear_solid.hpp"
+#include "physics/thermal_conduction.hpp"
 
 namespace serac {
 

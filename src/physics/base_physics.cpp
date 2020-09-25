@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/base_solver.hpp"
+#include "physics/base_physics.hpp"
 
 #include <algorithm>
 #include <fstream>
