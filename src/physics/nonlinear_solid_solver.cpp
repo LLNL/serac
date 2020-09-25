@@ -44,22 +44,21 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   velocity_->trueVec() = 0.0;
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
-                                              std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>& disp_bdr, mfem::VectorCoefficient& disp_bdr_coef)
 {
-  bcs_.addEssential(disp_bdr, *disp_bdr_coef, *displacement_, -1);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, -1);
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
-                                              std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
+void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>& disp_bdr, mfem::Coefficient& disp_bdr_coef,
+                                              int component)
 {
-  bcs_.addEssential(disp_bdr, *disp_bdr_coef, *displacement_, component);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
-void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
-                                          std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
+void NonlinearSolidSolver::setTractionBCs(const std::set<int>& trac_bdr, mfem::VectorCoefficient& trac_bdr_coef,
+                                          int component)
 {
-  bcs_.addNatural(trac_bdr, *trac_bdr_coef, component);
+  bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
 void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, const double K)

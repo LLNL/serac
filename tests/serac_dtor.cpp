@@ -33,7 +33,7 @@ TEST(serac_dtor, test1)
   therm_solver->setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x.Norml2(); });
+  mfem::FunctionCoefficient u_0([](const mfem::Vector& x) { return x.Norml2(); });
 
   std::set<int> temp_bdr = {1};
   // Set the temperature BC in the thermal solver

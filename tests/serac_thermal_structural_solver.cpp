@@ -30,14 +30,14 @@ TEST(dynamic_solver, dyn_solve)
   // define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector& x, mfem::Vector& y) {
+  StdFunctionVectorCoefficient deform(dim, [](mfem::Vector& x, mfem::Vector& y) {
     y    = x;
     y(1) = y(1) + x(0) * 0.01;
   });
 
-  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector&, mfem::Vector& v) { v = 0.0; });
+  StdFunctionVectorCoefficient velo(dim, [](mfem::Vector&, mfem::Vector& v) { v = 0.0; });
 
-  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) {
+  StdFunctionCoefficient temp([](mfem::Vector& x) {
     double temp = 2.0;
     if (x(0) < 1.0) {
       temp = 5.0;
@@ -52,9 +52,9 @@ TEST(dynamic_solver, dyn_solve)
 
   // define the traction vector
   mfem::Vector traction(dim);
-  traction           = 0.0;
-  traction(1)        = 1.0e-3;
-  auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
+  traction    = 0.0;
+  traction(1) = 1.0e-3;
+  mfem::VectorConstantCoefficient traction_coef(traction);
 
   // initialize the dynamic solver object
   ThermalStructuralSolver ts_solver(1, pmesh);
@@ -62,9 +62,9 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
   ts_solver.SetConductivity(std::move(kappa));
-  ts_solver.SetDisplacement(*deform);
-  ts_solver.SetVelocity(*velo);
-  ts_solver.SetTemperature(*temp);
+  ts_solver.SetDisplacement(deform);
+  ts_solver.SetVelocity(velo);
+  ts_solver.SetTemperature(temp);
   ts_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
   ts_solver.SetCouplingScheme(serac::CouplingScheme::OperatorSplit);
 

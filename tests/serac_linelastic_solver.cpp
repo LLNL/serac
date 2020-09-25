@@ -32,16 +32,16 @@ TEST(elastic_solver, static_solve)
   mfem::Vector disp(pmesh->Dimension());
   disp = 0.0;
 
-  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
+  mfem::VectorConstantCoefficient disp_coef(disp);
   elas_solver.setDisplacementBCs(disp_bdr, disp_coef);
 
   std::set<int> trac_bdr = {2};
 
   // define the traction vector
   mfem::Vector traction(pmesh->Dimension());
-  traction           = 0.0;
-  traction(1)        = 1.0e-4;
-  auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
+  traction    = 0.0;
+  traction(1) = 1.0e-4;
+  mfem::VectorConstantCoefficient traction_coef(traction);
   elas_solver.setTractionBCs(trac_bdr, traction_coef);
 
   // set the material properties

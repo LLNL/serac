@@ -46,7 +46,7 @@ public:
    * @param[in] disp_bdr_coef Coefficient definining the displacement boundary
    * @param[in] component Component to set (-1 indicates all components)
    */
-  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
+  void setDisplacementBCs(const std::set<int>& disp_bdr, mfem::VectorCoefficient& disp_bdr_coef,
                           const int component = -1);
 
   /**
@@ -56,8 +56,7 @@ public:
    * @param[in] trac_bdr_coef The traction condition coefficient
    * @param[in] component Component to set (-1 indicates all components)
    */
-  void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      const int component = -1);
+  void setTractionBCs(const std::set<int>& trac_bdr, mfem::VectorCoefficient& trac_bdr_coef, const int component = -1);
 
   /**
    * @brief Driver for advancing the timestep

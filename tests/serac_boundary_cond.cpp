@@ -26,12 +26,12 @@ TEST(boundary_cond, simple_repeated_dofs)
     par_mesh.GetBdrElement(i)->SetAttribute(ATTR);
   }
 
-  BoundaryConditionManager bcs(par_mesh);
-  auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
-  bcs.addEssential({ATTR}, *coef, state, 1);
+  BoundaryConditionManager  bcs(par_mesh);
+  mfem::ConstantCoefficient coef(1);
+  bcs.addEssential({ATTR}, coef, state, 1);
   const auto before_dofs = bcs.allEssentialDofs();
 
-  bcs.addEssential({ATTR}, *coef, state, 1);
+  bcs.addEssential({ATTR}, coef, state, 1);
   const auto after_dofs = bcs.allEssentialDofs();
 
   // Make sure that attempting to add a boundary condition
@@ -59,11 +59,11 @@ TEST(boundary_cond, filter_generics)
   mfem::Mesh    mesh(N, N, mfem::Element::TRIANGLE);
   mfem::ParMesh par_mesh(MPI_COMM_WORLD, mesh);
 
-  BoundaryConditionManager bcs(par_mesh);
-  auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
+  BoundaryConditionManager  bcs(par_mesh);
+  mfem::ConstantCoefficient coef(1);
   for (int i = 0; i < N; i++) {
-    bcs.addGeneric({}, *coef, TestTag::Tag1, 1);
-    bcs.addGeneric({}, *coef, TestTag::Tag2, 1);
+    bcs.addGeneric({}, coef, TestTag::Tag1, 1);
+    bcs.addGeneric({}, coef, TestTag::Tag2, 1);
   }
 
   int bcs_with_tag1 = 0;

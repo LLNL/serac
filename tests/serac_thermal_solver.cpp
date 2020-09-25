@@ -42,7 +42,7 @@ TEST(thermal_solver, static_solve)
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(One);
+  mfem::FunctionCoefficient u_0(One);
 
   std::set<int> temp_bdr = {1};
 
@@ -94,8 +94,8 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
-  auto u_1 = std::make_shared<mfem::ConstantCoefficient>(0.0);
+  mfem::FunctionCoefficient u_0(BoundaryTemperature);
+  mfem::ConstantCoefficient u_1(0.0);
 
   std::set<int> marked_1 = {1};
   std::set<int> marked_2 = {2};
@@ -155,8 +155,8 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Initialize the temperature boundary condition
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
-  auto u_1 = std::make_shared<mfem::FunctionCoefficient>(OtherBoundaryTemperature);
+  mfem::FunctionCoefficient u_0(BoundaryTemperature);
+  mfem::FunctionCoefficient u_1(OtherBoundaryTemperature);
 
   std::set<int> temp_bdr = {1};
 
@@ -209,8 +209,8 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.setTimestepper(serac::TimestepMethod::ForwardEuler);
 
   // Initialize the state grid function
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
-  therm_solver.setTemperature(*u_0);
+  mfem::FunctionCoefficient u_0(InitialTemperature);
+  therm_solver.setTemperature(u_0);
 
   std::set<int> temp_bdr = {1};
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
@@ -279,8 +279,8 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.setTimestepper(serac::TimestepMethod::BackwardEuler);
 
   // Initialize the state grid function
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
-  therm_solver.setTemperature(*u_0);
+  mfem::FunctionCoefficient u_0(InitialTemperature);
+  therm_solver.setTemperature(u_0);
 
   std::set<int> temp_bdr = {1};
   therm_solver.setTemperatureBCs(temp_bdr, u_0);

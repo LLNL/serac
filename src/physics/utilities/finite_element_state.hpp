@@ -27,7 +27,8 @@ namespace serac {
 /**
  * @brief A sum type for encapsulating either a scalar or vector coeffient
  */
-using GeneralCoefficient = std::variant<std::reference_wrapper<mfem::Coefficient>, std::reference_wrapper<mfem::VectorCoefficient>>;
+using GeneralCoefficient =
+    std::variant<std::reference_wrapper<mfem::Coefficient>, std::reference_wrapper<mfem::VectorCoefficient>>;
 
 /**
  * @brief Structure for optionally configuring a FiniteElementState

@@ -42,7 +42,7 @@ public:
    * @param[in] disp_bdr The set of boundary attributes to set the displacement on
    * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
    */
-  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef);
+  void setDisplacementBCs(const std::set<int>& disp_bdr, mfem::VectorCoefficient& disp_bdr_coef);
 
   /**
    * @brief Set the displacement essential boundary conditions on a single component
@@ -51,8 +51,7 @@ public:
    * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
    * @param[in] component The component to set the displacment on
    */
-  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
-                          int component);
+  void setDisplacementBCs(const std::set<int>& disp_bdr, mfem::Coefficient& disp_bdr_coef, int component);
 
   /**
    * @brief Set the traction boundary conditions
@@ -61,8 +60,7 @@ public:
    * @param[in] trac_bdr_coef The vector valued traction coefficient
    * @param[in] component The component to apply the traction on
    */
-  void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      int component = -1);
+  void setTractionBCs(const std::set<int>& trac_bdr, mfem::VectorCoefficient& trac_bdr_coef, int component = -1);
 
   /**
    * @brief Set the viscosity coefficient

@@ -45,7 +45,7 @@ public:
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
    * @param[in] temp_bdr_coef The prescribed boundary temperature
    */
-  void setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);
+  void setTemperatureBCs(const std::set<int>& temp_bdr, mfem::Coefficient& temp_bdr_coef);
 
   /**
    * @brief Set flux boundary conditions (weakly enforced)
@@ -53,7 +53,7 @@ public:
    * @param[in] flux_bdr The boundary attributes on which to enforce a heat flux (weakly enforced)
    * @param[in] flux_bdr_coef The prescribed boundary heat flux
    */
-  void setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef);
+  void setFluxBCs(const std::set<int>& flux_bdr, mfem::Coefficient& flux_bdr_coef);
 
   /**
    * @brief Advance the timestep

@@ -139,8 +139,8 @@ int main(int argc, char* argv[])
 
   // define the displacement vector
   mfem::Vector disp(dim);
-  disp           = 0.0;
-  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
+  disp = 0.0;
+  mfem::VectorConstantCoefficient disp_coef(disp);
 
   std::set<int> trac_bdr = {2};
 
@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
     traction(2) = tz;
   }
 
-  auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
+  serac::VectorScaledConstantCoefficient traction_coef(traction);
 
   // Set the boundary condition information
   solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
       std::cout << "step " << ti << ", t = " << t << std::endl;
     }
 
-    traction_coef->SetScale(t);
+    traction_coef.SetScale(t);
 
     // Solve the Newton system
     solid_solver.advanceTimestep(dt_real);

@@ -57,7 +57,8 @@ void BoundaryCondition::project(FiniteElementState& state) const
       // If it is only a single component, project the scalar
       SLIC_ASSERT_MSG(std::holds_alternative<std::reference_wrapper<mfem::Coefficient>>(coef_),
                       "Essential boundary condition contained a single component but had a non-scalar coefficient.");
-      state.gridFunc().ProjectCoefficient(std::get<std::reference_wrapper<mfem::Coefficient>>(coef_), dof_list, component_);
+      state.gridFunc().ProjectCoefficient(std::get<std::reference_wrapper<mfem::Coefficient>>(coef_), dof_list,
+                                          component_);
     }
   }
 }

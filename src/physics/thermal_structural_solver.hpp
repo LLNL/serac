@@ -39,7 +39,7 @@ public:
    * @param[in] temp_bdr The attributes denotiving the fixed temperature boundary
    * @param[in] temp_bdr_coef The coefficient that contains the fixed temperature boundary values
    */
-  void SetTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+  void SetTemperatureBCs(const std::set<int>& temp_bdr, mfem::Coefficient& temp_bdr_coef)
   {
     therm_solver_.setTemperatureBCs(temp_bdr, temp_bdr_coef);
   };
@@ -50,7 +50,7 @@ public:
    * @param[in] flux_bdr The boundary attributes on which to enforce a heat flux (weakly enforced)
    * @param[in] flux_bdr_coef The prescribed boundary heat flux
    */
-  void SetFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
+  void SetFluxBCs(const std::set<int>& flux_bdr, mfem::Coefficient& flux_bdr_coef)
   {
     therm_solver_.setFluxBCs(flux_bdr, flux_bdr_coef);
   };
@@ -92,7 +92,7 @@ public:
    * @param[in] disp_bdr The set of boundary attributes to set the displacement on
    * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
    */
-  void SetDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+  void SetDisplacementBCs(const std::set<int>& disp_bdr, mfem::VectorCoefficient& disp_bdr_coef)
   {
     solid_solver_.setDisplacementBCs(disp_bdr, disp_bdr_coef);
   };
@@ -104,8 +104,7 @@ public:
    * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
    * @param[in] component The component to set the displacment on
    */
-  void SetDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
-                          const int component)
+  void SetDisplacementBCs(const std::set<int>& disp_bdr, mfem::Coefficient& disp_bdr_coef, const int component)
   {
     solid_solver_.setDisplacementBCs(disp_bdr, disp_bdr_coef, component);
   };
@@ -117,8 +116,7 @@ public:
    * @param[in] trac_bdr_coef The vector valued traction coefficient
    * @param[in] component The component to apply the traction on
    */
-  void SetTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      const int component = -1)
+  void SetTractionBCs(const std::set<int>& trac_bdr, mfem::VectorCoefficient& trac_bdr_coef, const int component = -1)
   {
     solid_solver_.setTractionBCs(trac_bdr, trac_bdr_coef, component);
   };
