@@ -50,7 +50,7 @@ TEST(component_bc, qs_solve)
 
   mfem::Array<int> ess_corner_bc_list = makeTrueEssList(solid_solver.displacement()->space(), zero_bc);
 
-  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, 0);
+  solid_solver.setTrueDofs(ess_corner_bc_list, *disp_coef, 0);
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);

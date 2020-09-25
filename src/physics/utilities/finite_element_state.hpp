@@ -13,6 +13,7 @@
 #ifndef FINITE_ELEMENT_STATE
 #define FINITE_ELEMENT_STATE
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -26,7 +27,7 @@ namespace serac {
 /**
  * @brief A sum type for encapsulating either a scalar or vector coeffient
  */
-using GeneralCoefficient = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
+using GeneralCoefficient = std::variant<std::reference_wrapper<mfem::Coefficient>, std::reference_wrapper<mfem::VectorCoefficient>>;
 
 /**
  * @brief Structure for optionally configuring a FiniteElementState
@@ -117,7 +118,7 @@ public:
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(*concrete_coef); }, coef);
+    std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(concrete_coef); }, coef);
   }
 
   /**

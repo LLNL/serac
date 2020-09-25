@@ -28,10 +28,10 @@ TEST(boundary_cond, simple_repeated_dofs)
 
   BoundaryConditionManager bcs(par_mesh);
   auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
-  bcs.addEssential({ATTR}, coef, state, 1);
+  bcs.addEssential({ATTR}, *coef, state, 1);
   const auto before_dofs = bcs.allEssentialDofs();
 
-  bcs.addEssential({ATTR}, coef, state, 1);
+  bcs.addEssential({ATTR}, *coef, state, 1);
   const auto after_dofs = bcs.allEssentialDofs();
 
   // Make sure that attempting to add a boundary condition
@@ -62,8 +62,8 @@ TEST(boundary_cond, filter_generics)
   BoundaryConditionManager bcs(par_mesh);
   auto                     coef = std::make_shared<mfem::ConstantCoefficient>(1);
   for (int i = 0; i < N; i++) {
-    bcs.addGeneric({}, coef, TestTag::Tag1, 1);
-    bcs.addGeneric({}, coef, TestTag::Tag2, 1);
+    bcs.addGeneric({}, *coef, TestTag::Tag1, 1);
+    bcs.addGeneric({}, *coef, TestTag::Tag2, 1);
   }
 
   int bcs_with_tag1 = 0;
