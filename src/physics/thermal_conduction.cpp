@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/thermal_solver.hpp"
+#include "physics/thermal_conduction.hpp"
 
 #include "infrastructure/logger.hpp"
 
@@ -12,8 +12,8 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BaseSolver(mesh, NUM_FIELDS, order),
+ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh)
+    : BasePhysics(mesh, NUM_FIELDS, order),
       temperature_(std::make_shared<FiniteElementState>(
           *mesh,
           FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}))
@@ -21,7 +21,7 @@ ThermalSolver::ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
   state_[0] = temperature_;
 }
 
-void ThermalSolver::setTemperature(mfem::Coefficient& temp)
+void ThermalConduction::setTemperature(mfem::Coefficient& temp)
 {
   // Project the coefficient onto the grid function
   temp.SetTime(time_);
@@ -29,37 +29,38 @@ void ThermalSolver::setTemperature(mfem::Coefficient& temp)
   gf_initialized_[0] = true;
 }
 
-void ThermalSolver::setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+void ThermalConduction::setTemperatureBCs(const std::set<int>&               temp_bdr,
+                                          std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
   bcs_.addEssential(temp_bdr, temp_bdr_coef, *temperature_);
 }
 
-void ThermalSolver::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
+void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
 }
 
-void ThermalSolver::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
+void ThermalConduction::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
 {
   // Set the conduction coefficient
   kappa_ = std::move(kappa);
 }
 
-void ThermalSolver::setSource(std::unique_ptr<mfem::Coefficient>&& source)
+void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 {
   // Set the body source integral coefficient
   source_ = std::move(source);
 }
 
-void ThermalSolver::setLinearSolverParameters(const serac::LinearSolverParameters& params)
+void ThermalConduction::setLinearSolverParameters(const serac::LinearSolverParameters& params)
 {
   // Save the solver params object
   // TODO: separate the M and K solver params
   lin_params_ = params;
 }
 
-void ThermalSolver::completeSetup()
+void ThermalConduction::completeSetup()
 {
   SLIC_ASSERT_MSG(kappa_ != nullptr, "Conductivity not set in ThermalSolver!");
 
@@ -112,7 +113,7 @@ void ThermalSolver::completeSetup()
   }
 }
 
-void ThermalSolver::quasiStaticSolve()
+void ThermalConduction::quasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
@@ -136,7 +137,7 @@ void ThermalSolver::quasiStaticSolve()
   solver_.Mult(*bc_rhs_, temperature_->trueVec());
 }
 
-void ThermalSolver::advanceTimestep(double& dt)
+void ThermalConduction::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   temperature_->initializeTrueVec();
