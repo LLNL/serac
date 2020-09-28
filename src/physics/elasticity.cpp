@@ -22,13 +22,13 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh)
 }
 
 void Elasticity::setDisplacementBCs(const std::set<int>& disp_bdr, mfem::VectorCoefficient& disp_bdr_coef,
-                                          const int component)
+                                    const int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void Elasticity::setTractionBCs(const std::set<int>& trac_bdr, mfem::VectorCoefficient& trac_bdr_coef,
-                                      const int component)
+                                const int component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }

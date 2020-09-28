@@ -49,14 +49,13 @@ void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, mfem::Vec
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, -1);
 }
 
-void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, mfem::Coefficient& disp_bdr_coef,
-                                              int component)
+void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, mfem::Coefficient& disp_bdr_coef, int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
 void NonlinearSolid::setTractionBCs(const std::set<int>& trac_bdr, mfem::VectorCoefficient& trac_bdr_coef,
-                                          int component)
+                                    int component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
