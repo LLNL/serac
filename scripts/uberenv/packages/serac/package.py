@@ -93,6 +93,8 @@ class Serac(CMakePackage, CudaPackage):
     # netcdf variant commented out until a bug in the spack concretizer is fixed
     #variant('netcdf', default=True,
     #        description='Enable Cubit/Genesis reader')
+    variant('sundials', default=False,
+            description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
 
     # Basic dependencies
     depends_on("mpi")
@@ -111,6 +113,8 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
     #depends_on("mfem+netcdf", when="+netcdf")
+    depends_on("mfem+sundials", when="+sundials")
+    depends_on("sundials~shared", when="+sundials")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",

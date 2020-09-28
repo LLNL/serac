@@ -54,6 +54,18 @@ enum class LinearSolver
 };
 
 /**
+ * @brief Nonlinear solver type/method
+ */
+enum class NonlinearSolver
+{
+  BasicNewton,
+  KINBasic,
+  KINLineSearch,
+  KINFixedPoint,
+  KINPicard
+};
+
+/**
  * @brief Preconditioning method
  */
 enum class Preconditioner
@@ -130,6 +142,11 @@ struct NonlinearSolverParameters {
    * @brief Debug print level
    */
   int print_level;
+
+  /**
+   * @brief Nonlinear solver selection
+   */
+  NonlinearSolver nonlin_solver = NonlinearSolver::BasicNewton;
 };
 
 }  // namespace serac
