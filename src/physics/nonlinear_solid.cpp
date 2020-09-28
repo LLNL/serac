@@ -14,8 +14,8 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver)
-    : BasePhysics(mesh, NUM_FIELDS, order, solver),
+NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolidParameters& params)
+    : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "velocity"})),
       displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
@@ -42,6 +42,22 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, E
 
   block_->GetBlockView(0, velocity_->trueVec());
   velocity_->trueVec() = 0.0;
+
+  const auto& lin_params = std::get<0>(params);
+  // If the user wants the AMG preconditioner, set the pfes to be the displacement
+  if (std::holds_alternative<HypreBoomerAMGPrec>(lin_params.prec)) {
+    std::get<HypreBoomerAMGPrec>(lin_params.prec).pfes = &displacement_->space();
+  }
+
+  nonlin_solver_ = EquationSolver(mesh->GetComm(), lin_params, std::get<1>(params));
+  // Check for dynamic mode
+  const auto& dyn_params = std::get<2>(params);
+  if (dyn_params) {
+    setTimestepper(std::get<0>(*dyn_params));
+    timedep_oper_params_ = std::get<1>(*dyn_params);
+  } else {
+    setTimestepper(TimestepMethod::QuasiStatic);
+  }
 }
 
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
@@ -133,30 +149,15 @@ void NonlinearSolid::completeSetup()
     S_form->Finalize(0);
   }
 
-  // Set up the jacobian solver based on the linear solver options
-  if (solver_.linearSolverParams().prec == serac::Preconditioner::BoomerAMG) {
-    SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byNODES,
-                    "Attempting to use BoomerAMG with nodal ordering.");
-    auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
-    prec_amg->SetPrintLevel(solver_.linearSolverParams().print_level);
-    prec_amg->SetElasticityOptions(&displacement_->space());
-    solver_.SetPreconditioner(std::move(prec_amg));
-  } else {
-    auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
-    J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
-    J_hypreSmoother->SetPositiveDiagonal(true);
-    solver_.SetPreconditioner(std::move(J_hypreSmoother));
-  }
-
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    solver_.nonlinearSolver().iterative_mode = true;
+    nonlin_solver_.nonlinearSolver().iterative_mode = true;
     nonlinear_oper_ = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form), bcs_);
-    solver_.SetOperator(*nonlinear_oper_);
+    nonlin_solver_.SetOperator(*nonlinear_oper_);
   } else {
-    solver_.nonlinearSolver().iterative_mode = false;
-    timedep_oper_                            = std::make_unique<NonlinearSolidDynamicOperator>(
-        std::move(H_form), std::move(S_form), std::move(M_form), bcs_, solver_, solver_.linearSolverParams());
+    nonlin_solver_.nonlinearSolver().iterative_mode = false;
+    timedep_oper_                                   = std::make_unique<NonlinearSolidDynamicOperator>(
+        std::move(H_form), std::move(S_form), std::move(M_form), bcs_, nonlin_solver_, *timedep_oper_params_);
     ode_solver_->Init(*timedep_oper_);
   }
 }
@@ -165,7 +166,7 @@ void NonlinearSolid::completeSetup()
 void NonlinearSolid::quasiStaticSolve()
 {
   mfem::Vector zero;
-  solver_.Mult(zero, displacement_->trueVec());
+  nonlin_solver_.Mult(zero, displacement_->trueVec());
 }
 
 // Advance the timestep

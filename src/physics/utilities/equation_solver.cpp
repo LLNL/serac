@@ -13,7 +13,6 @@ namespace serac {
 
 EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
                                const std::optional<NonlinearSolverParameters>& nonlin_params)
-    : lin_params_(lin_params)
 {
   if (lin_params.lin_solver == LinearSolver::SuperLU) {
     lin_solver_ = std::make_unique<mfem::SuperLUSolver>(comm);
@@ -23,6 +22,29 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
     }
   } else {
     lin_solver_ = buildIterativeLinearSolver(comm, lin_params);
+
+    // Set the preconditioner
+    std::visit(
+        [this, &lin_params](const auto& prec) {
+          using Prec = std::decay_t<decltype(prec)>;
+          if constexpr (std::is_same_v<Prec, HypreBoomerAMGPrec>) {
+            SLIC_ERROR_IF(prec.pfes == nullptr, "FESpace is required to use the HypreBoomerAMG preconditioner.");
+            SLIC_WARNING_IF(prec.pfes->GetOrdering() == mfem::Ordering::byNODES,
+                            "Attempting to use BoomerAMG with nodal ordering.");
+            auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
+            prec_amg->SetPrintLevel(lin_params.print_level);
+            prec_amg->SetElasticityOptions(prec.pfes);
+            SetPreconditioner(std::move(prec_amg));
+          }
+          //
+          else if constexpr (std::is_same_v<Prec, HypreSmootherPrec>) {
+            auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
+            J_hypreSmoother->SetType(prec.type);
+            J_hypreSmoother->SetPositiveDiagonal(true);
+            SetPreconditioner(std::move(J_hypreSmoother));
+          }
+        },
+        lin_params.prec);
   }
 
   if (nonlin_params) {

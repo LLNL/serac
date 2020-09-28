@@ -36,9 +36,9 @@ public:
    *
    * @param[in] order The polynomial order of the solver
    * @param[in] mesh The parallel MFEM mesh
-   * @param[in] solver The system solver instance
    */
-  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver);
+  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh,
+             const LinearSolverParameters& params = default_quasistatic);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions
@@ -92,6 +92,17 @@ public:
    */
   virtual ~Elasticity();
 
+  /**
+   * @brief The default parameters for an iterative linear solver
+   */
+  constexpr static LinearSolverParameters default_quasistatic = {
+      .rel_tol     = 1.0e-4,
+      .abs_tol     = 1.0e-10,
+      .print_level = 0,
+      .max_iter    = 500,
+      .lin_solver  = LinearSolver::MINRES,
+      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+
 protected:
   /**
    * @brief Displacement field
@@ -124,14 +135,9 @@ protected:
   std::unique_ptr<mfem::HypreParVector> bc_rhs_;
 
   /**
-   * @brief Linear solver for the stiffness matrix
+   * @brief System solver instance for quasistatic K solver
    */
-  std::unique_ptr<mfem::Solver> K_solver_;
-
-  /**
-   * @brief Preconditioner for the stiffness matrix
-   */
-  std::unique_ptr<mfem::Solver> K_prec_;
+  EquationSolver K_inv_;
 
   /**
    * @brief Lame mu elasticity parameter

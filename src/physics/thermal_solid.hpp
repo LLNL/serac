@@ -33,8 +33,9 @@ public:
    * @param[in] therm_system_solver The system solver instance for the conduction physics
    * @param[in] therm_system_solver The system solver instance for the solid physics
    */
-  ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& therm_system_solver,
-               EquationSolver& solid_system_solver);
+  ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
+               const ThermalConduction::ThermalConductionParameters& therm_params,
+               const NonlinearSolid::NonlinearSolidParameters&       solid_params);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)

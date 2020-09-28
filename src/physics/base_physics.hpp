@@ -33,9 +33,8 @@ public:
    * @brief Empty constructor
    *
    * @param[in] mesh The primary mesh
-   * @param[in] solver The system solver instance
    */
-  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver);
+  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
@@ -45,7 +44,7 @@ public:
    * @param[in] p Order of the solver
    * @param[in] solver The system solver instance
    */
-  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p, EquationSolver& solver);
+  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
   /**
    * @brief Set a list of true degrees of freedom from a coefficient
@@ -215,11 +214,6 @@ protected:
    * @brief State variable initialization indicator
    */
   std::vector<bool> gf_initialized_;
-
-  /**
-   * @brief System solver instance
-   */
-  EquationSolver& solver_;
 
   /**
    * @brief Boundary condition manager instance

@@ -32,13 +32,25 @@ namespace serac {
 class ThermalConduction : public BasePhysics {
 public:
   /**
+   * @brief A timestep method and configs for the M and T solvers (in that order)
+   */
+  using DynamicParameters = std::tuple<TimestepMethod, LinearSolverParameters, LinearSolverParameters>;
+  /**
+   * @brief A configuration variant for the various solves
+   * Either quasistatic with a single config for the K solver, or
+   * time-dependent with timestep and M/T params
+   */
+  using ThermalConductionParameters = std::variant<LinearSolverParameters, DynamicParameters>;
+
+  /**
    * @brief Construct a new Thermal Solver object
    *
    * @param[in] order The order of the thermal field discretization
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    * @param[in] solver The system solver instance
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh,
+                    const ThermalConduction::ThermalConductionParameters& params = default_quasistatic);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -104,6 +116,23 @@ public:
    */
   virtual ~ThermalConduction() = default;
 
+  /**
+   * @brief The default parameters for an iterative linear solver
+   */
+  constexpr static LinearSolverParameters default_linear_params = {
+      .rel_tol     = 1.0e-6,
+      .abs_tol     = 1.0e-12,
+      .print_level = 0,
+      .max_iter    = 100,
+      .lin_solver  = LinearSolver::CG,
+      .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+
+  constexpr static ThermalConductionParameters default_quasistatic = default_linear_params;
+  constexpr static ThermalConductionParameters default_explicit_solve =
+      std::make_tuple(TimestepMethod::ForwardEuler, default_linear_params, default_linear_params);
+  constexpr static ThermalConductionParameters default_implicit_solve =
+      std::make_tuple(TimestepMethod::BackwardEuler, default_linear_params, default_linear_params);
+
 protected:
   /**
    * @brief The temperature finite element state
@@ -146,16 +175,6 @@ protected:
   std::unique_ptr<mfem::HypreParVector> rhs_;
 
   /**
-   * @brief Linear solver for the K operator
-   */
-  std::unique_ptr<mfem::CGSolver> K_solver_;
-
-  /**
-   * @brief Preconditioner for the K operator
-   */
-  std::unique_ptr<mfem::HypreSmoother> K_prec_;
-
-  /**
    * @brief Conduction coefficient
    */
   std::unique_ptr<mfem::Coefficient> kappa_;
@@ -166,6 +185,11 @@ protected:
   std::unique_ptr<mfem::Coefficient> source_;
 
   /**
+   * @brief Configuration for dynamic equation solvers
+   */
+  std::optional<std::pair<LinearSolverParameters, LinearSolverParameters>> dyn_oper_params_;
+
+  /**
    * @brief Time integration operator
    */
   std::unique_ptr<DynamicConductionOperator> dyn_oper_;
@@ -174,6 +198,11 @@ protected:
    * @brief Solve the Quasi-static operator
    */
   void quasiStaticSolve();
+
+  /**
+   * @brief System solver instance for quasistatic K solver
+   */
+  std::optional<EquationSolver> K_inv_;
 };
 
 }  // namespace serac

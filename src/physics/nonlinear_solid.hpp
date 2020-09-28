@@ -29,13 +29,25 @@ namespace serac {
 class NonlinearSolid : public BasePhysics {
 public:
   /**
+   * @brief A timestep method and config for the M solver (in that order)
+   */
+  using DynamicParameters = std::tuple<TimestepMethod, LinearSolverParameters>;
+  /**
+   * @brief A configuration variant for the various solves
+   * Either quasistatic, or time-dependent with timestep and M params
+   */
+  using NonlinearSolidParameters =
+      std::tuple<LinearSolverParameters, NonlinearSolverParameters, std::optional<DynamicParameters>>;
+
+  /**
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] order The order of the displacement field
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] solver The system solver instance
    */
-  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver);
+  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
+                 const NonlinearSolidParameters& params = default_quasistatic);
 
   /**
    * @brief Set displacement boundary conditions
@@ -125,6 +137,46 @@ public:
    */
   virtual ~NonlinearSolid();
 
+  /**
+   * @brief The default parameters for an iterative linear solver
+   */
+  constexpr static LinearSolverParameters default_qs_linear_params = {
+      .rel_tol     = 1.0e-6,
+      .abs_tol     = 1.0e-8,
+      .print_level = 0,
+      .max_iter    = 5000,
+      .lin_solver  = LinearSolver::MINRES,
+      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+
+  /**
+   * @brief The default parameters for the nonlinear Newton solver
+   */
+  constexpr static NonlinearSolverParameters default_qs_nonlinear_params = {
+      .rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
+
+  /**
+   * @brief The default parameters for an iterative linear solver
+   */
+  constexpr static LinearSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e-4,
+                                                                       .abs_tol     = 1.0e-8,
+                                                                       .print_level = 0,
+                                                                       .max_iter    = 500,
+                                                                       .lin_solver  = LinearSolver::GMRES,
+                                                                       .prec        = HypreBoomerAMGPrec{}};
+
+  /**
+   * @brief The default parameters for the nonlinear Newton solver
+   */
+  constexpr static NonlinearSolverParameters default_dyn_nonlinear_params = {
+      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+
+  constexpr static NonlinearSolidParameters default_quasistatic =
+      std::make_tuple(default_qs_linear_params, default_qs_nonlinear_params, std::nullopt);
+
+  constexpr static NonlinearSolidParameters default_dynamic =
+      std::make_tuple(default_dyn_linear_params, default_dyn_nonlinear_params,
+                      std::make_tuple(TimestepMethod::SDIRK33, default_dyn_linear_params));
+
 protected:
   /**
    * @brief Velocity field
@@ -142,24 +194,14 @@ protected:
   std::unique_ptr<mfem::Operator> nonlinear_oper_;
 
   /**
+   * @brief Configuration for dynamic equation solver
+   */
+  std::optional<LinearSolverParameters> timedep_oper_params_;
+
+  /**
    * @brief The time dependent operator for use with the MFEM ODE solvers
    */
   std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
-
-  /**
-   * @brief The Newton solver for the nonlinear iterations
-   */
-  mfem::NewtonSolver newton_solver_;
-
-  /**
-   * @brief The linear solver for the Jacobian
-   */
-  std::unique_ptr<mfem::Solver> J_solver_;
-
-  /**
-   * @brief The preconditioner for the Jacobian solver
-   */
-  std::unique_ptr<mfem::Solver> J_prec_;
 
   /**
    * @brief The viscosity coefficient
@@ -185,6 +227,11 @@ protected:
    * @brief Solve the Quasi-static operator
    */
   void quasiStaticSolve();
+
+  /**
+   * @brief Nonlinear system solver instance
+   */
+  EquationSolver nonlin_solver_;
 };
 
 }  // namespace serac

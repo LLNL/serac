@@ -12,13 +12,28 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver)
-    : BasePhysics(mesh, NUM_FIELDS, order, solver),
+ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh,
+                                     const ThermalConductionParameters& params)
+    : BasePhysics(mesh, NUM_FIELDS, order),
       temperature_(std::make_shared<FiniteElementState>(
           *mesh,
           FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}))
 {
   state_[0] = temperature_;
+  std::visit(
+      [this, &mesh](const auto& config) {
+        // Just the K solver - quasistatic
+        if constexpr (std::is_same_v<std::decay_t<decltype(config)>, LinearSolverParameters>) {
+          setTimestepper(TimestepMethod::QuasiStatic);
+          K_inv_ = EquationSolver(mesh->GetComm(), config);
+        }
+        // Otherwise - dynamic with M and T configs
+        else {
+          setTimestepper(std::get<0>(config));
+          dyn_oper_params_ = std::make_pair(std::get<1>(config), std::get<2>(config));
+        }
+      },
+      params);
 }
 
 void ThermalConduction::setTemperature(mfem::Coefficient& temp)
@@ -98,7 +113,8 @@ void ThermalConduction::completeSetup()
     M_mat_.reset(M_form_->ParallelAssemble());
 
     // Make the time integration operator and set the appropriate matricies
-    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), solver_.linearSolverParams(), bcs_);
+    // Just use the one set of params for now - FIXME
+    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), dyn_oper_params_->first, bcs_);
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 
@@ -116,16 +132,16 @@ void ThermalConduction::quasiStaticSolve()
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
-  auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
-  hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);
+  // auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
+  // hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);
 
-  solver_.SetPreconditioner(std::move(hypre_smoother));
+  // solver_.SetPreconditioner(std::move(hypre_smoother));
 
-  solver_.linearSolver().iterative_mode = false;
-  solver_.SetOperator(*K_mat_);
+  K_inv_->linearSolver().iterative_mode = false;
+  K_inv_->SetOperator(*K_mat_);
 
   // Perform the linear solve
-  solver_.Mult(*bc_rhs_, temperature_->trueVec());
+  K_inv_->Mult(*bc_rhs_, temperature_->trueVec());
 }
 
 void ThermalConduction::advanceTimestep(double& dt)

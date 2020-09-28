@@ -13,6 +13,10 @@
 #ifndef SOLVER_CONFIG
 #define SOLVER_CONFIG
 
+#include <variant>
+
+#include "mfem.hpp"
+
 namespace serac {
 /**
  * @brief Output file type associated with a solver
@@ -56,11 +60,21 @@ enum class LinearSolver
 /**
  * @brief Preconditioning method
  */
-enum class Preconditioner
-{
-  Jacobi,
-  BoomerAMG
+// enum class Preconditioner
+// {
+//   Jacobi,
+//   BoomerAMG
+// };
+
+struct HypreSmootherPrec {
+  mfem::HypreSmoother::Type type = mfem::HypreSmoother::Jacobi;
 };
+
+struct HypreBoomerAMGPrec {
+  mfem::ParFiniteElementSpace* pfes = nullptr;
+};
+
+using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec>;
 
 /**
  * @brief Abstract multiphysics coupling scheme
@@ -104,7 +118,7 @@ struct LinearSolverParameters {
   /**
    * @brief Preconditioner selection
    */
-  Preconditioner prec;
+  mutable Preconditioner prec;
 };
 
 /**
