@@ -8,19 +8,19 @@ add_subdirectory(utilities)
 add_subdirectory(operators)
 
 set(physics_sources
-    base_solver.cpp
-    nonlinear_solid_solver.cpp
-    thermal_solver.cpp
-    thermal_structural_solver.cpp
-    elasticity_solver.cpp
+    base_physics.cpp
+    nonlinear_solid.cpp
+    thermal_conduction.cpp
+    thermal_solid.cpp
+    elasticity.cpp
     )
 
 set(physics_headers
-    base_solver.hpp
-    nonlinear_solid_solver.hpp
-    thermal_solver.hpp
-    thermal_structural_solver.hpp
-    elasticity_solver.hpp
+    base_physics.hpp
+    nonlinear_solid.hpp
+    thermal_conduction.hpp
+    thermal_solid.hpp
+    elasticity.hpp
     )
 
 blt_add_library(
