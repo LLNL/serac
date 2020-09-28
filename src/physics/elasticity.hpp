@@ -36,8 +36,9 @@ public:
    *
    * @param[in] order The polynomial order of the solver
    * @param[in] mesh The parallel MFEM mesh
+   * @param[in] solver The system solver instance
    */
-  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh);
+  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions
@@ -85,13 +86,6 @@ public:
    * @brief Finish the setup of the solver and allocate and initialize the associated MFEM data structures
    */
   void completeSetup() override;
-
-  /**
-   * @brief Set the Linear Solver Parameters
-   *
-   * @param[in] params The linear solver parameters
-   */
-  void setLinearSolverParameters(const serac::LinearSolverParameters& params);
 
   /**
    * @brief The destructor
@@ -153,11 +147,6 @@ protected:
    * @brief Body force coefficient
    */
   mfem::VectorCoefficient* body_force_ = nullptr;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  serac::LinearSolverParameters lin_params_;
 
   /**
    * @brief Quasi-static solve driver

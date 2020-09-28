@@ -27,8 +27,25 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   int dim = pmesh->Dimension();
 
+  // Set the linear solver params
+  serac::LinearSolverParameters params;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-8;
+  params.print_level = 0;
+  params.max_iter    = 5000;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
+
+  serac::NonlinearSolverParameters nl_params;
+  nl_params.rel_tol     = 1.0e-3;
+  nl_params.abs_tol     = 1.0e-6;
+  nl_params.print_level = 1;
+  nl_params.max_iter    = 5000;
+
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params, nl_params);
+
   // Define the solver object
-  NonlinearSolid solid_solver(1, pmesh);
+  NonlinearSolid solid_solver(1, pmesh, eqn_solver);
 
   std::set<int> ess_bdr = {1};
 
@@ -52,23 +69,6 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
-
-  // Set the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-8;
-  params.print_level = 0;
-  params.max_iter    = 5000;
-  params.prec        = serac::Preconditioner::Jacobi;
-  params.lin_solver  = serac::LinearSolver::MINRES;
-
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-3;
-  nl_params.abs_tol     = 1.0e-6;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 5000;
-
-  solid_solver.setSolverParameters(params, nl_params);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -110,8 +110,25 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
 
   int dim = pmesh->Dimension();
 
+  // Set the linear solver params
+  serac::LinearSolverParameters params;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-8;
+  params.print_level = 0;
+  params.max_iter    = 5000;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
+
+  serac::NonlinearSolverParameters nl_params;
+  nl_params.rel_tol     = 1.0e-3;
+  nl_params.abs_tol     = 1.0e-6;
+  nl_params.print_level = 1;
+  nl_params.max_iter    = 5000;
+
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params, nl_params);
+
   // Define the solver object
-  NonlinearSolidSolver solid_solver(1, pmesh);
+  NonlinearSolidSolver solid_solver(1, pmesh, eqn_solver);
 
   std::set<int> ess_bdr = {1};
 
@@ -135,18 +152,6 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
-
-  // Set the linear solver params
-  serac::LinearSolverParameters params;
-  params.lin_solver = serac::LinearSolver::SuperLU;
-
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-3;
-  nl_params.abs_tol     = 1.0e-6;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 5000;
-
-  solid_solver.setSolverParameters(params, nl_params);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);

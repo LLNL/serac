@@ -36,8 +36,9 @@ public:
    *
    * @param[in] order The order of the thermal field discretization
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
+   * @param[in] solver The system solver instance
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -97,13 +98,6 @@ public:
    * = false, do not allocate the mass matrix or dynamic operator
    */
   void completeSetup() override;
-
-  /**
-   * @brief Set the linear solver parameters for both the M and K matrices
-   *
-   * @param[in] params The linear solver parameters
-   */
-  void setLinearSolverParameters(const serac::LinearSolverParameters& params);
 
   /**
    * @brief Destroy the Thermal Solver object
@@ -175,11 +169,6 @@ protected:
    * @brief Time integration operator
    */
   std::unique_ptr<DynamicConductionOperator> dyn_oper_;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  serac::LinearSolverParameters lin_params_;
 
   /**
    * @brief Solve the Quasi-static operator

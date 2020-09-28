@@ -30,8 +30,11 @@ public:
    *
    * @param[in] order The order of the temperature and displacement discretizations
    * @param[in] mesh The parallel mesh object on which to solve
+   * @param[in] therm_system_solver The system solver instance for the conduction physics
+   * @param[in] therm_system_solver The system solver instance for the solid physics
    */
-  ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& therm_system_solver,
+               EquationSolver& solid_system_solver);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -75,16 +78,6 @@ public:
    * @param[in] source The source function coefficient
    */
   void SetSource(std::unique_ptr<mfem::Coefficient>&& source) { therm_solver_.setSource(std::move(source)); };
-
-  /**
-   * @brief Set the linear solver parameters for both the M and K matrices
-   *
-   * @param[in] params The linear solver parameters
-   */
-  void SetThermalSolverParameters(const serac::LinearSolverParameters& params)
-  {
-    therm_solver_.setLinearSolverParameters(params);
-  };
 
   /**
    * @brief Set displacement boundary conditions
@@ -157,18 +150,6 @@ public:
    * @param[in] velo_state The velocity state
    */
   void SetVelocity(mfem::VectorCoefficient& velo_state) { solid_solver_.setVelocity(velo_state); };
-
-  /**
-   * @brief Set the linear and nonlinear parameters for the solid solver object
-   *
-   * @param[in] lin_params The linear solver parameters
-   * @param[in] nonlin_params The nonlinear solver parameters
-   */
-  void SetSolidSolverParameters(const serac::LinearSolverParameters&    lin_params,
-                                const serac::NonlinearSolverParameters& nonlin_params)
-  {
-    solid_solver_.setSolverParameters(lin_params, nonlin_params);
-  };
 
   /**
    * @brief Set the coupling scheme between the thermal and structural solvers

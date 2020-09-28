@@ -13,6 +13,7 @@ namespace serac {
 
 EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
                                const std::optional<NonlinearSolverParameters>& nonlin_params)
+    : lin_params_(lin_params)
 {
   if (lin_params.lin_solver == LinearSolver::SuperLU) {
     lin_solver_ = std::make_unique<mfem::SuperLUSolver>(comm);

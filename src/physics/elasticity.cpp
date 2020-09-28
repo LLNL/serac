@@ -13,8 +13,8 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BasePhysics(mesh, NUM_FIELDS, order),
+Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver)
+    : BasePhysics(mesh, NUM_FIELDS, order, solver),
       displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
   mesh->EnsureNodes();
@@ -40,8 +40,6 @@ void Elasticity::setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient&
 }
 
 void Elasticity::setBodyForce(mfem::VectorCoefficient& force) { body_force_ = &force; }
-
-void Elasticity::setLinearSolverParameters(const serac::LinearSolverParameters& params) { lin_params_ = params; }
 
 void Elasticity::completeSetup()
 {
@@ -88,13 +86,12 @@ void Elasticity::completeSetup()
   // Initialize the true vector
   displacement_->initializeTrueVec();
 
-  solver_ = EquationSolver(displacement_->comm(), lin_params_);
-  if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
+  if (solver_.linearSolverParams().prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byVDIM,
                     "Attempting to use BoomerAMG with nodal ordering.");
 
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
-    prec_amg->SetPrintLevel(lin_params_.print_level);
+    prec_amg->SetPrintLevel(solver_.linearSolverParams().print_level);
     prec_amg->SetElasticityOptions(&displacement_->space());
     solver_.SetPreconditioner(std::move(prec_amg));
   }

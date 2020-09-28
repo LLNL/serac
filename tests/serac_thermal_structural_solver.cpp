@@ -56,8 +56,28 @@ TEST(dynamic_solver, dyn_solve)
   traction(1)        = 1.0e-3;
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
+  // Set the linear solver parameters
+  serac::LinearSolverParameters params;
+  params.prec        = serac::Preconditioner::BoomerAMG;
+  params.abs_tol     = 1.0e-8;
+  params.rel_tol     = 1.0e-4;
+  params.max_iter    = 500;
+  params.lin_solver  = serac::LinearSolver::GMRES;
+  params.print_level = 0;
+
+  serac::EquationSolver therm_eqn_solver(MPI_COMM_WORLD, params);
+
+  // Set the nonlinear solver parameters
+  serac::NonlinearSolverParameters nl_params;
+  nl_params.rel_tol     = 1.0e-4;
+  nl_params.abs_tol     = 1.0e-8;
+  nl_params.print_level = 1;
+  nl_params.max_iter    = 500;
+
+  serac::EquationSolver solid_eqn_solver(MPI_COMM_WORLD, params, nl_params);
+
   // initialize the dynamic solver object
-  ThermalSolid ts_solver(1, pmesh);
+  ThermalSolid ts_solver(1, pmesh, therm_eqn_solver, solid_eqn_solver);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
@@ -76,24 +96,6 @@ TEST(dynamic_solver, dyn_solve)
   auto visc_coef    = std::make_unique<TransformedScalarCoefficient>(
       temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
   ts_solver.SetViscosity(std::move(visc_coef));
-
-  // Set the linear solver parameters
-  serac::LinearSolverParameters params;
-  params.prec        = serac::Preconditioner::BoomerAMG;
-  params.abs_tol     = 1.0e-8;
-  params.rel_tol     = 1.0e-4;
-  params.max_iter    = 500;
-  params.lin_solver  = serac::LinearSolver::GMRES;
-  params.print_level = 0;
-
-  // Set the nonlinear solver parameters
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-4;
-  nl_params.abs_tol     = 1.0e-8;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 500;
-  ts_solver.SetSolidSolverParameters(params, nl_params);
-  ts_solver.SetThermalSolverParameters(params);
 
   // Initialize the VisIt output
   ts_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");

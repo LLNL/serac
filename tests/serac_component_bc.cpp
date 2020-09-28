@@ -27,8 +27,25 @@ TEST(component_bc, qs_solve)
 
   int dim = pmesh->Dimension();
 
+  // Set the linear solver params
+  serac::LinearSolverParameters params;
+  params.rel_tol     = 1.0e-8;
+  params.abs_tol     = 1.0e-12;
+  params.print_level = 0;
+  params.max_iter    = 5000;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
+
+  serac::NonlinearSolverParameters nl_params;
+  nl_params.rel_tol     = 1.0e-6;
+  nl_params.abs_tol     = 1.0e-8;
+  nl_params.print_level = 1;
+  nl_params.max_iter    = 5000;
+
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params, nl_params);
+
   // Define the solver object
-  NonlinearSolid solid_solver(1, pmesh);
+  NonlinearSolid solid_solver(1, pmesh, eqn_solver);
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   std::set<int> ess_bdr = {1};
@@ -54,23 +71,6 @@ TEST(component_bc, qs_solve)
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
-
-  // Set the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-8;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 5000;
-  params.prec        = serac::Preconditioner::Jacobi;
-  params.lin_solver  = serac::LinearSolver::MINRES;
-
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-6;
-  nl_params.abs_tol     = 1.0e-8;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 5000;
-
-  solid_solver.setSolverParameters(params, nl_params);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -120,24 +120,6 @@ TEST(component_bc, qs_attribute_solve)
 
   int dim = pmesh->Dimension();
 
-  // Define the solver object
-  NonlinearSolid solid_solver(2, pmesh);
-
-  // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
-  std::set<int> ess_x_bdr = {1};
-  std::set<int> ess_y_bdr = {2};
-
-  // define the displacement vector
-  auto disp_x_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * 3.0e-2; });
-  auto disp_y_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[1] * -5.0e-2; });
-
-  // Pass the BC information to the solver object setting only the z direction
-  solid_solver.setDisplacementBCs(ess_x_bdr, disp_x_coef, 0);
-  solid_solver.setDisplacementBCs(ess_y_bdr, disp_y_coef, 1);
-
-  // Set the material parameters
-  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
-
   // Set the linear solver params
   serac::LinearSolverParameters params;
   params.rel_tol     = 1.0e-8;
@@ -153,7 +135,25 @@ TEST(component_bc, qs_attribute_solve)
   nl_params.print_level = 1;
   nl_params.max_iter    = 5000;
 
-  solid_solver.setSolverParameters(params, nl_params);
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params, nl_params);
+
+  // Define the solver object
+  NonlinearSolid solid_solver(2, pmesh, eqn_solver);
+
+  // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
+  std::set<int> ess_x_bdr = {1};
+  std::set<int> ess_y_bdr = {2};
+
+  // define the displacement vector
+  auto disp_x_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * 3.0e-2; });
+  auto disp_y_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[1] * -5.0e-2; });
+
+  // Pass the BC information to the solver object setting only the z direction
+  solid_solver.setDisplacementBCs(ess_x_bdr, disp_x_coef, 0);
+  solid_solver.setDisplacementBCs(ess_y_bdr, disp_y_coef, 1);
+
+  // Set the material parameters
+  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);

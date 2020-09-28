@@ -35,8 +35,17 @@ TEST(thermal_solver, static_solve)
 
   auto pmesh = buildBallMesh(10000);
 
+  // Define the linear solver params
+  serac::LinearSolverParameters params;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-12;
+  params.print_level = 0;
+  params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params);
+
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh, eqn_solver);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -52,15 +61,6 @@ TEST(thermal_solver, static_solve)
   // Set the conductivity of the thermal operator
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
-
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -87,8 +87,17 @@ TEST(thermal_solver, static_solve_multiple_bcs)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
+  // Define the linear solver params
+  serac::LinearSolverParameters params;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-12;
+  params.print_level = 0;
+  params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params);
+
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh, eqn_solver);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -107,15 +116,6 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   // Set the conductivity of the thermal operator
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
-
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -148,8 +148,17 @@ TEST(thermal_solver, static_solve_repeated_bcs)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
+  // Define the linear solver params
+  serac::LinearSolverParameters params;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-12;
+  params.print_level = 0;
+  params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params);
+
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh, eqn_solver);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -167,15 +176,6 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   // Set the conductivity of the thermal operator
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
-
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -202,8 +202,17 @@ TEST(thermal_solver, dyn_exp_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
+  // Define the linear solver params
+  serac::LinearSolverParameters params;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-12;
+  params.print_level = 0;
+  params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params);
+
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh, eqn_solver);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::ForwardEuler);
@@ -218,15 +227,6 @@ TEST(thermal_solver, dyn_exp_solve)
   // Set the conductivity of the thermal operator
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
-
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
 
   // Setup glvis output
   therm_solver.initializeOutput(serac::OutputType::ParaView, "thermal_explicit");
@@ -272,8 +272,17 @@ TEST(thermal_solver, dyn_imp_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
+  // Define the linear solver params
+  serac::LinearSolverParameters params;
+  params.rel_tol     = 1.0e-6;
+  params.abs_tol     = 1.0e-12;
+  params.print_level = 0;
+  params.max_iter    = 100;
+  params.lin_solver  = LinearSolver::CG;
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params);
+
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh, eqn_solver);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::BackwardEuler);
@@ -288,15 +297,6 @@ TEST(thermal_solver, dyn_imp_solve)
   // Set the conductivity of the thermal operator
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
-
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
 
   // Setup glvis output
   therm_solver.initializeOutput(serac::OutputType::VisIt, "thermal_implicit");

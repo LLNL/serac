@@ -14,8 +14,8 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BasePhysics(mesh, NUM_FIELDS, order),
+NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver)
+    : BasePhysics(mesh, NUM_FIELDS, order, solver),
       velocity_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "velocity"})),
       displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
@@ -83,13 +83,6 @@ void NonlinearSolid::setVelocity(mfem::VectorCoefficient& velo_state)
   gf_initialized_[0] = true;
 }
 
-void NonlinearSolid::setSolverParameters(const serac::LinearSolverParameters&    lin_params,
-                                         const serac::NonlinearSolverParameters& nonlin_params)
-{
-  lin_params_    = lin_params;
-  nonlin_params_ = nonlin_params;
-}
-
 void NonlinearSolid::completeSetup()
 {
   // Define the nonlinear form
@@ -140,13 +133,12 @@ void NonlinearSolid::completeSetup()
     S_form->Finalize(0);
   }
 
-  solver_ = EquationSolver(displacement_->comm(), lin_params_, nonlin_params_);
-  // Set up the jacbian solver based on the linear solver options
-  if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
+  // Set up the jacobian solver based on the linear solver options
+  if (solver_.linearSolverParams().prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byNODES,
                     "Attempting to use BoomerAMG with nodal ordering.");
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
-    prec_amg->SetPrintLevel(lin_params_.print_level);
+    prec_amg->SetPrintLevel(solver_.linearSolverParams().print_level);
     prec_amg->SetElasticityOptions(&displacement_->space());
     solver_.SetPreconditioner(std::move(prec_amg));
   } else {
@@ -163,8 +155,8 @@ void NonlinearSolid::completeSetup()
     solver_.SetOperator(*nonlinear_oper_);
   } else {
     solver_.nonlinearSolver().iterative_mode = false;
-    timedep_oper_ = std::make_unique<NonlinearSolidDynamicOperator>(std::move(H_form), std::move(S_form),
-                                                                    std::move(M_form), bcs_, solver_, lin_params_);
+    timedep_oper_                            = std::make_unique<NonlinearSolidDynamicOperator>(
+        std::move(H_form), std::move(S_form), std::move(M_form), bcs_, solver_, solver_.linearSolverParams());
     ode_solver_->Init(*timedep_oper_);
   }
 }

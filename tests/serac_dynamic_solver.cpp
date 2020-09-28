@@ -36,15 +36,6 @@ TEST(dynamic_solver, dyn_solve)
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
-  // initialize the dynamic solver object
-  NonlinearSolid dyn_solver(1, pmesh);
-  dyn_solver.setDisplacementBCs(ess_bdr, deform);
-  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
-  dyn_solver.setViscosity(std::move(visc));
-  dyn_solver.setDisplacement(*deform);
-  dyn_solver.setVelocity(*velo);
-  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
-
   // Set the linear solver parameters
   serac::LinearSolverParameters params;
   params.prec        = serac::Preconditioner::BoomerAMG;
@@ -60,7 +51,16 @@ TEST(dynamic_solver, dyn_solve)
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter    = 500;
-  dyn_solver.setSolverParameters(params, nl_params);
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params, nl_params);
+
+  // initialize the dynamic solver object
+  NonlinearSolid dyn_solver(1, pmesh, eqn_solver);
+  dyn_solver.setDisplacementBCs(ess_bdr, deform);
+  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
+  dyn_solver.setViscosity(std::move(visc));
+  dyn_solver.setDisplacement(*deform);
+  dyn_solver.setVelocity(*velo);
+  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
 
   // Initialize the VisIt output
   dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");
@@ -124,18 +124,14 @@ TEST(dynamic_solver, dyn_direct_solve)
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
-  // initialize the dynamic solver object
-  NonlinearSolidSolver dyn_solver(1, pmesh);
-  dyn_solver.setDisplacementBCs(ess_bdr, deform);
-  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
-  dyn_solver.setViscosity(std::move(visc));
-  dyn_solver.setDisplacement(*deform);
-  dyn_solver.setVelocity(*velo);
-  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
-
   // Set the linear solver parameters
   serac::LinearSolverParameters params;
-  params.lin_solver = serac::LinearSolver::SuperLU;
+  params.prec        = serac::Preconditioner::BoomerAMG;
+  params.abs_tol     = 1.0e-8;
+  params.rel_tol     = 1.0e-4;
+  params.max_iter    = 500;
+  params.lin_solver  = serac::LinearSolver::GMRES;
+  params.print_level = 0;
 
   // Set the nonlinear solver parameters
   serac::NonlinearSolverParameters nl_params;
@@ -143,7 +139,16 @@ TEST(dynamic_solver, dyn_direct_solve)
   nl_params.abs_tol     = 1.0e-8;
   nl_params.print_level = 1;
   nl_params.max_iter    = 500;
-  dyn_solver.setSolverParameters(params, nl_params);
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params, nl_params);
+
+  // initialize the dynamic solver object
+  NonlinearSolid dyn_solver(1, pmesh, eqn_solver);
+  dyn_solver.setDisplacementBCs(ess_bdr, deform);
+  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
+  dyn_solver.setViscosity(std::move(visc));
+  dyn_solver.setDisplacement(*deform);
+  dyn_solver.setVelocity(*velo);
+  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
 
   // Initialize the VisIt output
   dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");

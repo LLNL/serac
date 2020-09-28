@@ -15,22 +15,21 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
                                                      const serac::LinearSolverParameters& params,
                                                      const BoundaryConditionManager&      bcs)
     : mfem::TimeDependentOperator(fe_space.GetTrueVSize(), 0.0),
+      // Set the mass solver options (CG and Jacobi for now)
+      M_inv_(fe_space.GetComm(), params),
+      // Use the same options for the T (= M + dt K) solver
+      // TODO: separate the M and K solver params
+      T_inv_(fe_space.GetComm(), params),
       bcs_(bcs),
       z_(fe_space.GetTrueVSize()),
       y_(fe_space.GetTrueVSize()),
       x_(fe_space.GetTrueVSize()),
       old_dt_(-1.0)
 {
-  // Set the mass solver options (CG and Jacobi for now)
-  M_inv_ = EquationSolver(fe_space.GetComm(), params);
-
   M_inv_.linearSolver().iterative_mode = false;
   auto M_prec                          = std::make_unique<mfem::HypreSmoother>();
   M_prec->SetType(mfem::HypreSmoother::Jacobi);
   M_inv_.SetPreconditioner(std::move(M_prec));
-
-  // Use the same options for the T (= M + dt K) solver
-  T_inv_ = EquationSolver(fe_space.GetComm(), params);
 
   T_inv_.linearSolver().iterative_mode = false;
 

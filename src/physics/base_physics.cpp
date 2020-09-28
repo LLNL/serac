@@ -16,8 +16,14 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
-    : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0), bcs_(*mesh)
+BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver)
+    : comm_(mesh->GetComm()),
+      mesh_(mesh),
+      output_type_(serac::OutputType::VisIt),
+      time_(0.0),
+      cycle_(0),
+      solver_(solver),
+      bcs_(*mesh)
 {
   MPI_Comm_rank(comm_, &mpi_rank_);
   MPI_Comm_size(comm_, &mpi_size_);
@@ -25,7 +31,8 @@ BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
   order_ = 1;
 }
 
-BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
+BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p, EquationSolver& solver)
+    : BasePhysics(mesh, solver)
 {
   order_ = p;
   state_.resize(n);

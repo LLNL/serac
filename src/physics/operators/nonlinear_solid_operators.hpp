@@ -254,11 +254,6 @@ protected:
   const BoundaryConditionManager& bcs_;
 
   /**
-   * @brief The linear solver parameters for the mass matrix
-   */
-  serac::LinearSolverParameters lin_params_;
-
-  /**
    * @brief Working vector
    */
   mutable mfem::Vector z_;

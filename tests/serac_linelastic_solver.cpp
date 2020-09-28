@@ -24,7 +24,18 @@ TEST(elastic_solver, static_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
-  Elasticity elas_solver(1, pmesh);
+  // Define the linear solver params
+  serac::LinearSolverParameters params;
+  params.rel_tol     = 1.0e-4;
+  params.abs_tol     = 1.0e-10;
+  params.print_level = 0;
+  params.max_iter    = 500;
+  params.prec        = serac::Preconditioner::Jacobi;
+  params.lin_solver  = serac::LinearSolver::MINRES;
+
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params);
+
+  Elasticity elas_solver(1, pmesh, eqn_solver);
 
   std::set<int> disp_bdr = {1};
 
@@ -50,16 +61,6 @@ TEST(elastic_solver, static_solve)
 
   elas_solver.setLameParameters(K_coef, mu_coef);
 
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-4;
-  params.abs_tol     = 1.0e-10;
-  params.print_level = 0;
-  params.max_iter    = 500;
-  params.prec        = serac::Preconditioner::Jacobi;
-  params.lin_solver  = serac::LinearSolver::MINRES;
-
-  elas_solver.setLinearSolverParameters(params);
   elas_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // allocate the data structures

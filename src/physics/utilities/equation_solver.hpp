@@ -98,6 +98,11 @@ public:
     return *result;
   }
 
+  /**
+   * @brief Returns the linear solver parameters
+   */
+  const LinearSolverParameters& linearSolverParams() const { return lin_params_; }
+
 private:
   /**
    * @brief Builds an iterative solver given a set of linear solver parameters
@@ -185,6 +190,11 @@ private:
    * @brief A wrapper class that allows a direct solver to be used underneath a Newton-Raphson solver
    */
   std::unique_ptr<SuperLUNonlinearOperatorWrapper> superlu_wrapper_;
+
+  /**
+   * @brief A reference to the user-defined linear solver parameters
+   */
+  const LinearSolverParameters& lin_params_;
 };
 
 }  // namespace serac

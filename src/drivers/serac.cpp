@@ -117,8 +117,19 @@ int main(int argc, char* argv[])
 
   int dim = mesh->Dimension();
 
+  // Set the linear solver parameters
+  if (gmres_solver == true) {
+    lin_params.prec       = serac::Preconditioner::BoomerAMG;
+    lin_params.lin_solver = serac::LinearSolver::GMRES;
+  } else {
+    lin_params.prec       = serac::Preconditioner::Jacobi;
+    lin_params.lin_solver = serac::LinearSolver::MINRES;
+  }
+
+  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, lin_params, nonlin_params);
+
   // Define the solid solver object
-  serac::NonlinearSolid solid_solver(order, mesh);
+  serac::NonlinearSolid solid_solver(order, mesh, eqn_solver);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
@@ -160,16 +171,6 @@ int main(int argc, char* argv[])
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(mu, K);
-
-  // Set the linear solver parameters
-  if (gmres_solver == true) {
-    lin_params.prec       = serac::Preconditioner::BoomerAMG;
-    lin_params.lin_solver = serac::LinearSolver::GMRES;
-  } else {
-    lin_params.prec       = serac::Preconditioner::Jacobi;
-    lin_params.lin_solver = serac::LinearSolver::MINRES;
-  }
-  solid_solver.setSolverParameters(lin_params, nonlin_params);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);

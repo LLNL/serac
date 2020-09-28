@@ -46,16 +46,14 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
       M_form_(std::move(M_form)),
       S_form_(std::move(S_form)),
       H_form_(std::move(H_form)),
+      M_inv_(H_form_->ParFESpace()->GetComm(), lin_params),
       newton_solver_(newton_solver),
       bcs_(bcs),
-      lin_params_(lin_params),
       z_(height / 2)
 {
   // Assemble the mass matrix and eliminate the fixed DOFs
   M_mat_.reset(M_form_->ParallelAssemble());
   bcs_.eliminateAllEssentialDofsFromMatrix(*M_mat_);
-
-  M_inv_ = EquationSolver(H_form_->ParFESpace()->GetComm(), lin_params);
 
   auto M_prec                          = std::make_unique<mfem::HypreSmoother>();
   M_inv_.linearSolver().iterative_mode = false;

@@ -33,8 +33,9 @@ public:
    *
    * @param[in] order The order of the displacement field
    * @param[in] mesh The MFEM parallel mesh to solve on
+   * @param[in] solver The system solver instance
    */
-  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver);
 
   /**
    * @brief Set displacement boundary conditions
@@ -92,14 +93,6 @@ public:
    * @param[in] velo_state The velocity state
    */
   void setVelocity(mfem::VectorCoefficient& velo_state);
-
-  /**
-   * @brief Set the linear and nonlinear parameters object
-   *
-   * @param[in] lin_params The linear solver parameters
-   * @param[in] nonlin_params The nonlinear solver parameters
-   */
-  void setSolverParameters(const LinearSolverParameters& lin_params, const NonlinearSolverParameters& nonlin_params);
 
   /**
    * @brief Get the displacement state
@@ -177,16 +170,6 @@ protected:
    * @brief The hyperelastic material model
    */
   std::unique_ptr<mfem::HyperelasticModel> model_;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  LinearSolverParameters lin_params_;
-
-  /**
-   * @brief Nonlinear solver parameters
-   */
-  NonlinearSolverParameters nonlin_params_;
 
   /**
    * @brief Pointer to the reference mesh data

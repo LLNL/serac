@@ -12,8 +12,8 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BasePhysics(mesh, NUM_FIELDS, order),
+ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& solver)
+    : BasePhysics(mesh, NUM_FIELDS, order, solver),
       temperature_(std::make_shared<FiniteElementState>(
           *mesh,
           FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}))
@@ -51,13 +51,6 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 {
   // Set the body source integral coefficient
   source_ = std::move(source);
-}
-
-void ThermalConduction::setLinearSolverParameters(const serac::LinearSolverParameters& params)
-{
-  // Save the solver params object
-  // TODO: separate the M and K solver params
-  lin_params_ = params;
 }
 
 void ThermalConduction::completeSetup()
@@ -105,7 +98,7 @@ void ThermalConduction::completeSetup()
     M_mat_.reset(M_form_->ParallelAssemble());
 
     // Make the time integration operator and set the appropriate matricies
-    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_);
+    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), solver_.linearSolverParams(), bcs_);
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 
@@ -123,8 +116,6 @@ void ThermalConduction::quasiStaticSolve()
 
   // Solve the stiffness using CG with Jacobi preconditioning
   // and the given solverparams
-  solver_ = EquationSolver(temperature_->comm(), lin_params_);
-
   auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
   hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);
 

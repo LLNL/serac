@@ -13,8 +13,13 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 3;
 
-ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BasePhysics(mesh, NUM_FIELDS, order), therm_solver_(order, mesh), solid_solver_(order, mesh)
+ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, EquationSolver& therm_system_solver,
+                           EquationSolver& solid_system_solver)
+    : BasePhysics(
+          mesh, NUM_FIELDS, order,
+          therm_system_solver),  // FIXME: Eliminate BasePhysics entirely or refactor - class is mostly a passthrough
+      therm_solver_(order, mesh, therm_system_solver),
+      solid_solver_(order, mesh, solid_system_solver)
 {
   temperature_  = therm_solver_.temperature();
   velocity_     = solid_solver_.velocity();
