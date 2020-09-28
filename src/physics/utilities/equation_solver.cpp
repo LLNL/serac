@@ -61,7 +61,32 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm  
                                                                       const NonlinearSolverParameters& nonlin_params,
                                                                       mfem::Solver&                    lin_solver)
 {
-  auto newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
+  std::unique_ptr<mfem::NewtonSolver> newton_solver;
+
+  if (nonlin_params.nonlin_solver == NonlinearSolver::BasicNewton) {
+    newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
+  }
+  // KINSOL
+  else {
+    auto kinsol_strat = KIN_NONE;
+    switch (nonlin_params.nonlin_solver) {
+      case NonlinearSolver::KINBasic:
+        break;  // Already the default
+      case NonlinearSolver::KINLineSearch:
+        kinsol_strat = KIN_LINESEARCH;
+        break;
+      case NonlinearSolver::KINFixedPoint:
+        kinsol_strat = KIN_FP;
+        break;
+      case NonlinearSolver::KINPicard:
+        kinsol_strat = KIN_PICARD;
+        break;
+      default:
+        SLIC_WARNING("KINSOL option not recognized, defaulting to basic Newton.");
+    }
+    newton_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat);
+  }
+
   newton_solver->SetSolver(lin_solver);
   newton_solver->SetRelTol(nonlin_params.rel_tol);
   newton_solver->SetAbsTol(nonlin_params.abs_tol);
