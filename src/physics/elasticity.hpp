@@ -10,11 +10,11 @@
  * @brief A solver for the steady state solution of a linear elasticity PDE
  */
 
-#ifndef LINEARELASTIC_SOLVER
-#define LINEARELASTIC_SOLVER
+#ifndef LINEAR_ELASTICITY
+#define LINEAR_ELASTICITY
 
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
+#include "physics/base_physics.hpp"
 
 namespace serac {
 
@@ -29,7 +29,7 @@ namespace serac {
  *  where u is the displacement vector, f is the body force,
  *  and lambda and mu are the lame parameters
  */
-class ElasticitySolver : public BaseSolver {
+class Elasticity : public BasePhysics {
 public:
   /**
    * @brief Construct a new Elasticity Solver object
@@ -37,7 +37,7 @@ public:
    * @param[in] order The polynomial order of the solver
    * @param[in] mesh The parallel MFEM mesh
    */
-  ElasticitySolver(const int order, std::shared_ptr<mfem::ParMesh> mesh);
+  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions
@@ -95,7 +95,7 @@ public:
   /**
    * @brief The destructor
    */
-  virtual ~ElasticitySolver();
+  virtual ~Elasticity();
 
 protected:
   /**

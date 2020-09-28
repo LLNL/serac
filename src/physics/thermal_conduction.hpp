@@ -10,11 +10,11 @@
  * @brief An object containing the solver for a thermal conduction PDE
  */
 
-#ifndef CONDUCTION_SOLVER
-#define CONDUCTION_SOLVER
+#ifndef THERMAL_CONDUCTION
+#define THERMAL_CONDUCTION
 
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
+#include "physics/base_physics.hpp"
 #include "physics/operators/thermal_operators.hpp"
 
 namespace serac {
@@ -29,7 +29,7 @@ namespace serac {
  *  where M is a mass matrix, K is a stiffness matrix, and f is a
  *  thermal load vector.
  */
-class ThermalSolver : public BaseSolver {
+class ThermalConduction : public BasePhysics {
 public:
   /**
    * @brief Construct a new Thermal Solver object
@@ -37,7 +37,7 @@ public:
    * @param[in] order The order of the thermal field discretization
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    */
-  ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -108,7 +108,7 @@ public:
   /**
    * @brief Destroy the Thermal Solver object
    */
-  virtual ~ThermalSolver() = default;
+  virtual ~ThermalConduction() = default;
 
 protected:
   /**

@@ -24,7 +24,7 @@
 #include "infrastructure/terminator.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid_solver.hpp"
+#include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
 
 int main(int argc, char* argv[])
@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
   int dim = mesh->Dimension();
 
   // Define the solid solver object
-  serac::NonlinearSolidSolver solid_solver(order, mesh);
+  serac::NonlinearSolid solid_solver(order, mesh);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions

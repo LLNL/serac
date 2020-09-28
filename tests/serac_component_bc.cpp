@@ -11,7 +11,7 @@
 #include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid_solver.hpp"
+#include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
 
 namespace serac {
@@ -28,7 +28,7 @@ TEST(component_bc, qs_solve)
   int dim = pmesh->Dimension();
 
   // Define the solver object
-  NonlinearSolidSolver solid_solver(1, pmesh);
+  NonlinearSolid solid_solver(1, pmesh);
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   std::set<int> ess_bdr = {1};
@@ -121,7 +121,7 @@ TEST(component_bc, qs_attribute_solve)
   int dim = pmesh->Dimension();
 
   // Define the solver object
-  NonlinearSolidSolver solid_solver(2, pmesh);
+  NonlinearSolid solid_solver(2, pmesh);
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   std::set<int> ess_x_bdr = {1};
