@@ -103,6 +103,19 @@ public:
    */
   const LinearSolverParameters& linearSolverParams() const { return lin_params_; }
 
+  /**
+   * @brief Overrides the underlying linear solver with a custom mfem::Solver
+   * @param[in] solver The custom solver to use
+   */
+  void setLinearSolver(std::unique_ptr<mfem::Solver>&& solver)
+  {
+    lin_solver_ = std::move(solver);
+    if (nonlin_solver_) {
+      // Use the reseated pointer that was just moved to
+      nonlin_solver_->SetSolver(*std::get<std::unique_ptr<mfem::Solver>>(lin_solver_));
+    }
+  }
+
 private:
   /**
    * @brief Builds an iterative solver given a set of linear solver parameters
@@ -174,7 +187,9 @@ private:
   /**
    * @brief The linear solver object, either direct (SuperLU) or iterative
    */
-  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<mfem::SuperLUSolver>> lin_solver_;
+  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<mfem::SuperLUSolver>,
+               std::unique_ptr<mfem::Solver>>
+      lin_solver_;
 
   /**
    * @brief The optional nonlinear Newton-Raphson solver object
