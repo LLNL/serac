@@ -68,7 +68,7 @@ struct HypreSmootherPrec {
  * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
  */
 struct HypreBoomerAMGPrec {
-  mfem::ParFiniteElementSpace* pfes = nullptr;
+  mutable mfem::ParFiniteElementSpace* pfes = nullptr;
 };
 
 /**
@@ -118,7 +118,7 @@ struct IterativeSolverParameters {
   /**
    * @brief Preconditioner selection
    */
-  mutable Preconditioner prec;
+  Preconditioner prec;
 };
 
 /**
