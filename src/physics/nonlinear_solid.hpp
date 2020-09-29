@@ -172,12 +172,13 @@ public:
   /**
    * @brief The default parameters for the nonlinear solid dynamic operator (M solver)
    */
-  constexpr static IterativeSolverParameters default_dyn_oper_linear_params = {.rel_tol     = 1.0e-4,
-                                                                               .abs_tol     = 1.0e-8,
-                                                                               .print_level = 0,
-                                                                               .max_iter    = 500,
-                                                                               .lin_solver  = LinearSolver::GMRES,
-                                                                               .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+  constexpr static IterativeSolverParameters default_dyn_oper_linear_params = {
+      .rel_tol     = 1.0e-4,
+      .abs_tol     = 1.0e-8,
+      .print_level = 0,
+      .max_iter    = 500,
+      .lin_solver  = LinearSolver::GMRES,
+      .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
 
   /**
    * @brief The default parameters for the nonlinear Newton solver for dynamic mode

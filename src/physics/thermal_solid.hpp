@@ -30,8 +30,8 @@ public:
    *
    * @param[in] order The order of the temperature and displacement discretizations
    * @param[in] mesh The parallel mesh object on which to solve
-   * @param[in] therm_system_solver The system solver instance for the conduction physics
-   * @param[in] therm_system_solver The system solver instance for the solid physics
+   * @param[in] therm_params The equation solver params for the conduction physics
+   * @param[in] solid_params The equation solver params for the solid physics
    */
   ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
                const ThermalConduction::ThermalConductionParameters& therm_params,
