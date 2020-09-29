@@ -25,7 +25,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
   }
 
   if (nonlin_params) {
-    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_params, linearSolver());
+    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_params);
   }
 }
 
@@ -58,8 +58,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
 }
 
 std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                         comm,
-                                                                      const NonlinearSolverParameters& nonlin_params,
-                                                                      mfem::Solver&                    lin_solver)
+                                                                      const NonlinearSolverParameters& nonlin_params)
 {
   std::unique_ptr<mfem::NewtonSolver> newton_solver;
 
@@ -91,7 +90,6 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm  
 #endif
   }
 
-  newton_solver->SetSolver(lin_solver);
   newton_solver->SetRelTol(nonlin_params.rel_tol);
   newton_solver->SetAbsTol(nonlin_params.abs_tol);
   newton_solver->SetMaxIter(nonlin_params.max_iter);
@@ -107,6 +105,11 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
       nonlin_solver_->SetOperator(*superlu_wrapper_);
     } else {
       nonlin_solver_->SetOperator(op);
+    }
+    // Now that the nonlinear solver knows about the operator, we can set its linear solver
+    if (!nonlin_solver_set_solver_called_) {
+      nonlin_solver_->SetSolver(linearSolver());
+      nonlin_solver_set_solver_called_ = true;
     }
   } else {
     std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
