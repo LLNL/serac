@@ -46,20 +46,21 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
       M_form_(std::move(M_form)),
       S_form_(std::move(S_form)),
       H_form_(std::move(H_form)),
-      M_inv_(H_form_->ParFESpace()->GetComm(), lin_params),
       newton_solver_(newton_solver),
       bcs_(bcs),
       z_(height / 2)
 {
+  // If the user wants the AMG preconditioner, set the pfes to be the displacement
+  if (std::holds_alternative<HypreBoomerAMGPrec>(lin_params.prec)) {
+    std::get<HypreBoomerAMGPrec>(lin_params.prec).pfes = H_form_->ParFESpace();
+  }
+  M_inv_ = EquationSolver(H_form_->ParFESpace()->GetComm(), lin_params);
+
   // Assemble the mass matrix and eliminate the fixed DOFs
   M_mat_.reset(M_form_->ParallelAssemble());
   bcs_.eliminateAllEssentialDofsFromMatrix(*M_mat_);
 
-  auto M_prec                          = std::make_unique<mfem::HypreSmoother>();
   M_inv_.linearSolver().iterative_mode = false;
-
-  M_prec->SetType(mfem::HypreSmoother::Jacobi);
-  M_inv_.SetPreconditioner(std::move(M_prec));
 
   M_inv_.SetOperator(*M_mat_);
 

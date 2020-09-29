@@ -56,28 +56,17 @@ TEST(dynamic_solver, dyn_solve)
   traction(1)        = 1.0e-3;
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
-  // Set the linear solver parameters
-  serac::LinearSolverParameters params;
-  params.prec        = serac::Preconditioner::BoomerAMG;
-  params.abs_tol     = 1.0e-8;
-  params.rel_tol     = 1.0e-4;
-  params.max_iter    = 500;
-  params.lin_solver  = serac::LinearSolver::GMRES;
-  params.print_level = 0;
+  // Use the same configuration as the solid solver
+  auto therm_M_params = NonlinearSolid::default_dyn_linear_params;
+  auto therm_T_params = NonlinearSolid::default_dyn_linear_params;
+  therm_M_params.prec = HypreSmootherPrec{};
+  therm_T_params.prec = HypreSmootherPrec{};
 
-  serac::EquationSolver therm_eqn_solver(MPI_COMM_WORLD, params);
-
-  // Set the nonlinear solver parameters
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-4;
-  nl_params.abs_tol     = 1.0e-8;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 500;
-
-  serac::EquationSolver solid_eqn_solver(MPI_COMM_WORLD, params, nl_params);
+  ThermalConduction::ThermalConductionParameters therm_params =
+      std::make_tuple(TimestepMethod::SDIRK33, therm_M_params, therm_T_params);
 
   // initialize the dynamic solver object
-  ThermalSolid ts_solver(1, pmesh, therm_eqn_solver, solid_eqn_solver);
+  ThermalSolid ts_solver(1, pmesh, therm_params, NonlinearSolid::default_dynamic);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
@@ -85,7 +74,6 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetDisplacement(*deform);
   ts_solver.SetVelocity(*velo);
   ts_solver.SetTemperature(*temp);
-  ts_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
   ts_solver.SetCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity

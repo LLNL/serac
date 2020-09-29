@@ -48,11 +48,7 @@ int main(int argc, char* argv[])
   nonlin_params.max_iter    = 500;
   nonlin_params.print_level = 0;
 
-  serac::LinearSolverParameters lin_params;
-  lin_params.rel_tol     = 1.0e-6;
-  lin_params.abs_tol     = 1.0e-8;
-  lin_params.max_iter    = 5000;
-  lin_params.print_level = 0;
+  serac::LinearSolverParameters lin_params = serac::NonlinearSolid::default_qs_linear_params;
 
   // solver input args
   bool gmres_solver = true;
@@ -119,17 +115,19 @@ int main(int argc, char* argv[])
 
   // Set the linear solver parameters
   if (gmres_solver == true) {
-    lin_params.prec       = serac::Preconditioner::BoomerAMG;
+    lin_params.prec       = serac::HypreBoomerAMGPrec{};
     lin_params.lin_solver = serac::LinearSolver::GMRES;
   } else {
-    lin_params.prec       = serac::Preconditioner::Jacobi;
+    lin_params.prec       = serac::HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi};
     lin_params.lin_solver = serac::LinearSolver::MINRES;
   }
 
-  serac::EquationSolver eqn_solver(MPI_COMM_WORLD, lin_params, nonlin_params);
-
   // Define the solid solver object
-  serac::NonlinearSolid solid_solver(order, mesh, eqn_solver);
+  // Using a struct with default member initializer would be preferable here but not possible due
+  // to compiler bugs:
+  // https://bugs.llvm.org/show_bug.cgi?id=36684
+  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88165
+  serac::NonlinearSolid solid_solver(order, mesh, {lin_params, nonlin_params, std::nullopt});
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
@@ -171,9 +169,6 @@ int main(int argc, char* argv[])
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(mu, K);
-
-  // Set the time step method
-  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Complete the solver setup
   solid_solver.completeSetup();

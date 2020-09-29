@@ -15,26 +15,22 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
                                                      const serac::LinearSolverParameters& params,
                                                      const BoundaryConditionManager&      bcs)
     : mfem::TimeDependentOperator(fe_space.GetTrueVSize(), 0.0),
-      // Set the mass solver options (CG and Jacobi for now)
-      M_inv_(fe_space.GetComm(), params),
-      // Use the same options for the T (= M + dt K) solver
-      // TODO: separate the M and K solver params
-      T_inv_(fe_space.GetComm(), params),
       bcs_(bcs),
       z_(fe_space.GetTrueVSize()),
       y_(fe_space.GetTrueVSize()),
       x_(fe_space.GetTrueVSize()),
       old_dt_(-1.0)
 {
+  // If the user wants the AMG preconditioner, set the pfes to be the temperature
+  if (std::holds_alternative<HypreBoomerAMGPrec>(params.prec)) {
+    std::get<HypreBoomerAMGPrec>(params.prec).pfes = &fe_space;
+  }
+  // Use the same options for the T (= M + dt K) solver
+  // TODO: separate the M and K solver params
+  M_inv_                               = EquationSolver(fe_space.GetComm(), params);
+  T_inv_                               = EquationSolver(fe_space.GetComm(), params);
   M_inv_.linearSolver().iterative_mode = false;
-  auto M_prec                          = std::make_unique<mfem::HypreSmoother>();
-  M_prec->SetType(mfem::HypreSmoother::Jacobi);
-  M_inv_.SetPreconditioner(std::move(M_prec));
-
   T_inv_.linearSolver().iterative_mode = false;
-
-  auto T_prec = std::make_unique<mfem::HypreSmoother>();
-  T_inv_.SetPreconditioner(std::move(T_prec));
 
   state_gf_ = std::make_unique<mfem::ParGridFunction>(&fe_space);
   bc_rhs_   = std::make_unique<mfem::Vector>(fe_space.GetTrueVSize());

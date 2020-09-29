@@ -165,6 +165,16 @@ public:
                                                                        .prec        = HypreBoomerAMGPrec{}};
 
   /**
+   * @brief The default parameters for the nonlinear solid dynamic operator (M solver)
+   */
+  constexpr static LinearSolverParameters default_dyn_oper_linear_params = {.rel_tol     = 1.0e-4,
+                                                                            .abs_tol     = 1.0e-8,
+                                                                            .print_level = 0,
+                                                                            .max_iter    = 500,
+                                                                            .lin_solver  = LinearSolver::GMRES,
+                                                                            .prec        = HypreSmootherPrec{}};
+
+  /**
    * @brief The default parameters for the nonlinear Newton solver
    */
   constexpr static NonlinearSolverParameters default_dyn_nonlinear_params = {
@@ -175,7 +185,7 @@ public:
 
   constexpr static NonlinearSolidParameters default_dynamic =
       std::make_tuple(default_dyn_linear_params, default_dyn_nonlinear_params,
-                      std::make_tuple(TimestepMethod::SDIRK33, default_dyn_linear_params));
+                      std::make_tuple(TimestepMethod::SDIRK33, default_dyn_oper_linear_params));
 
 protected:
   /**

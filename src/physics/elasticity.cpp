@@ -25,6 +25,7 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const Lin
     std::get<HypreBoomerAMGPrec>(params.prec).pfes = &displacement_->space();
   }
   K_inv_ = EquationSolver(mesh->GetComm(), params);
+  setTimestepper(TimestepMethod::QuasiStatic);
 }
 
 void Elasticity::setDisplacementBCs(const std::set<int>&                     disp_bdr,
