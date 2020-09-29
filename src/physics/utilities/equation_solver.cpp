@@ -68,6 +68,7 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm  
   }
   // KINSOL
   else {
+#ifdef MFEM_USE_SUNDIALS
     auto kinsol_strat = KIN_NONE;
     switch (nonlin_params.nonlin_solver) {
       case NonlinearSolver::KINBasic:
@@ -84,7 +85,10 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm  
       default:
         SLIC_WARNING("KINSOL option not recognized, defaulting to basic Newton.");
     }
-    newton_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat);
+    newton_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
+#else
+    SLIC_ERROR("KINSOL was not enabled when MFEM was built");
+#endif
   }
 
   newton_solver->SetSolver(lin_solver);
