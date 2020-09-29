@@ -61,7 +61,7 @@ enum class LinearSolver
  * @brief Stores the information required to configure a HypreSmoother
  */
 struct HypreSmootherPrec {
-  mfem::HypreSmoother::Type type = mfem::HypreSmoother::Jacobi;
+  mfem::HypreSmoother::Type type;
 };
 
 /**

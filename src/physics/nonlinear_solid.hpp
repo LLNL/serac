@@ -177,7 +177,7 @@ public:
                                                                                .print_level = 0,
                                                                                .max_iter    = 500,
                                                                                .lin_solver  = LinearSolver::GMRES,
-                                                                               .prec        = HypreSmootherPrec{}};
+                                                                               .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
 
   /**
    * @brief The default parameters for the nonlinear Newton solver for dynamic mode
