@@ -70,6 +70,10 @@ class Axom(CMakePackage, CudaPackage):
     variant('debug',    default=False,
             description='Build debug instead of optimized version')
 
+    # BEGIN SERAC EDIT
+    variant('cpp14',  default=True, description="Build with C++14 support")
+    # END SERAC EDIT
+
     variant('fortran',  default=True, description="Build with Fortran support")
 
     variant("python",   default=False, description="Build python support")
@@ -245,6 +249,11 @@ class Axom(CMakePackage, CudaPackage):
             if flags:
                 cfg.write(cmake_cache_entry("BLT_EXE_LINKER_FLAGS", flags,
                                             description))
+
+        # BEGIN SERAC EDIT
+        if "+cpp14" in spec:
+            cfg.write(cmake_cache_entry("BLT_CXX_STD", "c++14", ""))
+        # END SERAC EDIT
 
         # TPL locations
         cfg.write("#------------------{0}\n".format("-" * 60))
