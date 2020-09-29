@@ -119,7 +119,7 @@ public:
   /**
    * @brief The default parameters for an iterative linear solver
    */
-  constexpr static LinearSolverParameters default_linear_params = {
+  constexpr static IterativeSolverParameters default_linear_params = {
       .rel_tol     = 1.0e-6,
       .abs_tol     = 1.0e-12,
       .print_level = 0,

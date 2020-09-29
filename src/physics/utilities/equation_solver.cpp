@@ -14,38 +14,49 @@ namespace serac {
 EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
                                const std::optional<NonlinearSolverParameters>& nonlin_params)
 {
-  if (lin_params.lin_solver == LinearSolver::SuperLU) {
-    lin_solver_ = std::make_unique<mfem::SuperLUSolver>(comm);
-    std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetColumnPermutation(mfem::superlu::PARMETIS);
-    if (lin_params.print_level == 0) {
-      std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetPrintStatistics(false);
-    }
-  } else {
-    lin_solver_ = buildIterativeLinearSolver(comm, lin_params);
+  std::visit(
+      [this, &comm](const auto& lin_params) {
+        using Param = std::decay_t<decltype(lin_params)>;
+        if constexpr (std::is_same_v<Param, IterativeSolverParameters>) {
+          lin_solver_ = buildIterativeLinearSolver(comm, lin_params);
 
-    // Set the preconditioner
-    std::visit(
-        [this, &lin_params](const auto& prec) {
-          using Prec = std::decay_t<decltype(prec)>;
-          if constexpr (std::is_same_v<Prec, HypreBoomerAMGPrec>) {
-            SLIC_ERROR_IF(prec.pfes == nullptr, "FESpace is required to use the HypreBoomerAMG preconditioner.");
-            SLIC_WARNING_IF(prec.pfes->GetOrdering() == mfem::Ordering::byNODES,
-                            "Attempting to use BoomerAMG with nodal ordering.");
-            auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
-            prec_amg->SetPrintLevel(lin_params.print_level);
-            prec_amg->SetElasticityOptions(prec.pfes);
-            SetPreconditioner(std::move(prec_amg));
+          // Set the preconditioner if it's an iterative solver
+          std::visit(
+              [this, &lin_params](const auto& prec) {
+                using Prec = std::decay_t<decltype(prec)>;
+                if constexpr (std::is_same_v<Prec, HypreBoomerAMGPrec>) {
+                  SLIC_ERROR_IF(prec.pfes == nullptr, "FESpace is required to use the HypreBoomerAMG preconditioner.");
+                  SLIC_WARNING_IF(prec.pfes->GetOrdering() == mfem::Ordering::byNODES,
+                                  "Attempting to use BoomerAMG with nodal ordering.");
+                  auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
+                  prec_amg->SetPrintLevel(lin_params.print_level);
+                  prec_amg->SetElasticityOptions(prec.pfes);
+                  SetPreconditioner(std::move(prec_amg));
+                } else if constexpr (std::is_same_v<Prec, HypreSmootherPrec>) {
+                  auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
+                  J_hypreSmoother->SetType(prec.type);
+                  J_hypreSmoother->SetPositiveDiagonal(true);
+                  SetPreconditioner(std::move(J_hypreSmoother));
+                }
+              },
+              lin_params.prec);
+
+        }
+        // If it's a custom solver, just configure the linear solver
+        else if constexpr (std::is_same_v<Param, CustomSolverParameters>) {
+          SLIC_ERROR_IF(lin_params.solver == nullptr, "Custom solver pointer must be initialized.");
+          setLinearSolver(*lin_params.solver);
+        }
+        // If it's a direct solver, set it up (currently only SuperLU is supported)
+        else if constexpr (std::is_same_v<Param, DirectSolverParameters>) {
+          lin_solver_ = std::make_unique<mfem::SuperLUSolver>(comm);
+          std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetColumnPermutation(mfem::superlu::PARMETIS);
+          if (lin_params.print_level == 0) {
+            std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetPrintStatistics(false);
           }
-          //
-          else if constexpr (std::is_same_v<Prec, HypreSmootherPrec>) {
-            auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
-            J_hypreSmoother->SetType(prec.type);
-            J_hypreSmoother->SetPositiveDiagonal(true);
-            SetPreconditioner(std::move(J_hypreSmoother));
-          }
-        },
-        lin_params.prec);
-  }
+        }
+      },
+      lin_params);
 
   if (nonlin_params) {
     nonlin_solver_ = buildNewtonSolver(comm, *nonlin_params, linearSolver());
@@ -53,7 +64,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
 }
 
 std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
-    MPI_Comm comm, const LinearSolverParameters& lin_params)
+    MPI_Comm comm, const IterativeSolverParameters& lin_params)
 {
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
 

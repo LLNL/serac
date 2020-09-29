@@ -87,27 +87,38 @@ public:
    */
   mfem::Solver& linearSolver()
   {
-    mfem::Solver* result;
-    std::visit([&result](auto&& solver) { result = solver.get(); }, lin_solver_);
-    return *result;
+    return *std::visit(
+        [](auto&& solver) {
+          if constexpr (std::is_same_v<std::decay_t<decltype(solver)>, mfem::Solver*>) {
+            return solver;
+          } else {
+            return static_cast<mfem::Solver*>(solver.get());
+          }
+        },
+        lin_solver_);
   }
   const mfem::Solver& linearSolver() const
   {
-    mfem::Solver* result;
-    std::visit([&result](auto&& solver) { result = solver.get(); }, lin_solver_);
-    return *result;
+    return *std::visit(
+        [](auto&& solver) {
+          if constexpr (std::is_same_v<std::decay_t<decltype(solver)>, mfem::Solver*>) {
+            return solver;
+          } else {
+            return static_cast<mfem::Solver*>(solver.get());
+          }
+        },
+        lin_solver_);
   }
 
   /**
    * @brief Overrides the underlying linear solver with a custom mfem::Solver
    * @param[in] solver The custom solver to use
    */
-  void setLinearSolver(std::unique_ptr<mfem::Solver>&& solver)
+  void setLinearSolver(mfem::Solver& solver)
   {
-    lin_solver_ = std::move(solver);
+    lin_solver_ = &solver;
     if (nonlin_solver_) {
-      // Use the reseated pointer that was just moved to
-      nonlin_solver_->SetSolver(*std::get<std::unique_ptr<mfem::Solver>>(lin_solver_));
+      nonlin_solver_->SetSolver(solver);
     }
   }
 
@@ -117,8 +128,8 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] lin_params The parameters for the linear solver
    */
-  static std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                      comm,
-                                                                           const LinearSolverParameters& lin_params);
+  static std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                         comm,
+                                                                           const IterativeSolverParameters& lin_params);
 
   /**
    * @brief Builds an Newton-Raphson solver given a set of nonlinear solver parameters
@@ -180,11 +191,9 @@ private:
   std::unique_ptr<mfem::Solver> prec_;
 
   /**
-   * @brief The linear solver object, either direct (SuperLU) or iterative
+   * @brief The linear solver object, either custom, direct (SuperLU), or iterative
    */
-  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<mfem::SuperLUSolver>,
-               std::unique_ptr<mfem::Solver>>
-      lin_solver_;
+  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<mfem::SuperLUSolver>, mfem::Solver*> lin_solver_;
 
   /**
    * @brief The optional nonlinear Newton-Raphson solver object

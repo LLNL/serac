@@ -58,22 +58,22 @@ enum class LinearSolver
 };
 
 /**
- * @brief Preconditioning method
+ * @brief Stores the information required to configure a HypreSmoother
  */
-// enum class Preconditioner
-// {
-//   Jacobi,
-//   BoomerAMG
-// };
-
 struct HypreSmootherPrec {
   mfem::HypreSmoother::Type type = mfem::HypreSmoother::Jacobi;
 };
 
+/**
+ * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
+ */
 struct HypreBoomerAMGPrec {
   mfem::ParFiniteElementSpace* pfes = nullptr;
 };
 
+/**
+ * @brief Preconditioning method
+ */
 using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec>;
 
 /**
@@ -87,9 +87,9 @@ enum class CouplingScheme
 };
 
 /**
- * @brief Parameters for a linear solution scheme
+ * @brief Parameters for an iterative linear solution scheme
  */
-struct LinearSolverParameters {
+struct IterativeSolverParameters {
   /**
    * @brief Relative tolerance
    */
@@ -120,6 +120,27 @@ struct LinearSolverParameters {
    */
   mutable Preconditioner prec;
 };
+
+/**
+ * @brief Parameters for a custom solver (currently just a non-owning pointer to the solver)
+ * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
+ * and destructors are a nightmare in this context
+ */
+struct CustomSolverParameters {
+  mfem::Solver* solver = nullptr;
+};
+
+/**
+ * @brief Parameters for a direct solver (PARDISO, MUMPS, SuperLU, etc)
+ */
+struct DirectSolverParameters {
+  /**
+   * @brief Debugging print level
+   */
+  int print_level;
+};
+
+using LinearSolverParameters = std::variant<IterativeSolverParameters, CustomSolverParameters, DirectSolverParameters>;
 
 /**
  * @brief Nonlinear solution scheme parameters

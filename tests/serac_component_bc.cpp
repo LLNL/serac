@@ -28,13 +28,13 @@ TEST(component_bc, qs_solve)
   int dim = pmesh->Dimension();
 
   // Set the linear solver params
-  serac::LinearSolverParameters params = NonlinearSolid::default_qs_linear_params;
-  params.rel_tol                       = 1.0e-8;
-  params.abs_tol                       = 1.0e-12;
+  auto params    = NonlinearSolid::default_qs_linear_params;
+  params.rel_tol = 1.0e-8;
+  params.abs_tol = 1.0e-12;
 
-  serac::NonlinearSolverParameters nl_params = NonlinearSolid::default_qs_nonlinear_params;
-  nl_params.rel_tol                          = 1.0e-6;
-  nl_params.abs_tol                          = 1.0e-8;
+  auto nl_params    = NonlinearSolid::default_qs_nonlinear_params;
+  nl_params.rel_tol = 1.0e-6;
+  nl_params.abs_tol = 1.0e-8;
 
   // Define the solver object
   NonlinearSolid solid_solver(1, pmesh, {params, nl_params, std::nullopt});
@@ -110,13 +110,13 @@ TEST(component_bc, qs_attribute_solve)
   int dim = pmesh->Dimension();
 
   // Set the linear solver params
-  serac::LinearSolverParameters params = NonlinearSolid::default_qs_linear_params;
-  params.rel_tol                       = 1.0e-8;
-  params.abs_tol                       = 1.0e-12;
+  auto params    = NonlinearSolid::default_qs_linear_params;
+  params.rel_tol = 1.0e-8;
+  params.abs_tol = 1.0e-12;
 
-  serac::NonlinearSolverParameters nl_params = NonlinearSolid::default_qs_nonlinear_params;
-  nl_params.rel_tol                          = 1.0e-6;
-  nl_params.abs_tol                          = 1.0e-8;
+  auto nl_params    = NonlinearSolid::default_qs_nonlinear_params;
+  nl_params.rel_tol = 1.0e-6;
+  nl_params.abs_tol = 1.0e-8;
 
   // Define the solver object
   NonlinearSolid solid_solver(2, pmesh, {params, nl_params, std::nullopt});

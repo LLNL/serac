@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
   nonlin_params.max_iter    = 500;
   nonlin_params.print_level = 0;
 
-  serac::LinearSolverParameters lin_params = serac::NonlinearSolid::default_qs_linear_params;
+  auto lin_params = serac::NonlinearSolid::default_qs_linear_params;
 
   // solver input args
   bool gmres_solver = true;

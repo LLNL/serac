@@ -140,7 +140,7 @@ public:
   /**
    * @brief The default parameters for an iterative linear solver
    */
-  constexpr static LinearSolverParameters default_qs_linear_params = {
+  constexpr static IterativeSolverParameters default_qs_linear_params = {
       .rel_tol     = 1.0e-6,
       .abs_tol     = 1.0e-8,
       .print_level = 0,
@@ -157,22 +157,22 @@ public:
   /**
    * @brief The default parameters for an iterative linear solver
    */
-  constexpr static LinearSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e-4,
-                                                                       .abs_tol     = 1.0e-8,
-                                                                       .print_level = 0,
-                                                                       .max_iter    = 500,
-                                                                       .lin_solver  = LinearSolver::GMRES,
-                                                                       .prec        = HypreBoomerAMGPrec{}};
+  constexpr static IterativeSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e-4,
+                                                                          .abs_tol     = 1.0e-8,
+                                                                          .print_level = 0,
+                                                                          .max_iter    = 500,
+                                                                          .lin_solver  = LinearSolver::GMRES,
+                                                                          .prec        = HypreBoomerAMGPrec{}};
 
   /**
    * @brief The default parameters for the nonlinear solid dynamic operator (M solver)
    */
-  constexpr static LinearSolverParameters default_dyn_oper_linear_params = {.rel_tol     = 1.0e-4,
-                                                                            .abs_tol     = 1.0e-8,
-                                                                            .print_level = 0,
-                                                                            .max_iter    = 500,
-                                                                            .lin_solver  = LinearSolver::GMRES,
-                                                                            .prec        = HypreSmootherPrec{}};
+  constexpr static IterativeSolverParameters default_dyn_oper_linear_params = {.rel_tol     = 1.0e-4,
+                                                                               .abs_tol     = 1.0e-8,
+                                                                               .print_level = 0,
+                                                                               .max_iter    = 500,
+                                                                               .lin_solver  = LinearSolver::GMRES,
+                                                                               .prec        = HypreSmootherPrec{}};
 
   /**
    * @brief The default parameters for the nonlinear Newton solver

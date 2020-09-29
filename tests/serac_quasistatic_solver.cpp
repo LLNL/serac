@@ -139,93 +139,82 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
 }
 */
 
-// TEST(nonlinear_solid_solver, qs_custom_solve)
-// {
-//   MPI_Barrier(MPI_COMM_WORLD);
+TEST(nonlinear_solid_solver, qs_custom_solve)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
 
-//   // Open the mesh
-//   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  // Open the mesh
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
 
-//   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
-//   int dim = pmesh->Dimension();
+  int dim = pmesh->Dimension();
 
-//   // Set the linear solver params
-//   serac::LinearSolverParameters params;
-//   params.rel_tol     = 1.0e-6;
-//   params.abs_tol     = 1.0e-8;
-//   params.print_level = 0;
-//   params.max_iter    = 5000;
-//   params.prec        = serac::Preconditioner::Jacobi;
-//   params.lin_solver  = serac::LinearSolver::MINRES;
+  // Simulate a custom solver by manually building the linear solver and passing it in
+  // The custom solver built here should be identical to what is internally built in the
+  // qs_solve test
+  auto custom_params = NonlinearSolid::default_qs_linear_params;
+  auto custom_solver = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
+  custom_solver->SetRelTol(custom_params.rel_tol);
+  custom_solver->SetAbsTol(custom_params.abs_tol);
+  custom_solver->SetMaxIter(custom_params.max_iter);
+  custom_solver->SetPrintLevel(custom_params.print_level);
 
-//   serac::NonlinearSolverParameters nl_params;
-//   nl_params.rel_tol     = 1.0e-3;
-//   nl_params.abs_tol     = 1.0e-6;
-//   nl_params.print_level = 1;
-//   nl_params.max_iter    = 5000;
+  // Define the solver object
+  NonlinearSolid solid_solver(
+      1, pmesh,
+      // Compiler cannot deduce through two layers of indirection so explicitly initialize the CustomParams here
+      // Note that a non-owning pointer is used and that the lifetime of the physics module is dependent on that
+      // of the driver
+      {CustomSolverParameters{custom_solver.get()}, NonlinearSolid::default_qs_nonlinear_params, std::nullopt});
 
-//   serac::EquationSolver eqn_solver(MPI_COMM_WORLD, params, nl_params);
+  std::set<int> ess_bdr = {1};
 
-//   // Simulate a custom solver by manually building the linear solver and passing it in
-//   auto custom_solver = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
-//   custom_solver->SetRelTol(params.rel_tol);
-//   custom_solver->SetAbsTol(params.abs_tol);
-//   custom_solver->SetMaxIter(params.max_iter);
-//   custom_solver->SetPrintLevel(params.print_level);
+  // define the displacement vector
+  mfem::Vector disp(dim);
+  disp = 0.0;
 
-//   eqn_solver.setLinearSolver(std::move(custom_solver));
+  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
 
-//   // Define the solver object
-//   NonlinearSolid solid_solver(1, pmesh, eqn_solver);
+  std::set<int> trac_bdr = {2};
 
-//   std::set<int> ess_bdr = {1};
+  // define the traction vector
+  mfem::Vector traction(dim);
+  traction           = 0.0;
+  traction(1)        = 1.0e-3;
+  auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
-//   // define the displacement vector
-//   mfem::Vector disp(dim);
-//   disp = 0.0;
+  // Pass the BC information to the solver object
+  solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
+  solid_solver.setTractionBCs(trac_bdr, traction_coef);
 
-//   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
+  // Set the material parameters
+  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
 
-//   std::set<int> trac_bdr = {2};
+  // Set the time step method
+  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
-//   // define the traction vector
-//   mfem::Vector traction(dim);
-//   traction           = 0.0;
-//   traction(1)        = 1.0e-3;
-//   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
+  // Initialize the output
+  solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
 
-//   // Pass the BC information to the solver object
-//   solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
-//   solid_solver.setTractionBCs(trac_bdr, traction_coef);
+  // Complete the solver setup
+  solid_solver.completeSetup();
 
-//   // Set the material parameters
-//   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
+  double dt = 1.0;
+  solid_solver.advanceTimestep(dt);
 
-//   // Set the time step method
-//   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
+  solid_solver.outputState();
 
-//   // Initialize the output
-//   solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
+  mfem::Vector zero(dim);
+  zero = 0.0;
+  mfem::VectorConstantCoefficient zerovec(zero);
 
-//   // Complete the solver setup
-//   solid_solver.completeSetup();
+  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
 
-//   double dt = 1.0;
-//   solid_solver.advanceTimestep(dt);
+  EXPECT_NEAR(2.2309025, x_norm, 0.001);
 
-//   solid_solver.outputState();
-
-//   mfem::Vector zero(dim);
-//   zero = 0.0;
-//   mfem::VectorConstantCoefficient zerovec(zero);
-
-//   double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
-
-//   EXPECT_NEAR(2.2309025, x_norm, 0.001);
-
-//   MPI_Barrier(MPI_COMM_WORLD);
-// }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
 
 }  // namespace serac
 

@@ -95,7 +95,7 @@ public:
   /**
    * @brief The default parameters for an iterative linear solver
    */
-  constexpr static LinearSolverParameters default_quasistatic = {
+  constexpr static IterativeSolverParameters default_quasistatic = {
       .rel_tol     = 1.0e-4,
       .abs_tol     = 1.0e-10,
       .print_level = 0,
