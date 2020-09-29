@@ -112,9 +112,9 @@ void ThermalConduction::completeSetup()
 
     M_mat_.reset(M_form_->ParallelAssemble());
 
-    // Make the time integration operator and set the appropriate matricies
-    // Just use the one set of params for now - FIXME
-    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), dyn_oper_params_->first, bcs_);
+    // Make the time integration operator and set the appropriate matrices
+    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), dyn_oper_params_->first,
+                                                            dyn_oper_params_->second, bcs_);
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 

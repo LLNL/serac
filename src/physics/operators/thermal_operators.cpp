@@ -12,7 +12,8 @@
 namespace serac {
 
 DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace&         fe_space,
-                                                     const serac::LinearSolverParameters& params,
+                                                     const serac::LinearSolverParameters& M_params,
+                                                     const serac::LinearSolverParameters& T_params,
                                                      const BoundaryConditionManager&      bcs)
     : mfem::TimeDependentOperator(fe_space.GetTrueVSize(), 0.0),
       bcs_(bcs),
@@ -22,12 +23,11 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
       old_dt_(-1.0)
 {
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the temperature
-  const auto& augmented_params = augmentAMGWithSpace(params, fe_space);
+  const auto& augmented_M_params = augmentAMGWithSpace(M_params, fe_space);
+  const auto& augmented_T_params = augmentAMGWithSpace(T_params, fe_space);
 
-  // Use the same options for the T (= M + dt K) solver
-  // TODO: separate the M and K solver params
-  M_inv_                               = EquationSolver(fe_space.GetComm(), augmented_params);
-  T_inv_                               = EquationSolver(fe_space.GetComm(), augmented_params);
+  M_inv_                               = EquationSolver(fe_space.GetComm(), augmented_M_params);
+  T_inv_                               = EquationSolver(fe_space.GetComm(), augmented_T_params);
   M_inv_.linearSolver().iterative_mode = false;
   T_inv_.linearSolver().iterative_mode = false;
 
