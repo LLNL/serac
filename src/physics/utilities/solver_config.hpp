@@ -59,10 +59,8 @@ enum class LinearSolver
 enum class NonlinearSolver
 {
   BasicNewton,
-  KINBasic,
-  KINLineSearch,
-  KINFixedPoint,
-  KINPicard
+  KINFullStep,
+  KINBacktrackingLineSearch
 };
 
 /**

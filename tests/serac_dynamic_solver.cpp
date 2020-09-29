@@ -229,7 +229,7 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   nl_params.abs_tol       = 1.0e-8;
   nl_params.print_level   = 1;
   nl_params.max_iter      = 500;
-  nl_params.nonlin_solver = NonlinearSolver::KINLineSearch;
+  nl_params.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch;
   dyn_solver.setSolverParameters(params, nl_params);
 
   // Initialize the VisIt output
