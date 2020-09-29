@@ -149,11 +149,16 @@ public:
       .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
 
   /**
-   * @brief The default parameters for the nonlinear Newton solver
+   * @brief The default parameters for the nonlinear Newton solver for quasistatic mode
    */
   constexpr static NonlinearSolverParameters default_qs_nonlinear_params = {
       .rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
 
+  /**
+   * @brief The default equation solver parameters for quasistatic simulations
+   */
+  constexpr static NonlinearSolidParameters default_quasistatic =
+      std::make_tuple(default_qs_linear_params, default_qs_nonlinear_params, std::nullopt);
   /**
    * @brief The default parameters for an iterative linear solver
    */
@@ -175,14 +180,14 @@ public:
                                                                                .prec        = HypreSmootherPrec{}};
 
   /**
-   * @brief The default parameters for the nonlinear Newton solver
+   * @brief The default parameters for the nonlinear Newton solver for dynamic mode
    */
   constexpr static NonlinearSolverParameters default_dyn_nonlinear_params = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
-  constexpr static NonlinearSolidParameters default_quasistatic =
-      std::make_tuple(default_qs_linear_params, default_qs_nonlinear_params, std::nullopt);
-
+  /**
+   * @brief The default equation solver parameters for time-dependent simulations
+   */
   constexpr static NonlinearSolidParameters default_dynamic =
       std::make_tuple(default_dyn_linear_params, default_dyn_nonlinear_params,
                       std::make_tuple(TimestepMethod::SDIRK33, default_dyn_oper_linear_params));

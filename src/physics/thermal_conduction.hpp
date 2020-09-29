@@ -127,9 +127,20 @@ public:
       .lin_solver  = LinearSolver::CG,
       .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
 
+  /**
+   * @brief The default equation solver parameters for quasistatic simulations
+   */
   constexpr static ThermalConductionParameters default_quasistatic = default_linear_params;
+
+  /**
+   * @brief The default equation solver parameters for explicit time-dependent simulations
+   */
   constexpr static ThermalConductionParameters default_explicit_solve =
       std::make_tuple(TimestepMethod::ForwardEuler, default_linear_params, default_linear_params);
+
+  /**
+   * @brief The default equation solver parameters for implicit time-dependent simulations
+   */
   constexpr static ThermalConductionParameters default_implicit_solve =
       std::make_tuple(TimestepMethod::BackwardEuler, default_linear_params, default_linear_params);
 

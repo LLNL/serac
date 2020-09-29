@@ -22,16 +22,12 @@ DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace
       old_dt_(-1.0)
 {
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the temperature
-  if (std::holds_alternative<IterativeSolverParameters>(params)) {
-    const auto& iter_params = std::get<IterativeSolverParameters>(params);
-    if (std::holds_alternative<HypreBoomerAMGPrec>(iter_params.prec)) {
-      std::get<HypreBoomerAMGPrec>(iter_params.prec).pfes = &fe_space;
-    }
-  }
+  const auto& augmented_params = augmentAMGWithSpace(params, fe_space);
+
   // Use the same options for the T (= M + dt K) solver
   // TODO: separate the M and K solver params
-  M_inv_                               = EquationSolver(fe_space.GetComm(), params);
-  T_inv_                               = EquationSolver(fe_space.GetComm(), params);
+  M_inv_                               = EquationSolver(fe_space.GetComm(), augmented_params);
+  T_inv_                               = EquationSolver(fe_space.GetComm(), augmented_params);
   M_inv_.linearSolver().iterative_mode = false;
   T_inv_.linearSolver().iterative_mode = false;
 

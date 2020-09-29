@@ -21,13 +21,9 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const Lin
   state_[0] = displacement_;
 
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
-  if (std::holds_alternative<IterativeSolverParameters>(params)) {
-    const auto& iter_params = std::get<IterativeSolverParameters>(params);
-    if (std::holds_alternative<HypreBoomerAMGPrec>(iter_params.prec)) {
-      std::get<HypreBoomerAMGPrec>(iter_params.prec).pfes = &displacement_->space();
-    }
-  }
-  K_inv_ = EquationSolver(mesh->GetComm(), params);
+  const auto& augmented_params = augmentAMGWithSpace(params, displacement_->space());
+
+  K_inv_ = EquationSolver(mesh->GetComm(), augmented_params);
   setTimestepper(TimestepMethod::QuasiStatic);
 }
 

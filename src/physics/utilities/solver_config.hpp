@@ -68,7 +68,7 @@ struct HypreSmootherPrec {
  * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
  */
 struct HypreBoomerAMGPrec {
-  mutable mfem::ParFiniteElementSpace* pfes = nullptr;
+  mfem::ParFiniteElementSpace* pfes = nullptr;
 };
 
 /**
@@ -140,6 +140,9 @@ struct DirectSolverParameters {
   int print_level;
 };
 
+/**
+ * @brief Parameters for a linear solver
+ */
 using LinearSolverParameters = std::variant<IterativeSolverParameters, CustomSolverParameters, DirectSolverParameters>;
 
 /**

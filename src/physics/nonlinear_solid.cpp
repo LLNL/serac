@@ -45,14 +45,9 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
 
   const auto& lin_params = std::get<0>(params);
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
-  if (std::holds_alternative<IterativeSolverParameters>(lin_params)) {
-    const auto& iter_params = std::get<IterativeSolverParameters>(lin_params);
-    if (std::holds_alternative<HypreBoomerAMGPrec>(iter_params.prec)) {
-      std::get<HypreBoomerAMGPrec>(iter_params.prec).pfes = &displacement_->space();
-    }
-  }
+  const auto& augmented_params = augmentAMGWithSpace(lin_params, displacement_->space());
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), lin_params, std::get<1>(params));
+  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, std::get<1>(params));
   // Check for dynamic mode
   const auto& dyn_params = std::get<2>(params);
   if (dyn_params) {

@@ -45,7 +45,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
         // If it's a custom solver, just configure the linear solver
         else if constexpr (std::is_same_v<Param, CustomSolverParameters>) {
           SLIC_ERROR_IF(lin_params.solver == nullptr, "Custom solver pointer must be initialized.");
-          setLinearSolver(*lin_params.solver);
+          lin_solver_ = lin_params.solver;
         }
         // If it's a direct solver, set it up (currently only SuperLU is supported)
         else if constexpr (std::is_same_v<Param, DirectSolverParameters>) {
