@@ -63,7 +63,7 @@ TEST(dynamic_solver, dyn_solve)
   therm_T_params.prec = HypreSmootherPrec{};
 
   ThermalConduction::ThermalConductionParameters therm_params =
-      std::make_tuple(TimestepMethod::SDIRK33, therm_M_params, therm_T_params);
+      ThermalConduction::DynamicParameters{TimestepMethod::SDIRK33, therm_M_params, therm_T_params};
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_params, NonlinearSolid::default_dynamic);

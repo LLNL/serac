@@ -32,9 +32,14 @@ namespace serac {
 class ThermalConduction : public BasePhysics {
 public:
   /**
-   * @brief A timestep method and configs for the M and T solvers (in that order)
+   * @brief A timestep method and configs for the M and T solvers
    */
-  using DynamicParameters = std::tuple<TimestepMethod, LinearSolverParameters, LinearSolverParameters>;
+  struct DynamicParameters {
+    TimestepMethod         timestepper;
+    LinearSolverParameters M_params;
+    LinearSolverParameters T_params;
+  };
+
   /**
    * @brief A configuration variant for the various solves
    * Either quasistatic with a single config for the K solver, or
@@ -136,13 +141,13 @@ public:
    * @brief The default equation solver parameters for explicit time-dependent simulations
    */
   constexpr static ThermalConductionParameters default_explicit_solve =
-      std::make_tuple(TimestepMethod::ForwardEuler, default_linear_params, default_linear_params);
+      DynamicParameters{TimestepMethod::ForwardEuler, default_linear_params, default_linear_params};
 
   /**
    * @brief The default equation solver parameters for implicit time-dependent simulations
    */
   constexpr static ThermalConductionParameters default_implicit_solve =
-      std::make_tuple(TimestepMethod::BackwardEuler, default_linear_params, default_linear_params);
+      DynamicParameters{TimestepMethod::BackwardEuler, default_linear_params, default_linear_params};
 
 protected:
   /**
@@ -198,7 +203,8 @@ protected:
   /**
    * @brief Configuration for dynamic equation solvers
    */
-  std::optional<std::pair<LinearSolverParameters, LinearSolverParameters>> dyn_oper_params_;
+  std::optional<LinearSolverParameters> dyn_M_params_;
+  std::optional<LinearSolverParameters> dyn_T_params_;
 
   /**
    * @brief Time integration operator

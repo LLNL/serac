@@ -29,8 +29,9 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
         }
         // Otherwise - dynamic with M and T configs
         else {
-          setTimestepper(std::get<0>(config));
-          dyn_oper_params_ = std::make_pair(std::get<1>(config), std::get<2>(config));
+          setTimestepper(config.timestepper);
+          dyn_M_params_ = config.M_params;
+          dyn_T_params_ = config.T_params;
         }
       },
       params);
@@ -113,8 +114,8 @@ void ThermalConduction::completeSetup()
     M_mat_.reset(M_form_->ParallelAssemble());
 
     // Make the time integration operator and set the appropriate matrices
-    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), dyn_oper_params_->first,
-                                                            dyn_oper_params_->second, bcs_);
+    dyn_oper_ =
+        std::make_unique<DynamicConductionOperator>(temperature_->space(), *dyn_M_params_, *dyn_T_params_, bcs_);
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 
@@ -129,13 +130,6 @@ void ThermalConduction::quasiStaticSolve()
   for (auto& bc : bcs_.essentials()) {
     bc.apply(*K_mat_, *bc_rhs_, *temperature_, time_);
   }
-
-  // Solve the stiffness using CG with Jacobi preconditioning
-  // and the given solverparams
-  // auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
-  // hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);
-
-  // solver_.SetPreconditioner(std::move(hypre_smoother));
 
   K_inv_->linearSolver().iterative_mode = false;
   K_inv_->SetOperator(*K_mat_);
