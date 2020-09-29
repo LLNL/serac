@@ -44,7 +44,7 @@ public:
    *
    * @param[in] order The order of the displacement field
    * @param[in] mesh The MFEM parallel mesh to solve on
-   * @param[in] solver The system solver instance
+   * @param[in] solver The system solver parameters
    */
   NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
                  const NonlinearSolidParameters& params = default_quasistatic);

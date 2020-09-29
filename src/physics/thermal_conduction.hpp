@@ -47,7 +47,7 @@ public:
    *
    * @param[in] order The order of the thermal field discretization
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
-   * @param[in] solver The system solver instance
+   * @param[in] params The system solver parameters
    */
   ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh,
                     const ThermalConduction::ThermalConductionParameters& params = default_quasistatic);

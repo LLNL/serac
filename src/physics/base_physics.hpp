@@ -42,7 +42,6 @@ public:
    * @param[in] mesh The primary mesh
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
-   * @param[in] solver The system solver instance
    */
   BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
