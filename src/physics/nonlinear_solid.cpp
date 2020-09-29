@@ -17,7 +17,9 @@ constexpr int NUM_FIELDS = 2;
 NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "velocity"})),
-      displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
+      displacement_(
+          std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"})),
+      bcs_(*mesh)
 {
   state_[0] = velocity_;
   state_[1] = displacement_;
@@ -47,19 +49,25 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh)
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                         std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, -1);
+  bcs_.addEssential<NonlinearSolidBC::Displacement>(disp_bdr, disp_bdr_coef, -1);
 }
 
 void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                                         int component)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
+  bcs_.addEssential<NonlinearSolidBC::Displacement>(disp_bdr, disp_bdr_coef, component);
 }
 
 void NonlinearSolid::setTractionBCs(const std::set<int>&                     trac_bdr,
                                     std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
-  bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
+  bcs_.addNatural<NonlinearSolidBC::Traction>(trac_bdr, trac_bdr_coef, component);
+}
+
+void NonlinearSolid::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient disp_bdr_coef,
+                                 int component)
+{
+  bcs_.addEssentialTrueDofs<NonlinearSolidBC::Displacement>(true_dofs, disp_bdr_coef, component);
 }
 
 void NonlinearSolid::setHyperelasticMaterialParameters(const double mu, const double K)
@@ -103,16 +111,21 @@ void NonlinearSolid::completeSetup()
   }
 
   // Add the traction integrator
-  for (auto& nat_bc_data : bcs_.naturals()) {
+  for (auto& nat_bc_data : bcs_.naturals<NonlinearSolidBC::Traction>()) {
     H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
                                  nat_bc_data.markers());
+  }
+
+  // Initialize all the essential DOFs
+  for (auto& bc : bcs_.essentials<NonlinearSolidBC::Displacement>()) {
+    bc.setTrueDofs(*displacement_);
   }
 
   // Build the dof array lookup tables
   displacement_->space().BuildDofToArrays();
 
   // Project the essential boundary coefficients
-  for (auto& bc : bcs_.essentials()) {
+  for (auto& bc : bcs_.essentials<NonlinearSolidBC::Displacement>()) {
     // Project the coefficient
     bc.project(*displacement_);
   }

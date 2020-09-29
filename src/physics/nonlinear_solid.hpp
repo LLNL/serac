@@ -18,7 +18,6 @@
 #include "physics/operators/nonlinear_solid_operators.hpp"
 
 namespace serac {
-
 /**
  * @brief The nonlinear solid solver class
  *
@@ -63,6 +62,15 @@ public:
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1);
+
+  /**
+   * @brief Set a list of true degrees of freedom from a coefficient
+   *
+   * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
+   * @param[in] disp_bdr_coef The coefficient that evaluates to the Dirichlet condition
+   * @param[in] component The component to set (-1 implies all components are set)
+   */
+  void setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient disp_bdr_coef, int component = -1);
 
   /**
    * @brief Set the viscosity coefficient
@@ -202,6 +210,8 @@ protected:
    * @brief Solve the Quasi-static operator
    */
   void quasiStaticSolve();
+
+  NonlinearSolidBC::Manager bcs_;
 };
 
 }  // namespace serac

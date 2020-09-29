@@ -15,6 +15,8 @@
 
 #include <memory>
 #include <set>
+#include <typeinfo>
+#include <unordered_map>
 
 #include "physics/utilities/boundary_condition.hpp"
 #include "physics/utilities/finite_element_state.hpp"
@@ -135,6 +137,81 @@ private:
 template <class Iter, class Pred>
 FilterView(Iter, Iter, Pred &&) -> FilterView<Iter, Pred>;
 
+template <typename Iter, typename UnaryOp>
+class TransformView {
+public:
+  class TransformViewIterator {
+  public:
+    TransformViewIterator(Iter curr, const UnaryOp& op) : curr_(curr), op_(op) {}
+    TransformViewIterator& operator++()
+    {
+      ++curr_;
+      return *this;
+    }
+    const auto& operator*() const { return op_(*curr_); }
+    auto&       operator*() { return op_(*curr_); }
+    bool        operator!=(const TransformViewIterator& other) const { return curr_ != other.curr_; }
+
+  private:
+    Iter           curr_;
+    const UnaryOp& op_;
+  };
+  TransformView(Iter begin, Iter end, UnaryOp&& op) : begin_(begin), end_(end), op_(std::move(op)) {}
+  TransformViewIterator       begin() { return {begin_, op_}; }
+  const TransformViewIterator begin() const { return {begin_, op_}; }
+  TransformViewIterator       end() { return {end_, op_}; }
+  const TransformViewIterator end() const { return {end_, op_}; }
+
+private:
+  Iter    begin_;
+  Iter    end_;
+  UnaryOp op_;
+};
+
+/**
+ * @brief Wrapper to enable strong type aliases
+ * i.e. those where different aliases of the same type are not interchangeable
+ * Roughly equivalent to the following Ada:
+ * @code{.ada}
+ * type Alias is new AliasedType;
+ * @endcode
+ * This should be used as follows:
+ * @code{.cpp}
+ * using Meters = StrongAlias<double, struct MetersParam>;
+ * @endcode
+ * @tparam AliasedType The type to tag/wrap/alias
+ * @tparam Alias The type to use as a tag - typically an empty struct
+ */
+template <class AliasedType, class Alias>
+class StrongAlias {
+public:
+  /**
+   * @brief Constructs a new StrongAlias instance via move from rvalue
+   * @param[in] val The value to move from
+   */
+  explicit StrongAlias(AliasedType&& val) : val_(std::move(val)) {}
+  /**
+   * @brief Constructs a new StrongAlias instance via copy from lvalue
+   * @param[in] val The value to copy from
+   */
+  explicit StrongAlias(const AliasedType& val) : val_(val) {}
+
+  /**
+   * @brief Accesses the underlying AliasedType object
+   */
+  explicit operator const AliasedType&() const { return val_; }
+  explicit operator AliasedType&() { return val_; }
+  explicit operator AliasedType&&() && { return std::move(val_); }
+
+private:
+  AliasedType val_;
+};
+
+/**
+ * @brief A structure for storing boundary conditions of arbitrary type
+ * @tparam BoundaryConditionTypes The variadic list of types
+ */
+template <class... BoundaryConditionTypes>
 class BoundaryConditionManager {
 public:
   BoundaryConditionManager(const mfem::ParMesh& mesh) : num_attrs_(mesh.bdr_attributes.Max()) {}
@@ -143,11 +220,32 @@ public:
    *
    * @param[in] ess_bdr The set of essential BC attributes
    * @param[in] ess_bdr_coef The essential BC value coefficient
-   * @param[in] state The finite element state to which the BC should be applied
    * @param[in] component The component to set (-1 implies all components are set)
+   * @tparam Tag The physics-specific tag/marker type to use to annotate the essential BC
    */
-  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, FiniteElementState& state,
-                    const int component = -1);
+  template <typename Tag>
+  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, const int component = -1)
+  {
+    using AliasedEssential = StrongAlias<EssentialBoundaryCondition, Tag>;
+    auto          type_key = typeid(AliasedEssential).hash_code();
+    auto&         bdr_vec  = std::get<std::vector<AliasedEssential>>(bdrs_);
+    std::set<int> filtered_attrs;
+    std::set_difference(ess_bdr.begin(), ess_bdr.end(), attrs_in_use_[type_key].begin(), attrs_in_use_[type_key].end(),
+                        std::inserter(filtered_attrs, filtered_attrs.begin()));
+
+    // Check if anything was removed
+    if (filtered_attrs.size() < bdr_vec.size()) {
+      SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
+    }
+
+    // Build the markers and then the boundary condition
+    auto markers = makeMarkers(filtered_attrs);
+    bdr_vec.emplace_back(EssentialBoundaryCondition(ess_bdr_coef, component, std::move(markers)));
+
+    // Then mark the boundary attributes as "in use" and invalidate the DOFs cache
+    attrs_in_use_[type_key].insert(ess_bdr.begin(), ess_bdr.end());
+    all_essential_dofs_valid_[type_key] = false;
+  }
 
   /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
@@ -155,26 +253,29 @@ public:
    * @param[in] nat_bdr The set of mesh attributes denoting a natural boundary
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
    * @param[in] component The component to set (-1 implies all components are set)
+   * @tparam Tag The physics-specific tag/marker type to use to annotate the essential BC
    */
-  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, const int component = -1);
+  template <typename Tag>
+  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, const int component = -1)
+  {
+    using AliasedNatural = StrongAlias<NaturalBoundaryCondition, Tag>;
+    auto markers         = makeMarkers(nat_bdr);
+    std::get<std::vector<AliasedNatural>>(bdrs_).emplace_back(
+        NaturalBoundaryCondition(nat_bdr_coef, component, std::move(markers)));
+  }
 
   /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
    *
-   * @tparam The type of the tag to use
    * @param[in] bdr_attr The set of mesh attributes denoting a natural boundary
    * @param[in] bdr_coef The coefficient defining the natural boundary function
-   * @param[in] tag The tag for the generic boundary condition, for identification purposes
    * @param[in] component The component to set (-1 implies all components are set)
-   * @pre Template type "Tag" must be an enumeration
+   * @tparam BoundaryConditionType The type of the BC to add
    */
-  template <typename Tag>
-  void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, const Tag tag,
-                  const int component = -1)
+  template <typename BoundaryConditionType>
+  void addGeneric(BoundaryConditionType&& bc)
   {
-    other_bdr_.emplace_back(bdr_coef, component, bdr_attr, num_attrs_);
-    other_bdr_.back().setTag(tag);
-    all_dofs_valid_ = false;
+    std::get<BoundaryConditionType>(bdrs_).emplace_back(std::move(bc));
   }
 
   /**
@@ -183,116 +284,166 @@ public:
    * @param[in] true_dofs The true degrees of freedom to set with a Dirichlet condition
    * @param[in] ess_bdr_coef The coefficient that evaluates to the Dirichlet condition
    * @param[in] component The component to set (-1 implies all components are set)
+   * @tparam Tag The physics-specific tag/marker type to use to annotate the essential BC
    */
+  template <typename Tag>
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            int component = -1);
+                            int component = -1)
+  {
+    using AliasedEssential = StrongAlias<EssentialBoundaryCondition, Tag>;
+    EssentialBoundaryCondition bc(ess_bdr_coef, component);
+    bc.setTrueDofs(true_dofs);
+    std::get<std::vector<AliasedEssential>>(bdrs_).emplace_back(std::move(bc));
+    auto type_key                       = typeid(AliasedEssential).hash_code();
+    all_essential_dofs_valid_[type_key] = false;
+  }
 
   /**
    * @brief Returns all the degrees of freedom associated with all the essential BCs
    * @return A const reference to the list of DOF indices, without duplicates and sorted
+   * @tparam Tag The physics-specific tag/marker type to use to annotate the essential BC
    */
+  template <typename Tag>
   const mfem::Array<int>& allEssentialDofs() const
   {
-    if (!all_dofs_valid_) {
-      updateAllEssentialDofs();
+    using AliasedEssential = StrongAlias<EssentialBoundaryCondition, Tag>;
+    auto type_key          = typeid(AliasedEssential).hash_code();
+    if (!all_essential_dofs_valid_[type_key]) {
+      updateAllEssentialDofs<AliasedEssential>();
     }
-    return all_dofs_;
+    return all_essential_dofs_[type_key];
   }
 
   /**
    * @brief Eliminates all essential BCs from a matrix
    * @param[inout] matrix The matrix to eliminate from, will be modified
+   * @tparam Tag The physics-specific tag/marker type to use to annotate the essential BC
    * @return The eliminated matrix entries
    * @note The sum of the eliminated matrix and the modified parameter is
    * equal to the initial state of the parameter
    */
+  template <typename Tag>
   std::unique_ptr<mfem::HypreParMatrix> eliminateAllEssentialDofsFromMatrix(mfem::HypreParMatrix& matrix) const
   {
-    return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allEssentialDofs()));
+    return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allEssentialDofs<Tag>()));
   }
 
   /**
    * @brief Accessor for the essential BC objects
    */
-  std::vector<BoundaryCondition>& essentials() { return ess_bdr_; }
+  template <typename Tag>
+  auto essentials()
+  {
+    auto& vec = std::get<std::vector<StrongAlias<EssentialBoundaryCondition, Tag>>>(bdrs_);
+    return TransformView(vec.begin(), vec.end(), [](auto& bc) -> EssentialBoundaryCondition& {
+      return static_cast<EssentialBoundaryCondition&>(bc);
+    });
+  }
   /**
    * @brief Accessor for the natural BC objects
    */
-  std::vector<BoundaryCondition>& naturals() { return nat_bdr_; }
+  template <typename Tag>
+  auto naturals()
+  {
+    auto& vec = std::get<std::vector<StrongAlias<NaturalBoundaryCondition, Tag>>>(bdrs_);
+    return TransformView(vec.begin(), vec.end(), [](auto& bc) -> NaturalBoundaryCondition& {
+      return static_cast<NaturalBoundaryCondition&>(bc);
+    });
+  }
   /**
    * @brief Accessor for the generic BC objects
    */
-  std::vector<BoundaryCondition>& generics() { return other_bdr_; }
+  template <typename BoundaryConditionType>
+  auto& generics()
+  {
+    return std::get<std::vector<BoundaryConditionType>>(bdrs_);
+  }
 
   /**
    * @brief Accessor for the essential BC objects
    */
-  const std::vector<BoundaryCondition>& essentials() const { return ess_bdr_; }
+  template <typename Tag>
+  const auto essentials() const
+  {
+    const auto& vec = std::get<std::vector<StrongAlias<EssentialBoundaryCondition, Tag>>>(bdrs_);
+    return TransformView(vec.begin(), vec.end(), [](const auto& bc) -> const EssentialBoundaryCondition& {
+      return static_cast<const EssentialBoundaryCondition&>(bc);
+    });
+  }
   /**
    * @brief Accessor for the natural BC objects
    */
-  const std::vector<BoundaryCondition>& naturals() const { return nat_bdr_; }
+  template <typename Tag>
+  const auto naturals() const
+  {
+    const auto& vec = std::get<std::vector<StrongAlias<NaturalBoundaryCondition, Tag>>>(bdrs_);
+    return TransformView(vec.begin(), vec.end(), [](const auto& bc) -> const NaturalBoundaryCondition& {
+      return static_cast<const NaturalBoundaryCondition&>(bc);
+    });
+  }
   /**
    * @brief Accessor for the generic BC objects
    */
-  const std::vector<BoundaryCondition>& generics() const { return other_bdr_; }
-
-  /**
-   * @brief View over all "other"/generic boundary conditions with a specific tag
-   * @tparam Tag The template type for the tag
-   * @param tag The tag to filter with
-   * @pre Tag must be an enumeration type
-   */
-  template <typename Tag>
-  auto genericsWithTag(const Tag tag)
+  template <typename BoundaryConditionType>
+  const auto& generics() const
   {
-    static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
-    return FilterView(other_bdr_.begin(), other_bdr_.end(), [tag](const auto& bc) { return bc.tagEquals(tag); });
+    return std::get<std::vector<BoundaryConditionType>>(bdrs_);
+  }
+
+  mfem::Array<int> makeMarkers(const std::set<int>& attrs) const
+  {
+    mfem::Array<int> markers(num_attrs_);
+    markers = 0;
+    for (const int attr : attrs) {
+      SLIC_ASSERT_MSG(attr <= num_attrs, "Attribute specified larger than what is found in the mesh.");
+      markers[attr - 1] = 1;
+    }
+
+    return markers;
   }
 
 private:
   /**
    * @brief Updates the "cached" list of all DOF indices
+   * @tparam AliasedEssential The physics-specific strongly aliased essential BC type
    */
-  void updateAllEssentialDofs() const;
+  template <typename AliasedEssential>
+  void updateAllEssentialDofs() const
+  {
+    auto type_key = typeid(AliasedEssential).hash_code();
+    all_essential_dofs_[type_key].DeleteAll();
+    for (const auto& bc : std::get<std::vector<AliasedEssential>>(bdrs_)) {
+      all_essential_dofs_[type_key].Append(static_cast<const EssentialBoundaryCondition&>(bc).getTrueDofs());
+    }
+    all_essential_dofs_[type_key].Sort();
+    all_essential_dofs_[type_key].Unique();
+    all_essential_dofs_valid_[type_key] = true;
+  }
 
   /**
    * @brief The total number of boundary attributes for a mesh
    */
   const int num_attrs_;
 
-  /**
-   * @brief The vector of essential boundary conditions
-   */
-  std::vector<BoundaryCondition> ess_bdr_;
-
-  /**
-   * @brief The vector of natural boundary conditions
-   */
-  std::vector<BoundaryCondition> nat_bdr_;
-
-  /**
-   * @brief The vector of generic (not Dirichlet or Neumann) boundary conditions
-   */
-  std::vector<BoundaryCondition> other_bdr_;
+  std::tuple<std::vector<BoundaryConditionTypes>...> bdrs_;
 
   /**
    * @brief The set of boundary attributes associated with
    * already-registered BCs
    * @see https://mfem.org/mesh-formats/
    */
-  std::set<int> attrs_in_use_;
+  std::unordered_map<std::size_t, std::set<int>> attrs_in_use_;
 
   /**
    * @brief The set of true DOF indices corresponding
    * to all registered BCs
    */
-  mutable mfem::Array<int> all_dofs_;
+  mutable std::unordered_map<std::size_t, mfem::Array<int>> all_essential_dofs_;
 
   /**
    * @brief Whether the set of stored total DOFs is valid
    */
-  mutable bool all_dofs_valid_ = false;
+  mutable std::unordered_map<std::size_t, bool> all_essential_dofs_valid_;
 };
 
 }  // namespace serac

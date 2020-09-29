@@ -13,7 +13,7 @@ namespace serac {
 
 DynamicConductionOperator::DynamicConductionOperator(mfem::ParFiniteElementSpace&         fe_space,
                                                      const serac::LinearSolverParameters& params,
-                                                     const BoundaryConditionManager&      bcs)
+                                                     const ThermalConductionBC::Manager&  bcs)
     : mfem::TimeDependentOperator(fe_space.GetTrueVSize(), 0.0),
       bcs_(bcs),
       z_(fe_space.GetTrueVSize()),
@@ -59,7 +59,7 @@ void DynamicConductionOperator::Mult(const mfem::Vector& u, mfem::Vector& du_dt)
   y_ = u;
 
   *bc_rhs_ = *rhs_;
-  for (const auto& bc : bcs_.essentials()) {
+  for (const auto& bc : bcs_.essentials<ThermalConductionBC::Temperature>()) {
     bc.eliminateToRHS(*K_, u, *bc_rhs_);
   }
 
@@ -85,7 +85,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
     T_.reset(mfem::Add(1.0, *M_, dt, *K_));
 
     // Eliminate the essential DOFs from the T matrix
-    bcs_.eliminateAllEssentialDofsFromMatrix(*T_);
+    bcs_.eliminateAllEssentialDofsFromMatrix<ThermalConductionBC::Temperature>(*T_);
     T_inv_.SetOperator(*T_);
   }
 
@@ -93,7 +93,7 @@ void DynamicConductionOperator::ImplicitSolve(const double dt, const mfem::Vecto
   *bc_rhs_ = *rhs_;
   x_       = 0.0;
 
-  for (const auto& bc : bcs_.essentials()) {
+  for (const auto& bc : bcs_.essentials<ThermalConductionBC::Temperature>()) {
     bc.projectBdr(*state_gf_, t);
     state_gf_->SetFromTrueDofs(y_);
     state_gf_->GetTrueDofs(y_);

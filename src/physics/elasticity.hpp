@@ -18,6 +18,16 @@
 
 namespace serac {
 
+struct ElasticityBC {
+  struct Displacement {
+  };
+  struct Traction {
+  };
+  using DisplacementEss = StrongAlias<EssentialBoundaryCondition, Displacement>;
+  using TractionNat     = StrongAlias<NaturalBoundaryCondition, Traction>;
+  using Manager         = BoundaryConditionManager<DisplacementEss, TractionNat>;
+};
+
 /**
  * @brief A solver for the steady state solution of a linear elasticity PDE
  *
@@ -163,6 +173,8 @@ protected:
    * @brief Quasi-static solve driver
    */
   void QuasiStaticSolve();
+
+  ElasticityBC::Manager bcs_;
 };
 
 }  // namespace serac

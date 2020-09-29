@@ -27,70 +27,9 @@
 
 namespace serac {
 
-/**
- * @brief Boundary condition information bundle
- */
-class BoundaryCondition {
+class GeneralCoefficientWrapper {
 public:
-  /**
-   * @brief Constructor for setting up a boundary condition using a set of attributes
-   * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
-   * @param[in] component The zero-indexed vector component if the BC applies to just one component,
-   * should be -1 for all components
-   * @param[in] attrs The set of boundary condition attributes in the mesh that the BC applies to
-   * @param[in] num_attrs The total number of boundary attributes for the mesh
-   */
-  BoundaryCondition(GeneralCoefficient coef, const int component, const std::set<int>& attrs, const int num_attrs = 0);
-
-  /**
-   * @brief Minimal constructor for setting the true DOFs directly
-   * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
-   * @param[in] component The zero-indexed vector component if the BC applies to just one component,
-   * should be -1 for all components
-   * @param[in] true_dofs The indices of the relevant DOFs
-   */
-  BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs);
-
-  /**
-   * @brief Determines whether a boundary condition is associated with a tag
-   * @tparam Tag The type of the tag to compare against
-   * @param[in] The tag to compare against
-   * @pre Template type "Tag" must be an enumeration
-   */
-  template <typename Tag>
-  bool tagEquals(const Tag tag) const
-  {
-    static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
-    SLIC_ERROR_IF(!tag_, "No tag has been configured for this boundary condition");
-    bool tags_same_type = typeid(tag).hash_code() == tag_->second;
-    SLIC_WARNING_IF(!tags_same_type, "Attempting to compare tags of two different enum types (always false)");
-    return (static_cast<int>(tag) == tag_->first) && tags_same_type;
-  }
-
-  /**
-   * @brief Sets the tag for the BC
-   * @tparam Tag The template type for the tag (label)
-   * @param[in] The new tag
-   * @pre Template type "Tag" must be an enumeration
-   */
-  template <typename Tag>
-  void setTag(const Tag tag)
-  {
-    static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
-    tag_ = {static_cast<int>(tag), typeid(tag).hash_code()};
-  }
-
-  /**
-   * @brief Returns a non-owning reference to the array of boundary
-   * attribute markers
-   */
-  const mfem::Array<int>& markers() const { return markers_; }
-
-  /**
-   * @brief Returns a non-owning reference to the array of boundary
-   * attribute markers
-   */
-  mfem::Array<int>& markers() { return markers_; }
+  GeneralCoefficientWrapper(GeneralCoefficient coef) : coef_(coef) {}
 
   /**
    * @brief Accessor for the underlying vector coefficient
@@ -132,11 +71,49 @@ public:
    */
   mfem::Coefficient& scalarCoefficient();
 
+private:
+  /**
+   * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
+   */
+  GeneralCoefficient coef_;
+};
+
+class EssentialBoundaryCondition {
+public:
+  /**
+   * @brief Constructor for setting up a boundary condition using a set of attributes
+   * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
+   * @param[in] component The zero-indexed vector component if the BC applies to just one component,
+   * should be -1 for all components
+   * @param[in] markers The 0-1 array of boundary condition markers
+   */
+  EssentialBoundaryCondition(GeneralCoefficient coef, const int component, mfem::Array<int>&& markers);
+
+  /**
+   * @brief Constructor for setting up a boundary condition using already-known DOFS (to be set with setTrueDofs)
+   * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
+   * @param[in] component The zero-indexed vector component if the BC applies to just one component,
+   * should be -1 for all components
+   */
+  EssentialBoundaryCondition(GeneralCoefficient coef, const int component);
+
+  /**
+   * @brief Returns a non-owning reference to the array of boundary
+   * attribute markers
+   */
+  const mfem::Array<int>& markers() const { return markers_; }
+
+  /**
+   * @brief Returns a non-owning reference to the array of boundary
+   * attribute markers
+   */
+  mfem::Array<int>& markers() { return markers_; }
+
   /**
    * @brief "Manually" set the DOF indices without specifying the field to which they apply
    * @param[in] dofs The indices of the DOFs constrained by the boundary condition
    */
-  void setTrueDofs(const mfem::Array<int> dofs);
+  void setTrueDofs(const mfem::Array<int>& dofs);
 
   /**
    * @brief Uses mfem::ParFiniteElementSpace::GetEssentialTrueDofs to
@@ -149,24 +126,13 @@ public:
    * @brief Returns the DOF indices for an essential boundary condition
    * @return A non-owning reference to the array of indices
    */
-  const mfem::Array<int>& getTrueDofs() const
-  {
-    SLIC_ERROR_IF(!true_dofs_, "True DOFs only available with essential BC.");
-    return *true_dofs_;
-  }
+  const mfem::Array<int>& getTrueDofs() const { return true_dofs_; }
 
   /**
    * @brief Projects the boundary condition over a field
    * @param[inout] state The field to project over
    */
   void project(FiniteElementState& state) const;
-
-  /**
-   * @brief Projects the boundary condition over a grid function
-   * @pre A corresponding field (FiniteElementState) has been associated
-   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
-   */
-  void project() const;
 
   /**
    * @brief Projects the boundary condition over boundary DOFs of a grid function
@@ -183,35 +149,6 @@ public:
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    */
   void projectBdr(FiniteElementState& state, const double time, const bool should_be_scalar = true) const;
-
-  /**
-   * @brief Projects the boundary condition over boundary DOFs
-   * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
-   * @pre A corresponding field (FiniteElementState) has been associated
-   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
-   */
-  void projectBdr(const double time, const bool should_be_scalar = true) const;
-
-  /**
-   * @brief Allocates an integrator of type "Integrator" on the heap,
-   * constructing it with the boundary condition's vector coefficient,
-   * intended to be passed to mfem::*LinearForm::Add*Integrator
-   * @return An owning pointer to the new integrator
-   * @pre Requires Integrator::Integrator(mfem::VectorCoefficient&)
-   */
-  template <typename Integrator>
-  std::unique_ptr<Integrator> newVecIntegrator() const;
-
-  /**
-   * @brief Allocates an integrator of type "Integrator" on the heap,
-   * constructing it with the boundary condition's coefficient,
-   * intended to be passed to mfem::*LinearForm::Add*Integrator
-   * @return An owning pointer to the new integrator
-   * @pre Requires Integrator::Integrator(mfem::Coefficient&)
-   */
-  template <typename Integrator>
-  std::unique_ptr<Integrator> newIntegrator() const;
 
   /**
    * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
@@ -247,8 +184,10 @@ public:
 private:
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
+   * @note Marked mutable as changing things like the time associated with the coef doesn't
+   * really affect the state of the BoundaryCondition object
    */
-  GeneralCoefficient coef_;
+  mutable GeneralCoefficientWrapper coef_;
   /**
    * @brief The vector component affected by this BC (-1 implies all components)
    */
@@ -259,24 +198,78 @@ private:
   mfem::Array<int> markers_;
   /**
    * @brief The true DOFs affected by this BC
-   * @note Only used for essential (Dirichlet) BCs
    */
-  std::optional<mfem::Array<int>> true_dofs_;
+  mfem::Array<int> true_dofs_;
   /**
-   * @brief The state (field) affected by this BC
-   * @note Only used for essential (Dirichlet) BCs
+   * @brief Whether the DOFs have been fully initialized
    */
-  FiniteElementState* state_ = nullptr;
+  bool dofs_fully_initialized_;
   /**
    * @brief The eliminated entries for Dirichlet BCs
    */
   mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
+};
+
+class NaturalBoundaryCondition {
+public:
   /**
-   * @brief A label for the BC, for filtering purposes, in addition to its type hash
-   * @note This should always correspond to an enum
-   * The first element is the enum val, the second is the hash of the corresponding enum type
+   * @brief Constructor for setting up a boundary condition using a set of attributes
+   * @param[in] coef Either a mfem::Coefficient or mfem::VectorCoefficient representing the BC
+   * @param[in] component The zero-indexed vector component if the BC applies to just one component,
+   * should be -1 for all components
+   * @param[in] markers The 0-1 array of boundary condition markers
    */
-  std::optional<std::pair<int, std::size_t>> tag_;
+  NaturalBoundaryCondition(GeneralCoefficient coef, const int component, mfem::Array<int>&& markers);
+
+  /**
+   * @brief Returns a non-owning reference to the array of boundary
+   * attribute markers
+   */
+  const mfem::Array<int>& markers() const { return markers_; }
+
+  /**
+   * @brief Returns a non-owning reference to the array of boundary
+   * attribute markers
+   */
+  mfem::Array<int>& markers() { return markers_; }
+
+  /**
+   * @brief Accessor for the underlying vector coefficient
+   * @see GeneralCoefficientWrapper
+   */
+  const mfem::VectorCoefficient& vectorCoefficient() const { return coef_.vectorCoefficient(); }
+
+  /**
+   * @brief Accessor for the underlying vector coefficient
+   * @see GeneralCoefficientWrapper
+   */
+  mfem::VectorCoefficient& vectorCoefficient() { return coef_.vectorCoefficient(); }
+
+  /**
+   * @brief Accessor for the underlying scalar coefficient
+   * @see GeneralCoefficientWrapper
+   */
+  const mfem::Coefficient& scalarCoefficient() const { return coef_.scalarCoefficient(); }
+
+  /**
+   * @brief Accessor for the underlying scalar coefficient
+   * @see GeneralCoefficientWrapper
+   */
+  mfem::Coefficient& scalarCoefficient() { return coef_.scalarCoefficient(); }
+
+private:
+  /**
+   * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
+   */
+  GeneralCoefficientWrapper coef_;
+  /**
+   * @brief The vector component affected by this BC (-1 implies all components)
+   */
+  int component_;
+  /**
+   * @brief The attribute marker array where this BC is active
+   */
+  mfem::Array<int> markers_;
 };
 
 }  // namespace serac

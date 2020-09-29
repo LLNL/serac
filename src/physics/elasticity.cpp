@@ -15,7 +15,9 @@ constexpr int NUM_FIELDS = 1;
 
 Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh)
     : BasePhysics(mesh, NUM_FIELDS, order),
-      displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
+      displacement_(
+          std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"})),
+      bcs_(*mesh)
 {
   mesh->EnsureNodes();
   state_[0] = displacement_;
@@ -24,13 +26,13 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh)
 void Elasticity::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                     std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
+  bcs_.addEssential<ElasticityBC::Displacement>(disp_bdr, disp_bdr_coef, component);
 }
 
 void Elasticity::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                                 const int component)
 {
-  bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
+  bcs_.addNatural<ElasticityBC::Traction>(trac_bdr, trac_bdr_coef, component);
 }
 
 void Elasticity::setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient& mu)
@@ -48,6 +50,11 @@ void Elasticity::completeSetup()
   SLIC_ASSERT_MSG(mu_ != nullptr, "Lame mu not set in ElasticitySolver!");
   SLIC_ASSERT_MSG(lambda_ != nullptr, "Lame lambda not set in ElasticitySolver!");
 
+  // Initialize all the essential DOFs
+  for (auto& bc : bcs_.essentials<ElasticityBC::Displacement>()) {
+    bc.setTrueDofs(*displacement_);
+  }
+
   // Define the parallel bilinear form
   K_form_ = displacement_->createOnSpace<mfem::ParBilinearForm>();
 
@@ -61,8 +68,9 @@ void Elasticity::completeSetup()
   l_form_ = displacement_->createOnSpace<mfem::ParLinearForm>();
 
   // Add the traction integrator
-  if (bcs_.naturals().size() > 0) {
-    for (auto& nat_bc : bcs_.naturals()) {
+  if (bcs_.naturals<ElasticityBC::Traction>().begin() != bcs_.naturals<ElasticityBC::Traction>().end()) {
+    // if (bcs_.naturals<ElasticityBC::Traction>().size() > 0) {
+    for (auto& nat_bc : bcs_.naturals<ElasticityBC::Traction>()) {
       l_form_->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(nat_bc.vectorCoefficient()),
                                      nat_bc.markers());
     }
@@ -77,7 +85,7 @@ void Elasticity::completeSetup()
   K_mat_ = std::unique_ptr<mfem::HypreParMatrix>(K_form_->ParallelAssemble());
 
   // Eliminate the essential DOFs
-  for (auto& bc : bcs_.essentials()) {
+  for (auto& bc : bcs_.essentials<ElasticityBC::Displacement>()) {
     bc.eliminateFromMatrix(*K_mat_);
   }
 
@@ -129,7 +137,7 @@ void Elasticity::QuasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
-  for (auto& bc : bcs_.essentials()) {
+  for (auto& bc : bcs_.essentials<ElasticityBC::Displacement>()) {
     bool should_be_scalar = false;
     bc.apply(*K_mat_, *bc_rhs_, *displacement_, time_, should_be_scalar);
   }

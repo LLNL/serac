@@ -12,7 +12,7 @@
 namespace serac {
 
 NonlinearSolidQuasiStaticOperator::NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form,
-                                                                     const BoundaryConditionManager&         bcs)
+                                                                     const NonlinearSolidBC::Manager&        bcs)
     : mfem::Operator(H_form->FESpace()->GetTrueVSize()), H_form_(std::move(H_form)), bcs_(bcs)
 {
 }
@@ -22,14 +22,14 @@ void NonlinearSolidQuasiStaticOperator::Mult(const mfem::Vector& k, mfem::Vector
 {
   // Apply the nonlinear form H_form_->Mult(k, y);
   H_form_->Mult(k, y);
-  y.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+  y.SetSubVector(bcs_.allEssentialDofs<NonlinearSolidBC::Displacement>(), 0.0);
 }
 
 // Compute the Jacobian from the nonlinear form
 mfem::Operator& NonlinearSolidQuasiStaticOperator::GetGradient(const mfem::Vector& x) const
 {
   auto& grad = dynamic_cast<mfem::HypreParMatrix&>(H_form_->GetGradient(x));
-  bcs_.eliminateAllEssentialDofsFromMatrix(grad);
+  bcs_.eliminateAllEssentialDofsFromMatrix<NonlinearSolidBC::Displacement>(grad);
   return grad;
 }
 
@@ -39,7 +39,7 @@ NonlinearSolidQuasiStaticOperator::~NonlinearSolidQuasiStaticOperator() {}
 NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form,
                                                              std::unique_ptr<mfem::ParBilinearForm>  S_form,
                                                              std::unique_ptr<mfem::ParBilinearForm>  M_form,
-                                                             const BoundaryConditionManager&         bcs,
+                                                             const NonlinearSolidBC::Manager&        bcs,
                                                              EquationSolver&                         newton_solver,
                                                              const serac::LinearSolverParameters&    lin_params)
     : mfem::TimeDependentOperator(M_form->ParFESpace()->TrueVSize() * 2),
@@ -53,7 +53,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
 {
   // Assemble the mass matrix and eliminate the fixed DOFs
   M_mat_.reset(M_form_->ParallelAssemble());
-  bcs_.eliminateAllEssentialDofsFromMatrix(*M_mat_);
+  bcs_.eliminateAllEssentialDofsFromMatrix<NonlinearSolidBC::Displacement>(*M_mat_);
 
   M_inv_ = EquationSolver(H_form_->ParFESpace()->GetComm(), lin_params);
 
@@ -82,7 +82,7 @@ void NonlinearSolidDynamicOperator::Mult(const mfem::Vector& vx, mfem::Vector& d
 
   z_ = *H_form_ * x;
   S_form_->TrueAddMult(v, z_);
-  z_.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+  z_.SetSubVector(bcs_.allEssentialDofs<NonlinearSolidBC::Displacement>(), 0.0);
 
   dv_dt = M_inv_ * -z_;
   dx_dt = v;
@@ -112,10 +112,10 @@ void NonlinearSolidDynamicOperator::ImplicitSolve(const double dt, const mfem::V
 // destructor
 NonlinearSolidDynamicOperator::~NonlinearSolidDynamicOperator() {}
 
-NonlinearSolidReducedSystemOperator::NonlinearSolidReducedSystemOperator(const mfem::ParNonlinearForm&   H_form,
-                                                                         const mfem::ParBilinearForm&    S_form,
-                                                                         mfem::ParBilinearForm&          M_form,
-                                                                         const BoundaryConditionManager& bcs)
+NonlinearSolidReducedSystemOperator::NonlinearSolidReducedSystemOperator(const mfem::ParNonlinearForm&    H_form,
+                                                                         const mfem::ParBilinearForm&     S_form,
+                                                                         mfem::ParBilinearForm&           M_form,
+                                                                         const NonlinearSolidBC::Manager& bcs)
     : mfem::Operator(M_form.ParFESpace()->TrueVSize()),
       M_form_(M_form),
       S_form_(S_form),
@@ -144,7 +144,7 @@ void NonlinearSolidReducedSystemOperator::Mult(const mfem::Vector& k, mfem::Vect
   y  = H_form_ * z_;
   M_form_.TrueAddMult(k, y);
   S_form_.TrueAddMult(w_, y);
-  y.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+  y.SetSubVector(bcs_.allEssentialDofs<NonlinearSolidBC::Displacement>(), 0.0);
 }
 
 mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vector& k) const
@@ -158,7 +158,7 @@ mfem::Operator& NonlinearSolidReducedSystemOperator::GetGradient(const mfem::Vec
   jacobian_.reset(M_form_.ParallelAssemble(localJ.get()));
 
   // Eliminate the fixed boundary DOFs
-  bcs_.eliminateAllEssentialDofsFromMatrix(*jacobian_);
+  bcs_.eliminateAllEssentialDofsFromMatrix<NonlinearSolidBC::Displacement>(*jacobian_);
   return *jacobian_;
 }
 

@@ -23,6 +23,16 @@
 
 namespace serac {
 
+struct NonlinearSolidBC {
+  struct Displacement {
+  };
+  struct Traction {
+  };
+  using DisplacementEss = StrongAlias<EssentialBoundaryCondition, Displacement>;
+  using TractionNat     = StrongAlias<NaturalBoundaryCondition, Traction>;
+  using Manager         = BoundaryConditionManager<DisplacementEss, TractionNat>;
+};
+
 /**
  * @brief The abstract MFEM operator for a quasi-static solve
  */
@@ -34,7 +44,7 @@ public:
    * @param[in] H_form The nonlinear form of the PDE
    */
   explicit NonlinearSolidQuasiStaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form,
-                                             const BoundaryConditionManager&         bcs);
+                                             const NonlinearSolidBC::Manager&        bcs);
 
   /**
    * @brief Get the Gradient of the nonlinear form
@@ -71,7 +81,7 @@ protected:
   /**
    * @brief The boundary conditions
    */
-  const BoundaryConditionManager& bcs_;
+  const NonlinearSolidBC::Manager& bcs_;
 };
 
 /**
@@ -93,7 +103,7 @@ public:
    * @param[in] ess_bdr The essential boundary conditions
    */
   NonlinearSolidReducedSystemOperator(const mfem::ParNonlinearForm& H_form, const mfem::ParBilinearForm& S_form,
-                                      mfem::ParBilinearForm& M_form, const BoundaryConditionManager& bcs);
+                                      mfem::ParBilinearForm& M_form, const NonlinearSolidBC::Manager& bcs);
 
   /**
    * @brief Set current dt, v, x values - needed to compute action and Jacobian.
@@ -165,7 +175,7 @@ private:
   /**
    * @brief Essential degrees of freedom
    */
-  const BoundaryConditionManager& bcs_;
+  const NonlinearSolidBC::Manager& bcs_;
 };
 
 /**
@@ -185,7 +195,7 @@ public:
    */
   NonlinearSolidDynamicOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form,
                                 std::unique_ptr<mfem::ParBilinearForm>  S_form,
-                                std::unique_ptr<mfem::ParBilinearForm> M_form, const BoundaryConditionManager& bcs,
+                                std::unique_ptr<mfem::ParBilinearForm> M_form, const NonlinearSolidBC::Manager& bcs,
                                 EquationSolver& newton_solver, const serac::LinearSolverParameters& lin_params);
 
   /**
@@ -251,7 +261,7 @@ protected:
   /**
    * @brief The fixed boudnary degrees of freedom
    */
-  const BoundaryConditionManager& bcs_;
+  const NonlinearSolidBC::Manager& bcs_;
 
   /**
    * @brief The linear solver parameters for the mass matrix

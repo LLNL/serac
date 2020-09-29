@@ -17,7 +17,7 @@
 namespace serac {
 
 BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
-    : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0), bcs_(*mesh)
+    : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0)
 {
   MPI_Comm_rank(comm_, &mpi_rank_);
   MPI_Comm_size(comm_, &mpi_size_);
@@ -30,11 +30,6 @@ BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : Ba
   order_ = p;
   state_.resize(n);
   gf_initialized_.assign(n, false);
-}
-
-void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
-{
-  bcs_.addEssentialTrueDofs(true_dofs, ess_bdr_coef, component);
 }
 
 void BasePhysics::setState(const std::vector<serac::GeneralCoefficient>& state_coef)

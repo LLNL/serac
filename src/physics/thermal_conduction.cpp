@@ -16,7 +16,8 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
     : BasePhysics(mesh, NUM_FIELDS, order),
       temperature_(std::make_shared<FiniteElementState>(
           *mesh,
-          FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}))
+          FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})),
+      bcs_(*mesh)
 {
   state_[0] = temperature_;
 }
@@ -32,13 +33,13 @@ void ThermalConduction::setTemperature(mfem::Coefficient& temp)
 void ThermalConduction::setTemperatureBCs(const std::set<int>&               temp_bdr,
                                           std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
-  bcs_.addEssential(temp_bdr, temp_bdr_coef, *temperature_);
+  bcs_.addEssential<ThermalConductionBC::Temperature>(temp_bdr, temp_bdr_coef);
 }
 
 void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
-  bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
+  bcs_.addNatural<ThermalConductionBC::Flux>(flux_bdr, flux_bdr_coef, -1);
 }
 
 void ThermalConduction::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
@@ -83,8 +84,13 @@ void ThermalConduction::completeSetup()
   // Assemble the stiffness matrix
   K_mat_.reset(K_form_->ParallelAssemble());
 
+  // Initialize all the essential DOFs
+  for (auto& bc : bcs_.essentials<ThermalConductionBC::Temperature>()) {
+    bc.setTrueDofs(*temperature_);
+  }
+
   // Eliminate the essential DOFs from the stiffness matrix
-  for (auto& bc : bcs_.essentials()) {
+  for (auto& bc : bcs_.essentials<ThermalConductionBC::Temperature>()) {
     bc.eliminateFromMatrix(*K_mat_);
   }
 
@@ -117,7 +123,7 @@ void ThermalConduction::quasiStaticSolve()
 {
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
-  for (auto& bc : bcs_.essentials()) {
+  for (auto& bc : bcs_.essentials<ThermalConductionBC::Temperature>()) {
     bc.apply(*K_mat_, *bc_rhs_, *temperature_, time_);
   }
 

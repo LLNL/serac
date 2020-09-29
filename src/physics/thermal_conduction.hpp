@@ -185,6 +185,8 @@ protected:
    * @brief Solve the Quasi-static operator
    */
   void quasiStaticSolve();
+
+  ThermalConductionBC::Manager bcs_;
 };
 
 }  // namespace serac

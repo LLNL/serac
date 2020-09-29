@@ -22,6 +22,16 @@
 
 namespace serac {
 
+struct ThermalConductionBC {
+  struct Temperature {
+  };
+  struct Flux {
+  };
+  using TemperatureEss = StrongAlias<EssentialBoundaryCondition, Temperature>;
+  using FluxNat        = StrongAlias<NaturalBoundaryCondition, Flux>;
+  using Manager        = BoundaryConditionManager<TemperatureEss, FluxNat>;
+};
+
 /**
  * @brief The time dependent operator for advancing the discretized conduction ODE
  */
@@ -35,7 +45,7 @@ public:
    * @param[in] ess_bdr The essential boundary condition objects
    */
   DynamicConductionOperator(mfem::ParFiniteElementSpace& fe_space, const serac::LinearSolverParameters& params,
-                            const BoundaryConditionManager& bcs);
+                            const ThermalConductionBC::Manager& bcs);
 
   /**
    * @brief Set the mass and stiffness matrices
@@ -122,7 +132,7 @@ protected:
   /**
    * @brief Temperature essential boundary coefficient
    */
-  const BoundaryConditionManager& bcs_;
+  const ThermalConductionBC::Manager& bcs_;
 
   /**
    * @brief Auxillary working vectors
