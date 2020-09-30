@@ -52,7 +52,7 @@ void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
   inlet->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
 
   // Physics
-  serac::NonlinearSolidSolver::defineInputFileSchema(inlet);
+  serac::NonlinearSolid::defineInputFileSchema(inlet);
 
   // Verify input file
   if (!inlet->verify()) {

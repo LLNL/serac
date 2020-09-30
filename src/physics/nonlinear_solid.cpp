@@ -211,7 +211,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolidSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+void NonlinearSolid::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
 {
   auto table = schema_creator->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
 
