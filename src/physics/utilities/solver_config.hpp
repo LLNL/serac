@@ -58,7 +58,7 @@ enum class LinearSolver
  */
 enum class NonlinearSolver
 {
-  BasicNewton,
+  MFEMNewton,
   KINFullStep,
   KINBacktrackingLineSearch
 };
@@ -144,7 +144,7 @@ struct NonlinearSolverParameters {
   /**
    * @brief Nonlinear solver selection
    */
-  NonlinearSolver nonlin_solver = NonlinearSolver::BasicNewton;
+  NonlinearSolver nonlin_solver = NonlinearSolver::MFEMNewton;
 };
 
 }  // namespace serac
