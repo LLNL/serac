@@ -62,7 +62,7 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm  
 {
   std::unique_ptr<mfem::NewtonSolver> newton_solver;
 
-  if (nonlin_params.nonlin_solver == NonlinearSolver::BasicNewton) {
+  if (nonlin_params.nonlin_solver == NonlinearSolver::MFEMNewton) {
     newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
   }
   // KINSOL
