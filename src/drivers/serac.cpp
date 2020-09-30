@@ -40,23 +40,7 @@ void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet,
                            int rank)
 {
   // mesh
-  inlet->addString("mesh", "Path to Mesh file")
-        ->registerVerifier([&]() -> bool {
-          std::string msg, path;
-          bool found = inlet->get("mesh", path);
-          if (!found) {
-            msg = fmt::format("Required input file variable was not found: mesh");
-            SLIC_WARNING_ROOT(rank, msg);
-            return false;
-          }
-          if(!axom::utilities::filesystem::pathExists(path)) {
-            msg = fmt::format("Input file: Given mesh file does not exist: {0}", path);
-            SLIC_WARNING_ROOT(rank, msg);
-            return false;
-          }
-          return true;
-        }
-  );
+  inlet->addString("mesh", "Path to Mesh file")->required(true);
 
   // Simulation time parameters
   inlet->addDouble("t_final", "Final time for simulation.")->defaultValue(1.0);
@@ -81,7 +65,7 @@ void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet,
   // Verify input file
   if(!inlet->verify())
   {
-    SLIC_ERROR("Input deck failed to verify.");
+    SLIC_ERROR_ROOT(rank, "Input deck failed to verify.");
     serac::exitGracefully(true);
   }
 }
@@ -121,6 +105,7 @@ int main(int argc, char* argv[])
   // Build mesh
   std::string mesh_file_path;
   inlet->get("mesh", mesh_file_path);  // required in input file
+  mesh_file_path = serac::input::findMeshFile(mesh_file_path, input_file_path);
   auto mesh = serac::buildMeshFromFile(mesh_file_path, ser_ref_levels, par_ref_levels);
 
   // Define the solid solver object

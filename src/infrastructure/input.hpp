@@ -33,6 +33,24 @@ namespace input {
 std::shared_ptr<axom::inlet::Inlet> initialize(std::shared_ptr<axom::sidre::DataStore> datastore,
                                                const std::string& input_file_path);
 
+/**
+ * @brief Returns the absolute path of the given mesh either relative
+ * to CWD or the input file
+ *
+ * @param[in] mesh_path Given mesh path from input file
+ * @param[in] input_file_path Path to user given input file
+ * @return initialized Inlet instance
+ */
+std::string findMeshFile(const std::string& mesh_path, const std::string& input_file_path);
+
+/**
+ * @brief Returns the absolute directory of the given file path.
+ *
+ * @param[in] file_path path to a file
+ * @return Absolute directory of given file path
+ */
+std::string fullDirectoryFromPath(const std::string& file_path);
+
 }  // namespace input
 }  // namespace serac
 
