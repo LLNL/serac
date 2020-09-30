@@ -29,15 +29,21 @@ namespace serac {
 class NonlinearSolid : public BasePhysics {
 public:
   /**
-   * @brief A timestep method and config for the M solver (in that order)
+   * @brief A timestep method and config for the M solver
    */
-  using DynamicParameters = std::tuple<TimestepMethod, LinearSolverParameters>;
+  struct DynamicParameters {
+    TimestepMethod         timestepper;
+    LinearSolverParameters M_params;
+  };
   /**
    * @brief A configuration variant for the various solves
    * Either quasistatic, or time-dependent with timestep and M params
    */
-  using NonlinearSolidParameters =
-      std::tuple<LinearSolverParameters, NonlinearSolverParameters, std::optional<DynamicParameters>>;
+  struct NonlinearSolidParameters {
+    LinearSolverParameters           H_lin_params;
+    NonlinearSolverParameters        H_nonlin_params;
+    std::optional<DynamicParameters> dyn_params = std::nullopt;
+  };
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -157,8 +163,12 @@ public:
   /**
    * @brief The default equation solver parameters for quasistatic simulations
    */
-  constexpr static NonlinearSolidParameters default_quasistatic =
-      std::make_tuple(default_qs_linear_params, default_qs_nonlinear_params, std::nullopt);
+
+  // NSDMI preferable but not possible due to compiler bugs:
+  // https://bugs.llvm.org/show_bug.cgi?id=36684
+  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88165
+  constexpr static NonlinearSolidParameters default_quasistatic = {default_qs_linear_params,
+                                                                   default_qs_nonlinear_params, std::nullopt};
   /**
    * @brief The default parameters for an iterative linear solver
    */
@@ -189,9 +199,9 @@ public:
   /**
    * @brief The default equation solver parameters for time-dependent simulations
    */
-  constexpr static NonlinearSolidParameters default_dynamic =
-      std::make_tuple(default_dyn_linear_params, default_dyn_nonlinear_params,
-                      std::make_tuple(TimestepMethod::SDIRK33, default_dyn_oper_linear_params));
+  constexpr static NonlinearSolidParameters default_dynamic = {
+      default_dyn_linear_params, default_dyn_nonlinear_params,
+      DynamicParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
 
 protected:
   /**

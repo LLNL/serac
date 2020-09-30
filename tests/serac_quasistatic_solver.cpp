@@ -166,7 +166,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
       // Compiler cannot deduce through two layers of indirection so explicitly initialize the CustomParams here
       // Note that a non-owning pointer is used and that the lifetime of the physics module is dependent on that
       // of the driver
-      {CustomSolverParameters{custom_solver.get()}, NonlinearSolid::default_qs_nonlinear_params, std::nullopt});
+      {CustomSolverParameters{custom_solver.get()}, NonlinearSolid::default_qs_nonlinear_params});
 
   std::set<int> ess_bdr = {1};
 

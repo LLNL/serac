@@ -123,11 +123,7 @@ int main(int argc, char* argv[])
   }
 
   // Define the solid solver object
-  // Using a struct with default member initializer would be preferable here but not possible due
-  // to compiler bugs:
-  // https://bugs.llvm.org/show_bug.cgi?id=36684
-  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88165
-  serac::NonlinearSolid solid_solver(order, mesh, {lin_params, nonlin_params, std::nullopt});
+  serac::NonlinearSolid solid_solver(order, mesh, {lin_params, nonlin_params});
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions

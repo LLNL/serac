@@ -37,7 +37,7 @@ TEST(component_bc, qs_solve)
   nl_params.abs_tol = 1.0e-8;
 
   // Define the solver object
-  NonlinearSolid solid_solver(1, pmesh, {params, nl_params, std::nullopt});
+  NonlinearSolid solid_solver(1, pmesh, {params, nl_params});
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   std::set<int> ess_bdr = {1};
@@ -119,7 +119,7 @@ TEST(component_bc, qs_attribute_solve)
   nl_params.abs_tol = 1.0e-8;
 
   // Define the solver object
-  NonlinearSolid solid_solver(2, pmesh, {params, nl_params, std::nullopt});
+  NonlinearSolid solid_solver(2, pmesh, {params, nl_params});
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   std::set<int> ess_x_bdr = {1};

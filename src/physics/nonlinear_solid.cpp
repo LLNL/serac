@@ -43,16 +43,15 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   block_->GetBlockView(0, velocity_->trueVec());
   velocity_->trueVec() = 0.0;
 
-  const auto& lin_params = std::get<LinearSolverParameters>(params);
+  const auto& lin_params = params.H_lin_params;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
   const auto& augmented_params = augmentAMGWithSpace(lin_params, displacement_->space());
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, std::get<NonlinearSolverParameters>(params));
+  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_params);
   // Check for dynamic mode
-  const auto& dyn_params = std::get<std::optional<DynamicParameters>>(params);
-  if (dyn_params) {
-    setTimestepper(std::get<TimestepMethod>(*dyn_params));
-    timedep_oper_params_ = std::get<LinearSolverParameters>(*dyn_params);
+  if (params.dyn_params) {
+    setTimestepper(params.dyn_params->timestepper);
+    timedep_oper_params_ = params.dyn_params->M_params;
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
   }
