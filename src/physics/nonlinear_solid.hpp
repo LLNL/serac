@@ -14,6 +14,8 @@
 #define NONLIN_SOLID
 
 #include "mfem.hpp"
+
+#include "infrastructure/input.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
 
@@ -131,6 +133,11 @@ public:
    * @brief Destroy the Nonlinear Solid Solver object
    */
   virtual ~NonlinearSolid();
+
+  /**
+   * Input deck parameters specific to this class
+   **/
+  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
 
 protected:
   /**

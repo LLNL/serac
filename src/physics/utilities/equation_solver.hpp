@@ -18,6 +18,8 @@
 #include <variant>
 
 #include "mfem.hpp"
+
+#include "infrastructure/input.hpp"
 #include "physics/utilities/solver_config.hpp"
 
 namespace serac {
@@ -97,6 +99,11 @@ public:
     std::visit([&result](auto&& solver) { result = solver.get(); }, lin_solver_);
     return *result;
   }
+
+  /**
+   * Input deck parameters specific to this class
+   **/
+  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
 
 private:
   /**

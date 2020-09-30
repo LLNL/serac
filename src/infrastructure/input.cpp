@@ -10,8 +10,8 @@ namespace serac {
 
 namespace input {
 
-std::shared_ptr<axom::inlet::Inlet> initializeInlet(std::shared_ptr<axom::sidre::DataStore> datastore,
-                                                    const std::string& input_file_path)
+std::shared_ptr<axom::inlet::Inlet> initialize(std::shared_ptr<axom::sidre::DataStore> datastore,
+                                               const std::string& input_file_path)
 {
   // Initialize Inlet
   auto luareader = std::make_shared<axom::inlet::LuaReader>();

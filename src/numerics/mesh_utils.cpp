@@ -8,7 +8,9 @@
 
 #include <fstream>
 
+#include "axom/core.hpp"
 #include "fmt/fmt.hpp"
+
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
 
@@ -24,6 +26,16 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
   SLIC_INFO_ROOT(rank, msg);
+
+  // Ensure correctness
+  serac::logger::flush();
+  if (!axom::utilities::filesystem::pathExists(mesh_file))
+  {
+    msg = fmt::format("Given mesh file does not exist: {0}", mesh_file);
+    SLIC_ERROR_ROOT(rank, msg);
+    serac::exitGracefully(true);
+  }
+
   // This inherits from std::ifstream, and will work the same way as a std::ifstream,
   // but is required for Exodus meshes
   mfem::named_ifgzstream imesh(mesh_file);

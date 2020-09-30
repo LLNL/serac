@@ -16,21 +16,22 @@
 
 #include <string>
 
-#include "axom/datastore.hpp"
 #include "axom/inlet.hpp"
+#include "axom/sidre.hpp"
 
 namespace serac {
 
 namespace input {
 
 /**
- * @brief Defines command line options and parses the found values.
+ * @brief Initializes Inlet with the given datastore and input file.
  *
- * @param[in] rank MPI rank of the current node
- * @return map of all given command line options
+ * @param[in] datastore Root of the Sidre datastore 
+ * @param[in] input_file_path Path to user given input file
+ * @return initialized Inlet instance
  */
 std::shared_ptr<axom::inlet::Inlet> initialize(std::shared_ptr<axom::sidre::DataStore> datastore,
-                                               const std::string& input_file_path)
+                                               const std::string& input_file_path);
 
 }  // namespace input
 }  // namespace serac
