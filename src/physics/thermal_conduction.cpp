@@ -20,21 +20,21 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
           FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}))
 {
   state_[0] = temperature_;
-  std::visit(
-      [this, &mesh](const auto& config) {
-        // Just the K solver - quasistatic
-        if constexpr (std::is_same_v<std::decay_t<decltype(config)>, LinearSolverParameters>) {
-          setTimestepper(TimestepMethod::QuasiStatic);
-          K_inv_ = EquationSolver(mesh->GetComm(), config);
-        }
-        // Otherwise - dynamic with M and T configs
-        else {
-          setTimestepper(config.timestepper);
-          dyn_M_params_ = config.M_params;
-          dyn_T_params_ = config.T_params;
-        }
-      },
-      params);
+
+  // If it's just the single set of params for a quasistatic K solve...
+  if (std::holds_alternative<LinearSolverParameters>(params)) {
+    auto K_params = std::get<LinearSolverParameters>(params);
+    K_inv_        = EquationSolver(mesh->GetComm(), K_params);
+    setTimestepper(TimestepMethod::QuasiStatic);
+  }
+  // Otherwise, two sets of parameters for the dynamic M/T solve
+  else {
+    auto dyn_params = std::get<DynamicParameters>(params);
+    setTimestepper(dyn_params.timestepper);
+    // Save these to initialize the DynamicConductionOperator later
+    dyn_M_params_ = dyn_params.M_params;
+    dyn_T_params_ = dyn_params.T_params;
+  }
 }
 
 void ThermalConduction::setTemperature(mfem::Coefficient& temp)

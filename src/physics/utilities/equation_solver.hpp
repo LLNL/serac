@@ -42,16 +42,6 @@ public:
                  const std::optional<NonlinearSolverParameters>& nonlin_params = std::nullopt);
 
   /**
-   * Sets a preconditioner for the underlying linear solver object
-   * @param[in] prec The preconditioner, of which the object takes ownership
-   * @note The preconditioner must be moved into the call
-   * @code(.cpp)
-   * solver.SetPreconditioner(std::move(prec));
-   * @endcode
-   */
-  void SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec);
-
-  /**
    * Updates the solver with the provided operator
    * @param[in] op The operator (system matrix) to use, "A" in Ax = b
    * @note Implements mfem::Operator::SetOperator
@@ -87,27 +77,11 @@ public:
    */
   mfem::Solver& linearSolver()
   {
-    return *std::visit(
-        [](auto&& solver) {
-          if constexpr (std::is_same_v<std::decay_t<decltype(solver)>, mfem::Solver*>) {
-            return solver;
-          } else {
-            return static_cast<mfem::Solver*>(solver.get());
-          }
-        },
-        lin_solver_);
+    return std::visit([](auto&& solver) -> mfem::Solver& { return *solver; }, lin_solver_);
   }
   const mfem::Solver& linearSolver() const
   {
-    return *std::visit(
-        [](auto&& solver) {
-          if constexpr (std::is_same_v<std::decay_t<decltype(solver)>, mfem::Solver*>) {
-            return solver;
-          } else {
-            return static_cast<mfem::Solver*>(solver.get());
-          }
-        },
-        lin_solver_);
+    return std::visit([](auto&& solver) -> const mfem::Solver& { return *solver; }, lin_solver_);
   }
 
 private:
@@ -116,8 +90,8 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] lin_params The parameters for the linear solver
    */
-  static std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                         comm,
-                                                                           const IterativeSolverParameters& lin_params);
+  std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                         comm,
+                                                                    const IterativeSolverParameters& lin_params);
 
   /**
    * @brief Builds an Newton-Raphson solver given a set of nonlinear solver parameters
