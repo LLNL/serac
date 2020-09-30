@@ -1,4 +1,4 @@
-mesh = "beam-hex.mesh"
+mesh = "../meshes/beam-hex.mesh"
 
 -- serial and parallel refinement levels
 ser_ref_levels = 0

@@ -21,7 +21,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
@@ -104,7 +104,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
