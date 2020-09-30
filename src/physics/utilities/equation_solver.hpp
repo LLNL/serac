@@ -17,9 +17,8 @@
 #include <optional>
 #include <variant>
 
-#include "mfem.hpp"
-
 #include "infrastructure/input.hpp"
+#include "mfem.hpp"
 #include "physics/utilities/solver_config.hpp"
 
 namespace serac {

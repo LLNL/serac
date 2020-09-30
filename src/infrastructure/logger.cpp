@@ -32,33 +32,33 @@ bool initialize(MPI_Comm comm)
   }
 
   // Separate streams for different message levels
-  slic::LogStream* iStream;  // info
-  slic::LogStream* dStream;  // debug
-  slic::LogStream* weStream; // warnings and errors
+  slic::LogStream* iStream;   // info
+  slic::LogStream* dStream;   // debug
+  slic::LogStream* weStream;  // warnings and errors
 
-  std::string fmt_i = "<MESSAGE>\n";
-  std::string fmt_d = "[<LEVEL>]: <MESSAGE>\n";
+  std::string fmt_i  = "<MESSAGE>\n";
+  std::string fmt_d  = "[<LEVEL>]: <MESSAGE>\n";
   std::string fmt_we = "[<LEVEL> (<FILE>:<LINE>)]\n<MESSAGE>\n\n";
 
   // Only create a parallel logger when there is more than one rank
   if (numRanks > 1) {
-    fmt_i = "[<RANK>] " + fmt_i;
-    fmt_d = "[<RANK>]" + fmt_d;
+    fmt_i  = "[<RANK>] " + fmt_i;
+    fmt_d  = "[<RANK>]" + fmt_d;
     fmt_we = "[<RANK>]" + fmt_we;
 
 #ifdef SERAC_USE_LUMBERJACK
     const int RLIMIT = 8;
-    iStream         = new slic::LumberjackStream(&std::cout, comm, RLIMIT, fmt_i);
-    dStream         = new slic::LumberjackStream(&std::cout, comm, RLIMIT, fmt_d);
+    iStream          = new slic::LumberjackStream(&std::cout, comm, RLIMIT, fmt_i);
+    dStream          = new slic::LumberjackStream(&std::cout, comm, RLIMIT, fmt_d);
     weStream         = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, fmt_we);
 #else
-    iStream = new slic::SynchronizedStream(&std::cout, comm, fmt_i);
-    dStream = new slic::SynchronizedStream(&std::cout, comm, fmt_d);
+    iStream  = new slic::SynchronizedStream(&std::cout, comm, fmt_i);
+    dStream  = new slic::SynchronizedStream(&std::cout, comm, fmt_d);
     weStream = new slic::SynchronizedStream(&std::cerr, comm, fmt_we);
 #endif
   } else {
-    iStream = new slic::GenericOutputStream(&std::cout, fmt_i);
-    dStream = new slic::GenericOutputStream(&std::cout, fmt_d);
+    iStream  = new slic::GenericOutputStream(&std::cout, fmt_i);
+    dStream  = new slic::GenericOutputStream(&std::cout, fmt_d);
     weStream = new slic::GenericOutputStream(&std::cerr, fmt_we);
   }
 

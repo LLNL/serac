@@ -17,9 +17,7 @@
 #include <memory>
 #include <string>
 
-#include "mfem.hpp"
 #include "axom/core.hpp"
-
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
 #include "infrastructure/cli.hpp"
@@ -27,6 +25,7 @@
 #include "infrastructure/input.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
+#include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
 #include "physics/nonlinear_solid.hpp"
 #include "physics/utilities/equation_solver.hpp"
@@ -36,8 +35,7 @@ namespace serac {
 
 //------- Input file -------
 
-void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet,
-                           int rank)
+void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
 {
   // mesh
   inlet->addString("mesh", "Path to Mesh file")->required(true);
@@ -47,30 +45,23 @@ void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet,
   inlet->addDouble("dt", "Time step.")->defaultValue(0.25);
 
   // Refinement levels
-  inlet->addInt("ser_ref_levels",
-                "Number of times to refine the mesh uniformly in serial.")
-        ->defaultValue(0);
-  inlet->addInt("par_ref_levels",
-                "Number of times to refine the mesh uniformly in parallel.")
-        ->defaultValue(0);
+  inlet->addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.")->defaultValue(0);
+  inlet->addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")->defaultValue(0);
 
   // Polynomial interpolation order
-  inlet->addInt("order",
-                "Order degree of the finite elements.")
-       ->defaultValue(1);
+  inlet->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
 
   // Physics
   serac::NonlinearSolidSolver::defineInputFileSchema(inlet);
 
   // Verify input file
-  if(!inlet->verify())
-  {
+  if (!inlet->verify()) {
     SLIC_ERROR_ROOT(rank, "Input deck failed to verify.");
     serac::exitGracefully(true);
   }
 }
 
-} // namespace serac
+}  // namespace serac
 
 int main(int argc, char* argv[])
 {
@@ -82,9 +73,8 @@ int main(int argc, char* argv[])
 
   // Read input file
   std::string input_file_path = "";
-  auto search = cli_opts->find("input_file");
-  if (search != cli_opts->end())
-    input_file_path = search->second;
+  auto        search          = cli_opts->find("input_file");
+  if (search != cli_opts->end()) input_file_path = search->second;
 
   // Create DataStore
   auto datastore = std::make_shared<axom::sidre::DataStore>();
@@ -106,7 +96,7 @@ int main(int argc, char* argv[])
   std::string mesh_file_path;
   inlet->get("mesh", mesh_file_path);  // required in input file
   mesh_file_path = serac::input::findMeshFile(mesh_file_path, input_file_path);
-  auto mesh = serac::buildMeshFromFile(mesh_file_path, ser_ref_levels, par_ref_levels);
+  auto mesh      = serac::buildMeshFromFile(mesh_file_path, ser_ref_levels, par_ref_levels);
 
   // Define the solid solver object
   int order;
@@ -115,7 +105,7 @@ int main(int argc, char* argv[])
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  int dim = mesh->Dimension();
+  int                             dim = mesh->Dimension();
   mfem::VectorFunctionCoefficient defo_coef(dim, serac::initialDeformation);
 
   mfem::Vector velo(dim);
@@ -161,22 +151,22 @@ int main(int argc, char* argv[])
   // neo-Hookean material parameters
   double mu, K;
   inlet->get("nonlinear_solid/mu", mu);  // has default value
-  inlet->get("nonlinear_solid/K", K);  // has default value
+  inlet->get("nonlinear_solid/K", K);    // has default value
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(mu, K);
 
   // Solver parameters
   serac::NonlinearSolverParameters nonlin_params;
-  inlet->get("nonlinear_solid/solver/nonlinear/rel_tol", nonlin_params.rel_tol);  // has default value
-  inlet->get("nonlinear_solid/solver/nonlinear/abs_tol", nonlin_params.abs_tol);  // has default value
-  inlet->get("nonlinear_solid/solver/nonlinear/max_iter", nonlin_params.max_iter);  // has default value
+  inlet->get("nonlinear_solid/solver/nonlinear/rel_tol", nonlin_params.rel_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/nonlinear/abs_tol", nonlin_params.abs_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/nonlinear/max_iter", nonlin_params.max_iter);        // has default value
   inlet->get("nonlinear_solid/solver/nonlinear/print_level", nonlin_params.print_level);  // has default value
 
   serac::LinearSolverParameters lin_params;
-  inlet->get("nonlinear_solid/solver/linear/rel_tol", lin_params.rel_tol);  // has default value
-  inlet->get("nonlinear_solid/solver/linear/abs_tol", lin_params.abs_tol);  // has default value
-  inlet->get("nonlinear_solid/solver/linear/max_iter", lin_params.max_iter);  // has default value
+  inlet->get("nonlinear_solid/solver/linear/rel_tol", lin_params.rel_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/linear/abs_tol", lin_params.abs_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/linear/max_iter", lin_params.max_iter);        // has default value
   inlet->get("nonlinear_solid/solver/linear/print_level", lin_params.print_level);  // has default value
 
   // solver input args
@@ -207,7 +197,7 @@ int main(int argc, char* argv[])
   double t = 0;
   double t_final, dt;
   inlet->get("t_final", t_final);  // has default value
-  inlet->get("dt", dt);  // has default value
+  inlet->get("dt", dt);            // has default value
 
   bool last_step = false;
 

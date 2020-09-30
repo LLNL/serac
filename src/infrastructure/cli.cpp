@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "CLI11/CLI11.hpp"
-
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
 
@@ -18,7 +17,7 @@ namespace cli {
 std::shared_ptr<std::unordered_map<std::string, std::string>> defineAndParse(int argc, char* argv[], int rank)
 {
   // specify all input arguments
-  CLI::App app{"Serac: a high order nonlinear thermomechanical simulation code"};
+  CLI::App    app{"Serac: a high order nonlinear thermomechanical simulation code"};
   std::string input_file_path;
   app.add_option("-i, --input_file", input_file_path, "Input file to use.")->required()->check(CLI::ExistingFile);
 
@@ -46,8 +45,7 @@ void printGiven(std::shared_ptr<std::unordered_map<std::string, std::string>> cl
 
   // Add options
   auto search = cli_opts->find("input_file");
-  if (search != cli_opts->end())
-    optsMsg += fmt::format("Input File: {0}\n", search->second);
+  if (search != cli_opts->end()) optsMsg += fmt::format("Input File: {0}\n", search->second);
 
   // Add footer
   optsMsg += fmt::format("{:*^80}\n", "*");

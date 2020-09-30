@@ -14,8 +14,8 @@
 #ifndef SERAC_CLI
 #define SERAC_CLI
 
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 namespace serac {
 

@@ -211,24 +211,18 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolidSolver::defineInputFileSchema(
-  std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+void NonlinearSolidSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
 {
   auto table = schema_creator->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
 
   // neo-Hookean material parameters
-  table->addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")
-       ->defaultValue(0.25);
-  table->addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")
-       ->defaultValue(5.0);
+  table->addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
+  table->addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);
 
   // loading parameters
-  table->addDouble("tx", "Cantilever tip traction in the x direction.")
-       ->defaultValue(0.0);
-  table->addDouble("ty", "Cantilever tip traction in the y direction.")
-       ->defaultValue(1.0e-3);
-  table->addDouble("tz", "Cantilever tip traction in the z direction.")
-       ->defaultValue(0.0);
+  table->addDouble("tx", "Cantilever tip traction in the x direction.")->defaultValue(0.0);
+  table->addDouble("ty", "Cantilever tip traction in the y direction.")->defaultValue(1.0e-3);
+  table->addDouble("tz", "Cantilever tip traction in the z direction.")->defaultValue(0.0);
 
   auto solver_table = table->addTable("solver", "Linear and Nonlinear Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(solver_table);

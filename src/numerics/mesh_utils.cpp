@@ -10,7 +10,6 @@
 
 #include "axom/core.hpp"
 #include "fmt/fmt.hpp"
-
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
 
@@ -29,8 +28,7 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
 
   // Ensure correctness
   serac::logger::flush();
-  if (!axom::utilities::filesystem::pathExists(mesh_file))
-  {
+  if (!axom::utilities::filesystem::pathExists(mesh_file)) {
     msg = fmt::format("Given mesh file does not exist: {0}", mesh_file);
     SLIC_ERROR_ROOT(rank, msg);
     serac::exitGracefully(true);
