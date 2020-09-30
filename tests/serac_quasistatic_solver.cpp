@@ -160,13 +160,12 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   custom_solver->SetMaxIter(custom_params.max_iter);
   custom_solver->SetPrintLevel(custom_params.print_level);
 
+  NonlinearSolid::NonlinearSolidParameters params;
+  params.H_lin_params    = CustomSolverParameters{custom_solver.get()};
+  params.H_nonlin_params = NonlinearSolid::default_qs_nonlinear_params;
+
   // Define the solver object
-  NonlinearSolid solid_solver(
-      1, pmesh,
-      // Compiler cannot deduce through two layers of indirection so explicitly initialize the CustomParams here
-      // Note that a non-owning pointer is used and that the lifetime of the physics module is dependent on that
-      // of the driver
-      {CustomSolverParameters{custom_solver.get()}, NonlinearSolid::default_qs_nonlinear_params});
+  NonlinearSolid solid_solver(1, pmesh, params);
 
   std::set<int> ess_bdr = {1};
 
