@@ -6,8 +6,6 @@
 
 #include "infrastructure/logger.hpp"
 
-#include "infrastructure/terminator.hpp"
-
 namespace serac {
 
 namespace logger {
@@ -19,8 +17,6 @@ bool initialize(MPI_Comm comm)
   if (!slic::isInitialized()) {
     slic::initialize();
   }
-
-  terminator::registerSignals();
 
   int numRanks, rank;
   MPI_Comm_size(comm, &numRanks);
