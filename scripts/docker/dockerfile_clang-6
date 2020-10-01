@@ -15,7 +15,7 @@ USER serac
 
 RUN git clone --recursive https://github.com/LLNL/serac.git
 
-RUN ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ --spec=%clang@6.0.0 --prefix=/home/serac/serac_tpls -k
+RUN ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ubuntu16/ --spec=%clang@6.0.0 --prefix=/home/serac/serac_tpls -k
 
 RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac/*.cmake /home/serac/export_hostconfig
