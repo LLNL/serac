@@ -28,7 +28,7 @@ namespace cli {
  * @param[in] rank MPI rank of the current node
  * @return map of all given command line options
  */
-std::shared_ptr<std::unordered_map<std::string, std::string>> defineAndParse(int argc, char* argv[], int rank);
+std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], int rank);
 
 /**
  * @brief Prints all given command line options to the screen.
@@ -36,7 +36,7 @@ std::shared_ptr<std::unordered_map<std::string, std::string>> defineAndParse(int
  * @param[in] cli_opts Given command line options to be printed
  * @param[in] rank     MPI rank of the current node
  */
-void printGiven(std::shared_ptr<std::unordered_map<std::string, std::string>> cli_opts, int rank);
+void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank);
 
 }  // namespace cli
 }  // namespace serac

@@ -14,7 +14,7 @@ namespace cli {
 
 //------- Command Line Interface -------
 
-std::shared_ptr<std::unordered_map<std::string, std::string>> defineAndParse(int argc, char* argv[], int rank)
+std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], int rank)
 {
   // specify all input arguments
   CLI::App    app{"Serac: a high order nonlinear thermomechanical simulation code"};
@@ -32,20 +32,20 @@ std::shared_ptr<std::unordered_map<std::string, std::string>> defineAndParse(int
   }
 
   // Store found values
-  auto cli_opts = std::make_shared<std::unordered_map<std::string, std::string>>();
-  cli_opts->insert({std::string("input_file"), input_file_path});
+  std::unordered_map<std::string, std::string> cli_opts;
+  cli_opts.insert({std::string("input_file"), input_file_path});
 
   return cli_opts;
 }
 
-void printGiven(std::shared_ptr<std::unordered_map<std::string, std::string>> cli_opts, int rank)
+void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank)
 {
   // Add header
   std::string optsMsg = fmt::format("\n{:*^80}\n", "Command Line Options");
 
   // Add options
-  auto search = cli_opts->find("input_file");
-  if (search != cli_opts->end()) optsMsg += fmt::format("Input File: {0}\n", search->second);
+  auto search = cli_opts.find("input_file");
+  if (search != cli_opts.end()) optsMsg += fmt::format("Input File: {0}\n", search->second);
 
   // Add footer
   optsMsg += fmt::format("{:*^80}\n", "*");

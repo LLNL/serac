@@ -61,13 +61,16 @@ int main(int argc, char* argv[])
   auto [num_procs, rank] = serac::initialize(argc, argv);
 
   // Handle Command line
-  auto cli_opts = serac::cli::defineAndParse(argc, argv, rank);
+  std::unordered_map<std::string, std::string> cli_opts = serac::cli::defineAndParse(argc, argv, rank);
   serac::cli::printGiven(cli_opts, rank);
 
   // Read input file
   std::string input_file_path = "";
-  auto        search          = cli_opts->find("input_file");
-  if (search != cli_opts->end()) input_file_path = search->second;
+  auto        search          = cli_opts.find("input_file");
+  if (search != cli_opts.end())
+  {
+    input_file_path = search->second;
+  }
 
   // Create DataStore
   axom::sidre::DataStore datastore;
