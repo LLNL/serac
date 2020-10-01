@@ -34,8 +34,10 @@ jobs:
         id: docker_build_clang10
         uses: docker/build-push-action@v2
         with:
-          push: false
-          tags: seracllnl/tpls:clang10
+          # push: false
+          # tags: seracllnl/tpls:clang10
+          push: true
+          tags: joshessmanllnl/actionstest:latest
           # file: ./scripts/docker/dockerfile_clang-10
           file: ./scripts/docker/fake_dockerfile
           context: .
