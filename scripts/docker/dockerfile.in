@@ -1,5 +1,6 @@
 FROM axom/compilers:<NAME>-<MAJ_VER>
 LABEL maintainer="bramwell1@llnl.gov"
+ARG branch=develop
 
 RUN sudo apt-get update -y
 RUN sudo apt-get install curl ssh pkg-config build-essential libopenblas-dev mpich python3 -fy
@@ -12,7 +13,7 @@ WORKDIR "/home/serac"
 USER serac
 
 RUN git clone --recursive https://github.com/LLNL/serac.git
-RUN cd serac && git checkout <BRANCH> && cd ..
+RUN cd serac && git checkout $branch && cd ..
 
 # New containers will use Python3
 RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/<DISTRO>/ \

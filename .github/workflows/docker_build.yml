@@ -11,6 +11,11 @@ jobs:
     env:
       TAG: clang-10
     steps:
+    - 
+        name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
     -
         name: Checkout
         uses: actions/checkout@v2
@@ -33,6 +38,7 @@ jobs:
           file: ./scripts/docker/dockerfile_${{ env.TAG }}
           context: .
           platforms: linux/amd64
+          build-args: branch=${{ steps.extract_branch.outputs.branch }}
     - 
         name: Get hostconfig
         run: |
@@ -54,6 +60,11 @@ jobs:
     env:
       TAG: gcc-8
     steps:
+    - 
+        name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
     -
         name: Checkout
         uses: actions/checkout@v2
@@ -76,6 +87,7 @@ jobs:
           file: ./scripts/docker/dockerfile_${{ env.TAG }}
           context: .
           platforms: linux/amd64
+          build-args: branch=${{ steps.extract_branch.outputs.branch }}
     - 
         name: Get hostconfig
         run: |

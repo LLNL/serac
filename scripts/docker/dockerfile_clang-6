@@ -1,5 +1,6 @@
 FROM axom/compilers:clang-6
 LABEL maintainer="bramwell1@llnl.gov"
+ARG branch=develop
 
 RUN sudo apt-get update -y
 RUN sudo apt-get install curl ssh pkg-config build-essential libopenblas-dev -fy
@@ -14,6 +15,7 @@ WORKDIR "/home/serac"
 USER serac
 
 RUN git clone --recursive https://github.com/LLNL/serac.git
+RUN cd serac && git checkout $branch && cd ..
 
 RUN ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ubuntu16/ --spec=%clang@6.0.0 --prefix=/home/serac/serac_tpls -k
 
