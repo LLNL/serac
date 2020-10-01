@@ -28,7 +28,7 @@ nonlinear_solid = {
     },
 
     -- polynomial interpolation order
-    order = 1
+    order = 1,
 
     -- neo-Hookean material parameters
     mu = 0.25,
