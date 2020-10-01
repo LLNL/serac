@@ -6,9 +6,7 @@
 
 #include "physics/base_physics.hpp"
 
-#include <algorithm>
 #include <fstream>
-#include <iostream>
 
 #include "fmt/fmt.hpp"
 #include "infrastructure/logger.hpp"
