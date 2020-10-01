@@ -70,14 +70,14 @@ int main(int argc, char* argv[])
   if (search != cli_opts->end()) input_file_path = search->second;
 
   // Create DataStore
-  auto datastore = std::make_shared<axom::sidre::DataStore>();
+  axom::sidre::DataStore datastore;
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
   serac::defineInputFileSchema(inlet, rank);
 
   // Save input values to file
-  datastore->getRoot()->save("serac_input", "json");
+  datastore.getRoot()->save("serac_input", "json");
 
   // serial and parallel refinement levels
   int ser_ref_levels;
