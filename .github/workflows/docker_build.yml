@@ -43,6 +43,8 @@ jobs:
           tags: seracllnl/tpls:clang10
           file: ./scripts/docker/dockerfile_clang-10
           outputs: ./host-configs/docker
+          context: .
+          platforms: linux/amd64
     - 
         uses: actions/upload-artifact@v2
         with:
