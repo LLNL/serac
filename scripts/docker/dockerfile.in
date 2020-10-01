@@ -18,5 +18,8 @@ RUN cd serac && git checkout <BRANCH> && cd ..
 RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/<DISTRO>/ \
                                                --spec=%<NAME>@<VER>.0 --prefix=/home/serac/serac_tpls -k
 
+RUN mkdir -p /home/serac/export_hostconfig
+RUN cp ./serac/*.cmake /home/serac/export_hostconfig
+
 RUN rm -rf serac
 RUN rm -rf serac_tpls/builds

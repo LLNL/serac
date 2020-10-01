@@ -19,5 +19,9 @@ RUN cd serac && git checkout ci/essman/docker_build_fixes && cd ..
 RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ubuntu16/ \
                                                --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
 
+RUN mkdir -p /home/serac/export_hostconfig
+RUN cp ./serac/*.cmake /home/serac/export_hostconfig
+
+
 RUN rm -rf serac
 RUN rm -rf serac_tpls/builds
