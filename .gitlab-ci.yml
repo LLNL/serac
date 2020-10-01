@@ -52,7 +52,7 @@ stages:
     - *run_update_uberenv
     - EXEC_PREFIX="srun ${SLURM_ACCOUNT}"
     #DEPENDENCIES
-    - RESOURCES="-t 30 -N 1"
+    - RESOURCES="-t 45 -N 1"
     - echo -e "section_start:$(date +%s):dependencies\r\e[0K
       Build dependencies and generate host-config file (uberenv)"
     - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_tpls.py --spec=${SPEC} --directory=${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID}
