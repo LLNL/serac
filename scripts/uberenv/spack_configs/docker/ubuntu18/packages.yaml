@@ -68,6 +68,11 @@ packages:
     externals:
     - spec: m4
       prefix: /usr/bin/
+  perl:
+    buildable: false
+    externals:
+    - spec: perl
+      prefix: /usr/bin/
   pkg-config:
     buildable: false
     externals:
