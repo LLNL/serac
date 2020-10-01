@@ -93,6 +93,7 @@ def log_success(prefix, msg, timestamp=""):
     """
     Called at the end of the process to signal success.
     """
+    print(msg)
     info = {}
     info["prefix"] = prefix
     info["platform"] = get_platform()
@@ -109,6 +110,7 @@ def log_failure(prefix, msg, timestamp=""):
     """
     Called when the process failed.
     """
+    print(msg)
     info = {}
     info["prefix"] = prefix
     info["platform"] = get_platform()
@@ -197,7 +199,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
         return res
 
     install_build_dir = pjoin(example_dir, "build")
-    res = sexe("cd %s && make && %s/serac_example" % (install_build_dir, install_build_dir),
+    res = sexe("cd %s && make && sleep 5 && %s/serac_example" % (install_build_dir, install_build_dir),
                 output_file = examples_output_file,
                 echo=True)
 
@@ -306,7 +308,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
     return 0
 
 
-def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs):
+def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False):
     host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
     if len(host_configs) == 0:
         log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
@@ -325,21 +327,20 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs):
         build_dir = get_build_dir(test_root, host_config)
 
         start_time = time.time()
-        if build_and_test_host_config(test_root,host_config, True) == 0:
+        if build_and_test_host_config(test_root, host_config, report_to_stdout) == 0:
             ok.append(host_config)
-            log_success(build_dir, timestamp)
+            log_success(build_dir, "[Success: Built host-config: {0}]".format(host_config), timestamp)
         else:
             bad.append(host_config)
-            log_failure(build_dir, timestamp)
+            log_failure(build_dir, "[Error: Failed to build host-config: {0}]".format(host_config), timestamp)
         end_time = time.time()
         print("[build time: {0}]\n".format(convertSecondsToReadableTime(end_time - start_time)))
 
-
     # Log overall job success/failure
     if len(bad) != 0:
-        log_failure(test_root, timestamp)
+        log_failure(test_root, "[Error: Failed to build host-configs: {0}]".format(bad), timestamp)
     else:
-        log_success(test_root, timestamp)
+        log_success(test_root,"[Success: Built all host-configs: {0}]".format(ok), timestamp)
 
     # Output summary of failure/succesful builds
     if len(ok) > 0:
@@ -388,7 +389,7 @@ def set_group_and_perms(directory):
     return 0
 
 
-def full_build_and_test_of_tpls(builds_dir, timestamp, spec):
+def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False):
     project_file = "scripts/uberenv/project.json"
     config_dir = "scripts/uberenv/spack_configs/{0}".format(get_system_type())
 
@@ -451,7 +452,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec):
     src_build_failed = False
     if not tpl_build_failed:
         # build the serac against the new tpls
-        res = build_and_test_host_configs(prefix, timestamp, True)
+        res = build_and_test_host_configs(prefix, timestamp, True, report_to_stdout)
         if res != 0:
             print("[ERROR: build and test of serac vs tpls test failed.]\n")
             src_build_failed = True

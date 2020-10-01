@@ -38,6 +38,10 @@ def parse_args():
                       default="",
                       help="Build all valid host-configs for the machine")                 
 
+    parser.add_option("-v", "--verbose",
+                      dest="verbose",
+                      default=False,
+                      help="Output logs to screen as well as to files")
     ###############
     # parse args
     ###############
@@ -73,7 +77,7 @@ def main():
         timestamp = get_timestamp()
 
         if opts["build_all"] != "":
-            res = build_and_test_host_configs(repo_dir, job_name, timestamp, False)
+            res = build_and_test_host_configs(repo_dir, job_name, timestamp, opts["verbose"])
         # Otherwise try to build a specific host-config
         else:
             # Command-line arg has highest priority
@@ -114,7 +118,7 @@ def main():
 
             test_root = get_build_and_test_root(repo_dir, timestamp)
             os.mkdir(test_root)
-            res = build_and_test_host_config(test_root, hostconfig_path, True)
+            res = build_and_test_host_config(test_root, hostconfig_path, opts["verbose"])
 
     finally:
         os.chdir(original_wd)
