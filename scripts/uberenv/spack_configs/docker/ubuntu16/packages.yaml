@@ -44,6 +44,13 @@ packages:
     buildable: false
   mpilander:
     buildable: false
+    # Spack may grab for mpi & we don't want to use them
+  mpi:
+    buildable: false
+  mpich:
+    externals:
+    - spec: mpich@3.2
+      prefix: /usr
 
   # System level packages to not build
   autotools:
