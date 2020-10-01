@@ -1,5 +1,6 @@
 FROM axom/compilers:gcc-8
 LABEL maintainer="bramwell1@llnl.gov"
+ARG branch=develop
 
 RUN sudo apt-get update -y
 RUN sudo apt-get install curl ssh pkg-config build-essential libopenblas-dev mpich -fy
@@ -13,11 +14,14 @@ WORKDIR "/home/serac"
 USER serac
 
 RUN git clone --recursive https://github.com/LLNL/serac.git
-RUN cd serac && git checkout ci/essman/docker_build_fixes && cd ..
+RUN cd serac && git checkout $branch && cd ..
 
 # New containers will use Python3
 RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ubuntu16/ \
                                                --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
+
+RUN mkdir -p /home/serac/export_hostconfig
+RUN cp ./serac/*.cmake /home/serac/export_hostconfig
 
 RUN rm -rf serac
 RUN rm -rf serac_tpls/builds
