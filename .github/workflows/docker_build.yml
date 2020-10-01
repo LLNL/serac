@@ -26,6 +26,9 @@ jobs:
     steps:
     # Runs a single command using the runners shell
     -
+        name: Checkout
+        uses: actions/checkout@v2
+    -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
     -
