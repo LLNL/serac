@@ -4,8 +4,9 @@ mesh = "../meshes/beam-hex.mesh"
 ser_ref_levels = 0
 par_ref_levels = 0
 
--- polynomial interpolation order
-order = 1
+-- Simulation time parameters
+t_final = 1.0
+dt      = 0.25
 
 -- Solver parameters
 nonlinear_solid = {
@@ -26,6 +27,9 @@ nonlinear_solid = {
         },
     },
 
+    -- polynomial interpolation order
+    order = 1
+
     -- neo-Hookean material parameters
     mu = 0.25,
     K  = 5.0,
@@ -35,6 +39,3 @@ nonlinear_solid = {
     ty = 1.0e-3,
     tz = 0.0,
 }
-
-t_final = 1.0
-dt      = 0.25
