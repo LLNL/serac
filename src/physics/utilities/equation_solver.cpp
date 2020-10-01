@@ -140,7 +140,7 @@ void EquationSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCr
   linear_table->addDouble("abs_tol", "Absolute tolerance for the linear solve.")->defaultValue(1.0e-8);
   linear_table->addInt("max_iter", "Maximum iterations for the linear solve.")->defaultValue(5000);
   linear_table->addInt("print_level", "Linear print level.")->defaultValue(0);
-  linear_table->addString("solver_type", "Solver type (gmres|slu).")->defaultValue("gmres");
+  linear_table->addString("solver_type", "Solver type (gmres|minres).")->defaultValue("gmres");
 }
 
 }  // namespace serac

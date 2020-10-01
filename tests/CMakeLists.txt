@@ -101,5 +101,5 @@ endif()
 
 # Make sure running serac driver doesn't completely fail
 blt_add_test(NAME          serac_driver
-             COMMAND       serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../data/decks/default.lua
+             COMMAND       serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../data/input_files/default.lua
              NUM_MPI_TASKS 1 )

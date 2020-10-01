@@ -171,10 +171,12 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
 
 def test_examples(host_config, build_dir, install_dir, report_to_stdout = False):
     print("[starting to build examples]")
-    examples_output_file =  pjoin(build_dir,"output.log.make.examples.txt")
-    print("[log file: %s]" % examples_output_file)
+
+    # Install
+    log_file =  pjoin(build_dir,"output.log.make.install.txt")
+    print("[log file: %s]" % log_file)
     res = sexe("cd %s && make VERBOSE=1 install " % build_dir,
-                output_file = examples_output_file,
+                output_file = log_file,
                 echo=True)
 
     if report_to_stdout:
@@ -185,9 +187,12 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
         print("[ERROR: Install for host-config: %s failed]\n" % host_config)
         return res
 
+    # Configure examples
+    log_file =  pjoin(build_dir,"output.log.configure.examples.txt")
+    print("[log file: %s]" % log_file)
     example_dir = pjoin(install_dir, "examples", "using-with-cmake")
-    res = sexe("cd %s && mkdir build && cd build && cmake -C %s/host-config.cmake %s" % (example_dir, example_dir, example_dir),
-                output_file = examples_output_file,
+    res = sexe("cd {0} && mkdir build && cd build && cmake -C {0}/host-config.cmake {0}".format(example_dir),
+                output_file = log_file,
                 echo=True)
 
     if report_to_stdout:
@@ -198,9 +203,12 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
         print("[ERROR: Configure examples for host-config: %s failed]\n" % host_config)
         return res
 
+    # Make examples
+    log_file =  pjoin(build_dir,"output.log.make.examples.txt")
+    print("[log file: %s]" % log_file)
     install_build_dir = pjoin(example_dir, "build")
-    res = sexe("cd %s && make && sleep 5 && %s/serac_example" % (install_build_dir, install_build_dir),
-                output_file = examples_output_file,
+    res = sexe("cd {0} && make && ls -al && sleep 5 && ./serac_example".format(install_build_dir),
+                output_file = log_file,
                 echo=True)
 
     if report_to_stdout:

@@ -100,7 +100,7 @@ public:
   }
 
   /**
-   * Input deck parameters specific to this class
+   * Input file parameters specific to this class
    **/
   static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
 

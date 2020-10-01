@@ -41,7 +41,7 @@ std::shared_ptr<axom::inlet::Inlet> initialize(std::shared_ptr<axom::sidre::Data
  * @param[in] input_file_path Path to user given input file
  * @return initialized Inlet instance
  */
-std::string findMeshFile(const std::string& mesh_path, const std::string& input_file_path);
+std::string findMeshFilePath(const std::string& mesh_path, const std::string& input_file_path);
 
 /**
  * @brief Returns the absolute directory of the given file path.

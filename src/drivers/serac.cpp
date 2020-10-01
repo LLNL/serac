@@ -38,25 +38,18 @@ namespace serac {
 void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
 {
   // mesh
-  inlet->addString("mesh", "Path to Mesh file")->required(true);
+  serac::mesh::defineInputFileSchema(inlet);
 
   // Simulation time parameters
   inlet->addDouble("t_final", "Final time for simulation.")->defaultValue(1.0);
   inlet->addDouble("dt", "Time step.")->defaultValue(0.25);
-
-  // Refinement levels
-  inlet->addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.")->defaultValue(0);
-  inlet->addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")->defaultValue(0);
-
-  // Polynomial interpolation order
-  inlet->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
 
   // Physics
   serac::NonlinearSolid::defineInputFileSchema(inlet);
 
   // Verify input file
   if (!inlet->verify()) {
-    SLIC_ERROR_ROOT(rank, "Input deck failed to verify.");
+    SLIC_ERROR_ROOT(rank, "Input file failed to verify.");
     serac::exitGracefully(true);
   }
 }
@@ -95,17 +88,18 @@ int main(int argc, char* argv[])
   // Build mesh
   std::string mesh_file_path;
   inlet->get("mesh", mesh_file_path);  // required in input file
-  mesh_file_path = serac::input::findMeshFile(mesh_file_path, input_file_path);
+  mesh_file_path = serac::input::findMeshFilePath(mesh_file_path, input_file_path);
   auto mesh      = serac::buildMeshFromFile(mesh_file_path, ser_ref_levels, par_ref_levels);
 
   // Define the solid solver object
   int order;
-  inlet->get("order", order);  // has default value
+  inlet->get("nonlinear_solid/order", order);  // has default value
   serac::NonlinearSolid solid_solver(order, mesh);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  int                             dim = mesh->Dimension();
+  int dim = mesh->Dimension();
+
   mfem::VectorFunctionCoefficient defo_coef(dim, serac::initialDeformation);
 
   mfem::Vector velo(dim);
@@ -172,11 +166,10 @@ int main(int argc, char* argv[])
   // solver input args
   std::string solver_type;
   inlet->get("nonlinear_solid/solver/linear/solver_type", solver_type);  // has default value
-  std::cout << "~~ Solver Type = " << solver_type << std::endl;
   if (solver_type == "gmres") {
     lin_params.prec       = serac::Preconditioner::BoomerAMG;
     lin_params.lin_solver = serac::LinearSolver::GMRES;
-  } else if (solver_type == "slu") {
+  } else if (solver_type == "minres") {
     lin_params.prec       = serac::Preconditioner::Jacobi;
     lin_params.lin_solver = serac::LinearSolver::MINRES;
   } else {

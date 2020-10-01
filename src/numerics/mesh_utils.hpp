@@ -18,6 +18,8 @@
 
 #include "mfem.hpp"
 
+#include "infrastructure/input.hpp"
+
 namespace serac {
 /**
  * @brief Constructs an MFEM parallel mesh from a file and refines it
@@ -78,6 +80,16 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int element
 std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
                                                const MPI_Comm = MPI_COMM_WORLD);
 
+namespace mesh {
+
+/**
+* @brief Input file parameters specific to this class
+*
+* @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
+**/
+void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
+
+}  // namespace mesh
 }  // namespace serac
 
 #endif

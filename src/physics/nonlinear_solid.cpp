@@ -215,6 +215,9 @@ void NonlinearSolid::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCr
 {
   auto table = schema_creator->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
 
+  // Polynomial interpolation order
+  table->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
+
   // neo-Hookean material parameters
   table->addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
   table->addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);

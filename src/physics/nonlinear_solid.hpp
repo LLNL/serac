@@ -135,7 +135,9 @@ public:
   virtual ~NonlinearSolid();
 
   /**
-   * Input deck parameters specific to this class
+   * @brief Input file parameters specific to this class
+   *
+   * @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
    **/
   static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
 

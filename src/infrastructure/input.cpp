@@ -30,7 +30,7 @@ std::shared_ptr<axom::inlet::Inlet> initialize(std::shared_ptr<axom::sidre::Data
   return serac_inlet;
 }
 
-std::string findMeshFile(const std::string& mesh_path, const std::string& input_file_path)
+std::string findMeshFilePath(const std::string& mesh_path, const std::string& input_file_path)
 {
   using namespace axom::utilities;
 
