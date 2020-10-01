@@ -6,11 +6,11 @@
 
 #include "infrastructure/profiling.hpp"
 
-#include <optional>
-
 #include "infrastructure/logger.hpp"
 
 #ifdef SERAC_USE_CALIPER
+#include <optional>
+
 namespace {
 std::optional<cali::ConfigManager> mgr;
 }  // namespace
