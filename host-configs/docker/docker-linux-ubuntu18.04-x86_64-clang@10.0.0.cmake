@@ -43,9 +43,9 @@ set(MPIEXEC_EXECUTABLE "/usr/bin/mpiexec" CACHE PATH "")
 #---------------------------------------
 set(TPL_ROOT "/home/serac/serac_tpls/clang-10.0.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0p1" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-master" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.5.1p1" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 
@@ -66,3 +66,5 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 #------------------------------------------------------------------------------
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
+
+
