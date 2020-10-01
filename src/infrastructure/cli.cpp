@@ -4,6 +4,8 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include "infrastructure/cli.hpp"
+
 #include "CLI11/CLI11.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"

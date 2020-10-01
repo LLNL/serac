@@ -24,9 +24,10 @@ The following instructions apply to the creation of a new compiler image.
         1. Start by finding the ID of the new image.  Run ``docker images`` and copy the ``IMAGE ID`` corresponding
            to the image in the ``seracllnl/tpls`` repository and with the tag that matches the desired compiler.
         2. Start an instance of the image interactively with ``docker run -u serac -it <IMAGE_ID_YOU_COPIED>``.
-        3. Clone the serac repository and run uberenv to create a new host config file.  Copy this file into 
-           ``host-configs/docker`` in a serac repository on the host computer, replacing the hash at the 
-           beginning of the filename with ``docker``.
+        3. Clone the serac repository and copy the new host-config file into ``<serac repository>/host-configs/docker``,
+           replacing the hash at the beginning of the filename with ``docker``.  The host-config will exist in the previously
+           created Spack install directory.  For example, the clang@10 host-config is here but may have a different hash:
+           ``/home/serac/serac_tpls/clang-10.0.0/serac-develop/b1aad9e0aaea-linux-ubuntu18.04-ivybridge-clang\@10.0.0.cmake``
         4. In the Docker container, follow the standard build instructions (using ``config-build.py``), using the 
            host-config generated in the last step.  If the build does not succeed, do not go to the next step.
     #. In the original terminal, press Enter to upload the image to Dockerhub.
