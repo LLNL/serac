@@ -41,10 +41,11 @@ jobs:
           platforms: linux/amd64
     - 
         name: Get hostconfig from Clang 10
-        run: docker create --name extract_hc ${{ steps.docker_build_clang10.outputs.digest }}
-        run: mkdir -p clang10_hc
-        run: docker cp extract_hc:/home/serac/export_hostconfig ./clang10_hc
-        run: docker rm extract_hc
+        run: |
+          docker create --name extract_hc ${{ steps.docker_build_clang10.outputs.digest }}
+          mkdir -p clang10_hc
+          docker cp extract_hc:/home/serac/export_hostconfig ./clang10_hc
+          docker rm extract_hc
     
     - 
         name: Upload hostconfig from Clang 10
