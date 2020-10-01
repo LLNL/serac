@@ -1,0 +1,15 @@
+FROM python:3.8-slim-buster
+
+RUN sudo useradd -m -s /bin/bash -G sudo serac
+
+WORKDIR "/home/serac"
+USER serac
+
+RUN git clone --recursive https://github.com/LLNL/serac.git
+
+RUN echo "this is a fake hostconfig" > ./serac/this-is-fake.cmake
+
+RUN mkdir -p /home/serac/export_hostconfig
+RUN cp ./serac/*.cmake /home/serac/export_hostconfig
+
+RUN rm -rf serac
