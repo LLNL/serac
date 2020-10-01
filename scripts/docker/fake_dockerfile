@@ -5,7 +5,8 @@ RUN sudo useradd -m -s /bin/bash -G sudo serac
 WORKDIR "/home/serac"
 USER serac
 
-RUN git clone --recursive https://github.com/LLNL/serac.git
+# this is the fake clone
+RUN mkdir -p serac
 
 RUN echo "this is a fake hostconfig" > ./serac/this-is-fake.cmake
 
