@@ -6,15 +6,7 @@ name: Docker build
 # or API.
 on:
   workflow_dispatch:
-    # Inputs the workflow accepts.
-#     inputs:
-#       name:
-#         # Friendly description to be shown in the UI instead of 'name'
-#         description: 'Person to greet'
-#         # Default value if no value is explicitly provided
-#         default: 'World'
-#         # Input has to be provided for the workflow to run
-#         required: true
+    # No input required
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -36,7 +28,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
     -
         name: Build and push Clang 10
-        id: docker_build
+        id: docker_build_clang10
         uses: docker/build-push-action@v1.1.1
         with:
           push: false
@@ -44,7 +36,15 @@ jobs:
           file: ./scripts/docker/dockerfile_clang-10
           outputs: ./host-configs/docker
     - 
+        name: Get hostconfig from Clang 10
+        run: docker create --name extract_hc ${{ steps.docker_build_clang10.outputs.digest }}
+        run: mkdir -p clang10_hc
+        run: docker cp extract_hc:/home/serac/export_hostconfig ./clang10_hc
+        run: docker rm extract_hc
+    
+    - 
+        name: Upload hostconfig from Clang 10
         uses: actions/upload-artifact@v2
         with:
-          name: hostconfigs
-          path: ./host-configs/docker/*
+          name: cl10_hostconfigs
+          path: ./clang10_hc/export_hostconfig/*
