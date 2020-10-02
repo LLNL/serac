@@ -1,4 +1,4 @@
-name: Docker build
+name: Docker TPL build
 
 # Manually triggered
 on:
@@ -6,111 +6,122 @@ on:
     # No input required
 
 jobs:
-  fake:
+  clang-10:
     runs-on: ubuntu-latest
-    name: Builds a fake docker image and extracts a fake hostconfig
+    name: Builds a docker image and extracts generated hostconfigs
+    env:
+      TAG: clang-10
+      REPO: joshessmanllnl/actionstest
+      HOSTCONFIG_LOC: /home/serac/export_hostconfig
+      DOCKERFILE_PREFIX: ./scripts/docker/dockerfile_
     steps:
-    - uses: actions/checkout@v2 # Required as action is in repo
-    - uses: ./.github/workflows/docker_build_action # Path to custom action
+    - name: Extract branch name
+      shell: bash
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      id: extract_branch
+    - name: Get dockerfile name
+      shell: bash
+      run: echo "##[set-output name=filename;]$(echo ${DOCKERFILE_PREFIX}${TAG})"
+      id: dockerfile_name
+    - name: Get dockerhub repo name
+      shell: bash
+      run: echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${TAG})"
+      id: repo_name
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1 
       with:
-        dockerfile: './scripts/docker/dockerfile_fake'
-        repo: 'joshessmanllnl/actionstest:fake'
-        hostconfig-loc: '/home/serac/export_hostconfig'
-  # clang10:
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     TAG: clang-10
-  #   steps:
-  #   - 
-  #       name: Extract branch name
-  #       shell: bash
-  #       run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-  #       id: extract_branch
-  #   -
-  #       name: Checkout
-  #       uses: actions/checkout@v2
-  #   -
-  #       name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v1
-  #   -
-  #       name: Login to DockerHub
-  #       uses: docker/login-action@v1 
-  #       with:
-  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
-  #   -
-  #       name: Build and push
-  #       id: docker_build
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         push: true
-  #         tags: joshessmanllnl/actionstest:${{ env.TAG }}
-  #         file: ./scripts/docker/dockerfile_${{ env.TAG }}
-  #         context: .
-  #         platforms: linux/amd64
-  #         build-args: branch=${{ steps.extract_branch.outputs.branch }}
-  #   - 
-  #       name: Get hostconfig
-  #       run: |
-  #         echo ${{ steps.docker_build_clang10.outputs.digest }}
-  #         docker pull joshessmanllnl/actionstest:${{ env.TAG }}
-  #         docker create --name extract_hc joshessmanllnl/actionstest:${{ env.TAG }}
-  #         mkdir -p extracted_hc
-  #         docker cp extract_hc:/home/serac/export_hostconfig ./extracted_hc
-  #         docker rm extract_hc
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: ${{ steps.repo_name.outputs.repo_plus_tag }}
+        file: ${{ steps.dockerfile_name.outputs.filename }}
+        context: .
+        platforms: linux/amd64
+        build-args: branch=${{ steps.extract_branch.outputs.branch }}
+
+    - name: Get hostconfig
+      run: |
+        echo ${{ steps.docker_build.outputs.digest }}
+        docker pull ${{ steps.repo_name.outputs.repo_plus_tag }}
+        docker create --name extract_hc ${{ steps.repo_name.outputs.repo_plus_tag }}
+        mkdir -p extracted_hc
+        docker cp extract_hc:${{ env.HOSTCONFIG_LOC }} ./extracted_hc
+        docker rm extract_hc
     
-  #   - 
-  #       name: Upload hostconfig
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: ${{ env.TAG }}_hostconfigs
-  #         path: ./extracted_hc/export_hostconfig/*
-  # gcc8:
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     TAG: gcc-8
-  #   steps:
-  #   - 
-  #       name: Extract branch name
-  #       shell: bash
-  #       run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-  #       id: extract_branch
-  #   -
-  #       name: Checkout
-  #       uses: actions/checkout@v2
-  #   -
-  #       name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v1
-  #   -
-  #       name: Login to DockerHub
-  #       uses: docker/login-action@v1 
-  #       with:
-  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
-  #   -
-  #       name: Build and push
-  #       id: docker_build
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         push: true
-  #         tags: joshessmanllnl/actionstest:${{ env.TAG }}
-  #         file: ./scripts/docker/dockerfile_${{ env.TAG }}
-  #         context: .
-  #         platforms: linux/amd64
-  #         build-args: branch=${{ steps.extract_branch.outputs.branch }}
-  #   - 
-  #       name: Get hostconfig
-  #       run: |
-  #         echo ${{ steps.docker_build_clang10.outputs.digest }}
-  #         docker pull joshessmanllnl/actionstest:${{ env.TAG }}
-  #         docker create --name extract_hc joshessmanllnl/actionstest:${{ env.TAG }}
-  #         mkdir -p extracted_hc
-  #         docker cp extract_hc:/home/serac/export_hostconfig ./extracted_hc
-  #         docker rm extract_hc
+    - name: Upload hostconfig
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.TAG }}_hostconfigs
+        path: ./extracted_hc/export_hostconfig/*
+
+  gcc-8:
+    runs-on: ubuntu-latest
+    name: Builds a docker image and extracts generated hostconfigs
+    env:
+      TAG: gcc-8
+      REPO: joshessmanllnl/actionstest
+      HOSTCONFIG_LOC: /home/serac/export_hostconfig
+      DOCKERFILE_PREFIX: ./scripts/docker/dockerfile_
+    steps:
+    - name: Extract branch name
+      shell: bash
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      id: extract_branch
+    - name: Get dockerfile name
+      shell: bash
+      run: echo "##[set-output name=filename;]$(echo ${DOCKERFILE_PREFIX}${TAG})"
+      id: dockerfile_name
+    - name: Get dockerhub repo name
+      shell: bash
+      run: echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${TAG})"
+      id: repo_name
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1 
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: ${{ steps.repo_name.outputs.repo_plus_tag }}
+        file: ${{ steps.dockerfile_name.outputs.filename }}
+        context: .
+        platforms: linux/amd64
+        build-args: branch=${{ steps.extract_branch.outputs.branch }}
+
+    - name: Get hostconfig
+      run: |
+        echo ${{ steps.docker_build.outputs.digest }}
+        docker pull ${{ steps.repo_name.outputs.repo_plus_tag }}
+        docker create --name extract_hc ${{ steps.repo_name.outputs.repo_plus_tag }}
+        mkdir -p extracted_hc
+        docker cp extract_hc:${{ env.HOSTCONFIG_LOC }} ./extracted_hc
+        docker rm extract_hc
     
-  #   - 
-  #       name: Upload hostconfig
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: ${{ env.TAG }}_hostconfigs
-  #         path: ./extracted_hc/export_hostconfig/*
+    - name: Upload hostconfig
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.TAG }}_hostconfigs
+        path: ./extracted_hc/export_hostconfig/*
