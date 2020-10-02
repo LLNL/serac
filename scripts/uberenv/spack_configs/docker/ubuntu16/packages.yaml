@@ -101,5 +101,5 @@ packages:
   cmake:
     buildable: false
     externals:
-    - spec: cmake@3.12.0
-      prefix: /usr/local
+    - spec: cmake@3.10.2
+      prefix: /usr/local/bin
