@@ -184,7 +184,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
             print(ex_out.read())
 
     if res != 0:
-        print("[ERROR: Install for host-config: %s failed]\n" % host_config)
+        print("[ERROR: error code={0}: Install for host-config: {1} failed]\n".format(res, host_config))
         return res
 
     # Configure examples
@@ -200,7 +200,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
             print(ex_out.read())
 
     if res != 0:
-        print("[ERROR: Configure examples for host-config: %s failed]\n" % host_config)
+        print("[ERROR: error code={0}: Configure examples for host-config: {1} failed]\n".format(res, host_config))
         return res
 
     # Make examples
@@ -215,6 +215,10 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
         with open(log_file, 'r') as ex_out:
             print(ex_out.read())
 
+    if res != 0:
+        print("[ERROR: error code={0}: Make examples for host-config: {1} failed]\n".format(res, host_config))
+        return res
+
     # Run examples
     log_file =  pjoin(build_dir,"output.log.run.examples.txt")
     print("[log file: %s]" % log_file)
@@ -228,7 +232,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
             print(ex_out.read())
 
     if res != 0:
-        print("[ERROR: Make examples for host-config: %s failed]\n" % host_config)
+        print("[ERROR: error code={0}: Run examples for host-config: {1} failed]\n".format(res, host_config))
         return res
 
     return 0
