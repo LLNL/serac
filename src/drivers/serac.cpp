@@ -67,8 +67,7 @@ int main(int argc, char* argv[])
   // Read input file
   std::string input_file_path = "";
   auto        search          = cli_opts.find("input_file");
-  if (search != cli_opts.end())
-  {
+  if (search != cli_opts.end()) {
     input_file_path = search->second;
   }
 

@@ -13,9 +13,8 @@
 #ifndef NONLIN_SOLID
 #define NONLIN_SOLID
 
-#include "mfem.hpp"
-
 #include "infrastructure/input.hpp"
+#include "mfem.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
 

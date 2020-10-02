@@ -177,7 +177,8 @@ void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_cr
 
   // Refinement levels
   schema_creator->addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.")->defaultValue(0);
-  schema_creator->addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")->defaultValue(0);
+  schema_creator->addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")
+      ->defaultValue(0);
 }
 
 }  // namespace mesh

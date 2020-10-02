@@ -30,8 +30,7 @@ namespace input {
  * @param[in] input_file_path Path to user given input file
  * @return initialized Inlet instance
  */
-std::shared_ptr<axom::inlet::Inlet> initialize(axom::sidre::DataStore& datastore,
-                                               const std::string&      input_file_path);
+std::shared_ptr<axom::inlet::Inlet> initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path);
 
 /**
  * @brief Returns the absolute path of the given mesh either relative

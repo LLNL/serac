@@ -207,7 +207,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     log_file =  pjoin(build_dir,"output.log.make.examples.txt")
     print("[log file: %s]" % log_file)
     install_build_dir = pjoin(example_dir, "build")
-    res = sexe("cd {0} && make && ls -al && make test".format(install_build_dir),
+    res = sexe("cd {0} && make && ls -al && make test ".format(install_build_dir),
                 output_file = log_file,
                 echo=True)
 
