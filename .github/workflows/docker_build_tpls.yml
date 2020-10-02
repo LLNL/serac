@@ -11,14 +11,22 @@ jobs:
     name: Builds a fake docker image and extracts a fake hostconfig
     env:
       TAG: fake
-      REPO: joshessmanllnl/actionstest:${{ env.TAG }}
+      REPO: joshessmanllnl/actionstest
       HOSTCONFIG_LOC: /home/serac/export_hostconfig
-      DOCKERFILE: ./scripts/docker/dockerfile_${{ env.TAG }}
+      DOCKERFILE_PREFIX: ./scripts/docker/dockerfile_
     steps:
     - name: Extract branch name
       shell: bash
       run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
       id: extract_branch
+    - name: Get dockerfile name
+      shell: bash
+      run: echo "##[set-output name=filename;]$(echo ${DOCKERFILE_PREFIX}${TAG})"
+      id: dockerfile_name
+    - name: Get dockerhub repo name
+      shell: bash
+      run: echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${TAG})"
+      id: repo_name
 
     - name: Checkout
       uses: actions/checkout@v2
@@ -37,8 +45,8 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         push: true
-        tags: ${{ env.REPO }}
-        file: ${{ env.DOCKERFILE }}
+        tags: ${{ steps.repo_name.outputs.repo_plus_tag }}
+        file: ${{ steps.dockerfile_name.outputs.filename }}
         context: .
         platforms: linux/amd64
         build-args: branch=${{ steps.extract_branch.outputs.branch }}
@@ -46,8 +54,8 @@ jobs:
     - name: Get hostconfig
       run: |
         echo ${{ steps.docker_build.outputs.digest }}
-        docker pull ${{ env.REPO }}
-        docker create --name extract_hc ${{ env.REPO }}
+        docker pull ${{ steps.repo_name.outputs.repo_plus_tag }}
+        docker create --name extract_hc ${{ steps.repo_name.outputs.repo_plus_tag }}
         mkdir -p extracted_hc
         docker cp extract_hc:${{ env.HOSTCONFIG_LOC }} ./extracted_hc
         docker rm extract_hc
