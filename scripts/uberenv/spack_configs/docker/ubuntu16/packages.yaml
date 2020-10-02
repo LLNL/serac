@@ -50,42 +50,42 @@ packages:
     buildable: false
     externals:
     - spec: autotools
-      prefix: /usr/bin/
+      prefix: /usr
   bzip2:
     buildable: false
     externals:
     - spec: bzip2
-      prefix: /usr/bin/
+      prefix: /usr
   gettext:
     buildable: false
     externals:
     - spec: gettext
-      prefix: /usr/bin/
+      prefix: /usr
   perl:
     buildable: false
     externals:
     - spec: perl
-      prefix: /usr/bin/
+      prefix: /usr
   m4:
     buildable: false
     externals:
     - spec: m4
-      prefix: /usr/bin/
+      prefix: /usr
   pkg-config:
     buildable: false
     externals:
     - spec: pkg-config
-      prefix: /usr/bin/
+      prefix: /usr
   tar:
     buildable: false
     externals:
     - spec: tar
-      prefix: /usr/bin/
+      prefix: /usr
   graphviz:
     buildable: false
     externals:
     - spec: graphviz
-      prefix: /usr/bin/
+      prefix: /usr
   openblas:
     buildable: false
     externals:
