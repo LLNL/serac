@@ -37,6 +37,6 @@ The following instructions apply to the creation of a new compiler image.
         6. Follow the standard build instructions (using ``config-build.py``) using the 
            host-config now in the repository.  If the build does not succeed, do not go to the next step.
     #. In the original terminal, press Enter to upload the image to Dockerhub.
-    #. Commit and push the new host-config and Dockerfile to the Git repository.  To include the new image in CI jobs, add a new
+    #. Commit and push the Dockerfile to the Git repository.  To include the new image in CI jobs, add a new
        ``matrix`` entry to ``azure-pipelines.yml``, modifying its attributes with the appropriate new image name and new
        host-config file.
