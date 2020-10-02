@@ -101,6 +101,6 @@ Distributed Expression Templates
     This functionality is under active development and may change significantly.
 
 Distributed expression templates (with ``mfem::HypreParVector``) are **experimentally** supported. 
-Mixed operations (where some operands are global ``mfem::Vector``s and others are distributed vectors)
+Mixed operations (where some operands are global ``mfem::Vector`` s and others are distributed vectors)
 are not supported.  Additionally, an expression cannot be assigned to a ``HypreParVector``.  Use the 
 ``evaluate`` function described above.
