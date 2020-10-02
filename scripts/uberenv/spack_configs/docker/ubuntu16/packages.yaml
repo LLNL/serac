@@ -103,3 +103,8 @@ packages:
     externals:
     - spec: cmake@3.10
       prefix: /usr/bin/
+  openssl:
+    buildable: false
+    externals:
+    - spec: openssl
+      prefix: /usr
