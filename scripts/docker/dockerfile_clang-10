@@ -19,12 +19,7 @@ RUN git clone --recursive --branch $branch --single-branch --depth 1 https://git
 RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ubuntu18/ --spec=%clang@10.0.0 --prefix=/home/serac/serac_tpls -k
 
 # Make sure the new hostconfig worked
-RUN pushd serac && python3 config-build.py -hc *.cmake -bp build
-RUN pushd build && make -j && make -j test
-RUN popd && popd
-
-RUN mkdir -p /home/serac/export_hostconfig
-RUN cp ./serac/*.cmake /home/serac/export_hostconfig
+RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
 
 RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac/*.cmake /home/serac/export_hostconfig
