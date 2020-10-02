@@ -180,7 +180,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
                 echo=True)
 
     if report_to_stdout:
-        with open(examples_output_file, 'r') as ex_out:
+        with open(log_file, 'r') as ex_out:
             print(ex_out.read())
 
     if res != 0:
@@ -196,7 +196,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
                 echo=True)
 
     if report_to_stdout:
-        with open(examples_output_file, 'r') as ex_out:
+        with open(log_file, 'r') as ex_out:
             print(ex_out.read())
 
     if res != 0:
@@ -212,7 +212,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
                 echo=True)
 
     if report_to_stdout:
-        with open(examples_output_file, 'r') as ex_out:
+        with open(log_file, 'r') as ex_out:
             print(ex_out.read())
 
     if res != 0:
