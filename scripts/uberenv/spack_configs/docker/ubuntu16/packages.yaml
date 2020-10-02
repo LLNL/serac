@@ -98,11 +98,8 @@ packages:
     externals:
     - spec: openblas
       prefix: /usr
-
-  # Globally lock in version of CMake
   cmake:
-    version: [3.10.1]
     buildable: false
     externals:
-    - spec: cmake@3.10.1
-      prefix: /usr
+    - spec: cmake@3.10
+      prefix: /usr/bin/
