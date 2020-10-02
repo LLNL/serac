@@ -68,6 +68,11 @@ packages:
     externals:
     - spec: m4
       prefix: /usr/bin/
+  perl:
+    buildable: false
+    externals:
+    - spec: perl
+      prefix: /usr/bin/
   pkg-config:
     buildable: false
     externals:
@@ -91,7 +96,7 @@ packages:
 
   # Globally lock in version of CMake
   cmake:
-    version: [3.10.1]
+    version: [3.10.2]
     buildable: false
     externals:
     - spec: cmake@3.10.2
