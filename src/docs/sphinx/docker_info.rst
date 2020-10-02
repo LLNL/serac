@@ -16,20 +16,17 @@ The following instructions apply to the creation of a new compiler image.
     #. Ensure that an Axom image exists on Dockerhub for the desired compiler.
        If no corresponding Axom compiler image exists, it should be 
        created before proceeding.
-    #. Go to the ``scripts/docker`` directory and run ``build_new_image.sh``, passing the compiler
-       name and version, e.g. for Clang 10, run ``./build_new_image.sh clang 10``.  Minor versions can also be specified,
-       for example, GCC 9.3 can be specified with ``./build_new_image.sh gcc 9.3``.
-       This will install all third-party libraries, which can take a long time.
-    #. Once the build is complete, the script will prompt you to test the new host-config (in a new terminal window):
-        1. Start by finding the ID of the new image.  Run ``docker images`` and copy the ``IMAGE ID`` corresponding
-           to the image in the ``seracllnl/tpls`` repository and with the tag that matches the desired compiler.
-        2. Start an instance of the image interactively with ``docker run -u serac -it <IMAGE_ID_YOU_COPIED>``.
-        3. Clone the serac repository and run uberenv to create a new host config file.  Copy this file into 
-           ``host-configs/docker`` in a serac repository on the host computer, replacing the hash at the 
-           beginning of the filename with ``docker``.
-        4. In the Docker container, follow the standard build instructions (using ``config-build.py``), using the 
-           host-config generated in the last step.  If the build does not succeed, do not go to the next step.
-    #. In the original terminal, press Enter to upload the image to Dockerhub.
-    #. Commit and push the new host-config and Dockerfile to the Git repository.  To include the new image in CI jobs, add a new
-       ``matrix`` entry to ``azure-pipelines.yml``, modifying its attributes with the appropriate new image name and new
-       host-config file.
+    #. Go to the ``scripts/docker`` directory and run ``build_new_dockerfile.sh``, passing the compiler
+       name and version, e.g. for Clang 10, run ``./build_new_dockerfile.sh clang 10``.  Minor versions can also be specified,
+       for example, GCC 9.3 can be specified with ``./build_new_dockerfile.sh gcc 9.3``.  This will create a Dockerfile whose
+       name corresponds to a specific compiler, e.g., ``dockerfile_clang-10``.
+    #. Edit ``./github/workflows/docker_build_tpls.yml`` to add new job for the new compiler image.  This can be copy-pasted 
+       from one of the existing jobs - the only things that must be changed are the job name and ``TAG``, which should match the
+       name of the compiler/generated ``Dockerfile``.  For example, a build for ``dockerfile_clang-10`` must set ``TAG``
+       to ``clang-10``.  For clarity, the ``name`` field for the job should also be updated.
+    #. Commit and push the modified YML file and new Dockerfile, then go to the Actions tab on GitHub, select the "Docker TPL Build"
+       action, and run the workflow on the branch to which the above changes were pushed.  
+       **This will push new images to Dockerhub, overwriting existing images**.
+    #. Once the "Docker TPL Build" action completes, it will produce artifacts for each of the generated hostconfigs.  Download these 
+       artifacts and commit them to the active branch, replacing any part of the filename preceding ``linux`` with ``docker``.  
+       Currently the part that needs to be replaced is ``buildkitsandbox``.

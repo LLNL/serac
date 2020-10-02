@@ -8,7 +8,7 @@ on:
 jobs:
   clang-10:
     runs-on: ubuntu-latest
-    name: Builds a docker image and extracts generated hostconfigs
+    name: Builds a Clang 10 docker image and extracts generated hostconfigs
     env:
       TAG: clang-10
       REPO: joshessmanllnl/actionstest
@@ -68,7 +68,7 @@ jobs:
 
   gcc-8:
     runs-on: ubuntu-latest
-    name: Builds a docker image and extracts generated hostconfigs
+    name: Builds a GCC 8 docker image and extracts generated hostconfigs
     env:
       TAG: gcc-8
       REPO: joshessmanllnl/actionstest
