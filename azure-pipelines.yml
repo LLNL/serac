@@ -36,7 +36,7 @@ jobs:
     clean: true
     submodules: recursive
   - script:  |
-      echo " -e $TEST_TARGET -e $COMPILER -e $DO_BUILD -e $DO_TEST -e $CMAKE_EXTRA_FLAGS $(Compiler_ImageName) ./scripts/llnl/build_src.py --host-config $HOST_CONFIG"
+      echo " -e $TEST_TARGET -e $COMPILER -e $DO_BUILD -e $DO_TEST -e $CMAKE_EXTRA_FLAGS $(Compiler_ImageName) ./scripts/llnl/build_src.py -v --host-config $HOST_CONFIG"
       docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e COMPILER -e DO_BUILD -e DO_TEST -e DO_CLEAN -e HOST_CONFIG -e CMAKE_EXTRA_FLAGS $(Compiler_ImageName) ./serac/scripts/llnl/build_src.py --host-config $HOST_CONFIG
 
     displayName: '$(TEST_TARGET) Build & Test'
