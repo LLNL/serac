@@ -38,6 +38,18 @@ mfem::VectorCoefficient& GeneralCoefficientWrapper::vectorCoefficient()
   return *std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
 }
 
+mfem::Array<int> BoundaryCondition::makeMarkers(const std::set<int>& attrs, const int num_attrs)
+{
+  mfem::Array<int> markers(num_attrs);
+  markers = 0;
+  for (const int attr : attrs) {
+    SLIC_ASSERT_MSG(attr <= num_attrs, "Attribute specified larger than what is found in the mesh.");
+    markers[attr - 1] = 1;
+  }
+
+  return markers;
+}
+
 NaturalBoundaryCondition::NaturalBoundaryCondition(GeneralCoefficient coef, const int component,
                                                    mfem::Array<int>&& markers)
     : coef_(coef), component_(component), markers_(std::move(markers))
@@ -63,8 +75,7 @@ void EssentialBoundaryCondition::setTrueDofs(const mfem::Array<int>& dofs)
 
 void EssentialBoundaryCondition::setTrueDofs(FiniteElementState& state)
 {
-  if (markers_.Size() > 0)
-  {
+  if (markers_.Size() > 0) {
     state.space().GetEssentialTrueDofs(markers_, true_dofs_, component_);
     dofs_fully_initialized_ = true;
   }

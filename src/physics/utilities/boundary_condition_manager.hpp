@@ -25,118 +25,12 @@
 namespace serac {
 
 /**
- * @brief A "view" for filtering a container
+ * @brief A "view" for lazily transforming a container
  * @note Will be made obsolete by C++20
- * @see std::ranges::views::filter
+ * @see std::ranges::views::transform
+ * @tparam The iterator type (must satisfy ForwardIterator)
+ * @tparam UnaryOp The operator to transform with
  */
-template <typename Iter, typename Pred>
-class FilterView {
-public:
-  /**
-   * @brief An iterator over a filtered view
-   */
-  class FilterViewIterator {
-  public:
-    /**
-     * @brief Constructs a new iterator object
-     * @param[in] curr The element in the container that should be initially "pointed to"
-     * @param[in] end The element "one past the end" of the container
-     * @param[in] pred The predicate to filter with
-     */
-    FilterViewIterator(Iter curr, Iter end, const Pred& pred) : curr_(curr), end_(end), pred_(pred) {}
-
-    /**
-     * @brief Advances the pointed-to container element to the next element that
-     * satisfies the predicate
-     */
-    FilterViewIterator& operator++()
-    {
-      // Move forward once to advance the element, then continue
-      // advancing until a predicate-satisfying element is found
-      ++curr_;
-      while ((curr_ != end_) && (!pred_(*curr_))) {
-        ++curr_;
-      }
-      return *this;
-    }
-
-    /**
-     * @brief Dereferences the iterator
-     * @return A non-owning reference to the pointed-to element
-     */
-    const auto& operator*() const { return *curr_; }
-
-    /**
-     * @brief Comparison operation, checks for iterator inequality
-     */
-    bool operator!=(const FilterViewIterator& other) const { return curr_ != other.curr_; }
-
-  private:
-    /**
-     * @brief The currently pointed to element
-     */
-    Iter curr_;
-
-    /**
-     * @brief One past the last element of the container, used for bounds checking
-     */
-    Iter end_;
-
-    /**
-     * @brief A reference for the predicate to filter with
-     */
-    const Pred& pred_;
-  };
-
-  /**
-   * @brief Constructs a new lazily-evaluated filtering view over a container
-   * @param[in] begin The begin() iterator to the container
-   * @param[in] end The end() iterator to the container
-   * @param[in] pred The predicate for the filter
-   */
-  FilterView(Iter begin, Iter end, Pred&& pred) : begin_(begin), end_(end), pred_(std::move(pred))
-  {
-    // Skip to the first element that meets the predicate, making sure not to deref the "end" iterator
-    while ((begin_ != end_) && (!pred_(*begin_))) {
-      ++begin_;
-    }
-  }
-
-  /**
-   * @brief Returns the first filtered element, i.e., the first element in the
-   * underlying container that satisfies the predicate
-   */
-  FilterViewIterator       begin() { return FilterViewIterator(begin_, end_, pred_); }
-  const FilterViewIterator begin() const { return FilterViewIterator(begin_, end_, pred_); }
-
-  /**
-   * @brief Returns one past the end of the container, primarily for bounds-checking
-   */
-  FilterViewIterator       end() { return FilterViewIterator(end_, end_, pred_); }
-  const FilterViewIterator end() const { return FilterViewIterator(end_, end_, pred_); }
-
-private:
-  /**
-   * @brief begin() iterator to the underlying container
-   */
-  Iter begin_;
-
-  /**
-   * @brief end() iterator to the underlying container
-   */
-  Iter end_;
-
-  /**
-   * @brief Predicate to filter with
-   */
-  Pred pred_;
-};
-
-// Deduction guide - iterator and lambda types must be deduced, so
-// this mitigates a "builder" function
-template <class Iter, class Pred>
-FilterView(Iter, Iter, Pred &&) -> FilterView<Iter, Pred>;
-
 template <typename Iter, typename UnaryOp>
 class TransformView {
 public:
@@ -239,7 +133,7 @@ public:
     }
 
     // Build the markers and then the boundary condition
-    auto markers = makeMarkers(filtered_attrs);
+    auto markers = BoundaryCondition::makeMarkers(filtered_attrs, num_attrs_);
     bdr_vec.emplace_back(EssentialBoundaryCondition(ess_bdr_coef, component, std::move(markers)));
 
     // Then mark the boundary attributes as "in use" and invalidate the DOFs cache
@@ -259,7 +153,7 @@ public:
   void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, const int component = -1)
   {
     using AliasedNatural = StrongAlias<NaturalBoundaryCondition, Tag>;
-    auto markers         = makeMarkers(nat_bdr);
+    auto markers         = BoundaryCondition::makeMarkers(nat_bdr, num_attrs_);
     std::get<std::vector<AliasedNatural>>(bdrs_).emplace_back(
         NaturalBoundaryCondition(nat_bdr_coef, component, std::move(markers)));
   }
@@ -339,29 +233,6 @@ public:
       return static_cast<EssentialBoundaryCondition&>(bc);
     });
   }
-  /**
-   * @brief Accessor for the natural BC objects
-   */
-  template <typename Tag>
-  auto naturals()
-  {
-    auto& vec = std::get<std::vector<StrongAlias<NaturalBoundaryCondition, Tag>>>(bdrs_);
-    return TransformView(vec.begin(), vec.end(), [](auto& bc) -> NaturalBoundaryCondition& {
-      return static_cast<NaturalBoundaryCondition&>(bc);
-    });
-  }
-  /**
-   * @brief Accessor for the generic BC objects
-   */
-  template <typename BoundaryConditionType>
-  auto& generics()
-  {
-    return std::get<std::vector<BoundaryConditionType>>(bdrs_);
-  }
-
-  /**
-   * @brief Accessor for the essential BC objects
-   */
   template <typename Tag>
   const auto essentials() const
   {
@@ -374,6 +245,14 @@ public:
    * @brief Accessor for the natural BC objects
    */
   template <typename Tag>
+  auto naturals()
+  {
+    auto& vec = std::get<std::vector<StrongAlias<NaturalBoundaryCondition, Tag>>>(bdrs_);
+    return TransformView(vec.begin(), vec.end(), [](auto& bc) -> NaturalBoundaryCondition& {
+      return static_cast<NaturalBoundaryCondition&>(bc);
+    });
+  }
+  template <typename Tag>
   const auto naturals() const
   {
     const auto& vec = std::get<std::vector<StrongAlias<NaturalBoundaryCondition, Tag>>>(bdrs_);
@@ -381,25 +260,19 @@ public:
       return static_cast<const NaturalBoundaryCondition&>(bc);
     });
   }
+
   /**
    * @brief Accessor for the generic BC objects
    */
   template <typename BoundaryConditionType>
-  const auto& generics() const
+  auto& generics()
   {
     return std::get<std::vector<BoundaryConditionType>>(bdrs_);
   }
-
-  mfem::Array<int> makeMarkers(const std::set<int>& attrs) const
+  template <typename BoundaryConditionType>
+  const auto& generics() const
   {
-    mfem::Array<int> markers(num_attrs_);
-    markers = 0;
-    for (const int attr : attrs) {
-      SLIC_ASSERT_MSG(attr <= num_attrs, "Attribute specified larger than what is found in the mesh.");
-      markers[attr - 1] = 1;
-    }
-
-    return markers;
+    return std::get<std::vector<BoundaryConditionType>>(bdrs_);
   }
 
 private:
@@ -425,6 +298,9 @@ private:
    */
   const int num_attrs_;
 
+  /**
+   * @brief The vector of boundary conditions
+   */
   std::tuple<std::vector<BoundaryConditionTypes>...> bdrs_;
 
   /**

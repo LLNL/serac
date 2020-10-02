@@ -14,7 +14,6 @@ set(physics_utilities_headers
 
 set(physics_utilities_sources
     boundary_condition.cpp
-    boundary_condition_manager.cpp
     equation_solver.cpp
     finite_element_state.cpp
     )

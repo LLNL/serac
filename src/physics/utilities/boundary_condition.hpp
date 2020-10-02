@@ -78,6 +78,15 @@ private:
   GeneralCoefficient coef_;
 };
 
+struct BoundaryCondition {
+  /**
+   * @brief Generates the 0-1 marker array for a set of boundary attributes
+   * @param[in] attrs The set of boundary attributes
+   * @param[in] num_attrs The total number of boundary attributes
+   */
+  static mfem::Array<int> makeMarkers(const std::set<int>& attrs, const int num_attrs);
+};
+
 class EssentialBoundaryCondition {
 public:
   /**
