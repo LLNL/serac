@@ -36,6 +36,7 @@ def parse_args():
                       default="",
                       help="Spack spec to build (defaults to all available on SYS_TYPE)")
     parser.add_option("-v", "--verbose",
+                      action="store_true",
                       dest="verbose",
                       default=False,
                       help="Output logs to screen as well as to files")

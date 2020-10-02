@@ -39,6 +39,7 @@ def parse_args():
                       help="Build all valid host-configs for the machine")                 
 
     parser.add_option("-v", "--verbose",
+                      action="store_true",
                       dest="verbose",
                       default=False,
                       help="Output logs to screen as well as to files")
