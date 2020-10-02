@@ -105,4 +105,4 @@ packages:
     buildable: false
     externals:
     - spec: cmake@3.10.1
-      prefix: /usr/bin/
+      prefix: /usr
