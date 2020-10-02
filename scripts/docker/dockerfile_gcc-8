@@ -8,14 +8,14 @@ RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo updat
 RUN sudo rm /usr/bin/python
 RUN sudo ln -s -f python3 /usr/bin/python # Compatibility with legacy Python
 
+# Avoid building CMake from scratch
+RUN wget https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh
+RUN sudo sh cmake-3.12.0-Linux-x86_64.sh --prefix=/usr/local --exclude-subdir
+
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
 WORKDIR "/home/serac"
 USER serac
-
-# Avoid building CMake from scratch
-RUN wget https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh
-RUN sudo sh cmake-3.12.0-Linux-x86_64.sh --prefix=/usr/local --exclude-subdir
 
 RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git
 
