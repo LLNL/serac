@@ -207,7 +207,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
     log_file =  pjoin(build_dir,"output.log.make.examples.txt")
     print("[log file: %s]" % log_file)
     install_build_dir = pjoin(example_dir, "build")
-    res = sexe("cd {0} && make && ls -al".format(install_build_dir),
+    res = sexe("cd {0} && make && ls -al && make test".format(install_build_dir),
                 output_file = log_file,
                 echo=True)
 
@@ -216,23 +216,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
             print(ex_out.read())
 
     if res != 0:
-        print("[ERROR: error code={0}: Make examples for host-config: {1} failed]\n".format(res, host_config))
-        return res
-
-    # Run examples
-    log_file =  pjoin(build_dir,"output.log.run.examples.txt")
-    print("[log file: %s]" % log_file)
-    install_build_dir = pjoin(example_dir, "build")
-    res = sexe("{0}/serac_example".format(install_build_dir),
-                output_file = log_file,
-                echo=True)
-
-    if report_to_stdout:
-        with open(log_file, 'r') as ex_out:
-            print(ex_out.read())
-
-    if res != 0:
-        print("[ERROR: error code={0}: Run examples for host-config: {1} failed]\n".format(res, host_config))
+        print("[ERROR: error code={0}: Make and test examples for host-config: {1} failed]\n".format(res, host_config))
         return res
 
     return 0
