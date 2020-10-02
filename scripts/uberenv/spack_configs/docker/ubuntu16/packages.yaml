@@ -68,6 +68,11 @@ packages:
     externals:
     - spec: gettext
       prefix: /usr/bin/
+  perl:
+    buildable: false
+    externals:
+    - spec: perl
+      prefix: /usr/bin/
   m4:
     buildable: false
     externals:

@@ -1,24 +1,22 @@
+# This is a basic workflow that is manually triggered
+
 name: Docker build
 
-# Manually triggered
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
 on:
   workflow_dispatch:
     # No input required
 
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  clang10:
+  main:
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    env:
-      TAG: clang-10
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    - 
-        name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-    -
-        name: Checkout
-        uses: actions/checkout@v2
+    # Runs a single command using the runners shell
     -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -29,78 +27,24 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
     -
-        name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v2
+        name: Build and push Clang 10
+        id: docker_build_clang10
+        uses: docker/build-push-action@v1.1.1
         with:
-          push: true
-          tags: joshessmanllnl/actionstest:${{ env.TAG }}
-          file: ./scripts/docker/dockerfile_${{ env.TAG }}
-          context: .
-          platforms: linux/amd64
-          build-args: branch=${{ steps.extract_branch.outputs.branch }}
+          push: false
+          tags: seracllnl/tpls:clang10
+          file: ./scripts/docker/dockerfile_clang-10
+          outputs: ./host-configs/docker
     - 
-        name: Get hostconfig
-        run: |
-          echo ${{ steps.docker_build_clang10.outputs.digest }}
-          docker pull joshessmanllnl/actionstest:${{ env.TAG }}
-          docker create --name extract_hc joshessmanllnl/actionstest:${{ env.TAG }}
-          mkdir -p extracted_hc
-          docker cp extract_hc:/home/serac/export_hostconfig ./extracted_hc
-          docker rm extract_hc
+        name: Get hostconfig from Clang 10
+        run: docker create --name extract_hc ${{ steps.docker_build_clang10.outputs.digest }}
+        run: mkdir -p clang10_hc
+        run: docker cp extract_hc:/home/serac/export_hostconfig ./clang10_hc
+        run: docker rm extract_hc
     
     - 
-        name: Upload hostconfig
+        name: Upload hostconfig from Clang 10
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.TAG }}_hostconfigs
-          path: ./extracted_hc/export_hostconfig/*
-  gcc8:
-    runs-on: ubuntu-latest
-    env:
-      TAG: gcc-8
-    steps:
-    - 
-        name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-    -
-        name: Checkout
-        uses: actions/checkout@v2
-    -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-    -
-        name: Login to DockerHub
-        uses: docker/login-action@v1 
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-    -
-        name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          tags: joshessmanllnl/actionstest:${{ env.TAG }}
-          file: ./scripts/docker/dockerfile_${{ env.TAG }}
-          context: .
-          platforms: linux/amd64
-          build-args: branch=${{ steps.extract_branch.outputs.branch }}
-    - 
-        name: Get hostconfig
-        run: |
-          echo ${{ steps.docker_build_clang10.outputs.digest }}
-          docker pull joshessmanllnl/actionstest:${{ env.TAG }}
-          docker create --name extract_hc joshessmanllnl/actionstest:${{ env.TAG }}
-          mkdir -p extracted_hc
-          docker cp extract_hc:/home/serac/export_hostconfig ./extracted_hc
-          docker rm extract_hc
-    
-    - 
-        name: Upload hostconfig
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.TAG }}_hostconfigs
-          path: ./extracted_hc/export_hostconfig/*
+          name: cl10_hostconfigs
+          path: ./clang10_hc/export_hostconfig/*

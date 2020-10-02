@@ -21,5 +21,8 @@ RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/script
 RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac/*.cmake /home/serac/export_hostconfig
 
+RUN mkdir -p /home/serac/export_hostconfig
+RUN cp ./serac/*.cmake /home/serac/export_hostconfig
+
 RUN rm -rf serac
 RUN rm -rf serac_tpls/builds
