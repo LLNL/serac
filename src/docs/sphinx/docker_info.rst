@@ -23,7 +23,7 @@ The following instructions apply to the creation of a new compiler image.
     #. Edit ``./github/workflows/docker_build_tpls.yml`` to add new job for the new compiler image.  This can be copy-pasted 
        from one of the existing jobs - the only things that must be changed are the job name and ``TAG``, which should match the
        name of the compiler/generated ``Dockerfile``.  For example, a build for ``dockerfile_clang-10`` must set ``TAG``
-       to ``clang-10``.
+       to ``clang-10``.  For clarity, the ``name`` field for the job should also be updated.
     #. Commit and push the modified YML file and new Dockerfile, then go to the Actions tab on GitHub, select the "Docker TPL Build"
        action, and run the workflow on the branch to which the above changes were pushed.  
        **This will push new images to Dockerhub, overwriting existing images**.
