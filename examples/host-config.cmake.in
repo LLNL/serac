@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 #------------------------------------------------------------------------------
 # Host-config for example. 
-# Defines configuration variables from serac's build.
+# Defines configuration variables from Serac's build.
 #------------------------------------------------------------------------------
 
 # Config related to compiler
@@ -19,6 +19,11 @@ set(CMAKE_C_FLAGS            "@CMAKE_C_FLAGS@"          CACHE STRING "")
 set(CMAKE_CXX_FLAGS          "@CMAKE_CXX_FLAGS@"        CACHE STRING "")
 set(CMAKE_Fortran_FLAGS      "@CMAKE_Fortran_FLAGS@"    CACHE STRING "")
 set(CMAKE_EXE_LINKER_FLAGS   "@CMAKE_EXE_LINKER_FLAGS@" CACHE STRING "")
+
+# MPI
+set(ENABLE_MPI ON CACHE BOOL "")
+set(MPI_C_COMPILER "@MPI_C_COMPILER@" CACHE PATH "")
+set(MPI_CXX_COMPILER "@MPI_CXX_COMPILER@" CACHE PATH "")
 
 # Path to Serac
 set(SERAC_DIR        "@CMAKE_INSTALL_PREFIX@" CACHE PATH "")
