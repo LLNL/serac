@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
   serac::defineInputFileSchema(inlet, rank);
 
   // Save input values to file
-  datastore.getRoot()->save("serac_input", "json");
+  datastore.getRoot()->save("serac_input.json", "json");
 
   // serial and parallel refinement levels
   int ser_ref_levels;
