@@ -31,12 +31,13 @@ def parse_args():
     parser.add_option("--host-config",
                       dest="hostconfig",
                       default="",
-                      help="Build a specific hostconfig (defaults to env $HOST_CONFIG, then to $SYS_TYPE/$COMPILER available)")
+                      help="Build a specific hostconfig (Tries multiple known paths to locate given file)")
 
-    parser.add_option("--build-all-host-configs",
-                      dest="build_all",
-                      default="",
-                      help="Build all valid host-configs for the machine")                 
+    parser.add_option("--automation-mode",
+                      action="store_true",
+                      dest="automation",
+                      default=False,
+                      help="Toggle automation mode which uses env $HOST_CONFIG, then to $SYS_TYPE/$COMPILER available")                 
 
     parser.add_option("-v", "--verbose",
                       action="store_true",
@@ -50,6 +51,12 @@ def parse_args():
     # we want a dict b/c the values could 
     # be passed without using optparse
     opts = vars(opts)
+
+    # Ensure correctness
+    if opts["automation"] and opts["hostconfig"] != "":
+        print("[ERROR: automation and host-config modes are mutually exclusive]")
+        sys.exit(1)
+
     return opts
 
 
@@ -77,8 +84,10 @@ def main():
         os.chdir(repo_dir)
         timestamp = get_timestamp()
 
-        if opts["build_all"] != "":
-            res = build_and_test_host_configs(repo_dir, job_name, timestamp, opts["verbose"])
+        # Default to build all SYS_TYPE's host-configs in host-config/
+        build_all = not (opts["automation"] or opts["hostconfig"] != "")
+        if build_all:
+            res = build_and_test_host_configs(repo_dir, timestamp, False, opts["verbose"])
         # Otherwise try to build a specific host-config
         else:
             # Command-line arg has highest priority
@@ -86,7 +95,13 @@ def main():
                 hostconfig = opts["hostconfig"]
             
             # Otherwise try to build it
-            else:
+            elif opts["automation"]:
+                if not "SYS_TYPE" in os.environ:
+                    print("[ERROR: Automation mode required 'SYS_TYPE' environment variable]")
+                    return 1
+                if not "COMPILER" in os.environ:
+                    print("[ERROR: Automation mode required 'COMPILER' environment variable]")
+                    return 1
                 import socket
                 hostname = socket.gethostname()
                 # Remove any numbers after the end
@@ -114,7 +129,8 @@ def main():
                     hostconfig_path = os.path.join(repo_dir, "host-configs", "docker", hostconfig)
                     if not os.path.isfile(hostconfig_path):
                         print("[INFO: Looking for hostconfig at %s]" % hostconfig_path)
-                        print("[WARNING: Predefined Docker host-config not found, exiting]")
+                        print("[WARNING: Predefined Docker host-config not found]")
+                        print("[ERROR: Could not find any host-configs in any known path. Try giving fully qualified path.]")
                         return 1
 
             test_root = get_build_and_test_root(repo_dir, timestamp)

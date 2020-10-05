@@ -62,7 +62,7 @@ stages:
     - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
       Build and test ${CI_PROJECT_NAME}"
     # Autodetects hostconfig created by build_tpls
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py -v
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py -v --automation
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
 
 .srun_build_devtools_script:
