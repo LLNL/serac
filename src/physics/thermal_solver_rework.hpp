@@ -14,7 +14,6 @@
 #define CONDUCTION_SOLVER_REWORK
 
 #include "mfem.hpp"
-
 #include "physics/base_solver.hpp"
 #include "physics/operators/odes.hpp"
 #include "physics/operators/thermal_operators.hpp"
@@ -146,12 +145,12 @@ protected:
   /**
    * @brief Assembled BC load vector
    */
-  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
+  std::unique_ptr<mfem::Vector> bc_rhs_;
 
   /**
    * @brief Assembled RHS vector
    */
-  std::unique_ptr<mfem::HypreParVector> rhs_;
+  std::unique_ptr<mfem::Vector> rhs_;
 
   /**
    * @brief Conduction coefficient
@@ -171,7 +170,16 @@ protected:
   /**
    * @brief the system of ordinary differential equations
    */
-  std::unique_ptr<LinearFirstOrderODE> ode_;
+  // std::unique_ptr<LinearFirstOrderODE> ode_;
+  FirstOrderODE ode_;
+
+  serac::EquationSolver                 invT_;
+  std::unique_ptr<mfem::HypreParMatrix> T_;
+  mutable mfem::Vector                  uf;
+  mutable mfem::Vector                  uc;
+  mutable mfem::Vector                  duc_dt;
+  mutable mfem::Vector                  uc_plus;
+  mutable mfem::Vector                  uc_minus;
 
   /**
    * @brief Linear solver parameters

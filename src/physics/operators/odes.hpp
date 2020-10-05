@@ -8,36 +8,35 @@
 
 class FirstOrderODE : public mfem::TimeDependentOperator {
 public:
-  using explicit_signature = void(const double, const mfem::Vector&, mfem::Vector&);
-  using implicit_signature = void(const double, const double, const mfem::Vector&, mfem::Vector&);
+  using signature = void(const double, const double, const mfem::Vector&, mfem::Vector&);
 
-  FirstOrderODE(int n) : mfem::TimeDependentOperator(n, 0.0){};
-  void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const { explicit_func(t, u, du_dt); }
-  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) { implicit_func(t, dt, u, du_dt); }
+  FirstOrderODE() : mfem::TimeDependentOperator(0, 0.0) {}
+  FirstOrderODE(int n, std::function<signature> f) : mfem::TimeDependentOperator(n, 0.0), f(f) {}
 
-  std::function<explicit_signature> explicit_func;
-  std::function<implicit_signature> implicit_func;
+  void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const { f(t, 0.0, u, du_dt); }
+  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) { f(t, dt, u, du_dt); }
+
+  std::function<signature> f;
 };
 
 class SecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
 public:
-  using explicit_signature = void(const double, const mfem::Vector&, const mfem::Vector&, mfem::Vector&);
-  using implicit_signature = void(const double, const double, const double, const mfem::Vector&, const mfem::Vector&,
-                                  mfem::Vector&);
+  using signature = void(const double, const double, const double, const mfem::Vector&, const mfem::Vector&,
+                         mfem::Vector&);
 
-  SecondOrderODE(int n) : mfem::SecondOrderTimeDependentOperator(n, 0.0){};
+  SecondOrderODE() : mfem::SecondOrderTimeDependentOperator(0, 0.0) {}
+  SecondOrderODE(int n, std::function<signature> f) : mfem::SecondOrderTimeDependentOperator(n, 0.0), f(f) {}
   void Mult(const mfem::Vector& u, const mfem::Vector& du_dt, mfem::Vector& d2u_dt2) const
   {
-    explicit_func(t, u, du_dt, d2u_dt2);
+    f(t, 0.0, 0.0, u, du_dt, d2u_dt2);
   }
   void ImplicitSolve(const double dt0, const double dt1, const mfem::Vector& u, const mfem::Vector& du_dt,
                      mfem::Vector& d2u_dt2)
   {
-    implicit_func(t, dt0, dt1, u, du_dt, d2u_dt2);
+    f(t, dt0, dt1, u, du_dt, d2u_dt2);
   }
 
-  std::function<explicit_signature> explicit_func;
-  std::function<implicit_signature> implicit_func;
+  std::function<signature> f;
 };
 
 class LinearFirstOrderODE : public mfem::TimeDependentOperator {
@@ -121,6 +120,8 @@ public:
       // Eliminate the essential DOFs from the T matrix
       bcs_.eliminateAllEssentialDofsFromMatrix(*T_);
       invT_.SetOperator(*T_);
+
+      previous_dt = dt;
     }
 
     uf = u;
@@ -137,8 +138,6 @@ public:
     duc_dt = (uc_plus - uc_minus) / (2.0 * epsilon);
 
     du_dt = invT_ * (f_ - M_ * duc_dt - K_ * uc - K_ * uf);
-
-    previous_dt = dt;
   }
 };
 
@@ -149,8 +148,8 @@ class LinearSecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
   mfem::Vector&                    f_;
   serac::BoundaryConditionManager& bcs_;
 
-  serac::EquationSolver           invMf_;
-  serac::EquationSolver           invT_;
+  serac::EquationSolver invMf_;
+  serac::EquationSolver invT_;
 
   mutable mfem::Vector                  uf;
   mutable mfem::Vector                  duf_dt;
@@ -230,7 +229,7 @@ class LinearSecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
                      mfem::Vector& d2u_dt2)
   {
     if (dt0 != previous_dt0 || dt1 != previous_dt1) {
-      // T = M + dt1 * C + 0.5 * (dt0 * dt0) * K 
+      // T = M + dt1 * C + 0.5 * (dt0 * dt0) * K
       T_.reset(mfem::Add(1.0, M_, dt1, C_));
       T_.reset(mfem::Add(1.0, *T_, 0.5 * dt0 * dt0, K_));
 

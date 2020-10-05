@@ -29,7 +29,8 @@ void ThermalSolverRework::setTemperature(mfem::Coefficient& temp)
   gf_initialized_[0] = true;
 }
 
-void ThermalSolverRework::setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+void ThermalSolverRework::setTemperatureBCs(const std::set<int>&               temp_bdr,
+                                            std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
   bcs_.addEssential(temp_bdr, temp_bdr_coef, *temperature_);
 }
@@ -89,14 +90,12 @@ void ThermalSolverRework::completeSetup()
   temperature_->initializeTrueVec();
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-
     // Eliminate the essential DOFs from the stiffness matrix
     for (auto& bc : bcs_.essentials()) {
       bc.eliminateFromMatrix(*K_);
     }
 
   } else {
-
     // If dynamic, assemble the mass matrix
     M_form_ = temperature_->createOnSpace<mfem::ParBilinearForm>();
     M_form_->AddDomainIntegrator(new mfem::MassIntegrator());
@@ -105,9 +104,51 @@ void ThermalSolverRework::completeSetup()
 
     M_.reset(M_form_->ParallelAssemble());
 
-    ode_ = std::make_unique< LinearFirstOrderODE >(*M_, *K_, *rhs_, bcs_, lin_params_);
+    auto preconditioner = std::make_unique<mfem::HypreSmoother>();
+    preconditioner->SetType(mfem::HypreSmoother::Jacobi);
 
-    ode_solver_->Init(*ode_);
+    invT_ = EquationSolver(M_->GetComm(), lin_params_);
+    invT_.linearSolver().iterative_mode = false;
+    invT_.SetPreconditioner(std::move(preconditioner));
+
+    uc       = temperature_->trueVec();
+    uc_plus  = temperature_->trueVec();
+    uc_minus = temperature_->trueVec();
+    duc_dt   = temperature_->trueVec();
+
+    double epsilon = 1.0e-8;
+
+    ode_ = FirstOrderODE(temperature_->trueVec().Size(),
+      [=, previous_dt = -1.0] (const double t, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) mutable {
+
+      if (dt != previous_dt) {
+        // T = M + dt K
+        T_.reset(mfem::Add(1.0, *M_, dt, *K_));
+
+        // Eliminate the essential DOFs from the T matrix
+        bcs_.eliminateAllEssentialDofsFromMatrix(*T_);
+        invT_.SetOperator(*T_);
+
+        previous_dt = dt;
+      }
+
+      uf = u;
+      uf.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+
+      uc       = 0.0;
+      uc_plus  = 0.0;
+      uc_minus = 0.0;
+      for (const auto& bc : bcs_.essentials()) {
+        bc.projectBdrToDofs(uc, t);
+        bc.projectBdrToDofs(uc_plus, t + epsilon);
+        bc.projectBdrToDofs(uc_minus, t - epsilon);
+      }
+      duc_dt = (uc_plus - uc_minus) / (2.0 * epsilon);
+
+      du_dt = invT_ * (*rhs_ - *M_ * duc_dt - *K_ * uc - *K_ * uf);
+    });
+
+    ode_solver_->Init(ode_);
   }
 }
 
@@ -148,7 +189,7 @@ void ThermalSolverRework::advanceTimestep(double& dt)
     // integrate forward in time
     ode_solver_->Step(temperature_->trueVec(), time_, dt);
 
-    // 
+    //
     for (const auto& bc : bcs_.essentials()) {
       bc.projectBdrToDofs(temperature_->trueVec(), time_);
     }
