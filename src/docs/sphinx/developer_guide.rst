@@ -57,8 +57,8 @@ Important Data Structures
 * `BasePhysics <../doxygen/html/classserac_1_1BasePhysics.html>`_: Interface class for a generic PDE simulation module.
 * `BoundaryCondition <../doxygen/html/classserac_1_1BoundaryCondition.html>`_: Class for storage of boundary condition-related data.
 * `BoundaryConditionManager <../doxygen/html/classserac_1_1BoundaryConditionManager.html>`_: Storage class for related boundary conditions.
-* `EquationSolver <../doxygen/html/classserac_1_1EquationSolver.html>`_: Class for solving nonlinear and linear discretized systems of equations.
-* `FiniteElementState <../doxygen/html/classserac_1_1FiniteElementState.html>`_: Data structure for storing a state variable discretized by MFEM and therefore the finite element method.
+* `EquationSolver <../doxygen/html/classserac_1_1EquationSolver.html>`_: Class for solving nonlinear and linear systems of equations.
+* `FiniteElementState <../doxygen/html/classserac_1_1FiniteElementState.html>`_: Data structure describing a solution field and its underlying finite element discretization.
 * `StdFunctionCoefficient <../doxygen/html/classserac_1_1StdFunctionCoefficient.html>`_: A class for defining MFEM coefficients based on ``std::functions`` and therefore generic C++ lambdas.
 
 Source Code Documentation
