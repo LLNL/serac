@@ -13,7 +13,7 @@ RUN sudo ln -s -f python3 /usr/bin/python # Compatibility with legacy Python
 RUN wget https://cmake.org/files/v3.10/cmake-3.10.1-Linux-x86_64.sh
 RUN sudo sh cmake-3.10.1-Linux-x86_64.sh --prefix=/usr --exclude-subdir
 
-# Avoid building MPICH3.3 from scratch
+# Avoid building all MPICH3.3 dependencies from scratch - is there a xenial-compatible binary somewhere?
 RUN wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz && tar xfz mpich-3.3.2.tar.gz
 RUN cd mpich-3.3.2 && ./configure -prefix=/usr && make -j && sudo make install
 
