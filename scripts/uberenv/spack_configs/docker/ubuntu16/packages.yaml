@@ -44,6 +44,12 @@ packages:
     buildable: false
   mpilander:
     buildable: false
+  mpi:
+    buildable: false
+  mpich:
+    externals:
+    - spec: mpich@3.3
+      prefix: /usr
 
   # System level packages to not build
   autotools:
