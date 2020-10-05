@@ -230,12 +230,6 @@ party library build phase, the appropriate Spack config directory must be specif
 ``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_18`` or
 ``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_20`` as appropriate.
 
-================================
-Source Code Documentation
-================================
-  
-Doxygen documentation for the Serac source code is located in the `Doxygen directory <doxygen/html/index.html>`_.
-
 ======================================================
 Copyright and License Information
 ======================================================
@@ -251,6 +245,7 @@ LLNL-CODE-805541
    :hidden:
    :maxdepth: 2
 
+   sphinx/developer_guide
    sphinx/docker_info
    sphinx/expr_templates
    sphinx/logging
