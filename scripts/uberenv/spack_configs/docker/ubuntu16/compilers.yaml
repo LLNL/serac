@@ -2,7 +2,9 @@ compilers:
   - compiler:
       environment: {}
       extra_rpaths: []
-      flags: {}
+      flags:
+        cflags: -pthread
+        cxxflags: -pthread
       modules: []
       operating_system: ubuntu16.04
       paths:
