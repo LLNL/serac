@@ -4,7 +4,7 @@ ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install curl wget ssh pkg-config build-essential libopenblas-dev mpich -fy
+RUN sudo apt-get install curl wget ssh pkg-config build-essential libopenblas-dev tar -fy
 RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-7 100
 RUN sudo rm /usr/bin/python
 RUN sudo ln -s -f python3 /usr/bin/python # Compatibility with legacy Python
@@ -12,6 +12,10 @@ RUN sudo ln -s -f python3 /usr/bin/python # Compatibility with legacy Python
 # Avoid building CMake from scratch
 RUN wget https://cmake.org/files/v3.10/cmake-3.10.1-Linux-x86_64.sh
 RUN sudo sh cmake-3.10.1-Linux-x86_64.sh --prefix=/usr --exclude-subdir
+
+# Avoid building MPICH3.3 from scratch
+RUN wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz && tar xfz mpich-3.3.2.tar.gz
+RUN cd mpich-3.3.2 && ./configure -prefix=/usr/bin && make && sudo make install
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
