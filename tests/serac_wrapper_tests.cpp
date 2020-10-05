@@ -210,7 +210,7 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   }
 }
 
-TEST_F(WrapperTests, Substitution)
+TEST_F(WrapperTests, Transformed)
 {
   // Setup problem
 
@@ -268,19 +268,19 @@ TEST_F(WrapperTests, Substitution)
   auto   nonlinear_diffusion = std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion);
   double multiplier          = 2.;
   double offset              = 1.;
-  auto   substitute          = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::Vector& x) {
+  auto   transform           = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::Vector& x) {
     auto v = std::make_shared<mfem::Vector>(x);
     (*v) *= multiplier;
     (*v) += offset;
     return v;
   };
-  auto substitute_back = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::DenseMatrix& x) {
+  auto transform_grad = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::DenseMatrix& x) {
     auto m = std::make_shared<mfem::DenseMatrix>(x);
     (*m) *= multiplier;
     return m;
   };
-  auto substitute_diffusion = std::make_unique<TransformedNonlinearFormIntegrator>(
-      std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion), substitute, substitute_back);
+  auto transformed_diffusion = std::make_unique<TransformedNonlinearFormIntegrator>(
+      std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion), transform, transform_grad);
 
   ParGridFunction temp(pfes_.get());
   {
@@ -308,7 +308,7 @@ TEST_F(WrapperTests, Substitution)
   ParGridFunction temp2(pfes_.get());
   {
     ParNonlinearForm A_nonlin(pfes_.get());
-    A_nonlin.AddDomainIntegrator(substitute_diffusion.release());
+    A_nonlin.AddDomainIntegrator(transformed_diffusion.release());
     A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
     // The temperature solution vector already contains the essential boundary condition values
