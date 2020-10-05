@@ -9,10 +9,10 @@
 #include <fstream>
 
 #include "coefficients/stdfunction_coefficient.hpp"
-#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/thermal_solid.hpp"
 #include "serac_config.hpp"
-#include "solvers/thermal_structural_solver.hpp"
 
 namespace serac {
 
@@ -57,7 +57,7 @@ TEST(dynamic_solver, dyn_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // initialize the dynamic solver object
-  ThermalStructuralSolver ts_solver(1, pmesh);
+  ThermalSolid ts_solver(1, pmesh);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);

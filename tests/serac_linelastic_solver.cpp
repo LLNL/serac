@@ -8,10 +8,10 @@
 
 #include <fstream>
 
-#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/elasticity.hpp"
 #include "serac_config.hpp"
-#include "solvers/elasticity_solver.hpp"
 
 namespace serac {
 
@@ -24,7 +24,7 @@ TEST(elastic_solver, static_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
-  ElasticitySolver elas_solver(1, pmesh);
+  Elasticity elas_solver(1, pmesh);
 
   std::set<int> disp_bdr = {1};
 

@@ -9,10 +9,10 @@
 
 #include <fstream>
 
-#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/thermal_conduction.hpp"
 #include "serac_config.hpp"
-#include "solvers/thermal_solver.hpp"
 
 namespace serac {
 
@@ -36,7 +36,7 @@ TEST(thermal_solver, static_solve)
   auto pmesh = buildBallMesh(10000);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -88,7 +88,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -149,7 +149,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -203,7 +203,7 @@ TEST(thermal_solver, dyn_exp_solve)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::ForwardEuler);
@@ -229,7 +229,7 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.setLinearSolverParameters(params);
 
   // Setup glvis output
-  therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_explicit");
+  therm_solver.initializeOutput(serac::OutputType::ParaView, "thermal_explicit");
 
   // Complete the setup including the dynamic operators
   therm_solver.completeSetup();
@@ -273,7 +273,7 @@ TEST(thermal_solver, dyn_imp_solve)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
+  ThermalConduction therm_solver(2, pmesh);
 
   // Set the time integration method
   therm_solver.setTimestepper(serac::TimestepMethod::BackwardEuler);

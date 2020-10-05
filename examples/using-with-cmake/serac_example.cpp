@@ -12,7 +12,9 @@
  * Intended to verify that external projects can include Serac
  */
 
-#include "common/common.hpp"
+#include "infrastructure/initialize.hpp"
+#include "infrastructure/logger.hpp"
+#include "infrastructure/terminator.hpp"
 #include "mfem.hpp"
 #include "axom/core.hpp"
 

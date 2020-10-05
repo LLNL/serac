@@ -8,10 +8,10 @@
 
 #include <fstream>
 
-#include "common/mesh_utils.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
 
 namespace serac {
 
@@ -37,7 +37,7 @@ TEST(dynamic_solver, dyn_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
-  NonlinearSolidSolver dyn_solver(1, pmesh);
+  NonlinearSolid dyn_solver(1, pmesh);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.setViscosity(std::move(visc));

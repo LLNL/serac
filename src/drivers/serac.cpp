@@ -19,11 +19,13 @@
 #include "CLI11/CLI11.hpp"
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
-#include "common/common.hpp"
-#include "common/mesh_utils.hpp"
+#include "infrastructure/initialize.hpp"
+#include "infrastructure/logger.hpp"
+#include "infrastructure/terminator.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -116,7 +118,7 @@ int main(int argc, char* argv[])
   int dim = mesh->Dimension();
 
   // Define the solid solver object
-  serac::NonlinearSolidSolver solid_solver(order, mesh);
+  serac::NonlinearSolid solid_solver(order, mesh);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
