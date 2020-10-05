@@ -27,6 +27,10 @@
 
 namespace serac {
 
+/**
+ * @brief A class for wrapping either an mfem::Coefficient or an mfem::VectorCoefficient
+ * with checked accessors
+ */
 class GeneralCoefficientWrapper {
 public:
   GeneralCoefficientWrapper(GeneralCoefficient coef) : coef_(coef) {}
@@ -78,6 +82,9 @@ private:
   GeneralCoefficient coef_;
 };
 
+/**
+ * @brief A set of general boundary condition utilities
+ */
 struct BoundaryCondition {
   /**
    * @brief Generates the 0-1 marker array for a set of boundary attributes
@@ -87,6 +94,9 @@ struct BoundaryCondition {
   static mfem::Array<int> makeMarkers(const std::set<int>& attrs, const int num_attrs);
 };
 
+/**
+ * @brief Basic essential (Dirichlet) boundary condition class
+ */
 class EssentialBoundaryCondition {
 public:
   /**
@@ -219,6 +229,9 @@ private:
   mutable std::unique_ptr<mfem::HypreParMatrix> eliminated_matrix_entries_;
 };
 
+/**
+ * @brief Basic natural (Neumann) boundary condition class
+ */
 class NaturalBoundaryCondition {
 public:
   /**

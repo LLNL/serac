@@ -37,22 +37,37 @@ public:
   class TransformViewIterator {
   public:
     TransformViewIterator(Iter curr, const UnaryOp& op) : curr_(curr), op_(op) {}
+    /**
+     * @brief Advances the iterator to the next element of the view
+     */
     TransformViewIterator& operator++()
     {
       ++curr_;
       return *this;
     }
+    /**
+     * @brief Dereferences the iterator
+     */
     const auto& operator*() const { return op_(*curr_); }
     auto&       operator*() { return op_(*curr_); }
-    bool        operator!=(const TransformViewIterator& other) const { return curr_ != other.curr_; }
+    /**
+     * @brief Iterator comparison
+     */
+    bool operator!=(const TransformViewIterator& other) const { return curr_ != other.curr_; }
 
   private:
     Iter           curr_;
     const UnaryOp& op_;
   };
   TransformView(Iter begin, Iter end, UnaryOp&& op) : begin_(begin), end_(end), op_(std::move(op)) {}
+  /**
+   * @brief Returns an iterator to the first element of the view
+   */
   TransformViewIterator       begin() { return {begin_, op_}; }
   const TransformViewIterator begin() const { return {begin_, op_}; }
+  /**
+   * @brief Returns an iterator to one past the end of the view
+   */
   TransformViewIterator       end() { return {end_, op_}; }
   const TransformViewIterator end() const { return {end_, op_}; }
 
