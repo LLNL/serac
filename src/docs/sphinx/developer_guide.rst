@@ -29,12 +29,14 @@ If you would like to include Serac's simulation capabilities in your software pr
 #. Advance the timestep by calling ``advanceTimestep(double dt)``. 
 #. Output the state variables in GLVis, VisIt, or ParaView format by calling ``outputState()``. You can also access the underlying `state data <../doxygen/html/classserac_1_1FiniteElementState.html>`_ via the generic ``getState()`` or physics-specific calls (e.g. ``getTemperature()``).
 
+Examples of how to use each of the physics modules can be found in the `tests` directory.
+
 Physics Module Developer Guide
 ------------------------------
 
 Developers have two workflows for creating new physics modules:
 
-1. Creating a new multiphysics module from existing physics modules.
+1. Creating a new multi-physics module from existing physics modules.
 #. Creating a new single physics PDE simulation module.
 
 In the first case, construct the new physics module by including existing physics modules by composition. See the `Thermal solid mechanics <../doxygen/html/classserac_1_1ThermalSolid.html>`_ module for an example.
