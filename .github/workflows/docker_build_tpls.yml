@@ -11,7 +11,7 @@ jobs:
     name: Builds a Clang 10 docker image and extracts generated hostconfigs
     env:
       TAG: clang-10
-      REPO: joshessmanllnl/actionstest
+      REPO: seracllnl/tpls
       HOSTCONFIG_LOC: /home/serac/export_hostconfig
       DOCKERFILE_PREFIX: ./scripts/docker/dockerfile_
     steps:
@@ -71,7 +71,7 @@ jobs:
     name: Builds a GCC 8 docker image and extracts generated hostconfigs
     env:
       TAG: gcc-8
-      REPO: joshessmanllnl/actionstest
+      REPO: seracllnl/tpls
       HOSTCONFIG_LOC: /home/serac/export_hostconfig
       DOCKERFILE_PREFIX: ./scripts/docker/dockerfile_
     steps:
