@@ -10,7 +10,7 @@ Developer Guide
 Physics Module User Guide
 -------------------------
 
-A fundamental data structure in Serac is `BasePhysics <../doxygen/html/classserac_1_1BasePhysics.html>`_. Classes derived from this structure are expected to encapsulate a specific partial differential equation and all of the state data and parameters associated with it. Currently, Serac contains the following physics modules:
+A fundamental data structure in Serac is `BasePhysics <../doxygen/html/classserac_1_1BasePhysics.html>`_. Classes derived from ``BasePhysics`` are expected to encapsulate a specific partial differential equation and all of the state data and parameters associated with it. Currently, Serac contains the following physics modules:
 
 * `Elasticity <../doxygen/html/classserac_1_1Elasticity.html>`_
 * `Nonlinear solid mechanics <../doxygen/html/classserac_1_1NonlinearSolid.html>`_
@@ -19,14 +19,15 @@ A fundamental data structure in Serac is `BasePhysics <../doxygen/html/classsera
 
 If you would like to include Serac's simulation capabilities in your software project, these are the classes to include. To set up and use a physics module:
 
-1. Construct the module using a ``mfem::ParMesh`` and a polynomial order of approximation.
+1. Construct the appropriate physics module class using a ``mfem::ParMesh`` and a polynomial order of approximation.
 #. Set the material properties via ``mfem::Coefficients``.
 #. Set the boundary conditions via a ``std::set`` of boundary attributes and a ``mfem::Coefficient``.
-#. Set the RHS source terms (e.g. body forces).
+#. Set the right hand side source terms (e.g. body forces).
 #. Set the `time integration scheme <../doxygen/html/solver__config_8hpp.html>`_ (e.g. quasi-static or backward Euler). Note that not all time integrators are available for all physics modules.
-#. Complete the setup of the physics module. This allocates and builds all of the underlying linear algebra data structures.
-#. Advance the timestep. 
-#. Output the state variables in GLVis, VisIt, or ParaView format. You can also access the underlying `state data <../doxygen/html/classserac_1_1FiniteElementState.html>`_ via the generic ``getState()`` or the physics-specific calls (e.g. ``getTemperature()``).
+#. Set the output type by calling ``initializeOutput(...)``.
+#. Complete the setup of the physics module by calling ``completeSetup()``. This allocates and builds all of the underlying linear algebra data structures.
+#. Advance the timestep by calling ``advanceTimestep(double dt)``. 
+#. Output the state variables in GLVis, VisIt, or ParaView format by calling ``outputState()``. You can also access the underlying `state data <../doxygen/html/classserac_1_1FiniteElementState.html>`_ via the generic ``getState()`` or physics-specific calls (e.g. ``getTemperature()``).
 
 Physics Module Developer Guide
 ------------------------------
@@ -36,13 +37,13 @@ Developers have two workflows for creating new physics modules:
 1. Creating a new multiphysics module from existing physics modules.
 #. Creating a new single physics PDE simulation module.
 
-In the first case, construct the new physics module by including the existing modules by composition. See the `Thermal solid mechanics <../doxygen/html/classserac_1_1ThermalSolid.html>`_ module for an example.
+In the first case, construct the new physics module by including existing physics modules by composition. See the `Thermal solid mechanics <../doxygen/html/classserac_1_1ThermalSolid.html>`_ module for an example.
 
-For the second case, starting with an existing physics module and re-writing it as necessary is a good practice. The following steps must happen to create a new physics solver:
+For the second case, starting with an existing physics module and re-writing it as necessary is a good practice. The following steps describe creation of a new physics module:
 
 1. Create a new class derived from `BasePhysics <../doxygen/html/classserac_1_1BasePhysics.html>`_.
 #. In the constructor, create new ``std::shared_ptrs`` to `FiniteElementStates <../doxygen/html/classserac_1_1FiniteElementState.html>`_ corresponding to each state variable in your PDE.
-#. Link these states to the state array in the ``BasePhysics`` class.
+#. Link these states to the state pointer array in the ``BasePhysics`` class.
 #. Create methods for defining problem parameters (e.g. material properties and sources).
 #. Create methods for defining boundary conditions. These should be stored as `BoundaryConditions <../doxygen/html/classserac_1_1BoundaryCondition.html>`_ and managed in the ``BasePhysics``'s `BoundaryConditionManager <../doxygen/html/classserac_1_1BoundaryConditionManager.html>`_.
 #. Override the virtual ``completeSetup()`` method. This should include construction of all of the data structures needed for advancing the timestep of the PDE.
