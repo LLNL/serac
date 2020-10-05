@@ -81,34 +81,30 @@ void MixedBilinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::Fin
   A_->AssembleElementMatrix2(trial_el, el, Tr, elmat);
 }
 
-SubstitutionNonlinearFormIntegrator::SubstitutionNonlinearFormIntegrator(
-    std::shared_ptr<mfem::NonlinearFormIntegrator> R,
-    std::function<std::shared_ptr<mfem::Vector>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
-                                                const mfem::Vector&)>
-        substitute,
-    std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
-                                                     const mfem::DenseMatrix&)>
-        substitute_grad)
-    : R_(R), substitute_function_(substitute), substitute_function_grad_(substitute_grad)
+TransformedNonlinearFormIntegrator::TransformedNonlinearFormIntegrator(
+    std::shared_ptr<mfem::NonlinearFormIntegrator>                               R,
+    std::function<TransformedNonlinearFormIntegrator::transformed_func>          transformed,
+    std::function<TransformedNonlinearFormIntegrator::transformed_gradient_func> transformed_grad)
+    : R_(R), transformed_function_(transformed), transformed_function_grad_(transformed_grad)
 {
 }
 
-void SubstitutionNonlinearFormIntegrator::AssembleElementVector(const mfem::FiniteElement&   el,
-                                                                mfem::ElementTransformation& Tr,
-                                                                const mfem::Vector& elfun, mfem::Vector& elvect)
+void TransformedNonlinearFormIntegrator::AssembleElementVector(const mfem::FiniteElement&   el,
+                                                               mfem::ElementTransformation& Tr,
+                                                               const mfem::Vector& elfun, mfem::Vector& elvect)
 {
-  auto substituted = substitute_function_(el, Tr, elfun);
-  R_->AssembleElementVector(el, Tr, *substituted, elvect);
+  auto transformed = transformed_function_(el, Tr, elfun);
+  R_->AssembleElementVector(el, Tr, *transformed, elvect);
 }
 
-void SubstitutionNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
-                                                              mfem::ElementTransformation& Tr,
-                                                              const mfem::Vector& elfun, mfem::DenseMatrix& elmat)
+void TransformedNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
+                                                             mfem::ElementTransformation& Tr, const mfem::Vector& elfun,
+                                                             mfem::DenseMatrix& elmat)
 {
-  auto substituted = substitute_function_(el, Tr, elfun);
-  R_->AssembleElementGrad(el, Tr, *substituted, elmat);
-  auto dense_grad_substitute = substitute_function_grad_(el, Tr, elmat);
-  elmat                      = *dense_grad_substitute;
+  auto transformed = transformed_function_(el, Tr, elfun);
+  R_->AssembleElementGrad(el, Tr, *transformed, elmat);
+  auto dense_grad_transformed = transformed_function_grad_(el, Tr, elmat);
+  elmat                       = *dense_grad_transformed;
 }
 
 }  // namespace serac

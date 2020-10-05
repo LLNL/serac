@@ -160,26 +160,30 @@ private:
 /**
  * @brief A class to convert NonlinearFormIntegrator to one where the input parameter undergoes a change of variables
  */
-class SubstitutionNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
+class TransformedNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 public:
+  /// alias for prototype of the residual_func
+  using transformed_func = std::shared_ptr<mfem::Vector>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                                         const mfem::Vector&);
+
+  /// alias for prototype of the gradient of residual_func
+  using transformed_gradient_func = std::shared_ptr<mfem::DenseMatrix>(const mfem::FiniteElement&   el,
+                                                                       mfem::ElementTransformation& Tr,
+                                                                       const mfem::DenseMatrix&);
+
   /**
    * @brief Recasts, A(u(x)) = F as R(u(x)) = A(u(x)) - F = R(x)
    *
    * @param[in] R A BilinearFormIntegrator
-   * @param[in] substitute A function that performs a change of variables to what R expects
-   * @param[in] substitute_grad A function that performs a change of variables for the gradient
+   * @param[in] transformed_input A function that performs a change of variables to what R expects
+   * @param[in] transformed_grad_output A function that performs a change of variables for the gradient
    */
-  explicit SubstitutionNonlinearFormIntegrator(
-      std::shared_ptr<mfem::NonlinearFormIntegrator> R,
-      std::function<std::shared_ptr<mfem::Vector>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
-                                                  const mfem::Vector&)>
-          substitute,
-      std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
-                                                       const mfem::DenseMatrix&)>
-          substitute_grad);
+  explicit TransformedNonlinearFormIntegrator(std::shared_ptr<mfem::NonlinearFormIntegrator> R,
+                                              std::function<transformed_func>                transformed_input,
+                                              std::function<transformed_gradient_func>       transformed_grad_output);
 
   /**
-   * @brief Compute the residual vector with input, substitute_function(x)
+   * @brief Compute the residual vector with input, transformed_function(x)
    * @param[in] el The finite element for local integration
    * @param[in] Tr The local FE transformation
    * @param[in] elfun The state to evaluate the residual
@@ -189,7 +193,7 @@ public:
                                      const mfem::Vector& elfun, mfem::Vector& elvect);
 
   /**
-   * @brief Compute the tangent matrix with input, substitute_function(x)
+   * @brief Compute the tangent matrix with input, transformed_function(x)
    *
    * @param[in] el The finite element for local integration
    * @param[in] Tr The local FE transformation
@@ -207,20 +211,16 @@ private:
   std::shared_ptr<mfem::NonlinearFormIntegrator> R_;
 
   /**
-   * @brief The substitution function on input x
+   * @brief The transforming function on input x
    *
    */
 
-  std::function<std::shared_ptr<mfem::Vector>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
-                                              const mfem::Vector&)>
-      substitute_function_;
+  std::function<transformed_func> transformed_function_;
 
   /**
-   * @brief The substitution to perform change of variables for the gradient
+   * @brief The transforming function to perform change of variables for the gradient
    */
-  std::function<std::shared_ptr<mfem::DenseMatrix>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
-                                                   const mfem::DenseMatrix&)>
-      substitute_function_grad_;
+  std::function<transformed_gradient_func> transformed_function_grad_;
 };
 
 }  // namespace serac

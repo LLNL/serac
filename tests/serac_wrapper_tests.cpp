@@ -268,19 +268,18 @@ TEST_F(WrapperTests, Substitution)
   auto   nonlinear_diffusion = std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion);
   double multiplier          = 2.;
   double offset              = 1.;
-  auto   substitute = [=](const mfem::FiniteElement& el, mfem::ElementTransformation& Tr, const mfem::Vector& x) {
+  auto   substitute          = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::Vector& x) {
     auto v = std::make_shared<mfem::Vector>(x);
     (*v) *= multiplier;
     (*v) += offset;
     return v;
   };
-  auto substitute_back = [=](const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
-                             const mfem::DenseMatrix& x) {
+  auto substitute_back = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::DenseMatrix& x) {
     auto m = std::make_shared<mfem::DenseMatrix>(x);
     (*m) *= multiplier;
     return m;
   };
-  auto substitute_diffusion = std::make_unique<SubstitutionNonlinearFormIntegrator>(
+  auto substitute_diffusion = std::make_unique<TransformedNonlinearFormIntegrator>(
       std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion), substitute, substitute_back);
 
   ParGridFunction temp(pfes_.get());
