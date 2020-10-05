@@ -22,7 +22,7 @@ TEST(serac_dtor, test1)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
