@@ -6,6 +6,8 @@
 
 #include "infrastructure/logger.hpp"
 
+#include "infrastructure/initialize.hpp"
+
 namespace serac {
 
 namespace logger {
@@ -18,11 +20,9 @@ bool initialize(MPI_Comm comm)
     slic::initialize();
   }
 
-  int numRanks, rank;
-  MPI_Comm_size(comm, &numRanks);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  auto [num_ranks, rank] = getMPIInfo(comm);
 
-  std::string loggerName = numRanks > 1 ? "serac_parallel_logger" : "serac_serial_logger";
+  std::string loggerName = num_ranks > 1 ? "serac_parallel_logger" : "serac_serial_logger";
   slic::createLogger(loggerName);
   slic::activateLogger(loggerName);
   if (!slic::activateLogger(loggerName)) {
@@ -32,16 +32,16 @@ bool initialize(MPI_Comm comm)
   }
 
   // Separate streams for different message levels
-  slic::LogStream* iStream;   // info
-  slic::LogStream* dStream;   // debug
-  slic::LogStream* weStream;  // warnings and errors
+  slic::LogStream* iStream  = nullptr;  // info
+  slic::LogStream* dStream  = nullptr;  // debug
+  slic::LogStream* weStream = nullptr;  // warnings and errors
 
   std::string fmt_i  = "<MESSAGE>\n";
   std::string fmt_d  = "[<LEVEL>]: <MESSAGE>\n";
   std::string fmt_we = "[<LEVEL> (<FILE>:<LINE>)]\n<MESSAGE>\n\n";
 
   // Only create a parallel logger when there is more than one rank
-  if (numRanks > 1) {
+  if (num_ranks > 1) {
     fmt_i  = "[<RANK>] " + fmt_i;
     fmt_d  = "[<RANK>]" + fmt_d;
     fmt_we = "[<RANK>]" + fmt_we;

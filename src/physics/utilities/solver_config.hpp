@@ -58,6 +58,16 @@ enum class LinearSolver
 };
 
 /**
+ * @brief Nonlinear solver type/method
+ */
+enum class NonlinearSolver
+{
+  MFEMNewton,
+  KINFullStep,
+  KINBacktrackingLineSearch
+};
+
+/**
  * @brief Stores the information required to configure a HypreSmoother
  */
 struct HypreSmootherPrec {
@@ -168,6 +178,11 @@ struct NonlinearSolverParameters {
    * @brief Debug print level
    */
   int print_level;
+
+  /**
+   * @brief Nonlinear solver selection
+   */
+  NonlinearSolver nonlin_solver = NonlinearSolver::MFEMNewton;
 };
 
 }  // namespace serac
