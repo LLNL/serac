@@ -17,6 +17,7 @@
 #include <optional>
 #include <variant>
 
+#include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "physics/utilities/solver_config.hpp"
 
@@ -97,6 +98,11 @@ public:
     std::visit([&result](auto&& solver) { result = solver.get(); }, lin_solver_);
     return *result;
   }
+
+  /**
+   * Input file parameters specific to this class
+   **/
+  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
 
 private:
   /**

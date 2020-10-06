@@ -57,11 +57,11 @@ set(MPIEXEC_EXECUTABLE "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-rele
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_09_10_13_28_07/clang-upstream_gfortran" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_09_30_22_49_53/clang-upstream_gfortran" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0p1" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-master" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.5.1p1" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 

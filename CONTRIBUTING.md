@@ -16,8 +16,10 @@ the list below as part of your commit.
 
 # Contributors (In Alphabetical Order)
 
+* Julian Andrej, LLNL
 * Adrien Bernede, LLNL
 * Jamie Bramwell, LLNL
+* Josh Essman, LLNL
 * Samuel Mish, LLNL
 * Chris White, LLNL
 * Jonathan Wong, LLNL

@@ -117,7 +117,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("sundials~shared", when="+sundials")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",
+    cmake_debug_deps = ["axom@0.4.0p1~openmp~fortran~raja~umpire",
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
@@ -125,7 +125,7 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit@master~shared~python")
+    depends_on("conduit@0.5.1p1~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@5.4.0~shared")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")

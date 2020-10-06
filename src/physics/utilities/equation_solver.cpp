@@ -144,4 +144,21 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   return *superlu_grad_mat_;
 }
 
+void EquationSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+{
+  auto nonlinear_table = schema_creator->addTable("nonlinear", "Newton Equation Solver Parameters")->required(true);
+  nonlinear_table->addDouble("rel_tol", "Relative tolerance for the Newton solve.")->defaultValue(1.0e-2);
+  nonlinear_table->addDouble("abs_tol", "Absolute tolerance for the Newton solve.")->defaultValue(1.0e-4);
+  nonlinear_table->addInt("max_iter", "Maximum iterations for the Newton solve.")->defaultValue(500);
+  nonlinear_table->addInt("print_level", "Nonlinear print level.")->defaultValue(0);
+  nonlinear_table->addString("solver_type", "Not currently used.")->defaultValue("");
+
+  auto linear_table = schema_creator->addTable("linear", "Linear Equation Solver Parameters")->required(true);
+  linear_table->addDouble("rel_tol", "Relative tolerance for the linear solve.")->defaultValue(1.0e-6);
+  linear_table->addDouble("abs_tol", "Absolute tolerance for the linear solve.")->defaultValue(1.0e-8);
+  linear_table->addInt("max_iter", "Maximum iterations for the linear solve.")->defaultValue(5000);
+  linear_table->addInt("print_level", "Linear print level.")->defaultValue(0);
+  linear_table->addString("solver_type", "Solver type (gmres|minres).")->defaultValue("gmres");
+}
+
 }  // namespace serac
