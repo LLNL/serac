@@ -8,8 +8,9 @@
 # Setup MFEM
 #
 # This file defines:
-#  MFEM_FOUND        - If MFEM was found
-#  mfem              - BLT Registered Library 
+#  MFEM_FOUND            - If MFEM was found
+#  mfem                  - BLT Registered Library 
+#  MFEM_BUILT_WITH_CMAKE - If MFEM was built with CMake
 #------------------------------------------------------------------------------
 
 if(NOT MFEM_DIR)
@@ -28,8 +29,10 @@ if(EXISTS ${_mfem_cmake_config})
 
     set(MFEM_INCLUDE_DIRS  ${MFEM_INCLUDE_DIRS} )
     set(MFEM_LIBRARIES     ${MFEM_LIBRARIES} )
+    set(MFEM_BUILT_WITH_CMAKE TRUE)
 
 else()
+    set(MFEM_BUILT_WITH_CMAKE FALSE)
     find_path(
         MFEM_INCLUDE_DIRS mfem.hpp
         PATHS ${MFEM_DIR}/include

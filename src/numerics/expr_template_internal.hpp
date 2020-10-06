@@ -27,11 +27,14 @@ namespace serac::internal {
  * @brief Determines whether a given type should be owned by a vector expression
  * @tparam vec The vector expression type
  * @note A vector should be owned if it is not an (optionally const) reference
- * to an mfem::Vector.  Note that std::remove_const does not apply here because
- * const is not a top-level qualifier on a const reference
+ * to an mfem::Vector or a class derived from mfem::Vector.  Note that
+ * std::remove_const does not apply here because const is not a top-level
+ * qualifier on a const reference
  */
 template <typename vec>
-inline constexpr bool owns_v = !std::is_same_v<vec, const mfem::Vector&> && !std::is_same_v<vec, mfem::Vector&>;
+inline constexpr bool owns_v =
+    !(std::is_base_of_v<mfem::Vector, std::decay_t<vec>> &&
+      (std::is_same_v<vec, const std::decay_t<vec>&> || std::is_same_v<vec, std::decay_t<vec>&>));
 
 /**
  * @brief Type alias for what should be stored by a vector expression - an object
@@ -49,6 +52,26 @@ using vec_t = typename std::conditional_t<owns_v<vec>, std::decay_t<vec>, const 
  */
 template <typename vec>
 using vec_arg_t = typename std::conditional_t<owns_v<vec>, std::decay_t<vec>&&, const vec&>;
+
+/**
+ * @brief Wraps the indexing of a vector type
+ * @param[in] v The vector to index
+ * @param[in] idx The offset of the indexing
+ * @note This is needed for uniform indexing that includes mfem::HypreParVectors.
+ * Because mfem::Vector::operator[] is implemented as an implicit conversion to double*,
+ * the additional implicit conversion (mfem::HypreParVector::operator hypre_ParVector*)
+ * results in an ambiguous call to operator[], as both implicit conversions are pointer
+ * types on which pointer arithmetic can be performed.
+ */
+template <typename vec>
+auto index(vec&& v, const std::size_t idx)
+{
+  if constexpr (std::is_same_v<std::decay_t<vec>, mfem::HypreParVector>) {
+    return static_cast<const double*>(v)[idx];
+  } else {
+    return v[idx];
+  }
+}
 
 /**
  * @brief Derived VectorExpr class for representing the application of a unary
@@ -72,7 +95,7 @@ public:
    * expression at index @p i
    * @param i The index to evaluate at
    */
-  double operator[](size_t i) const { return op_(v_[i]); }
+  double operator[](size_t i) const { return op_(index(v_, i)); }
   /**
    * @brief Returns the size of the vector expression
    */
@@ -168,7 +191,7 @@ public:
    * expression at index @p i
    * @param i The index to evaluate at
    */
-  double operator[](size_t i) const { return op_(u_[i], v_[i]); }
+  double operator[](size_t i) const { return op_(index(u_, i), index(v_, i)); }
   /**
    * @brief Returns the size of the vector expression
    */

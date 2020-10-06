@@ -4,12 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/base_solver.hpp"
+#include "physics/base_physics.hpp"
 
-#include <algorithm>
 #include <fstream>
-#include <iostream>
-#include <tuple>
 
 #include "fmt/fmt.hpp"
 #include "infrastructure/initialize.hpp"
@@ -18,27 +15,27 @@
 
 namespace serac {
 
-BaseSolver::BaseSolver(std::shared_ptr<mfem::ParMesh> mesh)
+BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
     : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0), bcs_(*mesh)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
-  BaseSolver::setTimestepper(serac::TimestepMethod::ForwardEuler);
+  BasePhysics::setTimestepper(serac::TimestepMethod::ForwardEuler);
   order_ = 1;
 }
 
-BaseSolver::BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BaseSolver(mesh)
+BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
 {
   order_ = p;
   state_.resize(n);
   gf_initialized_.assign(n, false);
 }
 
-void BaseSolver::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
+void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
 {
   bcs_.addEssentialTrueDofs(true_dofs, ess_bdr_coef, component);
 }
 
-void BaseSolver::setState(const std::vector<serac::GeneralCoefficient>& state_coef)
+void BasePhysics::setState(const std::vector<serac::GeneralCoefficient>& state_coef)
 {
   SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 
@@ -47,15 +44,15 @@ void BaseSolver::setState(const std::vector<serac::GeneralCoefficient>& state_co
   }
 }
 
-void BaseSolver::setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state)
+void BasePhysics::setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state)
 {
   SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
   state_ = state;
 }
 
-std::vector<std::shared_ptr<serac::FiniteElementState> > BaseSolver::getState() const { return state_; }
+std::vector<std::shared_ptr<serac::FiniteElementState> > BasePhysics::getState() const { return state_; }
 
-void BaseSolver::setTimestepper(const serac::TimestepMethod timestepper)
+void BasePhysics::setTimestepper(const serac::TimestepMethod timestepper)
 {
   timestepper_ = timestepper;
 
@@ -98,13 +95,13 @@ void BaseSolver::setTimestepper(const serac::TimestepMethod timestepper)
   }
 }
 
-void BaseSolver::setTime(const double time) { time_ = time; }
+void BasePhysics::setTime(const double time) { time_ = time; }
 
-double BaseSolver::time() const { return time_; }
+double BasePhysics::time() const { return time_; }
 
-int BaseSolver::cycle() const { return cycle_; }
+int BasePhysics::cycle() const { return cycle_; }
 
-void BaseSolver::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
+void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
 {
   root_name_ = root_name;
 
@@ -112,10 +109,26 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
 
   switch (output_type_) {
     case serac::OutputType::VisIt: {
-      visit_dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front()->mesh());
+      dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front()->mesh());
+
       for (const auto& state : state_) {
-        visit_dc_->RegisterField(state->name(), &state->gridFunc());
+        dc_->RegisterField(state->name(), &state->gridFunc());
       }
+      break;
+    }
+
+    case serac::OutputType::ParaView: {
+      auto pv_dc               = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front()->mesh());
+      int  max_order_in_fields = 0;
+      for (const auto& state : state_) {
+        pv_dc->RegisterField(state->name(), &state->gridFunc());
+        max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
+      }
+      pv_dc->SetLevelsOfDetail(max_order_in_fields);
+      pv_dc->SetHighOrderOutput(true);
+      pv_dc->SetDataFormat(mfem::VTKFormat::BINARY);
+      pv_dc->SetCompression(true);
+      dc_ = std::move(pv_dc);
       break;
     }
 
@@ -129,13 +142,20 @@ void BaseSolver::initializeOutput(const serac::OutputType output_type, const std
   }
 }
 
-void BaseSolver::outputState() const
+void BasePhysics::outputState() const
 {
   switch (output_type_) {
     case serac::OutputType::VisIt: {
-      visit_dc_->SetCycle(cycle_);
-      visit_dc_->SetTime(time_);
-      visit_dc_->Save();
+      dc_->SetCycle(cycle_);
+      dc_->SetTime(time_);
+      dc_->Save();
+      break;
+    }
+
+    case serac::OutputType::ParaView: {
+      dc_->SetCycle(cycle_);
+      dc_->SetTime(time_);
+      dc_->Save();
       break;
     }
 

@@ -20,7 +20,7 @@ namespace {
  */
 void signalHandler(int signal)
 {
-  std::cerr << "[SIGNAL]: Received signal " << signal << ", exiting" << std::endl;
+  std::cerr << "[SIGNAL]: Received signal " << signal << " (" << strsignal(signal) << "), exiting" << std::endl;
   serac::exitGracefully(true);
 }
 

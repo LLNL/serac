@@ -5,20 +5,24 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(infrastructure_headers
+    cli.hpp
     initialize.hpp
+    input.hpp
     logger.hpp
     profiling.hpp
     terminator.hpp
     )
 
 set(infrastructure_sources
+    cli.cpp
     initialize.cpp
+    input.cpp
     logger.cpp
     profiling.cpp
     terminator.cpp
     )
 
-set(infrastructure_depends axom mpi)
+set(infrastructure_depends axom fmt mpi cli11)
 blt_list_append( TO infrastructure_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
 blt_add_library(
@@ -27,7 +31,6 @@ blt_add_library(
     SOURCES     ${infrastructure_sources}
     DEPENDS_ON  ${infrastructure_depends}
     )
-
 
 target_include_directories(infrastructure PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>

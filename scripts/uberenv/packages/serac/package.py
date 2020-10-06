@@ -113,7 +113,7 @@ class Serac(CMakePackage, CudaPackage):
     #depends_on("mfem+netcdf", when="+netcdf")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",
+    cmake_debug_deps = ["axom@0.4.0p1~openmp~fortran~raja~umpire",
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
@@ -121,7 +121,7 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit@master~shared~python")
+    depends_on("conduit@0.5.1p1~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@5.4.0~shared")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
@@ -410,9 +410,14 @@ class Serac(CMakePackage, CudaPackage):
         else:
             cfg.write(cmake_cache_option("ENABLE_DOCS", False))
 
-        clangformatpath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format"
-        if os.path.exists(clangformatpath):
-            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", clangformatpath))
+        lc_clangformatpath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format"
+        # This works only with Ubuntu + Debian - other distros (Arch/Fedora) use
+        # /usr/bin/clang-format which would require actually running the executable to grab the version
+        apt_clangformatpath = "/usr/bin/clang-format-10"
+        if os.path.exists(lc_clangformatpath):
+            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", lc_clangformatpath))
+        elif os.path.exists(apt_clangformatpath):
+            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", apt_clangformatpath))
 
         clangtidypath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-tidy"
         if os.path.exists(clangtidypath):

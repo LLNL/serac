@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/nonlinear_solid_solver.hpp"
+#include "physics/nonlinear_solid.hpp"
 
 #include "infrastructure/logger.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
@@ -14,8 +14,8 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BaseSolver(mesh, NUM_FIELDS, order),
+NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh)
+    : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "velocity"})),
       displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
@@ -44,56 +44,53 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
   velocity_->trueVec() = 0.0;
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
-                                              std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
+                                        std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, -1);
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
-                                              std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
+void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+                                        int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
-void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
-                                          std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
+void NonlinearSolid::setTractionBCs(const std::set<int>&                     trac_bdr,
+                                    std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
-void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, const double K)
+void NonlinearSolid::setHyperelasticMaterialParameters(const double mu, const double K)
 {
   model_ = std::make_unique<mfem::NeoHookeanModel>(mu, K);
 }
 
-void NonlinearSolidSolver::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
-{
-  viscosity_ = std::move(visc_coef);
-}
+void NonlinearSolid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
 
-void NonlinearSolidSolver::setDisplacement(mfem::VectorCoefficient& disp_state)
+void NonlinearSolid::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_->project(disp_state);
   gf_initialized_[1] = true;
 }
 
-void NonlinearSolidSolver::setVelocity(mfem::VectorCoefficient& velo_state)
+void NonlinearSolid::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_->project(velo_state);
   gf_initialized_[0] = true;
 }
 
-void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParameters&    lin_params,
-                                               const serac::NonlinearSolverParameters& nonlin_params)
+void NonlinearSolid::setSolverParameters(const serac::LinearSolverParameters&    lin_params,
+                                         const serac::NonlinearSolverParameters& nonlin_params)
 {
   lin_params_    = lin_params;
   nonlin_params_ = nonlin_params;
 }
 
-void NonlinearSolidSolver::completeSetup()
+void NonlinearSolid::completeSetup()
 {
   // Define the nonlinear form
   auto H_form = displacement_->createOnSpace<mfem::ParNonlinearForm>();
@@ -144,6 +141,7 @@ void NonlinearSolidSolver::completeSetup()
   }
 
   solver_ = EquationSolver(displacement_->comm(), lin_params_, nonlin_params_);
+
   // Set up the jacbian solver based on the linear solver options
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byNODES,
@@ -173,14 +171,14 @@ void NonlinearSolidSolver::completeSetup()
 }
 
 // Solve the Quasi-static Newton system
-void NonlinearSolidSolver::quasiStaticSolve()
+void NonlinearSolid::quasiStaticSolve()
 {
   mfem::Vector zero;
   solver_.Mult(zero, displacement_->trueVec());
 }
 
 // Advance the timestep
-void NonlinearSolidSolver::advanceTimestep(double& dt)
+void NonlinearSolid::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   velocity_->initializeTrueVec();
@@ -211,6 +209,26 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-NonlinearSolidSolver::~NonlinearSolidSolver() {}
+NonlinearSolid::~NonlinearSolid() {}
+
+void NonlinearSolid::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+{
+  auto table = schema_creator->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+
+  // Polynomial interpolation order
+  table->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
+
+  // neo-Hookean material parameters
+  table->addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
+  table->addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);
+
+  // loading parameters
+  table->addDouble("tx", "Cantilever tip traction in the x direction.")->defaultValue(0.0);
+  table->addDouble("ty", "Cantilever tip traction in the y direction.")->defaultValue(1.0e-3);
+  table->addDouble("tz", "Cantilever tip traction in the z direction.")->defaultValue(0.0);
+
+  auto solver_table = table->addTable("solver", "Linear and Nonlinear Solver Parameters.");
+  serac::EquationSolver::defineInputFileSchema(solver_table);
+}
 
 }  // namespace serac

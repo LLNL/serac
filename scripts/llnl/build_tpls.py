@@ -35,6 +35,11 @@ def parse_args():
                       dest="spec",
                       default="",
                       help="Spack spec to build (defaults to all available on SYS_TYPE)")
+    parser.add_option("-v", "--verbose",
+                      action="store_true",
+                      dest="verbose",
+                      default=False,
+                      help="Output logs to screen as well as to files")
     ###############
     # parse args
     ###############
@@ -64,7 +69,7 @@ def main():
         os.chdir(repo_dir)
 
         timestamp = get_timestamp()
-        res = full_build_and_test_of_tpls(builds_dir, timestamp, opts["spec"])
+        res = full_build_and_test_of_tpls(builds_dir, timestamp, opts["spec"], opts["verbose"])
     finally:
         os.chdir(original_wd)
 

@@ -10,7 +10,7 @@
 
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/elasticity_solver.hpp"
+#include "physics/elasticity.hpp"
 #include "serac_config.hpp"
 
 namespace serac {
@@ -18,7 +18,7 @@ namespace serac {
 TEST(mesh, load_exodus)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/bortel_echem.e";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/bortel_echem.e";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
   MPI_Barrier(MPI_COMM_WORLD);
