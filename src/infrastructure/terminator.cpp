@@ -20,7 +20,7 @@ namespace {
  */
 void signalHandler(int signal)
 {
-  std::cerr << "[SIGNAL]: Received signal " << signal << ", exiting" << std::endl;
+  std::cerr << "[SIGNAL]: Received signal " << signal << " (" << strsignal(signal) << "), exiting" << std::endl;
   serac::exitGracefully(true);
 }
 
@@ -46,9 +46,12 @@ void exitGracefully(bool error)
     serac::logger::flush();
     serac::logger::finalize();
   }
-  int mpi_finalized;
+
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  int mpi_finalized = 0;
   MPI_Finalized(&mpi_finalized);
-  if (!mpi_finalized) {
+  if (mpi_initialized && !mpi_finalized) {
     MPI_Finalize();
   }
   profiling::terminateCaliper();

@@ -25,7 +25,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
   }
 
   if (nonlin_params) {
-    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_params, linearSolver());
+    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_params);
   }
 }
 
@@ -58,11 +58,24 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
 }
 
 std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                         comm,
-                                                                      const NonlinearSolverParameters& nonlin_params,
-                                                                      mfem::Solver&                    lin_solver)
+                                                                      const NonlinearSolverParameters& nonlin_params)
 {
-  auto newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
-  newton_solver->SetSolver(lin_solver);
+  std::unique_ptr<mfem::NewtonSolver> newton_solver;
+
+  if (nonlin_params.nonlin_solver == NonlinearSolver::MFEMNewton) {
+    newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
+  }
+  // KINSOL
+  else {
+#ifdef MFEM_USE_SUNDIALS
+    auto kinsol_strat =
+        (nonlin_params.nonlin_solver == NonlinearSolver::KINBacktrackingLineSearch) ? KIN_LINESEARCH : KIN_NONE;
+    newton_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
+#else
+    SLIC_ERROR("KINSOL was not enabled when MFEM was built");
+#endif
+  }
+
   newton_solver->SetRelTol(nonlin_params.rel_tol);
   newton_solver->SetAbsTol(nonlin_params.abs_tol);
   newton_solver->SetMaxIter(nonlin_params.max_iter);
@@ -78,6 +91,11 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
       nonlin_solver_->SetOperator(*superlu_wrapper_);
     } else {
       nonlin_solver_->SetOperator(op);
+    }
+    // Now that the nonlinear solver knows about the operator, we can set its linear solver
+    if (!nonlin_solver_set_solver_called_) {
+      nonlin_solver_->SetSolver(linearSolver());
+      nonlin_solver_set_solver_called_ = true;
     }
   } else {
     std::visit([&op](auto&& solver) { solver->SetOperator(op); }, lin_solver_);
@@ -124,6 +142,23 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   SLIC_ERROR_IF(matr_grad == nullptr, "Nonlinear operator gradient must be a HypreParMatrix");
   superlu_grad_mat_.emplace(*matr_grad);
   return *superlu_grad_mat_;
+}
+
+void EquationSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+{
+  auto nonlinear_table = schema_creator->addTable("nonlinear", "Newton Equation Solver Parameters")->required(true);
+  nonlinear_table->addDouble("rel_tol", "Relative tolerance for the Newton solve.")->defaultValue(1.0e-2);
+  nonlinear_table->addDouble("abs_tol", "Absolute tolerance for the Newton solve.")->defaultValue(1.0e-4);
+  nonlinear_table->addInt("max_iter", "Maximum iterations for the Newton solve.")->defaultValue(500);
+  nonlinear_table->addInt("print_level", "Nonlinear print level.")->defaultValue(0);
+  nonlinear_table->addString("solver_type", "Not currently used.")->defaultValue("");
+
+  auto linear_table = schema_creator->addTable("linear", "Linear Equation Solver Parameters")->required(true);
+  linear_table->addDouble("rel_tol", "Relative tolerance for the linear solve.")->defaultValue(1.0e-6);
+  linear_table->addDouble("abs_tol", "Absolute tolerance for the linear solve.")->defaultValue(1.0e-8);
+  linear_table->addInt("max_iter", "Maximum iterations for the linear solve.")->defaultValue(5000);
+  linear_table->addInt("print_level", "Linear print level.")->defaultValue(0);
+  linear_table->addString("solver_type", "Solver type (gmres|minres).")->defaultValue("gmres");
 }
 
 }  // namespace serac

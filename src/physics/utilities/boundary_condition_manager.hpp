@@ -20,7 +20,6 @@
 
 #include "physics/utilities/boundary_condition.hpp"
 #include "physics/utilities/finite_element_state.hpp"
-#include "physics/utilities/solver_config.hpp"
 
 namespace serac {
 
@@ -211,7 +210,7 @@ public:
   void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, const int component = -1)
   {
     using AliasedNatural = StrongAlias<NaturalBoundaryCondition, Tag>;
-    auto markers = BoundaryCondition::makeMarkers(nat_bdr, num_attrs_);
+    auto markers         = BoundaryCondition::makeMarkers(nat_bdr, num_attrs_);
     std::get<std::vector<AliasedNatural>>(bdrs_).emplace_back(
         NaturalBoundaryCondition(nat_bdr_coef, component, std::move(markers)));
   }

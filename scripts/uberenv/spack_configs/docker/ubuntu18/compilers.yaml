@@ -2,8 +2,7 @@ compilers:
   - compiler:
       environment: {}
       extra_rpaths: []
-      flags:
-        cxxflags: -stdlib=libc++
+      flags: {}
       modules: []
       operating_system: ubuntu18.04
       paths:

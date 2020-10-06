@@ -19,11 +19,9 @@
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
-#include <variant>
 
 #include "infrastructure/logger.hpp"
 #include "physics/utilities/finite_element_state.hpp"
-#include "physics/utilities/solver_config.hpp"
 
 namespace serac {
 

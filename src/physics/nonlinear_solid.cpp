@@ -72,7 +72,7 @@ void NonlinearSolid::setTrueDofs(const mfem::Array<int>& true_dofs, serac::Gener
 
 void NonlinearSolid::setHyperelasticMaterialParameters(const double mu, const double K)
 {
-  model_.reset(new mfem::NeoHookeanModel(mu, K));
+  model_ = std::make_unique<mfem::NeoHookeanModel>(mu, K);
 }
 
 void NonlinearSolid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
@@ -154,6 +154,7 @@ void NonlinearSolid::completeSetup()
   }
 
   solver_ = EquationSolver(displacement_->comm(), lin_params_, nonlin_params_);
+
   // Set up the jacbian solver based on the linear solver options
   if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
     SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byNODES,
@@ -222,5 +223,25 @@ void NonlinearSolid::advanceTimestep(double& dt)
 }
 
 NonlinearSolid::~NonlinearSolid() {}
+
+void NonlinearSolid::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+{
+  auto table = schema_creator->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+
+  // Polynomial interpolation order
+  table->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
+
+  // neo-Hookean material parameters
+  table->addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
+  table->addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);
+
+  // loading parameters
+  table->addDouble("tx", "Cantilever tip traction in the x direction.")->defaultValue(0.0);
+  table->addDouble("ty", "Cantilever tip traction in the y direction.")->defaultValue(1.0e-3);
+  table->addDouble("tz", "Cantilever tip traction in the z direction.")->defaultValue(0.0);
+
+  auto solver_table = table->addTable("solver", "Linear and Nonlinear Solver Parameters.");
+  serac::EquationSolver::defineInputFileSchema(solver_table);
+}
 
 }  // namespace serac

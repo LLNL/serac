@@ -17,6 +17,7 @@
 #include <optional>
 #include <variant>
 
+#include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "physics/utilities/solver_config.hpp"
 
@@ -98,6 +99,11 @@ public:
     return *result;
   }
 
+  /**
+   * Input file parameters specific to this class
+   **/
+  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
+
 private:
   /**
    * @brief Builds an iterative solver given a set of linear solver parameters
@@ -110,12 +116,10 @@ private:
   /**
    * @brief Builds an Newton-Raphson solver given a set of nonlinear solver parameters
    * @param[in] comm The MPI communicator object
-   * @param[in] nonlin_params The parameters for the linear solver
-   * @param[in] lin_solver The base linear solver object
+   * @param[in] nonlin_params The parameters for the nonlinear solver
    */
   static std::unique_ptr<mfem::NewtonSolver> buildNewtonSolver(MPI_Comm                         comm,
-                                                               const NonlinearSolverParameters& nonlin_params,
-                                                               mfem::Solver&                    lin_solver);
+                                                               const NonlinearSolverParameters& nonlin_params);
 
   /**
    * @brief A wrapper class for combining a nonlinear solver with a SuperLU direct solver
@@ -175,6 +179,13 @@ private:
    * @brief The optional nonlinear Newton-Raphson solver object
    */
   std::unique_ptr<mfem::NewtonSolver> nonlin_solver_;
+
+  /**
+   * @brief Whether the solver (linear solver) has been configured with the nonlinear solver
+   * @note This is a workaround as some nonlinear solvers require SetOperator to be called
+   * before SetSolver
+   */
+  bool nonlin_solver_set_solver_called_ = false;
 
   /**
    * @brief The operator (system matrix) used with a SuperLU solver
