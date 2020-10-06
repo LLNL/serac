@@ -69,7 +69,7 @@ void BasePhysics::setTimestepper(const serac::TimestepMethod timestepper)
       ode_solver_ = std::make_unique<mfem::ForwardEulerSolver>();
       break;
     case serac::TimestepMethod::RK2:
-      ode_solver_ = std::make_unique<mfem::RK2Solver>(DAMPING_);
+      ode_solver_ = std::make_unique<mfem::RK2Solver>();
       break;
     case serac::TimestepMethod::RK3SSP:
       ode_solver_ = std::make_unique<mfem::RK3SSPSolver>();
@@ -78,7 +78,7 @@ void BasePhysics::setTimestepper(const serac::TimestepMethod timestepper)
       ode_solver_ = std::make_unique<mfem::RK4Solver>();
       break;
     case serac::TimestepMethod::GeneralizedAlpha:
-      ode_solver_ = std::make_unique<mfem::GeneralizedAlphaSolver>(DAMPING_);
+      ode_solver_ = std::make_unique<mfem::GeneralizedAlphaSolver>();
       break;
     case serac::TimestepMethod::ImplicitMidpoint:
       ode_solver_ = std::make_unique<mfem::ImplicitMidpointSolver>();

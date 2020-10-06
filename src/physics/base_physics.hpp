@@ -183,11 +183,6 @@ protected:
   static constexpr int FLOAT_PRECISION_ = 8;
 
   /**
-   * @brief Damping amount for ODE integration methods
-   */
-  static constexpr double DAMPING_ = 0.5;
-
-  /**
    * @brief Current time
    */
   double time_;
