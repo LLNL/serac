@@ -9,7 +9,7 @@ Logging
 
 Logging is done through Axom's `SLIC <https://axom.readthedocs.io/en/develop/axom/slic/docs/sphinx/index.html>`_
 component. SLIC provides a lot of configurable logging functionality which we have consolidated the header
-``src/common/Logger.hpp`` and implemented in ``src/common/Logger.cpp``.
+``src/infrastructure/logger.hpp`` and implemented in ``src/infrastructure/logger.cpp``.
 
 .. note::
   On parallel runs, messages can be out of order if flush is not called often enough.
@@ -70,12 +70,15 @@ can be found `here <https://axom.readthedocs.io/en/develop/axom/slic/docs/sphinx
  * ``SLIC_INFO(msg)`` - Logs info message
  * ``SLIC_INFO_IF(expression, msg)`` - Logs info message if expression is true
  * ``SLIC_INFO_ROOT(rank, msg)`` - Logs info message if given rank is 0
+ * ``SLIC_INFO_ROOT_IF(expression, rank, msg)`` - Logs info message if given rank is 0 and expression is true
  * ``SLIC_WARNING(msg)`` - Logs warning message
  * ``SLIC_WARNING_IF(expression, msg)`` - Logs warning message if expression is true
- * ``SLIC_WARNING_ROOT(rank, msg)`` - Logs error message if given rank is 0
+ * ``SLIC_WARNING_ROOT(rank, msg)`` - Logs warning message if given rank is 0
+ * ``SLIC_WARNING_ROOT_IF(expression, rank, msg)`` - Logs warning message if given rank is 0 and expression is true
  * ``SLIC_ERROR(msg)`` - Logs error message
  * ``SLIC_ERROR_IF(expression, msg)`` - Logs error message if expression is true
  * ``SLIC_ERROR_ROOT(rank, msg)`` - Logs error message if given rank is 0
+ * ``SLIC_ERROR_ROOT_IF(expression, rank, msg)`` - Logs error message if given rank is 0 and expression is true
 
 The following macros are compiled out if not in a debug build:
 
@@ -86,7 +89,7 @@ The following macros are compiled out if not in a debug build:
  * ``SLIC_DEBUG(msg)`` - Logs debug message given rank is 0
  * ``SLIC_DEBUG_IF(expression, msg)`` - Logs debug message if expression is true
  * ``SLIC_DEBUG_ROOT(rank, msg)`` - Logs debug message if given rank is 0
+ * ``SLIC_DEBUG_ROOT_IF(expression, rank, msg)`` - Logs debug message if given rank is 0 and expression is true
 
 .. note::
   Macros with ROOT in the name are not true SLIC macros but are defined by Serac.
-

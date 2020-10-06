@@ -4,157 +4,104 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-//***********************************************************************
-//
-//   SERAC - Nonlinear Implicit Contact Proxy App
-//
-//   Description: The purpose of this code is to act as a proxy app
-//                for nonlinear implicit mechanics codes at LLNL. This
-//                initial version is copied from a previous version
-//                of the ExaConsist AM miniapp.
-//
-//
-//***********************************************************************
+/**
+ * @file serac.cpp
+ *
+ * @brief Nonlinear implicit proxy app driver
+ *
+ * The purpose of this code is to act as a proxy app for nonlinear implicit mechanics codes at LLNL.
+ */
 
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <string>
 
-#include "CLI11/CLI11.hpp"
+#include "axom/core.hpp"
 #include "coefficients/loading_functions.hpp"
 #include "coefficients/traction_coefficient.hpp"
-#include "common/logger.hpp"
+#include "infrastructure/cli.hpp"
+#include "infrastructure/initialize.hpp"
+#include "infrastructure/input.hpp"
+#include "infrastructure/logger.hpp"
+#include "infrastructure/terminator.hpp"
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/nonlinear_solid.hpp"
+#include "physics/utilities/equation_solver.hpp"
 #include "serac_config.hpp"
-#include "solvers/nonlinear_solid_solver.hpp"
+
+namespace serac {
+
+//------- Input file -------
+
+void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
+{
+  // mesh
+  serac::mesh::defineInputFileSchema(inlet);
+
+  // Simulation time parameters
+  inlet->addDouble("t_final", "Final time for simulation.")->defaultValue(1.0);
+  inlet->addDouble("dt", "Time step.")->defaultValue(0.25);
+
+  // Physics
+  serac::NonlinearSolid::defineInputFileSchema(inlet);
+
+  // Verify input file
+  if (!inlet->verify()) {
+    SLIC_ERROR_ROOT(rank, "Input file failed to verify.");
+    serac::exitGracefully(true);
+  }
+}
+
+}  // namespace serac
 
 int main(int argc, char* argv[])
 {
-  // Initialize MPI.
-  int num_procs, rank;
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  auto [num_procs, rank] = serac::initialize(argc, argv);
 
-  // Initialize SLIC logger
-  if (!serac::logger::initialize(MPI_COMM_WORLD)) {
-    serac::exitGracefully(true);
+  // Handle Command line
+  std::unordered_map<std::string, std::string> cli_opts = serac::cli::defineAndParse(argc, argv, rank);
+  serac::cli::printGiven(cli_opts, rank);
+
+  // Read input file
+  std::string input_file_path = "";
+  auto        search          = cli_opts.find("input_file");
+  if (search != cli_opts.end()) {
+    input_file_path = search->second;
   }
 
-  // mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+
+  // Initialize Inlet and read input file
+  auto inlet = serac::input::initialize(datastore, input_file_path);
+  serac::defineInputFileSchema(inlet, rank);
+
+  // Save input values to file
+  datastore.getRoot()->save("serac_input.json", "json");
 
   // serial and parallel refinement levels
-  int ser_ref_levels = 0;
-  int par_ref_levels = 0;
+  int ser_ref_levels;
+  inlet->get("ser_ref_levels", ser_ref_levels);  // has default value
+  int par_ref_levels;
+  inlet->get("par_ref_levels", par_ref_levels);  // has default value
 
-  // polynomial interpolation order
-  int order = 1;
-
-  // Solver parameters
-  serac::NonlinearSolverParameters nonlin_params;
-  nonlin_params.rel_tol     = 1.0e-2;
-  nonlin_params.abs_tol     = 1.0e-4;
-  nonlin_params.max_iter    = 500;
-  nonlin_params.print_level = 0;
-
-  serac::LinearSolverParameters lin_params;
-  lin_params.rel_tol     = 1.0e-6;
-  lin_params.abs_tol     = 1.0e-8;
-  lin_params.max_iter    = 5000;
-  lin_params.print_level = 0;
-
-  // solver input args
-  bool gmres_solver = true;
-  bool slu_solver   = false;
-
-  // neo-Hookean material parameters
-  double mu = 0.25;
-  double K  = 5.0;
-
-  // loading parameters
-  double tx = 0.0;
-  double ty = 1.0e-3;
-  double tz = 0.0;
-
-  double t_final = 1.0;
-  double dt      = 0.25;
-
-  // specify all input arguments
-  CLI::App app{"serac: a high order nonlinear thermomechanical simulation code"};
-  app.add_option("-m, --mesh", mesh_file, "Mesh file to use.", true);
-  app.add_option("--rs, --refine-serial", ser_ref_levels, "Number of times to refine the mesh uniformly in serial.",
-                 true);
-  app.add_option("--rp, --refine-parallel", par_ref_levels, "Number of times to refine the mesh uniformly in parallel.",
-                 true);
-  app.add_option("-o, --order", order, "Order degree of the finite elements.", true);
-  app.add_option("--mu, --shear-modulus", mu, "Shear modulus in the Neo-Hookean hyperelastic model.", true);
-  app.add_option("-K, --bulk-modulus", K, "Bulk modulus in the Neo-Hookean hyperelastic model.", true);
-  app.add_option("--tx, --traction-x", tx, "Cantilever tip traction in the x direction.", true);
-  app.add_option("--ty, --traction-y", ty, "Cantilever tip traction in the y direction.", true);
-  app.add_option("--tz, --traction-z", tz, "Cantilever tip traction in the z direction.", true);
-  app.add_flag("--slu, --superlu, !--no-slu, !--no-superlu", slu_solver, "Use the SuperLU Solver.");
-  app.add_flag("--gmres, !--no-gmres", gmres_solver, "Use gmres, otherwise minimum residual is used.");
-  app.add_option("--lrel, --linear-relative-tolerance", lin_params.rel_tol, "Relative tolerance for the lienar solve.",
-                 true);
-  app.add_option("--labs, --linear-absolute-tolerance", lin_params.abs_tol, "Absolute tolerance for the linear solve.",
-                 true);
-  app.add_option("--lit, --linear-iterations", lin_params.max_iter, "Maximum iterations for the linear solve.", true);
-  app.add_option("--lpl, --linear-print-level", lin_params.print_level, "Linear print level.", true);
-  app.add_option("--nrel, --newton-relative-tolerance", nonlin_params.rel_tol,
-                 "Relative tolerance for the Newton solve.", true);
-  app.add_option("--nabs, --newton-absolute-tolerance", nonlin_params.abs_tol,
-                 "Absolute tolerance for the Newton solve.", true);
-  app.add_option("--nit, --newton-iterations", nonlin_params.max_iter, "Maximum iterations for the Newton solve.",
-                 true);
-  app.add_option("--npl, --newton-print-level", nonlin_params.print_level, "Newton print level.", true);
-  app.add_option("--dt, --time-step", dt, "Time step.", true);
-
-  // Parse the arguments and check if they are good
-  try {
-    app.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    serac::logger::flush();
-    auto err_msg = (e.get_name() == "CallForHelp") ? app.help() : CLI::FailureMessage::simple(&app, e);
-    SLIC_ERROR_ROOT(rank, err_msg);
-    serac::exitGracefully();
-  }
-
-  auto config_msg = app.config_to_str(true, true);
-  SLIC_INFO_ROOT(rank, config_msg);
-
-  // Open the mesh
-  std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
-  SLIC_INFO_ROOT(rank, msg);
-  std::ifstream imesh(mesh_file);
-  if (!imesh) {
-    serac::logger::flush();
-    std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
-    SLIC_ERROR_ROOT(rank, err_msg);
-    serac::exitGracefully();
-  }
-
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
-
-  // mesh refinement if specified in input
-  for (int lev = 0; lev < ser_ref_levels; lev++) {
-    mesh->UniformRefinement();
-  }
-
-  // create the parallel mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-  for (int lev = 0; lev < par_ref_levels; lev++) {
-    pmesh->UniformRefinement();
-  }
-
-  int dim = pmesh->Dimension();
+  // Build mesh
+  std::string mesh_file_path;
+  inlet->get("mesh", mesh_file_path);  // required in input file
+  mesh_file_path = serac::input::findMeshFilePath(mesh_file_path, input_file_path);
+  auto mesh      = serac::buildMeshFromFile(mesh_file_path, ser_ref_levels, par_ref_levels);
 
   // Define the solid solver object
-  serac::NonlinearSolidSolver solid_solver(order, pmesh);
+  int order;
+  inlet->get("nonlinear_solid/order", order);  // has default value
+  serac::NonlinearSolid solid_solver(order, mesh);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
+  int dim = mesh->Dimension();
+
   mfem::VectorFunctionCoefficient defo_coef(dim, serac::initialDeformation);
 
   mfem::Vector velo(dim);
@@ -177,6 +124,12 @@ int main(int argc, char* argv[])
 
   std::set<int> trac_bdr = {2};
 
+  // loading parameters
+  double tx, ty, tz;
+  inlet->get("nonlinear_solid/tx", tx);  // has default value
+  inlet->get("nonlinear_solid/ty", ty);  // has default value
+  inlet->get("nonlinear_solid/tz", tz);  // has default value
+
   // define the traction vector
   mfem::Vector traction(dim);
   traction(0) = tx;
@@ -191,16 +144,41 @@ int main(int argc, char* argv[])
   solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
   solid_solver.setTractionBCs(trac_bdr, traction_coef);
 
+  // neo-Hookean material parameters
+  double mu, K;
+  inlet->get("nonlinear_solid/mu", mu);  // has default value
+  inlet->get("nonlinear_solid/K", K);    // has default value
+
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(mu, K);
 
-  // Set the linear solver parameters
-  if (gmres_solver == true) {
+  // Solver parameters
+  serac::NonlinearSolverParameters nonlin_params;
+  inlet->get("nonlinear_solid/solver/nonlinear/rel_tol", nonlin_params.rel_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/nonlinear/abs_tol", nonlin_params.abs_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/nonlinear/max_iter", nonlin_params.max_iter);        // has default value
+  inlet->get("nonlinear_solid/solver/nonlinear/print_level", nonlin_params.print_level);  // has default value
+
+  serac::LinearSolverParameters lin_params;
+  inlet->get("nonlinear_solid/solver/linear/rel_tol", lin_params.rel_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/linear/abs_tol", lin_params.abs_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/linear/max_iter", lin_params.max_iter);        // has default value
+  inlet->get("nonlinear_solid/solver/linear/print_level", lin_params.print_level);  // has default value
+
+  // solver input args
+  std::string solver_type;
+  inlet->get("nonlinear_solid/solver/linear/solver_type", solver_type);  // has default value
+  if (solver_type == "gmres") {
     lin_params.prec       = serac::Preconditioner::BoomerAMG;
     lin_params.lin_solver = serac::LinearSolver::GMRES;
-  } else {
+  } else if (solver_type == "minres") {
     lin_params.prec       = serac::Preconditioner::Jacobi;
     lin_params.lin_solver = serac::LinearSolver::MINRES;
+  } else {
+    serac::logger::flush();
+    std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
+    SLIC_ERROR_ROOT(rank, msg);
+    serac::exitGracefully(true);
   }
   solid_solver.setSolverParameters(lin_params, nonlin_params);
 
@@ -211,7 +189,10 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // initialize/set the time
-  double t = 0.0;
+  double t = 0;
+  double t_final, dt;
+  inlet->get("t_final", t_final);  // has default value
+  inlet->get("dt", dt);            // has default value
 
   bool last_step = false;
 

@@ -35,6 +35,10 @@ def cmake_cache_entry(name, value, comment=""):
 
     return 'set(%s "%s" CACHE PATH "%s")\n\n' % (name,value,comment)
 
+def cmake_cache_string(name, string, comment=""):
+    """Generate a string for a cmake cache variable"""
+
+    return 'set(%s "%s" CACHE STRING "%s")\n\n' % (name,string,comment)
 
 def cmake_cache_option(name, boolean_value, comment=""):
     """Generate a string for a cmake configuration option"""
@@ -68,7 +72,7 @@ def path_replace(path, path_replacements):
     return path
 
 
-class Serac(CMakePackage):
+class Serac(CMakePackage, CudaPackage):
     """FIXME: Put a proper description of your package here."""
 
     homepage = "https://www.github.com/LLNL/serac"
@@ -82,8 +86,13 @@ class Serac(CMakePackage):
     variant("devtools",  default=False,
             description="Build development tools (such as Sphinx, AStyle, etc...)")
 
+    variant('caliper', default=False, 
+            description='Build with hooks for Caliper performance analysis')
     variant('glvis', default=False,
             description='Build the glvis visualization executable')
+    # netcdf variant commented out until a bug in the spack concretizer is fixed
+    #variant('netcdf', default=True,
+    #        description='Enable Cubit/Genesis reader')
 
     # Basic dependencies
     depends_on("mpi")
@@ -96,27 +105,32 @@ class Serac(CMakePackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.1.0~shared+hypre+metis+superlu-dist+lapack+mpi",
-                  "hypre@2.11.1~shared~superlu-dist+mpi"]
+    debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf",
+                  "hypre@2.18.2~shared~superlu-dist+mpi"]
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
+    #depends_on("mfem+netcdf", when="+netcdf")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",
+    cmake_debug_deps = ["axom@0.4.0p1~openmp~fortran~raja~umpire",
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
-
     # Libraries that do not have a debug variant
-    depends_on("conduit@master~shared~python")
+    depends_on("conduit@0.5.1p1~shared~python")
+    depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@5.4.0~shared")
+    depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
+    depends_on("hdf5@1.8.21~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
+
+    conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
 
     phases = ['hostconfig', 'cmake', 'build',' install']
 
@@ -128,9 +142,12 @@ class Serac(CMakePackage):
         return sys_type
 
     def _get_host_config_path(self, spec):
-        host_config_path = "%s-%s-%s.cmake" % (socket.gethostname().rstrip('1234567890'),
+        var=''
+        if '+cuda' in spec:
+            var= '-'.join([var,'cuda'])
+        host_config_path = "%s-%s-%s%s.cmake" % (socket.gethostname().rstrip('1234567890'),
                                                self._get_sys_type(spec),
-                                               spec.compiler)
+                                               spec.compiler, var)
         dest_dir = self.stage.source_path
         host_config_path = os.path.abspath(pjoin(dest_dir, host_config_path))
         return host_config_path
@@ -236,6 +253,51 @@ class Serac(CMakePackage):
                                             description))
 
         #######################
+        # CUDA
+        #######################
+
+        if "+cuda" in spec:
+            cfg.write("#------------------{0}\n".format("-" * 60))
+            cfg.write("# Cuda\n")
+            cfg.write("#------------------{0}\n\n".format("-" * 60))
+
+            cfg.write(cmake_cache_option("ENABLE_CUDA", True))
+
+            cudatoolkitdir = spec['cuda'].prefix
+            cfg.write(cmake_cache_entry("CUDA_TOOLKIT_ROOT_DIR",
+                                        cudatoolkitdir))
+            cudacompiler = "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc"
+            cfg.write(cmake_cache_entry("CMAKE_CUDA_COMPILER",
+                                        cudacompiler))
+
+            if spec.satisfies('cuda_arch=none'):
+                cfg.write("# No cuda_arch specified in Spack spec, this is likely to fail\n\n")
+            else:
+                cuda_arch = spec.variants['cuda_arch'].value
+                flag = '-arch sm_{0}'.format(cuda_arch[0])
+                # CXX flags will be propagated to the host compiler
+                cuda_flags = ' '.join([flag, cxxflags])
+                cfg.write(cmake_cache_string("CMAKE_CUDA_FLAGS", cuda_flags))
+                cfg.write(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES", ' '.join(cuda_arch)))
+
+            sys_type = spec.architecture
+            # if on llnl systems, we can use the SYS_TYPE
+            if "SYS_TYPE" in env:
+                sys_type = env["SYS_TYPE"]
+
+            # are we on a specific machine
+            on_blueos = 'blueos' in sys_type
+
+            if on_blueos:
+                # Very specific fix for working around CMake adding implicit link directories returned by the BlueOS
+                # compilers to link CUDA executables 
+                cfg.write(cmake_cache_string("BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
+                                             "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;"
+                                             "/usr/tce/packages/gcc/gcc-4.9.3/lib64"))
+        else:
+            cfg.write(cmake_cache_option("ENABLE_CUDA", False))
+
+        #######################
         # MPI
         #######################
 
@@ -290,6 +352,11 @@ class Serac(CMakePackage):
         metis_dir = get_spec_path(spec, "metis", path_replacements)
         cfg.write(cmake_cache_entry("METIS_DIR", metis_dir))
 
+        #if "+netcdf" in spec:
+        # The actual package name is netcdf-c
+        netcdf_dir = get_spec_path(spec, "netcdf-c", path_replacements)
+        cfg.write(cmake_cache_entry("NETCDF_DIR", netcdf_dir))
+
         parmetis_dir = get_spec_path(spec, "parmetis", path_replacements)
         cfg.write(cmake_cache_entry("PARMETIS_DIR", parmetis_dir))
 
@@ -298,6 +365,10 @@ class Serac(CMakePackage):
 
         mfem_dir = get_spec_path(spec, "mfem", path_replacements)
         cfg.write(cmake_cache_entry("MFEM_DIR", mfem_dir))
+
+        if "+caliper" in spec:
+            caliper_dir = get_spec_path(spec, "caliper", path_replacements)
+            cfg.write(cmake_cache_entry("CALIPER_DIR", caliper_dir))
 
         if "+glvis" in spec:
             glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
@@ -314,14 +385,19 @@ class Serac(CMakePackage):
         # Add common prefix to path replacement list
         if "+devtools" in spec:
             # Grab common devtools root and strip the trailing slash
-            path1 = os.path.realpath(spec["python"].prefix)
+            path1 = os.path.realpath(spec["cppcheck"].prefix)
             path2 = os.path.realpath(spec["doxygen"].prefix)
-            devtools_root = os.path.commonprefix([path1, path2])[:-1]
-            path_replacements[devtools_root] = "${DEVTOOLS_ROOT}"
-            cfg.write("# Root directory for generated developer tools\n")
-            cfg.write(cmake_cache_entry("DEVTOOLS_ROOT",devtools_root))
-
-        if "doxygen" in spec or "py-sphinx" in spec:
+            devtools_root = os.path.commonprefix([path1, path2])
+            if len(devtools_root) > 1:
+                devtools_root = devtools_root[:-1]
+                path_replacements[devtools_root] = "${DEVTOOLS_ROOT}"
+                cfg.write("# Root directory for generated developer tools\n")
+                cfg.write(cmake_cache_entry("DEVTOOLS_ROOT",devtools_root))
+	
+        if spec.satisfies('target=ppc64le:'):
+            cfg.write("# Docs dont work on blueos machines, there is a prompt that waits for user input\n")
+            cfg.write(cmake_cache_option("ENABLE_DOCS", False))
+        elif "doxygen" in spec or "py-sphinx" in spec:
             cfg.write(cmake_cache_option("ENABLE_DOCS", True))
 
             if "doxygen" in spec:
@@ -334,9 +410,14 @@ class Serac(CMakePackage):
         else:
             cfg.write(cmake_cache_option("ENABLE_DOCS", False))
 
-        clangformatpath = "/usr/tce/packages/clang/clang-9.0.0/bin/clang-format"
-        if os.path.exists(clangformatpath):
-            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", clangformatpath))
+        lc_clangformatpath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format"
+        # This works only with Ubuntu + Debian - other distros (Arch/Fedora) use
+        # /usr/bin/clang-format which would require actually running the executable to grab the version
+        apt_clangformatpath = "/usr/bin/clang-format-10"
+        if os.path.exists(lc_clangformatpath):
+            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", lc_clangformatpath))
+        elif os.path.exists(apt_clangformatpath):
+            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", apt_clangformatpath))
 
         if "cppcheck" in spec:
             cppcheck_bin_dir = get_spec_path(spec, "cppcheck", path_replacements, use_bin=True)

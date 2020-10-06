@@ -1,4 +1,3 @@
-
 # -------------------------------------------------------------------------
 # This file controls default concretization preferences for Spack.
 #
@@ -19,16 +18,18 @@ packages:
     compiler: [gcc, intel, pgi, clang, xl, nag]
     providers:
       awk: [gawk]
-      blas: [openblas]
+      blas: [netlib-lapack]
       daal: [intel-daal]
       elf: [elfutils]
       golang: [gcc]
       ipp: [intel-ipp]
       java: [jdk]
-      lapack: [openblas]
+      lapack: [netlib-lapack]
       mkl: [intel-mkl]
       mpe: [mpe2]
-      mpi: [mvapich2]
+      # IBM Spectrum MPI is the only supported MPI 
+      # library on LC's Sierra and CORAL EA systems.
+      mpi: [spectrum-mpi]
       opencl: [pocl]
       openfoam: [openfoam-com, openfoam-org, foam-extend]
       pil: [py-pillow]
@@ -43,93 +44,105 @@ packages:
   py-numpy:
     variants: ~blas~lapack
   perl:
-    buildable: False
-    paths:
-      perl: /usr
+    buildable: false
+    externals:
+    - spec: perl
+      prefix: /usr
   pkg-config:
-      buildable: False
-      paths:
-          pkg-config: /usr
-# LLNL blueos CUDA
+    buildable: false
+    externals:
+    - spec: pkg-config
+      prefix: /usr
+
+  # LLNL blueos CUDA
   cuda:
-    paths:
-      cuda@9.0.176: /usr/tce/packages/cuda/cuda-9.0.176
-      cuda@8.0: /usr/tce/packages/cuda/cuda-8.0
-    buildable: False
-# LLNL blueos mpi
+    externals:
+      - spec: cuda@11.0.182
+        prefix: /usr/tce/packages/cuda/cuda-11.0.182
+      - spec: cuda@11.0.2
+        prefix: /usr/tce/packages/cuda/cuda-11.0.2
+    buildable: false
+
+  # LLNL blueos mpi
+  mpi:
+    buildable: false
   spectrum-mpi:
-    paths:
-      spectrum-mpi@release%gcc@4.9.3: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-4.9.3/ 
-      spectrum-mpi@release%clang@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2018.12.03/
-      spectrum-mpi@release%xl@coral: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-xl-2018.11.26/ 
-    buildable: False
+    externals:
+      - spec: spectrum-mpi@release%clang@upstream_gfortran
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2019.08.15
+      - spec: spectrum-mpi@release%clang@ibm_gfortran
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-ibm-2019.10.03-gcc-8.3.1
 
+  # System level packages to not build
   autoconf:
-    paths:
-      autoconf: /usr
-    buildable: False 
+    externals:
+      - spec: autoconf
+        prefix: /usr
+    buildable: false 
   automake:
-    paths:
-      automake: /usr
-    buildable: False
+    externals:
+      - spec: automake
+        prefix: /usr
+    buildable: false
   bzip2:
-   paths:
-      bzip2: /usr
-   buildable: False
-  cmake:
-    version: [3.14.5]
-    paths:
-      cmake: /usr/tce/packages/cmake/cmake-3.14.5
-    buildable: False
+    externals:
+      - spec: bzip2
+        prefix: /usr
+    buildable: false
   gettext:
-   paths:
-      gettext: /usr
-   buildable: False
+    externals:
+      - spec: gettext
+        prefix: /usr
+    buildable: false
   libtool:
-   paths:
-      libtool: /usr
-   buildable: False
+    externals:
+      - spec: libtool
+        prefix: /usr
+    buildable: false
   m4:
-   paths:
-      m4: /usr
-   buildable: False
-  perl:
-    paths:
-      perl: /usr
-    buildable: False 
-  pkg-config:
-    paths:
-      pkg-config: /usr
-    buildable: False 
+    externals:
+      - spec: m4
+        prefix: /usr
+    buildable: false
   tar:
-   paths:
-      tar: /usr
-   buildable: False
+    externals:
+      - spec: tar
+        prefix: /usr
+    buildable: false
+  netlib-lapack:
+    externals:
+      # This is the one that has the trailing underscores in name mangling, needed for MFEM compat
+      - spec: netlib-lapack@3.9.0
+        prefix: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
+    buildable: false
 
-# Lock in versions of Devtools
+  # Lock in versions of Devtools
+  cmake:
+    externals:
+    - spec: cmake@3.18.0
+      prefix: /usr/tce/packages/cmake/cmake-3.18.0
+    buildable: false
   cppcheck:
-    version: [1.87]
-    paths:
-      cppcheck: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-1.87
-    buildable: False
+    version: [2.1]
+    externals:
+      - spec: cppcheck@2.1
+        prefix: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/cppcheck-2.1
+    buildable: false
   doxygen:
-    version: [1.8.14]
-    paths:
-      doxygen: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.14
-    buildable: False
+    version: [1.8.17]
+    externals:
+      - spec: doxygen@1.8.17
+        prefix: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.17
+    buildable: false
   python:
-    version: [3.7.4]
-    paths:
-      python: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
-    buildable: False
+    version: [3.8.2]
+    externals:
+      - spec: python@3.8.2
+        prefix: /usr/tce/packages/python/python-3.8.2/
+    buildable: false
   py-sphinx:
     version: [2.2.0]
-    paths:
-      py-sphinx: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/python-3.7.4
-    buildable: False
-  uncrustify:
-    version: [0.61]
-    paths:
-      uncrustify: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/uncrustify-0.61
-    buildable: False
-
+    externals:
+      - spec: py-sphinx@2.2.0
+        prefix: /usr/tce/packages/python/python-3.8.2/
+    buildable: false

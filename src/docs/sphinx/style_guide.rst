@@ -19,6 +19,16 @@ with the following amendments:
 The Google style guide is meant for style enforcement only. The design principles outlined in the 
 `C++ Core Guidelines <http://isocpp.github.io/CppCoreGuidelines/>`_ should be followed.
 
+Of particular importance are the guidelines proposed for managing object lifetime:
+
+    1. Use raw pointers and references [only] to denote non-ownership (R.3 - R.4)
+    #. Prefer ``unique_ptr`` to ``shared_ptr`` (R.21)
+
+For example, if an object ``A`` creates a subobject ``B`` whose constructor requires a reference
+to one of ``A``'s instance variables ``Foo f``, ``B`` should store a non-owning reference to ``f``,
+either ``Foo&`` or ``Foo*``.  This should be ``const`` if at all possible.  In this case, shared ownership
+is not required because the lifetime of ``B`` is entirely dependent on the lifetime of ``A``.
+
 Documentation
 -------------
 
@@ -42,10 +52,9 @@ can come in handy to provide additional information:
      * Calculate du_dt = M^-1 (-Ku + f).
      * This is all that is needed for explicit methods
      * @param[in] u The state vector (input to the differentiation)
-     * @param[out] du The derivative of \p u with respect to time
+     * @param[out] du The derivative of @p u with respect to time
      * @see https://mfem.github.io/doxygen/html/classmfem_1_1TimeDependentOperator.html
      */
     virtual void Mult(const mfem::Vector &u, mfem::Vector &du_dt) const;
 
 For non-``void`` functions, the ``@return`` command should be used to describe the return value.
-

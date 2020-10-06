@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 if (SPHINX_FOUND)
-  add_subdirectory(sphinx)
+  blt_add_sphinx_target(serac_docs)
 endif()
 
 if (DOXYGEN_FOUND)

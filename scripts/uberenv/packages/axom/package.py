@@ -51,8 +51,14 @@ class Axom(CMakePackage, CudaPackage):
     homepage = "https://github.com/LLNL/axom"
     git      = "https://github.com/LLNL/axom.git"
 
-    version('master', branch='master', submodules=True)
+    version('main', branch='main', submodules=True)
     version('develop', branch='develop', submodules=True)
+
+    # SERAC EDIT START
+    version('0.4.0p1', SHA='d74c5d971c62a2263efa438736440ff28620dc3d', submodules="True")
+    # SERAC EDIT END
+
+    version('0.4.0', tag='v0.4.0', submodules="True")
     version('0.3.3', tag='v0.3.3', submodules="True")
     version('0.3.2', tag='v0.3.2', submodules="True")
     version('0.3.1', tag='v0.3.1', submodules="True")
@@ -65,10 +71,16 @@ class Axom(CMakePackage, CudaPackage):
     # -----------------------------------------------------------------------
     # Variants
     # -----------------------------------------------------------------------
-    variant('debug', default=False,
+    variant('shared',   default=True,
+            description='Enable build of shared libraries')
+    variant('debug',    default=False,
             description='Build debug instead of optimized version')
 
-    variant('fortran', default=True, description="Build with Fortran support")
+    # BEGIN SERAC EDIT
+    variant('cpp14',  default=True, description="Build with C++14 support")
+    # END SERAC EDIT
+
+    variant('fortran',  default=True, description="Build with Fortran support")
 
     variant("python",   default=False, description="Build python support")
 
@@ -77,16 +89,16 @@ class Axom(CMakePackage, CudaPackage):
 
     variant("mfem",     default=False, description="Build with mfem")
     variant("hdf5",     default=True, description="Build with hdf5")
-    variant("lua",      default=False, description="Build with Lua")
+    variant("lua",      default=True, description="Build with Lua")
     variant("scr",      default=False, description="Build with SCR")
     variant("umpire",   default=True, description="Build with umpire")
 
     variant("raja",     default=True, description="Build with raja")
-    variant("cub",     default=True,
+    variant("cub",      default=True,
             description="Build with RAJA's internal CUB support")
 
     varmsg = "Build development tools (such as Sphinx, Uncrustify, etc...)"
-    variant("devtools",  default=False, description=varmsg)
+    variant("devtools", default=False, description=varmsg)
 
     # -----------------------------------------------------------------------
     # Dependencies
@@ -96,15 +108,13 @@ class Axom(CMakePackage, CudaPackage):
     depends_on("mpi", when="+mpi")
 
     # Libraries
-    depends_on("conduit~shared+python", when="+python")
-    depends_on("conduit~shared~python", when="~python")
-    depends_on("conduit~shared+python+hdf5", when="+hdf5+python")
-    depends_on("conduit~shared+python~hdf5", when="~hdf5+python")
-    depends_on("conduit~shared~python+hdf5", when="+hdf5~python")
-    depends_on("conduit~shared~python~hdf5", when="~hdf5~python")
+    depends_on("conduit+python", when="+python")
+    depends_on("conduit~python", when="~python")
+    depends_on("conduit+hdf5", when="+hdf5")
+    depends_on("conduit~hdf5", when="~hdf5")
 
     # HDF5 needs to be the same as Conduit's
-    depends_on("hdf5@1.8.19:1.8.999~mpi~cxx~shared~fortran", when="+hdf5")
+    depends_on("hdf5@1.8.19:1.8.999~cxx~shared~fortran", when="+hdf5")
 
     depends_on("lua", when="+lua")
 
@@ -124,7 +134,8 @@ class Axom(CMakePackage, CudaPackage):
         depends_on('umpire cuda_arch={0}'.format(sm_),
                    when='+umpire cuda_arch={0}'.format(sm_))
 
-    depends_on("mfem~mpi~hypre~metis~gzstream", when="+mfem")
+    depends_on("mfem", when="+mfem")
+    depends_on("mfem~mpi", when="+mfem~mpi")
 
     depends_on("python", when="+python")
 
@@ -136,6 +147,12 @@ class Axom(CMakePackage, CudaPackage):
     depends_on("py-sphinx", when="+devtools")
     depends_on("py-shroud", when="+devtools")
     depends_on("uncrustify@0.61", when="+devtools")
+
+    def flag_handler(self, name, flags):
+        if name in ('cflags', 'cxxflags', 'fflags'):
+            # the package manages these flags in another way
+            return (None, None, None)
+        return (flags, None, None)
 
     def _get_sys_type(self, spec):
         sys_type = spec.architecture
@@ -211,23 +228,25 @@ class Axom(CMakePackage, CudaPackage):
             cfg.write(cmake_cache_option("ENABLE_FORTRAN", False))
 
         # use global spack compiler flags
-        cflags = ' '.join(spec.compiler_flags['cflags'])
+        cppflags = ' '.join(spec.compiler_flags['cppflags'])
+        if cppflags:
+            # avoid always ending up with ' ' with no flags defined
+            cppflags += ' '
+        cflags = cppflags + ' '.join(spec.compiler_flags['cflags'])
         if cflags:
             cfg.write(cmake_cache_entry("CMAKE_C_FLAGS", cflags))
-        cxxflags = ' '.join(spec.compiler_flags['cxxflags'])
+        cxxflags = cppflags + ' '.join(spec.compiler_flags['cxxflags'])
         if cxxflags:
             cfg.write(cmake_cache_entry("CMAKE_CXX_FLAGS", cxxflags))
         fflags = ' '.join(spec.compiler_flags['fflags'])
         if fflags:
             cfg.write(cmake_cache_entry("CMAKE_Fortran_FLAGS", fflags))
-        # ldflags = ' '.join(spec.compiler_flags['ldflags'])
-        # if ldflags:
-        #     cfg.write(cmake_cache_entry("CMAKE_EXE_LINKER_FLAGS".format(_type),
-        #                                 ldflags))
 
-        if ("gfortran" in f_compiler) and ("clang" in cpp_compiler):
+        if ((f_compiler is not None)
+           and ("gfortran" in f_compiler)
+           and ("clang" in cpp_compiler)):
             libdir = pjoin(os.path.dirname(
-                           os.path.dirname(f_compiler)), "lib")
+                           os.path.dirname(cpp_compiler)), "lib")
             flags = ""
             for _libpath in [libdir, libdir + "64"]:
                 if os.path.exists(_libpath):
@@ -237,7 +256,10 @@ class Axom(CMakePackage, CudaPackage):
                 cfg.write(cmake_cache_entry("BLT_EXE_LINKER_FLAGS", flags,
                                             description))
 
-
+        # BEGIN SERAC EDIT
+        if "+cpp14" in spec:
+            cfg.write(cmake_cache_entry("BLT_CXX_STD", "c++14", ""))
+        # END SERAC EDIT
 
         # TPL locations
         cfg.write("#------------------{0}\n".format("-" * 60))
@@ -440,7 +462,7 @@ class Axom(CMakePackage, CudaPackage):
 
         # Override XL compiler family
         familymsg = ("Override to proper compiler family for XL")
-        if "xlf" in f_compiler:
+        if (f_compiler is not None) and ("xlf" in f_compiler):
             cfg.write(cmake_cache_entry("CMAKE_Fortran_COMPILER_ID", "XL",
                                         familymsg))
         if "xlc" in c_compiler:
@@ -451,7 +473,7 @@ class Axom(CMakePackage, CudaPackage):
                                         familymsg))
 
         if spec.satisfies('target=ppc64le:'):
-            if "xlf" in f_compiler:
+            if (f_compiler is not None) and ("xlf" in f_compiler):
                 description = ("Converts C-style comments to Fortran style "
                                "in preprocessed files")
                 cfg.write(cmake_cache_entry("BLT_FORTRAN_FLAGS",
@@ -462,9 +484,14 @@ class Axom(CMakePackage, CudaPackage):
                                       os.path.dirname(f_compiler)), "lib")
                 description = ("Adds a missing rpath for libraries "
                                "associated with the fortran compiler")
+                linker_flags = "${BLT_EXE_LINKER_FLAGS} -Wl,-rpath," + libdir
                 cfg.write(cmake_cache_entry("BLT_EXE_LINKER_FLAGS",
-                                            "${BLT_EXE_LINKER_FLAGS} -Wl,-rpath," + libdir,
-                                            description))
+                                            linker_flags, description))
+                if "+shared" in spec:
+                    linker_flags = "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath," \
+                                   + libdir
+                    cfg.write(cmake_cache_entry("CMAKE_SHARED_LINKER_FLAGS",
+                                                linker_flags, description))
 
             if "+cuda" in spec:
                 cfg.write("#------------------{0}\n".format("-" * 60))
@@ -524,12 +551,21 @@ class Axom(CMakePackage, CudaPackage):
 
         options = []
         options.extend(['-C', host_config_path])
+
         if self.run_tests is False:
             options.append('-DENABLE_TESTS=OFF')
         else:
             options.append('-DENABLE_TESTS=ON')
-        src_dir = os.path.abspath(pjoin(self.stage.source_path, "src"))
-        options.append(src_dir)
+
+        if "+shared" in spec:
+            options.append('-DBUILD_SHARED_LIBS=ON')
+        else:
+            options.append('-DBUILD_SHARED_LIBS=OFF')
+
+        # BEGIN SERAC EDIT
+        options.append('-DAXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION=ON')
+        # END SERAC EDIT
+
         return options
 
     @run_after('install')

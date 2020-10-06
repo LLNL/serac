@@ -1,0 +1,76 @@
+####
+# This is the share configuration of jobs for quartz
+.on_quartz:
+  tags:
+    - shell
+    - quartz
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_QUARTZ == "OFF"' #run except if ...
+      when: never
+    - if: '$CI_JOB_NAME =~ /release_resources/'
+      when: always
+    - when: on_success
+
+####
+# In pre-build phase, allocate a node for builds
+allocate_resources_build_quartz:
+  variables:
+    GIT_STRATEGY: none
+  extends: [.on_quartz, .pr_workflow]
+  stage: q_allocate_resources
+  script:
+    - salloc ${SLURM_ACCOUNT} -N 1 -c 36 -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
+  needs: []
+
+####
+# In post-build phase, deallocate resources
+# Note : make sure this is run even on build phase failure
+release_resources_build_quartz:
+  variables:
+    GIT_STRATEGY: none
+  extends: [.on_quartz, .pr_workflow]
+  stage: q_release_resources
+  script:
+    - export JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
+    - if [[ -n "${JOBID}" ]]; then scancel ${JOBID}; fi
+
+####
+# Template
+.pr_build_on_quartz:
+  stage: q_build
+  extends: [.srun_build_script, .on_quartz, .pr_workflow]
+
+.main_build_with_deps_on_quartz:
+  stage: q_build_with_deps
+  extends: [.srun_build_with_deps_script, .on_quartz, .main_workflow]
+  needs: []
+
+.main_build_devtools_on_quartz:
+  stage: q_build_devtools
+  extends: [.srun_build_devtools_script, .on_quartz, .main_workflow]
+
+####
+# Build jobs
+clang_10_0_0 (PR build_on_quartz):
+  variables:
+    COMPILER: "clang@10.0.0"
+    HOST_CONFIG: "quartz-toss_3_x86_64_ib-${COMPILER}.cmake"
+  extends: .pr_build_on_quartz
+
+gcc_8_3_1 (PR build_on_quartz):
+  variables:
+    COMPILER: "gcc@8.3.1"
+    HOST_CONFIG: "quartz-toss_3_x86_64_ib-${COMPILER}.cmake"
+  extends: .pr_build_on_quartz
+
+clang_10_0_0 (Main build_with_deps_on_quartz):
+  variables:
+    COMPILER: "clang@10.0.0"
+    SPEC: "@develop%${COMPILER}"
+  extends: .main_build_with_deps_on_quartz
+
+gcc_8_3_1 (Main build_with_deps_on_quartz):
+  variables:
+    COMPILER: "gcc@8.3.1"
+    SPEC: "@develop%${COMPILER}"
+  extends: .main_build_with_deps_on_quartz

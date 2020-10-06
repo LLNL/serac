@@ -4,11 +4,12 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-blt_add_executable( NAME       serac
-                    SOURCES    serac.cpp
-                    DEPENDS_ON common solvers coefficients mfem mpi cli11
+blt_add_executable( NAME        serac_driver
+                    SOURCES     serac.cpp
+                    DEPENDS_ON  numerics infrastructure physics coefficients mfem mpi
+                    OUTPUT_NAME serac
                     )
 
-install( TARGETS serac
+install( TARGETS serac_driver
          RUNTIME DESTINATION bin
          )

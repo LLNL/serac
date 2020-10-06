@@ -8,8 +8,9 @@
 # Setup MFEM
 #
 # This file defines:
-#  MFEM_FOUND        - If MFEM was found
-#  mfem              - BLT Registered Library 
+#  MFEM_FOUND            - If MFEM was found
+#  mfem                  - BLT Registered Library 
+#  MFEM_BUILT_WITH_CMAKE - If MFEM was built with CMake
 #------------------------------------------------------------------------------
 
 if(NOT MFEM_DIR)
@@ -26,11 +27,12 @@ if(EXISTS ${_mfem_cmake_config})
 
     include(${_mfem_cmake_config})
 
-    # TODO: This needs to be verified
-    set(MFEM_INCLUDE_DIRS  ${MFEM_INCLUDE_DIR} )
-    set(MFEM_LIBRARIES     ${MFEM_LIBRARY} )
+    set(MFEM_INCLUDE_DIRS  ${MFEM_INCLUDE_DIRS} )
+    set(MFEM_LIBRARIES     ${MFEM_LIBRARIES} )
+    set(MFEM_BUILT_WITH_CMAKE TRUE)
 
 else()
+    set(MFEM_BUILT_WITH_CMAKE FALSE)
     find_path(
         MFEM_INCLUDE_DIRS mfem.hpp
         PATHS ${MFEM_DIR}/include
@@ -78,30 +80,30 @@ else()
         message(VERBOSE "Content of variable mfem_tpl_inc_flags: ${mfem_tpl_inc_flags}")
     endif()
     string(REGEX REPLACE  "MFEM_TPLFLAGS +=" "" mfem_tpl_inc_flags ${mfem_tpl_inc_flags})
-    string(FIND  ${mfem_tpl_inc_flags} "\n" mfem_tpl_inc_flags_end_pos)
-    string(SUBSTRING ${mfem_tpl_inc_flags} 0 ${mfem_tpl_inc_flags_end_pos} mfem_tpl_inc_flags)
-    string(STRIP ${mfem_tpl_inc_flags} mfem_tpl_inc_flags)
+    string(FIND  "${mfem_tpl_inc_flags}" "\n" mfem_tpl_inc_flags_end_pos)
+    string(SUBSTRING "${mfem_tpl_inc_flags}" 0 ${mfem_tpl_inc_flags_end_pos} mfem_tpl_inc_flags)
+    string(STRIP "${mfem_tpl_inc_flags}" mfem_tpl_inc_flags)
 
     # remove the " -I" and add them to the include dir list
     separate_arguments(mfem_tpl_inc_flags)
     foreach(_include_flag ${mfem_tpl_inc_flags})
-        string(FIND ${_include_flag} "-I" _pos)
+        string(FIND "${_include_flag}" "-I" _pos)
         if(_pos EQUAL 0)
-            string(SUBSTRING ${_include_flag} 2 -1 _include_dir)
+            string(SUBSTRING "${_include_flag}" 2 -1 _include_dir)
             list(APPEND MFEM_INCLUDE_DIRS ${_include_dir})
         endif()
     endforeach()
 
     # parse link flags
-    string(REGEX MATCHALL "MFEM_EXT_LIBS [^\n]+\n" mfem_tpl_lnk_flags ${mfem_cfg_file_txt})
+    string(REGEX MATCHALL "MFEM_EXT_LIBS [^\n]+\n" mfem_tpl_lnk_flags "${mfem_cfg_file_txt}")
     if(${CMAKE_VERSION} VERSION_GREATER 3.15.0)
         message(VERBOSE "Content of variable mfem_tpl_lnk_flags: ${mfem_tpl_lnk_flags}")
     endif()
     if(NOT mfem_tpl_lnk_flags EQUAL "")
-        string(REGEX REPLACE  "MFEM_EXT_LIBS +=" "" mfem_tpl_lnk_flags ${mfem_tpl_lnk_flags})
-        string(FIND  ${mfem_tpl_lnk_flags} "\n" mfem_tpl_lnl_flags_end_pos )
-        string(SUBSTRING ${mfem_tpl_lnk_flags} 0 ${mfem_tpl_lnl_flags_end_pos} mfem_tpl_lnk_flags)
-        string(STRIP ${mfem_tpl_lnk_flags} mfem_tpl_lnk_flags)
+        string(REGEX REPLACE  "MFEM_EXT_LIBS +=" "" mfem_tpl_lnk_flags "${mfem_tpl_lnk_flags}")
+        string(FIND  "${mfem_tpl_lnk_flags}" "\n" mfem_tpl_lnl_flags_end_pos )
+        string(SUBSTRING "${mfem_tpl_lnk_flags}" 0 ${mfem_tpl_lnl_flags_end_pos} mfem_tpl_lnk_flags)
+        string(STRIP "${mfem_tpl_lnk_flags}" mfem_tpl_lnk_flags)
     else()
         message(WARNING "No third party library flags found in ${MFEM_CFG_DIR}/config.mk")
     endif()

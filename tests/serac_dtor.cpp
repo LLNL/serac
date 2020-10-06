@@ -11,8 +11,9 @@
 #include <memory>
 
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/thermal_conduction.hpp"
 #include "serac_config.hpp"
-#include "solvers/thermal_solver.hpp"
 
 namespace serac {
 
@@ -21,23 +22,12 @@ TEST(serac_dtor, test1)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
-  std::fstream imesh(mesh_file);
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
-
-  // Refine in serial
-  mesh->UniformRefinement();
-
-  // Initialize the parallel mesh and delete the serial mesh
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-
-  // Refine the parallel mesh
-  pmesh->UniformRefinement();
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
   // Initialize the second order thermal solver on the parallel mesh
-  auto therm_solver = std::make_unique<ThermalSolver>(2, pmesh);
+  auto therm_solver = std::make_unique<ThermalConduction>(2, pmesh);
 
   // Set the time integration method
   therm_solver->setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -50,8 +40,8 @@ TEST(serac_dtor, test1)
   therm_solver->setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_shared<mfem::ConstantCoefficient>(0.5);
-  therm_solver->setConductivity(kappa);
+  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
+  therm_solver->setConductivity(std::move(kappa));
 
   // Define the linear solver params
   serac::LinearSolverParameters params;
@@ -66,7 +56,7 @@ TEST(serac_dtor, test1)
   therm_solver->completeSetup();
 
   // Destruct the old thermal solver and build a new one
-  therm_solver.reset(new ThermalSolver(1, pmesh));
+  therm_solver.reset(new ThermalConduction(1, pmesh));
 
   // Destruct the second thermal solver and leave the pointer empty
   therm_solver.reset(nullptr);

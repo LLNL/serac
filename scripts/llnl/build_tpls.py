@@ -30,11 +30,20 @@ def parse_args():
                       dest="directory",
                       default="",
                       help="Location to build all TPL's, timestamp directory will be created (Defaults to shared location)")
-
+    # Spack spec to use for the build
+    parser.add_option("-s", "--spec",
+                      dest="spec",
+                      default="",
+                      help="Spack spec to build (defaults to all available on SYS_TYPE)")
+    parser.add_option("-v", "--verbose",
+                      action="store_true",
+                      dest="verbose",
+                      default=False,
+                      help="Output logs to screen as well as to files")
     ###############
     # parse args
     ###############
-    opts, extras = parser.parse_args()
+    opts, _ = parser.parse_args()
     # we want a dict b/c the values could 
     # be passed without using optparse
     opts = vars(opts)
@@ -60,7 +69,7 @@ def main():
         os.chdir(repo_dir)
 
         timestamp = get_timestamp()
-        res = full_build_and_test_of_tpls(builds_dir, timestamp)
+        res = full_build_and_test_of_tpls(builds_dir, timestamp, opts["spec"], opts["verbose"])
     finally:
         os.chdir(original_wd)
 

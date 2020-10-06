@@ -10,15 +10,17 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies solvers coefficients axom mpi mfem gtest)
+    set(test_dependencies physics coefficients axom mpi mfem gtest)
 
     set(solver_tests
         serac_dynamic_solver.cpp
         serac_linelastic_solver.cpp
         serac_quasistatic_solver.cpp
         serac_thermal_solver.cpp
-	serac_thermal_structural_solver.cpp
-        serac_dtor.cpp)
+        serac_thermal_structural_solver.cpp
+        serac_dtor.cpp
+        serac_boundary_cond.cpp
+        serac_mesh.cpp)
 
     foreach(filename ${solver_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -53,7 +55,10 @@ if (ENABLE_GTEST)
     endforeach()
 
     set(language_tests
-        copy_elision.cpp)
+        mesh_generation.cpp
+        copy_elision.cpp
+        mfem_array_std_algo.cpp
+        expr_templates.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -68,10 +73,33 @@ if (ENABLE_GTEST)
                      NUM_MPI_TASKS 1 )
     endforeach()
 
+    if(ENABLE_CUDA)
+        # CUDA smoke test
+        blt_add_library( NAME       serac_cuda_smoketest_kernel
+                         SOURCES    serac_cuda_smoketest_kernel.cpp 
+                         DEPENDS_ON cuda)
+        blt_add_executable( NAME       serac_cuda_smoketest
+                            SOURCES    serac_cuda_smoketest.cpp 
+                            OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
+                            DEPENDS_ON serac_cuda_smoketest_kernel ${test_dependencies} cuda_runtime
+                            FOLDER      serac/tests)
+        blt_add_test( NAME          serac_cuda_smoketest
+                      COMMAND       serac_cuda_smoketest )
+    endif()
+
+    if(ENABLE_BENCHMARKS)
+        blt_add_executable( NAME    benchmark_expr_templates
+                            SOURCES benchmark_expr_templates.cpp
+                            DEPENDS_ON gbenchmark ${test_dependencies}
+                            FOLDER      serac/tests)
+        blt_add_benchmark(  NAME    benchmark_expr_templates
+                            COMMAND benchmark_expr_templates "--benchmark_min_time=0.0 --v=3 --benchmark_format=console"
+                            NUM_MPI_TASKS 4)
+    endif()
 
 endif()
 
 # Make sure running serac driver doesn't completely fail
-blt_add_test(NAME          serac
-             COMMAND       serac
+blt_add_test(NAME          serac_driver
+             COMMAND       serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../data/input_files/default.lua
              NUM_MPI_TASKS 1 )

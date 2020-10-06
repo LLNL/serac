@@ -5,18 +5,18 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 // # Author: Jonathan Wong @ LLNL.
 
-#include "stdfunction_coefficient.hpp"
+#include "coefficients/stdfunction_coefficient.hpp"
 
-#include "common/logger.hpp"
+#include "infrastructure/logger.hpp"
 
 namespace serac {
 
 StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector&)> func) : func_(func) {}
 
-double StdFunctionCoefficient::Eval(mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip)
+double StdFunctionCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
-  mfem::Vector transip(T.GetSpaceDim());
-  T.Transform(ip, transip);
+  mfem::Vector transip(Tr.GetSpaceDim());
+  Tr.Transform(ip, transip);
   return func_(transip);
 }
 
@@ -30,6 +30,7 @@ void StdFunctionVectorCoefficient::Eval(mfem::Vector& V, mfem::ElementTransforma
                                         const mfem::IntegrationPoint& ip)
 {
   mfem::Vector transip(T.GetSpaceDim());
+  V.SetSize(vdim);
   T.Transform(ip, transip);
   func_(transip, V);
 }

@@ -9,8 +9,9 @@
 #include <fstream>
 
 #include "mfem.hpp"
+#include "numerics/mesh_utils.hpp"
+#include "physics/elasticity.hpp"
 #include "serac_config.hpp"
-#include "solvers/elasticity_solver.hpp"
 
 namespace serac {
 
@@ -19,18 +20,11 @@ TEST(elastic_solver, static_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-quad.mesh";
-  std::fstream imesh(mesh_file);
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-quad.mesh";
 
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-  imesh.close();
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
-  // declare pointer to parallel mesh object
-  mesh->UniformRefinement();
-
-  auto pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, *mesh);
-
-  ElasticitySolver elas_solver(1, pmesh);
+  Elasticity elas_solver(1, pmesh);
 
   std::set<int> disp_bdr = {1};
 
@@ -78,7 +72,7 @@ TEST(elastic_solver, static_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = elas_solver.getState()[0]->gf->ComputeLpError(2.0, zerovec);
+  double x_norm = elas_solver.getState()[0]->gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
 

@@ -41,6 +41,11 @@ class Mfem(Package):
     # If this quick verification procedure fails, additional discussion
     # will be required to verify the new version.
 
+    # SERAC EDIT BEGIN
+    # Version spec used in serac based on mfem@develop commit SHA
+    version('4.1.0p1', SHA='bb3c788a05f430bcfed03065ba39868974964924')
+    # SERAC EDIT END
+
     # 'develop' is a special version that is always larger (or newer) than any
     # other version.
     version('develop', branch='master')
@@ -92,12 +97,6 @@ class Mfem(Package):
     # Can we make the default value for 'metis' to depend on the 'mpi' value?
     variant('metis', default=True,
             description='Enable METIS support')
-    # TODO: The 'hypre' variant is the same as 'mpi', we may want to remove it.
-    #       For now, keep the 'hypre' variant while ignoring its setting. This
-    #       is done to preserve compatibility with other packages that refer to
-    #       it, e.g. xSDK.
-    variant('hypre', default=True,
-            description='Required for MPI parallelism')
     variant('openmp', default=False,
             description='Enable OpenMP parallelism')
     variant('cuda', default=False, description='Enable CUDA support')
@@ -366,21 +365,27 @@ class Mfem(Package):
         cxxflags = spec.compiler_flags['cxxflags']
 
         if cxxflags:
+            # Add opt/debug flags if they are not present in global cxx flags
+            opt_flag_found = any(f in self.compiler.opt_flags
+                                 for f in cxxflags)
+            debug_flag_found = any(f in self.compiler.debug_flags
+                                   for f in cxxflags)
+
+            if '+debug' in spec:
+                if not debug_flag_found:
+                    cxxflags.append('-g')
+                if not opt_flag_found:
+                    cxxflags.append('-O0')
+            else:
+                if not opt_flag_found:
+                    cxxflags.append('-O2')
+
             cxxflags = [(xcompiler + flag) for flag in cxxflags]
             if '+cuda' in spec:
                 cxxflags += [
                     '-x=cu --expt-extended-lambda -arch=%s' % cuda_arch,
                     '-ccbin %s' % (spec['mpi'].mpicxx if '+mpi' in spec
                                    else env['CXX'])]
-
-            # SERAC EDIT BEGIN
-            # setting CXXFLAGS to anything breaks the ability for MFEM_DEBUG to add flags
-            if '+debug' in spec:
-                cxxflags.extend(['-g', '-O0'])
-            else:
-                cxxflags.append('-O2')
-            # SERAC EDIT END
-
             if self.spec.satisfies('@4.0.0:'):
                 cxxflags.append(self.compiler.cxx11_flag)
             # The cxxflags are set by the spack c++ compiler wrapper. We also
@@ -494,10 +499,16 @@ class Mfem(Package):
                 ld_flags_from_dirs([spec['gslib'].prefix.lib], ['gs'])]
 
         if '+netcdf' in spec:
+            lib_flags = ld_flags_from_dirs([spec['netcdf-c'].prefix.lib],
+                                           ['netcdf'])
+            hdf5 = spec['hdf5:hl']
+            if hdf5.satisfies('~shared'):
+                hdf5_libs = hdf5.libs
+                hdf5_libs += LibraryList(find_system_libraries('libdl'))
+                lib_flags += " " + ld_flags_from_library_list(hdf5_libs)
             options += [
                 'NETCDF_OPT=-I%s' % spec['netcdf-c'].prefix.include,
-                'NETCDF_LIB=%s' %
-                ld_flags_from_dirs([spec['netcdf-c'].prefix.lib], ['netcdf'])]
+                'NETCDF_LIB=%s' % lib_flags]
 
         if '+zlib' in spec:
             if "@:3.3.2" in spec:

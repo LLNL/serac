@@ -101,6 +101,25 @@ else()
     set(TRIBOL_FOUND FALSE CACHE BOOL "")
 endif()
 
+#------------------------------------------------------------------------------
+# Caliper
+#------------------------------------------------------------------------------
+if(CALIPER_DIR)
+    serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
+
+    find_package(caliper REQUIRED NO_DEFAULT_PATH 
+                  PATHS ${CALIPER_DIR})
+    message(STATUS "Caliper support is ON")
+    set(CALIPER_FOUND TRUE CACHE BOOL "")
+
+    # Set the include directories as Caliper does not completely
+    # configure the "caliper" target
+    set_target_properties(caliper PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES ${caliper_INCLUDE_PATH})
+else()
+    message(STATUS "Caliper support is OFF")
+    set(CALIPER_FOUND FALSE CACHE BOOL "")
+endif()
 
 #------------------------------------------------------------------------------
 # Remove exported OpenMP flags because they are not language agnostic
@@ -134,4 +153,3 @@ foreach(_target axom)
         endforeach()
     endif()
 endforeach()
-

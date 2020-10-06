@@ -16,12 +16,24 @@ set(integrators_headers
     wrapper_integrator.hpp
     )
 
+set(integrators_depends infrastructure mfem mpi)
+blt_list_append( TO integrators_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
+
 blt_add_library(
     NAME        integrators
     SOURCES     ${integrators_sources}
     HEADERS     ${integrators_headers}
-    DEPENDS_ON  mfem mpi
-    #DEPENDS_ON  mpi mfem hypre blas lapack parmetis metis 
+    DEPENDS_ON  ${integrators_depends}
     )
 
-target_include_directories(integrators PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_include_directories(integrators PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+    $<INSTALL_INTERFACE:include>
+    )
+
+install(FILES ${integrators_headers} DESTINATION include/integrators )
+
+install(TARGETS              integrators 
+        EXPORT               serac-targets
+        DESTINATION          lib
+        )

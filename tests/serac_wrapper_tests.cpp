@@ -17,7 +17,7 @@ using namespace mfem;
 using namespace serac;
 
 class WrapperTests : public ::testing::Test {
- protected:
+protected:
   void SetUp()
   {
     // Set up mesh
@@ -120,11 +120,6 @@ void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int
   A_nonlin.AddDomainIntegrator(new MixedBilinearToNonlinearFormIntegrator(diffusion, pfes_));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
-  ParLinearForm f_lin(pfes_.get());
-
-  f_lin                             = 0.;
-  std::unique_ptr<HypreParVector> F = std::unique_ptr<HypreParVector>(f_lin.ParallelAssemble());
-
   // The temperature solution vector already contains the essential boundary condition values
   std::unique_ptr<HypreParVector> T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
 
@@ -144,7 +139,7 @@ void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int
 TEST_F(WrapperTests, nonlinear_linear_thermal)
 {
   // Create a coefficient that indicates the x == 0 border of the cube
-  StdFunctionCoefficient x_zero([](Vector& x) {
+  StdFunctionCoefficient x_zero([](const Vector& x) {
     if (x[0] < 1.e-12) {
       return 1.;
     }
@@ -152,7 +147,7 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   });
 
   // Create a coefficient that indicates the x == 1 border of the cube
-  StdFunctionCoefficient x_one([](Vector& x) {
+  StdFunctionCoefficient x_one([](const Vector& x) {
     if ((1. - x[0]) < 1.e-12) {
       return 1.;
     }
