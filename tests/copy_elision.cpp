@@ -29,10 +29,11 @@ std::size_t ArrayCtr::default_ = 0;
 
 ArrayCtr doubleArrayMaker()
 {
-  ArrayCtr result;
+  constexpr int size = 10;
+  ArrayCtr      result;
   // Just a random loop - if nothing was done to the array before returning,
   // the compiler might be able to do an unnamed returned value optimimization
-  for (auto i = 0; i < 10; i++) {
+  for (auto i = 0; i < size; i++) {
     if (i % 2) {
       result.Append(i + 7 % 3);
     }

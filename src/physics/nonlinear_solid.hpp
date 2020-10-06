@@ -162,11 +162,6 @@ protected:
   std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
 
   /**
-   * @brief The Newton solver for the nonlinear iterations
-   */
-  mfem::NewtonSolver newton_solver_;
-
-  /**
    * @brief The linear solver for the Jacobian
    */
   std::unique_ptr<mfem::Solver> J_solver_;
