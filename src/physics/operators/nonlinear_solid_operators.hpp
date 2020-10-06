@@ -25,8 +25,10 @@ namespace serac {
 
 struct NonlinearSolidBC {
   struct Displacement {
+    static constexpr bool should_be_scalar = false;
   };
   struct Traction {
+    static constexpr bool should_be_scalar = false;
   };
   using DisplacementEss = StrongAlias<EssentialBoundaryCondition, Displacement>;
   using TractionNat     = StrongAlias<NaturalBoundaryCondition, Traction>;

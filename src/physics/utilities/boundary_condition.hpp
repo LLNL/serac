@@ -75,6 +75,14 @@ public:
    */
   mfem::Coefficient& scalarCoefficient();
 
+  template <typename Visitor>
+  void visit(Visitor&& visitor)
+  {
+    std::visit(visitor, coef_);
+  }
+
+  bool isScalar() const;
+
 private:
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
@@ -157,17 +165,15 @@ public:
    * @brief Projects the boundary condition over boundary DOFs of a grid function
    * @param[inout] gf The grid function representing the field to project over
    * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    */
-  void projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar = true) const;
+  void projectBdr(mfem::ParGridFunction& gf, const double time) const;
 
   /**
    * @brief Projects the boundary condition over boundary DOFs of a field
    * @param[inout] state The field to project over
    * @param[in] time The time for the coefficient, used for time-varying coefficients
-   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    */
-  void projectBdr(FiniteElementState& state, const double time, const bool should_be_scalar = true) const;
+  void projectBdr(FiniteElementState& state, const double time) const;
 
   /**
    * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
@@ -194,11 +200,10 @@ public:
    * @param[out] rhs The RHS vector for the system
    * @param[inout] state The state from which the solution DOF values are extracted and used to eliminate
    * @param[in] time Simulation time, used for time-varying boundary coefficients
-   * @param[in] should_be_scalar Whether the boundary coefficient should be a scalar coefficient
    * @pre BoundaryCondition::eliminateFrom has been called
    */
   void apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
-             const double time = 0.0, const bool should_be_scalar = true) const;
+             const double time = 0.0) const;
 
 private:
   /**

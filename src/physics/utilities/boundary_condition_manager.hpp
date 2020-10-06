@@ -116,6 +116,34 @@ private:
   AliasedType val_;
 };
 
+template <typename T, typename = void>
+struct has_should_be_scalar : std::false_type {
+};
+
+template <typename T>
+struct has_should_be_scalar<T,
+                            std::enable_if_t<std::is_same_v<bool, std::decay_t<decltype(T::should_be_scalar)>>, void>>
+    : std::true_type {
+};
+
+template <typename T>
+inline constexpr bool has_should_be_scalar_v = has_should_be_scalar<T>::value;
+
+template <typename Tag>
+constexpr void check_that_scalar_no_component_acceptable()
+{
+  // If this is a vector valued boundary condition, a component is required
+  if constexpr (has_should_be_scalar_v<Tag>) {
+    if constexpr (!Tag::should_be_scalar) {
+      static_assert(sizeof(Tag) < 0, "A component is required!");
+    }
+  } else {
+    static_assert(sizeof(Tag) < 0,
+                  "Boundary condition does not specify whether it is scalar- or vector-valued.  If you want to use a "
+                  "scalar coefficient, pass a component of 0.");
+  }
+}
+
 /**
  * @brief A structure for storing boundary conditions of arbitrary type
  * @tparam BoundaryConditionTypes The variadic list of types
@@ -124,6 +152,7 @@ template <class... BoundaryConditionTypes>
 class BoundaryConditionManager {
 public:
   BoundaryConditionManager(const mfem::ParMesh& mesh) : num_attrs_(mesh.bdr_attributes.Max()) {}
+
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
    *
@@ -133,7 +162,7 @@ public:
    * @tparam Tag The physics-specific tag/marker type to use to annotate the essential BC
    */
   template <typename Tag>
-  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, const int component = -1)
+  void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, const int component)
   {
     using AliasedEssential = StrongAlias<EssentialBoundaryCondition, Tag>;
     auto          type_key = typeid(AliasedEssential).hash_code();
@@ -156,6 +185,20 @@ public:
     all_essential_dofs_valid_[type_key] = false;
   }
 
+  template <typename Tag>
+  void addEssential(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+  {
+    check_that_scalar_no_component_acceptable<Tag>();
+    // If a scalar is acceptable, use component zero (element of single-element vector)
+    addEssential<Tag>(ess_bdr, ess_bdr_coef, 0);
+  }
+
+  template <typename Tag>
+  void addEssential(const std::set<int>& ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_coef)
+  {
+    addEssential<Tag>(ess_bdr, ess_bdr_coef, -1);
+  }
+
   /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
    *
@@ -168,7 +211,7 @@ public:
   void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, const int component = -1)
   {
     using AliasedNatural = StrongAlias<NaturalBoundaryCondition, Tag>;
-    auto markers         = BoundaryCondition::makeMarkers(nat_bdr, num_attrs_);
+    auto markers = BoundaryCondition::makeMarkers(nat_bdr, num_attrs_);
     std::get<std::vector<AliasedNatural>>(bdrs_).emplace_back(
         NaturalBoundaryCondition(nat_bdr_coef, component, std::move(markers)));
   }
@@ -196,8 +239,7 @@ public:
    * @tparam Tag The physics-specific tag/marker type to use to annotate the essential BC
    */
   template <typename Tag>
-  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            int component = -1)
+  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
   {
     using AliasedEssential = StrongAlias<EssentialBoundaryCondition, Tag>;
     EssentialBoundaryCondition bc(ess_bdr_coef, component);
@@ -205,6 +247,20 @@ public:
     std::get<std::vector<AliasedEssential>>(bdrs_).emplace_back(std::move(bc));
     auto type_key                       = typeid(AliasedEssential).hash_code();
     all_essential_dofs_valid_[type_key] = false;
+  }
+
+  template <typename Tag>
+  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
+  {
+    check_that_scalar_no_component_acceptable<Tag>();
+    // If a scalar is acceptable, use component zero (element of single-element vector)
+    addEssentialTrueDofs<Tag>(true_dofs, ess_bdr_coef, 0);
+  }
+
+  template <typename Tag>
+  void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_coef)
+  {
+    addEssentialTrueDofs<Tag>(true_dofs, ess_bdr_coef, -1);
   }
 
   /**

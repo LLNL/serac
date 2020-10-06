@@ -12,30 +12,35 @@ namespace serac {
 
 const mfem::Coefficient& GeneralCoefficientWrapper::scalarCoefficient() const
 {
-  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
+  SLIC_ERROR_IF(!isScalar(),
                 "Asking for a scalar coefficient on a GeneralCoefficientWrapper that contains a vector coefficient.");
   return *std::get<std::shared_ptr<mfem::Coefficient>>(coef_);
 }
 
 mfem::Coefficient& GeneralCoefficientWrapper::scalarCoefficient()
 {
-  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
+  SLIC_ERROR_IF(!isScalar(),
                 "Asking for a scalar coefficient on a GeneralCoefficientWrapper that contains a vector coefficient.");
   return *std::get<std::shared_ptr<mfem::Coefficient>>(coef_);
 }
 
 const mfem::VectorCoefficient& GeneralCoefficientWrapper::vectorCoefficient() const
 {
-  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
+  SLIC_ERROR_IF(isScalar(),
                 "Asking for a vector coefficient on a GeneralCoefficientWrapper that contains a scalar coefficient.");
   return *std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
 }
 
 mfem::VectorCoefficient& GeneralCoefficientWrapper::vectorCoefficient()
 {
-  SLIC_ERROR_IF(!std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
+  SLIC_ERROR_IF(isScalar(),
                 "Asking for a vector coefficient on a GeneralCoefficientWrapper that contains a scalar coefficient.");
   return *std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
+}
+
+bool GeneralCoefficientWrapper::isScalar() const
+{
+  return std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_);
 }
 
 mfem::Array<int> BoundaryCondition::makeMarkers(const std::set<int>& attrs, const int num_attrs)
@@ -103,27 +108,19 @@ void EssentialBoundaryCondition::project(FiniteElementState& state) const
   }
 }
 
-void EssentialBoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time,
-                                            const bool should_be_scalar) const
+void EssentialBoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time) const
 {
   // markers_ should be const param but it's not
   auto& non_const_markers = const_cast<mfem::Array<int>&>(markers_);
-
-  if (should_be_scalar) {
-    auto& coef = coef_.scalarCoefficient();
-    coef.SetTime(time);
-    gf.ProjectBdrCoefficient(coef, non_const_markers);
-  } else {
-    auto& coef = coef_.vectorCoefficient();
-    coef.SetTime(time);
-    gf.ProjectBdrCoefficient(coef, non_const_markers);
-  }
+  coef_.visit([&non_const_markers, time, &gf](auto&& coef) {
+    coef->SetTime(time);
+    gf.ProjectBdrCoefficient(*coef, non_const_markers);
+  });
 }
 
-void EssentialBoundaryCondition::projectBdr(FiniteElementState& state, const double time,
-                                            const bool should_be_scalar) const
+void EssentialBoundaryCondition::projectBdr(FiniteElementState& state, const double time) const
 {
-  projectBdr(state.gridFunc(), time, should_be_scalar);
+  projectBdr(state.gridFunc(), time);
 }
 
 void EssentialBoundaryCondition::eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const
@@ -142,9 +139,9 @@ void EssentialBoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post
 }
 
 void EssentialBoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs,
-                                       FiniteElementState& state, const double time, const bool should_be_scalar) const
+                                       FiniteElementState& state, const double time) const
 {
-  projectBdr(state, time, should_be_scalar);
+  projectBdr(state, time);
   state.initializeTrueVec();
   eliminateToRHS(k_mat_post_elim, state.trueVec(), rhs);
 }

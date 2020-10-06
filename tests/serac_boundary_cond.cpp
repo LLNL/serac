@@ -14,6 +14,7 @@
 namespace serac {
 
 struct TestTag {
+  static constexpr bool should_be_scalar = false;
 };
 
 TEST(boundary_cond, simple_repeated_dofs)

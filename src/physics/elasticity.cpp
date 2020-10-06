@@ -138,8 +138,7 @@ void Elasticity::QuasiStaticSolve()
   // Apply the boundary conditions
   *bc_rhs_ = *rhs_;
   for (auto& bc : bcs_.essentials<ElasticityBC::Displacement>()) {
-    bool should_be_scalar = false;
-    bc.apply(*K_mat_, *bc_rhs_, *displacement_, time_, should_be_scalar);
+    bc.apply(*K_mat_, *bc_rhs_, *displacement_, time_);
   }
 
   solver_.SetOperator(*K_mat_);
