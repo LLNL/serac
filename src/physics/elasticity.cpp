@@ -68,8 +68,7 @@ void Elasticity::completeSetup()
   l_form_ = displacement_->createOnSpace<mfem::ParLinearForm>();
 
   // Add the traction integrator
-  if (bcs_.naturals<ElasticityBC::Traction>().begin() != bcs_.naturals<ElasticityBC::Traction>().end()) {
-    // if (bcs_.naturals<ElasticityBC::Traction>().size() > 0) {
+  if (bcs_.naturals<ElasticityBC::Traction>().size() > 0) {
     for (auto& nat_bc : bcs_.naturals<ElasticityBC::Traction>()) {
       l_form_->AddBoundaryIntegrator(new mfem::VectorBoundaryLFIntegrator(nat_bc.vectorCoefficient()),
                                      nat_bc.markers());

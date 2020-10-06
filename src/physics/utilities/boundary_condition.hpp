@@ -26,6 +26,20 @@
 namespace serac {
 
 /**
+ * @brief Helper type intended to be inherited from to denote a scalar-valued BC
+ */
+struct ScalarBoundaryCondition {
+  static constexpr bool should_be_scalar = true;
+};
+
+/**
+ * @brief Helper type intended to be inherited from to denote a vector-valued BC
+ */
+struct VectorBoundaryCondition {
+  static constexpr bool should_be_scalar = false;
+};
+
+/**
  * @brief A class for wrapping either an mfem::Coefficient or an mfem::VectorCoefficient
  * with checked accessors
  */

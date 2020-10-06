@@ -70,6 +70,11 @@ public:
   TransformViewIterator       end() { return {end_, op_}; }
   const TransformViewIterator end() const { return {end_, op_}; }
 
+  /**
+   * @brief Returns the size of the view
+   */
+  auto size() const { return std::distance(begin_, end_); }
+
 private:
   Iter    begin_;
   Iter    end_;
@@ -115,6 +120,9 @@ private:
   AliasedType val_;
 };
 
+/**
+ * @brief Type trait for determining whether a type has a static bool member called should_be_scalar
+ */
 template <typename T, typename = void>
 struct has_should_be_scalar : std::false_type {
 };
@@ -125,21 +133,28 @@ struct has_should_be_scalar<T,
     : std::true_type {
 };
 
-template <typename T>
-inline constexpr bool has_should_be_scalar_v = has_should_be_scalar<T>::value;
-
+/**
+ * @brief A compile-time check called when an essential boundary condition is instantiated
+ * with a scalar coefficient but no component
+ * @tparam Tag the physics-specific tag type for the BC
+ */
 template <typename Tag>
-constexpr void check_that_scalar_no_component_acceptable()
+constexpr void check_scalar_coef_with_no_component()
 {
-  // If this is a vector valued boundary condition, a component is required
-  if constexpr (has_should_be_scalar_v<Tag>) {
+  // If this is a vector valued boundary condition and a scalar was passed,
+  // there must be a component associated with it
+  if constexpr (has_should_be_scalar<Tag>::value) {
     if constexpr (!Tag::should_be_scalar) {
       static_assert(sizeof(Tag) < 0, "A component is required!");
     }
-  } else {
-    static_assert(sizeof(Tag) < 0,
-                  "Boundary condition does not specify whether it is scalar- or vector-valued.  If you want to use a "
-                  "scalar coefficient, pass a component of 0.");
+  }
+  // If the type of the BC is not known, request that the user pass
+  // a component
+  else {
+    static_assert(
+        sizeof(Tag) < 0,
+        "Boundary condition does not specify whether it is scalar- or vector-valued.  If this is a scalar-valued BC, "
+        "pass a component of zero, otherwise, pass the vector component to which this scalar coef should apply.");
   }
 }
 
@@ -184,17 +199,24 @@ public:
     all_essential_dofs_valid_[type_key] = false;
   }
 
+  /**
+   * @brief Checks that a scalar coefficient without a specified component is valid
+   */
   template <typename Tag>
   void addEssential(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
   {
-    check_that_scalar_no_component_acceptable<Tag>();
+    check_scalar_coef_with_no_component<Tag>();
     // If a scalar is acceptable, use component zero (element of single-element vector)
     addEssential<Tag>(ess_bdr, ess_bdr_coef, 0);
   }
 
+  /**
+   * @brief Defaults coefficient component to -1 for vector coefficients only
+   */
   template <typename Tag>
   void addEssential(const std::set<int>& ess_bdr, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_coef)
   {
+    // Vector coefficient applies to all components
     addEssential<Tag>(ess_bdr, ess_bdr_coef, -1);
   }
 
@@ -248,17 +270,24 @@ public:
     all_essential_dofs_valid_[type_key] = false;
   }
 
+  /**
+   * @brief Checks that a scalar coefficient without a specified component is valid
+   */
   template <typename Tag>
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
   {
-    check_that_scalar_no_component_acceptable<Tag>();
+    check_scalar_coef_with_no_component<Tag>();
     // If a scalar is acceptable, use component zero (element of single-element vector)
     addEssentialTrueDofs<Tag>(true_dofs, ess_bdr_coef, 0);
   }
 
+  /**
+   * @brief Defaults coefficient component to -1 for vector coefficients only
+   */
   template <typename Tag>
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::VectorCoefficient> ess_bdr_coef)
   {
+    // Vector coefficient applies to all components
     addEssentialTrueDofs<Tag>(true_dofs, ess_bdr_coef, -1);
   }
 

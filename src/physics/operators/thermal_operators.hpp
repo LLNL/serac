@@ -23,11 +23,9 @@
 namespace serac {
 
 struct ThermalConductionBC {
-  struct Temperature {
-    static constexpr bool should_be_scalar = true;
+  struct Temperature : ScalarBoundaryCondition {
   };
-  struct Flux {
-    static constexpr bool should_be_scalar = true;
+  struct Flux : ScalarBoundaryCondition {
   };
   using TemperatureEss = StrongAlias<EssentialBoundaryCondition, Temperature>;
   using FluxNat        = StrongAlias<NaturalBoundaryCondition, Flux>;

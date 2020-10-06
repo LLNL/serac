@@ -13,8 +13,7 @@
 
 namespace serac {
 
-struct TestTag {
-  static constexpr bool should_be_scalar = false;
+struct TestTag : ScalarBoundaryCondition {
 };
 
 TEST(boundary_cond, simple_repeated_dofs)
@@ -33,7 +32,7 @@ TEST(boundary_cond, simple_repeated_dofs)
   using TestDirichlet = StrongAlias<EssentialBoundaryCondition, TestTag>;
   BoundaryConditionManager<TestDirichlet> bcs(par_mesh);
   auto                                    coef = std::make_shared<mfem::ConstantCoefficient>(1);
-  bcs.addEssential<TestTag>({ATTR}, coef, 1);
+  bcs.addEssential<TestTag>({ATTR}, coef);
   for (auto& bc : bcs.essentials<TestTag>()) {
     bc.setTrueDofs(state);
   }
