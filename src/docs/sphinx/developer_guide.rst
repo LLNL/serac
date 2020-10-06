@@ -47,7 +47,9 @@ For the second case, starting with an existing physics module and re-writing it 
 #. In the constructor, create new ``std::shared_ptrs`` to `FiniteElementStates <../doxygen/html/classserac_1_1FiniteElementState.html>`_ corresponding to each state variable in your PDE.
 #. Link these states to the state pointer array in the ``BasePhysics`` class.
 #. Create methods for defining problem parameters (e.g. material properties and sources).
+#. Define boundary conditions by creating a struct containing type aliases for your boundary conditions and your physics-specific ``BoundaryConditionManager`` instantiation.
 #. Create methods for defining boundary conditions. These should be stored as `BoundaryConditions <../doxygen/html/classserac_1_1BoundaryCondition.html>`_ and managed in the ``BasePhysics``'s `BoundaryConditionManager <../doxygen/html/classserac_1_1BoundaryConditionManager.html>`_.
+   These methods will forward to your ``BoundaryConditionManager`` template instantiation.
 #. Override the virtual ``completeSetup()`` method. This should include construction of all of the data structures needed for advancing the timestep of the PDE.
 #. Override the virtual ``advanceTimestep()`` method. This should solve the discretized PDE based on the chosen time integration method. This often requires defining ``mfem::Operators`` to use MFEM-based nonlinear and time integration methods. 
 
