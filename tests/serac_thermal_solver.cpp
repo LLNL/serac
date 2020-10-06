@@ -71,7 +71,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star_with_2_bdr_attributes.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star_with_2_bdr_attributes.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
@@ -120,7 +120,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
@@ -162,7 +162,7 @@ TEST(thermal_solver, dyn_exp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
@@ -220,7 +220,7 @@ TEST(thermal_solver, dyn_imp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 

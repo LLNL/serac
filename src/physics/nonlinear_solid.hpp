@@ -13,6 +13,7 @@
 #ifndef NONLIN_SOLID
 #define NONLIN_SOLID
 
+#include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
@@ -142,6 +143,13 @@ public:
    * @brief Destroy the Nonlinear Solid Solver object
    */
   virtual ~NonlinearSolid();
+
+  /**
+   * @brief Input file parameters specific to this class
+   *
+   * @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
+   **/
+  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
 
   /**
    * @brief The default parameters for an iterative linear solver
