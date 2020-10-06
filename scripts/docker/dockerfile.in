@@ -6,7 +6,7 @@ SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
 RUN sudo apt-get install curl ssh pkg-config build-essential libopenblas-dev mpich cmake python3 -fy
 RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-7 100
-RUN sudo ln -s -f python3 /usr/bin/python # Compatibility with legacy Python
+RUN sudo ln -f -s python3 /usr/bin/python # Compatibility with legacy Python
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
@@ -17,6 +17,7 @@ RUN git clone --recursive --branch $branch --single-branch --depth 1 https://git
 
 # New containers will use Python3
 RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/<DISTRO>/ \
+                                               --project-json=./serac/scripts/uberenv/project.json \
                                                --spec=%<NAME>@<VER>.0 --prefix=/home/serac/serac_tpls -k
 
 # Make sure the new hostconfig worked

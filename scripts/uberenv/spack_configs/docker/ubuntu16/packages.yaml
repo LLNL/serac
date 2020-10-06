@@ -67,15 +67,15 @@ packages:
     externals:
     - spec: gettext
       prefix: /usr
-  perl:
-    buildable: false
-    externals:
-    - spec: perl
-      prefix: /usr
   m4:
     buildable: false
     externals:
     - spec: m4
+      prefix: /usr
+  perl:
+    buildable: false
+    externals:
+    - spec: perl
       prefix: /usr
   pkg-config:
     buildable: false

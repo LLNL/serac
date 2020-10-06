@@ -30,3 +30,5 @@ The following instructions apply to the creation of a new compiler image.
     #. Once the "Docker TPL Build" action completes, it will produce artifacts for each of the generated hostconfigs.  Download these 
        artifacts and commit them to the active branch, replacing any part of the filename preceding ``linux`` with ``docker``.  
        Currently the part that needs to be replaced is ``buildkitsandbox``.
+    #. To include the new image in CI jobs, add a new ``matrix`` entry to ``azure-pipelines.yml``, modifying its 
+       attributes with the appropriate new image name and new host-config file.
