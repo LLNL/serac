@@ -6,8 +6,6 @@
 
 #include "infrastructure/logger.hpp"
 
-#include "infrastructure/terminator.hpp"
-
 namespace serac {
 
 namespace logger {
@@ -19,8 +17,6 @@ bool initialize(MPI_Comm comm)
   if (!slic::isInitialized()) {
     slic::initialize();
   }
-
-  terminator::registerSignals();
 
   int numRanks, rank;
   MPI_Comm_size(comm, &numRanks);
@@ -35,28 +31,34 @@ bool initialize(MPI_Comm comm)
     return false;
   }
 
-  // separate streams: warnings and errors (we); info and debug (id)
-  slic::LogStream* idStream;
-  slic::LogStream* weStream;
+  // Separate streams for different message levels
+  slic::LogStream* iStream;   // info
+  slic::LogStream* dStream;   // debug
+  slic::LogStream* weStream;  // warnings and errors
 
-  std::string fmt_id = "[<LEVEL>]: <MESSAGE>\n";
+  std::string fmt_i  = "<MESSAGE>\n";
+  std::string fmt_d  = "[<LEVEL>]: <MESSAGE>\n";
   std::string fmt_we = "[<LEVEL> (<FILE>:<LINE>)]\n<MESSAGE>\n\n";
 
   // Only create a parallel logger when there is more than one rank
   if (numRanks > 1) {
-    fmt_id = "[<RANK>]" + fmt_id;
+    fmt_i  = "[<RANK>] " + fmt_i;
+    fmt_d  = "[<RANK>]" + fmt_d;
     fmt_we = "[<RANK>]" + fmt_we;
 
 #ifdef SERAC_USE_LUMBERJACK
     const int RLIMIT = 8;
-    idStream         = new slic::LumberjackStream(&std::cout, comm, RLIMIT, fmt_id);
+    iStream          = new slic::LumberjackStream(&std::cout, comm, RLIMIT, fmt_i);
+    dStream          = new slic::LumberjackStream(&std::cout, comm, RLIMIT, fmt_d);
     weStream         = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, fmt_we);
 #else
-    idStream = new slic::SynchronizedStream(&std::cout, comm, fmt_id);
+    iStream  = new slic::SynchronizedStream(&std::cout, comm, fmt_i);
+    dStream  = new slic::SynchronizedStream(&std::cout, comm, fmt_d);
     weStream = new slic::SynchronizedStream(&std::cerr, comm, fmt_we);
 #endif
   } else {
-    idStream = new slic::GenericOutputStream(&std::cout, fmt_id);
+    iStream  = new slic::GenericOutputStream(&std::cout, fmt_i);
+    dStream  = new slic::GenericOutputStream(&std::cout, fmt_d);
     weStream = new slic::GenericOutputStream(&std::cerr, fmt_we);
   }
 
@@ -64,8 +66,8 @@ bool initialize(MPI_Comm comm)
 
   addStreamToMsgLevel(weStream, slic::message::Error);
   addStreamToMsgLevel(weStream, slic::message::Warning);
-  addStreamToMsgLevel(idStream, slic::message::Info);
-  addStreamToMsgLevel(idStream, slic::message::Debug);
+  addStreamToMsgLevel(iStream, slic::message::Info);
+  addStreamToMsgLevel(dStream, slic::message::Debug);
 
   slic::setAbortOnError(false);
   slic::setAbortOnWarning(false);

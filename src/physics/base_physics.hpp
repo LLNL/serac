@@ -10,31 +10,29 @@
  * @brief The base interface class for a generic PDE solver
  */
 
-#ifndef BASE_SOLVER
-#define BASE_SOLVER
+#ifndef BASE_PHYSICS
+#define BASE_PHYSICS
 
-#include <map>
 #include <memory>
 
 #include "mfem.hpp"
 #include "physics/utilities/boundary_condition_manager.hpp"
 #include "physics/utilities/equation_solver.hpp"
 #include "physics/utilities/finite_element_state.hpp"
-#include "physics/utilities/solver_config.hpp"
 
 namespace serac {
 
 /**
  * @brief This is the abstract base class for a generic forward solver
  */
-class BaseSolver {
+class BasePhysics {
 public:
   /**
    * @brief Empty constructor
    *
    * @param[in] mesh The primary mesh
    */
-  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh);
+  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
@@ -43,7 +41,7 @@ public:
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    */
-  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
+  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
   /**
    * @brief Set a list of true degrees of freedom from a coefficient
@@ -136,7 +134,7 @@ public:
   /**
    * @brief Destroy the Base Solver object
    */
-  virtual ~BaseSolver() = default;
+  virtual ~BasePhysics() = default;
 
 protected:
   /**

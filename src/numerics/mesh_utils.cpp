@@ -8,6 +8,7 @@
 
 #include <fstream>
 
+#include "axom/core.hpp"
 #include "fmt/fmt.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
@@ -24,6 +25,15 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
   SLIC_INFO_ROOT(rank, msg);
+
+  // Ensure correctness
+  serac::logger::flush();
+  if (!axom::utilities::filesystem::pathExists(mesh_file)) {
+    msg = fmt::format("Given mesh file does not exist: {0}", mesh_file);
+    SLIC_ERROR_ROOT(rank, msg);
+    serac::exitGracefully(true);
+  }
+
   // This inherits from std::ifstream, and will work the same way as a std::ifstream,
   // but is required for Exodus meshes
   mfem::named_ifgzstream imesh(mesh_file);
@@ -158,4 +168,18 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
   return std::make_shared<mfem::ParMesh>(comm, mesh);
 }
 
+namespace mesh {
+
+void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+{
+  // mesh path
+  schema_creator->addString("mesh", "Path to Mesh file")->required(true);
+
+  // Refinement levels
+  schema_creator->addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.")->defaultValue(0);
+  schema_creator->addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")
+      ->defaultValue(0);
+}
+
+}  // namespace mesh
 }  // namespace serac

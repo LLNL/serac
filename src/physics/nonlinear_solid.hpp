@@ -10,11 +10,12 @@
  * @brief The solver object for finite deformation hyperelasticity
  */
 
-#ifndef NONLINSOLID_SOLVER
-#define NONLINSOLID_SOLVER
+#ifndef NONLIN_SOLID
+#define NONLIN_SOLID
 
+#include "infrastructure/input.hpp"
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
+#include "physics/base_physics.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
 
 namespace serac {
@@ -26,7 +27,7 @@ namespace serac {
  * hyperelastic solver object. It is derived from MFEM
  * example 10p.
  */
-class NonlinearSolidSolver : public BaseSolver {
+class NonlinearSolid : public BasePhysics {
 public:
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -34,7 +35,7 @@ public:
    * @param[in] order The order of the displacement field
    * @param[in] mesh The MFEM parallel mesh to solve on
    */
-  NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set displacement boundary conditions
@@ -130,7 +131,14 @@ public:
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
-  virtual ~NonlinearSolidSolver();
+  virtual ~NonlinearSolid();
+
+  /**
+   * @brief Input file parameters specific to this class
+   *
+   * @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
+   **/
+  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
 
 protected:
   /**

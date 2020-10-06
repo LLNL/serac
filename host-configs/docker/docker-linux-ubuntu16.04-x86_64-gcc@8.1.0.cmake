@@ -5,11 +5,11 @@
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
-# SPDX-License-Identifier: (BSD-3-Clause)
+# SPDX-License-Identifier: (BSD-3-Clause) 
 ####################################################################
 
 #---------------------------------------
-# SYS_TYPE: linux-ubuntu16.04-skylake
+# SYS_TYPE: linux-ubuntu16.04-ivybridge
 # Compiler Spec: gcc@8.1.0
 # CMake executable path: /home/serac/serac_tpls/gcc-8.1.0/cmake-3.10.1/bin/cmake
 #---------------------------------------
@@ -39,9 +39,9 @@ set(MPIEXEC_EXECUTABLE "/home/serac/serac_tpls/gcc-8.1.0/mpich-3.3.2/bin/mpiexec
 #---------------------------------------
 set(TPL_ROOT "/home/serac/serac_tpls/gcc-8.1.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-develop" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0p1" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-master" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.5.1p1" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 
@@ -62,4 +62,5 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 #------------------------------------------------------------------------------
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
+
 

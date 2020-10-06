@@ -12,7 +12,7 @@
 
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/thermal_solver.hpp"
+#include "physics/thermal_conduction.hpp"
 #include "serac_config.hpp"
 
 namespace serac {
@@ -22,12 +22,12 @@ TEST(serac_dtor, test1)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
   // Initialize the second order thermal solver on the parallel mesh
-  auto therm_solver = std::make_unique<ThermalSolver>(2, pmesh);
+  auto therm_solver = std::make_unique<ThermalConduction>(2, pmesh);
 
   // Set the time integration method
   therm_solver->setTimestepper(serac::TimestepMethod::QuasiStatic);
@@ -56,7 +56,7 @@ TEST(serac_dtor, test1)
   therm_solver->completeSetup();
 
   // Destruct the old thermal solver and build a new one
-  therm_solver.reset(new ThermalSolver(1, pmesh));
+  therm_solver.reset(new ThermalConduction(1, pmesh));
 
   // Destruct the second thermal solver and leave the pointer empty
   therm_solver.reset(nullptr);

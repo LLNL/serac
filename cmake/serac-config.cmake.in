@@ -69,8 +69,23 @@ if(NOT SERAC_FOUND)
 
   # mfem
   if(SERAC_USE_MFEM)
-    set(SERAC_MFEM_DIR     "@MFEM_DIR@")
-    # Note: Targets not currently imported
+    set(SERAC_MFEM_DIR              "@MFEM_DIR@")
+    set(SERAC_MFEM_INCLUDE_DIRS     "@MFEM_INCLUDE_DIRS@")
+    set(SERAC_MFEM_LIBRARIES        "@MFEM_LIBRARIES@")
+    set(SERAC_MFEM_BUILT_WITH_CMAKE @MFEM_BUILT_WITH_CMAKE@)
+    if(NOT MFEM_INCLUDE_DIRS) 
+      set(MFEM_INCLUDE_DIRS ${SERAC_MFEM_INCLUDE_DIRS}) 
+    endif()
+    if(NOT MFEM_LIBRARIES) 
+      set(MFEM_LIBRARIES ${SERAC_MFEM_LIBRARIES}) 
+    endif()
+    # This will import the targets directly if they exist
+    # Needed for dynamic MFEM library
+    # TODO: Construct CMake target from GNU Make-build MFEM
+    if(SERAC_MFEM_BUILT_WITH_CMAKE AND NOT MFEM_DIR)
+      set(MFEM_DIR ${SERAC_MFEM_DIR}) 
+      find_dependency(mfem REQUIRED NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem" NAMES MFEM)
+    endif()
   endif()
 
    # tribol

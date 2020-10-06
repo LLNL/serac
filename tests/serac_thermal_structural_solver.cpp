@@ -11,7 +11,7 @@
 #include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/thermal_structural_solver.hpp"
+#include "physics/thermal_solid.hpp"
 #include "serac_config.hpp"
 
 namespace serac {
@@ -21,7 +21,7 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
@@ -57,7 +57,7 @@ TEST(dynamic_solver, dyn_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // initialize the dynamic solver object
-  ThermalStructuralSolver ts_solver(1, pmesh);
+  ThermalSolid ts_solver(1, pmesh);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
