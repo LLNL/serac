@@ -9,6 +9,7 @@
 #include <fstream>
 
 #include "fmt/fmt.hpp"
+#include "infrastructure/initialize.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
 
@@ -17,8 +18,7 @@ namespace serac {
 BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
     : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0), bcs_(*mesh)
 {
-  MPI_Comm_rank(comm_, &mpi_rank_);
-  MPI_Comm_size(comm_, &mpi_size_);
+  std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
   BasePhysics::setTimestepper(serac::TimestepMethod::ForwardEuler);
   order_ = 1;
 }
@@ -69,7 +69,7 @@ void BasePhysics::setTimestepper(const serac::TimestepMethod timestepper)
       ode_solver_ = std::make_unique<mfem::ForwardEulerSolver>();
       break;
     case serac::TimestepMethod::RK2:
-      ode_solver_ = std::make_unique<mfem::RK2Solver>(0.5);
+      ode_solver_ = std::make_unique<mfem::RK2Solver>();
       break;
     case serac::TimestepMethod::RK3SSP:
       ode_solver_ = std::make_unique<mfem::RK3SSPSolver>();
@@ -78,7 +78,7 @@ void BasePhysics::setTimestepper(const serac::TimestepMethod timestepper)
       ode_solver_ = std::make_unique<mfem::RK4Solver>();
       break;
     case serac::TimestepMethod::GeneralizedAlpha:
-      ode_solver_ = std::make_unique<mfem::GeneralizedAlphaSolver>(0.5);
+      ode_solver_ = std::make_unique<mfem::GeneralizedAlphaSolver>();
       break;
     case serac::TimestepMethod::ImplicitMidpoint:
       ode_solver_ = std::make_unique<mfem::ImplicitMidpointSolver>();
@@ -162,13 +162,13 @@ void BasePhysics::outputState() const
     case serac::OutputType::GLVis: {
       std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
       std::ofstream omesh(mesh_name);
-      omesh.precision(8);
+      omesh.precision(FLOAT_PRECISION_);
       state_.front()->mesh().Print(omesh);
 
       for (auto& state : state_) {
         std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state->name(), cycle_, mpi_rank_);
         std::ofstream osol(sol_name);
-        osol.precision(8);
+        osol.precision(FLOAT_PRECISION_);
         state->gridFunc().Save(osol);
       }
       break;

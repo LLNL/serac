@@ -423,6 +423,10 @@ class Serac(CMakePackage, CudaPackage):
         elif os.path.exists(apt_clangformatpath):
             cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", apt_clangformatpath))
 
+        clangtidypath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-tidy"
+        if os.path.exists(clangtidypath):
+            cfg.write(cmake_cache_entry("CLANGTIDY_EXECUTABLE", clangtidypath))
+
         if "cppcheck" in spec:
             cppcheck_bin_dir = get_spec_path(spec, "cppcheck", path_replacements, use_bin=True)
             cfg.write(cmake_cache_entry("CPPCHECK_EXECUTABLE", pjoin(cppcheck_bin_dir, "cppcheck")))
