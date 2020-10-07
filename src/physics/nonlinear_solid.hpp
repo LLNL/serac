@@ -37,6 +37,8 @@ public:
    */
   NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
+  NonlinearSolid(NonlinearSolid&& other) = default;
+
   /**
    * @brief Set displacement boundary conditions
    *

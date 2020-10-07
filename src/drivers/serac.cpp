@@ -37,9 +37,6 @@ namespace serac {
 
 void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
 {
-  // mesh
-  serac::mesh::defineInputFileSchema(inlet);
-
   // Simulation time parameters
   inlet->addDouble("t_final", "Final time for simulation.")->defaultValue(1.0);
   inlet->addDouble("dt", "Time step.")->defaultValue(0.25);
@@ -81,26 +78,12 @@ int main(int argc, char* argv[])
   // Save input values to file
   datastore.getRoot()->save("serac_input.json", "json");
 
-  // serial and parallel refinement levels
-  int ser_ref_levels;
-  inlet->get("ser_ref_levels", ser_ref_levels);  // has default value
-  int par_ref_levels;
-  inlet->get("par_ref_levels", par_ref_levels);  // has default value
-
-  // Build mesh
-  std::string mesh_file_path;
-  inlet->get("mesh", mesh_file_path);  // required in input file
-  mesh_file_path = serac::input::findMeshFilePath(mesh_file_path, input_file_path);
-  auto mesh      = serac::buildMeshFromFile(mesh_file_path, ser_ref_levels, par_ref_levels);
-
   // Define the solid solver object
-  int order;
-  inlet->get("nonlinear_solid/order", order);  // has default value
-  serac::NonlinearSolid solid_solver(order, mesh);
+  auto solid_solver = (*inlet)["nonlinear_solid"].get<serac::NonlinearSolid>();
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  int dim = mesh->Dimension();
+  int dim = solid_solver.mesh().Dimension();
 
   mfem::VectorFunctionCoefficient defo_coef(dim, serac::initialDeformation);
 
@@ -125,10 +108,9 @@ int main(int argc, char* argv[])
   std::set<int> trac_bdr = {2};
 
   // loading parameters
-  double tx, ty, tz;
-  inlet->get("nonlinear_solid/tx", tx);  // has default value
-  inlet->get("nonlinear_solid/ty", ty);  // has default value
-  inlet->get("nonlinear_solid/tz", tz);  // has default value
+  double tx = (*inlet)["nonlinear_solid/tx"];  // has default value
+  double ty = (*inlet)["nonlinear_solid/ty"];  // has default value
+  double tz = (*inlet)["nonlinear_solid/tz"];  // has default value
 
   // define the traction vector
   mfem::Vector traction(dim);
@@ -144,44 +126,6 @@ int main(int argc, char* argv[])
   solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
   solid_solver.setTractionBCs(trac_bdr, traction_coef);
 
-  // neo-Hookean material parameters
-  double mu, K;
-  inlet->get("nonlinear_solid/mu", mu);  // has default value
-  inlet->get("nonlinear_solid/K", K);    // has default value
-
-  // Set the material parameters
-  solid_solver.setHyperelasticMaterialParameters(mu, K);
-
-  // Solver parameters
-  serac::NonlinearSolverParameters nonlin_params;
-  inlet->get("nonlinear_solid/solver/nonlinear/rel_tol", nonlin_params.rel_tol);          // has default value
-  inlet->get("nonlinear_solid/solver/nonlinear/abs_tol", nonlin_params.abs_tol);          // has default value
-  inlet->get("nonlinear_solid/solver/nonlinear/max_iter", nonlin_params.max_iter);        // has default value
-  inlet->get("nonlinear_solid/solver/nonlinear/print_level", nonlin_params.print_level);  // has default value
-
-  serac::LinearSolverParameters lin_params;
-  inlet->get("nonlinear_solid/solver/linear/rel_tol", lin_params.rel_tol);          // has default value
-  inlet->get("nonlinear_solid/solver/linear/abs_tol", lin_params.abs_tol);          // has default value
-  inlet->get("nonlinear_solid/solver/linear/max_iter", lin_params.max_iter);        // has default value
-  inlet->get("nonlinear_solid/solver/linear/print_level", lin_params.print_level);  // has default value
-
-  // solver input args
-  std::string solver_type;
-  inlet->get("nonlinear_solid/solver/linear/solver_type", solver_type);  // has default value
-  if (solver_type == "gmres") {
-    lin_params.prec       = serac::Preconditioner::BoomerAMG;
-    lin_params.lin_solver = serac::LinearSolver::GMRES;
-  } else if (solver_type == "minres") {
-    lin_params.prec       = serac::Preconditioner::Jacobi;
-    lin_params.lin_solver = serac::LinearSolver::MINRES;
-  } else {
-    serac::logger::flush();
-    std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
-    SLIC_ERROR_ROOT(rank, msg);
-    serac::exitGracefully(true);
-  }
-  solid_solver.setSolverParameters(lin_params, nonlin_params);
-
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
@@ -189,10 +133,9 @@ int main(int argc, char* argv[])
   solid_solver.completeSetup();
 
   // initialize/set the time
-  double t = 0;
-  double t_final, dt;
-  inlet->get("t_final", t_final);  // has default value
-  inlet->get("dt", dt);            // has default value
+  double t       = 0;
+  double t_final = (*inlet)["t_final"];  // has default value
+  double dt      = (*inlet)["dt"];       // has default value
 
   bool last_step = false;
 

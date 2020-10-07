@@ -162,3 +162,53 @@ void EquationSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCr
 }
 
 }  // namespace serac
+
+using serac::EquationSolver;
+using serac::LinearSolverParameters;
+using serac::NonlinearSolverParameters;
+
+template <>
+LinearSolverParameters from_inlet<LinearSolverParameters>(axom::inlet::Table& base)
+{
+  LinearSolverParameters params;
+  params.rel_tol          = base["rel_tol"];
+  params.abs_tol          = base["abs_tol"];
+  params.max_iter         = base["max_iter"];
+  params.print_level      = base["print_level"];
+  std::string solver_type = base["solver_type"];
+  if (solver_type == "gmres") {
+    params.prec       = serac::Preconditioner::BoomerAMG;
+    params.lin_solver = serac::LinearSolver::GMRES;
+  } else if (solver_type == "minres") {
+    params.prec       = serac::Preconditioner::Jacobi;
+    params.lin_solver = serac::LinearSolver::MINRES;
+  } else {
+    serac::logger::flush();
+    std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
+    SLIC_ERROR(msg);
+    serac::exitGracefully(true);
+  }
+  return params;
+}
+
+template <>
+NonlinearSolverParameters from_inlet<NonlinearSolverParameters>(axom::inlet::Table& base)
+{
+  NonlinearSolverParameters params;
+  params.rel_tol     = base["rel_tol"];
+  params.abs_tol     = base["abs_tol"];
+  params.max_iter    = base["max_iter"];
+  params.print_level = base["print_level"];
+  return params;
+}
+
+template <>
+EquationSolver from_inlet<EquationSolver>(axom::inlet::Table& base)
+{
+  auto lin = base["linear"].get<LinearSolverParameters>();
+  if (base.hasTable("nonlinear")) {
+    auto nonlin = base["nonlinear"].get<NonlinearSolverParameters>();
+    return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
+  }
+  return EquationSolver(MPI_COMM_WORLD, lin);
+}
