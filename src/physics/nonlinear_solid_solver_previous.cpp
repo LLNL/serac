@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/nonlinear_solid_solver.hpp"
+#include "physics/nonlinear_solid_solver_previous.hpp"
 
 #include "infrastructure/logger.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
@@ -15,12 +15,10 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
+NonlinearSolidSolverPrevious::NonlinearSolidSolverPrevious(int order, std::shared_ptr<mfem::ParMesh> mesh)
     : BaseSolver(mesh, NUM_FIELDS, order),
       velocity_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "velocity"})),
-      displacement_(
-          std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"})),
-      op(displacement_->space().TrueVSize())
+      displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
   state_[0] = velocity_;
   state_[1] = displacement_;
@@ -45,85 +43,73 @@ NonlinearSolidSolver::NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParM
 
   block_->GetBlockView(0, velocity_->trueVec());
   velocity_->trueVec() = 0.0;
-
-  u = mfem::Vector(true_size);
-  du_dt = mfem::Vector(true_size);
-  zero = mfem::Vector(true_size);
-  zero = 0.0;
-
-  x = *reference_nodes_;
-
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&                     disp_bdr,
+void NonlinearSolidSolverPrevious::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                               std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, -1);
 }
 
-void NonlinearSolidSolver::setDisplacementBCs(const std::set<int>&               disp_bdr,
+void NonlinearSolidSolverPrevious::setDisplacementBCs(const std::set<int>&               disp_bdr,
                                               std::shared_ptr<mfem::Coefficient> disp_bdr_coef, int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
 }
 
-void NonlinearSolidSolver::setTractionBCs(const std::set<int>&                     trac_bdr,
+void NonlinearSolidSolverPrevious::setTractionBCs(const std::set<int>&                     trac_bdr,
                                           std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
-void NonlinearSolidSolver::setHyperelasticMaterialParameters(const double mu, const double K)
+void NonlinearSolidSolverPrevious::setHyperelasticMaterialParameters(const double mu, const double K)
 {
   model_.reset(new mfem::NeoHookeanModel(mu, K));
 }
 
-void NonlinearSolidSolver::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
+void NonlinearSolidSolverPrevious::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
 {
   viscosity_ = std::move(visc_coef);
 }
 
-void NonlinearSolidSolver::setDisplacement(mfem::VectorCoefficient& disp_state)
+void NonlinearSolidSolverPrevious::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_->project(disp_state);
   gf_initialized_[1] = true;
 }
 
-void NonlinearSolidSolver::setVelocity(mfem::VectorCoefficient& velo_state)
+void NonlinearSolidSolverPrevious::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_->project(velo_state);
   gf_initialized_[0] = true;
 }
 
-void NonlinearSolidSolver::setSolverParameters(const serac::LinearSolverParameters&    lin_params,
+void NonlinearSolidSolverPrevious::setSolverParameters(const serac::LinearSolverParameters&    lin_params,
                                                const serac::NonlinearSolverParameters& nonlin_params)
 {
   lin_params_    = lin_params;
   nonlin_params_ = nonlin_params;
 }
 
-void NonlinearSolidSolver::completeSetup()
+void NonlinearSolidSolverPrevious::completeSetup()
 {
   // Define the nonlinear form
   auto H_form = displacement_->createOnSpace<mfem::ParNonlinearForm>();
-  H           = displacement_->createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     H_form->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
-    H->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
   } else {
     H_form->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
-    H->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
   }
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
     H_form->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
                                  nat_bc_data.markers());
-    H->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()), nat_bc_data.markers());
   }
 
   // Build the dof array lookup tables
@@ -147,24 +133,15 @@ void NonlinearSolidSolver::completeSetup()
     mfem::ConstantCoefficient rho0(ref_density);
 
     M_form = displacement_->createOnSpace<mfem::ParBilinearForm>();
+
     M_form->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
     M_form->Assemble(0);
     M_form->Finalize(0);
-
-    M = displacement_->createOnSpace<mfem::ParBilinearForm>();
-    M->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
-    M->Assemble(0);
-    M->Finalize(0);
 
     S_form = displacement_->createOnSpace<mfem::ParBilinearForm>();
     S_form->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
     S_form->Assemble(0);
     S_form->Finalize(0);
-
-    S = displacement_->createOnSpace<mfem::ParBilinearForm>();
-    S->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
-    S->Assemble(0);
-    S->Finalize(0);
   }
 
   solver_ = EquationSolver(displacement_->comm(), lin_params_, nonlin_params_);
@@ -193,64 +170,18 @@ void NonlinearSolidSolver::completeSetup()
     timedep_oper_ = std::make_unique<NonlinearSolidDynamicOperator>(std::move(H_form), std::move(S_form),
                                                                     std::move(M_form), bcs_, solver_, lin_params_);
     ode_solver_->Init(*timedep_oper_);
-
-    root_finder = EquationSolver(displacement_->comm(), lin_params_, nonlin_params_);
-    auto J_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
-    J_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
-    J_hypreSmoother->SetPositiveDiagonal(true);
-    root_finder.SetPreconditioner(std::move(J_hypreSmoother));
-    root_finder.nonlinearSolver().iterative_mode = true;
-    root_finder.SetOperator(op);
-
-    op.residual = [=](const mfem::Vector& d2u_dt2, mfem::Vector& res) mutable {
-      res = (*M) * d2u_dt2 + (*S) * (du_dt + c1 * d2u_dt2) + (*H) * (x + u + c0 * d2u_dt2);
-      res.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-    };
-
-    op.jacobian = [=](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
-      // J = M + dt1 * S + 0.5 * dt0 * dt0 * H(u_predicted)
-      auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M->SpMat(), c1, S->SpMat()));
-      localJ->Add(c0, H->GetLocalGradient(x + u + c0 * d2u_dt2));
-      J.reset(M->ParallelAssemble(localJ.get()));
-      bcs_.eliminateAllEssentialDofsFromMatrix(*J);
-      return *J;
-    };
-
-    ode = SecondOrderODE(u.Size(), [=](const double /*t*/, const double c_0, const double c_1, const mfem::Vector& displacement,
-                                      const mfem::Vector& velocity, mfem::Vector& acceleration) {
-      u = displacement;
-      du_dt = velocity;
-      c0 = c_0;
-      c1 = c_1;
-
-      //std::cout << "acceleration:" << std::endl;
-      //acceleration.Print(std::cout);
-
-      root_finder.Mult(zero, acceleration);
-      //acceleration = root_finder * zero;
-      SLIC_WARNING_IF(!root_finder.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
-    });
-
-    //ode_solver_2 = std::make_unique<mfem::LinearAccelerationSolver>();
-    ode_solver_2 = std::make_unique<mfem::FoxGoodwinSolver>();
-
-    ode_solver_2->Init(ode);
-
   }
-
 }
 
 // Solve the Quasi-static Newton system
-void NonlinearSolidSolver::quasiStaticSolve()
+void NonlinearSolidSolverPrevious::quasiStaticSolve()
 {
   mfem::Vector zero;
   solver_.Mult(zero, displacement_->trueVec());
 }
 
-#include <iostream>
-
 // Advance the timestep
-void NonlinearSolidSolver::advanceTimestep(double& dt)
+void NonlinearSolidSolverPrevious::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   velocity_->initializeTrueVec();
@@ -265,7 +196,7 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     quasiStaticSolve();
   } else {
-    ode_solver_2->Step(displacement_->trueVec(), velocity_->trueVec(), time_, dt);
+    ode_solver_->Step(*block_, time_, dt);
   }
 
   // Distribute the shared DOFs
@@ -273,14 +204,13 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   displacement_->distributeSharedDofs();
 
   // Update the mesh with the new deformed nodes
-  //deformed_nodes_->Set(1.0, displacement_->gridFunc());
+  deformed_nodes_->Set(1.0, displacement_->gridFunc());
 
-  //if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-  //  deformed_nodes_->Add(1.0, *reference_nodes_);
-  //}
+  if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+    deformed_nodes_->Add(1.0, *reference_nodes_);
+  }
 
-  //mesh_->NewNodes(*deformed_nodes_);
-  //x = *deformed_nodes_;
+  mesh_->NewNodes(*deformed_nodes_);
 
   mfem::Vector u_after = displacement_->trueVec();
   mfem::Vector du_dt_after = velocity_->trueVec();
@@ -293,15 +223,9 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
 
   delta_u.Print(std::cout);
 
-  u = displacement_->trueVec();
-  du_dt = velocity_->trueVec();
-  mfem::Vector residual = op * zero;
-  std::cout << "residual: " << residual.Norml2() << std::endl;
-  residual.Print(std::cout);
-
   cycle_ += 1;
 }
 
-NonlinearSolidSolver::~NonlinearSolidSolver() {}
+NonlinearSolidSolverPrevious::~NonlinearSolidSolverPrevious() {}
 
 }  // namespace serac

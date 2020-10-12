@@ -10,7 +10,8 @@
 
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid_solver.hpp"
+#include "physics/nonlinear_solid_solver_previous.hpp"
+
 #include "serac_config.hpp"
 
 namespace serac {
@@ -37,7 +38,7 @@ TEST(dynamic_solver, dyn_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
-  NonlinearSolidSolver dyn_solver(1, pmesh);
+  NonlinearSolidSolverPrevious dyn_solver(1, pmesh);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.setViscosity(std::move(visc));
@@ -125,7 +126,7 @@ TEST(dynamic_solver, dyn_direct_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
-  NonlinearSolidSolver dyn_solver(1, pmesh);
+  NonlinearSolidSolverPrevious dyn_solver(1, pmesh);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.setViscosity(std::move(visc));
@@ -187,11 +188,11 @@ TEST(dynamic_solver, dyn_direct_solve)
 }
 */
 
-void initialDeformation(const mfem::Vector& /* x */, mfem::Vector& u)
+void initialDeformation(const mfem::Vector& x, mfem::Vector& y)
 {
   // set the initial configuration to be the same as the reference, stress
   // free, configuration
-  u = 0.0;
+  y = x;
 }
 
 void initialVelocity(const mfem::Vector& x, mfem::Vector& v)

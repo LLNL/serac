@@ -14,6 +14,7 @@ if (ENABLE_GTEST)
 
     set(solver_tests
         serac_dynamic_solver.cpp
+        serac_dynamic_solver_previous.cpp
         serac_linelastic_solver.cpp
         serac_quasistatic_solver.cpp
         serac_thermal_solver.cpp

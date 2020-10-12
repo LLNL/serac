@@ -10,15 +10,12 @@
  * @brief The solver object for finite deformation hyperelasticity
  */
 
-#ifndef NONLINSOLID_SOLVER
-#define NONLINSOLID_SOLVER
+#ifndef NONLINSOLID_SOLVER_PREVIOUS
+#define NONLINSOLID_SOLVER_PREVIOUS
 
 #include "mfem.hpp"
 #include "physics/base_solver.hpp"
-#include "physics/operators/odes.hpp"
-#include "physics/operators/stdfunction_operator.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
-
 
 namespace serac {
 
@@ -29,7 +26,7 @@ namespace serac {
  * hyperelastic solver object. It is derived from MFEM
  * example 10p.
  */
-class NonlinearSolidSolver : public BaseSolver {
+class NonlinearSolidSolverPrevious : public BaseSolver {
 public:
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -37,7 +34,7 @@ public:
    * @param[in] order The order of the displacement field
    * @param[in] mesh The MFEM parallel mesh to solve on
    */
-  NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  NonlinearSolidSolverPrevious(int order, std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Set displacement boundary conditions
@@ -133,7 +130,7 @@ public:
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
-  virtual ~NonlinearSolidSolver();
+  virtual ~NonlinearSolidSolverPrevious();
 
 protected:
   /**
@@ -205,30 +202,6 @@ protected:
    * @brief Solve the Quasi-static operator
    */
   void quasiStaticSolve();
-
-  StdFunctionOperator op;
-
-  // predicted displacments and velocities
-  mfem::Vector x;
-  mfem::Vector u;
-  mfem::Vector du_dt;
-
-  mfem::Vector zero;
-
-  // current and previous timesteps
-  double c0, c1;
-  double dt0, dt1, dt0_previous, dt1_previous;
-
-  std::unique_ptr<mfem::ParNonlinearForm> H;
-  std::unique_ptr<mfem::ParBilinearForm> M, S;
-
-  std::unique_ptr<mfem::HypreParMatrix> J;
-
-  SecondOrderODE ode;
-
-  std::unique_ptr<mfem::SecondOrderODESolver> ode_solver_2;
-  serac::EquationSolver root_finder;
-
 };
 
 }  // namespace serac
