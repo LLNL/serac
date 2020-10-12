@@ -93,6 +93,8 @@ class Serac(CMakePackage, CudaPackage):
     # netcdf variant commented out until a bug in the spack concretizer is fixed
     #variant('netcdf', default=True,
     #        description='Enable Cubit/Genesis reader')
+    variant('sundials', default=False,
+            description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
 
     # Basic dependencies
     depends_on("mpi")
@@ -111,6 +113,8 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
     #depends_on("mfem+netcdf", when="+netcdf")
+    depends_on("mfem+sundials", when="+sundials")
+    depends_on("sundials~shared", when="+sundials")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@0.4.0p1~openmp~fortran~raja~umpire",
@@ -418,6 +422,10 @@ class Serac(CMakePackage, CudaPackage):
             cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", lc_clangformatpath))
         elif os.path.exists(apt_clangformatpath):
             cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", apt_clangformatpath))
+
+        clangtidypath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-tidy"
+        if os.path.exists(clangtidypath):
+            cfg.write(cmake_cache_entry("CLANGTIDY_EXECUTABLE", clangtidypath))
 
         if "cppcheck" in spec:
             cppcheck_bin_dir = get_spec_path(spec, "cppcheck", path_replacements, use_bin=True)

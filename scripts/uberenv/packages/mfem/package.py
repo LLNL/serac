@@ -43,7 +43,7 @@ class Mfem(Package):
 
     # SERAC EDIT BEGIN
     # Version spec used in serac based on mfem@develop commit SHA
-    version('4.1.0p1', SHA='bb3c788a05f430bcfed03065ba39868974964924')
+    version('4.1.0p1', commit='bb3c788a05f430bcfed03065ba39868974964924')
     # SERAC EDIT END
 
     # 'develop' is a special version that is always larger (or newer) than any
@@ -681,7 +681,10 @@ class Mfem(Package):
     @property
     def sundials_components(self):
         """Return the SUNDIALS components needed by MFEM."""
-        sun_comps = 'arkode,cvode,nvecserial,kinsol'
+        # SERAC EDIT BEGIN - TODO: spack PR
+        # sun_comps = 'arkode,cvode,nvecserial,kinsol'
+        sun_comps = 'arkode,cvodes,nvecserial,kinsol'
+        # SERAC EDIT END
         if '+mpi' in self.spec:
             sun_comps += ',nvecparhyp,nvecparallel'
         return sun_comps

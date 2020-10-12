@@ -187,6 +187,93 @@ TEST(dynamic_solver, dyn_direct_solve)
 }
 */
 
+#ifdef MFEM_USE_SUNDIALS
+TEST(dynamic_solver, dyn_linesearch_solve)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Open the mesh
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
+
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+
+  int dim = pmesh->Dimension();
+
+  std::set<int> ess_bdr = {1};
+
+  auto visc   = std::make_unique<mfem::ConstantCoefficient>(0.0);
+  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
+  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
+
+  // initialize the dynamic solver object
+  NonlinearSolid dyn_solver(1, pmesh);
+  dyn_solver.setDisplacementBCs(ess_bdr, deform);
+  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
+  dyn_solver.setViscosity(std::move(visc));
+  dyn_solver.setDisplacement(*deform);
+  dyn_solver.setVelocity(*velo);
+  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
+
+  // Set the linear solver parameters
+  serac::LinearSolverParameters params;
+  params.prec        = serac::Preconditioner::BoomerAMG;
+  params.abs_tol     = 1.0e-8;
+  params.rel_tol     = 1.0e-4;
+  params.max_iter    = 500;
+  params.lin_solver  = serac::LinearSolver::GMRES;
+  params.print_level = 0;
+
+  // Set the nonlinear solver parameters
+  serac::NonlinearSolverParameters nl_params;
+  nl_params.rel_tol       = 1.0e-4;
+  nl_params.abs_tol       = 1.0e-8;
+  nl_params.print_level   = 1;
+  nl_params.max_iter      = 500;
+  nl_params.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch;
+  dyn_solver.setSolverParameters(params, nl_params);
+
+  // Initialize the VisIt output
+  dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");
+
+  // Construct the internal dynamic solver data structures
+  dyn_solver.completeSetup();
+
+  double t       = 0.0;
+  double t_final = 6.0;
+  double dt      = 3.0;
+
+  // Ouput the initial state
+  dyn_solver.outputState();
+
+  // Perform time-integration
+  // (looping over the time iterations, ti, with a time-step dt).
+  bool last_step = false;
+  for (int ti = 1; !last_step; ti++) {
+    double dt_real = std::min(dt, t_final - t);
+    t += dt_real;
+    last_step = (t >= t_final - 1e-8 * dt);
+
+    dyn_solver.advanceTimestep(dt_real);
+  }
+
+  // Output the final state
+  dyn_solver.outputState();
+
+  // Check the final displacement and velocity L2 norms
+  mfem::Vector zero(dim);
+  zero = 0.0;
+  mfem::VectorConstantCoefficient zerovec(zero);
+
+  double v_norm = dyn_solver.velocity()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = dyn_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+
+  EXPECT_NEAR(12.86733, x_norm, 0.0001);
+  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+#endif
+
 void initialDeformation(const mfem::Vector& x, mfem::Vector& y)
 {
   // set the initial configuration to be the same as the reference, stress
