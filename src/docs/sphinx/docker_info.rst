@@ -20,7 +20,8 @@ The following instructions apply to the creation of a new compiler image.
     #. Go to the ``scripts/docker`` directory and run ``build_new_dockerfile.sh``, passing the compiler
        name and version, e.g. for Clang 10, run ``./build_new_dockerfile.sh clang 10``.  Minor versions can also be specified,
        for example, GCC 9.3 can be specified with ``./build_new_dockerfile.sh gcc 9.3``.  This will create a Dockerfile whose
-       name corresponds to a specific compiler, e.g., ``dockerfile_clang-10``.
+       name corresponds to a specific compiler, e.g., ``dockerfile_clang-10``.  This may require modifications depending on the
+       compiler and base image - for example, an extra system package might be installed so Spack doesn't need to build it from source.
     #. Edit ``./github/workflows/docker_build_tpls.yml`` to add new job for the new compiler image.  This can be copy-pasted 
        from one of the existing jobs - the only things that must be changed are the job name and ``TAG``, which should match the
        name of the compiler/generated ``Dockerfile``.  For example, a build for ``dockerfile_clang-10`` must set ``TAG``
