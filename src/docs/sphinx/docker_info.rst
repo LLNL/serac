@@ -12,7 +12,8 @@ Building a new image
 
 The following instructions apply to the creation of a new compiler image.
 
-    1. Start by cloning down the ``serac`` repository.  
+    1. If a Dockerfile for the desired compiler already exists, you can just use GitHub actions to build the image (see step 7).
+    #. Start by cloning down the ``serac`` repository.  
     #. Ensure that an Axom image exists on Dockerhub for the desired compiler.
        If no corresponding Axom compiler image exists, it should be 
        created before proceeding.
@@ -27,7 +28,7 @@ The following instructions apply to the creation of a new compiler image.
     #. Commit and push the modified YML file and new Dockerfile, then go to the Actions tab on GitHub, select the "Docker TPL Build"
        action, and run the workflow on the branch to which the above changes were pushed.  
        **This will push new images to Dockerhub, overwriting existing images**.
-    #. Once the "Docker TPL Build" action completes, it will produce artifacts for each of the generated hostconfigs.  Download these 
+    #. Once the "Docker TPL Build" action completes, it will produce artifacts for each of the generated host-configs.  Download these 
        artifacts and commit them to the active branch, replacing any part of the filename preceding ``linux`` with ``docker``.  
        Currently the part that needs to be replaced is ``buildkitsandbox``.
     #. To include the new image in CI jobs, add a new ``matrix`` entry to ``azure-pipelines.yml``, modifying its 
