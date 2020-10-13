@@ -27,9 +27,7 @@ struct NonlinearSolidBC {
   };
   struct Traction : VectorBoundaryCondition {
   };
-  using DisplacementEss = StrongAlias<EssentialBoundaryCondition, Displacement>;
-  using TractionNat     = StrongAlias<NaturalBoundaryCondition, Traction>;
-  using Manager         = BoundaryConditionManager<DisplacementEss, TractionNat>;
+  using Manager = BoundaryConditionManager<EssentialAlias<Displacement>, NaturalAlias<Traction>>;
 };
 
 /**

@@ -121,6 +121,17 @@ private:
 };
 
 /**
+ * @brief Type aliases for boundary condition declarations
+ */
+template <typename T>
+using EssentialAlias = StrongAlias<EssentialBoundaryCondition, T>;
+
+template <typename T>
+using NaturalAlias = StrongAlias<NaturalBoundaryCondition, T>;
+
+namespace detail {
+
+/**
  * @brief Type trait for determining whether a type has a static bool member called should_be_scalar
  */
 template <typename T, typename = void>
@@ -157,6 +168,8 @@ constexpr void check_scalar_coef_with_no_component()
         "pass a component of zero, otherwise, pass the vector component to which this scalar coef should apply.");
   }
 }
+
+}  // namespace detail
 
 /**
  * @brief A structure for storing boundary conditions of arbitrary type
@@ -205,7 +218,7 @@ public:
   template <typename Tag>
   void addEssential(const std::set<int>& ess_bdr, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
   {
-    check_scalar_coef_with_no_component<Tag>();
+    detail::check_scalar_coef_with_no_component<Tag>();
     // If a scalar is acceptable, use component zero (element of single-element vector)
     addEssential<Tag>(ess_bdr, ess_bdr_coef, 0);
   }
@@ -276,7 +289,7 @@ public:
   template <typename Tag>
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, std::shared_ptr<mfem::Coefficient> ess_bdr_coef)
   {
-    check_scalar_coef_with_no_component<Tag>();
+    detail::check_scalar_coef_with_no_component<Tag>();
     // If a scalar is acceptable, use component zero (element of single-element vector)
     addEssentialTrueDofs<Tag>(true_dofs, ess_bdr_coef, 0);
   }

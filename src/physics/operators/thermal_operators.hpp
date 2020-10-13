@@ -27,9 +27,7 @@ struct ThermalConductionBC {
   };
   struct Flux : ScalarBoundaryCondition {
   };
-  using TemperatureEss = StrongAlias<EssentialBoundaryCondition, Temperature>;
-  using FluxNat        = StrongAlias<NaturalBoundaryCondition, Flux>;
-  using Manager        = BoundaryConditionManager<TemperatureEss, FluxNat>;
+  using Manager = BoundaryConditionManager<EssentialAlias<Temperature>, NaturalAlias<Flux>>;
 };
 
 /**
