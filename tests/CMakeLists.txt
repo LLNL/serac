@@ -97,6 +97,17 @@ if (ENABLE_GTEST)
                             NUM_MPI_TASKS 4)
     endif()
 
+    if(SERAC_USE_PETSC)
+        blt_add_executable( NAME        petsc_smoketest
+                            SOURCES     petsc_smoketest.cpp
+                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                            DEPENDS_ON  PETSc ${test_dependencies}
+                            FOLDER      serac/tests )
+        blt_add_test(NAME          petsc_smoketest
+                    COMMAND       petsc_smoketest
+                    NUM_MPI_TASKS 4 )
+    endif()
+
 endif()
 
 # Make sure running serac driver doesn't completely fail
