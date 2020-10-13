@@ -25,7 +25,9 @@ jobs:
       id: dockerfile_name
     - name: Get dockerhub repo name
       shell: bash
-      run: echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${TAG}-`date "+%m-%d-%y-%Hh-%Mm"`)"
+      run: |
+        echo ${REPO}:${TAG}-`date "+%m-%d-%y-%Hh-%Mm"`
+        echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${TAG}-`date "+%m-%d-%y-%Hh-%Mm"`)"
       id: repo_name
 
     - name: Checkout
@@ -85,7 +87,9 @@ jobs:
       id: dockerfile_name
     - name: Get dockerhub repo name
       shell: bash
-      run: echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${TAG}-`date "+%m-%d-%y-%Hh-%Mm"`)"
+      run: |
+        echo ${REPO}:${TAG}-`date "+%m-%d-%y-%Hh-%Mm"`
+        echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${TAG}-`date "+%m-%d-%y-%Hh-%Mm"`)"
       id: repo_name
 
     - name: Checkout
