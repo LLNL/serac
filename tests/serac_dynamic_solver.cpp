@@ -19,6 +19,28 @@ void initialDeformation(const mfem::Vector& x, mfem::Vector& y);
 
 void initialVelocity(const mfem::Vector& x, mfem::Vector& v);
 
+const IterativeSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e-4,
+                                                             .abs_tol     = 1.0e-8,
+                                                             .print_level = 0,
+                                                             .max_iter    = 500,
+                                                             .lin_solver  = LinearSolver::GMRES,
+                                                             .prec        = HypreBoomerAMGPrec{}};
+
+const IterativeSolverParameters default_dyn_oper_linear_params = {
+    .rel_tol     = 1.0e-4,
+    .abs_tol     = 1.0e-8,
+    .print_level = 0,
+    .max_iter    = 500,
+    .lin_solver  = LinearSolver::GMRES,
+    .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+
+const NonlinearSolverParameters default_dyn_nonlinear_params = {
+    .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+
+const NonlinearSolid::NonlinearSolidParameters default_dynamic = {
+    default_dyn_linear_params, default_dyn_nonlinear_params,
+    NonlinearSolid::DynamicParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
+
 TEST(dynamic_solver, dyn_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -37,7 +59,7 @@ TEST(dynamic_solver, dyn_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
-  NonlinearSolid dyn_solver(1, pmesh, NonlinearSolid::default_dynamic);
+  NonlinearSolid dyn_solver(1, pmesh, default_dynamic);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.setViscosity(std::move(visc));
@@ -107,7 +129,7 @@ TEST(dynamic_solver, dyn_direct_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
-  NonlinearSolid dyn_solver(1, pmesh, NonlinearSolid::default_dynamic);
+  NonlinearSolid dyn_solver(1, pmesh, default_dynamic);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.setViscosity(std::move(visc));
@@ -176,7 +198,7 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // Set the nonlinear solver parameters
-  auto params                          = NonlinearSolid::default_dynamic;
+  auto params                          = default_dynamic;
   params.H_nonlin_params.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch;
 
   // initialize the dynamic solver object

@@ -28,13 +28,18 @@ TEST(component_bc, qs_solve)
   int dim = pmesh->Dimension();
 
   // Set the linear solver params
-  auto params    = NonlinearSolid::default_qs_linear_params;
-  params.rel_tol = 1.0e-8;
-  params.abs_tol = 1.0e-12;
+  IterativeSolverParameters params = {.rel_tol     = 1.0e-6,
+                                      .abs_tol     = 1.0e-8,
+                                      .print_level = 0,
+                                      .max_iter    = 5000,
+                                      .lin_solver  = LinearSolver::MINRES,
+                                      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+  params.rel_tol                   = 1.0e-8;
+  params.abs_tol                   = 1.0e-12;
 
-  auto nl_params    = NonlinearSolid::default_qs_nonlinear_params;
-  nl_params.rel_tol = 1.0e-6;
-  nl_params.abs_tol = 1.0e-8;
+  NonlinearSolverParameters nl_params = {.rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
+  nl_params.rel_tol                   = 1.0e-6;
+  nl_params.abs_tol                   = 1.0e-8;
 
   // Define the solver object
   NonlinearSolid solid_solver(1, pmesh, {params, nl_params});
@@ -110,13 +115,18 @@ TEST(component_bc, qs_attribute_solve)
   int dim = pmesh->Dimension();
 
   // Set the linear solver params
-  auto params    = NonlinearSolid::default_qs_linear_params;
-  params.rel_tol = 1.0e-8;
-  params.abs_tol = 1.0e-12;
+  IterativeSolverParameters params = {.rel_tol     = 1.0e-6,
+                                      .abs_tol     = 1.0e-8,
+                                      .print_level = 0,
+                                      .max_iter    = 5000,
+                                      .lin_solver  = LinearSolver::MINRES,
+                                      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+  params.rel_tol                   = 1.0e-8;
+  params.abs_tol                   = 1.0e-12;
 
-  auto nl_params    = NonlinearSolid::default_qs_nonlinear_params;
-  nl_params.rel_tol = 1.0e-6;
-  nl_params.abs_tol = 1.0e-8;
+  NonlinearSolverParameters nl_params = {.rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
+  nl_params.rel_tol                   = 1.0e-6;
+  nl_params.abs_tol                   = 1.0e-8;
 
   // Define the solver object
   NonlinearSolid solid_solver(2, pmesh, {params, nl_params});

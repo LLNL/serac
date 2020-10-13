@@ -55,7 +55,7 @@ public:
    * @param[in] params The system solver parameters
    */
   ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh,
-                    const ThermalConduction::ThermalConductionParameters& params = default_quasistatic);
+                    const ThermalConduction::ThermalConductionParameters& params);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -120,34 +120,6 @@ public:
    * @brief Destroy the Thermal Solver object
    */
   virtual ~ThermalConduction() = default;
-
-  /**
-   * @brief The default parameters for an iterative linear solver
-   */
-  constexpr static IterativeSolverParameters default_linear_params = {
-      .rel_tol     = 1.0e-6,
-      .abs_tol     = 1.0e-12,
-      .print_level = 0,
-      .max_iter    = 100,
-      .lin_solver  = LinearSolver::CG,
-      .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-
-  /**
-   * @brief The default equation solver parameters for quasistatic simulations
-   */
-  constexpr static ThermalConductionParameters default_quasistatic = default_linear_params;
-
-  /**
-   * @brief The default equation solver parameters for explicit time-dependent simulations
-   */
-  constexpr static ThermalConductionParameters default_explicit_solve =
-      DynamicParameters{TimestepMethod::ForwardEuler, default_linear_params, default_linear_params};
-
-  /**
-   * @brief The default equation solver parameters for implicit time-dependent simulations
-   */
-  constexpr static ThermalConductionParameters default_implicit_solve =
-      DynamicParameters{TimestepMethod::BackwardEuler, default_linear_params, default_linear_params};
 
 protected:
   /**

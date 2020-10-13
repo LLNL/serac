@@ -53,8 +53,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] solver The system solver parameters
    */
-  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
-                 const NonlinearSolidParameters& params = default_quasistatic);
+  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolidParameters& params);
 
   /**
    * @brief Set displacement boundary conditions
@@ -150,66 +149,6 @@ public:
    * @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
    **/
   static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
-
-  /**
-   * @brief The default parameters for an iterative linear solver
-   */
-  constexpr static IterativeSolverParameters default_qs_linear_params = {
-      .rel_tol     = 1.0e-6,
-      .abs_tol     = 1.0e-8,
-      .print_level = 0,
-      .max_iter    = 5000,
-      .lin_solver  = LinearSolver::MINRES,
-      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
-
-  /**
-   * @brief The default parameters for the nonlinear Newton solver for quasistatic mode
-   */
-  constexpr static NonlinearSolverParameters default_qs_nonlinear_params = {
-      .rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
-
-  /**
-   * @brief The default equation solver parameters for quasistatic simulations
-   */
-
-  // NSDMI preferable but not possible due to compiler bugs:
-  // https://bugs.llvm.org/show_bug.cgi?id=36684
-  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88165
-  constexpr static NonlinearSolidParameters default_quasistatic = {default_qs_linear_params,
-                                                                   default_qs_nonlinear_params, std::nullopt};
-  /**
-   * @brief The default parameters for an iterative linear solver
-   */
-  constexpr static IterativeSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e-4,
-                                                                          .abs_tol     = 1.0e-8,
-                                                                          .print_level = 0,
-                                                                          .max_iter    = 500,
-                                                                          .lin_solver  = LinearSolver::GMRES,
-                                                                          .prec        = HypreBoomerAMGPrec{}};
-
-  /**
-   * @brief The default parameters for the nonlinear solid dynamic operator (M solver)
-   */
-  constexpr static IterativeSolverParameters default_dyn_oper_linear_params = {
-      .rel_tol     = 1.0e-4,
-      .abs_tol     = 1.0e-8,
-      .print_level = 0,
-      .max_iter    = 500,
-      .lin_solver  = LinearSolver::GMRES,
-      .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-
-  /**
-   * @brief The default parameters for the nonlinear Newton solver for dynamic mode
-   */
-  constexpr static NonlinearSolverParameters default_dyn_nonlinear_params = {
-      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
-
-  /**
-   * @brief The default equation solver parameters for time-dependent simulations
-   */
-  constexpr static NonlinearSolidParameters default_dynamic = {
-      default_dyn_linear_params, default_dyn_nonlinear_params,
-      DynamicParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
 
 protected:
   /**

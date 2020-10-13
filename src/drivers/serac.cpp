@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
   auto mesh      = serac::buildMeshFromFile(mesh_file_path, ser_ref_levels, par_ref_levels);
 
   // Solver parameters
-  auto lin_params = serac::NonlinearSolid::default_qs_linear_params;
+  serac::IterativeSolverParameters lin_params;
   inlet->get("nonlinear_solid/solver/linear/rel_tol", lin_params.rel_tol);          // has default value
   inlet->get("nonlinear_solid/solver/linear/abs_tol", lin_params.abs_tol);          // has default value
   inlet->get("nonlinear_solid/solver/linear/max_iter", lin_params.max_iter);        // has default value

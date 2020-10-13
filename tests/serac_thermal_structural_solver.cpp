@@ -57,16 +57,38 @@ TEST(dynamic_solver, dyn_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Use the same configuration as the solid solver
-  auto therm_M_params = NonlinearSolid::default_dyn_linear_params;
-  auto therm_T_params = NonlinearSolid::default_dyn_linear_params;
+  const IterativeSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e-4,
+                                                               .abs_tol     = 1.0e-8,
+                                                               .print_level = 0,
+                                                               .max_iter    = 500,
+                                                               .lin_solver  = LinearSolver::GMRES,
+                                                               .prec        = HypreBoomerAMGPrec{}};
+
+  auto therm_M_params = default_dyn_linear_params;
+  auto therm_T_params = default_dyn_linear_params;
   therm_M_params.prec = HypreSmootherPrec{};
   therm_T_params.prec = HypreSmootherPrec{};
 
   ThermalConduction::ThermalConductionParameters therm_params =
       ThermalConduction::DynamicParameters{TimestepMethod::SDIRK33, therm_M_params, therm_T_params};
 
+  const IterativeSolverParameters default_dyn_oper_linear_params = {
+      .rel_tol     = 1.0e-4,
+      .abs_tol     = 1.0e-8,
+      .print_level = 0,
+      .max_iter    = 500,
+      .lin_solver  = LinearSolver::GMRES,
+      .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+
+  const NonlinearSolverParameters default_dyn_nonlinear_params = {
+      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+
+  const NonlinearSolid::NonlinearSolidParameters default_dynamic = {
+      default_dyn_linear_params, default_dyn_nonlinear_params,
+      NonlinearSolid::DynamicParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
+
   // initialize the dynamic solver object
-  ThermalSolid ts_solver(1, pmesh, therm_params, NonlinearSolid::default_dynamic);
+  ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);

@@ -29,6 +29,13 @@ double InitialTemperature(const mfem::Vector& x)
   }
 }
 
+const IterativeSolverParameters default_linear_params = {.rel_tol     = 1.0e-6,
+                                                         .abs_tol     = 1.0e-12,
+                                                         .print_level = 0,
+                                                         .max_iter    = 100,
+                                                         .lin_solver  = LinearSolver::CG,
+                                                         .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+
 TEST(thermal_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -36,7 +43,7 @@ TEST(thermal_solver, static_solve)
   auto pmesh = buildBallMesh(10000);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::default_quasistatic);
+  ThermalConduction therm_solver(2, pmesh, default_linear_params);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(One);
@@ -76,7 +83,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::default_quasistatic);
+  ThermalConduction therm_solver(2, pmesh, default_linear_params);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -125,7 +132,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::default_quasistatic);
+  ThermalConduction therm_solver(2, pmesh, default_linear_params);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -166,8 +173,11 @@ TEST(thermal_solver, dyn_exp_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
+  const ThermalConduction::DynamicParameters default_explicit_solve = {TimestepMethod::ForwardEuler,
+                                                                       default_linear_params, default_linear_params};
+
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::default_explicit_solve);
+  ThermalConduction therm_solver(2, pmesh, default_explicit_solve);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -224,8 +234,11 @@ TEST(thermal_solver, dyn_imp_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
+  const ThermalConduction::DynamicParameters default_implicit_solve = {TimestepMethod::BackwardEuler,
+                                                                       default_linear_params, default_linear_params};
+
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::default_implicit_solve);
+  ThermalConduction therm_solver(2, pmesh, default_implicit_solve);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);

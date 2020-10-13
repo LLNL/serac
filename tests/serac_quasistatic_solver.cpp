@@ -16,6 +16,19 @@
 
 namespace serac {
 
+const IterativeSolverParameters default_qs_linear_params = {.rel_tol     = 1.0e-6,
+                                                            .abs_tol     = 1.0e-8,
+                                                            .print_level = 0,
+                                                            .max_iter    = 5000,
+                                                            .lin_solver  = LinearSolver::MINRES,
+                                                            .prec = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+
+const NonlinearSolverParameters default_qs_nonlinear_params = {
+    .rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
+
+const NonlinearSolid::NonlinearSolidParameters default_quasistatic = {default_qs_linear_params,
+                                                                      default_qs_nonlinear_params};
+
 TEST(nonlinear_solid_solver, qs_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -28,7 +41,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   int dim = pmesh->Dimension();
 
   // Define the solver object
-  NonlinearSolid solid_solver(1, pmesh, NonlinearSolid::default_quasistatic);
+  NonlinearSolid solid_solver(1, pmesh, default_quasistatic);
 
   std::set<int> ess_bdr = {1};
 
@@ -91,7 +104,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   int dim = pmesh->Dimension();
 
   // Define the solver object
-  NonlinearSolidSolver solid_solver(1, pmesh, NonlinearSolid::default_quasistatic);
+  NonlinearSolidSolver solid_solver(1, pmesh, default_quasistatic);
 
   std::set<int> ess_bdr = {1};
 
@@ -153,7 +166,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
   // qs_solve test
-  auto custom_params = NonlinearSolid::default_qs_linear_params;
+  auto custom_params = default_qs_linear_params;
   auto custom_solver = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
   custom_solver->SetRelTol(custom_params.rel_tol);
   custom_solver->SetAbsTol(custom_params.abs_tol);
@@ -162,7 +175,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
 
   NonlinearSolid::NonlinearSolidParameters params;
   params.H_lin_params    = CustomSolverParameters{custom_solver.get()};
-  params.H_nonlin_params = NonlinearSolid::default_qs_nonlinear_params;
+  params.H_nonlin_params = default_qs_nonlinear_params;
 
   // Define the solver object
   NonlinearSolid solid_solver(1, pmesh, params);

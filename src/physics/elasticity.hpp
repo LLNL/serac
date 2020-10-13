@@ -38,8 +38,7 @@ public:
    * @param[in] mesh The parallel MFEM mesh
    * @param[in] params The system solver parameters
    */
-  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh,
-             const LinearSolverParameters& params = default_quasistatic);
+  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverParameters& params);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions
@@ -92,17 +91,6 @@ public:
    * @brief The destructor
    */
   virtual ~Elasticity();
-
-  /**
-   * @brief The default parameters for an iterative linear solver
-   */
-  constexpr static IterativeSolverParameters default_quasistatic = {
-      .rel_tol     = 1.0e-4,
-      .abs_tol     = 1.0e-10,
-      .print_level = 0,
-      .max_iter    = 500,
-      .lin_solver  = LinearSolver::MINRES,
-      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
 
 protected:
   /**
