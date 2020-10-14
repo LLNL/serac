@@ -78,6 +78,9 @@ int main(int argc, char* argv[])
   // Save input values to file
   datastore.getRoot()->save("serac_input.json", "json");
 
+  // Annotate the mesh with the input filename
+  inlet->addTable("nonlinear_solid/mesh_info")->addString("input_file_path")->defaultValue(input_file_path);
+
   // Define the solid solver object
   auto solid_solver = (*inlet)["nonlinear_solid"].get<serac::NonlinearSolid>();
 

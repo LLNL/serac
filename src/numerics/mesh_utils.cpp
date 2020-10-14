@@ -185,8 +185,8 @@ void defineInputFileSchema(axom::inlet::Table& schema_creator)
 
 std::shared_ptr<mfem::ParMesh> FromInlet<std::shared_ptr<mfem::ParMesh>>::operator()(axom::inlet::Table& base)
 {
-  std::string filename = base["mesh"];
-  int         ser_ref  = base["ser_ref_levels"];
-  int         par_ref  = base["par_ref_levels"];
-  return serac::buildMeshFromFile(filename, ser_ref, par_ref);
+  auto mesh_path = serac::input::findMeshFilePath(base["mesh"], base["input_file_path"]);
+  int  ser_ref   = base["ser_ref_levels"];
+  int  par_ref   = base["par_ref_levels"];
+  return serac::buildMeshFromFile(mesh_path, ser_ref, par_ref);
 }
