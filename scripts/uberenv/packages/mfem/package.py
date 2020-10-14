@@ -479,10 +479,10 @@ class Mfem(Package):
                 ld_flags_from_library_list(spec[sun_spec].libs)]
 
         if '+petsc' in spec:
+            # SERAC EDIT BEGIN (TODO: spack PR)
             options += [
-                'PETSC_OPT=%s' % spec['petsc'].headers.cpp_flags,
-                'PETSC_LIB=%s' %
-                ld_flags_from_library_list(spec['petsc'].libs)]
+                'PETSC_DIR=%s' % spec['petsc'].prefix]
+            # SERAC EDIT END
 
         if '+pumi' in spec:
             pumi_libs = ['pumi', 'crv', 'ma', 'mds', 'apf', 'pcu', 'gmi',
