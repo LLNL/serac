@@ -93,6 +93,7 @@ def log_success(prefix, msg, timestamp=""):
     """
     Called at the end of the process to signal success.
     """
+    print(msg)
     info = {}
     info["prefix"] = prefix
     info["platform"] = get_platform()
@@ -109,6 +110,7 @@ def log_failure(prefix, msg, timestamp=""):
     """
     Called when the process failed.
     """
+    print(msg)
     info = {}
     info["prefix"] = prefix
     info["platform"] = get_platform()
@@ -169,44 +171,52 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
 
 def test_examples(host_config, build_dir, install_dir, report_to_stdout = False):
     print("[starting to build examples]")
-    examples_output_file =  pjoin(build_dir,"output.log.make.examples.txt")
-    print("[log file: %s]" % examples_output_file)
+
+    # Install
+    log_file =  pjoin(build_dir,"output.log.make.install.txt")
+    print("[log file: %s]" % log_file)
     res = sexe("cd %s && make VERBOSE=1 install " % build_dir,
-                output_file = examples_output_file,
+                output_file = log_file,
                 echo=True)
 
     if report_to_stdout:
-        with open(examples_output_file, 'r') as ex_out:
+        with open(log_file, 'r') as ex_out:
             print(ex_out.read())
 
     if res != 0:
-        print("[ERROR: Install for host-config: %s failed]\n" % host_config)
+        print("[ERROR: error code={0}: Install for host-config: {1} failed]\n".format(res, host_config))
         return res
 
+    # Configure examples
+    log_file =  pjoin(build_dir,"output.log.configure.examples.txt")
+    print("[log file: %s]" % log_file)
     example_dir = pjoin(install_dir, "examples", "using-with-cmake")
-    res = sexe("cd %s && mkdir build && cd build && cmake -C %s/host-config.cmake %s" % (example_dir, example_dir, example_dir),
-                output_file = examples_output_file,
+    res = sexe("cd {0} && mkdir build && cd build && cmake -C {0}/host-config.cmake {0}".format(example_dir),
+                output_file = log_file,
                 echo=True)
 
     if report_to_stdout:
-        with open(examples_output_file, 'r') as ex_out:
+        with open(log_file, 'r') as ex_out:
             print(ex_out.read())
 
     if res != 0:
-        print("[ERROR: Configure examples for host-config: %s failed]\n" % host_config)
+        print("[ERROR: error code={0}: Configure examples for host-config: {1} failed]\n".format(res, host_config))
         return res
 
+    # Make examples
+    log_file =  pjoin(build_dir,"output.log.make.examples.txt")
+    print("[log file: %s]" % log_file)
     install_build_dir = pjoin(example_dir, "build")
-    res = sexe("cd %s && make && %s/serac_example" % (install_build_dir, install_build_dir),
-                output_file = examples_output_file,
+    res = sexe("cd {0} && make && ls -al && make test ".format(install_build_dir),
+                output_file = log_file,
                 echo=True)
 
     if report_to_stdout:
-        with open(examples_output_file, 'r') as ex_out:
+        with open(log_file, 'r') as ex_out:
             print(ex_out.read())
 
     if res != 0:
-        print("[ERROR: Make examples for host-config: %s failed]\n" % host_config)
+        print("[ERROR: error code={0}: Make and test examples for host-config: {1} failed]\n".format(res, host_config))
         return res
 
     return 0
@@ -306,7 +316,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
     return 0
 
 
-def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs):
+def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False):
     host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
     if len(host_configs) == 0:
         log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
@@ -325,21 +335,20 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs):
         build_dir = get_build_dir(test_root, host_config)
 
         start_time = time.time()
-        if build_and_test_host_config(test_root,host_config, True) == 0:
+        if build_and_test_host_config(test_root, host_config, report_to_stdout) == 0:
             ok.append(host_config)
-            log_success(build_dir, timestamp)
+            log_success(build_dir, "[Success: Built host-config: {0}]".format(host_config), timestamp)
         else:
             bad.append(host_config)
-            log_failure(build_dir, timestamp)
+            log_failure(build_dir, "[Error: Failed to build host-config: {0}]".format(host_config), timestamp)
         end_time = time.time()
         print("[build time: {0}]\n".format(convertSecondsToReadableTime(end_time - start_time)))
 
-
     # Log overall job success/failure
     if len(bad) != 0:
-        log_failure(test_root, timestamp)
+        log_failure(test_root, "[Error: Failed to build host-configs: {0}]".format(bad), timestamp)
     else:
-        log_success(test_root, timestamp)
+        log_success(test_root,"[Success: Built all host-configs: {0}]".format(ok), timestamp)
 
     # Output summary of failure/succesful builds
     if len(ok) > 0:
@@ -388,7 +397,7 @@ def set_group_and_perms(directory):
     return 0
 
 
-def full_build_and_test_of_tpls(builds_dir, timestamp, spec):
+def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False):
     project_file = "scripts/uberenv/project.json"
     config_dir = "scripts/uberenv/spack_configs/{0}".format(get_system_type())
 
@@ -451,7 +460,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec):
     src_build_failed = False
     if not tpl_build_failed:
         # build the serac against the new tpls
-        res = build_and_test_host_configs(prefix, timestamp, True)
+        res = build_and_test_host_configs(prefix, timestamp, True, report_to_stdout)
         if res != 0:
             print("[ERROR: build and test of serac vs tpls test failed.]\n")
             src_build_failed = True

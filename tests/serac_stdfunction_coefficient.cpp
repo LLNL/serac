@@ -19,7 +19,7 @@ using namespace serac;
 
 class StdFunctionCoefficientTest : public ::testing::Test {
 protected:
-  void SetUp()
+  void SetUp() override
   {
     // Set up mesh
     dim_    = 3;
@@ -38,7 +38,7 @@ protected:
         new ParFiniteElementSpace(pmesh_.get(), new L2_FECollection(0, dim_), 1, Ordering::byNODES));
   }
 
-  void TearDown() {}
+  void TearDown() override {}
 
   int                                    dim_;
   std::shared_ptr<ParMesh>               pmesh_;
@@ -96,7 +96,7 @@ TEST_F(StdFunctionCoefficientTest, AttributeList)
 
   Array<int> attr_list = serac::makeAttributeList(*pmesh_, corner);
 
-  MFEM_VERIFY(attr_list.Size() > 0 && attr_list.Sum() > 0, "Didn't pick up anything");
+  SLIC_WARNING_IF(!(attr_list.Size() > 0 && attr_list.Sum() > 0), "Didn't pick up anything");
 
   ConstantCoefficient one(1.);
   Array<int>          attr(2);
@@ -139,7 +139,7 @@ TEST_F(StdFunctionCoefficientTest, AttributeListSet)
 
   Array<int> attr_list = serac::makeAttributeList(*pmesh_, corner);
 
-  SLIC_WARNING_IF(attr_list.Size() > 0 && attr_list.Sum() > 0, "Didn't pick up anything");
+  SLIC_WARNING_IF(!(attr_list.Size() > 0 && attr_list.Sum() > 0), "Didn't pick up anything");
 
   for (int e = 0; e < pmesh_->GetNE(); e++) {
     pmesh_->GetElement(e)->SetAttribute(attr_list[e]);

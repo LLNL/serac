@@ -18,7 +18,7 @@ using namespace serac;
 
 class WrapperTests : public ::testing::Test {
 protected:
-  void SetUp()
+  void SetUp() override
   {
     // Set up mesh
     dim_    = 3;
@@ -37,7 +37,7 @@ protected:
         new ParFiniteElementSpace(pmesh_.get(), new L2_FECollection(0, dim_), 1, Ordering::byNODES));
   }
 
-  void TearDown() {}
+  void TearDown() override {}
 
   int                                    dim_;
   std::shared_ptr<ParMesh>               pmesh_;

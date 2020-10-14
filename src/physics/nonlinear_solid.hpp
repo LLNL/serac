@@ -13,6 +13,7 @@
 #ifndef NONLIN_SOLID
 #define NONLIN_SOLID
 
+#include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
@@ -132,6 +133,13 @@ public:
    */
   virtual ~NonlinearSolid();
 
+  /**
+   * @brief Input file parameters specific to this class
+   *
+   * @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
+   **/
+  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
+
 protected:
   /**
    * @brief Velocity field
@@ -152,11 +160,6 @@ protected:
    * @brief The time dependent operator for use with the MFEM ODE solvers
    */
   std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
-
-  /**
-   * @brief The Newton solver for the nonlinear iterations
-   */
-  mfem::NewtonSolver newton_solver_;
 
   /**
    * @brief The linear solver for the Jacobian
