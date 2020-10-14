@@ -163,13 +163,12 @@ private:
 class TransformedNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 public:
   /// alias for prototype of the residual_func
-  using transformed_func = std::shared_ptr<mfem::Vector>(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
-                                                         const mfem::Vector&);
+  using transformed_func = mfem::Vector(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                        const mfem::Vector&);
 
   /// alias for prototype of the gradient of residual_func
-  using transformed_gradient_func = std::shared_ptr<mfem::DenseMatrix>(const mfem::FiniteElement&   el,
-                                                                       mfem::ElementTransformation& Tr,
-                                                                       const mfem::DenseMatrix&);
+  using transformed_gradient_func = mfem::DenseMatrix(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                                      const mfem::DenseMatrix&);
 
   /**
    * @brief Recasts, A(u(x)) = F as R(u(x)) = A(u(x)) - F = R(x)

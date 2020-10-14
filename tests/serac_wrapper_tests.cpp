@@ -269,14 +269,14 @@ TEST_F(WrapperTests, Transformed)
   double multiplier          = 2.;
   double offset              = 1.;
   auto   transform           = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::Vector& x) {
-    auto v = std::make_shared<mfem::Vector>(x);
-    (*v) *= multiplier;
-    (*v) += offset;
+    mfem::Vector v(x);
+    v *= multiplier;
+    v += offset;
     return v;
   };
   auto transform_grad = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::DenseMatrix& x) {
-    auto m = std::make_shared<mfem::DenseMatrix>(x);
-    (*m) *= multiplier;
+    mfem::DenseMatrix m(x);
+    m *= multiplier;
     return m;
   };
   auto transformed_diffusion = std::make_unique<TransformedNonlinearFormIntegrator>(

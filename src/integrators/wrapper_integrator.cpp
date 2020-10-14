@@ -93,18 +93,15 @@ void TransformedNonlinearFormIntegrator::AssembleElementVector(const mfem::Finit
                                                                mfem::ElementTransformation& Tr,
                                                                const mfem::Vector& elfun, mfem::Vector& elvect)
 {
-  auto transformed = transformed_function_(el, Tr, elfun);
-  R_->AssembleElementVector(el, Tr, *transformed, elvect);
+  R_->AssembleElementVector(el, Tr, transformed_function_(el, Tr, elfun), elvect);
 }
 
 void TransformedNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
                                                              mfem::ElementTransformation& Tr, const mfem::Vector& elfun,
                                                              mfem::DenseMatrix& elmat)
 {
-  auto transformed = transformed_function_(el, Tr, elfun);
-  R_->AssembleElementGrad(el, Tr, *transformed, elmat);
-  auto dense_grad_transformed = transformed_function_grad_(el, Tr, elmat);
-  elmat                       = *dense_grad_transformed;
+  R_->AssembleElementGrad(el, Tr, transformed_function_(el, Tr, elfun), elmat);
+  elmat = transformed_function_grad_(el, Tr, elmat);
 }
 
 }  // namespace serac
