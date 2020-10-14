@@ -170,22 +170,20 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
 
 namespace mesh {
 
-void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+void defineInputFileSchema(axom::inlet::Table& schema_creator)
 {
   // mesh path
-  schema_creator->addString("mesh", "Path to Mesh file")->required(true);
+  schema_creator.addString("mesh", "Path to Mesh file")->required(true);
 
   // Refinement levels
-  schema_creator->addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.")->defaultValue(0);
-  schema_creator->addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")
-      ->defaultValue(0);
+  schema_creator.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.")->defaultValue(0);
+  schema_creator.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")->defaultValue(0);
 }
 
 }  // namespace mesh
 }  // namespace serac
 
-template <>
-std::shared_ptr<mfem::ParMesh> from_inlet<std::shared_ptr<mfem::ParMesh>>(axom::inlet::Table& base)
+std::shared_ptr<mfem::ParMesh> FromInlet<std::shared_ptr<mfem::ParMesh>>::operator()(axom::inlet::Table& base)
 {
   std::string filename = base["mesh"];
   int         ser_ref  = base["ser_ref_levels"];

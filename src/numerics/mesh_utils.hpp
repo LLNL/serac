@@ -86,9 +86,15 @@ namespace mesh {
  *
  * @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
  **/
-void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
+void defineInputFileSchema(axom::inlet::Table& schema_creator);
 
 }  // namespace mesh
 }  // namespace serac
+
+// Prototype the specialization
+template <>
+struct FromInlet<std::shared_ptr<mfem::ParMesh>> {
+  std::shared_ptr<mfem::ParMesh> operator()(axom::inlet::Table& base);
+};
 
 #endif

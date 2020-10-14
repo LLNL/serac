@@ -102,7 +102,7 @@ public:
   /**
    * Input file parameters specific to this class
    **/
-  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
+  static void defineInputFileSchema(axom::inlet::Table& schema_creator);
 
 private:
   /**
@@ -199,5 +199,22 @@ private:
 };
 
 }  // namespace serac
+
+// Prototype the specialization
+
+template <>
+struct FromInlet<serac::LinearSolverParameters> {
+  serac::LinearSolverParameters operator()(axom::inlet::Table& base);
+};
+
+template <>
+struct FromInlet<serac::NonlinearSolverParameters> {
+  serac::NonlinearSolverParameters operator()(axom::inlet::Table& base);
+};
+
+template <>
+struct FromInlet<serac::EquationSolver> {
+  serac::EquationSolver operator()(axom::inlet::Table& base);
+};
 
 #endif

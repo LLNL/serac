@@ -212,12 +212,12 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+void NonlinearSolid::defineInputFileSchema(axom::inlet::Table& schema_creator)
 {
-  auto table = schema_creator->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto table = schema_creator.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
 
   auto mesh_table = table->addTable("mesh_info", "File location and refinement info for the mesh");
-  serac::mesh::defineInputFileSchema(mesh_table);
+  serac::mesh::defineInputFileSchema(*mesh_table);
 
   // Polynomial interpolation order
   table->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
@@ -232,15 +232,14 @@ void NonlinearSolid::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCr
   table->addDouble("tz", "Cantilever tip traction in the z direction.")->defaultValue(0.0);
 
   auto solver_table = table->addTable("solver", "Linear and Nonlinear Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(solver_table);
+  serac::EquationSolver::defineInputFileSchema(*solver_table);
 }
 
 }  // namespace serac
 
 using serac::NonlinearSolid;
 
-template <>
-NonlinearSolid from_inlet<NonlinearSolid>(axom::inlet::Table& base)
+NonlinearSolid FromInlet<NonlinearSolid>::operator()(axom::inlet::Table& base)
 {
   auto           mesh = base["mesh_info"].get<std::shared_ptr<mfem::ParMesh>>();
   NonlinearSolid solid_solver(base["order"], mesh);

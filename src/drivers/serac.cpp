@@ -42,7 +42,7 @@ void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
   inlet->addDouble("dt", "Time step.")->defaultValue(0.25);
 
   // Physics
-  serac::NonlinearSolid::defineInputFileSchema(inlet);
+  serac::NonlinearSolid::defineInputFileSchema(*inlet->getGlobalTable());
 
   // Verify input file
   if (!inlet->verify()) {

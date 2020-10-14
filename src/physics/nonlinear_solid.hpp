@@ -140,7 +140,7 @@ public:
    *
    * @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
    **/
-  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
+  static void defineInputFileSchema(axom::inlet::Table& schema_creator);
 
 protected:
   /**
@@ -210,5 +210,10 @@ protected:
 };
 
 }  // namespace serac
+
+template <>
+struct FromInlet<serac::NonlinearSolid> {
+  serac::NonlinearSolid operator()(axom::inlet::Table& base);
+};
 
 #endif
