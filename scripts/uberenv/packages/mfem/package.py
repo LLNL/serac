@@ -43,7 +43,7 @@ class Mfem(Package):
 
     # SERAC EDIT BEGIN
     # Version spec used in serac based on mfem@develop commit SHA
-    version('4.1.0p1', SHA='bb3c788a05f430bcfed03065ba39868974964924')
+    version('4.1.0p1', commit='bb3c788a05f430bcfed03065ba39868974964924')
     # SERAC EDIT END
 
     # 'develop' is a special version that is always larger (or newer) than any
@@ -479,10 +479,10 @@ class Mfem(Package):
                 ld_flags_from_library_list(spec[sun_spec].libs)]
 
         if '+petsc' in spec:
+            # SERAC EDIT BEGIN (TODO: spack PR)
             options += [
-                'PETSC_OPT=%s' % spec['petsc'].headers.cpp_flags,
-                'PETSC_LIB=%s' %
-                ld_flags_from_library_list(spec['petsc'].libs)]
+                'PETSC_DIR=%s' % spec['petsc'].prefix]
+            # SERAC EDIT END
 
         if '+pumi' in spec:
             pumi_libs = ['pumi', 'crv', 'ma', 'mds', 'apf', 'pcu', 'gmi',

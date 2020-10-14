@@ -29,7 +29,7 @@ If you would like to include Serac's simulation capabilities in your software pr
 #. Advance the timestep by calling ``advanceTimestep(double dt)``. 
 #. Output the state variables in GLVis, VisIt, or ParaView format by calling ``outputState()``. You can also access the underlying `state data <../doxygen/html/classserac_1_1FiniteElementState.html>`_ via the generic ``getState()`` or physics-specific calls (e.g. ``temperature()``).
 
-Examples of how to use each of the physics modules can be found in the `tests` directory.
+Examples of how to use each of the physics modules can be found in the `tests directory <https://github.com/LLNL/serac/tree/develop/tests>`_.
 
 Physics Module Developer Guide
 ------------------------------
