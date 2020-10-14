@@ -78,8 +78,8 @@ be responsible for the lifetime of the shared resource; the other object can sto
 
 ``std::optional<T>`` is used to express the idea of ``Maybe T``, a.k.a. a nullable type.  An ``optional`` is optionally a ``T``,
 which is useful as a return type for functions that can fail.  It is preferable to values that are implied to be invalid or 
-represent failure, e.g., ``std::optional<int>`` should be used instead of -1 to represent an invalid array index.  You 
-can read more about ``optional`` `here <https://www.bfilipek.com/2018/05/using-optional.html>`_.
+represent failure, e.g., ``std::optional<int>`` should be used instead of -1 to represent an invalid array index.  It is also preferred
+as an alternative to functions that return ``nullptr`` on failure.  You can read more about ``optional`` `here <https://www.bfilipek.com/2018/05/using-optional.html>`_.
 
 ``std::variant<T1, T2, T3, ...>`` is use to express the idea of ``Either T1 or T2 or T3 or ...``.  It is the type- and memory-safe
 version of a ``union``.  `This article <https://arne-mertz.de/2018/05/modern-c-features-stdvariant-and-stdvisit/>`_ goes into more
@@ -89,7 +89,7 @@ inheritance hierarchy.
 Lambdas are also used frequently to declare small functions immediately before they are used, e.g., before they are passed to another function.
 Lambdas are very useful with ``std::algorithm`` s (introduced `here <https://www.fluentcpp.com/2017/01/05/the-importance-of-knowing-stl-algorithms/>`_), 
 which are often preferable to traditional ``for`` loops as they more clearly express intent.  Lambdas can also *capture* variables available
-in the scope in which they are declared - see `this page <https://blog.feabhas.com/2014/03/demystifying-c-lambdas/>`_ for more info.
+in the scope in which they are declared - see `this page <https://docs.microsoft.com/en-us/cpp/cpp/lambda-expressions-in-cpp>`_ for more info.
 
 Finally, range-based ``for`` loops (described `here <https://en.cppreference.com/w/cpp/language/range-for>`_) should be used 
 whenever possible instead of integer-iterator-based indexing.  This is supported for all standard library containers.
