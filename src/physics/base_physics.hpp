@@ -43,6 +43,8 @@ public:
    */
   BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
+  BasePhysics(BasePhysics&& other) = default;
+
   /**
    * @brief Set a list of true degrees of freedom from a coefficient
    *
@@ -135,6 +137,11 @@ public:
    * @brief Destroy the Base Solver object
    */
   virtual ~BasePhysics() = default;
+
+  /**
+   * @brief Returns a reference to the mesh object
+   */
+  const mfem::ParMesh& mesh() const { return *mesh_; }
 
 protected:
   /**

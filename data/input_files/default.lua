@@ -1,15 +1,17 @@
-mesh = "../meshes/beam-hex.mesh"
-
--- serial and parallel refinement levels
-ser_ref_levels = 0
-par_ref_levels = 0
-
 -- Simulation time parameters
 t_final = 1.0
 dt      = 0.25
 
 -- Solver parameters
 nonlinear_solid = {
+    mesh_info = {
+        -- mesh file
+        mesh = "../data/meshes/beam-hex.mesh",
+        -- serial and parallel refinement levels
+        ser_ref_levels = 0,
+        par_ref_levels = 0,
+    },
+
     solver = {
         nonlinear = {
             rel_tol     = 1.0e-2,

@@ -9,6 +9,7 @@
 #include "infrastructure/logger.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
+#include "numerics/mesh_utils.hpp"
 
 namespace serac {
 
@@ -215,6 +216,9 @@ void NonlinearSolid::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCr
 {
   auto table = schema_creator->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
 
+  auto mesh_table = table->addTable("mesh_info", "File location and refinement info for the mesh");
+  serac::mesh::defineInputFileSchema(mesh_table);
+
   // Polynomial interpolation order
   table->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
 
@@ -232,3 +236,25 @@ void NonlinearSolid::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCr
 }
 
 }  // namespace serac
+
+using serac::NonlinearSolid;
+
+template <>
+NonlinearSolid from_inlet<NonlinearSolid>(axom::inlet::Table& base)
+{
+  auto           mesh = base["mesh_info"].get<std::shared_ptr<mfem::ParMesh>>();
+  NonlinearSolid solid_solver(base["order"], mesh);
+
+  // Set the material parameters
+  // neo-Hookean material parameters
+  solid_solver.setHyperelasticMaterialParameters(base["mu"], base["K"]);
+
+  // Solver parameters
+  auto solver        = base["solver"];
+  auto lin_params    = solver["linear"].get<serac::LinearSolverParameters>();
+  auto nonlin_params = solver["nonlinear"].get<serac::NonlinearSolverParameters>();
+
+  solid_solver.setSolverParameters(lin_params, nonlin_params);
+
+  return solid_solver;
+}
