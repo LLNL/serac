@@ -40,7 +40,7 @@ class Conduit(Package):
     version('master', branch='master', submodules=True, preferred=True)
 
     # SERAC EDIT START
-    version('0.5.1p1', SHA='edc3f72add4bec69ec19352865618f32dadc0356', submodules="True")
+    version('0.5.1p1', commit='edc3f72add4bec69ec19352865618f32dadc0356', submodules="True")
     # SERAC EDIT END
 
     version('0.5.1', sha256='68a3696d1ec6d3a4402b44a464d723e6529ec41016f9b44c053676affe516d44')

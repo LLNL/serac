@@ -55,6 +55,16 @@ enum class LinearSolver
 };
 
 /**
+ * @brief Nonlinear solver type/method
+ */
+enum class NonlinearSolver
+{
+  MFEMNewton,
+  KINFullStep,
+  KINBacktrackingLineSearch
+};
+
+/**
  * @brief Preconditioning method
  */
 enum class Preconditioner
@@ -131,6 +141,11 @@ struct NonlinearSolverParameters {
    * @brief Debug print level
    */
   int print_level;
+
+  /**
+   * @brief Nonlinear solver selection
+   */
+  NonlinearSolver nonlin_solver = NonlinearSolver::MFEMNewton;
 };
 
 }  // namespace serac

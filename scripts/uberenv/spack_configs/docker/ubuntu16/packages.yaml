@@ -44,6 +44,12 @@ packages:
     buildable: false
   mpilander:
     buildable: false
+  mpi:
+    buildable: false
+  mpich:
+    externals:
+    - spec: mpich@3.3
+      prefix: /usr
 
   # System level packages to not build
   autotools:
@@ -95,3 +101,7 @@ packages:
   # Globally lock in version of CMake
   cmake:
     version: [3.10.1]
+    buildable: false
+    externals:
+    - spec: cmake@3.10.1
+      prefix: /usr
