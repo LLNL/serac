@@ -11,7 +11,7 @@
 #---------------------------------------
 # SYS_TYPE: linux-ubuntu18.04-ivybridge
 # Compiler Spec: clang@10.0.0
-# CMake executable path: /home/serac/serac_tpls/clang-10.0.0/cmake-3.10.1/bin/cmake
+# CMake executable path: /usr/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
@@ -55,7 +55,7 @@ set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
 
 set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
-set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-5.4.0" CACHE PATH "")
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
 set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 
@@ -64,5 +64,3 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
 #------------------------------------------------------------------------------
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
-
-
