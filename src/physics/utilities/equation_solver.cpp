@@ -80,6 +80,9 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
     prec_smoother->SetType(relaxation_type);
     prec_smoother->SetPositiveDiagonal(true);
     prec_ = std::move(prec_smoother);
+  } else if (std::holds_alternative<BlockILUPrec>(lin_params.prec)) {
+    auto block_size = std::get<BlockILUPrec>(lin_params.prec).block_size;
+    prec_           = std::make_unique<mfem::BlockILU>(block_size);
   }
   iter_lin_solver->SetPreconditioner(*prec_);
   return iter_lin_solver;
