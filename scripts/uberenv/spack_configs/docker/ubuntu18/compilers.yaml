@@ -2,7 +2,9 @@ compilers:
   - compiler:
       environment: {}
       extra_rpaths: []
-      flags: {}
+      # Axom example sidre_shocktube_F_ex doesn't link otherwise
+      flags:
+        ldflags: -no-pie
       modules: []
       operating_system: ubuntu18.04
       paths:
