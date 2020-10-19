@@ -214,24 +214,22 @@ NonlinearSolid::~NonlinearSolid() {}
 
 void NonlinearSolid::defineInputFileSchema(axom::inlet::Table& table)
 {
-  auto table = table.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-
-  auto mesh_table = table->addTable("mesh_info", "File location and refinement info for the mesh");
+  auto mesh_table = table.addTable("mesh_info", "File location and refinement info for the mesh");
   serac::mesh::defineInputFileSchema(*mesh_table);
 
   // Polynomial interpolation order
-  table->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
+  table.addInt("order", "Order degree of the finite elements.")->defaultValue(1);
 
   // neo-Hookean material parameters
-  table->addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
-  table->addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);
+  table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
+  table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);
 
   // loading parameters
-  table->addDouble("tx", "Cantilever tip traction in the x direction.")->defaultValue(0.0);
-  table->addDouble("ty", "Cantilever tip traction in the y direction.")->defaultValue(1.0e-3);
-  table->addDouble("tz", "Cantilever tip traction in the z direction.")->defaultValue(0.0);
+  table.addDouble("tx", "Cantilever tip traction in the x direction.")->defaultValue(0.0);
+  table.addDouble("ty", "Cantilever tip traction in the y direction.")->defaultValue(1.0e-3);
+  table.addDouble("tz", "Cantilever tip traction in the z direction.")->defaultValue(0.0);
 
-  auto solver_table = table->addTable("solver", "Linear and Nonlinear Solver Parameters.");
+  auto solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(*solver_table);
 }
 

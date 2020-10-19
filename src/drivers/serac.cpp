@@ -42,7 +42,8 @@ void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
   inlet->addDouble("dt", "Time step.")->defaultValue(0.25);
 
   // Physics
-  serac::NonlinearSolid::defineInputFileSchema(*inlet->getGlobalTable());
+  auto solid_solver_table = inlet->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  serac::NonlinearSolid::defineInputFileSchema(*solid_solver_table);
 
   // Verify input file
   if (!inlet->verify()) {

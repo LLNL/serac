@@ -2,7 +2,7 @@
 t_final = 1.0
 dt      = 0.25
 
-primary_mesh = {
+main_mesh = {
     -- mesh file
     mesh = "../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
@@ -12,7 +12,7 @@ primary_mesh = {
 
 -- Solver parameters
 nonlinear_solid = {
-    mesh_info = primary_mesh,
+    mesh_info = main_mesh,
 
     solver = {
         nonlinear = {
