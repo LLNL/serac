@@ -27,8 +27,22 @@ TEST(component_bc, qs_solve)
 
   int dim = pmesh->Dimension();
 
+  // Set the linear solver params
+  IterativeSolverParameters params = {.rel_tol     = 1.0e-6,
+                                      .abs_tol     = 1.0e-8,
+                                      .print_level = 0,
+                                      .max_iter    = 5000,
+                                      .lin_solver  = LinearSolver::MINRES,
+                                      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+  params.rel_tol                   = 1.0e-8;
+  params.abs_tol                   = 1.0e-12;
+
+  NonlinearSolverParameters nl_params = {.rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
+  nl_params.rel_tol                   = 1.0e-6;
+  nl_params.abs_tol                   = 1.0e-8;
+
   // Define the solver object
-  NonlinearSolid solid_solver(1, pmesh);
+  NonlinearSolid solid_solver(1, pmesh, {params, nl_params});
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   std::set<int> ess_bdr = {1};
@@ -54,26 +68,6 @@ TEST(component_bc, qs_solve)
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
-
-  // Set the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-8;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 5000;
-  params.prec        = serac::Preconditioner::Jacobi;
-  params.lin_solver  = serac::LinearSolver::MINRES;
-
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-6;
-  nl_params.abs_tol     = 1.0e-8;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 5000;
-
-  solid_solver.setSolverParameters(params, nl_params);
-
-  // Set the time step method
-  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "component_bc");
@@ -120,8 +114,22 @@ TEST(component_bc, qs_attribute_solve)
 
   int dim = pmesh->Dimension();
 
+  // Set the linear solver params
+  IterativeSolverParameters params = {.rel_tol     = 1.0e-6,
+                                      .abs_tol     = 1.0e-8,
+                                      .print_level = 0,
+                                      .max_iter    = 5000,
+                                      .lin_solver  = LinearSolver::MINRES,
+                                      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+  params.rel_tol                   = 1.0e-8;
+  params.abs_tol                   = 1.0e-12;
+
+  NonlinearSolverParameters nl_params = {.rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
+  nl_params.rel_tol                   = 1.0e-6;
+  nl_params.abs_tol                   = 1.0e-8;
+
   // Define the solver object
-  NonlinearSolid solid_solver(2, pmesh);
+  NonlinearSolid solid_solver(2, pmesh, {params, nl_params});
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   std::set<int> ess_x_bdr = {1};
@@ -137,26 +145,6 @@ TEST(component_bc, qs_attribute_solve)
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
-
-  // Set the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-8;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 5000;
-  params.prec        = serac::Preconditioner::Jacobi;
-  params.lin_solver  = serac::LinearSolver::MINRES;
-
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-6;
-  nl_params.abs_tol     = 1.0e-8;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 5000;
-
-  solid_solver.setSolverParameters(params, nl_params);
-
-  // Set the time step method
-  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::GLVis, "component_attr_bc");

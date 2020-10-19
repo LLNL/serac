@@ -26,11 +26,15 @@ TEST(serac_dtor, test1)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
-  // Initialize the second order thermal solver on the parallel mesh
-  auto therm_solver = std::make_unique<ThermalConduction>(2, pmesh);
+  IterativeSolverParameters lin_params = {.rel_tol     = 1.0e-6,
+                                          .abs_tol     = 1.0e-12,
+                                          .print_level = 0,
+                                          .max_iter    = 100,
+                                          .lin_solver  = LinearSolver::CG,
+                                          .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
 
-  // Set the time integration method
-  therm_solver->setTimestepper(serac::TimestepMethod::QuasiStatic);
+  // Initialize the second order thermal solver on the parallel mesh
+  auto therm_solver = std::make_unique<ThermalConduction>(2, pmesh, lin_params);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x.Norml2(); });
@@ -43,20 +47,12 @@ TEST(serac_dtor, test1)
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver->setConductivity(std::move(kappa));
 
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  therm_solver->setLinearSolverParameters(params);
-
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
   therm_solver->completeSetup();
 
   // Destruct the old thermal solver and build a new one
-  therm_solver.reset(new ThermalConduction(1, pmesh));
+  therm_solver.reset(new ThermalConduction(1, pmesh, lin_params));
 
   // Destruct the second thermal solver and leave the pointer empty
   therm_solver.reset(nullptr);

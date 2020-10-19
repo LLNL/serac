@@ -218,11 +218,6 @@ protected:
   std::vector<bool> gf_initialized_;
 
   /**
-   * @brief System solver instance
-   */
-  EquationSolver solver_;
-
-  /**
    * @brief Boundary condition manager instance
    */
   BoundaryConditionManager bcs_;
