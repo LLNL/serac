@@ -138,9 +138,9 @@ public:
   /**
    * @brief Input file parameters specific to this class
    *
-   * @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
+   * @param[in] table Inlet's SchemaCreator that input files will be added too
    **/
-  static void defineInputFileSchema(axom::inlet::Table& schema_creator);
+  static void defineInputFileSchema(axom::inlet::Table& table);
 
 protected:
   /**

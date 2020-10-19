@@ -212,9 +212,9 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::defineInputFileSchema(axom::inlet::Table& schema_creator)
+void NonlinearSolid::defineInputFileSchema(axom::inlet::Table& table)
 {
-  auto table = schema_creator.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto table = table.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
 
   auto mesh_table = table->addTable("mesh_info", "File location and refinement info for the mesh");
   serac::mesh::defineInputFileSchema(*mesh_table);

@@ -102,7 +102,7 @@ public:
   /**
    * Input file parameters specific to this class
    **/
-  static void defineInputFileSchema(axom::inlet::Table& schema_creator);
+  static void defineInputFileSchema(axom::inlet::Table& table);
 
 private:
   /**

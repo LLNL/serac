@@ -170,14 +170,14 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
 
 namespace mesh {
 
-void defineInputFileSchema(axom::inlet::Table& schema_creator)
+void defineInputFileSchema(axom::inlet::Table& table)
 {
   // mesh path
-  schema_creator.addString("mesh", "Path to Mesh file")->required(true);
+  table.addString("mesh", "Path to Mesh file")->required(true);
 
   // Refinement levels
-  schema_creator.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.")->defaultValue(0);
-  schema_creator.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")->defaultValue(0);
+  table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.")->defaultValue(0);
+  table.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")->defaultValue(0);
 }
 
 }  // namespace mesh
