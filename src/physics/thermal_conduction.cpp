@@ -12,13 +12,28 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh)
+ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       temperature_(std::make_shared<FiniteElementState>(
           *mesh,
           FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}))
 {
   state_[0] = temperature_;
+
+  // If it's just the single set of params for a quasistatic K solve...
+  if (std::holds_alternative<LinearSolverParameters>(params)) {
+    auto K_params = std::get<LinearSolverParameters>(params);
+    K_inv_        = EquationSolver(mesh->GetComm(), K_params);
+    setTimestepper(TimestepMethod::QuasiStatic);
+  }
+  // Otherwise, two sets of parameters for the dynamic M/T solve
+  else {
+    auto dyn_params = std::get<DynamicSolverParameters>(params);
+    setTimestepper(dyn_params.timestepper);
+    // Save these to initialize the DynamicConductionOperator later
+    dyn_M_params_ = dyn_params.M_params;
+    dyn_T_params_ = dyn_params.T_params;
+  }
 }
 
 void ThermalConduction::setTemperature(mfem::Coefficient& temp)
@@ -51,13 +66,6 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 {
   // Set the body source integral coefficient
   source_ = std::move(source);
-}
-
-void ThermalConduction::setLinearSolverParameters(const serac::LinearSolverParameters& params)
-{
-  // Save the solver params object
-  // TODO: separate the M and K solver params
-  lin_params_ = params;
 }
 
 void ThermalConduction::completeSetup()
@@ -104,8 +112,9 @@ void ThermalConduction::completeSetup()
 
     M_mat_.reset(M_form_->ParallelAssemble());
 
-    // Make the time integration operator and set the appropriate matricies
-    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_->space(), lin_params_, bcs_);
+    // Make the time integration operator and set the appropriate matrices
+    dyn_oper_ =
+        std::make_unique<DynamicConductionOperator>(temperature_->space(), *dyn_M_params_, *dyn_T_params_, bcs_);
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 
@@ -121,20 +130,11 @@ void ThermalConduction::quasiStaticSolve()
     bc.apply(*K_mat_, *bc_rhs_, *temperature_, time_);
   }
 
-  // Solve the stiffness using CG with Jacobi preconditioning
-  // and the given solverparams
-  solver_ = EquationSolver(temperature_->comm(), lin_params_);
-
-  auto hypre_smoother = std::make_unique<mfem::HypreSmoother>();
-  hypre_smoother->SetType(mfem::HypreSmoother::Jacobi);
-
-  solver_.SetPreconditioner(std::move(hypre_smoother));
-
-  solver_.linearSolver().iterative_mode = false;
-  solver_.SetOperator(*K_mat_);
+  K_inv_->linearSolver().iterative_mode = false;
+  K_inv_->SetOperator(*K_mat_);
 
   // Perform the linear solve
-  solver_.Mult(*bc_rhs_, temperature_->trueVec());
+  K_inv_->Mult(*bc_rhs_, temperature_->trueVec());
 }
 
 void ThermalConduction::advanceTimestep(double& dt)

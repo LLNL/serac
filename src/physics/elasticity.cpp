@@ -13,12 +13,18 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh)
+Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverParameters& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
 {
   mesh->EnsureNodes();
   state_[0] = displacement_;
+
+  // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
+  const auto& augmented_params = augmentAMGWithSpace(params, displacement_->space());
+
+  K_inv_ = EquationSolver(mesh->GetComm(), augmented_params);
+  setTimestepper(TimestepMethod::QuasiStatic);
 }
 
 void Elasticity::setDisplacementBCs(const std::set<int>&                     disp_bdr,
@@ -40,8 +46,6 @@ void Elasticity::setLameParameters(mfem::Coefficient& lambda, mfem::Coefficient&
 }
 
 void Elasticity::setBodyForce(mfem::VectorCoefficient& force) { body_force_ = &force; }
-
-void Elasticity::setLinearSolverParameters(const serac::LinearSolverParameters& params) { lin_params_ = params; }
 
 void Elasticity::completeSetup()
 {
@@ -87,24 +91,6 @@ void Elasticity::completeSetup()
 
   // Initialize the true vector
   displacement_->initializeTrueVec();
-
-  solver_ = EquationSolver(displacement_->comm(), lin_params_);
-  if (lin_params_.prec == serac::Preconditioner::BoomerAMG) {
-    SLIC_WARNING_IF(displacement_->space().GetOrdering() == mfem::Ordering::byVDIM,
-                    "Attempting to use BoomerAMG with nodal ordering.");
-
-    auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
-    prec_amg->SetPrintLevel(lin_params_.print_level);
-    prec_amg->SetElasticityOptions(&displacement_->space());
-    solver_.SetPreconditioner(std::move(prec_amg));
-  }
-  // If not AMG, just MINRES with Jacobi smoothing
-  else {
-    auto K_hypreSmoother = std::make_unique<mfem::HypreSmoother>();
-    K_hypreSmoother->SetType(mfem::HypreSmoother::l1Jacobi);
-    K_hypreSmoother->SetPositiveDiagonal(true);
-    solver_.SetPreconditioner(std::move(K_hypreSmoother));
-  }
 }
 
 void Elasticity::advanceTimestep(double&)
@@ -134,9 +120,9 @@ void Elasticity::QuasiStaticSolve()
     bc.apply(*K_mat_, *bc_rhs_, *displacement_, time_, should_be_scalar);
   }
 
-  solver_.SetOperator(*K_mat_);
+  K_inv_.SetOperator(*K_mat_);
 
-  solver_.Mult(*bc_rhs_, displacement_->trueVec());
+  K_inv_.Mult(*bc_rhs_, displacement_->trueVec());
 }
 
 Elasticity::~Elasticity() {}
