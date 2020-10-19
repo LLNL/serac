@@ -259,6 +259,7 @@ class Axom(CMakePackage, CudaPackage):
         # BEGIN SERAC EDIT
         if "+cpp14" in spec:
             cfg.write(cmake_cache_entry("BLT_CXX_STD", "c++14", ""))
+        cfg.write(cmake_cache_option("AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION", True))
         # END SERAC EDIT
 
         # TPL locations
