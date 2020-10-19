@@ -12,8 +12,7 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh,
-                                     const ThermalConductionParameters& params)
+ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       temperature_(std::make_shared<FiniteElementState>(
           *mesh,
@@ -29,7 +28,7 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   }
   // Otherwise, two sets of parameters for the dynamic M/T solve
   else {
-    auto dyn_params = std::get<DynamicParameters>(params);
+    auto dyn_params = std::get<DynamicSolverParameters>(params);
     setTimestepper(dyn_params.timestepper);
     // Save these to initialize the DynamicConductionOperator later
     dyn_M_params_ = dyn_params.M_params;

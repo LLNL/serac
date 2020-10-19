@@ -159,9 +159,8 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
-
-  int dim = pmesh->Dimension();
+  auto                 pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  SolverParameters int dim   = pmesh->Dimension();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the

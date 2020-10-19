@@ -32,7 +32,7 @@ public:
   /**
    * @brief A timestep method and config for the M solver
    */
-  struct DynamicParameters {
+  struct DynamicSolverParameters {
     TimestepMethod         timestepper;
     LinearSolverParameters M_params;
   };
@@ -40,10 +40,10 @@ public:
    * @brief A configuration variant for the various solves
    * Either quasistatic, or time-dependent with timestep and M params
    */
-  struct NonlinearSolidParameters {
-    LinearSolverParameters           H_lin_params;
-    NonlinearSolverParameters        H_nonlin_params;
-    std::optional<DynamicParameters> dyn_params = std::nullopt;
+  struct SolverParameters {
+    LinearSolverParameters                 H_lin_params;
+    NonlinearSolverParameters              H_nonlin_params;
+    std::optional<DynamicSolverParameters> dyn_params = std::nullopt;
   };
 
   /**
@@ -53,7 +53,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] solver The system solver parameters
    */
-  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolidParameters& params);
+  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
 
   /**
    * @brief Set displacement boundary conditions

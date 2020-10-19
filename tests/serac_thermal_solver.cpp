@@ -173,8 +173,8 @@ TEST(thermal_solver, dyn_exp_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
-  const ThermalConduction::DynamicParameters default_explicit_solve = {TimestepMethod::ForwardEuler,
-                                                                       default_linear_params, default_linear_params};
+  const ThermalConduction::DynamicSolverParameters default_explicit_solve = {
+      TimestepMethod::ForwardEuler, default_linear_params, default_linear_params};
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalConduction therm_solver(2, pmesh, default_explicit_solve);
@@ -234,8 +234,8 @@ TEST(thermal_solver, dyn_imp_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
-  const ThermalConduction::DynamicParameters default_implicit_solve = {TimestepMethod::BackwardEuler,
-                                                                       default_linear_params, default_linear_params};
+  const ThermalConduction::DynamicSolverParameters default_implicit_solve = {
+      TimestepMethod::BackwardEuler, default_linear_params, default_linear_params};
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalConduction therm_solver(2, pmesh, default_implicit_solve);

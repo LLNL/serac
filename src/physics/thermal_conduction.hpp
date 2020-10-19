@@ -34,7 +34,7 @@ public:
   /**
    * @brief A timestep method and configs for the M and T solvers
    */
-  struct DynamicParameters {
+  struct DynamicSolverParameters {
     TimestepMethod         timestepper;
     LinearSolverParameters M_params;
     LinearSolverParameters T_params;
@@ -45,7 +45,7 @@ public:
    * Either quasistatic with a single config for the K solver, or
    * time-dependent with timestep and M/T params
    */
-  using ThermalConductionParameters = std::variant<LinearSolverParameters, DynamicParameters>;
+  using SolverParameters = std::variant<LinearSolverParameters, DynamicSolverParameters>;
 
   /**
    * @brief Construct a new Thermal Solver object
@@ -54,8 +54,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    * @param[in] params The system solver parameters
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh,
-                    const ThermalConduction::ThermalConductionParameters& params);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverParameters& params);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)

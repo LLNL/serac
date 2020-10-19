@@ -69,8 +69,8 @@ TEST(dynamic_solver, dyn_solve)
   therm_M_params.prec = HypreSmootherPrec{};
   therm_T_params.prec = HypreSmootherPrec{};
 
-  ThermalConduction::ThermalConductionParameters therm_params =
-      ThermalConduction::DynamicParameters{TimestepMethod::SDIRK33, therm_M_params, therm_T_params};
+  ThermalConduction::SolverParameters therm_params =
+      ThermalConduction::DynamicSolverParameters{TimestepMethod::SDIRK33, therm_M_params, therm_T_params};
 
   const IterativeSolverParameters default_dyn_oper_linear_params = {
       .rel_tol     = 1.0e-4,
@@ -85,7 +85,7 @@ TEST(dynamic_solver, dyn_solve)
 
   const NonlinearSolid::NonlinearSolidParameters default_dynamic = {
       default_dyn_linear_params, default_dyn_nonlinear_params,
-      NonlinearSolid::DynamicParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
+      NonlinearSolid::DynamicSolverParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);

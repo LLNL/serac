@@ -14,8 +14,8 @@ namespace serac {
 constexpr int NUM_FIELDS = 3;
 
 ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
-                           const ThermalConduction::ThermalConductionParameters& therm_params,
-                           const NonlinearSolid::NonlinearSolidParameters&       solid_params)
+                           const ThermalConduction::SolverParameters& therm_params,
+                           const NonlinearSolid::SolverParameters&    solid_params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       therm_solver_(order, mesh, therm_params),
       solid_solver_(order, mesh, solid_params)
