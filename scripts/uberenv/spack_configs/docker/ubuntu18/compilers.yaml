@@ -5,6 +5,7 @@ compilers:
       # Axom example sidre_shocktube_F_ex doesn't link otherwise
       flags:
         cflags: -fPIC
+        cppflags: -fPIC
       modules: []
       operating_system: ubuntu18.04
       paths:
