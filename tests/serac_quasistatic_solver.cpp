@@ -26,8 +26,7 @@ const IterativeSolverParameters default_qs_linear_params = {.rel_tol     = 1.0e-
 const NonlinearSolverParameters default_qs_nonlinear_params = {
     .rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
 
-const NonlinearSolid::NonlinearSolidParameters default_quasistatic = {default_qs_linear_params,
-                                                                      default_qs_nonlinear_params};
+const NonlinearSolid::SolverParameters default_quasistatic = {default_qs_linear_params, default_qs_nonlinear_params};
 
 TEST(nonlinear_solid_solver, qs_solve)
 {
@@ -159,8 +158,8 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
-  auto                 pmesh = buildMeshFromFile(mesh_file, 1, 0);
-  SolverParameters int dim   = pmesh->Dimension();
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  int  dim   = pmesh->Dimension();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
@@ -172,7 +171,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   custom_solver->SetMaxIter(custom_params.max_iter);
   custom_solver->SetPrintLevel(custom_params.print_level);
 
-  NonlinearSolid::NonlinearSolidParameters params;
+  NonlinearSolid::SolverParameters params;
   params.H_lin_params    = CustomSolverParameters{custom_solver.get()};
   params.H_nonlin_params = default_qs_nonlinear_params;
 

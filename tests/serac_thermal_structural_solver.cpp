@@ -83,7 +83,7 @@ TEST(dynamic_solver, dyn_solve)
   const NonlinearSolverParameters default_dyn_nonlinear_params = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
-  const NonlinearSolid::NonlinearSolidParameters default_dynamic = {
+  const NonlinearSolid::SolverParameters default_dynamic = {
       default_dyn_linear_params, default_dyn_nonlinear_params,
       NonlinearSolid::DynamicSolverParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
 
