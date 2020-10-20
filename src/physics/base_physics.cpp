@@ -144,8 +144,8 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
 
   if ((output_type_ == OutputType::VisIt) || (output_type_ == OutputType::Sidre)) {
     for (const auto& state : state_) {
-        dc_->RegisterField(state->name(), &state->gridFunc());
-      }
+      dc_->RegisterField(state->name(), &state->gridFunc());
+    }
   }
 }
 
@@ -153,9 +153,9 @@ void BasePhysics::outputState() const
 {
   switch (output_type_) {
     case serac::OutputType::VisIt:
-    [[fallthrough]];
+      [[fallthrough]];
     case serac::OutputType::ParaView:
-    [[fallthrough]];
+      [[fallthrough]];
     case serac::OutputType::Sidre: {
       dc_->SetCycle(cycle_);
       dc_->SetTime(time_);
