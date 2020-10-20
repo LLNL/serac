@@ -563,10 +563,6 @@ class Axom(CMakePackage, CudaPackage):
         else:
             options.append('-DBUILD_SHARED_LIBS=OFF')
 
-        # BEGIN SERAC EDIT
-        options.append('-DAXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION=ON')
-        # END SERAC EDIT
-
         return options
 
     @run_after('install')
