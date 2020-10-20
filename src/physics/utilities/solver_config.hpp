@@ -13,6 +13,10 @@
 #ifndef SOLVER_CONFIG
 #define SOLVER_CONFIG
 
+#include <variant>
+
+#include "mfem.hpp"
+
 namespace serac {
 /**
  * @brief Output file type associated with a solver
@@ -64,13 +68,23 @@ enum class NonlinearSolver
 };
 
 /**
+ * @brief Stores the information required to configure a HypreSmoother
+ */
+struct HypreSmootherPrec {
+  mfem::HypreSmoother::Type type;
+};
+
+/**
+ * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
+ */
+struct HypreBoomerAMGPrec {
+  mfem::ParFiniteElementSpace* pfes = nullptr;
+};
+
+/**
  * @brief Preconditioning method
  */
-enum class Preconditioner
-{
-  Jacobi,
-  BoomerAMG
-};
+using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec>;
 
 /**
  * @brief Abstract multiphysics coupling scheme
@@ -83,9 +97,9 @@ enum class CouplingScheme
 };
 
 /**
- * @brief Parameters for a linear solution scheme
+ * @brief Parameters for an iterative linear solution scheme
  */
-struct LinearSolverParameters {
+struct IterativeSolverParameters {
   /**
    * @brief Relative tolerance
    */
@@ -116,6 +130,30 @@ struct LinearSolverParameters {
    */
   Preconditioner prec;
 };
+
+/**
+ * @brief Parameters for a custom solver (currently just a non-owning pointer to the solver)
+ * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
+ * and destructors are a nightmare in this context
+ */
+struct CustomSolverParameters {
+  mfem::Solver* solver = nullptr;
+};
+
+/**
+ * @brief Parameters for a direct solver (PARDISO, MUMPS, SuperLU, etc)
+ */
+struct DirectSolverParameters {
+  /**
+   * @brief Debugging print level
+   */
+  int print_level;
+};
+
+/**
+ * @brief Parameters for a linear solver
+ */
+using LinearSolverParameters = std::variant<IterativeSolverParameters, CustomSolverParameters, DirectSolverParameters>;
 
 /**
  * @brief Nonlinear solution scheme parameters

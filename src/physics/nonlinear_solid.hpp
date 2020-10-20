@@ -30,12 +30,30 @@ namespace serac {
 class NonlinearSolid : public BasePhysics {
 public:
   /**
+   * @brief A timestep method and config for the M solver
+   */
+  struct DynamicSolverParameters {
+    TimestepMethod         timestepper;
+    LinearSolverParameters M_params;
+  };
+  /**
+   * @brief A configuration variant for the various solves
+   * Either quasistatic, or time-dependent with timestep and M params
+   */
+  struct SolverParameters {
+    LinearSolverParameters                 H_lin_params;
+    NonlinearSolverParameters              H_nonlin_params;
+    std::optional<DynamicSolverParameters> dyn_params = std::nullopt;
+  };
+
+  /**
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] order The order of the displacement field
    * @param[in] mesh The MFEM parallel mesh to solve on
+   * @param[in] solver The system solver parameters
    */
-  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
 
   NonlinearSolid(NonlinearSolid&& other) = default;
 
@@ -97,14 +115,6 @@ public:
   void setVelocity(mfem::VectorCoefficient& velo_state);
 
   /**
-   * @brief Set the linear and nonlinear parameters object
-   *
-   * @param[in] lin_params The linear solver parameters
-   * @param[in] nonlin_params The nonlinear solver parameters
-   */
-  void setSolverParameters(const LinearSolverParameters& lin_params, const NonlinearSolverParameters& nonlin_params);
-
-  /**
    * @brief Get the displacement state
    *
    * @return The displacement state field
@@ -159,19 +169,14 @@ protected:
   std::unique_ptr<mfem::Operator> nonlinear_oper_;
 
   /**
+   * @brief Configuration for dynamic equation solver
+   */
+  std::optional<LinearSolverParameters> timedep_oper_params_;
+
+  /**
    * @brief The time dependent operator for use with the MFEM ODE solvers
    */
   std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
-
-  /**
-   * @brief The linear solver for the Jacobian
-   */
-  std::unique_ptr<mfem::Solver> J_solver_;
-
-  /**
-   * @brief The preconditioner for the Jacobian solver
-   */
-  std::unique_ptr<mfem::Solver> J_prec_;
 
   /**
    * @brief The viscosity coefficient
@@ -182,16 +187,6 @@ protected:
    * @brief The hyperelastic material model
    */
   std::unique_ptr<mfem::HyperelasticModel> model_;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  LinearSolverParameters lin_params_;
-
-  /**
-   * @brief Nonlinear solver parameters
-   */
-  NonlinearSolverParameters nonlin_params_;
 
   /**
    * @brief Pointer to the reference mesh data
@@ -207,6 +202,11 @@ protected:
    * @brief Solve the Quasi-static operator
    */
   void quasiStaticSolve();
+
+  /**
+   * @brief Nonlinear system solver instance
+   */
+  EquationSolver nonlin_solver_;
 };
 
 }  // namespace serac

@@ -43,16 +43,6 @@ public:
                  const std::optional<NonlinearSolverParameters>& nonlin_params = std::nullopt);
 
   /**
-   * Sets a preconditioner for the underlying linear solver object
-   * @param[in] prec The preconditioner, of which the object takes ownership
-   * @note The preconditioner must be moved into the call
-   * @code(.cpp)
-   * solver.SetPreconditioner(std::move(prec));
-   * @endcode
-   */
-  void SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec);
-
-  /**
    * Updates the solver with the provided operator
    * @param[in] op The operator (system matrix) to use, "A" in Ax = b
    * @note Implements mfem::Operator::SetOperator
@@ -88,15 +78,11 @@ public:
    */
   mfem::Solver& linearSolver()
   {
-    mfem::Solver* result;
-    std::visit([&result](auto&& solver) { result = solver.get(); }, lin_solver_);
-    return *result;
+    return std::visit([](auto&& solver) -> mfem::Solver& { return *solver; }, lin_solver_);
   }
   const mfem::Solver& linearSolver() const
   {
-    mfem::Solver* result;
-    std::visit([&result](auto&& solver) { result = solver.get(); }, lin_solver_);
-    return *result;
+    return std::visit([](auto&& solver) -> const mfem::Solver& { return *solver; }, lin_solver_);
   }
 
   /**
@@ -110,8 +96,8 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] lin_params The parameters for the linear solver
    */
-  static std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                      comm,
-                                                                           const LinearSolverParameters& lin_params);
+  std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                         comm,
+                                                                    const IterativeSolverParameters& lin_params);
 
   /**
    * @brief Builds an Newton-Raphson solver given a set of nonlinear solver parameters
@@ -171,9 +157,9 @@ private:
   std::unique_ptr<mfem::Solver> prec_;
 
   /**
-   * @brief The linear solver object, either direct (SuperLU) or iterative
+   * @brief The linear solver object, either custom, direct (SuperLU), or iterative
    */
-  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<mfem::SuperLUSolver>> lin_solver_;
+  std::variant<std::unique_ptr<mfem::IterativeSolver>, std::unique_ptr<mfem::SuperLUSolver>, mfem::Solver*> lin_solver_;
 
   /**
    * @brief The optional nonlinear Newton-Raphson solver object
@@ -198,13 +184,34 @@ private:
   std::unique_ptr<SuperLUNonlinearOperatorWrapper> superlu_wrapper_;
 };
 
+/**
+ * @brief A helper method intended to be called by physics modules to configure the AMG preconditioner
+ * @param[in] init_params The user-provided solver parameters to possibly modify
+ * @param[in] pfes The FiniteElementSpace to configure the preconditioner with
+ * @note A full copy of the object is made, pending C++20 relaxation of "mutable"
+ */
+inline LinearSolverParameters augmentAMGWithSpace(const LinearSolverParameters& init_params,
+                                                  mfem::ParFiniteElementSpace&  pfes)
+{
+  auto augmented_params = init_params;
+  if (std::holds_alternative<IterativeSolverParameters>(init_params)) {
+    const auto& iter_params = std::get<IterativeSolverParameters>(init_params);
+    if (std::holds_alternative<HypreBoomerAMGPrec>(iter_params.prec)) {
+      // It's a copy, but at least it's on the stack
+      std::get<HypreBoomerAMGPrec>(std::get<IterativeSolverParameters>(augmented_params).prec).pfes = &pfes;
+    }
+  }
+  // NRVO will kick in here
+  return augmented_params;
+}
+
 }  // namespace serac
 
 // Prototype the specialization
 
 template <>
-struct FromInlet<serac::LinearSolverParameters> {
-  serac::LinearSolverParameters operator()(axom::inlet::Table& base);
+struct FromInlet<serac::IterativeSolverParameters> {
+  serac::IterativeSolverParameters operator()(axom::inlet::Table& base);
 };
 
 template <>

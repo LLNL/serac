@@ -7,6 +7,7 @@
 #include "infrastructure/logger.hpp"
 
 #include "infrastructure/initialize.hpp"
+#include "infrastructure/terminator.hpp"
 
 namespace serac {
 
@@ -69,7 +70,9 @@ bool initialize(MPI_Comm comm)
   addStreamToMsgLevel(iStream, slic::message::Info);
   addStreamToMsgLevel(dStream, slic::message::Debug);
 
-  slic::setAbortOnError(false);
+  // Exit gracefully on error
+  slic::setAbortFunction([]() { exitGracefully(true); });
+  slic::setAbortOnError(true);
   slic::setAbortOnWarning(false);
 
   std::string msg = fmt::format("Logger activated: {0}", loggerName);
