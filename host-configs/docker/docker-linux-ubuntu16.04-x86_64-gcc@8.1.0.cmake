@@ -43,7 +43,7 @@ set(MPIEXEC_EXECUTABLE "/usr/bin/mpiexec" CACHE PATH "")
 #---------------------------------------
 set(TPL_ROOT "/home/serac/serac_tpls/gcc-8.1.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0p1" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 
 set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.5.1p1" CACHE PATH "")
 
