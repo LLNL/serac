@@ -123,6 +123,9 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("mfem+sundials", when="+sundials")
     depends_on("sundials~shared", when="+sundials")
 
+    # Needs to be first due to a bug with the Spack concretizer
+    depends_on("hdf5+hl@1.8.21~shared")
+
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran~raja~umpire+mfem~shared",
                         "metis@5.1.0~shared",
@@ -136,7 +139,6 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
-    depends_on("hdf5@1.8.21~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
