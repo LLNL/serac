@@ -44,6 +44,7 @@ class Mfem(Package):
     # SERAC EDIT BEGIN
     # Version spec used in serac based on mfem@develop commit SHA
     version('4.1.0p1', commit='bb3c788a05f430bcfed03065ba39868974964924')
+    version('4.2candidate', branch='mfem-4.2-dev')
     # SERAC EDIT END
 
     # 'develop' is a special version that is always larger (or newer) than any
