@@ -81,20 +81,27 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
 
 namespace mesh {
 
-/**
- * @brief Input file parameters specific to this class
- *
- * @param[in] table Inlet's SchemaCreator that input files will be added too
- **/
-void defineInputFileSchema(axom::inlet::Table& table);
+struct InputInfo {
+  /**
+   * @brief Input file parameters specific to this class
+   *
+   * @param[in] table Inlet's SchemaCreator that input files will be added to
+   **/
+  static void defineInputFileSchema(axom::inlet::Table& table);
+
+  std::string relative_mesh_file_name;
+  // Serial/parallel refinement iterations
+  int ser_ref_levels;
+  int par_ref_levels;
+};
 
 }  // namespace mesh
 }  // namespace serac
 
 // Prototype the specialization
 template <>
-struct FromInlet<std::shared_ptr<mfem::ParMesh>> {
-  std::shared_ptr<mfem::ParMesh> operator()(axom::inlet::Table& base);
+struct FromInlet<serac::mesh::InputInfo> {
+  serac::mesh::InputInfo operator()(axom::inlet::Table& base);
 };
 
 #endif

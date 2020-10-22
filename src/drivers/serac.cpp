@@ -41,9 +41,12 @@ void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
   inlet->addDouble("t_final", "Final time for simulation.")->defaultValue(1.0);
   inlet->addDouble("dt", "Time step.")->defaultValue(0.25);
 
+  auto mesh_table = inlet->addTable("main_mesh", "The main mesh for the problem");
+  serac::mesh::InputInfo::defineInputFileSchema(*mesh_table);
+
   // Physics
   auto solid_solver_table = inlet->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  serac::NonlinearSolid::defineInputFileSchema(*solid_solver_table);
+  serac::NonlinearSolid::InputInfo::defineInputFileSchema(*solid_solver_table);
 
   // Verify input file
   if (!inlet->verify()) {
@@ -79,15 +82,18 @@ int main(int argc, char* argv[])
   // Save input values to file
   datastore.getRoot()->save("serac_input.json", "json");
 
-  // Annotate the mesh with the input filename
-  inlet->addTable("nonlinear_solid/mesh_info")->addString("input_file_path")->defaultValue(input_file_path);
+  // Build the mesh
+  auto mesh_info      = (*inlet)["main_mesh"].get<serac::mesh::InputInfo>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
+  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver = (*inlet)["nonlinear_solid"].get<serac::NonlinearSolid>();
+  auto                  solid_solver_info = (*inlet)["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
-  int dim = solid_solver.mesh().Dimension();
+  int dim = mesh->Dimension();
 
   mfem::VectorFunctionCoefficient defo_coef(dim, serac::initialDeformation);
 

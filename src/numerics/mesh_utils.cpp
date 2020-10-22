@@ -170,7 +170,7 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
 
 namespace mesh {
 
-void defineInputFileSchema(axom::inlet::Table& table)
+void InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 {
   // mesh path
   table.addString("mesh", "Path to Mesh file")->required(true);
@@ -183,10 +183,10 @@ void defineInputFileSchema(axom::inlet::Table& table)
 }  // namespace mesh
 }  // namespace serac
 
-std::shared_ptr<mfem::ParMesh> FromInlet<std::shared_ptr<mfem::ParMesh>>::operator()(axom::inlet::Table& base)
+serac::mesh::InputInfo FromInlet<serac::mesh::InputInfo>::operator()(axom::inlet::Table& base)
 {
-  auto mesh_path = serac::input::findMeshFilePath(base["mesh"], base["input_file_path"]);
-  int  ser_ref   = base["ser_ref_levels"];
-  int  par_ref   = base["par_ref_levels"];
-  return serac::buildMeshFromFile(mesh_path, ser_ref, par_ref);
+  std::string mesh_path = base["mesh"];
+  int         ser_ref   = base["ser_ref_levels"];
+  int         par_ref   = base["par_ref_levels"];
+  return {mesh_path, ser_ref, par_ref};
 }

@@ -58,6 +58,14 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   }
 }
 
+NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputInfo& info)
+    : NonlinearSolid(info.order, mesh, info.solver_params)
+{
+  // This is the only other info stored in the input file that we can use
+  // in the initialization stage
+  setHyperelasticMaterialParameters(info.mu, info.K);
+}
+
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                         std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
@@ -201,11 +209,8 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::defineInputFileSchema(axom::inlet::Table& table)
+void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 {
-  auto mesh_table = table.addTable("mesh_info", "File location and refinement info for the mesh");
-  serac::mesh::defineInputFileSchema(*mesh_table);
-
   // Polynomial interpolation order
   table.addInt("order", "Order degree of the finite elements.")->defaultValue(1);
 
@@ -230,20 +235,23 @@ void NonlinearSolid::defineInputFileSchema(axom::inlet::Table& table)
 
 using serac::NonlinearSolid;
 
-NonlinearSolid FromInlet<NonlinearSolid>::operator()(axom::inlet::Table& base)
+NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(axom::inlet::Table& base)
 {
-  auto mesh = base["mesh_info"].get<std::shared_ptr<mfem::ParMesh>>();
+  NonlinearSolid::InputInfo result;
+
+  result.order = base["order"];
 
   // Solver parameters
-  auto solver        = base["solver"];
-  auto lin_params    = solver["linear"].get<serac::IterativeSolverParameters>();
-  auto nonlin_params = solver["nonlinear"].get<serac::NonlinearSolverParameters>();
+  auto solver                          = base["solver"];
+  result.solver_params.H_lin_params    = solver["linear"].get<serac::IterativeSolverParameters>();
+  result.solver_params.H_nonlin_params = solver["nonlinear"].get<serac::NonlinearSolverParameters>();
 
-  NonlinearSolid solid_solver(base["order"], mesh, {lin_params, nonlin_params});
+  // TODO: "optional" concept within Inlet to support dynamic parameters
 
+  result.mu = base["mu"];
+  result.K  = base["K"];
   // Set the material parameters
   // neo-Hookean material parameters
-  solid_solver.setHyperelasticMaterialParameters(base["mu"], base["K"]);
 
-  return solid_solver;
+  return result;
 }

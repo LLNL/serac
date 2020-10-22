@@ -12,8 +12,6 @@ main_mesh = {
 
 -- Solver parameters
 nonlinear_solid = {
-    mesh_info = main_mesh,
-
     solver = {
         nonlinear = {
             rel_tol     = 1.0e-2,
