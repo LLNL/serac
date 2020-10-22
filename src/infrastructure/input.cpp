@@ -70,5 +70,36 @@ std::string fullDirectoryFromPath(const std::string& path)
   return dir;
 }
 
+void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension)
+{
+  if (dimension < 0 || dimension > 3) {
+    SLIC_ERROR("Cannot define an input file schema for vector of invalid size" << dimension);
+  }
+  table.addDouble("x", "x-component of vector")->required(true);
+  if (dimension >= 2) {
+    table.addDouble("y", "y-component of vector")->required(true);
+    if (dimension >= 3) {
+      table.addDouble("z", "z-component of vector")->required(true);
+    }
+  }
+}
+
 }  // namespace input
 }  // namespace serac
+
+mfem::Vector FromInlet<mfem::Vector>::operator()(axom::inlet::Table& base)
+{
+  mfem::Vector result(3);  // Allocate up front since it's small
+  result[0] = base["x"];
+  if (base.contains("y")) {
+    result[1] = base["y"];
+    if (base.contains("z")) {
+      result[2] = base["z"];
+    } else {
+      result.SetSize(2);  // Shrink to a 2D vector, leaving the data intact
+    }
+  } else {
+    result.SetSize(1);  // Shrink to a 1D vector, leaving the data intact
+  }
+  return result;
+}

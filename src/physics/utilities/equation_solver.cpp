@@ -206,7 +206,6 @@ IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(axom:
     serac::logger::flush();
     std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
     SLIC_ERROR(msg);
-    serac::exitGracefully(true);
   }
   return params;
 }

@@ -213,10 +213,14 @@ void NonlinearSolid::defineInputFileSchema(axom::inlet::Table& table)
   table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
   table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);
 
+  auto traction_table = table.addTable("traction", "Cantilever tip traction vector");
+
   // loading parameters
-  table.addDouble("tx", "Cantilever tip traction in the x direction.")->defaultValue(0.0);
-  table.addDouble("ty", "Cantilever tip traction in the y direction.")->defaultValue(1.0e-3);
-  table.addDouble("tz", "Cantilever tip traction in the z direction.")->defaultValue(0.0);
+  input::defineVectorInputFileSchema(*traction_table);
+
+  traction_table->getField("x")->defaultValue(0.0);
+  traction_table->getField("y")->defaultValue(1.0e-3);
+  traction_table->getField("z")->defaultValue(0.0);
 
   auto solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(*solver_table);

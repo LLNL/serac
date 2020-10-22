@@ -112,18 +112,8 @@ int main(int argc, char* argv[])
   std::set<int> trac_bdr = {2};
 
   // loading parameters
-  double tx = (*inlet)["nonlinear_solid/tx"];  // has default value
-  double ty = (*inlet)["nonlinear_solid/ty"];  // has default value
-  double tz = (*inlet)["nonlinear_solid/tz"];  // has default value
-
   // define the traction vector
-  mfem::Vector traction(dim);
-  traction(0) = tx;
-  traction(1) = ty;
-  if (dim == 3) {
-    traction(2) = tz;
-  }
-
+  auto traction      = (*inlet)["nonlinear_solid/traction"].get<mfem::Vector>();
   auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
