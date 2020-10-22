@@ -681,14 +681,14 @@ class Mfem(Package):
 
     @property
     def sundials_components(self):
-        """Return the SUNDIALS components needed by MFEM."""
-        # SERAC EDIT BEGIN - TODO: spack PR
-        # sun_comps = 'arkode,cvode,nvecserial,kinsol'
-        sun_comps = 'arkode,cvodes,nvecserial,kinsol'
-        # SERAC EDIT END
-        if '+mpi' in self.spec:
-            sun_comps += ',nvecparhyp,nvecparallel'
-        return sun_comps
+      """Return the SUNDIALS components needed by MFEM."""
+      sun_comps = 'arkode,cvodes,nvecserial,kinsol'
+      if '+mpi' in self.spec:
+        if self.spec.satisfies('@4.2:'):
+          sun_comps += ',nvecparallel,nvecmpiplusx'
+        else:
+          sun_comps += ',nvecparhyp,nvecparallel'
+      return sun_comps
 
     @property
     def headers(self):
