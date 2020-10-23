@@ -166,16 +166,18 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   return *superlu_grad_mat_;
 }
 
-void EquationSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
 {
-  auto nonlinear_table = schema_creator->addTable("nonlinear", "Newton Equation Solver Parameters")->required(true);
+  auto nonlinear_table = table.addTable("nonlinear", "Newton Equation Solver Parameters");
+  nonlinear_table->required(false);
   nonlinear_table->addDouble("rel_tol", "Relative tolerance for the Newton solve.")->defaultValue(1.0e-2);
   nonlinear_table->addDouble("abs_tol", "Absolute tolerance for the Newton solve.")->defaultValue(1.0e-4);
   nonlinear_table->addInt("max_iter", "Maximum iterations for the Newton solve.")->defaultValue(500);
   nonlinear_table->addInt("print_level", "Nonlinear print level.")->defaultValue(0);
   nonlinear_table->addString("solver_type", "Not currently used.")->defaultValue("");
 
-  auto linear_table = schema_creator->addTable("linear", "Linear Equation Solver Parameters")->required(true);
+  auto linear_table = table.addTable("linear", "Linear Equation Solver Parameters");
+  linear_table->required(false);
   linear_table->addDouble("rel_tol", "Relative tolerance for the linear solve.")->defaultValue(1.0e-6);
   linear_table->addDouble("abs_tol", "Absolute tolerance for the linear solve.")->defaultValue(1.0e-8);
   linear_table->addInt("max_iter", "Maximum iterations for the linear solve.")->defaultValue(5000);
@@ -184,3 +186,49 @@ void EquationSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCr
 }
 
 }  // namespace serac
+
+using serac::EquationSolver;
+using serac::IterativeSolverParameters;
+using serac::NonlinearSolverParameters;
+
+IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(axom::inlet::Table& base)
+{
+  IterativeSolverParameters params;
+  params.rel_tol          = base["rel_tol"];
+  params.abs_tol          = base["abs_tol"];
+  params.max_iter         = base["max_iter"];
+  params.print_level      = base["print_level"];
+  std::string solver_type = base["solver_type"];
+  if (solver_type == "gmres") {
+    params.prec       = serac::HypreBoomerAMGPrec{};
+    params.lin_solver = serac::LinearSolver::GMRES;
+  } else if (solver_type == "minres") {
+    params.prec       = serac::HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi};
+    params.lin_solver = serac::LinearSolver::MINRES;
+  } else {
+    serac::logger::flush();
+    std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
+    SLIC_ERROR(msg);
+  }
+  return params;
+}
+
+NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(axom::inlet::Table& base)
+{
+  NonlinearSolverParameters params;
+  params.rel_tol     = base["rel_tol"];
+  params.abs_tol     = base["abs_tol"];
+  params.max_iter    = base["max_iter"];
+  params.print_level = base["print_level"];
+  return params;
+}
+
+EquationSolver FromInlet<EquationSolver>::operator()(axom::inlet::Table& base)
+{
+  auto lin = base["linear"].get<IterativeSolverParameters>();
+  if (base.hasTable("nonlinear")) {
+    auto nonlin = base["nonlinear"].get<NonlinearSolverParameters>();
+    return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
+  }
+  return EquationSolver(MPI_COMM_WORLD, lin);
+}

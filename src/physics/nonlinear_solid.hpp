@@ -47,6 +47,26 @@ public:
   };
 
   /**
+   * @brief Stores all information held in the input file that
+   * is used to configure the solver
+   */
+  struct InputInfo {
+    /**
+     * @brief Input file parameters specific to this class
+     *
+     * @param[in] table Inlet's SchemaCreator that input files will be added to
+     **/
+    static void defineInputFileSchema(axom::inlet::Table& table);
+
+    // The order of the field
+    int              order;
+    SolverParameters solver_params;
+    // Lame parameters
+    double mu;
+    double K;
+  };
+
+  /**
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] order The order of the displacement field
@@ -54,6 +74,14 @@ public:
    * @param[in] solver The system solver parameters
    */
   NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
+
+  /**
+   * @brief Construct a new Nonlinear Solid Solver object
+   *
+   * @param[in] mesh The MFEM parallel mesh to solve on
+   * @param[in] info The solver information parsed from the input file
+   */
+  NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const InputInfo& info);
 
   /**
    * @brief Set displacement boundary conditions
@@ -143,13 +171,6 @@ public:
    */
   virtual ~NonlinearSolid();
 
-  /**
-   * @brief Input file parameters specific to this class
-   *
-   * @param[in] schema_creator Inlet's SchemaCreator that input files will be added too
-   **/
-  static void defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator);
-
 protected:
   /**
    * @brief Velocity field
@@ -208,5 +229,10 @@ protected:
 };
 
 }  // namespace serac
+
+template <>
+struct FromInlet<serac::NonlinearSolid::InputInfo> {
+  serac::NonlinearSolid::InputInfo operator()(axom::inlet::Table& base);
+};
 
 #endif
