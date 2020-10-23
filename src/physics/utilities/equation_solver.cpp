@@ -14,14 +14,24 @@ namespace serac {
 EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
                                const std::optional<NonlinearSolverParameters>& nonlin_params)
 {
-  if (lin_params.lin_solver == LinearSolver::SuperLU) {
-    lin_solver_ = std::make_unique<mfem::SuperLUSolver>(comm);
-    std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetColumnPermutation(mfem::superlu::PARMETIS);
-    if (lin_params.print_level == 0) {
-      std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetPrintStatistics(false);
+  // If it's an iterative solver, build it and set the preconditioner
+  if (std::holds_alternative<IterativeSolverParameters>(lin_params)) {
+    lin_solver_ = buildIterativeLinearSolver(comm, std::get<IterativeSolverParameters>(lin_params));
+  }
+  // If it's a custom solver, check that the mfem::Solver* is not null
+  else if (std::holds_alternative<CustomSolverParameters>(lin_params)) {
+    auto custom_solver_ptr = std::get<CustomSolverParameters>(lin_params).solver;
+    SLIC_ERROR_IF(custom_solver_ptr == nullptr, "Custom solver pointer must be initialized.");
+    lin_solver_ = custom_solver_ptr;
+  }
+  // If it's a direct solver (currently SuperLU only)
+  else if (std::holds_alternative<DirectSolverParameters>(lin_params)) {
+    auto direct_solver = std::make_unique<mfem::SuperLUSolver>(comm);
+    direct_solver->SetColumnPermutation(mfem::superlu::PARMETIS);
+    if (std::get<DirectSolverParameters>(lin_params).print_level == 0) {
+      direct_solver->SetPrintStatistics(false);
     }
-  } else {
-    lin_solver_ = buildIterativeLinearSolver(comm, lin_params);
+    lin_solver_ = std::move(direct_solver);
   }
 
   if (nonlin_params) {
@@ -30,7 +40,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
 }
 
 std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
-    MPI_Comm comm, const LinearSolverParameters& lin_params)
+    MPI_Comm comm, const IterativeSolverParameters& lin_params)
 {
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
 
@@ -54,6 +64,27 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
   iter_lin_solver->SetMaxIter(lin_params.max_iter);
   iter_lin_solver->SetPrintLevel(lin_params.print_level);
 
+  // Handle the preconditioner - currently just BoomerAMG and HypreSmoother are supported
+  if (std::holds_alternative<HypreBoomerAMGPrec>(lin_params.prec)) {
+    auto par_fes = std::get<HypreBoomerAMGPrec>(lin_params.prec).pfes;
+    SLIC_ERROR_IF(par_fes == nullptr, "FESpace is required to use the HypreBoomerAMG preconditioner.");
+    SLIC_WARNING_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
+                    "Attempting to use BoomerAMG with nodal ordering.");
+    auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
+    prec_amg->SetPrintLevel(lin_params.print_level);
+    prec_amg->SetElasticityOptions(par_fes);
+    prec_ = std::move(prec_amg);
+  } else if (std::holds_alternative<HypreSmootherPrec>(lin_params.prec)) {
+    auto relaxation_type = std::get<HypreSmootherPrec>(lin_params.prec).type;
+    auto prec_smoother   = std::make_unique<mfem::HypreSmoother>();
+    prec_smoother->SetType(relaxation_type);
+    prec_smoother->SetPositiveDiagonal(true);
+    prec_ = std::move(prec_smoother);
+  } else if (std::holds_alternative<BlockILUPrec>(lin_params.prec)) {
+    auto block_size = std::get<BlockILUPrec>(lin_params.prec).block_size;
+    prec_           = std::make_unique<mfem::BlockILU>(block_size);
+  }
+  iter_lin_solver->SetPreconditioner(*prec_);
   return iter_lin_solver;
 }
 
@@ -122,15 +153,6 @@ void EquationSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
     nonlin_solver_->Mult(b, x);
   } else {
     std::visit([&b, &x](auto&& solver) { solver->Mult(b, x); }, lin_solver_);
-  }
-}
-
-void EquationSolver::SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
-{
-  // If the linear solver is iterative, set the preconditioner
-  if (std::holds_alternative<std::unique_ptr<mfem::IterativeSolver>>(lin_solver_)) {
-    prec_ = std::move(prec);
-    std::get<std::unique_ptr<mfem::IterativeSolver>>(lin_solver_)->SetPreconditioner(*prec_);
   }
 }
 

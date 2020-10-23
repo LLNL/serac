@@ -36,8 +36,9 @@ public:
    *
    * @param[in] order The polynomial order of the solver
    * @param[in] mesh The parallel MFEM mesh
+   * @param[in] params The system solver parameters
    */
-  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh);
+  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverParameters& params);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions
@@ -87,13 +88,6 @@ public:
   void completeSetup() override;
 
   /**
-   * @brief Set the Linear Solver Parameters
-   *
-   * @param[in] params The linear solver parameters
-   */
-  void setLinearSolverParameters(const serac::LinearSolverParameters& params);
-
-  /**
    * @brief The destructor
    */
   virtual ~Elasticity();
@@ -130,14 +124,9 @@ protected:
   std::unique_ptr<mfem::HypreParVector> bc_rhs_;
 
   /**
-   * @brief Linear solver for the stiffness matrix
+   * @brief System solver instance for quasistatic K solver
    */
-  std::unique_ptr<mfem::Solver> K_solver_;
-
-  /**
-   * @brief Preconditioner for the stiffness matrix
-   */
-  std::unique_ptr<mfem::Solver> K_prec_;
+  EquationSolver K_inv_;
 
   /**
    * @brief Lame mu elasticity parameter
@@ -153,11 +142,6 @@ protected:
    * @brief Body force coefficient
    */
   mfem::VectorCoefficient* body_force_ = nullptr;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  serac::LinearSolverParameters lin_params_;
 
   /**
    * @brief Quasi-static solve driver

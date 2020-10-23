@@ -31,11 +31,12 @@ public:
    * @brief Construct a new Dynamic Conduction Operator object
    *
    * @param[in] fe_space The temperature field finite element space
-   * @param[in] params The linear solver parameters
+   * @param[in] M_params The linear solver parameters for solving M
+   * @param[in] T_params The linear solver parameters for solving T
    * @param[in] ess_bdr The essential boundary condition objects
    */
-  DynamicConductionOperator(mfem::ParFiniteElementSpace& fe_space, const serac::LinearSolverParameters& params,
-                            const BoundaryConditionManager& bcs);
+  DynamicConductionOperator(mfem::ParFiniteElementSpace& fe_space, const serac::LinearSolverParameters& M_params,
+                            const serac::LinearSolverParameters& T_params, const BoundaryConditionManager& bcs);
 
   /**
    * @brief Set the mass and stiffness matrices

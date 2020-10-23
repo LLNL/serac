@@ -93,10 +93,39 @@ int main(int argc, char* argv[])
   mesh_file_path = serac::input::findMeshFilePath(mesh_file_path, input_file_path);
   auto mesh      = serac::buildMeshFromFile(mesh_file_path, ser_ref_levels, par_ref_levels);
 
+  // Solver parameters
+  serac::IterativeSolverParameters lin_params;
+  inlet->get("nonlinear_solid/solver/linear/rel_tol", lin_params.rel_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/linear/abs_tol", lin_params.abs_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/linear/max_iter", lin_params.max_iter);        // has default value
+  inlet->get("nonlinear_solid/solver/linear/print_level", lin_params.print_level);  // has default value
+
+  serac::NonlinearSolverParameters nonlin_params;
+  inlet->get("nonlinear_solid/solver/nonlinear/rel_tol", nonlin_params.rel_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/nonlinear/abs_tol", nonlin_params.abs_tol);          // has default value
+  inlet->get("nonlinear_solid/solver/nonlinear/max_iter", nonlin_params.max_iter);        // has default value
+  inlet->get("nonlinear_solid/solver/nonlinear/print_level", nonlin_params.print_level);  // has default value
+
+  // solver input args
+  std::string solver_type;
+  inlet->get("nonlinear_solid/solver/linear/solver_type", solver_type);  // has default value
+  if (solver_type == "gmres") {
+    lin_params.prec       = serac::HypreBoomerAMGPrec{};
+    lin_params.lin_solver = serac::LinearSolver::GMRES;
+  } else if (solver_type == "minres") {
+    lin_params.prec       = serac::HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi};
+    lin_params.lin_solver = serac::LinearSolver::MINRES;
+  } else {
+    serac::logger::flush();
+    std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
+    SLIC_ERROR_ROOT(rank, msg);
+    serac::exitGracefully(true);
+  }
+
   // Define the solid solver object
   int order;
   inlet->get("nonlinear_solid/order", order);  // has default value
-  serac::NonlinearSolid solid_solver(order, mesh);
+  serac::NonlinearSolid solid_solver(order, mesh, {lin_params, nonlin_params});
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
@@ -151,39 +180,6 @@ int main(int argc, char* argv[])
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(mu, K);
-
-  // Solver parameters
-  serac::NonlinearSolverParameters nonlin_params;
-  inlet->get("nonlinear_solid/solver/nonlinear/rel_tol", nonlin_params.rel_tol);          // has default value
-  inlet->get("nonlinear_solid/solver/nonlinear/abs_tol", nonlin_params.abs_tol);          // has default value
-  inlet->get("nonlinear_solid/solver/nonlinear/max_iter", nonlin_params.max_iter);        // has default value
-  inlet->get("nonlinear_solid/solver/nonlinear/print_level", nonlin_params.print_level);  // has default value
-
-  serac::LinearSolverParameters lin_params;
-  inlet->get("nonlinear_solid/solver/linear/rel_tol", lin_params.rel_tol);          // has default value
-  inlet->get("nonlinear_solid/solver/linear/abs_tol", lin_params.abs_tol);          // has default value
-  inlet->get("nonlinear_solid/solver/linear/max_iter", lin_params.max_iter);        // has default value
-  inlet->get("nonlinear_solid/solver/linear/print_level", lin_params.print_level);  // has default value
-
-  // solver input args
-  std::string solver_type;
-  inlet->get("nonlinear_solid/solver/linear/solver_type", solver_type);  // has default value
-  if (solver_type == "gmres") {
-    lin_params.prec       = serac::Preconditioner::BoomerAMG;
-    lin_params.lin_solver = serac::LinearSolver::GMRES;
-  } else if (solver_type == "minres") {
-    lin_params.prec       = serac::Preconditioner::Jacobi;
-    lin_params.lin_solver = serac::LinearSolver::MINRES;
-  } else {
-    serac::logger::flush();
-    std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
-    SLIC_ERROR_ROOT(rank, msg);
-    serac::exitGracefully(true);
-  }
-  solid_solver.setSolverParameters(lin_params, nonlin_params);
-
-  // Set the time step method
-  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Complete the solver setup
   solid_solver.completeSetup();
