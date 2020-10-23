@@ -1,12 +1,14 @@
-mesh = "../meshes/beam-hex.mesh"
-
--- serial and parallel refinement levels
-ser_ref_levels = 0
-par_ref_levels = 0
-
 -- Simulation time parameters
 t_final = 1.0
 dt      = 0.25
+
+main_mesh = {
+    -- mesh file
+    mesh = "../meshes/beam-hex.mesh",
+    -- serial and parallel refinement levels
+    ser_ref_levels = 0,
+    par_ref_levels = 0,
+}
 
 -- Solver parameters
 nonlinear_solid = {
@@ -35,7 +37,9 @@ nonlinear_solid = {
     K  = 5.0,
 
     -- loading parameters
-    tx = 0.0,
-    ty = 1.0e-3,
-    tz = 0.0,
+    traction = {
+        x = 0.0,
+        y = 1.0e-3,
+        z = 0.0,
+    },
 }

@@ -9,6 +9,7 @@
 #include "infrastructure/logger.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
+#include "numerics/mesh_utils.hpp"
 
 namespace serac {
 
@@ -55,6 +56,14 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
   }
+}
+
+NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputInfo& info)
+    : NonlinearSolid(info.order, mesh, info.solver_params)
+{
+  // This is the only other info stored in the input file that we can use
+  // in the initialization stage
+  setHyperelasticMaterialParameters(info.mu, info.K);
 }
 
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
@@ -200,24 +209,49 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 {
-  auto table = schema_creator->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-
   // Polynomial interpolation order
-  table->addInt("order", "Order degree of the finite elements.")->defaultValue(1);
+  table.addInt("order", "Order degree of the finite elements.")->defaultValue(1);
 
   // neo-Hookean material parameters
-  table->addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
-  table->addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);
+  table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
+  table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);
+
+  auto traction_table = table.addTable("traction", "Cantilever tip traction vector");
 
   // loading parameters
-  table->addDouble("tx", "Cantilever tip traction in the x direction.")->defaultValue(0.0);
-  table->addDouble("ty", "Cantilever tip traction in the y direction.")->defaultValue(1.0e-3);
-  table->addDouble("tz", "Cantilever tip traction in the z direction.")->defaultValue(0.0);
+  input::defineVectorInputFileSchema(*traction_table);
 
-  auto solver_table = table->addTable("solver", "Linear and Nonlinear Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(solver_table);
+  traction_table->getField("x")->defaultValue(0.0);
+  traction_table->getField("y")->defaultValue(1.0e-3);
+  traction_table->getField("z")->defaultValue(0.0);
+
+  auto solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
+  serac::EquationSolver::defineInputFileSchema(*solver_table);
 }
 
 }  // namespace serac
+
+using serac::NonlinearSolid;
+
+NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(axom::inlet::Table& base)
+{
+  NonlinearSolid::InputInfo result;
+
+  result.order = base["order"];
+
+  // Solver parameters
+  auto solver                          = base["solver"];
+  result.solver_params.H_lin_params    = solver["linear"].get<serac::IterativeSolverParameters>();
+  result.solver_params.H_nonlin_params = solver["nonlinear"].get<serac::NonlinearSolverParameters>();
+
+  // TODO: "optional" concept within Inlet to support dynamic parameters
+
+  result.mu = base["mu"];
+  result.K  = base["K"];
+  // Set the material parameters
+  // neo-Hookean material parameters
+
+  return result;
+}
