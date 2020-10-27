@@ -6,6 +6,7 @@
 
 #include "infrastructure/initialize.hpp"
 
+#include "infrastructure/accelerator.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/profiling.hpp"
 #include "infrastructure/terminator.hpp"
@@ -47,6 +48,9 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
 
   // Start the profiler (no-op if not enabled)
   profiling::initializeCaliper();
+
+  // Initialize GPU (no-op if not enabled/available)
+  accelerator::initializeDevice();
 
   return getMPIInfo(comm);
 }
