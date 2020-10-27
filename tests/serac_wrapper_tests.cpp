@@ -210,6 +210,134 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   }
 }
 
+TEST_F(WrapperTests, Transformed)
+{
+  // Setup problem
+
+  // Create a coefficient that indicates the x == 0 border of the cube
+  StdFunctionCoefficient x_zero([](const Vector& x) {
+    if (x[0] < 1.e-12) {
+      return 1.;
+    }
+    return 0.;
+  });
+
+  // Create a coefficient that indicates the x == 1 border of the cube
+  StdFunctionCoefficient x_one([](const Vector& x) {
+    if ((1. - x[0]) < 1.e-12) {
+      return 1.;
+    }
+    return 0.;
+  });
+
+  Array<int> bdr_attr_list_zero = serac::makeBdrAttributeList(*pmesh_, x_zero);
+  Array<int> bdr_attr_list_one  = serac::makeBdrAttributeList(*pmesh_, x_one);
+
+  // Set x_zero to be attribute 2 and x_one to be attribute 3
+  Array<int> bdr_attr_list(pfes_->GetNBE());
+  for (int be = 0; be < pfes_->GetNBE(); be++) {
+    bdr_attr_list[be] = (bdr_attr_list_zero[be] - 1) + (bdr_attr_list_one[be] - 1) * 2 + 1;
+  }
+
+  for (int be = 0; be < pfes_->GetNBE(); be++) {
+    pmesh_->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
+  }
+
+  // Update attribute data structures
+  pmesh_->SetAttributes();
+
+  Array<int> bdr_attr_is_ess(3);
+  bdr_attr_is_ess[0] = 0;
+  bdr_attr_is_ess[1] = 1;  //< This is an attribute we are looking for
+  bdr_attr_is_ess[2] = 1;  //< This is an attribute we are looking for
+
+  // Get all the essential degrees of freedom
+  Array<int> ess_tdof_list;
+  pfes_->GetEssentialTrueDofs(bdr_attr_is_ess, ess_tdof_list);
+
+  // Boundary conditions evaluation
+  ParGridFunction t_ess(pfes_.get());
+  t_ess = 0.;
+  t_ess.ProjectBdrCoefficient(x_one, bdr_attr_is_ess);
+
+  // Solve Nonlinear
+
+  ConstantCoefficient one(1.);
+
+  auto   diffusion           = std::make_shared<DiffusionIntegrator>(one);
+  auto   nonlinear_diffusion = std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion);
+  double multiplier          = 2.;
+  double offset              = 1.;
+  auto   transform           = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::Vector& x) {
+    mfem::Vector v(x);
+    v *= multiplier;
+    v += offset;
+    return v;
+  };
+  auto transform_grad = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::DenseMatrix& x) {
+    mfem::DenseMatrix m(x);
+    m *= multiplier;
+    return m;
+  };
+  auto transformed_diffusion = std::make_unique<TransformedNonlinearFormIntegrator>(
+      std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion), transform, transform_grad);
+
+  ParGridFunction temp(pfes_.get());
+  {
+    ParNonlinearForm A_nonlin(pfes_.get());
+    A_nonlin.AddDomainIntegrator(nonlinear_diffusion.release());
+    A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
+
+    // The temperature solution vector already contains the essential boundary condition values
+    temp = t_ess;
+
+    auto T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
+
+    GMRESSolver solver(pfes_->GetComm());
+
+    NewtonSolver newton_solver(pfes_->GetComm());
+    newton_solver.SetSolver(solver);
+    newton_solver.SetOperator(A_nonlin);
+
+    Vector zero;
+    newton_solver.Mult(zero, *T);
+
+    temp = *T;
+  }
+
+  ParGridFunction temp2(pfes_.get());
+  {
+    ParNonlinearForm A_nonlin(pfes_.get());
+    A_nonlin.AddDomainIntegrator(transformed_diffusion.release());
+    A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
+
+    // The temperature solution vector already contains the essential boundary condition values
+    temp2 = t_ess;
+    temp2 -= offset;
+    temp2 *= 1. / multiplier;
+
+    auto T = std::unique_ptr<HypreParVector>(temp2.GetTrueDofs());
+
+    GMRESSolver solver(pfes_->GetComm());
+
+    NewtonSolver newton_solver(pfes_->GetComm());
+    newton_solver.SetSolver(solver);
+    newton_solver.SetOperator(A_nonlin);
+
+    Vector zero;
+    newton_solver.Mult(zero, *T);
+
+    temp2 = *T;
+  }
+
+  for (int i = 0; i < temp.Size(); i++) {
+    EXPECT_NEAR(temp[i], temp2[i] * multiplier + offset, 1.e-8);
+  }
+  temp.Print();
+  std::cout << multiplier << std::endl;
+  temp2.Print();
+}
+
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
 using axom::slic::UnitTestLogger;

@@ -81,4 +81,27 @@ void MixedBilinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::Fin
   A_->AssembleElementMatrix2(trial_el, el, Tr, elmat);
 }
 
+TransformedNonlinearFormIntegrator::TransformedNonlinearFormIntegrator(
+    std::shared_ptr<mfem::NonlinearFormIntegrator>                               R,
+    std::function<TransformedNonlinearFormIntegrator::transformed_func>          transformed,
+    std::function<TransformedNonlinearFormIntegrator::transformed_gradient_func> transformed_grad)
+    : R_(R), transformed_function_(transformed), transformed_function_grad_(transformed_grad)
+{
+}
+
+void TransformedNonlinearFormIntegrator::AssembleElementVector(const mfem::FiniteElement&   el,
+                                                               mfem::ElementTransformation& Tr,
+                                                               const mfem::Vector& elfun, mfem::Vector& elvect)
+{
+  R_->AssembleElementVector(el, Tr, transformed_function_(el, Tr, elfun), elvect);
+}
+
+void TransformedNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
+                                                             mfem::ElementTransformation& Tr, const mfem::Vector& elfun,
+                                                             mfem::DenseMatrix& elmat)
+{
+  R_->AssembleElementGrad(el, Tr, transformed_function_(el, Tr, elfun), elmat);
+  elmat = transformed_function_grad_(el, Tr, elmat);
+}
+
 }  // namespace serac
