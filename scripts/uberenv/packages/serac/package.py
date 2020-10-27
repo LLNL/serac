@@ -143,6 +143,16 @@ class Serac(CMakePackage, CudaPackage):
 
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
 
+    # Libraries that have a GPU variant
+    cuda_deps = ["mfem"]
+    for dep in cuda_deps:
+        depends_on("{0}+cuda".format(dep), when="+cuda")
+        # WARNING: This may only work for MFEM as it doesn't use
+        # Spack's built-in CudaPackage
+        for sm_ in CudaPackage.cuda_arch_values:
+            depends_on('{0} cuda_arch=sm_{1}'.format(dep, sm_),
+                    when='cuda_arch={0}'.format(sm_))
+
     phases = ['hostconfig', 'cmake', 'build',' install']
 
     def _get_sys_type(self, spec):
