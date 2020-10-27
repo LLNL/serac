@@ -11,12 +11,12 @@ jobs:
     matrix:
       linux_gcc8:
           VM_ImageName: 'ubuntu-16.04'
-          Compiler_ImageName: 'seracllnl/tpls:gcc-8'
+          Compiler_ImageName: 'seracllnl/tpls:gcc-8_10-19-20_18h-06m'
           TEST_TARGET: 'linux_gcc8'
           HOST_CONFIG: 'docker-linux-ubuntu16.04-x86_64-gcc@8.1.0.cmake'
       linux_clang10:
           VM_ImageName: 'ubuntu-18.04'
-          Compiler_ImageName: 'seracllnl/tpls:clang-10'
+          Compiler_ImageName: 'seracllnl/tpls:clang-10_10-19-20_22h-40m'
           TEST_TARGET: 'linux_clang10'
           HOST_CONFIG: 'docker-linux-ubuntu18.04-x86_64-clang@10.0.0.cmake'
 
@@ -43,7 +43,7 @@ jobs:
   variables:
     DO_STYLE_CHECK: 'yes'
     VM_ImageName: 'ubuntu-18.04'
-    Compiler_ImageName: 'seracllnl/tpls:clang-10'
+    Compiler_ImageName: 'seracllnl/tpls:clang-10_10-19-20_22h-40m'
     TEST_TARGET: 'linux_clang10'
     HOST_CONFIG: 'docker-linux-ubuntu18.04-x86_64-clang@10.0.0'
   pool:

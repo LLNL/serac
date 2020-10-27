@@ -14,14 +14,24 @@ namespace serac {
 EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
                                const std::optional<NonlinearSolverParameters>& nonlin_params)
 {
-  if (lin_params.lin_solver == LinearSolver::SuperLU) {
-    lin_solver_ = std::make_unique<mfem::SuperLUSolver>(comm);
-    std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetColumnPermutation(mfem::superlu::PARMETIS);
-    if (lin_params.print_level == 0) {
-      std::get<std::unique_ptr<mfem::SuperLUSolver>>(lin_solver_)->SetPrintStatistics(false);
+  // If it's an iterative solver, build it and set the preconditioner
+  if (std::holds_alternative<IterativeSolverParameters>(lin_params)) {
+    lin_solver_ = buildIterativeLinearSolver(comm, std::get<IterativeSolverParameters>(lin_params));
+  }
+  // If it's a custom solver, check that the mfem::Solver* is not null
+  else if (std::holds_alternative<CustomSolverParameters>(lin_params)) {
+    auto custom_solver_ptr = std::get<CustomSolverParameters>(lin_params).solver;
+    SLIC_ERROR_IF(custom_solver_ptr == nullptr, "Custom solver pointer must be initialized.");
+    lin_solver_ = custom_solver_ptr;
+  }
+  // If it's a direct solver (currently SuperLU only)
+  else if (std::holds_alternative<DirectSolverParameters>(lin_params)) {
+    auto direct_solver = std::make_unique<mfem::SuperLUSolver>(comm);
+    direct_solver->SetColumnPermutation(mfem::superlu::PARMETIS);
+    if (std::get<DirectSolverParameters>(lin_params).print_level == 0) {
+      direct_solver->SetPrintStatistics(false);
     }
-  } else {
-    lin_solver_ = buildIterativeLinearSolver(comm, lin_params);
+    lin_solver_ = std::move(direct_solver);
   }
 
   if (nonlin_params) {
@@ -30,7 +40,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
 }
 
 std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
-    MPI_Comm comm, const LinearSolverParameters& lin_params)
+    MPI_Comm comm, const IterativeSolverParameters& lin_params)
 {
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
 
@@ -54,6 +64,27 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
   iter_lin_solver->SetMaxIter(lin_params.max_iter);
   iter_lin_solver->SetPrintLevel(lin_params.print_level);
 
+  // Handle the preconditioner - currently just BoomerAMG and HypreSmoother are supported
+  if (std::holds_alternative<HypreBoomerAMGPrec>(lin_params.prec)) {
+    auto par_fes = std::get<HypreBoomerAMGPrec>(lin_params.prec).pfes;
+    SLIC_ERROR_IF(par_fes == nullptr, "FESpace is required to use the HypreBoomerAMG preconditioner.");
+    SLIC_WARNING_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
+                    "Attempting to use BoomerAMG with nodal ordering.");
+    auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
+    prec_amg->SetPrintLevel(lin_params.print_level);
+    prec_amg->SetElasticityOptions(par_fes);
+    prec_ = std::move(prec_amg);
+  } else if (std::holds_alternative<HypreSmootherPrec>(lin_params.prec)) {
+    auto relaxation_type = std::get<HypreSmootherPrec>(lin_params.prec).type;
+    auto prec_smoother   = std::make_unique<mfem::HypreSmoother>();
+    prec_smoother->SetType(relaxation_type);
+    prec_smoother->SetPositiveDiagonal(true);
+    prec_ = std::move(prec_smoother);
+  } else if (std::holds_alternative<BlockILUPrec>(lin_params.prec)) {
+    auto block_size = std::get<BlockILUPrec>(lin_params.prec).block_size;
+    prec_           = std::make_unique<mfem::BlockILU>(block_size);
+  }
+  iter_lin_solver->SetPreconditioner(*prec_);
   return iter_lin_solver;
 }
 
@@ -125,15 +156,6 @@ void EquationSolver::Mult(const mfem::Vector& b, mfem::Vector& x) const
   }
 }
 
-void EquationSolver::SetPreconditioner(std::unique_ptr<mfem::Solver>&& prec)
-{
-  // If the linear solver is iterative, set the preconditioner
-  if (std::holds_alternative<std::unique_ptr<mfem::IterativeSolver>>(lin_solver_)) {
-    prec_ = std::move(prec);
-    std::get<std::unique_ptr<mfem::IterativeSolver>>(lin_solver_)->SetPreconditioner(*prec_);
-  }
-}
-
 mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(const mfem::Vector& x) const
 {
   mfem::Operator&       grad      = oper_.GetGradient(x);
@@ -144,16 +166,18 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   return *superlu_grad_mat_;
 }
 
-void EquationSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCreator> schema_creator)
+void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
 {
-  auto nonlinear_table = schema_creator->addTable("nonlinear", "Newton Equation Solver Parameters")->required(true);
+  auto nonlinear_table = table.addTable("nonlinear", "Newton Equation Solver Parameters");
+  nonlinear_table->required(false);
   nonlinear_table->addDouble("rel_tol", "Relative tolerance for the Newton solve.")->defaultValue(1.0e-2);
   nonlinear_table->addDouble("abs_tol", "Absolute tolerance for the Newton solve.")->defaultValue(1.0e-4);
   nonlinear_table->addInt("max_iter", "Maximum iterations for the Newton solve.")->defaultValue(500);
   nonlinear_table->addInt("print_level", "Nonlinear print level.")->defaultValue(0);
   nonlinear_table->addString("solver_type", "Not currently used.")->defaultValue("");
 
-  auto linear_table = schema_creator->addTable("linear", "Linear Equation Solver Parameters")->required(true);
+  auto linear_table = table.addTable("linear", "Linear Equation Solver Parameters");
+  linear_table->required(false);
   linear_table->addDouble("rel_tol", "Relative tolerance for the linear solve.")->defaultValue(1.0e-6);
   linear_table->addDouble("abs_tol", "Absolute tolerance for the linear solve.")->defaultValue(1.0e-8);
   linear_table->addInt("max_iter", "Maximum iterations for the linear solve.")->defaultValue(5000);
@@ -162,3 +186,49 @@ void EquationSolver::defineInputFileSchema(std::shared_ptr<axom::inlet::SchemaCr
 }
 
 }  // namespace serac
+
+using serac::EquationSolver;
+using serac::IterativeSolverParameters;
+using serac::NonlinearSolverParameters;
+
+IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(axom::inlet::Table& base)
+{
+  IterativeSolverParameters params;
+  params.rel_tol          = base["rel_tol"];
+  params.abs_tol          = base["abs_tol"];
+  params.max_iter         = base["max_iter"];
+  params.print_level      = base["print_level"];
+  std::string solver_type = base["solver_type"];
+  if (solver_type == "gmres") {
+    params.prec       = serac::HypreBoomerAMGPrec{};
+    params.lin_solver = serac::LinearSolver::GMRES;
+  } else if (solver_type == "minres") {
+    params.prec       = serac::HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi};
+    params.lin_solver = serac::LinearSolver::MINRES;
+  } else {
+    serac::logger::flush();
+    std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
+    SLIC_ERROR(msg);
+  }
+  return params;
+}
+
+NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(axom::inlet::Table& base)
+{
+  NonlinearSolverParameters params;
+  params.rel_tol     = base["rel_tol"];
+  params.abs_tol     = base["abs_tol"];
+  params.max_iter    = base["max_iter"];
+  params.print_level = base["print_level"];
+  return params;
+}
+
+EquationSolver FromInlet<EquationSolver>::operator()(axom::inlet::Table& base)
+{
+  auto lin = base["linear"].get<IterativeSolverParameters>();
+  if (base.hasTable("nonlinear")) {
+    auto nonlin = base["nonlinear"].get<NonlinearSolverParameters>();
+    return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
+  }
+  return EquationSolver(MPI_COMM_WORLD, lin);
+}

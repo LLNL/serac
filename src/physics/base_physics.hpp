@@ -43,6 +43,8 @@ public:
    */
   BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
+  BasePhysics(BasePhysics&& other) = default;
+
   /**
    * @brief Set a list of true degrees of freedom from a coefficient
    *
@@ -136,6 +138,11 @@ public:
    */
   virtual ~BasePhysics() = default;
 
+  /**
+   * @brief Returns a reference to the mesh object
+   */
+  const mfem::ParMesh& mesh() const { return *mesh_; }
+
 protected:
   /**
    * @brief The MPI communicator
@@ -216,11 +223,6 @@ protected:
    * @brief State variable initialization indicator
    */
   std::vector<bool> gf_initialized_;
-
-  /**
-   * @brief System solver instance
-   */
-  EquationSolver solver_;
 
   /**
    * @brief Boundary condition manager instance

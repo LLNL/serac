@@ -18,6 +18,7 @@
 
 #include "axom/inlet.hpp"
 #include "axom/sidre.hpp"
+#include "mfem.hpp"
 
 namespace serac {
 
@@ -50,7 +51,20 @@ std::string findMeshFilePath(const std::string& mesh_path, const std::string& in
  */
 std::string fullDirectoryFromPath(const std::string& file_path);
 
+/**
+ * @brief Defines the schema for a vector in R^{1,2,3} space
+ * @param[inout] table The base table on which to define the schema
+ * @param[in] dimension The expected dimension of the vector
+ */
+void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension = 3);
+
 }  // namespace input
 }  // namespace serac
+
+// Template specializations
+template <>
+struct FromInlet<mfem::Vector> {
+  mfem::Vector operator()(axom::inlet::Table& base);
+};
 
 #endif
