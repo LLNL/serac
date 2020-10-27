@@ -10,7 +10,6 @@
 #include "infrastructure/logger.hpp"
 #include "infrastructure/profiling.hpp"
 #include "infrastructure/terminator.hpp"
-#include "mfem.hpp"
 
 namespace serac {
 
