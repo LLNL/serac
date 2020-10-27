@@ -11,7 +11,6 @@
 #include <iostream>
 
 #include "infrastructure/accelerator.hpp"
-#include "infrastructure/initialize.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/profiling.hpp"
 
