@@ -37,7 +37,7 @@ set(CMAKE_CUDA_FLAGS "-arch sm_70 " CACHE STRING "")
 
 set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "")
 
-set(BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;/usr/tce/packages/gcc/gcc-4.9.3/lib64" CACHE STRING "")
+set(BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;/usr/tce/packages/gcc/gcc-4.9.3/lib64" CACHE STRING "")
 
 #---------------------------------------
 # MPI

@@ -302,7 +302,7 @@ class Serac(CMakePackage, CudaPackage):
             if on_blueos:
                 # Very specific fix for working around CMake adding implicit link directories returned by the BlueOS
                 # compilers to link CUDA executables 
-                cfg.write(cmake_cache_string("BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
+                cfg.write(cmake_cache_string("BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
                                              "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;"
                                              "/usr/tce/packages/gcc/gcc-4.9.3/lib64"))
         else:
