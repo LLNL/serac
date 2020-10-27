@@ -135,7 +135,8 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("conduit@0.5.1p1~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
-    depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
+    # Unconditional for now until concretizer fixed
+    depends_on("netcdf-c@4.7.4~shared")
     depends_on("hdf5@1.8.21~shared")
 
     # Libraries that we do not build debug

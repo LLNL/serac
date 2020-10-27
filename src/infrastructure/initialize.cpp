@@ -13,12 +13,6 @@
 
 namespace serac {
 
-#ifdef MFEM_USE_CUDA
-// Keep as a global so it has the same
-// lifetime as the program
-static mfem::Device device;
-#endif
-
 std::pair<int, int> getMPIInfo(MPI_Comm comm)
 {
   int num_procs = 0;
@@ -54,17 +48,7 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
   // Start the profiler (no-op if not enabled)
   profiling::initializeCaliper();
 
-  const auto mpi_info = getMPIInfo(comm);
-
-// If MFEM supports CUDA, configure it
-#ifdef MFEM_USE_CUDA
-  device.Configure("cuda");
-  if (mpi_info.second == 0) {
-    device.Print();
-  }
-#endif
-
-  return mpi_info;
+  return getMPIInfo(comm);
 }
 
 }  // namespace serac

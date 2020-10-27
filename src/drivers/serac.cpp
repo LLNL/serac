@@ -60,6 +60,12 @@ void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
+#ifdef MFEM_USE_CUDA
+  mfem::Device device("cuda");  // TODO: Handle lifetimes better
+  if (rank == 0) {
+    device.Print();
+  }
+#endif
 
   // Handle Command line
   std::unordered_map<std::string, std::string> cli_opts = serac::cli::defineAndParse(argc, argv, rank);
@@ -160,6 +166,12 @@ int main(int argc, char* argv[])
 
     last_step = (t >= t_final - 1e-8 * dt);
   }
-
+#ifdef MFEM_USE_CUDA
+  // This is pretty terrible, but we can't call the destructor
+  // in a libc exit handler context - the CUDA driver is already
+  // dead.  Options include a scope block for the entirety of the
+  // driver, or maybe some custom deleter magic
+  device.~Device();
+#endif
   serac::exitGracefully();
 }
