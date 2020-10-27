@@ -38,7 +38,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   true_offset[2]             = 2 * true_size;
 
   // This will be "host-std" without CUDA, which is "the usual" - operator new[]/delete[]
-  // If an accelerator is configured, then that gets used instread
+  // If an accelerator is configured, then that gets used instead
   block_ = std::make_unique<mfem::BlockVector>(true_offset, mfem::Device::GetDeviceMemoryType());
 
   block_->GetBlockView(1, displacement_->trueVec());
