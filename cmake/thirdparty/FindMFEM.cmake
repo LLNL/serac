@@ -129,9 +129,10 @@ if(ENABLE_CUDA)
     message(STATUS "MFEM: Adding required CUDA includes/libraries")
     blt_register_library(
         NAME          mfem
-        INCLUDES      ${MFEM_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
-        # FIXME: How does this work with first-class CMake CUDA support
-        LIBRARIES     ${MFEM_LIBRARIES} ${CMAKE_CUDA_LINK_FLAGS} ${CUDA_LIBRARIES}
+        INCLUDES      ${MFEM_INCLUDE_DIRS}
+        # FIXME: How does this work with first-class CMake CUDA support?
+        DEPENDS_ON    ${CMAKE_CUDA_LINK_FLAGS} cuda_runtime cusparse
+        LIBRARIES     ${MFEM_LIBRARIES}
         TREAT_INCLUDES_AS_SYSTEM ON)
 else()
     blt_register_library(
