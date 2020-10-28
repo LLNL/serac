@@ -80,7 +80,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
 
@@ -139,7 +139,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
 
@@ -214,7 +214,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
 

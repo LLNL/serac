@@ -14,14 +14,13 @@ namespace serac {
 constexpr int NUM_FIELDS = 1;
 
 Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverParameters& params)
-    : BasePhysics(mesh, NUM_FIELDS, order),
-      displacement_(std::make_shared<FiniteElementState>(*mesh, FEStateOptions{.order = order, .name = "displacement"}))
+    : BasePhysics(mesh, NUM_FIELDS, order), displacement_(*mesh, FEStateOptions{.order = order, .name = "displacement"})
 {
   mesh->EnsureNodes();
-  state_[0] = displacement_;
+  state_.push_back(displacement_);
 
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
-  const auto& augmented_params = augmentAMGWithSpace(params, displacement_->space());
+  const auto& augmented_params = augmentAMGWithSpace(params, displacement_.space());
 
   K_inv_ = EquationSolver(mesh->GetComm(), augmented_params);
   setTimestepper(TimestepMethod::QuasiStatic);
@@ -30,7 +29,7 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const Lin
 void Elasticity::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                     std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, *displacement_, component);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
 }
 
 void Elasticity::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
@@ -53,7 +52,7 @@ void Elasticity::completeSetup()
   SLIC_ASSERT_MSG(lambda_ != nullptr, "Lame lambda not set in ElasticitySolver!");
 
   // Define the parallel bilinear form
-  K_form_ = displacement_->createOnSpace<mfem::ParBilinearForm>();
+  K_form_ = displacement_.createOnSpace<mfem::ParBilinearForm>();
 
   // Add the elastic integrator
   K_form_->AddDomainIntegrator(new mfem::ElasticityIntegrator(*lambda_, *mu_));
@@ -62,7 +61,7 @@ void Elasticity::completeSetup()
 
   // Define the parallel linear form
 
-  l_form_ = displacement_->createOnSpace<mfem::ParLinearForm>();
+  l_form_ = displacement_.createOnSpace<mfem::ParLinearForm>();
 
   // Add the traction integrator
   if (bcs_.naturals().size() > 0) {
@@ -73,7 +72,7 @@ void Elasticity::completeSetup()
     l_form_->Assemble();
     rhs_.reset(l_form_->ParallelAssemble());
   } else {
-    rhs_  = displacement_->createOnSpace<mfem::HypreParVector>();
+    rhs_  = displacement_.createOnSpace<mfem::HypreParVector>();
     *rhs_ = 0.0;
   }
 
@@ -86,17 +85,17 @@ void Elasticity::completeSetup()
   }
 
   // Initialize the eliminate BC RHS vector
-  bc_rhs_  = displacement_->createOnSpace<mfem::HypreParVector>();
+  bc_rhs_  = displacement_.createOnSpace<mfem::HypreParVector>();
   *bc_rhs_ = 0.0;
 
   // Initialize the true vector
-  displacement_->initializeTrueVec();
+  displacement_.initializeTrueVec();
 }
 
 void Elasticity::advanceTimestep(double&)
 {
   // Initialize the true vector
-  displacement_->initializeTrueVec();
+  displacement_.initializeTrueVec();
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     QuasiStaticSolve();
@@ -106,7 +105,7 @@ void Elasticity::advanceTimestep(double&)
   }
 
   // Distribute the shared DOFs
-  displacement_->distributeSharedDofs();
+  displacement_.distributeSharedDofs();
   cycle_ += 1;
 }
 
@@ -117,12 +116,12 @@ void Elasticity::QuasiStaticSolve()
   *bc_rhs_ = *rhs_;
   for (auto& bc : bcs_.essentials()) {
     bool should_be_scalar = false;
-    bc.apply(*K_mat_, *bc_rhs_, *displacement_, time_, should_be_scalar);
+    bc.apply(*K_mat_, *bc_rhs_, displacement_, time_, should_be_scalar);
   }
 
   K_inv_.SetOperator(*K_mat_);
 
-  K_inv_.Mult(*bc_rhs_, displacement_->trueVec());
+  K_inv_.Mult(*bc_rhs_, displacement_.trueVec());
 }
 
 Elasticity::~Elasticity() {}

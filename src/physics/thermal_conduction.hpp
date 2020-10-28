@@ -103,9 +103,10 @@ public:
   /**
    * @brief Get the temperature state
    *
-   * @return A pointer to the current temperature finite element state
+   * @return A reference to the current temperature finite element state
    */
-  std::shared_ptr<serac::FiniteElementState> temperature() { return temperature_; };
+  const serac::FiniteElementState& temperature() const { return temperature_; };
+  serac::FiniteElementState&       temperature() { return temperature_; };
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -124,7 +125,7 @@ protected:
   /**
    * @brief The temperature finite element state
    */
-  std::shared_ptr<serac::FiniteElementState> temperature_;
+  serac::FiniteElementState temperature_;
 
   /**
    * @brief Mass bilinear form object
