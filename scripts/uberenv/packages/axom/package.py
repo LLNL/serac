@@ -55,7 +55,7 @@ class Axom(CMakePackage, CudaPackage):
     version('develop', branch='develop', submodules=True)
 
     # SERAC EDIT START
-    version('0.4.0serac', commit='64a562aa18669ac7babb2c876b7f1a22708d85b3', submodules="True")
+    version('0.4.0serac', commit='8907d1380be62b50df5e058422fa4e958ff0e8ad', submodules="True")
     # SERAC EDIT END
 
     version('0.4.0', tag='v0.4.0', submodules="True")
