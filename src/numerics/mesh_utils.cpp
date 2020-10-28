@@ -173,17 +173,17 @@ namespace mesh {
 void InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 {
   // mesh path
-  table.addString("mesh", "Path to Mesh file")->required(true);
+  table.addString("mesh", "Path to Mesh file").required();
 
   // Refinement levels
-  table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.")->defaultValue(0);
-  table.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.")->defaultValue(0);
+  table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
+  table.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
 }
 
 }  // namespace mesh
 }  // namespace serac
 
-serac::mesh::InputInfo FromInlet<serac::mesh::InputInfo>::operator()(axom::inlet::Table& base)
+serac::mesh::InputInfo FromInlet<serac::mesh::InputInfo>::operator()(const axom::inlet::Table& base)
 {
   std::string mesh_path = base["mesh"];
   int         ser_ref   = base["ser_ref_levels"];
