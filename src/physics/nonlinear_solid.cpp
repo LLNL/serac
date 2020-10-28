@@ -20,8 +20,6 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
       velocity_(*mesh, FEStateOptions{.order = order, .name = "velocity"}),
       displacement_(*mesh, FEStateOptions{.order = order, .name = "displacement"})
 {
-  // state_[0] = velocity_;
-  // state_[1] = displacement_;
   state_.push_back(velocity_);
   state_.push_back(displacement_);
 

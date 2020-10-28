@@ -23,9 +23,9 @@ ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
       velocity_(solid_solver_.velocity()),
       displacement_(solid_solver_.displacement())
 {
-  // state_[0] = therm_solver_.temperature();
-  // state_[1] = solid_solver_.velocity();
-  // state_[2] = solid_solver_.displacement();
+  // The temperature_, velocity_, displacement_ members are not currently used
+  // but presumably will be needed when further coupling schemes are implemented
+  // This calls the non-const version
   state_.push_back(therm_solver_.temperature());
   state_.push_back(solid_solver_.velocity());
   state_.push_back(solid_solver_.displacement());

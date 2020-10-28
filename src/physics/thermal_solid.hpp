@@ -178,7 +178,7 @@ public:
   /**
    * @brief Get the temperature state
    *
-   * @return A pointer to the current temperature finite element state
+   * @return A reference to the current temperature finite element state
    */
   const serac::FiniteElementState& temperature() { return temperature_; };
 
