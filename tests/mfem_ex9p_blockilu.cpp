@@ -730,8 +730,8 @@ double u0_function(const Vector& x)
             ry *= s;
           }
           retValue = (erfc(w * (X(0) - cx - rx)) * erfc(-w * (X(0) - cx + rx)) * erfc(w * (X(1) - cy - ry)) *
-                  erfc(-w * (X(1) - cy + ry))) /
-                 16;
+                      erfc(-w * (X(1) - cy + ry))) /
+                     16;
           break;
         }
       }
@@ -739,14 +739,14 @@ double u0_function(const Vector& x)
     }
     case 2: {
       double x_ = X(0), y_ = X(1), rho, phi;
-      rho = hypot(x_, y_);
-      phi = atan2(y_, x_);
+      rho      = hypot(x_, y_);
+      phi      = atan2(y_, x_);
       retValue = pow(sin(M_PI * rho), 2) * sin(3 * phi);
       break;
     }
     case 3: {
       const double f = M_PI;
-      retValue = sin(f * X(0)) * sin(f * X(1));
+      retValue       = sin(f * X(0)) * sin(f * X(1));
       break;
     }
   }
