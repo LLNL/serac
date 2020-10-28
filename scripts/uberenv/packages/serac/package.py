@@ -135,13 +135,24 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("conduit@0.5.1p1~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
-    depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
+    # Unconditional for now until concretizer fixed
+    depends_on("netcdf-c@4.7.4~shared")
     depends_on("hdf5@1.8.21~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
 
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
+
+    # Libraries that have a GPU variant
+    cuda_deps = ["mfem"]
+    for dep in cuda_deps:
+        depends_on("{0}+cuda".format(dep), when="+cuda")
+        # WARNING: This may only work for MFEM as it doesn't use
+        # Spack's built-in CudaPackage
+        for sm_ in CudaPackage.cuda_arch_values:
+            depends_on('{0} cuda_arch=sm_{1}'.format(dep, sm_),
+                    when='cuda_arch={0}'.format(sm_))
 
     phases = ['hostconfig', 'cmake', 'build',' install']
 

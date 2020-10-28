@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(infrastructure_headers
+    accelerator.hpp
     cli.hpp
     initialize.hpp
     input.hpp
@@ -14,6 +15,7 @@ set(infrastructure_headers
     )
 
 set(infrastructure_sources
+    accelerator.cpp
     cli.cpp
     initialize.cpp
     input.cpp
@@ -22,7 +24,7 @@ set(infrastructure_sources
     terminator.cpp
     )
 
-set(infrastructure_depends axom fmt mpi cli11)
+set(infrastructure_depends axom fmt mpi cli11 mfem)
 blt_list_append( TO infrastructure_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
 blt_add_library(

@@ -82,9 +82,16 @@ struct HypreBoomerAMGPrec {
 };
 
 /**
+ * @brief Stores the information required to configure a BlockILU preconditioner
+ */
+struct BlockILUPrec {
+  int block_size;
+};
+
+/**
  * @brief Preconditioning method
  */
-using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec>;
+using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, BlockILUPrec>;
 
 /**
  * @brief Abstract multiphysics coupling scheme
