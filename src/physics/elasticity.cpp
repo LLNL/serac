@@ -17,7 +17,6 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const Lin
     : BasePhysics(mesh, NUM_FIELDS, order), displacement_(*mesh, FEStateOptions{.order = order, .name = "displacement"})
 {
   mesh->EnsureNodes();
-  // state_[0] = displacement_;
   state_.push_back(displacement_);
 
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement

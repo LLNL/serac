@@ -18,7 +18,6 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
           *mesh,
           FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})
 {
-  // state_[0] = temperature_;
   state_.push_back(temperature_);
 
   // If it's just the single set of params for a quasistatic K solve...

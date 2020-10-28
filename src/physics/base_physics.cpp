@@ -26,7 +26,6 @@ BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
 BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
 {
   order_ = p;
-  // state_.resize(n);
   gf_initialized_.assign(n, false);
 }
 
