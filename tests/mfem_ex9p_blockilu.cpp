@@ -745,7 +745,7 @@ double u0_function(const Vector& x)
 }
 
 // Inflow boundary condition (zero for the problems considered in this example)
-double inflow_function(const Vector& x)
+double inflow_function(const Vector&)
 {
   switch (problem) {
     case 0:
