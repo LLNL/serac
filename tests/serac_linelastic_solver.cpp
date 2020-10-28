@@ -67,7 +67,7 @@ TEST(elastic_solver, static_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = elas_solver.getState()[0]->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = elas_solver.getState()[0].get().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
 
