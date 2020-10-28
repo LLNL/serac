@@ -67,6 +67,9 @@ public:
    * @brief Set the state variables from an existing grid function
    *
    * @param[in] state A vector of finite element states to initialze the solver
+   * @note This will move from each element of the vector, so the vector cannot
+   * be used in the calling scope after this function is called (as it has been
+   * moved from)
    */
   virtual void setState(std::vector<serac::FiniteElementState>&& state);
 
