@@ -25,7 +25,8 @@ enum class OutputType
 {
   GLVis,
   ParaView,
-  VisIt
+  VisIt,
+  SidreVisIt
 };
 
 /**
