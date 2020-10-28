@@ -710,13 +710,18 @@ double u0_function(const Vector& x)
     X(i)          = 2 * (x(i) - center) / (bb_max[i] - bb_min[i]);
   }
 
+  // SERAC EDIT: removed the internal returns to quiet fallthrough warning
+  double retValue = 0.0;
   switch (problem) {
     case 0:
+      [[fallthrough]];
     case 1: {
       switch (dim) {
         case 1:
-          return exp(-40. * pow(X(0) - 0.5, 2));
+          retValue = exp(-40. * pow(X(0) - 0.5, 2));
+          break;
         case 2:
+          [[fallthrough]];
         case 3: {
           double rx = 0.45, ry = 0.25, cx = 0., cy = -0.2, w = 10.;
           if (dim == 3) {
@@ -724,24 +729,28 @@ double u0_function(const Vector& x)
             rx *= s;
             ry *= s;
           }
-          return (erfc(w * (X(0) - cx - rx)) * erfc(-w * (X(0) - cx + rx)) * erfc(w * (X(1) - cy - ry)) *
+          retValue = (erfc(w * (X(0) - cx - rx)) * erfc(-w * (X(0) - cx + rx)) * erfc(w * (X(1) - cy - ry)) *
                   erfc(-w * (X(1) - cy + ry))) /
                  16;
+          break;
         }
       }
+      break;
     }
     case 2: {
       double x_ = X(0), y_ = X(1), rho, phi;
       rho = hypot(x_, y_);
       phi = atan2(y_, x_);
-      return pow(sin(M_PI * rho), 2) * sin(3 * phi);
+      retValue = pow(sin(M_PI * rho), 2) * sin(3 * phi);
+      break;
     }
     case 3: {
       const double f = M_PI;
-      return sin(f * X(0)) * sin(f * X(1));
+      retValue = sin(f * X(0)) * sin(f * X(1));
+      break;
     }
   }
-  return 0.0;
+  return retValue;
 }
 
 // Inflow boundary condition (zero for the problems considered in this example)
