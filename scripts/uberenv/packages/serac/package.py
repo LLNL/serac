@@ -145,7 +145,7 @@ class Serac(CMakePackage, CudaPackage):
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
 
     # Libraries that have a GPU variant
-    cuda_deps = ["mfem"]
+    cuda_deps = ["mfem+amgx"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
         # WARNING: This may only work for MFEM as it doesn't use
