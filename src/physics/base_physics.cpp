@@ -26,7 +26,6 @@ BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
 BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
 {
   order_ = p;
-  state_.resize(n);
   gf_initialized_.assign(n, false);
 }
 
@@ -40,17 +39,22 @@ void BasePhysics::setState(const std::vector<serac::GeneralCoefficient>& state_c
   SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
 
   for (unsigned int i = 0; i < state_coef.size(); ++i) {
-    state_[i]->project(state_coef[i]);
+    state_[i].get().project(state_coef[i]);
   }
 }
 
-void BasePhysics::setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state)
+void BasePhysics::setState(std::vector<serac::FiniteElementState>&& state)
 {
   SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
-  state_ = state;
+  // To avoid making a shallow copy of the references, we move individually
+  for (std::size_t i = 0; i < state.size(); i++) {
+    // Assigning to the FiniteElementState being referenced,
+    // not the reference itself
+    state_[i].get() = std::move(state[i]);
+  }
 }
 
-std::vector<std::shared_ptr<serac::FiniteElementState> > BasePhysics::getState() const { return state_; }
+const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
 void BasePhysics::setTimestepper(const serac::TimestepMethod timestepper)
 {
@@ -109,20 +113,20 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
 
   switch (output_type_) {
     case serac::OutputType::VisIt: {
-      dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front()->mesh());
-
-      for (const auto& state : state_) {
-        dc_->RegisterField(state->name(), &state->gridFunc());
+      dc_ = std::make_unique<mfem::VisItDataCollection>(root_name_, &state_.front().get().mesh());
+      // Implicitly convert from ref_wrapper
+      for (FiniteElementState& state : state_) {
+        dc_->RegisterField(state.name(), &state.gridFunc());
       }
       break;
     }
 
     case serac::OutputType::ParaView: {
-      auto pv_dc               = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front()->mesh());
+      auto pv_dc = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front().get().mesh());
       int  max_order_in_fields = 0;
-      for (const auto& state : state_) {
-        pv_dc->RegisterField(state->name(), &state->gridFunc());
-        max_order_in_fields = std::max(max_order_in_fields, state->space().GetOrder(0));
+      for (FiniteElementState& state : state_) {
+        pv_dc->RegisterField(state.name(), &state.gridFunc());
+        max_order_in_fields = std::max(max_order_in_fields, state.space().GetOrder(0));
       }
       pv_dc->SetLevelsOfDetail(max_order_in_fields);
       pv_dc->SetHighOrderOutput(true);
@@ -163,13 +167,13 @@ void BasePhysics::outputState() const
       std::string   mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
       std::ofstream omesh(mesh_name);
       omesh.precision(FLOAT_PRECISION_);
-      state_.front()->mesh().Print(omesh);
+      state_.front().get().mesh().Print(omesh);
 
-      for (auto& state : state_) {
-        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state->name(), cycle_, mpi_rank_);
+      for (FiniteElementState& state : state_) {
+        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state.name(), cycle_, mpi_rank_);
         std::ofstream osol(sol_name);
         osol.precision(FLOAT_PRECISION_);
-        state->gridFunc().Save(osol);
+        state.gridFunc().Save(osol);
       }
       break;
     }

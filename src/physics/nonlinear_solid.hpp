@@ -145,14 +145,16 @@ public:
    *
    * @return The displacement state field
    */
-  std::shared_ptr<FiniteElementState> displacement() { return displacement_; };
+  const FiniteElementState& displacement() const { return displacement_; };
+  FiniteElementState&       displacement() { return displacement_; };
 
   /**
    * @brief Get the velocity state
    *
    * @return The velocity state field
    */
-  std::shared_ptr<FiniteElementState> velocity() { return velocity_; };
+  const FiniteElementState& velocity() const { return velocity_; };
+  FiniteElementState&       velocity() { return velocity_; };
 
   /**
    * @brief Complete the setup of all of the internal MFEM objects and prepare for timestepping
@@ -175,12 +177,12 @@ protected:
   /**
    * @brief Velocity field
    */
-  std::shared_ptr<FiniteElementState> velocity_;
+  FiniteElementState velocity_;
 
   /**
    * @brief Displacement field
    */
-  std::shared_ptr<FiniteElementState> displacement_;
+  FiniteElementState displacement_;
 
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers
