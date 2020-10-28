@@ -211,17 +211,17 @@ inline LinearSolverParameters augmentAMGWithSpace(const LinearSolverParameters& 
 
 template <>
 struct FromInlet<serac::IterativeSolverParameters> {
-  serac::IterativeSolverParameters operator()(axom::inlet::Table& base);
+  serac::IterativeSolverParameters operator()(const axom::inlet::Table& base);
 };
 
 template <>
 struct FromInlet<serac::NonlinearSolverParameters> {
-  serac::NonlinearSolverParameters operator()(axom::inlet::Table& base);
+  serac::NonlinearSolverParameters operator()(const axom::inlet::Table& base);
 };
 
 template <>
 struct FromInlet<serac::EquationSolver> {
-  serac::EquationSolver operator()(axom::inlet::Table& base);
+  serac::EquationSolver operator()(const axom::inlet::Table& base);
 };
 
 #endif

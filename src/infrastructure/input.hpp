@@ -31,7 +31,7 @@ namespace input {
  * @param[in] input_file_path Path to user given input file
  * @return initialized Inlet instance
  */
-std::shared_ptr<axom::inlet::Inlet> initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path);
+axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path);
 
 /**
  * @brief Returns the absolute path of the given mesh either relative
@@ -64,7 +64,7 @@ void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension 
 // Template specializations
 template <>
 struct FromInlet<mfem::Vector> {
-  mfem::Vector operator()(axom::inlet::Table& base);
+  mfem::Vector operator()(const axom::inlet::Table& base);
 };
 
 #endif

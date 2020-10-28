@@ -16,17 +16,16 @@ namespace serac {
 
 namespace input {
 
-std::shared_ptr<axom::inlet::Inlet> initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path)
+axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path)
 {
   // Initialize Inlet
-  auto luareader = std::make_shared<axom::inlet::LuaReader>();
+  auto luareader = std::make_unique<axom::inlet::LuaReader>();
   luareader->parseFile(input_file_path);
 
   // Store inlet data under its own group
-  axom::sidre::Group* inlet_root  = datastore.getRoot()->createGroup("input_file");
-  auto                serac_inlet = std::make_shared<axom::inlet::Inlet>(luareader, inlet_root);
+  axom::sidre::Group* inlet_root = datastore.getRoot()->createGroup("input_file");
 
-  return serac_inlet;
+  return axom::inlet::Inlet(std::move(luareader), inlet_root);
 }
 
 std::string findMeshFilePath(const std::string& mesh_path, const std::string& input_file_path)
@@ -75,11 +74,11 @@ void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension)
   if (dimension < 0 || dimension > 3) {
     SLIC_ERROR("Cannot define an input file schema for vector of invalid size" << dimension);
   }
-  table.addDouble("x", "x-component of vector")->required(true);
+  table.addDouble("x", "x-component of vector").required(true);
   if (dimension >= 2) {
-    table.addDouble("y", "y-component of vector")->required(true);
+    table.addDouble("y", "y-component of vector").required(true);
     if (dimension >= 3) {
-      table.addDouble("z", "z-component of vector")->required(true);
+      table.addDouble("z", "z-component of vector").required(true);
     }
   }
 }
@@ -87,7 +86,7 @@ void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension)
 }  // namespace input
 }  // namespace serac
 
-mfem::Vector FromInlet<mfem::Vector>::operator()(axom::inlet::Table& base)
+mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
 {
   mfem::Vector result(3);  // Allocate up front since it's small
   result[0] = base["x"];

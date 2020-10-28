@@ -101,7 +101,7 @@ struct InputInfo {
 // Prototype the specialization
 template <>
 struct FromInlet<serac::mesh::InputInfo> {
-  serac::mesh::InputInfo operator()(axom::inlet::Table& base);
+  serac::mesh::InputInfo operator()(const axom::inlet::Table& base);
 };
 
 #endif

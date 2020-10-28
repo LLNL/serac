@@ -35,21 +35,21 @@ namespace serac {
 
 //------- Input file -------
 
-void defineInputFileSchema(std::shared_ptr<axom::inlet::Inlet> inlet, int rank)
+void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 {
   // Simulation time parameters
-  inlet->addDouble("t_final", "Final time for simulation.")->defaultValue(1.0);
-  inlet->addDouble("dt", "Time step.")->defaultValue(0.25);
+  inlet.addDouble("t_final", "Final time for simulation.").defaultValue(1.0);
+  inlet.addDouble("dt", "Time step.").defaultValue(0.25);
 
-  auto mesh_table = inlet->addTable("main_mesh", "The main mesh for the problem");
-  serac::mesh::InputInfo::defineInputFileSchema(*mesh_table);
+  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  serac::mesh::InputInfo::defineInputFileSchema(mesh_table);
 
   // Physics
-  auto solid_solver_table = inlet->addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  serac::NonlinearSolid::InputInfo::defineInputFileSchema(*solid_solver_table);
+  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  serac::NonlinearSolid::InputInfo::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
-  if (!inlet->verify()) {
+  if (!inlet.verify()) {
     SLIC_ERROR_ROOT(rank, "Input file failed to verify.");
     serac::exitGracefully(true);
   }
@@ -83,12 +83,12 @@ int main(int argc, char* argv[])
   datastore.getRoot()->save("serac_input.json", "json");
 
   // Build the mesh
-  auto mesh_info      = (*inlet)["main_mesh"].get<serac::mesh::InputInfo>();
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
   auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = (*inlet)["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
   serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
 
   // Project the initial and reference configuration functions onto the
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
 
   // loading parameters
   // define the traction vector
-  auto traction      = (*inlet)["nonlinear_solid/traction"].get<mfem::Vector>();
+  auto traction      = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
   auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
@@ -134,8 +134,8 @@ int main(int argc, char* argv[])
 
   // initialize/set the time
   double t       = 0;
-  double t_final = (*inlet)["t_final"];  // has default value
-  double dt      = (*inlet)["dt"];       // has default value
+  double t_final = inlet["t_final"];  // has default value
+  double dt      = inlet["dt"];       // has default value
 
   bool last_step = false;
 

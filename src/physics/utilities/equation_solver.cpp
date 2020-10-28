@@ -168,21 +168,20 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
 
 void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
 {
-  auto nonlinear_table = table.addTable("nonlinear", "Newton Equation Solver Parameters");
-  nonlinear_table->required(false);
-  nonlinear_table->addDouble("rel_tol", "Relative tolerance for the Newton solve.")->defaultValue(1.0e-2);
-  nonlinear_table->addDouble("abs_tol", "Absolute tolerance for the Newton solve.")->defaultValue(1.0e-4);
-  nonlinear_table->addInt("max_iter", "Maximum iterations for the Newton solve.")->defaultValue(500);
-  nonlinear_table->addInt("print_level", "Nonlinear print level.")->defaultValue(0);
-  nonlinear_table->addString("solver_type", "Not currently used.")->defaultValue("");
+  auto& linear_table = table.addTable("linear", "Linear Equation Solver Parameters").required();
+  linear_table.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
+  linear_table.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
+  linear_table.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
+  linear_table.addInt("print_level", "Linear print level.").defaultValue(0);
+  linear_table.addString("solver_type", "Solver type (gmres|minres).").defaultValue("gmres");
 
-  auto linear_table = table.addTable("linear", "Linear Equation Solver Parameters");
-  linear_table->required(false);
-  linear_table->addDouble("rel_tol", "Relative tolerance for the linear solve.")->defaultValue(1.0e-6);
-  linear_table->addDouble("abs_tol", "Absolute tolerance for the linear solve.")->defaultValue(1.0e-8);
-  linear_table->addInt("max_iter", "Maximum iterations for the linear solve.")->defaultValue(5000);
-  linear_table->addInt("print_level", "Linear print level.")->defaultValue(0);
-  linear_table->addString("solver_type", "Solver type (gmres|minres).")->defaultValue("gmres");
+  // Only needed for nonlinear problems
+  auto& nonlinear_table = table.addTable("nonlinear", "Newton Equation Solver Parameters").required(false);
+  nonlinear_table.addDouble("rel_tol", "Relative tolerance for the Newton solve.").defaultValue(1.0e-2);
+  nonlinear_table.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
+  nonlinear_table.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
+  nonlinear_table.addInt("print_level", "Nonlinear print level.").defaultValue(0);
+  nonlinear_table.addString("solver_type", "Not currently used.").defaultValue("");
 }
 
 }  // namespace serac
@@ -191,7 +190,7 @@ using serac::EquationSolver;
 using serac::IterativeSolverParameters;
 using serac::NonlinearSolverParameters;
 
-IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(axom::inlet::Table& base)
+IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(const axom::inlet::Table& base)
 {
   IterativeSolverParameters params;
   params.rel_tol          = base["rel_tol"];
@@ -213,7 +212,7 @@ IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(axom:
   return params;
 }
 
-NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(axom::inlet::Table& base)
+NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(const axom::inlet::Table& base)
 {
   NonlinearSolverParameters params;
   params.rel_tol     = base["rel_tol"];
@@ -223,7 +222,7 @@ NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(axom:
   return params;
 }
 
-EquationSolver FromInlet<EquationSolver>::operator()(axom::inlet::Table& base)
+EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Table& base)
 {
   auto lin = base["linear"].get<IterativeSolverParameters>();
   if (base.hasTable("nonlinear")) {
