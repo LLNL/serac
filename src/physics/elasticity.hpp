@@ -96,7 +96,7 @@ protected:
   /**
    * @brief Displacement field
    */
-  std::shared_ptr<serac::FiniteElementState> displacement_;
+  serac::FiniteElementState displacement_;
 
   /**
    * @brief Stiffness bilinear form

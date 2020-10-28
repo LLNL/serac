@@ -62,7 +62,7 @@ TEST(component_bc, qs_solve)
       }
   });
 
-  mfem::Array<int> ess_corner_bc_list = makeTrueEssList(solid_solver.displacement()->space(), zero_bc);
+  mfem::Array<int> ess_corner_bc_list = makeTrueEssList(solid_solver.displacement().space(), zero_bc);
 
   solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, 0);
 
@@ -87,7 +87,7 @@ TEST(component_bc, qs_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.08363646, x_norm, 0.0001);
 
@@ -162,7 +162,7 @@ TEST(component_bc, qs_attribute_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.03330115, x_norm, 0.0001);
 

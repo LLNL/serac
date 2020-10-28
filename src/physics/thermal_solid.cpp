@@ -18,15 +18,17 @@ ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
                            const NonlinearSolid::SolverParameters&    solid_params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       therm_solver_(order, mesh, therm_params),
-      solid_solver_(order, mesh, solid_params)
+      solid_solver_(order, mesh, solid_params),
+      temperature_(therm_solver_.temperature()),
+      velocity_(solid_solver_.velocity()),
+      displacement_(solid_solver_.displacement())
 {
-  temperature_  = therm_solver_.temperature();
-  velocity_     = solid_solver_.velocity();
-  displacement_ = solid_solver_.displacement();
-
-  state_[0] = temperature_;
-  state_[1] = velocity_;
-  state_[2] = displacement_;
+  // state_[0] = therm_solver_.temperature();
+  // state_[1] = solid_solver_.velocity();
+  // state_[2] = solid_solver_.displacement();
+  state_.push_back(therm_solver_.temperature());
+  state_.push_back(solid_solver_.velocity());
+  state_.push_back(solid_solver_.displacement());
 
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
