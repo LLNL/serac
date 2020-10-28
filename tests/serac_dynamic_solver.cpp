@@ -107,10 +107,6 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-/*
-TODO this test is disabled as it was failing CI due to a memory leak in MFEM.
-Once that leak is fixed, it should be re-enabled
-
 TEST(dynamic_solver, dyn_direct_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -177,7 +173,6 @@ TEST(dynamic_solver, dyn_direct_solve)
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-*/
 
 #ifdef MFEM_USE_SUNDIALS
 TEST(dynamic_solver, dyn_linesearch_solve)
