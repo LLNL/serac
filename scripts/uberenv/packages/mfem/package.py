@@ -107,6 +107,7 @@ class Mfem(Package):
     variant('raja', default=False, description='Enable RAJA backend')
     variant('libceed', default=False, description='Enable libCEED backend')
     variant('umpire', default=False, description='Enable Umpire support')
+    variant('amgx', default=False, description='Enable NVIDIA AmgX solver support')
 
     variant('threadsafe', default=False,
             description=('Enable thread safe features.'
@@ -243,6 +244,16 @@ class Mfem(Package):
     depends_on('umpire@2.0.0:', when='+umpire')
     depends_on('umpire+cuda', when='+umpire+cuda')
 
+    # SERAC EDIT BEGIN (TODO: spack PR)
+    depends_on('amgx', when='+amgx')
+    # AmgX doesn't need CUDA but MFEM build system requires amgx+cuda
+    depends_on('cuda', when='+amgx')
+    depends_on('amgx~mpi', when='~mpi')
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('amgx cuda_arch={0}'.format(sm_),
+                   when='+amgx cuda_arch={0}'.format(sm_.replace('sm_', '')))
+    # SERAC EDIT END
+
     patch('mfem_ppc_build.patch', when='@3.2:3.3.0 arch=ppc64le')
     patch('mfem-3.4.patch', when='@3.4.0')
     patch('mfem-3.3-3.4-petsc-3.9.patch',
@@ -360,6 +371,9 @@ class Mfem(Package):
             'MFEM_USE_CUDA=%s' % yes_no('+cuda'),
             'MFEM_USE_OCCA=%s' % yes_no('+occa'),
             'MFEM_USE_RAJA=%s' % yes_no('+raja'),
+            # SERAC EDIT BEGIN (TODO: spack PR)
+            'MFEM_USE_AMGX=%s' % yes_no('+amgx'),
+            # SERAC EDIT END
             'MFEM_USE_CEED=%s' % yes_no('+libceed'),
             'MFEM_USE_UMPIRE=%s' % yes_no('+umpire')]
 
@@ -562,6 +576,16 @@ class Mfem(Package):
                         'RAJA_LIB=%s' %
                         ld_flags_from_dirs([spec['raja'].prefix.lib],
                                            ['RAJA'])]
+
+        # SERAC EDIT BEGIN (TODO: spack PR)
+        if '+amgx' in spec:
+            if '+shared' in spec:
+                 options += ['AMGX_OPT=-I%s' % spec['amgx'].prefix.include,
+                            'AMGX_LIB=%s' %
+                            ld_flags_from_library_list(spec['amgx'].libs)]
+            else:
+                options += 'AMGX_DIR=%s' % spec['amgx'].prefix]
+        # SERAC EDIT END
 
         if '+libceed' in spec:
             options += ['CEED_OPT=-I%s' % spec['libceed'].prefix.include,
