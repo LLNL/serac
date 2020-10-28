@@ -43,23 +43,23 @@ TEST(dynamic_solver, dyn_solve)
   dyn_solver.setViscosity(std::move(visc));
   dyn_solver.setDisplacement(*deform);
   dyn_solver.setVelocity(*velo);
-  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
+  dyn_solver.setTimestepper(serac::TimestepMethod::AverageAcceleration);
 
   // Set the linear solver parameters
   serac::LinearSolverParameters params;
   params.prec        = serac::Preconditioner::BoomerAMG;
-  params.abs_tol     = 1.0e-8;
-  params.rel_tol     = 1.0e-4;
+  params.rel_tol     = 1.0e-8;
+  params.abs_tol     = 1.0e-12;
   params.max_iter    = 500;
   params.lin_solver  = serac::LinearSolver::GMRES;
   params.print_level = 0;
 
   // Set the nonlinear solver parameters
   serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-4;
-  nl_params.abs_tol     = 1.0e-8;
+  nl_params.rel_tol     = 1.0e-8;
+  nl_params.abs_tol     = 1.0e-12;
   nl_params.print_level = 1;
-  nl_params.max_iter    = 500;
+  nl_params.max_iter    = 6;
   dyn_solver.setSolverParameters(params, nl_params);
 
   // Initialize the VisIt output
@@ -70,7 +70,7 @@ TEST(dynamic_solver, dyn_solve)
 
   double t       = 0.0;
   double t_final = 6.0;
-  double dt      = 3.0;
+  double dt      = 1.0;
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -97,8 +97,8 @@ TEST(dynamic_solver, dyn_solve)
   double v_norm = dyn_solver.velocity()->gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(1.4224, x_norm, 0.0001);
+  EXPECT_NEAR(0.2252, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

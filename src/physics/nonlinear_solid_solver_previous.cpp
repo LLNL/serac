@@ -218,10 +218,10 @@ void NonlinearSolidSolverPrevious::advanceTimestep(double& dt)
   mfem::Vector delta_u = u_after - u_before;
   mfem::Vector delta_du_dt = du_dt_after - du_dt_before;
 
-  std::cout << delta_u.Norml2() << std::endl;
-  std::cout << delta_du_dt.Norml2() << std::endl;
+  //std::cout << delta_u.Norml2() << std::endl;
+  //std::cout << delta_du_dt.Norml2() << std::endl;
 
-  delta_u.Print(std::cout);
+  //delta_u.Print(std::cout);
 
   cycle_ += 1;
 }

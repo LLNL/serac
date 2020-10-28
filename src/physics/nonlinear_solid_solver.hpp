@@ -31,6 +31,7 @@ namespace serac {
  */
 class NonlinearSolidSolver : public BaseSolver {
 public:
+
   /**
    * @brief Construct a new Nonlinear Solid Solver object
    *
@@ -208,10 +209,20 @@ protected:
 
   StdFunctionOperator op;
 
-  // predicted displacments and velocities
+  // predicted displacements and velocities
   mfem::Vector x;
   mfem::Vector u;
   mfem::Vector du_dt;
+
+  // temporary values used to compute finite difference approximations
+  // to the derivatives of constrained degrees of freedom
+  mfem::Vector U_minus;
+  mfem::Vector U;
+  mfem::Vector U_plus;
+
+  // time derivatives of the constraint function
+  mfem::Vector dU_dt;
+  mfem::Vector d2U_dt2;
 
   mfem::Vector zero;
 
@@ -224,9 +235,8 @@ protected:
 
   std::unique_ptr<mfem::HypreParMatrix> J;
 
-  SecondOrderODE ode;
+  SecondOrderODE ode2;
 
-  std::unique_ptr<mfem::SecondOrderODESolver> ode_solver_2;
   serac::EquationSolver root_finder;
 
 };

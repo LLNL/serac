@@ -4,7 +4,10 @@
 #include "mfem.hpp"
 #include "numerics/expr_template_ops.hpp"
 #include "physics/operators/odes.hpp"
+#include "physics/operators/stdfunction_operator.hpp"
 #include "physics/utilities/equation_solver.hpp"
+
+constexpr double epsilon = 1.0e-4;
 
 template <typename T>
 struct has_print {
@@ -22,26 +25,7 @@ std::ostream& operator<<(std::ostream& out, const T& vec)
   return out;
 }
 
-mfem::Vector uc(double t)
-{
-  mfem::Vector u(3);
-  u[0] = 0;
-  u[1] = 0.25 * sin(2 * M_PI * t);
-  u[2] = 0;
-  return u;
-}
-
-mfem::Vector duc_dt(double t)
-{
-  static constexpr double eps = 1.0e-4;
-  return mfem::Vector((uc(t + eps) - uc(t - eps)) * (1.0 / (2.0 * eps)));
-};
-
-mfem::Vector d2uc_dt2(double t)
-{
-  static constexpr double eps = 1.0e-4;
-  return mfem::Vector((uc(t - eps) - 2 * uc(t) + uc(t + eps)) * (1.0 / (eps * eps)));
-};
+double uc(double t) { return 0.25 * sin(2 * M_PI * t); }
 
 mfem::Vector fext(double t)
 {
@@ -52,6 +36,7 @@ mfem::Vector fext(double t)
   return force;
 }
 
+#if 0
 double first_order_test_mfem(int num_steps)
 {
   // clang-format off
@@ -83,26 +68,30 @@ double first_order_test_mfem(int num_steps)
   mfem::Vector u = uc(t);
 
   FirstOrderODE ode(u.Size(), [&, dt_prev = -1.0, invT = mfem::DenseMatrix(3, 3)](
-    const double t, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) mutable {
-
-      if (dt != dt_prev) {
-        invT = M;
-        invT.AddMatrix(dt, K, 0, 0);
-        for (int i = 0; i < 3; i++) {
-          invT(i, 1) = invT(1, i) = (i == 1);
-        }
-        invT.Invert();
-        dt_prev = dt;
+                                  const double t, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) mutable {
+    if (dt != dt_prev) {
+      invT = M;
+      invT.AddMatrix(dt, K, 0, 0);
+      for (int i = 0; i < 3; i++) {
+        invT(i, 1) = invT(1, i) = (i == 1);
       }
+      invT.Invert();
+      dt_prev = dt;
+    }
 
-      mfem::Vector uf = u;
-      uf[1]           = 0;
+    double       epsilon  = 1.0e-5;
+    mfem::Vector uc_plus  = uc(t + epsilon);
+    mfem::Vector uc_minus = uc(t - epsilon);
 
-      mfem::Vector f = fext(t) - M * duc_dt(t) - K * uc(t) - K * uf;
-      f[1]           = 0;
+    mfem::Vector duc_dt = (uc_plus - uc_minus) / (2.0 * epsilon);
 
-      du_dt = invT * f;
+    mfem::Vector uf = u;
+    uf[1]           = 0;
 
+    mfem::Vector f = fext(t) - M * duc_dt - K * uc(t) - K * uf;
+    f[1]           = 0;
+
+    du_dt = invT * f;
   });
 
   auto time_integrator = mfem::RK4Solver();
@@ -124,70 +113,9 @@ double first_order_test_mfem(int num_steps)
 
   return error.Norml2();
 }
+#endif
 
-double first_order_ode_test(int num_steps)
-{
-  // clang-format off
-  mfem::DenseMatrix M(3, 3);
-  M(0, 0) = 2; M(0, 1) = 1; M(0, 2) = 0;
-  M(1, 0) = 1; M(1, 1) = 4; M(1, 2) = 1;
-  M(2, 0) = 0; M(2, 1) = 1; M(2, 2) = 2;
-
-  double k = 100;
-  mfem::DenseMatrix K(3, 3);
-  K(0, 0) =  k; K(0, 1) =    -k; K(0, 2) =  0;
-  K(1, 0) = -k; K(1, 1) = 2 * k; K(1, 2) = -k;
-  K(2, 0) =  0; K(2, 1) =    -k; K(2, 2) =  k;
-  // clang-format on
-
-  double gamma = 0.5;
-  double tmax  = 1.0;
-  double dt    = tmax / num_steps;
-
-  mfem::DenseMatrix invH = M;
-  mfem::DenseMatrix invT = M;
-  invT.AddMatrix(dt * gamma, K, 0, 0);
-
-  for (int i = 0; i < 3; i++) {
-    invH(i, 1) = invH(1, i) = (i == 1);
-    invT(i, 1) = invT(1, i) = (i == 1);
-  }
-
-  invH.Invert();
-  invT.Invert();
-
-  double       t      = 0.0;
-  mfem::Vector u      = uc(t);
-  mfem::Vector du_dt  = invH * (fext(t) - K * u - M * duc_dt(t));
-  du_dt[1]            = duc_dt(t)[1];
-  mfem::Vector uf     = u;
-  mfem::Vector duf_dt = du_dt;
-  uf[1] = duf_dt[1] = 0.0;
-
-  for (int i = 0; i < num_steps; i++) {
-    t += dt;
-
-    mfem::Vector f = fext(t) - M * duc_dt(t) - K * uc(t) - K * (uf + (1.0 - gamma) * duf_dt * dt);
-    f[1]           = 0;
-
-    uf += (1.0 - gamma) * duf_dt * dt;
-    duf_dt = invT * f;
-    uf += gamma * duf_dt * dt;
-
-    u = uf + uc(t);
-  }
-
-  mfem::Vector solution(3);
-  solution[0] = -0.1443913076373983;
-  solution[1] = 0.0;
-  solution[2] = 0.04968869236260167;
-
-  mfem::Vector error = u - solution;
-
-  return error.Norml2();
-}
-
-double second_order_ode_test(int num_steps)
+double second_order_test_mfem(int num_steps, int method = 2)
 {
   // clang-format off
   mfem::DenseMatrix M(3, 3);
@@ -207,55 +135,112 @@ double second_order_ode_test(int num_steps)
   K(2, 0) =  0; K(2, 1) =    -k; K(2, 2) =  k;
   // clang-format on
 
-  double beta  = 1.0 / 6.0;
-  double gamma = 1.0 / 2.0;
-
+  double c0, c1;
+  double t    = 0.0;
   double tmax = 1.0;
-  double dt   = tmax / num_steps;
 
-  mfem::DenseMatrix invH = M;
-  mfem::DenseMatrix invT = M;
-  invT.AddMatrix(dt * gamma, C, 0, 0);
-  invT.AddMatrix(dt * dt * beta, K, 0, 0);
+  mfem::DenseMatrix A(3);
+  mfem::DenseMatrix invA(3);
 
-  for (int i = 0; i < 3; i++) {
-    invH(i, 1) = invH(1, i) = (i == 1);
-    invT(i, 1) = invT(1, i) = (i == 1);
-  }
+  // Set the linear solver parameters
+  serac::LinearSolverParameters lin_params;
+  lin_params.prec        = serac::Preconditioner::BoomerAMG;
+  lin_params.abs_tol     = 1.0e-16;
+  lin_params.rel_tol     = 1.0e-12;
+  lin_params.max_iter    = 500;
+  lin_params.lin_solver  = serac::LinearSolver::GMRES;
+  lin_params.print_level = -1;
 
-  invH.Invert();
-  invT.Invert();
+  // Set the nonlinear solver parameters
+  serac::NonlinearSolverParameters nonlin_params;
+  nonlin_params.abs_tol     = 1.0e-16;
+  nonlin_params.rel_tol     = 1.0e-12;
+  nonlin_params.print_level = -1;
+  nonlin_params.max_iter    = 5;
 
-  double       t        = 0.0;
-  mfem::Vector u        = uc(t);
-  mfem::Vector du_dt    = duc_dt(t);
-  mfem::Vector d2u_dt2  = invH * (fext(t) - K * u - C * duc_dt(t) - M * d2uc_dt2(t));
-  du_dt[1]              = duc_dt(t)[1];
-  d2u_dt2[1]            = d2uc_dt2(t)[1];
-  mfem::Vector uf       = u;
-  mfem::Vector duf_dt   = du_dt;
-  mfem::Vector d2uf_dt2 = d2u_dt2;
-  uf[1] = duf_dt[1] = d2uf_dt2[1] = 0.0;
+  mfem::Vector zero(3);
+  zero = 0.0;
+
+  mfem::Vector u(3);
+  mfem::Vector du_dt(3);
+
+  StdFunctionOperator op(3);
+
+  StdFunctionOperator unconstrained(3);
+  StdFunctionOperator constrained(3);
+
+  op.residual = [&](const mfem::Vector& d2u_dt2, mfem::Vector& res) mutable {
+    res    = M * d2u_dt2 + C * (du_dt + c1 * d2u_dt2) + K * (u + c0 * d2u_dt2) - fext(t);
+    res[1] = 0.0;
+  };
+
+  op.jacobian = [&](const mfem::Vector& /*d2u_dt2*/) mutable -> mfem::Operator& {
+    A = M;
+    A.AddMatrix(c1, C, 0, 0);
+    A.AddMatrix(c0, K, 0, 0);
+    for (int i = 0; i < 3; i++) {
+      A(i, 1) = A(1, i) = (i == 1);
+    }
+    return A;
+  };
+
+  serac::EquationSolver root_finder(MPI_COMM_WORLD, lin_params, nonlin_params);
+  root_finder.nonlinearSolver().iterative_mode = true;
+  root_finder.SetOperator(op);
+
+  SecondOrderODE ode(3, [&](const double time, const double fac0, const double fac1, const mfem::Vector& displacement,
+                            const mfem::Vector& velocity, mfem::Vector& acceleration) {
+    t  = time;
+    c0 = fac0;
+    c1 = fac1;
+
+    u     = displacement;
+    du_dt = velocity;
+
+    if (c0 == 0.0 && c1 == 0.0) {
+      acceleration[1] = (uc(t + epsilon) - 2 * uc(t) + uc(t - epsilon)) / (epsilon * epsilon);
+    } else {
+      if (method == 1) {
+        acceleration[1] = (uc(t + epsilon) - 2 * uc(t) + uc(t - epsilon)) / (epsilon * epsilon);
+        du_dt[1]        = (uc(t + epsilon) - uc(t - epsilon)) / (2.0 * epsilon) - c1 * acceleration[1];
+        u[1]            = uc(t) - c0 * acceleration[1];
+      }
+
+      if (method == 2) {
+        acceleration[1] = (uc(t) - u[1]) / c0;
+      }
+    }
+
+    // while (norm(r(acceleration) > tolerance) {
+    //   acceleration -= J(acceleration)^{-1} * r(acceleration);
+    // }
+    root_finder.Mult(zero, acceleration);
+
+  });
+
+  auto time_integrator = mfem::NewmarkSolver();
+  //auto time_integrator = mfem::FoxGoodwinSolver();
+  time_integrator.Init(ode);
+
+  double       time = 0.0;
+  double       dt   = tmax / num_steps;
+  mfem::Vector displacement(3);
+  displacement[0] = 0.0;
+  displacement[1] = uc(time);
+  displacement[2] = 0.0;
+
+  mfem::Vector velocity(3);
+  velocity[0] = 0.0;
+  velocity[1] = (uc(time + epsilon) - uc(time - epsilon)) / (2.0 * epsilon);
+  velocity[2] = 0.0;
 
   for (int i = 0; i < num_steps; i++) {
-    t += dt;
+    time_integrator.Step(displacement, velocity, time, dt);
 
-    mfem::Vector fc = M * d2uc_dt2(t) + C * duc_dt(t) + K * uc(t);
-    mfem::Vector fp =
-        C * (duf_dt + d2uf_dt2 * (1.0 - gamma) * dt) + K * (uf + duf_dt * dt + d2uf_dt2 * (0.5 - beta) * dt * dt);
-    mfem::Vector f = fext(t) - fc - fp;
-    f[1]           = 0;
-
-    uf += duf_dt * dt + (0.5 - beta) * d2uf_dt2 * dt * dt;
-    duf_dt += (1.0 - gamma) * d2uf_dt2 * dt;
-
-    d2uf_dt2 = invT * f;
-
-    uf += beta * d2uf_dt2 * dt * dt;
-    duf_dt += gamma * d2uf_dt2 * dt;
-
-    u     = uf + uc(t);
-    du_dt = duf_dt + duc_dt(t);
+    if (method == 1) {
+      displacement[1] = uc(time);
+      velocity[1]     = (uc(time + epsilon) - uc(time + epsilon)) / (2.0 * epsilon);
+    }
   }
 
   mfem::Vector solution(3);
@@ -263,13 +248,17 @@ double second_order_ode_test(int num_steps)
   solution[1] = 0.0;
   solution[2] = -0.82245512013213784019;
 
-  mfem::Vector error = u - solution;
+  mfem::Vector error = displacement - solution;
+
+  error.Print(std::cout);
 
   return error.Norml2();
 }
 
-int main()
+int main(int argc, char** argv)
 {
+  MPI_Init(&argc, &argv);
+
 #if 0
   std::cout << "first order ODE errors:\n";
   std::cout << "20 steps: " << first_order_ode_test(20) << std::endl;
@@ -280,9 +269,19 @@ int main()
   std::cout << "20 steps: " << second_order_ode_test(20) << std::endl;
   std::cout << "40 steps: " << second_order_ode_test(40) << std::endl;
   std::cout << "80 steps: " << second_order_ode_test(80) << std::endl;
-#endif
 
-  std::cout << "100 steps: " << first_order_test_mfem(100) << std::endl;
-  std::cout << "200 steps: " << first_order_test_mfem(200) << std::endl;
-  std::cout << "400 steps: " << first_order_test_mfem(400) << std::endl;
+#endif
+  //  std::cout << "100 steps: \n" << first_order_test_mfem(100) << std::endl;
+  //  std::cout << "200 steps: \n" << first_order_test_mfem(200) << std::endl;
+  //  std::cout << "400 steps: \n" << first_order_test_mfem(400) << std::endl;
+
+  std::cout << "100 steps: \n" << second_order_test_mfem(100) << std::endl;
+  std::cout << "200 steps: \n" << second_order_test_mfem(200) << std::endl;
+  std::cout << "400 steps: \n" << second_order_test_mfem(400) << std::endl;
+
+  std::cout << "100 steps: \n" << second_order_test_mfem(100, 1) << std::endl;
+  std::cout << "200 steps: \n" << second_order_test_mfem(200, 1) << std::endl;
+  std::cout << "400 steps: \n" << second_order_test_mfem(400, 1) << std::endl;
+
+  MPI_Finalize();
 }

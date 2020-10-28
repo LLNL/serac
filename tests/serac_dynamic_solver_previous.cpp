@@ -49,16 +49,20 @@ TEST(dynamic_solver, dyn_solve)
   // Set the linear solver parameters
   serac::LinearSolverParameters params;
   params.prec        = serac::Preconditioner::BoomerAMG;
-  params.abs_tol     = 1.0e-8;
-  params.rel_tol     = 1.0e-4;
+  //params.abs_tol     = 1.0e-8;
+  //params.rel_tol     = 1.0e-4;
+  params.rel_tol     = 1.0e-8;
+  params.abs_tol     = 1.0e-12;
   params.max_iter    = 500;
   params.lin_solver  = serac::LinearSolver::GMRES;
   params.print_level = 0;
 
   // Set the nonlinear solver parameters
   serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-4;
-  nl_params.abs_tol     = 1.0e-8;
+  //nl_params.rel_tol     = 1.0e-4;
+  //nl_params.abs_tol     = 1.0e-8;
+  nl_params.rel_tol     = 1.0e-8;
+  nl_params.abs_tol     = 1.0e-12;
   nl_params.print_level = 1;
   nl_params.max_iter    = 500;
   dyn_solver.setSolverParameters(params, nl_params);
@@ -71,7 +75,7 @@ TEST(dynamic_solver, dyn_solve)
 
   double t       = 0.0;
   double t_final = 6.0;
-  double dt      = 3.0;
+  double dt      = 1.0;
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -94,6 +98,11 @@ TEST(dynamic_solver, dyn_solve)
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
+
+  mfem::Vector vel = dyn_solver.velocity()->trueVec();
+  std::cout << "velocity: " << vel.Norml2() << std::endl;
+  vel.Print(std::cout);
+
 
   double v_norm = dyn_solver.velocity()->gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);

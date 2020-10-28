@@ -36,9 +36,11 @@ void ThermalStructuralSolver::completeSetup()
   solid_solver_.completeSetup();
 }
 
-void ThermalStructuralSolver::setTimestepper(serac::TimestepMethod timestepper)
+void ThermalStructuralSolver::setTimestepper(const serac::TimestepMethod             timestepper,
+                                             const serac::DirichletEnforcementMethod enforcement_method)
 {
-  timestepper_ = timestepper;
+  timestepper_        = timestepper;
+  enforcement_method_ = enforcement_method;
   therm_solver_.setTimestepper(timestepper);
   solid_solver_.setTimestepper(timestepper);
 }
