@@ -87,10 +87,6 @@ TEST(nonlinear_solid_solver, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-/*
-TODO this test is disabled as it was failing CI due to a memory leak in MFEM.
-Once that leak is fixed, it should be re-enabled
-
 TEST(nonlinear_solid_solver, qs_direct_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -103,7 +99,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   int dim = pmesh->Dimension();
 
   // Define the solver object
-  NonlinearSolidSolver solid_solver(1, pmesh, default_quasistatic);
+  NonlinearSolid solid_solver(1, pmesh, default_quasistatic);
 
   std::set<int> ess_bdr = {1};
 
@@ -149,7 +145,6 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-*/
 
 TEST(nonlinear_solid_solver, qs_custom_solve)
 {
