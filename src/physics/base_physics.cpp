@@ -148,7 +148,7 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
 
   if ((output_type_ == OutputType::VisIt) || (output_type_ == OutputType::SidreVisIt)) {
     // Implicitly convert from ref_wrapper
-    for (const FiniteElementState& state : state_) {
+    for (FiniteElementState& state : state_) {
       dc_->RegisterField(state.name(), &state.gridFunc());
     }
   }
