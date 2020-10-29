@@ -43,11 +43,11 @@ TEST(thermal_solver, static_solve)
   auto pmesh = buildBallMesh(10000);
 
   const IterativeSolverParameters linear_params = {.rel_tol     = 1.0e-6,
-                                                          .abs_tol     = 1.0e-12,
-                                                          .print_level = 0,
-                                                          .max_iter    = 100,
-                                                          .lin_solver  = LinearSolver::CG,
-                                                          .prec        = HypreBoomerAMGPrec{}};
+                                                   .abs_tol     = 1.0e-12,
+                                                   .print_level = 0,
+                                                   .max_iter    = 100,
+                                                   .lin_solver  = LinearSolver::CG,
+                                                   .prec        = HypreBoomerAMGPrec{}};
 
   // Initialize the second order thermal solver on the parallel mesh
   ThermalConduction therm_solver(2, pmesh, linear_params);
