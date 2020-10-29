@@ -67,12 +67,13 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
   // Handle the preconditioner - currently just BoomerAMG and HypreSmoother are supported
   if (std::holds_alternative<HypreBoomerAMGPrec>(lin_params.prec)) {
     auto par_fes = std::get<HypreBoomerAMGPrec>(lin_params.prec).pfes;
-    SLIC_ERROR_IF(par_fes == nullptr, "FESpace is required to use the HypreBoomerAMG preconditioner.");
     SLIC_WARNING_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
                     "Attempting to use BoomerAMG with nodal ordering.");
     auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
     prec_amg->SetPrintLevel(lin_params.print_level);
-    prec_amg->SetElasticityOptions(par_fes);
+    if (par_fes != nullptr) {
+      prec_amg->SetElasticityOptions(par_fes);
+    }
     prec_ = std::move(prec_amg);
   } else if (std::holds_alternative<HypreSmootherPrec>(lin_params.prec)) {
     auto relaxation_type = std::get<HypreSmootherPrec>(lin_params.prec).type;
