@@ -131,7 +131,7 @@ if(ENABLE_CUDA)
         NAME          mfem
         INCLUDES      ${MFEM_INCLUDE_DIRS}
         # FIXME: How does this work with first-class CMake CUDA support?
-        DEPENDS_ON    ${CMAKE_CUDA_LINK_FLAGS} cuda_runtime cusparse
+        DEPENDS_ON    ${CMAKE_CUDA_LINK_FLAGS} cuda_runtime cusparse ${CUDA_CUBLAS_LIBRARIES}
         LIBRARIES     ${MFEM_LIBRARIES}
         TREAT_INCLUDES_AS_SYSTEM ON)
 else()

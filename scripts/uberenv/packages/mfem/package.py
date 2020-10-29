@@ -251,7 +251,7 @@ class Mfem(Package):
     depends_on('amgx~mpi', when='~mpi')
     for sm_ in CudaPackage.cuda_arch_values:
         depends_on('amgx cuda_arch={0}'.format(sm_),
-                   when='+amgx cuda_arch={0}'.format(sm_.replace('sm_', '')))
+                   when='+amgx cuda_arch=sm_{0}'.format(sm_))
     # SERAC EDIT END
 
     patch('mfem_ppc_build.patch', when='@3.2:3.3.0 arch=ppc64le')
@@ -581,10 +581,10 @@ class Mfem(Package):
         if '+amgx' in spec:
             if '+shared' in spec:
                  options += ['AMGX_OPT=-I%s' % spec['amgx'].prefix.include,
-                            'AMGX_LIB=%s' %
-                            ld_flags_from_library_list(spec['amgx'].libs)]
+                             'AMGX_LIB=%s' %
+                             ld_flags_from_library_list(spec['amgx'].libs)]
             else:
-                options += 'AMGX_DIR=%s' % spec['amgx'].prefix]
+                options += ['AMGX_DIR=%s' % spec['amgx'].prefix]
         # SERAC EDIT END
 
         if '+libceed' in spec:

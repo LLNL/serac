@@ -116,6 +116,13 @@ packages:
         prefix: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
     buildable: false
 
+  # FIXME: Remove this ASAP once PR is merged
+  amgx:
+    externals:
+    - spec: amgx@2.1.x cuda_arch=70,80
+      prefix: /usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/amgx_tmp
+    buildable: false
+
   # Lock in versions of Devtools
   cmake:
     externals:
