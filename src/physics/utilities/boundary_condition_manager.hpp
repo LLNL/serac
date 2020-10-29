@@ -62,7 +62,7 @@ public:
      * @return A non-owning reference to the pointed-to element
      */
     const auto& operator*() const { return *curr_; }
-    auto& operator*() { return *curr_; }
+    auto&       operator*() { return *curr_; }
 
     /**
      * @brief Comparison operation, checks for iterator inequality
