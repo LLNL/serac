@@ -70,7 +70,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
     auto par_fes  = std::get<HypreBoomerAMGPrec>(lin_params.prec).pfes;
     if (par_fes != nullptr) {
       SLIC_WARNING_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
-                      "Attempting to use BoomerAMG on with nodal ordering.");
+                      "Attempting to use BoomerAMG with nodal ordering on an elasticity problem.");
       prec_amg->SetElasticityOptions(par_fes);
     }
     prec_amg->SetPrintLevel(lin_params.print_level);
