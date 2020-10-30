@@ -46,7 +46,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
 
   const auto& lin_params = params.H_lin_params;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
-  const auto& augmented_params = augmentAMGWithSpace(lin_params, displacement_.space());
+  const auto& augmented_params = augmentAMGForElasticity(lin_params, displacement_.space());
 
   nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_params);
   // Check for dynamic mode

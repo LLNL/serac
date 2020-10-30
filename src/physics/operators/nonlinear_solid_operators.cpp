@@ -51,7 +51,7 @@ NonlinearSolidDynamicOperator::NonlinearSolidDynamicOperator(std::unique_ptr<mfe
       z_(height / 2)
 {
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
-  const auto& augmented_params = augmentAMGWithSpace(lin_params, *H_form_->ParFESpace());
+  const auto& augmented_params = augmentAMGForElasticity(lin_params, *H_form_->ParFESpace());
 
   M_inv_ = EquationSolver(H_form_->ParFESpace()->GetComm(), augmented_params);
 
