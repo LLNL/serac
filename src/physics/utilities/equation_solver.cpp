@@ -80,6 +80,12 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
     prec_smoother->SetType(relaxation_type);
     prec_smoother->SetPositiveDiagonal(true);
     prec_ = std::move(prec_smoother);
+  } else if (std::holds_alternative<AMGXPrec>(lin_params.prec)) {
+#ifdef MFEM_USE_AMGX
+    prec_ = std::make_unique<mfem::AmgXSolver>(comm, mfem::AmgXSolver::PRECONDITIONER, true);
+#else
+    SLIC_ERROR("AMGX was not enabled when MFEM was built");
+#endif
   } else if (std::holds_alternative<BlockILUPrec>(lin_params.prec)) {
     auto block_size = std::get<BlockILUPrec>(lin_params.prec).block_size;
     prec_           = std::make_unique<mfem::BlockILU>(block_size);
