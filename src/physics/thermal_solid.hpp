@@ -178,23 +178,23 @@ public:
   /**
    * @brief Get the temperature state
    *
-   * @return A pointer to the current temperature finite element state
+   * @return A reference to the current temperature finite element state
    */
-  std::shared_ptr<serac::FiniteElementState> temperature() { return temperature_; };
+  const serac::FiniteElementState& temperature() { return temperature_; };
 
   /**
    * @brief Get the displacement state
    *
    * @return The displacement state field
    */
-  std::shared_ptr<serac::FiniteElementState> displacement() { return displacement_; };
+  const serac::FiniteElementState& displacement() { return displacement_; };
 
   /**
    * @brief Get the velocity state
    *
    * @return The velocity state field
    */
-  std::shared_ptr<serac::FiniteElementState> velocity() { return velocity_; };
+  const serac::FiniteElementState& velocity() { return velocity_; };
 
   /**
    * @brief Advance the timestep
@@ -210,21 +210,6 @@ public:
 
 protected:
   /**
-   * @brief The temperature finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> temperature_;
-
-  /**
-   * @brief The velocity finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> velocity_;
-
-  /**
-   * @brief The displacement finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> displacement_;
-
-  /**
    * @brief The single physics thermal solver
    */
   ThermalConduction therm_solver_;
@@ -233,6 +218,21 @@ protected:
    * @brief The single physics nonlinear solid solver
    */
   NonlinearSolid solid_solver_;
+
+  /**
+   * @brief The temperature finite element state
+   */
+  const serac::FiniteElementState& temperature_;
+
+  /**
+   * @brief The velocity finite element state
+   */
+  const serac::FiniteElementState& velocity_;
+
+  /**
+   * @brief The displacement finite element state
+   */
+  const serac::FiniteElementState& displacement_;
 
   /**
    * @brief The coupling strategy

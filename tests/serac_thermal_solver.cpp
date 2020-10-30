@@ -42,8 +42,15 @@ TEST(thermal_solver, static_solve)
 
   auto pmesh = buildBallMesh(10000);
 
+  const IterativeSolverParameters linear_params = {.rel_tol     = 1.0e-6,
+                                                   .abs_tol     = 1.0e-12,
+                                                   .print_level = 0,
+                                                   .max_iter    = 100,
+                                                   .lin_solver  = LinearSolver::CG,
+                                                   .prec        = HypreBoomerAMGPrec{}};
+
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, default_linear_params);
+  ThermalConduction therm_solver(2, pmesh, linear_params);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(One);
@@ -67,7 +74,7 @@ TEST(thermal_solver, static_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.02263, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -116,7 +123,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(0.9168086318, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -158,7 +165,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -219,7 +226,7 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.6493029, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -280,7 +287,7 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);

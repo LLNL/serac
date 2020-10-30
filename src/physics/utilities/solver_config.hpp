@@ -25,7 +25,8 @@ enum class OutputType
 {
   GLVis,
   ParaView,
-  VisIt
+  VisIt,
+  SidreVisIt
 };
 
 /**
@@ -141,7 +142,7 @@ struct IterativeSolverParameters {
   /**
    * @brief Preconditioner selection
    */
-  Preconditioner prec;
+  std::optional<Preconditioner> prec;
 };
 
 /**

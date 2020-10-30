@@ -123,8 +123,11 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("mfem+sundials", when="+sundials")
     depends_on("sundials~shared", when="+sundials")
 
+    # Needs to be first due to a bug with the Spack concretizer
+    depends_on("hdf5+hl@1.8.21~shared")
+
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["axom@0.4.0p1~openmp~fortran~raja~umpire",
+    cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran~raja~umpire+mfem~shared",
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
@@ -137,7 +140,6 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("superlu-dist@6.1.1~shared")
     # Unconditional for now until concretizer fixed
     depends_on("netcdf-c@4.7.4~shared")
-    depends_on("hdf5@1.8.21~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
@@ -313,7 +315,7 @@ class Serac(CMakePackage, CudaPackage):
             if on_blueos:
                 # Very specific fix for working around CMake adding implicit link directories returned by the BlueOS
                 # compilers to link CUDA executables 
-                cfg.write(cmake_cache_string("BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
+                cfg.write(cmake_cache_string("BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
                                              "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;"
                                              "/usr/tce/packages/gcc/gcc-4.9.3/lib64"))
         else:

@@ -13,6 +13,7 @@
 #ifndef BASE_PHYSICS
 #define BASE_PHYSICS
 
+#include <functional>
 #include <memory>
 
 #include "mfem.hpp"
@@ -66,15 +67,18 @@ public:
    * @brief Set the state variables from an existing grid function
    *
    * @param[in] state A vector of finite element states to initialze the solver
+   * @note This will move from each element of the vector, so the vector cannot
+   * be used in the calling scope after this function is called (as it has been
+   * moved from)
    */
-  virtual void setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state);
+  virtual void setState(std::vector<serac::FiniteElementState>&& state);
 
   /**
    * @brief Get the list of state variable grid functions
    *
    * @return the current vector of finite element states
    */
-  virtual std::vector<std::shared_ptr<serac::FiniteElementState> > getState() const;
+  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState> >& getState() const;
 
   /**
    * @brief Set the time integration method
@@ -157,7 +161,7 @@ protected:
   /**
    * @brief List of finite element data structures
    */
-  std::vector<std::shared_ptr<serac::FiniteElementState> > state_;
+  std::vector<std::reference_wrapper<serac::FiniteElementState> > state_;
 
   /**
    * @brief Block vector storage of the true state

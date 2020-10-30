@@ -80,16 +80,12 @@ TEST(nonlinear_solid_solver, qs_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-
-/*
-TODO this test is disabled as it was failing CI due to a memory leak in MFEM.
-Once that leak is fixed, it should be re-enabled
 
 TEST(nonlinear_solid_solver, qs_direct_solve)
 {
@@ -103,7 +99,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   int dim = pmesh->Dimension();
 
   // Define the solver object
-  NonlinearSolidSolver solid_solver(1, pmesh, default_quasistatic);
+  NonlinearSolid solid_solver(1, pmesh, default_quasistatic);
 
   std::set<int> ess_bdr = {1};
 
@@ -143,13 +139,12 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-*/
 
 TEST(nonlinear_solid_solver, qs_custom_solve)
 {
@@ -219,7 +214,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(2.2309025, x_norm, 0.001);
 

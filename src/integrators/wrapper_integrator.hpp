@@ -13,6 +13,7 @@
 #ifndef WRAPPER_INTEGRATOR_HPP
 #define WRAPPER_INTEGRATOR_HPP
 
+#include <functional>
 #include <memory>
 
 #include "mfem.hpp"
@@ -68,7 +69,7 @@ private:
 };
 
 /**
- * @brief A class to convert linearform integrators into a nonlinear residual-based one
+ * @brief A class to convert bilinearform integrators into a nonlinear residual-based one
  */
 class BilinearToNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 public:
@@ -154,6 +155,71 @@ private:
    * @brief The trial finite element space
    */
   std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes_;
+};
+
+/**
+ * @brief A class to convert NonlinearFormIntegrator to one where the input parameter undergoes a change of variables
+ */
+class TransformedNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
+public:
+  /// alias for prototype of the residual_func
+  using transformed_func = mfem::Vector(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                        const mfem::Vector&);
+
+  /// alias for prototype of the gradient of residual_func
+  using transformed_gradient_func = mfem::DenseMatrix(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                                      const mfem::DenseMatrix&);
+
+  /**
+   * @brief Recasts, A(u(x)) = F as R(u(x)) = A(u(x)) - F = R(x)
+   *
+   * @param[in] R A BilinearFormIntegrator
+   * @param[in] transformed_input A function that performs a change of variables to what R expects
+   * @param[in] transformed_grad_output A function that performs a change of variables for the gradient
+   */
+  explicit TransformedNonlinearFormIntegrator(std::shared_ptr<mfem::NonlinearFormIntegrator> R,
+                                              std::function<transformed_func>                transformed_input,
+                                              std::function<transformed_gradient_func>       transformed_grad_output);
+
+  /**
+   * @brief Compute the residual vector with input, transformed_function(x)
+   * @param[in] el The finite element for local integration
+   * @param[in] Tr The local FE transformation
+   * @param[in] elfun The state to evaluate the residual
+   * @param[out] elvect The output residual
+   */
+  virtual void AssembleElementVector(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                     const mfem::Vector& elfun, mfem::Vector& elvect);
+
+  /**
+   * @brief Compute the tangent matrix with input, transformed_function(x)
+   *
+   * @param[in] el The finite element for local integration
+   * @param[in] Tr The local FE transformation
+   * @param[in] elfun The state to evaluate the residual
+   * @param[out] elmat elvect The output gradient
+   */
+  virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                   const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
+
+private:
+  /**
+   * @brief The NonlinearFormIntegrator form to wrap
+   *
+   */
+  std::shared_ptr<mfem::NonlinearFormIntegrator> R_;
+
+  /**
+   * @brief The transforming function on input x
+   *
+   */
+
+  std::function<transformed_func> transformed_function_;
+
+  /**
+   * @brief The transforming function to perform change of variables for the gradient
+   */
+  std::function<transformed_gradient_func> transformed_function_grad_;
 };
 
 }  // namespace serac
