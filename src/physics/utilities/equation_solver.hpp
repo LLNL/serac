@@ -195,10 +195,12 @@ inline LinearSolverParameters augmentAMGForElasticity(const LinearSolverParamete
                                                       mfem::ParFiniteElementSpace&  pfes)
 {
   auto augmented_params = init_params;
-  if (auto iter_params = std::get_if<IterativeSolverParameters>(init_params) && iter_params->prec) {
-    if (auto amg_prec = std::get_if<HypreBoomerAMGPrec>(&iter_params->prec.value())) {
-      // It's a copy, but at least it's on the stack
-      std::get<HypreBoomerAMGPrec>(*std::get<IterativeSolverParameters>(augmented_params).prec).pfes = &pfes;
+  if (auto iter_params = std::get_if<IterativeSolverParameters>(&init_params)) {
+    if (iter_params->prec) {
+      if (auto amg_prec = std::get_if<HypreBoomerAMGPrec>(&iter_params->prec.value())) {
+        // It's a copy, but at least it's on the stack
+        std::get<HypreBoomerAMGPrec>(*std::get<IterativeSolverParameters>(augmented_params).prec).pfes = &pfes;
+      }
     }
   }
   // NRVO will kick in here

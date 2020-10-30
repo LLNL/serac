@@ -26,7 +26,7 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
     setTimestepper(TimestepMethod::QuasiStatic);
   }
   // Otherwise, two sets of parameters for the dynamic M/T solve
-  else if (auto dyn_params = std::get_if<DynamicSolverParameters>(&params) {
+  else if (auto dyn_params = std::get_if<DynamicSolverParameters>(&params)) {
     setTimestepper(dyn_params->timestepper);
     // Save these to initialize the DynamicConductionOperator later
     dyn_M_params_ = dyn_params->M_params;
