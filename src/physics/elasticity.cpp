@@ -20,7 +20,7 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const Lin
   state_.push_back(displacement_);
 
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
-  const auto& augmented_params = augmentAMGWithSpace(params, displacement_.space());
+  const auto& augmented_params = augmentAMGForElasticity(params, displacement_.space());
 
   K_inv_ = EquationSolver(mesh->GetComm(), augmented_params);
   setTimestepper(TimestepMethod::QuasiStatic);
