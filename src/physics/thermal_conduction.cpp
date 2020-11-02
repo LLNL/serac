@@ -31,6 +31,8 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
     // Save these to initialize the DynamicConductionOperator later
     dyn_M_params_ = dyn_params->M_params;
     dyn_T_params_ = dyn_params->T_params;
+  } else {
+    SLIC_ERROR("ThermalCondution::SolverParameters did not contain a value");
   }
 }
 
