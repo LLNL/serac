@@ -195,11 +195,9 @@ inline LinearSolverParameters augmentAMGForElasticity(const LinearSolverParamete
                                                       mfem::ParFiniteElementSpace&  pfes)
 {
   auto augmented_params = init_params;
-  if (std::holds_alternative<IterativeSolverParameters>(init_params)) {
-    const auto& iter_params = std::get<IterativeSolverParameters>(init_params);
-    if (iter_params.prec) {
-      auto augmented_params = init_params;
-      if (std::holds_alternative<HypreBoomerAMGPrec>(*iter_params.prec)) {
+  if (auto iter_params = std::get_if<IterativeSolverParameters>(&init_params)) {
+    if (iter_params->prec) {
+      if (std::holds_alternative<HypreBoomerAMGPrec>(iter_params->prec.value())) {
         // It's a copy, but at least it's on the stack
         std::get<HypreBoomerAMGPrec>(*std::get<IterativeSolverParameters>(augmented_params).prec).pfes = &pfes;
       }
