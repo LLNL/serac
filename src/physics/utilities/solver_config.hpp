@@ -136,7 +136,7 @@ struct IterativeSolverParameters {
   /**
    * @brief Preconditioner selection
    */
-  Preconditioner prec;
+  std::optional<Preconditioner> prec;
 };
 
 /**
