@@ -33,7 +33,7 @@ set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/tce/packages/gcc/gcc-8.3.1/lib" CACHE
 
 set(ENABLE_CUDA ON CACHE BOOL "")
 
-set(CUDA_TOOLKIT_ROOT_DIR "/usr/tce/packages/cuda/cuda-11.0.182" CACHE PATH "")
+set(CUDA_TOOLKIT_ROOT_DIR "/usr/tce/packages/cuda/cuda-11.1.1" CACHE PATH "")
 
 set(CMAKE_CUDA_COMPILER "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" CACHE PATH "")
 
@@ -57,9 +57,9 @@ set(MPIEXEC_EXECUTABLE "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-rele
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_10_29_10_51_56/clang-upstream_gfortran" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_11_03_07_07_50/clang-upstream_gfortran" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0p1" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac-bugfix" CACHE PATH "")
 
 set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.5.1p1" CACHE PATH "")
 
@@ -75,7 +75,7 @@ set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.2candidate" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.2" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools

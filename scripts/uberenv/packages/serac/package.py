@@ -109,7 +109,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.2candidate~shared+metis+superlu-dist+lapack+mpi+netcdf",
+    debug_deps = ["mfem@4.2~shared+metis+superlu-dist+lapack+mpi+netcdf",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -127,7 +127,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("hdf5+hl@1.8.21~shared")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran~raja~umpire+mfem~shared",
+    cmake_debug_deps = ["axom@0.4.0serac-bugfix~openmp~fortran~raja~umpire+mfem~shared",
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
@@ -147,14 +147,17 @@ class Serac(CMakePackage, CudaPackage):
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
 
     # Libraries that have a GPU variant
-    cuda_deps = ["mfem+amgx"]
+    depends_on("amgx@2.1.x", when="+cuda")
+    cuda_deps = ["mfem", "axom"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
-        # WARNING: This may only work for MFEM as it doesn't use
-        # Spack's built-in CudaPackage
-        for sm_ in CudaPackage.cuda_arch_values:
-            depends_on('{0} cuda_arch=sm_{1}'.format(dep, sm_),
-                    when='cuda_arch={0}'.format(sm_))
+
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('mfem+amgx cuda_arch=sm_{0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
+        depends_on('axom cuda_arch={0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
+        
 
     phases = ['hostconfig', 'cmake', 'build',' install']
 

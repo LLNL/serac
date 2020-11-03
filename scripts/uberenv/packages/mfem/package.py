@@ -44,7 +44,7 @@ class Mfem(Package):
     # SERAC EDIT BEGIN
     # Version spec used in serac based on mfem@develop commit SHA
     version('4.1.0p1', commit='bb3c788a05f430bcfed03065ba39868974964924')
-    version('4.2candidate', branch='mfem-4.2-dev')
+    version('4.2', tag='v4.2')
     # SERAC EDIT END
 
     # 'develop' is a special version that is always larger (or newer) than any
@@ -299,7 +299,9 @@ class Mfem(Package):
         xlinker = '-Wl,'
         if '+cuda' in spec:
             xcompiler = '-Xcompiler='
-            xlinker = '-Xlinker='
+            # SERAC EDIT BEGIN - equals sign not portable
+            xlinker = '-Xlinker '
+            # SERAC EDIT END
         cuda_arch = spec.variants['cuda_arch'].value
 
         # We need to add rpaths explicitly to allow proper export of link flags
@@ -310,17 +312,21 @@ class Mfem(Package):
         # above -- this is done to avoid issues like this:
         # https://github.com/mfem/mfem/issues/1088.
         def ld_flags_from_library_list(libs_list):
-            flags = ['%s-rpath,%s' % (xlinker, dir)
+            # SERAC EDIT BEGIN - Xlinker allows only one arg
+            flags = ['%s-rpath %s%s' % (xlinker, xlinker, dir)
                      for dir in libs_list.directories
                      if not is_sys_lib_path(dir)]
+            # SERAC EDIT END
             flags += ['-L%s' % dir for dir in libs_list.directories
                       if not is_sys_lib_path(dir)]
             flags += [libs_list.link_flags]
             return ' '.join(flags)
 
         def ld_flags_from_dirs(pkg_dirs_list, pkg_libs_list):
-            flags = ['%s-rpath,%s' % (xlinker, dir) for dir in pkg_dirs_list
+            # SERAC EDIT BEGIN
+            flags = ['%s-rpath %s%s' % (xlinker, xlinker, dir) for dir in pkg_dirs_list
                      if not is_sys_lib_path(dir)]
+            # SERAC EDIT END
             flags += ['-L%s' % dir for dir in pkg_dirs_list
                       if not is_sys_lib_path(dir)]
             flags += ['-l%s' % lib for lib in pkg_libs_list]
