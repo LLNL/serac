@@ -108,14 +108,10 @@ int main(int argc, char* argv[])
   solid_solver.setDisplacement(defo_coef);
   solid_solver.setVelocity(velo_coef);
 
-  std::set<int> ess_bdr = {1};
-
   // define the displacement vector
   mfem::Vector disp(dim);
   disp           = 0.0;
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
-
-  std::set<int> trac_bdr = {2};
 
   // loading parameters
   // define the traction vector
@@ -123,8 +119,13 @@ int main(int argc, char* argv[])
   auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
-  solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
-  solid_solver.setTractionBCs(trac_bdr, traction_coef);
+  const auto disp_info = solid_solver_info.boundary_conditions.find("displacement");
+  SLIC_ERROR_ROOT_IF(disp_info == solid_solver_info.boundary_conditions.end(), rank, "No displacement BC specified");
+  solid_solver.setDisplacementBCs(disp_info->second.attrs, disp_coef);
+
+  const auto trac_info = solid_solver_info.boundary_conditions.find("traction");
+  SLIC_ERROR_ROOT_IF(trac_info == solid_solver_info.boundary_conditions.end(), rank, "No traction BC specified");
+  solid_solver.setTractionBCs(trac_info->second.attrs, traction_coef);
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);

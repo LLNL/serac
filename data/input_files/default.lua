@@ -13,19 +13,20 @@ main_mesh = {
 -- Solver parameters
 nonlinear_solid = {
     solver = {
-        nonlinear = {
-            rel_tol     = 1.0e-2,
-            abs_tol     = 1.0e-4,
-            max_iter    = 500,
-            print_level = 0,
-        },
-
         linear = {
             rel_tol     = 1.0e-6,
             abs_tol     = 1.0e-8,
             max_iter    = 5000,
             print_level = 0,
             solver_type = "gmres",
+            prec_type   = "AMG",
+        },
+
+        nonlinear = {
+            rel_tol     = 1.0e-2,
+            abs_tol     = 1.0e-4,
+            max_iter    = 500,
+            print_level = 0,
         },
     },
 
@@ -41,5 +42,17 @@ nonlinear_solid = {
         x = 0.0,
         y = 1.0e-3,
         z = 0.0,
+    },
+
+    -- boundary condition parameters
+    boundary_conds = {
+        [1] = {
+            name = "displacement",
+            attrs = {1},
+        },
+        [2] = {
+            name = "traction",
+            attrs = {2},
+        },
     },
 }
