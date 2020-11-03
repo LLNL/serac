@@ -69,7 +69,13 @@ TEST(component_bc, qs_solve)
   auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -1.0e-1; });
 
   // Pass the BC information to the solver object setting only the z direction
-  solid_solver.setDisplacementBCs(solid_solver_info.boundary_conditions.at("displacement").attrs, disp_coef, 0);
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement") {
+      solid_solver.setDisplacementBCs(bc.attrs, disp_coef, 0);
+    } else {
+      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
 
   // Create an indicator function to set all vertices that are x=0
   StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector& x, mfem::Vector& X) {
@@ -140,8 +146,15 @@ TEST(component_bc, qs_attribute_solve)
   auto disp_y_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[1] * -5.0e-2; });
 
   // Pass the BC information to the solver object setting only the z direction
-  solid_solver.setDisplacementBCs(solid_solver_info.boundary_conditions.at("displacement_x").attrs, disp_x_coef, 0);
-  solid_solver.setDisplacementBCs(solid_solver_info.boundary_conditions.at("displacement_y").attrs, disp_y_coef, 1);
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement_x") {
+      solid_solver.setDisplacementBCs(bc.attrs, disp_x_coef, 0);
+    } else if (bc.name == "displacement_y") {
+      solid_solver.setDisplacementBCs(bc.attrs, disp_y_coef, 1);
+    } else {
+      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::GLVis, "component_attr_bc");

@@ -119,13 +119,15 @@ int main(int argc, char* argv[])
   auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
-  const auto disp_info = solid_solver_info.boundary_conditions.find("displacement");
-  SLIC_ERROR_ROOT_IF(disp_info == solid_solver_info.boundary_conditions.end(), rank, "No displacement BC specified");
-  solid_solver.setDisplacementBCs(disp_info->second.attrs, disp_coef);
-
-  const auto trac_info = solid_solver_info.boundary_conditions.find("traction");
-  SLIC_ERROR_ROOT_IF(trac_info == solid_solver_info.boundary_conditions.end(), rank, "No traction BC specified");
-  solid_solver.setTractionBCs(trac_info->second.attrs, traction_coef);
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement") {
+      solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
+    } else if (bc.name == "traction") {
+      solid_solver.setTractionBCs(bc.attrs, traction_coef);
+    } else {
+      SLIC_WARNING_ROOT(rank, "Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);

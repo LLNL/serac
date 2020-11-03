@@ -257,8 +257,8 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   result.K  = base["K"];
 
   auto bdr_map = base["boundary_conds"].get<std::unordered_map<int, serac::input::BoundaryConditionInputInfo>>();
-  for (const auto& [_, val] : bdr_map) {
-    result.boundary_conditions[val.name] = val;
+  for (const auto& [idx, val] : bdr_map) {
+    result.boundary_conditions.push_back(val);
   }
 
   return result;

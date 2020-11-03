@@ -66,7 +66,7 @@ public:
     double K;
 
     // Boundary condition information
-    std::unordered_map<std::string, input::BoundaryConditionInputInfo> boundary_conditions;
+    std::vector<input::BoundaryConditionInputInfo> boundary_conditions;
   };
 
   /**
