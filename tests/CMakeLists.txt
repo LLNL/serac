@@ -23,7 +23,7 @@ if (ENABLE_GTEST)
         serac_dtor.cpp
         serac_boundary_cond.cpp
         serac_mesh.cpp
-        time_integration_with_constraints.cpp)
+        time_integration_with_constraints.cpp
         mfem_ex9p_blockilu.cpp)
 
     foreach(filename ${solver_tests})
