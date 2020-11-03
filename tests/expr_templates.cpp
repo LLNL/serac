@@ -32,6 +32,29 @@ static std::pair<mfem::DenseMatrix, mfem::Vector> sample_matvec(const int rows, 
   return {matrix, vec_in};
 }
 
+static auto build_partitioning(MPI_Comm comm, const int size)
+{
+  int num_procs = 0;
+  int rank      = 0;
+  MPI_Comm_size(comm, &num_procs);
+  MPI_Comm_rank(comm, &rank);
+  bool assumed_partition = HYPRE_AssumedPartitionCheck();
+  auto partitioning      = std::make_unique<int[]>(assumed_partition ? 2 : (num_procs + 1));
+  auto per_proc          = (size / num_procs) + ((size % num_procs != 0) ? 1 : 0);
+
+  if (assumed_partition) {
+    auto n_entries  = (rank == num_procs - 1) ? size - ((num_procs - 1) * per_proc) : per_proc;
+    partitioning[0] = per_proc * rank;
+    partitioning[1] = (per_proc * rank) + n_entries;
+  } else {
+    for (int i = 0; i < num_procs; i++) {
+      partitioning[i] = per_proc * i;
+    }
+    partitioning[num_procs] = size;
+  }
+  return std::make_pair(std::move(partitioning), per_proc * rank);
+}
+
 TEST(expr_templates, basic_add)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -64,6 +87,33 @@ TEST(expr_templates, basic_add_parallel)
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(expr_templates, basic_add_hyprepar)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  constexpr int size = 10;
+  auto [lhs, rhs]    = sample_vectors(size);
+
+  auto [partitioning, start] = build_partitioning(MPI_COMM_WORLD, size);
+
+  mfem::HypreParVector lhs_par(MPI_COMM_WORLD, size, lhs + start, partitioning.get());
+  mfem::HypreParVector rhs_par(MPI_COMM_WORLD, size, rhs + start, partitioning.get());
+
+  mfem::HypreParVector mfem_result(MPI_COMM_WORLD, size, partitioning.get());
+  add(lhs_par, rhs_par, mfem_result);
+
+  mfem::HypreParVector expr_result(MPI_COMM_WORLD, size, partitioning.get());
+  evaluate(lhs_par + rhs_par, expr_result);
+
+  double* mfem_local = mfem_result;
+  double* expr_local = expr_result;
+
+  for (int i = 0; i < expr_result.Size(); i++) {
+    EXPECT_FLOAT_EQ(mfem_local[i], expr_local[i]);
+  }
+
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

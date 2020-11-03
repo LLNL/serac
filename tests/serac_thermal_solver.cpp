@@ -11,7 +11,7 @@
 
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/thermal_solver.hpp"
+#include "physics/thermal_conduction.hpp"
 #include "serac_config.hpp"
 
 namespace serac {
@@ -29,17 +29,28 @@ double InitialTemperature(const mfem::Vector& x)
   }
 }
 
+const IterativeSolverParameters default_linear_params = {.rel_tol     = 1.0e-6,
+                                                         .abs_tol     = 1.0e-12,
+                                                         .print_level = 0,
+                                                         .max_iter    = 100,
+                                                         .lin_solver  = LinearSolver::CG,
+                                                         .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+
 TEST(thermal_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
   auto pmesh = buildBallMesh(10000);
 
-  // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
+  const IterativeSolverParameters linear_params = {.rel_tol     = 1.0e-6,
+                                                   .abs_tol     = 1.0e-12,
+                                                   .print_level = 0,
+                                                   .max_iter    = 100,
+                                                   .lin_solver  = LinearSolver::CG,
+                                                   .prec        = HypreBoomerAMGPrec{}};
 
-  // Set the time integration method
-  therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
+  // Initialize the second order thermal solver on the parallel mesh
+  ThermalConduction therm_solver(2, pmesh, linear_params);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(One);
@@ -53,15 +64,6 @@ TEST(thermal_solver, static_solve)
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
 
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
-
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
   therm_solver.completeSetup();
@@ -72,7 +74,7 @@ TEST(thermal_solver, static_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.02263, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -83,15 +85,12 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star_with_2_bdr_attributes.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star_with_2_bdr_attributes.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
-
-  // Set the time integration method
-  therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
+  ThermalConduction therm_solver(2, pmesh, default_linear_params);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -107,15 +106,6 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   // Set the conductivity of the thermal operator
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
-
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -133,7 +123,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(0.9168086318, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -144,15 +134,12 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
-
-  // Set the time integration method
-  therm_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
+  ThermalConduction therm_solver(2, pmesh, default_linear_params);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -168,15 +155,6 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
 
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
-
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
   therm_solver.completeSetup();
@@ -187,7 +165,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.56980679, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -198,15 +176,15 @@ TEST(thermal_solver, dyn_exp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
-  // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
+  const ThermalConduction::DynamicSolverParameters default_explicit_solve = {
+      TimestepMethod::ForwardEuler, default_linear_params, default_linear_params};
 
-  // Set the time integration method
-  therm_solver.setTimestepper(serac::TimestepMethod::ForwardEuler);
+  // Initialize the second order thermal solver on the parallel mesh
+  ThermalConduction therm_solver(2, pmesh, default_explicit_solve);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -219,17 +197,8 @@ TEST(thermal_solver, dyn_exp_solve)
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
 
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
-
   // Setup glvis output
-  therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_explicit");
+  therm_solver.initializeOutput(serac::OutputType::ParaView, "thermal_explicit");
 
   // Complete the setup including the dynamic operators
   therm_solver.completeSetup();
@@ -257,7 +226,7 @@ TEST(thermal_solver, dyn_exp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.6493029, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -268,15 +237,15 @@ TEST(thermal_solver, dyn_imp_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/star.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
-  // Initialize the second order thermal solver on the parallel mesh
-  ThermalSolver therm_solver(2, pmesh);
+  const ThermalConduction::DynamicSolverParameters default_implicit_solve = {
+      TimestepMethod::BackwardEuler, default_linear_params, default_linear_params};
 
-  // Set the time integration method
-  therm_solver.setTimestepper(serac::TimestepMethod::BackwardEuler);
+  // Initialize the second order thermal solver on the parallel mesh
+  ThermalConduction therm_solver(2, pmesh, default_implicit_solve);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -288,15 +257,6 @@ TEST(thermal_solver, dyn_imp_solve)
   // Set the conductivity of the thermal operator
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setConductivity(std::move(kappa));
-
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-6;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 100;
-  params.lin_solver  = LinearSolver::CG;
-  therm_solver.setLinearSolverParameters(params);
 
   // Setup glvis output
   therm_solver.initializeOutput(serac::OutputType::VisIt, "thermal_implicit");
@@ -327,7 +287,7 @@ TEST(thermal_solver, dyn_imp_solve)
 
   // Measure the L2 norm of the solution and check the value
   mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature()->gridFunc().ComputeLpError(2.0, zero);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
   EXPECT_NEAR(2.18201099, u_norm, 0.00001);
 
   MPI_Barrier(MPI_COMM_WORLD);

@@ -53,6 +53,12 @@ class Axom(CMakePackage, CudaPackage):
 
     version('main', branch='main', submodules=True)
     version('develop', branch='develop', submodules=True)
+
+    # SERAC EDIT START
+    version('0.4.0serac', commit='64a562aa18669ac7babb2c876b7f1a22708d85b3', submodules="True")
+    # SERAC EDIT END
+
+    version('0.4.0', tag='v0.4.0', submodules="True")
     version('0.3.3', tag='v0.3.3', submodules="True")
     version('0.3.2', tag='v0.3.2', submodules="True")
     version('0.3.1', tag='v0.3.1', submodules="True")
@@ -69,6 +75,10 @@ class Axom(CMakePackage, CudaPackage):
             description='Enable build of shared libraries')
     variant('debug',    default=False,
             description='Build debug instead of optimized version')
+
+    # BEGIN SERAC EDIT
+    variant('cpp14',  default=True, description="Build with C++14 support")
+    # END SERAC EDIT
 
     variant('fortran',  default=True, description="Build with Fortran support")
 
@@ -245,6 +255,12 @@ class Axom(CMakePackage, CudaPackage):
             if flags:
                 cfg.write(cmake_cache_entry("BLT_EXE_LINKER_FLAGS", flags,
                                             description))
+
+        # BEGIN SERAC EDIT
+        if "+cpp14" in spec:
+            cfg.write(cmake_cache_entry("BLT_CXX_STD", "c++14", ""))
+        cfg.write(cmake_cache_option("AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION", True))
+        # END SERAC EDIT
 
         # TPL locations
         cfg.write("#------------------{0}\n".format("-" * 60))

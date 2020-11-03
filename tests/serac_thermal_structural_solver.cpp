@@ -11,7 +11,7 @@
 #include "mfem.hpp"
 #include "coefficients/stdfunction_coefficient.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/thermal_structural_solver.hpp"
+#include "physics/thermal_solid.hpp"
 #include "serac_config.hpp"
 
 namespace serac {
@@ -21,7 +21,7 @@ TEST(dynamic_solver, dyn_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-hex.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
@@ -56,8 +56,39 @@ TEST(dynamic_solver, dyn_solve)
   traction(1)        = 1.0e-3;
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
+  // Use the same configuration as the solid solver
+  const IterativeSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e-4,
+                                                               .abs_tol     = 1.0e-8,
+                                                               .print_level = 0,
+                                                               .max_iter    = 500,
+                                                               .lin_solver  = LinearSolver::GMRES,
+                                                               .prec        = HypreBoomerAMGPrec{}};
+
+  auto therm_M_params = default_dyn_linear_params;
+  auto therm_T_params = default_dyn_linear_params;
+  therm_M_params.prec = HypreSmootherPrec{};
+  therm_T_params.prec = HypreSmootherPrec{};
+
+  ThermalConduction::SolverParameters therm_params =
+      ThermalConduction::DynamicSolverParameters{TimestepMethod::SDIRK33, therm_M_params, therm_T_params};
+
+  const IterativeSolverParameters default_dyn_oper_linear_params = {
+      .rel_tol     = 1.0e-4,
+      .abs_tol     = 1.0e-8,
+      .print_level = 0,
+      .max_iter    = 500,
+      .lin_solver  = LinearSolver::GMRES,
+      .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+
+  const NonlinearSolverParameters default_dyn_nonlinear_params = {
+      .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+
+  const NonlinearSolid::SolverParameters default_dynamic = {
+      default_dyn_linear_params, default_dyn_nonlinear_params,
+      NonlinearSolid::DynamicSolverParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
+
   // initialize the dynamic solver object
-  ThermalStructuralSolver ts_solver(1, pmesh);
+  ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
@@ -65,35 +96,16 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetDisplacement(*deform);
   ts_solver.SetVelocity(*velo);
   ts_solver.SetTemperature(*temp);
-  ts_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
   ts_solver.SetCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity
   double offset = 0.1;
   double scale  = 1.0;
 
-  auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature()->gridFunc());
+  auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature().gridFunc());
   auto visc_coef    = std::make_unique<TransformedScalarCoefficient>(
       temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
   ts_solver.SetViscosity(std::move(visc_coef));
-
-  // Set the linear solver parameters
-  serac::LinearSolverParameters params;
-  params.prec        = serac::Preconditioner::BoomerAMG;
-  params.abs_tol     = 1.0e-8;
-  params.rel_tol     = 1.0e-4;
-  params.max_iter    = 500;
-  params.lin_solver  = serac::LinearSolver::GMRES;
-  params.print_level = 0;
-
-  // Set the nonlinear solver parameters
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-4;
-  nl_params.abs_tol     = 1.0e-8;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 500;
-  ts_solver.SetSolidSolverParameters(params, nl_params);
-  ts_solver.SetThermalSolverParameters(params);
 
   // Initialize the VisIt output
   ts_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");
@@ -127,9 +139,9 @@ TEST(dynamic_solver, dyn_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double v_norm    = ts_solver.velocity()->gridFunc().ComputeLpError(2.0, zerovec);
-  double x_norm    = ts_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
-  double temp_norm = ts_solver.temperature()->gridFunc().ComputeLpError(2.0, zerovec);
+  double v_norm    = ts_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm    = ts_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+  double temp_norm = ts_solver.temperature().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(13.28049, x_norm, 0.001);
   EXPECT_NEAR(0.005227, v_norm, 0.001);

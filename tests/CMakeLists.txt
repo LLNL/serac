@@ -24,6 +24,7 @@ if (ENABLE_GTEST)
         serac_boundary_cond.cpp
         serac_mesh.cpp
         time_integration_with_constraints.cpp)
+        mfem_ex9p_blockilu.cpp)
 
     foreach(filename ${solver_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -100,9 +101,20 @@ if (ENABLE_GTEST)
                             NUM_MPI_TASKS 4)
     endif()
 
+    if(SERAC_USE_PETSC)
+        blt_add_executable( NAME        petsc_smoketest
+                            SOURCES     petsc_smoketest.cpp
+                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                            DEPENDS_ON  PETSc ${test_dependencies}
+                            FOLDER      serac/tests )
+        blt_add_test(NAME          petsc_smoketest
+                    COMMAND       petsc_smoketest
+                    NUM_MPI_TASKS 4 )
+    endif()
+
 endif()
 
 # Make sure running serac driver doesn't completely fail
 blt_add_test(NAME          serac_driver
-             COMMAND       serac_driver
+             COMMAND       serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../data/input_files/default.lua
              NUM_MPI_TASKS 1 )

@@ -90,9 +90,13 @@ class Serac(CMakePackage, CudaPackage):
             description='Build with hooks for Caliper performance analysis')
     variant('glvis', default=False,
             description='Build the glvis visualization executable')
+    variant('petsc', default=False,
+            description='Enable PETSC')
     # netcdf variant commented out until a bug in the spack concretizer is fixed
     #variant('netcdf', default=True,
     #        description='Enable Cubit/Genesis reader')
+    variant('sundials', default=False,
+            description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
 
     # Basic dependencies
     depends_on("mpi")
@@ -107,13 +111,23 @@ class Serac(CMakePackage, CudaPackage):
     # Libraries that support +debug
     debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
+
+    depends_on("petsc~shared", when="+petsc")
+    depends_on("petsc+debug", when="+petsc+debug")
+
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
     #depends_on("mfem+netcdf", when="+netcdf")
+    depends_on("mfem+petsc", when="+petsc")
+    depends_on("mfem+sundials", when="+sundials")
+    depends_on("sundials~shared", when="+sundials")
+
+    # Needs to be first due to a bug with the Spack concretizer
+    depends_on("hdf5+hl@1.8.21~shared")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["axom@develop~openmp~fortran~raja~umpire",
+    cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran~raja~umpire+mfem~shared",
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
@@ -121,11 +135,10 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit@master~shared~python")
+    depends_on("conduit@0.5.1p1~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
-    depends_on("superlu-dist@5.4.0~shared")
+    depends_on("superlu-dist@6.1.1~shared")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
-    depends_on("hdf5@1.8.21~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
@@ -291,7 +304,7 @@ class Serac(CMakePackage, CudaPackage):
             if on_blueos:
                 # Very specific fix for working around CMake adding implicit link directories returned by the BlueOS
                 # compilers to link CUDA executables 
-                cfg.write(cmake_cache_string("BLT_CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
+                cfg.write(cmake_cache_string("BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
                                              "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;"
                                              "/usr/tce/packages/gcc/gcc-4.9.3/lib64"))
         else:
@@ -357,6 +370,10 @@ class Serac(CMakePackage, CudaPackage):
         netcdf_dir = get_spec_path(spec, "netcdf-c", path_replacements)
         cfg.write(cmake_cache_entry("NETCDF_DIR", netcdf_dir))
 
+        if "+petsc" in spec:
+            petsc_dir = get_spec_path(spec, "petsc", path_replacements)
+            cfg.write(cmake_cache_entry("PETSC_DIR", petsc_dir))
+
         parmetis_dir = get_spec_path(spec, "parmetis", path_replacements)
         cfg.write(cmake_cache_entry("PARMETIS_DIR", parmetis_dir))
 
@@ -410,9 +427,18 @@ class Serac(CMakePackage, CudaPackage):
         else:
             cfg.write(cmake_cache_option("ENABLE_DOCS", False))
 
-        clangformatpath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format"
-        if os.path.exists(clangformatpath):
-            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", clangformatpath))
+        lc_clangformatpath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format"
+        # This works only with Ubuntu + Debian - other distros (Arch/Fedora) use
+        # /usr/bin/clang-format which would require actually running the executable to grab the version
+        apt_clangformatpath = "/usr/bin/clang-format-10"
+        if os.path.exists(lc_clangformatpath):
+            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", lc_clangformatpath))
+        elif os.path.exists(apt_clangformatpath):
+            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", apt_clangformatpath))
+
+        clangtidypath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-tidy"
+        if os.path.exists(clangtidypath):
+            cfg.write(cmake_cache_entry("CLANGTIDY_EXECUTABLE", clangtidypath))
 
         if "cppcheck" in spec:
             cppcheck_bin_dir = get_spec_path(spec, "cppcheck", path_replacements, use_bin=True)

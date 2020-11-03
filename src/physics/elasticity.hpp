@@ -10,11 +10,11 @@
  * @brief A solver for the steady state solution of a linear elasticity PDE
  */
 
-#ifndef LINEARELASTIC_SOLVER
-#define LINEARELASTIC_SOLVER
+#ifndef LINEAR_ELASTICITY
+#define LINEAR_ELASTICITY
 
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
+#include "physics/base_physics.hpp"
 
 namespace serac {
 
@@ -29,15 +29,16 @@ namespace serac {
  *  where u is the displacement vector, f is the body force,
  *  and lambda and mu are the lame parameters
  */
-class ElasticitySolver : public BaseSolver {
+class Elasticity : public BasePhysics {
 public:
   /**
    * @brief Construct a new Elasticity Solver object
    *
    * @param[in] order The polynomial order of the solver
    * @param[in] mesh The parallel MFEM mesh
+   * @param[in] params The system solver parameters
    */
-  ElasticitySolver(const int order, std::shared_ptr<mfem::ParMesh> mesh);
+  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverParameters& params);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions
@@ -87,22 +88,15 @@ public:
   void completeSetup() override;
 
   /**
-   * @brief Set the Linear Solver Parameters
-   *
-   * @param[in] params The linear solver parameters
-   */
-  void setLinearSolverParameters(const serac::LinearSolverParameters& params);
-
-  /**
    * @brief The destructor
    */
-  virtual ~ElasticitySolver();
+  virtual ~Elasticity();
 
 protected:
   /**
    * @brief Displacement field
    */
-  std::shared_ptr<serac::FiniteElementState> displacement_;
+  serac::FiniteElementState displacement_;
 
   /**
    * @brief Stiffness bilinear form
@@ -130,14 +124,9 @@ protected:
   std::unique_ptr<mfem::HypreParVector> bc_rhs_;
 
   /**
-   * @brief Linear solver for the stiffness matrix
+   * @brief System solver instance for quasistatic K solver
    */
-  std::unique_ptr<mfem::Solver> K_solver_;
-
-  /**
-   * @brief Preconditioner for the stiffness matrix
-   */
-  std::unique_ptr<mfem::Solver> K_prec_;
+  EquationSolver K_inv_;
 
   /**
    * @brief Lame mu elasticity parameter
@@ -153,11 +142,6 @@ protected:
    * @brief Body force coefficient
    */
   mfem::VectorCoefficient* body_force_ = nullptr;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  serac::LinearSolverParameters lin_params_;
 
   /**
    * @brief Quasi-static solve driver

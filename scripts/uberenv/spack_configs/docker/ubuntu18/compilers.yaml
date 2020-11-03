@@ -2,8 +2,10 @@ compilers:
   - compiler:
       environment: {}
       extra_rpaths: []
+      # Axom example sidre_shocktube_F_ex doesn't link otherwise
       flags:
-        cxxflags: -stdlib=libc++
+        cflags: -fPIC
+        cppflags: -fPIC
       modules: []
       operating_system: ubuntu18.04
       paths:

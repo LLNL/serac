@@ -44,7 +44,7 @@ stages:
     - RESOURCES="-t 10 -N 1"
     - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
       Build and test ${CI_PROJECT_NAME}"
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py --host-config ${HOST_CONFIG}
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
 
 .srun_build_with_deps_script:
@@ -52,17 +52,17 @@ stages:
     - *run_update_uberenv
     - EXEC_PREFIX="srun ${SLURM_ACCOUNT}"
     #DEPENDENCIES
-    - RESOURCES="-t 30 -N 1"
+    - RESOURCES="-t 45 -N 1"
     - echo -e "section_start:$(date +%s):dependencies\r\e[0K
       Build dependencies and generate host-config file (uberenv)"
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_tpls.py --spec=${SPEC} --directory=${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID}
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_tpls.py -v --spec=${SPEC} --directory=${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID}
     - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD + TEST
     - RESOURCES="-t 10 -N 1"
     - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
       Build and test ${CI_PROJECT_NAME}"
     # Autodetects hostconfig created by build_tpls
-    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py
+    - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py -v --automation
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
 
 .srun_build_devtools_script:
@@ -81,7 +81,7 @@ stages:
     #BUILD + TEST
     - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
       Build and test ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 10 ${LSF_ACCOUNT} scripts/llnl/build_src.py --host-config ${HOST_CONFIG}
+    - lalloc 1 -W 10 ${LSF_ACCOUNT} scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
 
 .build_with_deps_blueos_3_ppc64le_ib_p9_script:
@@ -90,12 +90,12 @@ stages:
     #DEPENDENCIES
     - echo -e "section_start:$(date +%s):dependencies\r\e[0K
       Build dependencies and generate host-config file (uberenv)"
-    - lalloc 1 -W 30 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID}
+    - lalloc 1 -W 30 ${LSF_ACCOUNT} scripts/llnl/build_tpls.py -v --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID}
     - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
     #BUILD + TEST
     - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
       Build and test ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 10 ${LSF_ACCOUNT} scripts/llnl/build_src.py --host-config ${HOST_CONFIG}
+    - lalloc 1 -W 10 ${LSF_ACCOUNT} scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
 
 # This is where jobs are included

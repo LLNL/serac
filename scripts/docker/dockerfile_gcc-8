@@ -1,23 +1,37 @@
 FROM axom/compilers:gcc-8
 LABEL maintainer="bramwell1@llnl.gov"
+ARG branch=develop
 
+SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install curl ssh pkg-config build-essential libopenblas-dev mpich -fy
+RUN sudo apt-get install curl wget ssh pkg-config build-essential libopenblas-dev tar python3 -fy
 RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-7 100
-RUN sudo rm /usr/bin/python
-RUN sudo ln -s python3 /usr/bin/python # Compatibility with legacy Python
+RUN sudo ln -f -s python3 /usr/bin/python # Compatibility with legacy Python
+
+# Avoid building CMake from scratch
+RUN wget https://cmake.org/files/v3.10/cmake-3.10.1-Linux-x86_64.sh
+RUN sudo sh cmake-3.10.1-Linux-x86_64.sh --prefix=/usr --exclude-subdir
+
+# Avoid building all MPICH3.3 dependencies from scratch - is there a xenial-compatible binary somewhere?
+RUN wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz && tar xfz mpich-3.3.2.tar.gz
+RUN cd mpich-3.3.2 && ./configure -prefix=/usr && make -j && sudo make install
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
 WORKDIR "/home/serac"
 USER serac
 
-RUN git clone --recursive https://github.com/LLNL/serac.git
-RUN cd serac && git checkout ci/essman/docker_build_fixes && cd ..
+RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git
 
 # New containers will use Python3
-RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ubuntu16/ \
+RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ubuntu16/ --project-json=./serac/scripts/uberenv/project.json \
                                                --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
+
+# Make sure the new hostconfig worked
+RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
+
+RUN mkdir -p /home/serac/export_hostconfig
+RUN cp ./serac/*.cmake /home/serac/export_hostconfig
 
 RUN rm -rf serac
 RUN rm -rf serac_tpls/builds

@@ -13,13 +13,13 @@
 #ifndef FINITE_ELEMENT_STATE
 #define FINITE_ELEMENT_STATE
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <variant>
 
 #include "mfem.hpp"
-#include "physics/utilities/solver_config.hpp"
 
 namespace serac {
 
@@ -82,7 +82,8 @@ public:
   /**
    * Returns a non-owning reference to the internal grid function
    */
-  mfem::ParGridFunction& gridFunc() { return *gf_; }
+  mfem::ParGridFunction&       gridFunc() { return *gf_; }
+  const mfem::ParGridFunction& gridFunc() const { return *gf_; }
 
   /**
    * Returns a non-owning reference to the internal mesh object
@@ -158,7 +159,8 @@ public:
   }
 
 private:
-  mfem::ParMesh&                                 mesh_;
+  // Allows for copy/move assignment
+  std::reference_wrapper<mfem::ParMesh>          mesh_;
   std::unique_ptr<mfem::FiniteElementCollection> coll_;
   mfem::ParFiniteElementSpace                    space_;
   std::unique_ptr<mfem::ParGridFunction>         gf_;

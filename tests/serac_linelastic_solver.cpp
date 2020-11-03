@@ -10,7 +10,7 @@
 
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/elasticity_solver.hpp"
+#include "physics/elasticity.hpp"
 #include "serac_config.hpp"
 
 namespace serac {
@@ -20,11 +20,18 @@ TEST(elastic_solver, static_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/beam-quad.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-quad.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
-  ElasticitySolver elas_solver(1, pmesh);
+  IterativeSolverParameters default_quasistatic = {.rel_tol     = 1.0e-4,
+                                                   .abs_tol     = 1.0e-10,
+                                                   .print_level = 0,
+                                                   .max_iter    = 500,
+                                                   .lin_solver  = LinearSolver::MINRES,
+                                                   .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+
+  Elasticity elas_solver(1, pmesh, default_quasistatic);
 
   std::set<int> disp_bdr = {1};
 
@@ -50,18 +57,6 @@ TEST(elastic_solver, static_solve)
 
   elas_solver.setLameParameters(K_coef, mu_coef);
 
-  // Define the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-4;
-  params.abs_tol     = 1.0e-10;
-  params.print_level = 0;
-  params.max_iter    = 500;
-  params.prec        = serac::Preconditioner::Jacobi;
-  params.lin_solver  = serac::LinearSolver::MINRES;
-
-  elas_solver.setLinearSolverParameters(params);
-  elas_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
-
   // allocate the data structures
   elas_solver.completeSetup();
 
@@ -72,7 +67,7 @@ TEST(elastic_solver, static_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = elas_solver.getState()[0]->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = elas_solver.getState()[0].get().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.128065, x_norm, 0.00001);
 

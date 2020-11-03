@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/thermal_structural_solver.hpp"
+#include "physics/thermal_solid.hpp"
 
 #include "infrastructure/logger.hpp"
 #include "physics/utilities/solver_config.hpp"
@@ -13,21 +13,27 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 3;
 
-ThermalStructuralSolver::ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> mesh)
-    : BaseSolver(mesh, NUM_FIELDS, order), therm_solver_(order, mesh), solid_solver_(order, mesh)
+ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
+                           const ThermalConduction::SolverParameters& therm_params,
+                           const NonlinearSolid::SolverParameters&    solid_params)
+    : BasePhysics(mesh, NUM_FIELDS, order),
+      therm_solver_(order, mesh, therm_params),
+      solid_solver_(order, mesh, solid_params),
+      temperature_(therm_solver_.temperature()),
+      velocity_(solid_solver_.velocity()),
+      displacement_(solid_solver_.displacement())
 {
-  temperature_  = therm_solver_.temperature();
-  velocity_     = solid_solver_.velocity();
-  displacement_ = solid_solver_.displacement();
-
-  state_[0] = temperature_;
-  state_[1] = velocity_;
-  state_[2] = displacement_;
+  // The temperature_, velocity_, displacement_ members are not currently used
+  // but presumably will be needed when further coupling schemes are implemented
+  // This calls the non-const version
+  state_.push_back(therm_solver_.temperature());
+  state_.push_back(solid_solver_.velocity());
+  state_.push_back(solid_solver_.displacement());
 
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
-void ThermalStructuralSolver::completeSetup()
+void ThermalSolid::completeSetup()
 {
   SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit, mpi_rank_,
                      "Only operator split is currently implemented in the thermal structural solver.");
@@ -36,8 +42,8 @@ void ThermalStructuralSolver::completeSetup()
   solid_solver_.completeSetup();
 }
 
-void ThermalStructuralSolver::setTimestepper(const serac::TimestepMethod             timestepper,
-                                             const serac::DirichletEnforcementMethod enforcement_method)
+void ThermalSolid::setTimestepper(const serac::TimestepMethod             timestepper,
+                                  const serac::DirichletEnforcementMethod enforcement_method)
 {
   timestepper_        = timestepper;
   enforcement_method_ = enforcement_method;
@@ -46,7 +52,7 @@ void ThermalStructuralSolver::setTimestepper(const serac::TimestepMethod        
 }
 
 // Advance the timestep
-void ThermalStructuralSolver::advanceTimestep(double& dt)
+void ThermalSolid::advanceTimestep(double& dt)
 {
   if (coupling_ == serac::CouplingScheme::OperatorSplit) {
     double initial_dt = dt;

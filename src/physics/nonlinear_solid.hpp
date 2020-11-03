@@ -10,15 +10,16 @@
  * @brief The solver object for finite deformation hyperelasticity
  */
 
-#ifndef NONLINSOLID_SOLVER
-#define NONLINSOLID_SOLVER
+#ifndef NONLIN_SOLID
+#define NONLIN_SOLID
 
+#include "infrastructure/input.hpp"
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
+
 #include "physics/operators/odes.hpp"
 #include "physics/operators/stdfunction_operator.hpp"
+#include "physics/base_physics.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
-
 
 namespace serac {
 
@@ -29,16 +30,62 @@ namespace serac {
  * hyperelastic solver object. It is derived from MFEM
  * example 10p.
  */
-class NonlinearSolidSolver : public BaseSolver {
+class NonlinearSolid : public BasePhysics {
 public:
+
+  /**
+   * @brief A timestep method and config for the M solver
+   */
+  struct DynamicSolverParameters {
+    TimestepMethod         timestepper;
+    LinearSolverParameters M_params;
+  };
+  /**
+   * @brief A configuration variant for the various solves
+   * Either quasistatic, or time-dependent with timestep and M params
+   */
+  struct SolverParameters {
+    LinearSolverParameters                 H_lin_params;
+    NonlinearSolverParameters              H_nonlin_params;
+    std::optional<DynamicSolverParameters> dyn_params = std::nullopt;
+  };
+
+  /**
+   * @brief Stores all information held in the input file that
+   * is used to configure the solver
+   */
+  struct InputInfo {
+    /**
+     * @brief Input file parameters specific to this class
+     *
+     * @param[in] table Inlet's SchemaCreator that input files will be added to
+     **/
+    static void defineInputFileSchema(axom::inlet::Table& table);
+
+    // The order of the field
+    int              order;
+    SolverParameters solver_params;
+    // Lame parameters
+    double mu;
+    double K;
+  };
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] order The order of the displacement field
    * @param[in] mesh The MFEM parallel mesh to solve on
+   * @param[in] solver The system solver parameters
    */
-  NonlinearSolidSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
+
+  /**
+   * @brief Construct a new Nonlinear Solid Solver object
+   *
+   * @param[in] mesh The MFEM parallel mesh to solve on
+   * @param[in] info The solver information parsed from the input file
+   */
+  NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const InputInfo& info);
 
   /**
    * @brief Set displacement boundary conditions
@@ -98,26 +145,20 @@ public:
   void setVelocity(mfem::VectorCoefficient& velo_state);
 
   /**
-   * @brief Set the linear and nonlinear parameters object
-   *
-   * @param[in] lin_params The linear solver parameters
-   * @param[in] nonlin_params The nonlinear solver parameters
-   */
-  void setSolverParameters(const LinearSolverParameters& lin_params, const NonlinearSolverParameters& nonlin_params);
-
-  /**
    * @brief Get the displacement state
    *
    * @return The displacement state field
    */
-  std::shared_ptr<FiniteElementState> displacement() { return displacement_; };
+  const FiniteElementState& displacement() const { return displacement_; };
+  FiniteElementState&       displacement() { return displacement_; };
 
   /**
    * @brief Get the velocity state
    *
    * @return The velocity state field
    */
-  std::shared_ptr<FiniteElementState> velocity() { return velocity_; };
+  const FiniteElementState& velocity() const { return velocity_; };
+  FiniteElementState&       velocity() { return velocity_; };
 
   /**
    * @brief Complete the setup of all of the internal MFEM objects and prepare for timestepping
@@ -134,18 +175,18 @@ public:
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
-  virtual ~NonlinearSolidSolver();
+  virtual ~NonlinearSolid();
 
 protected:
   /**
    * @brief Velocity field
    */
-  std::shared_ptr<FiniteElementState> velocity_;
+  FiniteElementState velocity_;
 
   /**
    * @brief Displacement field
    */
-  std::shared_ptr<FiniteElementState> displacement_;
+  FiniteElementState displacement_;
 
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers
@@ -153,24 +194,14 @@ protected:
   std::unique_ptr<mfem::Operator> nonlinear_oper_;
 
   /**
+   * @brief Configuration for dynamic equation solver
+   */
+  std::optional<LinearSolverParameters> timedep_oper_params_;
+
+  /**
    * @brief The time dependent operator for use with the MFEM ODE solvers
    */
   std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
-
-  /**
-   * @brief The Newton solver for the nonlinear iterations
-   */
-  mfem::NewtonSolver newton_solver_;
-
-  /**
-   * @brief The linear solver for the Jacobian
-   */
-  std::unique_ptr<mfem::Solver> J_solver_;
-
-  /**
-   * @brief The preconditioner for the Jacobian solver
-   */
-  std::unique_ptr<mfem::Solver> J_prec_;
 
   /**
    * @brief The viscosity coefficient
@@ -181,16 +212,6 @@ protected:
    * @brief The hyperelastic material model
    */
   std::unique_ptr<mfem::HyperelasticModel> model_;
-
-  /**
-   * @brief Linear solver parameters
-   */
-  LinearSolverParameters lin_params_;
-
-  /**
-   * @brief Nonlinear solver parameters
-   */
-  NonlinearSolverParameters nonlin_params_;
 
   /**
    * @brief Pointer to the reference mesh data
@@ -242,5 +263,10 @@ protected:
 };
 
 }  // namespace serac
+
+template <>
+struct FromInlet<serac::NonlinearSolid::InputInfo> {
+  serac::NonlinearSolid::InputInfo operator()(axom::inlet::Table& base);
+};
 
 #endif

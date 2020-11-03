@@ -10,28 +10,31 @@
  * @brief An object containing an operator-split thermal structural solver
  */
 
-#ifndef THERMSTRUCT_SOLVER
-#define THERMSTRUCT_SOLVER
+#ifndef THERMAL_SOLID
+#define THERMAL_SOLID
 
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
-#include "physics/nonlinear_solid_solver.hpp"
-#include "physics/thermal_solver.hpp"
+#include "physics/base_physics.hpp"
+#include "physics/nonlinear_solid.hpp"
+#include "physics/thermal_conduction.hpp"
 
 namespace serac {
 
 /**
  * @brief The operator-split thermal structural solver
  */
-class ThermalStructuralSolver : public BaseSolver {
+class ThermalSolid : public BasePhysics {
 public:
   /**
    * @brief Construct a new Thermal Structural Solver object
    *
    * @param[in] order The order of the temperature and displacement discretizations
    * @param[in] mesh The parallel mesh object on which to solve
+   * @param[in] therm_params The equation solver params for the conduction physics
+   * @param[in] solid_params The equation solver params for the solid physics
    */
-  ThermalStructuralSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverParameters& therm_params,
+               const NonlinearSolid::SolverParameters& solid_params);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -75,16 +78,6 @@ public:
    * @param[in] source The source function coefficient
    */
   void SetSource(std::unique_ptr<mfem::Coefficient>&& source) { therm_solver_.setSource(std::move(source)); };
-
-  /**
-   * @brief Set the linear solver parameters for both the M and K matrices
-   *
-   * @param[in] params The linear solver parameters
-   */
-  void SetThermalSolverParameters(const serac::LinearSolverParameters& params)
-  {
-    therm_solver_.setLinearSolverParameters(params);
-  };
 
   /**
    * @brief Set displacement boundary conditions
@@ -159,18 +152,6 @@ public:
   void SetVelocity(mfem::VectorCoefficient& velo_state) { solid_solver_.setVelocity(velo_state); };
 
   /**
-   * @brief Set the linear and nonlinear parameters for the solid solver object
-   *
-   * @param[in] lin_params The linear solver parameters
-   * @param[in] nonlin_params The nonlinear solver parameters
-   */
-  void SetSolidSolverParameters(const serac::LinearSolverParameters&    lin_params,
-                                const serac::NonlinearSolverParameters& nonlin_params)
-  {
-    solid_solver_.setSolverParameters(lin_params, nonlin_params);
-  };
-
-  /**
    * @brief Set the coupling scheme between the thermal and structural solvers
    *
    * Note that only operator split coupling is currently implemented.
@@ -200,23 +181,23 @@ public:
   /**
    * @brief Get the temperature state
    *
-   * @return A pointer to the current temperature finite element state
+   * @return A reference to the current temperature finite element state
    */
-  std::shared_ptr<serac::FiniteElementState> temperature() { return temperature_; };
+  const serac::FiniteElementState& temperature() { return temperature_; };
 
   /**
    * @brief Get the displacement state
    *
    * @return The displacement state field
    */
-  std::shared_ptr<serac::FiniteElementState> displacement() { return displacement_; };
+  const serac::FiniteElementState& displacement() { return displacement_; };
 
   /**
    * @brief Get the velocity state
    *
    * @return The velocity state field
    */
-  std::shared_ptr<serac::FiniteElementState> velocity() { return velocity_; };
+  const serac::FiniteElementState& velocity() { return velocity_; };
 
   /**
    * @brief Advance the timestep
@@ -228,33 +209,33 @@ public:
   /**
    * @brief Destroy the Thermal Structural Solver object
    */
-  virtual ~ThermalStructuralSolver() = default;
+  virtual ~ThermalSolid() = default;
 
 protected:
   /**
-   * @brief The temperature finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> temperature_;
-
-  /**
-   * @brief The velocity finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> velocity_;
-
-  /**
-   * @brief The displacement finite element state
-   */
-  std::shared_ptr<serac::FiniteElementState> displacement_;
-
-  /**
    * @brief The single physics thermal solver
    */
-  ThermalSolver therm_solver_;
+  ThermalConduction therm_solver_;
 
   /**
    * @brief The single physics nonlinear solid solver
    */
-  NonlinearSolidSolver solid_solver_;
+  NonlinearSolid solid_solver_;
+
+  /**
+   * @brief The temperature finite element state
+   */
+  const serac::FiniteElementState& temperature_;
+
+  /**
+   * @brief The velocity finite element state
+   */
+  const serac::FiniteElementState& velocity_;
+
+  /**
+   * @brief The displacement finite element state
+   */
+  const serac::FiniteElementState& displacement_;
 
   /**
    * @brief The coupling strategy

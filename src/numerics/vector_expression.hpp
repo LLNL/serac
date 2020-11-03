@@ -88,8 +88,10 @@ void evaluate(const VectorExpr<T>& expr, mfem::Vector& result)
 {
   SLIC_ERROR_IF(expr.Size() != static_cast<std::size_t>(result.Size()),
                 "Vector sizes in expression assignment must be equal");
+  // Get the underlying array for indexing compatibility with mfem::HypreParVector
+  double* result_arr = result;
   for (size_t i = 0; i < expr.Size(); i++) {
-    result[i] = expr[i];
+    result_arr[i] = expr[i];
   }
 }
 
@@ -116,7 +118,7 @@ void evaluate(const VectorExpr<T>& expr, mfem::Vector& result, MPI_Comm comm)
   double* result_arr = result;
 
   // If the array size is not divisible by # elements, add one
-  const long long per_proc = (SIZE / num_procs) + (SIZE % num_procs != 0);
+  const long long per_proc = (SIZE / num_procs) + ((SIZE % num_procs != 0) ? 1 : 0);
 
   // Truncate the number of elements for the last process
   const long long n_entries = (rank == num_procs - 1) ? SIZE - ((num_procs - 1) * per_proc) : per_proc;

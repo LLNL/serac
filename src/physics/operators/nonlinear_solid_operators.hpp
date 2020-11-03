@@ -18,7 +18,6 @@
 #include "mfem.hpp"
 #include "physics/utilities/boundary_condition_manager.hpp"
 #include "physics/utilities/equation_solver.hpp"
-#include "physics/utilities/finite_element_state.hpp"
 #include "physics/utilities/solver_config.hpp"
 
 namespace serac {
@@ -252,11 +251,6 @@ protected:
    * @brief The fixed boudnary degrees of freedom
    */
   const BoundaryConditionManager& bcs_;
-
-  /**
-   * @brief The linear solver parameters for the mass matrix
-   */
-  serac::LinearSolverParameters lin_params_;
 
   /**
    * @brief Working vector

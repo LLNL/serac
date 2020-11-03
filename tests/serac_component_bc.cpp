@@ -11,7 +11,7 @@
 #include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid_solver.hpp"
+#include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
 
 namespace serac {
@@ -21,14 +21,28 @@ TEST(component_bc, qs_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/square.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 2, 0);
 
   int dim = pmesh->Dimension();
 
+  // Set the linear solver params
+  IterativeSolverParameters params = {.rel_tol     = 1.0e-6,
+                                      .abs_tol     = 1.0e-8,
+                                      .print_level = 0,
+                                      .max_iter    = 5000,
+                                      .lin_solver  = LinearSolver::MINRES,
+                                      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+  params.rel_tol                   = 1.0e-8;
+  params.abs_tol                   = 1.0e-12;
+
+  NonlinearSolverParameters nl_params = {.rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
+  nl_params.rel_tol                   = 1.0e-6;
+  nl_params.abs_tol                   = 1.0e-8;
+
   // Define the solver object
-  NonlinearSolidSolver solid_solver(1, pmesh);
+  NonlinearSolid solid_solver(1, pmesh, {params, nl_params});
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   std::set<int> ess_bdr = {1};
@@ -48,32 +62,12 @@ TEST(component_bc, qs_solve)
       }
   });
 
-  mfem::Array<int> ess_corner_bc_list = makeTrueEssList(solid_solver.displacement()->space(), zero_bc);
+  mfem::Array<int> ess_corner_bc_list = makeTrueEssList(solid_solver.displacement().space(), zero_bc);
 
   solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, 0);
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
-
-  // Set the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-8;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 5000;
-  params.prec        = serac::Preconditioner::Jacobi;
-  params.lin_solver  = serac::LinearSolver::MINRES;
-
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-6;
-  nl_params.abs_tol     = 1.0e-8;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 5000;
-
-  solid_solver.setSolverParameters(params, nl_params);
-
-  // Set the time step method
-  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "component_bc");
@@ -93,7 +87,7 @@ TEST(component_bc, qs_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.08363646, x_norm, 0.0001);
 
@@ -105,7 +99,7 @@ TEST(component_bc, qs_attribute_solve)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
-  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/square.mesh";
+  std::string  mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/square.mesh";
   std::fstream imesh(mesh_file);
 
   auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
@@ -120,8 +114,22 @@ TEST(component_bc, qs_attribute_solve)
 
   int dim = pmesh->Dimension();
 
+  // Set the linear solver params
+  IterativeSolverParameters params = {.rel_tol     = 1.0e-6,
+                                      .abs_tol     = 1.0e-8,
+                                      .print_level = 0,
+                                      .max_iter    = 5000,
+                                      .lin_solver  = LinearSolver::MINRES,
+                                      .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
+  params.rel_tol                   = 1.0e-8;
+  params.abs_tol                   = 1.0e-12;
+
+  NonlinearSolverParameters nl_params = {.rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
+  nl_params.rel_tol                   = 1.0e-6;
+  nl_params.abs_tol                   = 1.0e-8;
+
   // Define the solver object
-  NonlinearSolidSolver solid_solver(2, pmesh);
+  NonlinearSolid solid_solver(2, pmesh, {params, nl_params});
 
   // boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
   std::set<int> ess_x_bdr = {1};
@@ -137,26 +145,6 @@ TEST(component_bc, qs_attribute_solve)
 
   // Set the material parameters
   solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
-
-  // Set the linear solver params
-  serac::LinearSolverParameters params;
-  params.rel_tol     = 1.0e-8;
-  params.abs_tol     = 1.0e-12;
-  params.print_level = 0;
-  params.max_iter    = 5000;
-  params.prec        = serac::Preconditioner::Jacobi;
-  params.lin_solver  = serac::LinearSolver::MINRES;
-
-  serac::NonlinearSolverParameters nl_params;
-  nl_params.rel_tol     = 1.0e-6;
-  nl_params.abs_tol     = 1.0e-8;
-  nl_params.print_level = 1;
-  nl_params.max_iter    = 5000;
-
-  solid_solver.setSolverParameters(params, nl_params);
-
-  // Set the time step method
-  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::GLVis, "component_attr_bc");
@@ -174,7 +162,7 @@ TEST(component_bc, qs_attribute_solve)
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(0.03330115, x_norm, 0.0001);
 

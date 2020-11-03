@@ -10,11 +10,11 @@
  * @brief An object containing the solver for a thermal conduction PDE
  */
 
-#ifndef CONDUCTION_SOLVER
-#define CONDUCTION_SOLVER
+#ifndef THERMAL_CONDUCTION
+#define THERMAL_CONDUCTION
 
 #include "mfem.hpp"
-#include "physics/base_solver.hpp"
+#include "physics/base_physics.hpp"
 #include "physics/operators/thermal_operators.hpp"
 
 namespace serac {
@@ -29,15 +29,32 @@ namespace serac {
  *  where M is a mass matrix, K is a stiffness matrix, and f is a
  *  thermal load vector.
  */
-class ThermalSolver : public BaseSolver {
+class ThermalConduction : public BasePhysics {
 public:
+  /**
+   * @brief A timestep method and configs for the M and T solvers
+   */
+  struct DynamicSolverParameters {
+    TimestepMethod         timestepper;
+    LinearSolverParameters M_params;
+    LinearSolverParameters T_params;
+  };
+
+  /**
+   * @brief A configuration variant for the various solves
+   * Either quasistatic with a single config for the K solver, or
+   * time-dependent with timestep and M/T params
+   */
+  using SolverParameters = std::variant<LinearSolverParameters, DynamicSolverParameters>;
+
   /**
    * @brief Construct a new Thermal Solver object
    *
    * @param[in] order The order of the thermal field discretization
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
+   * @param[in] params The system solver parameters
    */
-  ThermalSolver(int order, std::shared_ptr<mfem::ParMesh> mesh);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverParameters& params);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -86,9 +103,10 @@ public:
   /**
    * @brief Get the temperature state
    *
-   * @return A pointer to the current temperature finite element state
+   * @return A reference to the current temperature finite element state
    */
-  std::shared_ptr<serac::FiniteElementState> temperature() { return temperature_; };
+  const serac::FiniteElementState& temperature() const { return temperature_; };
+  serac::FiniteElementState&       temperature() { return temperature_; };
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -99,22 +117,15 @@ public:
   void completeSetup() override;
 
   /**
-   * @brief Set the linear solver parameters for both the M and K matrices
-   *
-   * @param[in] params The linear solver parameters
-   */
-  void setLinearSolverParameters(const serac::LinearSolverParameters& params);
-
-  /**
    * @brief Destroy the Thermal Solver object
    */
-  virtual ~ThermalSolver() = default;
+  virtual ~ThermalConduction() = default;
 
 protected:
   /**
    * @brief The temperature finite element state
    */
-  std::shared_ptr<serac::FiniteElementState> temperature_;
+  serac::FiniteElementState temperature_;
 
   /**
    * @brief Mass bilinear form object
@@ -152,16 +163,6 @@ protected:
   std::unique_ptr<mfem::HypreParVector> rhs_;
 
   /**
-   * @brief Linear solver for the K operator
-   */
-  std::unique_ptr<mfem::CGSolver> K_solver_;
-
-  /**
-   * @brief Preconditioner for the K operator
-   */
-  std::unique_ptr<mfem::HypreSmoother> K_prec_;
-
-  /**
    * @brief Conduction coefficient
    */
   std::unique_ptr<mfem::Coefficient> kappa_;
@@ -172,19 +173,25 @@ protected:
   std::unique_ptr<mfem::Coefficient> source_;
 
   /**
+   * @brief Configuration for dynamic equation solvers
+   */
+  std::optional<LinearSolverParameters> dyn_M_params_;
+  std::optional<LinearSolverParameters> dyn_T_params_;
+
+  /**
    * @brief Time integration operator
    */
   std::unique_ptr<DynamicConductionOperator> dyn_oper_;
 
   /**
-   * @brief Linear solver parameters
-   */
-  serac::LinearSolverParameters lin_params_;
-
-  /**
    * @brief Solve the Quasi-static operator
    */
   void quasiStaticSolve();
+
+  /**
+   * @brief System solver instance for quasistatic K solver
+   */
+  std::optional<EquationSolver> K_inv_;
 };
 
 }  // namespace serac

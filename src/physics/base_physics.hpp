@@ -10,31 +10,30 @@
  * @brief The base interface class for a generic PDE solver
  */
 
-#ifndef BASE_SOLVER
-#define BASE_SOLVER
+#ifndef BASE_PHYSICS
+#define BASE_PHYSICS
 
-#include <map>
+#include <functional>
 #include <memory>
 
 #include "mfem.hpp"
 #include "physics/utilities/boundary_condition_manager.hpp"
 #include "physics/utilities/equation_solver.hpp"
 #include "physics/utilities/finite_element_state.hpp"
-#include "physics/utilities/solver_config.hpp"
 
 namespace serac {
 
 /**
  * @brief This is the abstract base class for a generic forward solver
  */
-class BaseSolver {
+class BasePhysics {
 public:
   /**
    * @brief Empty constructor
    *
    * @param[in] mesh The primary mesh
    */
-  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh);
+  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh);
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
@@ -43,7 +42,9 @@ public:
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    */
-  BaseSolver(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
+  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
+
+  BasePhysics(BasePhysics&& other) = default;
 
   /**
    * @brief Set a list of true degrees of freedom from a coefficient
@@ -66,15 +67,18 @@ public:
    * @brief Set the state variables from an existing grid function
    *
    * @param[in] state A vector of finite element states to initialze the solver
+   * @note This will move from each element of the vector, so the vector cannot
+   * be used in the calling scope after this function is called (as it has been
+   * moved from)
    */
-  virtual void setState(const std::vector<std::shared_ptr<serac::FiniteElementState> >& state);
+  virtual void setState(std::vector<serac::FiniteElementState>&& state);
 
   /**
    * @brief Get the list of state variable grid functions
    *
    * @return the current vector of finite element states
    */
-  virtual std::vector<std::shared_ptr<serac::FiniteElementState> > getState() const;
+  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState> >& getState() const;
 
   /**
    * @brief Set the time integration method
@@ -139,7 +143,12 @@ public:
   /**
    * @brief Destroy the Base Solver object
    */
-  virtual ~BaseSolver() = default;
+  virtual ~BasePhysics() = default;
+
+  /**
+   * @brief Returns a reference to the mesh object
+   */
+  const mfem::ParMesh& mesh() const { return *mesh_; }
 
 protected:
   /**
@@ -155,7 +164,7 @@ protected:
   /**
    * @brief List of finite element data structures
    */
-  std::vector<std::shared_ptr<serac::FiniteElementState> > state_;
+  std::vector<std::reference_wrapper<serac::FiniteElementState> > state_;
 
   /**
    * @brief Block vector storage of the true state
@@ -170,7 +179,7 @@ protected:
   /**
    *@brief Time integration method
    */
-  serac::TimestepMethod timestepper_;
+  serac::TimestepMethod timestepper_ = TimestepMethod::QuasiStatic;
 
   /**
    * @brief Method for enforcing time-varying dirichlet boundary conditions
@@ -191,6 +200,11 @@ protected:
    * @brief Root output name
    */
   std::string root_name_;
+
+  /**
+   * @brief Number of significant figures to output for floating-point
+   */
+  static constexpr int FLOAT_PRECISION_ = 8;
 
   /**
    * @brief Current time
@@ -218,19 +232,14 @@ protected:
   int order_;
 
   /**
-   * @brief VisIt data collection pointer
+   * @brief DataCollection pointer
    */
-  std::unique_ptr<mfem::VisItDataCollection> visit_dc_;
+  std::unique_ptr<mfem::DataCollection> dc_;
 
   /**
    * @brief State variable initialization indicator
    */
   std::vector<bool> gf_initialized_;
-
-  /**
-   * @brief System solver instance
-   */
-  EquationSolver solver_;
 
   /**
    * @brief Boundary condition manager instance
