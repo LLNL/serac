@@ -41,7 +41,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-clang-10.0.0/bin/m
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_10_21_06_38_11/clang-10.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/toss_3_x86_64_ib/2020_11_03_07_48_31/clang-10.0.0" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 

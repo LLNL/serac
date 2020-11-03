@@ -244,7 +244,7 @@ TEST(dynamic_solver, dyn_linesearch_solve)
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-#endif // MFEM_USE_SUNDIALS
+#endif  // MFEM_USE_SUNDIALS
 
 #ifdef MFEM_USE_AMGX
 TEST(dynamic_solver, dyn_amgx_solve)
@@ -265,8 +265,8 @@ TEST(dynamic_solver, dyn_amgx_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
-  auto dyn_solver_params = default_dynamic;
-  auto& H_iter_params = std::get<IterativeSolverParameters>(dyn_solver_params.H_lin_params);
+  auto  dyn_solver_params = default_dynamic;
+  auto& H_iter_params     = std::get<IterativeSolverParameters>(dyn_solver_params.H_lin_params);
   // auto& M_iter_params = std::get<IterativeSolverParameters>(dyn_solver_params.dyn_params->M_params);
   H_iter_params.prec = AMGXPrec{};
   NonlinearSolid dyn_solver(1, pmesh, dyn_solver_params);
@@ -316,7 +316,7 @@ TEST(dynamic_solver, dyn_amgx_solve)
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
-#endif // MFEM_USE_AMGX
+#endif  // MFEM_USE_AMGX
 
 void initialDeformation(const mfem::Vector& x, mfem::Vector& y)
 {

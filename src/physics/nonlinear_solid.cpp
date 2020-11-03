@@ -215,30 +215,30 @@ NonlinearSolid::~NonlinearSolid() {}
 void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Polynomial interpolation order
-  table.addInt("order", "Order degree of the finite elements.")->defaultValue(1);
+  table.addInt("order", "Order degree of the finite elements.").defaultValue(1);
 
   // neo-Hookean material parameters
-  table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.")->defaultValue(0.25);
-  table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.")->defaultValue(5.0);
+  table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
+  table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
 
-  auto traction_table = table.addTable("traction", "Cantilever tip traction vector");
+  auto& traction_table = table.addTable("traction", "Cantilever tip traction vector");
 
   // loading parameters
-  input::defineVectorInputFileSchema(*traction_table);
+  input::defineVectorInputFileSchema(traction_table);
 
-  traction_table->getField("x")->defaultValue(0.0);
-  traction_table->getField("y")->defaultValue(1.0e-3);
-  traction_table->getField("z")->defaultValue(0.0);
+  traction_table.getField("x").defaultValue(0.0);
+  traction_table.getField("y").defaultValue(1.0e-3);
+  traction_table.getField("z").defaultValue(0.0);
 
-  auto solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(*solver_table);
+  auto& solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
+  serac::EquationSolver::defineInputFileSchema(solver_table);
 }
 
 }  // namespace serac
 
 using serac::NonlinearSolid;
 
-NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(axom::inlet::Table& base)
+NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const axom::inlet::Table& base)
 {
   NonlinearSolid::InputInfo result;
 
@@ -251,10 +251,10 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(axom:
 
   // TODO: "optional" concept within Inlet to support dynamic parameters
 
-  result.mu = base["mu"];
-  result.K  = base["K"];
   // Set the material parameters
   // neo-Hookean material parameters
+  result.mu = base["mu"];
+  result.K  = base["K"];
 
   return result;
 }
