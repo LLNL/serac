@@ -40,13 +40,6 @@ nonlinear_solid = {
     mu = 0.25,
     K  = 10.0,
 
-    -- loading parameters
-    traction = {
-        x = 0.0,
-        y = 1.0e-3,
-        z = 0.0,
-    },
-
     -- boundary condition parameters
     boundary_conds = {
         {
