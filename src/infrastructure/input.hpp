@@ -58,6 +58,21 @@ std::string fullDirectoryFromPath(const std::string& file_path);
  */
 void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension = 3);
 
+/**
+ * @brief The information required from the input deck for a boundary condition
+ */
+struct BoundaryConditionInputInfo {
+  // Just store the attributes and a name for now
+  std::string   name;
+  std::set<int> attrs;
+  /**
+   * @brief Input file parameters specific to this class
+   *
+   * @param[in] table Inlet's Table to which fields should be added
+   **/
+  static void defineInputFileSchema(axom::inlet::Table& table);
+};
+
 }  // namespace input
 }  // namespace serac
 
@@ -65,6 +80,11 @@ void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension 
 template <>
 struct FromInlet<mfem::Vector> {
   mfem::Vector operator()(const axom::inlet::Table& base);
+};
+
+template <>
+struct FromInlet<serac::input::BoundaryConditionInputInfo> {
+  serac::input::BoundaryConditionInputInfo operator()(const axom::inlet::Table& base);
 };
 
 #endif

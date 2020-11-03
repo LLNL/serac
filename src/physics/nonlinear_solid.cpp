@@ -229,6 +229,9 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 
   auto& solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(solver_table);
+
+  auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
+  serac::input::BoundaryConditionInputInfo::defineInputFileSchema(bc_table);
 }
 
 }  // namespace serac
@@ -252,6 +255,11 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   // neo-Hookean material parameters
   result.mu = base["mu"];
   result.K  = base["K"];
+
+  auto bdr_map = base["boundary_conds"].get<std::unordered_map<int, serac::input::BoundaryConditionInputInfo>>();
+  for (const auto& [_, val] : bdr_map) {
+    result.boundary_conditions[val.name] = val;
+  }
 
   return result;
 }
