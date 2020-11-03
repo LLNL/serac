@@ -185,20 +185,22 @@ private:
 };
 
 /**
- * @brief A helper method intended to be called by physics modules to configure the AMG preconditioner
+ * @brief A helper method intended to be called by physics modules to configure the AMG preconditioner for elasticity
+ * problems
  * @param[in] init_params The user-provided solver parameters to possibly modify
  * @param[in] pfes The FiniteElementSpace to configure the preconditioner with
  * @note A full copy of the object is made, pending C++20 relaxation of "mutable"
  */
-inline LinearSolverParameters augmentAMGWithSpace(const LinearSolverParameters& init_params,
-                                                  mfem::ParFiniteElementSpace&  pfes)
+inline LinearSolverParameters augmentAMGForElasticity(const LinearSolverParameters& init_params,
+                                                      mfem::ParFiniteElementSpace&  pfes)
 {
   auto augmented_params = init_params;
-  if (std::holds_alternative<IterativeSolverParameters>(init_params)) {
-    const auto& iter_params = std::get<IterativeSolverParameters>(init_params);
-    if (std::holds_alternative<HypreBoomerAMGPrec>(iter_params.prec)) {
-      // It's a copy, but at least it's on the stack
-      std::get<HypreBoomerAMGPrec>(std::get<IterativeSolverParameters>(augmented_params).prec).pfes = &pfes;
+  if (auto iter_params = std::get_if<IterativeSolverParameters>(&init_params)) {
+    if (iter_params->prec) {
+      if (std::holds_alternative<HypreBoomerAMGPrec>(iter_params->prec.value())) {
+        // It's a copy, but at least it's on the stack
+        std::get<HypreBoomerAMGPrec>(*std::get<IterativeSolverParameters>(augmented_params).prec).pfes = &pfes;
+      }
     }
   }
   // NRVO will kick in here

@@ -45,6 +45,9 @@ set(ENABLE_CLANGQUERY  OFF CACHE BOOL "")
 set(ENABLE_UNCRUSTIFY  OFF CACHE BOOL "")
 set(ENABLE_BENCHMARKS  OFF CACHE BOOL "")
 
+set(ENABLE_ALL_WARNINGS ON CACHE BOOL "")
+set(ENABLE_WARNINGS_AS_ERRORS ON CACHE BOOL "")
+
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
 #------------------------------------------------------------------------------
