@@ -55,15 +55,15 @@ class Axom(CMakePackage, CudaPackage):
     version('develop', branch='develop', submodules=True)
 
     # SERAC EDIT START
-    version('0.4.0serac', commit='8907d1380be62b50df5e058422fa4e958ff0e8ad', submodules="True")
+    version('0.4.0serac', commit='8907d1380be62b50df5e058422fa4e958ff0e8ad', submodules=True)
     # SERAC EDIT END
 
-    version('0.4.0', tag='v0.4.0', submodules="True")
-    version('0.3.3', tag='v0.3.3', submodules="True")
-    version('0.3.2', tag='v0.3.2', submodules="True")
-    version('0.3.1', tag='v0.3.1', submodules="True")
-    version('0.3.0', tag='v0.3.0', submodules="True")
-    version('0.2.9', tag='v0.2.9', submodules="True")
+    version('0.4.0', tag='v0.4.0', submodules=True)
+    version('0.3.3', tag='v0.3.3', submodules=True)
+    version('0.3.2', tag='v0.3.2', submodules=True)
+    version('0.3.1', tag='v0.3.1', submodules=True)
+    version('0.3.0', tag='v0.3.0', submodules=True)
+    version('0.2.9', tag='v0.2.9', submodules=True)
 
     phases = ["hostconfig", "cmake", "build", "install"]
     root_cmakelists_dir = 'src'
@@ -76,9 +76,7 @@ class Axom(CMakePackage, CudaPackage):
     variant('debug',    default=False,
             description='Build debug instead of optimized version')
 
-    # BEGIN SERAC EDIT
     variant('cpp14',  default=True, description="Build with C++14 support")
-    # END SERAC EDIT
 
     variant('fortran',  default=True, description="Build with Fortran support")
 
@@ -94,10 +92,8 @@ class Axom(CMakePackage, CudaPackage):
     variant("umpire",   default=True, description="Build with umpire")
 
     variant("raja",     default=True, description="Build with raja")
-    variant("cub",      default=True,
-            description="Build with RAJA's internal CUB support")
 
-    varmsg = "Build development tools (such as Sphinx, Uncrustify, etc...)"
+    varmsg = "Build development tools (such as Sphinx, Doxygen, etc...)"
     variant("devtools", default=False, description=varmsg)
 
     # -----------------------------------------------------------------------
@@ -146,7 +142,6 @@ class Axom(CMakePackage, CudaPackage):
     depends_on("python", when="+devtools")
     depends_on("py-sphinx", when="+devtools")
     depends_on("py-shroud", when="+devtools")
-    depends_on("uncrustify@0.61", when="+devtools")
 
     def flag_handler(self, name, flags):
         if name in ('cflags', 'cxxflags', 'fflags'):
@@ -256,9 +251,10 @@ class Axom(CMakePackage, CudaPackage):
                 cfg.write(cmake_cache_entry("BLT_EXE_LINKER_FLAGS", flags,
                                             description))
 
-        # BEGIN SERAC EDIT
         if "+cpp14" in spec:
             cfg.write(cmake_cache_entry("BLT_CXX_STD", "c++14", ""))
+
+        # BEGIN SERAC EDIT
         cfg.write(cmake_cache_option("AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION", True))
         # END SERAC EDIT
 
@@ -387,7 +383,7 @@ class Axom(CMakePackage, CudaPackage):
         # Add common prefix to path replacement list
         if "+devtools" in spec:
             # Grab common devtools root and strip the trailing slash
-            path1 = os.path.realpath(spec["uncrustify"].prefix)
+            path1 = os.path.realpath(spec["cppcheck"].prefix)
             path2 = os.path.realpath(spec["doxygen"].prefix)
             devtools_root = os.path.commonprefix([path1, path2])[:-1]
             path_replacements[devtools_root] = "${DEVTOOLS_ROOT}"
@@ -427,19 +423,33 @@ class Axom(CMakePackage, CudaPackage):
             cfg.write(cmake_cache_entry("SHROUD_EXECUTABLE",
                                         pjoin(shroud_bin_dir, "shroud")))
 
-        if "uncrustify" in spec:
-            uncrustify_bin_dir = get_spec_path(spec, "uncrustify",
-                                               path_replacements,
-                                               use_bin=True)
-            cfg.write(cmake_cache_entry("UNCRUSTIFY_EXECUTABLE",
-                                        pjoin(uncrustify_bin_dir,
-                                              "uncrustify")))
-
         if "cppcheck" in spec:
             cppcheck_bin_dir = get_spec_path(spec, "cppcheck",
                                              path_replacements, use_bin=True)
             cfg.write(cmake_cache_entry("CPPCHECK_EXECUTABLE",
                                         pjoin(cppcheck_bin_dir, "cppcheck")))
+
+        # Only turn on clangformat support if devtools is on
+        if "+devtools" in spec:
+            cf_paths = []
+            lc_clangpath = "/usr/tce/packages/clang/clang-10.0.0"
+            cf_paths.append(pjoin(lc_clangpath, "bin/clang-format"))
+            cf_paths.append("/usr/bin/clang-format-10")
+            cf_paths.append("/usr/bin/clang-format")
+
+            cf_found = False
+            for path in cf_paths:
+                if os.path.exists(path):
+                    cf_found = True
+                    cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE",
+                                                path))
+
+            if not cf_found:
+                cfg.write("# Unable to find clang-format\n\n")
+                cfg.write(cmake_cache_option("ENABLE_CLANGFORMAT", False))
+        else:
+            cfg.write("# ClangFormat disabled due to disabled devtools\n")
+            cfg.write(cmake_cache_option("ENABLE_CLANGFORMAT", False))
 
         ##################################
         # Other machine specifics
@@ -512,11 +522,6 @@ class Axom(CMakePackage, CudaPackage):
                                              True))
 
                 cfg.write(cmake_cache_option("AXOM_ENABLE_ANNOTATIONS", True))
-
-                if "+cub" in spec:
-                    cfg.write(cmake_cache_option("AXOM_ENABLE_CUB", True))
-                else:
-                    cfg.write(cmake_cache_option("AXOM_ENABLE_CUB", False))
 
                 # CUDA_FLAGS
                 cudaflags  = "-restrict "
