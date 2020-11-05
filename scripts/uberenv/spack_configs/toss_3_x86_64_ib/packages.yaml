@@ -130,6 +130,12 @@ packages:
     externals:
     - spec: doxygen
       prefix: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.8.17
+  llvm:
+    version: [10.0.0]
+    buildable: false
+    externals:
+    - spec: llvm+clang
+      prefix: /usr/tce/packages/clang/clang-10.0.0
   python:
     buildable: false
     externals:

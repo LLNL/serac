@@ -105,6 +105,7 @@ class Serac(CMakePackage, CudaPackage):
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")
     depends_on('doxygen', when="+devtools")
+    depends_on("llvm+clang@10.0.0", when="+devtools")
     depends_on('python', when="+devtools")
     depends_on('py-sphinx', when="+devtools")
 
@@ -427,18 +428,19 @@ class Serac(CMakePackage, CudaPackage):
         else:
             cfg.write(cmake_cache_option("ENABLE_DOCS", False))
 
-        lc_clangformatpath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format"
-        # This works only with Ubuntu + Debian - other distros (Arch/Fedora) use
-        # /usr/bin/clang-format which would require actually running the executable to grab the version
-        apt_clangformatpath = "/usr/bin/clang-format-10"
-        if os.path.exists(lc_clangformatpath):
-            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", lc_clangformatpath))
-        elif os.path.exists(apt_clangformatpath):
-            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", apt_clangformatpath))
+        # Only turn on clang tools support if devtools is on
+        if "+devtools" in spec:
+            clang_fmt_path = spec['llvm'].prefix.bin.join('clang-format')
+            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE",
+                                        clang_fmt_path))
 
-        clangtidypath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-tidy"
-        if os.path.exists(clangtidypath):
-            cfg.write(cmake_cache_entry("CLANGTIDY_EXECUTABLE", clangtidypath))
+            clang_tidy_path = spec['llvm'].prefix.bin.join('clang-tidy')
+            cfg.write(cmake_cache_entry("CLANGTIDY_EXECUTABLE",
+                                        clang_tidy_path))
+        else:
+            cfg.write("# Clang tools disabled due to disabled devtools\n")
+            cfg.write(cmake_cache_option("ENABLE_CLANGFORMAT", False))
+            cfg.write(cmake_cache_option("ENABLE_CLANGTIDY", False))
 
         if "cppcheck" in spec:
             cppcheck_bin_dir = get_spec_path(spec, "cppcheck", path_replacements, use_bin=True)
