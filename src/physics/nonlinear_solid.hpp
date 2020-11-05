@@ -266,7 +266,7 @@ protected:
 
 template <>
 struct FromInlet<serac::NonlinearSolid::InputInfo> {
-  serac::NonlinearSolid::InputInfo operator()(axom::inlet::Table& base);
+  serac::NonlinearSolid::InputInfo operator()(const axom::inlet::Table& base);
 };
 
 #endif
