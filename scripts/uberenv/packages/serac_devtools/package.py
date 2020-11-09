@@ -13,5 +13,6 @@ class SeracDevtools(BundlePackage):
     depends_on('cmake')
     depends_on('cppcheck')
     depends_on('doxygen')
+    depends_on("llvm+clang@10.0.0")
     depends_on('python')
     depends_on('py-sphinx')
