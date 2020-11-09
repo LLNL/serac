@@ -15,6 +15,7 @@
 
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
+#include "physics/operators/odes.hpp"
 #include "physics/operators/thermal_operators.hpp"
 
 namespace serac {
@@ -182,6 +183,16 @@ protected:
    * @brief Time integration operator
    */
   std::unique_ptr<DynamicConductionOperator> dyn_oper_;
+
+  FirstOrderODE ode_;
+
+  serac::EquationSolver                 invT_;
+  std::unique_ptr<mfem::HypreParMatrix> T_;
+  mutable mfem::Vector                  uf;
+  mutable mfem::Vector                  uc;
+  mutable mfem::Vector                  duc_dt;
+  mutable mfem::Vector                  uc_plus;
+  mutable mfem::Vector                  uc_minus;
 
   /**
    * @brief Solve the Quasi-static operator

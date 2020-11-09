@@ -18,7 +18,8 @@ constexpr int NUM_FIELDS = 2;
 NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh, FEStateOptions{.order = order, .name = "velocity"}),
-      displacement_(*mesh, FEStateOptions{.order = order, .name = "displacement"})
+      displacement_(*mesh, FEStateOptions{.order = order, .name = "displacement"}),
+      op(displacement_.space().TrueVSize())
 {
   state_.push_back(velocity_);
   state_.push_back(displacement_);
@@ -56,6 +57,19 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
   }
+
+  u     = mfem::Vector(true_size);
+  du_dt = mfem::Vector(true_size);
+  zero  = mfem::Vector(true_size);
+  zero  = 0.0;
+
+  U_minus = mfem::Vector(true_size);
+  U       = mfem::Vector(true_size);
+  U_plus  = mfem::Vector(true_size);
+  dU_dt   = mfem::Vector(true_size);
+  d2U_dt2 = mfem::Vector(true_size);
+
+  x = *reference_nodes_;
 }
 
 NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputInfo& info)

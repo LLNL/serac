@@ -228,6 +228,11 @@ protected:
    */
   void quasiStaticSolve();
 
+  /**
+   * @brief Nonlinear system solver instance
+   */
+  EquationSolver nonlin_solver_;
+
   StdFunctionOperator op;
 
   // predicted displacements and velocities
@@ -251,8 +256,9 @@ protected:
   double c0, c1;
   double dt0, dt1, dt0_previous, dt1_previous;
 
-  std::unique_ptr<mfem::ParNonlinearForm> H;
-  std::unique_ptr<mfem::ParBilinearForm> M, S;
+  std::unique_ptr<mfem::ParBilinearForm> M;
+  std::unique_ptr<mfem::ParBilinearForm> C;
+  std::unique_ptr<mfem::ParNonlinearForm> K;
 
   std::unique_ptr<mfem::HypreParMatrix> J;
 

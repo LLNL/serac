@@ -14,16 +14,13 @@ if (ENABLE_GTEST)
 
     set(solver_tests
         serac_dynamic_solver.cpp
-        serac_dynamic_solver_previous.cpp
         serac_linelastic_solver.cpp
         serac_quasistatic_solver.cpp
         serac_thermal_solver.cpp
-        serac_thermal_solver_rework.cpp
         serac_thermal_structural_solver.cpp
         serac_dtor.cpp
         serac_boundary_cond.cpp
         serac_mesh.cpp
-        time_integration_with_constraints.cpp
         mfem_ex9p_blockilu.cpp)
 
     foreach(filename ${solver_tests})
