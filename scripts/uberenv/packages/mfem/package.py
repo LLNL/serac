@@ -6,6 +6,7 @@
 from spack import *
 import os
 import shutil
+import sys
 
 
 class Mfem(Package):
@@ -210,7 +211,8 @@ class Mfem(Package):
     depends_on('gslib@1.0.5:~mpi~mpiio', when='+gslib~mpi')
     depends_on('suite-sparse', when='+suite-sparse')
     depends_on('superlu-dist', when='+superlu-dist')
-    depends_on('strumpack@3.0.0:', when='+strumpack')
+    depends_on('strumpack@3.0.0:', when='+strumpack~shared')
+    depends_on('strumpack@3.0.0:+shared', when='+strumpack+shared')
     # The PETSc tests in MFEM will fail if PETSc is not configured with
     # SuiteSparse and MUMPS. On the other hand, if we require the variants
     # '+suite-sparse+mumps' of PETSc, the xsdk package concretization fails.
@@ -345,6 +347,21 @@ class Mfem(Package):
                         return lib
             return LibraryList([])
 
+        # Determine how to run MPI tests, e.g. when using '--test=root', when
+        # Spack is run inside a batch system job.
+        mfem_mpiexec    = 'mpirun'
+        mfem_mpiexec_np = '-np'
+        if 'SLURM_JOBID' in os.environ:
+            mfem_mpiexec    = 'srun'
+            mfem_mpiexec_np = '-n'
+        elif 'LSB_JOBID' in os.environ:
+            if 'LLNL_COMPUTE_NODES' in os.environ:
+                mfem_mpiexec    = 'lrun'
+                mfem_mpiexec_np = '-n'
+            else:
+                mfem_mpiexec    = 'jsrun'
+                mfem_mpiexec_np = '-p'
+
         metis5_str = 'NO'
         if ('+metis' in spec) and spec['metis'].satisfies('@5:'):
             metis5_str = 'YES'
@@ -385,7 +402,9 @@ class Mfem(Package):
             'MFEM_USE_AMGX=%s' % yes_no('+amgx'),
             # SERAC EDIT END
             'MFEM_USE_CEED=%s' % yes_no('+libceed'),
-            'MFEM_USE_UMPIRE=%s' % yes_no('+umpire')]
+            'MFEM_USE_UMPIRE=%s' % yes_no('+umpire'),
+            'MFEM_MPIEXEC=%s' % mfem_mpiexec,
+            'MFEM_MPIEXEC_NP=%s' % mfem_mpiexec_np]
 
         cxxflags = spec.compiler_flags['cxxflags']
 
@@ -467,24 +486,46 @@ class Mfem(Package):
             # fortran library and also the MPI fortran library:
             if '~shared' in strumpack:
                 if os.path.basename(env['FC']) == 'gfortran':
-                    sp_lib += ['-lgfortran']
-                if '^mpich' in strumpack:
+                    gfortran = Executable(env['FC'])
+                    libext = 'dylib' if sys.platform == 'darwin' else 'so'
+                    libfile = os.path.abspath(gfortran(
+                        '-print-file-name=libgfortran.%s' % libext,
+                        output=str).strip())
+                    gfortran_lib = LibraryList(libfile)
+                    sp_lib += [ld_flags_from_library_list(gfortran_lib)]
+                if ('^mpich' in strumpack) or ('^mvapich2' in strumpack):
                     sp_lib += ['-lmpifort']
                 elif '^openmpi' in strumpack:
                     sp_lib += ['-lmpi_mpifh']
             if '+openmp' in strumpack:
-                sp_opt += [self.compiler.openmp_flag]
-            if '^scalapack' in strumpack:
+                # The '+openmp' in the spec means strumpack will TRY to find
+                # OpenMP; if not found, we should not add any flags -- how do
+                # we figure out if strumpack found OpenMP?
+                if not self.spec.satisfies('%apple-clang'):
+                    sp_opt += [self.compiler.openmp_flag]
+            if '^parmetis' in strumpack:
+                parmetis = strumpack['parmetis']
+                sp_opt += [parmetis.headers.cpp_flags]
+                sp_lib += [ld_flags_from_library_list(parmetis.libs)]
+            if '^netlib-scalapack' in strumpack:
                 scalapack = strumpack['scalapack']
                 sp_opt += ['-I%s' % scalapack.prefix.include]
                 sp_lib += [ld_flags_from_dirs([scalapack.prefix.lib],
                                               ['scalapack'])]
+            elif '^scalapack' in strumpack:
+                scalapack = strumpack['scalapack']
+                sp_opt += [scalapack.headers.cpp_flags]
+                sp_lib += [ld_flags_from_library_list(scalapack.libs)]
             if '+butterflypack' in strumpack:
                 bp = strumpack['butterflypack']
                 sp_opt += ['-I%s' % bp.prefix.include]
                 sp_lib += [ld_flags_from_dirs([bp.prefix.lib],
                                               ['dbutterflypack',
                                                'zbutterflypack'])]
+            if '+zfp' in strumpack:
+                zfp = strumpack['zfp']
+                sp_opt += ['-I%s' % zfp.prefix.include]
+                sp_lib += [ld_flags_from_dirs([zfp.prefix.lib], ['zfp'])]
             options += [
                 'STRUMPACK_OPT=%s' % ' '.join(sp_opt),
                 'STRUMPACK_LIB=%s' % ' '.join(sp_lib)]

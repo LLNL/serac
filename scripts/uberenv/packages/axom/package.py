@@ -533,7 +533,7 @@ class Axom(CMakePackage, CudaPackage):
                     cuda_arch = spec.variants['cuda_arch'].value
                     axom_arch = 'sm_{0}'.format(cuda_arch[0])
                     cfg.write(cmake_cache_entry("AXOM_CUDA_ARCH", axom_arch))
-                    cfg.write(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES", ' '.join(cuda_arch)))
+                    # cfg.write(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES", ' '.join(cuda_arch)))
                     cudaflags += "-arch ${AXOM_CUDA_ARCH} "
                 else:
                     cfg.write("# cuda_arch could not be determined\n\n")
@@ -554,14 +554,9 @@ class Axom(CMakePackage, CudaPackage):
                 cfg.write("# nvcc does not like gtest's 'pthreads' flag\n")
                 cfg.write(cmake_cache_option("gtest_disable_pthreads", True))
 
-                sys_type = spec.architecture
-                # if on llnl systems, we can use the SYS_TYPE
-                if "SYS_TYPE" in env:
-                    sys_type = env["SYS_TYPE"]
+                sys_type = self._get_sys_type(spec)
                 # are we on a specific machine
-                on_blueos = 'blueos' in sys_type
-
-                if on_blueos:
+                if 'blueos' in sys_type:
                     # Very specific fix for working around CMake adding implicit link directories returned by the BlueOS
                     # compilers to link CUDA executables 
                     cfg.write(cmake_cache_string("BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
