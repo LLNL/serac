@@ -39,9 +39,75 @@ const NonlinearSolverParameters default_dyn_nonlinear_params = {
 
 const NonlinearSolid::SolverParameters default_dynamic = {
     default_dyn_linear_params, default_dyn_nonlinear_params,
-    NonlinearSolid::DynamicSolverParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
+    NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration, default_dyn_oper_linear_params}};
 
 TEST(dynamic_solver, dyn_solve)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Open the mesh
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
+
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+
+  int dim = pmesh->Dimension();
+
+  std::set<int> ess_bdr = {1};
+
+  auto visc   = std::make_unique<mfem::ConstantCoefficient>(0.0);
+  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
+  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
+
+  // initialize the dynamic solver object
+  NonlinearSolid dyn_solver(1, pmesh, default_dynamic);
+  dyn_solver.setDisplacementBCs(ess_bdr, deform);
+  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
+  dyn_solver.setViscosity(std::move(visc));
+  dyn_solver.setDisplacement(*deform);
+  dyn_solver.setVelocity(*velo);
+
+  // Initialize the VisIt output
+  dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");
+
+  // Construct the internal dynamic solver data structures
+  dyn_solver.completeSetup();
+
+  double t       = 0.0;
+  double t_final = 6.0;
+  double dt      = 1.0;
+
+  // Ouput the initial state
+  dyn_solver.outputState();
+
+  // Perform time-integration
+  // (looping over the time iterations, ti, with a time-step dt).
+  bool last_step = false;
+  for (int ti = 1; !last_step; ti++) {
+    double dt_real = std::min(dt, t_final - t);
+    t += dt_real;
+    last_step = (t >= t_final - 1e-8 * dt);
+
+    dyn_solver.advanceTimestep(dt_real);
+  }
+
+  // Output the final state
+  dyn_solver.outputState();
+
+  // Check the final displacement and velocity L2 norms
+  mfem::Vector zero(dim);
+  zero = 0.0;
+  mfem::VectorConstantCoefficient zerovec(zero);
+
+  double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
+  double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+
+  EXPECT_NEAR(1.4225, x_norm, 0.0001);
+  EXPECT_NEAR(0.2252, v_norm, 0.0001);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(dynamic_solver, dyn_solve2)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -131,7 +197,6 @@ TEST(dynamic_solver, dyn_direct_solve)
   dyn_solver.setViscosity(std::move(visc));
   dyn_solver.setDisplacement(*deform);
   dyn_solver.setVelocity(*velo);
-  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
 
   // Initialize the VisIt output
   dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");

@@ -37,8 +37,9 @@ public:
    * @brief A timestep method and config for the M solver
    */
   struct DynamicSolverParameters {
-    TimestepMethod         timestepper;
-    LinearSolverParameters M_params;
+    TimestepMethod             timestepper;
+    //DirichletEnforcementMethod enforcement_method;
+    LinearSolverParameters     M_params;
   };
   /**
    * @brief A configuration variant for the various solves
