@@ -126,18 +126,18 @@ void NonlinearSolid::setVelocity(mfem::VectorCoefficient& velo_state) {
 
 void NonlinearSolid::completeSetup() {
   // Define the nonlinear form
-  K = displacement_.createOnSpace<mfem::ParNonlinearForm>();
+  H = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    K->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
+    H->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
   } else {
-    K->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
+    H->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
   }
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
-    K->AddBdrFaceIntegrator(
+    H->AddBdrFaceIntegrator(
         new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
         nat_bc_data.markers());
   }
@@ -157,7 +157,6 @@ void NonlinearSolid::completeSetup() {
     mfem::ConstantCoefficient rho0(ref_density);
 
     M = displacement_.createOnSpace<mfem::ParBilinearForm>();
-
     M->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
     M->Assemble(0);
     M->Finalize(0);
@@ -168,34 +167,35 @@ void NonlinearSolid::completeSetup() {
     C->Finalize(0);
   }
 
-  // Set the MFEM abstract operators for use with the internal MFEM solvers
+  // We are assuming that the ODE is prescribing the
+  // acceleration value for the constrained dofs, so
+  // the residuals for those dofs can be taken to be zero.
+  // 
+  // Setting iterative_mode to true ensures that these
+  // prescribed acceleration values are not modified by
+  // the nonlinear solve.
+  nonlin_solver_.nonlinearSolver().iterative_mode = true;
+  nonlin_solver_.SetOperator(residual);
+
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    nonlin_solver_.nonlinearSolver().iterative_mode = true;
-    nonlinear_oper_ =
-        std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(K), bcs_);
-    nonlin_solver_.SetOperator(*nonlinear_oper_);
+
+    residual.function = [=](const mfem::Vector& u, mfem::Vector& r) mutable {
+      H->Mult(u, r); // r := H(u)
+      r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+    };
+
+    residual.jacobian = [=](const mfem::Vector& u) mutable -> mfem::Operator& {
+      auto& J = dynamic_cast<mfem::HypreParMatrix&>(H->GetGradient(u));
+      bcs_.eliminateAllEssentialDofsFromMatrix(J);
+      return J;
+    };
+
   } else {
-    //nonlin_solver_.nonlinearSolver().iterative_mode = false;
-    //timedep_oper_ = std::make_unique<NonlinearSolidDynamicOperator>(
-    //    std::move(K), std::move(C), std::move(M), bcs_, nonlin_solver_,
-    //    *timedep_oper_params_);
-    //ode_solver_->Init(*timedep_oper_);
-
-    // We are assuming that the ODE is prescribing the
-    // acceleration value for the constrained dofs, so
-    // the residuals for those dofs can be taken to be zero.
-    // 
-    // Setting iterative_mode to true ensures that these
-    // prescribed acceleration values are not modified by
-    // the nonlinear solve.
-
-    nonlin_solver_.nonlinearSolver().iterative_mode = true;
-    nonlin_solver_.SetOperator(residual);
 
     residual.function = [=](const mfem::Vector& d2u_dt2,
                             mfem::Vector& res) mutable {
       res = (*M) * d2u_dt2 + (*C) * (du_dt + c1 * d2u_dt2) +
-            (*K) * (x + u + c0 * d2u_dt2);
+            (*H) * (x + u + c0 * d2u_dt2);
       res.SetSubVector(bcs_.allEssentialDofs(), 0.0);
     };
 
@@ -204,7 +204,7 @@ void NonlinearSolid::completeSetup() {
       // J = M + dt1 * S + 0.5 * dt0 * dt0 * H(u_predicted)
       auto localJ = std::unique_ptr<mfem::SparseMatrix>(
           Add(1.0, M->SpMat(), c1, C->SpMat()));
-      localJ->Add(c0, K->GetLocalGradient(x + u + c0 * d2u_dt2));
+      localJ->Add(c0, H->GetLocalGradient(x + u + c0 * d2u_dt2));
       J.reset(M->ParallelAssemble(localJ.get()));
       bcs_.eliminateAllEssentialDofsFromMatrix(*J);
       return *J;
@@ -216,12 +216,12 @@ void NonlinearSolid::completeSetup() {
                                         const mfem::Vector& velocity,
                                         mfem::Vector& acceleration) {
 
-      // this is is intended to be temporary
+      // this is intended to be temporary
       // Ideally, epsilon should be "small" relative to the characteristic time of the ODE,
       // but we can't ensure that at present (we don't have a critical timestep estimate)
       constexpr double epsilon = 0.0001;
 
-      // pass these values through to the physics module
+      // assign these values to variables with greater scope,
       // so that the residual operator can see them
       c0 = fac0;
       c1 = fac1;
@@ -289,11 +289,11 @@ void NonlinearSolid::completeSetup() {
   }
 }
 
-// Solve the Quasi-static Newton system
-void NonlinearSolid::quasiStaticSolve() {
-  mfem::Vector zero;
-  nonlin_solver_.Mult(zero, displacement_.trueVec());
-}
+//// Solve the Quasi-static Newton system
+//void NonlinearSolid::quasiStaticSolve() {
+//  mfem::Vector zero;
+//  nonlin_solver_.Mult(zero, displacement_.trueVec());
+//}
 
 // Advance the timestep
 void NonlinearSolid::advanceTimestep(double& dt) {
@@ -305,9 +305,8 @@ void NonlinearSolid::advanceTimestep(double& dt) {
   mesh_->NewNodes(*reference_nodes_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    quasiStaticSolve();
+    nonlin_solver_.Mult(zero, displacement_.trueVec());
   } else {
-    //ode_solver_->Step(*block_, time_, dt);
     second_order_ode_solver_->Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }
 

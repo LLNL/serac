@@ -258,7 +258,7 @@ protected:
 
   std::unique_ptr<mfem::ParBilinearForm> M;
   std::unique_ptr<mfem::ParBilinearForm> C;
-  std::unique_ptr<mfem::ParNonlinearForm> K;
+  std::unique_ptr<mfem::ParNonlinearForm> H;
 
   std::unique_ptr<mfem::HypreParMatrix> J;
 
