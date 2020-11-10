@@ -101,3 +101,9 @@ packages:
     externals:
     - spec: cmake@3.10.1
       prefix: /usr
+  llvm:
+    version: [10.0.0]
+    buildable: false
+    externals:
+    - spec: llvm+clang
+      prefix: /usr
