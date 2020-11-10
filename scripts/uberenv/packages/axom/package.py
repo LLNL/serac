@@ -60,8 +60,7 @@ class Axom(CMakePackage, CudaPackage):
     version('develop', branch='develop', submodules=True)
 
     # SERAC EDIT START
-    version('0.4.0serac', commit='dd59ce19f3a139c4e7adb41c4fd867d169860a4e', submodules="True")
-    version('0.4.0serac-bugfix', branch='bugfix/essman/cuda_build_fixes', submodules="True")
+    version('0.4.0serac', commit='da070105fcb2e4009ea8609d60aa321c63172cc4', submodules="True")
     # SERAC EDIT END
 
     version('0.4.0', tag='v0.4.0', submodules="True")
@@ -533,14 +532,12 @@ class Axom(CMakePackage, CudaPackage):
                     cuda_arch = spec.variants['cuda_arch'].value
                     axom_arch = 'sm_{0}'.format(cuda_arch[0])
                     cfg.write(cmake_cache_entry("AXOM_CUDA_ARCH", axom_arch))
-                    # cfg.write(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES", ' '.join(cuda_arch)))
                     cudaflags += "-arch ${AXOM_CUDA_ARCH} "
                 else:
                     cfg.write("# cuda_arch could not be determined\n\n")
 
                 # SERAC EDIT BEGIN - debug flag causes the NVIDIA assembler to fail
-                # cudaflags += "-std=c++11 --expt-extended-lambda -G "
-                cudaflags += "-std=c++11 --expt-extended-lambda "
+                cudaflags += "-std=c++11 --expt-extended-lambda " # -G
                 # SERAC EDIT END
                 cfg.write(cmake_cache_entry("CMAKE_CUDA_FLAGS", cudaflags))
 
