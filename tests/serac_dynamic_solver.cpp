@@ -101,7 +101,7 @@ TEST(dynamic_solver, dyn_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(1.4224, x_norm, 0.0001);
+  EXPECT_NEAR(1.4225, x_norm, 0.0001);
   EXPECT_NEAR(0.2252, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -141,7 +141,7 @@ TEST(dynamic_solver, dyn_direct_solve)
 
   double t       = 0.0;
   double t_final = 6.0;
-  double dt      = 3.0;
+  double dt      = 1.0;
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -168,8 +168,8 @@ TEST(dynamic_solver, dyn_direct_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(1.4225, x_norm, 0.0001);
+  EXPECT_NEAR(0.2252, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -246,11 +246,12 @@ TEST(dynamic_solver, dyn_linesearch_solve)
 }
 #endif
 
-void initialDeformation(const mfem::Vector& /* x */, mfem::Vector& u)
+void initialDeformation(const mfem::Vector& /*x*/, mfem::Vector& u)
 {
   // set the initial configuration to be the same as the reference, stress
   // free, configuration
   u = 0.0;
+  //u = x;
 }
 
 void initialVelocity(const mfem::Vector& x, mfem::Vector& v)

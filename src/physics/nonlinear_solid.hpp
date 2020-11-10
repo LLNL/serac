@@ -233,7 +233,7 @@ protected:
    */
   EquationSolver nonlin_solver_;
 
-  StdFunctionOperator op;
+  StdFunctionOperator residual;
 
   // predicted displacements and velocities
   mfem::Vector x;
@@ -263,8 +263,6 @@ protected:
   std::unique_ptr<mfem::HypreParMatrix> J;
 
   SecondOrderODE ode2;
-
-  serac::EquationSolver root_finder;
 
 };
 
