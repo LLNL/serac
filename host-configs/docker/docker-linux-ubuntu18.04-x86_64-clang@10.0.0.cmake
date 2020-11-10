@@ -59,7 +59,7 @@ set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.1.0p1" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.2.0" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
