@@ -267,7 +267,7 @@ TEST(dynamic_solver, dyn_amgx_solve)
   // initialize the dynamic solver object
   auto  dyn_solver_params = default_dynamic;
   auto& H_iter_params     = std::get<IterativeSolverParameters>(dyn_solver_params.H_lin_params);
-  H_iter_params.prec = AMGXPrec{};
+  H_iter_params.prec      = AMGXPrec{};
   NonlinearSolid dyn_solver(1, pmesh, dyn_solver_params);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
