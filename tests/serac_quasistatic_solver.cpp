@@ -101,7 +101,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   // Define the solver object
   auto solver_params         = default_quasistatic;
   solver_params.H_lin_params = DirectSolverParameters{0};
-  NonlinearSolid solid_solver(1, pmesh, default_quasistatic);
+  NonlinearSolid solid_solver(1, pmesh, solver_params);
 
   std::set<int> ess_bdr = {1};
 
