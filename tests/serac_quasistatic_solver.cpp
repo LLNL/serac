@@ -99,6 +99,8 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   int dim = pmesh->Dimension();
 
   // Define the solver object
+  auto solver_params         = default_quasistatic;
+  solver_params.H_lin_params = DirectSolverParameters{0};
   NonlinearSolid solid_solver(1, pmesh, default_quasistatic);
 
   std::set<int> ess_bdr = {1};
