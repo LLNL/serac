@@ -66,6 +66,20 @@ public:
   void SetConductivity(std::unique_ptr<mfem::Coefficient>&& kappa) { therm_solver_.setConductivity(std::move(kappa)); };
 
   /**
+   * @brief Set the thermal conductivity
+   *
+   * @param[in] kappa The thermal conductivity
+   */
+  void SetDensity(std::unique_ptr<mfem::Coefficient>&& rho) { therm_solver_.setDensity(std::move(rho)); };
+
+    /**
+   * @brief Set the thermal conductivity
+   *
+   * @param[in] kappa The thermal conductivity
+   */
+  void SetSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp) { therm_solver_.setSpecificHeatCapacity(std::move(cp)); };
+
+  /**
    * @brief Set the temperature state vector from a coefficient
    *
    * @param[in] temp The temperature coefficient
