@@ -8,8 +8,8 @@
 
 #include <fstream>
 
-#include "mfem.hpp"
 #include "coefficients/stdfunction_coefficient.hpp"
+#include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
 #include "physics/thermal_solid.hpp"
 #include "serac_config.hpp"
@@ -31,8 +31,8 @@ TEST(dynamic_solver, dyn_solve)
   std::set<int> ess_bdr = {1};
 
   auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector& x, mfem::Vector& y) {
-    y    = x;
-    y(1) = y(1) + x(0) * 0.01;
+    y = 0.0;
+    y(1) = x(0) * 0.01;
   });
 
   auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector&, mfem::Vector& v) { v = 0.0; });
@@ -85,7 +85,9 @@ TEST(dynamic_solver, dyn_solve)
 
   const NonlinearSolid::SolverParameters default_dynamic = {
       default_dyn_linear_params, default_dyn_nonlinear_params,
-      NonlinearSolid::DynamicSolverParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
+      NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration,
+                                              DirichletEnforcementMethod::RateControl,
+                                              default_dyn_oper_linear_params}};
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);
@@ -143,7 +145,7 @@ TEST(dynamic_solver, dyn_solve)
   double x_norm    = ts_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
   double temp_norm = ts_solver.temperature().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(13.28049, x_norm, 0.001);
+  EXPECT_NEAR(0.146228, x_norm, 0.001);
   EXPECT_NEAR(0.005227, v_norm, 0.001);
   EXPECT_NEAR(6.491872, temp_norm, 0.001);
 

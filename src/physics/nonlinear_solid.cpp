@@ -55,7 +55,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   // Check for dynamic mode
   if (params.dyn_params) {
     timedep_oper_params_ = params.dyn_params->M_params;
-    setTimestepper(params.dyn_params->timestepper);
+    setTimestepper(params.dyn_params->timestepper, params.dyn_params->enforcement_method);
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
   }

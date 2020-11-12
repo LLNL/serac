@@ -39,7 +39,7 @@ const NonlinearSolverParameters default_dyn_nonlinear_params = {
 
 const NonlinearSolid::SolverParameters default_dynamic = {
     default_dyn_linear_params, default_dyn_nonlinear_params,
-    NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration, default_dyn_oper_linear_params}};
+    NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl, default_dyn_oper_linear_params}};
 
 TEST(dynamic_solver, dyn_solve)
 {
