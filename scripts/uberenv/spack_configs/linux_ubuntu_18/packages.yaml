@@ -88,12 +88,6 @@ packages:
     externals:
     - spec: cppcheck
       prefix: /usr
-  doxygen:
-    version: [1.8.13]
-    buildable: false
-    externals:
-    - spec: doxygen
-      prefix: /usr
   llvm:
     version: [10.0.0]
     buildable: false
