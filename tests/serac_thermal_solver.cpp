@@ -254,7 +254,7 @@ TEST(thermal_solver, dyn_imp_solve)
   std::set<int> temp_bdr = {1};
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
-  // Set the density function 
+  // Set the density function
   auto rho = std::make_unique<mfem::ConstantCoefficient>(0.5);
   therm_solver.setDensity(std::move(rho));
 
