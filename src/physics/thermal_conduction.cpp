@@ -122,14 +122,13 @@ void ThermalConduction::completeSetup()
 
     // If both a specific heat capacity and density have been specified, use their product as the mass matrix
     // coefficient
-    if (cp_ != nullptr && rho_ != nullptr) {
-      auto product_function = [](double a, double b) { return a * b; };
-      mass_coef_ = std::make_unique<TransformedScalarCoefficient>(std::move(rho_), std::move(cp_), product_function);
+    if (cp_ && rho_) {
+      mass_coef_ = std::make_unique<mfem::ProductCoefficient>(*rho_, *cp_);
     }
     // otherwise, just use the one that is specified
-    else if (cp_ != nullptr) {
+    else if (cp_) {
       mass_coef_ = std::move(cp_);
-    } else if (rho_ != nullptr) {
+    } else if (rho_) {
       mass_coef_ = std::move(rho_);
     }
     // if neither is specified, use the default coefficient of 1.0
