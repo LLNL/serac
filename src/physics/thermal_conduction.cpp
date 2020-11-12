@@ -120,32 +120,31 @@ void ThermalConduction::completeSetup()
     // If dynamic, assemble the mass matrix
     M_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
 
-    // If both a specific heat capacity and density have been specified, use their product as the mass matrix coefficient
+    // If both a specific heat capacity and density have been specified, use their product as the mass matrix
+    // coefficient
     if (cp_ != nullptr && rho_ != nullptr) {
       auto product_function = [](double a, double b) { return a * b; };
-      mass_coef_            = std::make_unique<TransformedScalarCoefficient>(std::move(rho_), std::move(cp_), product_function);
+      mass_coef_ = std::make_unique<TransformedScalarCoefficient>(std::move(rho_), std::move(cp_), product_function);
     }
     // otherwise, just use the one that is specified
     else if (cp_ != nullptr) {
       mass_coef_ = std::move(cp_);
-    }
-    else if (rho_ != nullptr) {
+    } else if (rho_ != nullptr) {
       mass_coef_ = std::move(rho_);
     }
     // if neither is specified, use the default coefficient of 1.0
     else {
       mass_coef_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
     }
-      
+
     M_form_->AddDomainIntegrator(new mfem::MassIntegrator(*mass_coef_));
     M_form_->Assemble(0);  // keep sparsity pattern of M and K the same
     M_form_->Finalize();
 
     M_mat_.reset(M_form_->ParallelAssemble());
 
-      // Make the time integration operator and set the appropriate matrices
-    dyn_oper_ =
-        std::make_unique<DynamicConductionOperator>(temperature_.space(), *dyn_M_params_, *dyn_T_params_, bcs_);
+    // Make the time integration operator and set the appropriate matrices
+    dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_.space(), *dyn_M_params_, *dyn_T_params_, bcs_);
     dyn_oper_->setMatrices(M_mat_.get(), K_mat_.get());
     dyn_oper_->setLoadVector(rhs_.get());
 

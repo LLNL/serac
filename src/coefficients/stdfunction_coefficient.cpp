@@ -147,7 +147,7 @@ void TransformedVectorCoefficient::Eval(mfem::Vector& V, mfem::ElementTransforma
   }
 }
 
-TransformedScalarCoefficient::TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1,
+TransformedScalarCoefficient::TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient>  s1,
                                                            std::function<double(const double)> func)
     : mfem::Coefficient(), s1_(s1), mono_function_(func), bi_function_(nullptr)
 {
@@ -161,13 +161,13 @@ TransformedScalarCoefficient::TransformedScalarCoefficient(std::shared_ptr<mfem:
 }
 
 TransformedScalarCoefficient::TransformedScalarCoefficient(std::unique_ptr<mfem::Coefficient>&& u1,
-                                                           std::function<double(const double)> func)
+                                                           std::function<double(const double)>  func)
     : mfem::Coefficient(), u1_(std::move(u1)), mono_function_(func), bi_function_(nullptr)
 {
 }
 
-TransformedScalarCoefficient::TransformedScalarCoefficient(std::unique_ptr<mfem::Coefficient>&&                u1,
-                                                           std::unique_ptr<mfem::Coefficient>&&                u2,
+TransformedScalarCoefficient::TransformedScalarCoefficient(std::unique_ptr<mfem::Coefficient>&&              u1,
+                                                           std::unique_ptr<mfem::Coefficient>&&              u2,
                                                            std::function<double(const double, const double)> func)
     : mfem::Coefficient(), u1_(std::move(u1)), u2_(std::move(u2)), mono_function_(nullptr), bi_function_(func)
 {
@@ -184,8 +184,7 @@ double TransformedScalarCoefficient::Eval(mfem::ElementTransformation& T, const 
       double temp2 = s2_->Eval(T, ip);
       return bi_function_(temp, temp2);
     }
-  }
-  else {
+  } else {
     double temp = u1_->Eval(T, ip);
 
     if (mono_function_) {
@@ -193,7 +192,7 @@ double TransformedScalarCoefficient::Eval(mfem::ElementTransformation& T, const 
     } else {
       double temp2 = u2_->Eval(T, ip);
       return bi_function_(temp, temp2);
-    }  
+    }
   }
 }
 

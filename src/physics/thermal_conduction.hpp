@@ -102,14 +102,14 @@ public:
 
   /**
    * @brief Set the density field. Defaults to 1.0 if not set.
-   * 
+   *
    * @param[in] rho The density field coefficient
    */
   void setDensity(std::unique_ptr<mfem::Coefficient>&& rho);
 
   /**
    * @brief Set the specific heat capacity. Defaults to 1.0 if not set.
-   * 
+   *
    * @param[in] cp The specific heat capacity
    */
   void setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp);
@@ -188,19 +188,19 @@ protected:
 
   /**
    * @brief Density coefficient
-   * 
+   *
    */
   std::unique_ptr<mfem::Coefficient> rho_;
 
   /**
    * @brief Specific heat capacity
-   * 
+   *
    */
   std::unique_ptr<mfem::Coefficient> cp_;
 
   /**
    * @brief Combined mass matrix coefficient (rho * cp)
-   * 
+   *
    */
   std::unique_ptr<mfem::Coefficient> mass_coef_;
 
