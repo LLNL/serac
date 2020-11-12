@@ -6,7 +6,6 @@
 
 #include "physics/thermal_conduction.hpp"
 
-#include "coefficients/stdfunction_coefficient.hpp"
 #include "infrastructure/logger.hpp"
 
 namespace serac {
