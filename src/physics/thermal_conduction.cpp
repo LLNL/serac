@@ -70,13 +70,13 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 
 void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
 {
-  // Set the body source integral coefficient
+  // Set the specific heat capacity coefficient
   cp_ = std::move(cp);
 }
 
 void ThermalConduction::setDensity(std::unique_ptr<mfem::Coefficient>&& rho)
 {
-  // Set the body source integral coefficient
+  // Set the density coefficient
   rho_ = std::move(rho);
 }
 
