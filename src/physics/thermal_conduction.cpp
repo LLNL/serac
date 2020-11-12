@@ -82,7 +82,7 @@ void ThermalConduction::setDensity(std::unique_ptr<mfem::Coefficient>&& rho)
 
 void ThermalConduction::completeSetup()
 {
-  SLIC_ASSERT_MSG(kappa_ != nullptr, "Conductivity not set in ThermalSolver!");
+  SLIC_ASSERT_MSG(kappa_, "Conductivity not set in ThermalSolver!");
 
   // Add the domain diffusion integrator to the K form and assemble the matrix
   K_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
@@ -92,7 +92,7 @@ void ThermalConduction::completeSetup()
 
   // Add the body source to the RS if specified
   l_form_ = temperature_.createOnSpace<mfem::ParLinearForm>();
-  if (source_ != nullptr) {
+  if (source_) {
     l_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*source_));
     rhs_.reset(l_form_->ParallelAssemble());
   } else {
