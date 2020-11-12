@@ -265,15 +265,6 @@ public:
    */
   TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::function<double(const double)> func);
 
-  /*
-   * @brief Apply a scalar function, Func, to u1
-   *
-   * @param[in] u1 A Coefficient to apply Func to
-   * @param[in] func A function that takes in an input scalar, and returns the
-   * output.
-   */
-  TransformedScalarCoefficient(std::unique_ptr<mfem::Coefficient>&& u1, std::function<double(const double)> func);
-
   /**
    * @brief Apply a scalar function, Func, to s1 and s2
    *
@@ -283,17 +274,6 @@ public:
    * output.
    */
   TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::shared_ptr<mfem::Coefficient> s2,
-                               std::function<double(const double, const double)> func);
-
-  /**
-   * @brief Apply a scalar function, Func, to u1 and u2
-   *
-   * @param[in] u1 A scalar Coefficient to apply Func to
-   * @param[in] u2 A scalar Coefficient to apply Func to
-   * @param[in] func A function that takes in two input scalars, and returns the
-   * output.
-   */
-  TransformedScalarCoefficient(std::unique_ptr<mfem::Coefficient>&& u1, std::unique_ptr<mfem::Coefficient>&& u2,
                                std::function<double(const double, const double)> func);
 
   /**
@@ -310,13 +290,11 @@ private:
    * @brief The first scalar coefficient in the transformation
    */
   std::shared_ptr<mfem::Coefficient> s1_;
-  std::unique_ptr<mfem::Coefficient> u1_;
 
   /**
    * @brief The second scalar coefficient in the transformation
    */
   std::shared_ptr<mfem::Coefficient> s2_;
-  std::unique_ptr<mfem::Coefficient> u2_;
 
   /**
    * @brief The one argument transformation function
