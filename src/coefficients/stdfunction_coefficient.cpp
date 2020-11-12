@@ -27,9 +27,11 @@ double StdFunctionCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem:
   return func_(transip, GetTime());
 }
 
-StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(
-    int dim, std::function<void(mfem::Vector&, mfem::Vector&)> func)
-    : mfem::VectorCoefficient(dim), func_([=](mfem::Vector& v, mfem::Vector & w, double /* t */){ return func(v, w); }), is_time_dependent_(false)
+StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(int                                               dim,
+                                                           std::function<void(mfem::Vector&, mfem::Vector&)> func)
+    : mfem::VectorCoefficient(dim),
+      func_([=](mfem::Vector& v, mfem::Vector& w, double /* t */) { return func(v, w); }),
+      is_time_dependent_(false)
 {
 }
 

@@ -100,7 +100,7 @@ void BoundaryCondition::projectBdr(const double time, const bool should_be_scala
   projectBdr(*state_, time, should_be_scalar);
 }
 
-void BoundaryCondition::projectBdrToDofs(mfem::Vector & dof_values, const double time, const bool should_be_scalar) const
+void BoundaryCondition::projectBdrToDofs(mfem::Vector& dof_values, const double time, const bool should_be_scalar) const
 {
   SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   auto gf = state_->gridFunc();

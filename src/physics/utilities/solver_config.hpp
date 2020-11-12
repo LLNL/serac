@@ -44,7 +44,7 @@ enum class TimestepMethod
   ImplicitMidpoint,
   SDIRK23,
   SDIRK34,
-  QuasiStatic, 
+  QuasiStatic,
 
   HHTAlpha,
   WBZAlpha,
@@ -55,31 +55,31 @@ enum class TimestepMethod
 };
 
 // this enum describes the which way to
-// enforce the time-varying constraint 
+// enforce the time-varying constraint
 //   u(t) == U(t)
 enum class DirichletEnforcementMethod
 {
   // satisfies u(t+dt) == U(t+dt)
-  // 
-  // this method imposes additional stability criteria 
+  //
+  // this method imposes additional stability criteria
   // for the case of second order differential equations
-  DirectControl, 
+  DirectControl,
 
   // (default value)
   // satisfies dudt(t+dt) == dUdt(t+dt)
-  // 
-  // this method does not impose any additional stability criteria 
+  //
+  // this method does not impose any additional stability criteria
   // for the case of second order differential equations.
-  RateControl,   
+  RateControl,
 
-  // satisfies u(t+dt) == U(t+dt), 
+  // satisfies u(t+dt) == U(t+dt),
   //           dudt(t+dt) == dUdt(t+dt),
   // (and      d2udt2(t+dt) == d2Udt2(t+dt), for a second order ODE)
-  // 
+  //
   // Empirically, this method tends to be the most accurate
-  // for small timesteps (by a constant factor),  but is more 
-  // expensive to evaluate 
-  FullControl    
+  // for small timesteps (by a constant factor),  but is more
+  // expensive to evaluate
+  FullControl
 };
 
 /**

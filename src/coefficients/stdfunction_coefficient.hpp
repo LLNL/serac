@@ -30,7 +30,6 @@ namespace serac {
  */
 class StdFunctionCoefficient : public mfem::Coefficient {
 public:
-
   /**
    * @brief Constructor that takes in a time-independent function of space that returns a double
    *
@@ -53,15 +52,15 @@ public:
    * @return The value of the coefficient at the quadrature point
    */
   virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
-  
-  bool is_time_dependent() const { return is_time_dependent_; } 
+
+  bool is_time_dependent() const { return is_time_dependent_; }
 
 private:
   /**
    * @brief The function to evaluate for the coefficient
    */
   std::function<double(mfem::Vector&, double)> func_;
-  bool is_time_dependent_;
+  bool                                         is_time_dependent_;
 };
 
 /**
@@ -104,7 +103,7 @@ public:
    * @param[in] ip The integration point for the evaluation
    */
   virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
-  
+
   bool is_time_dependent() const { return is_time_dependent_; }
 
 private:
@@ -112,7 +111,7 @@ private:
    * @brief The function to evaluate for the coefficient
    */
   std::function<void(mfem::Vector&, mfem::Vector&, double)> func_;
-  bool is_time_dependent_;
+  bool                                                      is_time_dependent_;
 };
 
 /**
@@ -336,8 +335,6 @@ private:
    */
   std::function<double(const double, const double)> bi_function_;
 };
-
-
 
 }  // namespace serac
 

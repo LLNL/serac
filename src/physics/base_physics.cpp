@@ -59,7 +59,7 @@ const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysi
 void BasePhysics::setTimestepper(const serac::TimestepMethod             timestepper,
                                  const serac::DirichletEnforcementMethod enforcement_method)
 {
-  timestepper_ = timestepper;
+  timestepper_        = timestepper;
   enforcement_method_ = enforcement_method;
 
   switch (timestepper_) {
@@ -96,7 +96,6 @@ void BasePhysics::setTimestepper(const serac::TimestepMethod             timeste
       ode_solver_ = std::make_unique<mfem::SDIRK34Solver>();
       break;
 
-
     case serac::TimestepMethod::HHTAlpha:
       second_order_ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
       break;
@@ -115,7 +114,6 @@ void BasePhysics::setTimestepper(const serac::TimestepMethod             timeste
     case serac::TimestepMethod::FoxGoodwin:
       second_order_ode_solver_ = std::make_unique<mfem::FoxGoodwinSolver>();
       break;
-
 
     default:
       SLIC_ERROR_ROOT(mpi_rank_, "Timestep method not recognized!");

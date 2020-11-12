@@ -198,7 +198,7 @@ public:
    * @pre A corresponding field (FiniteElementState) has been associated
    * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
    */
-  void projectBdrToDofs(mfem::Vector & dof_values, const double time, const bool should_be_scalar = true) const;
+  void projectBdrToDofs(mfem::Vector& dof_values, const double time, const bool should_be_scalar = true) const;
 
   /**
    * @brief Allocates an integrator of type "Integrator" on the heap,

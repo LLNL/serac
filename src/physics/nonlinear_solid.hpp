@@ -15,11 +15,9 @@
 
 #include "infrastructure/input.hpp"
 #include "mfem.hpp"
-
+#include "physics/base_physics.hpp"
 #include "physics/operators/odes.hpp"
 #include "physics/operators/stdfunction_operator.hpp"
-#include "physics/base_physics.hpp"
-#include "physics/operators/nonlinear_solid_operators.hpp"
 
 namespace serac {
 
@@ -32,14 +30,13 @@ namespace serac {
  */
 class NonlinearSolid : public BasePhysics {
 public:
-
   /**
    * @brief A timestep method and config for the M solver
    */
   struct DynamicSolverParameters {
-    TimestepMethod             timestepper;
-    //DirichletEnforcementMethod enforcement_method;
-    LinearSolverParameters     M_params;
+    TimestepMethod timestepper;
+    // DirichletEnforcementMethod enforcement_method;
+    LinearSolverParameters M_params;
   };
   /**
    * @brief A configuration variant for the various solves
@@ -240,6 +237,7 @@ protected:
   mfem::Vector x;
   mfem::Vector u;
   mfem::Vector du_dt;
+  mfem::Vector previous;
 
   // temporary values used to compute finite difference approximations
   // to the derivatives of constrained degrees of freedom
@@ -257,14 +255,13 @@ protected:
   double c0, c1;
   double dt0, dt1, dt0_previous, dt1_previous;
 
-  std::unique_ptr<mfem::ParBilinearForm> M;
-  std::unique_ptr<mfem::ParBilinearForm> C;
+  std::unique_ptr<mfem::ParBilinearForm>  M;
+  std::unique_ptr<mfem::ParBilinearForm>  C;
   std::unique_ptr<mfem::ParNonlinearForm> H;
 
   std::unique_ptr<mfem::HypreParMatrix> J;
 
   SecondOrderODE ode2;
-
 };
 
 }  // namespace serac
