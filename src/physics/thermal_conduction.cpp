@@ -34,6 +34,10 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   } else {
     SLIC_ERROR("ThermalCondution::SolverParameters did not contain a value");
   }
+
+  // Default to constant value of 1.0 for density and specific heat capacity
+  cp_  = std::make_unique<mfem::ConstantCoefficient>(1.0);
+  rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
 }
 
 void ThermalConduction::setTemperature(mfem::Coefficient& temp)
@@ -119,21 +123,8 @@ void ThermalConduction::completeSetup()
     // If dynamic, assemble the mass matrix
     M_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
 
-    // If both a specific heat capacity and density have been specified, use their product as the mass matrix
-    // coefficient
-    if (cp_ && rho_) {
-      mass_coef_ = std::make_unique<mfem::ProductCoefficient>(*rho_, *cp_);
-    }
-    // otherwise, just use the one that is specified
-    else if (cp_) {
-      mass_coef_ = std::move(cp_);
-    } else if (rho_) {
-      mass_coef_ = std::move(rho_);
-    }
-    // if neither is specified, use the default coefficient of 1.0
-    else {
-      mass_coef_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
-    }
+    // Define the mass matrix coefficient as a product of the density and specific heat capacity
+    mass_coef_ = std::make_unique<mfem::ProductCoefficient>(*rho_, *cp_);
 
     M_form_->AddDomainIntegrator(new mfem::MassIntegrator(*mass_coef_));
     M_form_->Assemble(0);  // keep sparsity pattern of M and K the same
