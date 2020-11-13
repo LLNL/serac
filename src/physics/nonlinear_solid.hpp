@@ -64,6 +64,9 @@ public:
     // Lame parameters
     double mu;
     double K;
+
+    // Boundary condition information
+    std::vector<input::BoundaryConditionInputInfo> boundary_conditions;
   };
 
   /**
