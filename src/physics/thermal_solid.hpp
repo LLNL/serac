@@ -17,6 +17,7 @@
 #include "physics/base_physics.hpp"
 #include "physics/nonlinear_solid.hpp"
 #include "physics/thermal_conduction.hpp"
+#include "coefficients/whatever_coefficient.hpp"
 
 namespace serac {
 
@@ -63,7 +64,7 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void SetConductivity(std::unique_ptr<mfem::Coefficient>&& kappa) { therm_solver_.setConductivity(std::move(kappa)); };
+  void SetConductivity(whatever_coefficient kappa) { therm_solver_.setConductivity(std::move(kappa)); };
 
   /**
    * @brief Set the temperature state vector from a coefficient
@@ -77,7 +78,7 @@ public:
    *
    * @param[in] source The source function coefficient
    */
-  void SetSource(std::unique_ptr<mfem::Coefficient>&& source) { therm_solver_.setSource(std::move(source)); };
+  void SetSource(whatever_coefficient&& source) { therm_solver_.setSource(std::move(source)); };
 
   /**
    * @brief Set displacement boundary conditions
@@ -121,7 +122,7 @@ public:
    *
    * @param[in] visc_coef The abstract viscosity coefficient
    */
-  void SetViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
+  void SetViscosity(whatever_coefficient&& visc_coef)
   {
     solid_solver_.setViscosity(std::move(visc_coef));
   };

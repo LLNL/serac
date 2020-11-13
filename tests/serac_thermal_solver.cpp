@@ -60,9 +60,7 @@ TEST(thermal_solver, static_solve)
   // Set the temperature BC in the thermal solver
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
-  // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  therm_solver.setConductivity(0.5);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -103,9 +101,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   therm_solver.setTemperatureBCs(marked_1, u_0);
   therm_solver.setTemperatureBCs(marked_2, u_1);
 
-  // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  therm_solver.setConductivity(0.5);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -151,9 +147,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
   therm_solver.setTemperatureBCs(temp_bdr, u_1);
 
-  // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  therm_solver.setConductivity(0.5);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
@@ -194,8 +188,7 @@ TEST(thermal_solver, dyn_exp_solve)
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  therm_solver.setConductivity(0.5);
 
   // Setup glvis output
   therm_solver.initializeOutput(serac::OutputType::ParaView, "thermal_explicit");
@@ -255,8 +248,7 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
+  therm_solver.setConductivity(0.5);
 
   // Setup glvis output
   therm_solver.initializeOutput(serac::OutputType::VisIt, "thermal_implicit");

@@ -43,9 +43,7 @@ TEST(serac_dtor, test1)
   // Set the temperature BC in the thermal solver
   therm_solver->setTemperatureBCs(temp_bdr, u_0);
 
-  // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver->setConductivity(std::move(kappa));
+  therm_solver->setConductivity(0.5);
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator

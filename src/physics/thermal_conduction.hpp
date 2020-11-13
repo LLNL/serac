@@ -16,6 +16,7 @@
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/operators/thermal_operators.hpp"
+#include "coefficients/whatever_coefficient.hpp"
 
 namespace serac {
 
@@ -84,7 +85,7 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa);
+  void setConductivity(whatever_coefficient kappa);
 
   /**
    * @brief Set the temperature state vector from a coefficient
@@ -98,7 +99,7 @@ public:
    *
    * @param[in] source The source function coefficient
    */
-  void setSource(std::unique_ptr<mfem::Coefficient>&& source);
+  void setSource(whatever_coefficient&& source);
 
   /**
    * @brief Get the temperature state
@@ -165,12 +166,12 @@ protected:
   /**
    * @brief Conduction coefficient
    */
-  std::unique_ptr<mfem::Coefficient> kappa_;
+  whatever_coefficient kappa_;
 
   /**
    * @brief Body source coefficient
    */
-  std::unique_ptr<mfem::Coefficient> source_;
+  whatever_coefficient source_;
 
   /**
    * @brief Configuration for dynamic equation solvers

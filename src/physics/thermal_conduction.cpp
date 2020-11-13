@@ -56,13 +56,13 @@ void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_pt
   bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
 }
 
-void ThermalConduction::setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa)
+void ThermalConduction::setConductivity(whatever_coefficient kappa)
 {
   // Set the conduction coefficient
   kappa_ = std::move(kappa);
 }
 
-void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
+void ThermalConduction::setSource(whatever_coefficient&& source)
 {
   // Set the body source integral coefficient
   source_ = std::move(source);
@@ -74,14 +74,14 @@ void ThermalConduction::completeSetup()
 
   // Add the domain diffusion integrator to the K form and assemble the matrix
   K_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
-  K_form_->AddDomainIntegrator(new mfem::DiffusionIntegrator(*kappa_));
+  K_form_->AddDomainIntegrator(new mfem::DiffusionIntegrator(kappa_));
   K_form_->Assemble(0);  // keep sparsity pattern of M and K the same
   K_form_->Finalize();
 
   // Add the body source to the RS if specified
   l_form_ = temperature_.createOnSpace<mfem::ParLinearForm>();
-  if (source_ != nullptr) {
-    l_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*source_));
+  if (source_) {
+    l_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(source_));
     rhs_.reset(l_form_->ParallelAssemble());
   } else {
     rhs_  = temperature_.createOnSpace<mfem::HypreParVector>();

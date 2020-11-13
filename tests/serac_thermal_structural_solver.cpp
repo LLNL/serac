@@ -45,8 +45,6 @@ TEST(dynamic_solver, dyn_solve)
     return temp;
   });
 
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-
   // set the traction boundary
   std::set<int> trac_bdr = {2};
 
@@ -92,7 +90,7 @@ TEST(dynamic_solver, dyn_solve)
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  ts_solver.SetConductivity(std::move(kappa));
+  ts_solver.SetConductivity(0.5);
   ts_solver.SetDisplacement(*deform);
   ts_solver.SetVelocity(*velo);
   ts_solver.SetTemperature(*temp);
