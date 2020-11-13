@@ -88,13 +88,16 @@ if(NOT SERAC_FOUND)
     endif()
   endif()
 
-   # tribol
+  # tribol
   if(SERAC_USE_TRIBOL)
     set(SERAC_TRIBOL_DIR   "@TRIBOL_DIR@")
+    if(NOT TRIBOL_DIR) 
+      set(TRIBOL_DIR ${SERAC_TRIBOL_DIR}) 
+    endif()
     find_dependency(tribol REQUIRED NO_DEFAULT_PATH PATHS "${TRIBOL_DIR}/lib/cmake")
   endif()
 
-   # caliper
+  # caliper
   if(SERAC_USE_CALIPER)
     set(SERAC_CALIPER_DIR     "@CALIPER_DIR@")
     if(NOT CALIPER_DIR) 
