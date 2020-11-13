@@ -39,7 +39,8 @@ const NonlinearSolverParameters default_dyn_nonlinear_params = {
 
 const NonlinearSolid::SolverParameters default_dynamic = {
     default_dyn_linear_params, default_dyn_nonlinear_params,
-    NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl, default_dyn_oper_linear_params}};
+    NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration,
+                                            DirichletEnforcementMethod::RateControl, default_dyn_oper_linear_params}};
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -245,10 +246,7 @@ TEST(dynamic_solver, dyn_linesearch_solve)
 }
 #endif
 
-void initialDeformation(const mfem::Vector& /*x*/, mfem::Vector& u)
-{
-  u = 0.0;
-}
+void initialDeformation(const mfem::Vector& /*x*/, mfem::Vector& u) { u = 0.0; }
 
 void initialVelocity(const mfem::Vector& x, mfem::Vector& v)
 {

@@ -52,9 +52,9 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   const auto& augmented_params = augmentAMGForElasticity(lin_params, displacement_.space());
 
   nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_params);
+
   // Check for dynamic mode
   if (params.dyn_params) {
-    timedep_oper_params_ = params.dyn_params->M_params;
     setTimestepper(params.dyn_params->timestepper, params.dyn_params->enforcement_method);
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
@@ -175,6 +175,9 @@ void NonlinearSolid::completeSetup()
   nonlin_solver_.SetOperator(residual);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+
+    // the quasistatic case is entirely described by the residual,
+    // there is no ordinary differential equation
     residual.function = [=](const mfem::Vector& u, mfem::Vector& r) mutable {
       H->Mult(u, r);  // r := H(u)
       r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
@@ -187,6 +190,10 @@ void NonlinearSolid::completeSetup()
     };
 
   } else {
+
+    // the dynamic case is described by a residual function and a second order 
+    // ordinary differential equation. Here, we define the residual function in
+    // terms of an acceleration.
     residual.function = [=](const mfem::Vector& d2u_dt2, mfem::Vector& res) mutable {
       res = (*M) * d2u_dt2 + (*C) * (du_dt + c1 * d2u_dt2) + (*H) * (x + u + c0 * d2u_dt2);
       res.SetSubVector(bcs_.allEssentialDofs(), 0.0);
@@ -246,12 +253,12 @@ void NonlinearSolid::completeSetup()
 
             if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
               d2U_dt2 = (U_minus - 2.0 * U + U_plus) / (epsilon * epsilon);
-              dU_dt   = (U_minus - U_plus) / (2.0 * epsilon) - c1 * d2U_dt2;
+              dU_dt   = (U_plus - U_minus) / (2.0 * epsilon) - c1 * d2U_dt2;
               U       = U - c0 * d2U_dt2;
             }
           } else {
             d2U_dt2 = (U_minus - 2.0 * U + U_plus) / (epsilon * epsilon);
-            dU_dt   = (U_minus - U_plus) / (2.0 * epsilon);
+            dU_dt   = (U_plus - U_minus) / (2.0 * epsilon);
           }
 
           auto constrained_dofs = bcs_.allEssentialDofs();

@@ -4,8 +4,6 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/base_solver.hpp"
-
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -13,6 +11,7 @@
 #include "fmt/fmt.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/terminator.hpp"
+#include "physics/base_solver.hpp"
 
 namespace serac {
 
@@ -57,7 +56,7 @@ std::vector<std::shared_ptr<serac::FiniteElementState> > BaseSolver::getState() 
 void BaseSolver::setTimestepper(const serac::TimestepMethod             timestepper,
                                 const serac::DirichletEnforcementMethod enforcement_method)
 {
-  timestepper_ = timestepper;
+  timestepper_        = timestepper;
   enforcement_method_ = enforcement_method;
 
   switch (timestepper_) {
@@ -94,7 +93,6 @@ void BaseSolver::setTimestepper(const serac::TimestepMethod             timestep
       ode_solver_ = std::make_unique<mfem::SDIRK34Solver>();
       break;
 
-
     case serac::TimestepMethod::HHTAlpha:
       second_order_ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
       break;
@@ -113,7 +111,6 @@ void BaseSolver::setTimestepper(const serac::TimestepMethod             timestep
     case serac::TimestepMethod::FoxGoodwin:
       second_order_ode_solver_ = std::make_unique<mfem::FoxGoodwinSolver>();
       break;
-
 
     default:
       SLIC_ERROR_ROOT(mpi_rank_, "Timestep method not recognized!");

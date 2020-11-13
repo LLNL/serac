@@ -31,7 +31,7 @@ TEST(dynamic_solver, dyn_solve)
   std::set<int> ess_bdr = {1};
 
   auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector& x, mfem::Vector& y) {
-    y = 0.0;
+    y    = 0.0;
     y(1) = x(0) * 0.01;
   });
 
@@ -69,8 +69,7 @@ TEST(dynamic_solver, dyn_solve)
   therm_M_params.prec = HypreSmootherPrec{};
   therm_T_params.prec = HypreSmootherPrec{};
 
-  ThermalConduction::SolverParameters therm_params =
-      ThermalConduction::DynamicSolverParameters{TimestepMethod::SDIRK33, therm_M_params, therm_T_params};
+  auto therm_params = ThermalConduction::defaultDynamicParameters();
 
   const IterativeSolverParameters default_dyn_oper_linear_params = {
       .rel_tol     = 1.0e-4,
@@ -86,8 +85,7 @@ TEST(dynamic_solver, dyn_solve)
   const NonlinearSolid::SolverParameters default_dynamic = {
       default_dyn_linear_params, default_dyn_nonlinear_params,
       NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration,
-                                              DirichletEnforcementMethod::RateControl,
-                                              default_dyn_oper_linear_params}};
+                                              DirichletEnforcementMethod::RateControl, default_dyn_oper_linear_params}};
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);

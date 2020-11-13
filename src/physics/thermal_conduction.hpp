@@ -16,6 +16,7 @@
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/operators/odes.hpp"
+#include "physics/operators/stdfunction_operator.hpp"
 #include "physics/operators/thermal_operators.hpp"
 
 namespace serac {
@@ -33,20 +34,52 @@ namespace serac {
 class ThermalConduction : public BasePhysics {
 public:
   /**
-   * @brief A timestep method and configs for the M and T solvers
+   * @brief A timestep method and config for the M solver
    */
   struct DynamicSolverParameters {
-    TimestepMethod         timestepper;
-    LinearSolverParameters M_params;
-    LinearSolverParameters T_params;
+    TimestepMethod             timestepper;
+    DirichletEnforcementMethod enforcement_method;
+    LinearSolverParameters     M_params;
   };
 
   /**
    * @brief A configuration variant for the various solves
-   * Either quasistatic with a single config for the K solver, or
-   * time-dependent with timestep and M/T params
+   * Either quasistatic, or time-dependent with timestep and M params
    */
-  using SolverParameters = std::variant<LinearSolverParameters, DynamicSolverParameters>;
+  struct SolverParameters {
+    LinearSolverParameters                 T_lin_params;
+    NonlinearSolverParameters              T_nonlin_params;
+    std::optional<DynamicSolverParameters> dyn_params = std::nullopt;
+  };
+
+  static IterativeSolverParameters defaultLinearParameters()
+  {
+    return {.rel_tol     = 1.0e-6,
+            .abs_tol     = 1.0e-12,
+            .print_level = 0,
+            .max_iter    = 200,
+            .lin_solver  = LinearSolver::CG,
+            .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+  }
+
+  static NonlinearSolverParameters defaultNonlinearParameters()
+  {
+    return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+  }
+
+  static SolverParameters defaultQuasistaticParameters()
+  {
+    return {defaultLinearParameters(), defaultNonlinearParameters(),
+            DynamicSolverParameters{TimestepMethod::QuasiStatic, DirichletEnforcementMethod::RateControl,
+                                    defaultLinearParameters()}};
+  }
+
+  static SolverParameters defaultDynamicParameters()
+  {
+    return {defaultLinearParameters(), defaultNonlinearParameters(),
+            DynamicSolverParameters{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl,
+                                    defaultLinearParameters()}};
+  }
 
   /**
    * @brief Construct a new Thermal Solver object
@@ -55,7 +88,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    * @param[in] params The system solver parameters
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverParameters& params);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -141,12 +174,12 @@ protected:
   /**
    * @brief Assembled mass matrix
    */
-  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> M_;
 
   /**
    * @brief Assembled stiffness matrix
    */
-  std::unique_ptr<mfem::HypreParMatrix> K_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> K_;
 
   /**
    * @brief Thermal load linear form
@@ -186,13 +219,24 @@ protected:
 
   FirstOrderODE ode_;
 
-  serac::EquationSolver                 invT_;
-  std::unique_ptr<mfem::HypreParMatrix> T_;
-  mutable mfem::Vector                  uf;
-  mutable mfem::Vector                  uc;
-  mutable mfem::Vector                  duc_dt;
-  mutable mfem::Vector                  uc_plus;
-  mutable mfem::Vector                  uc_minus;
+  StdFunctionOperator residual;
+
+  EquationSolver nonlin_solver_;
+  EquationSolver mass_solver_;
+  EquationSolver stiffness_solver_;
+
+  double                                dt_, previous_dt_;
+  std::unique_ptr<mfem::HypreParMatrix> J_;
+
+  mfem::Vector zero_;
+
+  mfem::Vector u_;
+  mfem::Vector previous_;
+
+  mfem::Vector U_minus_;
+  mfem::Vector U_;
+  mfem::Vector U_plus_;
+  mfem::Vector dU_dt_;
 
   /**
    * @brief Solve the Quasi-static operator
