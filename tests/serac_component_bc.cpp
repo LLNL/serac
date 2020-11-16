@@ -23,7 +23,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.");
 
   // Integration test parameters
-  inlet.addDouble("expected_l2norm", "Correct L2 norm of the solution field");
+  inlet.addDouble("expected_x_l2norm", "Correct L2 norm of the displacement field");
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
   auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
@@ -110,7 +110,7 @@ TEST(component_bc, qs_solve)
 
   double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(inlet["expected_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -174,7 +174,7 @@ TEST(component_bc, qs_attribute_solve)
 
   double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(inlet["expected_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
