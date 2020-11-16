@@ -13,37 +13,13 @@
 #include "numerics/mesh_utils.hpp"
 #include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
+#include "test_utilities.hpp"
 
 namespace serac {
 
 void initialDeformation(const mfem::Vector& x, mfem::Vector& y);
 
 void initialVelocity(const mfem::Vector& x, mfem::Vector& v);
-
-void defineInputFileSchema(axom::inlet::Inlet& inlet)
-{
-  // Simulation time parameters
-  inlet.addDouble("dt", "Time step.");
-  inlet.addDouble("t_final", "Stopping point");
-
-  // Integration test parameters
-  inlet.addDouble("expected_x_l2norm", "Correct L2 norm of the displacement field");
-  inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
-  inlet.addDouble("epsilon", "Threshold to be used in the comparison");
-
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
-  serac::mesh::InputInfo::defineInputFileSchema(mesh_table);
-
-  // Physics
-  auto&      solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  const bool dynamic            = true;
-  serac::NonlinearSolid::InputInfo::defineInputFileSchema(solid_solver_table, dynamic);
-
-  // Verify input file
-  if (!inlet.verify()) {
-    SLIC_ERROR("Input file failed to verify.");
-  }
-}
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -58,7 +34,7 @@ TEST(dynamic_solver, dyn_solve)
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  defineInputFileSchema(inlet);
+  testing::defineNonlinSolidInputFileSchema(inlet, /* dynamic = */ true);
 
   // Build the mesh
   auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
@@ -143,7 +119,7 @@ TEST(dynamic_solver, dyn_direct_solve)
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  defineInputFileSchema(inlet);
+  testing::defineNonlinSolidInputFileSchema(inlet, true);
 
   // Build the mesh
   auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
@@ -232,7 +208,7 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  defineInputFileSchema(inlet);
+  testing::defineNonlinSolidInputFileSchema(inlet, true);
 
   // Build the mesh
   auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
