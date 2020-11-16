@@ -46,9 +46,11 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
 {
   // Simulation time parameters
   inlet.addDouble("dt", "Time step.");
+  inlet.addDouble("t_final", "Stopping point");
 
   // Integration test parameters
-  inlet.addDouble("expected_l2norm", "Correct L2 norm of the solution field");
+  inlet.addDouble("expected_x_l2norm", "Correct L2 norm of the displacement field");
+  inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
   auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
@@ -116,8 +118,8 @@ TEST(dynamic_solver, dyn_solve)
   dyn_solver.completeSetup();
 
   double t       = 0.0;
-  double t_final = 6.0;
-  double dt      = 3.0;
+  double t_final = inlet["t_final"];
+  double dt      = inlet["dt"];
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -144,8 +146,8 @@ TEST(dynamic_solver, dyn_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -154,30 +156,48 @@ TEST(dynamic_solver, dyn_direct_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
+  std::string input_file_path =
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/serac_dynamic_solver/dyn_direct_solve.lua";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  // Create DataStore
+  axom::sidre::DataStore datastore;
 
-  int dim = pmesh->Dimension();
+  // Initialize Inlet and read input file
+  auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  std::set<int> ess_bdr = {1};
+  defineInputFileSchema(inlet);
+
+  // Build the mesh
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
+  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+
+  // Define the solid solver object
+  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  // FIXME: These should be moved to part of the schema once the contains() logic is updated in Inlet
+  solid_solver_info.solver_params.H_lin_params         = DirectSolverParameters{0};
+  solid_solver_info.solver_params.dyn_params->M_params = DirectSolverParameters{0};
+  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+
+  int dim = mesh->Dimension();
 
   auto visc   = std::make_unique<mfem::ConstantCoefficient>(0.0);
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
+  // Pass the BC information to the solver object setting only the z direction
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement") {
+      dyn_solver.setDisplacementBCs(bc.attrs, deform);
+    } else {
+      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
+
   // initialize the dynamic solver object
-  auto solver_params                 = default_dynamic;
-  solver_params.H_lin_params         = DirectSolverParameters{0};
-  solver_params.dyn_params->M_params = DirectSolverParameters{0};
-  NonlinearSolid dyn_solver(1, pmesh, solver_params);
-  dyn_solver.setDisplacementBCs(ess_bdr, deform);
-  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.setViscosity(std::move(visc));
   dyn_solver.setDisplacement(*deform);
   dyn_solver.setVelocity(*velo);
-  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
 
   // Initialize the VisIt output
   dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");
@@ -186,8 +206,8 @@ TEST(dynamic_solver, dyn_direct_solve)
   dyn_solver.completeSetup();
 
   double t       = 0.0;
-  double t_final = 6.0;
-  double dt      = 3.0;
+  double t_final = inlet["t_final"];
+  double dt      = inlet["dt"];
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -214,8 +234,8 @@ TEST(dynamic_solver, dyn_direct_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -225,27 +245,42 @@ TEST(dynamic_solver, dyn_linesearch_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
+  std::string input_file_path = std::string(SERAC_REPO_DIR) +
+                                "/data/input_files/tests/nonlinear_solid/serac_dynamic_solver/dyn_linesearch_solve.lua";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  // Create DataStore
+  axom::sidre::DataStore datastore;
 
-  int dim = pmesh->Dimension();
+  // Initialize Inlet and read input file
+  auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  std::set<int> ess_bdr = {1};
+  defineInputFileSchema(inlet);
+
+  // Build the mesh
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
+  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+
+  // Define the solid solver object
+  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+
+  int dim = mesh->Dimension();
 
   auto visc   = std::make_unique<mfem::ConstantCoefficient>(0.0);
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
-  // Set the nonlinear solver parameters
-  auto params                          = default_dynamic;
-  params.H_nonlin_params.nonlin_solver = NonlinearSolver::KINBacktrackingLineSearch;
+  // Pass the BC information to the solver object setting only the z direction
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement") {
+      dyn_solver.setDisplacementBCs(bc.attrs, deform);
+    } else {
+      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
 
   // initialize the dynamic solver object
-  NonlinearSolid dyn_solver(1, pmesh, params);
-  dyn_solver.setDisplacementBCs(ess_bdr, deform);
-  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.setViscosity(std::move(visc));
   dyn_solver.setDisplacement(*deform);
   dyn_solver.setVelocity(*velo);
@@ -257,8 +292,8 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   dyn_solver.completeSetup();
 
   double t       = 0.0;
-  double t_final = 6.0;
-  double dt      = 3.0;
+  double t_final = inlet["t_final"];
+  double dt      = inlet["dt"];
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -285,8 +320,8 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

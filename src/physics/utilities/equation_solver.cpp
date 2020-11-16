@@ -184,7 +184,8 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
   nonlinear_table.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
   nonlinear_table.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
   nonlinear_table.addInt("print_level", "Nonlinear print level.").defaultValue(0);
-  nonlinear_table.addString("solver_type", "Not currently used.").defaultValue("");
+  nonlinear_table.addString("solver_type", "Solver type (MFEMNewton|KINFullStep|KINLineSearch)")
+      .defaultValue("MFEMNewton");
 }
 
 }  // namespace serac
@@ -209,7 +210,7 @@ IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(const
     std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
     SLIC_ERROR(msg);
   }
-  std::string prec_type = base["prec_type"];
+  const std::string prec_type = base["prec_type"];
   if (prec_type == "JacobiSmoother") {
     params.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::Jacobi};
   } else if (prec_type == "L1JacobiSmoother") {
@@ -228,10 +229,20 @@ IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(const
 NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(const axom::inlet::Table& base)
 {
   NonlinearSolverParameters params;
-  params.rel_tol     = base["rel_tol"];
-  params.abs_tol     = base["abs_tol"];
-  params.max_iter    = base["max_iter"];
-  params.print_level = base["print_level"];
+  params.rel_tol                = base["rel_tol"];
+  params.abs_tol                = base["abs_tol"];
+  params.max_iter               = base["max_iter"];
+  params.print_level            = base["print_level"];
+  const std::string solver_type = base["solver_type"];
+  if (solver_type == "MFEMNewton") {
+    params.nonlin_solver = serac::NonlinearSolver::MFEMNewton;
+  } else if (solver_type == "KINFullStep") {
+    params.nonlin_solver = serac::NonlinearSolver::KINFullStep;
+  } else if (solver_type == "KINLineSearch") {
+    params.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch;
+  } else {
+    SLIC_ERROR(fmt::format("Unknown nonlinear solver type given: {0}", solver_type));
+  }
   return params;
 }
 

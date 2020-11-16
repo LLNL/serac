@@ -32,6 +32,7 @@ nonlinear_solid = {
             abs_tol     = 1.0e-8,
             max_iter    = 500,
             print_level = 1,
+            solver_type = "KINLineSearch",
         },
 
         dynamic = {
