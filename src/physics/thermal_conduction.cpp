@@ -34,6 +34,10 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   } else {
     SLIC_ERROR("ThermalCondution::SolverParameters did not contain a value");
   }
+
+  // Default to constant value of 1.0 for density and specific heat capacity
+  cp_  = std::make_unique<mfem::ConstantCoefficient>(1.0);
+  rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
 }
 
 void ThermalConduction::setTemperature(mfem::Coefficient& temp)
@@ -68,9 +72,21 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
   source_ = std::move(source);
 }
 
+void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
+{
+  // Set the specific heat capacity coefficient
+  cp_ = std::move(cp);
+}
+
+void ThermalConduction::setDensity(std::unique_ptr<mfem::Coefficient>&& rho)
+{
+  // Set the density coefficient
+  rho_ = std::move(rho);
+}
+
 void ThermalConduction::completeSetup()
 {
-  SLIC_ASSERT_MSG(kappa_ != nullptr, "Conductivity not set in ThermalSolver!");
+  SLIC_ASSERT_MSG(kappa_, "Conductivity not set in ThermalSolver!");
 
   // Add the domain diffusion integrator to the K form and assemble the matrix
   K_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
@@ -80,7 +96,7 @@ void ThermalConduction::completeSetup()
 
   // Add the body source to the RS if specified
   l_form_ = temperature_.createOnSpace<mfem::ParLinearForm>();
-  if (source_ != nullptr) {
+  if (source_) {
     l_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*source_));
     rhs_.reset(l_form_->ParallelAssemble());
   } else {
@@ -106,7 +122,11 @@ void ThermalConduction::completeSetup()
   if (timestepper_ != serac::TimestepMethod::QuasiStatic) {
     // If dynamic, assemble the mass matrix
     M_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
-    M_form_->AddDomainIntegrator(new mfem::MassIntegrator());
+
+    // Define the mass matrix coefficient as a product of the density and specific heat capacity
+    mass_coef_ = std::make_unique<mfem::ProductCoefficient>(*rho_, *cp_);
+
+    M_form_->AddDomainIntegrator(new mfem::MassIntegrator(*mass_coef_));
     M_form_->Assemble(0);  // keep sparsity pattern of M and K the same
     M_form_->Finalize();
 
