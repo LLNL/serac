@@ -8,6 +8,7 @@
 
 #include <fstream>
 
+#include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
 #include "physics/nonlinear_solid.hpp"
@@ -41,27 +42,69 @@ const NonlinearSolid::SolverParameters default_dynamic = {
     default_dyn_linear_params, default_dyn_nonlinear_params,
     NonlinearSolid::DynamicSolverParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
 
+void defineInputFileSchema(axom::inlet::Inlet& inlet)
+{
+  // Simulation time parameters
+  inlet.addDouble("dt", "Time step.");
+
+  // Integration test parameters
+  inlet.addDouble("expected_l2norm", "Correct L2 norm of the solution field");
+  inlet.addDouble("epsilon", "Threshold to be used in the comparison");
+
+  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  serac::mesh::InputInfo::defineInputFileSchema(mesh_table);
+
+  // Physics
+  auto&      solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  const bool dynamic            = true;
+  serac::NonlinearSolid::InputInfo::defineInputFileSchema(solid_solver_table, dynamic);
+
+  // Verify input file
+  if (!inlet.verify()) {
+    SLIC_ERROR("Input file failed to verify.");
+  }
+}
+
 TEST(dynamic_solver, dyn_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
+  std::string input_file_path =
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/serac_dynamic_solver/dyn_solve.lua";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  // Create DataStore
+  axom::sidre::DataStore datastore;
 
-  int dim = pmesh->Dimension();
+  // Initialize Inlet and read input file
+  auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  std::set<int> ess_bdr = {1};
+  defineInputFileSchema(inlet);
+
+  // Build the mesh
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
+  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+
+  // Define the solid solver object
+  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+
+  int dim = mesh->Dimension();
 
   auto visc   = std::make_unique<mfem::ConstantCoefficient>(0.0);
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialDeformation);
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
+  // Pass the BC information to the solver object setting only the z direction
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement") {
+      dyn_solver.setDisplacementBCs(bc.attrs, deform);
+    } else {
+      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
+
   // initialize the dynamic solver object
-  NonlinearSolid dyn_solver(1, pmesh, default_dynamic);
-  dyn_solver.setDisplacementBCs(ess_bdr, deform);
-  dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.setViscosity(std::move(visc));
   dyn_solver.setDisplacement(*deform);
   dyn_solver.setVelocity(*velo);

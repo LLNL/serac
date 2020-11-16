@@ -55,8 +55,11 @@ public:
      * @brief Input file parameters specific to this class
      *
      * @param[in] table Inlet's SchemaCreator that input files will be added to
+     * @param[in] dynamic Whether the solid solver will be dynamic
      **/
-    static void defineInputFileSchema(axom::inlet::Table& table);
+    // FIXME: The dynamic parameter can be removed once the enhanced axom::inlet::Proxy::contains
+    // logic is merged in
+    static void defineInputFileSchema(axom::inlet::Table& table, const bool dynamic = false);
 
     // The order of the field
     int              order;

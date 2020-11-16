@@ -209,7 +209,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
+void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table, const bool dynamic)
 {
   // Polynomial interpolation order
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1);
@@ -230,6 +230,12 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
   auto& solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(solver_table);
 
+  if (dynamic) {
+    auto& dyn_solver_table = solver_table.addTable("dynamic", "Parameters for dynamic solve");
+    serac::EquationSolver::defineInputFileSchema(dyn_solver_table);
+    dyn_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
+  }
+
   auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
   serac::input::BoundaryConditionInputInfo::defineInputFileSchema(bc_table);
 }
@@ -249,7 +255,15 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   result.solver_params.H_lin_params    = solver["linear"].get<serac::IterativeSolverParameters>();
   result.solver_params.H_nonlin_params = solver["nonlinear"].get<serac::NonlinearSolverParameters>();
 
-  // TODO: "optional" concept within Inlet to support dynamic parameters
+  if (solver.contains("dynamic")) {
+    NonlinearSolid::DynamicSolverParameters dyn_params;
+    dyn_params.M_params         = solver["dynamic/linear"].get<serac::IterativeSolverParameters>();
+    std::string timestep_method = solver["dynamic/timestepper"];
+    // TODO: Implement all supported methods as part of an ODE schema
+    SLIC_ERROR_IF(timestep_method != "SDIRK33", "Unrecognized timestep method: " << timestep_method);
+    dyn_params.timestepper          = serac::TimestepMethod::SDIRK33;
+    result.solver_params.dyn_params = std::move(dyn_params);
+  }
 
   // Set the material parameters
   // neo-Hookean material parameters
