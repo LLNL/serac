@@ -62,7 +62,8 @@ int main(int argc, char* argv[])
   auto [num_procs, rank] = serac::initialize(argc, argv);
 
   // Handle Command line
-  std::unordered_map<std::string, std::string> cli_opts = serac::cli::defineAndParse(argc, argv, rank);
+  std::unordered_map<std::string, std::string> cli_opts =
+      serac::cli::defineAndParse(argc, argv, rank, "Serac: a high order nonlinear thermomechanical simulation code");
   serac::cli::printGiven(cli_opts, rank);
 
   // Read input file
