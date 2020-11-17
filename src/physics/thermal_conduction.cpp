@@ -14,9 +14,7 @@ constexpr int NUM_FIELDS = 1;
 
 ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
-      temperature_(
-          *mesh,
-          FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})
+      temperature_(*mesh, {.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})
 {
   state_.push_back(temperature_);
 

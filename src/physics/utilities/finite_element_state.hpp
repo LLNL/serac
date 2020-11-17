@@ -29,35 +29,6 @@ namespace serac {
 using GeneralCoefficient = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 /**
- * @brief Structure for optionally configuring a FiniteElementState
- */
-// The optionals are explicitly default-constructed to allow the user to partially aggregrate-initialized
-// with only the options they care about
-struct FEStateOptions {
-  /**
-   * The polynomial order that should be used for the problem
-   */
-  int order = 1;
-  /**
-   * The vector dimension for the FiniteElementSpace - defaults to the dimension of the mesh
-   */
-  std::optional<int> space_dim = std::optional<int>();
-  /**
-   * The FECollection to use - defaults to an H1_FECollection
-   */
-  std::optional<std::unique_ptr<mfem::FiniteElementCollection>> coll =
-      std::optional<std::unique_ptr<mfem::FiniteElementCollection>>();
-  /**
-   * The DOF ordering that should be used interally by MFEM
-   */
-  mfem::Ordering::Type ordering = mfem::Ordering::byVDIM;
-  /**
-   * The name of the field encapsulated by the state object
-   */
-  std::string name = "";
-};
-
-/**
  * @brief Class for encapsulating the critical MFEM components of a solver
  *
  * Namely: Mesh, FiniteElementCollection, FiniteElementState,
@@ -66,13 +37,43 @@ struct FEStateOptions {
 class FiniteElementState {
 public:
   /**
+   * @brief Structure for optionally configuring a FiniteElementState
+   */
+  // The optionals are explicitly default-constructed to allow the user to partially aggregrate-initialized
+  // with only the options they care about
+  struct Options {
+    /**
+     * The polynomial order that should be used for the problem
+     */
+    int order = 1;
+    /**
+     * The vector dimension for the FiniteElementSpace - defaults to the dimension of the mesh
+     */
+    std::optional<int> space_dim = {};
+    /**
+     * The FECollection to use - defaults to an H1_FECollection
+     */
+    std::unique_ptr<mfem::FiniteElementCollection> coll = {};
+    /**
+     * The DOF ordering that should be used interally by MFEM
+     */
+    mfem::Ordering::Type ordering = mfem::Ordering::byVDIM;
+    /**
+     * The name of the field encapsulated by the state object
+     */
+    std::string name = "";
+  };
+
+  /**
    * Main constructor for building a new state object
    * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] options The options specified, namely those relating to the order of the problem,
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementState(mfem::ParMesh& mesh, FEStateOptions&& options = FEStateOptions());
+  FiniteElementState(mfem::ParMesh& mesh,
+                     Options&&      options = {
+                         .order = 1, .space_dim = {}, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
 
   /**
    * Returns the MPI communicator for the state
