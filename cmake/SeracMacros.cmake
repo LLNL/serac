@@ -71,14 +71,14 @@ macro(serac_add_code_checks)
     set(_src_sources)
     file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp")
 
-    blt_add_clang_tidy_target(  NAME              serac_guidelines_check
+    blt_add_clang_tidy_target(  NAME              ${arg_PREFIX}_guidelines_check
                                 CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*"
                                 SRC_FILES         ${_src_sources})
 
     set(_test_sources)
     file(GLOB_RECURSE _test_sources "tests/*.cpp" "tests/*.hpp")
 
-    blt_add_clang_tidy_target(  NAME              serac_guidelines_check_tests
+    blt_add_clang_tidy_target(  NAME              ${arg_PREFIX}_guidelines_check_tests
                                 CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
                                 SRC_FILES         ${_test_sources})
 
