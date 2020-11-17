@@ -10,6 +10,16 @@ blt_add_executable( NAME        serac_driver
                     OUTPUT_NAME serac
                     )
 
+if (ENABLE_TESTS)
+    # Make sure running serac driver doesn't completely fail
+    blt_add_test(NAME          serac_driver_default
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/default.lua
+                 NUM_MPI_TASKS 1 )
+
+    blt_add_test(NAME          serac_driver_help
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac --help )
+endif()
+
 install( TARGETS serac_driver
          RUNTIME DESTINATION bin
          )
