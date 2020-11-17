@@ -106,7 +106,7 @@ void ThermalConduction::completeSetup()
   // Project the essential boundary coefficients
   for (auto& bc : bcs_.essentials()) {
     // Project the coefficient
-    bc.project(temperature_);
+    bc.projectBdr(temperature_, time_);
 
     auto ids = bc.getTrueDofs();
 
