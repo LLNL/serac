@@ -105,6 +105,11 @@ void NonlinearSolid::setVelocity(mfem::VectorCoefficient& velo_state)
   gf_initialized_[0] = true;
 }
 
+std::unique_ptr<mfem::Operator> NonlinearSolid::buildQuasistaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form)
+{
+  return std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form), bcs_);
+}
+
 void NonlinearSolid::completeSetup()
 {
   // Define the nonlinear form
@@ -158,7 +163,7 @@ void NonlinearSolid::completeSetup()
   // Set the MFEM abstract operators for use with the internal MFEM solvers
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     nonlin_solver_.nonlinearSolver().iterative_mode = true;
-    nonlinear_oper_ = std::make_unique<NonlinearSolidQuasiStaticOperator>(std::move(H_form), bcs_);
+    nonlinear_oper_                                 = buildQuasistaticOperator(std::move(H_form));
     nonlin_solver_.SetOperator(*nonlinear_oper_);
   } else {
     nonlin_solver_.nonlinearSolver().iterative_mode = false;
