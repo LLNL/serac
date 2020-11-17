@@ -65,7 +65,7 @@ find_package(axom REQUIRED
 #------------------------------------------------------------------------------
 # MFEM
 #------------------------------------------------------------------------------
-include(cmake/thirdparty/FindMFEM.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
 
 
 #------------------------------------------------------------------------------
@@ -121,7 +121,7 @@ endif()
 #------------------------------------------------------------------------------
 if(PETSC_DIR)
     serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
-    include(cmake/thirdparty/FindPETSc.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
     message(STATUS "PETSc support is ON")
     set(PETSC_FOUND TRUE CACHE BOOL "")
 else()
