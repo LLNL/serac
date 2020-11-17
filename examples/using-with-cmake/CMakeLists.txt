@@ -8,4 +8,5 @@ add_executable(serac_example serac_example.cpp)
 target_link_libraries(serac_example serac::serac axom ${MFEM_LIBRARIES})
 
 enable_testing()
-add_test(NAME serac_example COMMAND serac_example)
+add_test(NAME    serac_example 
+         COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 1 ./serac_example)
