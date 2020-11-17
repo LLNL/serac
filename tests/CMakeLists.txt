@@ -104,14 +104,9 @@ if (ENABLE_GTEST)
                             OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
                             DEPENDS_ON  PETSc ${test_dependencies}
                             FOLDER      serac/tests )
-        blt_add_test(NAME          petsc_smoketest
+        blt_add_test(NAME         petsc_smoketest
                     COMMAND       petsc_smoketest
                     NUM_MPI_TASKS 4 )
     endif()
 
 endif()
-
-# Make sure running serac driver doesn't completely fail
-blt_add_test(NAME          serac_driver
-             COMMAND       serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../data/input_files/default.lua
-             NUM_MPI_TASKS 1 )

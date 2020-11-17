@@ -16,10 +16,11 @@ namespace cli {
 
 //------- Command Line Interface -------
 
-std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], int rank)
+std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], int rank,
+                                                            std::string app_description)
 {
   // specify all input arguments
-  CLI::App    app{"Serac: a high order nonlinear thermomechanical simulation code"};
+  CLI::App    app{app_description};
   std::string input_file_path;
   app.add_option("-i, --input_file", input_file_path, "Input file to use.")->required()->check(CLI::ExistingFile);
 
@@ -28,8 +29,13 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
     app.parse(argc, argv);
   } catch (const CLI::ParseError& e) {
     serac::logger::flush();
-    auto err_msg = (e.get_name() == "CallForHelp") ? app.help() : CLI::FailureMessage::simple(&app, e);
-    SLIC_ERROR_ROOT(rank, err_msg);
+    if (e.get_name() == "CallForHelp") {
+      auto msg = app.help();
+      SLIC_INFO_ROOT(rank, msg);
+    } else {
+      auto err_msg = CLI::FailureMessage::simple(&app, e);
+      SLIC_ERROR_ROOT(rank, err_msg);
+    }
     serac::exitGracefully();
   }
 
