@@ -17,8 +17,8 @@ constexpr int NUM_FIELDS = 2;
 
 NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
-      velocity_(*mesh, {.order = order, .name = "velocity"}),
-      displacement_(*mesh, {.order = order, .name = "displacement"})
+      velocity_(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"}),
+      displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"})
 {
   state_.push_back(velocity_);
   state_.push_back(displacement_);
