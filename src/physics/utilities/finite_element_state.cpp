@@ -8,9 +8,9 @@
 
 namespace serac {
 
-FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FEStateOptions&& options)
+FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::Options&& options)
     : mesh_(mesh),
-      coll_(options.coll ? std::move(*options.coll)
+      coll_(options.coll ? std::move(options.coll)
                          : std::make_unique<mfem::H1_FECollection>(options.order, mesh.Dimension())),
       space_(&mesh, coll_.get(), options.space_dim ? *options.space_dim : mesh.Dimension(), options.ordering),
       gf_(std::make_unique<mfem::ParGridFunction>(&space_)),
