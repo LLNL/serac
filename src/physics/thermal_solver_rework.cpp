@@ -107,7 +107,7 @@ void ThermalSolverRework::completeSetup()
     auto preconditioner = std::make_unique<mfem::HypreSmoother>();
     preconditioner->SetType(mfem::HypreSmoother::Jacobi);
 
-    invT_ = EquationSolver(M_->GetComm(), lin_params_);
+    invT_                               = EquationSolver(M_->GetComm(), lin_params_);
     invT_.linearSolver().iterative_mode = false;
     invT_.SetPreconditioner(std::move(preconditioner));
 
@@ -118,35 +118,35 @@ void ThermalSolverRework::completeSetup()
 
     double epsilon = 1.0e-8;
 
-    ode_ = FirstOrderODE(temperature_->trueVec().Size(),
-      [=, previous_dt = -1.0] (const double t, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) mutable {
+    ode_ = FirstOrderODE(
+        temperature_->trueVec().Size(),
+        [=, previous_dt = -1.0](const double t, const double dt, const mfem::Vector& u, mfem::Vector& du_dt) mutable {
+          if (dt != previous_dt) {
+            // T = M + dt K
+            T_.reset(mfem::Add(1.0, *M_, dt, *K_));
 
-      if (dt != previous_dt) {
-        // T = M + dt K
-        T_.reset(mfem::Add(1.0, *M_, dt, *K_));
+            // Eliminate the essential DOFs from the T matrix
+            bcs_.eliminateAllEssentialDofsFromMatrix(*T_);
+            invT_.SetOperator(*T_);
 
-        // Eliminate the essential DOFs from the T matrix
-        bcs_.eliminateAllEssentialDofsFromMatrix(*T_);
-        invT_.SetOperator(*T_);
+            previous_dt = dt;
+          }
 
-        previous_dt = dt;
-      }
+          uf = u;
+          uf.SetSubVector(bcs_.allEssentialDofs(), 0.0);
 
-      uf = u;
-      uf.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+          uc       = 0.0;
+          uc_plus  = 0.0;
+          uc_minus = 0.0;
+          for (const auto& bc : bcs_.essentials()) {
+            bc.projectBdrToDofs(uc, t);
+            bc.projectBdrToDofs(uc_plus, t + epsilon);
+            bc.projectBdrToDofs(uc_minus, t - epsilon);
+          }
+          duc_dt = (uc_plus - uc_minus) / (2.0 * epsilon);
 
-      uc       = 0.0;
-      uc_plus  = 0.0;
-      uc_minus = 0.0;
-      for (const auto& bc : bcs_.essentials()) {
-        bc.projectBdrToDofs(uc, t);
-        bc.projectBdrToDofs(uc_plus, t + epsilon);
-        bc.projectBdrToDofs(uc_minus, t - epsilon);
-      }
-      duc_dt = (uc_plus - uc_minus) / (2.0 * epsilon);
-
-      du_dt = invT_ * (*rhs_ - *M_ * duc_dt - *K_ * uc - *K_ * uf);
-    });
+          du_dt = invT_ * (*rhs_ - *M_ * duc_dt - *K_ * uc - *K_ * uf);
+        });
 
     ode_solver_->Init(ode_);
   }

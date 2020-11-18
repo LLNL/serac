@@ -4,12 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/nonlinear_solid_solver.hpp"
-
 #include "infrastructure/logger.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
 #include "numerics/expr_template_ops.hpp"
+#include "physics/nonlinear_solid_solver.hpp"
 
 namespace serac {
 
@@ -209,7 +208,7 @@ void NonlinearSolidSolver::completeSetup()
     // We are assuming that the ODE is prescribing the
     // acceleration value for the constrained dofs, so
     // the residuals for those dofs can be taken to be zero.
-    // 
+    //
     // Setting iterative_mode to true ensures that these
     // prescribed acceleration values are not modified by
     // the nonlinear solve.
@@ -236,9 +235,9 @@ void NonlinearSolidSolver::completeSetup()
                       const mfem::Vector& velocity, mfem::Vector& acceleration) {
           // pass these values through to the physics module
           // so that the residual operator can see them
-          c0 = fac0;
-          c1 = fac1;
-          u = displacement;
+          c0    = fac0;
+          c1    = fac1;
+          u     = displacement;
           du_dt = velocity;
 
           // evaluate the constraint functions at a 3-point
@@ -330,7 +329,7 @@ void NonlinearSolidSolver::advanceTimestep(double& dt)
   deformed_nodes_->Set(1.0, displacement_->gridFunc());
   deformed_nodes_->Add(1.0, *reference_nodes_);
   mesh_->NewNodes(*deformed_nodes_);
-  
+
   // x = *deformed_nodes_;
 
   cycle_ += 1;

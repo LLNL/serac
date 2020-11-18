@@ -354,7 +354,7 @@ double second_order_test_as_first_order_mfem(int num_steps, int method = 2)
     root_finder.Mult(zero, acceleration);
   });
 
-  //auto          time_integrator = mfem::RK4Solver();
+  // auto          time_integrator = mfem::RK4Solver();
   auto          time_integrator = mfem::SDIRK34Solver();
   FirstOrderODE ode1(ode2);
   time_integrator.Init(ode1);

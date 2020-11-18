@@ -11,7 +11,6 @@
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
 #include "physics/nonlinear_solid_solver_previous.hpp"
-
 #include "serac_config.hpp"
 
 namespace serac {
@@ -48,9 +47,9 @@ TEST(dynamic_solver, dyn_solve)
 
   // Set the linear solver parameters
   serac::LinearSolverParameters params;
-  params.prec        = serac::Preconditioner::BoomerAMG;
-  //params.abs_tol     = 1.0e-8;
-  //params.rel_tol     = 1.0e-4;
+  params.prec = serac::Preconditioner::BoomerAMG;
+  // params.abs_tol     = 1.0e-8;
+  // params.rel_tol     = 1.0e-4;
   params.rel_tol     = 1.0e-8;
   params.abs_tol     = 1.0e-12;
   params.max_iter    = 500;
@@ -59,8 +58,8 @@ TEST(dynamic_solver, dyn_solve)
 
   // Set the nonlinear solver parameters
   serac::NonlinearSolverParameters nl_params;
-  //nl_params.rel_tol     = 1.0e-4;
-  //nl_params.abs_tol     = 1.0e-8;
+  // nl_params.rel_tol     = 1.0e-4;
+  // nl_params.abs_tol     = 1.0e-8;
   nl_params.rel_tol     = 1.0e-8;
   nl_params.abs_tol     = 1.0e-12;
   nl_params.print_level = 1;
@@ -102,7 +101,6 @@ TEST(dynamic_solver, dyn_solve)
   mfem::Vector vel = dyn_solver.velocity()->trueVec();
   std::cout << "velocity: " << vel.Norml2() << std::endl;
   vel.Print(std::cout);
-
 
   double v_norm = dyn_solver.velocity()->gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement()->gridFunc().ComputeLpError(2.0, zerovec);

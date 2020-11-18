@@ -159,7 +159,7 @@ void NonlinearSolid::completeSetup()
     M->Finalize(0);
 
     M_mat.reset(M->ParallelAssemble());
-    
+
     C = displacement_.createOnSpace<mfem::ParBilinearForm>();
     C->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
     C->Assemble(0);
@@ -177,7 +177,6 @@ void NonlinearSolid::completeSetup()
   nonlin_solver_.SetOperator(residual);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
     residual.function = [=](const mfem::Vector& u, mfem::Vector& r) mutable {
@@ -192,12 +191,10 @@ void NonlinearSolid::completeSetup()
     };
 
   } else {
-
-    // the dynamic case is described by a residual function and a second order 
+    // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
     residual.function = [=](const mfem::Vector& d2u_dt2, mfem::Vector& res) mutable {
-
       // TODO: we should avoid re-assembling this when not required
       C_mat.reset(C->ParallelAssemble());
 
