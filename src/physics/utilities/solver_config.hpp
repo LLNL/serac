@@ -83,6 +83,12 @@ struct HypreBoomerAMGPrec {
 };
 
 /**
+ * @brief Stores the information required to configure a NVIDIA AMGX preconditioner
+ */
+struct AMGXPrec {
+};
+
+/**
  * @brief Stores the information required to configure a BlockILU preconditioner
  */
 struct BlockILUPrec {
@@ -92,7 +98,7 @@ struct BlockILUPrec {
 /**
  * @brief Preconditioning method
  */
-using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, BlockILUPrec>;
+using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, AMGXPrec, BlockILUPrec>;
 
 /**
  * @brief Abstract multiphysics coupling scheme
