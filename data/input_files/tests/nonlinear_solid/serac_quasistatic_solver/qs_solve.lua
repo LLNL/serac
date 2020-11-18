@@ -15,7 +15,7 @@ main_mesh = {
 
 -- Solver parameters
 nonlinear_solid = {
-    solver = {
+    stiffness_solver = {
         linear = {
             rel_tol     = 1.0e-6,
             abs_tol     = 1.0e-8,

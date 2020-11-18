@@ -227,13 +227,14 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table,
   traction_table.getField("y").defaultValue(1.0e-3);
   traction_table.getField("z").defaultValue(0.0);
 
-  auto& solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(solver_table);
+  auto& stiffness_solver_table =
+      table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
 
   if (dynamic) {
-    auto& dyn_solver_table = solver_table.addTable("dynamic", "Parameters for dynamic solve");
-    serac::EquationSolver::defineInputFileSchema(dyn_solver_table);
-    dyn_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
+    auto& mass_solver_table = table.addTable("mass_solver", "Parameters for mass matrix inversion");
+    serac::EquationSolver::defineInputFileSchema(mass_solver_table);
+    mass_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
   }
 
   auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
@@ -251,14 +252,15 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   result.order = base["order"];
 
   // Solver parameters
-  auto solver                          = base["solver"];
-  result.solver_params.H_lin_params    = solver["linear"].get<serac::IterativeSolverParameters>();
-  result.solver_params.H_nonlin_params = solver["nonlinear"].get<serac::NonlinearSolverParameters>();
+  auto stiffness_solver                = base["stiffness_solver"];
+  result.solver_params.H_lin_params    = stiffness_solver["linear"].get<serac::IterativeSolverParameters>();
+  result.solver_params.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverParameters>();
 
-  if (solver.contains("dynamic")) {
+  if (base.contains("mass_solver")) {
     NonlinearSolid::DynamicSolverParameters dyn_params;
-    dyn_params.M_params         = solver["dynamic/linear"].get<serac::IterativeSolverParameters>();
-    std::string timestep_method = solver["dynamic/timestepper"];
+    auto                                    mass_solver = base["mass_solver"];
+    dyn_params.M_params                                 = mass_solver["linear"].get<serac::IterativeSolverParameters>();
+    std::string timestep_method                         = mass_solver["timestepper"];
     // TODO: Implement all supported methods as part of an ODE schema
     SLIC_ERROR_IF(timestep_method != "SDIRK33", "Unrecognized timestep method: " << timestep_method);
     dyn_params.timestepper          = serac::TimestepMethod::SDIRK33;

@@ -17,7 +17,7 @@ main_mesh = {
 
 -- Solver parameters
 nonlinear_solid = {
-    solver = {
+    stiffness_solver = {
         linear = {
             rel_tol     = 1.0e-4,
             abs_tol     = 1.0e-8,
@@ -33,18 +33,18 @@ nonlinear_solid = {
             max_iter    = 500,
             print_level = 1,
         },
+    },
 
-        dynamic = {
-            linear = {
-                rel_tol     = 1.0e-4,
-                abs_tol     = 1.0e-8,
-                max_iter    = 500,
-                print_level = 0,
-                solver_type = "gmres",
-                prec_type   = "JacobiSmoother",
-            },
-            timestepper = "SDIRK33",
+    mass_solver = {
+        linear = {
+            rel_tol     = 1.0e-4,
+            abs_tol     = 1.0e-8,
+            max_iter    = 500,
+            print_level = 0,
+            solver_type = "gmres",
+            prec_type   = "JacobiSmoother",
         },
+        timestepper = "SDIRK33",
     },
 
     -- polynomial interpolation order

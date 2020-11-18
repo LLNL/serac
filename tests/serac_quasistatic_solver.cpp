@@ -186,7 +186,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
   // qs_solve test
-  auto custom_params = inlet["nonlinear_solid/solver/linear"].get<serac::IterativeSolverParameters>();
+  auto custom_params = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::IterativeSolverParameters>();
   auto custom_solver = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
   custom_solver->SetRelTol(custom_params.rel_tol);
   custom_solver->SetAbsTol(custom_params.abs_tol);
