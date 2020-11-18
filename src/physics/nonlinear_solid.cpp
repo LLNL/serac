@@ -29,7 +29,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   mesh->GetNodes(*reference_nodes_);
   mesh->NewNodes(*reference_nodes_);
 
-  x               = *reference_nodes_;
+  reference_nodes_->GetTrueDofs(x);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
   // Initialize the true DOF vector
@@ -158,10 +158,14 @@ void NonlinearSolid::completeSetup()
     M->Assemble(0);
     M->Finalize(0);
 
+    M_mat.reset(M->ParallelAssemble());
+
     C = displacement_.createOnSpace<mfem::ParBilinearForm>();
     C->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
     C->Assemble(0);
     C->Finalize(0);
+
+    C_mat.reset(C->ParallelAssemble());
   }
 
   // We are assuming that the ODE is prescribing the
@@ -195,7 +199,7 @@ void NonlinearSolid::completeSetup()
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
     residual.function = [=](const mfem::Vector& d2u_dt2, mfem::Vector& res) mutable {
-      res = (*M) * d2u_dt2 + (*C) * (du_dt + c1 * d2u_dt2) + (*H) * (x + u + c0 * d2u_dt2);
+      res = (*M_mat) * d2u_dt2 + (*C_mat) * (du_dt + c1 * d2u_dt2) + (*H) * (x + u + c0 * d2u_dt2);
       res.SetSubVector(bcs_.allEssentialDofs(), 0.0);
     };
 
@@ -203,9 +207,9 @@ void NonlinearSolid::completeSetup()
       // J = M + c1 * C + c0 * H(u_predicted)
       auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M->SpMat(), c1, C->SpMat()));
       localJ->Add(c0, H->GetLocalGradient(x + u + c0 * d2u_dt2));
-      J.reset(M->ParallelAssemble(localJ.get()));
-      bcs_.eliminateAllEssentialDofsFromMatrix(*J);
-      return *J;
+      J_mat.reset(M->ParallelAssemble(localJ.get()));
+      bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat);
+      return *J_mat;
     };
 
     ode2 = SecondOrderODE(

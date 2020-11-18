@@ -259,7 +259,9 @@ protected:
   std::unique_ptr<mfem::ParBilinearForm>  C;
   std::unique_ptr<mfem::ParNonlinearForm> H;
 
-  std::unique_ptr<mfem::HypreParMatrix> J;
+  std::unique_ptr<mfem::HypreParMatrix> M_mat;
+  std::unique_ptr<mfem::HypreParMatrix> C_mat;
+  std::unique_ptr<mfem::HypreParMatrix> J_mat;
 
   SecondOrderODE ode2;
 };
