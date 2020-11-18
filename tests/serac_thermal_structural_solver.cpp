@@ -145,7 +145,7 @@ TEST(dynamic_solver, dyn_solve)
 
   EXPECT_NEAR(0.146228, x_norm, 0.001);
   EXPECT_NEAR(0.005227, v_norm, 0.001);
-  EXPECT_NEAR(6.491872, temp_norm, 0.001);
+  EXPECT_NEAR(6.494477, temp_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
