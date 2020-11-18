@@ -159,13 +159,11 @@ void NonlinearSolid::completeSetup()
     M->Finalize(0);
 
     M_mat.reset(M->ParallelAssemble());
-
+    
     C = displacement_.createOnSpace<mfem::ParBilinearForm>();
     C->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
     C->Assemble(0);
     C->Finalize(0);
-
-    C_mat.reset(C->ParallelAssemble());
   }
 
   // We are assuming that the ODE is prescribing the
@@ -199,6 +197,10 @@ void NonlinearSolid::completeSetup()
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
     residual.function = [=](const mfem::Vector& d2u_dt2, mfem::Vector& res) mutable {
+
+      // TODO: we should avoid re-assembling this when not required
+      C_mat.reset(C->ParallelAssemble());
+
       res = (*M_mat) * d2u_dt2 + (*C_mat) * (du_dt + c1 * d2u_dt2) + (*H) * (x + u + c0 * d2u_dt2);
       res.SetSubVector(bcs_.allEssentialDofs(), 0.0);
     };
