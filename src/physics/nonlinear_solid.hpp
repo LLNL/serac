@@ -235,7 +235,7 @@ protected:
   /**
    * @brief Solve the Quasi-static operator
    */
-  void quasiStaticSolve();
+  virtual void quasiStaticSolve();
 
   /**
    * @brief Nonlinear system solver instance
