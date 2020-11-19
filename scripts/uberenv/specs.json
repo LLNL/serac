@@ -18,11 +18,11 @@
       "gcc@8.3.1+devtools" ],
 
     "rzansel":
-    [ "clang@ibm_gfortran+devtools+cuda cuda_arch=70",
-      "clang@upstream_gfortran+devtools+cuda cuda_arch=70" ],
+    [ "clang@ibm_gfortran+devtools+cuda+raja+umpire+caliper cuda_arch=70",
+      "clang@upstream_gfortran+devtools+cuda+raja+umpire+caliper cuda_arch=70" ],
 
     "blueos_3_ppc64le_ib_p9":
-    [ "clang@upstream_gfortran+devtools+cuda cuda_arch=70" ],
+    [ "clang@upstream_gfortran+devtools+cuda+umpire+raja+umpire+caliper cuda_arch=70" ],
 
     "darwin-x86_64":
     [ "clang@9.0.0+devtools" ]

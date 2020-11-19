@@ -97,6 +97,10 @@ class Serac(CMakePackage, CudaPackage):
     #        description='Enable Cubit/Genesis reader')
     variant('sundials', default=False,
             description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
+    variant("umpire",   default=False,
+            description="Build with portable memory access support")
+    variant("raja",     default=False,
+            description="Build with portable kernel execution support")
 
     # Basic dependencies
     depends_on("mpi")
@@ -128,7 +132,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("hdf5+hl@1.8.21~shared")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran~raja~umpire+mfem~shared",
+    cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran+mfem~shared",
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
@@ -141,6 +145,10 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("superlu-dist@6.1.1~shared")
     # Unconditional for now until concretizer fixed
     depends_on("netcdf-c@4.7.4~shared")
+
+    # Axom enables RAJA/Umpire by default
+    depends_on("axom~raja", when="~raja")
+    depends_on("axom~umpire", when="~umpire")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
@@ -401,6 +409,14 @@ class Serac(CMakePackage, CudaPackage):
         if "+caliper" in spec:
             caliper_dir = get_spec_path(spec, "caliper", path_replacements)
             cfg.write(cmake_cache_entry("CALIPER_DIR", caliper_dir))
+
+        if "+raja" in spec:
+            raja_dir = get_spec_path(spec, "raja", path_replacements)
+            cfg.write(cmake_cache_entry("RAJA_DIR", raja_dir))
+
+        if "+umpire" in spec:
+            umpire_dir = get_spec_path(spec, "umpire", path_replacements)
+            cfg.write(cmake_cache_entry("UMPIRE_DIR", umpire_dir))
 
         if "+glvis" in spec:
             glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
