@@ -22,7 +22,7 @@ option(ENABLE_LUMBERJACK "Enable Axom's Lumberjack component" ON)
 if(GLVIS_EXECUTABLE)
     add_custom_target(glvis_symlink ALL
                       COMMAND ${CMAKE_COMMAND} 
-                      -E create_symlink ${GLVIS_EXECUTABLE} ${CMAKE_INSTALL_BINDIR}/glvis)
+                      -E create_symlink ${GLVIS_EXECUTABLE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/glvis)
 endif()
 
 
