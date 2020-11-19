@@ -110,7 +110,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf",
+    debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -139,12 +139,26 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("conduit@0.5.1p1~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
-    depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
+    # Unconditional for now until concretizer fixed
+    depends_on("netcdf-c@4.7.4~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
 
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
+
+    # Libraries that have a GPU variant
+    depends_on("amgx@2.1.x", when="+cuda")
+    cuda_deps = ["mfem", "axom"]
+    for dep in cuda_deps:
+        depends_on("{0}+cuda".format(dep), when="+cuda")
+
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('mfem+amgx cuda_arch=sm_{0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
+        depends_on('axom cuda_arch={0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
+        
 
     phases = ['hostconfig', 'cmake', 'build',' install']
 

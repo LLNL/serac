@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(infrastructure_headers
+    accelerator.hpp
     cli.hpp
     initialize.hpp
     input.hpp
@@ -14,6 +15,7 @@ set(infrastructure_headers
     )
 
 set(infrastructure_sources
+    accelerator.cpp
     cli.cpp
     initialize.cpp
     input.cpp

@@ -399,7 +399,7 @@ def set_group_and_perms(directory):
     return 0
 
 
-def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False):
+def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, mirror_location = ''):
     project_file = "scripts/uberenv/project.json"
     config_dir = "scripts/uberenv/spack_configs/{0}".format(get_system_type())
 
@@ -413,10 +413,13 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     print("]\n")
 
     # Use shared network mirror location otherwise create local one
-    mirror_dir = get_shared_mirror_dir()
-    if not os.path.exists(mirror_dir):
-        mirror_dir = pjoin(builds_dir,"mirror")
-    print("[using mirror location: %s]" % mirror_dir)
+    if mirror_location:
+        mirror_dir = mirror_location
+    else:
+        mirror_dir = get_shared_mirror_dir()
+        if not os.path.exists(mirror_dir):
+            mirror_dir = pjoin(builds_dir,"mirror")
+        print("[using mirror location: %s]" % mirror_dir)
 
     # unique install location
     prefix = pjoin(builds_dir, get_system_type())

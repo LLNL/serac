@@ -23,6 +23,11 @@ def cmake_cache_option(name, boolean_value, comment=""):
     value = "ON" if boolean_value else "OFF"
     return 'set({0} {1} CACHE BOOL "{2}")\n\n'.format(name, value, comment)
 
+def cmake_cache_string(name, string, comment=""):
+    """Generate a string for a cmake cache variable"""
+
+    return 'set(%s "%s" CACHE STRING "%s")\n\n' % (name,string,comment)
+
 
 def get_spec_path(spec, package_name, path_replacements={}, use_bin=False):
     """Extracts the prefix path for the given spack package
@@ -55,7 +60,7 @@ class Axom(CMakePackage, CudaPackage):
     version('develop', branch='develop', submodules=True)
 
     # SERAC EDIT START
-    version('0.4.0serac', commit='8907d1380be62b50df5e058422fa4e958ff0e8ad', submodules=True)
+    version('0.4.0serac', commit='da070105fcb2e4009ea8609d60aa321c63172cc4', submodules="True")
     # SERAC EDIT END
 
     version('0.4.0', tag='v0.4.0', submodules=True)
@@ -506,8 +511,10 @@ class Axom(CMakePackage, CudaPackage):
                 cfg.write(cmake_cache_entry("CMAKE_CUDA_COMPILER",
                                             cudacompiler))
 
-                cfg.write(cmake_cache_option("CUDA_SEPARABLE_COMPILATION",
-                                             True))
+                # SERAC EDIT BEGIN - this requires NVCC linking which is problematic
+                # cfg.write(cmake_cache_option("CUDA_SEPARABLE_COMPILATION",
+                #                              True))
+                # SERAC EDIT END
 
                 cfg.write(cmake_cache_option("AXOM_ENABLE_ANNOTATIONS", True))
 
@@ -522,7 +529,9 @@ class Axom(CMakePackage, CudaPackage):
                 else:
                     cfg.write("# cuda_arch could not be determined\n\n")
 
-                cudaflags += "-std=c++11 --expt-extended-lambda -G "
+                # SERAC EDIT BEGIN - debug flag causes the NVIDIA assembler to fail
+                cudaflags += "-std=c++11 --expt-extended-lambda " # -G
+                # SERAC EDIT END
                 cfg.write(cmake_cache_entry("CMAKE_CUDA_FLAGS", cudaflags))
 
                 if "+mpi" in spec:
@@ -534,6 +543,15 @@ class Axom(CMakePackage, CudaPackage):
 
                 cfg.write("# nvcc does not like gtest's 'pthreads' flag\n")
                 cfg.write(cmake_cache_option("gtest_disable_pthreads", True))
+
+                sys_type = self._get_sys_type(spec)
+                # are we on a specific machine
+                if 'blueos' in sys_type:
+                    # Very specific fix for working around CMake adding implicit link directories returned by the BlueOS
+                    # compilers to link CUDA executables 
+                    cfg.write(cmake_cache_string("BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", \
+                                             "/usr/tce/packages/gcc/gcc-4.9.3/lib64/gcc/powerpc64le-unknown-linux-gnu/4.9.3;"
+                                             "/usr/tce/packages/gcc/gcc-4.9.3/lib64"))
 
         cfg.write("\n")
         cfg.close()
