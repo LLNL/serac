@@ -8,7 +8,7 @@
 
 #include <fstream>
 
-#include "coefficients/stdfunction_coefficient.hpp"
+#include "coefficients/coefficient_extensions.hpp"
 #include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
@@ -66,7 +66,7 @@ TEST(component_bc, qs_solve)
   int dim = mesh->Dimension();
 
   // define the displacement vector
-  auto disp_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * -1.0e-1; });
+  auto disp_coef = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[0] * -1.0e-1; });
 
   // Pass the BC information to the solver object setting only the z direction
   for (const auto& bc : solid_solver_info.boundary_conditions) {
@@ -78,7 +78,7 @@ TEST(component_bc, qs_solve)
   }
 
   // Create an indicator function to set all vertices that are x=0
-  StdFunctionVectorCoefficient zero_bc(dim, [](mfem::Vector& x, mfem::Vector& X) {
+  mfem::VectorFunctionCoefficient zero_bc(dim, [](const mfem::Vector& x, mfem::Vector& X) {
     X = 0.;
     for (int i = 0; i < X.Size(); i++)
       if (std::abs(x[i]) < 1.e-13) {
@@ -142,8 +142,8 @@ TEST(component_bc, qs_attribute_solve)
   int dim = mesh->Dimension();
 
   // define the displacement vector
-  auto disp_x_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[0] * 3.0e-2; });
-  auto disp_y_coef = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) { return x[1] * -5.0e-2; });
+  auto disp_x_coef = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[0] * 3.0e-2; });
+  auto disp_y_coef = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[1] * -5.0e-2; });
 
   // Pass the BC information to the solver object setting only the z direction
   for (const auto& bc : solid_solver_info.boundary_conditions) {

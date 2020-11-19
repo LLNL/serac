@@ -39,7 +39,6 @@ if (ENABLE_GTEST)
 
     set(coefficent_tests
         serac_component_bc.cpp
-        serac_stdfunction_coefficient.cpp
         serac_wrapper_tests.cpp)
 
     foreach(filename ${coefficent_tests})

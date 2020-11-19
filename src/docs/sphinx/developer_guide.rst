@@ -59,7 +59,6 @@ Important Data Structures
 * `BoundaryConditionManager <../doxygen/html/classserac_1_1BoundaryConditionManager.html>`_: Storage class for related boundary conditions.
 * `EquationSolver <../doxygen/html/classserac_1_1EquationSolver.html>`_: Class for solving nonlinear and linear systems of equations.
 * `FiniteElementState <../doxygen/html/classserac_1_1FiniteElementState.html>`_: Data structure describing a solution field and its underlying finite element discretization.
-* `StdFunctionCoefficient <../doxygen/html/classserac_1_1StdFunctionCoefficient.html>`_: A class for defining MFEM coefficients based on ``std::functions`` and therefore generic C++ lambdas.
 
 Frequently Used Modern C++ Features
 -----------------------------------
