@@ -62,20 +62,6 @@ void BoundaryCondition::project(FiniteElementState& state) const
         state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, component_);
       }
     }
-
-    // if (component_ == -1) {
-    //  // If it contains all components, project the vector
-    //  auto vec_coef = std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
-    //  SLIC_ASSERT_MSG(vec_coef,
-    //                  "Essential boundary condition contained all components but had a non-vector coefficient.");
-    //  state.gridFunc().ProjectCoefficient(**vec_coef, dof_list);  // Deref ptr-to-result, then shared_ptr
-    //} else {
-    //  // If it is only a single component, project the scalar
-    //  auto scalar_coef = std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
-    //  SLIC_ASSERT_MSG(scalar_coef,
-    //                  "Essential boundary condition contained a single component but had a non-scalar coefficient.");
-    //  state.gridFunc().ProjectCoefficient(**scalar_coef, dof_list, component_);
-    //}
   }
 }
 
