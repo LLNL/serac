@@ -179,12 +179,12 @@ void NonlinearSolid::completeSetup()
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    residual.function = [=](const mfem::Vector& u, mfem::Vector& r) mutable {
+    residual.function_ = [=](const mfem::Vector& u, mfem::Vector& r) mutable {
       H->Mult(u, r);  // r := H(u)
       r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
     };
 
-    residual.jacobian = [=](const mfem::Vector& u) mutable -> mfem::Operator& {
+    residual.jacobian_ = [=](const mfem::Vector& u) mutable -> mfem::Operator& {
       auto& J = dynamic_cast<mfem::HypreParMatrix&>(H->GetGradient(u));
       bcs_.eliminateAllEssentialDofsFromMatrix(J);
       return J;
@@ -194,7 +194,7 @@ void NonlinearSolid::completeSetup()
     // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
-    residual.function = [=](const mfem::Vector& d2u_dt2, mfem::Vector& res) mutable {
+    residual.function_ = [=](const mfem::Vector& d2u_dt2, mfem::Vector& res) mutable {
       // TODO: we should avoid re-assembling this when not required
       C_mat.reset(C->ParallelAssemble());
 
@@ -202,7 +202,7 @@ void NonlinearSolid::completeSetup()
       res.SetSubVector(bcs_.allEssentialDofs(), 0.0);
     };
 
-    residual.jacobian = [=](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
+    residual.jacobian_ = [=](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
       // J = M + c1 * C + c0 * H(u_predicted)
       auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M->SpMat(), c1, C->SpMat()));
       localJ->Add(c0, H->GetLocalGradient(x + u + c0 * d2u_dt2));

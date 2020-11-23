@@ -17,7 +17,6 @@
 #include "physics/base_physics.hpp"
 #include "physics/operators/odes.hpp"
 #include "physics/operators/stdfunction_operator.hpp"
-#include "physics/operators/thermal_operators.hpp"
 
 namespace serac {
 
@@ -211,11 +210,6 @@ protected:
    */
   std::optional<LinearSolverParameters> dyn_M_params_;
   std::optional<LinearSolverParameters> dyn_T_params_;
-
-  /**
-   * @brief Time integration operator
-   */
-  std::unique_ptr<DynamicConductionOperator> dyn_oper_;
 
   FirstOrderODE ode_;
 

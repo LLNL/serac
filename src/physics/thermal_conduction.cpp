@@ -105,16 +105,7 @@ void ThermalConduction::completeSetup()
 
   // Project the essential boundary coefficients
   for (auto& bc : bcs_.essentials()) {
-    // Project the coefficient
     bc.projectBdr(temperature_, time_);
-
-    auto ids = bc.getTrueDofs();
-
-    for (int i = 0; i < ids.Size(); i++) {
-      std::cout << ids[i] << " ";
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
   }
 
   // Assemble the stiffness matrix
@@ -128,12 +119,12 @@ void ThermalConduction::completeSetup()
   temperature_.initializeTrueVec();
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    residual.function = [=](const mfem::Vector& u, mfem::Vector& res) mutable {
+    residual.function_ = [this](const mfem::Vector& u, mfem::Vector& res) {
       res = (*K_) * u;
       res.SetSubVector(bcs_.allEssentialDofs(), 0.0);
     };
 
-    residual.jacobian = [=](const mfem::Vector& /*du_dt*/) mutable -> mfem::Operator& {
+    residual.jacobian_ = [this](const mfem::Vector& /*du_dt*/) -> mfem::Operator& {
       if (J_ == nullptr) {
         J_.reset(K_form_->ParallelAssemble());
         bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -150,18 +141,12 @@ void ThermalConduction::completeSetup()
 
     M_.reset(M_form_->ParallelAssemble());
 
-    //// Make the time integration operator and set the appropriate matrices
-    // dyn_oper_ = std::make_unique<DynamicConductionOperator>(temperature_.space(), *dyn_M_params_, *dyn_T_params_,
-    // bcs_); dyn_oper_->setMatrices(M_.get(), K_.get()); dyn_oper_->setLoadVector(rhs_.get());
-
-    // ode_solver_->Init(*dyn_oper_);
-
-    residual.function = [=](const mfem::Vector& du_dt, mfem::Vector& r) mutable {
+    residual.function_ = [this](const mfem::Vector& du_dt, mfem::Vector& r) {
       r = (*M_) * du_dt + (*K_) * (u_ + dt_ * du_dt);
       r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
     };
 
-    residual.jacobian = [=](const mfem::Vector& /*du_dt*/) mutable -> mfem::Operator& {
+    residual.jacobian_ = [this](const mfem::Vector& /*du_dt*/) -> mfem::Operator& {
       if (dt_ != previous_dt_) {
         J_.reset(mfem::Add(1.0, *M_, dt_, *K_));
         bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
@@ -170,7 +155,7 @@ void ThermalConduction::completeSetup()
     };
 
     ode_ = FirstOrderODE(temperature_.trueVec().Size(), [=](const double t, const double dt, const mfem::Vector& u,
-                                                            mfem::Vector& du_dt) mutable {
+                                                            mfem::Vector& du_dt) {
       // this is intended to be temporary
       // Ideally, epsilon should be "small" relative to the characteristic
       // time of the ODE, but we can't ensure that at present (we don't have
@@ -225,9 +210,6 @@ void ThermalConduction::completeSetup()
       dU_dt_.SetSubVectorComplement(constrained_dofs, 0.0);
       du_dt += dU_dt_;
 
-      // EquationSolver& residual_solver = (implicit) ? stiffness_solver_ : mass_solver_;
-      // residual_solver.Mult(zero_, du_dt);
-
       nonlin_solver_.Mult(zero_, du_dt);
       SLIC_WARNING_IF(!nonlin_solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
@@ -239,28 +221,12 @@ void ThermalConduction::completeSetup()
   }
 }
 
-void ThermalConduction::quasiStaticSolve()
-{
-  // Apply the boundary conditions
-  *bc_rhs_ = *rhs_;
-  for (auto& bc : bcs_.essentials()) {
-    bc.apply(*K_, *bc_rhs_, temperature_, time_);
-  }
-
-  K_inv_->linearSolver().iterative_mode = false;
-  K_inv_->SetOperator(*K_);
-
-  // Perform the linear solve
-  K_inv_->Mult(*bc_rhs_, temperature_.trueVec());
-}
-
 void ThermalConduction::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   temperature_.initializeTrueVec();
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    // quasiStaticSolve();
     nonlin_solver_.Mult(zero_, temperature_.trueVec());
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");

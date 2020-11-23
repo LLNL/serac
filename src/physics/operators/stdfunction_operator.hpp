@@ -4,11 +4,35 @@
 
 #include "mfem.hpp"
 
+/**
+ * @brief StdFunctionOperator is a class wrapping mfem::Operator
+ *   so that the user can use std::function to define the implementations of
+ *   mfem::Operator::Mult and
+ *   mfem::Operator::GetGradient
+ * 
+ * The main benefit of this approach is that lambda capture lists allow
+ * for a flexible inline representation of the overloaded functions,
+ * without having to manually define a separate functor class.
+ */
 class StdFunctionOperator : public mfem::Operator {
 public:
+
+  /**
+   * @brief Default constructor for creating an uninitialized StdFunctionOperator
+   */
   StdFunctionOperator(int n) : mfem::Operator(n) {}
-  void            Mult(const mfem::Vector& k, mfem::Vector& y) const { function(k, y); };
-  mfem::Operator& GetGradient(const mfem::Vector& k) const { return jacobian(k); };
-  mutable std::function<void(const mfem::Vector&, mfem::Vector&)> function;
-  mutable std::function<mfem::Operator&(const mfem::Vector&)>     jacobian;
+
+
+  void            Mult(const mfem::Vector& k, mfem::Vector& y) const { function_(k, y); };
+  mfem::Operator& GetGradient(const mfem::Vector& k) const { return jacobian_(k); };
+
+  /**
+   * @brief the function that is used to implement mfem::Operator::Mult
+   */
+  mutable std::function<void(const mfem::Vector&, mfem::Vector&)> function_;
+
+  /**
+   * @brief the function that is used to implement mfem::Operator::GetGradient
+   */
+  mutable std::function<mfem::Operator&(const mfem::Vector&)>     jacobian_;
 };

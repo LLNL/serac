@@ -8,7 +8,6 @@
 #include "physics/utilities/boundary_condition_manager.hpp"
 #include "physics/utilities/equation_solver.hpp"
 
-
 /**
  * @brief SecondOrderODE is a class wrapping mfem::SecondOrderTimeDependentOperator
  *   so that the user can use std::function to define the implementations of
@@ -21,8 +20,7 @@
  */
 class SecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
 public:
-  using signature = void(const double, const double, const double, const mfem::Vector&, const mfem::Vector&,
-                         mfem::Vector&);
+  using TypeSignature = void(const double, const double, const double, const mfem::Vector&, const mfem::Vector&, mfem::Vector&);
 
   /**
    * @brief Default constructor for creating an uninitialized SecondOrderODE
@@ -45,23 +43,23 @@ public:
    *      mfem::SecondOrderTimeDependentOperator::Mult corresponds to the case where either of fac0, fac1 are nonzero
    * 
    */
-  SecondOrderODE(int n, std::function<signature> f) : mfem::SecondOrderTimeDependentOperator(n, 0.0), f(f) {}
+  SecondOrderODE(int n, std::function<TypeSignature> f) : mfem::SecondOrderTimeDependentOperator(n, 0.0), f_(f) {}
 
   void Mult(const mfem::Vector& u, const mfem::Vector& du_dt, mfem::Vector& d2u_dt2) const
   {
-    f(t, 0.0, 0.0, u, du_dt, d2u_dt2);
+    f_(t, 0.0, 0.0, u, du_dt, d2u_dt2);
   }
 
   void ImplicitSolve(const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
                      mfem::Vector& d2u_dt2)
   {
-    f(t, c0, c1, u, du_dt, d2u_dt2);
+    f_(t, c0, c1, u, du_dt, d2u_dt2);
   }
 
   /**
    * @brief the function that is used to implement mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
    */
-  std::function<signature> f;
+  std::function<TypeSignature> f_;
 };
 
 /**
@@ -76,7 +74,7 @@ public:
  */
 class FirstOrderODE : public mfem::TimeDependentOperator {
 public:
-  using signature = void(const double, const double, const mfem::Vector&, mfem::Vector&);
+  using TypeSignature = void(const double, const double, const mfem::Vector&, mfem::Vector&);
 
   /**
    * @brief Default constructor for creating an uninitialized FirstOrderODE
@@ -99,13 +97,13 @@ public:
    *      mfem::TimeDependentOperator::Mult corresponds to the case where dt is nonzero
    * 
    */
-  FirstOrderODE(int n, std::function<signature> f) : mfem::TimeDependentOperator(n, 0.0), f(f) {}
+  FirstOrderODE(int n, std::function<TypeSignature> f) : mfem::TimeDependentOperator(n, 0.0), f_(f) {}
 
-  void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const { f(t, 0.0, u, du_dt); }
-  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) { f(t, dt, u, du_dt); }
+  void Mult(const mfem::Vector& u, mfem::Vector& du_dt) const { f_(t, 0.0, u, du_dt); }
+  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) { f_(t, dt, u, du_dt); }
 
   /**
    * @brief the function that is used to implement mfem::TDO::Mult and mfem::TDO::ImplicitSolve
    */
-  std::function<signature> f;
+  std::function<TypeSignature> f_;
 };
