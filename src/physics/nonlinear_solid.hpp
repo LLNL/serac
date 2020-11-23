@@ -234,25 +234,25 @@ protected:
   StdFunctionOperator residual;
 
   // predicted displacements and velocities
-  mfem::Vector x;
-  mfem::Vector u;
-  mfem::Vector du_dt;
-  mfem::Vector previous;
+  mfem::Vector x_;
+  mfem::Vector u_;
+  mfem::Vector du_dt_;
+  mfem::Vector previous_;
 
   // temporary values used to compute finite difference approximations
   // to the derivatives of constrained degrees of freedom
-  mfem::Vector U_minus;
-  mfem::Vector U;
-  mfem::Vector U_plus;
+  mfem::Vector U_minus_;
+  mfem::Vector U_;
+  mfem::Vector U_plus_;
 
   // time derivatives of the constraint function
-  mfem::Vector dU_dt;
-  mfem::Vector d2U_dt2;
+  mfem::Vector dU_dt_;
+  mfem::Vector d2U_dt2_;
 
-  mfem::Vector zero;
+  mfem::Vector zero_;
 
   // current and previous timesteps
-  double c0, c1;
+  double c0_, c1_;
   double dt0, dt1, dt0_previous, dt1_previous;
 
   std::unique_ptr<mfem::ParBilinearForm>  M;

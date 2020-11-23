@@ -17,12 +17,12 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
       temperature_(
           *mesh,
           FEStateOptions{.order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}),
-      residual(temperature_.space().TrueVSize())
+      residual_(temperature_.space().TrueVSize())
 {
   state_.push_back(temperature_);
 
   nonlin_solver_ = EquationSolver(mesh->GetComm(), params.T_lin_params, params.T_nonlin_params);
-  nonlin_solver_.SetOperator(residual);
+  nonlin_solver_.SetOperator(residual_);
 
   // Check for dynamic mode
   if (params.dyn_params) {
@@ -35,17 +35,17 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   previous_dt_ = -1.0;
 
   int true_size = temperature_.space().TrueVSize();
-  u_            = mfem::Vector(true_size);
-  previous_     = mfem::Vector(true_size);
-  previous_     = 0.0;
+  u_.SetSize(true_size);
+  previous_.SetSize(true_size);
+  previous_ = 0.0;
 
-  zero_ = mfem::Vector(true_size);
+  zero_.SetSize(true_size);
   zero_ = 0.0;
 
-  U_minus_ = mfem::Vector(true_size);
-  U_       = mfem::Vector(true_size);
-  U_plus_  = mfem::Vector(true_size);
-  dU_dt_   = mfem::Vector(true_size);
+  U_minus_.SetSize(true_size);
+  U_.SetSize(true_size);
+  U_plus_.SetSize(true_size);
+  dU_dt_.SetSize(true_size);
 }
 
 void ThermalConduction::setTemperature(mfem::Coefficient& temp)
@@ -119,18 +119,20 @@ void ThermalConduction::completeSetup()
   temperature_.initializeTrueVec();
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    residual.function_ = [this](const mfem::Vector& u, mfem::Vector& res) {
-      res = (*K_) * u;
-      res.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-    };
+    residual_ = StdFunctionOperator(temperature_.space().TrueVSize(),
+      
+    [this](const mfem::Vector& u, mfem::Vector& r) {
+      r = (*K_) * u;
+      r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+    },
 
-    residual.jacobian_ = [this](const mfem::Vector& /*du_dt*/) -> mfem::Operator& {
+    [this](const mfem::Vector& /*du_dt*/) -> mfem::Operator& {
       if (J_ == nullptr) {
         J_.reset(K_form_->ParallelAssemble());
         bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
       }
       return *J_;
-    };
+    });
 
   } else {
     // If dynamic, assemble the mass matrix
@@ -141,18 +143,19 @@ void ThermalConduction::completeSetup()
 
     M_.reset(M_form_->ParallelAssemble());
 
-    residual.function_ = [this](const mfem::Vector& du_dt, mfem::Vector& r) {
+    residual_ = StdFunctionOperator(temperature_.space().TrueVSize(),
+    [this](const mfem::Vector& du_dt, mfem::Vector& r) {
       r = (*M_) * du_dt + (*K_) * (u_ + dt_ * du_dt);
       r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-    };
+    },
 
-    residual.jacobian_ = [this](const mfem::Vector& /*du_dt*/) -> mfem::Operator& {
+    [this](const mfem::Vector& /*du_dt*/) -> mfem::Operator& {
       if (dt_ != previous_dt_) {
         J_.reset(mfem::Add(1.0, *M_, dt_, *K_));
         bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
       }
       return *J_;
-    };
+    });
 
     ode_ = FirstOrderODE(temperature_.trueVec().Size(), [=](const double t, const double dt, const mfem::Vector& u,
                                                             mfem::Vector& du_dt) {
@@ -167,6 +170,9 @@ void ThermalConduction::completeSetup()
       dt_ = dt;
       u_  = u;
 
+      // TODO: take care of this last part of the ODE definition 
+      //       automatically by wrapping mfem's ODE solvers
+      //
       // evaluate the constraint functions at a 3-point
       // stencil of times centered on the time of interest
       // in order to compute finite-difference approximations
@@ -223,7 +229,6 @@ void ThermalConduction::completeSetup()
 
 void ThermalConduction::advanceTimestep(double& dt)
 {
-  // Initialize the true vector
   temperature_.initializeTrueVec();
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
@@ -235,7 +240,6 @@ void ThermalConduction::advanceTimestep(double& dt)
     ode_solver_->Step(temperature_.trueVec(), time_, dt);
   }
 
-  // Distribute the shared DOFs
   temperature_.distributeSharedDofs();
   cycle_ += 1;
 }

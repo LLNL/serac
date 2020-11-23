@@ -213,7 +213,7 @@ protected:
 
   FirstOrderODE ode_;
 
-  StdFunctionOperator residual;
+  StdFunctionOperator residual_;
 
   EquationSolver nonlin_solver_;
   EquationSolver mass_solver_;

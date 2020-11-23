@@ -29,7 +29,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   mesh->GetNodes(*reference_nodes_);
   mesh->NewNodes(*reference_nodes_);
 
-  reference_nodes_->GetTrueDofs(x);
+  reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
   // Initialize the true DOF vector
@@ -60,19 +60,19 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
     setTimestepper(TimestepMethod::QuasiStatic);
   }
 
-  u        = mfem::Vector(true_size);
-  du_dt    = mfem::Vector(true_size);
-  previous = mfem::Vector(true_size);
-  previous = 0.0;
+  u_.SetSize(true_size);
+  du_dt_.SetSize(true_size);
+  previous_.SetSize(true_size);
+  previous_ = 0.0;
 
-  zero = mfem::Vector(true_size);
-  zero = 0.0;
+  zero_.SetSize(true_size);
+  zero_ = 0.0;
 
-  U_minus = mfem::Vector(true_size);
-  U       = mfem::Vector(true_size);
-  U_plus  = mfem::Vector(true_size);
-  dU_dt   = mfem::Vector(true_size);
-  d2U_dt2 = mfem::Vector(true_size);
+  U_minus_.SetSize(true_size);
+  U_.SetSize(true_size);
+  U_plus_.SetSize(true_size);
+  dU_dt_.SetSize(true_size);
+  d2U_dt2_.SetSize(true_size);
 }
 
 NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputInfo& info)
@@ -177,42 +177,52 @@ void NonlinearSolid::completeSetup()
   nonlin_solver_.SetOperator(residual);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    residual.function_ = [=](const mfem::Vector& u, mfem::Vector& r) mutable {
+    residual = StdFunctionOperator(displacement_.space().TrueVSize(),
+
+    // residual function
+    [this](const mfem::Vector& u, mfem::Vector& r) mutable {
       H->Mult(u, r);  // r := H(u)
       r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-    };
+    },
 
-    residual.jacobian_ = [=](const mfem::Vector& u) mutable -> mfem::Operator& {
+    // gradient of residual function
+    [this](const mfem::Vector& u) mutable -> mfem::Operator& {
       auto& J = dynamic_cast<mfem::HypreParMatrix&>(H->GetGradient(u));
       bcs_.eliminateAllEssentialDofsFromMatrix(J);
       return J;
-    };
+    });
+
 
   } else {
     // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
-    residual.function_ = [=](const mfem::Vector& d2u_dt2, mfem::Vector& res) mutable {
+    residual = StdFunctionOperator(displacement_.space().TrueVSize(),
+
+    // residual function
+    [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) mutable {
       // TODO: we should avoid re-assembling this when not required
       C_mat.reset(C->ParallelAssemble());
 
-      res = (*M_mat) * d2u_dt2 + (*C_mat) * (du_dt + c1 * d2u_dt2) + (*H) * (x + u + c0 * d2u_dt2);
-      res.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-    };
+      r = (*M_mat) * d2u_dt2 + (*C_mat) * (du_dt_ + c1_ * d2u_dt2) + (*H) * (x_ + u_ + c0_ * d2u_dt2);
+      r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+    },
 
-    residual.jacobian_ = [=](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
+    // gradient of residual function
+    [this](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
       // J = M + c1 * C + c0 * H(u_predicted)
-      auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M->SpMat(), c1, C->SpMat()));
-      localJ->Add(c0, H->GetLocalGradient(x + u + c0 * d2u_dt2));
+      auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M->SpMat(), c1_, C->SpMat()));
+      localJ->Add(c0_, H->GetLocalGradient(x_ + u_ + c0_ * d2u_dt2));
       J_mat.reset(M->ParallelAssemble(localJ.get()));
       bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat);
       return *J_mat;
-    };
+    });
 
     ode2 = SecondOrderODE(
-        u.Size(), [=](const double t, const double fac0, const double fac1, const mfem::Vector& displacement,
+        u_.Size(), [this](const double t, const double fac0, const double fac1, const mfem::Vector& displacement,
                       const mfem::Vector& velocity, mfem::Vector& acceleration) {
           // this is intended to be temporary
           // Ideally, epsilon should be "small" relative to the characteristic time
@@ -222,67 +232,70 @@ void NonlinearSolid::completeSetup()
 
           // assign these values to variables with greater scope,
           // so that the residual operator can see them
-          c0    = fac0;
-          c1    = fac1;
-          u     = displacement;
-          du_dt = velocity;
+          c0_    = fac0;
+          c1_    = fac1;
+          u_     = displacement;
+          du_dt_ = velocity;
 
+          // TODO: take care of this last part of the ODE definition 
+          //       automatically by wrapping mfem's ODE solvers
+          //
           // evaluate the constraint functions at a 3-point
           // stencil of times centered on the time of interest
           // in order to compute finite-difference approximations
           // to the time derivatives that appear in the residual
-          U_minus = 0.0;
-          U       = 0.0;
-          U_plus  = 0.0;
+          U_minus_ = 0.0;
+          U_       = 0.0;
+          U_plus_  = 0.0;
           for (const auto& bc : bcs_.essentials()) {
-            bc.projectBdrToDofs(U_minus, t - epsilon);
-            bc.projectBdrToDofs(U, t);
-            bc.projectBdrToDofs(U_plus, t + epsilon);
+            bc.projectBdrToDofs(U_minus_, t - epsilon);
+            bc.projectBdrToDofs(U_, t);
+            bc.projectBdrToDofs(U_plus_, t + epsilon);
           }
 
-          bool implicit = (c0 != 0.0 || c1 != 0.0);
+          bool implicit = (c0_ != 0.0 || c1_ != 0.0);
           if (implicit) {
             if (enforcement_method_ == DirichletEnforcementMethod::DirectControl) {
-              d2U_dt2 = (U - u) / c0;
-              dU_dt   = du_dt;
-              U       = u;
+              d2U_dt2_ = (U_ - u_) / c0_;
+              dU_dt_   = du_dt_;
+              U_       = u_;
             }
 
             if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {
-              d2U_dt2 = (dU_dt - du_dt) / c1;
-              dU_dt   = du_dt;
-              U       = u;
+              d2U_dt2_ = (dU_dt_ - du_dt_) / c1_;
+              dU_dt_   = du_dt_;
+              U_       = u_;
             }
 
             if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
-              d2U_dt2 = (U_minus - 2.0 * U + U_plus) / (epsilon * epsilon);
-              dU_dt   = (U_plus - U_minus) / (2.0 * epsilon) - c1 * d2U_dt2;
-              U       = U - c0 * d2U_dt2;
+              d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
+              dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon) - c1_ * d2U_dt2_;
+              U_       = U_ - c0_ * d2U_dt2_;
             }
           } else {
-            d2U_dt2 = (U_minus - 2.0 * U + U_plus) / (epsilon * epsilon);
-            dU_dt   = (U_plus - U_minus) / (2.0 * epsilon);
+            d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
+            dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon);
           }
 
           auto constrained_dofs = bcs_.allEssentialDofs();
-          u.SetSubVector(constrained_dofs, 0.0);
-          U.SetSubVectorComplement(constrained_dofs, 0.0);
-          u += U;
+          u_.SetSubVector(constrained_dofs, 0.0);
+          U_.SetSubVectorComplement(constrained_dofs, 0.0);
+          u_ += U_;
 
-          du_dt.SetSubVector(constrained_dofs, 0.0);
-          dU_dt.SetSubVectorComplement(constrained_dofs, 0.0);
-          du_dt += dU_dt;
+          du_dt_.SetSubVector(constrained_dofs, 0.0);
+          dU_dt_.SetSubVectorComplement(constrained_dofs, 0.0);
+          du_dt_ += dU_dt_;
 
           // use the previous solution as our starting guess
-          acceleration = previous;
+          acceleration = previous_;
           acceleration.SetSubVector(constrained_dofs, 0.0);
-          d2U_dt2.SetSubVectorComplement(constrained_dofs, 0.0);
-          acceleration += d2U_dt2;
+          d2U_dt2_.SetSubVectorComplement(constrained_dofs, 0.0);
+          acceleration += d2U_dt2_;
 
-          nonlin_solver_.Mult(zero, acceleration);
+          nonlin_solver_.Mult(zero_, acceleration);
           SLIC_WARNING_IF(!nonlin_solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
-          previous = acceleration;
+          previous_ = acceleration;
         });
 
     second_order_ode_solver_->Init(ode2);
@@ -300,7 +313,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
   mesh_->NewNodes(*reference_nodes_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    nonlin_solver_.Mult(zero, displacement_.trueVec());
+    nonlin_solver_.Mult(zero_, displacement_.trueVec());
   } else {
     second_order_ode_solver_->Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }
