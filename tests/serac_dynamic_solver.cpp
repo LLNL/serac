@@ -239,8 +239,8 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(1.4225, x_norm, 0.0001);
+  EXPECT_NEAR(0.2252, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
