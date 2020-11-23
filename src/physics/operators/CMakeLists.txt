@@ -8,9 +8,11 @@ set(physics_operators_headers odes.hpp stdfunction_operator.hpp)
 
 set(physics_operators_depends infrastructure physics_utilities numerics fmt mfem mpi axom)
 
-add_library(physics_operators ${physics_operators_headers})
-
-set_target_properties(physics_operators PROPERTIES LINKER_LANGUAGE CXX)
+blt_add_library(
+   NAME        physics_operators
+   HEADERS     ${physics_operators_headers}
+   DEPENDS_ON  ${physics_operators_depends}
+   )
 
 target_include_directories(physics_operators INTERFACE 
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
