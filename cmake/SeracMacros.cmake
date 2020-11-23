@@ -82,6 +82,10 @@ macro(serac_add_code_checks)
                                 CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
                                 SRC_FILES         ${_test_sources})
 
+    blt_add_code_coverage_target( NAME   ${arg_PREFIX}_coverage
+                                  RUNNER ${CMAKE_MAKE_PROGRAM} test
+                                  SOURCE_DIRECTORIES ${CMAKE_SOURCE_DIR}/src )
+
 endmacro(serac_add_code_checks)
 
 #------------------------------------------------------------------------------
