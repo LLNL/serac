@@ -56,6 +56,8 @@ public:
     f_(t, c0, c1, u, du_dt, d2u_dt2);
   }
 
+ private:
+
   /**
    * @brief the function that is used to implement mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
    */
@@ -105,5 +107,7 @@ public:
   /**
    * @brief the function that is used to implement mfem::TDO::Mult and mfem::TDO::ImplicitSolve
    */
+
+ private:
   std::function<TypeSignature> f_;
 };

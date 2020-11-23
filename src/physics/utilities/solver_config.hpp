@@ -34,6 +34,9 @@ enum class OutputType
  */
 enum class TimestepMethod
 {
+  QuasiStatic,
+
+  // options for first order ODEs
   BackwardEuler,
   SDIRK33,
   ForwardEuler,
@@ -44,8 +47,8 @@ enum class TimestepMethod
   ImplicitMidpoint,
   SDIRK23,
   SDIRK34,
-  QuasiStatic,
 
+  // options for second order ODEs
   HHTAlpha,
   WBZAlpha,
   AverageAcceleration,
@@ -54,9 +57,10 @@ enum class TimestepMethod
   FoxGoodwin
 };
 
-// this enum describes the which way to
-// enforce the time-varying constraint
-//   u(t) == U(t)
+/**
+ * @brief this enum describes which way to enforce the time-varying constraint u(t) == U(t)
+ */
+
 enum class DirichletEnforcementMethod
 {
   // satisfies u(t+dt) == U(t+dt)
