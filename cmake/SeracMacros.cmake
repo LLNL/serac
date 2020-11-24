@@ -81,10 +81,14 @@ macro(serac_add_code_checks)
     blt_add_clang_tidy_target(  NAME              ${arg_PREFIX}_guidelines_check_tests
                                 CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
                                 SRC_FILES         ${_test_sources})
+    if (ENABLE_COVERAGE)
+        blt_add_code_coverage_target( NAME   ${arg_PREFIX}_coverage
+                                    RUNNER ${CMAKE_MAKE_PROGRAM} test
+                                    SOURCE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src )
 
-    blt_add_code_coverage_target( NAME   ${arg_PREFIX}_coverage
-                                  RUNNER ${CMAKE_MAKE_PROGRAM} test
-                                  SOURCE_DIRECTORIES ${CMAKE_SOURCE_DIR}/src )
+        add_custom_command( TARGET ${arg_PREFIX}_coverage POST_BUILD
+                            COMMAND python3 ${PROJECT_SOURCE_DIR}/scripts/azure-pipelines/lcov_cobertura.py ${PROJECT_BINARY_DIR}/.info.cleaned --demangle -o ${PROJECT_SOURCE_DIR}/coverage.xml )
+    endif()
 
 endmacro(serac_add_code_checks)
 

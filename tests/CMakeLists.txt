@@ -58,7 +58,8 @@ if (ENABLE_GTEST)
         mesh_generation.cpp
         copy_elision.cpp
         mfem_array_std_algo.cpp
-        expr_templates.cpp)
+        expr_templates.cpp
+        serac_error_handling.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)
