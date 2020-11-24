@@ -105,11 +105,12 @@ class Serac(CMakePackage, CudaPackage):
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")
     depends_on('doxygen', when="+devtools")
+    depends_on("llvm+clang@10.0.0", when="+devtools")
     depends_on('python', when="+devtools")
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.1.0p1~shared+metis+superlu-dist+lapack+mpi+netcdf",
+    debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -138,12 +139,26 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("conduit@0.5.1p1~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
-    depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
+    # Unconditional for now until concretizer fixed
+    depends_on("netcdf-c@4.7.4~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
 
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
+
+    # Libraries that have a GPU variant
+    depends_on("amgx@2.1.x", when="+cuda")
+    cuda_deps = ["mfem", "axom"]
+    for dep in cuda_deps:
+        depends_on("{0}+cuda".format(dep), when="+cuda")
+
+    for sm_ in CudaPackage.cuda_arch_values:
+        depends_on('mfem+amgx cuda_arch=sm_{0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
+        depends_on('axom cuda_arch={0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
+        
 
     phases = ['hostconfig', 'cmake', 'build',' install']
 
@@ -410,11 +425,8 @@ class Serac(CMakePackage, CudaPackage):
                 path_replacements[devtools_root] = "${DEVTOOLS_ROOT}"
                 cfg.write("# Root directory for generated developer tools\n")
                 cfg.write(cmake_cache_entry("DEVTOOLS_ROOT",devtools_root))
-	
-        if spec.satisfies('target=ppc64le:'):
-            cfg.write("# Docs dont work on blueos machines, there is a prompt that waits for user input\n")
-            cfg.write(cmake_cache_option("ENABLE_DOCS", False))
-        elif "doxygen" in spec or "py-sphinx" in spec:
+
+        if "doxygen" in spec or "py-sphinx" in spec:
             cfg.write(cmake_cache_option("ENABLE_DOCS", True))
 
             if "doxygen" in spec:
@@ -427,18 +439,19 @@ class Serac(CMakePackage, CudaPackage):
         else:
             cfg.write(cmake_cache_option("ENABLE_DOCS", False))
 
-        lc_clangformatpath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format"
-        # This works only with Ubuntu + Debian - other distros (Arch/Fedora) use
-        # /usr/bin/clang-format which would require actually running the executable to grab the version
-        apt_clangformatpath = "/usr/bin/clang-format-10"
-        if os.path.exists(lc_clangformatpath):
-            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", lc_clangformatpath))
-        elif os.path.exists(apt_clangformatpath):
-            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE", apt_clangformatpath))
+        # Only turn on clang tools support if devtools is on
+        if "+devtools" in spec:
+            clang_fmt_path = spec['llvm'].prefix.bin.join('clang-format')
+            cfg.write(cmake_cache_entry("CLANGFORMAT_EXECUTABLE",
+                                        clang_fmt_path))
 
-        clangtidypath = "/usr/tce/packages/clang/clang-10.0.0/bin/clang-tidy"
-        if os.path.exists(clangtidypath):
-            cfg.write(cmake_cache_entry("CLANGTIDY_EXECUTABLE", clangtidypath))
+            clang_tidy_path = spec['llvm'].prefix.bin.join('clang-tidy')
+            cfg.write(cmake_cache_entry("CLANGTIDY_EXECUTABLE",
+                                        clang_tidy_path))
+        else:
+            cfg.write("# Clang tools disabled due to disabled devtools\n")
+            cfg.write(cmake_cache_option("ENABLE_CLANGFORMAT", False))
+            cfg.write(cmake_cache_option("ENABLE_CLANGTIDY", False))
 
         if "cppcheck" in spec:
             cppcheck_bin_dir = get_spec_path(spec, "cppcheck", path_replacements, use_bin=True)

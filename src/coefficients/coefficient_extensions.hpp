@@ -5,13 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file stdfunction_coefficient.hpp
+ * @file coefficient_extensions.hpp
  *
- * @brief MFEM coefficients and helper functions based on std::functions
+ * @brief Extensions of MFEM's coefficient interface and helper functions
  */
 
-#ifndef STD_FUNCTION_COEFFICIENT_HPP
-#define STD_FUNCTION_COEFFICIENT_HPP
+#ifndef COEFFICIENT_EXTENSIONS_HPP
+#define COEFFICIENT_EXTENSIONS_HPP
 
 #include <functional>
 #include <memory>
@@ -20,99 +20,6 @@
 #include "numerics/expr_template_ops.hpp"
 
 namespace serac {
-
-/**
- * @brief StdFunctionCoefficient is an easy way to make an mfem::Coefficient
- *  using a lambda
- *
- * This is a place holder until the coefficient of the same name is merged into
- * mfem.
- */
-class StdFunctionCoefficient : public mfem::Coefficient {
-public:
-  /**
-   * @brief Constructor that takes in a time-independent function of space that returns a double
-   *
-   * @param[in] func: a function of space and time that returns a double
-   */
-  StdFunctionCoefficient(std::function<double(mfem::Vector&)> func);
-
-  /**
-   * @brief Constructor that takes in a time-dependent function of space that returns a double
-   *
-   * @param[in] func: a function of space and time that returns a double
-   */
-  StdFunctionCoefficient(std::function<double(mfem::Vector&, double)> func);
-
-  /**
-   * @brief Evaluate the coefficient at a quadrature point
-   *
-   * @param[in] Tr The element transformation for the evaluation
-   * @param[in] ip The integration point for the evaluation
-   * @return The value of the coefficient at the quadrature point
-   */
-  virtual double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip);
-
-  bool is_time_dependent() const { return is_time_dependent_; }
-
-private:
-  /**
-   * @brief The function to evaluate for the coefficient
-   */
-  std::function<double(mfem::Vector&, double)> func_;
-  bool                                         is_time_dependent_;
-};
-
-/**
- * @brief StdFunctionVectorCoefficient is an easy way to make an
- * mfem::VectorCoefficient using a lambda
- */
-class StdFunctionVectorCoefficient : public mfem::VectorCoefficient {
-public:
-  /**
-   * @brief StdFunctionVectorCoefficient is an easy way to make an
-   * mfem::Coefficient using a lambda
-   *
-   * @param[in] dim The dimension of the VectorCoefficient
-   * @param[in] func Is a function that matches the following prototype
-   * void(mfem::Vector &, mfem::Vector &). The first argument of the function is
-   * the position, and the second argument is the output of the function.
-   */
-
-  /**
-   * @brief Constructor that takes in a time-independent function of space that returns a vector
-   *
-   * @param[in] dim: number of components in the output vector
-   * @param[in] func: a function of space and time that returns a double
-   */
-  StdFunctionVectorCoefficient(int dim, std::function<void(mfem::Vector&, mfem::Vector&)> func);
-
-  /**
-   * @brief Constructor that takes in a time-dependent function of space that returns a double
-   *
-   * @param[in] dim: number of components in the output vector
-   * @param[in] func: a function of space and time that returns a double
-   */
-  StdFunctionVectorCoefficient(int dim, std::function<void(mfem::Vector&, mfem::Vector&, double)> func);
-
-  /**
-   * @brief Evaluate the coefficient at a quadrature point
-   *
-   * @param[out] V The evaluated coefficient vector at the quadrature point
-   * @param[in] T The element transformation for the evaluation
-   * @param[in] ip The integration point for the evaluation
-   */
-  virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
-
-  bool is_time_dependent() const { return is_time_dependent_; }
-
-private:
-  /**
-   * @brief The function to evaluate for the coefficient
-   */
-  std::function<void(mfem::Vector&, mfem::Vector&, double)> func_;
-  bool                                                      is_time_dependent_;
-};
 
 /**
  * @brief MakeTrueEssList takes in a FESpace, a vector coefficient, and produces a list

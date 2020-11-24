@@ -109,6 +109,16 @@ else()
     endif()
 
     list(APPEND MFEM_LIBRARIES ${mfem_tpl_lnk_flags})
+
+    if(mfem_cfg_file_txt MATCHES "MFEM_USE_CUDA += YES")
+        if(NOT ENABLE_CUDA)
+            message(WARNING "MFEM was built with CUDA but CUDA is not enabled")
+        endif()
+        list(APPEND MFEM_INCLUDE_DIRS ${CUDA_INCLUDE_DIRS})
+        list(APPEND MFEM_LIBRARIES ${CMAKE_CUDA_LINK_FLAGS})
+        list(APPEND MFEM_LIBRARIES ${CUDA_LIBRARIES})
+        list(APPEND MFEM_LIBRARIES ${CUDA_CUBLAS_LIBRARIES})
+    endif()
 endif()
 
 include(FindPackageHandleStandardArgs)

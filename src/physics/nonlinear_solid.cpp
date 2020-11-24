@@ -17,9 +17,9 @@ constexpr int NUM_FIELDS = 2;
 
 NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
-      velocity_(*mesh, FEStateOptions{.order = order, .name = "velocity"}),
-      displacement_(*mesh, FEStateOptions{.order = order, .name = "displacement"}),
-      residual(displacement_.space().TrueVSize())
+      velocity_(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"}),
+      displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"}),
+      residual_(displacement_.space().TrueVSize())
 {
   state_.push_back(velocity_);
   state_.push_back(displacement_);
@@ -38,7 +38,10 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   true_offset[0]             = 0;
   true_offset[1]             = true_size;
   true_offset[2]             = 2 * true_size;
-  block_                     = std::make_unique<mfem::BlockVector>(true_offset);
+
+  // This will be "host-std" without CUDA, which is "the usual" - operator new[]/delete[]
+  // If an accelerator is configured, then that gets used instead
+  block_ = std::make_unique<mfem::BlockVector>(true_offset, mfem::Device::GetDeviceMemoryType());
 
   block_->GetBlockView(1, displacement_.trueVec());
   displacement_.trueVec() = 0.0;
@@ -125,18 +128,18 @@ void NonlinearSolid::setVelocity(mfem::VectorCoefficient& velo_state)
 void NonlinearSolid::completeSetup()
 {
   // Define the nonlinear form
-  H = displacement_.createOnSpace<mfem::ParNonlinearForm>();
+  H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    H->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
+    H_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
   } else {
-    H->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
+    H_->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
   }
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
-    H->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()), nat_bc_data.markers());
+    H_->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()), nat_bc_data.markers());
   }
 
   // Build the dof array lookup tables
@@ -153,17 +156,19 @@ void NonlinearSolid::completeSetup()
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
-    M = displacement_.createOnSpace<mfem::ParBilinearForm>();
-    M->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
-    M->Assemble(0);
-    M->Finalize(0);
+    M_ = displacement_.createOnSpace<mfem::ParBilinearForm>();
+    M_->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
+    M_->Assemble(0);
+    M_->Finalize(0);
 
-    M_mat.reset(M->ParallelAssemble());
+    M_mat_.reset(M_->ParallelAssemble());
 
-    C = displacement_.createOnSpace<mfem::ParBilinearForm>();
-    C->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
-    C->Assemble(0);
-    C->Finalize(0);
+    C_ = displacement_.createOnSpace<mfem::ParBilinearForm>();
+    C_->AddDomainIntegrator(new mfem::VectorDiffusionIntegrator(*viscosity_));
+    C_->Assemble(0);
+    C_->Finalize(0);
+
+    C_mat_.reset(C_->ParallelAssemble());
   }
 
   // We are assuming that the ODE is prescribing the
@@ -174,51 +179,47 @@ void NonlinearSolid::completeSetup()
   // prescribed acceleration values are not modified by
   // the nonlinear solve.
   nonlin_solver_.nonlinearSolver().iterative_mode = true;
-  nonlin_solver_.SetOperator(residual);
+  nonlin_solver_.SetOperator(residual_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
 
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    residual = StdFunctionOperator(displacement_.space().TrueVSize(),
+    residual_ = StdFunctionOperator(displacement_.space().TrueVSize(),
 
     // residual function
     [this](const mfem::Vector& u, mfem::Vector& r) mutable {
-      H->Mult(u, r);  // r := H(u)
+      H_->Mult(u, r);  // r := H(u)
       r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
     },
 
     // gradient of residual function
     [this](const mfem::Vector& u) mutable -> mfem::Operator& {
-      auto& J = dynamic_cast<mfem::HypreParMatrix&>(H->GetGradient(u));
+      auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
       bcs_.eliminateAllEssentialDofsFromMatrix(J);
       return J;
     });
-
 
   } else {
     // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
-    residual = StdFunctionOperator(displacement_.space().TrueVSize(),
+    residual_ = StdFunctionOperator(displacement_.space().TrueVSize(),
 
     // residual function
     [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) mutable {
-      // TODO: we should avoid re-assembling this when not required
-      C_mat.reset(C->ParallelAssemble());
-
-      r = (*M_mat) * d2u_dt2 + (*C_mat) * (du_dt_ + c1_ * d2u_dt2) + (*H) * (x_ + u_ + c0_ * d2u_dt2);
+      r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (x_ + u_ + c0_ * d2u_dt2);
       r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
     },
 
     // gradient of residual function
     [this](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
       // J = M + c1 * C + c0 * H(u_predicted)
-      auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M->SpMat(), c1_, C->SpMat()));
-      localJ->Add(c0_, H->GetLocalGradient(x_ + u_ + c0_ * d2u_dt2));
-      J_mat.reset(M->ParallelAssemble(localJ.get()));
-      bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat);
-      return *J_mat;
+      auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_mat_, c1_, C_mat_));
+      localJ->Add(c0_, H_->GetLocalGradient(x_ + u_ + c0_ * d2u_dt2));
+      J_mat_.reset(M_->ParallelAssemble(localJ.get()));
+      bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat_);
+      return *J_mat_;
     });
 
     ode2 = SecondOrderODE(
@@ -353,6 +354,9 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 
   auto& solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(solver_table);
+
+  auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
+  serac::input::BoundaryConditionInputInfo::defineInputFileSchema(bc_table);
 }
 
 }  // namespace serac
@@ -376,6 +380,11 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   // neo-Hookean material parameters
   result.mu = base["mu"];
   result.K  = base["K"];
+
+  auto bdr_map = base["boundary_conds"].get<std::unordered_map<int, serac::input::BoundaryConditionInputInfo>>();
+  for (const auto& [idx, val] : bdr_map) {
+    result.boundary_conditions.push_back(val);
+  }
 
   return result;
 }

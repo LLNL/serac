@@ -25,10 +25,14 @@ namespace cli {
 /**
  * @brief Defines command line options and parses the found values.
  *
+ * @param[in] argc Argument count
+ * @param[in] argv Argument vector
  * @param[in] rank MPI rank of the current node
+ * @param[in] app_description Description of application to be printed by usage
  * @return map of all given command line options
  */
-std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], int rank);
+std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], int rank,
+                                                            std::string app_description);
 
 /**
  * @brief Prints all given command line options to the screen.

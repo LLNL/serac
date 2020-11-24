@@ -5,50 +5,11 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 // # Author: Jonathan Wong @ LLNL.
 
-#include "coefficients/stdfunction_coefficient.hpp"
+#include "coefficients/coefficient_extensions.hpp"
 
 #include "infrastructure/logger.hpp"
 
 namespace serac {
-
-StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector&)> func)
-    : func_([=](mfem::Vector& v, double /* t */) { return func(v); }), is_time_dependent_(false)
-{
-}
-StdFunctionCoefficient::StdFunctionCoefficient(std::function<double(mfem::Vector&, double)> func)
-    : func_(func), is_time_dependent_(true)
-{
-}
-
-double StdFunctionCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
-{
-  mfem::Vector transip(Tr.GetSpaceDim());
-  Tr.Transform(ip, transip);
-  return func_(transip, GetTime());
-}
-
-StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(int                                               dim,
-                                                           std::function<void(mfem::Vector&, mfem::Vector&)> func)
-    : mfem::VectorCoefficient(dim),
-      func_([=](mfem::Vector& v, mfem::Vector& w, double /* t */) { return func(v, w); }),
-      is_time_dependent_(false)
-{
-}
-
-StdFunctionVectorCoefficient::StdFunctionVectorCoefficient(
-    int dim, std::function<void(mfem::Vector&, mfem::Vector&, double)> func)
-    : mfem::VectorCoefficient(dim), func_(func), is_time_dependent_(true)
-{
-}
-
-void StdFunctionVectorCoefficient::Eval(mfem::Vector& V, mfem::ElementTransformation& T,
-                                        const mfem::IntegrationPoint& ip)
-{
-  mfem::Vector transip(T.GetSpaceDim());
-  V.SetSize(vdim);
-  T.Transform(ip, transip);
-  func_(transip, V, GetTime());
-}
 
 mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c)
 {

@@ -117,6 +117,12 @@ packages:
     externals:
     - spec: cmake
       prefix: /usr/tce/packages/cmake/cmake-3.14.5
+  llvm:
+    version: [10.0.0]
+    buildable: false
+    externals:
+    - spec: llvm+clang
+      prefix: /usr/tce/packages/clang/clang-10.0.0
   python:
     buildable: false
     externals:

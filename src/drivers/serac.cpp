@@ -62,7 +62,8 @@ int main(int argc, char* argv[])
   auto [num_procs, rank] = serac::initialize(argc, argv);
 
   // Handle Command line
-  std::unordered_map<std::string, std::string> cli_opts = serac::cli::defineAndParse(argc, argv, rank);
+  std::unordered_map<std::string, std::string> cli_opts =
+      serac::cli::defineAndParse(argc, argv, rank, "Serac: a high order nonlinear thermomechanical simulation code");
   serac::cli::printGiven(cli_opts, rank);
 
   // Read input file
@@ -108,14 +109,10 @@ int main(int argc, char* argv[])
   solid_solver.setDisplacement(defo_coef);
   solid_solver.setVelocity(velo_coef);
 
-  std::set<int> ess_bdr = {1};
-
   // define the displacement vector
   mfem::Vector disp(dim);
   disp           = 0.0;
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
-
-  std::set<int> trac_bdr = {2};
 
   // loading parameters
   // define the traction vector
@@ -123,8 +120,15 @@ int main(int argc, char* argv[])
   auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
-  solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
-  solid_solver.setTractionBCs(trac_bdr, traction_coef);
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement") {
+      solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
+    } else if (bc.name == "traction") {
+      solid_solver.setTractionBCs(bc.attrs, traction_coef);
+    } else {
+      SLIC_WARNING_ROOT(rank, "Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
 
   // Set the time step method
   solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);

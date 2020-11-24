@@ -65,7 +65,7 @@ find_package(axom REQUIRED
 #------------------------------------------------------------------------------
 # MFEM
 #------------------------------------------------------------------------------
-include(cmake/thirdparty/FindMFEM.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
 
 
 #------------------------------------------------------------------------------
@@ -74,15 +74,9 @@ include(cmake/thirdparty/FindMFEM.cmake)
 if(TRIBOL_DIR)
     serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
 
-    set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
-
-    set(_target_file ${TRIBOL_DIR}/lib/cmake/tribol-targets.cmake)
-
-    if(NOT EXISTS ${_target_file})
-        message(FATAL_ERROR "Could not find Tribol CMake exported target file (${_target_file})")
-    endif()
-
-    include(${_target_file})
+    find_package(tribol REQUIRED
+                        NO_DEFAULT_PATH 
+                        PATHS ${TRIBOL_DIR}/lib/cmake)
 
     if(TARGET tribol)
         message(STATUS "Tribol CMake exported library loaded: tribol")
@@ -91,6 +85,7 @@ if(TRIBOL_DIR)
     endif()
 
     # Set include dir to system
+    set(TRIBOL_INCLUDE_DIR ${TRIBOL_DIR}/include)
     set_property(TARGET tribol
                  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                  ${TRIBOL_INCLUDE_DIR})
@@ -126,7 +121,7 @@ endif()
 #------------------------------------------------------------------------------
 if(PETSC_DIR)
     serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
-    include(cmake/thirdparty/FindPETSc.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
     message(STATUS "PETSc support is ON")
     set(PETSC_FOUND TRUE CACHE BOOL "")
 else()

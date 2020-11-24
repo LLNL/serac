@@ -234,7 +234,8 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
     cfg_output_file = pjoin(test_root,"output.log.%s.configure.txt" % host_config_root)
     print("[starting configure of %s]" % host_config)
     print("[log file: %s]" % cfg_output_file)
-    res = sexe("python config-build.py  -bp %s -hc %s -ip %s" % (build_dir, host_config, install_dir),
+    # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
+    res = sexe("python config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s" % (build_dir, host_config, install_dir),
                output_file = cfg_output_file,
                echo=True)
     
@@ -285,22 +286,23 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
         print("[ERROR: Tests for host-config: %s failed]\n" % host_config)
         return res
 
+    # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
     # build the docs
-    docs_output_file = pjoin(build_dir,"output.log.make.docs.txt")
-    print("[starting docs generation]")
-    print("[log file: %s]" % docs_output_file)
+    # docs_output_file = pjoin(build_dir,"output.log.make.docs.txt")
+    # print("[starting docs generation]")
+    # print("[log file: %s]" % docs_output_file)
 
-    res = sexe("cd %s && make docs " % build_dir,
-               output_file = docs_output_file,
-               echo=True)
+    # res = sexe("cd %s && make docs " % build_dir,
+    #            output_file = docs_output_file,
+    #            echo=True)
 
-    if report_to_stdout:
-        with open(docs_output_file, 'r') as docs_out:
-            print(docs_out.read())
+    # if report_to_stdout:
+    #     with open(docs_output_file, 'r') as docs_out:
+    #         print(docs_out.read())
 
-    if res != 0:
-        print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
-        return res
+    # if res != 0:
+    #     print("[ERROR: Docs generation for host-config: %s failed]\n\n" % host_config)
+    #     return res
 
     # build the examples
     res = test_examples(host_config, build_dir, install_dir, report_to_stdout)
@@ -397,7 +399,7 @@ def set_group_and_perms(directory):
     return 0
 
 
-def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False):
+def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, mirror_location = ''):
     project_file = "scripts/uberenv/project.json"
     config_dir = "scripts/uberenv/spack_configs/{0}".format(get_system_type())
 
@@ -411,10 +413,13 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     print("]\n")
 
     # Use shared network mirror location otherwise create local one
-    mirror_dir = get_shared_mirror_dir()
-    if not os.path.exists(mirror_dir):
-        mirror_dir = pjoin(builds_dir,"mirror")
-    print("[using mirror location: %s]" % mirror_dir)
+    if mirror_location:
+        mirror_dir = mirror_location
+    else:
+        mirror_dir = get_shared_mirror_dir()
+        if not os.path.exists(mirror_dir):
+            mirror_dir = pjoin(builds_dir,"mirror")
+        print("[using mirror location: %s]" % mirror_dir)
 
     # unique install location
     prefix = pjoin(builds_dir, get_system_type())

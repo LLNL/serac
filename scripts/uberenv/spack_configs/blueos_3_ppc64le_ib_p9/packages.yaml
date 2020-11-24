@@ -57,10 +57,10 @@ packages:
   # LLNL blueos CUDA
   cuda:
     externals:
-      - spec: cuda@11.0.182
-        prefix: /usr/tce/packages/cuda/cuda-11.0.182
       - spec: cuda@11.0.2
         prefix: /usr/tce/packages/cuda/cuda-11.0.2
+      - spec: cuda@11.1.1
+        prefix: /usr/tce/packages/cuda/cuda-11.1.1
     buildable: false
 
   # LLNL blueos mpi
@@ -134,6 +134,12 @@ packages:
       - spec: doxygen@1.8.17
         prefix: /usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/latest/doxygen-1.8.17
     buildable: false
+  llvm:
+    version: [10.0.0]
+    buildable: false
+    externals:
+    - spec: llvm+clang
+      prefix: /usr/tce/packages/clang/clang-10.0.0
   python:
     version: [3.8.2]
     externals:

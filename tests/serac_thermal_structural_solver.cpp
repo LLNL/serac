@@ -8,7 +8,7 @@
 
 #include <fstream>
 
-#include "coefficients/stdfunction_coefficient.hpp"
+#include "coefficients/coefficient_extensions.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
 #include "physics/thermal_solid.hpp"
@@ -35,9 +35,10 @@ TEST(dynamic_solver, dyn_solve)
     y(1) = x(0) * 0.01;
   });
 
-  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector&, mfem::Vector& v) { v = 0.0; });
+  auto velo =
+      std::make_shared<mfem::VectorFunctionCoefficient>(dim, [](const mfem::Vector&, mfem::Vector& v) { v = 0.0; });
 
-  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) {
+  auto temp = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) {
     double temp = 2.0;
     if (x(0) < 1.0) {
       temp = 5.0;
