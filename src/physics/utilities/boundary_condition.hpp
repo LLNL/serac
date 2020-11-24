@@ -201,26 +201,6 @@ public:
   void projectBdrToDofs(mfem::Vector& dof_values, const double time, const bool should_be_scalar = true) const;
 
   /**
-   * @brief Allocates an integrator of type "Integrator" on the heap,
-   * constructing it with the boundary condition's vector coefficient,
-   * intended to be passed to mfem::*LinearForm::Add*Integrator
-   * @return An owning pointer to the new integrator
-   * @pre Requires Integrator::Integrator(mfem::VectorCoefficient&)
-   */
-  template <typename Integrator>
-  std::unique_ptr<Integrator> newVecIntegrator() const;
-
-  /**
-   * @brief Allocates an integrator of type "Integrator" on the heap,
-   * constructing it with the boundary condition's coefficient,
-   * intended to be passed to mfem::*LinearForm::Add*Integrator
-   * @return An owning pointer to the new integrator
-   * @pre Requires Integrator::Integrator(mfem::Coefficient&)
-   */
-  template <typename Integrator>
-  std::unique_ptr<Integrator> newIntegrator() const;
-
-  /**
    * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
    * from a stiffness matrix
    * @param[inout] k_mat The stiffness matrix to eliminate from,

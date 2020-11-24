@@ -179,7 +179,6 @@ public:
   virtual ~NonlinearSolid();
 
 protected:
-
   /**
    * @brief Velocity field
    */
@@ -226,18 +225,80 @@ protected:
   std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
 
   /**
+   * @brief Mass matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
+
+  /**
+   * @brief Damping matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> C_mat_;
+
+  /**
+   * @brief Jacobian (or "effective mass") matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> J_mat_;
+
+  /**
+   * @brief Mass bilinear form object
+   */
+  std::unique_ptr<mfem::ParBilinearForm> M_;
+
+  /**
+   * @brief Damping bilinear form object
+   */
+  std::unique_ptr<mfem::ParBilinearForm> C_;
+
+  /**
+   * @brief Stiffness bilinear form object
+   */
+  std::unique_ptr<mfem::ParNonlinearForm> H_;
+
+  /**
+   * @brief zero vector of the appropriate dimensions
+   */
+  mfem::Vector zero_;
+
+  /**
    * @brief Nonlinear system solver instance
    */
   EquationSolver nonlin_solver_;
 
+  /**
+   * @brief mfem::Operator for computing the weighted residual
+   */
   StdFunctionOperator residual_;
 
-  // predicted displacements and velocities
+  /**
+   * @brief the system of ordinary differential equations for the physics module
+   */
+  SecondOrderODE ode2_;
+
+  /**
+   * @brief alias for the reference mesh coordinates
+   *
+   *   this is used to correct for the fact that mfem's hyperelastic
+   *   material model is based on the nodal positions rather than nodal displacements
+   */
   mfem::Vector x_;
+
+  /**
+   * @brief used to communicate the ODE solver's predicted displacement to the residual operator
+   */
   mfem::Vector u_;
+
+  /**
+   * @brief used to communicate the ODE solver's predicted velocity to the residual operator
+   */
   mfem::Vector du_dt_;
+
+  /**
+   * @brief the previous acceleration, used as a starting guess for newton's method
+   */
   mfem::Vector previous_;
 
+  // TODO: wrap mfem's second order ODE solvers to incorporate this boundary condition info
+  //
   // temporary values used to compute finite difference approximations
   // to the derivatives of constrained degrees of freedom
   mfem::Vector U_minus_;
@@ -248,20 +309,8 @@ protected:
   mfem::Vector dU_dt_;
   mfem::Vector d2U_dt2_;
 
-  mfem::Vector zero_;
-
   // current and previous timesteps
   double c0_, c1_;
-
-  std::unique_ptr<mfem::ParBilinearForm>  M_;
-  std::unique_ptr<mfem::ParBilinearForm>  C_;
-  std::unique_ptr<mfem::ParNonlinearForm> H_;
-
-  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
-  std::unique_ptr<mfem::HypreParMatrix> C_mat_;
-  std::unique_ptr<mfem::HypreParMatrix> J_mat_;
-
-  SecondOrderODE ode2;
 };
 
 }  // namespace serac

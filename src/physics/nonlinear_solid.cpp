@@ -33,7 +33,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
   displacement_.trueVec() = 0.0;
-  velocity_.trueVec() = 0.0;
+  velocity_.trueVec()     = 0.0;
 
   const auto& lin_params = params.H_lin_params;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -127,7 +127,8 @@ void NonlinearSolid::completeSetup()
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
-    H_->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()), nat_bc_data.markers());
+    H_->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
+                             nat_bc_data.markers());
   }
 
   // Build the dof array lookup tables
@@ -170,49 +171,50 @@ void NonlinearSolid::completeSetup()
   nonlin_solver_.SetOperator(residual_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-
     // the quasistatic case is entirely described by the residual,
     // there is no ordinary differential equation
-    residual_ = StdFunctionOperator(displacement_.space().TrueVSize(),
+    residual_ = StdFunctionOperator(
+        displacement_.space().TrueVSize(),
 
-    // residual function
-    [this](const mfem::Vector& u, mfem::Vector& r) mutable {
-      H_->Mult(u, r);  // r := H(u)
-      r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-    },
+        // residual function
+        [this](const mfem::Vector& u, mfem::Vector& r) mutable {
+          H_->Mult(u, r);  // r := H(u)
+          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+        },
 
-    // gradient of residual function
-    [this](const mfem::Vector& u) mutable -> mfem::Operator& {
-      auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
-      bcs_.eliminateAllEssentialDofsFromMatrix(J);
-      return J;
-    });
+        // gradient of residual function
+        [this](const mfem::Vector& u) mutable -> mfem::Operator& {
+          auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
+          bcs_.eliminateAllEssentialDofsFromMatrix(J);
+          return J;
+        });
 
   } else {
     // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
-    residual_ = StdFunctionOperator(displacement_.space().TrueVSize(),
+    residual_ = StdFunctionOperator(
+        displacement_.space().TrueVSize(),
 
-    // residual function
-    [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) mutable {
-      r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (x_ + u_ + c0_ * d2u_dt2);
-      r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-    },
+        // residual function
+        [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) mutable {
+          r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (x_ + u_ + c0_ * d2u_dt2);
+          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+        },
 
-    // gradient of residual function
-    [this](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
-      // J = M + c1 * C + c0 * H(u_predicted)
-      auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_->SpMat(), c1_, C_->SpMat()));
-      localJ->Add(c0_, H_->GetLocalGradient(x_ + u_ + c0_ * d2u_dt2));
-      J_mat_.reset(M_->ParallelAssemble(localJ.get()));
-      bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat_);
-      return *J_mat_;
-    });
+        // gradient of residual function
+        [this](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
+          // J = M + c1 * C + c0 * H(u_predicted)
+          auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_->SpMat(), c1_, C_->SpMat()));
+          localJ->Add(c0_, H_->GetLocalGradient(x_ + u_ + c0_ * d2u_dt2));
+          J_mat_.reset(M_->ParallelAssemble(localJ.get()));
+          bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat_);
+          return *J_mat_;
+        });
 
-    ode2 = SecondOrderODE(
+    ode2_ = SecondOrderODE(
         u_.Size(), [this](const double t, const double fac0, const double fac1, const mfem::Vector& displacement,
-                      const mfem::Vector& velocity, mfem::Vector& acceleration) {
+                          const mfem::Vector& velocity, mfem::Vector& acceleration) {
           // this is intended to be temporary
           // Ideally, epsilon should be "small" relative to the characteristic time
           // of the ODE, but we can't ensure that at present (we don't have a
@@ -226,7 +228,7 @@ void NonlinearSolid::completeSetup()
           u_     = displacement;
           du_dt_ = velocity;
 
-          // TODO: take care of this last part of the ODE definition 
+          // TODO: take care of this last part of the ODE definition
           //       automatically by wrapping mfem's ODE solvers
           //
           // evaluate the constraint functions at a 3-point
@@ -287,7 +289,7 @@ void NonlinearSolid::completeSetup()
           previous_ = acceleration;
         });
 
-    second_order_ode_solver_->Init(ode2);
+    second_order_ode_solver_->Init(ode2_);
   }
 }
 

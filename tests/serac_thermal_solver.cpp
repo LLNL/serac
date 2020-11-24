@@ -298,8 +298,9 @@ TEST(thermal_solver_rework, dyn_imp_solve_time_varying)
   ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicParameters());
 
   // by construction, f(x, y, t) satisfies df_dt == d2f_dx2 + d2f_dy2
-  auto f = std::make_shared<mfem::FunctionCoefficient>(
-      [](const mfem::Vector & x, double t) { return 1.0 + 6.0 * x[0] * t - 2.0 * x[1] * t + (x[0] - x[1]) * x[0] * x[0]; });
+  auto f = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x, double t) {
+    return 1.0 + 6.0 * x[0] * t - 2.0 * x[1] * t + (x[0] - x[1]) * x[0] * x[0];
+  });
 
   therm_solver.setTemperature(*f);
 

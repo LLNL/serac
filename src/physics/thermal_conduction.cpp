@@ -135,20 +135,21 @@ void ThermalConduction::completeSetup()
   temperature_.initializeTrueVec();
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    residual_ = StdFunctionOperator(temperature_.space().TrueVSize(),
-      
-    [this](const mfem::Vector& u, mfem::Vector& r) {
-      r = (*K_) * u;
-      r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-    },
+    residual_ = StdFunctionOperator(
+        temperature_.space().TrueVSize(),
 
-    [this](const mfem::Vector& /*du_dt*/) -> mfem::Operator& {
-      if (J_ == nullptr) {
-        J_.reset(K_form_->ParallelAssemble());
-        bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-      }
-      return *J_;
-    });
+        [this](const mfem::Vector& u, mfem::Vector& r) {
+          r = (*K_) * u;
+          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+        },
+
+        [this](const mfem::Vector & /*du_dt*/) -> mfem::Operator& {
+          if (J_ == nullptr) {
+            J_.reset(K_form_->ParallelAssemble());
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          }
+          return *J_;
+        });
 
   } else {
     // If dynamic, assemble the mass matrix
@@ -163,19 +164,20 @@ void ThermalConduction::completeSetup()
 
     M_.reset(M_form_->ParallelAssemble());
 
-    residual_ = StdFunctionOperator(temperature_.space().TrueVSize(),
-    [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-      r = (*M_) * du_dt + (*K_) * (u_ + dt_ * du_dt);
-      r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-    },
+    residual_ = StdFunctionOperator(
+        temperature_.space().TrueVSize(),
+        [this](const mfem::Vector& du_dt, mfem::Vector& r) {
+          r = (*M_) * du_dt + (*K_) * (u_ + dt_ * du_dt);
+          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+        },
 
-    [this](const mfem::Vector& /*du_dt*/) -> mfem::Operator& {
-      if (dt_ != previous_dt_) {
-        J_.reset(mfem::Add(1.0, *M_, dt_, *K_));
-        bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-      }
-      return *J_;
-    });
+        [this](const mfem::Vector & /*du_dt*/) -> mfem::Operator& {
+          if (dt_ != previous_dt_) {
+            J_.reset(mfem::Add(1.0, *M_, dt_, *K_));
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+          }
+          return *J_;
+        });
 
     ode_ = FirstOrderODE(temperature_.trueVec().Size(), [=](const double t, const double dt, const mfem::Vector& u,
                                                             mfem::Vector& du_dt) {
@@ -190,7 +192,7 @@ void ThermalConduction::completeSetup()
       dt_ = dt;
       u_  = u;
 
-      // TODO: take care of this last part of the ODE definition 
+      // TODO: take care of this last part of the ODE definition
       //       automatically by wrapping mfem's ODE solvers
       //
       // evaluate the constraint functions at a 3-point
