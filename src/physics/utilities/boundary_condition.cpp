@@ -159,12 +159,9 @@ mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
 
 void BoundaryCondition::verifyCoefficient() const
 {
-  if(std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_))
-  {
+  if (std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_)) {
     SLIC_ERROR_IF(component_ == -1, "A scalar coefficient must be applied to a single component");
-  }
-  else
-  {
+  } else {
     SLIC_ERROR_IF(component_ != -1, "A vector coefficient must be applied to a all components");
   }
 }

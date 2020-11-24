@@ -5,13 +5,15 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include <gtest/gtest.h>
+
 #include <exception>
 
-#include "physics/utilities/equation_solver.hpp"
-#include "physics/utilities/boundary_condition.hpp"
 #include "numerics/mesh_utils.hpp"
+#include "physics/utilities/boundary_condition.hpp"
+#include "physics/utilities/equation_solver.hpp"
 
-class SlicErrorException : public std::exception {};
+class SlicErrorException : public std::exception {
+};
 
 namespace serac {
 
@@ -35,10 +37,10 @@ TEST(serac_error_handling, equationsolver_amgx_not_available)
 
 TEST(serac_error_handling, bc_project_requires_state)
 {
-  auto mesh = buildDiskMesh(10);
-  int num_attrs = mesh->bdr_attributes.Max();
+  auto mesh      = buildDiskMesh(10);
+  int  num_attrs = mesh->bdr_attributes.Max();
 
-  auto coef = std::make_shared<mfem::ConstantCoefficient>();
+  auto              coef = std::make_shared<mfem::ConstantCoefficient>();
   BoundaryCondition bc(coef, 0, std::set<int>{1}, num_attrs);
   EXPECT_THROW(bc.project(), SlicErrorException);
 
@@ -56,11 +58,11 @@ TEST(serac_error_handling, bc_all_component_scalar_coef)
 TEST(serac_error_handling, bc_one_component_vector_coef)
 {
   mfem::Vector vec;
-  auto coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
+  auto         coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
   EXPECT_THROW(BoundaryCondition(coef, 0, std::set<int>{1}), SlicErrorException);
 }
 
-} // namespace serac
+}  // namespace serac
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
