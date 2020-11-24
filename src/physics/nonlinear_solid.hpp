@@ -179,15 +179,6 @@ public:
   virtual ~NonlinearSolid();
 
 protected:
-  /**
-   * @brief Extensible means of constructing the nonlinear quasistatic
-   * operator
-   *
-   * @param[in] H_form The nonlinear form
-   *
-   * @return An owning pointer to the operator
-   */
-  virtual std::unique_ptr<mfem::Operator> buildQuasistaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form);
 
   /**
    * @brief Velocity field
@@ -235,16 +226,11 @@ protected:
   std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
 
   /**
-   * @brief Solve the Quasi-static operator
-   */
-  virtual void quasiStaticSolve();
-
-  /**
    * @brief Nonlinear system solver instance
    */
   EquationSolver nonlin_solver_;
 
-  StdFunctionOperator residual;
+  StdFunctionOperator residual_;
 
   // predicted displacements and velocities
   mfem::Vector x_;
@@ -266,15 +252,14 @@ protected:
 
   // current and previous timesteps
   double c0_, c1_;
-  double dt0, dt1, dt0_previous, dt1_previous;
 
-  std::unique_ptr<mfem::ParBilinearForm>  M;
-  std::unique_ptr<mfem::ParBilinearForm>  C;
-  std::unique_ptr<mfem::ParNonlinearForm> H;
+  std::unique_ptr<mfem::ParBilinearForm>  M_;
+  std::unique_ptr<mfem::ParBilinearForm>  C_;
+  std::unique_ptr<mfem::ParNonlinearForm> H_;
 
-  std::unique_ptr<mfem::HypreParMatrix> M_mat;
-  std::unique_ptr<mfem::HypreParMatrix> C_mat;
-  std::unique_ptr<mfem::HypreParMatrix> J_mat;
+  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> C_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> J_mat_;
 
   SecondOrderODE ode2;
 };

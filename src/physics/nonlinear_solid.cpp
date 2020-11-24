@@ -32,21 +32,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-  // Initialize the true DOF vector
-  mfem::Array<int> true_offset(NUM_FIELDS + 1);
-  int              true_size = velocity_.space().TrueVSize();
-  true_offset[0]             = 0;
-  true_offset[1]             = true_size;
-  true_offset[2]             = 2 * true_size;
-
-  // This will be "host-std" without CUDA, which is "the usual" - operator new[]/delete[]
-  // If an accelerator is configured, then that gets used instead
-  block_ = std::make_unique<mfem::BlockVector>(true_offset, mfem::Device::GetDeviceMemoryType());
-
-  block_->GetBlockView(1, displacement_.trueVec());
   displacement_.trueVec() = 0.0;
-
-  block_->GetBlockView(0, velocity_.trueVec());
   velocity_.trueVec() = 0.0;
 
   const auto& lin_params = params.H_lin_params;
@@ -62,6 +48,8 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
   }
+
+  int true_size = velocity_.space().TrueVSize();
 
   u_.SetSize(true_size);
   du_dt_.SetSize(true_size);
@@ -215,7 +203,7 @@ void NonlinearSolid::completeSetup()
     // gradient of residual function
     [this](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
       // J = M + c1 * C + c0 * H(u_predicted)
-      auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_mat_, c1_, C_mat_));
+      auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_->SpMat(), c1_, C_->SpMat()));
       localJ->Add(c0_, H_->GetLocalGradient(x_ + u_ + c0_ * d2u_dt2));
       J_mat_.reset(M_->ParallelAssemble(localJ.get()));
       bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat_);
