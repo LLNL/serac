@@ -40,7 +40,7 @@ const NonlinearSolverParameters default_dyn_nonlinear_params = {
 const NonlinearSolid::SolverParameters default_dynamic = {
     default_dyn_linear_params, default_dyn_nonlinear_params,
     NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration,
-                                            DirichletEnforcementMethod::RateControl, default_dyn_oper_linear_params}};
+                                            DirichletEnforcementMethod::RateControl}};
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -128,7 +128,6 @@ TEST(dynamic_solver, dyn_direct_solve)
   // initialize the dynamic solver object
   auto solver_params                 = default_dynamic;
   solver_params.H_lin_params         = DirectSolverParameters{0};
-  solver_params.dyn_params->M_params = DirectSolverParameters{0};
   NonlinearSolid dyn_solver(1, pmesh, solver_params);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);

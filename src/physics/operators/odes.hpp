@@ -33,7 +33,7 @@ public:
    *
    * @param[in] n The number of components in each vector of the ODE
    * @param[in] f The function that describing how to solve for the second derivative, given the current state
-   *    its time derivative. The two functions
+   *    and its time derivative. The two functions
    *
    *      mfem::SecondOrderTimeDependentOperator::Mult and mfem::SecondOrderTimeDependentOperator::ImplicitSolve
    *      (described in more detail here:

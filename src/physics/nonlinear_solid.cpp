@@ -177,13 +177,13 @@ void NonlinearSolid::completeSetup()
         displacement_.space().TrueVSize(),
 
         // residual function
-        [this](const mfem::Vector& u, mfem::Vector& r) mutable {
+        [this](const mfem::Vector& u, mfem::Vector& r)  {
           H_->Mult(u, r);  // r := H(u)
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
         // gradient of residual function
-        [this](const mfem::Vector& u) mutable -> mfem::Operator& {
+        [this](const mfem::Vector& u)  -> mfem::Operator& {
           auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
           bcs_.eliminateAllEssentialDofsFromMatrix(J);
           return J;
@@ -197,13 +197,13 @@ void NonlinearSolid::completeSetup()
         displacement_.space().TrueVSize(),
 
         // residual function
-        [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) mutable {
+        [this](const mfem::Vector& d2u_dt2, mfem::Vector& r)  {
           r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (x_ + u_ + c0_ * d2u_dt2);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
         // gradient of residual function
-        [this](const mfem::Vector& d2u_dt2) mutable -> mfem::Operator& {
+        [this](const mfem::Vector& d2u_dt2)  -> mfem::Operator& {
           // J = M + c1 * C + c0 * H(u_predicted)
           auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_->SpMat(), c1_, C_->SpMat()));
           localJ->Add(c0_, H_->GetLocalGradient(x_ + u_ + c0_ * d2u_dt2));

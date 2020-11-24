@@ -72,21 +72,13 @@ TEST(dynamic_solver, dyn_solve)
 
   auto therm_params = ThermalConduction::defaultDynamicParameters();
 
-  const IterativeSolverParameters default_dyn_oper_linear_params = {
-      .rel_tol     = 1.0e-4,
-      .abs_tol     = 1.0e-8,
-      .print_level = 0,
-      .max_iter    = 500,
-      .lin_solver  = LinearSolver::GMRES,
-      .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-
   const NonlinearSolverParameters default_dyn_nonlinear_params = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
   const NonlinearSolid::SolverParameters default_dynamic = {
       default_dyn_linear_params, default_dyn_nonlinear_params,
       NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration,
-                                              DirichletEnforcementMethod::RateControl, default_dyn_oper_linear_params}};
+                                              DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);

@@ -49,18 +49,14 @@ void BoundaryCondition::project(FiniteElementState& state) const
                    [&space = std::as_const(state.space())](int tdof) { return space.VDofToDof(tdof); });
 
     // the only reason to store a VectorCoefficient is to act on all components
-    if (std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_)) {
+    if (is_vector_valued(coef_)) {
       auto vec_coef = std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
       state.gridFunc().ProjectCoefficient(*vec_coef, dof_list);
     } else {
       // an mfem::Coefficient could be used to describe a scalar-valued function, or
       // a single component of a vector-valued function
       auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(coef_);
-      if (component_ == -1) {
-        state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list);
-      } else {
-        state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, component_);
-      }
+      state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, std::max(0, component_));
     }
   }
 }

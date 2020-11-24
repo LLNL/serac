@@ -45,10 +45,10 @@ private:
   /**
    * @brief the function that is used to implement mfem::Operator::Mult
    */
-  mutable std::function<void(const mfem::Vector&, mfem::Vector&)> function_;
+  std::function<void(const mfem::Vector&, mfem::Vector&)> function_;
 
   /**
    * @brief the function that is used to implement mfem::Operator::GetGradient
    */
-  mutable std::function<mfem::Operator&(const mfem::Vector&)> jacobian_;
+  std::function<mfem::Operator&(const mfem::Vector&)> jacobian_;
 };

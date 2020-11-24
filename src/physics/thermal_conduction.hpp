@@ -38,7 +38,6 @@ public:
   struct DynamicSolverParameters {
     TimestepMethod             timestepper;
     DirichletEnforcementMethod enforcement_method;
-    LinearSolverParameters     M_params;
   };
 
   /**
@@ -69,15 +68,13 @@ public:
   static SolverParameters defaultQuasistaticParameters()
   {
     return {defaultLinearParameters(), defaultNonlinearParameters(),
-            DynamicSolverParameters{TimestepMethod::QuasiStatic, DirichletEnforcementMethod::RateControl,
-                                    defaultLinearParameters()}};
+            DynamicSolverParameters{TimestepMethod::QuasiStatic, DirichletEnforcementMethod::RateControl}};
   }
 
   static SolverParameters defaultDynamicParameters()
   {
     return {defaultLinearParameters(), defaultNonlinearParameters(),
-            DynamicSolverParameters{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl,
-                                    defaultLinearParameters()}};
+            DynamicSolverParameters{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
   }
 
   /**
@@ -237,19 +234,11 @@ protected:
    */
   std::unique_ptr<mfem::Coefficient> mass_coef_;
 
-  /**
-   * @brief Configuration for dynamic equation solvers
-   */
-  std::optional<LinearSolverParameters> dyn_M_params_;
-  std::optional<LinearSolverParameters> dyn_T_params_;
-
   FirstOrderODE ode_;
 
   StdFunctionOperator residual_;
 
   EquationSolver nonlin_solver_;
-  EquationSolver mass_solver_;
-  EquationSolver stiffness_solver_;
 
   double                                dt_, previous_dt_;
   std::unique_ptr<mfem::HypreParMatrix> J_;

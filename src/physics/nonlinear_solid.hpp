@@ -36,7 +36,6 @@ public:
   struct DynamicSolverParameters {
     TimestepMethod             timestepper;
     DirichletEnforcementMethod enforcement_method;
-    LinearSolverParameters     M_params;
   };
   /**
    * @brief A configuration variant for the various solves
