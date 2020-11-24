@@ -49,12 +49,6 @@ TEST(serac_error_handling, bc_project_requires_state)
   EXPECT_NO_THROW(bc.project());
 }
 
-TEST(serac_error_handling, bc_all_component_scalar_coef)
-{
-  auto coef = std::make_shared<mfem::ConstantCoefficient>();
-  EXPECT_THROW(BoundaryCondition(coef, -1, std::set<int>{1}), SlicErrorException);
-}
-
 TEST(serac_error_handling, bc_one_component_vector_coef)
 {
   mfem::Vector vec;

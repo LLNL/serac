@@ -255,10 +255,6 @@ private:
    * The first element is the enum val, the second is the hash of the corresponding enum type
    */
   std::optional<std::pair<int, std::size_t>> tag_;
-  /**
-   * @brief Verifies that a coefficient matches its component
-   */
-  void verifyCoefficient() const;
 };
 
 }  // namespace serac

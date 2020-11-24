@@ -14,7 +14,9 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int componen
                                      const int num_attrs)
     : coef_(coef), component_(component), markers_(num_attrs)
 {
-  verifyCoefficient();
+  if (std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
+    SLIC_ERROR_IF(component_ != -1, "A vector coefficient must be applied to all components");
+  }
   markers_ = 0;
   for (const int attr : attrs) {
     SLIC_ASSERT_MSG(attr <= num_attrs, "Attribute specified larger than what is found in the mesh.");
@@ -25,7 +27,9 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int componen
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs)
     : coef_(coef), component_(component), markers_(0), true_dofs_(true_dofs)
 {
-  verifyCoefficient();
+  if (std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
+    SLIC_ERROR_IF(component_ != -1, "A vector coefficient must be applied to all components");
+  }
 }
 
 void BoundaryCondition::setTrueDofs(const mfem::Array<int> dofs) { true_dofs_ = dofs; }
@@ -50,7 +54,8 @@ void BoundaryCondition::project(FiniteElementState& state) const
     std::transform(tdofs.begin(), tdofs.end(), dof_list.begin(),
                    [&space = std::as_const(state.space())](int tdof) { return space.VDofToDof(tdof); });
 
-    if (component_ == -1) {
+    const int vdim = state.gridFunc().VectorDim();
+    if ((component_ == -1) && (vdim > 1)) {
       // If it contains all components, project the vector
       auto vec_coef = std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
       SLIC_ASSERT_MSG(vec_coef,
@@ -61,7 +66,8 @@ void BoundaryCondition::project(FiniteElementState& state) const
       auto scalar_coef = std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
       SLIC_ASSERT_MSG(scalar_coef,
                       "Essential boundary condition contained a single component but had a non-scalar coefficient.");
-      state.gridFunc().ProjectCoefficient(**scalar_coef, dof_list, component_);
+      const int component = (vdim == 1) ? 0 : component_;
+      state.gridFunc().ProjectCoefficient(**scalar_coef, dof_list, component);
     }
   }
 }
@@ -155,15 +161,6 @@ mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
   SLIC_ERROR_IF(!vec_coef,
                 "Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
   return **vec_coef;
-}
-
-void BoundaryCondition::verifyCoefficient() const
-{
-  if (std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_)) {
-    SLIC_ERROR_IF(component_ == -1, "A scalar coefficient must be applied to a single component");
-  } else {
-    SLIC_ERROR_IF(component_ != -1, "A vector coefficient must be applied to all components");
-  }
 }
 
 }  // namespace serac
