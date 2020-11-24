@@ -51,7 +51,7 @@ void ThermalConduction::setTemperature(mfem::Coefficient& temp)
 void ThermalConduction::setTemperatureBCs(const std::set<int>&               temp_bdr,
                                           std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
-  bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_);
+  bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_, 0);
 }
 
 void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
