@@ -98,7 +98,7 @@ endif()
 # MFEMSidreDataCollection.hpp
 find_path(
     _mfemdatacollection_found MFEMSidreDataCollection.hpp
-    PATHS ${AXOM_DIR}/include/axom/sidre
+    PATHS ${AXOM_DIR}/include/axom/sidre/core
     NO_DEFAULT_PATH
     NO_CMAKE_ENVIRONMENT_PATH
     NO_CMAKE_PATH
@@ -106,7 +106,7 @@ find_path(
     NO_CMAKE_SYSTEM_PATH
 )
 if (NOT _mfemdatacollection_found)
-    message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/sidre/MFEMSidreDataCollection.hpp"
+    message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/sidre/core/MFEMSidreDataCollection.hpp"
                         "\nTry building Axom with '-DAXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION=ON'\n ")
 endif()
 
