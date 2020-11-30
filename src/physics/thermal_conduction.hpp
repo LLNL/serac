@@ -254,23 +254,23 @@ protected:
   EquationSolver nonlin_solver_;
 
   /**
-   * @brief assembled sparse matrix for the Jacobian 
+   * @brief assembled sparse matrix for the Jacobian
    * at the predicted temperature
    */
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-  double dt_, previous_dt_;
+  double       dt_, previous_dt_;
   mfem::Vector zero_;
 
   /**
    * @brief predicted temperature true dofs
-   */ 
+   */
   mfem::Vector u_;
 
   /**
    * @brief previous value of du_dt used to prime the pump for the
    * nonlinear solver
-   */ 
+   */
   mfem::Vector previous_;
 
   // TODO delete these with ODE refactor
@@ -278,7 +278,6 @@ protected:
   mfem::Vector U_;
   mfem::Vector U_plus_;
   mfem::Vector dU_dt_;
-
 };
 
 }  // namespace serac
