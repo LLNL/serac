@@ -26,14 +26,6 @@ const IterativeSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e
                                                              .lin_solver  = LinearSolver::GMRES,
                                                              .prec        = HypreBoomerAMGPrec{}};
 
-const IterativeSolverParameters default_dyn_oper_linear_params = {
-    .rel_tol     = 1.0e-4,
-    .abs_tol     = 1.0e-8,
-    .print_level = 0,
-    .max_iter    = 500,
-    .lin_solver  = LinearSolver::GMRES,
-    .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-
 const NonlinearSolverParameters default_dyn_nonlinear_params = {
     .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
