@@ -52,7 +52,7 @@ set_property(TARGET conduit::conduit
 # Axom
 #------------------------------------------------------------------------------
 if(NOT AXOM_DIR)
-  MESSAGE(FATAL_ERROR "Could not find Axom. Axom requires explicit AXOM_DIR.")
+    MESSAGE(FATAL_ERROR "Could not find Axom. Axom requires explicit AXOM_DIR.")
 endif()
 
 serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
@@ -60,6 +60,55 @@ serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
 find_package(axom REQUIRED
                   NO_DEFAULT_PATH 
                   PATHS ${AXOM_DIR}/lib/cmake)
+
+#
+# Check for optional Axom headers that are required for Serac
+#
+
+# sol.hpp
+find_path(
+    _sol_found sol.hpp
+    PATHS ${AXOM_DIR}/include/sol
+    NO_DEFAULT_PATH
+    NO_CMAKE_ENVIRONMENT_PATH
+    NO_CMAKE_PATH
+    NO_SYSTEM_ENVIRONMENT_PATH
+    NO_CMAKE_SYSTEM_PATH
+)
+if (NOT _sol_found)
+    message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: sol/sol.hpp"
+                        "\nTry building Axom with '-DBLT_CXX_STD=c++14' or higher\n ")
+endif()
+
+# LuaReader.hpp
+find_path(
+    _luareader_found LuaReader.hpp
+    PATHS ${AXOM_DIR}/include/axom/inlet
+    NO_DEFAULT_PATH
+    NO_CMAKE_ENVIRONMENT_PATH
+    NO_CMAKE_PATH
+    NO_SYSTEM_ENVIRONMENT_PATH
+    NO_CMAKE_SYSTEM_PATH
+)
+if (NOT _luareader_found)
+    message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/inlet/LuaReader.hpp"
+                        "\nTry building Axom with '-DLUA_DIR=path/to/lua/install'\n ")
+endif()
+
+# MFEMSidreDataCollection.hpp
+find_path(
+    _mfemdatacollection_found MFEMSidreDataCollection.hpp
+    PATHS ${AXOM_DIR}/include/axom/sidre/core
+    NO_DEFAULT_PATH
+    NO_CMAKE_ENVIRONMENT_PATH
+    NO_CMAKE_PATH
+    NO_SYSTEM_ENVIRONMENT_PATH
+    NO_CMAKE_SYSTEM_PATH
+)
+if (NOT _mfemdatacollection_found)
+    message(FATAL_ERROR "Given AXOM_DIR did not contain a required header: axom/sidre/core/MFEMSidreDataCollection.hpp"
+                        "\nTry building Axom with '-DAXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION=ON'\n ")
+endif()
 
 
 #------------------------------------------------------------------------------
