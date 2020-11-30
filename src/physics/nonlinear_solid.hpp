@@ -17,7 +17,7 @@
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/operators/nonlinear_solid_operators.hpp"
-#include "coefficients/whatever_coefficient.hpp"
+#include "coefficients/coefficient.hpp"
 
 namespace serac {
 
@@ -120,7 +120,7 @@ public:
    *
    * @param[in] visc_coef The abstract viscosity coefficient
    */
-  void setViscosity(whatever_coefficient visc_coef);
+  void setViscosity(coefficient visc_coef);
 
   /**
    * @brief Set the hyperelastic material parameters
@@ -206,7 +206,7 @@ protected:
   /**
    * @brief The viscosity coefficient
    */
-  whatever_coefficient viscosity_;
+  coefficient viscosity_;
 
   /**
    * @brief The hyperelastic material model

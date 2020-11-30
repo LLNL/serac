@@ -89,7 +89,7 @@ void NonlinearSolid::setHyperelasticMaterialParameters(const double mu, const do
   model_ = std::make_unique<mfem::NeoHookeanModel>(mu, K);
 }
 
-void NonlinearSolid::setViscosity(whatever_coefficient visc_coef) { viscosity_ = std::move(visc_coef); }
+void NonlinearSolid::setViscosity(coefficient visc_coef) { viscosity_ = std::move(visc_coef); }
 
 void NonlinearSolid::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
