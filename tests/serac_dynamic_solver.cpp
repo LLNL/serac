@@ -118,8 +118,8 @@ TEST(dynamic_solver, dyn_direct_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
-  auto solver_params                 = default_dynamic;
-  solver_params.H_lin_params         = DirectSolverParameters{0};
+  auto solver_params         = default_dynamic;
+  solver_params.H_lin_params = DirectSolverParameters{0};
   NonlinearSolid dyn_solver(1, pmesh, solver_params);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
