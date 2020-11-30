@@ -42,7 +42,7 @@ public:
    *    are consolidated into a single std::function, where
    *
    *      mfem::SecondOrderTimeDependentOperator::Mult corresponds to the case where fac0, fac1 are both zero
-   *      mfem::SecondOrderTimeDependentOperator::Mult corresponds to the case where either of fac0, fac1 are nonzero
+   *      mfem::SecondOrderTimeDependentOperator::ImplicitSolve corresponds to the case where either of fac0, fac1 are nonzero
    *
    */
   SecondOrderODE(int n, std::function<TypeSignature> f) : mfem::SecondOrderTimeDependentOperator(n, 0.0), f_(f) {}
@@ -97,7 +97,7 @@ public:
    *    are consolidated into a single std::function, where
    *
    *      mfem::TimeDependentOperator::Mult corresponds to the case where dt is zero
-   *      mfem::TimeDependentOperator::Mult corresponds to the case where dt is nonzero
+   *      mfem::TimeDependentOperator::ImplicitSolve corresponds to the case where dt is nonzero
    *
    */
   FirstOrderODE(int n, std::function<TypeSignature> f) : mfem::TimeDependentOperator(n, 0.0), f_(f) {}
