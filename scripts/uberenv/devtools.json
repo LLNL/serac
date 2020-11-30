@@ -4,6 +4,6 @@
 "package_final_phase" : "",
 "package_source_dir" : "../..",
 "spack_url": "https://github.com/spack/spack",
-"spack_commit": "ccf94ded67e688770dc8d0388d8f75d0d6641e1e",
+"spack_commit": "e75b76f433016a720027b41c0d36cdb9ef24a827",
 "spack_activate" : {"py-sphinx" : [""]}
 }

@@ -78,3 +78,6 @@ config:
   # If not set, all available cores are used by default.
   # for uberenv, limit build_jobs to 8
   build_jobs: 8
+
+  # Attempt to use the new concretizer
+  concretizer: clingo

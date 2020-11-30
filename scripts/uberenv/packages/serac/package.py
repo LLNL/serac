@@ -97,9 +97,9 @@ class Serac(CMakePackage, CudaPackage):
     #        description='Enable Cubit/Genesis reader')
     variant('sundials', default=False,
             description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
-    variant("umpire",   default=False,
+    variant('umpire',   default=False,
             description="Build with portable memory access support")
-    variant("raja",     default=False,
+    variant('raja',     default=False,
             description="Build with portable kernel execution support")
 
     # Basic dependencies
@@ -131,6 +131,10 @@ class Serac(CMakePackage, CudaPackage):
     # Needs to be first due to a bug with the Spack concretizer
     depends_on("hdf5+hl@1.8.21~shared")
 
+    # Axom enables RAJA/Umpire by default
+    depends_on("axom~raja", when="~raja")
+    depends_on("axom~umpire", when="~umpire")
+
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran+mfem~shared",
                         "metis@5.1.0~shared",
@@ -145,10 +149,6 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("superlu-dist@6.1.1~shared")
     # Unconditional for now until concretizer fixed
     depends_on("netcdf-c@4.7.4~shared")
-
-    # Axom enables RAJA/Umpire by default
-    depends_on("axom~raja", when="~raja")
-    depends_on("axom~umpire", when="~umpire")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
