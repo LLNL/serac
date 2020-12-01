@@ -178,11 +178,14 @@ public:
   void SetCouplingScheme(serac::CouplingScheme coupling) { coupling_ = coupling; };
 
   /**
-   * @brief Set the timestepping method for both the termal and structural solvers
+   * @brief Set the time integration method
    *
-   * @param[in] timestepper The timestepping method
+   * @param[in] timestepper The timestepping method for the solver
+   * @param[in] enforcement_method The method of enforcing time-varying dirichlet boundary conditions
    */
-  void setTimestepper(const serac::TimestepMethod timestepper) override;
+  virtual void setTimestepper(const serac::TimestepMethod             timestepper,
+                              const serac::DirichletEnforcementMethod enforcement_method =
+                                  serac::DirichletEnforcementMethod::RateControl) override;
 
   /**
    * @brief Complete the initialization and allocation of the data structures.

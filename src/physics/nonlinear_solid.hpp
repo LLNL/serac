@@ -16,7 +16,8 @@
 #include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
-#include "physics/operators/nonlinear_solid_operators.hpp"
+#include "physics/operators/odes.hpp"
+#include "physics/operators/stdfunction_operator.hpp"
 
 namespace serac {
 
@@ -33,8 +34,8 @@ public:
    * @brief A timestep method and config for the M solver
    */
   struct DynamicSolverParameters {
-    TimestepMethod         timestepper;
-    LinearSolverParameters M_params;
+    TimestepMethod             timestepper;
+    DirichletEnforcementMethod enforcement_method;
   };
   /**
    * @brief A configuration variant for the various solves
@@ -178,16 +179,6 @@ public:
 
 protected:
   /**
-   * @brief Extensible means of constructing the nonlinear quasistatic
-   * operator
-   *
-   * @param[in] H_form The nonlinear form
-   *
-   * @return An owning pointer to the operator
-   */
-  virtual std::unique_ptr<mfem::Operator> buildQuasistaticOperator(std::unique_ptr<mfem::ParNonlinearForm> H_form);
-
-  /**
    * @brief Velocity field
    */
   FiniteElementState velocity_;
@@ -233,14 +224,92 @@ protected:
   std::unique_ptr<mfem::ParGridFunction> deformed_nodes_;
 
   /**
-   * @brief Solve the Quasi-static operator
+   * @brief Mass matrix
    */
-  virtual void quasiStaticSolve();
+  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
+
+  /**
+   * @brief Damping matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> C_mat_;
+
+  /**
+   * @brief Jacobian (or "effective mass") matrix
+   */
+  std::unique_ptr<mfem::HypreParMatrix> J_mat_;
+
+  /**
+   * @brief Mass bilinear form object
+   */
+  std::unique_ptr<mfem::ParBilinearForm> M_;
+
+  /**
+   * @brief Damping bilinear form object
+   */
+  std::unique_ptr<mfem::ParBilinearForm> C_;
+
+  /**
+   * @brief Stiffness bilinear form object
+   */
+  std::unique_ptr<mfem::ParNonlinearForm> H_;
+
+  /**
+   * @brief zero vector of the appropriate dimensions
+   */
+  mfem::Vector zero_;
 
   /**
    * @brief Nonlinear system solver instance
    */
   EquationSolver nonlin_solver_;
+
+  /**
+   * @brief mfem::Operator for computing the weighted residual
+   */
+  StdFunctionOperator residual_;
+
+  /**
+   * @brief the system of ordinary differential equations for the physics module
+   */
+  SecondOrderODE ode2_;
+
+  /**
+   * @brief alias for the reference mesh coordinates
+   *
+   *   this is used to correct for the fact that mfem's hyperelastic
+   *   material model is based on the nodal positions rather than nodal displacements
+   */
+  mfem::Vector x_;
+
+  /**
+   * @brief used to communicate the ODE solver's predicted displacement to the residual operator
+   */
+  mfem::Vector u_;
+
+  /**
+   * @brief used to communicate the ODE solver's predicted velocity to the residual operator
+   */
+  mfem::Vector du_dt_;
+
+  /**
+   * @brief the previous acceleration, used as a starting guess for newton's method
+   */
+  mfem::Vector previous_;
+
+  // TODO: wrap mfem's second order ODE solvers to incorporate this boundary condition info
+  //
+  // temporary values used to compute finite difference approximations
+  // to the derivatives of constrained degrees of freedom
+  mfem::Vector U_minus_;
+  mfem::Vector U_;
+  mfem::Vector U_plus_;
+
+  // time derivatives of the constraint function
+  mfem::Vector dU_dt_;
+  mfem::Vector d2U_dt2_;
+
+  // current and previous timesteps
+  double c0_, c1_;
 };
 
 }  // namespace serac

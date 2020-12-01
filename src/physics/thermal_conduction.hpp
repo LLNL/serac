@@ -15,7 +15,8 @@
 
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
-#include "physics/operators/thermal_operators.hpp"
+#include "physics/operators/odes.hpp"
+#include "physics/operators/stdfunction_operator.hpp"
 
 namespace serac {
 
@@ -32,20 +33,49 @@ namespace serac {
 class ThermalConduction : public BasePhysics {
 public:
   /**
-   * @brief A timestep method and configs for the M and T solvers
+   * @brief A timestep method and config for the M solver
    */
   struct DynamicSolverParameters {
-    TimestepMethod         timestepper;
-    LinearSolverParameters M_params;
-    LinearSolverParameters T_params;
+    TimestepMethod             timestepper;
+    DirichletEnforcementMethod enforcement_method;
   };
 
   /**
    * @brief A configuration variant for the various solves
-   * Either quasistatic with a single config for the K solver, or
-   * time-dependent with timestep and M/T params
+   * Either quasistatic, or time-dependent with timestep and M params
    */
-  using SolverParameters = std::variant<LinearSolverParameters, DynamicSolverParameters>;
+  struct SolverParameters {
+    LinearSolverParameters                 T_lin_params;
+    NonlinearSolverParameters              T_nonlin_params;
+    std::optional<DynamicSolverParameters> dyn_params = std::nullopt;
+  };
+
+  static IterativeSolverParameters defaultLinearParameters()
+  {
+    return {.rel_tol     = 1.0e-6,
+            .abs_tol     = 1.0e-12,
+            .print_level = 0,
+            .max_iter    = 200,
+            .lin_solver  = LinearSolver::CG,
+            .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+  }
+
+  static NonlinearSolverParameters defaultNonlinearParameters()
+  {
+    return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
+  }
+
+  static SolverParameters defaultQuasistaticParameters()
+  {
+    return {defaultLinearParameters(), defaultNonlinearParameters(),
+            DynamicSolverParameters{TimestepMethod::QuasiStatic, DirichletEnforcementMethod::RateControl}};
+  }
+
+  static SolverParameters defaultDynamicParameters()
+  {
+    return {defaultLinearParameters(), defaultNonlinearParameters(),
+            DynamicSolverParameters{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+  }
 
   /**
    * @brief Construct a new Thermal Solver object
@@ -54,7 +84,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    * @param[in] params The system solver parameters
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverParameters& params);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -154,12 +184,12 @@ protected:
   /**
    * @brief Assembled mass matrix
    */
-  std::unique_ptr<mfem::HypreParMatrix> M_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> M_;
 
   /**
    * @brief Assembled stiffness matrix
    */
-  std::unique_ptr<mfem::HypreParMatrix> K_mat_;
+  std::unique_ptr<mfem::HypreParMatrix> K_;
 
   /**
    * @brief Thermal load linear form
@@ -205,25 +235,49 @@ protected:
   std::unique_ptr<mfem::Coefficient> mass_coef_;
 
   /**
-   * @brief Configuration for dynamic equation solvers
+   * @brief the ordinary differential equation that describes
+   * how to solve for the time derivative of temperature, given
+   * the current temperature and source terms
    */
-  std::optional<LinearSolverParameters> dyn_M_params_;
-  std::optional<LinearSolverParameters> dyn_T_params_;
+  FirstOrderODE ode_;
 
   /**
-   * @brief Time integration operator
+   * @brief mfem::Operator that describes the weight residual
+   * and its gradient with respect to temperature
    */
-  std::unique_ptr<DynamicConductionOperator> dyn_oper_;
+  StdFunctionOperator residual_;
 
   /**
-   * @brief Solve the Quasi-static operator
+   * @brief the specific methods and tolerances specified to
+   * solve the nonlinear residual equations
    */
-  void quasiStaticSolve();
+  EquationSolver nonlin_solver_;
 
   /**
-   * @brief System solver instance for quasistatic K solver
+   * @brief assembled sparse matrix for the Jacobian
+   * at the predicted temperature
    */
-  std::optional<EquationSolver> K_inv_;
+  std::unique_ptr<mfem::HypreParMatrix> J_;
+
+  double       dt_, previous_dt_;
+  mfem::Vector zero_;
+
+  /**
+   * @brief predicted temperature true dofs
+   */
+  mfem::Vector u_;
+
+  /**
+   * @brief previous value of du_dt used to prime the pump for the
+   * nonlinear solver
+   */
+  mfem::Vector previous_;
+
+  // TODO delete these with ODE refactor
+  mfem::Vector U_minus_;
+  mfem::Vector U_;
+  mfem::Vector U_plus_;
+  mfem::Vector dU_dt_;
 };
 
 }  // namespace serac

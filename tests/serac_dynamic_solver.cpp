@@ -26,20 +26,13 @@ const IterativeSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e
                                                              .lin_solver  = LinearSolver::GMRES,
                                                              .prec        = HypreBoomerAMGPrec{}};
 
-const IterativeSolverParameters default_dyn_oper_linear_params = {
-    .rel_tol     = 1.0e-4,
-    .abs_tol     = 1.0e-8,
-    .print_level = 0,
-    .max_iter    = 500,
-    .lin_solver  = LinearSolver::GMRES,
-    .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-
 const NonlinearSolverParameters default_dyn_nonlinear_params = {
     .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
 const NonlinearSolid::SolverParameters default_dynamic = {
     default_dyn_linear_params, default_dyn_nonlinear_params,
-    NonlinearSolid::DynamicSolverParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
+    NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration,
+                                            DirichletEnforcementMethod::RateControl}};
 
 TEST(dynamic_solver, dyn_solve)
 {
@@ -74,7 +67,7 @@ TEST(dynamic_solver, dyn_solve)
 
   double t       = 0.0;
   double t_final = 6.0;
-  double dt      = 3.0;
+  double dt      = 1.0;
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -101,8 +94,8 @@ TEST(dynamic_solver, dyn_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(1.4225, x_norm, 0.0001);
+  EXPECT_NEAR(0.2252, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -125,16 +118,14 @@ TEST(dynamic_solver, dyn_direct_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // initialize the dynamic solver object
-  auto solver_params                 = default_dynamic;
-  solver_params.H_lin_params         = DirectSolverParameters{0};
-  solver_params.dyn_params->M_params = DirectSolverParameters{0};
+  auto solver_params         = default_dynamic;
+  solver_params.H_lin_params = DirectSolverParameters{0};
   NonlinearSolid dyn_solver(1, pmesh, solver_params);
   dyn_solver.setDisplacementBCs(ess_bdr, deform);
   dyn_solver.setHyperelasticMaterialParameters(0.25, 5.0);
   dyn_solver.setViscosity(std::move(visc));
   dyn_solver.setDisplacement(*deform);
   dyn_solver.setVelocity(*velo);
-  dyn_solver.setTimestepper(serac::TimestepMethod::SDIRK33);
 
   // Initialize the VisIt output
   dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");
@@ -144,7 +135,7 @@ TEST(dynamic_solver, dyn_direct_solve)
 
   double t       = 0.0;
   double t_final = 6.0;
-  double dt      = 3.0;
+  double dt      = 1.0;
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -171,8 +162,8 @@ TEST(dynamic_solver, dyn_direct_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(1.4225, x_norm, 0.0001);
+  EXPECT_NEAR(0.2252, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -215,7 +206,7 @@ TEST(dynamic_solver, dyn_linesearch_solve)
 
   double t       = 0.0;
   double t_final = 6.0;
-  double dt      = 3.0;
+  double dt      = 1.0;
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -242,8 +233,8 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(1.4225, x_norm, 0.0001);
+  EXPECT_NEAR(0.2252, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -286,7 +277,7 @@ TEST(dynamic_solver, dyn_amgx_solve)
 
   double t       = 0.0;
   double t_final = 6.0;
-  double dt      = 3.0;
+  double dt      = 1.0;
 
   // Ouput the initial state
   dyn_solver.outputState();
@@ -313,19 +304,14 @@ TEST(dynamic_solver, dyn_amgx_solve)
   double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
   double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(12.86733, x_norm, 0.0001);
-  EXPECT_NEAR(0.22298, v_norm, 0.0001);
+  EXPECT_NEAR(1.4225, x_norm, 0.0001);
+  EXPECT_NEAR(0.2252, v_norm, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
 #endif  // MFEM_USE_AMGX
 
-void initialDeformation(const mfem::Vector& x, mfem::Vector& y)
-{
-  // set the initial configuration to be the same as the reference, stress
-  // free, configuration
-  y = x;
-}
+void initialDeformation(const mfem::Vector& /*x*/, mfem::Vector& u) { u = 0.0; }
 
 void initialVelocity(const mfem::Vector& x, mfem::Vector& v)
 {

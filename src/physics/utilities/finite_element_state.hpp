@@ -29,6 +29,22 @@ namespace serac {
 using GeneralCoefficient = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 /**
+ * @brief convenience function for querying the type stored in a GeneralCoefficient
+ */
+inline bool is_scalar_valued(const GeneralCoefficient& coef)
+{
+  return std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef);
+}
+
+/**
+ * @brief convenience function for querying the type stored in a GeneralCoefficient
+ */
+inline bool is_vector_valued(const GeneralCoefficient& coef)
+{
+  return std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef);
+}
+
+/**
  * @brief Class for encapsulating the critical MFEM components of a solver
  *
  * Namely: Mesh, FiniteElementCollection, FiniteElementState,

@@ -192,6 +192,15 @@ public:
   void projectBdr(const double time, const bool should_be_scalar = true) const;
 
   /**
+   * @brief Projects the boundary condition over boundary to a DoF vector
+   * @param[in] time The time for the coefficient, used for time-varying coefficients
+   * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
+   * @pre A corresponding field (FiniteElementState) has been associated
+   * with the calling object via BoundaryCondition::setTrueDofs(FiniteElementState&)
+   */
+  void projectBdrToDofs(mfem::Vector& dof_values, const double time, const bool should_be_scalar = true) const;
+
+  /**
    * @brief Eliminates the rows and columns corresponding to the BC's true DOFS
    * from a stiffness matrix
    * @param[inout] k_mat The stiffness matrix to eliminate from,
