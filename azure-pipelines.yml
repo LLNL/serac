@@ -70,7 +70,9 @@ jobs:
   - checkout: self
     clean: true
     submodules: recursive
+    # https://docs.codecov.io/docs/testing-with-docker
   - script:  |
       echo " -e $TEST_TARGET -e $COMPILER -e $DO_COVERAGE_CHECK -e $CMAKE_EXTRA_FLAGS $(Compiler_ImageName) ./scripts/azure-pipelines/linux-check.sh"
-      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e DO_COVERAGE_CHECK -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/azure-pipelines/linux-check.sh
-    displayName: '$(TEST_TARGET) Style Check'
+      ci_env=`bash <(curl -s https://codecov.io/env)`
+      docker run --rm -v `pwd`:/home/serac/serac $ci_env -e TEST_TARGET -e DO_COVERAGE_CHECK -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/azure-pipelines/linux-check.sh
+    displayName: '$(TEST_TARGET) Coverage Check'
