@@ -221,8 +221,10 @@ IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(const
     params.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::Jacobi};
   } else if (prec_type == "L1JacobiSmoother") {
     params.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi};
-  } else if (prec_type == "AMG") {
+  } else if (prec_type == "HypreAMG") {
     params.prec = serac::HypreBoomerAMGPrec{};
+  } else if (prec_type == "AMGX") {
+    params.prec = serac::AMGXPrec{};
   } else if (prec_type == "BlockILU") {
     params.prec = serac::BlockILUPrec{};
   } else {

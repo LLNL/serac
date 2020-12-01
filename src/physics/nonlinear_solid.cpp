@@ -348,8 +348,8 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table,
 
   if (dynamic) {
     auto& mass_solver_table = table.addTable("mass_solver", "Parameters for mass matrix inversion");
-    serac::EquationSolver::defineInputFileSchema(mass_solver_table);
     mass_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
+    mass_solver_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
   }
 
   auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
@@ -358,7 +358,9 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table,
 
 }  // namespace serac
 
+using serac::DirichletEnforcementMethod;
 using serac::NonlinearSolid;
+using serac::TimestepMethod;
 
 NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const axom::inlet::Table& base)
 {
@@ -374,11 +376,22 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   if (base.contains("mass_solver")) {
     NonlinearSolid::DynamicSolverParameters dyn_params;
     auto                                    mass_solver = base["mass_solver"];
-    dyn_params.M_params                                 = mass_solver["linear"].get<serac::IterativeSolverParameters>();
-    std::string timestep_method                         = mass_solver["timestepper"];
-    // TODO: Implement all supported methods as part of an ODE schema
-    SLIC_ERROR_IF(timestep_method != "SDIRK33", "Unrecognized timestep method: " << timestep_method);
-    dyn_params.timestepper          = serac::TimestepMethod::SDIRK33;
+
+    // FIXME: Implement all supported methods as part of an ODE schema
+    const static std::map<std::string, TimestepMethod> timestep_methods = {
+        {"AverageAcceleration", TimestepMethod::AverageAcceleration}};
+    std::string timestep_method = mass_solver["timestepper"];
+    SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
+    dyn_params.timestepper = timestep_methods.at(timestep_method);
+
+    // FIXME: Implement all supported methods as part of an ODE schema
+    const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
+        {"RateControl", DirichletEnforcementMethod::RateControl}};
+    std::string enforcement_method = mass_solver["enforcement_method"];
+    SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
+                  "Unrecognized enforcement method: " << enforcement_method);
+    dyn_params.enforcement_method = enforcement_methods.at(enforcement_method);
+
     result.solver_params.dyn_params = std::move(dyn_params);
   }
 

@@ -1,10 +1,10 @@
 -- Comparison information
-expected_x_l2norm = 12.86733
-expected_v_l2norm = 0.22298
+expected_x_l2norm = 1.4225
+expected_v_l2norm = 0.2252
 epsilon = 0.0001
 
 -- Simulation time parameters
-dt      = 3.0
+dt      = 1.0
 t_final = 6.0
 
 main_mesh = {
@@ -24,7 +24,7 @@ nonlinear_solid = {
             max_iter    = 500,
             print_level = 0,
             solver_type = "gmres",
-            prec_type   = "AMG",
+            prec_type   = "HypreAMG",
         },
 
         nonlinear = {
@@ -37,15 +37,8 @@ nonlinear_solid = {
     },
 
     mass_solver = {
-        linear = {
-            rel_tol     = 1.0e-4,
-            abs_tol     = 1.0e-8,
-            max_iter    = 500,
-            print_level = 0,
-            solver_type = "gmres",
-            prec_type   = "JacobiSmoother",
-        },
-        timestepper = "SDIRK33",
+        timestepper = "AverageAcceleration",
+        enforcement_method = "RateControl",
     },
 
     -- polynomial interpolation order
