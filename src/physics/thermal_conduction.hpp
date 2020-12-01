@@ -85,7 +85,7 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void setConductivity(coefficient kappa);
+  void setConductivity(coefficient && kappa);
 
   /**
    * @brief Set the temperature state vector from a coefficient

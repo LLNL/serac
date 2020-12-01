@@ -56,7 +56,7 @@ void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_pt
   bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
 }
 
-void ThermalConduction::setConductivity(coefficient kappa)
+void ThermalConduction::setConductivity(coefficient && kappa)
 {
   // Set the conduction coefficient
   kappa_ = std::move(kappa);

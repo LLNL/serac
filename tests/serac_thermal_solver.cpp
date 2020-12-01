@@ -99,7 +99,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
 
   // Set the temperature BC in the thermal solver
   therm_solver.setTemperatureBCs(marked_1, u_0);
-  therm_solver.setTemperatureBCs(marked_2, u_1);
+  therm_solver.setTemperatureBCs(marked_2, u_0);
 
   therm_solver.setConductivity(0.5);
 
