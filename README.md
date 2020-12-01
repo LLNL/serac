@@ -4,6 +4,7 @@ Serac
 [![Build
 Status](https://dev.azure.com/llnl-serac/serac/_apis/build/status/LLNL.serac?branchName=develop)](https://dev.azure.com/llnl-serac/serac/_build/latest?definitionId=1&branchName=develop)
 [![Documentation Status](https://readthedocs.org/projects/serac/badge/?version=latest)](https://serac.readthedocs.io/en/latest/?badge=latest)
+[![codecov](https://codecov.io/gh/LLNL/serac/branch/master/graph/badge.svg?token=DO4KFMPNM0)](https://codecov.io/gh/LLNL/serac)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg)](./LICENSE)
 
 Serac is a 3D implicit nonlinear thermal-structural simulation code. Its primary purpose is to investigate multiphysics 
