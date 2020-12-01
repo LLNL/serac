@@ -60,10 +60,10 @@ jobs:
 - job: Check_Coverage
   variables:
     DO_COVERAGE_CHECK: 'yes'
-    VM_ImageName: 'ubuntu-18.04'
-    Compiler_ImageName: 'seracllnl/tpls:clang-10_12-01-20_14h-22m'
-    TEST_TARGET: 'linux_clang10'
-    HOST_CONFIG: 'docker-linux-ubuntu18.04-x86_64-clang@10.0.0'
+    VM_ImageName: 'ubuntu-16.04'
+    Compiler_ImageName: 'seracllnl/tpls:gcc-8_12-01-20_14h-22m'
+    TEST_TARGET: 'linux_gcc8'
+    HOST_CONFIG: 'docker-linux-ubuntu16.04-x86_64-gcc@8.1.0.cmake'
   pool:
       vmImage: $(VM_ImageName)
   steps:
