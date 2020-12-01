@@ -29,8 +29,9 @@ cmake_args="-DENABLE_CLANGTIDY=OFF"
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
     ls -l /usr/bin | grep gcov
-    gcc --version
-    cmake_args="$cmake_args -DENABLE_COVERAGE=ON -DGCOV_EXECUTABLE=/usr/bin/gcov-8"
+    ls -l /usr/bin | grep llvm-cov
+    ln -s `which llvm-cov` /home/serac/gcov
+    cmake_args="$cmake_args -DENABLE_COVERAGE=ON -DGCOV_EXECUTABLE=/home/serac/gcov"
 fi
 
 or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake $cmake_args
