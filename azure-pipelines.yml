@@ -11,12 +11,12 @@ jobs:
     matrix:
       linux_gcc8:
           VM_ImageName: 'ubuntu-16.04'
-          Compiler_ImageName: 'seracllnl/tpls:gcc-8_11-10-20_18h-25m'
+          Compiler_ImageName: 'seracllnl/tpls:gcc-8_12-01-20_14h-22m'
           TEST_TARGET: 'linux_gcc8'
           HOST_CONFIG: 'docker-linux-ubuntu16.04-x86_64-gcc@8.1.0.cmake'
       linux_clang10:
           VM_ImageName: 'ubuntu-18.04'
-          Compiler_ImageName: 'seracllnl/tpls:clang-10_11-10-20_18h-25m'
+          Compiler_ImageName: 'seracllnl/tpls:clang-10_12-01-20_14h-22m'
           TEST_TARGET: 'linux_clang10'
           HOST_CONFIG: 'docker-linux-ubuntu18.04-x86_64-clang@10.0.0.cmake'
 
@@ -43,7 +43,7 @@ jobs:
   variables:
     DO_STYLE_CHECK: 'yes'
     VM_ImageName: 'ubuntu-18.04'
-    Compiler_ImageName: 'seracllnl/tpls:clang-10_11-10-20_18h-25m'
+    Compiler_ImageName: 'seracllnl/tpls:clang-10_12-01-20_14h-22m'
     TEST_TARGET: 'linux_clang10'
     HOST_CONFIG: 'docker-linux-ubuntu18.04-x86_64-clang@10.0.0'
   pool:
@@ -55,4 +55,22 @@ jobs:
   - script:  |
       echo " -e $TEST_TARGET -e $COMPILER -e $DO_STYLE_CHECK -e $CMAKE_EXTRA_FLAGS $(Compiler_ImageName) ./scripts/azure-pipelines/linux-check.sh"
       docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e DO_STYLE_CHECK -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/azure-pipelines/linux-check.sh
+    displayName: '$(TEST_TARGET) Style Check'
+
+- job: Check_Coverage
+  variables:
+    DO_COVERAGE_CHECK: 'yes'
+    VM_ImageName: 'ubuntu-18.04'
+    Compiler_ImageName: 'seracllnl/tpls:clang-10_12-01-20_14h-22m'
+    TEST_TARGET: 'linux_clang10'
+    HOST_CONFIG: 'docker-linux-ubuntu18.04-x86_64-clang@10.0.0'
+  pool:
+      vmImage: $(VM_ImageName)
+  steps:
+  - checkout: self
+    clean: true
+    submodules: recursive
+  - script:  |
+      echo " -e $TEST_TARGET -e $COMPILER -e $DO_COVERAGE_CHECK -e $CMAKE_EXTRA_FLAGS $(Compiler_ImageName) ./scripts/azure-pipelines/linux-check.sh"
+      docker run --rm -v `pwd`:/home/serac/serac -e TEST_TARGET -e DO_COVERAGE_CHECK -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/azure-pipelines/linux-check.sh
     displayName: '$(TEST_TARGET) Style Check'
