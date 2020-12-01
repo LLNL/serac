@@ -7,14 +7,14 @@
 set(coefficients_sources
     coefficient.cpp
     loading_functions.cpp
-    stdfunction_coefficient.cpp
+    coefficient_extensions.cpp
     )
 
 set(coefficients_headers
     coefficient.hpp
     loading_functions.hpp
     traction_coefficient.hpp
-    stdfunction_coefficient.hpp
+    coefficient_extensions.hpp
     )
 
 blt_add_library(

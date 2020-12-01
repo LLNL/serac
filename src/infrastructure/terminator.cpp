@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "infrastructure/accelerator.hpp"
 #include "infrastructure/logger.hpp"
 #include "infrastructure/profiling.hpp"
 
@@ -55,6 +56,9 @@ void exitGracefully(bool error)
     MPI_Finalize();
   }
   profiling::terminateCaliper();
+
+  accelerator::terminateDevice();
+
   error ? exit(EXIT_FAILURE) : exit(EXIT_SUCCESS);
 }
 

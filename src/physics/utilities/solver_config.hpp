@@ -34,6 +34,9 @@ enum class OutputType
  */
 enum class TimestepMethod
 {
+  QuasiStatic,
+
+  // options for first order ODEs
   BackwardEuler,
   SDIRK33,
   ForwardEuler,
@@ -44,7 +47,43 @@ enum class TimestepMethod
   ImplicitMidpoint,
   SDIRK23,
   SDIRK34,
-  QuasiStatic
+
+  // options for second order ODEs
+  HHTAlpha,
+  WBZAlpha,
+  AverageAcceleration,
+  LinearAcceleration,
+  CentralDifference,
+  FoxGoodwin
+};
+
+/**
+ * @brief this enum describes which way to enforce the time-varying constraint u(t) == U(t)
+ */
+
+enum class DirichletEnforcementMethod
+{
+  // satisfies u(t+dt) == U(t+dt)
+  //
+  // this method imposes additional stability criteria
+  // for the case of second order differential equations
+  DirectControl,
+
+  // (default value)
+  // satisfies dudt(t+dt) == dUdt(t+dt)
+  //
+  // this method does not impose any additional stability criteria
+  // for the case of second order differential equations.
+  RateControl,
+
+  // satisfies u(t+dt) == U(t+dt),
+  //           dudt(t+dt) == dUdt(t+dt),
+  // (and      d2udt2(t+dt) == d2Udt2(t+dt), for a second order ODE)
+  //
+  // Empirically, this method tends to be the most accurate
+  // for small timesteps (by a constant factor),  but is more
+  // expensive to evaluate
+  FullControl
 };
 
 /**
@@ -83,6 +122,12 @@ struct HypreBoomerAMGPrec {
 };
 
 /**
+ * @brief Stores the information required to configure a NVIDIA AMGX preconditioner
+ */
+struct AMGXPrec {
+};
+
+/**
  * @brief Stores the information required to configure a BlockILU preconditioner
  */
 struct BlockILUPrec {
@@ -92,7 +137,7 @@ struct BlockILUPrec {
 /**
  * @brief Preconditioning method
  */
-using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, BlockILUPrec>;
+using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, AMGXPrec, BlockILUPrec>;
 
 /**
  * @brief Abstract multiphysics coupling scheme

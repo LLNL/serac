@@ -84,8 +84,11 @@ public:
    * @brief Set the time integration method
    *
    * @param[in] timestepper The timestepping method for the solver
+   * @param[in] enforcement_method The method of enforcing time-varying dirichlet boundary conditions
    */
-  virtual void setTimestepper(const serac::TimestepMethod timestepper);
+  virtual void setTimestepper(
+      const serac::TimestepMethod             timestepper,
+      const serac::DirichletEnforcementMethod enforcement_method = serac::DirichletEnforcementMethod::RateControl);
 
   /**
    * @brief Set the current time
@@ -179,9 +182,19 @@ protected:
   serac::TimestepMethod timestepper_ = TimestepMethod::QuasiStatic;
 
   /**
-   * @brief MFEM ode solver object
+   * @brief Method for enforcing time-varying dirichlet boundary conditions
+   */
+  serac::DirichletEnforcementMethod enforcement_method_;
+
+  /**
+   * @brief MFEM solver object for first-order ODEs
    */
   std::unique_ptr<mfem::ODESolver> ode_solver_;
+
+  /**
+   * @brief MFEM solver object for second-order ODEs
+   */
+  std::unique_ptr<mfem::SecondOrderODESolver> second_order_ode_solver_;
 
   /**
    * @brief Root output name
