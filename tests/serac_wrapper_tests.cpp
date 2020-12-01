@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "coefficients/stdfunction_coefficient.hpp"
+#include "coefficients/coefficient_extensions.hpp"
 #include "integrators/wrapper_integrator.hpp"
 #include "mfem.hpp"
 
@@ -139,7 +139,7 @@ void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int
 TEST_F(WrapperTests, nonlinear_linear_thermal)
 {
   // Create a coefficient that indicates the x == 0 border of the cube
-  StdFunctionCoefficient x_zero([](const Vector& x) {
+  mfem::FunctionCoefficient x_zero([](const Vector& x) {
     if (x[0] < 1.e-12) {
       return 1.;
     }
@@ -147,7 +147,7 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   });
 
   // Create a coefficient that indicates the x == 1 border of the cube
-  StdFunctionCoefficient x_one([](const Vector& x) {
+  mfem::FunctionCoefficient x_one([](const Vector& x) {
     if ((1. - x[0]) < 1.e-12) {
       return 1.;
     }
@@ -215,7 +215,7 @@ TEST_F(WrapperTests, Transformed)
   // Setup problem
 
   // Create a coefficient that indicates the x == 0 border of the cube
-  StdFunctionCoefficient x_zero([](const Vector& x) {
+  mfem::FunctionCoefficient x_zero([](const Vector& x) {
     if (x[0] < 1.e-12) {
       return 1.;
     }
@@ -223,7 +223,7 @@ TEST_F(WrapperTests, Transformed)
   });
 
   // Create a coefficient that indicates the x == 1 border of the cube
-  StdFunctionCoefficient x_one([](const Vector& x) {
+  mfem::FunctionCoefficient x_one([](const Vector& x) {
     if ((1. - x[0]) < 1.e-12) {
       return 1.;
     }

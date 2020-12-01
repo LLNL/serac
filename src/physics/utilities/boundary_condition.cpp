@@ -48,18 +48,15 @@ void BoundaryCondition::project(FiniteElementState& state) const
     std::transform(tdofs.begin(), tdofs.end(), dof_list.begin(),
                    [&space = std::as_const(state.space())](int tdof) { return space.VDofToDof(tdof); });
 
-    if (component_ == -1) {
-      // If it contains all components, project the vector
-      auto vec_coef = std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
-      SLIC_ASSERT_MSG(vec_coef,
-                      "Essential boundary condition contained all components but had a non-vector coefficient.");
-      state.gridFunc().ProjectCoefficient(**vec_coef, dof_list);  // Deref ptr-to-result, then shared_ptr
+    // the only reason to store a VectorCoefficient is to act on all components
+    if (is_vector_valued(coef_)) {
+      auto vec_coef = std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
+      state.gridFunc().ProjectCoefficient(*vec_coef, dof_list);
     } else {
-      // If it is only a single component, project the scalar
-      auto scalar_coef = std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
-      SLIC_ASSERT_MSG(scalar_coef,
-                      "Essential boundary condition contained a single component but had a non-scalar coefficient.");
-      state.gridFunc().ProjectCoefficient(**scalar_coef, dof_list, component_);
+      // an mfem::Coefficient could be used to describe a scalar-valued function, or
+      // a single component of a vector-valued function
+      auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(coef_);
+      state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, std::max(0, component_));
     }
   }
 }
@@ -98,6 +95,15 @@ void BoundaryCondition::projectBdr(const double time, const bool should_be_scala
 {
   SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   projectBdr(*state_, time, should_be_scalar);
+}
+
+void BoundaryCondition::projectBdrToDofs(mfem::Vector& dof_values, const double time, const bool should_be_scalar) const
+{
+  SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
+  auto gf = state_->gridFunc();
+  gf.SetFromTrueDofs(dof_values);
+  projectBdr(gf, time, should_be_scalar);
+  gf.GetTrueDofs(dof_values);
 }
 
 void BoundaryCondition::eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const
