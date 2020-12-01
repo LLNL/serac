@@ -42,7 +42,7 @@ fi
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
     or_die make -j4
-    or_die serac_coverage
+    or_die make serac_coverage
     ls -la
     or_die bash <(curl -s https://codecov.io/bash)
 fi
