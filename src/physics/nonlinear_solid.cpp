@@ -346,6 +346,8 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table,
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
 
+  // See comment in header - schema definitions should never be guarded by a conditional.
+  // This is a short-term patch.
   if (dynamic) {
     auto& mass_solver_table = table.addTable("mass_solver", "Parameters for mass matrix inversion");
     mass_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
