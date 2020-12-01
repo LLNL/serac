@@ -28,8 +28,7 @@ echo "~~~~~~ RUNNING CMAKE ~~~~~~~~"
 cmake_args="-DENABLE_CLANGTIDY=OFF"
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
-    ls -l /usr/bin | grep gcov
-    ls -l /usr/bin | grep llvm-cov
+    # Alias llvm-cov to gcov so it acts like gcov
     ln -s `which llvm-cov` /home/serac/gcov
     cmake_args="$cmake_args -DENABLE_COVERAGE=ON -DGCOV_EXECUTABLE=/home/serac/gcov"
 fi
@@ -43,9 +42,8 @@ fi
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
     or_die make -j4
-    or_die make VERBOSE=1 serac_coverage
-    or_die cp .info.cleaned ../lcov.info
-    or_die cd ..
+    or_die serac_coverage
+    ls -la
     or_die bash <(curl -s https://codecov.io/bash)
 fi
 
