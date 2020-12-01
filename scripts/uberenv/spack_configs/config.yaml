@@ -80,4 +80,4 @@ config:
   build_jobs: 8
 
   # Attempt to use the new concretizer
-  concretizer: clingo
+  # concretizer: clingo

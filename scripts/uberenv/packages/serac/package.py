@@ -132,8 +132,10 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("hdf5+hl@1.8.21~shared")
 
     # Axom enables RAJA/Umpire by default
-    depends_on("axom~raja", when="~raja")
-    depends_on("axom~umpire", when="~umpire")
+    # depends_on("axom~raja", when="~raja")
+    # depends_on("axom~umpire", when="~umpire")
+    depends_on("raja~openmp~shared", when="+raja")
+    depends_on("umpire~shared", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran+mfem~shared",
