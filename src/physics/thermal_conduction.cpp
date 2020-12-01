@@ -179,8 +179,8 @@ void ThermalConduction::completeSetup()
           return *J_;
         });
 
-    ode_ = FirstOrderODE(temperature_.trueVec().Size(), [=](const double t, const double dt, const mfem::Vector& u,
-                                                            mfem::Vector& du_dt) {
+    ode_ = FirstOrderODE(temperature_.trueVec().Size(), [this](const double t, const double dt, const mfem::Vector& u,
+                                                               mfem::Vector& du_dt) {
       // this is intended to be temporary
       // Ideally, epsilon should be "small" relative to the characteristic
       // time of the ODE, but we can't ensure that at present (we don't have
