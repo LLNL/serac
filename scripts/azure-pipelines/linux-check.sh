@@ -25,7 +25,15 @@ echo HOST_CONFIG
 echo $HOST_CONFIG
 
 echo "~~~~~~ RUNNING CMAKE ~~~~~~~~"
-or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake -DENABLE_CLANGTIDY=OFF -DENABLE_COVERAGE=ON
+cmake_args="-DENABLE_CLANGTIDY=OFF"
+
+if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
+    ls -l /usr/bin | grep gcov
+    gcc --version
+    cmake_args="$cmake_args -DENABLE_COVERAGE=ON -DGCOV_EXECUTABLE=/usr/bin/gcov-8"
+fi
+
+or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake $cmake_args
 or_die cd build-$HOST_CONFIG-debug
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
@@ -34,7 +42,7 @@ fi
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
     or_die make -j4
-    or_die make serac_coverage
+    or_die make VERBOSE=1 serac_coverage
     or_die cp .info.cleaned ../lcov.info
     or_die cd ..
     or_die bash <(curl -s https://codecov.io/bash)
