@@ -31,8 +31,8 @@ TEST(dynamic_solver, dyn_solve)
   std::set<int> ess_bdr = {1};
 
   auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, [](const mfem::Vector& x, mfem::Vector& y) {
-    y    = x;
-    y(1) = y(1) + x(0) * 0.01;
+    y    = 0.0;
+    y(1) = x(0) * 0.01;
   });
 
   auto velo =
@@ -70,23 +70,15 @@ TEST(dynamic_solver, dyn_solve)
   therm_M_params.prec = HypreSmootherPrec{};
   therm_T_params.prec = HypreSmootherPrec{};
 
-  ThermalConduction::SolverParameters therm_params =
-      ThermalConduction::DynamicSolverParameters{TimestepMethod::SDIRK33, therm_M_params, therm_T_params};
-
-  const IterativeSolverParameters default_dyn_oper_linear_params = {
-      .rel_tol     = 1.0e-4,
-      .abs_tol     = 1.0e-8,
-      .print_level = 0,
-      .max_iter    = 500,
-      .lin_solver  = LinearSolver::GMRES,
-      .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
+  auto therm_params = ThermalConduction::defaultDynamicParameters();
 
   const NonlinearSolverParameters default_dyn_nonlinear_params = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
   const NonlinearSolid::SolverParameters default_dynamic = {
       default_dyn_linear_params, default_dyn_nonlinear_params,
-      NonlinearSolid::DynamicSolverParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
+      NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration,
+                                              DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);
@@ -144,9 +136,9 @@ TEST(dynamic_solver, dyn_solve)
   double x_norm    = ts_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
   double temp_norm = ts_solver.temperature().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(13.28049, x_norm, 0.001);
+  EXPECT_NEAR(0.146228, x_norm, 0.001);
   EXPECT_NEAR(0.005227, v_norm, 0.001);
-  EXPECT_NEAR(6.491872, temp_norm, 0.001);
+  EXPECT_NEAR(6.494477, temp_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

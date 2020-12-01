@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "mfem.hpp"
+#include "numerics/expr_template_ops.hpp"
 
 namespace serac {
 
@@ -106,7 +107,7 @@ public:
   }
 
   /**
-   * @brief Evalate the coefficient at a quadrature point
+   * @brief Evaluate the coefficient at a quadrature point
    *
    * @param[in] Tr The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
@@ -155,7 +156,7 @@ public:
                                std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> func);
 
   /**
-   * @brief Evalate the coefficient at a quadrature point
+   * @brief Evaluate the coefficient at a quadrature point
    *
    * @param[out] V The evaluated coefficient vector at the quadrature point
    * @param[in] T The element transformation for the evaluation
