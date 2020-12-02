@@ -19,15 +19,7 @@ namespace serac {
 double One(const mfem::Vector& /*x*/) { return 1.0; }
 double BoundaryTemperature(const mfem::Vector& x) { return x.Norml2(); }
 double OtherBoundaryTemperature(const mfem::Vector& x) { return 2 * x.Norml2(); }
-
-double InitialTemperature(const mfem::Vector& x)
-{
-  if (x.Norml2() < 0.5) {
-    return 2.0;
-  } else {
-    return 1.0;
-  }
-}
+double InitialTemperature(const mfem::Vector& x) { return (x.Norml2() < 0.5) ? 2.0 : 1.0; }
 
 TEST(thermal_solver, static_solve)
 {
@@ -232,12 +224,10 @@ TEST(thermal_solver, dyn_imp_solve)
   therm_solver.setTemperatureBCs(temp_bdr, u_0);
 
   // Set the density function
-  auto rho = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setDensity(std::move(rho));
+  therm_solver.setDensity(0.5);
 
   // Set the specific heat capacity function
-  auto cp = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setSpecificHeatCapacity(std::move(cp));
+  therm_solver.setSpecificHeatCapacity(0.5);
 
   // Set the conductivity of the thermal operator
   therm_solver.setConductivity(0.5);
@@ -300,8 +290,7 @@ TEST(thermal_solver_rework, dyn_imp_solve_time_varying)
   therm_solver.setTemperatureBCs(temp_bdr, f);
 
   // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(1.0);
-  therm_solver.setConductivity(std::move(kappa));
+  therm_solver.setConductivity(1.0);
 
   // Setup glvis output
   therm_solver.initializeOutput(serac::OutputType::VisIt, "thermal_implicit");

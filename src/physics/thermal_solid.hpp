@@ -13,11 +13,11 @@
 #ifndef THERMAL_SOLID
 #define THERMAL_SOLID
 
+#include "coefficients/coefficient.hpp"
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/nonlinear_solid.hpp"
 #include "physics/thermal_conduction.hpp"
-#include "coefficients/coefficient.hpp"
 
 namespace serac {
 
@@ -64,24 +64,21 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void SetConductivity(coefficient kappa) { therm_solver_.setConductivity(std::move(kappa)); };
+  void SetConductivity(CoefficientWrapper&& kappa) { therm_solver_.setConductivity(std::move(kappa)); };
 
   /**
    * @brief Set the density
    *
    * @param[in] rho The density coefficient
    */
-  void SetDensity(std::unique_ptr<mfem::Coefficient>&& rho) { therm_solver_.setDensity(std::move(rho)); };
+  void SetDensity(CoefficientWrapper&& rho) { therm_solver_.setDensity(std::move(rho)); };
 
   /**
    * @brief Set the specific heat capacity
    *
    * @param[in] cp The specific heat capacity
    */
-  void SetSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
-  {
-    therm_solver_.setSpecificHeatCapacity(std::move(cp));
-  };
+  void SetSpecificHeatCapacity(CoefficientWrapper&& cp) { therm_solver_.setSpecificHeatCapacity(std::move(cp)); };
 
   /**
    * @brief Set the temperature state vector from a coefficient
@@ -95,7 +92,7 @@ public:
    *
    * @param[in] source The source function coefficient
    */
-  void SetSource(coefficient&& source) { therm_solver_.setSource(std::move(source)); };
+  void SetSource(CoefficientWrapper&& source) { therm_solver_.setSource(std::move(source)); };
 
   /**
    * @brief Set displacement boundary conditions
@@ -139,10 +136,7 @@ public:
    *
    * @param[in] visc_coef The abstract viscosity coefficient
    */
-  void SetViscosity(coefficient&& visc_coef)
-  {
-    solid_solver_.setViscosity(std::move(visc_coef));
-  };
+  void SetViscosity(CoefficientWrapper&& visc_coef) { solid_solver_.setViscosity(std::move(visc_coef)); };
 
   /**
    * @brief Set the hyperelastic material parameters

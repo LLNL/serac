@@ -93,12 +93,7 @@ TEST(dynamic_solver, dyn_solve)
   double offset = 0.1;
   double scale  = 1.0;
 
-  //  auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature().gridFunc());
-  //  auto visc_coef    = std::make_unique<TransformedScalarCoefficient>(
-  //      temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
-  //  ts_solver.SetViscosity(std::move(visc_coef));
-
-  ts_solver.SetViscosity({ts_solver.temperature(), [offset, scale](const double x){ return scale * x + offset; }});
+  ts_solver.SetViscosity({ts_solver.temperature(), [offset, scale](const double x) { return scale * x + offset; }});
 
   // Initialize the VisIt output
   ts_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");

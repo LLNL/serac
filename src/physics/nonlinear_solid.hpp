@@ -13,10 +13,9 @@
 #ifndef NONLIN_SOLID
 #define NONLIN_SOLID
 
+#include "coefficients/coefficient.hpp"
 #include "infrastructure/input.hpp"
 #include "mfem.hpp"
-
-#include "coefficients/coefficient.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/operators/odes.hpp"
 #include "physics/operators/stdfunction_operator.hpp"
@@ -122,7 +121,7 @@ public:
    *
    * @param[in] visc_coef The abstract viscosity coefficient
    */
-  void setViscosity(CoefficientWrapper visc_coef);
+  void setViscosity(CoefficientWrapper&& visc_coef);
 
   /**
    * @brief Set the hyperelastic material parameters

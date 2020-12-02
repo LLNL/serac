@@ -13,8 +13,8 @@
 #ifndef THERMAL_CONDUCTION
 #define THERMAL_CONDUCTION
 
-#include "mfem.hpp"
 #include "coefficients/coefficient.hpp"
+#include "mfem.hpp"
 #include "physics/base_physics.hpp"
 #include "physics/operators/odes.hpp"
 #include "physics/operators/stdfunction_operator.hpp"
@@ -115,7 +115,7 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void setConductivity(CoefficientWrapper && kappa);
+  void setConductivity(CoefficientWrapper&& kappa);
 
   /**
    * @brief Set the temperature state vector from a coefficient
@@ -136,14 +136,14 @@ public:
    *
    * @param[in] rho The density field coefficient
    */
-  void setDensity(std::unique_ptr<mfem::Coefficient>&& rho);
+  void setDensity(CoefficientWrapper&& rho);
 
   /**
    * @brief Set the specific heat capacity. Defaults to 1.0 if not set.
    *
    * @param[in] cp The specific heat capacity
    */
-  void setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp);
+  void setSpecificHeatCapacity(CoefficientWrapper&& cp);
 
   /**
    * @brief Get the temperature state
@@ -233,7 +233,7 @@ protected:
    * @brief Combined mass matrix coefficient (rho * cp)
    *
    */
-  // std::unique_ptr<mfem::Coefficient> mass_coef_;
+  std::unique_ptr<mfem::Coefficient> mass_coef_;
 
   /**
    * @brief the ordinary differential equation that describes

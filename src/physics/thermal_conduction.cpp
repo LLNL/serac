@@ -48,8 +48,8 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   dU_dt_.SetSize(true_size);
 
   // Default to constant value of 1.0 for density and specific heat capacity
-  cp_  = std::make_unique<mfem::ConstantCoefficient>(1.0);
-  rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
+  cp_  = CoefficientWrapper(1.0);
+  rho_ = CoefficientWrapper(1.0);
 }
 
 void ThermalConduction::setTemperature(mfem::Coefficient& temp)
@@ -72,7 +72,7 @@ void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_pt
   bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
 }
 
-void ThermalConduction::setConductivity(CoefficientWrapper && kappa)
+void ThermalConduction::setConductivity(CoefficientWrapper&& kappa)
 {
   // Set the conduction coefficient
   kappa_ = std::move(kappa);
@@ -84,13 +84,13 @@ void ThermalConduction::setSource(CoefficientWrapper&& source)
   source_ = std::move(source);
 }
 
-void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
+void ThermalConduction::setSpecificHeatCapacity(CoefficientWrapper&& cp)
 {
   // Set the specific heat capacity coefficient
   cp_ = std::move(cp);
 }
 
-void ThermalConduction::setDensity(std::unique_ptr<mfem::Coefficient>&& rho)
+void ThermalConduction::setDensity(CoefficientWrapper&& rho)
 {
   // Set the density coefficient
   rho_ = std::move(rho);
@@ -108,7 +108,7 @@ void ThermalConduction::completeSetup()
 
   // Add the body source to the RS if specified
   l_form_ = temperature_.createOnSpace<mfem::ParLinearForm>();
-  if (source_) {
+  if (source_.is_initialized()) {
     l_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(source_));
     rhs_.reset(l_form_->ParallelAssemble());
   } else {
@@ -156,9 +156,10 @@ void ThermalConduction::completeSetup()
     M_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
 
     // Define the mass matrix coefficient as a product of the density and specific heat capacity
-    //mass_coef_ = std::make_unique<mfem::ProductCoefficient>(*rho_, *cp_);
+    mass_coef_ = std::make_unique<mfem::ProductCoefficient>(rho_, cp_);
 
-    M_form_->AddDomainIntegrator(new mfem::MassIntegrator(mfem::ProductCoefficient(rho_, cp_)));
+    // M_form_->AddDomainIntegrator(new mfem::MassIntegrator(mfem::ProductCoefficient(rho_, cp_)));
+    M_form_->AddDomainIntegrator(new mfem::MassIntegrator(*mass_coef_));
     M_form_->Assemble(0);  // keep sparsity pattern of M and K the same
     M_form_->Finalize();
 
