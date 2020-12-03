@@ -9,40 +9,40 @@
 #include <fstream>
 
 #include "coefficients/loading_functions.hpp"
+#include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
 #include "physics/nonlinear_solid.hpp"
 #include "serac_config.hpp"
+#include "test_utilities.hpp"
 
 namespace serac {
-
-const IterativeSolverParameters default_qs_linear_params = {.rel_tol     = 1.0e-6,
-                                                            .abs_tol     = 1.0e-8,
-                                                            .print_level = 0,
-                                                            .max_iter    = 5000,
-                                                            .lin_solver  = LinearSolver::MINRES,
-                                                            .prec = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
-
-const NonlinearSolverParameters default_qs_nonlinear_params = {
-    .rel_tol = 1.0e-3, .abs_tol = 1.0e-6, .max_iter = 5000, .print_level = 1};
-
-const NonlinearSolid::SolverParameters default_quasistatic = {default_qs_linear_params, default_qs_nonlinear_params};
 
 TEST(nonlinear_solid_solver, qs_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
+  std::string input_file_path =
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/serac_quasistatic_solver/qs_solve.lua";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  // Create DataStore
+  axom::sidre::DataStore datastore;
 
-  int dim = pmesh->Dimension();
+  // Initialize Inlet and read input file
+  auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  // Define the solver object
-  NonlinearSolid solid_solver(1, pmesh, default_quasistatic);
+  testing::defineNonlinSolidInputFileSchema(inlet);
 
-  std::set<int> ess_bdr = {1};
+  // Build the mesh
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
+  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+
+  // Define the solid solver object
+  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  NonlinearSolid solid_solver(mesh, solid_solver_info);
+
+  int dim = mesh->Dimension();
 
   // define the displacement vector
   mfem::Vector disp(dim);
@@ -50,20 +50,21 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
 
-  std::set<int> trac_bdr = {2};
-
   // define the traction vector
-  mfem::Vector traction(dim);
-  traction           = 0.0;
-  traction(1)        = 1.0e-3;
+  auto traction = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
+  traction.SetSize(dim);  // The vector in the input file is 3D, so shrink it if needed
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Pass the BC information to the solver object
-  solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
-  solid_solver.setTractionBCs(trac_bdr, traction_coef);
-
-  // Set the material parameters
-  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement") {
+      solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
+    } else if (bc.name == "traction") {
+      solid_solver.setTractionBCs(bc.attrs, traction_coef);
+    } else {
+      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
 
   // Initialize the output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
@@ -71,7 +72,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   // Complete the solver setup
   solid_solver.completeSetup();
 
-  double dt = 1.0;
+  double dt = inlet["dt"];
   solid_solver.advanceTimestep(dt);
 
   solid_solver.outputState();
@@ -82,7 +83,7 @@ TEST(nonlinear_solid_solver, qs_solve)
 
   double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(2.2309025, x_norm, 0.001);
+  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -91,19 +92,29 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
+  std::string input_file_path =
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/serac_quasistatic_solver/qs_solve.lua";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  // Create DataStore
+  axom::sidre::DataStore datastore;
 
-  int dim = pmesh->Dimension();
+  // Initialize Inlet and read input file
+  auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  // Define the solver object
-  auto solver_params         = default_quasistatic;
-  solver_params.H_lin_params = DirectSolverParameters{0};
-  NonlinearSolid solid_solver(1, pmesh, solver_params);
+  testing::defineNonlinSolidInputFileSchema(inlet);
 
-  std::set<int> ess_bdr = {1};
+  // Build the mesh
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
+  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+
+  // Define the solid solver object
+  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  // FIXME: These should be moved to part of the schema once the contains() logic is updated in Inlet
+  solid_solver_info.solver_params.H_lin_params = DirectSolverParameters{0};
+  NonlinearSolid solid_solver(mesh, solid_solver_info);
+
+  int dim = mesh->Dimension();
 
   // define the displacement vector
   mfem::Vector disp(dim);
@@ -111,20 +122,21 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
 
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
 
-  std::set<int> trac_bdr = {2};
-
   // define the traction vector
-  mfem::Vector traction(dim);
-  traction           = 0.0;
-  traction(1)        = 1.0e-3;
+  auto traction = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
+  traction.SetSize(dim);  // The vector in the input file is 3D, so shrink it if needed
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Pass the BC information to the solver object
-  solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
-  solid_solver.setTractionBCs(trac_bdr, traction_coef);
-
-  // Set the material parameters
-  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement") {
+      solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
+    } else if (bc.name == "traction") {
+      solid_solver.setTractionBCs(bc.attrs, traction_coef);
+    } else {
+      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
 
   // Initialize the output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
@@ -132,7 +144,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   // Complete the solver setup
   solid_solver.completeSetup();
 
-  double dt = 1.0;
+  double dt = inlet["dt"];
   solid_solver.advanceTimestep(dt);
 
   solid_solver.outputState();
@@ -143,7 +155,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
 
   double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(2.2309025, x_norm, 0.001);
+  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -152,30 +164,39 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
+  std::string input_file_path =
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/serac_quasistatic_solver/qs_solve.lua";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
-  int  dim   = pmesh->Dimension();
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+
+  // Initialize Inlet and read input file
+  auto inlet = serac::input::initialize(datastore, input_file_path);
+
+  testing::defineNonlinSolidInputFileSchema(inlet);
+
+  // Build the mesh
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
+  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+
+  // Define the solid solver object
+  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
   // qs_solve test
-  auto custom_params = default_qs_linear_params;
+  auto custom_params = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::IterativeSolverParameters>();
   auto custom_solver = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
   custom_solver->SetRelTol(custom_params.rel_tol);
   custom_solver->SetAbsTol(custom_params.abs_tol);
   custom_solver->SetMaxIter(custom_params.max_iter);
   custom_solver->SetPrintLevel(custom_params.print_level);
 
-  NonlinearSolid::SolverParameters params;
-  params.H_lin_params    = CustomSolverParameters{custom_solver.get()};
-  params.H_nonlin_params = default_qs_nonlinear_params;
+  solid_solver_info.solver_params.H_lin_params = CustomSolverParameters{custom_solver.get()};
+  NonlinearSolid solid_solver(mesh, solid_solver_info);
 
-  // Define the solver object
-  NonlinearSolid solid_solver(1, pmesh, params);
-
-  std::set<int> ess_bdr = {1};
+  int dim = mesh->Dimension();
 
   // define the displacement vector
   mfem::Vector disp(dim);
@@ -183,23 +204,21 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
 
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
 
-  std::set<int> trac_bdr = {2};
-
   // define the traction vector
-  mfem::Vector traction(dim);
-  traction           = 0.0;
-  traction(1)        = 1.0e-3;
+  auto traction = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
+  traction.SetSize(dim);  // The vector in the input file is 3D, so shrink it if needed
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Pass the BC information to the solver object
-  solid_solver.setDisplacementBCs(ess_bdr, disp_coef);
-  solid_solver.setTractionBCs(trac_bdr, traction_coef);
-
-  // Set the material parameters
-  solid_solver.setHyperelasticMaterialParameters(0.25, 10.0);
-
-  // Set the time step method
-  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
+  for (const auto& bc : solid_solver_info.boundary_conditions) {
+    if (bc.name == "displacement") {
+      solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
+    } else if (bc.name == "traction") {
+      solid_solver.setTractionBCs(bc.attrs, traction_coef);
+    } else {
+      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
+    }
+  }
 
   // Initialize the output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
@@ -207,7 +226,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   // Complete the solver setup
   solid_solver.completeSetup();
 
-  double dt = 1.0;
+  double dt = inlet["dt"];
   solid_solver.advanceTimestep(dt);
 
   solid_solver.outputState();
@@ -218,7 +237,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
 
   double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(2.2309025, x_norm, 0.001);
+  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

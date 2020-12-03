@@ -10,7 +10,14 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies physics coefficients axom mpi mfem gtest)
+    set(test_dependencies physics coefficients axom mpi mfem gtest test_utils)
+
+    blt_add_library(
+        NAME        test_utils
+        SOURCES     test_utilities.cpp
+        HEADERS     test_utilities.hpp
+        DEPENDS_ON  numerics infrastructure physics axom
+        )
 
     set(solver_tests
         serac_dynamic_solver.cpp
