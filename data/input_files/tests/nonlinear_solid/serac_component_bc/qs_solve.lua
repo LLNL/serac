@@ -1,5 +1,5 @@
 -- Comparison information
-expected_l2norm = 0.08363646
+expected_x_l2norm = 0.08363646
 epsilon = 0.0001
 
 -- Simulation time parameters
@@ -15,7 +15,7 @@ main_mesh = {
 
 -- Solver parameters
 nonlinear_solid = {
-    solver = {
+    stiffness_solver = {
         linear = {
             rel_tol     = 1.0e-8,
             abs_tol     = 1.0e-12,
