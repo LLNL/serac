@@ -7,6 +7,7 @@
 #include "physics/thermal_conduction.hpp"
 
 #include "infrastructure/logger.hpp"
+#include "numerics/expr_template_ops.hpp"
 
 namespace serac {
 

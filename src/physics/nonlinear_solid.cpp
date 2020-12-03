@@ -9,6 +9,7 @@
 #include "infrastructure/logger.hpp"
 #include "integrators/hyperelastic_traction_integrator.hpp"
 #include "integrators/inc_hyperelastic_integrator.hpp"
+#include "numerics/expr_template_ops.hpp"
 #include "numerics/mesh_utils.hpp"
 
 namespace serac {
@@ -47,6 +48,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   // Check for dynamic mode
   if (params.dyn_params) {
     setTimestepper(params.dyn_params->timestepper, params.dyn_params->enforcement_method);
+    ode2_.setEnforcementMethod(params.dyn_params->enforcement_method);
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
   }
