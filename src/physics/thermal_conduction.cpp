@@ -17,7 +17,9 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
       temperature_(*mesh,
                    FiniteElementState::Options{
                        .order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}),
-      residual_(temperature_.space().TrueVSize())
+      residual_(temperature_.space().TrueVSize()),
+      ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .previous = previous_, .previous_dt = previous_dt_},
+           nonlin_solver_, bcs_)
 {
   state_.push_back(temperature_);
 
@@ -27,6 +29,7 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   // Check for dynamic mode
   if (params.dyn_params) {
     setTimestepper(params.dyn_params->timestepper, params.dyn_params->enforcement_method);
+    ode_.setEnforcementMethod(params.dyn_params->enforcement_method);
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
   }
@@ -178,72 +181,6 @@ void ThermalConduction::completeSetup()
           }
           return *J_;
         });
-
-    ode_ = FirstOrderODE(temperature_.trueVec().Size(), [this](const double t, const double dt, const mfem::Vector& u,
-                                                               mfem::Vector& du_dt) {
-      // this is intended to be temporary
-      // Ideally, epsilon should be "small" relative to the characteristic
-      // time of the ODE, but we can't ensure that at present (we don't have
-      // a critical timestep estimate)
-      constexpr double epsilon = 0.0001;
-
-      // assign these values to variables with greater scope,
-      // so that the residual operator can see them
-      dt_ = dt;
-      u_  = u;
-
-      // TODO: take care of this last part of the ODE definition
-      //       automatically by wrapping mfem's ODE solvers
-      //
-      // evaluate the constraint functions at a 3-point
-      // stencil of times centered on the time of interest
-      // in order to compute finite-difference approximations
-      // to the time derivatives that appear in the residual
-      U_minus_ = 0.0;
-      U_       = 0.0;
-      U_plus_  = 0.0;
-      for (const auto& bc : bcs_.essentials()) {
-        bc.projectBdrToDofs(U_minus_, t - epsilon);
-        bc.projectBdrToDofs(U_, t);
-        bc.projectBdrToDofs(U_plus_, t + epsilon);
-      }
-
-      bool implicit = (dt != 0.0);
-      if (implicit) {
-        if (enforcement_method_ == DirichletEnforcementMethod::DirectControl) {
-          dU_dt_ = (U_ - u) / dt;
-          U_     = u;
-        }
-
-        if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {
-          dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
-          U_     = u;
-        }
-
-        if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
-          dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
-          U_     = U_ - dt * dU_dt_;
-        }
-      } else {
-        dU_dt_ = (U_plus_ - U_minus_) / (2.0 * epsilon);
-      }
-
-      auto constrained_dofs = bcs_.allEssentialDofs();
-      u_.SetSubVector(constrained_dofs, 0.0);
-      U_.SetSubVectorComplement(constrained_dofs, 0.0);
-      u_ += U_;
-
-      du_dt = previous_;
-      du_dt.SetSubVector(constrained_dofs, 0.0);
-      dU_dt_.SetSubVectorComplement(constrained_dofs, 0.0);
-      du_dt += dU_dt_;
-
-      nonlin_solver_.Mult(zero_, du_dt);
-      SLIC_WARNING_IF(!nonlin_solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
-
-      previous_    = du_dt;
-      previous_dt_ = dt;
-    });
 
     ode_solver_->Init(ode_);
   }
