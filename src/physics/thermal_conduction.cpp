@@ -18,7 +18,7 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
                    FiniteElementState::Options{
                        .order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}),
       residual_(temperature_.space().TrueVSize()),
-      ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .previous = previous_, .previous_dt = previous_dt_},
+      ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
            nonlin_solver_, bcs_)
 {
   state_.push_back(temperature_);

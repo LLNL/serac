@@ -27,13 +27,32 @@ namespace serac {
  */
 class SecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
 public:
-  using TypeSignature = void(const double, const double, const double, const mfem::Vector&, const mfem::Vector&,
-                             mfem::Vector&);
+  struct State {
+    /**
+     * @brief Current time step
+     */
+    double& c0;
 
-  /**
-   * @brief Default constructor for creating an uninitialized SecondOrderODE
-   */
-  SecondOrderODE() : mfem::SecondOrderTimeDependentOperator(0, 0.0) {}
+    /**
+     * @brief Previous value of dt
+     */
+    double& c1;
+
+    /**
+     * @brief Predicted true DOFs
+     */
+    mfem::Vector& u;
+
+    /**
+     * @brief  Predicted du_dt
+     */
+    mfem::Vector& du_dt;
+
+    /**
+     * @brief Previous value of d^2u_dt^2
+     */
+    mfem::Vector& d2u_dt2;
+  };
 
   /**
    * @brief Constructor defining the size and specific system of ordinary differential equations to be solved
@@ -53,24 +72,115 @@ public:
    * nonzero
    *
    */
-  SecondOrderODE(int n, std::function<TypeSignature> f) : mfem::SecondOrderTimeDependentOperator(n, 0.0), f_(f) {}
+  SecondOrderODE(int n, State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs)
+      : mfem::SecondOrderTimeDependentOperator(n, 0.0), state_(std::move(state)), solver_(solver), bcs_(bcs), zero_(n)
+  {
+    zero_ = 0.0;
+    U_minus_.SetSize(n);
+    U_.SetSize(n);
+    U_plus_.SetSize(n);
+    dU_dt_.SetSize(n);
+    d2U_dt2_.SetSize(n);
+  }
 
   void Mult(const mfem::Vector& u, const mfem::Vector& du_dt, mfem::Vector& d2u_dt2) const
   {
-    f_(t, 0.0, 0.0, u, du_dt, d2u_dt2);
+    Solve(t, 0.0, 0.0, u, du_dt, d2u_dt2);
   }
 
   void ImplicitSolve(const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
                      mfem::Vector& d2u_dt2)
   {
-    f_(t, c0, c1, u, du_dt, d2u_dt2);
+    Solve(t, c0, c1, u, du_dt, d2u_dt2);
   }
 
 private:
-  /**
-   * @brief the function that is used to implement mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
-   */
-  std::function<TypeSignature> f_;
+  void Solve(const double t, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
+             mfem::Vector& d2u_dt2) const
+  {
+    // this is intended to be temporary
+    // Ideally, epsilon should be "small" relative to the characteristic time
+    // of the ODE, but we can't ensure that at present (we don't have a
+    // critical timestep estimate)
+    constexpr double epsilon = 0.0001;
+
+    // assign these values to variables with greater scope,
+    // so that the residual operator can see them
+    state_.c0    = c0;
+    state_.c1    = c1;
+    state_.u     = u;
+    state_.du_dt = du_dt;
+
+    // TODO: take care of this last part of the ODE definition
+    //       automatically by wrapping mfem's ODE solvers
+    //
+    // evaluate the constraint functions at a 3-point
+    // stencil of times centered on the time of interest
+    // in order to compute finite-difference approximations
+    // to the time derivatives that appear in the residual
+    U_minus_ = 0.0;
+    U_       = 0.0;
+    U_plus_  = 0.0;
+    for (const auto& bc : bcs_.essentials()) {
+      bc.projectBdrToDofs(U_minus_, t - epsilon);
+      bc.projectBdrToDofs(U_, t);
+      bc.projectBdrToDofs(U_plus_, t + epsilon);
+    }
+
+    bool implicit = (c0 != 0.0 || c0 != 0.0);
+    if (implicit) {
+      if (enforcement_method_ == DirichletEnforcementMethod::DirectControl) {
+        d2U_dt2_ = (U_ - u) / c0;
+        dU_dt_   = du_dt;
+        U_       = u;
+      }
+
+      if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {
+        d2U_dt2_ = (dU_dt_ - du_dt) / c0;
+        dU_dt_   = du_dt;
+        U_       = u;
+      }
+
+      if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
+        d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
+        dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon) - c0 * d2U_dt2_;
+        U_       = U_ - c0 * d2U_dt2_;
+      }
+    } else {
+      d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
+      dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon);
+    }
+
+    auto constrained_dofs = bcs_.allEssentialDofs();
+    state_.u.SetSubVector(constrained_dofs, 0.0);
+    U_.SetSubVectorComplement(constrained_dofs, 0.0);
+    state_.u += U_;
+
+    state_.du_dt.SetSubVector(constrained_dofs, 0.0);
+    dU_dt_.SetSubVectorComplement(constrained_dofs, 0.0);
+    state_.du_dt += dU_dt_;
+
+    // use the previous solution as our starting guess
+    d2u_dt2 = state_.d2u_dt2;
+    d2u_dt2.SetSubVector(constrained_dofs, 0.0);
+    d2U_dt2_.SetSubVectorComplement(constrained_dofs, 0.0);
+    d2u_dt2 += d2U_dt2_;
+
+    solver_.Mult(zero_, d2u_dt2);
+    SLIC_WARNING_IF(!solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
+
+    state_.d2u_dt2 = d2u_dt2;
+  }
+  State                           state_;
+  DirichletEnforcementMethod      enforcement_method_;
+  const EquationSolver&           solver_;
+  const BoundaryConditionManager& bcs_;
+  mfem::Vector                    zero_;
+  mutable mfem::Vector            U_minus_;
+  mutable mfem::Vector            U_;
+  mutable mfem::Vector            U_plus_;
+  mutable mfem::Vector            dU_dt_;
+  mutable mfem::Vector            d2U_dt2_;
 };
 
 /**
@@ -85,8 +195,6 @@ private:
  */
 class FirstOrderODE : public mfem::TimeDependentOperator {
 public:
-  using TypeSignature = void(const double, const double, const mfem::Vector&, mfem::Vector&);
-
   struct State {
     /**
      * @brief Predicted true DOFs
@@ -101,18 +209,13 @@ public:
     /**
      * @brief Previous value of du_dt
      */
-    mfem::Vector& previous;
+    mfem::Vector& du_dt;
 
     /**
      * @brief Previous value of dt
      */
     double& previous_dt;
   };
-
-  /**
-   * @brief Default constructor for creating an uninitialized FirstOrderODE
-   */
-  // FirstOrderODE() : mfem::TimeDependentOperator(0, 0.0) {}
 
   /**
    * @brief Constructor defining the size and specific system of ordinary differential equations to be solved
@@ -204,7 +307,7 @@ private:
     U_.SetSubVectorComplement(constrained_dofs, 0.0);
     state_.u += U_;
 
-    du_dt = state_.previous;
+    du_dt = state_.du_dt;
     du_dt.SetSubVector(constrained_dofs, 0.0);
     dU_dt_.SetSubVectorComplement(constrained_dofs, 0.0);
     du_dt += dU_dt_;
@@ -212,7 +315,7 @@ private:
     solver_.Mult(zero_, du_dt);
     SLIC_WARNING_IF(!solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
-    state_.previous    = du_dt;
+    state_.du_dt       = du_dt;
     state_.previous_dt = dt;
   }
 
