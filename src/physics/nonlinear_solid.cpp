@@ -280,7 +280,7 @@ void NonlinearSolid::completeSetup()
 // Solve the Quasi-static Newton system
 void NonlinearSolid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
 
-void StdFunctionOperator::buildQuasistaticOperator()
+StdFunctionOperator NonlinearSolid::buildQuasistaticOperator()
 {
   // the quasistatic case is entirely described by the residual,
   // there is no ordinary differential equation
@@ -299,6 +299,7 @@ void StdFunctionOperator::buildQuasistaticOperator()
         bcs_.eliminateAllEssentialDofsFromMatrix(J);
         return J;
       });
+  return residual;
 }
 
 // Advance the timestep

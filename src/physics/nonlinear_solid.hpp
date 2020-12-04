@@ -169,20 +169,12 @@ public:
   void completeSetup() override;
 
   /**
-   * @brief Build the quasi-static operator
+   * @brief Advance the timestep
    *
-   * This is virtual if a user wants to augment the quasi-static physics with additional terms
+   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
+   * schemes
    */
-  virtual void buildQ
-
-      /**
-       * @brief Advance the timestep
-       *
-       * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
-       * schemes
-       */
-      void
-      advanceTimestep(double& dt) override;
+  void advanceTimestep(double& dt) override;
 
   /**
    * @brief Destroy the Nonlinear Solid Solver object
@@ -194,16 +186,14 @@ protected:
    * @brief Extensible means of constructing the nonlinear quasistatic
    * operator
    *
-   * @param[in] H_form The nonlinear form
-   *
-   * @return An owning pointer to the operator
+   * @return The quasi-static operator
    */
-  virtual StdFunctionOperator buildQuasistaticOperator() override;
+  virtual StdFunctionOperator buildQuasistaticOperator();
 
   /**
    * @brief Complete a quasi-static solve
    */
-  virtual void quasiStaticSolve() override;
+  virtual void quasiStaticSolve();
 
   /**
    * @brief Velocity field
