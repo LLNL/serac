@@ -171,23 +171,7 @@ void NonlinearSolid::completeSetup()
   nonlin_solver_.SetOperator(residual_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    // the quasistatic case is entirely described by the residual,
-    // there is no ordinary differential equation
-    residual_ = StdFunctionOperator(
-        displacement_.space().TrueVSize(),
-
-        // residual function
-        [this](const mfem::Vector& u, mfem::Vector& r) {
-          H_->Mult(u, r);  // r := H(u)
-          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-        },
-
-        // gradient of residual function
-        [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
-          bcs_.eliminateAllEssentialDofsFromMatrix(J);
-          return J;
-        });
+    residual_ = NonlinearSolid::buildQuasistaticOperator();
 
   } else {
     // the dynamic case is described by a residual function and a second order
@@ -293,6 +277,30 @@ void NonlinearSolid::completeSetup()
   }
 }
 
+// Solve the Quasi-static Newton system
+void NonlinearSolid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
+
+void StdFunctionOperator::buildQuasistaticOperator()
+{
+  // the quasistatic case is entirely described by the residual,
+  // there is no ordinary differential equation
+  StdFunctionOperator residual = StdFunctionOperator(
+      displacement_.space().TrueVSize(),
+
+      // residual function
+      [this](const mfem::Vector& u, mfem::Vector& r) {
+        H_->Mult(u, r);  // r := H(u)
+        r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+      },
+
+      // gradient of residual function
+      [this](const mfem::Vector& u) -> mfem::Operator& {
+        auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
+        bcs_.eliminateAllEssentialDofsFromMatrix(J);
+        return J;
+      });
+}
+
 // Advance the timestep
 void NonlinearSolid::advanceTimestep(double& dt)
 {
@@ -304,7 +312,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
   mesh_->NewNodes(*reference_nodes_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    nonlin_solver_.Mult(zero_, displacement_.trueVec());
+    quasiStaticSolve();
   } else {
     second_order_ode_solver_->Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }
