@@ -188,7 +188,7 @@ protected:
    *
    * @return The quasi-static operator
    */
-  virtual StdFunctionOperator buildQuasistaticOperator();
+  virtual std::unique_ptr<mfem::Operator> buildQuasistaticOperator();
 
   /**
    * @brief Complete a quasi-static solve
@@ -208,7 +208,7 @@ protected:
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers
    */
-  std::unique_ptr<mfem::Operator> nonlinear_oper_;
+  std::unique_ptr<mfem::Operator> residual_;
 
   /**
    * @brief Configuration for dynamic equation solver
@@ -279,11 +279,6 @@ protected:
    * @brief Nonlinear system solver instance
    */
   EquationSolver nonlin_solver_;
-
-  /**
-   * @brief mfem::Operator for computing the weighted residual
-   */
-  StdFunctionOperator residual_;
 
   /**
    * @brief the system of ordinary differential equations for the physics module
