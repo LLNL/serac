@@ -169,7 +169,7 @@ void NonlinearSolid::completeSetup()
   nonlin_solver_.nonlinearSolver().iterative_mode = true;
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    residual_ = NonlinearSolid::buildQuasistaticOperator();
+    residual_ = buildQuasistaticOperator();
 
   } else {
     // the dynamic case is described by a residual function and a second order
