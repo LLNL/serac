@@ -171,7 +171,8 @@ public:
   /**
    * @brief Advance the timestep
    *
-   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping schemes
+   * @param[inout] dt The timestep to attempt. This will return the actual timestep for adaptive timestepping
+   * schemes
    */
   void advanceTimestep(double& dt) override;
 
@@ -181,6 +182,19 @@ public:
   virtual ~NonlinearSolid();
 
 protected:
+  /**
+   * @brief Extensible means of constructing the nonlinear quasistatic
+   * operator
+   *
+   * @return The quasi-static operator
+   */
+  virtual std::unique_ptr<mfem::Operator> buildQuasistaticOperator();
+
+  /**
+   * @brief Complete a quasi-static solve
+   */
+  virtual void quasiStaticSolve();
+
   /**
    * @brief Velocity field
    */
@@ -194,7 +208,7 @@ protected:
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers
    */
-  std::unique_ptr<mfem::Operator> nonlinear_oper_;
+  std::unique_ptr<mfem::Operator> residual_;
 
   /**
    * @brief Configuration for dynamic equation solver
@@ -265,11 +279,6 @@ protected:
    * @brief Nonlinear system solver instance
    */
   EquationSolver nonlin_solver_;
-
-  /**
-   * @brief mfem::Operator for computing the weighted residual
-   */
-  StdFunctionOperator residual_;
 
   /**
    * @brief the system of ordinary differential equations for the physics module

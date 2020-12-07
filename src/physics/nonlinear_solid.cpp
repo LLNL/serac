@@ -18,8 +18,7 @@ constexpr int NUM_FIELDS = 2;
 NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"}),
-      displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"}),
-      residual_(displacement_.space().TrueVSize())
+      displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"})
 {
   state_.push_back(velocity_);
   state_.push_back(displacement_);
@@ -168,32 +167,15 @@ void NonlinearSolid::completeSetup()
   // prescribed acceleration values are not modified by
   // the nonlinear solve.
   nonlin_solver_.nonlinearSolver().iterative_mode = true;
-  nonlin_solver_.SetOperator(residual_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    // the quasistatic case is entirely described by the residual,
-    // there is no ordinary differential equation
-    residual_ = StdFunctionOperator(
-        displacement_.space().TrueVSize(),
-
-        // residual function
-        [this](const mfem::Vector& u, mfem::Vector& r) {
-          H_->Mult(u, r);  // r := H(u)
-          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-        },
-
-        // gradient of residual function
-        [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
-          bcs_.eliminateAllEssentialDofsFromMatrix(J);
-          return J;
-        });
+    residual_ = buildQuasistaticOperator();
 
   } else {
     // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
-    residual_ = StdFunctionOperator(
+    residual_ = std::make_unique<StdFunctionOperator>(
         displacement_.space().TrueVSize(),
 
         // residual function
@@ -291,6 +273,33 @@ void NonlinearSolid::completeSetup()
 
     second_order_ode_solver_->Init(ode2_);
   }
+
+  nonlin_solver_.SetOperator(*residual_);
+}
+
+// Solve the Quasi-static Newton system
+void NonlinearSolid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
+
+std::unique_ptr<mfem::Operator> NonlinearSolid::buildQuasistaticOperator()
+{
+  // the quasistatic case is entirely described by the residual,
+  // there is no ordinary differential equation
+  auto residual = std::make_unique<StdFunctionOperator>(
+      displacement_.space().TrueVSize(),
+
+      // residual function
+      [this](const mfem::Vector& u, mfem::Vector& r) {
+        H_->Mult(u, r);  // r := H(u)
+        r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+      },
+
+      // gradient of residual function
+      [this](const mfem::Vector& u) -> mfem::Operator& {
+        auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
+        bcs_.eliminateAllEssentialDofsFromMatrix(J);
+        return J;
+      });
+  return residual;
 }
 
 // Advance the timestep
@@ -304,7 +313,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
   mesh_->NewNodes(*reference_nodes_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    nonlin_solver_.Mult(zero_, displacement_.trueVec());
+    quasiStaticSolve();
   } else {
     second_order_ode_solver_->Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }
