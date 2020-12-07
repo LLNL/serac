@@ -14,6 +14,9 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int componen
                                      const int num_attrs)
     : coef_(coef), component_(component), markers_(num_attrs)
 {
+  if (std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
+    SLIC_ERROR_IF(component_ != -1, "A vector coefficient must be applied to all components");
+  }
   markers_ = 0;
   for (const int attr : attrs) {
     SLIC_ASSERT_MSG(attr <= num_attrs, "Attribute specified larger than what is found in the mesh.");
@@ -24,6 +27,9 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int componen
 BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs)
     : coef_(coef), component_(component), markers_(0), true_dofs_(true_dofs)
 {
+  if (std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
+    SLIC_ERROR_IF(component_ != -1, "A vector coefficient must be applied to all components");
+  }
 }
 
 void BoundaryCondition::setTrueDofs(const mfem::Array<int> dofs) { true_dofs_ = dofs; }
