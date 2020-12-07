@@ -121,11 +121,24 @@ private:
    * @param[in] du_dt The first time derivative of u
    * @param[out] d2u_dt2 The second time derivative of u
    */
-  void  Solve(const double t, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
-              mfem::Vector& d2u_dt2) const;
+  void Solve(const double t, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
+             mfem::Vector& d2u_dt2) const;
+
+  /**
+   * @brief Set of references to external variables used by residual operator
+   */
   State state_;
-  DirichletEnforcementMethod      enforcement_method_ = serac::DirichletEnforcementMethod::RateControl;
-  const EquationSolver&           solver_;
+  /**
+   * @brief The method of enforcing time-varying dirichlet boundary conditions
+   */
+  DirichletEnforcementMethod enforcement_method_ = serac::DirichletEnforcementMethod::RateControl;
+  /**
+   * @brief Reference to the equationsolver used to solve for d2u_dt2
+   */
+  const EquationSolver& solver_;
+  /**
+   * @brief Reference to boundary conditions used to constrain the solution
+   */
   const BoundaryConditionManager& bcs_;
   mfem::Vector                    zero_;
 
@@ -227,9 +240,21 @@ private:
    */
   void Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
 
-  State                           state_;
-  DirichletEnforcementMethod      enforcement_method_ = serac::DirichletEnforcementMethod::RateControl;
-  const EquationSolver&           solver_;
+  /**
+   * @brief Set of references to external variables used by residual operator
+   */
+  State state_;
+  /**
+   * @brief The method of enforcing time-varying dirichlet boundary conditions
+   */
+  DirichletEnforcementMethod enforcement_method_ = serac::DirichletEnforcementMethod::RateControl;
+  /**
+   * @brief Reference to the equationsolver used to solve for du_dt
+   */
+  const EquationSolver& solver_;
+  /**
+   * @brief Reference to boundary conditions used to constrain the solution
+   */
   const BoundaryConditionManager& bcs_;
   mfem::Vector                    zero_;
 
