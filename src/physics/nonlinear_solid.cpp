@@ -166,32 +166,15 @@ void NonlinearSolid::completeSetup()
   // prescribed acceleration values are not modified by
   // the nonlinear solve.
   nonlin_solver_.nonlinearSolver().iterative_mode = true;
-  nonlin_solver_.SetOperator(residual_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    // the quasistatic case is entirely described by the residual,
-    // there is no ordinary differential equation
-    residual_ = StdFunctionOperator(
-        displacement_.space().TrueVSize(),
-
-        // residual function
-        [this](const mfem::Vector& u, mfem::Vector& r) {
-          H_->Mult(u, r);  // r := H(u)
-          r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
-        },
-
-        // gradient of residual function
-        [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
-          bcs_.eliminateAllEssentialDofsFromMatrix(J);
-          return J;
-        });
+    residual_ = buildQuasistaticOperator();
 
   } else {
     // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
-    residual_ = StdFunctionOperator(
+    residual_ = std::make_unique<StdFunctionOperator>(
         displacement_.space().TrueVSize(),
 
         // residual function
@@ -212,6 +195,33 @@ void NonlinearSolid::completeSetup()
 
     second_order_ode_solver_->Init(ode2_);
   }
+
+  nonlin_solver_.SetOperator(*residual_);
+}
+
+// Solve the Quasi-static Newton system
+void NonlinearSolid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
+
+std::unique_ptr<mfem::Operator> NonlinearSolid::buildQuasistaticOperator()
+{
+  // the quasistatic case is entirely described by the residual,
+  // there is no ordinary differential equation
+  auto residual = std::make_unique<StdFunctionOperator>(
+      displacement_.space().TrueVSize(),
+
+      // residual function
+      [this](const mfem::Vector& u, mfem::Vector& r) {
+        H_->Mult(u, r);  // r := H(u)
+        r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+      },
+
+      // gradient of residual function
+      [this](const mfem::Vector& u) -> mfem::Operator& {
+        auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
+        bcs_.eliminateAllEssentialDofsFromMatrix(J);
+        return J;
+      });
+  return residual;
 }
 
 // Advance the timestep
@@ -225,7 +235,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
   mesh_->NewNodes(*reference_nodes_);
 
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
-    nonlin_solver_.Mult(zero_, displacement_.trueVec());
+    quasiStaticSolve();
   } else {
     second_order_ode_solver_->Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }
@@ -245,7 +255,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
+void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table, const bool dynamic)
 {
   // Polynomial interpolation order
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1);
@@ -263,8 +273,17 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
   traction_table.getField("y").defaultValue(1.0e-3);
   traction_table.getField("z").defaultValue(0.0);
 
-  auto& solver_table = table.addTable("solver", "Linear and Nonlinear Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(solver_table);
+  auto& stiffness_solver_table =
+      table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
+
+  // See comment in header - schema definitions should never be guarded by a conditional.
+  // This is a short-term patch.
+  if (dynamic) {
+    auto& mass_solver_table = table.addTable("mass_solver", "Parameters for mass matrix inversion");
+    mass_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
+    mass_solver_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
+  }
 
   auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
   serac::input::BoundaryConditionInputInfo::defineInputFileSchema(bc_table);
@@ -272,7 +291,9 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 
 }  // namespace serac
 
+using serac::DirichletEnforcementMethod;
 using serac::NonlinearSolid;
+using serac::TimestepMethod;
 
 NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const axom::inlet::Table& base)
 {
@@ -281,11 +302,31 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   result.order = base["order"];
 
   // Solver parameters
-  auto solver                          = base["solver"];
-  result.solver_params.H_lin_params    = solver["linear"].get<serac::IterativeSolverParameters>();
-  result.solver_params.H_nonlin_params = solver["nonlinear"].get<serac::NonlinearSolverParameters>();
+  auto stiffness_solver                = base["stiffness_solver"];
+  result.solver_params.H_lin_params    = stiffness_solver["linear"].get<serac::IterativeSolverParameters>();
+  result.solver_params.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverParameters>();
 
-  // TODO: "optional" concept within Inlet to support dynamic parameters
+  if (base.contains("mass_solver")) {
+    NonlinearSolid::DynamicSolverParameters dyn_params;
+    auto                                    mass_solver = base["mass_solver"];
+
+    // FIXME: Implement all supported methods as part of an ODE schema
+    const static std::map<std::string, TimestepMethod> timestep_methods = {
+        {"AverageAcceleration", TimestepMethod::AverageAcceleration}};
+    std::string timestep_method = mass_solver["timestepper"];
+    SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
+    dyn_params.timestepper = timestep_methods.at(timestep_method);
+
+    // FIXME: Implement all supported methods as part of an ODE schema
+    const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
+        {"RateControl", DirichletEnforcementMethod::RateControl}};
+    std::string enforcement_method = mass_solver["enforcement_method"];
+    SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
+                  "Unrecognized enforcement method: " << enforcement_method);
+    dyn_params.enforcement_method = enforcement_methods.at(enforcement_method);
+
+    result.solver_params.dyn_params = std::move(dyn_params);
+  }
 
   // Set the material parameters
   // neo-Hookean material parameters

@@ -10,7 +10,14 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies physics coefficients axom mpi mfem gtest)
+    set(test_dependencies physics coefficients axom mpi mfem gtest test_utils)
+
+    blt_add_library(
+        NAME        test_utils
+        SOURCES     test_utilities.cpp
+        HEADERS     test_utilities.hpp
+        DEPENDS_ON  numerics infrastructure physics axom
+        )
 
     set(solver_tests
         serac_dynamic_solver.cpp
@@ -58,7 +65,8 @@ if (ENABLE_GTEST)
         mesh_generation.cpp
         copy_elision.cpp
         mfem_array_std_algo.cpp
-        expr_templates.cpp)
+        expr_templates.cpp
+        serac_error_handling.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)
