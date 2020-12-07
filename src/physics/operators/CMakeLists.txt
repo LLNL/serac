@@ -5,12 +5,13 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(physics_operators_headers odes.hpp stdfunction_operator.hpp)
-
+set(physics_operators_sources odes.cpp)
 set(physics_operators_depends infrastructure physics_utilities numerics fmt mfem mpi axom)
 
 blt_add_library(
    NAME        physics_operators
    HEADERS     ${physics_operators_headers}
+   SOURCES     ${physics_operators_sources}
    DEPENDS_ON  ${physics_operators_depends}
    )
 

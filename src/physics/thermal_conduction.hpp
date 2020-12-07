@@ -235,17 +235,17 @@ protected:
   std::unique_ptr<mfem::Coefficient> mass_coef_;
 
   /**
+   * @brief mfem::Operator that describes the weight residual
+   * and its gradient with respect to temperature
+   */
+  StdFunctionOperator residual_;
+
+  /**
    * @brief the ordinary differential equation that describes
    * how to solve for the time derivative of temperature, given
    * the current temperature and source terms
    */
   FirstOrderODE ode_;
-
-  /**
-   * @brief mfem::Operator that describes the weight residual
-   * and its gradient with respect to temperature
-   */
-  StdFunctionOperator residual_;
 
   /**
    * @brief the specific methods and tolerances specified to
@@ -272,12 +272,6 @@ protected:
    * nonlinear solver
    */
   mfem::Vector previous_;
-
-  // TODO delete these with ODE refactor
-  mfem::Vector U_minus_;
-  mfem::Vector U_;
-  mfem::Vector U_plus_;
-  mfem::Vector dU_dt_;
 };
 
 }  // namespace serac

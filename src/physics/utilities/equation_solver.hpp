@@ -7,7 +7,7 @@
 /**
  * @file equation_solver.hpp
  *
- * @brief This file contains the declaration of an iterative solver wrapper
+ * @brief This file contains the declaration of an equation solver wrapper
  */
 
 #ifndef EQUATION_SOLVER
