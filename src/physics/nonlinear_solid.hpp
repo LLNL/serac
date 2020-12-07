@@ -296,18 +296,6 @@ protected:
    */
   mfem::Vector previous_;
 
-  // TODO: wrap mfem's second order ODE solvers to incorporate this boundary condition info
-  //
-  // temporary values used to compute finite difference approximations
-  // to the derivatives of constrained degrees of freedom
-  mfem::Vector U_minus_;
-  mfem::Vector U_;
-  mfem::Vector U_plus_;
-
-  // time derivatives of the constraint function
-  mfem::Vector dU_dt_;
-  mfem::Vector d2U_dt2_;
-
   // current and previous timesteps
   double c0_, c1_;
 };

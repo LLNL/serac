@@ -113,7 +113,13 @@ public:
 
 private:
   /**
-   * @brief the function that is used to implement mfem::TDO::Mult and mfem::TDO::ImplicitSolve
+   * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
+   * @param[in] t The current time
+   * @param[in] c0 The current time step
+   * @param[in] c1 The previous time step
+   * @param[in] u The true DOFs
+   * @param[in] du_dt The first time derivative of u
+   * @param[out] d2u_dt2 The second time derivative of u
    */
   void  Solve(const double t, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
               mfem::Vector& d2u_dt2) const;
@@ -214,7 +220,10 @@ public:
 
 private:
   /**
-   * @brief the function that is used to implement mfem::TDO::Mult and mfem::TDO::ImplicitSolve
+   * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve
+   * @param[in] dt The time step
+   * @param[in] u The true DOFs
+   * @param[in] du_dt The first time derivative of u
    */
   void Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
 

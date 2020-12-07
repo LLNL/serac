@@ -272,12 +272,6 @@ protected:
    * nonlinear solver
    */
   mfem::Vector previous_;
-
-  // TODO delete these with ODE refactor
-  mfem::Vector U_minus_;
-  mfem::Vector U_;
-  mfem::Vector U_plus_;
-  mfem::Vector dU_dt_;
 };
 
 }  // namespace serac

@@ -46,11 +46,6 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   zero_.SetSize(true_size);
   zero_ = 0.0;
 
-  U_minus_.SetSize(true_size);
-  U_.SetSize(true_size);
-  U_plus_.SetSize(true_size);
-  dU_dt_.SetSize(true_size);
-
   // Default to constant value of 1.0 for density and specific heat capacity
   cp_  = std::make_unique<mfem::ConstantCoefficient>(1.0);
   rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);

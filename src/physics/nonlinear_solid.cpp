@@ -62,12 +62,6 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
 
   zero_.SetSize(true_size);
   zero_ = 0.0;
-
-  U_minus_.SetSize(true_size);
-  U_.SetSize(true_size);
-  U_plus_.SetSize(true_size);
-  dU_dt_.SetSize(true_size);
-  d2U_dt2_.SetSize(true_size);
 }
 
 NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputInfo& info)
