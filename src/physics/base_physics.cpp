@@ -56,11 +56,9 @@ void BasePhysics::setState(std::vector<serac::FiniteElementState>&& state)
 
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
-void BasePhysics::setTimestepper(const serac::TimestepMethod             timestepper,
-                                 const serac::DirichletEnforcementMethod enforcement_method)
+void BasePhysics::setTimestepper(const serac::TimestepMethod timestepper)
 {
-  timestepper_        = timestepper;
-  enforcement_method_ = enforcement_method;
+  timestepper_ = timestepper;
 
   switch (timestepper_) {
     case serac::TimestepMethod::QuasiStatic:

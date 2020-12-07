@@ -183,9 +183,7 @@ public:
    * @param[in] timestepper The timestepping method for the solver
    * @param[in] enforcement_method The method of enforcing time-varying dirichlet boundary conditions
    */
-  virtual void setTimestepper(const serac::TimestepMethod             timestepper,
-                              const serac::DirichletEnforcementMethod enforcement_method =
-                                  serac::DirichletEnforcementMethod::RateControl) override;
+  virtual void setTimestepper(const serac::TimestepMethod timestepper) override;
 
   /**
    * @brief Complete the initialization and allocation of the data structures.

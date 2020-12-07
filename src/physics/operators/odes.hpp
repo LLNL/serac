@@ -124,7 +124,7 @@ private:
   void  Solve(const double t, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
               mfem::Vector& d2u_dt2) const;
   State state_;
-  DirichletEnforcementMethod      enforcement_method_;
+  DirichletEnforcementMethod      enforcement_method_ = serac::DirichletEnforcementMethod::RateControl;
   const EquationSolver&           solver_;
   const BoundaryConditionManager& bcs_;
   mfem::Vector                    zero_;
@@ -228,7 +228,7 @@ private:
   void Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
 
   State                           state_;
-  DirichletEnforcementMethod      enforcement_method_;
+  DirichletEnforcementMethod      enforcement_method_ = serac::DirichletEnforcementMethod::RateControl;
   const EquationSolver&           solver_;
   const BoundaryConditionManager& bcs_;
   mfem::Vector                    zero_;

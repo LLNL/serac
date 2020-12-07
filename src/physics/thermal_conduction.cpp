@@ -29,7 +29,7 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
 
   // Check for dynamic mode
   if (params.dyn_params) {
-    setTimestepper(params.dyn_params->timestepper, params.dyn_params->enforcement_method);
+    setTimestepper(params.dyn_params->timestepper);
     ode_.setEnforcementMethod(params.dyn_params->enforcement_method);
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
