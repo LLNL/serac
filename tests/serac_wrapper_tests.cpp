@@ -85,13 +85,13 @@ void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int>& es
 
   auto diffusion = std::make_shared<DiffusionIntegrator>(one);
 
-  A_nonlin.AddDomainIntegrator(new BilinearToNonlinearFormIntegrator(diffusion));
+  A_nonlin.AddDomainIntegrator(new mfem_extensions::BilinearToNonlinearFormIntegrator(diffusion));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
   ConstantCoefficient coeff_zero(0.0);
 
   auto zero_integrator = std::make_shared<DomainLFIntegrator>(coeff_zero);
-  A_nonlin.AddDomainIntegrator(new LinearToNonlinearFormIntegrator(zero_integrator, pfes_));
+  A_nonlin.AddDomainIntegrator(new mfem_extensions::LinearToNonlinearFormIntegrator(zero_integrator, pfes_));
 
   // The temperature solution vector already contains the essential boundary condition values
   std::unique_ptr<HypreParVector> T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
@@ -117,7 +117,7 @@ void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int
 
   auto diffusion = std::make_shared<DiffusionIntegrator>(one);
 
-  A_nonlin.AddDomainIntegrator(new MixedBilinearToNonlinearFormIntegrator(diffusion, pfes_));
+  A_nonlin.AddDomainIntegrator(new mfem_extensions::MixedBilinearToNonlinearFormIntegrator(diffusion, pfes_));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
   // The temperature solution vector already contains the essential boundary condition values
@@ -154,8 +154,8 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
     return 0.;
   });
 
-  Array<int> bdr_attr_list_zero = serac::makeBdrAttributeList(*pmesh_, x_zero);
-  Array<int> bdr_attr_list_one  = serac::makeBdrAttributeList(*pmesh_, x_one);
+  Array<int> bdr_attr_list_zero = mfem_extensions::makeBdrAttributeList(*pmesh_, x_zero);
+  Array<int> bdr_attr_list_one  = mfem_extensions::makeBdrAttributeList(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   Array<int> bdr_attr_list(pfes_->GetNBE());
@@ -230,8 +230,8 @@ TEST_F(WrapperTests, Transformed)
     return 0.;
   });
 
-  Array<int> bdr_attr_list_zero = serac::makeBdrAttributeList(*pmesh_, x_zero);
-  Array<int> bdr_attr_list_one  = serac::makeBdrAttributeList(*pmesh_, x_one);
+  Array<int> bdr_attr_list_zero = mfem_extensions::makeBdrAttributeList(*pmesh_, x_zero);
+  Array<int> bdr_attr_list_one  = mfem_extensions::makeBdrAttributeList(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   Array<int> bdr_attr_list(pfes_->GetNBE());
@@ -265,7 +265,7 @@ TEST_F(WrapperTests, Transformed)
   ConstantCoefficient one(1.);
 
   auto   diffusion           = std::make_shared<DiffusionIntegrator>(one);
-  auto   nonlinear_diffusion = std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion);
+  auto   nonlinear_diffusion = std::make_unique<mfem_extensions::BilinearToNonlinearFormIntegrator>(diffusion);
   double multiplier          = 2.;
   double offset              = 1.;
   auto   transform           = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::Vector& x) {
@@ -279,8 +279,8 @@ TEST_F(WrapperTests, Transformed)
     m *= multiplier;
     return m;
   };
-  auto transformed_diffusion = std::make_unique<TransformedNonlinearFormIntegrator>(
-      std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion), transform, transform_grad);
+  auto transformed_diffusion = std::make_unique<mfem_extensions::TransformedNonlinearFormIntegrator>(
+      std::make_unique<mfem_extensions::BilinearToNonlinearFormIntegrator>(diffusion), transform, transform_grad);
 
   ParGridFunction temp(pfes_.get());
   {

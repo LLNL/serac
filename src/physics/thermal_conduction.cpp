@@ -24,7 +24,7 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
 {
   state_.push_back(temperature_);
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), params.T_lin_params, params.T_nonlin_params);
+  nonlin_solver_ = mfem_extensions::EquationSolver(mesh->GetComm(), params.T_lin_params, params.T_nonlin_params);
   nonlin_solver_.SetOperator(residual_);
 
   // Check for dynamic mode
@@ -135,7 +135,7 @@ void ThermalConduction::completeSetup()
   temperature_.initializeTrueVec();
 
   if (is_quasistatic_) {
-    residual_ = StdFunctionOperator(
+    residual_ = mfem_extensions::StdFunctionOperator(
         temperature_.space().TrueVSize(),
 
         [this](const mfem::Vector& u, mfem::Vector& r) {
@@ -164,7 +164,7 @@ void ThermalConduction::completeSetup()
 
     M_.reset(M_form_->ParallelAssemble());
 
-    residual_ = StdFunctionOperator(
+    residual_ = mfem_extensions::StdFunctionOperator(
         temperature_.space().TrueVSize(),
         [this](const mfem::Vector& du_dt, mfem::Vector& r) {
           r = (*M_) * du_dt + (*K_) * (u_ + dt_ * du_dt);

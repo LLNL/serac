@@ -40,9 +40,9 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   const auto& lin_params = params.H_lin_params;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
   // to be the displacement
-  const auto& augmented_params = augmentAMGForElasticity(lin_params, displacement_.space());
+  const auto& augmented_params = mfem_extensions::augmentAMGForElasticity(lin_params, displacement_.space());
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_params);
+  nonlin_solver_ = mfem_extensions::EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_params);
 
   // Check for dynamic mode
   if (params.dyn_params) {
@@ -118,14 +118,14 @@ void NonlinearSolid::completeSetup()
 
   // Add the hyperelastic integrator
   if (is_quasistatic_) {
-    H_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
+    H_->AddDomainIntegrator(new mfem_extensions::IncrementalHyperelasticIntegrator(model_.get()));
   } else {
     H_->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
   }
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
-    H_->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
+    H_->AddBdrFaceIntegrator(new mfem_extensions::HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
                              nat_bc_data.markers());
   }
 
@@ -174,7 +174,7 @@ void NonlinearSolid::completeSetup()
     // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
-    residual_ = std::make_unique<StdFunctionOperator>(
+    residual_ = std::make_unique<mfem_extensions::StdFunctionOperator>(
         displacement_.space().TrueVSize(),
 
         // residual function
@@ -204,7 +204,7 @@ std::unique_ptr<mfem::Operator> NonlinearSolid::buildQuasistaticOperator()
 {
   // the quasistatic case is entirely described by the residual,
   // there is no ordinary differential equation
-  auto residual = std::make_unique<StdFunctionOperator>(
+  auto residual = std::make_unique<mfem_extensions::StdFunctionOperator>(
       displacement_.space().TrueVSize(),
 
       // residual function
@@ -273,7 +273,7 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table,
 
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
+  serac::mfem_extensions::EquationSolver::defineInputFileSchema(stiffness_solver_table);
 
   // See comment in header - schema definitions should never be guarded by a conditional.
   // This is a short-term patch.

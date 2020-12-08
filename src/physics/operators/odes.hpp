@@ -12,7 +12,7 @@
 #include "physics/utilities/boundary_condition_manager.hpp"
 #include "physics/utilities/equation_solver.hpp"
 
-namespace serac {
+namespace serac::mfem_extensions {
 
 /**
  * @brief SecondOrderODE is a class wrapping mfem::SecondOrderTimeDependentOperator
@@ -312,4 +312,4 @@ private:
   mutable mfem::Vector dU_dt_;
 };
 
-}  // namespace serac
+}  // namespace serac::mfem_extensions

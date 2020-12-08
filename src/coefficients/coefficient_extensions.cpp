@@ -9,7 +9,7 @@
 
 #include "infrastructure/logger.hpp"
 
-namespace serac {
+namespace serac::mfem_extensions {
 
 mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c)
 {
@@ -148,4 +148,4 @@ double TransformedScalarCoefficient::Eval(mfem::ElementTransformation& T, const 
   }
 }
 
-}  // namespace serac
+}  // namespace serac::mfem_extensions

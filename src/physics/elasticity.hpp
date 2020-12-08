@@ -126,7 +126,7 @@ protected:
   /**
    * @brief System solver instance for quasistatic K solver
    */
-  EquationSolver K_inv_;
+  mfem_extensions::EquationSolver K_inv_;
 
   /**
    * @brief Lame mu elasticity parameter

@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
   // loading parameters
   // define the traction vector
   auto traction      = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
-  auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
+  auto traction_coef = std::make_shared<serac::mfem_extensions::VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
   for (const auto& bc : solid_solver_info.boundary_conditions) {

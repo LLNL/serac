@@ -21,7 +21,7 @@
 #include "mfem.hpp"
 #include "physics/utilities/solver_config.hpp"
 
-namespace serac {
+namespace serac::mfem_extensions {
 
 /**
  * Wraps a (currently iterative) system solver and handles the configuration of linear
@@ -207,7 +207,7 @@ inline LinearSolverParameters augmentAMGForElasticity(const LinearSolverParamete
   return augmented_params;
 }
 
-}  // namespace serac
+}  // namespace serac::mfem_extensions
 
 // Prototype the specialization
 
@@ -222,8 +222,8 @@ struct FromInlet<serac::NonlinearSolverParameters> {
 };
 
 template <>
-struct FromInlet<serac::EquationSolver> {
-  serac::EquationSolver operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::mfem_extensions::EquationSolver> {
+  serac::mfem_extensions::EquationSolver operator()(const axom::inlet::Table& base);
 };
 
 #endif
