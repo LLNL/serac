@@ -81,13 +81,6 @@ public:
   virtual const std::vector<std::reference_wrapper<serac::FiniteElementState> >& getState() const;
 
   /**
-   * @brief Set the time integration method
-   *
-   * @param[in] timestepper The timestepping method for the solver
-   */
-  virtual void setTimestepper(const serac::TimestepMethod timestepper);
-
-  /**
    * @brief Set the current time
    *
    * @param[in] time The time
@@ -174,19 +167,9 @@ protected:
   serac::OutputType output_type_;
 
   /**
-   *@brief Time integration method
+   *@brief Whether the simulation is time-independent
    */
-  serac::TimestepMethod timestepper_ = TimestepMethod::QuasiStatic;
-
-  /**
-   * @brief MFEM solver object for first-order ODEs
-   */
-  std::unique_ptr<mfem::ODESolver> ode_solver_;
-
-  /**
-   * @brief MFEM solver object for second-order ODEs
-   */
-  std::unique_ptr<mfem::SecondOrderODESolver> second_order_ode_solver_;
+  bool is_quasistatic_ = true;
 
   /**
    * @brief Root output name

@@ -178,14 +178,6 @@ public:
   void SetCouplingScheme(serac::CouplingScheme coupling) { coupling_ = coupling; };
 
   /**
-   * @brief Set the time integration method
-   *
-   * @param[in] timestepper The timestepping method for the solver
-   * @param[in] enforcement_method The method of enforcing time-varying dirichlet boundary conditions
-   */
-  virtual void setTimestepper(const serac::TimestepMethod timestepper) override;
-
-  /**
    * @brief Complete the initialization and allocation of the data structures.
    *
    * This must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic

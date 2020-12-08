@@ -19,8 +19,7 @@ BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
     : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0), bcs_(*mesh)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
-  BasePhysics::setTimestepper(serac::TimestepMethod::ForwardEuler);
-  order_ = 1;
+  order_                         = 1;
 }
 
 BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
@@ -55,69 +54,6 @@ void BasePhysics::setState(std::vector<serac::FiniteElementState>&& state)
 }
 
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
-
-void BasePhysics::setTimestepper(const serac::TimestepMethod timestepper)
-{
-  timestepper_ = timestepper;
-
-  switch (timestepper_) {
-    case serac::TimestepMethod::QuasiStatic:
-      break;
-    case serac::TimestepMethod::BackwardEuler:
-      ode_solver_ = std::make_unique<mfem::BackwardEulerSolver>();
-      break;
-    case serac::TimestepMethod::SDIRK33:
-      ode_solver_ = std::make_unique<mfem::SDIRK33Solver>();
-      break;
-    case serac::TimestepMethod::ForwardEuler:
-      ode_solver_ = std::make_unique<mfem::ForwardEulerSolver>();
-      break;
-    case serac::TimestepMethod::RK2:
-      ode_solver_ = std::make_unique<mfem::RK2Solver>(0.5);
-      break;
-    case serac::TimestepMethod::RK3SSP:
-      ode_solver_ = std::make_unique<mfem::RK3SSPSolver>();
-      break;
-    case serac::TimestepMethod::RK4:
-      ode_solver_ = std::make_unique<mfem::RK4Solver>();
-      break;
-    case serac::TimestepMethod::GeneralizedAlpha:
-      ode_solver_ = std::make_unique<mfem::GeneralizedAlphaSolver>(0.5);
-      break;
-    case serac::TimestepMethod::ImplicitMidpoint:
-      ode_solver_ = std::make_unique<mfem::ImplicitMidpointSolver>();
-      break;
-    case serac::TimestepMethod::SDIRK23:
-      ode_solver_ = std::make_unique<mfem::SDIRK23Solver>();
-      break;
-    case serac::TimestepMethod::SDIRK34:
-      ode_solver_ = std::make_unique<mfem::SDIRK34Solver>();
-      break;
-
-    case serac::TimestepMethod::HHTAlpha:
-      second_order_ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
-      break;
-    case serac::TimestepMethod::WBZAlpha:
-      second_order_ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
-      break;
-    case serac::TimestepMethod::AverageAcceleration:
-      second_order_ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
-      break;
-    case serac::TimestepMethod::LinearAcceleration:
-      second_order_ode_solver_ = std::make_unique<mfem::LinearAccelerationSolver>();
-      break;
-    case serac::TimestepMethod::CentralDifference:
-      second_order_ode_solver_ = std::make_unique<mfem::CentralDifferenceSolver>();
-      break;
-    case serac::TimestepMethod::FoxGoodwin:
-      second_order_ode_solver_ = std::make_unique<mfem::FoxGoodwinSolver>();
-      break;
-
-    default:
-      SLIC_ERROR_ROOT(mpi_rank_, "Timestep method not recognized!");
-      serac::exitGracefully(true);
-  }
-}
 
 void BasePhysics::setTime(const double time) { time_ = time; }
 

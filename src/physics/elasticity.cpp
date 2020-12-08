@@ -23,8 +23,8 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const Lin
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
   const auto& augmented_params = augmentAMGForElasticity(params, displacement_.space());
 
-  K_inv_ = EquationSolver(mesh->GetComm(), augmented_params);
-  setTimestepper(TimestepMethod::QuasiStatic);
+  K_inv_          = EquationSolver(mesh->GetComm(), augmented_params);
+  is_quasistatic_ = true;
 }
 
 void Elasticity::setDisplacementBCs(const std::set<int>&                     disp_bdr,
@@ -98,7 +98,7 @@ void Elasticity::advanceTimestep(double&)
   // Initialize the true vector
   displacement_.initializeTrueVec();
 
-  if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+  if (is_quasistatic_) {
     QuasiStaticSolve();
   } else {
     SLIC_ERROR_ROOT(mpi_rank_, "Only quasistatics implemented for linear elasticity!");
