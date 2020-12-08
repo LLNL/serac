@@ -20,7 +20,7 @@ SecondOrderODE::SecondOrderODE(int n, State&& state, const EquationSolver& solve
   d2U_dt2_.SetSize(n);
 }
 
-void SecondOrderODE::setTimestepper(const serac::TimestepMethod timestepper)
+void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 {
   switch (timestepper) {
     case serac::TimestepMethod::HHTAlpha:
@@ -134,7 +134,7 @@ FirstOrderODE::FirstOrderODE(int n, State&& state, const EquationSolver& solver,
   dU_dt_.SetSize(n);
 }
 
-void FirstOrderODE::setTimestepper(const serac::TimestepMethod timestepper)
+void FirstOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 {
   switch (timestepper) {
     case serac::TimestepMethod::BackwardEuler:

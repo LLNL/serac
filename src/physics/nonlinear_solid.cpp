@@ -46,8 +46,8 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
 
   // Check for dynamic mode
   if (params.dyn_params) {
-    ode2_.setTimestepper(params.dyn_params->timestepper);
-    ode2_.setEnforcementMethod(params.dyn_params->enforcement_method);
+    ode2_.SetTimestepper(params.dyn_params->timestepper);
+    ode2_.SetEnforcementMethod(params.dyn_params->enforcement_method);
     is_quasistatic_ = false;
   } else {
     is_quasistatic_ = true;

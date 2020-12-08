@@ -109,14 +109,14 @@ public:
    * @brief Configures the Dirichlet enforcement method to use
    * @param[in] method The selected method
    */
-  void setEnforcementMethod(const DirichletEnforcementMethod method) { enforcement_method_ = method; }
+  void SetEnforcementMethod(const DirichletEnforcementMethod method) { enforcement_method_ = method; }
 
   /**
    * @brief Set the time integration method
    *
    * @param[in] timestepper The timestepping method for the solver
    */
-  void setTimestepper(const serac::TimestepMethod timestepper);
+  void SetTimestepper(const serac::TimestepMethod timestepper);
 
   /**
    * @brief Performs a time step
@@ -252,14 +252,14 @@ public:
    * @brief Configures the Dirichlet enforcement method to use
    * @param[in] method The selected method
    */
-  void setEnforcementMethod(const DirichletEnforcementMethod method) { enforcement_method_ = method; }
+  void SetEnforcementMethod(const DirichletEnforcementMethod method) { enforcement_method_ = method; }
 
   /**
    * @brief Set the time integration method
    *
    * @param[in] timestepper The timestepping method for the solver
    */
-  void setTimestepper(const serac::TimestepMethod timestepper);
+  void SetTimestepper(const serac::TimestepMethod timestepper);
 
   /**
    * @brief Performs a time step
