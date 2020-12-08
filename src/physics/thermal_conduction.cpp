@@ -30,6 +30,7 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   // Check for dynamic mode
   if (params.dyn_params) {
     setTimestepper(params.dyn_params->timestepper);
+    ode_.setTimestepper(params.dyn_params->timestepper);
     ode_.setEnforcementMethod(params.dyn_params->enforcement_method);
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
@@ -177,8 +178,6 @@ void ThermalConduction::completeSetup()
           }
           return *J_;
         });
-
-    ode_solver_->Init(ode_);
   }
 }
 
@@ -192,7 +191,7 @@ void ThermalConduction::advanceTimestep(double& dt)
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
     // Step the time integrator
-    ode_solver_->Step(temperature_.trueVec(), time_, dt);
+    ode_.Step(temperature_.trueVec(), time_, dt);
   }
 
   temperature_.distributeSharedDofs();

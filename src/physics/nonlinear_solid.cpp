@@ -47,6 +47,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   // Check for dynamic mode
   if (params.dyn_params) {
     setTimestepper(params.dyn_params->timestepper);
+    ode2_.setTimestepper(params.dyn_params->timestepper);
     ode2_.setEnforcementMethod(params.dyn_params->enforcement_method);
   } else {
     setTimestepper(TimestepMethod::QuasiStatic);
@@ -191,8 +192,6 @@ void NonlinearSolid::completeSetup()
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat_);
           return *J_mat_;
         });
-
-    second_order_ode_solver_->Init(ode2_);
   }
 
   nonlin_solver_.SetOperator(*residual_);
@@ -236,7 +235,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
   if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
     quasiStaticSolve();
   } else {
-    second_order_ode_solver_->Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
+    ode2_.Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }
 
   // Distribute the shared DOFs
