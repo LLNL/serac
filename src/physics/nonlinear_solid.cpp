@@ -46,10 +46,11 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
 
   // Check for dynamic mode
   if (params.dyn_params) {
-    setTimestepper(params.dyn_params->timestepper);
-    ode2_.setEnforcementMethod(params.dyn_params->enforcement_method);
+    ode2_.SetTimestepper(params.dyn_params->timestepper);
+    ode2_.SetEnforcementMethod(params.dyn_params->enforcement_method);
+    is_quasistatic_ = false;
   } else {
-    setTimestepper(TimestepMethod::QuasiStatic);
+    is_quasistatic_ = true;
   }
 
   int true_size = velocity_.space().TrueVSize();
@@ -116,7 +117,7 @@ void NonlinearSolid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+  if (is_quasistatic_) {
     H_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
   } else {
     H_->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
@@ -138,7 +139,7 @@ void NonlinearSolid::completeSetup()
   }
 
   // If dynamic, create the mass and viscosity forms
-  if (timestepper_ != serac::TimestepMethod::QuasiStatic) {
+  if (!is_quasistatic_) {
     const double              ref_density = 1.0;  // density in the reference configuration
     mfem::ConstantCoefficient rho0(ref_density);
 
@@ -166,7 +167,7 @@ void NonlinearSolid::completeSetup()
   // the nonlinear solve.
   nonlin_solver_.nonlinearSolver().iterative_mode = true;
 
-  if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+  if (is_quasistatic_) {
     residual_ = buildQuasistaticOperator();
 
   } else {
@@ -191,8 +192,6 @@ void NonlinearSolid::completeSetup()
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat_);
           return *J_mat_;
         });
-
-    second_order_ode_solver_->Init(ode2_);
   }
 
   nonlin_solver_.SetOperator(*residual_);
@@ -233,10 +232,10 @@ void NonlinearSolid::advanceTimestep(double& dt)
   // Set the mesh nodes to the reference configuration
   mesh_->NewNodes(*reference_nodes_);
 
-  if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+  if (is_quasistatic_) {
     quasiStaticSolve();
   } else {
-    second_order_ode_solver_->Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
+    ode2_.Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }
 
   // Distribute the shared DOFs

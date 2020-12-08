@@ -20,6 +20,33 @@ SecondOrderODE::SecondOrderODE(int n, State&& state, const EquationSolver& solve
   d2U_dt2_.SetSize(n);
 }
 
+void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
+{
+  switch (timestepper) {
+    case serac::TimestepMethod::HHTAlpha:
+      ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
+      break;
+    case serac::TimestepMethod::WBZAlpha:
+      ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
+      break;
+    case serac::TimestepMethod::AverageAcceleration:
+      ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
+      break;
+    case serac::TimestepMethod::LinearAcceleration:
+      ode_solver_ = std::make_unique<mfem::LinearAccelerationSolver>();
+      break;
+    case serac::TimestepMethod::CentralDifference:
+      ode_solver_ = std::make_unique<mfem::CentralDifferenceSolver>();
+      break;
+    case serac::TimestepMethod::FoxGoodwin:
+      ode_solver_ = std::make_unique<mfem::FoxGoodwinSolver>();
+      break;
+    default:
+      SLIC_ERROR("Timestep method was not a supported second-order ODE method");
+  }
+  ode_solver_->Init(*this);
+}
+
 void SecondOrderODE::Solve(const double t, const double c0, const double c1, const mfem::Vector& u,
                            const mfem::Vector& du_dt, mfem::Vector& d2u_dt2) const
 {
@@ -105,6 +132,45 @@ FirstOrderODE::FirstOrderODE(int n, State&& state, const EquationSolver& solver,
   U_.SetSize(n);
   U_plus_.SetSize(n);
   dU_dt_.SetSize(n);
+}
+
+void FirstOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
+{
+  switch (timestepper) {
+    case serac::TimestepMethod::BackwardEuler:
+      ode_solver_ = std::make_unique<mfem::BackwardEulerSolver>();
+      break;
+    case serac::TimestepMethod::SDIRK33:
+      ode_solver_ = std::make_unique<mfem::SDIRK33Solver>();
+      break;
+    case serac::TimestepMethod::ForwardEuler:
+      ode_solver_ = std::make_unique<mfem::ForwardEulerSolver>();
+      break;
+    case serac::TimestepMethod::RK2:
+      ode_solver_ = std::make_unique<mfem::RK2Solver>(0.5);
+      break;
+    case serac::TimestepMethod::RK3SSP:
+      ode_solver_ = std::make_unique<mfem::RK3SSPSolver>();
+      break;
+    case serac::TimestepMethod::RK4:
+      ode_solver_ = std::make_unique<mfem::RK4Solver>();
+      break;
+    case serac::TimestepMethod::GeneralizedAlpha:
+      ode_solver_ = std::make_unique<mfem::GeneralizedAlphaSolver>(0.5);
+      break;
+    case serac::TimestepMethod::ImplicitMidpoint:
+      ode_solver_ = std::make_unique<mfem::ImplicitMidpointSolver>();
+      break;
+    case serac::TimestepMethod::SDIRK23:
+      ode_solver_ = std::make_unique<mfem::SDIRK23Solver>();
+      break;
+    case serac::TimestepMethod::SDIRK34:
+      ode_solver_ = std::make_unique<mfem::SDIRK34Solver>();
+      break;
+    default:
+      SLIC_ERROR("Timestep method was not a supported first-order ODE method");
+  }
+  ode_solver_->Init(*this);
 }
 
 void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const

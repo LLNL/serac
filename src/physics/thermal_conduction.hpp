@@ -67,8 +67,7 @@ public:
 
   static SolverParameters defaultQuasistaticParameters()
   {
-    return {defaultLinearParameters(), defaultNonlinearParameters(),
-            DynamicSolverParameters{TimestepMethod::QuasiStatic, DirichletEnforcementMethod::RateControl}};
+    return {defaultLinearParameters(), defaultNonlinearParameters(), std::nullopt};
   }
 
   static SolverParameters defaultDynamicParameters()

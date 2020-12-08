@@ -130,9 +130,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  // Set the time step method
-  solid_solver.setTimestepper(serac::TimestepMethod::QuasiStatic);
-
   // Complete the solver setup
   solid_solver.completeSetup();
 

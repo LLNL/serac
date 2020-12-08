@@ -42,13 +42,6 @@ void ThermalSolid::completeSetup()
   solid_solver_.completeSetup();
 }
 
-void ThermalSolid::setTimestepper(const serac::TimestepMethod timestepper)
-{
-  timestepper_ = timestepper;
-  therm_solver_.setTimestepper(timestepper);
-  solid_solver_.setTimestepper(timestepper);
-}
-
 // Advance the timestep
 void ThermalSolid::advanceTimestep(double& dt)
 {

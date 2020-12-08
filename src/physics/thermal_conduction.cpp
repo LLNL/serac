@@ -29,10 +29,11 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
 
   // Check for dynamic mode
   if (params.dyn_params) {
-    setTimestepper(params.dyn_params->timestepper);
-    ode_.setEnforcementMethod(params.dyn_params->enforcement_method);
+    ode_.SetTimestepper(params.dyn_params->timestepper);
+    ode_.SetEnforcementMethod(params.dyn_params->enforcement_method);
+    is_quasistatic_ = false;
   } else {
-    setTimestepper(TimestepMethod::QuasiStatic);
+    is_quasistatic_ = true;
   }
 
   dt_          = 0.0;
@@ -133,7 +134,7 @@ void ThermalConduction::completeSetup()
   // Initialize the true vector
   temperature_.initializeTrueVec();
 
-  if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+  if (is_quasistatic_) {
     residual_ = StdFunctionOperator(
         temperature_.space().TrueVSize(),
 
@@ -177,8 +178,6 @@ void ThermalConduction::completeSetup()
           }
           return *J_;
         });
-
-    ode_solver_->Init(ode_);
   }
 }
 
@@ -186,13 +185,13 @@ void ThermalConduction::advanceTimestep(double& dt)
 {
   temperature_.initializeTrueVec();
 
-  if (timestepper_ == serac::TimestepMethod::QuasiStatic) {
+  if (is_quasistatic_) {
     nonlin_solver_.Mult(zero_, temperature_.trueVec());
   } else {
     SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
     // Step the time integrator
-    ode_solver_->Step(temperature_.trueVec(), time_, dt);
+    ode_.Step(temperature_.trueVec(), time_, dt);
   }
 
   temperature_.distributeSharedDofs();
