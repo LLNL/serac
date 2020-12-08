@@ -79,7 +79,7 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
     bc.projectBdrToDofs(U_plus_, t + epsilon);
   }
 
-  bool implicit = (c0 != 0.0 || c0 != 0.0);
+  bool implicit = (c0 != 0.0 || c1 != 0.0);
   if (implicit) {
     if (enforcement_method_ == DirichletEnforcementMethod::DirectControl) {
       d2U_dt2_ = (U_ - u) / c0;
@@ -88,14 +88,14 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {
-      d2U_dt2_ = (dU_dt_ - du_dt) / c0;
+      d2U_dt2_ = (dU_dt_ - du_dt) / c1;
       dU_dt_   = du_dt;
       U_       = u;
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
       d2U_dt2_ = (U_minus_ - 2.0 * U_ + U_plus_) / (epsilon * epsilon);
-      dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon) - c0 * d2U_dt2_;
+      dU_dt_   = (U_plus_ - U_minus_) / (2.0 * epsilon) - c1 * d2U_dt2_;
       U_       = U_ - c0 * d2U_dt2_;
     }
   } else {
