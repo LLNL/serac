@@ -111,6 +111,25 @@ public:
    */
   void setEnforcementMethod(const DirichletEnforcementMethod method) { enforcement_method_ = method; }
 
+  /**
+   * @brief Set the time integration method
+   *
+   * @param[in] timestepper The timestepping method for the solver
+   */
+  void setTimestepper(const serac::TimestepMethod timestepper);
+
+  /**
+   * @brief Performs a time step
+   *
+   * @param[inout] x The predicted solution
+   * @param[inout] dxdt The predicted rate
+   * @param[inout] t The current time
+   * @param[inout] dt The desired time step
+   *
+   * @see mfem::SecondOrderODESolver::Step
+   */
+  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt) { ode_solver_->Step(x, dxdt, t, dt); }
+
 private:
   /**
    * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
@@ -136,6 +155,10 @@ private:
    * @brief Reference to the equationsolver used to solve for d2u_dt2
    */
   const EquationSolver& solver_;
+  /**
+   * @brief MFEM solver object for second-order ODEs
+   */
+  std::unique_ptr<mfem::SecondOrderODESolver> ode_solver_;
   /**
    * @brief Reference to boundary conditions used to constrain the solution
    */
@@ -231,6 +254,24 @@ public:
    */
   void setEnforcementMethod(const DirichletEnforcementMethod method) { enforcement_method_ = method; }
 
+  /**
+   * @brief Set the time integration method
+   *
+   * @param[in] timestepper The timestepping method for the solver
+   */
+  void setTimestepper(const serac::TimestepMethod timestepper);
+
+  /**
+   * @brief Performs a time step
+   *
+   * @param[inout] x The predicted solution
+   * @param[inout] t The current time
+   * @param[inout] dt The desired time step
+   *
+   * @see mfem::ODESolver::Step
+   */
+  void Step(mfem::Vector& x, double& t, double& dt) { ode_solver_->Step(x, t, dt); }
+
 private:
   /**
    * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve
@@ -252,6 +293,10 @@ private:
    * @brief Reference to the equationsolver used to solve for du_dt
    */
   const EquationSolver& solver_;
+  /**
+   * @brief MFEM solver object for first-order ODEs
+   */
+  std::unique_ptr<mfem::ODESolver> ode_solver_;
   /**
    * @brief Reference to boundary conditions used to constrain the solution
    */
