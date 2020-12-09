@@ -125,6 +125,10 @@ struct HypreBoomerAMGPrec {
  * @brief Stores the information required to configure a NVIDIA AMGX preconditioner
  */
 struct AMGXPrec {
+  /**
+   * @brief Whether to display statistics from AMGX
+   */
+  bool verbose = false;
 };
 
 /**

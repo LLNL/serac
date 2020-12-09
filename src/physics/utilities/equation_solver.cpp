@@ -38,6 +38,65 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
   }
 }
 
+namespace detail {
+#ifdef MFEM_USE_AMGX
+std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXPrec& options)
+{
+  auto amgx                              = std::make_unique<mfem::AmgXSolver>();
+  using JSONType                         = std::variant<std::string, double, int>;
+  static const auto default_prec_options = []() {
+    std::unordered_map<std::string, JSONType> result;
+    result["solver"]       = "AMG";
+    result["presweeps"]    = 1;
+    result["postsweeps"]   = 2;
+    result["interpolator"] = "D2";
+    result["max_iters"]    = 2;
+    result["convergence"]  = "ABSOLUTE";
+    result["cycle"]        = "V";
+    return result;
+  }();
+
+  auto options_table = default_prec_options;
+  if (options.verbose) {
+    static const auto default_verbose_options = []() {
+      std::unordered_map<std::string, JSONType> result;
+      result["obtain_timings"]    = 1;
+      result["monitor_residual"]  = 1;
+      result["print_solve_stats"] = 1;
+      result["print_solve_stats"] = 1;
+      return result;
+    }();
+    options_table.insert(default_verbose_options.begin(), default_verbose_options.end());
+  }
+
+  std::string amgx_config =
+      "{\n"
+      " \"config_version\": 2, \n"
+      " \"solver\": { \n";
+  std::ostringstream oss;
+  char               sep = ' ';
+  for (const auto& [key, val] : options_table) {
+    oss << sep << "\n   \"" << key << "\": ";
+    if (auto str_ptr = std::get_if<std::string>(&val)) {
+      oss << "\"" << *str_ptr << "\"";
+    } else {
+      std::visit([&oss](const auto contained_val) { oss << contained_val; }, val);
+    }
+
+    sep = ',';
+  }
+
+  amgx_config = amgx_config + oss.str() + "\n }\n" + "}\n";
+
+  amgx->ReadParameters(amgx_config, mfem::AmgXSolver::INTERNAL);
+  amgx->InitExclusiveGPU(comm);
+
+  return amgx;
+}
+
+#endif
+}  // namespace detail
+
 std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
     MPI_Comm comm, const IterativeSolverParameters& lin_params)
 {
@@ -80,9 +139,9 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
       prec_smoother->SetType(smoother_params->type);
       prec_smoother->SetPositiveDiagonal(true);
       prec_ = std::move(prec_smoother);
-    } else if (std::holds_alternative<AMGXPrec>(*lin_params.prec)) {
+    } else if (auto amgx_options = std::get_if<AMGXPrec>(prec_ptr)) {
 #ifdef MFEM_USE_AMGX
-      prec_ = std::make_unique<mfem::AmgXSolver>(comm, mfem::AmgXSolver::PRECONDITIONER, true);
+      prec_ = detail::configureAMGX(comm, *amgx_options);
 #else
       SLIC_ERROR("AMGX was not enabled when MFEM was built");
 #endif
