@@ -84,7 +84,7 @@ if(NOT SERAC_FOUND)
     # TODO: Construct CMake target from GNU Make-build MFEM
     if(SERAC_MFEM_BUILT_WITH_CMAKE AND NOT MFEM_DIR)
       set(MFEM_DIR ${SERAC_MFEM_DIR}) 
-      find_dependency(mfem REQUIRED NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem" NAMES MFEM)
+      find_dependency(MFEM REQUIRED NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem")
     endif()
   endif()
 
