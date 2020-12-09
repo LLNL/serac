@@ -345,6 +345,47 @@ TEST(thermal_solver_rework, dyn_imp_solve_time_varying)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+#ifdef MFEM_USE_AMGX
+TEST(thermal_solver, static_amgx_solve)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  auto pmesh = buildBallMesh(10000);
+
+  auto params                                                   = ThermalConduction::defaultQuasistaticParameters();
+  std::get<IterativeSolverParameters>(params.T_lin_params).prec = AMGXPrec{.smoother = AMGXSolver::JACOBI_L1};
+  // Initialize the second order thermal solver on the parallel mesh
+  ThermalConduction therm_solver(2, pmesh, params);
+
+  // Initialize the temperature boundary condition
+  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(One);
+
+  std::set<int> temp_bdr = {1};
+
+  // Set the temperature BC in the thermal solver
+  therm_solver.setTemperatureBCs(temp_bdr, u_0);
+
+  // Set the conductivity of the thermal operator
+  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
+  therm_solver.setConductivity(std::move(kappa));
+
+  // Complete the setup without allocating the mass matrices and dynamic
+  // operator
+  therm_solver.completeSetup();
+
+  // Perform the static solve
+  double dt = 1.0;
+  therm_solver.advanceTimestep(dt);
+
+  // Measure the L2 norm of the solution and check the value
+  mfem::ConstantCoefficient zero(0.0);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
+  EXPECT_NEAR(2.02263, u_norm, 0.00001);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+#endif
+
 }  // namespace serac
 
 //------------------------------------------------------------------------------
