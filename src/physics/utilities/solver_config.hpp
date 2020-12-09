@@ -122,9 +122,38 @@ struct HypreBoomerAMGPrec {
 };
 
 /**
+ * @brief Solver types supported by AMGX
+ */
+enum class AMGXSolver
+{
+  AMG,
+  PCGF,
+  CG,
+  PCG,
+  PBICGSTAB,
+  BICGSTAB,
+  FGMRES,
+  JACOBI_L1,
+  GS,
+  POLYNOMIAL,
+  KPZ_POLYNOMIAL,
+  BLOCK_JACOBI,
+  MULTICOLOR_GS,
+  MULTICOLOR_DILU
+};
+
+/**
  * @brief Stores the information required to configure a NVIDIA AMGX preconditioner
  */
 struct AMGXPrec {
+  /**
+   * @brief The solver algorithm
+   */
+  AMGXSolver solver = AMGXSolver::AMG;
+  /**
+   * @brief The smoother algorithm
+   */
+  AMGXSolver smoother = AMGXSolver::BLOCK_JACOBI;
   /**
    * @brief Whether to display statistics from AMGX
    */

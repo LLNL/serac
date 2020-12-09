@@ -167,6 +167,29 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
     options_table["solver"].add(default_verbose_options);
   }
 
+  // FIXME: magic_enum?
+  static const auto solver_names = []() {
+    std::unordered_map<AMGXSolver, std::string> names;
+    names[AMGXSolver::AMG]             = "AMG";
+    names[AMGXSolver::PCGF]            = "PCGF";
+    names[AMGXSolver::CG]              = "CG";
+    names[AMGXSolver::PCG]             = "PCG";
+    names[AMGXSolver::PBICGSTAB]       = "PBICGSTAB";
+    names[AMGXSolver::BICGSTAB]        = "BICGSTAB";
+    names[AMGXSolver::FGMRES]          = "FGMRES";
+    names[AMGXSolver::JACOBI_L1]       = "JACOBI_L1";
+    names[AMGXSolver::GS]              = "GS";
+    names[AMGXSolver::POLYNOMIAL]      = "POLYNOMIAL";
+    names[AMGXSolver::KPZ_POLYNOMIAL]  = "KPZ_POLYNOMIAL";
+    names[AMGXSolver::BLOCK_JACOBI]    = "BLOCK_JACOBI";
+    names[AMGXSolver::MULTICOLOR_GS]   = "MULTICOLOR_GS";
+    names[AMGXSolver::MULTICOLOR_DILU] = "MULTICOLOR_DILU";
+    return names;
+  }();
+
+  options_table["solver"].literal("solver")   = solver_names.at(options.solver);
+  options_table["solver"].literal("smoother") = solver_names.at(options.smoother);
+
   std::ostringstream oss;
   oss << options_table;
   SLIC_INFO(options_table);
