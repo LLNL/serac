@@ -102,7 +102,6 @@ void Elasticity::advanceTimestep(double&)
     QuasiStaticSolve();
   } else {
     SLIC_ERROR_ROOT(mpi_rank_, "Only quasistatics implemented for linear elasticity!");
-    serac::exitGracefully(true);
   }
 
   // Distribute the shared DOFs

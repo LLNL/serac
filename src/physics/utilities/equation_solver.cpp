@@ -55,7 +55,6 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
       break;
     default:
       SLIC_ERROR("Linear solver type not recognized.");
-      exitGracefully(true);
   }
 
   iter_lin_solver->SetRelTol(lin_params.rel_tol);

@@ -31,7 +31,6 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
   if (!axom::utilities::filesystem::pathExists(mesh_file)) {
     msg = fmt::format("Given mesh file does not exist: {0}", mesh_file);
     SLIC_ERROR_ROOT(rank, msg);
-    serac::exitGracefully(true);
   }
 
   // This inherits from std::ifstream, and will work the same way as a std::ifstream,
@@ -42,7 +41,6 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
     serac::logger::flush();
     std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
     SLIC_ERROR_ROOT(rank, err_msg);
-    serac::exitGracefully();
   }
 
   auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);

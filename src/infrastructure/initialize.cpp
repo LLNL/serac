@@ -19,12 +19,10 @@ std::pair<int, int> getMPIInfo(MPI_Comm comm)
   int rank      = 0;
   if (MPI_Comm_size(comm, &num_procs) != MPI_SUCCESS) {
     SLIC_ERROR("Failed to determine number of MPI processes");
-    serac::exitGracefully(true);
   }
 
   if (MPI_Comm_rank(comm, &rank) != MPI_SUCCESS) {
     SLIC_ERROR("Failed to determine MPI rank");
-    serac::exitGracefully(true);
   }
   return {num_procs, rank};
 }

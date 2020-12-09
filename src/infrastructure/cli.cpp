@@ -32,11 +32,11 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
     if (e.get_name() == "CallForHelp") {
       auto msg = app.help();
       SLIC_INFO_ROOT(rank, msg);
+      serac::exitGracefully();
     } else {
       auto err_msg = CLI::FailureMessage::simple(&app, e);
       SLIC_ERROR_ROOT(rank, err_msg);
     }
-    serac::exitGracefully();
   }
 
   // Store found values
