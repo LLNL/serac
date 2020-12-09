@@ -4,6 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+add_subdirectory(integrators)
 add_subdirectory(utilities)
 add_subdirectory(operators)
 

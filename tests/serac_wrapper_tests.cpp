@@ -10,7 +10,7 @@
 #include <memory>
 
 #include "coefficients/coefficient_extensions.hpp"
-#include "integrators/wrapper_integrator.hpp"
+#include "physics/integrators/wrapper_integrator.hpp"
 #include "mfem.hpp"
 
 using namespace mfem;

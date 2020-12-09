@@ -7,8 +7,8 @@
 #include "physics/solid.hpp"
 
 #include "infrastructure/logger.hpp"
-#include "integrators/hyperelastic_traction_integrator.hpp"
-#include "integrators/inc_hyperelastic_integrator.hpp"
+#include "physics/integrators/hyperelastic_traction_integrator.hpp"
+#include "physics/integrators/inc_hyperelastic_integrator.hpp"
 #include "numerics/expr_template_ops.hpp"
 #include "numerics/mesh_utils.hpp"
 

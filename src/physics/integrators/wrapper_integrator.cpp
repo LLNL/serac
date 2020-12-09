@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "integrators/wrapper_integrator.hpp"
+#include "physics/integrators/wrapper_integrator.hpp"
 
 namespace serac {
 

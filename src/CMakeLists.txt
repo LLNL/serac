@@ -6,7 +6,6 @@
 
 add_subdirectory(numerics)
 add_subdirectory(physics)
-add_subdirectory(integrators)
 add_subdirectory(coefficients)
 add_subdirectory(drivers)
 add_subdirectory(infrastructure)
