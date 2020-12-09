@@ -93,15 +93,15 @@ double AttributeModifierCoefficient::Eval(mfem::ElementTransformation& Tr, const
   return result;
 }
 
-TransformedVectorCoefficient::TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>          v1,
-                                                           std::function<void(mfem::Vector&, mfem::Vector&)> func)
+TransformedVectorCoefficient::TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>                v1,
+                                                           std::function<void(const mfem::Vector&, mfem::Vector&)> func)
     : mfem::VectorCoefficient(v1->GetVDim()), v1_(v1), v2_(nullptr), mono_function_(func), bi_function_(nullptr)
 {
 }
 
 TransformedVectorCoefficient::TransformedVectorCoefficient(
     std::shared_ptr<mfem::VectorCoefficient> v1, std::shared_ptr<mfem::VectorCoefficient> v2,
-    std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> func)
+    std::function<void(const mfem::Vector&, const mfem::Vector&, mfem::Vector&)> func)
     : mfem::VectorCoefficient(v1->GetVDim()), v1_(v1), v2_(v2), mono_function_(nullptr), bi_function_(func)
 {
   SLIC_CHECK_MSG(v1_->GetVDim() == v2_->GetVDim(), "v1 and v2 are not the same size");
