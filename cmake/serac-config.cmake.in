@@ -83,8 +83,9 @@ if(NOT SERAC_FOUND)
     # Needed for dynamic MFEM library
     # TODO: Construct CMake target from GNU Make-build MFEM
     if(SERAC_MFEM_BUILT_WITH_CMAKE AND NOT MFEM_DIR)
-      set(MFEM_DIR ${SERAC_MFEM_DIR}) 
-      find_dependency(MFEM REQUIRED NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem")
+      set(MFEM_DIR ${SERAC_MFEM_DIR})
+      # CMake will have set MFEM_DIR to be the directory containing the CMake config
+      find_dependency(MFEM CONFIG NO_DEFAULT_PATH PATHS "${MFEM_DIR}")
     endif()
   endif()
 
