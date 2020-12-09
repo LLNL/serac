@@ -141,8 +141,8 @@ public:
    * @param[in] func A function that takes in an input vector, and returns the
    * output as the second argument.
    */
-  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>          v1,
-                               std::function<void(mfem::Vector&, mfem::Vector&)> func);
+  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>                v1,
+                               std::function<void(const mfem::Vector&, mfem::Vector&)> func);
 
   /**
    * @brief Apply a vector function, Func, to v1 and v2
@@ -153,7 +153,7 @@ public:
    * output as the third argument.
    */
   TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient> v1, std::shared_ptr<mfem::VectorCoefficient> v2,
-                               std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> func);
+                               std::function<void(const mfem::Vector&, const mfem::Vector&, mfem::Vector&)> func);
 
   /**
    * @brief Evaluate the coefficient at a quadrature point
@@ -178,12 +178,12 @@ private:
   /**
    * @brief The one argument function for a transformed coefficient
    */
-  std::function<void(mfem::Vector&, mfem::Vector&)> mono_function_;
+  std::function<void(const mfem::Vector&, mfem::Vector&)> mono_function_;
 
   /**
    * @brief The two argument function for a transformed coefficient
    */
-  std::function<void(mfem::Vector&, mfem::Vector&, mfem::Vector&)> bi_function_;
+  std::function<void(const mfem::Vector&, const mfem::Vector&, mfem::Vector&)> bi_function_;
 };
 
 /**
