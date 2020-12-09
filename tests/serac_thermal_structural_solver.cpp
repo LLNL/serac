@@ -77,8 +77,7 @@ TEST(dynamic_solver, dyn_solve)
 
   const Solid::SolverParameters default_dynamic = {
       default_dyn_linear_params, default_dyn_nonlinear_params,
-      Solid::DynamicSolverParameters{TimestepMethod::AverageAcceleration,
-                                              DirichletEnforcementMethod::RateControl}};
+      Solid::DynamicSolverParameters{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);

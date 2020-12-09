@@ -39,7 +39,7 @@ TEST(component_bc, qs_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
+  auto         solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
   serac::Solid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
@@ -115,7 +115,7 @@ TEST(component_bc, qs_attribute_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
+  auto         solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
   serac::Solid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();

@@ -72,20 +72,19 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputInfo& info)
   setHyperelasticMaterialParameters(info.mu, info.K);
 }
 
-void Solid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
-                                        std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, -1);
 }
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
-                                        int component)
+                               int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
 }
 
-void Solid::setTractionBCs(const std::set<int>&                     trac_bdr,
-                                    std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
+void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                           int component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
@@ -302,7 +301,7 @@ Solid::InputInfo FromInlet<Solid::InputInfo>::operator()(const axom::inlet::Tabl
 
   if (base.contains("mass_solver")) {
     Solid::DynamicSolverParameters dyn_params;
-    auto                                    mass_solver = base["mass_solver"];
+    auto                           mass_solver = base["mass_solver"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {
