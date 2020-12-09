@@ -192,7 +192,6 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
 
   std::ostringstream oss;
   oss << options_table;
-  SLIC_INFO(options_table);
   // Treat the string as the config (not a filename)
   amgx->ReadParameters(oss.str(), mfem::AmgXSolver::INTERNAL);
   amgx->InitExclusiveGPU(comm);
