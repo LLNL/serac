@@ -51,8 +51,7 @@ std::string findMeshFilePath(const std::string& mesh_path, const std::string& in
   std::string msg = fmt::format("Input file: Given mesh file does not exist: {0}", mesh_path);
   int         rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  SLIC_WARNING_ROOT(rank, msg);
-  serac::exitGracefully(true);
+  SLIC_ERROR_ROOT(rank, msg);
   return "";
 }
 
@@ -62,7 +61,6 @@ std::string fullDirectoryFromPath(const std::string& path)
   char* ptr = realpath(path.c_str(), actualpath);
   if (ptr == nullptr) {
     SLIC_ERROR("Failed to find absolute path from input file.");
-    serac::exitGracefully(true);
   }
   std::string dir;
   axom::utilities::filesystem::getDirName(dir, std::string(actualpath));

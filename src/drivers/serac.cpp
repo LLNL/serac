@@ -51,7 +51,6 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   // Verify input file
   if (!inlet.verify()) {
     SLIC_ERROR_ROOT(rank, "Input file failed to verify.");
-    serac::exitGracefully(true);
   }
 }
 
