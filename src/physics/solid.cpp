@@ -117,11 +117,7 @@ void Solid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  if (is_quasistatic_) {
-    H_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
-  } else {
-    H_->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
-  }
+  H_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
@@ -179,7 +175,7 @@ void Solid::completeSetup()
 
         // residual function
         [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-          r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (x_ + u_ + c0_ * d2u_dt2);
+          r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (u_ + c0_ * d2u_dt2);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
@@ -187,7 +183,7 @@ void Solid::completeSetup()
         [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
           // J = M + c1 * C + c0 * H(u_predicted)
           auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_->SpMat(), c1_, C_->SpMat()));
-          localJ->Add(c0_, H_->GetLocalGradient(x_ + u_ + c0_ * d2u_dt2));
+          localJ->Add(c0_, H_->GetLocalGradient(u_ + c0_ * d2u_dt2));
           J_mat_.reset(M_->ParallelAssemble(localJ.get()));
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat_);
           return *J_mat_;
