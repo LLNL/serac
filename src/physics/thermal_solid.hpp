@@ -15,7 +15,7 @@
 
 #include "mfem.hpp"
 #include "physics/base_physics.hpp"
-#include "physics/nonlinear_solid.hpp"
+#include "physics/solid.hpp"
 #include "physics/thermal_conduction.hpp"
 
 namespace serac {
@@ -34,7 +34,7 @@ public:
    * @param[in] solid_params The equation solver params for the solid physics
    */
   ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverParameters& therm_params,
-               const NonlinearSolid::SolverParameters& solid_params);
+               const Solid::SolverParameters& solid_params);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -227,7 +227,7 @@ protected:
   /**
    * @brief The single physics nonlinear solid solver
    */
-  NonlinearSolid solid_solver_;
+  Solid solid_solver_;
 
   /**
    * @brief The temperature finite element state

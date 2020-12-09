@@ -11,7 +11,7 @@
 #include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid.hpp"
+#include "physics/solid.hpp"
 #include "serac_config.hpp"
 #include "test_utilities.hpp"
 
@@ -42,8 +42,8 @@ TEST(dynamic_solver, dyn_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
-  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
+  Solid dyn_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
 
@@ -127,10 +127,10 @@ TEST(dynamic_solver, dyn_direct_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
   // FIXME: These should be moved to part of the schema once the contains() logic is updated in Inlet
   solid_solver_info.solver_params.H_lin_params = DirectSolverParameters{0};
-  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+  Solid dyn_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
 
@@ -215,8 +215,8 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
-  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
+  Solid dyn_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
 
@@ -302,8 +302,8 @@ TEST(dynamic_solver, dyn_amgx_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
-  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
+  Solid dyn_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
 

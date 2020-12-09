@@ -27,7 +27,7 @@
 #include "infrastructure/terminator.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid.hpp"
+#include "physics/solid.hpp"
 #include "physics/utilities/equation_solver.hpp"
 #include "serac_config.hpp"
 
@@ -46,7 +46,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  serac::NonlinearSolid::InputInfo::defineInputFileSchema(solid_solver_table);
+  serac::Solid::InputInfo::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
   if (!inlet.verify()) {
@@ -89,8 +89,8 @@ int main(int argc, char* argv[])
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
-  serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
+  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
+  serac::Solid solid_solver(mesh, solid_solver_info);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions

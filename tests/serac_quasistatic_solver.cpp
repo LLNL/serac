@@ -12,7 +12,7 @@
 #include "infrastructure/input.hpp"
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid.hpp"
+#include "physics/solid.hpp"
 #include "serac_config.hpp"
 #include "test_utilities.hpp"
 
@@ -39,8 +39,8 @@ TEST(nonlinear_solid_solver, qs_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
-  NonlinearSolid solid_solver(mesh, solid_solver_info);
+  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
+  Solid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
 
@@ -109,10 +109,10 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
   // FIXME: These should be moved to part of the schema once the contains() logic is updated in Inlet
   solid_solver_info.solver_params.H_lin_params = DirectSolverParameters{0};
-  NonlinearSolid solid_solver(mesh, solid_solver_info);
+  Solid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
 
@@ -181,7 +181,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
@@ -194,7 +194,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   custom_solver->SetPrintLevel(custom_params.print_level);
 
   solid_solver_info.solver_params.H_lin_params = CustomSolverParameters{custom_solver.get()};
-  NonlinearSolid solid_solver(mesh, solid_solver_info);
+  Solid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
 

@@ -9,18 +9,16 @@ add_subdirectory(operators)
 
 set(physics_sources
     base_physics.cpp
-    nonlinear_solid.cpp
+    solid.cpp
     thermal_conduction.cpp
     thermal_solid.cpp
-    elasticity.cpp
     )
 
 set(physics_headers
     base_physics.hpp
-    nonlinear_solid.hpp
+    solid.hpp
     thermal_conduction.hpp
     thermal_solid.hpp
-    elasticity.hpp
     )
 
 blt_add_library(

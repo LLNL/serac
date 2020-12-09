@@ -28,7 +28,7 @@ namespace serac {
  * hyperelastic solver object. It is derived from MFEM
  * example 10p.
  */
-class NonlinearSolid : public BasePhysics {
+class Solid : public BasePhysics {
 public:
   /**
    * @brief A timestep method and config for the M solver
@@ -80,7 +80,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] solver The system solver parameters
    */
-  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
+  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -88,7 +88,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] info The solver information parsed from the input file
    */
-  NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const InputInfo& info);
+  Solid(std::shared_ptr<mfem::ParMesh> mesh, const InputInfo& info);
 
   /**
    * @brief Set displacement boundary conditions
@@ -179,7 +179,7 @@ public:
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
-  virtual ~NonlinearSolid();
+  virtual ~Solid();
 
 protected:
   /**
@@ -315,8 +315,8 @@ protected:
 }  // namespace serac
 
 template <>
-struct FromInlet<serac::NonlinearSolid::InputInfo> {
-  serac::NonlinearSolid::InputInfo operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::Solid::InputInfo> {
+  serac::Solid::InputInfo operator()(const axom::inlet::Table& base);
 };
 
 #endif

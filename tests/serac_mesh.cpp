@@ -10,7 +10,6 @@
 
 #include "mfem.hpp"
 #include "numerics/mesh_utils.hpp"
-#include "physics/elasticity.hpp"
 #include "serac_config.hpp"
 
 namespace serac {

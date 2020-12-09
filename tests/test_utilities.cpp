@@ -7,7 +7,7 @@
 #include "test_utilities.hpp"
 
 #include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid.hpp"
+#include "physics/solid.hpp"
 
 namespace serac {
 
@@ -30,7 +30,7 @@ void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet, const bool dyna
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
   // FIXME: Remove once Inlet's "contains" logic improvements are merged
-  serac::NonlinearSolid::InputInfo::defineInputFileSchema(solid_solver_table, dynamic);
+  serac::Solid::InputInfo::defineInputFileSchema(solid_solver_table, dynamic);
 
   // Verify input file
   if (!inlet.verify()) {
