@@ -114,13 +114,12 @@ std::ostream& operator<<(std::ostream& out, const JSONTable& table)
   char        sep = ' ';                      // Start with empty separator to avoid trailing comma
   for (const auto& [key, val] : table.literals_) {
     out << sep << "\n" << indent << "\"" << key << "\": ";
-    // Strings need to be quoted with escaped strings
+    // Strings need to be wrapped in escaped quotes
     if (auto str_ptr = std::get_if<std::string>(&val)) {
       out << "\"" << *str_ptr << "\"";
     } else {
       std::visit([&out](const auto contained_val) { out << contained_val; }, val);
     }
-
     sep = ',';
   }
 
