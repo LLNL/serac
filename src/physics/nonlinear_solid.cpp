@@ -40,7 +40,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   const auto& lin_params = params.H_lin_params;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
   // to be the displacement
-  const auto& augmented_params = mfem_extensions::augmentAMGForElasticity(lin_params, displacement_.space());
+  const auto& augmented_params = mfem_extensions::AugmentAMGForElasticity(lin_params, displacement_.space());
 
   nonlin_solver_ = mfem_extensions::EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_params);
 
@@ -165,7 +165,7 @@ void NonlinearSolid::completeSetup()
   // Setting iterative_mode to true ensures that these
   // prescribed acceleration values are not modified by
   // the nonlinear solve.
-  nonlin_solver_.nonlinearSolver().iterative_mode = true;
+  nonlin_solver_.NonlinearSolver().iterative_mode = true;
 
   if (is_quasistatic_) {
     residual_ = buildQuasistaticOperator();
@@ -273,7 +273,7 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table,
 
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_extensions::EquationSolver::defineInputFileSchema(stiffness_solver_table);
+  serac::mfem_extensions::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
   // See comment in header - schema definitions should never be guarded by a conditional.
   // This is a short-term patch.

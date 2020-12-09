@@ -16,7 +16,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
 {
   // If it's an iterative solver, build it and set the preconditioner
   if (auto iter_params = std::get_if<IterativeSolverParameters>(&lin_params)) {
-    lin_solver_ = buildIterativeLinearSolver(comm, *iter_params);
+    lin_solver_ = BuildIterativeLinearSolver(comm, *iter_params);
   }
   // If it's a custom solver, check that the mfem::Solver* is not null
   else if (auto custom = std::get_if<CustomSolverParameters>(&lin_params)) {
@@ -34,11 +34,11 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_
   }
 
   if (nonlin_params) {
-    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_params);
+    nonlin_solver_ = BuildNewtonSolver(comm, *nonlin_params);
   }
 }
 
-std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
+std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolver(
     MPI_Comm comm, const IterativeSolverParameters& lin_params)
 {
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
@@ -95,7 +95,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
   return iter_lin_solver;
 }
 
-std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                         comm,
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNewtonSolver(MPI_Comm                         comm,
                                                                       const NonlinearSolverParameters& nonlin_params)
 {
   std::unique_ptr<mfem::NewtonSolver> newton_solver;
@@ -132,7 +132,7 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
     }
     // Now that the nonlinear solver knows about the operator, we can set its linear solver
     if (!nonlin_solver_set_solver_called_) {
-      nonlin_solver_->SetSolver(linearSolver());
+      nonlin_solver_->SetSolver(LinearSolver());
       nonlin_solver_set_solver_called_ = true;
     }
   } else {
@@ -173,7 +173,7 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   return *superlu_grad_mat_;
 }
 
-void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
+void EquationSolver::DefineInputFileSchema(axom::inlet::Table& table)
 {
   auto& linear_table = table.addTable("linear", "Linear Equation Solver Parameters").required();
   linear_table.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);

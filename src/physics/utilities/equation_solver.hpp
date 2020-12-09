@@ -69,18 +69,18 @@ public:
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::IterativeSolver&       nonlinearSolver() { return *nonlin_solver_; }
-  const mfem::IterativeSolver& nonlinearSolver() const { return *nonlin_solver_; }
+  mfem::IterativeSolver&       NonlinearSolver() { return *nonlin_solver_; }
+  const mfem::IterativeSolver& NonlinearSolver() const { return *nonlin_solver_; }
 
   /**
    * Returns the underlying linear solver object
    * @return A non-owning reference to the underlying linear solver
    */
-  mfem::Solver& linearSolver()
+  mfem::Solver& LinearSolver()
   {
     return std::visit([](auto&& solver) -> mfem::Solver& { return *solver; }, lin_solver_);
   }
-  const mfem::Solver& linearSolver() const
+  const mfem::Solver& LinearSolver() const
   {
     return std::visit([](auto&& solver) -> const mfem::Solver& { return *solver; }, lin_solver_);
   }
@@ -88,7 +88,7 @@ public:
   /**
    * Input file parameters specific to this class
    **/
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void DefineInputFileSchema(axom::inlet::Table& table);
 
 private:
   /**
@@ -96,7 +96,7 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] lin_params The parameters for the linear solver
    */
-  std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                         comm,
+  std::unique_ptr<mfem::IterativeSolver> BuildIterativeLinearSolver(MPI_Comm                         comm,
                                                                     const IterativeSolverParameters& lin_params);
 
   /**
@@ -104,7 +104,7 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] nonlin_params The parameters for the nonlinear solver
    */
-  static std::unique_ptr<mfem::NewtonSolver> buildNewtonSolver(MPI_Comm                         comm,
+  static std::unique_ptr<mfem::NewtonSolver> BuildNewtonSolver(MPI_Comm                         comm,
                                                                const NonlinearSolverParameters& nonlin_params);
 
   /**
@@ -191,7 +191,7 @@ private:
  * @param[in] pfes The FiniteElementSpace to configure the preconditioner with
  * @note A full copy of the object is made, pending C++20 relaxation of "mutable"
  */
-inline LinearSolverParameters augmentAMGForElasticity(const LinearSolverParameters& init_params,
+inline LinearSolverParameters AugmentAMGForElasticity(const LinearSolverParameters& init_params,
                                                       mfem::ParFiniteElementSpace&  pfes)
 {
   auto augmented_params = init_params;

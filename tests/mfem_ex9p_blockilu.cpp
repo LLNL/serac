@@ -125,7 +125,7 @@ public:
                                                        .prec        = serac::BlockILUPrec{fes.GetFE(0)->GetDof()}}),
         dt(-1.0)
   {
-    linear_solver.linearSolver().iterative_mode = false;
+    linear_solver.LinearSolver().iterative_mode = false;
 
     M.GetDiag(M_diag);
   }
