@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 add_subdirectory(serac)
+add_subdirectory(drivers)
 
 if (ENABLE_DOCS)
     add_subdirectory(docs)
