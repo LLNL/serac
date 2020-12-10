@@ -15,24 +15,18 @@ set(numerics_sources
     mesh_utils.cpp
     )
 
-set(numerics_depends infrastructure axom mfem mpi fmt)
+set(numerics_depends serac_infrastructure)
 
 blt_add_library(
-    NAME        numerics
+    NAME        serac_numerics
     HEADERS     ${numerics_headers}
     SOURCES     ${numerics_sources}
     DEPENDS_ON  ${numerics_depends}
     )
 
-
-target_include_directories(numerics PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
-    $<INSTALL_INTERFACE:include>
-    )
-
 install(FILES ${numerics_headers} DESTINATION include/serac/numerics )
 
-install(TARGETS              numerics
+install(TARGETS              serac_numerics
         EXPORT               serac-targets
         DESTINATION          lib
         )

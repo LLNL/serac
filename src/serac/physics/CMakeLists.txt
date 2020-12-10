@@ -23,16 +23,24 @@ set(physics_headers
     elasticity.hpp
     )
 
+set(physics_dependencies
+    serac_infrastructure
+    serac_integrators
+    serac_numerics
+    serac_physics_utilities
+    serac_physics_operators
+    )
+
 blt_add_library(
-    NAME        physics
+    NAME        serac_physics
     SOURCES     ${physics_sources}
     HEADERS     ${physics_headers}
-    DEPENDS_ON  mfem integrators numerics infrastructure physics_utilities physics_operators axom fmt mpi
+    DEPENDS_ON  ${physics_dependencies}
     )
 
 install(FILES ${physics_headers} DESTINATION include/serac/physics )
 
-install(TARGETS              physics
+install(TARGETS              serac_physics
         EXPORT               serac-targets
         DESTINATION          lib
         )
