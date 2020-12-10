@@ -8,13 +8,13 @@
 
 #include <exception>
 
-#include "infrastructure/cli.hpp"
-#include "infrastructure/initialize.hpp"
-#include "numerics/mesh_utils.hpp"
-#include "physics/thermal_conduction.hpp"
-#include "physics/utilities/boundary_condition.hpp"
-#include "physics/utilities/equation_solver.hpp"
-#include "serac_config.hpp"
+#include "serac/infrastructure/cli.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/numerics/mesh_utils.hpp"
+#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/utilities/boundary_condition.hpp"
+#include "serac/physics/utilities/equation_solver.hpp"
+#include "serac/serac_config.hpp"
 
 class SlicErrorException : public std::exception {
 };

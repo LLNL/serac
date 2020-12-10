@@ -4,11 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "infrastructure/accelerator.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 
 #include <memory>
 
-#include "infrastructure/logger.hpp"
+#include "serac/infrastructure/logger.hpp"
 #include "mfem.hpp"
 
 namespace serac {

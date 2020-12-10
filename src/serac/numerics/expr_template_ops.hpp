@@ -13,7 +13,7 @@
 #ifndef EXPR_TEMPLATE_OPS
 #define EXPR_TEMPLATE_OPS
 
-#include "numerics/expr_template_internal.hpp"
+#include "serac/numerics/expr_template_internal.hpp"
 
 /**
  * @brief A utility for conditionally enabling templates if a given type

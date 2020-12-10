@@ -30,12 +30,7 @@ blt_add_library(
     DEPENDS_ON  mfem integrators numerics infrastructure physics_utilities physics_operators axom fmt mpi
     )
 
-target_include_directories(physics PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
-    $<INSTALL_INTERFACE:include>
-    )
-
-install(FILES ${physics_headers} DESTINATION include/physics )
+install(FILES ${physics_headers} DESTINATION include/serac/physics )
 
 install(TARGETS              physics
         EXPORT               serac-targets

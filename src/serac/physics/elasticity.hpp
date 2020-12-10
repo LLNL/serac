@@ -14,7 +14,7 @@
 #define LINEAR_ELASTICITY
 
 #include "mfem.hpp"
-#include "physics/base_physics.hpp"
+#include "serac/physics/base_physics.hpp"
 
 namespace serac {
 

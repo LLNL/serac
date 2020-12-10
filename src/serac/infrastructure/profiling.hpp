@@ -15,7 +15,7 @@
 
 #include <string>
 
-#include "serac_config.hpp"
+#include "serac/serac_config.hpp"
 
 /**
  * @def SERAC_MARK_FUNCTION

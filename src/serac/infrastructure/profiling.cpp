@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "infrastructure/profiling.hpp"
+#include "serac/infrastructure/profiling.hpp"
 
-#include "infrastructure/logger.hpp"
+#include "serac/infrastructure/logger.hpp"
 
 #ifdef SERAC_USE_CALIPER
 #include <optional>

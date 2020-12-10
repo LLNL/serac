@@ -16,8 +16,8 @@
 #include <memory>
 #include <set>
 
-#include "physics/utilities/boundary_condition.hpp"
-#include "physics/utilities/finite_element_state.hpp"
+#include "serac/physics/utilities/boundary_condition.hpp"
+#include "serac/physics/utilities/finite_element_state.hpp"
 
 namespace serac {
 

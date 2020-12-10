@@ -4,12 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/utilities/boundary_condition_manager.hpp"
+#include "serac/physics/utilities/boundary_condition_manager.hpp"
 
 #include <algorithm>
 #include <iterator>
 
-#include "infrastructure/logger.hpp"
+#include "serac/infrastructure/logger.hpp"
 
 namespace serac {
 

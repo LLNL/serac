@@ -4,10 +4,10 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/thermal_conduction.hpp"
+#include "serac/physics/thermal_conduction.hpp"
 
-#include "infrastructure/logger.hpp"
-#include "numerics/expr_template_ops.hpp"
+#include "serac/infrastructure/logger.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 
 namespace serac {
 
