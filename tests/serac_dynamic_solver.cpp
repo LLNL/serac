@@ -8,11 +8,11 @@
 
 #include <fstream>
 
-#include "infrastructure/input.hpp"
+#include "serac/infrastructure/input.hpp"
 #include "mfem.hpp"
-#include "numerics/mesh_utils.hpp"
-#include "physics/nonlinear_solid.hpp"
-#include "serac_config.hpp"
+#include "serac/numerics/mesh_utils.hpp"
+#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
 namespace serac {

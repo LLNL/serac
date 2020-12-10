@@ -14,9 +14,9 @@
 #define THERMAL_SOLID
 
 #include "mfem.hpp"
-#include "physics/base_physics.hpp"
-#include "physics/nonlinear_solid.hpp"
-#include "physics/thermal_conduction.hpp"
+#include "serac/physics/base_physics.hpp"
+#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/thermal_conduction.hpp"
 
 namespace serac {
 

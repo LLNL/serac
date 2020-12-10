@@ -28,12 +28,7 @@ blt_add_library(
     DEPENDS_ON  ${physics_utilities_depends}
     )
 
-target_include_directories(physics_utilities PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
-    $<INSTALL_INTERFACE:include>
-    )
-
-install(FILES ${physics_utilities_headers} DESTINATION include/physics/utilities )
+install(FILES ${physics_utilities_headers} DESTINATION include/serac/physics/utilities )
 
 install(TARGETS              physics_utilities
         EXPORT               serac-targets

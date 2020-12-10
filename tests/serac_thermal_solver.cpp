@@ -10,9 +10,9 @@
 #include <fstream>
 
 #include "mfem.hpp"
-#include "numerics/mesh_utils.hpp"
-#include "physics/thermal_conduction.hpp"
-#include "serac_config.hpp"
+#include "serac/numerics/mesh_utils.hpp"
+#include "serac/physics/thermal_conduction.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 

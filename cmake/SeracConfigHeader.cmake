@@ -73,11 +73,11 @@ serac_convert_to_native_escaped_file_path(${CMAKE_BINARY_DIR}   SERAC_BIN_DIR)
 # Create Config Header
 #------------------------------------------------------------------------------
 configure_file(
-    ${PROJECT_SOURCE_DIR}/src/serac_config.hpp.in
-    ${CMAKE_BINARY_DIR}/include/serac_config.hpp
+    ${PROJECT_SOURCE_DIR}/src/serac/serac_config.hpp.in
+    ${CMAKE_BINARY_DIR}/include/serac/serac_config.hpp
 )
 
-install(FILES ${CMAKE_BINARY_DIR}/include/serac_config.hpp DESTINATION include)
+install(FILES ${CMAKE_BINARY_DIR}/include/serac/serac_config.hpp DESTINATION include/serac)
 
 #------------------------------------------------------------------------------
 # Generate serac-config.cmake for importing serac into other CMake packages

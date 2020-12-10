@@ -27,11 +27,11 @@ blt_add_library(
     )
 
 target_include_directories(integrators PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
     $<INSTALL_INTERFACE:include>
     )
 
-install(FILES ${integrators_headers} DESTINATION include/integrators )
+install(FILES ${integrators_headers} DESTINATION include/serac/integrators )
 
 install(TARGETS              integrators 
         EXPORT               serac-targets

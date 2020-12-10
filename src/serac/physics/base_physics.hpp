@@ -17,9 +17,9 @@
 #include <memory>
 
 #include "mfem.hpp"
-#include "physics/utilities/boundary_condition_manager.hpp"
-#include "physics/utilities/equation_solver.hpp"
-#include "physics/utilities/finite_element_state.hpp"
+#include "serac/physics/utilities/boundary_condition_manager.hpp"
+#include "serac/physics/utilities/equation_solver.hpp"
+#include "serac/physics/utilities/finite_element_state.hpp"
 
 namespace serac {
 

@@ -14,9 +14,9 @@
 #define THERMAL_CONDUCTION
 
 #include "mfem.hpp"
-#include "physics/base_physics.hpp"
-#include "physics/operators/odes.hpp"
-#include "physics/operators/stdfunction_operator.hpp"
+#include "serac/physics/base_physics.hpp"
+#include "serac/physics/operators/odes.hpp"
+#include "serac/physics/operators/stdfunction_operator.hpp"
 
 namespace serac {
 

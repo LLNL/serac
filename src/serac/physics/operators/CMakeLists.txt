@@ -15,12 +15,7 @@ blt_add_library(
    DEPENDS_ON  ${physics_operators_depends}
    )
 
-target_include_directories(physics_operators INTERFACE 
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
-        $<INSTALL_INTERFACE:include>
-        )
-
-install(FILES ${physics_operators_headers} DESTINATION include/physics/operators )
+install(FILES ${physics_operators_headers} DESTINATION include/serac/physics/operators )
 
 install(TARGETS              physics_operators
         EXPORT               serac-targets

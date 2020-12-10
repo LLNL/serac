@@ -9,8 +9,8 @@
 
 #include <memory>
 
-#include "coefficients/coefficient_extensions.hpp"
-#include "integrators/wrapper_integrator.hpp"
+#include "serac/coefficients/coefficient_extensions.hpp"
+#include "serac/integrators/wrapper_integrator.hpp"
 #include "mfem.hpp"
 
 using namespace mfem;

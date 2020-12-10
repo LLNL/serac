@@ -17,7 +17,7 @@
 #include <memory>
 
 #include "mfem.hpp"
-#include "numerics/expr_template_ops.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 
 namespace serac {
 

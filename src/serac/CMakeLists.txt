@@ -4,13 +4,8 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+add_subdirectory(infrastructure)
 add_subdirectory(numerics)
 add_subdirectory(physics)
 add_subdirectory(integrators)
 add_subdirectory(coefficients)
-add_subdirectory(drivers)
-add_subdirectory(infrastructure)
-
-if (ENABLE_DOCS)
-    add_subdirectory(docs)
-endif()

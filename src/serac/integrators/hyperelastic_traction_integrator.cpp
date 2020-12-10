@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "integrators/hyperelastic_traction_integrator.hpp"
+#include "serac/integrators/hyperelastic_traction_integrator.hpp"
 
 namespace serac {
 

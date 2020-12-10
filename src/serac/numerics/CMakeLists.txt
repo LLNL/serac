@@ -26,11 +26,11 @@ blt_add_library(
 
 
 target_include_directories(numerics PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
     $<INSTALL_INTERFACE:include>
     )
 
-install(FILES ${numerics_headers} DESTINATION include/numerics )
+install(FILES ${numerics_headers} DESTINATION include/serac/numerics )
 
 install(TARGETS              numerics
         EXPORT               serac-targets

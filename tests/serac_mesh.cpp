@@ -9,9 +9,9 @@
 #include <fstream>
 
 #include "mfem.hpp"
-#include "numerics/mesh_utils.hpp"
-#include "physics/elasticity.hpp"
-#include "serac_config.hpp"
+#include "serac/numerics/mesh_utils.hpp"
+#include "serac/physics/elasticity.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 

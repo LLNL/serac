@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 // # Author: Jonathan Wong @ LLNL.
 
-#include "coefficients/coefficient_extensions.hpp"
+#include "serac/coefficients/coefficient_extensions.hpp"
 
-#include "infrastructure/logger.hpp"
+#include "serac/infrastructure/logger.hpp"
 
 namespace serac {
 

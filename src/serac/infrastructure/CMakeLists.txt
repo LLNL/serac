@@ -35,11 +35,11 @@ blt_add_library(
     )
 
 target_include_directories(infrastructure PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
     $<INSTALL_INTERFACE:include>
     )
 
-install(FILES ${infrastructure_headers} DESTINATION include/infrastructure )
+install(FILES ${infrastructure_headers} DESTINATION include/serac/infrastructure )
 
 install(TARGETS              infrastructure
         EXPORT               serac-targets

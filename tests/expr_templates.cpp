@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "numerics/expr_template_ops.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 
 static std::pair<mfem::Vector, mfem::Vector> sample_vectors(const int entries)
 {

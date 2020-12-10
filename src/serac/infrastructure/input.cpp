@@ -4,13 +4,13 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "infrastructure/input.hpp"
+#include "serac/infrastructure/input.hpp"
 
 #include <stdlib.h>
 
 #include "axom/core.hpp"
-#include "infrastructure/logger.hpp"
-#include "infrastructure/terminator.hpp"
+#include "serac/infrastructure/logger.hpp"
+#include "serac/infrastructure/terminator.hpp"
 
 namespace serac {
 
