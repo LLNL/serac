@@ -8,8 +8,8 @@
 
 #include <fstream>
 
-#include "serac/coefficients/coefficient_extensions.hpp"
 #include "mfem.hpp"
+#include "serac/coefficients/coefficient_extensions.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/thermal_solid.hpp"
 #include "serac/serac_config.hpp"

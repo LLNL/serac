@@ -16,8 +16,8 @@
 
 #include <memory>
 
-#include "serac/infrastructure/input.hpp"
 #include "mfem.hpp"
+#include "serac/infrastructure/input.hpp"
 
 namespace serac {
 /**

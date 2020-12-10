@@ -18,6 +18,7 @@
 #include <string>
 
 #include "axom/core.hpp"
+#include "mfem.hpp"
 #include "serac/coefficients/loading_functions.hpp"
 #include "serac/coefficients/traction_coefficient.hpp"
 #include "serac/infrastructure/cli.hpp"
@@ -25,7 +26,6 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
-#include "mfem.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/nonlinear_solid.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
