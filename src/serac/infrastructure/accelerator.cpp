@@ -8,8 +8,8 @@
 
 #include <memory>
 
-#include "serac/infrastructure/logger.hpp"
 #include "mfem.hpp"
+#include "serac/infrastructure/logger.hpp"
 
 namespace serac {
 
