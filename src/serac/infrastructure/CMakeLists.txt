@@ -28,20 +28,20 @@ set(infrastructure_depends axom fmt mpi cli11 mfem)
 blt_list_append( TO infrastructure_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
 blt_add_library(
-    NAME        infrastructure
+    NAME        serac_infrastructure
     HEADERS     ${infrastructure_headers}
     SOURCES     ${infrastructure_sources}
     DEPENDS_ON  ${infrastructure_depends}
     )
 
-target_include_directories(infrastructure PUBLIC 
+target_include_directories(serac_infrastructure PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
     $<INSTALL_INTERFACE:include>
     )
 
 install(FILES ${infrastructure_headers} DESTINATION include/serac/infrastructure )
 
-install(TARGETS              infrastructure
+install(TARGETS              serac_infrastructure
         EXPORT               serac-targets
         DESTINATION          lib
         )

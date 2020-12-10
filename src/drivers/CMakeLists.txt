@@ -6,7 +6,7 @@
 
 blt_add_executable( NAME        serac_driver
                     SOURCES     serac.cpp
-                    DEPENDS_ON  numerics infrastructure physics coefficients mfem mpi
+                    DEPENDS_ON  serac_physics serac_coefficients
                     OUTPUT_NAME serac
                     )
 

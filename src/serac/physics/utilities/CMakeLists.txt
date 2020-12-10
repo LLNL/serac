@@ -19,10 +19,10 @@ set(physics_utilities_sources
     finite_element_state.cpp
     )
 
-set(physics_utilities_depends infrastructure mfem mpi axom)
+set(physics_utilities_depends serac_infrastructure)
 
 blt_add_library(
-    NAME        physics_utilities
+    NAME        serac_physics_utilities
     HEADERS     ${physics_utilities_headers}
     SOURCES     ${physics_utilities_sources}
     DEPENDS_ON  ${physics_utilities_depends}
@@ -30,7 +30,7 @@ blt_add_library(
 
 install(FILES ${physics_utilities_headers} DESTINATION include/serac/physics/utilities )
 
-install(TARGETS              physics_utilities
+install(TARGETS              serac_physics_utilities
         EXPORT               serac-targets
         DESTINATION          lib
         )
