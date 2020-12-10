@@ -137,18 +137,18 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
 {
   auto              amgx                 = std::make_unique<mfem::AmgXSolver>();
   static const auto default_prec_options = []() {
-    JSONTable result;
-    result.literal("solver")       = "AMG";
-    result.literal("presweeps")    = 1;
-    result.literal("postsweeps")   = 2;
-    result.literal("interpolator") = "D2";
-    result.literal("max_iters")    = 2;
-    result.literal("convergence")  = "ABSOLUTE";
-    result.literal("cycle")        = "V";
+    JSONTable solver_table;
+    solver_table.literal("solver")       = "AMG";
+    solver_table.literal("presweeps")    = 1;
+    solver_table.literal("postsweeps")   = 2;
+    solver_table.literal("interpolator") = "D2";
+    solver_table.literal("max_iters")    = 2;
+    solver_table.literal("convergence")  = "ABSOLUTE";
+    solver_table.literal("cycle")        = "V";
 
     JSONTable top_level;
     top_level.literal("config_version") = 2;
-    top_level["solver"].add(result);
+    top_level["solver"].add(solver_table);
     return top_level;
   }();
 
@@ -218,6 +218,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
       break;
     default:
       SLIC_ERROR("Linear solver type not recognized.");
+      exitGracefully(true);
   }
 
   iter_lin_solver->SetRelTol(lin_params.rel_tol);
