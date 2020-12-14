@@ -48,8 +48,8 @@
 #include <iostream>
 
 #include "mfem.hpp"
-#include "physics/utilities/equation_solver.hpp"
-#include "serac_config.hpp"
+#include "serac/physics/utilities/equation_solver.hpp"
+#include "serac/serac_config.hpp"
 
 using namespace std;
 using namespace mfem;

@@ -9,9 +9,9 @@
 
 #include <memory>
 
-#include "coefficients/coefficient_extensions.hpp"
-#include "integrators/wrapper_integrator.hpp"
 #include "mfem.hpp"
+#include "serac/coefficients/coefficient_extensions.hpp"
+#include "serac/integrators/wrapper_integrator.hpp"
 
 using namespace mfem;
 using namespace serac;
@@ -27,14 +27,15 @@ protected:
     int nez = 4;
 
     Mesh mesh(nex, ney, nez, mfem::Element::HEXAHEDRON, true);
-    pmesh_  = std::shared_ptr<ParMesh>(new ParMesh(MPI_COMM_WORLD, mesh));
-    pfes_   = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
-        pmesh_.get(), new H1_FECollection(1, dim_, BasisType::GaussLobatto), 1, Ordering::byNODES));
-    pfes_v_ = std::shared_ptr<ParFiniteElementSpace>(new ParFiniteElementSpace(
-        pmesh_.get(), new H1_FECollection(1, dim_, BasisType::GaussLobatto), dim_, Ordering::byNODES));
+    pmesh_ = std::make_shared<ParMesh>(MPI_COMM_WORLD, mesh);
+    fec_   = std::make_unique<H1_FECollection>(1, dim_, BasisType::GaussLobatto);
+    pfes_  = std::make_shared<ParFiniteElementSpace>(pmesh_.get(), fec_.get(), 1, Ordering::byNODES);
 
-    pfes_l2_ = std::shared_ptr<ParFiniteElementSpace>(
-        new ParFiniteElementSpace(pmesh_.get(), new L2_FECollection(0, dim_), 1, Ordering::byNODES));
+    fec_v_  = std::make_unique<H1_FECollection>(1, dim_, BasisType::GaussLobatto);
+    pfes_v_ = std::make_shared<ParFiniteElementSpace>(pmesh_.get(), fec_v_.get(), dim_, Ordering::byNODES);
+
+    fec_l2_  = std::make_unique<L2_FECollection>(0, dim_);
+    pfes_l2_ = std::make_shared<ParFiniteElementSpace>(pmesh_.get(), fec_l2_.get(), 1, Ordering::byNODES);
   }
 
   void TearDown() override {}
@@ -44,6 +45,11 @@ protected:
   std::shared_ptr<ParFiniteElementSpace> pfes_;
   std::shared_ptr<ParFiniteElementSpace> pfes_v_;
   std::shared_ptr<ParFiniteElementSpace> pfes_l2_;
+
+private:
+  std::unique_ptr<FiniteElementCollection> fec_;
+  std::unique_ptr<FiniteElementCollection> fec_v_;
+  std::unique_ptr<FiniteElementCollection> fec_l2_;
 };
 
 void SolveLinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int>& ess_tdof_list, ParGridFunction& temp)
@@ -336,6 +342,65 @@ TEST_F(WrapperTests, Transformed)
   temp.Print();
   std::cout << multiplier << std::endl;
   temp2.Print();
+}
+
+TEST_F(WrapperTests, attribute_modifier_coef)
+{
+  mfem::ConstantCoefficient three_and_a_half(3.5);
+  // All the attributes in the mesh are "1", but for whatever reason the restricted coefficient
+  // operates on attribute "2"
+  mfem::Array<int> restrict_to(2);
+  restrict_to[0] = 0;  // Don't apply if the attr is 1
+  restrict_to[1] = 1;  // But apply if the attr is 0
+  mfem::RestrictedCoefficient restrict_coef(three_and_a_half, restrict_to);
+
+  // Everything gets converted to 2
+  mfem::Array<int> modified_attrs(pmesh_->GetNE());
+  modified_attrs = 2;
+  mfem_extensions::AttributeModifierCoefficient am_coef(modified_attrs, restrict_coef);
+
+  ParGridFunction gf(pfes_.get());
+  gf.ProjectCoefficient(am_coef);
+  EXPECT_NEAR(gf.ComputeL2Error(three_and_a_half), 0.0, 1.e-8);
+}
+
+TEST_F(WrapperTests, vector_transform_coef)
+{
+  mfem::Vector one_two_three(dim_);
+  one_two_three[0]    = 1;
+  one_two_three[1]    = 2;
+  one_two_three[2]    = 3;
+  auto first_vec_coef = std::make_shared<mfem::VectorConstantCoefficient>(one_two_three);
+
+  mfem::Vector four_five_six(dim_);
+  four_five_six[0]     = 4;
+  four_five_six[1]     = 5;
+  four_five_six[2]     = 6;
+  auto second_vec_coef = std::make_shared<mfem::VectorConstantCoefficient>(four_five_six);
+
+  // Verify the answer using an MFEM VectorSumCoefficient since the transformation is
+  // just an addition
+  mfem::VectorSumCoefficient sum_coef(*first_vec_coef, *second_vec_coef);
+
+  // Both of these do the same thing, but we can test both the single- and dual-vector transformations
+  // by capturing the operand
+  mfem_extensions::TransformedVectorCoefficient mono_tv_coef(
+      first_vec_coef, [&four_five_six](const mfem::Vector& in, mfem::Vector& out) {
+        out = in;
+        out += four_five_six;
+      });
+  ParGridFunction mono_gf(pfes_v_.get());
+  mono_gf.ProjectCoefficient(mono_tv_coef);
+  EXPECT_NEAR(mono_gf.ComputeL2Error(sum_coef), 0.0, 1.e-8);
+
+  mfem_extensions::TransformedVectorCoefficient dual_tv_coef(
+      first_vec_coef, second_vec_coef, [](const mfem::Vector& first, const mfem::Vector& second, mfem::Vector& out) {
+        out = first;
+        out += second;
+      });
+  ParGridFunction dual_gf(pfes_v_.get());
+  dual_gf.ProjectCoefficient(dual_tv_coef);
+  EXPECT_NEAR(dual_gf.ComputeL2Error(sum_coef), 0.0, 1.e-8);
 }
 
 //------------------------------------------------------------------------------
