@@ -21,7 +21,7 @@ class SlicErrorException : public std::exception {
 
 namespace serac {
 
-using mfem_extensions::EquationSolver;
+using mfem_ext::EquationSolver;
 
 TEST(serac_error_handling, equationsolver_bad_lin_solver)
 {

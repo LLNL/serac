@@ -12,7 +12,7 @@
 
 #include "mfem.hpp"
 
-namespace serac::mfem_extensions {
+namespace serac::mfem_ext {
 
 /**
  * @brief Incremental hyperelastic integrator for any given HyperelasticModel.
@@ -83,4 +83,4 @@ private:
   mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, Jpt_, P_, PMatI_, PMatO_;
 };
 
-}  // namespace serac::mfem_extensions
+}  // namespace serac::mfem_ext

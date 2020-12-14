@@ -65,7 +65,7 @@ TEST(component_bc, qs_solve)
       }
   });
 
-  mfem::Array<int> ess_corner_bc_list = mfem_extensions::makeTrueEssList(solid_solver.displacement().space(), zero_bc);
+  mfem::Array<int> ess_corner_bc_list = mfem_ext::makeTrueEssList(solid_solver.displacement().space(), zero_bc);
 
   solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, 0);
 

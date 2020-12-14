@@ -105,11 +105,11 @@ Vector bb_min, bb_max;
 
 class DG_Solver : public Solver {
 private:
-  HypreParMatrix &                       M, &K;
-  SparseMatrix                           M_diag;
-  HypreParMatrix*                        A;
-  serac::mfem_extensions::EquationSolver linear_solver;
-  double                                 dt;
+  HypreParMatrix &                M, &K;
+  SparseMatrix                    M_diag;
+  HypreParMatrix*                 A;
+  serac::mfem_ext::EquationSolver linear_solver;
+  double                          dt;
 
 public:
   DG_Solver(HypreParMatrix& M_, HypreParMatrix& K_, const FiniteElementSpace& fes)

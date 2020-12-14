@@ -6,7 +6,7 @@
 
 #include "serac/integrators/wrapper_integrator.hpp"
 
-namespace serac::mfem_extensions {
+namespace serac::mfem_ext {
 
 LinearToNonlinearFormIntegrator::LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator>  f,
                                                                  std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes)
@@ -104,4 +104,4 @@ void TransformedNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteE
   elmat = transformed_function_grad_(el, Tr, elmat);
 }
 
-}  // namespace serac::mfem_extensions
+}  // namespace serac::mfem_ext

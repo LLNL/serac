@@ -9,7 +9,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac::mfem_extensions {
+namespace serac::mfem_ext {
 
 EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
                                const std::optional<NonlinearSolverParameters>& nonlin_params)
@@ -358,11 +358,11 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Table& table)
       .defaultValue("MFEMNewton");
 }
 
-}  // namespace serac::mfem_extensions
+}  // namespace serac::mfem_ext
 
 using serac::IterativeSolverParameters;
 using serac::NonlinearSolverParameters;
-using serac::mfem_extensions::EquationSolver;
+using serac::mfem_ext::EquationSolver;
 
 IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(const axom::inlet::Table& base)
 {

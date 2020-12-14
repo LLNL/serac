@@ -8,7 +8,7 @@
 
 #include "serac/numerics/expr_template_ops.hpp"
 
-namespace serac::mfem_extensions {
+namespace serac::mfem_ext {
 
 SecondOrderODE::SecondOrderODE(int n, State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs)
     : mfem::SecondOrderTimeDependentOperator(n, 0.0), state_(std::move(state)), solver_(solver), bcs_(bcs), zero_(n)
@@ -240,4 +240,4 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   state_.previous_dt = dt;
 }
 
-}  // namespace serac::mfem_extensions
+}  // namespace serac::mfem_ext

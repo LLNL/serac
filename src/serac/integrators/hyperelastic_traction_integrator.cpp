@@ -6,7 +6,7 @@
 
 #include "serac/integrators/hyperelastic_traction_integrator.hpp"
 
-namespace serac::mfem_extensions {
+namespace serac::mfem_ext {
 
 void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElement& el1, const mfem::FiniteElement&,
                                                         mfem::FaceElementTransformations& Tr, const mfem::Vector& elfun,
@@ -103,4 +103,4 @@ void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement&
   }
 }
 
-}  // namespace serac::mfem_extensions
+}  // namespace serac::mfem_ext

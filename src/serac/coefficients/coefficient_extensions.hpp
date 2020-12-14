@@ -19,7 +19,7 @@
 #include "mfem.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 
-namespace serac::mfem_extensions {
+namespace serac::mfem_ext {
 
 /**
  * @brief MakeTrueEssList takes in a FESpace, a vector coefficient, and produces a list
@@ -243,6 +243,6 @@ private:
   std::function<double(const double, const double)> bi_function_;
 };
 
-}  // namespace serac::mfem_extensions
+}  // namespace serac::mfem_ext
 
 #endif
