@@ -48,12 +48,31 @@ nonlinear_solid = {
     mu = 0.25,
     K  = 5.0,
 
+    -- initial conditions
+    initial_displacement = {
+        coef = function (x, y, z)
+            return 0, 0, 0
+        end  
+    },
+
+    initial_velocity = {
+        coef = function (x, y, z)
+            s = 0.1 / 64
+            first = -s * x * x
+            last = s * x * x * (8.0 - x)
+            -- FIXME: How can we detect the dimension?
+            return first, 0, last
+        end 
+    },
+
     -- boundary condition parameters
     boundary_conds = {
-        {
-            name = "displacement",
+        ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
+            coef = function (x, y, z)
+                return 0, 0, 0
+            end 
         },
     },
 }

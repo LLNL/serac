@@ -83,8 +83,17 @@ void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension)
 
 void BoundaryConditionInputInfo::defineInputFileSchema(axom::inlet::Table& table)
 {
-  table.addString("name", "Name used to identify the boundary condition").required();
   table.addIntArray("attrs", "Boundary attributes to which the BC should be applied").required();
+  CoefficientInputInfo::defineInputFileSchema(table);
+}
+
+void CoefficientInputInfo::defineInputFileSchema(axom::inlet::Table& table)
+{
+  table
+      .addFunction("coef", axom::inlet::FunctionType::Vec3D,
+                   {axom::inlet::FunctionType::Vec3D},  // Multiple argument types
+                   "The function representing the BC coefficient")
+      .required();
 }
 
 }  // namespace input
@@ -116,6 +125,19 @@ serac::input::BoundaryConditionInputInfo FromInlet<serac::input::BoundaryConditi
   for (const auto& [_, val] : bdr_attr_map) {
     result.attrs.insert(val);
   }
-  result.name = base["name"];
+  result.coef_info = base.get<serac::input::CoefficientInputInfo>();
+  return result;
+}
+
+serac::input::CoefficientInputInfo FromInlet<serac::input::CoefficientInputInfo>::operator()(
+    const axom::inlet::Table& base)
+{
+  serac::input::CoefficientInputInfo result;
+  auto func   = base["coef"].get<std::function<axom::primal::Vector3D(axom::primal::Vector3D)>>();
+  result.func = [func(std::move(func))](const mfem::Vector& input, mfem::Vector& output) {
+    auto ret = func({input.GetData(), input.Size()});
+    // Copy from the primal vector into the MFEM vector
+    std::copy(ret.data(), ret.data() + ret.dimension(), output.GetData());
+  };
   return result;
 }

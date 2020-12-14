@@ -56,11 +56,8 @@ public:
      * @brief Input file parameters specific to this class
      *
      * @param[in] table Inlet's SchemaCreator that input files will be added to
-     * @param[in] dynamic Whether the solid solver will be dynamic
      **/
-    // FIXME: The dynamic parameter can be removed once the enhanced axom::inlet::Proxy::contains
-    // logic is merged in
-    static void defineInputFileSchema(axom::inlet::Table& table, const bool dynamic = false);
+    static void defineInputFileSchema(axom::inlet::Table& table);
 
     // The order of the field
     int              order;
@@ -70,7 +67,10 @@ public:
     double K;
 
     // Boundary condition information
-    std::vector<input::BoundaryConditionInputInfo> boundary_conditions;
+    std::unordered_map<std::string, input::BoundaryConditionInputInfo> boundary_conditions;
+
+    input::CoefficientInputInfo initial_displacement;
+    input::CoefficientInputInfo initial_velocity;
   };
 
   /**

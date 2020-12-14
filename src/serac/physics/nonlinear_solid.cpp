@@ -70,6 +70,16 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
   // This is the only other info stored in the input file that we can use
   // in the initialization stage
   setHyperelasticMaterialParameters(info.mu, info.K);
+
+  auto dim    = mesh->Dimension();
+  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, info.initial_displacement.func);
+  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, info.initial_velocity.func);
+  setDisplacement(*deform);
+  setVelocity(*velo);
+
+  const auto& disp_bc   = info.boundary_conditions.at("displacement");
+  auto        disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp_bc.coef_info.func);
+  setDisplacementBCs(disp_bc.attrs, disp_coef);
 }
 
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
@@ -253,7 +263,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table, const bool dynamic)
+void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Polynomial interpolation order
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1);
@@ -275,16 +285,17 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table,
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
 
-  // See comment in header - schema definitions should never be guarded by a conditional.
-  // This is a short-term patch.
-  if (dynamic) {
-    auto& mass_solver_table = table.addTable("mass_solver", "Parameters for mass matrix inversion");
-    mass_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
-    mass_solver_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
-  }
+  auto& mass_solver_table = table.addTable("mass_solver", "Parameters for mass matrix inversion");
+  mass_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
+  mass_solver_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
-  auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
+  auto& bc_table = table.addGenericDictionary("boundary_conds", "Boundary condition information");
   serac::input::BoundaryConditionInputInfo::defineInputFileSchema(bc_table);
+
+  auto& init_displ = table.addTable("initial_displacement", "Coefficient for initial condition");
+  serac::input::CoefficientInputInfo::defineInputFileSchema(init_displ);
+  auto& init_velo = table.addTable("initial_velocity", "Coefficient for initial condition");
+  serac::input::CoefficientInputInfo::defineInputFileSchema(init_velo);
 }
 
 }  // namespace serac
@@ -331,10 +342,10 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   result.mu = base["mu"];
   result.K  = base["K"];
 
-  auto bdr_map = base["boundary_conds"].get<std::unordered_map<int, serac::input::BoundaryConditionInputInfo>>();
-  for (const auto& [idx, val] : bdr_map) {
-    result.boundary_conditions.push_back(val);
-  }
+  result.boundary_conditions =
+      base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputInfo>>();
 
+  result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputInfo>();
+  result.initial_velocity     = base["initial_velocity"].get<serac::input::CoefficientInputInfo>();
   return result;
 }
