@@ -144,7 +144,6 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     """
     cmd  = "python scripts/uberenv/uberenv.py -k "
     cmd += "--prefix=\"{0}\" --spec=\"{1}\" ".format(prefix, spec)
-    cmd += "--project-json=\"{0}\" ".format(project_file)
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
     cmd += "--spack-config-dir=\"{0}\" ".format(config_dir)
         
@@ -400,8 +399,8 @@ def set_group_and_perms(directory):
 
 
 def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, mirror_location = ''):
-    project_file = "scripts/uberenv/project.json"
-    config_dir = "scripts/uberenv/spack_configs/{0}".format(get_system_type())
+    project_file = "scripts/spack/project.json"
+    config_dir = "scripts/spack/configs/{0}".format(get_system_type())
 
     if spec:
         specs = [spec]
@@ -484,8 +483,8 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
 
 def build_devtools(builds_dir, timestamp):
     sys_type = get_system_type()
-    config_dir = "scripts/uberenv/spack_configs/{0}/devtools".format(sys_type)
-    project_file = "scripts/uberenv/devtools.json"
+    config_dir = "scripts/spack/configs/{0}/devtools".format(sys_type)
+    project_file = "scripts/spack/devtools.json"
 
     if "toss_3" in sys_type:
         compiler_spec = "%gcc@8.1.0"
@@ -543,7 +542,7 @@ def build_devtools(builds_dir, timestamp):
 
 def get_specs_for_current_machine():
     repo_dir = get_repo_dir()
-    specs_json_path = pjoin(repo_dir, "scripts/uberenv/specs.json")
+    specs_json_path = pjoin(repo_dir, "scripts/spack/specs.json")
 
     with open(specs_json_path, 'r') as f:
         specs_json = json.load(f)
