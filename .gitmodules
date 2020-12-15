@@ -3,4 +3,4 @@
 	url = https://github.com/LLNL/blt.git
 [submodule "scripts/uberenv"]
 	path = scripts/uberenv
-	url = git@github.com:LLNL/uberenv.git
+	url = https://github.com/LLNL/uberenv.git
