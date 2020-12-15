@@ -14,7 +14,7 @@
 
 namespace serac {
 
-namespace testing {
+namespace test_utils {
 
 void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet)
 {
@@ -41,7 +41,7 @@ void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet)
   }
 }
 
-void runNonlinSolidDynamicTest(const std::string& input_file)
+void runNonlinSolidTest(const std::string& input_file)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -49,70 +49,7 @@ void runNonlinSolidDynamicTest(const std::string& input_file)
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  testing::defineNonlinSolidInputFileSchema(inlet);
-
-  // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
-
-  // Define the solid solver object
-  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
-  NonlinearSolid dyn_solver(mesh, solid_solver_info);
-
-  // initialize the dynamic solver object
-  auto visc = std::make_unique<mfem::ConstantCoefficient>(0.0);
-  dyn_solver.setViscosity(std::move(visc));
-
-  // Initialize the VisIt output
-  dyn_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_solid");
-
-  // Construct the internal dynamic solver data structures
-  dyn_solver.completeSetup();
-
-  double t       = 0.0;
-  double t_final = inlet["t_final"];
-  double dt      = inlet["dt"];
-
-  // Ouput the initial state
-  dyn_solver.outputState();
-
-  // Perform time-integration
-  // (looping over the time iterations, ti, with a time-step dt).
-  bool last_step = false;
-  for (int ti = 1; !last_step; ti++) {
-    double dt_real = std::min(dt, t_final - t);
-    t += dt_real;
-    last_step = (t >= t_final - 1e-8 * dt);
-
-    dyn_solver.advanceTimestep(dt_real);
-  }
-
-  // Output the final state
-  dyn_solver.outputState();
-
-  // Check the final displacement and velocity L2 norms
-  int          dim = mesh->Dimension();
-  mfem::Vector zero(dim);
-  zero = 0.0;
-  mfem::VectorConstantCoefficient zerovec(zero);
-
-  double v_norm = dyn_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
-  double x_norm = dyn_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-
-  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
-  EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
-}
-
-void runNonlinSolidQuasistaticTest(const std::string& input_file)
-{
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-
-  // Initialize Inlet and read input file
-  auto inlet = serac::input::initialize(datastore, input_file);
-
-  testing::defineNonlinSolidInputFileSchema(inlet);
+  defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
   auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
@@ -123,27 +60,59 @@ void runNonlinSolidQuasistaticTest(const std::string& input_file)
   auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
   NonlinearSolid solid_solver(mesh, solid_solver_info);
 
+  const bool is_dynamic = inlet["nonlinear_solid"].contains("mass_solver");
+
+  if (is_dynamic) {
+    auto visc = std::make_unique<mfem::ConstantCoefficient>(0.0);
+    solid_solver.setViscosity(std::move(visc));
+  }
+
   // Initialize the output
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
+  solid_solver.initializeOutput(serac::OutputType::VisIt, "nonlin_solid");
 
   // Complete the solver setup
   solid_solver.completeSetup();
-
-  double dt = inlet["dt"];
-  solid_solver.advanceTimestep(dt);
-
+  // Output the initial state
   solid_solver.outputState();
 
-  int          dim = mesh->Dimension();
-  mfem::Vector zero(dim);
+  double dt = inlet["dt"];
+
+  // Check if dynamic
+  if (is_dynamic) {
+    double t       = 0.0;
+    double t_final = inlet["t_final"];
+
+    // Perform time-integration
+    // (looping over the time iterations, ti, with a time-step dt).
+    bool last_step = false;
+    for (int ti = 1; !last_step; ti++) {
+      double dt_real = std::min(dt, t_final - t);
+      t += dt_real;
+      last_step = (t >= t_final - 1e-8 * dt);
+
+      solid_solver.advanceTimestep(dt_real);
+    }
+  } else {
+    solid_solver.advanceTimestep(dt);
+  }
+
+  // Output the final state
+  solid_solver.outputState();
+
+  mfem::Vector zero(mesh->Dimension());
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-
-  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  if (inlet.contains("expected_x_l2norm")) {
+    double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+    EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  }
+  if (inlet.contains("expected_v_l2norm")) {
+    double v_norm = solid_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
+    EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
+  }
 }
 
-}  // end namespace testing
+}  // end namespace test_utils
 
 }  // end namespace serac

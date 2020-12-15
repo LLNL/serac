@@ -9,7 +9,7 @@ t_final = 6.0
 
 main_mesh = {
     -- mesh file
-    mesh = "../../../../meshes/beam-hex.mesh",
+    mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
     ser_ref_levels = 1,
     par_ref_levels = 0,
@@ -35,7 +35,6 @@ nonlinear_solid = {
             abs_tol     = 1.0e-8,
             max_iter    = 500,
             print_level = 1,
-            solver_type = "KINLineSearch",
         },
     },
 
