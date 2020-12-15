@@ -95,7 +95,7 @@ class Serac(CMakePackage, CudaPackage):
     # netcdf variant commented out until a bug in the spack concretizer is fixed
     #variant('netcdf', default=True,
     #        description='Enable Cubit/Genesis reader')
-    variant('sundials', default=False,
+    variant('sundials', default=True,
             description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
 
     # Basic dependencies
