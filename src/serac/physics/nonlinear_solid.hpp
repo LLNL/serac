@@ -13,6 +13,8 @@
 #ifndef NONLIN_SOLID
 #define NONLIN_SOLID
 
+#include <optional>
+
 #include "mfem.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/base_physics.hpp"
@@ -69,8 +71,8 @@ public:
     // Boundary condition information
     std::unordered_map<std::string, input::BoundaryConditionInputInfo> boundary_conditions;
 
-    input::CoefficientInputInfo initial_displacement;
-    input::CoefficientInputInfo initial_velocity;
+    std::optional<input::CoefficientInputInfo> initial_displacement;
+    std::optional<input::CoefficientInputInfo> initial_velocity;
   };
 
   /**

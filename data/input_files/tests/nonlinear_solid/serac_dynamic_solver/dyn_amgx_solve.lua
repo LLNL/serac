@@ -19,12 +19,15 @@ main_mesh = {
 nonlinear_solid = {
     stiffness_solver = {
         linear = {
-            rel_tol     = 1.0e-4,
-            abs_tol     = 1.0e-8,
-            max_iter    = 500,
-            print_level = 0,
-            solver_type = "gmres",
-            prec_type   = "AMGX",
+            type = "iterative",
+            iterative_params = {
+                rel_tol     = 1.0e-4,
+                abs_tol     = 1.0e-8,
+                max_iter    = 500,
+                print_level = 0,
+                solver_type = "gmres",
+                prec_type   = "AMGX",
+            },
         },
 
         nonlinear = {

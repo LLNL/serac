@@ -14,6 +14,8 @@ void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet);
 
 void runNonlinSolidDynamicTest(const std::string& input_file);
 
+void runNonlinSolidQuasistaticTest(const std::string& input_file);
+
 }  // end namespace testing
 
 }  // end namespace serac

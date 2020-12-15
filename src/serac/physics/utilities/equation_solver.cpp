@@ -340,13 +340,19 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
 void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
 {
   auto& linear_table = table.addTable("linear", "Linear Equation Solver Parameters").required();
-  linear_table.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
-  linear_table.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
-  linear_table.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
-  linear_table.addInt("print_level", "Linear print level.").defaultValue(0);
-  linear_table.addString("solver_type", "Solver type (gmres|minres).").defaultValue("gmres");
-  linear_table.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
+  linear_table.addString("type", "The type of solver parameters to use").required();
+
+  auto& iterative_table = linear_table.addTable("iterative_params", "Iterative solver parameters");
+  iterative_table.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
+  iterative_table.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
+  iterative_table.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
+  iterative_table.addInt("print_level", "Linear print level.").defaultValue(0);
+  iterative_table.addString("solver_type", "Solver type (gmres|minres).").defaultValue("gmres");
+  iterative_table.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
       .defaultValue("JacobiSmoother");
+
+  auto& direct_table = linear_table.addTable("direct_params", "Direct solver parameters");
+  direct_table.addInt("print_level", "Linear print level.").defaultValue(0);
 
   // Only needed for nonlinear problems
   auto& nonlinear_table = table.addTable("nonlinear", "Newton Equation Solver Parameters").required(false);
@@ -361,39 +367,49 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
 }  // namespace serac
 
 using serac::EquationSolver;
-using serac::IterativeSolverParameters;
+using serac::LinearSolverParameters;
 using serac::NonlinearSolverParameters;
 
-IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(const axom::inlet::Table& base)
+LinearSolverParameters FromInlet<LinearSolverParameters>::operator()(const axom::inlet::Table& base)
 {
-  IterativeSolverParameters params;
-  params.rel_tol          = base["rel_tol"];
-  params.abs_tol          = base["abs_tol"];
-  params.max_iter         = base["max_iter"];
-  params.print_level      = base["print_level"];
-  std::string solver_type = base["solver_type"];
-  if (solver_type == "gmres") {
-    params.lin_solver = serac::LinearSolver::GMRES;
-  } else if (solver_type == "minres") {
-    params.lin_solver = serac::LinearSolver::MINRES;
-  } else {
-    std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
-    SLIC_ERROR(msg);
-  }
-  const std::string prec_type = base["prec_type"];
-  if (prec_type == "JacobiSmoother") {
-    params.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::Jacobi};
-  } else if (prec_type == "L1JacobiSmoother") {
-    params.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi};
-  } else if (prec_type == "HypreAMG") {
-    params.prec = serac::HypreBoomerAMGPrec{};
-  } else if (prec_type == "AMGX") {
-    params.prec = serac::AMGXPrec{};
-  } else if (prec_type == "BlockILU") {
-    params.prec = serac::BlockILUPrec{};
-  } else {
-    std::string msg = fmt::format("Unknown preconditioner type given: {0}", prec_type);
-    SLIC_ERROR(msg);
+  LinearSolverParameters params;
+  std::string            type = base["type"];
+  if (type == "iterative") {
+    serac::IterativeSolverParameters iter_params;
+    auto                             config = base["iterative_params"];
+    iter_params.rel_tol                     = config["rel_tol"];
+    iter_params.abs_tol                     = config["abs_tol"];
+    iter_params.max_iter                    = config["max_iter"];
+    iter_params.print_level                 = config["print_level"];
+    std::string solver_type                 = config["solver_type"];
+    if (solver_type == "gmres") {
+      iter_params.lin_solver = serac::LinearSolver::GMRES;
+    } else if (solver_type == "minres") {
+      iter_params.lin_solver = serac::LinearSolver::MINRES;
+    } else {
+      std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
+      SLIC_ERROR(msg);
+    }
+    const std::string prec_type = config["prec_type"];
+    if (prec_type == "JacobiSmoother") {
+      iter_params.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::Jacobi};
+    } else if (prec_type == "L1JacobiSmoother") {
+      iter_params.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi};
+    } else if (prec_type == "HypreAMG") {
+      iter_params.prec = serac::HypreBoomerAMGPrec{};
+    } else if (prec_type == "AMGX") {
+      iter_params.prec = serac::AMGXPrec{};
+    } else if (prec_type == "BlockILU") {
+      iter_params.prec = serac::BlockILUPrec{};
+    } else {
+      std::string msg = fmt::format("Unknown preconditioner type given: {0}", prec_type);
+      SLIC_ERROR(msg);
+    }
+    params = iter_params;
+  } else if (type == "direct") {
+    serac::DirectSolverParameters direct_params;
+    direct_params.print_level = base["direct_params/print_level"];
+    params                    = direct_params;
   }
   return params;
 }
@@ -420,7 +436,7 @@ NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(const
 
 EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Table& base)
 {
-  auto lin = base["linear"].get<IterativeSolverParameters>();
+  auto lin = base["linear"].get<LinearSolverParameters>();
   if (base.hasTable("nonlinear")) {
     auto nonlin = base["nonlinear"].get<NonlinearSolverParameters>();
     return EquationSolver(MPI_COMM_WORLD, lin, nonlin);

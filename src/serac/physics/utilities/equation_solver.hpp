@@ -212,8 +212,8 @@ inline LinearSolverParameters augmentAMGForElasticity(const LinearSolverParamete
 // Prototype the specialization
 
 template <>
-struct FromInlet<serac::IterativeSolverParameters> {
-  serac::IterativeSolverParameters operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::LinearSolverParameters> {
+  serac::LinearSolverParameters operator()(const axom::inlet::Table& base);
 };
 
 template <>

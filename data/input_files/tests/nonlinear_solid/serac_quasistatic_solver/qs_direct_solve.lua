@@ -1,11 +1,9 @@
 -- Comparison information
-expected_x_l2norm = 1.4225
-expected_v_l2norm = 0.2252
-epsilon = 0.0001
+expected_x_l2norm = 2.2309025
+epsilon = 0.001
 
 -- Simulation time parameters
 dt      = 1.0
-t_final = 6.0
 
 main_mesh = {
     -- mesh file
@@ -26,16 +24,11 @@ nonlinear_solid = {
         },
 
         nonlinear = {
-            rel_tol     = 1.0e-4,
-            abs_tol     = 1.0e-8,
-            max_iter    = 500,
+            rel_tol     = 1.0e-3,
+            abs_tol     = 1.0e-6,
+            max_iter    = 5000,
             print_level = 1,
         },
-    },
-
-    mass_solver = {
-        timestepper = "AverageAcceleration",
-        enforcement_method = "RateControl",
     },
 
     -- polynomial interpolation order
@@ -43,24 +36,7 @@ nonlinear_solid = {
 
     -- neo-Hookean material parameters
     mu = 0.25,
-    K  = 5.0,
-
-    -- initial conditions
-    initial_displacement = {
-        coef = function (x, y, z)
-            return 0, 0, 0
-        end  
-    },
-
-    initial_velocity = {
-        coef = function (x, y, z)
-            s = 0.1 / 64
-            first = -s * x * x
-            last = s * x * x * (8.0 - x)
-            -- FIXME: How can we detect the dimension?
-            return first, 0, last
-        end 
-    },
+    K  = 10.0,
 
     -- boundary condition parameters
     boundary_conds = {
@@ -69,7 +45,13 @@ nonlinear_solid = {
             attrs = {1},
             coef = function (x, y, z)
                 return 0, 0, 0
-            end 
+            end
+        },
+        ['traction'] = {
+            attrs = {2},
+            coef = function (x, y, z)
+                return 0, 1.0e-3, 0
+            end
         },
     },
 }

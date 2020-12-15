@@ -17,12 +17,15 @@ main_mesh = {
 nonlinear_solid = {
     stiffness_solver = {
         linear = {
-            rel_tol     = 1.0e-6,
-            abs_tol     = 1.0e-8,
-            max_iter    = 5000,
-            print_level = 0,
-            solver_type = "minres",
-            prec_type   = "L1JacobiSmoother",
+            type = "iterative",
+            iterative_params = {
+                rel_tol     = 1.0e-6,
+                abs_tol     = 1.0e-8,
+                max_iter    = 5000,
+                print_level = 0,
+                solver_type = "minres",
+                prec_type   = "L1JacobiSmoother",
+            },
         },
 
         nonlinear = {
@@ -40,22 +43,20 @@ nonlinear_solid = {
     mu = 0.25,
     K  = 10.0,
 
-    traction = {
-      x = 0.0,
-      y = 1.0e-3,
-      z = 0.0,
-    },
-
     -- boundary condition parameters
     boundary_conds = {
-        {
-            name = "displacement",
+        ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
+            coef = function (x, y, z)
+                return 0, 0, 0
+            end
         },
-        {
-          name = "traction",
-          attrs = {2},
-      },
+        ['traction'] = {
+            attrs = {2},
+            coef = function (x, y, z)
+                return 0, 1.0e-3, 0
+            end
+        },
     },
 }

@@ -71,15 +71,28 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
   // in the initialization stage
   setHyperelasticMaterialParameters(info.mu, info.K);
 
-  auto dim    = mesh->Dimension();
-  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, info.initial_displacement.func);
-  auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, info.initial_velocity.func);
-  setDisplacement(*deform);
-  setVelocity(*velo);
+  auto dim = mesh->Dimension();
+  if (info.initial_displacement) {
+    mfem::VectorFunctionCoefficient deform(dim, info.initial_displacement->func);
+    setDisplacement(deform);
+  }
 
-  const auto& disp_bc   = info.boundary_conditions.at("displacement");
-  auto        disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp_bc.coef_info.func);
-  setDisplacementBCs(disp_bc.attrs, disp_coef);
+  if (info.initial_velocity) {
+    mfem::VectorFunctionCoefficient velo(dim, info.initial_velocity->func);
+    setVelocity(velo);
+  }
+
+  if (info.boundary_conditions.count("displacement") > 0) {
+    const auto& disp_bc   = info.boundary_conditions.at("displacement");
+    auto        disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(dim, disp_bc.coef_info.func);
+    setDisplacementBCs(disp_bc.attrs, disp_coef);
+  }
+
+  if (info.boundary_conditions.count("traction") > 0) {
+    const auto& trac_bc   = info.boundary_conditions.at("traction");
+    auto        trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(dim, trac_bc.coef_info.func);
+    setTractionBCs(trac_bc.attrs, trac_coef);
+  }
 }
 
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
@@ -272,15 +285,6 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
   table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
   table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
 
-  auto& traction_table = table.addTable("traction", "Cantilever tip traction vector");
-
-  // loading parameters
-  input::defineVectorInputFileSchema(traction_table);
-
-  traction_table.getField("x").defaultValue(0.0);
-  traction_table.getField("y").defaultValue(1.0e-3);
-  traction_table.getField("z").defaultValue(0.0);
-
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
@@ -312,7 +316,7 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
 
   // Solver parameters
   auto stiffness_solver                = base["stiffness_solver"];
-  result.solver_params.H_lin_params    = stiffness_solver["linear"].get<serac::IterativeSolverParameters>();
+  result.solver_params.H_lin_params    = stiffness_solver["linear"].get<serac::LinearSolverParameters>();
   result.solver_params.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverParameters>();
 
   if (base.contains("mass_solver")) {
@@ -345,7 +349,11 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   result.boundary_conditions =
       base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputInfo>>();
 
-  result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputInfo>();
-  result.initial_velocity     = base["initial_velocity"].get<serac::input::CoefficientInputInfo>();
+  if (base.contains("initial_displacement")) {
+    result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputInfo>();
+  }
+  if (base.contains("initial_velocity")) {
+    result.initial_velocity = base["initial_velocity"].get<serac::input::CoefficientInputInfo>();
+  }
   return result;
 }

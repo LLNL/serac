@@ -89,11 +89,9 @@ void BoundaryConditionInputInfo::defineInputFileSchema(axom::inlet::Table& table
 
 void CoefficientInputInfo::defineInputFileSchema(axom::inlet::Table& table)
 {
-  table
-      .addFunction("coef", axom::inlet::FunctionType::Vec3D,
-                   {axom::inlet::FunctionType::Vec3D},  // Multiple argument types
-                   "The function representing the BC coefficient")
-      .required();
+  table.addFunction("coef", axom::inlet::FunctionType::Vec3D,
+                    {axom::inlet::FunctionType::Vec3D},  // Multiple argument types
+                    "The function representing the BC coefficient");
 }
 
 }  // namespace input
