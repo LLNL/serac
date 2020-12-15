@@ -11,11 +11,11 @@
 
 namespace serac::mfem_ext {
 
-mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c)
+mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c)
 {
   mfem::Array<int> ess_tdof_list(0);
 
-  mfem::Array<int> ess_vdof_list = makeEssList(pfes, c);
+  mfem::Array<int> ess_vdof_list = MakeEssList(pfes, c);
 
   for (int i = 0; i < ess_vdof_list.Size(); ++i) {
     int tdof = pfes.GetLocalTDofNumber(ess_vdof_list[i]);
@@ -27,7 +27,7 @@ mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::Vector
   return ess_tdof_list;
 }
 
-mfem::Array<int> makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c)
+mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c)
 {
   mfem::Array<int> ess_vdof_list(0);
 
@@ -43,7 +43,7 @@ mfem::Array<int> makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoef
   return ess_vdof_list;
 }
 
-mfem::Array<int> makeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize)
+mfem::Array<int> MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize)
 {
   mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &l2_fec);
@@ -60,7 +60,7 @@ mfem::Array<int> makeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::fun
 }
 
 // Need to use H1_fec because boundary elements don't exist in L2
-mfem::Array<int> makeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize)
+mfem::Array<int> MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize)
 {
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &h1_fec);
