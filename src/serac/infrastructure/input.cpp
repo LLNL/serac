@@ -87,11 +87,27 @@ void BoundaryConditionInputInfo::defineInputFileSchema(axom::inlet::Table& table
   CoefficientInputInfo::defineInputFileSchema(table);
 }
 
+mfem::VectorFunctionCoefficient CoefficientInputInfo::constructVector(const int dim) const
+{
+  SLIC_ERROR_IF(!vec_func, "Cannot construct a vector coefficient from a scalar function");
+  return {dim, vec_func};
+}
+
+mfem::FunctionCoefficient CoefficientInputInfo::constructScalar() const
+{
+  SLIC_ERROR_IF(!scalar_func, "Cannot construct a scalar coefficient from a vector function");
+  return {scalar_func};
+}
+
 void CoefficientInputInfo::defineInputFileSchema(axom::inlet::Table& table)
 {
-  table.addFunction("coef", axom::inlet::FunctionType::Vec3D,
+  table.addFunction("vec_coef", axom::inlet::FunctionType::Vec3D,
                     {axom::inlet::FunctionType::Vec3D},  // Multiple argument types
-                    "The function representing the BC coefficient");
+                    "The function representing a vector BC coefficient");
+  table.addFunction("coef", axom::inlet::FunctionType::Double,
+                    {axom::inlet::FunctionType::Vec3D},  // Multiple argument types
+                    "The function representing a scalar BC coefficient");
+  table.addInt("component", "The vector component to which the scalar BC should be applied");
 }
 
 }  // namespace input
@@ -131,11 +147,19 @@ serac::input::CoefficientInputInfo FromInlet<serac::input::CoefficientInputInfo>
     const axom::inlet::Table& base)
 {
   serac::input::CoefficientInputInfo result;
-  auto func   = base["coef"].get<std::function<axom::primal::Vector3D(axom::primal::Vector3D)>>();
-  result.func = [func(std::move(func))](const mfem::Vector& input, mfem::Vector& output) {
-    auto ret = func({input.GetData(), input.Size()});
-    // Copy from the primal vector into the MFEM vector
-    std::copy(ret.data(), ret.data() + ret.dimension(), output.GetData());
-  };
+  if (base.contains("vec_coef")) {
+    auto func       = base["vec_coef"].get<std::function<axom::primal::Vector3D(axom::primal::Vector3D)>>();
+    result.vec_func = [func(std::move(func))](const mfem::Vector& input, mfem::Vector& output) {
+      auto ret = func({input.GetData(), input.Size()});
+      // Copy from the primal vector into the MFEM vector
+      std::copy(ret.data(), ret.data() + ret.dimension(), output.GetData());
+    };
+  } else if (base.contains("coef")) {
+    auto func          = base["coef"].get<std::function<double(axom::primal::Vector3D)>>();
+    result.scalar_func = [func(std::move(func))](const mfem::Vector& input) {
+      return func({input.GetData(), input.Size()});
+    };
+    result.component = base["component"];
+  }
   return result;
 }

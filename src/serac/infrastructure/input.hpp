@@ -59,7 +59,11 @@ std::string fullDirectoryFromPath(const std::string& file_path);
 void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension = 3);
 
 struct CoefficientInputInfo {
-  std::function<void(const mfem::Vector&, mfem::Vector&)> func;
+  std::function<void(const mfem::Vector&, mfem::Vector&)> vec_func;
+  std::function<double(const mfem::Vector&)>              scalar_func;
+  int                                                     component;
+  mfem::VectorFunctionCoefficient                         constructVector(const int dim = 3) const;
+  mfem::FunctionCoefficient                               constructScalar() const;
   static void                                             defineInputFileSchema(axom::inlet::Table& table);
 };
 

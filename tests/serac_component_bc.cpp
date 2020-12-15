@@ -45,16 +45,8 @@ TEST(component_bc, qs_solve)
   int dim = mesh->Dimension();
 
   // define the displacement vector
-  auto disp_coef = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[0] * -1.0e-1; });
-
-  // Pass the BC information to the solver object setting only the z direction
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
-    if (bc.name == "displacement") {
-      solid_solver.setDisplacementBCs(bc.attrs, disp_coef, 0);
-    } else {
-      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
-    }
-  }
+  const auto& disp_bc   = solid_solver_info.boundary_conditions.at("displacement");
+  auto        disp_coef = std::make_shared<mfem::FunctionCoefficient>(disp_bc.coef_info.scalar_func);
 
   // Create an indicator function to set all vertices that are x=0
   mfem::VectorFunctionCoefficient zero_bc(dim, [](const mfem::Vector& x, mfem::Vector& X) {
@@ -67,7 +59,7 @@ TEST(component_bc, qs_solve)
 
   mfem::Array<int> ess_corner_bc_list = makeTrueEssList(solid_solver.displacement().space(), zero_bc);
 
-  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, 0);
+  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, disp_bc.coef_info.component);
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "component_bc");
@@ -119,21 +111,6 @@ TEST(component_bc, qs_attribute_solve)
   serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
-
-  // define the displacement vector
-  auto disp_x_coef = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[0] * 3.0e-2; });
-  auto disp_y_coef = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[1] * -5.0e-2; });
-
-  // Pass the BC information to the solver object setting only the z direction
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
-    if (bc.name == "displacement_x") {
-      solid_solver.setDisplacementBCs(bc.attrs, disp_x_coef, 0);
-    } else if (bc.name == "displacement_y") {
-      solid_solver.setDisplacementBCs(bc.attrs, disp_y_coef, 1);
-    } else {
-      SLIC_WARNING("Ignoring unrecognized boundary condition: " << bc.name);
-    }
-  }
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::GLVis, "component_attr_bc");
