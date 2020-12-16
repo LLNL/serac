@@ -133,6 +133,7 @@ def uberenv_create_mirror(prefix, project_file, mirror_path):
     """
     Calls uberenv to create a spack mirror.
     """
+    assertUberenvExists()
     cmd  = "python {0} --create-mirror -k ".format(get_uberenv_path())
     cmd += "--prefix=\"{0}\" --mirror=\"{1}\" ".format(prefix, mirror_path)
     if project_file:
@@ -149,6 +150,7 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     """
     Calls uberenv to install tpls for a given spec to given prefix.
     """
+    assertUberenvExists()
     cmd  = "python {0} -k ".format(get_uberenv_path())
     cmd += "--prefix=\"{0}\" --spec=\"{1}\" ".format(prefix, spec)
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
