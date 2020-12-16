@@ -36,7 +36,7 @@ nonlinear_solid = {
         },
     },
 
-    mass_solver = {
+    dynamics = {
         timestepper = "AverageAcceleration",
         enforcement_method = "RateControl",
     },

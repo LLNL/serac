@@ -81,7 +81,7 @@ void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension)
   }
 }
 
-void BoundaryConditionInputInfo::defineInputFileSchema(axom::inlet::Table& table)
+void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   table.addString("name", "Name used to identify the boundary condition").required();
   table.addIntArray("attrs", "Boundary attributes to which the BC should be applied").required();
@@ -107,10 +107,10 @@ mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
   return result;
 }
 
-serac::input::BoundaryConditionInputInfo FromInlet<serac::input::BoundaryConditionInputInfo>::operator()(
+serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
     const axom::inlet::Table& base)
 {
-  serac::input::BoundaryConditionInputInfo result;
+  serac::input::BoundaryConditionInputOptions result;
   // Build a set with just the values of the map
   auto bdr_attr_map = base["attrs"].get<std::unordered_map<int, int>>();
   for (const auto& [_, val] : bdr_attr_map) {

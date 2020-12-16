@@ -11,30 +11,30 @@
 
 namespace serac {
 
-EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
-                               const std::optional<NonlinearSolverParameters>& nonlin_params)
+EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_options,
+                               const std::optional<NonlinearSolverOptions>& nonlin_options)
 {
   // If it's an iterative solver, build it and set the preconditioner
-  if (auto iter_params = std::get_if<IterativeSolverParameters>(&lin_params)) {
-    lin_solver_ = buildIterativeLinearSolver(comm, *iter_params);
+  if (auto iter_options = std::get_if<IterativeSolverOptions>(&lin_options)) {
+    lin_solver_ = buildIterativeLinearSolver(comm, *iter_options);
   }
   // If it's a custom solver, check that the mfem::Solver* is not null
-  else if (auto custom = std::get_if<CustomSolverParameters>(&lin_params)) {
+  else if (auto custom = std::get_if<CustomSolverOptions>(&lin_options)) {
     SLIC_ERROR_IF(custom->solver == nullptr, "Custom solver pointer must be initialized.");
     lin_solver_ = custom->solver;
   }
   // If it's a direct solver (currently SuperLU only)
-  else if (auto direct_params = std::get_if<DirectSolverParameters>(&lin_params)) {
+  else if (auto direct_options = std::get_if<DirectSolverOptions>(&lin_options)) {
     auto direct_solver = std::make_unique<mfem::SuperLUSolver>(comm);
     direct_solver->SetColumnPermutation(mfem::superlu::PARMETIS);
-    if (direct_params->print_level == 0) {
+    if (direct_options->print_level == 0) {
       direct_solver->SetPrintStatistics(false);
     }
     lin_solver_ = std::move(direct_solver);
   }
 
-  if (nonlin_params) {
-    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_params);
+  if (nonlin_options) {
+    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_options);
   }
 }
 
@@ -202,11 +202,11 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
 }  // namespace detail
 
 std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
-    MPI_Comm comm, const IterativeSolverParameters& lin_params)
+    MPI_Comm comm, const IterativeSolverOptions& lin_options)
 {
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
 
-  switch (lin_params.lin_solver) {
+  switch (lin_options.lin_solver) {
     case LinearSolver::CG:
       iter_lin_solver = std::make_unique<mfem::CGSolver>(comm);
       break;
@@ -221,27 +221,27 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
       exitGracefully(true);
   }
 
-  iter_lin_solver->SetRelTol(lin_params.rel_tol);
-  iter_lin_solver->SetAbsTol(lin_params.abs_tol);
-  iter_lin_solver->SetMaxIter(lin_params.max_iter);
-  iter_lin_solver->SetPrintLevel(lin_params.print_level);
+  iter_lin_solver->SetRelTol(lin_options.rel_tol);
+  iter_lin_solver->SetAbsTol(lin_options.abs_tol);
+  iter_lin_solver->SetMaxIter(lin_options.max_iter);
+  iter_lin_solver->SetPrintLevel(lin_options.print_level);
 
   // Handle the preconditioner - currently just BoomerAMG and HypreSmoother are supported
-  if (lin_params.prec) {
-    const auto prec_ptr = &lin_params.prec.value();
-    if (auto amg_params = std::get_if<HypreBoomerAMGPrec>(prec_ptr)) {
+  if (lin_options.prec) {
+    const auto prec_ptr = &lin_options.prec.value();
+    if (auto amg_options = std::get_if<HypreBoomerAMGPrec>(prec_ptr)) {
       auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
-      auto par_fes  = amg_params->pfes;
+      auto par_fes  = amg_options->pfes;
       if (par_fes != nullptr) {
         SLIC_WARNING_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
                         "Attempting to use BoomerAMG with nodal ordering on an elasticity problem.");
         prec_amg->SetElasticityOptions(par_fes);
       }
-      prec_amg->SetPrintLevel(lin_params.print_level);
+      prec_amg->SetPrintLevel(lin_options.print_level);
       prec_ = std::move(prec_amg);
-    } else if (auto smoother_params = std::get_if<HypreSmootherPrec>(prec_ptr)) {
+    } else if (auto smoother_options = std::get_if<HypreSmootherPrec>(prec_ptr)) {
       auto prec_smoother = std::make_unique<mfem::HypreSmoother>();
-      prec_smoother->SetType(smoother_params->type);
+      prec_smoother->SetType(smoother_options->type);
       prec_smoother->SetPositiveDiagonal(true);
       prec_ = std::move(prec_smoother);
 #ifdef MFEM_USE_AMGX
@@ -251,37 +251,37 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
     } else if (std::get_if<AMGXPrec>(prec_ptr)) {
       SLIC_ERROR("AMGX was not enabled when MFEM was built");
 #endif
-    } else if (auto ilu_params = std::get_if<BlockILUPrec>(prec_ptr)) {
-      prec_ = std::make_unique<mfem::BlockILU>(ilu_params->block_size);
+    } else if (auto ilu_options = std::get_if<BlockILUPrec>(prec_ptr)) {
+      prec_ = std::make_unique<mfem::BlockILU>(ilu_options->block_size);
     }
     iter_lin_solver->SetPreconditioner(*prec_);
   }
   return iter_lin_solver;
 }
 
-std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                         comm,
-                                                                      const NonlinearSolverParameters& nonlin_params)
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                      comm,
+                                                                      const NonlinearSolverOptions& nonlin_options)
 {
   std::unique_ptr<mfem::NewtonSolver> newton_solver;
 
-  if (nonlin_params.nonlin_solver == NonlinearSolver::MFEMNewton) {
+  if (nonlin_options.nonlin_solver == NonlinearSolver::MFEMNewton) {
     newton_solver = std::make_unique<mfem::NewtonSolver>(comm);
   }
   // KINSOL
   else {
 #ifdef MFEM_USE_SUNDIALS
     auto kinsol_strat =
-        (nonlin_params.nonlin_solver == NonlinearSolver::KINBacktrackingLineSearch) ? KIN_LINESEARCH : KIN_NONE;
+        (nonlin_options.nonlin_solver == NonlinearSolver::KINBacktrackingLineSearch) ? KIN_LINESEARCH : KIN_NONE;
     newton_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
 #else
     SLIC_ERROR("KINSOL was not enabled when MFEM was built");
 #endif
   }
 
-  newton_solver->SetRelTol(nonlin_params.rel_tol);
-  newton_solver->SetAbsTol(nonlin_params.abs_tol);
-  newton_solver->SetMaxIter(nonlin_params.max_iter);
-  newton_solver->SetPrintLevel(nonlin_params.print_level);
+  newton_solver->SetRelTol(nonlin_options.rel_tol);
+  newton_solver->SetAbsTol(nonlin_options.abs_tol);
+  newton_solver->SetMaxIter(nonlin_options.max_iter);
+  newton_solver->SetPrintLevel(nonlin_options.print_level);
   return newton_solver;
 }
 
@@ -361,68 +361,68 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
 }  // namespace serac
 
 using serac::EquationSolver;
-using serac::IterativeSolverParameters;
-using serac::NonlinearSolverParameters;
+using serac::IterativeSolverOptions;
+using serac::NonlinearSolverOptions;
 
-IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(const axom::inlet::Table& base)
+IterativeSolverOptions FromInlet<IterativeSolverOptions>::operator()(const axom::inlet::Table& base)
 {
-  IterativeSolverParameters params;
-  params.rel_tol          = base["rel_tol"];
-  params.abs_tol          = base["abs_tol"];
-  params.max_iter         = base["max_iter"];
-  params.print_level      = base["print_level"];
+  IterativeSolverOptions options;
+  options.rel_tol         = base["rel_tol"];
+  options.abs_tol         = base["abs_tol"];
+  options.max_iter        = base["max_iter"];
+  options.print_level     = base["print_level"];
   std::string solver_type = base["solver_type"];
   if (solver_type == "gmres") {
-    params.lin_solver = serac::LinearSolver::GMRES;
+    options.lin_solver = serac::LinearSolver::GMRES;
   } else if (solver_type == "minres") {
-    params.lin_solver = serac::LinearSolver::MINRES;
+    options.lin_solver = serac::LinearSolver::MINRES;
   } else {
     std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
     SLIC_ERROR(msg);
   }
   const std::string prec_type = base["prec_type"];
   if (prec_type == "JacobiSmoother") {
-    params.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::Jacobi};
+    options.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::Jacobi};
   } else if (prec_type == "L1JacobiSmoother") {
-    params.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi};
+    options.prec = serac::HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi};
   } else if (prec_type == "HypreAMG") {
-    params.prec = serac::HypreBoomerAMGPrec{};
+    options.prec = serac::HypreBoomerAMGPrec{};
   } else if (prec_type == "AMGX") {
-    params.prec = serac::AMGXPrec{};
+    options.prec = serac::AMGXPrec{};
   } else if (prec_type == "BlockILU") {
-    params.prec = serac::BlockILUPrec{};
+    options.prec = serac::BlockILUPrec{};
   } else {
     std::string msg = fmt::format("Unknown preconditioner type given: {0}", prec_type);
     SLIC_ERROR(msg);
   }
-  return params;
+  return options;
 }
 
-NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(const axom::inlet::Table& base)
+NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom::inlet::Table& base)
 {
-  NonlinearSolverParameters params;
-  params.rel_tol                = base["rel_tol"];
-  params.abs_tol                = base["abs_tol"];
-  params.max_iter               = base["max_iter"];
-  params.print_level            = base["print_level"];
+  NonlinearSolverOptions options;
+  options.rel_tol               = base["rel_tol"];
+  options.abs_tol               = base["abs_tol"];
+  options.max_iter              = base["max_iter"];
+  options.print_level           = base["print_level"];
   const std::string solver_type = base["solver_type"];
   if (solver_type == "MFEMNewton") {
-    params.nonlin_solver = serac::NonlinearSolver::MFEMNewton;
+    options.nonlin_solver = serac::NonlinearSolver::MFEMNewton;
   } else if (solver_type == "KINFullStep") {
-    params.nonlin_solver = serac::NonlinearSolver::KINFullStep;
+    options.nonlin_solver = serac::NonlinearSolver::KINFullStep;
   } else if (solver_type == "KINLineSearch") {
-    params.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch;
+    options.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch;
   } else {
     SLIC_ERROR(fmt::format("Unknown nonlinear solver type given: {0}", solver_type));
   }
-  return params;
+  return options;
 }
 
 EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Table& base)
 {
-  auto lin = base["linear"].get<IterativeSolverParameters>();
+  auto lin = base["linear"].get<IterativeSolverOptions>();
   if (base.hasTable("nonlinear")) {
-    auto nonlin = base["nonlinear"].get<NonlinearSolverParameters>();
+    auto nonlin = base["nonlinear"].get<NonlinearSolverOptions>();
     return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
   }
   return EquationSolver(MPI_COMM_WORLD, lin);

@@ -13,7 +13,7 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
+ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options)
     : BasePhysics(mesh, NUM_FIELDS, order),
       temperature_(*mesh,
                    FiniteElementState::Options{
@@ -24,13 +24,13 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
 {
   state_.push_back(temperature_);
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), params.T_lin_params, params.T_nonlin_params);
+  nonlin_solver_ = EquationSolver(mesh->GetComm(), options.T_lin_options, options.T_nonlin_options);
   nonlin_solver_.SetOperator(residual_);
 
   // Check for dynamic mode
-  if (params.dyn_params) {
-    ode_.SetTimestepper(params.dyn_params->timestepper);
-    ode_.SetEnforcementMethod(params.dyn_params->enforcement_method);
+  if (options.dyn_options) {
+    ode_.SetTimestepper(options.dyn_options->timestepper);
+    ode_.SetEnforcementMethod(options.dyn_options->enforcement_method);
     is_quasistatic_ = false;
   } else {
     is_quasistatic_ = true;
