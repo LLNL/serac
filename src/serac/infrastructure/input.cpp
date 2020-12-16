@@ -67,18 +67,11 @@ std::string fullDirectoryFromPath(const std::string& path)
   return dir;
 }
 
-void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension)
+void defineVectorInputFileSchema(axom::inlet::Table& table)
 {
-  if (dimension < 0 || dimension > 3) {
-    SLIC_ERROR("Cannot define an input file schema for vector of invalid size" << dimension);
-  }
-  table.addDouble("x", "x-component of vector").required(true);
-  if (dimension >= 2) {
-    table.addDouble("y", "y-component of vector").required(true);
-    if (dimension >= 3) {
-      table.addDouble("z", "z-component of vector").required(true);
-    }
-  }
+  table.addDouble("x", "x-component of vector").required();
+  table.addDouble("y", "y-component of vector");
+  table.addDouble("z", "z-component of vector");
 }
 
 void BoundaryConditionInputInfo::defineInputFileSchema(axom::inlet::Table& table)

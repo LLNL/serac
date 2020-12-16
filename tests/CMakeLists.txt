@@ -65,7 +65,8 @@ if (ENABLE_GTEST)
         copy_elision.cpp
         mfem_array_std_algo.cpp
         expr_templates.cpp
-        serac_error_handling.cpp)
+        serac_error_handling.cpp
+        serac_input.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)
