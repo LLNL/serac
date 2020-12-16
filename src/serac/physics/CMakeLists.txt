@@ -6,6 +6,7 @@
 
 add_subdirectory(utilities)
 add_subdirectory(operators)
+add_subdirectory(materials)
 
 set(physics_sources
     base_physics.cpp
@@ -27,6 +28,7 @@ set(physics_dependencies
     serac_numerics
     serac_physics_utilities
     serac_physics_operators
+    serac_materials
     )
 
 blt_add_library(

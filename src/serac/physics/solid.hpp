@@ -14,17 +14,11 @@
 #define NONLIN_SOLID
 
 #include "mfem.hpp"
-<<<<<<< HEAD:src/physics/solid.hpp
-#include "physics/base_physics.hpp"
-#include "physics/operators/odes.hpp"
-#include "physics/operators/stdfunction_operator.hpp"
-#include "physics/materials/hyperelastic_material.hpp"
-=======
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/operators/odes.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
->>>>>>> develop:src/serac/physics/nonlinear_solid.hpp
+#include "serac/physics/materials/hyperelastic_material.hpp"
 
 namespace serac {
 

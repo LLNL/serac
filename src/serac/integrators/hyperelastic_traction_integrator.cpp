@@ -4,11 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-<<<<<<< HEAD:src/physics/integrators/hyperelastic_traction_integrator.cpp
-#include "physics/integrators/hyperelastic_traction_integrator.hpp"
-=======
 #include "serac/integrators/hyperelastic_traction_integrator.hpp"
->>>>>>> develop:src/serac/integrators/hyperelastic_traction_integrator.cpp
 
 namespace serac {
 

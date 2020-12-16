@@ -4,23 +4,13 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-<<<<<<< HEAD:src/physics/solid.cpp
-#include "physics/solid.hpp"
-
-#include "infrastructure/logger.hpp"
-#include "physics/integrators/hyperelastic_traction_integrator.hpp"
-#include "physics/integrators/displacement_hyperelastic_integrator.hpp"
-#include "numerics/expr_template_ops.hpp"
-#include "numerics/mesh_utils.hpp"
-=======
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/integrators/hyperelastic_traction_integrator.hpp"
-#include "serac/integrators/inc_hyperelastic_integrator.hpp"
+#include "serac/integrators/displacement_hyperelastic_integrator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
->>>>>>> develop:src/serac/physics/nonlinear_solid.cpp
 
 namespace serac {
 

@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/materials/hyperelastic_material.hpp"
+#include "serac/physics/materials/hyperelastic_material.hpp"
 
 namespace serac {
 

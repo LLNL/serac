@@ -7,7 +7,7 @@
 #include "test_utilities.hpp"
 
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid.hpp"
 
 namespace serac {
 

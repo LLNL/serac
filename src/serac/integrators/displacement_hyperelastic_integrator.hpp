@@ -13,7 +13,7 @@
 #ifndef DISPLACEMENT_INTEGRATOR_HPP
 #define DISPLACEMENT_INTEGRATOR_HPP
 
-#include "physics/materials/hyperelastic_material.hpp"
+#include "serac/physics/materials/hyperelastic_material.hpp"
 
 #include "mfem.hpp"
 
