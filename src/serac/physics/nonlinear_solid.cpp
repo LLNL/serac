@@ -278,9 +278,9 @@ void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& tab
   // See comment in header - schema definitions should never be guarded by a conditional.
   // This is a short-term patch.
   if (dynamic) {
-    auto& mass_solver_table = table.addTable("mass_solver", "Parameters for mass matrix inversion");
-    mass_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
-    mass_solver_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
+    auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
+    dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
+    dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
   }
 
   auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
@@ -304,21 +304,21 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
   result.solver_params.H_lin_params    = stiffness_solver["linear"].get<serac::IterativeSolverOptions>();
   result.solver_params.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
-  if (base.contains("mass_solver")) {
+  if (base.contains("dynamics")) {
     NonlinearSolid::TimesteppingOptions dyn_params;
-    auto                                mass_solver = base["mass_solver"];
+    auto                                dynamics = base["dynamics"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {
         {"AverageAcceleration", TimestepMethod::AverageAcceleration}};
-    std::string timestep_method = mass_solver["timestepper"];
+    std::string timestep_method = dynamics["timestepper"];
     SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
     dyn_params.timestepper = timestep_methods.at(timestep_method);
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
         {"RateControl", DirichletEnforcementMethod::RateControl}};
-    std::string enforcement_method = mass_solver["enforcement_method"];
+    std::string enforcement_method = dynamics["enforcement_method"];
     SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
                   "Unrecognized enforcement method: " << enforcement_method);
     dyn_params.enforcement_method = enforcement_methods.at(enforcement_method);
