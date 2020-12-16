@@ -53,7 +53,7 @@ set(MPIEXEC_EXECUTABLE "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-rele
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_11_10_13_31_23/clang-ibm_gfortran" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2020_12_15_23_15_09/clang-ibm_gfortran" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 
@@ -80,8 +80,11 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.2.0" CACHE PATH "")
 # Root directory for generated developer tools
 set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2020_09_02_16_03_10/gcc-8.3.1" CACHE PATH "")
 
-# Docs dont work on blueos machines, there is a prompt that waits for user input
-set(ENABLE_DOCS OFF CACHE BOOL "")
+set(ENABLE_DOCS ON CACHE BOOL "")
+
+set(DOXYGEN_EXECUTABLE "${DEVTOOLS_ROOT}/doxygen-1.8.17/bin/doxygen" CACHE PATH "")
+
+set(SPHINX_EXECUTABLE "/collab/usr/gapps/python/build/spack-coralea.4/opt/spack/linux-rhel7-power8le/gcc-4.9.3/python-3.8.2-vgiumi4ushemn2ywaxcibgo3kw6yvtfj/bin/sphinx-build" CACHE PATH "")
 
 set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format" CACHE PATH "")
 
