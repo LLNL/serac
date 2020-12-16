@@ -129,7 +129,7 @@ TEST(dynamic_solver, dyn_direct_solve)
   // Define the solid solver object
   auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   // FIXME: These should be moved to part of the schema once the contains() logic is updated in Inlet
-  solid_solver_info.solver_params.H_lin_params = DirectSolverOptions{0};
+  solid_solver_info.solver_options.H_lin_params = DirectSolverOptions{0};
   NonlinearSolid dyn_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();

@@ -111,7 +111,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   // Define the solid solver object
   auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   // FIXME: These should be moved to part of the schema once the contains() logic is updated in Inlet
-  solid_solver_info.solver_params.H_lin_params = DirectSolverOptions{0};
+  solid_solver_info.solver_options.H_lin_params = DirectSolverOptions{0};
   NonlinearSolid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
@@ -193,7 +193,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   custom_solver->SetMaxIter(custom_params.max_iter);
   custom_solver->SetPrintLevel(custom_params.print_level);
 
-  solid_solver_info.solver_params.H_lin_params = CustomSolverOptions{custom_solver.get()};
+  solid_solver_info.solver_options.H_lin_params = CustomSolverOptions{custom_solver.get()};
   NonlinearSolid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();

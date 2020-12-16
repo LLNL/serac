@@ -64,7 +64,7 @@ public:
 
     // The order of the field
     int           order;
-    SolverOptions solver_params;
+    SolverOptions solver_options;
     // Lame parameters
     double mu;
     double K;

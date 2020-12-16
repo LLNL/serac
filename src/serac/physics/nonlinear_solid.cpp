@@ -65,7 +65,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
 }
 
 NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputOptions& info)
-    : NonlinearSolid(info.order, mesh, info.solver_params)
+    : NonlinearSolid(info.order, mesh, info.solver_options)
 {
   // This is the only other info stored in the input file that we can use
   // in the initialization stage
@@ -300,9 +300,9 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
   result.order = base["order"];
 
   // Solver parameters
-  auto stiffness_solver                = base["stiffness_solver"];
-  result.solver_params.H_lin_params    = stiffness_solver["linear"].get<serac::IterativeSolverOptions>();
-  result.solver_params.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  auto stiffness_solver                 = base["stiffness_solver"];
+  result.solver_options.H_lin_params    = stiffness_solver["linear"].get<serac::IterativeSolverOptions>();
+  result.solver_options.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
     NonlinearSolid::TimesteppingOptions dyn_params;
@@ -323,7 +323,7 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
                   "Unrecognized enforcement method: " << enforcement_method);
     dyn_params.enforcement_method = enforcement_methods.at(enforcement_method);
 
-    result.solver_params.dyn_params = std::move(dyn_params);
+    result.solver_options.dyn_params = std::move(dyn_params);
   }
 
   // Set the material parameters
