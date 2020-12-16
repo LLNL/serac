@@ -57,7 +57,7 @@ public:
        where x1 ... xn are the FE dofs. This function is usually defined using
        the matrix invariants and their derivatives.
    */
-   virtual void AssembleTangent(const mfem::DenseMatrix &Jpt, const mfem::DenseMatrix &DS,
+   virtual void AssembleTangentModuli(const mfem::DenseMatrix &Jpt, const mfem::DenseMatrix &DS,
                           const double weight, mfem::DenseMatrix &T) const = 0;
 };
 
@@ -90,7 +90,7 @@ public:
 
    virtual void EvalP(const mfem::DenseMatrix &J, mfem::DenseMatrix &P) const;
 
-   virtual void AssembleTangent(const mfem::DenseMatrix &J, const mfem::DenseMatrix &DS,
+   virtual void AssembleTangentModuli(const mfem::DenseMatrix &J, const mfem::DenseMatrix &DS,
                           const double weight, mfem::DenseMatrix &T) const;
 };
 

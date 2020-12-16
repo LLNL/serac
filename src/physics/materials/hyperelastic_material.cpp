@@ -55,7 +55,7 @@ void NeoHookeanMaterial::EvalP(const mfem::DenseMatrix &J, mfem::DenseMatrix &P)
    P.Add(b, Z);
 }
 
-void NeoHookeanMaterial::AssembleTangent(const mfem::DenseMatrix &J, const mfem::DenseMatrix &DS,
+void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix &J, const mfem::DenseMatrix &DS,
                                 const double weight, mfem::DenseMatrix &T) const
 {
    int dof = DS.Height(), dim = DS.Width();

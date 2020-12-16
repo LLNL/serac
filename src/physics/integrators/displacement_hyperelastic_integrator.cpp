@@ -126,7 +126,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
       Jpt_(d, d) += 1.0;
     }
 
-    material_.AssembleTangent(Jpt_, DS_, ip.weight * Ttr.Weight(), elmat);
+    material_.AssembleTangentModuli(Jpt_, DS_, ip.weight * Ttr.Weight(), elmat);
   }
   SERAC_MARK_LOOP_END(ip_loop_id);
 }
