@@ -27,7 +27,7 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
   }
 
   double energy = 0.0;
-  material_->SetTransformation(Ttr);
+  material_.SetTransformation(Ttr);
   for (int i = 0; i < ir->GetNPoints(); i++) {
     const mfem::IntegrationPoint& ip = ir->IntPoint(i);
     Ttr.SetIntPoint(&ip);
@@ -41,7 +41,7 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
       Jpt_(d, d) += 1.0;
     }
 
-    energy += ip.weight * Ttr.Weight() * material_->EvalW(Jpt_);
+    energy += ip.weight * Ttr.Weight() * material_.EvalW(Jpt_);
   }
 
   return energy;
@@ -68,7 +68,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
   }
 
   elvect = 0.0;
-  material_->SetTransformation(Ttr);
+  material_.SetTransformation(Ttr);
   for (int i = 0; i < ir->GetNPoints(); i++) {
     const mfem::IntegrationPoint& ip = ir->IntPoint(i);
     Ttr.SetIntPoint(&ip);
@@ -82,7 +82,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
       Jpt_(d, d) += 1.0;
     }
 
-    material_->EvalP(Jpt_, P_);
+    material_.EvalP(Jpt_, P_);
 
     P_ *= ip.weight * Ttr.Weight();
     AddMultABt(DS_, P_, PMatO_);
@@ -110,7 +110,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
   }
 
   elmat = 0.0;
-  material_->SetTransformation(Ttr);
+  material_.SetTransformation(Ttr);
   SERAC_MARK_LOOP_START(ip_loop_id, "IntegrationPt Loop");
   for (int i = 0; i < ir->GetNPoints(); i++) {
     SERAC_MARK_LOOP_ITER(ip_loop_id, i);
@@ -126,7 +126,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
       Jpt_(d, d) += 1.0;
     }
 
-    material_->AssembleTangent(Jpt_, DS_, ip.weight * Ttr.Weight(), elmat);
+    material_.AssembleTangent(Jpt_, DS_, ip.weight * Ttr.Weight(), elmat);
   }
   SERAC_MARK_LOOP_END(ip_loop_id);
 }

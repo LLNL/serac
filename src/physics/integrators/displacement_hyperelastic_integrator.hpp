@@ -34,7 +34,7 @@ public:
    *
    * @param[in] m  HyperelasticModel that will be integrated.
    */
-  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial* m) : material_(m) {}
+  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, bool geom_nonlin = true) : material_(m), geom_nonlin_(geom_nonlin) {}
 
   /**
    * @brief Computes the integral of W(Jacobian(Trt)) over a target zone
@@ -71,7 +71,7 @@ private:
   /**
    * @brief The associated hyperelastic model
    */
-  serac::HyperelasticMaterial* material_;
+  serac::HyperelasticMaterial& material_;
 
   /**
    * Jrt: the Jacobian of the target-to-reference-element transformation.
@@ -86,6 +86,12 @@ private:
    * output - the result of AssembleElementVector() (dof x dim).
    */
   mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, Jpt_, P_, PMatI_, PMatO_;
+
+  /**
+   * @brief The geometric nonlinearity flag
+   */
+  bool geom_nonlin_;
+
 };
 
 }  // namespace serac

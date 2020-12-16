@@ -116,7 +116,7 @@ void Solid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  H_->AddDomainIntegrator(new DisplacementHyperelasticIntegrator(material_.get()));
+  H_->AddDomainIntegrator(new DisplacementHyperelasticIntegrator(*material_));
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
