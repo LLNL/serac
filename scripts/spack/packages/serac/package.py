@@ -118,7 +118,7 @@ class Serac(CMakePackage, CudaPackage):
 
     for dep in debug_deps:
         depends_on("{0}".format(dep))
-        depends_on("{0}+debug".format(dep), when="+debug")#
+        depends_on("{0}+debug".format(dep), when="+debug")
     #depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
     #depends_on("mfem+sundials", when="+sundials")
