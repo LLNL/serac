@@ -339,8 +339,21 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
 
 void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
 {
-  auto& linear_table = table.addTable("linear", "Linear Equation Solver Parameters").required();
-  linear_table.addString("type", "The type of solver parameters to use").required();
+  auto& linear_table =
+      table.addTable("linear", "Linear Equation Solver Parameters")
+          .required()
+          .registerVerifier([](const axom::inlet::Table& table) {
+            // Make sure that the provided options match the desired linear solver type
+            const bool is_iterative =
+                (table["type"].get<std::string>() == "iterative") && table.contains("iterative_options");
+            const bool is_direct = (table["type"].get<std::string>() == "direct") && table.contains("direct_options");
+            return is_iterative || is_direct;
+          });
+
+  // Enforce the solver type - must be iterative or direct
+  linear_table.addString("type", "The type of solver parameters to use (iterative|direct)")
+      .required()
+      .validValues({"iterative", "direct"});
 
   auto& iterative_table = linear_table.addTable("iterative_options", "Iterative solver parameters");
   iterative_table.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);

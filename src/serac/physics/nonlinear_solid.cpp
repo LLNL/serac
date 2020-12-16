@@ -283,8 +283,8 @@ NonlinearSolid::~NonlinearSolid() {}
 
 void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
-  // Polynomial interpolation order
-  table.addInt("order", "Order degree of the finite elements.").defaultValue(1);
+  // Polynomial interpolation order - currently up to 8th order is allowed
+  table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
 
   // neo-Hookean material parameters
   table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
