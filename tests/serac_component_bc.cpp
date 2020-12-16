@@ -34,13 +34,13 @@ TEST(component_bc, qs_solve)
   testing::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
+  auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  serac::NonlinearSolid solid_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -48,7 +48,7 @@ TEST(component_bc, qs_solve)
   auto disp_coef = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[0] * -1.0e-1; });
 
   // Pass the BC information to the solver object setting only the z direction
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement") {
       solid_solver.setDisplacementBCs(bc.attrs, disp_coef, 0);
     } else {
@@ -110,13 +110,13 @@ TEST(component_bc, qs_attribute_solve)
   testing::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
+  auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  serac::NonlinearSolid solid_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -125,7 +125,7 @@ TEST(component_bc, qs_attribute_solve)
   auto disp_y_coef = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[1] * -5.0e-2; });
 
   // Pass the BC information to the solver object setting only the z direction
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement_x") {
       solid_solver.setDisplacementBCs(bc.attrs, disp_x_coef, 0);
     } else if (bc.name == "displacement_y") {

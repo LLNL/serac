@@ -37,13 +37,13 @@ TEST(dynamic_solver, dyn_solve)
   testing::defineNonlinSolidInputFileSchema(inlet, /* dynamic = */ true);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  NonlinearSolid dyn_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -52,7 +52,7 @@ TEST(dynamic_solver, dyn_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // Pass the BC information to the solver object setting only the z direction
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement") {
       dyn_solver.setDisplacementBCs(bc.attrs, deform);
     } else {
@@ -122,15 +122,15 @@ TEST(dynamic_solver, dyn_direct_solve)
   testing::defineNonlinSolidInputFileSchema(inlet, true);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   // FIXME: These should be moved to part of the schema once the contains() logic is updated in Inlet
-  solid_solver_info.solver_options.H_lin_options = DirectSolverOptions{0};
-  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+  solid_solver_options.solver_options.H_lin_options = DirectSolverOptions{0};
+  NonlinearSolid dyn_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -139,7 +139,7 @@ TEST(dynamic_solver, dyn_direct_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // Pass the BC information to the solver object setting only the z direction
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement") {
       dyn_solver.setDisplacementBCs(bc.attrs, deform);
     } else {
@@ -210,13 +210,13 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   testing::defineNonlinSolidInputFileSchema(inlet, true);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  NonlinearSolid dyn_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -225,7 +225,7 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // Pass the BC information to the solver object setting only the z direction
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement") {
       dyn_solver.setDisplacementBCs(bc.attrs, deform);
     } else {
@@ -297,13 +297,13 @@ TEST(dynamic_solver, dyn_amgx_solve)
   testing::defineNonlinSolidInputFileSchema(inlet, /* dynamic = */ true);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  NonlinearSolid dyn_solver(mesh, solid_solver_info);
+  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  NonlinearSolid dyn_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -312,7 +312,7 @@ TEST(dynamic_solver, dyn_amgx_solve)
   auto velo   = std::make_shared<mfem::VectorFunctionCoefficient>(dim, initialVelocity);
 
   // Pass the BC information to the solver object setting only the z direction
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement") {
       dyn_solver.setDisplacementBCs(bc.attrs, deform);
     } else {

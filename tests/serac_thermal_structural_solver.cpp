@@ -58,30 +58,30 @@ TEST(dynamic_solver, dyn_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Use the same configuration as the solid solver
-  const IterativeSolverOptions default_dyn_linear_params = {.rel_tol     = 1.0e-4,
-                                                            .abs_tol     = 1.0e-8,
-                                                            .print_level = 0,
-                                                            .max_iter    = 500,
-                                                            .lin_solver  = LinearSolver::GMRES,
-                                                            .prec        = HypreBoomerAMGPrec{}};
+  const IterativeSolverOptions default_dyn_linear_options = {.rel_tol     = 1.0e-4,
+                                                             .abs_tol     = 1.0e-8,
+                                                             .print_level = 0,
+                                                             .max_iter    = 500,
+                                                             .lin_solver  = LinearSolver::GMRES,
+                                                             .prec        = HypreBoomerAMGPrec{}};
 
-  auto therm_M_params = default_dyn_linear_params;
-  auto therm_T_params = default_dyn_linear_params;
-  therm_M_params.prec = HypreSmootherPrec{};
-  therm_T_params.prec = HypreSmootherPrec{};
+  auto therm_M_options = default_dyn_linear_options;
+  auto therm_T_options = default_dyn_linear_options;
+  therm_M_options.prec = HypreSmootherPrec{};
+  therm_T_options.prec = HypreSmootherPrec{};
 
-  auto therm_params = ThermalConduction::defaultDynamicOptions();
+  auto therm_options = ThermalConduction::defaultDynamicOptions();
 
-  const NonlinearSolverOptions default_dyn_nonlinear_params = {
+  const NonlinearSolverOptions default_dyn_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
   const NonlinearSolid::SolverOptions default_dynamic = {
-      default_dyn_linear_params, default_dyn_nonlinear_params,
+      default_dyn_linear_options, default_dyn_nonlinear_options,
       NonlinearSolid::TimesteppingOptions{TimestepMethod::AverageAcceleration,
                                           DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
-  ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);
+  ThermalSolid ts_solver(1, pmesh, therm_options, default_dynamic);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);

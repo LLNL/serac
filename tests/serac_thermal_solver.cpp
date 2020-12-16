@@ -167,11 +167,11 @@ TEST(thermal_solver, dyn_exp_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
-  auto params                     = ThermalConduction::defaultDynamicOptions();
-  params.dyn_options->timestepper = TimestepMethod::ForwardEuler;
+  auto options                     = ThermalConduction::defaultDynamicOptions();
+  options.dyn_options->timestepper = TimestepMethod::ForwardEuler;
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, params);
+  ThermalConduction therm_solver(2, pmesh, options);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -352,10 +352,10 @@ TEST(thermal_solver, static_amgx_solve)
 
   auto pmesh = buildBallMesh(10000);
 
-  auto params                                                 = ThermalConduction::defaultQuasistaticOptions();
-  std::get<IterativeSolverOptions>(params.T_lin_options).prec = AMGXPrec{.smoother = AMGXSolver::JACOBI_L1};
+  auto options                                                 = ThermalConduction::defaultQuasistaticOptions();
+  std::get<IterativeSolverOptions>(options.T_lin_options).prec = AMGXPrec{.smoother = AMGXSolver::JACOBI_L1};
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, params);
+  ThermalConduction therm_solver(2, pmesh, options);
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(One);

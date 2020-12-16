@@ -23,19 +23,19 @@ namespace serac {
 
 TEST(serac_error_handling, equationsolver_bad_lin_solver)
 {
-  IterativeSolverOptions params;
+  IterativeSolverOptions options;
   // Try a definitely wrong number to ensure that an invalid linear solver is detected
-  params.lin_solver = static_cast<LinearSolver>(-7);
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, params), SlicErrorException);
+  options.lin_solver = static_cast<LinearSolver>(-7);
+  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, options), SlicErrorException);
 }
 
 // Only need to test this when AmgX is **not** available
 #ifndef MFEM_USE_AMGX
 TEST(serac_error_handling, equationsolver_amgx_not_available)
 {
-  IterativeSolverOptions params;
-  params.prec = AMGXPrec{};
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, params), SlicErrorException);
+  IterativeSolverOptions options;
+  options.prec = AMGXPrec{};
+  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, options), SlicErrorException);
 }
 #endif
 
@@ -43,10 +43,10 @@ TEST(serac_error_handling, equationsolver_amgx_not_available)
 #ifndef MFEM_USE_SUNDIALS
 TEST(serac_error_handling, equationsolver_kinsol_not_available)
 {
-  auto lin_params             = ThermalConduction::defaultLinearOptions();
-  auto nonlin_params          = ThermalConduction::defaultNonlinearOptions();
-  nonlin_params.nonlin_solver = NonlinearSolver::KINFullStep;
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, lin_params, nonlin_params), SlicErrorException);
+  auto lin_options             = ThermalConduction::defaultLinearOptions();
+  auto nonlin_options          = ThermalConduction::defaultNonlinearOptions();
+  nonlin_options.nonlin_solver = NonlinearSolver::KINFullStep;
+  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, lin_options, nonlin_options), SlicErrorException);
 }
 #endif
 
