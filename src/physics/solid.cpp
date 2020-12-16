@@ -8,7 +8,7 @@
 
 #include "infrastructure/logger.hpp"
 #include "physics/integrators/hyperelastic_traction_integrator.hpp"
-#include "physics/integrators/inc_hyperelastic_integrator.hpp"
+#include "physics/integrators/displacement_hyperelastic_integrator.hpp"
 #include "numerics/expr_template_ops.hpp"
 #include "numerics/mesh_utils.hpp"
 
@@ -116,7 +116,7 @@ void Solid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  H_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(material_.get()));
+  H_->AddDomainIntegrator(new DisplacementHyperelasticIntegrator(material_.get()));
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {

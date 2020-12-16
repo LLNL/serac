@@ -57,8 +57,8 @@ public:
        where x1 ... xn are the FE dofs. This function is usually defined using
        the matrix invariants and their derivatives.
    */
-   virtual void AssembleH(const mfem::DenseMatrix &Jpt, const mfem::DenseMatrix &DS,
-                          const double weight, mfem::DenseMatrix &A) const = 0;
+   virtual void AssembleTangent(const mfem::DenseMatrix &Jpt, const mfem::DenseMatrix &DS,
+                          const double weight, mfem::DenseMatrix &T) const = 0;
 };
 
 /** Neo-Hookean hyperelastic model with a strain energy density function given
@@ -90,8 +90,8 @@ public:
 
    virtual void EvalP(const mfem::DenseMatrix &J, mfem::DenseMatrix &P) const;
 
-   virtual void AssembleH(const mfem::DenseMatrix &J, const mfem::DenseMatrix &DS,
-                          const double weight, mfem::DenseMatrix &A) const;
+   virtual void AssembleTangent(const mfem::DenseMatrix &J, const mfem::DenseMatrix &DS,
+                          const double weight, mfem::DenseMatrix &T) const;
 };
 
 }

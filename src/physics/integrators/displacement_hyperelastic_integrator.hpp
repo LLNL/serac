@@ -10,6 +10,9 @@
  * @brief The MFEM integrators for the incremental hyperelastic formulation
  */
 
+#ifndef DISPLACEMENT_INTEGRATOR_HPP
+#define DISPLACEMENT_INTEGRATOR_HPP
+
 #include "physics/materials/hyperelastic_material.hpp"
 
 #include "mfem.hpp"
@@ -24,14 +27,14 @@ namespace serac {
  * target->physical coordinates transformation. The target configuration is
  * given by the current mesh at the time of the evaluation of the integrator.
  */
-class IncrementalHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
+class DisplacementHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
 public:
   /**
    * @brief The constructor for the incremental hyperelastic integrator
    *
    * @param[in] m  HyperelasticModel that will be integrated.
    */
-  explicit IncrementalHyperelasticIntegrator(serac::HyperelasticMaterial* m) : material_(m) {}
+  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial* m) : material_(m) {}
 
   /**
    * @brief Computes the integral of W(Jacobian(Trt)) over a target zone
@@ -86,3 +89,6 @@ private:
 };
 
 }  // namespace serac
+
+#endif 
+

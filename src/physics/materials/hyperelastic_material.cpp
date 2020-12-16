@@ -55,8 +55,8 @@ void NeoHookeanMaterial::EvalP(const mfem::DenseMatrix &J, mfem::DenseMatrix &P)
    P.Add(b, Z);
 }
 
-void NeoHookeanMaterial::AssembleH(const mfem::DenseMatrix &J, const mfem::DenseMatrix &DS,
-                                const double weight, mfem::DenseMatrix &A) const
+void NeoHookeanMaterial::AssembleTangent(const mfem::DenseMatrix &J, const mfem::DenseMatrix &DS,
+                                const double weight, mfem::DenseMatrix &T) const
 {
    int dof = DS.Height(), dim = DS.Width();
 
@@ -99,13 +99,13 @@ void NeoHookeanMaterial::AssembleH(const mfem::DenseMatrix &J, const mfem::Dense
 
          for (int d = 0; d < dim; d++)
          {
-            A(i+d*dof,k+d*dof) += s;
+            T(i+d*dof,k+d*dof) += s;
          }
 
          if (k != i)
             for (int d = 0; d < dim; d++)
             {
-               A(k+d*dof,i+d*dof) += s;
+               T(k+d*dof,i+d*dof) += s;
             }
       }
 
@@ -117,7 +117,7 @@ void NeoHookeanMaterial::AssembleH(const mfem::DenseMatrix &J, const mfem::Dense
          for (int k = 0; k < dof; k++)
             for (int l = 0; l < dim; l++)
             {
-               A(i+j*dof,k+l*dof) +=
+               T(i+j*dof,k+l*dof) +=
                   a*(C(i,j)*G(k,l) + G(i,j)*C(k,l)) +
                   b*G(i,l)*G(k,j) + c*G(i,j)*G(k,l);
             }

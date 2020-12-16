@@ -4,13 +4,13 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "physics/integrators/inc_hyperelastic_integrator.hpp"
+#include "physics/integrators/displacement_hyperelastic_integrator.hpp"
 
 #include "infrastructure/profiling.hpp"
 
 namespace serac {
 
-double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
+double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
                                                            mfem::ElementTransformation& Ttr, const mfem::Vector& elfun)
 {
   int dof = el.GetDof(), dim = el.GetDim();
@@ -47,7 +47,7 @@ double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEle
   return energy;
 }
 
-void IncrementalHyperelasticIntegrator::AssembleElementVector(const mfem::FiniteElement&   el,
+void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::FiniteElement&   el,
                                                               mfem::ElementTransformation& Ttr,
                                                               const mfem::Vector& elfun, mfem::Vector& elvect)
 {
@@ -89,7 +89,7 @@ void IncrementalHyperelasticIntegrator::AssembleElementVector(const mfem::Finite
   }
 }
 
-void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
+void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
                                                             mfem::ElementTransformation& Ttr, const mfem::Vector& elfun,
                                                             mfem::DenseMatrix& elmat)
 {
@@ -126,7 +126,7 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
       Jpt_(d, d) += 1.0;
     }
 
-    material_->AssembleH(Jpt_, DS_, ip.weight * Ttr.Weight(), elmat);
+    material_->AssembleTangent(Jpt_, DS_, ip.weight * Ttr.Weight(), elmat);
   }
   SERAC_MARK_LOOP_END(ip_loop_id);
 }
