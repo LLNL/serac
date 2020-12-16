@@ -123,11 +123,17 @@ def log_failure(prefix, msg, timestamp=""):
     json.dump(info,open(pjoin(prefix,"failed.json"),"w"),indent=2)
 
 
+def assertUberenvExists():
+    if not os.path.exist(get_uberenv_path()):
+        print("[ERROR: {0} does not exist]".format(get_uberenv_path()))
+        sys.exit(1)
+
+
 def uberenv_create_mirror(prefix, project_file, mirror_path):
     """
     Calls uberenv to create a spack mirror.
     """
-    cmd  = "python scripts/uberenv/uberenv.py --create-mirror -k "
+    cmd  = "python {0} --create-mirror -k ".format(get_uberenv_path())
     cmd += "--prefix=\"{0}\" --mirror=\"{1}\" ".format(prefix, mirror_path)
     if project_file:
         cmd += "--project-json=\"{0}\" ".format(project_file)
@@ -143,7 +149,7 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     """
     Calls uberenv to install tpls for a given spec to given prefix.
     """
-    cmd  = "python scripts/uberenv/uberenv.py -k "
+    cmd  = "python {0} -k ".format(get_uberenv_path())
     cmd += "--prefix=\"{0}\" --spec=\"{1}\" ".format(prefix, spec)
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
     if project_file:
@@ -626,6 +632,10 @@ def get_shared_mirror_dir():
 
 def get_shared_libs_dir():
     return pjoin(get_shared_base_dir(), "libs/serac")
+
+
+def get_uberenv_path():
+    return "scripts/uberenv/uberenv.py"
 
 
 def on_rz():
