@@ -11,7 +11,7 @@
 
 #include "mfem.hpp"
 #include "serac/coefficients/coefficient_extensions.hpp"
-#include "serac/integrators/wrapper_integrator.hpp"
+#include "serac/physics/integrators/wrapper_integrator.hpp"
 
 using namespace mfem;
 using namespace serac;

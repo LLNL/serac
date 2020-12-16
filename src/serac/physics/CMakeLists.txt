@@ -6,6 +6,7 @@
 
 add_subdirectory(utilities)
 add_subdirectory(operators)
+add_subdirectory(integrators)
 add_subdirectory(materials)
 
 set(physics_sources

@@ -7,8 +7,8 @@
 #include "serac/physics/solid.hpp"
 
 #include "serac/infrastructure/logger.hpp"
-#include "serac/integrators/hyperelastic_traction_integrator.hpp"
-#include "serac/integrators/displacement_hyperelastic_integrator.hpp"
+#include "serac/physics/integrators/hyperelastic_traction_integrator.hpp"
+#include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 

@@ -25,7 +25,7 @@ blt_add_library(
     DEPENDS_ON  ${integrators_depends}
     )
 
-install(FILES ${integrators_headers} DESTINATION include/serac/integrators )
+install(FILES ${integrators_headers} DESTINATION include/serac/physics/integrators )
 
 install(TARGETS              serac_integrators 
         EXPORT               serac-targets

@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/integrators/displacement_hyperelastic_integrator.hpp"
+#include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
 
 #include "serac/infrastructure/profiling.hpp"
 
