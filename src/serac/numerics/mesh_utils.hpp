@@ -81,7 +81,7 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
 
 namespace mesh {
 
-struct InputInfo {
+struct InputOptions {
   /**
    * @brief Input file parameters specific to this class
    *
@@ -100,8 +100,8 @@ struct InputInfo {
 
 // Prototype the specialization
 template <>
-struct FromInlet<serac::mesh::InputInfo> {
-  serac::mesh::InputInfo operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::mesh::InputOptions> {
+  serac::mesh::InputOptions operator()(const axom::inlet::Table& base);
 };
 
 #endif

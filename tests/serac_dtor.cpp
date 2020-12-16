@@ -27,7 +27,7 @@ TEST(serac_dtor, test1)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
   // Initialize the second order thermal solver on the parallel mesh
-  auto therm_solver = std::make_unique<ThermalConduction>(2, pmesh, ThermalConduction::defaultQuasistaticParameters());
+  auto therm_solver = std::make_unique<ThermalConduction>(2, pmesh, ThermalConduction::defaultQuasistaticOptions());
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x.Norml2(); });
@@ -45,7 +45,7 @@ TEST(serac_dtor, test1)
   therm_solver->completeSetup();
 
   // Destruct the old thermal solver and build a new one
-  therm_solver.reset(new ThermalConduction(1, pmesh, ThermalConduction::defaultQuasistaticParameters()));
+  therm_solver.reset(new ThermalConduction(1, pmesh, ThermalConduction::defaultQuasistaticOptions()));
 
   // Destruct the second thermal solver and leave the pointer empty
   therm_solver.reset(nullptr);

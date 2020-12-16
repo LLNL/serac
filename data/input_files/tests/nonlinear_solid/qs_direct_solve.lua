@@ -18,7 +18,7 @@ nonlinear_solid = {
     stiffness_solver = {
         linear = {
             type = "direct",
-            direct_params = {
+            direct_options = {
                 print_level = 0,
             },
         },

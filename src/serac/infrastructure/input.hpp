@@ -61,7 +61,7 @@ void defineVectorInputFileSchema(axom::inlet::Table& table);
 /**
  * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
  */
-struct CoefficientInputInfo {
+struct CoefficientInputOptions {
   using VecFunc    = std::function<void(const mfem::Vector&, mfem::Vector&)>;
   using ScalarFunc = std::function<double(const mfem::Vector&)>;
   /**
@@ -93,7 +93,7 @@ struct CoefficientInputInfo {
 /**
  * @brief The information required from the input file for a boundary condition
  */
-struct BoundaryConditionInputInfo {
+struct BoundaryConditionInputOptions {
   /**
    * @brief The mesh attributes on which to apply the boundary condition
    */
@@ -101,7 +101,7 @@ struct BoundaryConditionInputInfo {
   /**
    * @brief The information from the input file on the BC coefficient
    */
-  CoefficientInputInfo coef_info;
+  CoefficientInputOptions coef_opts;
   /**
    * @brief Input file parameters specific to this class
    *
@@ -120,13 +120,13 @@ struct FromInlet<mfem::Vector> {
 };
 
 template <>
-struct FromInlet<serac::input::CoefficientInputInfo> {
-  serac::input::CoefficientInputInfo operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::input::CoefficientInputOptions> {
+  serac::input::CoefficientInputOptions operator()(const axom::inlet::Table& base);
 };
 
 template <>
-struct FromInlet<serac::input::BoundaryConditionInputInfo> {
-  serac::input::BoundaryConditionInputInfo operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::input::BoundaryConditionInputOptions> {
+  serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Table& base);
 };
 
 #endif

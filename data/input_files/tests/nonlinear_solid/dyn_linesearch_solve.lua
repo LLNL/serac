@@ -20,7 +20,7 @@ nonlinear_solid = {
     stiffness_solver = {
         linear = {
             type = "iterative",
-            iterative_params = {
+            iterative_options = {
                 rel_tol     = 1.0e-4,
                 abs_tol     = 1.0e-8,
                 max_iter    = 500,
@@ -39,7 +39,7 @@ nonlinear_solid = {
         },
     },
 
-    mass_solver = {
+    dynamics = {
         timestepper = "AverageAcceleration",
         enforcement_method = "RateControl",
     },

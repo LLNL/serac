@@ -16,7 +16,7 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
+NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"}),
       displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"}),
@@ -37,17 +37,17 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   displacement_.trueVec() = 0.0;
   velocity_.trueVec()     = 0.0;
 
-  const auto& lin_params = params.H_lin_params;
+  const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
   // to be the displacement
-  const auto& augmented_params = augmentAMGForElasticity(lin_params, displacement_.space());
+  const auto& augmented_options = augmentAMGForElasticity(lin_options, displacement_.space());
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_params);
+  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_options, options.H_nonlin_options);
 
   // Check for dynamic mode
-  if (params.dyn_params) {
-    ode2_.SetTimestepper(params.dyn_params->timestepper);
-    ode2_.SetEnforcementMethod(params.dyn_params->enforcement_method);
+  if (options.dyn_options) {
+    ode2_.SetTimestepper(options.dyn_options->timestepper);
+    ode2_.SetEnforcementMethod(options.dyn_options->enforcement_method);
     is_quasistatic_ = false;
   } else {
     is_quasistatic_ = true;
@@ -64,35 +64,35 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   zero_ = 0.0;
 }
 
-NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputInfo& info)
-    : NonlinearSolid(info.order, mesh, info.solver_params)
+NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputOptions& options)
+    : NonlinearSolid(options.order, mesh, options.solver_options)
 {
-  // This is the only other info stored in the input file that we can use
+  // This is the only other options stored in the input file that we can use
   // in the initialization stage
-  setHyperelasticMaterialParameters(info.mu, info.K);
+  setHyperelasticMaterialParameters(options.mu, options.K);
 
   auto dim = mesh->Dimension();
-  if (info.initial_displacement) {
-    auto deform = info.initial_displacement->constructVector(dim);
+  if (options.initial_displacement) {
+    auto deform = options.initial_displacement->constructVector(dim);
     setDisplacement(deform);
   }
 
-  if (info.initial_velocity) {
-    auto velo = info.initial_velocity->constructVector(dim);
+  if (options.initial_velocity) {
+    auto velo = options.initial_velocity->constructVector(dim);
     setVelocity(velo);
   }
-  for (const auto& [name, bc] : info.boundary_conditions) {
+  for (const auto& [name, bc] : options.boundary_conditions) {
     // FIXME: Better naming for boundary conditions?
     if (name.find("displacement") != std::string::npos) {
-      if (bc.coef_info.isVector()) {
-        auto disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_info.constructVector(dim));
+      if (bc.coef_opts.isVector()) {
+        auto disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
         setDisplacementBCs(bc.attrs, disp_coef);
       } else {
-        auto disp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_info.constructScalar());
-        setDisplacementBCs(bc.attrs, disp_coef, bc.coef_info.component);
+        auto disp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+        setDisplacementBCs(bc.attrs, disp_coef, bc.coef_opts.component);
       }
     } else if (name.find("traction") != std::string::npos) {
-      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_info.constructVector(dim));
+      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
       setTractionBCs(bc.attrs, trac_coef);
     } else {
       SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
@@ -281,7 +281,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
+void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Polynomial interpolation order
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1);
@@ -294,17 +294,17 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table)
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
 
-  auto& mass_solver_table = table.addTable("mass_solver", "Parameters for mass matrix inversion");
-  mass_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
-  mass_solver_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
+  auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
+  dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
+  dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
   auto& bc_table = table.addGenericDictionary("boundary_conds", "Boundary condition information");
-  serac::input::BoundaryConditionInputInfo::defineInputFileSchema(bc_table);
+  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
 
   auto& init_displ = table.addTable("initial_displacement", "Coefficient for initial condition");
-  serac::input::CoefficientInputInfo::defineInputFileSchema(init_displ);
+  serac::input::CoefficientInputOptions::defineInputFileSchema(init_displ);
   auto& init_velo = table.addTable("initial_velocity", "Coefficient for initial condition");
-  serac::input::CoefficientInputInfo::defineInputFileSchema(init_velo);
+  serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
 }
 
 }  // namespace serac
@@ -313,37 +313,37 @@ using serac::DirichletEnforcementMethod;
 using serac::NonlinearSolid;
 using serac::TimestepMethod;
 
-NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const axom::inlet::Table& base)
+NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()(const axom::inlet::Table& base)
 {
-  NonlinearSolid::InputInfo result;
+  NonlinearSolid::InputOptions result;
 
   result.order = base["order"];
 
   // Solver parameters
-  auto stiffness_solver                = base["stiffness_solver"];
-  result.solver_params.H_lin_params    = stiffness_solver["linear"].get<serac::LinearSolverParameters>();
-  result.solver_params.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverParameters>();
+  auto stiffness_solver                  = base["stiffness_solver"];
+  result.solver_options.H_lin_options    = stiffness_solver["linear"].get<serac::LinearSolverOptions>();
+  result.solver_options.H_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
-  if (base.contains("mass_solver")) {
-    NonlinearSolid::DynamicSolverParameters dyn_params;
-    auto                                    mass_solver = base["mass_solver"];
+  if (base.contains("dynamics")) {
+    NonlinearSolid::TimesteppingOptions dyn_options;
+    auto                                dynamics = base["dynamics"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {
         {"AverageAcceleration", TimestepMethod::AverageAcceleration}};
-    std::string timestep_method = mass_solver["timestepper"];
+    std::string timestep_method = dynamics["timestepper"];
     SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
-    dyn_params.timestepper = timestep_methods.at(timestep_method);
+    dyn_options.timestepper = timestep_methods.at(timestep_method);
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
         {"RateControl", DirichletEnforcementMethod::RateControl}};
-    std::string enforcement_method = mass_solver["enforcement_method"];
+    std::string enforcement_method = dynamics["enforcement_method"];
     SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
                   "Unrecognized enforcement method: " << enforcement_method);
-    dyn_params.enforcement_method = enforcement_methods.at(enforcement_method);
+    dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
 
-    result.solver_params.dyn_params = std::move(dyn_params);
+    result.solver_options.dyn_options = std::move(dyn_options);
   }
 
   // Set the material parameters
@@ -352,13 +352,13 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   result.K  = base["K"];
 
   result.boundary_conditions =
-      base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputInfo>>();
+      base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
 
   if (base.contains("initial_displacement")) {
-    result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputInfo>();
+    result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputOptions>();
   }
   if (base.contains("initial_velocity")) {
-    result.initial_velocity = base["initial_velocity"].get<serac::input::CoefficientInputInfo>();
+    result.initial_velocity = base["initial_velocity"].get<serac::input::CoefficientInputOptions>();
   }
   return result;
 }

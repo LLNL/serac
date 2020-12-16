@@ -42,11 +42,11 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
 
   auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
-  serac::mesh::InputInfo::defineInputFileSchema(mesh_table);
+  serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  serac::NonlinearSolid::InputInfo::defineInputFileSchema(solid_solver_table);
+  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
   if (!inlet.verify()) {
@@ -83,12 +83,12 @@ int main(int argc, char* argv[])
   datastore.getRoot()->save("serac_input.json", "json");
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
   auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
 
   // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed

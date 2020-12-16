@@ -59,26 +59,26 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   test_utils::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
   // qs_solve test
-  auto custom_params = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::LinearSolverParameters>();
-  auto iter_params   = std::get<serac::IterativeSolverParameters>(custom_params);
-  auto custom_solver = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
-  custom_solver->SetRelTol(iter_params.rel_tol);
-  custom_solver->SetAbsTol(iter_params.abs_tol);
-  custom_solver->SetMaxIter(iter_params.max_iter);
-  custom_solver->SetPrintLevel(iter_params.print_level);
+  auto custom_options = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::LinearSolverOptions>();
+  auto iter_options   = std::get<serac::IterativeSolverOptions>(custom_options);
+  auto custom_solver  = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
+  custom_solver->SetRelTol(iter_options.rel_tol);
+  custom_solver->SetAbsTol(iter_options.abs_tol);
+  custom_solver->SetMaxIter(iter_options.max_iter);
+  custom_solver->SetPrintLevel(iter_options.print_level);
 
-  solid_solver_info.solver_params.H_lin_params = CustomSolverParameters{custom_solver.get()};
-  NonlinearSolid solid_solver(mesh, solid_solver_info);
+  solid_solver_options.solver_options.H_lin_options = CustomSolverOptions{custom_solver.get()};
+  NonlinearSolid solid_solver(mesh, solid_solver_options);
 
   // Initialize the output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");

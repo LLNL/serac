@@ -74,29 +74,32 @@ void defineVectorInputFileSchema(axom::inlet::Table& table)
   table.addDouble("z", "z-component of vector");
 }
 
-void BoundaryConditionInputInfo::defineInputFileSchema(axom::inlet::Table& table)
+void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   table.addIntArray("attrs", "Boundary attributes to which the BC should be applied").required();
-  CoefficientInputInfo::defineInputFileSchema(table);
+  CoefficientInputOptions::defineInputFileSchema(table);
 }
 
-bool CoefficientInputInfo::isVector() const { return std::holds_alternative<CoefficientInputInfo::VecFunc>(func); }
-
-mfem::VectorFunctionCoefficient CoefficientInputInfo::constructVector(const int dim) const
+bool CoefficientInputOptions::isVector() const
 {
-  auto vec_func = std::get_if<CoefficientInputInfo::VecFunc>(&func);
+  return std::holds_alternative<CoefficientInputOptions::VecFunc>(func);
+}
+
+mfem::VectorFunctionCoefficient CoefficientInputOptions::constructVector(const int dim) const
+{
+  auto vec_func = std::get_if<CoefficientInputOptions::VecFunc>(&func);
   SLIC_ERROR_IF(!vec_func, "Cannot construct a vector coefficient from a scalar function");
   return {dim, *vec_func};
 }
 
-mfem::FunctionCoefficient CoefficientInputInfo::constructScalar() const
+mfem::FunctionCoefficient CoefficientInputOptions::constructScalar() const
 {
-  auto scalar_func = std::get_if<CoefficientInputInfo::ScalarFunc>(&func);
+  auto scalar_func = std::get_if<CoefficientInputOptions::ScalarFunc>(&func);
   SLIC_ERROR_IF(!scalar_func, "Cannot construct a scalar coefficient from a vector function");
   return {*scalar_func};
 }
 
-void CoefficientInputInfo::defineInputFileSchema(axom::inlet::Table& table)
+void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   table.addFunction("vec_coef", axom::inlet::FunctionType::Vec3D,
                     {axom::inlet::FunctionType::Vec3D},  // Multiple argument types
@@ -127,10 +130,10 @@ mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
   return result;
 }
 
-serac::input::BoundaryConditionInputInfo FromInlet<serac::input::BoundaryConditionInputInfo>::operator()(
+serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
     const axom::inlet::Table& base)
 {
-  serac::input::BoundaryConditionInputInfo result{.coef_info = base.get<serac::input::CoefficientInputInfo>()};
+  serac::input::BoundaryConditionInputOptions result{.coef_opts = base.get<serac::input::CoefficientInputOptions>()};
   // Build a set with just the values of the map
   auto bdr_attr_map = base["attrs"].get<std::unordered_map<int, int>>();
   for (const auto& [_, val] : bdr_attr_map) {
@@ -139,7 +142,7 @@ serac::input::BoundaryConditionInputInfo FromInlet<serac::input::BoundaryConditi
   return result;
 }
 
-serac::input::CoefficientInputInfo FromInlet<serac::input::CoefficientInputInfo>::operator()(
+serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOptions>::operator()(
     const axom::inlet::Table& base)
 {
   if (base.contains("vec_coef")) {

@@ -20,7 +20,7 @@ nonlinear_solid = {
     stiffness_solver = {
         linear = {
             type = "direct",
-            direct_params = {
+            direct_options = {
                 print_level = 0,
             },
         },
@@ -33,7 +33,7 @@ nonlinear_solid = {
         },
     },
 
-    mass_solver = {
+    dynamics = {
         timestepper = "AverageAcceleration",
         enforcement_method = "RateControl",
     },

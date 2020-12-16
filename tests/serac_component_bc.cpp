@@ -43,19 +43,19 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   test_utils::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
-  serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
+  auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  serac::NonlinearSolid solid_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
   // define the displacement vector
-  const auto& disp_bc   = solid_solver_info.boundary_conditions.at("displacement");
-  auto        disp_coef = std::make_shared<mfem::FunctionCoefficient>(disp_bc.coef_info.constructScalar());
+  const auto& disp_bc   = solid_solver_options.boundary_conditions.at("displacement");
+  auto        disp_coef = std::make_shared<mfem::FunctionCoefficient>(disp_bc.coef_opts.constructScalar());
 
   // Create an indicator function to set all vertices that are x=0
   mfem::VectorFunctionCoefficient zero_bc(dim, [](const mfem::Vector& x, mfem::Vector& X) {
@@ -68,7 +68,7 @@ TEST(nonlinear_solid_solver, qs_component_solve)
 
   mfem::Array<int> ess_corner_bc_list = makeTrueEssList(solid_solver.displacement().space(), zero_bc);
 
-  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, disp_bc.coef_info.component);
+  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, disp_bc.coef_opts.component);
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::GLVis, "component_bc");
