@@ -15,6 +15,7 @@
 #define SERAC_INPUT
 
 #include <string>
+#include <variant>
 
 #include "axom/inlet.hpp"
 #include "axom/sidre.hpp"
@@ -58,20 +59,49 @@ std::string fullDirectoryFromPath(const std::string& file_path);
  */
 void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension = 3);
 
+/**
+ * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
+ */
 struct CoefficientInputInfo {
-  std::function<void(const mfem::Vector&, mfem::Vector&)> vec_func;
-  std::function<double(const mfem::Vector&)>              scalar_func;
-  int                                                     component;
-  mfem::VectorFunctionCoefficient                         constructVector(const int dim = 3) const;
-  mfem::FunctionCoefficient                               constructScalar() const;
-  static void                                             defineInputFileSchema(axom::inlet::Table& table);
+  using VecFunc    = std::function<void(const mfem::Vector&, mfem::Vector&)>;
+  using ScalarFunc = std::function<double(const mfem::Vector&)>;
+  /**
+   * @brief The std::function corresponding to a function coefficient
+   */
+  std::variant<ScalarFunc, VecFunc> func;
+  /**
+   * @brief The component to which a scalar coefficient should be applied
+   */
+  int component;
+  /**
+   * @brief Returns whether the contained function corresponds to a vector coefficient
+   */
+  bool isVector() const;
+  /**
+   * @brief Constructs a vector coefficient with the requested dimension
+   */
+  mfem::VectorFunctionCoefficient constructVector(const int dim = 3) const;
+  /**
+   * @brief Constructs a scalar coefficient
+   */
+  mfem::FunctionCoefficient constructScalar() const;
+  /**
+   * @brief Defines the input file schema on the provided inlet table
+   */
+  static void defineInputFileSchema(axom::inlet::Table& table);
 };
 
 /**
- * @brief The information required from the input deck for a boundary condition
+ * @brief The information required from the input file for a boundary condition
  */
 struct BoundaryConditionInputInfo {
-  std::set<int>        attrs;
+  /**
+   * @brief The mesh attributes on which to apply the boundary condition
+   */
+  std::set<int> attrs{};
+  /**
+   * @brief The information from the input file on the BC coefficient
+   */
   CoefficientInputInfo coef_info;
   /**
    * @brief Input file parameters specific to this class

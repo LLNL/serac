@@ -84,15 +84,15 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
   for (const auto& [name, bc] : info.boundary_conditions) {
     // FIXME: Better naming for boundary conditions?
     if (name.find("displacement") != std::string::npos) {
-      if (bc.coef_info.vec_func) {
-        auto disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(dim, bc.coef_info.vec_func);
+      if (bc.coef_info.isVector()) {
+        auto disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_info.constructVector(dim));
         setDisplacementBCs(bc.attrs, disp_coef);
       } else {
-        auto disp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_info.scalar_func);
+        auto disp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_info.constructScalar());
         setDisplacementBCs(bc.attrs, disp_coef, bc.coef_info.component);
       }
     } else if (name.find("traction") != std::string::npos) {
-      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(dim, bc.coef_info.vec_func);
+      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_info.constructVector(dim));
       setTractionBCs(bc.attrs, trac_coef);
     } else {
       SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
