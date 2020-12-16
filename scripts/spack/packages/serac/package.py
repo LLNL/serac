@@ -92,7 +92,7 @@ class Serac(CMakePackage, CudaPackage):
             description='Build the glvis visualization executable')
     variant('petsc', default=False,
             description='Enable PETSC')
-    # netcdf variant commented out until a bug in the spack concretizer is fixed
+    # netcdf and sundials variants commented out until a bug in the spack concretizer is fixed
     #variant('netcdf', default=True,
     #        description='Enable Cubit/Genesis reader')
     #variant('sundials', default=True,
