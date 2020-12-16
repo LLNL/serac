@@ -211,11 +211,6 @@ protected:
   std::unique_ptr<mfem::Operator> residual_;
 
   /**
-   * @brief Configuration for dynamic equation solver
-   */
-  std::optional<LinearSolverOptions> timedep_oper_params_;
-
-  /**
    * @brief The time dependent operator for use with the MFEM ODE solvers
    */
   std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
