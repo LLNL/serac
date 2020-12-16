@@ -129,7 +129,8 @@ def uberenv_create_mirror(prefix, project_file, mirror_path):
     """
     cmd  = "python scripts/uberenv/uberenv.py --create-mirror -k "
     cmd += "--prefix=\"{0}\" --mirror=\"{1}\" ".format(prefix, mirror_path)
-    cmd += "--project-json=\"{0}\" ".format(project_file)
+    if project_file:
+        cmd += "--project-json=\"{0}\" ".format(project_file)
     res = sexe(cmd, echo=True, error_prefix="WARNING:")
     print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
     print("[ It is expected for 'spack --create-mirror' to throw warnings.                ]")
@@ -145,6 +146,8 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     cmd  = "python scripts/uberenv/uberenv.py -k "
     cmd += "--prefix=\"{0}\" --spec=\"{1}\" ".format(prefix, spec)
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
+    if project_file:
+        cmd += "--project-json=\"{0}\" ".format(project_file)
     cmd += "--spack-config-dir=\"{0}\" ".format(config_dir)
         
     spack_tpl_build_log = pjoin(prefix,"output.log.spack.tpl.build.%s.txt" % spec.replace(" ", "_"))
@@ -399,7 +402,6 @@ def set_group_and_perms(directory):
 
 
 def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, mirror_location = ''):
-    project_file = "scripts/spack/project.json"
     config_dir = "scripts/spack/configs/{0}".format(get_system_type())
 
     if spec:
@@ -427,7 +429,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     prefix = pjoin(prefix, timestamp)
 
     # create a mirror
-    uberenv_create_mirror(prefix, project_file, mirror_dir)
+    uberenv_create_mirror(prefix, "", mirror_dir)
     # write info about this build
     write_build_info(pjoin(prefix, "info.json"))
 
@@ -443,7 +445,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     for spec in specs:
         start_time = time.time()
         fullspec = "{0}".format(spec)
-        res = uberenv_build(prefix, fullspec, project_file, config_dir, mirror_dir)
+        res = uberenv_build(prefix, fullspec, "", config_dir, mirror_dir)
         end_time = time.time()
         print("[build time: {0}]".format(convertSecondsToReadableTime(end_time - start_time)))
         if res != 0:
