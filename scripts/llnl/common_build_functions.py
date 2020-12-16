@@ -9,7 +9,7 @@
  file: common_build_functions.py
 
  description: 
-  helpers for installing serac tpls on llnl lc systems.
+  helpers for installing src and tpls on llnl lc systems.
 
 """
 
@@ -473,13 +473,13 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
 
     src_build_failed = False
     if not tpl_build_failed:
-        # build the serac against the new tpls
+        # build the src against the new tpls
         res = build_and_test_host_configs(prefix, timestamp, True, report_to_stdout)
         if res != 0:
-            print("[ERROR: build and test of serac vs tpls test failed.]\n")
+            print("[ERROR: Build and test of src vs tpls test failed.]\n")
             src_build_failed = True
         else:
-            print("[SUCCESS: build and test of serac vs tpls test passed.]\n")
+            print("[SUCCESS: Build and test of src vs tpls test passed.]\n")
  
     # set proper perms for installed tpls
     set_group_and_perms(prefix)
@@ -600,7 +600,8 @@ def get_repo_dir():
 
 
 def get_build_and_test_root(prefix, timestamp):
-    return pjoin(prefix,"_serac_build_and_test_%s" % timestamp)
+    dirname = "_{0}_build_and_test_{1}".format(get_project_name(), timestamp)
+    return pjoin(prefix, dirname)
 
 
 def get_machine_name():
@@ -633,7 +634,7 @@ def get_shared_mirror_dir():
 
 
 def get_shared_libs_dir():
-    return pjoin(get_shared_base_dir(), "libs/serac")
+    return pjoin(get_shared_base_dir(), "libs", get_project_name())
 
 
 def get_uberenv_path():
@@ -645,6 +646,24 @@ def on_rz():
     if machine_name.startswith("rz"):
         return True
     return False
+
+
+def get_script_dir():
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+_project_name = ""
+def get_project_name():
+    global _project_name
+    if not _project_name:
+        uberenv_config_path = os.path.abspath(os.path.join(get_script_dir(), "../../.uberenv_config.json"))
+        _project_name = "UNKNOWN_PROJECT"
+        if os.path.exists(uberenv_config_path):
+            with open(uberenv_config_path) as json_file:
+                data = json.load(json_file)
+                if "package_name" in data:
+                    _project_name = data["package_name"]
+    return _project_name
 
 
 def convertSecondsToReadableTime(seconds):
