@@ -64,12 +64,12 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   zero_ = 0.0;
 }
 
-NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputOptions& info)
-    : NonlinearSolid(info.order, mesh, info.solver_options)
+NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputOptions& options)
+    : NonlinearSolid(options.order, mesh, options.solver_options)
 {
-  // This is the only other info stored in the input file that we can use
+  // This is the only other options stored in the input file that we can use
   // in the initialization stage
-  setHyperelasticMaterialParameters(info.mu, info.K);
+  setHyperelasticMaterialParameters(options.mu, options.K);
 }
 
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
