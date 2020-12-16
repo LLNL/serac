@@ -306,7 +306,7 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
 
   if (base.contains("mass_solver")) {
     NonlinearSolid::TimesteppingOptions dyn_params;
-    auto                                    mass_solver = base["mass_solver"];
+    auto                                mass_solver = base["mass_solver"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {

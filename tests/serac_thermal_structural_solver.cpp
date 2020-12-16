@@ -59,11 +59,11 @@ TEST(dynamic_solver, dyn_solve)
 
   // Use the same configuration as the solid solver
   const IterativeSolverOptions default_dyn_linear_params = {.rel_tol     = 1.0e-4,
-                                                               .abs_tol     = 1.0e-8,
-                                                               .print_level = 0,
-                                                               .max_iter    = 500,
-                                                               .lin_solver  = LinearSolver::GMRES,
-                                                               .prec        = HypreBoomerAMGPrec{}};
+                                                            .abs_tol     = 1.0e-8,
+                                                            .print_level = 0,
+                                                            .max_iter    = 500,
+                                                            .lin_solver  = LinearSolver::GMRES,
+                                                            .prec        = HypreBoomerAMGPrec{}};
 
   auto therm_M_params = default_dyn_linear_params;
   auto therm_T_params = default_dyn_linear_params;
@@ -78,7 +78,7 @@ TEST(dynamic_solver, dyn_solve)
   const NonlinearSolid::SolverOptions default_dynamic = {
       default_dyn_linear_params, default_dyn_nonlinear_params,
       NonlinearSolid::TimesteppingOptions{TimestepMethod::AverageAcceleration,
-                                              DirichletEnforcementMethod::RateControl}};
+                                          DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);

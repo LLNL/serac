@@ -96,7 +96,7 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] lin_params The parameters for the linear solver
    */
-  std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                         comm,
+  std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                      comm,
                                                                     const IterativeSolverOptions& lin_params);
 
   /**
@@ -104,7 +104,7 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] nonlin_params The parameters for the nonlinear solver
    */
-  static std::unique_ptr<mfem::NewtonSolver> buildNewtonSolver(MPI_Comm                         comm,
+  static std::unique_ptr<mfem::NewtonSolver> buildNewtonSolver(MPI_Comm                      comm,
                                                                const NonlinearSolverOptions& nonlin_params);
 
   /**
@@ -191,8 +191,8 @@ private:
  * @param[in] pfes The FiniteElementSpace to configure the preconditioner with
  * @note A full copy of the object is made, pending C++20 relaxation of "mutable"
  */
-inline LinearSolverOptions augmentAMGForElasticity(const LinearSolverOptions& init_params,
-                                                      mfem::ParFiniteElementSpace&  pfes)
+inline LinearSolverOptions augmentAMGForElasticity(const LinearSolverOptions&   init_params,
+                                                   mfem::ParFiniteElementSpace& pfes)
 {
   auto augmented_params = init_params;
   if (auto iter_params = std::get_if<IterativeSolverOptions>(&init_params)) {

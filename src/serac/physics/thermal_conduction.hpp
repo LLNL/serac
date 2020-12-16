@@ -45,8 +45,8 @@ public:
    * Either quasistatic, or time-dependent with timestep and M params
    */
   struct SolverOptions {
-    LinearSolverOptions                 T_lin_params;
-    NonlinearSolverOptions              T_nonlin_params;
+    LinearSolverOptions                T_lin_params;
+    NonlinearSolverOptions             T_nonlin_params;
     std::optional<TimesteppingOptions> dyn_params = std::nullopt;
   };
 

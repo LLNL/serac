@@ -352,7 +352,7 @@ TEST(thermal_solver, static_amgx_solve)
 
   auto pmesh = buildBallMesh(10000);
 
-  auto params                                                   = ThermalConduction::defaultQuasistaticParameters();
+  auto params                                                = ThermalConduction::defaultQuasistaticParameters();
   std::get<IterativeSolverOptions>(params.T_lin_params).prec = AMGXPrec{.smoother = AMGXSolver::JACOBI_L1};
   // Initialize the second order thermal solver on the parallel mesh
   ThermalConduction therm_solver(2, pmesh, params);

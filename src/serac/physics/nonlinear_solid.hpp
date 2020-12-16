@@ -42,8 +42,8 @@ public:
    * Either quasistatic, or time-dependent with timestep and M params
    */
   struct SolverOptions {
-    LinearSolverOptions                 H_lin_params;
-    NonlinearSolverOptions              H_nonlin_params;
+    LinearSolverOptions                H_lin_params;
+    NonlinearSolverOptions             H_nonlin_params;
     std::optional<TimesteppingOptions> dyn_params = std::nullopt;
   };
 
@@ -63,7 +63,7 @@ public:
     static void defineInputFileSchema(axom::inlet::Table& table, const bool dynamic = false);
 
     // The order of the field
-    int              order;
+    int           order;
     SolverOptions solver_params;
     // Lame parameters
     double mu;

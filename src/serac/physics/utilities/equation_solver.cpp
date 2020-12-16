@@ -259,7 +259,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
   return iter_lin_solver;
 }
 
-std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                         comm,
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                      comm,
                                                                       const NonlinearSolverOptions& nonlin_params)
 {
   std::unique_ptr<mfem::NewtonSolver> newton_solver;
