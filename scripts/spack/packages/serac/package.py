@@ -95,8 +95,8 @@ class Serac(CMakePackage, CudaPackage):
     # netcdf variant commented out until a bug in the spack concretizer is fixed
     #variant('netcdf', default=True,
     #        description='Enable Cubit/Genesis reader')
-    variant('sundials', default=True,
-            description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
+    #variant('sundials', default=True,
+    #        description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
 
     # Basic dependencies
     depends_on("mpi")
@@ -110,7 +110,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf",
+    debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -118,11 +118,12 @@ class Serac(CMakePackage, CudaPackage):
 
     for dep in debug_deps:
         depends_on("{0}".format(dep))
-        depends_on("{0}+debug".format(dep), when="+debug")
+        depends_on("{0}+debug".format(dep), when="+debug")#
     #depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
-    depends_on("mfem+sundials", when="+sundials")
-    depends_on("sundials~shared", when="+sundials")
+    #depends_on("mfem+sundials", when="+sundials")
+    #depends_on("sundials~shared", when="+sundials")
+    depends_on("sundials~shared")
 
     # Needs to be first due to a bug with the Spack concretizer
     depends_on("hdf5+hl@1.8.21~shared")
