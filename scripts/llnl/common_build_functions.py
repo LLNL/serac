@@ -124,7 +124,7 @@ def log_failure(prefix, msg, timestamp=""):
 
 
 def assertUberenvExists():
-    if not os.path.exist(get_uberenv_path()):
+    if not os.path.exists(get_uberenv_path()):
         print("[ERROR: {0} does not exist]".format(get_uberenv_path()))
         sys.exit(1)
 
