@@ -91,8 +91,17 @@ serac_add_code_checks(PREFIX   serac
 #------------------------------------------------------------------------------
 # Export Targets
 #------------------------------------------------------------------------------
+set(exported_targets
+    serac_coefficients
+    serac_physics
+    serac_infrastructure
+    serac_numerics
+    serac_physics_utilities
+    serac_physics_operators
+    serac_integrators)
+
 add_library(serac INTERFACE)
-target_link_libraries(serac INTERFACE coefficients physics infrastructure numerics physics_utilities physics_operators integrators)
+target_link_libraries(serac INTERFACE ${exported_targets})
 install(TARGETS              serac
         EXPORT               serac-targets
         DESTINATION          lib

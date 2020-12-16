@@ -9,8 +9,8 @@
 #include <fstream>
 
 #include "mfem.hpp"
-#include "numerics/mesh_utils.hpp"
-#include "serac_config.hpp"
+#include "serac/numerics/mesh_utils.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 

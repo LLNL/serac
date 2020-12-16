@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "infrastructure/input.hpp"
+#include "serac/infrastructure/input.hpp"
 
 namespace serac {
 

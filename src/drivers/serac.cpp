@@ -18,18 +18,18 @@
 #include <string>
 
 #include "axom/core.hpp"
-#include "coefficients/loading_functions.hpp"
-#include "coefficients/traction_coefficient.hpp"
-#include "infrastructure/cli.hpp"
-#include "infrastructure/initialize.hpp"
-#include "infrastructure/input.hpp"
-#include "infrastructure/logger.hpp"
-#include "infrastructure/terminator.hpp"
 #include "mfem.hpp"
-#include "numerics/mesh_utils.hpp"
-#include "physics/solid.hpp"
-#include "physics/utilities/equation_solver.hpp"
-#include "serac_config.hpp"
+#include "serac/coefficients/loading_functions.hpp"
+#include "serac/coefficients/traction_coefficient.hpp"
+#include "serac/infrastructure/cli.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/input.hpp"
+#include "serac/infrastructure/logger.hpp"
+#include "serac/infrastructure/terminator.hpp"
+#include "serac/numerics/mesh_utils.hpp"
+#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/utilities/equation_solver.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 
@@ -51,7 +51,6 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   // Verify input file
   if (!inlet.verify()) {
     SLIC_ERROR_ROOT(rank, "Input file failed to verify.");
-    serac::exitGracefully(true);
   }
 }
 

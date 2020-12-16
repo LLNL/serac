@@ -10,13 +10,13 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies physics coefficients axom mpi mfem gtest test_utils)
+    set(test_dependencies serac_physics serac_coefficients gtest test_utils)
 
     blt_add_library(
         NAME        test_utils
         SOURCES     test_utilities.cpp
         HEADERS     test_utilities.hpp
-        DEPENDS_ON  numerics infrastructure physics axom
+        DEPENDS_ON  serac_physics
         )
 
     set(solver_tests
@@ -85,22 +85,22 @@ if (ENABLE_GTEST)
         blt_add_library( NAME       serac_cuda_smoketest_kernel
                          SOURCES    serac_cuda_smoketest_kernel.cpp 
                          DEPENDS_ON cuda)
-        blt_add_executable( NAME       serac_cuda_smoketest
-                            SOURCES    serac_cuda_smoketest.cpp 
-                            OUTPUT_DIR ${TEST_OUTPUT_DIRECTORY}
-                            DEPENDS_ON serac_cuda_smoketest_kernel ${test_dependencies} cuda_runtime
+        blt_add_executable( NAME        serac_cuda_smoketest
+                            SOURCES     serac_cuda_smoketest.cpp 
+                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                            DEPENDS_ON  serac_cuda_smoketest_kernel ${test_dependencies} cuda_runtime
                             FOLDER      serac/tests)
         blt_add_test( NAME          serac_cuda_smoketest
                       COMMAND       serac_cuda_smoketest )
     endif()
 
     if(ENABLE_BENCHMARKS)
-        blt_add_executable( NAME    benchmark_expr_templates
-                            SOURCES benchmark_expr_templates.cpp
-                            DEPENDS_ON gbenchmark ${test_dependencies}
+        blt_add_executable( NAME        benchmark_expr_templates
+                            SOURCES     benchmark_expr_templates.cpp
+                            DEPENDS_ON  gbenchmark ${test_dependencies}
                             FOLDER      serac/tests)
-        blt_add_benchmark(  NAME    benchmark_expr_templates
-                            COMMAND benchmark_expr_templates "--benchmark_min_time=0.0 --v=3 --benchmark_format=console"
+        blt_add_benchmark(  NAME        benchmark_expr_templates
+                            COMMAND     benchmark_expr_templates "--benchmark_min_time=0.0 --v=3 --benchmark_format=console"
                             NUM_MPI_TASKS 4)
     endif()
 
