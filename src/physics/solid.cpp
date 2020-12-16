@@ -91,7 +91,7 @@ void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::
 
 void Solid::setHyperelasticMaterialParameters(const double mu, const double K)
 {
-  model_ = std::make_unique<mfem::NeoHookeanModel>(mu, K);
+  material_ = std::make_unique<serac::NeoHookeanMaterial>(mu, K);
 }
 
 void Solid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
@@ -116,7 +116,7 @@ void Solid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  H_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
+  H_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(material_.get()));
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {

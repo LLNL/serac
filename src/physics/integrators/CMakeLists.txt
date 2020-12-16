@@ -16,7 +16,7 @@ set(integrators_headers
     wrapper_integrator.hpp
     )
 
-set(integrators_depends infrastructure mfem mpi)
+set(integrators_depends materials infrastructure mfem mpi)
 blt_list_append( TO integrators_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
 blt_add_library(

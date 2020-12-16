@@ -10,6 +10,8 @@
  * @brief The MFEM integrators for the incremental hyperelastic formulation
  */
 
+#include "physics/materials/hyperelastic_material.hpp"
+
 #include "mfem.hpp"
 
 namespace serac {
@@ -29,7 +31,7 @@ public:
    *
    * @param[in] m  HyperelasticModel that will be integrated.
    */
-  explicit IncrementalHyperelasticIntegrator(mfem::HyperelasticModel* m) : model_(m) {}
+  explicit IncrementalHyperelasticIntegrator(serac::HyperelasticMaterial* m) : material_(m) {}
 
   /**
    * @brief Computes the integral of W(Jacobian(Trt)) over a target zone
@@ -66,7 +68,7 @@ private:
   /**
    * @brief The associated hyperelastic model
    */
-  mfem::HyperelasticModel* model_;
+  serac::HyperelasticMaterial* material_;
 
   /**
    * Jrt: the Jacobian of the target-to-reference-element transformation.

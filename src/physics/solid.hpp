@@ -18,6 +18,7 @@
 #include "physics/base_physics.hpp"
 #include "physics/operators/odes.hpp"
 #include "physics/operators/stdfunction_operator.hpp"
+#include "physics/materials/hyperelastic_material.hpp"
 
 namespace serac {
 
@@ -228,7 +229,7 @@ protected:
   /**
    * @brief The hyperelastic material model
    */
-  std::unique_ptr<mfem::HyperelasticModel> model_;
+  std::unique_ptr<serac::HyperelasticMaterial> material_;
 
   /**
    * @brief Pointer to the reference mesh data
