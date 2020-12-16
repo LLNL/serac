@@ -220,7 +220,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
 
     return 0
 
-def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
+def build_and_test_host_config(test_root,host_config, report_to_stdout = False, extra_cmake_options = ""):
     host_config_root = get_host_config_root(host_config)
 
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
@@ -234,7 +234,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
     print("[starting configure of %s]" % host_config)
     print("[log file: %s]" % cfg_output_file)
     # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
-    res = sexe("python config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s" % (build_dir, host_config, install_dir),
+    res = sexe("python config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s %s" % (build_dir, host_config, install_dir, extra_cmake_options),
                output_file = cfg_output_file,
                echo=True)
     
@@ -317,7 +317,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
     return 0
 
 
-def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False):
+def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False, extra_cmake_options = ""):
     host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
     if len(host_configs) == 0:
         log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
@@ -336,7 +336,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
         build_dir = get_build_dir(test_root, host_config)
 
         start_time = time.time()
-        if build_and_test_host_config(test_root, host_config, report_to_stdout) == 0:
+        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options) == 0:
             ok.append(host_config)
             log_success(build_dir, "[Success: Built host-config: {0}]".format(host_config), timestamp)
         else:
@@ -623,7 +623,7 @@ def get_shared_mirror_dir():
 
 
 def get_shared_libs_dir():
-    return pjoin(get_shared_base_dir(), "libs")
+    return pjoin(get_shared_base_dir(), "libs/serac")
 
 
 def on_rz():
