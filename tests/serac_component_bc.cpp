@@ -19,36 +19,20 @@
 
 namespace serac {
 
-class InputFileTest : public ::testing::TestWithParam<std::string> {
-};
-
-TEST_P(InputFileTest, nonlin_solid)
+TEST(nonlinear_solid_solver, qs_attribute_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/" + GetParam() + ".lua";
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_attribute_solve.lua";
   test_utils::runNonlinSolidTest(input_file_path);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-const std::string input_files[] = {"dyn_solve",
-                                   "dyn_direct_solve",
-#ifdef MFEM_USE_SUNDIALS
-                                   "dyn_linesearch_solve",
-#endif
-#ifdef MFEM_USE_AMGX
-                                   "dyn_amgx_solve",
-#endif
-                                   "qs_solve",
-                                   "qs_direct_solve"};
-
-INSTANTIATE_TEST_SUITE_P(NonlinearSolidInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
-
-TEST(nonlinear_solid_solver, qs_custom_solve)
+TEST(nonlinear_solid_solver, qs_component_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-
-  std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_solve.lua";
+  std::string input_file_path =
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_component_solve.lua";
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -64,24 +48,30 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
 
-  // Simulate a custom solver by manually building the linear solver and passing it in
-  // The custom solver built here should be identical to what is internally built in the
-  // qs_solve test
-  auto custom_params = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::LinearSolverParameters>();
-  auto iter_params   = std::get<serac::IterativeSolverParameters>(custom_params);
-  auto custom_solver = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
-  custom_solver->SetRelTol(iter_params.rel_tol);
-  custom_solver->SetAbsTol(iter_params.abs_tol);
-  custom_solver->SetMaxIter(iter_params.max_iter);
-  custom_solver->SetPrintLevel(iter_params.print_level);
+  int dim = mesh->Dimension();
 
-  solid_solver_info.solver_params.H_lin_params = CustomSolverParameters{custom_solver.get()};
-  NonlinearSolid solid_solver(mesh, solid_solver_info);
+  // define the displacement vector
+  const auto& disp_bc   = solid_solver_info.boundary_conditions.at("displacement");
+  auto        disp_coef = std::make_shared<mfem::FunctionCoefficient>(disp_bc.coef_info.scalar_func);
 
-  // Initialize the output
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
+  // Create an indicator function to set all vertices that are x=0
+  mfem::VectorFunctionCoefficient zero_bc(dim, [](const mfem::Vector& x, mfem::Vector& X) {
+    X = 0.;
+    for (int i = 0; i < X.Size(); i++)
+      if (std::abs(x[i]) < 1.e-13) {
+        X[i] = 1.;
+      }
+  });
+
+  mfem::Array<int> ess_corner_bc_list = makeTrueEssList(solid_solver.displacement().space(), zero_bc);
+
+  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, disp_bc.coef_info.component);
+
+  // Setup glvis output
+  solid_solver.initializeOutput(serac::OutputType::GLVis, "component_bc");
 
   // Complete the solver setup
   solid_solver.completeSetup();
@@ -89,9 +79,11 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   double dt = inlet["dt"];
   solid_solver.advanceTimestep(dt);
 
+  // Output the state
   solid_solver.outputState();
 
-  int          dim = mesh->Dimension();
+  auto state = solid_solver.getState();
+
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
@@ -99,7 +91,6 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
   EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
-
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
