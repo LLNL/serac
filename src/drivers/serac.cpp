@@ -83,13 +83,13 @@ int main(int argc, char* argv[])
   datastore.getRoot()->save("serac_input.json", "json");
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
+  auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  serac::NonlinearSolid solid_solver(mesh, solid_solver_options);
 
   // Project the initial and reference configuration functions onto the
   // appropriate grid functions
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
   auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Set the boundary condition information
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement") {
       solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
     } else if (bc.name == "traction") {
