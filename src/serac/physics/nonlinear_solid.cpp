@@ -16,7 +16,7 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
+NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"}),
       displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"}),
@@ -64,7 +64,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   zero_ = 0.0;
 }
 
-NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputInfo& info)
+NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputOptions& info)
     : NonlinearSolid(info.order, mesh, info.solver_params)
 {
   // This is the only other info stored in the input file that we can use
@@ -253,7 +253,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table, const bool dynamic)
+void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& table, const bool dynamic)
 {
   // Polynomial interpolation order
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1);
@@ -284,7 +284,7 @@ void NonlinearSolid::InputInfo::defineInputFileSchema(axom::inlet::Table& table,
   }
 
   auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
-  serac::input::BoundaryConditionInputInfo::defineInputFileSchema(bc_table);
+  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
 }
 
 }  // namespace serac
@@ -293,19 +293,19 @@ using serac::DirichletEnforcementMethod;
 using serac::NonlinearSolid;
 using serac::TimestepMethod;
 
-NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const axom::inlet::Table& base)
+NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()(const axom::inlet::Table& base)
 {
-  NonlinearSolid::InputInfo result;
+  NonlinearSolid::InputOptions result;
 
   result.order = base["order"];
 
   // Solver parameters
   auto stiffness_solver                = base["stiffness_solver"];
-  result.solver_params.H_lin_params    = stiffness_solver["linear"].get<serac::IterativeSolverParameters>();
-  result.solver_params.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverParameters>();
+  result.solver_params.H_lin_params    = stiffness_solver["linear"].get<serac::IterativeSolverOptions>();
+  result.solver_params.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("mass_solver")) {
-    NonlinearSolid::DynamicSolverParameters dyn_params;
+    NonlinearSolid::TimesteppingOptions dyn_params;
     auto                                    mass_solver = base["mass_solver"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
@@ -331,7 +331,7 @@ NonlinearSolid::InputInfo FromInlet<NonlinearSolid::InputInfo>::operator()(const
   result.mu = base["mu"];
   result.K  = base["K"];
 
-  auto bdr_map = base["boundary_conds"].get<std::unordered_map<int, serac::input::BoundaryConditionInputInfo>>();
+  auto bdr_map = base["boundary_conds"].get<std::unordered_map<int, serac::input::BoundaryConditionInputOptions>>();
   for (const auto& [idx, val] : bdr_map) {
     result.boundary_conditions.push_back(val);
   }

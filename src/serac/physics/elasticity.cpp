@@ -13,7 +13,7 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverParameters& params)
+Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"})
 {

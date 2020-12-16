@@ -38,7 +38,7 @@ public:
    * @param[in] mesh The parallel MFEM mesh
    * @param[in] params The system solver parameters
    */
-  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverParameters& params);
+  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& params);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions

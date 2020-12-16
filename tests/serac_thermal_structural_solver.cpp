@@ -58,7 +58,7 @@ TEST(dynamic_solver, dyn_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Use the same configuration as the solid solver
-  const IterativeSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e-4,
+  const IterativeSolverOptions default_dyn_linear_params = {.rel_tol     = 1.0e-4,
                                                                .abs_tol     = 1.0e-8,
                                                                .print_level = 0,
                                                                .max_iter    = 500,
@@ -72,12 +72,12 @@ TEST(dynamic_solver, dyn_solve)
 
   auto therm_params = ThermalConduction::defaultDynamicParameters();
 
-  const NonlinearSolverParameters default_dyn_nonlinear_params = {
+  const NonlinearSolverOptions default_dyn_nonlinear_params = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
-  const NonlinearSolid::SolverParameters default_dynamic = {
+  const NonlinearSolid::SolverOptions default_dynamic = {
       default_dyn_linear_params, default_dyn_nonlinear_params,
-      NonlinearSolid::DynamicSolverParameters{TimestepMethod::AverageAcceleration,
+      NonlinearSolid::TimesteppingOptions{TimestepMethod::AverageAcceleration,
                                               DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object

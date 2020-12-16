@@ -36,11 +36,11 @@ public:
    * @param[in] comm The MPI communicator object
    * @param[in] lin_params The parameters for the linear solver
    * @param[in] nonlin_params The optional parameters for the optional nonlinear solver
-   * @see serac::LinearSolverParameters
-   * @see serac::NonlinearSolverParameters
+   * @see serac::LinearSolverOptions
+   * @see serac::NonlinearSolverOptions
    */
-  EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
-                 const std::optional<NonlinearSolverParameters>& nonlin_params = std::nullopt);
+  EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_params,
+                 const std::optional<NonlinearSolverOptions>& nonlin_params = std::nullopt);
 
   /**
    * Updates the solver with the provided operator
@@ -97,7 +97,7 @@ private:
    * @param[in] lin_params The parameters for the linear solver
    */
   std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                         comm,
-                                                                    const IterativeSolverParameters& lin_params);
+                                                                    const IterativeSolverOptions& lin_params);
 
   /**
    * @brief Builds an Newton-Raphson solver given a set of nonlinear solver parameters
@@ -105,7 +105,7 @@ private:
    * @param[in] nonlin_params The parameters for the nonlinear solver
    */
   static std::unique_ptr<mfem::NewtonSolver> buildNewtonSolver(MPI_Comm                         comm,
-                                                               const NonlinearSolverParameters& nonlin_params);
+                                                               const NonlinearSolverOptions& nonlin_params);
 
   /**
    * @brief A wrapper class for combining a nonlinear solver with a SuperLU direct solver
@@ -191,15 +191,15 @@ private:
  * @param[in] pfes The FiniteElementSpace to configure the preconditioner with
  * @note A full copy of the object is made, pending C++20 relaxation of "mutable"
  */
-inline LinearSolverParameters augmentAMGForElasticity(const LinearSolverParameters& init_params,
+inline LinearSolverOptions augmentAMGForElasticity(const LinearSolverOptions& init_params,
                                                       mfem::ParFiniteElementSpace&  pfes)
 {
   auto augmented_params = init_params;
-  if (auto iter_params = std::get_if<IterativeSolverParameters>(&init_params)) {
+  if (auto iter_params = std::get_if<IterativeSolverOptions>(&init_params)) {
     if (iter_params->prec) {
       if (std::holds_alternative<HypreBoomerAMGPrec>(iter_params->prec.value())) {
         // It's a copy, but at least it's on the stack
-        std::get<HypreBoomerAMGPrec>(*std::get<IterativeSolverParameters>(augmented_params).prec).pfes = &pfes;
+        std::get<HypreBoomerAMGPrec>(*std::get<IterativeSolverOptions>(augmented_params).prec).pfes = &pfes;
       }
     }
   }
@@ -212,13 +212,13 @@ inline LinearSolverParameters augmentAMGForElasticity(const LinearSolverParamete
 // Prototype the specialization
 
 template <>
-struct FromInlet<serac::IterativeSolverParameters> {
-  serac::IterativeSolverParameters operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::IterativeSolverOptions> {
+  serac::IterativeSolverOptions operator()(const axom::inlet::Table& base);
 };
 
 template <>
-struct FromInlet<serac::NonlinearSolverParameters> {
-  serac::NonlinearSolverParameters operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::NonlinearSolverOptions> {
+  serac::NonlinearSolverOptions operator()(const axom::inlet::Table& base);
 };
 
 template <>

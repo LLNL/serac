@@ -11,20 +11,20 @@
 
 namespace serac {
 
-EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverParameters& lin_params,
-                               const std::optional<NonlinearSolverParameters>& nonlin_params)
+EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_params,
+                               const std::optional<NonlinearSolverOptions>& nonlin_params)
 {
   // If it's an iterative solver, build it and set the preconditioner
-  if (auto iter_params = std::get_if<IterativeSolverParameters>(&lin_params)) {
+  if (auto iter_params = std::get_if<IterativeSolverOptions>(&lin_params)) {
     lin_solver_ = buildIterativeLinearSolver(comm, *iter_params);
   }
   // If it's a custom solver, check that the mfem::Solver* is not null
-  else if (auto custom = std::get_if<CustomSolverParameters>(&lin_params)) {
+  else if (auto custom = std::get_if<CustomSolverOptions>(&lin_params)) {
     SLIC_ERROR_IF(custom->solver == nullptr, "Custom solver pointer must be initialized.");
     lin_solver_ = custom->solver;
   }
   // If it's a direct solver (currently SuperLU only)
-  else if (auto direct_params = std::get_if<DirectSolverParameters>(&lin_params)) {
+  else if (auto direct_params = std::get_if<DirectSolverOptions>(&lin_params)) {
     auto direct_solver = std::make_unique<mfem::SuperLUSolver>(comm);
     direct_solver->SetColumnPermutation(mfem::superlu::PARMETIS);
     if (direct_params->print_level == 0) {
@@ -202,7 +202,7 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
 }  // namespace detail
 
 std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
-    MPI_Comm comm, const IterativeSolverParameters& lin_params)
+    MPI_Comm comm, const IterativeSolverOptions& lin_params)
 {
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
 
@@ -260,7 +260,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
 }
 
 std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                         comm,
-                                                                      const NonlinearSolverParameters& nonlin_params)
+                                                                      const NonlinearSolverOptions& nonlin_params)
 {
   std::unique_ptr<mfem::NewtonSolver> newton_solver;
 
@@ -361,12 +361,12 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
 }  // namespace serac
 
 using serac::EquationSolver;
-using serac::IterativeSolverParameters;
-using serac::NonlinearSolverParameters;
+using serac::IterativeSolverOptions;
+using serac::NonlinearSolverOptions;
 
-IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(const axom::inlet::Table& base)
+IterativeSolverOptions FromInlet<IterativeSolverOptions>::operator()(const axom::inlet::Table& base)
 {
-  IterativeSolverParameters params;
+  IterativeSolverOptions params;
   params.rel_tol          = base["rel_tol"];
   params.abs_tol          = base["abs_tol"];
   params.max_iter         = base["max_iter"];
@@ -398,9 +398,9 @@ IterativeSolverParameters FromInlet<IterativeSolverParameters>::operator()(const
   return params;
 }
 
-NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(const axom::inlet::Table& base)
+NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom::inlet::Table& base)
 {
-  NonlinearSolverParameters params;
+  NonlinearSolverOptions params;
   params.rel_tol                = base["rel_tol"];
   params.abs_tol                = base["abs_tol"];
   params.max_iter               = base["max_iter"];
@@ -420,9 +420,9 @@ NonlinearSolverParameters FromInlet<NonlinearSolverParameters>::operator()(const
 
 EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Table& base)
 {
-  auto lin = base["linear"].get<IterativeSolverParameters>();
+  auto lin = base["linear"].get<IterativeSolverOptions>();
   if (base.hasTable("nonlinear")) {
-    auto nonlin = base["nonlinear"].get<NonlinearSolverParameters>();
+    auto nonlin = base["nonlinear"].get<NonlinearSolverOptions>();
     return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
   }
   return EquationSolver(MPI_COMM_WORLD, lin);

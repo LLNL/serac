@@ -25,12 +25,12 @@ void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet, const bool dyna
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
   auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
-  serac::mesh::InputInfo::defineInputFileSchema(mesh_table);
+  serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
   // FIXME: Remove once Inlet's "contains" logic improvements are merged
-  serac::NonlinearSolid::InputInfo::defineInputFileSchema(solid_solver_table, dynamic);
+  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table, dynamic);
 
   // Verify input file
   if (!inlet.verify()) {

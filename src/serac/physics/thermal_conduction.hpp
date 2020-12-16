@@ -35,7 +35,7 @@ public:
   /**
    * @brief A timestep method and config for the M solver
    */
-  struct DynamicSolverParameters {
+  struct TimesteppingOptions {
     TimestepMethod             timestepper;
     DirichletEnforcementMethod enforcement_method;
   };
@@ -44,13 +44,13 @@ public:
    * @brief A configuration variant for the various solves
    * Either quasistatic, or time-dependent with timestep and M params
    */
-  struct SolverParameters {
-    LinearSolverParameters                 T_lin_params;
-    NonlinearSolverParameters              T_nonlin_params;
-    std::optional<DynamicSolverParameters> dyn_params = std::nullopt;
+  struct SolverOptions {
+    LinearSolverOptions                 T_lin_params;
+    NonlinearSolverOptions              T_nonlin_params;
+    std::optional<TimesteppingOptions> dyn_params = std::nullopt;
   };
 
-  static IterativeSolverParameters defaultLinearParameters()
+  static IterativeSolverOptions defaultLinearParameters()
   {
     return {.rel_tol     = 1.0e-6,
             .abs_tol     = 1.0e-12,
@@ -60,20 +60,20 @@ public:
             .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
   }
 
-  static NonlinearSolverParameters defaultNonlinearParameters()
+  static NonlinearSolverOptions defaultNonlinearParameters()
   {
     return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
   }
 
-  static SolverParameters defaultQuasistaticParameters()
+  static SolverOptions defaultQuasistaticParameters()
   {
     return {defaultLinearParameters(), defaultNonlinearParameters(), std::nullopt};
   }
 
-  static SolverParameters defaultDynamicParameters()
+  static SolverOptions defaultDynamicParameters()
   {
     return {defaultLinearParameters(), defaultNonlinearParameters(),
-            DynamicSolverParameters{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+            TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
   }
 
   /**
@@ -83,7 +83,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    * @param[in] params The system solver parameters
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& params);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)

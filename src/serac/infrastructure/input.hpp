@@ -61,7 +61,7 @@ void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension 
 /**
  * @brief The information required from the input deck for a boundary condition
  */
-struct BoundaryConditionInputInfo {
+struct BoundaryConditionInputOptions {
   // Just store the attributes and a name for now
   std::string   name;
   std::set<int> attrs;
@@ -83,8 +83,8 @@ struct FromInlet<mfem::Vector> {
 };
 
 template <>
-struct FromInlet<serac::input::BoundaryConditionInputInfo> {
-  serac::input::BoundaryConditionInputInfo operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::input::BoundaryConditionInputOptions> {
+  serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Table& base);
 };
 
 #endif

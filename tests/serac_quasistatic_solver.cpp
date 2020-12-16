@@ -34,12 +34,12 @@ TEST(nonlinear_solid_solver, qs_solve)
   testing::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
   auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto           solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   NonlinearSolid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
@@ -104,14 +104,14 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   testing::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
   auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   // FIXME: These should be moved to part of the schema once the contains() logic is updated in Inlet
-  solid_solver_info.solver_params.H_lin_params = DirectSolverParameters{0};
+  solid_solver_info.solver_params.H_lin_params = DirectSolverOptions{0};
   NonlinearSolid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();
@@ -176,24 +176,24 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   testing::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
+  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputOptions>();
   auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
   auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
+  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
   // qs_solve test
-  auto custom_params = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::IterativeSolverParameters>();
+  auto custom_params = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::IterativeSolverOptions>();
   auto custom_solver = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
   custom_solver->SetRelTol(custom_params.rel_tol);
   custom_solver->SetAbsTol(custom_params.abs_tol);
   custom_solver->SetMaxIter(custom_params.max_iter);
   custom_solver->SetPrintLevel(custom_params.print_level);
 
-  solid_solver_info.solver_params.H_lin_params = CustomSolverParameters{custom_solver.get()};
+  solid_solver_info.solver_params.H_lin_params = CustomSolverOptions{custom_solver.get()};
   NonlinearSolid solid_solver(mesh, solid_solver_info);
 
   int dim = mesh->Dimension();

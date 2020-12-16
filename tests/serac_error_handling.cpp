@@ -23,7 +23,7 @@ namespace serac {
 
 TEST(serac_error_handling, equationsolver_bad_lin_solver)
 {
-  IterativeSolverParameters params;
+  IterativeSolverOptions params;
   // Try a definitely wrong number to ensure that an invalid linear solver is detected
   params.lin_solver = static_cast<LinearSolver>(-7);
   EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, params), SlicErrorException);
@@ -33,7 +33,7 @@ TEST(serac_error_handling, equationsolver_bad_lin_solver)
 #ifndef MFEM_USE_AMGX
 TEST(serac_error_handling, equationsolver_amgx_not_available)
 {
-  IterativeSolverParameters params;
+  IterativeSolverOptions params;
   params.prec = AMGXPrec{};
   EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, params), SlicErrorException);
 }

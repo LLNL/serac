@@ -117,7 +117,7 @@ public:
         K(K_),
         A(NULL),
         linear_solver(M.GetComm(),
-                      serac::IterativeSolverParameters{.rel_tol     = 1e-9,
+                      serac::IterativeSolverOptions{.rel_tol     = 1e-9,
                                                        .abs_tol     = 0.0,
                                                        .print_level = 0,
                                                        .max_iter    = 100,

@@ -13,7 +13,7 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params)
+ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& params)
     : BasePhysics(mesh, NUM_FIELDS, order),
       temperature_(*mesh,
                    FiniteElementState::Options{

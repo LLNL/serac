@@ -24,7 +24,7 @@ TEST(elastic_solver, static_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
 
-  IterativeSolverParameters default_quasistatic = {.rel_tol     = 1.0e-4,
+  IterativeSolverOptions default_quasistatic = {.rel_tol     = 1.0e-4,
                                                    .abs_tol     = 1.0e-10,
                                                    .print_level = 0,
                                                    .max_iter    = 500,
