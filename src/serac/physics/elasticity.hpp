@@ -36,9 +36,9 @@ public:
    *
    * @param[in] order The polynomial order of the solver
    * @param[in] mesh The parallel MFEM mesh
-   * @param[in] params The system solver parameters
+   * @param[in] options The system solver parameters
    */
-  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& params);
+  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& options);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions

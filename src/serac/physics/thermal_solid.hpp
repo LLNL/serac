@@ -30,11 +30,11 @@ public:
    *
    * @param[in] order The order of the temperature and displacement discretizations
    * @param[in] mesh The parallel mesh object on which to solve
-   * @param[in] therm_params The equation solver params for the conduction physics
-   * @param[in] solid_params The equation solver params for the solid physics
+   * @param[in] therm_options The equation solver options for the conduction physics
+   * @param[in] solid_options The equation solver options for the solid physics
    */
-  ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverOptions& therm_params,
-               const NonlinearSolid::SolverOptions& solid_params);
+  ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverOptions& therm_options,
+               const NonlinearSolid::SolverOptions& solid_options);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)

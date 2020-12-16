@@ -42,7 +42,7 @@ public:
 
   /**
    * @brief A configuration variant for the various solves
-   * Either quasistatic, or time-dependent with timestep and M params
+   * Either quasistatic, or time-dependent with timestep and M options
    */
   struct SolverOptions {
     LinearSolverOptions                T_lin_options;
@@ -81,9 +81,9 @@ public:
    *
    * @param[in] order The order of the thermal field discretization
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
-   * @param[in] params The system solver parameters
+   * @param[in] options The system solver parameters
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& params);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)

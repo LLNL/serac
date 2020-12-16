@@ -80,7 +80,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] solver The system solver parameters
    */
-  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& params);
+  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options);
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object

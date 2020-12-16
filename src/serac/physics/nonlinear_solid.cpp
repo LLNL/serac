@@ -16,7 +16,7 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& params)
+NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"}),
       displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"}),
@@ -37,17 +37,17 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   displacement_.trueVec() = 0.0;
   velocity_.trueVec()     = 0.0;
 
-  const auto& lin_params = params.H_lin_options;
+  const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
   // to be the displacement
-  const auto& augmented_params = augmentAMGForElasticity(lin_params, displacement_.space());
+  const auto& augmented_options = augmentAMGForElasticity(lin_options, displacement_.space());
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_options);
+  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_options, options.H_nonlin_options);
 
   // Check for dynamic mode
-  if (params.dyn_options) {
-    ode2_.SetTimestepper(params.dyn_options->timestepper);
-    ode2_.SetEnforcementMethod(params.dyn_options->enforcement_method);
+  if (options.dyn_options) {
+    ode2_.SetTimestepper(options.dyn_options->timestepper);
+    ode2_.SetEnforcementMethod(options.dyn_options->enforcement_method);
     is_quasistatic_ = false;
   } else {
     is_quasistatic_ = true;
