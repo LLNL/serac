@@ -45,12 +45,12 @@ public:
    * Either quasistatic, or time-dependent with timestep and M params
    */
   struct SolverOptions {
-    LinearSolverOptions                T_lin_params;
-    NonlinearSolverOptions             T_nonlin_params;
-    std::optional<TimesteppingOptions> dyn_params = std::nullopt;
+    LinearSolverOptions                T_lin_options;
+    NonlinearSolverOptions             T_nonlin_options;
+    std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
-  static IterativeSolverOptions defaultLinearParameters()
+  static IterativeSolverOptions defaultLinearOptions()
   {
     return {.rel_tol     = 1.0e-6,
             .abs_tol     = 1.0e-12,
@@ -60,19 +60,19 @@ public:
             .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
   }
 
-  static NonlinearSolverOptions defaultNonlinearParameters()
+  static NonlinearSolverOptions defaultNonlinearOptions()
   {
     return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
   }
 
-  static SolverOptions defaultQuasistaticParameters()
+  static SolverOptions defaultQuasistaticOptions()
   {
-    return {defaultLinearParameters(), defaultNonlinearParameters(), std::nullopt};
+    return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt};
   }
 
-  static SolverOptions defaultDynamicParameters()
+  static SolverOptions defaultDynamicOptions()
   {
-    return {defaultLinearParameters(), defaultNonlinearParameters(),
+    return {defaultLinearOptions(), defaultNonlinearOptions(),
             TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
   }
 

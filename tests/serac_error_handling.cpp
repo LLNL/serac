@@ -43,8 +43,8 @@ TEST(serac_error_handling, equationsolver_amgx_not_available)
 #ifndef MFEM_USE_SUNDIALS
 TEST(serac_error_handling, equationsolver_kinsol_not_available)
 {
-  auto lin_params             = ThermalConduction::defaultLinearParameters();
-  auto nonlin_params          = ThermalConduction::defaultNonlinearParameters();
+  auto lin_params             = ThermalConduction::defaultLinearOptions();
+  auto nonlin_params          = ThermalConduction::defaultNonlinearOptions();
   nonlin_params.nonlin_solver = NonlinearSolver::KINFullStep;
   EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, lin_params, nonlin_params), SlicErrorException);
 }
@@ -114,7 +114,7 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
 
 TEST(serac_error_handling, invalid_output_type)
 {
-  ThermalConduction physics(1, buildDiskMesh(100), ThermalConduction::defaultQuasistaticParameters());
+  ThermalConduction physics(1, buildDiskMesh(100), ThermalConduction::defaultQuasistaticOptions());
   // Try a definitely wrong number to ensure that an invalid output type is detected
   EXPECT_THROW(physics.initializeOutput(static_cast<OutputType>(-7), ""), SlicErrorException);
 }

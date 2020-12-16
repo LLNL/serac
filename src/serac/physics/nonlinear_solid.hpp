@@ -39,12 +39,12 @@ public:
   };
   /**
    * @brief A configuration variant for the various solves
-   * Either quasistatic, or time-dependent with timestep and M params
+   * Either quasistatic, or time-dependent with timestep and M options
    */
   struct SolverOptions {
-    LinearSolverOptions                H_lin_params;
-    NonlinearSolverOptions             H_nonlin_params;
-    std::optional<TimesteppingOptions> dyn_params = std::nullopt;
+    LinearSolverOptions                H_lin_options;
+    NonlinearSolverOptions             H_nonlin_options;
+    std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
   /**

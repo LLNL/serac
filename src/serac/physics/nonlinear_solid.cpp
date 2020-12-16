@@ -37,17 +37,17 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   displacement_.trueVec() = 0.0;
   velocity_.trueVec()     = 0.0;
 
-  const auto& lin_params = params.H_lin_params;
+  const auto& lin_params = params.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
   // to be the displacement
   const auto& augmented_params = augmentAMGForElasticity(lin_params, displacement_.space());
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_params);
+  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_params, params.H_nonlin_options);
 
   // Check for dynamic mode
-  if (params.dyn_params) {
-    ode2_.SetTimestepper(params.dyn_params->timestepper);
-    ode2_.SetEnforcementMethod(params.dyn_params->enforcement_method);
+  if (params.dyn_options) {
+    ode2_.SetTimestepper(params.dyn_options->timestepper);
+    ode2_.SetEnforcementMethod(params.dyn_options->enforcement_method);
     is_quasistatic_ = false;
   } else {
     is_quasistatic_ = true;
@@ -300,12 +300,12 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
   result.order = base["order"];
 
   // Solver parameters
-  auto stiffness_solver                 = base["stiffness_solver"];
-  result.solver_options.H_lin_params    = stiffness_solver["linear"].get<serac::IterativeSolverOptions>();
-  result.solver_options.H_nonlin_params = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  auto stiffness_solver                  = base["stiffness_solver"];
+  result.solver_options.H_lin_options    = stiffness_solver["linear"].get<serac::IterativeSolverOptions>();
+  result.solver_options.H_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
-    NonlinearSolid::TimesteppingOptions dyn_params;
+    NonlinearSolid::TimesteppingOptions dyn_options;
     auto                                dynamics = base["dynamics"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
@@ -313,7 +313,7 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
         {"AverageAcceleration", TimestepMethod::AverageAcceleration}};
     std::string timestep_method = dynamics["timestepper"];
     SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
-    dyn_params.timestepper = timestep_methods.at(timestep_method);
+    dyn_options.timestepper = timestep_methods.at(timestep_method);
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
@@ -321,9 +321,9 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
     std::string enforcement_method = dynamics["enforcement_method"];
     SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
                   "Unrecognized enforcement method: " << enforcement_method);
-    dyn_params.enforcement_method = enforcement_methods.at(enforcement_method);
+    dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
 
-    result.solver_options.dyn_params = std::move(dyn_params);
+    result.solver_options.dyn_options = std::move(dyn_options);
   }
 
   // Set the material parameters

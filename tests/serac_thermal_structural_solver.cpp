@@ -70,7 +70,7 @@ TEST(dynamic_solver, dyn_solve)
   therm_M_params.prec = HypreSmootherPrec{};
   therm_T_params.prec = HypreSmootherPrec{};
 
-  auto therm_params = ThermalConduction::defaultDynamicParameters();
+  auto therm_params = ThermalConduction::defaultDynamicOptions();
 
   const NonlinearSolverOptions default_dyn_nonlinear_params = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
