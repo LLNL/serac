@@ -7,7 +7,7 @@ dt      = 1.0
 
 main_mesh = {
     -- mesh file
-    mesh = "../../../../meshes/square.mesh",
+    mesh = "../../../meshes/square.mesh",
     -- serial and parallel refinement levels
     ser_ref_levels = 2,
     par_ref_levels = 0,
@@ -17,12 +17,15 @@ main_mesh = {
 nonlinear_solid = {
     stiffness_solver = {
         linear = {
-            rel_tol     = 1.0e-8,
-            abs_tol     = 1.0e-12,
-            max_iter    = 5000,
-            print_level = 0,
-            solver_type = "minres",
-            prec_type   = "L1JacobiSmoother",
+            type = "iterative",
+            iterative_options = {
+                rel_tol     = 1.0e-8,
+                abs_tol     = 1.0e-12,
+                max_iter    = 5000,
+                print_level = 0,
+                solver_type = "minres",
+                prec_type   = "L1JacobiSmoother",
+            }
         },
 
         nonlinear = {
@@ -42,14 +45,20 @@ nonlinear_solid = {
 
     -- boundary condition parameters
     boundary_conds = {
-        {
-            name = "displacement_x",
+        ['displacement_x'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
+            component = 0,
+            coef = function (x, y, z)
+                return x * 3.0e-2
+            end
         },
-        {
-            name = "displacement_y",
+        ['displacement_y'] = {
             attrs = {2},
+            component = 1,
+            coef = function (x, y, z)
+                return y * -5.0e-2
+            end
         },
     },
 }

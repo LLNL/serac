@@ -78,6 +78,9 @@ int main(int argc, char* argv[])
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
   serac::defineInputFileSchema(inlet, rank);
+  auto writer = std::make_unique<axom::inlet::SphinxDocWriter>("serac_input.rst", inlet.sidreGroup());
+  inlet.registerDocWriter(std::move(writer));
+  inlet.writeDoc();
 
   // Save input values to file
   datastore.getRoot()->save("serac_input.json", "json");
@@ -91,43 +94,9 @@ int main(int argc, char* argv[])
   auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   serac::NonlinearSolid solid_solver(mesh, solid_solver_options);
 
-  // Project the initial and reference configuration functions onto the
-  // appropriate grid functions
-  int dim = mesh->Dimension();
-
-  mfem::VectorFunctionCoefficient defo_coef(dim, serac::initialDeformation);
-
-  mfem::Vector velo(dim);
-  velo = 0.0;
-
-  mfem::VectorConstantCoefficient velo_coef(velo);
-
-  // initialize x_cur, boundary condition, deformation, and
-  // incremental nodal displacment grid functions by projection the
-  // VectorFunctionCoefficient function onto them
-  solid_solver.setDisplacement(defo_coef);
-  solid_solver.setVelocity(velo_coef);
-
-  // define the displacement vector
-  mfem::Vector disp(dim);
-  disp           = 0.0;
-  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
-
-  // loading parameters
-  // define the traction vector
-  auto traction      = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
-  auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
-
-  // Set the boundary condition information
-  for (const auto& bc : solid_solver_options.boundary_conditions) {
-    if (bc.name == "displacement") {
-      solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
-    } else if (bc.name == "traction") {
-      solid_solver.setTractionBCs(bc.attrs, traction_coef);
-    } else {
-      SLIC_WARNING_ROOT(rank, "Ignoring unrecognized boundary condition: " << bc.name);
-    }
-  }
+  // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
+  // auto traction      = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
+  // auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Complete the solver setup
   solid_solver.completeSetup();
@@ -147,11 +116,10 @@ int main(int argc, char* argv[])
     // compute current time
     t = t + dt_real;
 
-    if (rank == 0) {
-      std::cout << "step " << ti << ", t = " << t << std::endl;
-    }
+    SLIC_INFO_ROOT(rank, "step " << ti << ", t = " << t);
 
-    traction_coef->SetScale(t);
+    // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
+    // traction_coef->SetScale(t);
 
     // Solve the Newton system
     solid_solver.advanceTimestep(dt_real);

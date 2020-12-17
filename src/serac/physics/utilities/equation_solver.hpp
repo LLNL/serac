@@ -212,8 +212,8 @@ inline LinearSolverOptions augmentAMGForElasticity(const LinearSolverOptions&   
 // Prototype the specialization
 
 template <>
-struct FromInlet<serac::IterativeSolverOptions> {
-  serac::IterativeSolverOptions operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::LinearSolverOptions> {
+  serac::LinearSolverOptions operator()(const axom::inlet::Table& base);
 };
 
 template <>

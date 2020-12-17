@@ -252,3 +252,4 @@ LLNL-CODE-805541
    sphinx/memory_checking
    sphinx/profiling
    sphinx/docker_info
+   sphinx/input_schema
