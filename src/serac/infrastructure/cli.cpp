@@ -23,6 +23,8 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   CLI::App    app{app_description};
   std::string input_file_path;
   app.add_option("-i, --input_file", input_file_path, "Input file to use.")->required()->check(CLI::ExistingFile);
+  int restart_cycle;
+  auto restart_opt = app.add_option("-c, --restart_cycle", restart_cycle, "Cycle to restart from.")->check(CLI::PositiveNumber);
 
   // Parse the arguments and check if they are good
   try {
@@ -42,6 +44,10 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   // Store found values
   std::unordered_map<std::string, std::string> cli_opts;
   cli_opts.insert({std::string("input_file"), input_file_path});
+  if (restart_opt->count())
+  {
+    cli_opts["restart_cycle"] = std::to_string(restart_cycle);
+  }
 
   return cli_opts;
 }

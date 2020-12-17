@@ -71,9 +71,17 @@ int main(int argc, char* argv[])
   if (search != cli_opts.end()) {
     input_file_path = search->second;
   }
+  std::optional<int> restart_cycle;
+  if (auto cycle = cli_opts.find("restart_cycle"); cycle != cli_opts.end())
+  {
+    restart_cycle = std::stoi(cycle->second);
+  }
 
   // Create DataStore
   axom::sidre::DataStore datastore;
+
+  // Intialize MFEMSidreDataCollection
+  serac::StateManager::initialize(datastore, restart_cycle);
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
@@ -139,7 +147,7 @@ int main(int argc, char* argv[])
 
   bool last_step = false;
 
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "serac");
+  solid_solver.initializeOutput(serac::OutputType::SidreVisIt, "serac");
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {
