@@ -34,13 +34,13 @@ TEST(nonlinear_solid_solver, qs_solve)
   testing::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto  solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
-  Solid solid_solver(mesh, solid_solver_info);
+  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
+  Solid solid_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -56,7 +56,7 @@ TEST(nonlinear_solid_solver, qs_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Pass the BC information to the solver object
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement") {
       solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
     } else if (bc.name == "traction") {
@@ -104,15 +104,15 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   testing::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
+  auto solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
   // FIXME: These should be moved to part of the schema once the contains() logic is updated in Inlet
-  solid_solver_info.solver_params.H_lin_params = DirectSolverParameters{0};
-  Solid solid_solver(mesh, solid_solver_info);
+  solid_solver_options.solver_options.H_lin_options = DirectSolverOptions{0};
+  Solid solid_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -128,7 +128,7 @@ TEST(nonlinear_solid_solver, qs_direct_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Pass the BC information to the solver object
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement") {
       solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
     } else if (bc.name == "traction") {
@@ -176,25 +176,25 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   testing::defineNonlinSolidInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_info = inlet["nonlinear_solid"].get<serac::Solid::InputInfo>();
+  auto solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
   // qs_solve test
-  auto custom_params = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::IterativeSolverParameters>();
-  auto custom_solver = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
-  custom_solver->SetRelTol(custom_params.rel_tol);
-  custom_solver->SetAbsTol(custom_params.abs_tol);
-  custom_solver->SetMaxIter(custom_params.max_iter);
-  custom_solver->SetPrintLevel(custom_params.print_level);
+  auto custom_options = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::IterativeSolverOptions>();
+  auto custom_solver  = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
+  custom_solver->SetRelTol(custom_options.rel_tol);
+  custom_solver->SetAbsTol(custom_options.abs_tol);
+  custom_solver->SetMaxIter(custom_options.max_iter);
+  custom_solver->SetPrintLevel(custom_options.print_level);
 
-  solid_solver_info.solver_params.H_lin_params = CustomSolverParameters{custom_solver.get()};
-  Solid solid_solver(mesh, solid_solver_info);
+  solid_solver_options.solver_options.H_lin_options = CustomSolverOptions{custom_solver.get()};
+  Solid solid_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -210,7 +210,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Pass the BC information to the solver object
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
+  for (const auto& bc : solid_solver_options.boundary_conditions) {
     if (bc.name == "displacement") {
       solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
     } else if (bc.name == "traction") {

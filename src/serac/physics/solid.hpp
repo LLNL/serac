@@ -34,25 +34,25 @@ public:
   /**
    * @brief A timestep method and config for the M solver
    */
-  struct DynamicSolverParameters {
+  struct TimesteppingOptions {
     TimestepMethod             timestepper;
     DirichletEnforcementMethod enforcement_method;
   };
   /**
    * @brief A configuration variant for the various solves
-   * Either quasistatic, or time-dependent with timestep and M params
+   * Either quasistatic, or time-dependent with timestep and M options
    */
-  struct SolverParameters {
-    LinearSolverParameters                 H_lin_params;
-    NonlinearSolverParameters              H_nonlin_params;
-    std::optional<DynamicSolverParameters> dyn_params = std::nullopt;
+  struct SolverOptions {
+    LinearSolverOptions                H_lin_options;
+    NonlinearSolverOptions             H_nonlin_options;
+    std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
   /**
    * @brief Stores all information held in the input file that
    * is used to configure the solver
    */
-  struct InputInfo {
+  struct InputOptions {
     /**
      * @brief Input file parameters specific to this class
      *
@@ -64,14 +64,14 @@ public:
     static void defineInputFileSchema(axom::inlet::Table& table, const bool dynamic = false);
 
     // The order of the field
-    int              order;
-    SolverParameters solver_params;
+    int           order;
+    SolverOptions solver_options;
     // Lame parameters
     double mu;
     double K;
 
     // Boundary condition information
-    std::vector<input::BoundaryConditionInputInfo> boundary_conditions;
+    std::vector<input::BoundaryConditionInputOptions> boundary_conditions;
   };
 
   /**
@@ -81,15 +81,15 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] solver The system solver parameters
    */
-  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
+  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options);
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] mesh The MFEM parallel mesh to solve on
-   * @param[in] info The solver information parsed from the input file
+   * @param[in] options The solver information parsed from the input file
    */
-  Solid(std::shared_ptr<mfem::ParMesh> mesh, const InputInfo& info);
+  Solid(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options);
 
   /**
    * @brief Set displacement boundary conditions
@@ -212,11 +212,6 @@ protected:
   std::unique_ptr<mfem::Operator> residual_;
 
   /**
-   * @brief Configuration for dynamic equation solver
-   */
-  std::optional<LinearSolverParameters> timedep_oper_params_;
-
-  /**
    * @brief The time dependent operator for use with the MFEM ODE solvers
    */
   std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
@@ -316,8 +311,8 @@ protected:
 }  // namespace serac
 
 template <>
-struct FromInlet<serac::Solid::InputInfo> {
-  serac::Solid::InputInfo operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::Solid::InputOptions> {
+  serac::Solid::InputOptions operator()(const axom::inlet::Table& base);
 };
 
 #endif
