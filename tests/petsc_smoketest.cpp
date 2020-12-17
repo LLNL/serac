@@ -96,7 +96,7 @@ PetscErrorCode ComputeRHS(KSP ksp, Vec b, void* ctx)
   PetscFunctionBeginUser;
   ierr = KSPGetDM(ksp, &da);
   CHKERRQ(ierr);
-  ierr = DMDAGetoptions(da, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  ierr = DMDAGetInfo(da, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
   CHKERRQ(ierr);
   uu = user->uu;
   tt = user->tt;
@@ -147,7 +147,7 @@ PetscErrorCode ComputeJacobian(KSP ksp, Mat J, Mat jac, void*)
   PetscFunctionBeginUser;
   ierr = KSPGetDM(ksp, &da);
   CHKERRQ(ierr);
-  ierr = DMDAGetoptions(da, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  ierr = DMDAGetInfo(da, 0, &M, &N, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
   CHKERRQ(ierr);
   Hx    = 1.0 / (PetscReal)(M);
   Hy    = 1.0 / (PetscReal)(N);

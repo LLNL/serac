@@ -101,11 +101,13 @@ mfem::FunctionCoefficient CoefficientInputOptions::constructScalar() const
 
 void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
+  // Vectors are expanded to three arguments in Lua (x, y, z)
+  // and should be returned as a 3-tuple
   table.addFunction("vec_coef", axom::inlet::FunctionType::Vec3D,
-                    {axom::inlet::FunctionType::Vec3D},  // Multiple argument types
+                    {axom::inlet::FunctionType::Vec3D},
                     "The function representing a vector BC coefficient");
   table.addFunction("coef", axom::inlet::FunctionType::Double,
-                    {axom::inlet::FunctionType::Vec3D},  // Multiple argument types
+                    {axom::inlet::FunctionType::Vec3D},
                     "The function representing a scalar BC coefficient");
   table.addInt("component", "The vector component to which the scalar BC should be applied");
 }
