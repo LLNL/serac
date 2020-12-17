@@ -729,8 +729,10 @@ class Mfem(Package):
                 sun_comps += ',nvecparallel,nvecmpiplusx'
             else:
                 sun_comps += ',nvecparhyp,nvecparallel'
+        # SERAC EDIT BEGIN
         if '+cuda' in self.spec:
             sun_comps += ',nveccuda'
+        # SERAC EDIT END
         return sun_comps
 
     @property
