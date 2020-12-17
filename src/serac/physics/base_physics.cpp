@@ -93,7 +93,7 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
     }
 
     case OutputType::SidreVisIt: {
-      dc_ = std::make_unique<axom::sidre::MFEMSidreDataCollection>(root_name_, &state_.front().get().mesh());
+      // dc_ = std::make_unique<axom::sidre::MFEMSidreDataCollection>(root_name_, &state_.front().get().mesh());
       break;
     }
 
@@ -101,7 +101,7 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
       SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
   }
 
-  if ((output_type_ == OutputType::VisIt) || (output_type_ == OutputType::SidreVisIt)) {
+  if (output_type_ == OutputType::VisIt) {
     // Implicitly convert from ref_wrapper
     for (FiniteElementState& state : state_) {
       dc_->RegisterField(state.name(), &state.gridFunc());
@@ -115,11 +115,12 @@ void BasePhysics::outputState() const
     case serac::OutputType::VisIt:
       [[fallthrough]];
     case serac::OutputType::ParaView:
-      [[fallthrough]];
-    case serac::OutputType::SidreVisIt: {
       dc_->SetCycle(cycle_);
       dc_->SetTime(time_);
       dc_->Save();
+      break;
+    case serac::OutputType::SidreVisIt: {
+      StateManager::step(time_, cycle_);
       break;
     }
 

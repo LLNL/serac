@@ -46,15 +46,6 @@ inline bool is_vector_valued(const GeneralCoefficient& coef)
   return std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef);
 }
 
-class StateManager {
-public:
-  static void initialize(axom::sidre::DataStore& ds);
-  static void newState();
-
-private:
-  static std::optional<axom::sidre::MFEMSidreDataCollection> datacoll_;
-};
-
 /**
  * @brief Class for encapsulating the critical MFEM components of a solver
  *
@@ -89,6 +80,11 @@ public:
      * The name of the field encapsulated by the state object
      */
     std::string name = "";
+
+    /**
+     * @brief Whether to allocate memory for the GridFunction
+     */
+    bool allocate_gf = true;
   };
 
   /**
@@ -98,9 +94,14 @@ public:
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementState(mfem::ParMesh& mesh,
-                     Options&&      options = {
-                         .order = 1, .space_dim = {}, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
+  FiniteElementState(mfem::ParMesh& mesh, Options&& options = {.order       = 1,
+                                                               .space_dim   = {},
+                                                               .coll        = {},
+                                                               .ordering    = mfem::Ordering::byVDIM,
+                                                               .name        = "",
+                                                               .allocate_gf = true});
+
+  FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "");
 
   /**
    * Returns the MPI communicator for the state
@@ -203,12 +204,25 @@ private:
   }
 
   // Allows for copy/move assignment
-  MaybeOwner<mfem::ParMesh>                 mesh_;
-  MaybeOwner<mfem::FiniteElementCollection> coll_;
-  MaybeOwner<mfem::ParFiniteElementSpace>   space_;
-  MaybeOwner<mfem::ParGridFunction>         gf_;
-  mfem::HypreParVector                      true_vec_;
-  std::string                               name_ = "";
+  MaybeOwner<mfem::ParMesh>                       mesh_;
+  MaybeOwner<const mfem::FiniteElementCollection> coll_;
+  MaybeOwner<mfem::ParFiniteElementSpace>         space_;
+  MaybeOwner<mfem::ParGridFunction>               gf_;
+  mfem::HypreParVector                            true_vec_;
+  std::string                                     name_ = "";
+};
+
+class StateManager {
+public:
+  static void               initialize(axom::sidre::DataStore& ds, const std::optional<int> cycle_to_load = {});
+  static FiniteElementState newState(mfem::ParMesh& mesh, FiniteElementState::Options&& options = {});
+
+  static void step(const double t, const int cycle);
+  static void reset() { datacoll_.reset(); };
+
+private:
+  static std::optional<axom::sidre::MFEMSidreDataCollection> datacoll_;
+  static bool                                                is_restart_;
 };
 
 }  // namespace serac
