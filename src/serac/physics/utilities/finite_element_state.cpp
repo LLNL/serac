@@ -69,26 +69,26 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::optional<in
 
 FiniteElementState StateManager::newState(mfem::ParMesh& mesh, FiniteElementState::Options&& options)
 {
-  SLIC_ERROR_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
-  std::optional<FiniteElementState> state;
-  auto                              dc_mesh = datacoll_->GetMesh();
+  auto dc_mesh = datacoll_ ? datacoll_->GetMesh() : nullptr;
   if (is_restart_) {
     auto field = datacoll_->GetParField(options.name);
     SLIC_INFO("Restoring field from saved data: " << options.name);
-    state.emplace(*static_cast<mfem::ParMesh*>(dc_mesh), *field, options.name);
-  } else {
+    return {*static_cast<mfem::ParMesh*>(dc_mesh), *field, options.name};
+  } else if (datacoll_) {
     SLIC_INFO("Creating new state for field: " << options.name);
     options.allocate_gf = false;  // We need  to have the datacollection allocate the gridfunction
-    state.emplace(mesh, std::move(options));
+    FiniteElementState state(mesh, std::move(options));
     if (!dc_mesh) {
       datacoll_->SetMesh(&mesh);
     }
-    datacoll_->RegisterField(options.name, &(state->gridFunc()));
+    datacoll_->RegisterField(options.name, &(state.gridFunc()));
     // Now that it's been allocated, we can set it to zero
-    state->gridFunc() = 0.0;
+    state.gridFunc() = 0.0;
+    return state;
+  } else {
+    // If the datcollection was not initialzed, just call the constructor directly
+    return {mesh, std::move(options)};
   }
-  // I think this return is not RVO-eligible, but the move is still relatively cheap
-  return std::move(*state);
 }
 
 void StateManager::step(const double t, const int cycle)

@@ -61,15 +61,15 @@ public:
   // with only the options they care about
   struct Options {
     /**
-     * The polynomial order that should be used for the problem
+     * @brief The polynomial order that should be used for the problem
      */
     int order = 1;
     /**
-     * The vector dimension for the FiniteElementSpace - defaults to the dimension of the mesh
+     * @brief The vector dimension for the FiniteElementSpace - defaults to the dimension of the mesh
      */
     std::optional<int> space_dim = {};
     /**
-     * The FECollection to use - defaults to an H1_FECollection
+     * @brief The FECollection to use - defaults to an H1_FECollection
      */
     std::unique_ptr<mfem::FiniteElementCollection> coll = {};
     /**
@@ -77,7 +77,7 @@ public:
      */
     mfem::Ordering::Type ordering = mfem::Ordering::byVDIM;
     /**
-     * The name of the field encapsulated by the state object
+     * @brief The name of the field encapsulated by the state object
      */
     std::string name = "";
 
@@ -101,6 +101,12 @@ public:
                                                                .name        = "",
                                                                .allocate_gf = true});
 
+  /**
+   * @brief Minimal constructor for a FiniteElementState given an already-existing field
+   * @param[in] mesh The problem mesh (object does not take ownership)
+   * @param[in] gf The field for the state to create (object does not take ownership)
+   * @param[in] name The name of the field
+   */
   FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "");
 
   /**
@@ -188,15 +194,22 @@ public:
   }
 
 private:
+  /**
+   * @brief A helper type for uniform semantics over owning/non-owning pointers
+   */
   template <typename T>
   using MaybeOwner = std::variant<T*, std::unique_ptr<T>>;
 
+  /**
+   * @brief Retrieves a reference to the underlying object in a MaybeOwner
+   * @param[in] obj The object to dereference
+   */
   template <typename T>
   static T& retrieve(MaybeOwner<T>& obj)
   {
     return std::visit([](auto&& ptr) -> T& { return *ptr; }, obj);
   }
-
+  /// @overload
   template <typename T>
   static const T& retrieve(const MaybeOwner<T>& obj)
   {
@@ -204,7 +217,8 @@ private:
   }
 
   // Allows for copy/move assignment
-  MaybeOwner<mfem::ParMesh>                       mesh_;
+  MaybeOwner<mfem::ParMesh> mesh_;
+  // Must be const as FESpaces store a const reference to their FEColls
   MaybeOwner<const mfem::FiniteElementCollection> coll_;
   MaybeOwner<mfem::ParFiniteElementSpace>         space_;
   MaybeOwner<mfem::ParGridFunction>               gf_;
@@ -212,17 +226,49 @@ private:
   std::string                                     name_ = "";
 };
 
+/**
+ * @brief Manages the lifetimes of FEState objects such that restarts are abstracted
+ * from physics modules
+ */
 class StateManager {
 public:
-  static void               initialize(axom::sidre::DataStore& ds, const std::optional<int> cycle_to_load = {});
+  /**
+   * @brief Initializes the StateManager with a sidre DataStore (into which state will be written/read)
+   * @param[in] ds The DataStore to use
+   * @param[in] cycle_to_load The cycle to load - required for restarts
+   */
+  static void initialize(axom::sidre::DataStore& ds, const std::optional<int> cycle_to_load = {});
+
+  /**
+   * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
+   * @param[in] mesh The problem mesh
+   * @param[in] options Configuration options for the FEState, if a new state is created
+   * @see FiniteElementState::FiniteElementState
+   * @note If this is a restart then the options (except for the name) will be ignored
+   */
   static FiniteElementState newState(mfem::ParMesh& mesh, FiniteElementState::Options&& options = {});
 
+  /**
+   * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
+   * @param[in] t The current sim time
+   * @param[in] cycle The current iteration number of the simulation
+   */
   static void step(const double t, const int cycle);
+
+  /**
+   * @brief Resets the underlying global datacollection object
+   */
   static void reset() { datacoll_.reset(); };
 
 private:
+  /**
+   * @brief The datacollection instance
+   */
   static std::optional<axom::sidre::MFEMSidreDataCollection> datacoll_;
-  static bool                                                is_restart_;
+  /**
+   * @brief Whether this simulation has been restarted from another simulation
+   */
+  static bool is_restart_;
 };
 
 }  // namespace serac
