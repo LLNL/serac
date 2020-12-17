@@ -78,6 +78,9 @@ int main(int argc, char* argv[])
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
   serac::defineInputFileSchema(inlet, rank);
+  auto writer = std::make_unique<axom::inlet::SphinxDocWriter>("serac_input.rst", inlet.sidreGroup());
+  inlet.registerDocWriter(std::move(writer));
+  inlet.writeDoc();
 
   // Save input values to file
   datastore.getRoot()->save("serac_input.json", "json");
