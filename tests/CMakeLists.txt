@@ -28,7 +28,8 @@ if (ENABLE_GTEST)
         serac_dtor.cpp
         serac_boundary_cond.cpp
         serac_mesh.cpp
-        mfem_ex9p_blockilu.cpp)
+        mfem_ex9p_blockilu.cpp
+        serac_restart.cpp)
 
     foreach(filename ${solver_tests})
         get_filename_component(test_name ${filename} NAME_WE)

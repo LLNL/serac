@@ -21,6 +21,8 @@
 
 #include "mfem.hpp"
 
+#include "axom/sidre/core/MFEMSidreDataCollection.hpp"
+
 namespace serac {
 
 /**
@@ -43,6 +45,15 @@ inline bool is_vector_valued(const GeneralCoefficient& coef)
 {
   return std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef);
 }
+
+class StateManager {
+public:
+  static void initialize(axom::sidre::DataStore& ds);
+  static void newState();
+
+private:
+  static std::optional<axom::sidre::MFEMSidreDataCollection> datacoll_;
+};
 
 /**
  * @brief Class for encapsulating the critical MFEM components of a solver
@@ -94,28 +105,28 @@ public:
   /**
    * Returns the MPI communicator for the state
    */
-  MPI_Comm comm() const { return space_.GetComm(); }
+  MPI_Comm comm() const { return retrieve(space_).GetComm(); }
 
   /**
    * Returns a non-owning reference to the internal grid function
    */
-  mfem::ParGridFunction&       gridFunc() { return *gf_; }
-  const mfem::ParGridFunction& gridFunc() const { return *gf_; }
+  mfem::ParGridFunction&       gridFunc() { return retrieve(gf_); }
+  const mfem::ParGridFunction& gridFunc() const { return retrieve(gf_); }
 
   /**
    * Returns a non-owning reference to the internal mesh object
    */
-  mfem::ParMesh& mesh() { return mesh_; }
+  mfem::ParMesh& mesh() { return retrieve(mesh_); }
 
   /**
    * Returns a non-owning reference to the internal FESpace
    */
-  mfem::ParFiniteElementSpace& space() { return space_; }
+  mfem::ParFiniteElementSpace& space() { return retrieve(space_); }
 
   /**
    * Returns a non-owning const reference to the internal FESpace
    */
-  const mfem::ParFiniteElementSpace& space() const { return space_; }
+  const mfem::ParFiniteElementSpace& space() const { return retrieve(space_); }
 
   /**
    * Returns a non-owning reference to the vector of true DOFs
@@ -135,31 +146,31 @@ public:
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(*concrete_coef); }, coef);
+    std::visit([this](auto&& concrete_coef) { retrieve(gf_).ProjectCoefficient(*concrete_coef); }, coef);
   }
 
   /**
    * Projects a coefficient (vector or scalar) onto the field
    * @param[in] coef The coefficient to project
    */
-  void project(mfem::Coefficient& coef) { gf_->ProjectCoefficient(coef); }
+  void project(mfem::Coefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
 
   /**
    * Projects a coefficient (vector or scalar) onto the field
    * @param[in] coef The coefficient to project
    */
-  void project(mfem::VectorCoefficient& coef) { gf_->ProjectCoefficient(coef); }
+  void project(mfem::VectorCoefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
 
   /**
    * Initialize the true DOF vector by extracting true DOFs from the internal
    * grid function into the internal true DOF vector
    */
-  void initializeTrueVec() { gf_->GetTrueDofs(true_vec_); }
+  void initializeTrueVec() { retrieve(gf_).GetTrueDofs(true_vec_); }
 
   /**
    * Set the internal grid function using the true DOF values
    */
-  void distributeSharedDofs() { gf_->SetFromTrueDofs(true_vec_); }
+  void distributeSharedDofs() { retrieve(gf_).SetFromTrueDofs(true_vec_); }
 
   /**
    * Utility function for creating a tensor, e.g. mfem::HypreParVector,
@@ -172,17 +183,32 @@ public:
   {
     static_assert(std::is_constructible_v<Tensor, mfem::ParFiniteElementSpace*>,
                   "Tensor must be constructible with a ptr to ParFESpace");
-    return std::make_unique<Tensor>(&space_);
+    return std::make_unique<Tensor>(&retrieve(space_));
   }
 
 private:
+  template <typename T>
+  using MaybeOwner = std::variant<T*, std::unique_ptr<T>>;
+
+  template <typename T>
+  static T& retrieve(MaybeOwner<T>& obj)
+  {
+    return std::visit([](auto&& ptr) -> T& { return *ptr; }, obj);
+  }
+
+  template <typename T>
+  static const T& retrieve(const MaybeOwner<T>& obj)
+  {
+    return std::visit([](auto&& ptr) -> const T& { return *ptr; }, obj);
+  }
+
   // Allows for copy/move assignment
-  std::reference_wrapper<mfem::ParMesh>          mesh_;
-  std::unique_ptr<mfem::FiniteElementCollection> coll_;
-  mfem::ParFiniteElementSpace                    space_;
-  std::unique_ptr<mfem::ParGridFunction>         gf_;
-  mfem::HypreParVector                           true_vec_;
-  std::string                                    name_ = "";
+  MaybeOwner<mfem::ParMesh>                 mesh_;
+  MaybeOwner<mfem::FiniteElementCollection> coll_;
+  MaybeOwner<mfem::ParFiniteElementSpace>   space_;
+  MaybeOwner<mfem::ParGridFunction>         gf_;
+  mfem::HypreParVector                      true_vec_;
+  std::string                               name_ = "";
 };
 
 }  // namespace serac
