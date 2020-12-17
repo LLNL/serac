@@ -34,7 +34,10 @@ public:
    *
    * @param[in] m  HyperelasticModel that will be integrated.
    */
-  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, bool geom_nonlin = true) : material_(m), geom_nonlin_(geom_nonlin) {}
+  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, bool geom_nonlin = true)
+      : material_(m), geom_nonlin_(geom_nonlin)
+  {
+  }
 
   /**
    * @brief Computes the integral of W(Jacobian(Trt)) over a target zone
@@ -91,10 +94,8 @@ private:
    * @brief The geometric nonlinearity flag
    */
   bool geom_nonlin_;
-
 };
 
 }  // namespace serac
 
-#endif 
-
+#endif

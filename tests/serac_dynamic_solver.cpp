@@ -43,7 +43,7 @@ TEST(dynamic_solver, dyn_solve)
   auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
+  auto  solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
   Solid dyn_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
@@ -216,7 +216,7 @@ TEST(dynamic_solver, dyn_linesearch_solve)
   auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
+  auto  solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
   Solid dyn_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
@@ -303,7 +303,7 @@ TEST(dynamic_solver, dyn_amgx_solve)
   auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
+  auto  solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
   Solid dyn_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();

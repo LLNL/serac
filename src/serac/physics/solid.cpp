@@ -301,7 +301,7 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
 
   if (base.contains("dynamics")) {
     Solid::TimesteppingOptions dyn_options;
-    auto                                dynamics = base["dynamics"];
+    auto                       dynamics = base["dynamics"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {

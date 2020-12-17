@@ -11,7 +11,7 @@
 namespace serac {
 
 double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
-                                                           mfem::ElementTransformation& Ttr, const mfem::Vector& elfun)
+                                                            mfem::ElementTransformation& Ttr, const mfem::Vector& elfun)
 {
   int dof = el.GetDof(), dim = el.GetDim();
 
@@ -48,8 +48,8 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
 }
 
 void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::FiniteElement&   el,
-                                                              mfem::ElementTransformation& Ttr,
-                                                              const mfem::Vector& elfun, mfem::Vector& elvect)
+                                                               mfem::ElementTransformation& Ttr,
+                                                               const mfem::Vector& elfun, mfem::Vector& elvect)
 {
   int dof = el.GetDof(), dim = el.GetDim();
 
@@ -90,8 +90,8 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
 }
 
 void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
-                                                            mfem::ElementTransformation& Ttr, const mfem::Vector& elfun,
-                                                            mfem::DenseMatrix& elmat)
+                                                             mfem::ElementTransformation& Ttr,
+                                                             const mfem::Vector& elfun, mfem::DenseMatrix& elmat)
 {
   SERAC_MARK_FUNCTION;
 
