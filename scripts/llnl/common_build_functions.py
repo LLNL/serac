@@ -125,7 +125,9 @@ def log_failure(prefix, msg, timestamp=""):
 
 def assertUberenvExists():
     if not os.path.exists(get_uberenv_path()):
-        print("[ERROR: {0} does not exist]".format(get_uberenv_path()))
+        print("[ERROR: {0} does not exist".format(get_uberenv_path()))
+        print("  run 'git submodule update --init'")
+        print("]")
         sys.exit(1)
 
 
