@@ -10,16 +10,16 @@
 
 #---------------------------------------
 # SYS_TYPE: blueos_3_ppc64le_ib_p9
-# Compiler Spec: clang@ibm_gfortran
+# Compiler Spec: clang@10.0.1
 # CMake executable path: /usr/tce/packages/cmake/cmake-3.18.0/bin/cmake
 #---------------------------------------
 
 #---------------------------------------
 # Compilers
 #---------------------------------------
-set(CMAKE_C_COMPILER "/usr/tce/packages/clang/clang-ibm-2019.10.03-gcc-8.3.1/bin/clang" CACHE PATH "")
+set(CMAKE_C_COMPILER "/usr/tce/packages/clang/clang-ibm-10.0.1-gcc-8.3.1/bin/clang" CACHE PATH "")
 
-set(CMAKE_CXX_COMPILER "/usr/tce/packages/clang/clang-ibm-2019.10.03-gcc-8.3.1/bin/clang++" CACHE PATH "")
+set(CMAKE_CXX_COMPILER "/usr/tce/packages/clang/clang-ibm-10.0.1-gcc-8.3.1/bin/clang++" CACHE PATH "")
 
 set(BLT_EXE_LINKER_FLAGS " -Wl,-rpath,/usr/tce/packages/gcc/gcc-8.3.1/lib" CACHE PATH "Adds a missing libstdc++ rpath")
 
@@ -44,16 +44,16 @@ set(BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE "/usr/tce/packages/gcc/gcc-4.9.3
 #---------------------------------------
 set(ENABLE_MPI "ON" CACHE PATH "")
 
-set(MPI_C_COMPILER "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-ibm-2019.10.03-gcc-8.3.1/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-10.0.1-gcc-8.3.1/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-ibm-2019.10.03-gcc-8.3.1/bin/mpicxx" CACHE PATH "")
+set(MPI_CXX_COMPILER "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-10.0.1-gcc-8.3.1/bin/mpicxx" CACHE PATH "")
 
-set(MPIEXEC_EXECUTABLE "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-ibm-2019.10.03-gcc-8.3.1/bin/mpiexec" CACHE PATH "")
+set(MPIEXEC_EXECUTABLE "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-10.0.1-gcc-8.3.1/bin/mpiexec" CACHE PATH "")
 
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/blueos_3_ppc64le_ib_p9/2020_11_10_13_31_23/clang-ibm_gfortran" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2020_12_17_10_11_32/clang-10.0.1" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 
@@ -80,8 +80,11 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.2.0" CACHE PATH "")
 # Root directory for generated developer tools
 set(DEVTOOLS_ROOT "/usr/WS2/smithdev/devtools/blueos_3_ppc64le_ib_p9/2020_09_02_16_03_10/gcc-8.3.1" CACHE PATH "")
 
-# Docs dont work on blueos machines, there is a prompt that waits for user input
-set(ENABLE_DOCS OFF CACHE BOOL "")
+set(ENABLE_DOCS ON CACHE BOOL "")
+
+set(DOXYGEN_EXECUTABLE "${DEVTOOLS_ROOT}/doxygen-1.8.17/bin/doxygen" CACHE PATH "")
+
+set(SPHINX_EXECUTABLE "/collab/usr/gapps/python/build/spack-coralea.4/opt/spack/linux-rhel7-power8le/gcc-4.9.3/python-3.8.2-vgiumi4ushemn2ywaxcibgo3kw6yvtfj/bin/sphinx-build" CACHE PATH "")
 
 set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-format" CACHE PATH "")
 

@@ -1,0 +1,20 @@
+compilers:
+- compiler:
+    environment:
+      # Temporary workaround: Spack issue #18156
+      set:
+        SPACK_TARGET_ARGS: ""
+    extra_rpaths: []
+    flags:
+      # Required as spack cannot recognize compiler-specific linker
+      # flags in mixed toolchains
+      ldlibs: -lgfortran
+    modules: []
+    operating_system: rhel7
+    paths:
+      cc:  /usr/tce/packages/clang/clang-ibm-10.0.1-gcc-8.3.1/bin/clang
+      cxx: /usr/tce/packages/clang/clang-ibm-10.0.1-gcc-8.3.1/bin/clang++
+      f77: /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran
+      fc:  /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran
+    spec: clang@10.0.1
+    target: ppc64le
