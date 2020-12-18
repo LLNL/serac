@@ -16,12 +16,11 @@ if (ENABLE_GTEST)
         NAME        test_utils
         SOURCES     test_utilities.cpp
         HEADERS     test_utilities.hpp
-        DEPENDS_ON  serac_physics
+        DEPENDS_ON  serac_physics gtest
         )
 
     set(solver_tests
-        serac_dynamic_solver.cpp
-        serac_quasistatic_solver.cpp
+        serac_nonlinear_solid.cpp
         serac_thermal_solver.cpp
         serac_thermal_structural_solver.cpp
         serac_dtor.cpp
@@ -65,7 +64,8 @@ if (ENABLE_GTEST)
         copy_elision.cpp
         mfem_array_std_algo.cpp
         expr_templates.cpp
-        serac_error_handling.cpp)
+        serac_error_handling.cpp
+        serac_input.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)

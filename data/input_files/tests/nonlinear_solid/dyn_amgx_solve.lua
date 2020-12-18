@@ -1,12 +1,17 @@
+-- Comparison information
+expected_x_l2norm = 1.4225
+expected_v_l2norm = 0.2252
+epsilon = 0.0001
+
 -- Simulation time parameters
-t_final = 1.0
-dt      = 0.25
+dt      = 1.0
+t_final = 6.0
 
 main_mesh = {
     -- mesh file
-    mesh = "../meshes/beam-hex.mesh",
+    mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
-    ser_ref_levels = 0,
+    ser_ref_levels = 1,
     par_ref_levels = 0,
 }
 
@@ -16,21 +21,26 @@ nonlinear_solid = {
         linear = {
             type = "iterative",
             iterative_options = {
-                rel_tol     = 1.0e-6,
+                rel_tol     = 1.0e-4,
                 abs_tol     = 1.0e-8,
-                max_iter    = 5000,
+                max_iter    = 500,
                 print_level = 0,
                 solver_type = "gmres",
-                prec_type   = "HypreAMG",
+                prec_type   = "AMGX",
             },
         },
 
         nonlinear = {
-            rel_tol     = 1.0e-2,
-            abs_tol     = 1.0e-4,
+            rel_tol     = 1.0e-4,
+            abs_tol     = 1.0e-8,
             max_iter    = 500,
-            print_level = 0,
+            print_level = 1,
         },
+    },
+
+    dynamics = {
+        timestepper = "AverageAcceleration",
+        enforcement_method = "RateControl",
     },
 
     -- polynomial interpolation order
@@ -40,18 +50,7 @@ nonlinear_solid = {
     mu = 0.25,
     K  = 5.0,
 
-    -- loading parameters
-    traction = {
-        x = 0.0,
-        y = 1.0e-3,
-        z = 0.0,
-    },
-
     -- initial conditions
-    -- initialize x_cur, boundary condition, deformation, and
-    -- incremental nodal displacment grid functions by projecting the
-    -- VectorFunctionCoefficient function onto them
-
     initial_displacement = {
         vec_coef = function (x, y, z)
             return 0, 0, 0
@@ -60,27 +59,22 @@ nonlinear_solid = {
 
     initial_velocity = {
         vec_coef = function (x, y, z)
-            return 0, 0, 0
+            s = 0.1 / 64
+            first = -s * x * x
+            last = s * x * x * (8.0 - x)
+            -- FIXME: How can we detect the dimension?
+            return first, 0, last
         end 
     },
 
     -- boundary condition parameters
     boundary_conds = {
         ['displacement'] = {
+            -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
             vec_coef = function (x, y, z)
                 return 0, 0, 0
-            end
-        },
-        ['traction'] = {
-            attrs = {2},
-            vec_coef = function (x, y, z)
-                return 0, 1.0e-3, 0
-            end
-            -- FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-            -- vec_coef = function (x, y, z, t)
-            --     return 0 * t, 1.0e-3 * t, 0 * t
-            -- end
+            end 
         },
     },
 }

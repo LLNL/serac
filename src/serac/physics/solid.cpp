@@ -70,6 +70,34 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
   setHyperelasticMaterialParameters(options.mu, options.K);
+
+  auto dim = mesh->Dimension();
+  if (options.initial_displacement) {
+    auto deform = options.initial_displacement->constructVector(dim);
+    setDisplacement(deform);
+  }
+
+  if (options.initial_velocity) {
+    auto velo = options.initial_velocity->constructVector(dim);
+    setVelocity(velo);
+  }
+  for (const auto& [name, bc] : options.boundary_conditions) {
+    // FIXME: Better naming for boundary conditions?
+    if (name.find("displacement") != std::string::npos) {
+      if (bc.coef_opts.isVector()) {
+        auto disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+        setDisplacementBCs(bc.attrs, disp_coef);
+      } else {
+        auto disp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+        setDisplacementBCs(bc.attrs, disp_coef, bc.coef_opts.component);
+      }
+    } else if (name.find("traction") != std::string::npos) {
+      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+      setTractionBCs(bc.attrs, trac_coef);
+    } else {
+      SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
+    }
+  }
 }
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
@@ -248,38 +276,30 @@ void Solid::advanceTimestep(double& dt)
 
 Solid::~Solid() {}
 
-void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table, const bool dynamic)
+void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
-  // Polynomial interpolation order
-  table.addInt("order", "Order degree of the finite elements.").defaultValue(1);
+  // Polynomial interpolation order - currently up to 8th order is allowed
+  table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
 
   // neo-Hookean material parameters
   table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
   table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
 
-  auto& traction_table = table.addTable("traction", "Cantilever tip traction vector");
-
-  // loading parameters
-  input::defineVectorInputFileSchema(traction_table);
-
-  traction_table.getField("x").defaultValue(0.0);
-  traction_table.getField("y").defaultValue(1.0e-3);
-  traction_table.getField("z").defaultValue(0.0);
-
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
 
-  // See comment in header - schema definitions should never be guarded by a conditional.
-  // This is a short-term patch.
-  if (dynamic) {
-    auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
-    dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
-    dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
-  }
+  auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
+  dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
+  dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
-  auto& bc_table = table.addGenericArray("boundary_conds", "Boundary condition information");
+  auto& bc_table = table.addGenericDictionary("boundary_conds", "Table of boundary conditions");
   serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
+
+  auto& init_displ = table.addTable("initial_displacement", "Coefficient for initial condition");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(init_displ);
+  auto& init_velo = table.addTable("initial_velocity", "Coefficient for initial condition");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
 }
 
 }  // namespace serac
@@ -296,7 +316,7 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
 
   // Solver parameters
   auto stiffness_solver                  = base["stiffness_solver"];
-  result.solver_options.H_lin_options    = stiffness_solver["linear"].get<serac::IterativeSolverOptions>();
+  result.solver_options.H_lin_options    = stiffness_solver["linear"].get<serac::LinearSolverOptions>();
   result.solver_options.H_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
@@ -326,10 +346,14 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
   result.mu = base["mu"];
   result.K  = base["K"];
 
-  auto bdr_map = base["boundary_conds"].get<std::unordered_map<int, serac::input::BoundaryConditionInputOptions>>();
-  for (const auto& [idx, val] : bdr_map) {
-    result.boundary_conditions.push_back(val);
-  }
+  result.boundary_conditions =
+      base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
 
+  if (base.contains("initial_displacement")) {
+    result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputOptions>();
+  }
+  if (base.contains("initial_velocity")) {
+    result.initial_velocity = base["initial_velocity"].get<serac::input::CoefficientInputOptions>();
+  }
   return result;
 }

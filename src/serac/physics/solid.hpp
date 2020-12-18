@@ -13,6 +13,8 @@
 #ifndef NONLIN_SOLID
 #define NONLIN_SOLID
 
+#include <optional>
+
 #include "mfem.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/base_physics.hpp"
@@ -57,11 +59,8 @@ public:
      * @brief Input file parameters specific to this class
      *
      * @param[in] table Inlet's SchemaCreator that input files will be added to
-     * @param[in] dynamic Whether the solid solver will be dynamic
      **/
-    // FIXME: The dynamic parameter can be removed once the enhanced axom::inlet::Proxy::contains
-    // logic is merged in
-    static void defineInputFileSchema(axom::inlet::Table& table, const bool dynamic = false);
+    static void defineInputFileSchema(axom::inlet::Table& table);
 
     // The order of the field
     int           order;
@@ -71,7 +70,11 @@ public:
     double K;
 
     // Boundary condition information
-    std::vector<input::BoundaryConditionInputOptions> boundary_conditions;
+    std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
+
+    // Initial conditions for displacement and velocity
+    std::optional<input::CoefficientInputOptions> initial_displacement;
+    std::optional<input::CoefficientInputOptions> initial_velocity;
   };
 
   /**
