@@ -16,7 +16,7 @@ namespace serac {
 
 namespace test_utils {
 
-void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet)
+void defineSolidInputFileSchema(axom::inlet::Inlet& inlet)
 {
   // Simulation time parameters
   inlet.addDouble("dt", "Time step.");
@@ -33,7 +33,7 @@ void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet)
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
   // FIXME: Remove once Inlet's "contains" logic improvements are merged
-  serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table, dynamic);
+  serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
   if (!inlet.verify()) {
@@ -41,7 +41,7 @@ void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet)
   }
 }
 
-void runNonlinSolidTest(const std::string& input_file)
+void runSolidTest(const std::string& input_file)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -49,7 +49,7 @@ void runNonlinSolidTest(const std::string& input_file)
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  defineNonlinSolidInputFileSchema(inlet);
+  defineSolidInputFileSchema(inlet);
 
   // Build the mesh
   auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
@@ -57,8 +57,8 @@ void runNonlinSolidTest(const std::string& input_file)
   auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  NonlinearSolid solid_solver(mesh, solid_solver_options);
+  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
+  Solid solid_solver(mesh, solid_solver_options);
 
   const bool is_dynamic = inlet["nonlinear_solid"].contains("dynamics");
 

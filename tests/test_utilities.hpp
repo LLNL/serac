@@ -10,9 +10,9 @@ namespace serac {
 
 namespace test_utils {
 
-void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet);
+void defineSolidInputFileSchema(axom::inlet::Inlet& inlet);
 
-void runNonlinSolidTest(const std::string& input_file);
+void runSolidTest(const std::string& input_file);
 
 }  // end namespace test_utils
 
