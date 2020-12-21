@@ -92,10 +92,9 @@ class Serac(CMakePackage, CudaPackage):
             description='Build the glvis visualization executable')
     variant('petsc', default=False,
             description='Enable PETSC')
-    # netcdf variant commented out until a bug in the spack concretizer is fixed
-    #variant('netcdf', default=True,
-    #        description='Enable Cubit/Genesis reader')
-    variant('sundials', default=False,
+    variant('netcdf', default=True,
+           description='Enable Cubit/Genesis reader')
+    variant('sundials', default=True,
             description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
     variant('umpire',   default=False,
             description="Build with portable memory access support")
@@ -123,7 +122,7 @@ class Serac(CMakePackage, CudaPackage):
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
-    #depends_on("mfem+netcdf", when="+netcdf")
+    depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
     depends_on("mfem+sundials", when="+sundials")
     depends_on("sundials~shared", when="+sundials")
@@ -132,8 +131,8 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("hdf5+hl@1.8.21~shared")
 
     # Axom enables RAJA/Umpire by default
-    # depends_on("axom~raja", when="~raja")
-    # depends_on("axom~umpire", when="~umpire")
+    depends_on("axom~raja", when="~raja")
+    depends_on("axom~umpire", when="~umpire")
     depends_on("raja~openmp~shared", when="+raja")
     depends_on("umpire~shared", when="+umpire")
 

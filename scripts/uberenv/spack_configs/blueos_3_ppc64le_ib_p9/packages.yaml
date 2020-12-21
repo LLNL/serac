@@ -68,10 +68,10 @@ packages:
     buildable: false
   spectrum-mpi:
     externals:
-      - spec: spectrum-mpi@release%clang@upstream_gfortran
+      - spec: spectrum-mpi@10.3.1.03%clang@9.0.0
         prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-upstream-2019.08.15
-      - spec: spectrum-mpi@release%clang@ibm_gfortran
-        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-ibm-2019.10.03-gcc-8.3.1
+      # - spec: spectrum-mpi@10.3.1.03%clang@ibm_gfortran
+      #   prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-ibm-2019.10.03-gcc-8.3.1
 
   # System level packages to not build
   autoconf:

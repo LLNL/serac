@@ -23,7 +23,7 @@ compilers:
       # to trip superlu-dist's conditional removal of underscores
       f77: /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran
       fc: /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran
-    spec: clang@upstream_gfortran
+    spec: clang@9.0.0
     target: ppc64le
 
 # This compiler is only present on rzansel as a proof of concept

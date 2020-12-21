@@ -109,7 +109,7 @@ class Mfem(Package):
             description='Enable OpenMP parallelism')
     variant('cuda', default=False, description='Enable CUDA support')
     variant('cuda_arch', default='sm_60',
-            description='CUDA architecture to compile for')
+            description='CUDA architecture to compile for', values=['sm_' + val for val in CudaPackage.cuda_arch_values])
     variant('occa', default=False, description='Enable OCCA backend')
     variant('raja', default=False, description='Enable RAJA backend')
     variant('libceed', default=False, description='Enable libCEED backend')
@@ -205,6 +205,7 @@ class Mfem(Package):
     depends_on('sundials@2.7.0+mpi+hypre', when='@:3.3.0+sundials+mpi')
     depends_on('sundials@2.7.0:', when='@3.3.2:+sundials~mpi')
     depends_on('sundials@2.7.0:+mpi+hypre', when='@3.3.2:+sundials+mpi')
+    depends_on('sundials@2.7.0:+cuda', when='+sundials+cuda')
     depends_on('sundials@5.0.0:', when='@4.0.1-xsdk:+sundials~mpi')
     depends_on('sundials@5.0.0:+mpi+hypre', when='@4.0.1-xsdk:+sundials+mpi')
     depends_on('pumi', when='+pumi~shared')
@@ -768,6 +769,8 @@ class Mfem(Package):
           sun_comps += ',nvecparallel,nvecmpiplusx'
         else:
           sun_comps += ',nvecparhyp,nvecparallel'
+      if '+cuda' in self.spec:
+        sun_comps += ',nveccuda'
       return sun_comps
 
     @property
