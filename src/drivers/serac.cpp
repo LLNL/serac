@@ -42,11 +42,11 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
 
   auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
-  serac::mesh::InputInfo::defineInputFileSchema(mesh_table);
+  serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  serac::NonlinearSolid::InputInfo::defineInputFileSchema(solid_solver_table);
+  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
   if (!inlet.verify()) {
@@ -86,56 +86,25 @@ int main(int argc, char* argv[])
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
   serac::defineInputFileSchema(inlet, rank);
+  auto writer = std::make_unique<axom::inlet::SphinxDocWriter>("serac_input.rst", inlet.sidreGroup());
+  inlet.registerDocWriter(std::move(writer));
+  inlet.writeDoc();
 
   // Save input values to file
   datastore.getRoot()->save("serac_input.json", "json");
 
   // Build the mesh
-  auto mesh_info      = inlet["main_mesh"].get<serac::mesh::InputInfo>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_info.relative_mesh_file_name, input_file_path);
-  auto mesh           = serac::buildMeshFromFile(full_mesh_path, mesh_info.ser_ref_levels, mesh_info.par_ref_levels);
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto                  solid_solver_info = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputInfo>();
-  serac::NonlinearSolid solid_solver(mesh, solid_solver_info);
+  auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  serac::NonlinearSolid solid_solver(mesh, solid_solver_options);
 
-  // Project the initial and reference configuration functions onto the
-  // appropriate grid functions
-  int dim = mesh->Dimension();
-
-  mfem::VectorFunctionCoefficient defo_coef(dim, serac::initialDeformation);
-
-  mfem::Vector velo(dim);
-  velo = 0.0;
-
-  mfem::VectorConstantCoefficient velo_coef(velo);
-
-  // initialize x_cur, boundary condition, deformation, and
-  // incremental nodal displacment grid functions by projection the
-  // VectorFunctionCoefficient function onto them
-  solid_solver.setDisplacement(defo_coef);
-  solid_solver.setVelocity(velo_coef);
-
-  // define the displacement vector
-  mfem::Vector disp(dim);
-  disp           = 0.0;
-  auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
-
-  // loading parameters
-  // define the traction vector
-  auto traction      = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
-  auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
-
-  // Set the boundary condition information
-  for (const auto& bc : solid_solver_info.boundary_conditions) {
-    if (bc.name == "displacement") {
-      solid_solver.setDisplacementBCs(bc.attrs, disp_coef);
-    } else if (bc.name == "traction") {
-      solid_solver.setTractionBCs(bc.attrs, traction_coef);
-    } else {
-      SLIC_WARNING_ROOT(rank, "Ignoring unrecognized boundary condition: " << bc.name);
-    }
-  }
+  // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
+  // auto traction      = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
+  // auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Complete the solver setup
   solid_solver.completeSetup();
@@ -155,11 +124,10 @@ int main(int argc, char* argv[])
     // compute current time
     t = t + dt_real;
 
-    if (rank == 0) {
-      std::cout << "step " << ti << ", t = " << t << std::endl;
-    }
+    SLIC_INFO_ROOT(rank, "step " << ti << ", t = " << t);
 
-    traction_coef->SetScale(t);
+    // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
+    // traction_coef->SetScale(t);
 
     // Solve the Newton system
     solid_solver.advanceTimestep(dt_real);
