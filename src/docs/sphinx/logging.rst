@@ -57,10 +57,6 @@ SLIC has 4 message levels to help indicate the important of messages. Descriptio
  * Warning - message indicating that something has gone wrong but not enough to end the simulation
  * Error - message indicating a non-recoverable error has occurred
 
-Before every warning and error, ``serac::logger::Flush()`` should be called to clarify what happened
-leading up to the message.  After an error has occured ``serac::ExitGracefully(bool error=false)`` should
-be called because we have turned off the abort on errors SLIC functionality.
-
 Logging Macros
 --------------
 

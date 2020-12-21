@@ -66,3 +66,8 @@ set(MFEM_DIR "${TPL_ROOT}/mfem-4.2.0" CACHE PATH "")
 #------------------------------------------------------------------------------
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
+
+# Clang tools disabled due to disabled devtools
+set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
+
+set(ENABLE_CLANGTIDY OFF CACHE BOOL "")

@@ -9,7 +9,7 @@
 #include <memory>
 
 #include "mfem.hpp"
-#include "physics/utilities/boundary_condition_manager.hpp"
+#include "serac/physics/utilities/boundary_condition_manager.hpp"
 
 namespace serac {
 

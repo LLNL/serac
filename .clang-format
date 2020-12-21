@@ -22,4 +22,5 @@ BraceWrapping:
   SplitEmptyRecord: true
   SplitEmptyNamespace: true
 DerivePointerAlignment: false
+SortIncludes: false
 PointerAlignment: Left

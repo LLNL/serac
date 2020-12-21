@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "numerics/mesh_utils.hpp"
+#include "serac/numerics/mesh_utils.hpp"
 
 TEST(meshgen, successful_creation)
 {

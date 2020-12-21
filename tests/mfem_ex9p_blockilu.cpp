@@ -48,8 +48,8 @@
 #include <iostream>
 
 #include "mfem.hpp"
-#include "physics/utilities/equation_solver.hpp"
-#include "serac_config.hpp"
+#include "serac/physics/utilities/equation_solver.hpp"
+#include "serac/serac_config.hpp"
 
 using namespace std;
 using namespace mfem;
@@ -116,13 +116,12 @@ public:
       : M(M_),
         K(K_),
         A(NULL),
-        linear_solver(M.GetComm(),
-                      serac::IterativeSolverParameters{.rel_tol     = 1e-9,
-                                                       .abs_tol     = 0.0,
-                                                       .print_level = 0,
-                                                       .max_iter    = 100,
-                                                       .lin_solver  = serac::LinearSolver::GMRES,
-                                                       .prec        = serac::BlockILUPrec{fes.GetFE(0)->GetDof()}}),
+        linear_solver(M.GetComm(), serac::IterativeSolverOptions{.rel_tol     = 1e-9,
+                                                                 .abs_tol     = 0.0,
+                                                                 .print_level = 0,
+                                                                 .max_iter    = 100,
+                                                                 .lin_solver  = serac::LinearSolver::GMRES,
+                                                                 .prec = serac::BlockILUPrec{fes.GetFE(0)->GetDof()}}),
         dt(-1.0)
   {
     linear_solver.linearSolver().iterative_mode = false;

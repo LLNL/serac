@@ -1,9 +1,0 @@
-{
-"package_name" : "serac",
-"package_version" : "develop",
-"package_final_phase" : "hostconfig",
-"package_source_dir" : "../..",
-"spack_url": "https://github.com/spack/spack",
-"spack_commit": "05848c87c5e4a1505746643c2efd34703e438988",
-"spack_activate" : {}
-}

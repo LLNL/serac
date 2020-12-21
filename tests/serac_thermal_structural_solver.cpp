@@ -8,11 +8,11 @@
 
 #include <fstream>
 
-#include "coefficients/stdfunction_coefficient.hpp"
 #include "mfem.hpp"
-#include "numerics/mesh_utils.hpp"
-#include "physics/thermal_solid.hpp"
-#include "serac_config.hpp"
+#include "serac/coefficients/coefficient_extensions.hpp"
+#include "serac/numerics/mesh_utils.hpp"
+#include "serac/physics/thermal_solid.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 
@@ -30,14 +30,15 @@ TEST(dynamic_solver, dyn_solve)
   // define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
-  auto deform = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector& x, mfem::Vector& y) {
-    y    = x;
-    y(1) = y(1) + x(0) * 0.01;
+  auto deform = std::make_shared<mfem::VectorFunctionCoefficient>(dim, [](const mfem::Vector& x, mfem::Vector& y) {
+    y    = 0.0;
+    y(1) = x(0) * 0.01;
   });
 
-  auto velo = std::make_shared<StdFunctionVectorCoefficient>(dim, [](mfem::Vector&, mfem::Vector& v) { v = 0.0; });
+  auto velo =
+      std::make_shared<mfem::VectorFunctionCoefficient>(dim, [](const mfem::Vector&, mfem::Vector& v) { v = 0.0; });
 
-  auto temp = std::make_shared<StdFunctionCoefficient>([](mfem::Vector& x) {
+  auto temp = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) {
     double temp = 2.0;
     if (x(0) < 1.0) {
       temp = 5.0;
@@ -57,38 +58,30 @@ TEST(dynamic_solver, dyn_solve)
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
 
   // Use the same configuration as the solid solver
-  const IterativeSolverParameters default_dyn_linear_params = {.rel_tol     = 1.0e-4,
-                                                               .abs_tol     = 1.0e-8,
-                                                               .print_level = 0,
-                                                               .max_iter    = 500,
-                                                               .lin_solver  = LinearSolver::GMRES,
-                                                               .prec        = HypreBoomerAMGPrec{}};
+  const IterativeSolverOptions default_dyn_linear_options = {.rel_tol     = 1.0e-4,
+                                                             .abs_tol     = 1.0e-8,
+                                                             .print_level = 0,
+                                                             .max_iter    = 500,
+                                                             .lin_solver  = LinearSolver::GMRES,
+                                                             .prec        = HypreBoomerAMGPrec{}};
 
-  auto therm_M_params = default_dyn_linear_params;
-  auto therm_T_params = default_dyn_linear_params;
-  therm_M_params.prec = HypreSmootherPrec{};
-  therm_T_params.prec = HypreSmootherPrec{};
+  auto therm_M_options = default_dyn_linear_options;
+  auto therm_T_options = default_dyn_linear_options;
+  therm_M_options.prec = HypreSmootherPrec{};
+  therm_T_options.prec = HypreSmootherPrec{};
 
-  ThermalConduction::SolverParameters therm_params =
-      ThermalConduction::DynamicSolverParameters{TimestepMethod::SDIRK33, therm_M_params, therm_T_params};
+  auto therm_options = ThermalConduction::defaultDynamicOptions();
 
-  const IterativeSolverParameters default_dyn_oper_linear_params = {
-      .rel_tol     = 1.0e-4,
-      .abs_tol     = 1.0e-8,
-      .print_level = 0,
-      .max_iter    = 500,
-      .lin_solver  = LinearSolver::GMRES,
-      .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
-
-  const NonlinearSolverParameters default_dyn_nonlinear_params = {
+  const NonlinearSolverOptions default_dyn_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
-  const NonlinearSolid::SolverParameters default_dynamic = {
-      default_dyn_linear_params, default_dyn_nonlinear_params,
-      NonlinearSolid::DynamicSolverParameters{TimestepMethod::SDIRK33, default_dyn_oper_linear_params}};
+  const NonlinearSolid::SolverOptions default_dynamic = {
+      default_dyn_linear_options, default_dyn_nonlinear_options,
+      NonlinearSolid::TimesteppingOptions{TimestepMethod::AverageAcceleration,
+                                          DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
-  ThermalSolid ts_solver(1, pmesh, therm_params, default_dynamic);
+  ThermalSolid ts_solver(1, pmesh, therm_options, default_dynamic);
   ts_solver.SetDisplacementBCs(ess_bdr, deform);
   ts_solver.SetTractionBCs(trac_bdr, traction_coef);
   ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
@@ -143,9 +136,9 @@ TEST(dynamic_solver, dyn_solve)
   double x_norm    = ts_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
   double temp_norm = ts_solver.temperature().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(13.28049, x_norm, 0.001);
+  EXPECT_NEAR(0.146228, x_norm, 0.001);
   EXPECT_NEAR(0.005227, v_norm, 0.001);
-  EXPECT_NEAR(6.491872, temp_norm, 0.001);
+  EXPECT_NEAR(6.494477, temp_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

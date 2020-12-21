@@ -9,7 +9,7 @@
  file: common_build_functions.py
 
  description: 
-  helpers for installing serac tpls on llnl lc systems.
+  helpers for installing src and tpls on llnl lc systems.
 
 """
 
@@ -123,13 +123,23 @@ def log_failure(prefix, msg, timestamp=""):
     json.dump(info,open(pjoin(prefix,"failed.json"),"w"),indent=2)
 
 
+def assertUberenvExists():
+    if not os.path.exists(get_uberenv_path()):
+        print("[ERROR: {0} does not exist".format(get_uberenv_path()))
+        print("  run 'git submodule update --init'")
+        print("]")
+        sys.exit(1)
+
+
 def uberenv_create_mirror(prefix, project_file, mirror_path):
     """
     Calls uberenv to create a spack mirror.
     """
-    cmd  = "python scripts/uberenv/uberenv.py --create-mirror -k "
+    assertUberenvExists()
+    cmd  = "python {0} --create-mirror -k ".format(get_uberenv_path())
     cmd += "--prefix=\"{0}\" --mirror=\"{1}\" ".format(prefix, mirror_path)
-    cmd += "--project-json=\"{0}\" ".format(project_file)
+    if project_file:
+        cmd += "--project-json=\"{0}\" ".format(project_file)
     res = sexe(cmd, echo=True, error_prefix="WARNING:")
     print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
     print("[ It is expected for 'spack --create-mirror' to throw warnings.                ]")
@@ -142,10 +152,12 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     """
     Calls uberenv to install tpls for a given spec to given prefix.
     """
-    cmd  = "python scripts/uberenv/uberenv.py -k "
+    assertUberenvExists()
+    cmd  = "python {0} -k ".format(get_uberenv_path())
     cmd += "--prefix=\"{0}\" --spec=\"{1}\" ".format(prefix, spec)
-    cmd += "--project-json=\"{0}\" ".format(project_file)
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
+    if project_file:
+        cmd += "--project-json=\"{0}\" ".format(project_file)
     cmd += "--spack-config-dir=\"{0}\" ".format(config_dir)
         
     spack_tpl_build_log = pjoin(prefix,"output.log.spack.tpl.build.%s.txt" % spec.replace(" ", "_"))
@@ -221,7 +233,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
 
     return 0
 
-def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
+def build_and_test_host_config(test_root,host_config, report_to_stdout = False, extra_cmake_options = ""):
     host_config_root = get_host_config_root(host_config)
 
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
@@ -235,7 +247,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
     print("[starting configure of %s]" % host_config)
     print("[log file: %s]" % cfg_output_file)
     # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
-    res = sexe("python config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s" % (build_dir, host_config, install_dir),
+    res = sexe("python config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s %s" % (build_dir, host_config, install_dir, extra_cmake_options),
                output_file = cfg_output_file,
                echo=True)
     
@@ -318,7 +330,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False):
     return 0
 
 
-def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False):
+def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, report_to_stdout = False, extra_cmake_options = ""):
     host_configs = get_host_configs_for_current_machine(prefix, use_generated_host_configs)
     if len(host_configs) == 0:
         log_failure(prefix,"[ERROR: No host configs found at %s]" % prefix)
@@ -337,7 +349,7 @@ def build_and_test_host_configs(prefix, timestamp, use_generated_host_configs, r
         build_dir = get_build_dir(test_root, host_config)
 
         start_time = time.time()
-        if build_and_test_host_config(test_root, host_config, report_to_stdout) == 0:
+        if build_and_test_host_config(test_root, host_config, report_to_stdout, extra_cmake_options) == 0:
             ok.append(host_config)
             log_success(build_dir, "[Success: Built host-config: {0}]".format(host_config), timestamp)
         else:
@@ -400,8 +412,7 @@ def set_group_and_perms(directory):
 
 
 def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, mirror_location = ''):
-    project_file = "scripts/uberenv/project.json"
-    config_dir = "scripts/uberenv/spack_configs/{0}".format(get_system_type())
+    config_dir = "scripts/spack/configs/{0}".format(get_system_type())
 
     if spec:
         specs = [spec]
@@ -428,7 +439,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     prefix = pjoin(prefix, timestamp)
 
     # create a mirror
-    uberenv_create_mirror(prefix, project_file, mirror_dir)
+    uberenv_create_mirror(prefix, "", mirror_dir)
     # write info about this build
     write_build_info(pjoin(prefix, "info.json"))
 
@@ -444,7 +455,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     for spec in specs:
         start_time = time.time()
         fullspec = "{0}".format(spec)
-        res = uberenv_build(prefix, fullspec, project_file, config_dir, mirror_dir)
+        res = uberenv_build(prefix, fullspec, "", config_dir, mirror_dir)
         end_time = time.time()
         print("[build time: {0}]".format(convertSecondsToReadableTime(end_time - start_time)))
         if res != 0:
@@ -464,13 +475,13 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
 
     src_build_failed = False
     if not tpl_build_failed:
-        # build the serac against the new tpls
+        # build the src against the new tpls
         res = build_and_test_host_configs(prefix, timestamp, True, report_to_stdout)
         if res != 0:
-            print("[ERROR: build and test of serac vs tpls test failed.]\n")
+            print("[ERROR: Build and test of src vs tpls test failed.]\n")
             src_build_failed = True
         else:
-            print("[SUCCESS: build and test of serac vs tpls test passed.]\n")
+            print("[SUCCESS: Build and test of src vs tpls test passed.]\n")
  
     # set proper perms for installed tpls
     set_group_and_perms(prefix)
@@ -484,8 +495,8 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
 
 def build_devtools(builds_dir, timestamp):
     sys_type = get_system_type()
-    config_dir = "scripts/uberenv/spack_configs/{0}/devtools".format(sys_type)
-    project_file = "scripts/uberenv/devtools.json"
+    config_dir = "scripts/spack/configs/{0}/devtools".format(sys_type)
+    project_file = "scripts/spack/devtools.json"
 
     if "toss_3" in sys_type:
         compiler_spec = "%gcc@8.1.0"
@@ -543,7 +554,7 @@ def build_devtools(builds_dir, timestamp):
 
 def get_specs_for_current_machine():
     repo_dir = get_repo_dir()
-    specs_json_path = pjoin(repo_dir, "scripts/uberenv/specs.json")
+    specs_json_path = pjoin(repo_dir, "scripts/spack/specs.json")
 
     with open(specs_json_path, 'r') as f:
         specs_json = json.load(f)
@@ -591,7 +602,8 @@ def get_repo_dir():
 
 
 def get_build_and_test_root(prefix, timestamp):
-    return pjoin(prefix,"_serac_build_and_test_%s" % timestamp)
+    dirname = "_{0}_build_and_test_{1}".format(get_project_name(), timestamp)
+    return pjoin(prefix, dirname)
 
 
 def get_machine_name():
@@ -624,7 +636,11 @@ def get_shared_mirror_dir():
 
 
 def get_shared_libs_dir():
-    return pjoin(get_shared_base_dir(), "libs")
+    return pjoin(get_shared_base_dir(), "libs", get_project_name())
+
+
+def get_uberenv_path():
+    return "scripts/uberenv/uberenv.py"
 
 
 def on_rz():
@@ -632,6 +648,24 @@ def on_rz():
     if machine_name.startswith("rz"):
         return True
     return False
+
+
+def get_script_dir():
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+_project_name = ""
+def get_project_name():
+    global _project_name
+    if not _project_name:
+        uberenv_config_path = os.path.abspath(os.path.join(get_script_dir(), "../../.uberenv_config.json"))
+        _project_name = "UNKNOWN_PROJECT"
+        if os.path.exists(uberenv_config_path):
+            with open(uberenv_config_path) as json_file:
+                data = json.load(json_file)
+                if "package_name" in data:
+                    _project_name = data["package_name"]
+    return _project_name
 
 
 def convertSecondsToReadableTime(seconds):
