@@ -126,11 +126,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     if(TRIBOL_DIR)
         serac_assert_is_directory(VARIABLE_NAME TRIBOL_DIR)
 
-        # This gets left in the cache if you re-run cmake
-        if(NOT TARGET tribol AND TRIBOL_FOUND)
-            unset(TRIBOL_FOUND CACHE)
-        endif()
-
         find_package(tribol REQUIRED
                             NO_DEFAULT_PATH 
                             PATHS ${TRIBOL_DIR}/lib/cmake)
@@ -146,8 +141,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set_property(TARGET tribol
                      APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                      ${TRIBOL_INCLUDE_DIR})
-
-        set(TRIBOL_FOUND TRUE CACHE BOOL "")
     else()
         message(STATUS "Tribol support is OFF")
         set(TRIBOL_FOUND FALSE CACHE BOOL "")
