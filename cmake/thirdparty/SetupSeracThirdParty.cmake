@@ -143,7 +143,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                      ${TRIBOL_INCLUDE_DIR})
     else()
         message(STATUS "Tribol support is OFF")
-        set(TRIBOL_FOUND FALSE CACHE BOOL "")
+        set(TRIBOL_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
@@ -153,9 +153,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
 
         find_package(caliper REQUIRED NO_DEFAULT_PATH 
-                      PATHS ${CALIPER_DIR})
+                     PATHS ${CALIPER_DIR})
         message(STATUS "Caliper support is ON")
-        set(CALIPER_FOUND TRUE CACHE BOOL "")
+        set(CALIPER_FOUND TRUE)
 
         # Set the include directories as Caliper does not completely
         # configure the "caliper" target
@@ -163,7 +163,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             INTERFACE_INCLUDE_DIRECTORIES ${caliper_INCLUDE_PATH})
     else()
         message(STATUS "Caliper support is OFF")
-        set(CALIPER_FOUND FALSE CACHE BOOL "")
+        set(CALIPER_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
@@ -173,10 +173,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
         include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
         message(STATUS "PETSc support is ON")
-        set(PETSC_FOUND TRUE CACHE BOOL "")
+        set(PETSC_FOUND TRUE)
     else()
         message(STATUS "PETSc support is OFF")
-        set(PETSC_FOUND FALSE CACHE BOOL "")
+        set(PETSC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
