@@ -142,9 +142,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                      APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                      ${TRIBOL_INCLUDE_DIR})
     else()
-        message(STATUS "Tribol support is OFF")
         set(TRIBOL_FOUND FALSE)
     endif()
+    
+    message(STATUS "Tribol Support is " ${TRIBOL_FOUND})
+
 
     #------------------------------------------------------------------------------
     # Caliper
