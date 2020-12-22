@@ -142,10 +142,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                      APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                      ${TRIBOL_INCLUDE_DIR})
     else()
-        set(TRIBOL_FOUND FALSE)
+        set(TRIBOL_FOUND OFF)
     endif()
     
-    message(STATUS "Tribol Support is " ${TRIBOL_FOUND})
+    message(STATUS "Tribol support is " ${TRIBOL_FOUND})
 
 
     #------------------------------------------------------------------------------
