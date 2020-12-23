@@ -60,7 +60,7 @@ class Axom(CMakePackage, CudaPackage):
     version('develop', branch='develop', submodules=True)
 
     # SERAC EDIT START
-    version('0.4.0serac', commit='85a67b8489947965a32a50312c559f44c9f7c880', submodules="True")
+    version('0.4.0serac', commit='27d8eb464143ff21b10654dbc14c7fd4dd8ce6fb', submodules="True")
     # SERAC EDIT END
 
     version('0.4.0', tag='v0.4.0', submodules=True)
@@ -251,7 +251,13 @@ class Axom(CMakePackage, CudaPackage):
             flags = ""
             for _libpath in [libdir, libdir + "64"]:
                 if os.path.exists(_libpath):
-                    flags += " -Wl,-rpath,{0}".format(_libpath)
+                    # SERAC EDIT BEGIN - BLT_EXE_LINKER_FLAGS aren't filtered
+                    # for the Wl/Xlinker incompability
+                    if "+cuda" in spec:
+                        flags += " -Xlinker -rpath -Xlinker {0}".format(_libpath)
+                    else:
+                        flags += " -Wl,-rpath,{0}".format(_libpath)
+                    # SERAC EDIT END
             description = ("Adds a missing libstdc++ rpath")
             if flags:
                 cfg.write(cmake_cache_entry("BLT_EXE_LINKER_FLAGS", flags,
@@ -488,7 +494,13 @@ class Axom(CMakePackage, CudaPackage):
                                       os.path.dirname(f_compiler)), "lib")
                 description = ("Adds a missing rpath for libraries "
                                "associated with the fortran compiler")
-                linker_flags = "${BLT_EXE_LINKER_FLAGS} -Wl,-rpath," + libdir
+                # SERAC EDIT BEGIN - BLT_EXE_LINKER_FLAGS aren't filtered
+                # for the Wl/Xlinker incompability
+                if "+cuda" in spec:
+                    linker_flags = "${BLT_EXE_LINKER_FLAGS} -Xlinker -rpath -Xlinker " + libdir
+                else:
+                    linker_flags = "${BLT_EXE_LINKER_FLAGS} -Wl,-rpath," + libdir
+                # SERAC EDIT END
                 cfg.write(cmake_cache_entry("BLT_EXE_LINKER_FLAGS",
                                             linker_flags, description))
                 if "+shared" in spec:
@@ -511,9 +523,13 @@ class Axom(CMakePackage, CudaPackage):
                 cfg.write(cmake_cache_entry("CMAKE_CUDA_COMPILER",
                                             cudacompiler))
 
-                # SERAC EDIT BEGIN - this requires NVCC linking which is problematic
-                # cfg.write(cmake_cache_option("CUDA_SEPARABLE_COMPILATION",
-                #                              True))
+                cfg.write(cmake_cache_option("CUDA_SEPARABLE_COMPILATION",
+                                             True))
+                # SERAC EDIT BEGIN - NVCC doesn't allow -Wl, --rdynamic
+                cfg.write(cmake_cache_option("CUDA_LINK_WITH_NVCC",
+                                             True))
+                cfg.write(cmake_cache_option("AXOM_ENABLE_EXPORTS",
+                                             False))
                 # SERAC EDIT END
 
                 cfg.write(cmake_cache_option("AXOM_ENABLE_ANNOTATIONS", True))
@@ -526,11 +542,17 @@ class Axom(CMakePackage, CudaPackage):
                     axom_arch = 'sm_{0}'.format(cuda_arch[0])
                     cfg.write(cmake_cache_entry("AXOM_CUDA_ARCH", axom_arch))
                     cudaflags += "-arch ${AXOM_CUDA_ARCH} "
+                    # SERAC EDIT BEGIN - CMake 3.18 requires this
+                    cfg.write(cmake_cache_entry("CMAKE_CUDA_ARCHITECTURES", cuda_arch[0]))
+                    # SERAC EDIT END
                 else:
                     cfg.write("# cuda_arch could not be determined\n\n")
 
                 # SERAC EDIT BEGIN - debug flag causes the NVIDIA assembler to fail
                 cudaflags += "-std=c++11 --expt-extended-lambda " # -G
+                # NVCC ignores the host compiler when linking??
+                # and some MPI -Wl,-rpath, flags are added from somewhere
+                cudaflags += "-ccbin ${CMAKE_CXX_COMPILER} -forward-unknown-to-host-compiler "
                 # SERAC EDIT END
                 cfg.write(cmake_cache_entry("CMAKE_CUDA_FLAGS", cudaflags))
 
