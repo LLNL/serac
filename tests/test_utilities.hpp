@@ -17,7 +17,7 @@ void runNonlinSolidTest(const std::string& input_file);
 
 void defineThermalConductionInputFileSchema(axom::inlet::Inlet& inlet);
 
-void runThermalConductionTest(const std::string& input_file);
+void runThermalConductionTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh = {});
 
 class InputFileTest : public ::testing::TestWithParam<std::string> {
 };

@@ -136,7 +136,7 @@ void defineThermalConductionInputFileSchema(axom::inlet::Inlet& inlet)
   }
 }
 
-void runThermalConductionTest(const std::string& input_file)
+void runThermalConductionTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -147,9 +147,14 @@ void runThermalConductionTest(const std::string& input_file)
   defineThermalConductionInputFileSchema(inlet);
 
   // Build the mesh
-  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file);
-  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  std::shared_ptr<mfem::ParMesh> mesh;
+  if (custom_mesh) {
+    mesh = custom_mesh;
+  } else {
+    auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file);
+    mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  }
 
   // Define the thermal solver object
   auto              thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
