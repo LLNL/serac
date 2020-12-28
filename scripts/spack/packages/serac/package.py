@@ -113,7 +113,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials",
+    debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -124,9 +124,9 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0}+debug".format(dep), when="+debug")
     depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
-    #depends_on("mfem+sundials", when="+sundials")
-    #depends_on("sundials~shared", when="+sundials")
-    depends_on("sundials~shared")
+    depends_on("mfem+sundials", when="+sundials")
+    depends_on("sundials~shared", when="+sundials")
+    depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
 
     # Needs to be first due to a bug with the Spack concretizer
     depends_on("hdf5+hl@1.8.21~shared")
@@ -149,8 +149,6 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("conduit@0.5.1p1~shared~python")
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
-    # Unconditional for now until concretizer fixed
-    depends_on("netcdf-c@4.7.4~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
