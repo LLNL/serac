@@ -67,11 +67,16 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
 }
 
 namespace detail {
+
+// Utility type for use in always-false static assertions
 template <typename>
 struct AlwaysFalse {
   static constexpr bool value = false;
 };
 
+/**
+ * @brief Returns the name of the module used by the input file
+ */
 template <typename PhysicsModule>
 std::string moduleName()
 {
@@ -91,6 +96,12 @@ std::string moduleName<ThermalConduction>()
   return "thermal_conduction";
 }
 
+/**
+ * @brief Verifies the solution fields against the input file
+ * @param[in] module The module whose fields should be verified
+ * @param[in] inlet The Inlet object from which expected solution values will be obtained
+ * @param[in] dim The mesh dimension
+ */
 template <typename PhysicsModule>
 void verifyFields(const PhysicsModule&, const axom::inlet::Inlet&, const int)
 {
