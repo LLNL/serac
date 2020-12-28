@@ -11,13 +11,11 @@ namespace serac {
 
 namespace test_utils {
 
-void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet);
+template <typename PhysicsModule>
+void defineTestSchema(axom::inlet::Inlet& inlet);
 
-void runNonlinSolidTest(const std::string& input_file);
-
-void defineThermalConductionInputFileSchema(axom::inlet::Inlet& inlet);
-
-void runThermalConductionTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh = {});
+template <typename PhysicsModule>
+void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh = {});
 
 class InputFileTest : public ::testing::TestWithParam<std::string> {
 };

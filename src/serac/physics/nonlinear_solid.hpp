@@ -68,6 +68,8 @@ public:
     double mu;
     double K;
 
+    std::optional<double> viscosity;
+
     // Boundary condition information
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 

@@ -38,7 +38,7 @@ TEST(thermal_solver, static_solve)
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/static_solve.lua";
   auto pmesh = buildBallMesh(10000);
-  test_utils::runThermalConductionTest(input_file_path, pmesh);
+  test_utils::runModuleTest<ThermalConduction>(input_file_path, pmesh);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -47,7 +47,7 @@ TEST_P(InputFileTest, thermal_conduction)
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/" + GetParam() + ".lua";
-  test_utils::runThermalConductionTest(input_file_path);
+  test_utils::runModuleTest<ThermalConduction>(input_file_path);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -123,7 +123,7 @@ TEST(thermal_solver, static_amgx_solve)
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/static_amgx_solve.lua";
   auto pmesh = buildBallMesh(10000);
-  test_utils::runThermalConductionTest(input_file_path, pmesh);
+  test_utils::runModuleTest<ThermalConduction>(input_file_path, pmesh);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 #endif

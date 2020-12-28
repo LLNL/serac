@@ -17,7 +17,8 @@ namespace serac {
 
 namespace test_utils {
 
-void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet)
+template <>
+void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet)
 {
   // Simulation time parameters
   inlet.addDouble("dt", "Time step.");
@@ -41,79 +42,8 @@ void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet)
   }
 }
 
-void runNonlinSolidTest(const std::string& input_file)
-{
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-
-  // Initialize Inlet and read input file
-  auto inlet = serac::input::initialize(datastore, input_file);
-
-  defineNonlinSolidInputFileSchema(inlet);
-
-  // Build the mesh
-  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file);
-  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
-
-  // Define the solid solver object
-  auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  NonlinearSolid solid_solver(mesh, solid_solver_options);
-
-  const bool is_dynamic = inlet["nonlinear_solid"].contains("dynamics");
-
-  if (is_dynamic) {
-    auto visc = std::make_unique<mfem::ConstantCoefficient>(0.0);
-    solid_solver.setViscosity(std::move(visc));
-  }
-
-  // Initialize the output
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "nonlin_solid");
-
-  // Complete the solver setup
-  solid_solver.completeSetup();
-  // Output the initial state
-  solid_solver.outputState();
-
-  double dt = inlet["dt"];
-
-  // Check if dynamic
-  if (is_dynamic) {
-    double t       = 0.0;
-    double t_final = inlet["t_final"];
-
-    // Perform time-integration
-    // (looping over the time iterations, ti, with a time-step dt).
-    bool last_step = false;
-    for (int ti = 1; !last_step; ti++) {
-      double dt_real = std::min(dt, t_final - t);
-      t += dt_real;
-      last_step = (t >= t_final - 1e-8 * dt);
-
-      solid_solver.advanceTimestep(dt_real);
-    }
-  } else {
-    solid_solver.advanceTimestep(dt);
-  }
-
-  // Output the final state
-  solid_solver.outputState();
-
-  mfem::Vector zero(mesh->Dimension());
-  zero = 0.0;
-  mfem::VectorConstantCoefficient zerovec(zero);
-
-  if (inlet.contains("expected_x_l2norm")) {
-    double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-    EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
-  }
-  if (inlet.contains("expected_v_l2norm")) {
-    double v_norm = solid_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
-    EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
-  }
-}
-
-void defineThermalConductionInputFileSchema(axom::inlet::Inlet& inlet)
+template <>
+void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
 {
   // Simulation time parameters
   inlet.addDouble("dt", "Time step.");
@@ -136,7 +66,70 @@ void defineThermalConductionInputFileSchema(axom::inlet::Inlet& inlet)
   }
 }
 
-void runThermalConductionTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh)
+template void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet);
+template void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet);
+
+namespace detail {
+template <typename>
+struct AlwaysFalse {
+  static constexpr bool value = false;
+};
+
+template <typename PhysicsModule>
+std::string moduleName()
+{
+  static_assert(AlwaysFalse<PhysicsModule>::value, "Test driver is not supported for selected type");
+  return {};
+}
+
+template <>
+std::string moduleName<NonlinearSolid>()
+{
+  return "nonlinear_solid";
+}
+
+template <>
+std::string moduleName<ThermalConduction>()
+{
+  return "thermal_conduction";
+}
+
+template <typename PhysicsModule>
+void verifyFields(const PhysicsModule& module, const axom::inlet::Inlet& inlet, const int dim)
+{
+  static_assert(AlwaysFalse<PhysicsModule>::value, "Test driver is not supported for selected type");
+}
+
+template <>
+void verifyFields(const NonlinearSolid& module, const axom::inlet::Inlet& inlet, const int dim)
+{
+  mfem::Vector zero(dim);
+  zero = 0.0;
+  mfem::VectorConstantCoefficient zerovec(zero);
+
+  if (inlet.contains("expected_x_l2norm")) {
+    double x_norm = module.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+    EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  }
+  if (inlet.contains("expected_v_l2norm")) {
+    double v_norm = module.velocity().gridFunc().ComputeLpError(2.0, zerovec);
+    EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
+  }
+}
+
+template <>
+void verifyFields(const ThermalConduction& module, const axom::inlet::Inlet& inlet, const int)
+{
+  mfem::ConstantCoefficient zero(0.0);
+  if (inlet.contains("expected_t_l2norm")) {
+    double t_norm = module.temperature().gridFunc().ComputeLpError(2.0, zero);
+    EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
+  }
+}
+}  // namespace detail
+
+template <typename PhysicsModule>
+void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -144,7 +137,7 @@ void runThermalConductionTest(const std::string& input_file, std::shared_ptr<mfe
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  defineThermalConductionInputFileSchema(inlet);
+  defineTestSchema<PhysicsModule>(inlet);
 
   // Build the mesh
   std::shared_ptr<mfem::ParMesh> mesh;
@@ -156,19 +149,21 @@ void runThermalConductionTest(const std::string& input_file, std::shared_ptr<mfe
     mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
   }
 
-  // Define the thermal solver object
-  auto              thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
-  ThermalConduction therm_solver(mesh, thermal_solver_options);
+  const std::string module_name = detail::moduleName<PhysicsModule>();
 
-  const bool is_dynamic = inlet["thermal_conduction"].contains("dynamics");
-  therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_solver");
+  // Define the solid solver object
+  auto          module_options = inlet[module_name].get<typename PhysicsModule::InputOptions>();
+  PhysicsModule module(mesh, module_options);
 
-  // Complete the setup without allocating the mass matrices and dynamic
-  // operator
-  therm_solver.completeSetup();
+  const bool is_dynamic = inlet[module_name].contains("dynamics");
 
+  // Initialize the output
+  module.initializeOutput(serac::OutputType::VisIt, module_name);
+
+  // Complete the solver setup
+  module.completeSetup();
   // Output the initial state
-  therm_solver.outputState();
+  module.outputState();
 
   double dt = inlet["dt"];
 
@@ -185,25 +180,21 @@ void runThermalConductionTest(const std::string& input_file, std::shared_ptr<mfe
       t += dt_real;
       last_step = (t >= t_final - 1e-8 * dt);
 
-      // Advance the timestep
-      therm_solver.advanceTimestep(dt_real);
+      module.advanceTimestep(dt_real);
     }
   } else {
-    // Perform the static solve
-    therm_solver.advanceTimestep(dt);
+    module.advanceTimestep(dt);
   }
 
   // Output the final state
-  therm_solver.outputState();
+  module.outputState();
 
-  mfem::ConstantCoefficient zero(0.0);
-
-  // Measure the L2 norm of the solution and check the value
-  if (inlet.contains("expected_t_l2norm")) {
-    double t_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
-    EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
-  }
+  detail::verifyFields(module, inlet, mesh->Dimension());
 }
+
+template void runModuleTest<NonlinearSolid>(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh);
+template void runModuleTest<ThermalConduction>(const std::string&             input_file,
+                                               std::shared_ptr<mfem::ParMesh> custom_mesh);
 
 }  // end namespace test_utils
 
