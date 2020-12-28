@@ -11,6 +11,7 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/thermal_conduction.hpp"
 
 namespace serac {
 
@@ -32,7 +33,6 @@ void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet)
 
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  // FIXME: Remove once Inlet's "contains" logic improvements are merged
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
@@ -110,6 +110,68 @@ void runNonlinSolidTest(const std::string& input_file)
   if (inlet.contains("expected_v_l2norm")) {
     double v_norm = solid_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
     EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
+  }
+}
+
+void defineThermalConductionInputFileSchema(axom::inlet::Inlet& inlet)
+{
+  // Simulation time parameters
+  inlet.addDouble("dt", "Time step.");
+  inlet.addDouble("t_final", "Stopping point");
+
+  // Integration test parameters
+  inlet.addDouble("expected_t_l2norm", "Correct L2 norm of the temperature field");
+  inlet.addDouble("epsilon", "Threshold to be used in the comparison");
+
+  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
+
+  // Physics
+  auto& conduction_table = inlet.addTable("thermal_conduction", "Thermal conduction module");
+  serac::ThermalConduction::InputOptions::defineInputFileSchema(conduction_table);
+
+  // Verify input file
+  if (!inlet.verify()) {
+    SLIC_ERROR("Input file failed to verify.");
+  }
+}
+
+void runThermalConductionTest(const std::string& input_file)
+{
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+
+  // Initialize Inlet and read input file
+  auto inlet = serac::input::initialize(datastore, input_file);
+
+  defineThermalConductionInputFileSchema(inlet);
+
+  // Build the mesh
+  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file);
+  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+
+  // Define the thermal solver object
+  auto              thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
+  ThermalConduction therm_solver(mesh, thermal_solver_options);
+
+  // const bool is_dynamic = inlet["thermal_conduction"].contains("dynamics");
+  therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_solver");
+
+  // Complete the setup without allocating the mass matrices and dynamic
+  // operator
+  therm_solver.completeSetup();
+
+  // Perform the static solve
+  double dt = inlet["dt"];
+  therm_solver.advanceTimestep(dt);
+
+  mfem::ConstantCoefficient zero(0.0);
+
+  // Measure the L2 norm of the solution and check the value
+  if (inlet.contains("expected_t_l2norm")) {
+    double t_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
+    EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
   }
 }
 

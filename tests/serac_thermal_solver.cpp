@@ -13,6 +13,7 @@
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/thermal_conduction.hpp"
 #include "serac/serac_config.hpp"
+#include "test_utilities.hpp"
 
 namespace serac {
 
@@ -69,50 +70,9 @@ TEST(thermal_solver, static_solve)
 TEST(thermal_solver, static_solve_multiple_bcs)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-
-  // Open the mesh
-  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star_with_2_bdr_attributes.mesh";
-
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
-
-  // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultQuasistaticOptions());
-
-  // Initialize the temperature boundary condition
-  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
-  auto u_1 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
-  // auto u_1 = std::make_shared<mfem::ConstantCoefficient>(0.0);
-
-  std::set<int> marked_1 = {1};
-  std::set<int> marked_2 = {2};
-
-  // Set the temperature BC in the thermal solver
-  therm_solver.setTemperatureBCs(marked_1, u_0);
-  therm_solver.setTemperatureBCs(marked_2, u_1);
-
-  // Set the conductivity of the thermal operator
-  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
-  therm_solver.setConductivity(std::move(kappa));
-
-  // Complete the setup without allocating the mass matrices and dynamic
-  // operator
-  therm_solver.completeSetup();
-
-  // Initialize the output
-  therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_two_boundary");
-
-  // Perform the static solve
-  double dt = 1.0;
-  therm_solver.advanceTimestep(dt);
-
-  // Output the state
-  therm_solver.outputState();
-
-  // Measure the L2 norm of the solution and check the value
-  mfem::ConstantCoefficient zero(0.0);
-  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
-  EXPECT_NEAR(2.56980679, u_norm, 0.00001);
-
+  std::string input_file_path =
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/static_solve_multiple_bcs.lua";
+  test_utils::runThermalConductionTest(input_file_path);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

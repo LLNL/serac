@@ -52,6 +52,31 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
 }
 
+ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options)
+    : ThermalConduction(options.order, mesh, options.solver_options)
+{
+  setConductivity(std::make_unique<mfem::ConstantCoefficient>(options.kappa));
+
+  // FIXME: Lifetimes?
+  if (options.initial_temperature) {
+    auto temp = options.initial_temperature->constructScalar();
+    setTemperature(temp);
+  }
+
+  for (const auto& [name, bc] : options.boundary_conditions) {
+    // FIXME: Better naming for boundary conditions?
+    if (name.find("temperature") != std::string::npos) {
+      auto temp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      setTemperatureBCs(bc.attrs, temp_coef);
+    } else if (name.find("flux") != std::string::npos) {
+      auto flux_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      setFluxBCs(bc.attrs, flux_coef);
+    } else {
+      SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
+    }
+  }
+}
+
 void ThermalConduction::setTemperature(mfem::Coefficient& temp)
 {
   // Project the coefficient onto the grid function
@@ -198,4 +223,76 @@ void ThermalConduction::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
+void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
+{
+  // Polynomial interpolation order - currently up to 8th order is allowed
+  table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
+
+  // neo-Hookean material parameters
+  table.addDouble("kappa", "Thermal conductivity").defaultValue(0.5);
+
+  auto& stiffness_solver_table =
+      table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
+
+  auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
+  dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
+  dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
+
+  auto& bc_table = table.addGenericDictionary("boundary_conds", "Table of boundary conditions");
+  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
+
+  auto& init_temp = table.addTable("initial_temperature", "Coefficient for initial condition");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(init_temp);
+}
+
 }  // namespace serac
+
+using serac::DirichletEnforcementMethod;
+using serac::ThermalConduction;
+using serac::TimestepMethod;
+
+ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::operator()(const axom::inlet::Table& base)
+{
+  ThermalConduction::InputOptions result;
+
+  result.order = base["order"];
+
+  // Solver parameters
+  auto stiffness_solver                  = base["stiffness_solver"];
+  result.solver_options.T_lin_options    = stiffness_solver["linear"].get<serac::LinearSolverOptions>();
+  result.solver_options.T_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+
+  if (base.contains("dynamics")) {
+    ThermalConduction::TimesteppingOptions dyn_options;
+    auto                                   dynamics = base["dynamics"];
+
+    // FIXME: Implement all supported methods as part of an ODE schema
+    const static std::map<std::string, TimestepMethod> timestep_methods = {
+        {"AverageAcceleration", TimestepMethod::AverageAcceleration}};
+    std::string timestep_method = dynamics["timestepper"];
+    SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
+    dyn_options.timestepper = timestep_methods.at(timestep_method);
+
+    // FIXME: Implement all supported methods as part of an ODE schema
+    const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
+        {"RateControl", DirichletEnforcementMethod::RateControl}};
+    std::string enforcement_method = dynamics["enforcement_method"];
+    SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
+                  "Unrecognized enforcement method: " << enforcement_method);
+    dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
+
+    result.solver_options.dyn_options = std::move(dyn_options);
+  }
+
+  // Set the conductivity
+  result.kappa = base["kappa"];
+
+  result.boundary_conditions =
+      base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
+
+  if (base.contains("initial_temperature")) {
+    result.initial_temperature = base["initial_temperature"].get<serac::input::CoefficientInputOptions>();
+  }
+  return result;
+}

@@ -360,7 +360,7 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
   iterative_table.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
   iterative_table.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
   iterative_table.addInt("print_level", "Linear print level.").defaultValue(0);
-  iterative_table.addString("solver_type", "Solver type (gmres|minres).").defaultValue("gmres");
+  iterative_table.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
   iterative_table.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
       .defaultValue("JacobiSmoother");
 
@@ -399,6 +399,8 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
       iter_options.lin_solver = serac::LinearSolver::GMRES;
     } else if (solver_type == "minres") {
       iter_options.lin_solver = serac::LinearSolver::MINRES;
+    } else if (solver_type == "cg") {
+      iter_options.lin_solver = serac::LinearSolver::CG;
     } else {
       std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
       SLIC_ERROR(msg);

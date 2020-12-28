@@ -14,6 +14,10 @@ void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet);
 
 void runNonlinSolidTest(const std::string& input_file);
 
+void defineThermalConductionInputFileSchema(axom::inlet::Inlet& inlet);
+
+void runThermalConductionTest(const std::string& input_file);
+
 }  // end namespace test_utils
 
 }  // end namespace serac
