@@ -155,16 +155,41 @@ void runThermalConductionTest(const std::string& input_file)
   auto              thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
   ThermalConduction therm_solver(mesh, thermal_solver_options);
 
-  // const bool is_dynamic = inlet["thermal_conduction"].contains("dynamics");
+  const bool is_dynamic = inlet["thermal_conduction"].contains("dynamics");
   therm_solver.initializeOutput(serac::OutputType::GLVis, "thermal_solver");
 
   // Complete the setup without allocating the mass matrices and dynamic
   // operator
   therm_solver.completeSetup();
 
-  // Perform the static solve
+  // Output the initial state
+  therm_solver.outputState();
+
   double dt = inlet["dt"];
-  therm_solver.advanceTimestep(dt);
+
+  // Check if dynamic
+  if (is_dynamic) {
+    double t       = 0.0;
+    double t_final = inlet["t_final"];
+
+    // Perform time-integration
+    // (looping over the time iterations, ti, with a time-step dt).
+    bool last_step = false;
+    for (int ti = 1; !last_step; ti++) {
+      double dt_real = std::min(dt, t_final - t);
+      t += dt_real;
+      last_step = (t >= t_final - 1e-8 * dt);
+
+      // Advance the timestep
+      therm_solver.advanceTimestep(dt_real);
+    }
+  } else {
+    // Perform the static solve
+    therm_solver.advanceTimestep(dt);
+  }
+
+  // Output the final state
+  therm_solver.outputState();
 
   mfem::ConstantCoefficient zero(0.0);
 

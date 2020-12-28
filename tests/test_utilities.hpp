@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <gtest/gtest.h>
 #include "serac/infrastructure/input.hpp"
 
 namespace serac {
@@ -17,6 +18,9 @@ void runNonlinSolidTest(const std::string& input_file);
 void defineThermalConductionInputFileSchema(axom::inlet::Inlet& inlet);
 
 void runThermalConductionTest(const std::string& input_file);
+
+class InputFileTest : public ::testing::TestWithParam<std::string> {
+};
 
 }  // end namespace test_utils
 

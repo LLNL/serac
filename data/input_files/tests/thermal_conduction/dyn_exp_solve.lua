@@ -1,13 +1,14 @@
 -- Comparison information
-expected_t_l2norm = 2.56980679
+expected_t_l2norm = 2.6493029
 epsilon = 0.00001
 
 -- Simulation time parameters
-dt      = 1.0
+dt      = 0.0001
+t_final = 0.001
 
 main_mesh = {
     -- mesh file
-    mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",
+    mesh = "../../../meshes/star.mesh",
     -- serial and parallel refinement levels
     ser_ref_levels = 1,
     par_ref_levels = 1,
@@ -36,24 +37,32 @@ thermal_conduction = {
         },
     },
 
+    dynamics = {
+        timestepper = "ForwardEuler",
+        enforcement_method = "RateControl",
+    },
+
     -- polynomial interpolation order
     order = 2,
 
     -- material parameters
     kappa = 0.5,
 
+    -- initial conditions
+    initial_temperature = {
+        coef = function (x, y, z)
+            local norm = math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
+            if norm < 0.5 then return 2.0 else return 1.0 end
+        end
+    },
+
     -- boundary condition parameters
     boundary_conds = {
-        ['temperature_1'] = {
+        ['temperature'] = {
             attrs = {1},
             coef = function (x, y, z)
-                return math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
-            end
-        },
-        ['temperature_2'] = {
-            attrs = {2},
-            coef = function (x, y, z)
-                return math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
+                local norm = math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
+                if norm < 0.5 then return 2.0 else return 1.0 end
             end
         },
     },

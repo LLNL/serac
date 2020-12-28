@@ -56,14 +56,18 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
     : ThermalConduction(options.order, mesh, options.solver_options)
 {
   setConductivity(std::make_unique<mfem::ConstantCoefficient>(options.kappa));
+  setDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
+  setSpecificHeatCapacity(std::make_unique<mfem::ConstantCoefficient>(options.cp));
 
-  // FIXME: Lifetimes?
   if (options.initial_temperature) {
     auto temp = options.initial_temperature->constructScalar();
     setTemperature(temp);
   }
 
-  for (const auto& [name, bc] : options.boundary_conditions) {
+  // Process the BCs in sorted order for correct behavior with repeated attributes
+  std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(options.boundary_conditions.begin(),
+                                                                         options.boundary_conditions.end());
+  for (const auto& [name, bc] : sorted_bcs) {
     // FIXME: Better naming for boundary conditions?
     if (name.find("temperature") != std::string::npos) {
       auto temp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
@@ -228,8 +232,10 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   // Polynomial interpolation order - currently up to 8th order is allowed
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
 
-  // neo-Hookean material parameters
+  // material parameters
   table.addDouble("kappa", "Thermal conductivity").defaultValue(0.5);
+  table.addDouble("rho", "Density").defaultValue(1.0);
+  table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
@@ -269,7 +275,9 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {
-        {"AverageAcceleration", TimestepMethod::AverageAcceleration}};
+        {"AverageAcceleration", TimestepMethod::AverageAcceleration},
+        {"BackwardEuler", TimestepMethod::BackwardEuler},
+        {"ForwardEuler", TimestepMethod::ForwardEuler}};
     std::string timestep_method = dynamics["timestepper"];
     SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
     dyn_options.timestepper = timestep_methods.at(timestep_method);
@@ -285,8 +293,10 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
     result.solver_options.dyn_options = std::move(dyn_options);
   }
 
-  // Set the conductivity
+  // Set the material parameters
   result.kappa = base["kappa"];
+  result.rho   = base["rho"];
+  result.cp    = base["cp"];
 
   result.boundary_conditions =
       base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();

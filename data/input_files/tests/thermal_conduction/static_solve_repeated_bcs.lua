@@ -7,7 +7,7 @@ dt      = 1.0
 
 main_mesh = {
     -- mesh file
-    mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",
+    mesh = "../../../meshes/star.mesh",
     -- serial and parallel refinement levels
     ser_ref_levels = 1,
     par_ref_levels = 1,
@@ -51,9 +51,9 @@ thermal_conduction = {
             end
         },
         ['temperature_2'] = {
-            attrs = {2},
+            attrs = {1},
             coef = function (x, y, z)
-                return math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
+                return 2 * math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
             end
         },
     },

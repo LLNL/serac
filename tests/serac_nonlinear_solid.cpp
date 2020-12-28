@@ -19,8 +19,7 @@
 
 namespace serac {
 
-class InputFileTest : public ::testing::TestWithParam<std::string> {
-};
+using test_utils::InputFileTest;
 
 TEST_P(InputFileTest, nonlin_solid)
 {

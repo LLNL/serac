@@ -67,6 +67,8 @@ public:
     SolverOptions solver_options;
     // Conductivity
     double kappa;
+    double cp;
+    double rho;
 
     // Boundary condition information
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
