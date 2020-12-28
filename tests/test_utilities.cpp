@@ -66,9 +66,6 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
   }
 }
 
-template void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet);
-template void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet);
-
 namespace detail {
 template <typename>
 struct AlwaysFalse {
@@ -95,7 +92,7 @@ std::string moduleName<ThermalConduction>()
 }
 
 template <typename PhysicsModule>
-void verifyFields(const PhysicsModule& module, const axom::inlet::Inlet& inlet, const int dim)
+void verifyFields(const PhysicsModule&, const axom::inlet::Inlet&, const int)
 {
   static_assert(AlwaysFalse<PhysicsModule>::value, "Test driver is not supported for selected type");
 }
