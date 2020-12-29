@@ -304,17 +304,17 @@ Description: Table of boundary conditions
      - Range/Valid Values
      - Required
    * - vec_coef
-     - The function representing a vector BC coefficient
+     - The function to use for an mfem::VectorFunctionCoefficient
      - 
      - 
      - |uncheck|
    * - coef
-     - The function representing a scalar BC coefficient
+     - The function to use for an mfem::FunctionCoefficient
      - 
      - 
      - |uncheck|
    * - component
-     - The vector component to which the scalar BC should be applied
+     - The vector component to which the scalar coefficient should be applied
      - 
      - 
      - |uncheck|
@@ -363,17 +363,17 @@ Description: Table of boundary conditions
      - Range/Valid Values
      - Required
    * - vec_coef
-     - The function representing a vector BC coefficient
+     - The function to use for an mfem::VectorFunctionCoefficient
      - 
      - 
      - |uncheck|
    * - coef
-     - The function representing a scalar BC coefficient
+     - The function to use for an mfem::FunctionCoefficient
      - 
      - 
      - |uncheck|
    * - component
-     - The vector component to which the scalar BC should be applied
+     - The vector component to which the scalar coefficient should be applied
      - 
      - 
      - |uncheck|
@@ -422,17 +422,17 @@ Description: Coefficient for initial condition
      - Range/Valid Values
      - Required
    * - vec_coef
-     - The function representing a vector BC coefficient
+     - The function to use for an mfem::VectorFunctionCoefficient
      - 
      - 
      - |uncheck|
    * - coef
-     - The function representing a scalar BC coefficient
+     - The function to use for an mfem::FunctionCoefficient
      - 
      - 
      - |uncheck|
    * - component
-     - The vector component to which the scalar BC should be applied
+     - The vector component to which the scalar coefficient should be applied
      - 
      - 
      - |uncheck|
@@ -454,17 +454,17 @@ Description: Coefficient for initial condition
      - Range/Valid Values
      - Required
    * - vec_coef
-     - The function representing a vector BC coefficient
+     - The function to use for an mfem::VectorFunctionCoefficient
      - 
      - 
      - |uncheck|
    * - coef
-     - The function representing a scalar BC coefficient
+     - The function to use for an mfem::FunctionCoefficient
      - 
      - 
      - |uncheck|
    * - component
-     - The vector component to which the scalar BC should be applied
+     - The vector component to which the scalar coefficient should be applied
      - 
      - 
      - |uncheck|
