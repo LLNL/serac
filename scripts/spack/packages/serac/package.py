@@ -111,17 +111,15 @@ class Serac(CMakePackage, CudaPackage):
     depends_on('py-sphinx', when="+devtools")
 
     # Libraries that have a +shared option
-    depends_on("mfem~shared", when="~shared")
-    depends_on("hypre~shared", when="~shared")
+    shared_deps = ["mfem", "hypre", "hdf5", "axom", "metis", "parmetis",
+                   "conduit", "superlu-dist"]
+    for dep in shared_deps:
+        depends_on("{0}+shared".format(dep), when="+shared")
+        depends_on("{0}~shared".format(dep), when="~shared")
+
     depends_on("petsc~shared", when="+petsc~shared")
     depends_on("sundials~shared", when="+sundials~shared")
-    depends_on("hdf5~shared", when="~shared")
-    depends_on("axom~shared", when="~shared")
-    depends_on("metis~shared", when="~shared")
-    depends_on("parmetis~shared", when="~shared")
-    depends_on("conduit~shared", when="~shared")
-    depends_on("superlu-dist~shared", when="~shared")
-    depends_on("netcdf-c~shared", when="~shared")
+    depends_on("netcdf-c~shared", when="+netcdf~shared")
     depends_on("caliper~shared", when="+caliper~shared")
 
     # Libraries that support +debug

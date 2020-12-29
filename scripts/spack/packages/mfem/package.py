@@ -45,10 +45,14 @@ class Mfem(Package):
     # other version.
     version('develop', branch='master')
 
-    version('4.2.0',
-            '4352a225b55948d2e73a5ee88cece0e88bdbe7ba6726a23d68b2736d3221a86d',
-            url='https://bit.ly/mfem-4-2', extension='tar.gz',
-            preferred=True)
+    # SERAC EDIT START
+    version('4.2.0', commit='735b4de627e4904b53daeda4920d7c95460d498e')
+    # SERAC EDIT END
+
+    # version('4.2.0',
+    #         '4352a225b55948d2e73a5ee88cece0e88bdbe7ba6726a23d68b2736d3221a86d',
+    #         url='https://bit.ly/mfem-4-2', extension='tar.gz',
+    #         preferred=True)
 
     version('4.1.0',
             '4c83fdcf083f8e2f5b37200a755db843cdb858811e25a8486ad36b2cbec0e11d',
@@ -417,9 +421,14 @@ class Mfem(Package):
         if '~static' in spec:
             options += ['STATIC=NO']
         if '+shared' in spec:
+            # SERAC EDIT BEGIN - need Xcompiler for PIC flag
+            pic_flag = self.compiler.cxx_pic_flag
+            if '+cuda' in spec:
+                pic_flag = '-Xcompiler %s' % pic_flag
             options += [
-                'SHARED=YES', 'PICFLAG=%s' % self.compiler.cxx_pic_flag
+                'SHARED=YES', 'PICFLAG=%s' % pic_flag
             ]
+            # SERAC EDIT END
 
         if '+mpi' in spec:
             options += ['MPICXX=%s' % spec['mpi'].mpicxx]
