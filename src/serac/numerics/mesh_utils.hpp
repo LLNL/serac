@@ -20,7 +20,7 @@
 #include "serac/infrastructure/input.hpp"
 
 /**
-   The Serac namespace
+ * The Serac namespace
  */
 namespace serac {
 /**
