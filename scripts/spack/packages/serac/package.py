@@ -92,6 +92,7 @@ class Serac(CMakePackage, CudaPackage):
             description='Build the glvis visualization executable')
     variant('petsc', default=False,
             description='Enable PETSC')
+    variant('shared', default=False, description='Use shared libraries')
     # netcdf and sundials variants commented out until a bug in the spack concretizer is fixed
     #variant('netcdf', default=True,
     #        description='Enable Cubit/Genesis reader')
@@ -109,11 +110,25 @@ class Serac(CMakePackage, CudaPackage):
     depends_on('python', when="+devtools")
     depends_on('py-sphinx', when="+devtools")
 
-    # Libraries that support +debug
-    debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials",
-                  "hypre@2.18.2~shared~superlu-dist+mpi"]
+    # Libraries that have a +shared option
+    depends_on("mfem~shared", when="~shared")
+    depends_on("hypre~shared", when="~shared")
+    depends_on("petsc~shared", when="+petsc~shared")
+    depends_on("sundials~shared", when="+sundials~shared")
+    depends_on("hdf5~shared", when="~shared")
+    depends_on("axom~shared", when="~shared")
+    depends_on("metis~shared", when="~shared")
+    depends_on("parmetis~shared", when="~shared")
+    depends_on("conduit~shared", when="~shared")
+    depends_on("superlu-dist~shared", when="~shared")
+    depends_on("netcdf~shared", when="~shared")
+    depends_on("caliper~shared", when="+caliper~shared")
 
-    depends_on("petsc~shared", when="+petsc")
+    # Libraries that support +debug
+    debug_deps = ["mfem@4.2.0+metis+superlu-dist+lapack+mpi+netcdf+sundials",
+                  "hypre@2.18.2~superlu-dist+mpi"]
+
+    depends_on("petsc", when="+petsc")
     depends_on("petsc+debug", when="+petsc+debug")
 
     for dep in debug_deps:
@@ -122,26 +137,26 @@ class Serac(CMakePackage, CudaPackage):
     #depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
     #depends_on("mfem+sundials", when="+sundials")
-    #depends_on("sundials~shared", when="+sundials")
-    depends_on("sundials~shared")
+    #depends_on("sundials", when="+sundials")
+    depends_on("sundials")
 
     # Needs to be first due to a bug with the Spack concretizer
-    depends_on("hdf5+hl@1.8.21~shared")
+    depends_on("hdf5+hl@1.8.21")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran~raja~umpire+mfem~shared",
-                        "metis@5.1.0~shared",
-                        "parmetis@4.0.3~shared"]
+    cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran~raja~umpire+mfem",
+                        "metis@5.1.0",
+                        "parmetis@4.0.3"]
     for dep in cmake_debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit@0.5.1p1~shared~python")
-    depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
-    depends_on("superlu-dist@6.1.1~shared")
+    depends_on("conduit@0.5.1p1~python")
+    depends_on("caliper@master+mpi~callpath~adiak~papi", when="+caliper")
+    depends_on("superlu-dist@6.1.1")
     # Unconditional for now until concretizer fixed
-    depends_on("netcdf-c@4.7.4~shared")
+    depends_on("netcdf-c@4.7.4")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
