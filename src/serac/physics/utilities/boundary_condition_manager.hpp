@@ -10,8 +10,7 @@
  * @brief This file contains the declaration of the boundary condition manager class
  */
 
-#ifndef BOUNDARY_CONDITION_MANAGER
-#define BOUNDARY_CONDITION_MANAGER
+#pragma once
 
 #include <memory>
 #include <set>
@@ -296,5 +295,3 @@ private:
 };
 
 }  // namespace serac
-
-#endif

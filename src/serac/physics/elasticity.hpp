@@ -10,10 +10,10 @@
  * @brief A solver for the steady state solution of a linear elasticity PDE
  */
 
-#ifndef LINEAR_ELASTICITY
-#define LINEAR_ELASTICITY
+#pragma once
 
 #include "mfem.hpp"
+
 #include "serac/physics/base_physics.hpp"
 
 namespace serac {
@@ -150,5 +150,3 @@ protected:
 };
 
 }  // namespace serac
-
-#endif

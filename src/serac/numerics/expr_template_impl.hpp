@@ -5,14 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * \@file expr_templates_internal.hpp
+ * \@file expr_templates_impl.hpp
  *
  * @brief The internal implementation for a set of template classes used to
  * represent the evaluation of unary and binary operations on vectors
  */
 
-#ifndef EXPR_TEMPLATES_INTERNAL
-#define EXPR_TEMPLATES_INTERNAL
+#pragma once
 
 #include <functional>
 #include <type_traits>
@@ -21,7 +20,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/vector_expression.hpp"
 
-namespace serac::internal {
+namespace detail {
 
 /**
  * @brief Determines whether a given type should be owned by a vector expression
@@ -54,6 +53,13 @@ template <typename vec>
 using vec_arg_t = typename std::conditional_t<owns_v<vec>, std::decay_t<vec>&&, const vec&>;
 
 /**
+ * @brief A utility for conditionally enabling templates if a given type
+ * is an mfem::Vector (including by inheritance)
+ */
+template <typename MFEMVec>
+using enable_if_mfem_vec = std::enable_if_t<std::is_base_of_v<mfem::Vector, std::decay_t<MFEMVec>>>;
+
+/**
  * @brief Wraps the indexing of a vector type
  * @param[in] v The vector to index
  * @param[in] idx The offset of the indexing
@@ -72,6 +78,8 @@ auto index(vec&& v, const std::size_t idx)
     return v[idx];
   }
 }
+
+using serac::VectorExpr;
 
 /**
  * @brief Derived VectorExpr class for representing the application of a unary
@@ -251,6 +259,4 @@ private:
   mfem::Vector result_;
 };
 
-}  // namespace serac::internal
-
-#endif
+}  // namespace detail

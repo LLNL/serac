@@ -7,12 +7,11 @@
 #include "serac/infrastructure/cli.hpp"
 
 #include "CLI11/CLI11.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac {
-
-namespace cli {
+namespace serac::cli {
 
 //------- Command Line Interface -------
 
@@ -62,5 +61,4 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank
   serac::logger::flush();
 }
 
-}  // namespace cli
-}  // namespace serac
+}  // namespace serac::cli

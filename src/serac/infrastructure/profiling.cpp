@@ -10,13 +10,15 @@
 
 #ifdef SERAC_USE_CALIPER
 #include <optional>
+#endif
 
+namespace serac::profiling {
+
+#ifdef SERAC_USE_CALIPER
 namespace {
 std::optional<cali::ConfigManager> mgr;
 }  // namespace
 #endif
-
-namespace serac::profiling {
 
 void initializeCaliper(const std::string& options)
 {
@@ -44,6 +46,7 @@ void terminateCaliper()
     mgr->stop();
     mgr->flush();
   }
+  mgr.reset();
 #endif
 }
 

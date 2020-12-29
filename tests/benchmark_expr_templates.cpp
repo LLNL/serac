@@ -4,11 +4,11 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <benchmark/benchmark.h>
+#include "numerics/expr_template_ops.hpp"
 
 #include <utility>
 
-#include "numerics/expr_template_ops.hpp"
+#include <benchmark/benchmark.h>
 
 static std::pair<mfem::Vector, mfem::Vector> sample_vectors(const int entries)
 {

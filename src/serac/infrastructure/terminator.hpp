@@ -4,8 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#ifndef TERMINATOR
-#define TERMINATOR
+#pragma once
 
 namespace serac {
 
@@ -36,5 +35,3 @@ void registerSignals();
 void exitGracefully(bool error = false);
 
 }  // namespace serac
-
-#endif
