@@ -94,10 +94,10 @@ class Serac(CMakePackage, CudaPackage):
             description='Enable PETSC')
     variant('shared', default=False, description='Use shared libraries')
     # netcdf and sundials variants commented out until a bug in the spack concretizer is fixed
-    #variant('netcdf', default=True,
-    #        description='Enable Cubit/Genesis reader')
-    #variant('sundials', default=True,
-    #        description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
+    variant('netcdf', default=True,
+           description='Enable Cubit/Genesis reader')
+    variant('sundials', default=True,
+           description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
 
     # Basic dependencies
     depends_on("mpi")
@@ -121,11 +121,11 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("parmetis~shared", when="~shared")
     depends_on("conduit~shared", when="~shared")
     depends_on("superlu-dist~shared", when="~shared")
-    depends_on("netcdf~shared", when="~shared")
+    depends_on("netcdf-c~shared", when="~shared")
     depends_on("caliper~shared", when="+caliper~shared")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.2.0+metis+superlu-dist+lapack+mpi+netcdf+sundials",
+    debug_deps = ["mfem@4.2.0+metis+superlu-dist+lapack+mpi",
                   "hypre@2.18.2~superlu-dist+mpi"]
 
     depends_on("petsc", when="+petsc")
@@ -134,10 +134,10 @@ class Serac(CMakePackage, CudaPackage):
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
-    #depends_on("mfem+netcdf", when="+netcdf")
+    depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
-    #depends_on("mfem+sundials", when="+sundials")
-    #depends_on("sundials", when="+sundials")
+    depends_on("mfem+sundials", when="+sundials")
+    depends_on("sundials", when="+sundials")
     depends_on("sundials")
 
     # Needs to be first due to a bug with the Spack concretizer
@@ -155,7 +155,6 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("conduit@0.5.1p1~python")
     depends_on("caliper@master+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1")
-    # Unconditional for now until concretizer fixed
     depends_on("netcdf-c@4.7.4")
 
     # Libraries that we do not build debug
