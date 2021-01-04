@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "numerics/expr_template_ops.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 
 #include <utility>
 
