@@ -24,7 +24,7 @@ USER serac
 RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git
 
 # New containers will use Python3
-RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/ubuntu16/ --project-json=./serac/scripts/uberenv/project.json \
+RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/spack/configs/docker/ubuntu16/ --project-json=./serac/.uberenv_config.json \
                                                --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
 
 # Make sure the new hostconfig worked
