@@ -16,6 +16,8 @@ Documentation
 
 Build, run, and design documentation can be found at [readthedocs](https://serac.readthedocs.io).
 
+Source documentation can be found [here](https://serac.readthedocs.io/en/latest/doxygen/html/index.html).
+
 Contributions
 -------------
 
