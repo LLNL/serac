@@ -6,6 +6,9 @@ epsilon = 0.00001
 dt      = 0.0001
 t_final = 0.001
 
+-- Simulation output format
+output_type = "ParaView"
+
 main_mesh = {
     -- mesh file
     mesh = "../../../meshes/star.mesh",

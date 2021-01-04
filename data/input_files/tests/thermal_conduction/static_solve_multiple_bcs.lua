@@ -5,6 +5,9 @@ epsilon = 0.00001
 -- Simulation time parameters
 dt      = 1.0
 
+-- Simulation output format
+output_type = "GLVis"
+
 main_mesh = {
     -- mesh file
     mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",

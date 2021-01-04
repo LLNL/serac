@@ -6,6 +6,9 @@ epsilon = 0.00001
 dt      = 1.0
 t_final = 5.0
 
+-- Simulation output format
+output_type = "VisIt"
+
 main_mesh = {
     -- mesh file
     mesh = "../../../meshes/star.mesh",
