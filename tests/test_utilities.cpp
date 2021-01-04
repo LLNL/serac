@@ -17,24 +17,28 @@ namespace serac {
 
 namespace test_utils {
 
-template <>
-void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet)
+/**
+ * @brief Defines elements of a test schema that are not specific to a particular
+ * physics module
+ * @param[inout] inlet The top-level Inlet object to define the schema on
+ * @note This function should be called *after* defining any physics-specific parts of
+ * the input file
+ */
+void defineCommonTestSchema(axom::inlet::Inlet& inlet)
 {
   // Simulation time parameters
   inlet.addDouble("dt", "Time step.");
   inlet.addDouble("t_final", "Stopping point");
 
-  // Integration test parameters
-  inlet.addDouble("expected_x_l2norm", "Correct L2 norm of the displacement field");
-  inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
+  inlet.addString("output_type", "Desired output format")
+      .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
+      .defaultValue("VisIt");
+
+  // Comparison parameter
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
   auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
-
-  // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
   if (!inlet.verify()) {
@@ -43,27 +47,30 @@ void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet)
 }
 
 template <>
+void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet)
+{
+  // Integration test parameters
+  inlet.addDouble("expected_x_l2norm", "Correct L2 norm of the displacement field");
+  inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
+
+  // Physics
+  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
+
+  defineCommonTestSchema(inlet);
+}
+
+template <>
 void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
 {
-  // Simulation time parameters
-  inlet.addDouble("dt", "Time step.");
-  inlet.addDouble("t_final", "Stopping point");
-
   // Integration test parameters
   inlet.addDouble("expected_t_l2norm", "Correct L2 norm of the temperature field");
-  inlet.addDouble("epsilon", "Threshold to be used in the comparison");
-
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
-  serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Physics
   auto& conduction_table = inlet.addTable("thermal_conduction", "Thermal conduction module");
   serac::ThermalConduction::InputOptions::defineInputFileSchema(conduction_table);
 
-  // Verify input file
-  if (!inlet.verify()) {
-    SLIC_ERROR("Input file failed to verify.");
-  }
+  defineCommonTestSchema(inlet);
 }
 
 namespace detail {
@@ -166,7 +173,16 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
   const bool is_dynamic = inlet[module_name].contains("dynamics");
 
   // Initialize the output
-  module.initializeOutput(serac::OutputType::VisIt, module_name);
+  const static auto output_names = []() {
+    std::unordered_map<std::string, serac::OutputType> result;
+    result["GLVis"]      = serac::OutputType::GLVis;
+    result["ParaView"]   = serac::OutputType::ParaView;
+    result["VisIt"]      = serac::OutputType::VisIt;
+    result["SidreVisIt"] = serac::OutputType::SidreVisIt;
+    return result;
+  }();
+
+  module.initializeOutput(output_names.at(inlet["output_type"]), module_name);
 
   // Complete the solver setup
   module.completeSetup();
