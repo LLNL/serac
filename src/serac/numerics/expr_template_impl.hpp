@@ -20,7 +20,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/vector_expression.hpp"
 
-namespace detail {
+namespace serac::detail {
 
 /**
  * @brief Determines whether a given type should be owned by a vector expression
@@ -259,4 +259,4 @@ private:
   mfem::Vector result_;
 };
 
-}  // namespace detail
+}  // namespace serac::detail
