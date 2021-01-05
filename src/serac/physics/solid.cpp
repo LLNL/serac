@@ -287,7 +287,8 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
 
   // Geometric nonlinearities flag
-  table.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.").defaultValue(true);
+  table.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
+      .defaultValue(true);
 
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
