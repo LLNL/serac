@@ -23,6 +23,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   CLI::App    app{app_description};
   std::string input_file_path;
   app.add_option("-i, --input_file", input_file_path, "Input file to use.")->required()->check(CLI::ExistingFile);
+  bool create_input_file_docs{false};
+  app.add_flag("-d, --create-input-file-docs", create_input_file_docs,
+               "Writes Sphinx documentation for input file, then exits");
 
   // Parse the arguments and check if they are good
   try {
@@ -42,6 +45,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   // Store found values
   std::unordered_map<std::string, std::string> cli_opts;
   cli_opts.insert({std::string("input_file"), input_file_path});
+  if (create_input_file_docs) {
+    cli_opts.insert({"create_input_file_docs", {}});
+  }
 
   return cli_opts;
 }
