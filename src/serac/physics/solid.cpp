@@ -16,10 +16,11 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options)
+Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"}),
       displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"}),
+      geom_nonlin_(geom_nonlin),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {
@@ -65,7 +66,7 @@ Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions
 }
 
 Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& options)
-    : Solid(options.order, mesh, options.solver_options)
+    : Solid(options.order, mesh, options.solver_options, options.geom_nonlin)
 {
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
@@ -144,7 +145,7 @@ void Solid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  H_->AddDomainIntegrator(new DisplacementHyperelasticIntegrator(*material_));
+  H_->AddDomainIntegrator(new DisplacementHyperelasticIntegrator(*material_, geom_nonlin_));
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
@@ -285,6 +286,9 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
   table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
 
+  // Geometric nonlinearities flag
+  table.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.").defaultValue(true);
+
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
@@ -345,6 +349,9 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
   // neo-Hookean material parameters
   result.mu = base["mu"];
   result.K  = base["K"];
+
+  // Set the geometric nonlinearities flag
+  result.geom_nonlin = base["geometric_nonlin"];
 
   result.boundary_conditions =
       base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();

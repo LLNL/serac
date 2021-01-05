@@ -69,6 +69,9 @@ public:
     double mu;
     double K;
 
+    // Geometric nonlinearities flag
+    bool geom_nonlin;
+
     // Boundary condition information
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 
@@ -84,7 +87,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] solver The system solver parameters
    */
-  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options);
+  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin = true);
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -228,6 +231,11 @@ protected:
    * @brief The hyperelastic material model
    */
   std::unique_ptr<serac::HyperelasticMaterial> material_;
+
+  /**
+   * @brief Flag for enabling geometric nonlinearities in the residual calculation
+   */
+  bool geom_nonlin_;
 
   /**
    * @brief Pointer to the reference mesh data
