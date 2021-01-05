@@ -122,6 +122,13 @@ public:
                       int component = -1);
 
   /**
+   * @brief Set the external force vectors on the domain
+   *
+   * @param[in] ext_force_coefs The sd::vector of vector-valued external force coefficients applied to the domain
+   */
+  void setExternalForces(std::vector<std::shared_ptr<mfem::VectorCoefficient>> ext_force_coefs);
+
+  /**
    * @brief Set the viscosity coefficient
    *
    * @param[in] visc_coef The abstract viscosity coefficient
@@ -267,6 +274,11 @@ protected:
    * @brief Stiffness bilinear form object
    */
   std::unique_ptr<mfem::ParNonlinearForm> H_;
+
+  /**
+   * @brief external force coefficents
+   */
+  std::vector<std::shared_ptr<mfem::VectorCoefficient>> ext_force_coefs_;
 
   /**
    * @brief zero vector of the appropriate dimensions
