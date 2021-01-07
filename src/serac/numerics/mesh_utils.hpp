@@ -19,6 +19,9 @@
 #include "mfem.hpp"
 #include "serac/infrastructure/input.hpp"
 
+/**
+ * The Serac namespace
+ */
 namespace serac {
 /**
  * @brief Constructs an MFEM parallel mesh from a file and refines it
