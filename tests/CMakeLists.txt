@@ -27,6 +27,7 @@ if (ENABLE_GTEST)
         serac_dtor.cpp
         serac_boundary_cond.cpp
         serac_mesh.cpp
+        serac_odes.cpp
         mfem_ex9p_blockilu.cpp)
 
     foreach(filename ${solver_tests})

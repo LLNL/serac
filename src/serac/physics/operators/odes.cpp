@@ -23,6 +23,9 @@ SecondOrderODE::SecondOrderODE(int n, State&& state, const EquationSolver& solve
 void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 {
   switch (timestepper) {
+    case serac::TimestepMethod::Newmark:
+      ode_solver_ = std::make_unique<mfem::NewmarkSolver>();
+      break;
     case serac::TimestepMethod::HHTAlpha:
       ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
       break;
@@ -30,6 +33,14 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
       ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
       break;
     case serac::TimestepMethod::AverageAcceleration:
+      // WARNING: apparently mfem's implementation of AverageAccelerationSolver
+      // is NOT equivalent to Newmark (beta = 0.25, gamma = 0.5), so the
+      // stability analysis of using DirichletEnforcementMethod::DirectControl
+      // with Newmark methods does not apply.
+      //
+      // TODO: do a more thorough stability analysis for mfem::GeneralizedAlpha2Solver 
+      // to characterize which parameter combinations work with time-varying
+      // dirichlet constraints
       ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
       break;
     case serac::TimestepMethod::LinearAcceleration:
@@ -63,9 +74,6 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
   state_.u     = u;
   state_.du_dt = du_dt;
 
-  // TODO: take care of this last part of the ODE definition
-  //       automatically by wrapping mfem's ODE solvers
-  //
   // evaluate the constraint functions at a 3-point
   // stencil of times centered on the time of interest
   // in order to compute finite-difference approximations
@@ -88,7 +96,7 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {
-      d2U_dt2_ = (dU_dt_ - du_dt) / c1;
+      d2U_dt2_ = ((U_plus_ - U_minus_) / (2.0 * epsilon) - du_dt) / c1;
       dU_dt_   = du_dt;
       U_       = u;
     }
@@ -118,8 +126,14 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
   d2U_dt2_.SetSubVectorComplement(constrained_dofs, 0.0);
   d2u_dt2 += d2U_dt2_;
 
+
+  std::cout << t << " " << (U_plus_(0) - U_minus_(0)) / (2.0 * epsilon) << std::endl;
+  std::cout << t << " " << d2u_dt2(0) << std::endl;
+
   solver_.Mult(zero_, d2u_dt2);
   SLIC_WARNING_IF(!solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
+
+  std::cout << t << " " << d2u_dt2(0) << std::endl;
 
   state_.d2u_dt2 = d2u_dt2;
 }
@@ -186,9 +200,6 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   state_.dt = dt;
   state_.u  = u;
 
-  // TODO: take care of this last part of the ODE definition
-  //       automatically by wrapping mfem's ODE solvers
-  //
   // evaluate the constraint functions at a 3-point
   // stencil of times centered on the time of interest
   // in order to compute finite-difference approximations

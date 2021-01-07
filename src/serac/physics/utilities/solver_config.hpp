@@ -49,6 +49,12 @@ enum class TimestepMethod
   SDIRK34,
 
   // options for second order ODEs
+  //
+  // note: we don't have a way to communicate
+  //       parameters to the TimestepMethod,
+  //       right now, so Newmark implies
+  //       (beta = 0.25, gamma = 0.5)
+  Newmark,
   HHTAlpha,
   WBZAlpha,
   AverageAcceleration,

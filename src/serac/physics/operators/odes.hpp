@@ -128,7 +128,12 @@ public:
    *
    * @see mfem::SecondOrderODESolver::Step
    */
-  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt) { ode_solver_->Step(x, dxdt, t, dt); }
+  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt) { 
+    ode_solver_->Step(x, dxdt, t, dt); 
+    if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
+      // TODO
+    }
+  }
 
 private:
   /**
