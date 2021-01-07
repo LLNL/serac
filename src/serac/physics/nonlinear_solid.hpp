@@ -122,11 +122,11 @@ public:
                       int component = -1);
 
   /**
-   * @brief Set the external force vectors on the domain
+   * @brief Add body force vectors on the domain
    *
-   * @param[in] ext_force_coefs The sd::vector of vector-valued external force coefficients applied to the domain
+   * @param[in] ext_force_coef Add a vector-valued external force coefficient applied to the domain
    */
-  void setExternalForces(std::vector<std::shared_ptr<mfem::VectorCoefficient>> ext_force_coefs);
+  void addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef);
 
   /**
    * @brief Set the viscosity coefficient

@@ -119,9 +119,9 @@ void NonlinearSolid::setTractionBCs(const std::set<int>&                     tra
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
-void NonlinearSolid::setExternalForces(std::vector<std::shared_ptr<mfem::VectorCoefficient>> ext_force_coefs)
+void NonlinearSolid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
 {
-  ext_force_coefs_ = ext_force_coefs;
+  ext_force_coefs_.push_back(ext_force_coef);
 }
 
 void NonlinearSolid::setHyperelasticMaterialParameters(const double mu, const double K)
