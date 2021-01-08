@@ -18,7 +18,7 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
   DSh_.SetSize(dof, dim);
   Jrt_.SetSize(dim);
   Jpr_.SetSize(dim);
-  Jpt_.SetSize(dim);
+  F_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
 
   const mfem::IntegrationRule* ir = IntRule;
@@ -35,13 +35,13 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
 
     el.CalcDShape(ip, DSh_);
     MultAtB(PMatI_, DSh_, Jpr_);
-    Mult(Jpr_, Jrt_, Jpt_);
+    Mult(Jpr_, Jrt_, F_);
 
     for (int d = 0; d < dim; d++) {
-      Jpt_(d, d) += 1.0;
+      F_(d, d) += 1.0;
     }
 
-    energy += ip.weight * Ttr.Weight() * material_.EvalW(Jpt_);
+    energy += ip.weight * Ttr.Weight() * material_.EvalW(F_);
   }
 
   return energy;
@@ -54,9 +54,9 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
   int dof = el.GetDof(), dim = el.GetDim();
 
   DSh_.SetSize(dof, dim);
-  DS_.SetSize(dof, dim);
+  B0_T_.SetSize(dof, dim);
   Jrt_.SetSize(dim);
-  Jpt_.SetSize(dim);
+  F_.SetSize(dim);
   P_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
   elvect.SetSize(dof * dim);
@@ -75,17 +75,18 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
     CalcInverse(Ttr.Jacobian(), Jrt_);
 
     el.CalcDShape(ip, DSh_);
-    Mult(DSh_, Jrt_, DS_);
-    MultAtB(PMatI_, DS_, Jpt_);
+    Mult(DSh_, Jrt_, B0_T_);
+    MultAtB(PMatI_, B0_T_, F_);
 
+    // Since we use a displacement forumulation, add identity to get the deformation gradient
     for (int d = 0; d < dim; d++) {
-      Jpt_(d, d) += 1.0;
+      F_(d, d) += 1.0;
     }
 
-    material_.EvalP(Jpt_, P_);
+    material_.EvalP(F_, P_);
 
     P_ *= ip.weight * Ttr.Weight();
-    AddMultABt(DS_, P_, PMatO_);
+    AddMultABt(B0_T_, P_, PMatO_);
   }
 }
 
@@ -98,9 +99,9 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
   int dof = el.GetDof(), dim = el.GetDim();
 
   DSh_.SetSize(dof, dim);
-  DS_.SetSize(dof, dim);
+  B0_T_.SetSize(dof, dim);
   Jrt_.SetSize(dim);
-  Jpt_.SetSize(dim);
+  F_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
   elmat.SetSize(dof * dim);
 
@@ -119,14 +120,15 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
     CalcInverse(Ttr.Jacobian(), Jrt_);
 
     el.CalcDShape(ip, DSh_);
-    Mult(DSh_, Jrt_, DS_);
-    MultAtB(PMatI_, DS_, Jpt_);
+    Mult(DSh_, Jrt_, B0_T_);
+    MultAtB(PMatI_, B0_T_, F_);
 
+    // Since we use a displacement forumulation, add identity to get the deformation gradient
     for (int d = 0; d < dim; d++) {
-      Jpt_(d, d) += 1.0;
+      F_(d, d) += 1.0;
     }
 
-    material_.AssembleTangentModuli(Jpt_, DS_, ip.weight * Ttr.Weight(), elmat);
+    material_.AssembleTangentModuli(F_, B0_T_, ip.weight * Ttr.Weight(), elmat);
   }
   SERAC_MARK_LOOP_END(ip_loop_id);
 }

@@ -79,16 +79,16 @@ private:
   /**
    * Jrt: the Jacobian of the target-to-reference-element transformation.
    * Jpr: the Jacobian of the reference-to-physical-element transformation.
-   * Jpt: the Jacobian of the target-to-physical-element transformation.
+   * F: the Jacobian of the target-to-physical-element transformation (deformation gradient) (dx_i/DX_j).
    * P: represents dW_d(Jtp) (dim x dim).
    * DSh: gradients of reference shape functions (dof x dim).
-   * DS: gradients of the shape functions in the target (stress-free)
+   * B0_T: gradients of the shape functions in the target (stress-free) (dN_i/DX_j) (dof x dim)
    * configuration (dof x dim).
    * PMatI: coordinates of the deformed configuration (dof x dim).
    * PMatO: reshaped view into the local element contribution to the operator
    * output - the result of AssembleElementVector() (dof x dim).
    */
-  mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, Jpt_, P_, PMatI_, PMatO_;
+  mfem::DenseMatrix DSh_, B0_T_, Jrt_, Jpr_, F_, P_, PMatI_, PMatO_;
 
   /**
    * @brief The geometric nonlinearity flag

@@ -17,66 +17,65 @@ inline void NeoHookeanMaterial::EvalCoeffs() const
   }
 }
 
-double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& J) const
+double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& F) const
 {
-  int dim = J.Width();
+  int dim = F.Width();
 
   if (have_coeffs) {
     EvalCoeffs();
   }
 
-  double dJ  = J.Det();
-  double sJ  = dJ / g;
-  double bI1 = pow(dJ, -2.0 / dim) * (J * J);  // \bar{I}_1
+  double detF = F.Det();
+  double sJ   = detF / g;
+  double bI1  = pow(detF, -2.0 / dim) * (F * F);  // \bar{I}_1
 
   return 0.5 * (mu * (bI1 - dim) + K * (sJ - 1.0) * (sJ - 1.0));
 }
 
-void NeoHookeanMaterial::EvalP(const mfem::DenseMatrix& J, mfem::DenseMatrix& P) const
+void NeoHookeanMaterial::EvalP(const mfem::DenseMatrix& F, mfem::DenseMatrix& P) const
 {
-  int dim = J.Width();
+  int dim = F.Width();
 
   if (have_coeffs) {
     EvalCoeffs();
   }
 
-  Z.SetSize(dim);
-  CalcAdjugateTranspose(J, Z);
+  FinvT.SetSize(dim);
+  CalcInverseTranspose(F, FinvT);
+  double detF = F.Det();
 
-  double dJ = J.Det();
-  double a  = mu * pow(dJ, -2.0 / dim);
-  double b  = K * (dJ / g - 1.0) / g - a * (J * J) / (dim * dJ);
+  double a = mu * pow(detF, -2.0 / dim);
+  double b = K * detF * (detF / g - 1.0) / g - a * (F * F) / (dim);
 
   P = 0.0;
-  P.Add(a, J);
-  P.Add(b, Z);
+  P.Add(a, F);
+  P.Add(b, FinvT);
 }
 
-void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& J, const mfem::DenseMatrix& DS,
+void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, const mfem::DenseMatrix& B0_T,
                                                const double weight, mfem::DenseMatrix& T) const
 {
-  int dof = DS.Height(), dim = DS.Width();
+  int dof = B0_T.Height(), dim = B0_T.Width();
 
   if (have_coeffs) {
     EvalCoeffs();
   }
 
-  Z.SetSize(dim);
+  FinvT.SetSize(dim);
   G.SetSize(dof, dim);
   C.SetSize(dof, dim);
 
-  double dJ = J.Det();
-  double sJ = dJ / g;
-  double a  = mu * pow(dJ, -2.0 / dim);
-  double bc = a * (J * J) / dim;
-  double b  = bc - K * sJ * (sJ - 1.0);
-  double c  = 2.0 * bc / dim + K * sJ * (2.0 * sJ - 1.0);
+  double detF = F.Det();
+  double sJ   = detF / g;
+  double a    = mu * pow(detF, -2.0 / dim);
+  double bc   = a * (F * F) / dim;
+  double b    = bc - K * sJ * (sJ - 1.0);
+  double c    = 2.0 * bc / dim + K * sJ * (2.0 * sJ - 1.0);
 
-  CalcAdjugateTranspose(J, Z);
-  Z *= (1.0 / dJ);  // Z = J^{-t}
+  CalcInverseTranspose(F, FinvT);
 
-  MultABt(DS, J, C);  // C = DS J^t
-  MultABt(DS, Z, G);  // G = DS J^{-1}
+  MultABt(B0_T, F, C);      // C = B0_T F^t
+  MultABt(B0_T, FinvT, G);  // G = B0_T F^{-1}
 
   a *= weight;
   b *= weight;
@@ -87,7 +86,7 @@ void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& J, const
     for (int k = 0; k <= i; k++) {
       double s = 0.0;
       for (int d = 0; d < dim; d++) {
-        s += DS(i, d) * DS(k, d);
+        s += B0_T(i, d) * B0_T(k, d);
       }
       s *= a;
 
