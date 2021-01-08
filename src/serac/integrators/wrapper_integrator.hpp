@@ -221,4 +221,46 @@ private:
   std::function<transformed_gradient_func> transformed_function_grad_;
 };
 
+/**
+ * @brief A class to hold a shared_ptr to an NonlinearformIntegrator that can be deleted without deleting the shared
+ * pointer improperly
+ */
+
+class PointerNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
+public:
+  PointerNonlinearFormIntegrator(std::shared_ptr<mfem::NonlinearFormIntegrator> nonlin) : integ_(nonlin) {}
+
+  /**
+   * @brief Compute the residual vector with input
+   * @param[in] el The finite element for local integration
+   * @param[in] Tr The local FE transformation
+   * @param[in] elfun The state to evaluate the residual
+   * @param[out] elvect The output residual
+   */
+  virtual void AssembleElementVector(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                     const mfem::Vector& elfun, mfem::Vector& elvect)
+  {
+    integ_->AssembleElementVector(el, Tr, elfun, elvect);
+  }
+
+  /**
+   * @brief Compute the tangent matrix with input
+   *
+   * @param[in] el The finite element for local integration
+   * @param[in] Tr The local FE transformation
+   * @param[in] elfun The state to evaluate the residual
+   * @param[out] elmat elvect The output gradient
+   */
+  virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Tr,
+                                   const mfem::Vector& elfun, mfem::DenseMatrix& elmat)
+  {
+    integ_->AssembleElementGrad(el, Tr, elfun, elmat);
+  }
+
+protected:
+  std::shared_ptr<mfem::NonlinearFormIntegrator> integ_;
+};
+
 }  // namespace serac::mfem_ext
+
+#endif

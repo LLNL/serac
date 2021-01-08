@@ -42,6 +42,9 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
     case serac::TimestepMethod::FoxGoodwin:
       ode_solver_ = std::make_unique<mfem::FoxGoodwinSolver>();
       break;
+    case serac::TimestepMethod::NewmarkBeta:
+      ode_solver_ = std::make_unique<mfem::NewmarkSolver>();
+      break;
     default:
       SLIC_ERROR("Timestep method was not a supported second-order ODE method");
   }

@@ -343,7 +343,7 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {
-        {"AverageAcceleration", TimestepMethod::AverageAcceleration}};
+        {"AverageAcceleration", TimestepMethod::AverageAcceleration}, {"NewmarkBeta", TimestepMethod::NewmarkBeta}};
     std::string timestep_method = dynamics["timestepper"];
     SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
     dyn_options.timestepper = timestep_methods.at(timestep_method);

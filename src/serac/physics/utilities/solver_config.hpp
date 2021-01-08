@@ -53,7 +53,8 @@ enum class TimestepMethod
   AverageAcceleration,
   LinearAcceleration,
   CentralDifference,
-  FoxGoodwin
+  FoxGoodwin,
+  NewmarkBeta
 };
 
 /**
