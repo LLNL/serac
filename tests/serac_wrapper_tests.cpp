@@ -5,12 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 // # Author: Jonathan Wong @ LLNL.
 
-#include <gtest/gtest.h>
+#include "serac/coefficients/coefficient_extensions.hpp"
 
 #include <memory>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
-#include "serac/coefficients/coefficient_extensions.hpp"
+
 #include "serac/integrators/wrapper_integrator.hpp"
 
 using namespace mfem;

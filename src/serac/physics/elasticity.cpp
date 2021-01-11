@@ -13,7 +13,7 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverParameters& params)
+Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& options)
     : BasePhysics(mesh, NUM_FIELDS, order),
       displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"})
 {
@@ -21,9 +21,9 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const Lin
   state_.push_back(displacement_);
 
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
-  const auto& augmented_params = mfem_ext::AugmentAMGForElasticity(params, displacement_.space());
+  const auto& augmented_options = mfem_ext::AugmentAMGForElasticity(options, displacement_.space());
 
-  K_inv_          = mfem_ext::EquationSolver(mesh->GetComm(), augmented_params);
+  K_inv_          = mfem_ext::EquationSolver(mesh->GetComm(), augmented_options);
   is_quasistatic_ = true;
 }
 

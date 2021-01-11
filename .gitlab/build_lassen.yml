@@ -14,7 +14,7 @@
 # Load required CUDA module
 .with_cuda:
   before_script:
-    - module load cuda/11.0.2
+    - module load cuda/11.1.1
 
 ####
 # Template
@@ -30,15 +30,15 @@
 
 ####
 # Build jobs
-clang_upstream_gfortran (PR build_on_lassen):
+clang_10_0_1 (PR build_on_lassen):
   variables:
-    COMPILER: "clang@upstream_gfortran"
-    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-clang@upstream_gfortran-cuda.cmake"
+    COMPILER: "clang@10.0.1"
+    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}-cuda.cmake"
   extends: [.pr_build_on_lassen, .with_cuda]
 
-clang_upstream_gfortran (Main build_with_deps_on_lassen):
+clang_10_0_1 (Main build_with_deps_on_lassen):
   variables:
-    COMPILER: "clang@upstream_gfortran"
+    COMPILER: "clang@10.0.1"
     SPEC: "@develop+cuda%${COMPILER}"
     EXTRA_SPEC: "cuda_arch=70"
     # The "-cuda" at the end of the host-config needs to be hardcoded for now

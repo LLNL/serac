@@ -5,24 +5,21 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file cli.hpp
+ * @file input.hpp
  *
- * @brief This file contains the all the necessary functions and macros required
- *        for interacting with the command line interface.
+ * @brief This file contains the all the necessary functions for reading input files
  */
 
-#ifndef SERAC_INPUT
-#define SERAC_INPUT
+#pragma once
 
 #include <string>
+#include <variant>
 
+#include "mfem.hpp"
 #include "axom/inlet.hpp"
 #include "axom/sidre.hpp"
-#include "mfem.hpp"
 
-namespace serac {
-
-namespace input {
+namespace serac::input {
 
 /**
  * @brief Initializes Inlet with the given datastore and input file.
@@ -54,17 +51,53 @@ std::string fullDirectoryFromPath(const std::string& file_path);
 /**
  * @brief Defines the schema for a vector in R^{1,2,3} space
  * @param[inout] table The base table on which to define the schema
- * @param[in] dimension The expected dimension of the vector
  */
-void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension = 3);
+void defineVectorInputFileSchema(axom::inlet::Table& table);
 
 /**
- * @brief The information required from the input deck for a boundary condition
+ * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
  */
-struct BoundaryConditionInputInfo {
-  // Just store the attributes and a name for now
-  std::string   name;
-  std::set<int> attrs;
+struct CoefficientInputOptions {
+  using VecFunc    = std::function<void(const mfem::Vector&, mfem::Vector&)>;
+  using ScalarFunc = std::function<double(const mfem::Vector&)>;
+  /**
+   * @brief The std::function corresponding to a function coefficient
+   */
+  std::variant<ScalarFunc, VecFunc> func;
+  /**
+   * @brief The component to which a scalar coefficient should be applied
+   */
+  int component;
+  /**
+   * @brief Returns whether the contained function corresponds to a vector coefficient
+   */
+  bool isVector() const;
+  /**
+   * @brief Constructs a vector coefficient with the requested dimension
+   */
+  mfem::VectorFunctionCoefficient constructVector(const int dim = 3) const;
+  /**
+   * @brief Constructs a scalar coefficient
+   */
+  mfem::FunctionCoefficient constructScalar() const;
+  /**
+   * @brief Defines the input file schema on the provided inlet table
+   */
+  static void defineInputFileSchema(axom::inlet::Table& table);
+};
+
+/**
+ * @brief The information required from the input file for a boundary condition
+ */
+struct BoundaryConditionInputOptions {
+  /**
+   * @brief The mesh attributes on which to apply the boundary condition
+   */
+  std::set<int> attrs{};
+  /**
+   * @brief The information from the input file on the BC coefficient
+   */
+  CoefficientInputOptions coef_opts;
   /**
    * @brief Input file parameters specific to this class
    *
@@ -73,8 +106,7 @@ struct BoundaryConditionInputInfo {
   static void defineInputFileSchema(axom::inlet::Table& table);
 };
 
-}  // namespace input
-}  // namespace serac
+}  // namespace serac::input
 
 // Template specializations
 template <>
@@ -83,8 +115,11 @@ struct FromInlet<mfem::Vector> {
 };
 
 template <>
-struct FromInlet<serac::input::BoundaryConditionInputInfo> {
-  serac::input::BoundaryConditionInputInfo operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::input::CoefficientInputOptions> {
+  serac::input::CoefficientInputOptions operator()(const axom::inlet::Table& base);
 };
 
-#endif
+template <>
+struct FromInlet<serac::input::BoundaryConditionInputOptions> {
+  serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Table& base);
+};

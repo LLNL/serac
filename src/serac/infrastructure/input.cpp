@@ -9,12 +9,11 @@
 #include <stdlib.h>
 
 #include "axom/core.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac {
-
-namespace input {
+namespace serac::input {
 
 axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path)
 {
@@ -67,28 +66,50 @@ std::string fullDirectoryFromPath(const std::string& path)
   return dir;
 }
 
-void defineVectorInputFileSchema(axom::inlet::Table& table, const int dimension)
+void defineVectorInputFileSchema(axom::inlet::Table& table)
 {
-  if (dimension < 0 || dimension > 3) {
-    SLIC_ERROR("Cannot define an input file schema for vector of invalid size" << dimension);
-  }
-  table.addDouble("x", "x-component of vector").required(true);
-  if (dimension >= 2) {
-    table.addDouble("y", "y-component of vector").required(true);
-    if (dimension >= 3) {
-      table.addDouble("z", "z-component of vector").required(true);
-    }
-  }
+  table.addDouble("x", "x-component of vector").required();
+  table.addDouble("y", "y-component of vector");
+  table.addDouble("z", "z-component of vector");
 }
 
-void BoundaryConditionInputInfo::defineInputFileSchema(axom::inlet::Table& table)
+void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
-  table.addString("name", "Name used to identify the boundary condition").required();
   table.addIntArray("attrs", "Boundary attributes to which the BC should be applied").required();
+  CoefficientInputOptions::defineInputFileSchema(table);
 }
 
-}  // namespace input
-}  // namespace serac
+bool CoefficientInputOptions::isVector() const
+{
+  return std::holds_alternative<CoefficientInputOptions::VecFunc>(func);
+}
+
+mfem::VectorFunctionCoefficient CoefficientInputOptions::constructVector(const int dim) const
+{
+  auto vec_func = std::get_if<CoefficientInputOptions::VecFunc>(&func);
+  SLIC_ERROR_IF(!vec_func, "Cannot construct a vector coefficient from a scalar function");
+  return {dim, *vec_func};
+}
+
+mfem::FunctionCoefficient CoefficientInputOptions::constructScalar() const
+{
+  auto scalar_func = std::get_if<CoefficientInputOptions::ScalarFunc>(&func);
+  SLIC_ERROR_IF(!scalar_func, "Cannot construct a scalar coefficient from a vector function");
+  return {*scalar_func};
+}
+
+void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
+{
+  // Vectors are expanded to three arguments in Lua (x, y, z)
+  // and should be returned as a 3-tuple
+  table.addFunction("vec_coef", axom::inlet::FunctionType::Vec3D, {axom::inlet::FunctionType::Vec3D},
+                    "The function to use for an mfem::VectorFunctionCoefficient");
+  table.addFunction("coef", axom::inlet::FunctionType::Double, {axom::inlet::FunctionType::Vec3D},
+                    "The function to use for an mfem::FunctionCoefficient");
+  table.addInt("component", "The vector component to which the scalar coefficient should be applied");
+}
+
+}  // namespace serac::input
 
 mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
 {
@@ -107,15 +128,35 @@ mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
   return result;
 }
 
-serac::input::BoundaryConditionInputInfo FromInlet<serac::input::BoundaryConditionInputInfo>::operator()(
+serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
     const axom::inlet::Table& base)
 {
-  serac::input::BoundaryConditionInputInfo result;
+  serac::input::BoundaryConditionInputOptions result{.coef_opts = base.get<serac::input::CoefficientInputOptions>()};
   // Build a set with just the values of the map
   auto bdr_attr_map = base["attrs"].get<std::unordered_map<int, int>>();
   for (const auto& [_, val] : bdr_attr_map) {
     result.attrs.insert(val);
   }
-  result.name = base["name"];
   return result;
+}
+
+serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOptions>::operator()(
+    const axom::inlet::Table& base)
+{
+  if (base.contains("vec_coef")) {
+    auto func     = base["vec_coef"].get<std::function<axom::primal::Vector3D(axom::primal::Vector3D)>>();
+    auto vec_func = [func(std::move(func))](const mfem::Vector& input, mfem::Vector& output) {
+      auto ret = func({input.GetData(), input.Size()});
+      // Copy from the primal vector into the MFEM vector
+      std::copy(ret.data(), ret.data() + ret.dimension(), output.GetData());
+    };
+    return {std::move(vec_func), -1};
+  } else if (base.contains("coef")) {
+    auto func        = base["coef"].get<std::function<double(axom::primal::Vector3D)>>();
+    auto scalar_func = [func(std::move(func))](const mfem::Vector& input) {
+      return func({input.GetData(), input.Size()});
+    };
+    return {std::move(scalar_func), base["component"]};
+  }
+  return {};
 }

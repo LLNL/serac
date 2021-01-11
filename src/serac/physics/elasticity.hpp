@@ -10,10 +10,10 @@
  * @brief A solver for the steady state solution of a linear elasticity PDE
  */
 
-#ifndef LINEAR_ELASTICITY
-#define LINEAR_ELASTICITY
+#pragma once
 
 #include "mfem.hpp"
+
 #include "serac/physics/base_physics.hpp"
 
 namespace serac {
@@ -36,9 +36,9 @@ public:
    *
    * @param[in] order The polynomial order of the solver
    * @param[in] mesh The parallel MFEM mesh
-   * @param[in] params The system solver parameters
+   * @param[in] options The system solver parameters
    */
-  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverParameters& params);
+  Elasticity(const int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& options);
 
   /**
    * @brief Set the vector-valued essential displacement boundary conditions
@@ -150,5 +150,3 @@ protected:
 };
 
 }  // namespace serac
-
-#endif

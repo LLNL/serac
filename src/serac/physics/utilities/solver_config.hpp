@@ -10,8 +10,7 @@
  * @brief This file contains enumerations and record types for physics solver configuration
  */
 
-#ifndef SOLVER_CONFIG
-#define SOLVER_CONFIG
+#pragma once
 
 #include <variant>
 
@@ -185,7 +184,7 @@ enum class CouplingScheme
 /**
  * @brief Parameters for an iterative linear solution scheme
  */
-struct IterativeSolverParameters {
+struct IterativeSolverOptions {
   /**
    * @brief Relative tolerance
    */
@@ -222,14 +221,14 @@ struct IterativeSolverParameters {
  * @note This is preferable to unique_ptr or even references because non-trivial copy constructors
  * and destructors are a nightmare in this context
  */
-struct CustomSolverParameters {
+struct CustomSolverOptions {
   mfem::Solver* solver = nullptr;
 };
 
 /**
  * @brief Parameters for a direct solver (PARDISO, MUMPS, SuperLU, etc)
  */
-struct DirectSolverParameters {
+struct DirectSolverOptions {
   /**
    * @brief Debugging print level
    */
@@ -239,12 +238,12 @@ struct DirectSolverParameters {
 /**
  * @brief Parameters for a linear solver
  */
-using LinearSolverParameters = std::variant<IterativeSolverParameters, CustomSolverParameters, DirectSolverParameters>;
+using LinearSolverOptions = std::variant<IterativeSolverOptions, CustomSolverOptions, DirectSolverOptions>;
 
 /**
  * @brief Nonlinear solution scheme parameters
  */
-struct NonlinearSolverParameters {
+struct NonlinearSolverOptions {
   /**
    * @brief Relative tolerance
    */
@@ -272,5 +271,3 @@ struct NonlinearSolverParameters {
 };
 
 }  // namespace serac
-
-#endif

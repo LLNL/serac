@@ -10,8 +10,7 @@
  * @brief This file contains the declaration of the boundary condition class
  */
 
-#ifndef BOUNDARY_CONDITION
-#define BOUNDARY_CONDITION
+#pragma once
 
 #include <memory>
 #include <optional>
@@ -267,5 +266,3 @@ private:
 };
 
 }  // namespace serac
-
-#endif

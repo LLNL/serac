@@ -10,8 +10,7 @@
  * @brief Wrappers to turn bilinear and linear integrators into nonlinear ones
  */
 
-#ifndef WRAPPER_INTEGRATOR_HPP
-#define WRAPPER_INTEGRATOR_HPP
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -223,5 +222,3 @@ private:
 };
 
 }  // namespace serac::mfem_ext
-
-#endif

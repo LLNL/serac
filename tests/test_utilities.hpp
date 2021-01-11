@@ -3,15 +3,14 @@
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
+#pragma once
 
 #include "serac/infrastructure/input.hpp"
 
-namespace serac {
+namespace serac::test_utils {
 
-namespace testing {
+void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet);
 
-void defineNonlinSolidInputFileSchema(axom::inlet::Inlet& inlet, const bool dynamic = false);
+void runNonlinSolidTest(const std::string& input_file);
 
-}  // end namespace testing
-
-}  // end namespace serac
+}  // end namespace serac::test_utils

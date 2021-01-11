@@ -10,6 +10,7 @@
 
 #include "axom/core.hpp"
 #include "fmt/fmt.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
@@ -168,7 +169,7 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
 
 namespace mesh {
 
-void InputInfo::defineInputFileSchema(axom::inlet::Table& table)
+void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // mesh path
   table.addString("mesh", "Path to Mesh file").required();
@@ -181,7 +182,7 @@ void InputInfo::defineInputFileSchema(axom::inlet::Table& table)
 }  // namespace mesh
 }  // namespace serac
 
-serac::mesh::InputInfo FromInlet<serac::mesh::InputInfo>::operator()(const axom::inlet::Table& base)
+serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const axom::inlet::Table& base)
 {
   std::string mesh_path = base["mesh"];
   int         ser_ref   = base["ser_ref_levels"];

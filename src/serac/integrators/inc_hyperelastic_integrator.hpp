@@ -10,6 +10,8 @@
  * @brief The MFEM integrators for the incremental hyperelastic formulation
  */
 
+#pragma once
+
 #include "mfem.hpp"
 
 namespace serac::mfem_ext {

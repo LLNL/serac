@@ -116,13 +116,12 @@ public:
       : M(M_),
         K(K_),
         A(NULL),
-        linear_solver(M.GetComm(),
-                      serac::IterativeSolverParameters{.rel_tol     = 1e-9,
-                                                       .abs_tol     = 0.0,
-                                                       .print_level = 0,
-                                                       .max_iter    = 100,
-                                                       .lin_solver  = serac::LinearSolver::GMRES,
-                                                       .prec        = serac::BlockILUPrec{fes.GetFE(0)->GetDof()}}),
+        linear_solver(M.GetComm(), serac::IterativeSolverOptions{.rel_tol     = 1e-9,
+                                                                 .abs_tol     = 0.0,
+                                                                 .print_level = 0,
+                                                                 .max_iter    = 100,
+                                                                 .lin_solver  = serac::LinearSolver::GMRES,
+                                                                 .prec = serac::BlockILUPrec{fes.GetFE(0)->GetDof()}}),
         dt(-1.0)
   {
     linear_solver.LinearSolver().iterative_mode = false;

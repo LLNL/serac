@@ -10,10 +10,10 @@
  * @brief An object containing the solver for a thermal conduction PDE
  */
 
-#ifndef THERMAL_CONDUCTION
-#define THERMAL_CONDUCTION
+#pragma once
 
 #include "mfem.hpp"
+
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/operators/odes.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
@@ -35,22 +35,22 @@ public:
   /**
    * @brief A timestep method and config for the M solver
    */
-  struct DynamicSolverParameters {
+  struct TimesteppingOptions {
     TimestepMethod             timestepper;
     DirichletEnforcementMethod enforcement_method;
   };
 
   /**
    * @brief A configuration variant for the various solves
-   * Either quasistatic, or time-dependent with timestep and M params
+   * Either quasistatic, or time-dependent with timestep and M options
    */
-  struct SolverParameters {
-    LinearSolverParameters                 T_lin_params;
-    NonlinearSolverParameters              T_nonlin_params;
-    std::optional<DynamicSolverParameters> dyn_params = std::nullopt;
+  struct SolverOptions {
+    LinearSolverOptions                T_lin_options;
+    NonlinearSolverOptions             T_nonlin_options;
+    std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
-  static IterativeSolverParameters defaultLinearParameters()
+  static IterativeSolverOptions defaultLinearOptions()
   {
     return {.rel_tol     = 1.0e-6,
             .abs_tol     = 1.0e-12,
@@ -60,20 +60,20 @@ public:
             .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
   }
 
-  static NonlinearSolverParameters defaultNonlinearParameters()
+  static NonlinearSolverOptions defaultNonlinearOptions()
   {
     return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
   }
 
-  static SolverParameters defaultQuasistaticParameters()
+  static SolverOptions defaultQuasistaticOptions()
   {
-    return {defaultLinearParameters(), defaultNonlinearParameters(), std::nullopt};
+    return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt};
   }
 
-  static SolverParameters defaultDynamicParameters()
+  static SolverOptions defaultDynamicOptions()
   {
-    return {defaultLinearParameters(), defaultNonlinearParameters(),
-            DynamicSolverParameters{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
+    return {defaultLinearOptions(), defaultNonlinearOptions(),
+            TimesteppingOptions{TimestepMethod::BackwardEuler, DirichletEnforcementMethod::RateControl}};
   }
 
   /**
@@ -81,9 +81,9 @@ public:
    *
    * @param[in] order The order of the thermal field discretization
    * @param[in] mesh The MFEM parallel mesh to solve the PDE on
-   * @param[in] params The system solver parameters
+   * @param[in] options The system solver parameters
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverParameters& params);
+  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -274,5 +274,3 @@ protected:
 };
 
 }  // namespace serac
-
-#endif

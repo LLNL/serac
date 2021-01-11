@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
-
 #include <exception>
+
+#include <gtest/gtest.h>
 
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
@@ -25,19 +25,19 @@ using mfem_ext::EquationSolver;
 
 TEST(serac_error_handling, equationsolver_bad_lin_solver)
 {
-  IterativeSolverParameters params;
+  IterativeSolverOptions options;
   // Try a definitely wrong number to ensure that an invalid linear solver is detected
-  params.lin_solver = static_cast<LinearSolver>(-7);
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, params), SlicErrorException);
+  options.lin_solver = static_cast<LinearSolver>(-7);
+  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, options), SlicErrorException);
 }
 
 // Only need to test this when AmgX is **not** available
 #ifndef MFEM_USE_AMGX
 TEST(serac_error_handling, equationsolver_amgx_not_available)
 {
-  IterativeSolverParameters params;
-  params.prec = AMGXPrec{};
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, params), SlicErrorException);
+  IterativeSolverOptions options;
+  options.prec = AMGXPrec{};
+  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, options), SlicErrorException);
 }
 #endif
 
@@ -45,10 +45,10 @@ TEST(serac_error_handling, equationsolver_amgx_not_available)
 #ifndef MFEM_USE_SUNDIALS
 TEST(serac_error_handling, equationsolver_kinsol_not_available)
 {
-  auto lin_params             = ThermalConduction::defaultLinearParameters();
-  auto nonlin_params          = ThermalConduction::defaultNonlinearParameters();
-  nonlin_params.nonlin_solver = NonlinearSolver::KINFullStep;
-  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, lin_params, nonlin_params), SlicErrorException);
+  auto lin_options             = ThermalConduction::defaultLinearOptions();
+  auto nonlin_options          = ThermalConduction::defaultNonlinearOptions();
+  nonlin_options.nonlin_solver = NonlinearSolver::KINFullStep;
+  EXPECT_THROW(EquationSolver(MPI_COMM_WORLD, lin_options, nonlin_options), SlicErrorException);
 }
 #endif
 
@@ -116,7 +116,7 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
 
 TEST(serac_error_handling, invalid_output_type)
 {
-  ThermalConduction physics(1, buildDiskMesh(100), ThermalConduction::defaultQuasistaticParameters());
+  ThermalConduction physics(1, buildDiskMesh(100), ThermalConduction::defaultQuasistaticOptions());
   // Try a definitely wrong number to ensure that an invalid output type is detected
   EXPECT_THROW(physics.initializeOutput(static_cast<OutputType>(-7), ""), SlicErrorException);
 }
