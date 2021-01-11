@@ -10,8 +10,7 @@
  * @brief MFEM coefficients for handling traction boundaries
  */
 
-#ifndef TRACTION_COEF
-#define TRACTION_COEF
+#pragma once
 
 #include "mfem.hpp"
 
@@ -61,5 +60,3 @@ private:
 };
 
 }  // namespace serac
-
-#endif

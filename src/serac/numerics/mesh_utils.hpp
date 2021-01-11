@@ -11,12 +11,12 @@
  *        various mesh objects.
  */
 
-#ifndef MESH_UTILS
-#define MESH_UTILS
+#pragma once
 
 #include <memory>
 
 #include "mfem.hpp"
+
 #include "serac/infrastructure/input.hpp"
 
 /**
@@ -106,5 +106,3 @@ template <>
 struct FromInlet<serac::mesh::InputOptions> {
   serac::mesh::InputOptions operator()(const axom::inlet::Table& base);
 };
-
-#endif

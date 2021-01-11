@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
-
 #include "serac/numerics/mesh_utils.hpp"
+
+#include <gtest/gtest.h>
 
 TEST(meshgen, successful_creation)
 {

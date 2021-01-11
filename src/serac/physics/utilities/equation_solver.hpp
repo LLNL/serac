@@ -10,14 +10,14 @@
  * @brief This file contains the declaration of an equation solver wrapper
  */
 
-#ifndef EQUATION_SOLVER
-#define EQUATION_SOLVER
+#pragma once
 
 #include <memory>
 #include <optional>
 #include <variant>
 
 #include "mfem.hpp"
+
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/utilities/solver_config.hpp"
 
@@ -225,5 +225,3 @@ template <>
 struct FromInlet<serac::EquationSolver> {
   serac::EquationSolver operator()(const axom::inlet::Table& base);
 };
-
-#endif
