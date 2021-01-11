@@ -4,15 +4,17 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
+#include "serac/physics/thermal_conduction.hpp"
+
 #include <sys/stat.h>
 
 #include <fstream>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
-#include "numerics/mesh_utils.hpp"
-#include "physics/thermal_conduction.hpp"
-#include "serac_config.hpp"
+
+#include "serac/numerics/mesh_utils.hpp"
+#include "serac/serac_config.hpp"
 
 namespace serac {
 
@@ -36,7 +38,7 @@ TEST(thermal_solver, static_solve)
   auto pmesh = buildBallMesh(10000);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultQuasistaticParameters());
+  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultQuasistaticOptions());
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(One);
@@ -76,7 +78,7 @@ TEST(thermal_solver, static_solve_multiple_bcs)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultQuasistaticParameters());
+  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultQuasistaticOptions());
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -126,7 +128,7 @@ TEST(thermal_solver, static_solve_repeated_bcs)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultQuasistaticParameters());
+  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultQuasistaticOptions());
 
   // Initialize the temperature boundary condition
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(BoundaryTemperature);
@@ -167,11 +169,11 @@ TEST(thermal_solver, dyn_exp_solve)
 
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
-  auto params                    = ThermalConduction::defaultDynamicParameters();
-  params.dyn_params->timestepper = TimestepMethod::ForwardEuler;
+  auto options                     = ThermalConduction::defaultDynamicOptions();
+  options.dyn_options->timestepper = TimestepMethod::ForwardEuler;
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, params);
+  ThermalConduction therm_solver(2, pmesh, options);
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -229,7 +231,7 @@ TEST(thermal_solver, dyn_imp_solve)
   auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicParameters());
+  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicOptions());
 
   // Initialize the state grid function
   auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -295,7 +297,7 @@ TEST(thermal_solver_rework, dyn_imp_solve_time_varying)
   auto pmesh = buildMeshFromFile(mesh_file, 2, 1);
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicParameters());
+  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicOptions());
 
   // by construction, f(x, y, t) satisfies df_dt == d2f_dx2 + d2f_dy2
   auto f = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x, double t) {
@@ -344,6 +346,47 @@ TEST(thermal_solver_rework, dyn_imp_solve_time_varying)
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
+
+#ifdef MFEM_USE_AMGX
+TEST(thermal_solver, static_amgx_solve)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  auto pmesh = buildBallMesh(10000);
+
+  auto options                                                 = ThermalConduction::defaultQuasistaticOptions();
+  std::get<IterativeSolverOptions>(options.T_lin_options).prec = AMGXPrec{.smoother = AMGXSolver::JACOBI_L1};
+  // Initialize the second order thermal solver on the parallel mesh
+  ThermalConduction therm_solver(2, pmesh, options);
+
+  // Initialize the temperature boundary condition
+  auto u_0 = std::make_shared<mfem::FunctionCoefficient>(One);
+
+  std::set<int> temp_bdr = {1};
+
+  // Set the temperature BC in the thermal solver
+  therm_solver.setTemperatureBCs(temp_bdr, u_0);
+
+  // Set the conductivity of the thermal operator
+  auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
+  therm_solver.setConductivity(std::move(kappa));
+
+  // Complete the setup without allocating the mass matrices and dynamic
+  // operator
+  therm_solver.completeSetup();
+
+  // Perform the static solve
+  double dt = 1.0;
+  therm_solver.advanceTimestep(dt);
+
+  // Measure the L2 norm of the solution and check the value
+  mfem::ConstantCoefficient zero(0.0);
+  double                    u_norm = therm_solver.temperature().gridFunc().ComputeLpError(2.0, zero);
+  EXPECT_NEAR(2.02263, u_norm, 0.00001);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+#endif
 
 }  // namespace serac
 

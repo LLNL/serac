@@ -4,12 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
+#include "serac/physics/utilities/boundary_condition_manager.hpp"
 
 #include <memory>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
-#include "physics/utilities/boundary_condition_manager.hpp"
 
 namespace serac {
 
