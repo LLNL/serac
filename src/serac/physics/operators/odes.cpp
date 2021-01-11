@@ -126,14 +126,13 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
   d2U_dt2_.SetSubVectorComplement(constrained_dofs, 0.0);
   d2u_dt2 += d2U_dt2_;
 
-
-  std::cout << t << " " << (U_plus_(0) - U_minus_(0)) / (2.0 * epsilon) << std::endl;
-  std::cout << t << " " << d2u_dt2(0) << std::endl;
+  //std::cout << t << " " << (U_plus_(0) - U_minus_(0)) / (2.0 * epsilon) << std::endl;
+  //std::cout << t << " " << d2u_dt2(0) << std::endl;
 
   solver_.Mult(zero_, d2u_dt2);
   SLIC_WARNING_IF(!solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
-  std::cout << t << " " << d2u_dt2(0) << std::endl;
+  //std::cout << t << " " << d2u_dt2(0) << std::endl;
 
   state_.d2u_dt2 = d2u_dt2;
 }
@@ -242,6 +241,8 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   du_dt.SetSubVector(constrained_dofs, 0.0);
   dU_dt_.SetSubVectorComplement(constrained_dofs, 0.0);
   du_dt += dU_dt_;
+
+  //std::cout << "inside: " << t << " " << du_dt(0) << std::endl;
 
   solver_.Mult(zero_, du_dt);
   SLIC_WARNING_IF(!solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
