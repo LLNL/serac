@@ -19,8 +19,8 @@ axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::stri
 {
   // Initialize Inlet
   auto luareader = std::make_unique<axom::inlet::LuaReader>();
-  luareader->parseFile(input_file_path);
   luareader->solState().open_libraries(sol::lib::math);
+  luareader->parseFile(input_file_path);
 
   // Store inlet data under its own group
   axom::sidre::Group* inlet_root = datastore.getRoot()->createGroup("input_file");
