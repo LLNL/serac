@@ -3,13 +3,12 @@
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
+#pragma once
 
 #include <gtest/gtest.h>
 #include "serac/infrastructure/input.hpp"
 
-namespace serac {
-
-namespace test_utils {
+namespace serac::test_utils {
 
 /**
  * @brief Defines the full schema for an integration test on the provided
@@ -30,6 +29,4 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
 class InputFileTest : public ::testing::TestWithParam<std::string> {
 };
 
-}  // end namespace test_utils
-
-}  // end namespace serac
+}  // end namespace serac::test_utils

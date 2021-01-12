@@ -11,16 +11,13 @@
  *        for interacting with the command line interface.
  */
 
-#ifndef SERAC_CLI
-#define SERAC_CLI
+#pragma once
 
 #include <string>
 #include <unordered_map>
 
-namespace serac {
-
 // Command line functionality
-namespace cli {
+namespace serac::cli {
 
 /**
  * @brief Defines command line options and parses the found values.
@@ -42,7 +39,4 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
  */
 void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank);
 
-}  // namespace cli
-}  // namespace serac
-
-#endif
+}  // namespace serac::cli

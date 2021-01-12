@@ -10,10 +10,10 @@
  * @brief An object containing the solver for a thermal conduction PDE
  */
 
-#ifndef THERMAL_CONDUCTION
-#define THERMAL_CONDUCTION
+#pragma once
 
 #include "mfem.hpp"
+
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/operators/odes.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
@@ -314,5 +314,3 @@ template <>
 struct FromInlet<serac::ThermalConduction::InputOptions> {
   serac::ThermalConduction::InputOptions operator()(const axom::inlet::Table& base);
 };
-
-#endif

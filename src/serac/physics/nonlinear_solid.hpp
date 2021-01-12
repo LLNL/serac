@@ -10,12 +10,12 @@
  * @brief The solver object for finite deformation hyperelasticity
  */
 
-#ifndef NONLIN_SOLID
-#define NONLIN_SOLID
+#pragma once
 
 #include <optional>
 
 #include "mfem.hpp"
+
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/operators/odes.hpp"
@@ -318,5 +318,3 @@ template <>
 struct FromInlet<serac::NonlinearSolid::InputOptions> {
   serac::NonlinearSolid::InputOptions operator()(const axom::inlet::Table& base);
 };
-
-#endif

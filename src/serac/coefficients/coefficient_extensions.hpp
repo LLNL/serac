@@ -10,13 +10,13 @@
  * @brief Extensions of MFEM's coefficient interface and helper functions
  */
 
-#ifndef COEFFICIENT_EXTENSIONS_HPP
-#define COEFFICIENT_EXTENSIONS_HPP
+#pragma once
 
 #include <functional>
 #include <memory>
 
 #include "mfem.hpp"
+
 #include "serac/numerics/expr_template_ops.hpp"
 
 namespace serac {
@@ -244,5 +244,3 @@ private:
 };
 
 }  // namespace serac
-
-#endif

@@ -7,8 +7,8 @@
 #include "serac/physics/nonlinear_solid.hpp"
 
 #include <fstream>
-#include <gtest/gtest.h>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/coefficients/coefficient_extensions.hpp"

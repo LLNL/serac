@@ -9,6 +9,7 @@
 #include <functional>
 
 #include "mfem.hpp"
+
 #include "serac/physics/utilities/boundary_condition_manager.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
 

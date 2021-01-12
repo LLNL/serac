@@ -9,12 +9,11 @@
 #include <stdlib.h>
 
 #include "axom/core.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac {
-
-namespace input {
+namespace serac::input {
 
 axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path)
 {
@@ -111,8 +110,7 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
   table.addInt("component", "The vector component to which the scalar coefficient should be applied");
 }
 
-}  // namespace input
-}  // namespace serac
+}  // namespace serac::input
 
 mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
 {

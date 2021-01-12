@@ -4,10 +4,10 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <algorithm>
+
 #include <cuda_runtime.h>
 #include <gtest/gtest.h>
-
-#include <algorithm>
 
 void vector_add(float* out, float* a, float* b, int n);
 

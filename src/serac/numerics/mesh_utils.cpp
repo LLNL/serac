@@ -10,6 +10,7 @@
 
 #include "axom/core.hpp"
 #include "fmt/fmt.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
