@@ -107,6 +107,11 @@ public:
   }
 
   /**
+     The FirstOrder recast that can be used by a first order ode solver
+   */
+  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
+  
+  /**
    * @brief Configures the Dirichlet enforcement method to use
    * @param[in] method The selected method
    */
@@ -129,7 +134,7 @@ public:
    *
    * @see mfem::SecondOrderODESolver::Step
    */
-  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt) { ode_solver_->Step(x, dxdt, t, dt); }
+  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt);
 
 private:
   /**
@@ -160,6 +165,12 @@ private:
    * @brief MFEM solver object for second-order ODEs
    */
   std::unique_ptr<mfem::SecondOrderODESolver> ode_solver_;
+
+  /**
+   * @brief MFEM solver object for second-order ODEs recast as first order
+   */
+  std::unique_ptr<mfem::ODESolver> ode_system_solver_;
+  
   /**
    * @brief Reference to boundary conditions used to constrain the solution
    */
@@ -230,8 +241,20 @@ public:
    * mfem::TimeDependentOperator::ImplicitSolve corresponds to the case where dt is nonzero
    *
    */
-  FirstOrderODE(int n, State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs);
+  FirstOrderODE(int n, FirstOrderODE::State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs);
 
+  /**
+   * @brief Recasts a second order equation as a set of first order equations
+   *
+   * @param[in] n The number of components in each vector of the ODE
+   * @param[in] state The SecondOrderODE state
+   * @param[in] solver The equation solver for the residual equation that is solved at the next time step
+   * @param[in] bcs boundary conditions for the ode
+   *
+   */
+  FirstOrderODE(int n, SecondOrderODE& ode2, const EquationSolver& solver, const BoundaryConditionManager& bcs);
+
+  
   /**
    * @brief Solves the equation du_dt = f(u, t)
    *
@@ -273,19 +296,23 @@ public:
    */
   void Step(mfem::Vector& x, double& t, double& dt) { ode_solver_->Step(x, t, dt); }
 
-private:
+
   /**
    * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve
    * @param[in] dt The time step
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    */
-  void Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
+  virtual void Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
+
+  
+private:
 
   /**
    * @brief Set of references to external variables used by residual operator
    */
-  State state_;
+  FirstOrderODE::State state_;
+
   /**
    * @brief The method of enforcing time-varying dirichlet boundary conditions
    */

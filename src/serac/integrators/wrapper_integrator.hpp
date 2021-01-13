@@ -263,4 +263,3 @@ protected:
 
 }  // namespace serac::mfem_ext
 
-#endif

@@ -45,12 +45,73 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
     case serac::TimestepMethod::NewmarkBeta:
       ode_solver_ = std::make_unique<mfem::NewmarkSolver>();
       break;
+    case serac::TimestepMethod::BackwardEuler:
+      ode_system_solver_ = std::make_unique<mfem::BackwardEulerSolver>();
+      break;            
     default:
       SLIC_ERROR("Timestep method was not a supported second-order ODE method");
   }
-  ode_solver_->Init(*this);
+
+  if (ode_solver_)
+    ode_solver_->Init(*this);
+
+  if (ode_system_solver_) {
+    // we need to adjust the width of this operator
+    width *= 2;
+    ode_system_solver_->Init(*this);    
+  }
+  
 }
 
+  void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt)
+  {
+    if (ode_solver_) { // if we used a 2nd order method
+      ode_solver_->Step(x, dxdt, t, dt);
+    } else if (ode_system_solver_) {
+      // Would be better if displacement and velocity were from a block vector?
+      mfem::Array<int> boffsets(3);
+      boffsets[0] = 0; boffsets[1] = x.Size(); boffsets[2] = x.Size() + dxdt.Size();
+      mfem::BlockVector bx(boffsets);
+      bx.GetBlock(0) = x;
+      bx.GetBlock(1) = dxdt;
+      
+      ode_system_solver_->Step(bx, t, dt);
+      
+      // Copy back
+      x = bx.GetBlock(0);
+      dxdt = bx.GetBlock(1);
+    }
+      
+  }
+
+  
+  void SecondOrderODE::ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt)
+  {
+    /* A second order p.d.e can be recast as a first order system
+      u_next = u_prev + dt * v_next
+      v_next = v_prev + dt * a_next
+
+      This means:
+      u_next = u_prev + dt * (v_prev + dt * a_next);
+      u_next = (u_prev + dt * v_prev) + dt*dt*a_next
+    */
+
+    // Split u in half and du_dt in half?
+    mfem::Array<int> boffsets(3);
+    boffsets[0] = 0; boffsets[1] = u.Size()/2; boffsets[2] = u.Size();
+    
+    const mfem::BlockVector bu(u.GetData(), boffsets);
+
+    mfem::BlockVector bdu_dt(du_dt.GetData(), boffsets);
+    Solve(t, dt*dt, dt,
+	  bu.GetBlock(0) + bu.GetBlock(1)*dt, // u_next
+	  bu.GetBlock(1), // v_next
+	  bdu_dt.GetBlock(1)); // a_next
+
+    bdu_dt.GetBlock(0) = bu.GetBlock(1) + dt * bdu_dt.GetBlock(1);
+
+  }
+  
 void SecondOrderODE::Solve(const double t, const double c0, const double c1, const mfem::Vector& u,
                            const mfem::Vector& du_dt, mfem::Vector& d2u_dt2) const
 {
@@ -128,7 +189,7 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
   state_.d2u_dt2 = d2u_dt2;
 }
 
-FirstOrderODE::FirstOrderODE(int n, State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs)
+  FirstOrderODE::FirstOrderODE(int n, FirstOrderODE::State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs)
     : mfem::TimeDependentOperator(n, 0.0), state_(std::move(state)), solver_(solver), bcs_(bcs), zero_(n)
 {
   zero_ = 0.0;
@@ -137,7 +198,7 @@ FirstOrderODE::FirstOrderODE(int n, State&& state, const EquationSolver& solver,
   U_plus_.SetSize(n);
   dU_dt_.SetSize(n);
 }
-
+  
 void FirstOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 {
   switch (timestepper) {
