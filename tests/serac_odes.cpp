@@ -18,6 +18,8 @@
 
 using namespace serac;
 
+bool with_print_statements = true;
+
 DirichletEnforcementMethod enforcement_methods[3] = {DirichletEnforcementMethod::DirectControl,
                                                      DirichletEnforcementMethod::RateControl,
                                                      DirichletEnforcementMethod::FullControl};
@@ -25,11 +27,11 @@ DirichletEnforcementMethod enforcement_methods[3] = {DirichletEnforcementMethod:
 IterativeSolverOptions linear_options{.rel_tol     = 1.0e-12,
                                       .abs_tol     = 1.0e-12,
                                       .print_level = -1,
-                                      .max_iter    = 200,
+                                      .max_iter    = 10,
                                       .lin_solver  = LinearSolver::CG,
                                       .prec        = {}};
 
-NonlinearSolverOptions nonlinear_options{.rel_tol = 1.0e-12, .abs_tol = 1.0e-12, .max_iter = 500, .print_level = -1};
+NonlinearSolverOptions nonlinear_options{.rel_tol = 1.0e-12, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = -1};
 
 mfem::DenseMatrix M = []() {
   mfem::DenseMatrix M(3, 3);
@@ -127,9 +129,10 @@ enum ode_type
   NONLINEAR
 };
 
-std::string to_string(ode_type o) {
+std::string to_string(ode_type o)
+{
   if (o == LINEAR) return std::string("linear");
-  if (o == NONLINEAR) return std::string("linear");
+  if (o == NONLINEAR) return std::string("nonlinear");
   return "unknown";
 }
 
@@ -140,14 +143,16 @@ enum constraint_type
   TRIANGLE_WAVE
 };
 
-std::string to_string(constraint_type c) {
+std::string to_string(constraint_type c)
+{
   if (c == UNCONSTRAINED) return std::string("unconstrained");
   if (c == SINE_WAVE) return std::string("sine wave");
   if (c == TRIANGLE_WAVE) return std::string("triangle wave");
   return "unknown";
 }
 
-std::string to_string(serac::TimestepMethod m) {
+std::string to_string(serac::TimestepMethod m)
+{
   // for first order odes
   if (m == serac::TimestepMethod::BackwardEuler) return std::string("BackwardEuler");
   if (m == serac::TimestepMethod::SDIRK33) return std::string("SDIRK33");
@@ -171,7 +176,8 @@ std::string to_string(serac::TimestepMethod m) {
   return "unknown";
 }
 
-std::string to_string(serac::DirichletEnforcementMethod m) {
+std::string to_string(serac::DirichletEnforcementMethod m)
+{
   // for first order odes
   if (m == serac::DirichletEnforcementMethod::DirectControl) return std::string("direct control");
   if (m == serac::DirichletEnforcementMethod::RateControl) return std::string("rate control");
@@ -179,33 +185,34 @@ std::string to_string(serac::DirichletEnforcementMethod m) {
   return "unknown";
 }
 
-// (error(h) / error(h/2)) ~ 2^alpha
-double order_of_convergence(serac::TimestepMethod m) {
+int order_of_convergence(serac::TimestepMethod m)
+{
   // for first order odes
-  if (m == serac::TimestepMethod::BackwardEuler) return 1.0;
-  if (m == serac::TimestepMethod::SDIRK33) return 3.0; // ? 
-  if (m == serac::TimestepMethod::ForwardEuler) return 1.0;
-  if (m == serac::TimestepMethod::RK2) return 2.0; // ? 
-  if (m == serac::TimestepMethod::RK3SSP) return 3.0; // ?
-  if (m == serac::TimestepMethod::RK4) return 4.0;
-  if (m == serac::TimestepMethod::GeneralizedAlpha) return 2.0; // ?
-  if (m == serac::TimestepMethod::ImplicitMidpoint) return 2.0; 
-  if (m == serac::TimestepMethod::SDIRK23) return 2.0; 
-  if (m == serac::TimestepMethod::SDIRK34) return 2.0;
+  if (m == serac::TimestepMethod::BackwardEuler) return 1;
+  if (m == serac::TimestepMethod::SDIRK33) return 3;  // ?
+  if (m == serac::TimestepMethod::ForwardEuler) return 1;
+  if (m == serac::TimestepMethod::RK2) return 2;     // ?
+  if (m == serac::TimestepMethod::RK3SSP) return 3;  // ?
+  if (m == serac::TimestepMethod::RK4) return 4;
+  if (m == serac::TimestepMethod::GeneralizedAlpha) return 2;  // ?
+  if (m == serac::TimestepMethod::ImplicitMidpoint) return 2;
+  if (m == serac::TimestepMethod::SDIRK23) return 2;
+  if (m == serac::TimestepMethod::SDIRK34) return 3;
 
   // for second order odes
-  if (m == serac::TimestepMethod::Newmark) return 2.0; 
-  if (m == serac::TimestepMethod::HHTAlpha) return 2.0; 
-  if (m == serac::TimestepMethod::WBZAlpha) return 2.0; // ?
-  if (m == serac::TimestepMethod::AverageAcceleration) return 2.0; // ?
-  if (m == serac::TimestepMethod::LinearAcceleration) return 2.0; // ?
-  if (m == serac::TimestepMethod::CentralDifference) return 2.0; // ? 
-  if (m == serac::TimestepMethod::FoxGoodwin) return 2.0; // ?
+  if (m == serac::TimestepMethod::Newmark) return 2;
+  if (m == serac::TimestepMethod::HHTAlpha) return 2;
+  if (m == serac::TimestepMethod::WBZAlpha) return 2;             // ?
+  if (m == serac::TimestepMethod::AverageAcceleration) return 2;  // ?
+  if (m == serac::TimestepMethod::LinearAcceleration) return 2;   // ?
+  if (m == serac::TimestepMethod::CentralDifference) return 2;    // ?
+  if (m == serac::TimestepMethod::FoxGoodwin) return 2;           // ?
 
-  return -1.0;
+  return -1;
 }
 
-int which_kind_of_ode(serac::TimestepMethod m) {
+int which_kind_of_ode(serac::TimestepMethod m)
+{
   // for first order odes
   if (m == serac::TimestepMethod::BackwardEuler) return 1;
   if (m == serac::TimestepMethod::SDIRK33) return 1;
@@ -214,13 +221,13 @@ int which_kind_of_ode(serac::TimestepMethod m) {
   if (m == serac::TimestepMethod::RK3SSP) return 1;
   if (m == serac::TimestepMethod::RK4) return 1;
   if (m == serac::TimestepMethod::GeneralizedAlpha) return 1;
-  if (m == serac::TimestepMethod::ImplicitMidpoint) return 1; 
-  if (m == serac::TimestepMethod::SDIRK23) return 1; 
+  if (m == serac::TimestepMethod::ImplicitMidpoint) return 1;
+  if (m == serac::TimestepMethod::SDIRK23) return 1;
   if (m == serac::TimestepMethod::SDIRK34) return 1;
 
   // for second order odes
-  if (m == serac::TimestepMethod::Newmark) return 2; 
-  if (m == serac::TimestepMethod::HHTAlpha) return 2; 
+  if (m == serac::TimestepMethod::Newmark) return 2;
+  if (m == serac::TimestepMethod::HHTAlpha) return 2;
   if (m == serac::TimestepMethod::WBZAlpha) return 2;
   if (m == serac::TimestepMethod::AverageAcceleration) return 2;
   if (m == serac::TimestepMethod::LinearAcceleration) return 2;
@@ -229,7 +236,6 @@ int which_kind_of_ode(serac::TimestepMethod m) {
 
   return -1;
 }
-
 
 double first_order_ode_test(int nsteps, ode_type type, constraint_type constraint, TimestepMethod timestepper,
                             DirichletEnforcementMethod enforcement)
@@ -350,7 +356,7 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
 
   mfem::DenseMatrix J(3, 3);
 
-  mfem::Mesh               mesh1D(3);
+  mfem::Mesh               mesh1D(2);
   mfem::ParMesh            mesh(MPI_COMM_WORLD, mesh1D);
   BoundaryConditionManager bcs(mesh);
 
@@ -430,9 +436,6 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
 
   for (int i = 0; i < nsteps; i++) {
     ode.Step(displacement, velocity, t, dt);
-
-    //std::cout << t << " " << displacement[0] << " " << displacement[1] << " " << displacement[2];
-    //std::cout << " " << velocity[0] << " " << velocity[1] << " " << velocity[2] << std::endl;
   }
 
   // clang-format off
@@ -468,58 +471,59 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
   mfem::Vector error_displacement = (exact_displacement - displacement) / exact_displacement.Norml2();
   mfem::Vector error_velocity     = (exact_velocity - velocity) / exact_velocity.Norml2();
 
-  std::cout << "displacement constraint error: " << error_displacement(0) << std::endl;
-  std::cout << "velocity constraint error: " << error_velocity(0) << std::endl;
+  // std::cout << "displacement constraint error: " << error_displacement(0) << std::endl;
+  // std::cout << "velocity constraint error: " << error_velocity(0) << std::endl;
 
   return std::max(error_displacement.Norml2(), error_velocity.Norml2());
 }
 
 using param_t = std::tuple<ode_type, constraint_type, TimestepMethod, DirichletEnforcementMethod>;
 
-class ODE_tests : public testing::TestWithParam<param_t> {
+class FirstOrderODE_suite : public testing::TestWithParam<param_t> {
 protected:
-  void SetUp() override { std::tie(type, constraint, timestepper, enforcement) = GetParam(); }
+  void                       SetUp() override { std::tie(type, constraint, timestepper, enforcement) = GetParam(); }
   ode_type                   type;
   constraint_type            constraint;
   TimestepMethod             timestepper;
   DirichletEnforcementMethod enforcement;
 };
 
-TEST_P(ODE_tests, first_and_second_order)
+TEST_P(FirstOrderODE_suite, all)
 {
-
-  if (which_kind_of_ode(timestepper) == 1) {
+  if (with_print_statements) {
     std::cout << "running first order test (";
     std::cout << to_string(type) << ", ";
     std::cout << to_string(constraint) << ", ";
     std::cout << to_string(timestepper) << ", ";
-    std::cout << to_string(enforcement) << ")..." << std::endl;
-    double errors[3] = {first_order_ode_test(50, type, constraint, timestepper, enforcement),
-                        first_order_ode_test(100, type, constraint, timestepper, enforcement),
-                        first_order_ode_test(200, type, constraint, timestepper, enforcement)};
+    std::cout << to_string(enforcement) << "): ";
+  }
 
+  int o = order_of_convergence(timestepper);
+
+  // there is enough variety in first order timestep methods
+  // that we pick different timesteps for each of convergence
+  constexpr int nsteps[5] = {0,  // unused, just here to make indexing work
+                             30, 20, 10, 5};
+
+  double errors[3] = {first_order_ode_test(nsteps[o] * 1, type, constraint, timestepper, enforcement),
+                      first_order_ode_test(nsteps[o] * 2, type, constraint, timestepper, enforcement),
+                      first_order_ode_test(nsteps[o] * 4, type, constraint, timestepper, enforcement)};
+
+  if (with_print_statements) {
     std::cout << errors[0] << " " << errors[1] << " " << errors[2] << std::endl;
   }
 
-  if (which_kind_of_ode(timestepper) == 2) {
-    std::cout << "running second order test (";
-    std::cout << to_string(type) << ", ";
-    std::cout << to_string(constraint) << ", ";
-    std::cout << to_string(timestepper) << ", ";
-    std::cout << to_string(enforcement) << ")..." << std::endl;
-    double errors[3] = {second_order_ode_test(50, type, constraint, timestepper, enforcement),
-                        second_order_ode_test(100, type, constraint, timestepper, enforcement),
-                        second_order_ode_test(200, type, constraint, timestepper, enforcement)};
+  // this tolerance is pretty loose, since some some of the
+  // methods converge pretty slowly, but we still want to
+  // check that they're in the right ballpark
+  EXPECT_LT(errors[2], 3.0e-3);
 
-    std::cout << errors[0] << " " << errors[1] << " " << errors[2] << std::endl;
-  }
-
-  //EXPECT_NEAR(2.0, (errors[0] / errors[1]), 0.1);
-  //EXPECT_NEAR(2.0, (errors[1] / errors[2]), 0.1);
+  // we check against slightly less than the expected order of convergence
+  EXPECT_LT(pow(2.0, 0.9 * order_of_convergence(timestepper)), (errors[1] / errors[2]));
 }
 
 // clang-format off
-INSTANTIATE_TEST_SUITE_P(all_first_order_tests, ODE_tests,
+INSTANTIATE_TEST_SUITE_P(all_first_order_tests, FirstOrderODE_suite,
   testing::Combine(
     testing::Values(
       LINEAR, 
@@ -527,8 +531,7 @@ INSTANTIATE_TEST_SUITE_P(all_first_order_tests, ODE_tests,
     ), 
     testing::Values(
       UNCONSTRAINED, 
-      SINE_WAVE, 
-      TRIANGLE_WAVE
+      SINE_WAVE
     ), 
     testing::Values(
       serac::TimestepMethod::BackwardEuler,
@@ -540,15 +543,7 @@ INSTANTIATE_TEST_SUITE_P(all_first_order_tests, ODE_tests,
       serac::TimestepMethod::GeneralizedAlpha,
       serac::TimestepMethod::ImplicitMidpoint,
       serac::TimestepMethod::SDIRK23,
-      serac::TimestepMethod::SDIRK34,
-
-      serac::TimestepMethod::Newmark,
-      serac::TimestepMethod::HHTAlpha,
-      serac::TimestepMethod::WBZAlpha,
-      serac::TimestepMethod::AverageAcceleration,
-      serac::TimestepMethod::LinearAcceleration,
-      serac::TimestepMethod::CentralDifference,
-      serac::TimestepMethod::FoxGoodwin
+      serac::TimestepMethod::SDIRK34
     ),
     testing::Values(
       DirichletEnforcementMethod::DirectControl,       
@@ -559,6 +554,78 @@ INSTANTIATE_TEST_SUITE_P(all_first_order_tests, ODE_tests,
 );
 // clang-format on
 
+class SecondOrderODE_suite : public testing::TestWithParam<param_t> {
+protected:
+  void                       SetUp() override { std::tie(type, constraint, timestepper, enforcement) = GetParam(); }
+  ode_type                   type;
+  constraint_type            constraint;
+  TimestepMethod             timestepper;
+  DirichletEnforcementMethod enforcement;
+};
+
+// these cases do not satisfy the stability criteria of the DirectControl option
+std::vector unstable_cases = {
+    std::tuple{SINE_WAVE, TimestepMethod::CentralDifference, DirichletEnforcementMethod::DirectControl},
+    std::tuple{SINE_WAVE, TimestepMethod::FoxGoodwin, DirichletEnforcementMethod::DirectControl},
+    std::tuple{SINE_WAVE, TimestepMethod::LinearAcceleration, DirichletEnforcementMethod::DirectControl}};
+
+TEST_P(SecondOrderODE_suite, all)
+{
+  bool expected_to_fail = std::find(std::begin(unstable_cases), std::end(unstable_cases),
+                                    std::tuple{constraint, timestepper, enforcement}) != std::end(unstable_cases);
+
+  if (!expected_to_fail) {
+    if (with_print_statements) {
+      std::cout << "running second order test (";
+      std::cout << to_string(type) << ", ";
+      std::cout << to_string(constraint) << ", ";
+      std::cout << to_string(timestepper) << ", ";
+      std::cout << to_string(enforcement) << "): ";
+    }
+
+    double errors[3] = {second_order_ode_test(30, type, constraint, timestepper, enforcement),
+                        second_order_ode_test(60, type, constraint, timestepper, enforcement),
+                        second_order_ode_test(120, type, constraint, timestepper, enforcement)};
+
+    if (with_print_statements) {
+      std::cout << errors[0] << " " << errors[1] << " " << errors[2] << std::endl;
+    }
+
+    EXPECT_LT(errors[2], 1.0e-3);
+
+    // we check against slightly less than the expected order of convergence
+    EXPECT_LT(pow(2.0, 0.8 * order_of_convergence(timestepper)), (errors[1] / errors[2]));
+  }
+}
+
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    all_second_order_tests, SecondOrderODE_suite,
+    testing::Combine(
+      testing::Values(
+        LINEAR, 
+        NONLINEAR
+      ), 
+      testing::Values(
+        UNCONSTRAINED, 
+        SINE_WAVE
+      ),
+      testing::Values(
+        serac::TimestepMethod::Newmark, 
+        serac::TimestepMethod::HHTAlpha,
+        serac::TimestepMethod::WBZAlpha, 
+        serac::TimestepMethod::LinearAcceleration,
+        serac::TimestepMethod::CentralDifference, 
+        serac::TimestepMethod::FoxGoodwin
+      ),
+      testing::Values(
+        DirichletEnforcementMethod::DirectControl, 
+        DirichletEnforcementMethod::RateControl,
+        DirichletEnforcementMethod::FullControl)
+      )
+    );
+// clang-format on
+
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -567,12 +634,9 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  // UnitTestLogger logger;  // create & initialize test logger, finalized when
-  //                        // exiting main scope
-
-  //result = RUN_ALL_TESTS();
-
-  std::cout << second_order_ode_test(50, LINEAR, SINE_WAVE, serac::TimestepMethod::Newmark, DirichletEnforcementMethod::RateControl);
+  axom::slic::UnitTestLogger logger;  // create & initialize test logger, finalized when
+                                      // exiting main scope
+  result = RUN_ALL_TESTS();
 
   MPI_Finalize();
 

@@ -253,3 +253,4 @@ LLNL-CODE-805541
    sphinx/profiling
    sphinx/docker_info
    sphinx/input_schema
+   sphinx/theory_reference/index

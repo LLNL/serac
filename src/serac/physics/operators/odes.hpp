@@ -26,6 +26,18 @@ namespace serac {
  */
 class SecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
 public:
+
+  /**
+   * @brief a small number used to compute finite difference approximations
+   * to time derivatives of boundary conditions.
+   * 
+   * Note: this is intended to be temporary
+   * Ideally, epsilon should be "small" relative to the characteristic
+   * time of the ODE, but we can't ensure that at present (we don't have
+   * a critical timestep estimate)
+   */
+  static constexpr double epsilon = 0.0001;
+
   /**
    * @brief A set of references to physics-module-owned variables
    * used by the residual operator
@@ -130,8 +142,22 @@ public:
    */
   void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt) { 
     ode_solver_->Step(x, dxdt, t, dt); 
+
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
-      // TODO
+      U_minus_ = 0.0;
+      U_       = 0.0;
+      U_plus_  = 0.0;
+      for (const auto& bc : bcs_.essentials()) {
+        bc.projectBdrToDofs(U_minus_, t - epsilon);
+        bc.projectBdrToDofs(U_, t);
+        bc.projectBdrToDofs(U_plus_, t + epsilon);
+      }
+
+      auto constrained_dofs = bcs_.allEssentialDofs();
+      for (int i = 0; i < constrained_dofs.Size(); i++) {
+        x[i] = U_[i];
+        dxdt[i] = (U_plus_[i] - U_minus_[i]) / (2.0 * epsilon); 
+      }
     }
   }
 
@@ -192,6 +218,18 @@ private:
  */
 class FirstOrderODE : public mfem::TimeDependentOperator {
 public:
+
+  /**
+   * @brief a small number used to compute finite difference approximations
+   * to time derivatives of boundary conditions.
+   * 
+   * Note: this is intended to be temporary
+   * Ideally, epsilon should be "small" relative to the characteristic
+   * time of the ODE, but we can't ensure that at present (we don't have
+   * a critical timestep estimate)
+   */
+  static constexpr double epsilon = 0.000001;
+
   /**
    * @brief A set of references to physics-module-owned variables
    * used by the residual operator
