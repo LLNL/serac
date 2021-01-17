@@ -6,110 +6,149 @@
 
 #include "serac/physics/materials/hyperelastic_material.hpp"
 
+#include "serac/infrastructure/logger.hpp"
+
+#include <cmath>
+
 namespace serac {
+
+void getVoigtVectorFromTensor(const std::vector<std::pair<int, int>>& shear_terms, const mfem::DenseMatrix& mat,
+                              mfem::Vector& vec)
+{
+  int dim = mat.Width();
+  vec.SetSize(dim + shear_terms.size());
+  for (int i = 0; i < dim; ++i) {
+    vec(i) = mat(i, i);
+  }
+  for (int i = 0; i < (int)shear_terms.size(); ++i) {
+    vec(dim + i) = mat(shear_terms[i].first, shear_terms[i].second);
+  }
+}
+
+void getTensorfromVoigtVector(const std::vector<std::pair<int, int>>& shear_terms, const mfem::Vector& vec,
+                              mfem::DenseMatrix& mat)
+{
+  int dim;
+
+  if (shear_terms.size() == 3) {
+    dim = 3;
+  } else {
+    dim = 2;
+  }
+
+  mat.SetSize(dim);
+  mat = 0.0;
+
+  for (int i = 0; i < dim; ++i) {
+    mat(i, i) = vec(i);
+  }
+
+  for (int i = 0; i < (int)shear_terms.size(); ++i) {
+    mat(shear_terms[i].first, shear_terms[i].second) = vec(i);
+    mat(shear_terms[i].second, shear_terms[i].first) = vec(i);
+  }
+}
 
 inline void NeoHookeanMaterial::EvalCoeffs() const
 {
-  mu = c_mu->Eval(*Ttr, Ttr->GetIntPoint());
-  K  = c_K->Eval(*Ttr, Ttr->GetIntPoint());
-  if (c_g) {
-    g = c_g->Eval(*Ttr, Ttr->GetIntPoint());
-  }
+  mu_     = c_mu_->Eval(*Ttr_, Ttr_->GetIntPoint());
+  lambda_ = c_lambda_->Eval(*Ttr_, Ttr_->GetIntPoint());
 }
 
-double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& F) const
+double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& C) const
 {
-  int dim = F.Width();
+  int dim = C.Width();
 
-  if (have_coeffs) {
+  SLIC_ERROR_IF(dim != 2 && dim != 3, "NeoHookean material used for spatial dimension not 2 or 3!");
+
+  if (c_mu_) {
     EvalCoeffs();
   }
 
-  double detF = F.Det();
-  double sJ   = detF / g;
-  double bI1  = pow(detF, -2.0 / dim) * (F * F);  // \bar{I}_1
+  double J = std::sqrt(C.Det());
 
-  return 0.5 * (mu * (bI1 - dim) + K * (sJ - 1.0) * (sJ - 1.0));
+  return 0.5 * lambda_ * std::log(J) * std::log(J) - mu_ * std::log(J) + 0.5 * mu_ * (C.Trace() - dim);
 }
 
-void NeoHookeanMaterial::EvalP(const mfem::DenseMatrix& F, mfem::DenseMatrix& P) const
+void NeoHookeanMaterial::EvalPK2(const mfem::DenseMatrix& C, mfem::Vector& S) const
 {
-  int dim = F.Width();
+  int dim = C.Width();
 
-  if (have_coeffs) {
+  SLIC_ERROR_IF(dim != 2 && dim != 3, "NeoHookean material used for spatial dimension not 2 or 3!");
+
+  if (c_mu_) {
     EvalCoeffs();
   }
 
-  FinvT.SetSize(dim);
-  CalcInverseTranspose(F, FinvT);
-  double detF = F.Det();
+  double J = std::sqrt(C.Det());
 
-  double a = mu * pow(detF, -2.0 / dim);
-  double b = K * detF * (detF / g - 1.0) / g - a * (F * F) / (dim);
+  S.SetSize(dim + shear_terms_.size());
+  S_.SetSize(dim);
+  Cinv_.SetSize(dim);
 
-  P = 0.0;
-  P.Add(a, F);
-  P.Add(b, FinvT);
+  eye_.SetSize(dim);
+  eye_ = 0.0;
+  for (int i = 0; i < dim; ++i) {
+    eye_(i, i) = 1.0;
+  }
+
+  CalcInverse(C, Cinv_);
+
+  S_ = 0.0;
+
+  S_.Add(lambda_ * std::log(J), Cinv_);
+  S_.Add(mu_, eye_);
+  S_.Add(-1.0 * mu_, Cinv_);
+
+  getVoigtVectorFromTensor(shear_terms_, S_, S);
 }
 
-void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, const mfem::DenseMatrix& B0_T,
-                                               const double weight, mfem::DenseMatrix& T) const
+void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& C, mfem::DenseMatrix& T) const
 {
-  int dof = B0_T.Height(), dim = B0_T.Width();
+  int dim = C.Width();
 
-  if (have_coeffs) {
+  SLIC_ERROR_IF(dim != 2 && dim != 3, "NeoHookean material used for spatial dimension not 2 or 3!");
+
+  if (c_mu_) {
     EvalCoeffs();
   }
 
-  FinvT.SetSize(dim);
-  G.SetSize(dof, dim);
-  C.SetSize(dof, dim);
+  T.SetSize(dim + shear_terms_.size());
 
-  double detF = F.Det();
-  double sJ   = detF / g;
-  double a    = mu * pow(detF, -2.0 / dim);
-  double bc   = a * (F * F) / dim;
-  double b    = bc - K * sJ * (sJ - 1.0);
-  double c    = 2.0 * bc / dim + K * sJ * (2.0 * sJ - 1.0);
+  CalcInverse(C, Cinv_);
+  double J = std::sqrt(C.Det());
 
-  CalcInverseTranspose(F, FinvT);
+  double lambda = lambda_;
+  double mu     = mu_ - lambda * std::log(J);
 
-  MultABt(B0_T, F, C);      // C = B0_T F^t
-  MultABt(B0_T, FinvT, G);  // G = B0_T F^{-1}
+  auto neo_hookean_stiffness = [=](int i, int j, int k, int l) {
+    return lambda * Cinv_(i, j) * Cinv_(k, l) + mu * (Cinv_(i, k) * Cinv_(j, l) + Cinv_(i, l) * Cinv_(k, j));
+  };
 
-  a *= weight;
-  b *= weight;
-  c *= weight;
-
-  // 1.
-  for (int i = 0; i < dof; i++)
-    for (int k = 0; k <= i; k++) {
-      double s = 0.0;
-      for (int d = 0; d < dim; d++) {
-        s += B0_T(i, d) * B0_T(k, d);
-      }
-      s *= a;
-
-      for (int d = 0; d < dim; d++) {
-        T(i + d * dof, k + d * dof) += s;
-      }
-
-      if (k != i)
-        for (int d = 0; d < dim; d++) {
-          T(k + d * dof, i + d * dof) += s;
-        }
+  // Add the volumetric-volumetric terms
+  for (int i = 0; i < dim; ++i) {
+    for (int j = i; j < dim; ++j) {
+      T(i, j) = neo_hookean_stiffness(i, i, j, j);
     }
+  }
 
-  a *= (-2.0 / dim);
+  for (int j = 0; j < (int)shear_terms_.size(); ++j) {
+    for (int i = 0; i < dim; ++i) {
+      // Add the volumetric-shear terms
+      T(i, dim + j) = neo_hookean_stiffness(i, i, shear_terms_[j].first, shear_terms_[j].second);
+    }
+    for (int i = 0; i < j; ++i) {
+      // Add the shear-shear terms
+      T(dim + i, dim + j) = neo_hookean_stiffness(shear_terms_[i].first, shear_terms_[i].second, shear_terms_[j].first,
+                                                  shear_terms_[j].second);
+    }
+  }
 
-  // 2.
-  for (int i = 0; i < dof; i++)
-    for (int j = 0; j < dim; j++)
-      for (int k = 0; k < dof; k++)
-        for (int l = 0; l < dim; l++) {
-          T(i + j * dof, k + l * dof) +=
-              a * (C(i, j) * G(k, l) + G(i, j) * C(k, l)) + b * G(i, l) * G(k, j) + c * G(i, j) * G(k, l);
-        }
+  for (int i = 0; i < dim + (int)shear_terms_.size(); ++i) {
+    for (int j = 0; j < i; ++j) {
+      T(i, j) = T(j, i);
+    }
+  }
 }
 
 }  // namespace serac

@@ -34,9 +34,15 @@ public:
    *
    * @param[in] m  HyperelasticModel that will be integrated.
    */
-  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, bool geom_nonlin = true)
+  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, const int dim, bool geom_nonlin = true)
       : material_(m), geom_nonlin_(geom_nonlin)
   {
+    getShearTerms(dim, shear_terms_);
+    eye_.SetSize(dim);
+    eye_ = 0.0;
+    for (int i = 0; i < dim; ++i) {
+      eye_(i, i) = 1.0;
+    }
   }
 
   /**
@@ -71,6 +77,11 @@ public:
                                    const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
 
 private:
+  void CalcDeformationGradient(const mfem::FiniteElement& el, const mfem::IntegrationPoint& ip,
+                               mfem::ElementTransformation& Ttr);
+
+  void CalcBMatrix();
+
   /**
    * @brief The associated hyperelastic model
    */
@@ -82,13 +93,20 @@ private:
    * F: the Jacobian of the target-to-physical-element transformation (deformation gradient) (dx_i/DX_j).
    * P: represents dW_d(Jtp) (dim x dim).
    * DSh: gradients of reference shape functions (dof x dim).
-   * B0_T: gradients of the shape functions in the target (stress-free) (dN_i/DX_j) (dof x dim)
+   * DS: gradients of the shape functions in the target configuration (DN_i, DX_j)
+   * B0_T: B matrix in Voigt notation
    * configuration (dof x dim).
    * PMatI: coordinates of the deformed configuration (dof x dim).
    * PMatO: reshaped view into the local element contribution to the operator
    * output - the result of AssembleElementVector() (dof x dim).
    */
-  mfem::DenseMatrix DSh_, B0_T_, Jrt_, Jpr_, F_, P_, PMatI_, PMatO_;
+  mfem::DenseMatrix DSh_, DS_, Jrt_, Jpr_, F_, C_, P_, T_, PMatI_, PMatO_, temp_, K_, B_0T, H_, HT_, eye_, S_mat_;
+
+  std::vector<std::pair<int, int>> shear_terms_;
+
+  std::vector<mfem::DenseMatrix> B_0_;
+
+  mfem::Vector S_, force_, vec_temp_;
 
   /**
    * @brief The geometric nonlinearity flag

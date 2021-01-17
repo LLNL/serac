@@ -16,7 +16,10 @@ set(integrators_headers
     wrapper_integrator.hpp
     )
 
-set(integrators_depends serac_infrastructure)
+set(integrators_depends
+    serac_infrastructure
+    serac_materials
+    )
 
 blt_add_library(
     NAME        serac_integrators
