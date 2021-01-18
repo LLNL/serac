@@ -18,6 +18,7 @@ set(integrators_headers
 
 set(integrators_depends
     serac_infrastructure
+    serac_numerics
     serac_materials
     )
 

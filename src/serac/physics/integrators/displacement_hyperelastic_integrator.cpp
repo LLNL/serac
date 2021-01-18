@@ -8,6 +8,7 @@
 
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
+#include "serac/numerics/voigt_tensor.hpp"
 
 namespace serac {
 
@@ -199,7 +200,6 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
     if (geom_nonlin_) {
       material_.EvalPK2(C_, S_);
       getTensorFromVoigtVector(shear_terms_, S_, S_mat_);
-
       for (int n = 0; n < dof; ++n) {
         for (int m = 0; m < dof; ++m) {
           for (int r = 0; r < dim; ++r) {

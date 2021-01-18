@@ -12,43 +12,6 @@
 
 namespace serac {
 
-void getVoigtVectorFromTensor(const std::vector<std::pair<int, int>>& shear_terms, const mfem::DenseMatrix& mat,
-                              mfem::Vector& vec)
-{
-  int dim = mat.Width();
-  vec.SetSize(dim + shear_terms.size());
-  for (int i = 0; i < dim; ++i) {
-    vec(i) = mat(i, i);
-  }
-  for (int i = 0; i < (int)shear_terms.size(); ++i) {
-    vec(dim + i) = mat(shear_terms[i].first, shear_terms[i].second);
-  }
-}
-
-void getTensorfromVoigtVector(const std::vector<std::pair<int, int>>& shear_terms, const mfem::Vector& vec,
-                              mfem::DenseMatrix& mat)
-{
-  int dim;
-
-  if (shear_terms.size() == 3) {
-    dim = 3;
-  } else {
-    dim = 2;
-  }
-
-  mat.SetSize(dim);
-  mat = 0.0;
-
-  for (int i = 0; i < dim; ++i) {
-    mat(i, i) = vec(i);
-  }
-
-  for (int i = 0; i < (int)shear_terms.size(); ++i) {
-    mat(shear_terms[i].first, shear_terms[i].second) = vec(i);
-    mat(shear_terms[i].second, shear_terms[i].first) = vec(i);
-  }
-}
-
 inline void NeoHookeanMaterial::EvalCoeffs() const
 {
   mu_     = c_mu_->Eval(*Ttr_, Ttr_->GetIntPoint());

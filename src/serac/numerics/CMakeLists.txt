@@ -9,10 +9,12 @@ set(numerics_headers
     expr_template_ops.hpp
     mesh_utils.hpp
     vector_expression.hpp
+    voigt_tensor.hpp
     )
 
 set(numerics_sources
     mesh_utils.cpp
+    voigt_tensor.cpp
     )
 
 set(numerics_depends serac_infrastructure)

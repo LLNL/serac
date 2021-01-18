@@ -15,24 +15,9 @@
 
 #include "mfem.hpp"
 
+#include "serac/numerics/voigt_tensor.hpp"
+
 namespace serac {
-
-inline void getShearTerms(const int dim, std::vector<std::pair<int, int>>& shear_terms)
-{
-  if (shear_terms.size() == 0) {
-    if (dim == 2) {
-      shear_terms = {{1, 2}};
-    } else {
-      shear_terms = {{2, 3}, {1, 3}, {1, 2}};
-    }
-  }
-}
-
-void getTensorFromVoigtVector(const std::vector<std::pair<int, int>>& shear_terms, const mfem::Vector& vec,
-                              mfem::DenseMatrix& mat);
-
-void getVoigtVectorFromTensor(const std::vector<std::pair<int, int>>& shear_terms, const mfem::DenseMatrix& mat,
-                              mfem::Vector& vec);
 
 /// Abstract class for hyperelastic models
 class HyperelasticMaterial {

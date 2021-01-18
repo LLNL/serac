@@ -4,16 +4,17 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(materials_headers
-    hyperelastic_material.hpp
-    )
-
 set(materials_sources
     hyperelastic_material.cpp
     )
 
+set(materials_headers
+    hyperelastic_material.hpp
+    )
+
 set(materials_depends
     serac_infrastructure
+    serac_numerics
     )
 
 blt_add_library(
