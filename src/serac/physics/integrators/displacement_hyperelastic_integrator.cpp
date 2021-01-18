@@ -206,7 +206,6 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
             for (int i = 0; i < dim; ++i) {
               for (int j = 0; j < dim; ++j) {
                 elmat(r * dof + n, r * dof + m) += DS_(n, j) * S_mat_(j, i) * DS_(m, i) * ip.weight * Ttr.Weight();
-                ;
               }
             }
           }
