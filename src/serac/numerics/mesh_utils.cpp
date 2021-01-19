@@ -16,7 +16,7 @@
 
 namespace serac {
 
-std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial,
+std::unique_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial,
                                                  const int refine_parallel, const MPI_Comm comm)
 {
   // Get the MPI rank for logging purposes
@@ -52,7 +52,7 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
   }
 
   // create the parallel mesh
-  auto par_mesh = std::make_shared<mfem::ParMesh>(comm, *mesh);
+  auto par_mesh = std::make_unique<mfem::ParMesh>(comm, *mesh);
   for (int lev = 0; lev < refine_parallel; lev++) {
     par_mesh->UniformRefinement();
   }

@@ -16,10 +16,10 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options)
-    : BasePhysics(mesh, NUM_FIELDS, order),
-      velocity_(StateManager::newState(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"})),
-      displacement_(StateManager::newState(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"})),
+NonlinearSolid::NonlinearSolid(int order, const SolverOptions& options)
+    : BasePhysics(NUM_FIELDS, order),
+      velocity_(StateManager::newState(mesh_, FiniteElementState::Options{.order = order, .name = "velocity"})),
+      displacement_(StateManager::newState(mesh_, FiniteElementState::Options{.order = order, .name = "displacement"})),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {
@@ -28,8 +28,8 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
 
   // Initialize the mesh node pointers
   reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
-  mesh->GetNodes(*reference_nodes_);
-  mesh->NewNodes(*reference_nodes_);
+  mesh_.GetNodes(*reference_nodes_);
+  mesh_.NewNodes(*reference_nodes_);
 
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
@@ -42,7 +42,7 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   // to be the displacement
   const auto& augmented_options = mfem_ext::AugmentAMGForElasticity(lin_options, displacement_.space());
 
-  nonlin_solver_ = mfem_ext::EquationSolver(mesh->GetComm(), augmented_options, options.H_nonlin_options);
+  nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), augmented_options, options.H_nonlin_options);
 
   // Check for dynamic mode
   if (options.dyn_options) {
@@ -64,14 +64,14 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   zero_ = 0.0;
 }
 
-NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputOptions& options)
-    : NonlinearSolid(options.order, mesh, options.solver_options)
+NonlinearSolid::NonlinearSolid(const NonlinearSolid::InputOptions& options)
+    : NonlinearSolid(options.order, options.solver_options)
 {
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
   setHyperelasticMaterialParameters(options.mu, options.K);
 
-  auto dim = mesh->Dimension();
+  auto dim = mesh_.Dimension();
   if (options.initial_displacement) {
     auto deform = options.initial_displacement->constructVector(dim);
     setDisplacement(deform);
@@ -258,7 +258,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
   displacement_.initializeTrueVec();
 
   // Set the mesh nodes to the reference configuration
-  mesh_->NewNodes(*reference_nodes_);
+  mesh_.NewNodes(*reference_nodes_);
 
   if (is_quasistatic_) {
     quasiStaticSolve();
@@ -274,7 +274,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
   deformed_nodes_->Set(1.0, displacement_.gridFunc());
   deformed_nodes_->Add(1.0, *reference_nodes_);
 
-  mesh_->NewNodes(*deformed_nodes_);
+  mesh_.NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
 }

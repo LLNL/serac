@@ -36,7 +36,7 @@ namespace serac {
  * @param[in] MPI_Comm The MPI communicator
  * @return A shared_ptr containing the constructed and refined parallel mesh object
  */
-std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial = 0,
+std::unique_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial = 0,
                                                  const int refine_parallel = 0, const MPI_Comm = MPI_COMM_WORLD);
 
 /**

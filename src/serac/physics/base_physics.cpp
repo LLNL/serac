@@ -16,14 +16,19 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
-    : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0), bcs_(*mesh)
+BasePhysics::BasePhysics()
+    : mesh_(StateManager::mesh()),
+      comm_(mesh_.GetComm()),
+      output_type_(serac::OutputType::VisIt),
+      time_(0.0),
+      cycle_(0),
+      bcs_(mesh_)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
   order_                         = 1;
 }
 
-BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
+BasePhysics::BasePhysics(int n, int p) : BasePhysics()
 {
   order_ = p;
   gf_initialized_.assign(n, false);

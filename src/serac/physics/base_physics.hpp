@@ -30,19 +30,16 @@ class BasePhysics {
 public:
   /**
    * @brief Empty constructor
-   *
-   * @param[in] mesh The primary mesh
    */
-  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh);
+  BasePhysics();
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
    *
-   * @param[in] mesh The primary mesh
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    */
-  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
+  BasePhysics(int n, int p);
 
   BasePhysics(BasePhysics&& other) = default;
 
@@ -138,18 +135,18 @@ public:
   /**
    * @brief Returns a reference to the mesh object
    */
-  const mfem::ParMesh& mesh() const { return *mesh_; }
+  const mfem::ParMesh& mesh() const { return mesh_; }
 
 protected:
+  /**
+   * @brief The primary mesh
+   */
+  mfem::ParMesh& mesh_;
+
   /**
    * @brief The MPI communicator
    */
   MPI_Comm comm_;
-
-  /**
-   * @brief The primary mesh
-   */
-  std::shared_ptr<mfem::ParMesh> mesh_;
 
   /**
    * @brief List of finite element data structures

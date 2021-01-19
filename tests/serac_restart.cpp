@@ -37,9 +37,10 @@ TEST(thermal_solver, dyn_imp_solve)
     std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
 
     auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
+    serac::StateManager::setMesh(std::move(pmesh));
 
     // Initialize the second order thermal solver on the parallel mesh
-    ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicOptions());
+    ThermalConduction therm_solver(2, ThermalConduction::defaultDynamicOptions());
 
     // Initialize the state grid function
     auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -104,12 +105,8 @@ TEST(thermal_solver, dyn_imp_solve)
     // Load in from the saved cycle
     serac::StateManager::initialize(datastore, restart_cycle);
 
-    // FIXME: We don't need to build the mesh here if it's a restart
-    std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
-    auto        pmesh     = buildMeshFromFile(mesh_file, 1, 1);
-
     // Initialize the second order thermal solver on the parallel mesh
-    ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicOptions());
+    ThermalConduction therm_solver(2, ThermalConduction::defaultDynamicOptions());
 
     auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
     // Don't initialize the state grid function

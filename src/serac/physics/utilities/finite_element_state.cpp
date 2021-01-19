@@ -14,24 +14,18 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
                          : std::make_unique<mfem::H1_FECollection>(options.order, mesh.Dimension())),
       space_(std::make_unique<mfem::ParFiniteElementSpace>(
           &mesh, &retrieve(coll_), options.space_dim ? *options.space_dim : mesh.Dimension(), options.ordering)),
-      gf_(options.allocate_gf
-              ? std::make_unique<mfem::ParGridFunction>(&retrieve(space_))
-              : std::make_unique<mfem::ParGridFunction>(&retrieve(space_), static_cast<double*>(nullptr))),
+      gf_(new mfem::ParGridFunction(&retrieve(space_), static_cast<double*>(nullptr))),
       true_vec_(&retrieve(space_)),
       name_(options.name)
 {
-  if (options.allocate_gf) {
-    retrieve(gf_) = 0.0;
-  }
   true_vec_ = 0.0;
 }
 
 FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name)
     : mesh_(&mesh), space_(gf.ParFESpace()), gf_(&gf), true_vec_(&retrieve(space_)), name_(name)
 {
-  coll_         = retrieve(space_).FEColl();
-  retrieve(gf_) = 0.0;
-  true_vec_     = 0.0;
+  coll_     = retrieve(space_).FEColl();
+  true_vec_ = 0.0;
 }
 
 std::optional<axom::sidre::MFEMSidreDataCollection> StateManager::datacoll_;
@@ -80,6 +74,7 @@ FiniteElementState StateManager::newState(mfem::ParMesh& mesh, FiniteElementStat
     FiniteElementState state(mesh, std::move(options));
     if (!dc_mesh) {
       datacoll_->SetMesh(&mesh);
+      datacoll_->SetOwnData(true);
     }
     datacoll_->RegisterField(options.name, &(state.gridFunc()));
     // Now that it's been allocated, we can set it to zero
@@ -97,6 +92,19 @@ void StateManager::step(const double t, const int cycle)
   datacoll_->SetTime(t);
   datacoll_->SetCycle(cycle);
   datacoll_->Save();
+}
+
+void StateManager::setMesh(std::unique_ptr<mfem::ParMesh> mesh)
+{
+  datacoll_->SetMesh(mesh.release());
+  datacoll_->SetOwnData(true);
+}
+
+mfem::ParMesh& StateManager::mesh()
+{
+  auto mesh = datacoll_->GetMesh();
+  SLIC_ERROR_IF(!mesh, "The datastore does not contain a mesh object");
+  return static_cast<mfem::ParMesh&>(*mesh);
 }
 
 }  // namespace serac

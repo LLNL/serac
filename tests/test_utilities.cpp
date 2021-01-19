@@ -58,7 +58,7 @@ void runNonlinSolidTest(const std::string& input_file)
 
   // Define the solid solver object
   auto           solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  NonlinearSolid solid_solver(mesh, solid_solver_options);
+  NonlinearSolid solid_solver(solid_solver_options);
 
   const bool is_dynamic = inlet["nonlinear_solid"].contains("dynamics");
 

@@ -117,13 +117,13 @@ public:
   /**
    * Returns a non-owning reference to the internal grid function
    */
-  mfem::ParGridFunction&       gridFunc() { return retrieve(gf_); }
-  const mfem::ParGridFunction& gridFunc() const { return retrieve(gf_); }
+  mfem::ParGridFunction&       gridFunc() { return *gf_; }
+  const mfem::ParGridFunction& gridFunc() const { return *gf_; }
 
   /**
    * Returns a non-owning reference to the internal mesh object
    */
-  mfem::ParMesh& mesh() { return retrieve(mesh_); }
+  mfem::ParMesh& mesh() { return *mesh_; }
 
   /**
    * Returns a non-owning reference to the internal FESpace
@@ -153,31 +153,31 @@ public:
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit([this](auto&& concrete_coef) { retrieve(gf_).ProjectCoefficient(*concrete_coef); }, coef);
+    std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(*concrete_coef); }, coef);
   }
 
   /**
    * Projects a coefficient (vector or scalar) onto the field
    * @param[in] coef The coefficient to project
    */
-  void project(mfem::Coefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
+  void project(mfem::Coefficient& coef) { gf_->ProjectCoefficient(coef); }
 
   /**
    * Projects a coefficient (vector or scalar) onto the field
    * @param[in] coef The coefficient to project
    */
-  void project(mfem::VectorCoefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
+  void project(mfem::VectorCoefficient& coef) { gf_->ProjectCoefficient(coef); }
 
   /**
    * Initialize the true DOF vector by extracting true DOFs from the internal
    * grid function into the internal true DOF vector
    */
-  void initializeTrueVec() { retrieve(gf_).GetTrueDofs(true_vec_); }
+  void initializeTrueVec() { gf_->GetTrueDofs(true_vec_); }
 
   /**
    * Set the internal grid function using the true DOF values
    */
-  void distributeSharedDofs() { retrieve(gf_).SetFromTrueDofs(true_vec_); }
+  void distributeSharedDofs() { gf_->SetFromTrueDofs(true_vec_); }
 
   /**
    * Utility function for creating a tensor, e.g. mfem::HypreParVector,
@@ -217,11 +217,11 @@ private:
   }
 
   // Allows for copy/move assignment
-  MaybeOwner<mfem::ParMesh> mesh_;
+  mfem::ParMesh* mesh_;
   // Must be const as FESpaces store a const reference to their FEColls
   MaybeOwner<const mfem::FiniteElementCollection> coll_;
   MaybeOwner<mfem::ParFiniteElementSpace>         space_;
-  MaybeOwner<mfem::ParGridFunction>               gf_;
+  mfem::ParGridFunction*                          gf_;
   mfem::HypreParVector                            true_vec_;
   std::string                                     name_ = "";
 };
@@ -259,6 +259,10 @@ public:
    * @brief Resets the underlying global datacollection object
    */
   static void reset() { datacoll_.reset(); };
+
+  static void setMesh(std::unique_ptr<mfem::ParMesh> mesh);
+
+  static mfem::ParMesh& mesh();
 
 private:
   /**

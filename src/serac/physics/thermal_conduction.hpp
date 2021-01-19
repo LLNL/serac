@@ -80,10 +80,9 @@ public:
    * @brief Construct a new Thermal Solver object
    *
    * @param[in] order The order of the thermal field discretization
-   * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    * @param[in] options The system solver parameters
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options);
+  ThermalConduction(int order, const SolverOptions& options);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)

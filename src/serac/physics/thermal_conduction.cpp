@@ -13,10 +13,10 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options)
-    : BasePhysics(mesh, NUM_FIELDS, order),
+ThermalConduction::ThermalConduction(int order, const SolverOptions& options)
+    : BasePhysics(NUM_FIELDS, order),
       temperature_(StateManager::newState(
-          *mesh,
+          mesh_,
           FiniteElementState::Options{
               .order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})),
       residual_(temperature_.space().TrueVSize()),
@@ -25,7 +25,7 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
 {
   state_.push_back(temperature_);
 
-  nonlin_solver_ = mfem_ext::EquationSolver(mesh->GetComm(), options.T_lin_options, options.T_nonlin_options);
+  nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
   nonlin_solver_.SetOperator(residual_);
 
   // Check for dynamic mode
