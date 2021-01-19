@@ -179,7 +179,6 @@ TEST_F(NewmarkBetaTest, SimpleLua)
                 std::max(1.e-4 * v_next[d], epsilon));
 }
 
-
 TEST_F(NewmarkBetaTest, EquilbriumLua)
 {
   // Create DataStore
@@ -206,7 +205,6 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
   // FIXME: Remove once Inlet's "contains" logic improvements are merged
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
-  
   // get gravity parameter for this problem
   inlet.addDouble("g", "the gravity acceleration");
 
@@ -292,12 +290,12 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
 
 TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 {
-  
   // Create DataStore
   axom::sidre::DataStore datastore;
 
   // Initialize Inlet and read input file
-  std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/dyn_newmark_solve_bending_first.lua";
+  std::string input_file =
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/dyn_newmark_solve_bending_first.lua";
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
@@ -316,7 +314,6 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
   // FIXME: Remove once Inlet's "contains" logic improvements are merged
 
-  
   // serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
   // Polynomial interpolation order - currently up to 8th order is allowed
   solid_solver_table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
@@ -333,26 +330,27 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   dynamics_solid_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
   dynamics_solid_solver_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
-  auto& bc_solid_solver_table = solid_solver_table.addGenericDictionary("boundary_conds", "Solid_Solver_Table of boundary conditions");
+  auto& bc_solid_solver_table =
+      solid_solver_table.addGenericDictionary("boundary_conds", "Solid_Solver_Table of boundary conditions");
   serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_solid_solver_table);
 
   auto& init_displ = solid_solver_table.addTable("initial_displacement", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_displ);
   auto& init_velo = solid_solver_table.addTable("initial_velocity", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
-  
+
   // get gravity parameter for this problem
   inlet.addDouble("g", "the gravity acceleration");
-  
+
   // Verify input file
   if (!inlet.verify()) {
     SLIC_ERROR("Input file failed to verify.");
-  } 
-  
+  }
+
   // Define the solid solver object
   auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
 
-  int                           ne = nex;
+  int                       ne = nex;
   mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
 
   mfem::Array<int> bdr_attr_list = serac::makeBdrAttributeList(*pmesh, fixed);
@@ -360,9 +358,9 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
     pmesh->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
   }
   pmesh->SetAttributes();
-  
+
   serac::NonlinearSolid solid_solver(pmesh, solid_solver_options);
-  
+
   const bool is_dynamic = inlet["nonlinear_solid"].contains("dynamics");
 
   if (is_dynamic) {
@@ -372,12 +370,12 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 
   // add gravity load
   mfem::Vector gravity(dim);
-  gravity = 0.;
+  gravity    = 0.;
   gravity[1] = inlet["g"];
   solid_solver.addBodyForce(std::make_shared<mfem::VectorConstantCoefficient>(gravity));
-  
+
   // Assume everything is initially at rest
-  
+
   // Initialize the output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "nonlin_solid_first_orderlua");
 
@@ -385,16 +383,16 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   solid_solver.completeSetup();
   // Output the initial state
   solid_solver.outputState();
-  
-  double dt = inlet["dt"]; 
-  
+
+  double dt = inlet["dt"];
+
   mfem::VisItDataCollection visit("FirsOrderLua", pmesh.get());
   visit.RegisterField("u_next", &solid_solver.displacement().gridFunc());
   visit.RegisterField("v_next", &solid_solver.velocity().gridFunc());
   visit.SetCycle(0);
   visit.SetTime(0.);
   visit.Save();
-  
+
   // Check if dynamic
   if (is_dynamic) {
     double t       = 0.0;
@@ -403,7 +401,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
     // Perform time-integration
     // (looping over the time iterations, ti, with a time-step dt).
     bool last_step = false;
-    int nsteps = 0;
+    int  nsteps    = 0;
     for (int ti = 1; !last_step; ti++) {
       double dt_real = std::min(dt, t_final - t);
       t += dt_real;
@@ -413,15 +411,13 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 
       solid_solver.outputState();
       visit.SetTime(t);
-      visit.SetCycle( ++nsteps );
+      visit.SetCycle(++nsteps);
       visit.Save();
     }
   } else {
     solid_solver.advanceTimestep(dt);
   }
-  
 
   // Output the final state
   solid_solver.outputState();
-  
 }

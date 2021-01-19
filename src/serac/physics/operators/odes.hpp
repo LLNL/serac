@@ -110,7 +110,7 @@ public:
      The FirstOrder recast that can be used by a first order ode solver
    */
   void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
-  
+
   /**
    * @brief Configures the Dirichlet enforcement method to use
    * @param[in] method The selected method
@@ -170,7 +170,7 @@ private:
    * @brief MFEM solver object for second-order ODEs recast as first order
    */
   std::unique_ptr<mfem::ODESolver> ode_system_solver_;
-  
+
   /**
    * @brief Reference to boundary conditions used to constrain the solution
    */
@@ -254,7 +254,6 @@ public:
    */
   FirstOrderODE(int n, SecondOrderODE& ode2, const EquationSolver& solver, const BoundaryConditionManager& bcs);
 
-  
   /**
    * @brief Solves the equation du_dt = f(u, t)
    *
@@ -296,7 +295,6 @@ public:
    */
   void Step(mfem::Vector& x, double& t, double& dt) { ode_solver_->Step(x, t, dt); }
 
-
   /**
    * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve
    * @param[in] dt The time step
@@ -305,9 +303,7 @@ public:
    */
   virtual void Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
 
-  
 private:
-
   /**
    * @brief Set of references to external variables used by residual operator
    */
