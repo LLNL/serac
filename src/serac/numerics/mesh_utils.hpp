@@ -11,14 +11,17 @@
  *        various mesh objects.
  */
 
-#ifndef MESH_UTILS
-#define MESH_UTILS
+#pragma once
 
 #include <memory>
 
 #include "mfem.hpp"
+
 #include "serac/infrastructure/input.hpp"
 
+/**
+ * The Serac namespace
+ */
 namespace serac {
 /**
  * @brief Constructs an MFEM parallel mesh from a file and refines it
@@ -103,5 +106,3 @@ template <>
 struct FromInlet<serac::mesh::InputOptions> {
   serac::mesh::InputOptions operator()(const axom::inlet::Table& base);
 };
-
-#endif

@@ -10,9 +10,11 @@
  * @brief Custom MFEM integrator for nonlinear finite deformation traction loads
  */
 
+#pragma once
+
 #include "mfem.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 /**
  * @brief Custom MFEM integrator for nonlinear finite deformation traction loads
@@ -83,4 +85,4 @@ private:
   mutable mfem::Vector Sh_u_;
 };
 
-}  // namespace serac
+}  // namespace serac::mfem_ext
