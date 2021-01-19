@@ -52,6 +52,7 @@ void DisplacementHyperelasticIntegrator::CalcBMatrix()
     }
   } else {
     for (int n = 0; n < dof; ++n) {
+      B_0_[n] = 0.0;
       for (int i = 0; i < dim; ++i) {
         B_0_[n](i, i) = DS_(n, i);
       }

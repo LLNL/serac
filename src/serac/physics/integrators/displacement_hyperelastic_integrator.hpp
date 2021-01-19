@@ -43,6 +43,7 @@ public:
 
   /**
    * @brief Computes the integral of W(Jacobian(Trt)) over a target zone
+   *
    * @param[in] el     Type of FiniteElement.
    * @param[in] Ttr    Represents ref->target coordinates transformation.
    * @param[in] elfun  Physical coordinates of the zone.
