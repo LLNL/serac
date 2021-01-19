@@ -20,6 +20,7 @@ RUN cd serac && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./script
                                                      --spec=%clang@10.0.0 --prefix=/home/serac/serac_tpls -k
 
 # Make sure the new hostconfig worked
+RUN ls -l && cd serac && ls -l && cd scripts/uberenv && ls -l && cd /home/serac/serac_tpls && ls -l
 RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
 
 RUN mkdir -p /home/serac/export_hostconfig
