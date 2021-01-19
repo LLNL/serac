@@ -8,6 +8,10 @@ RUN sudo apt-get install curl ssh pkg-config build-essential libopenblas-dev mpi
 RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-7 100
 RUN sudo ln -f -s python3 /usr/bin/python # Compatibility with legacy Python
 
+# Avoid building CMake from scratch
+RUN wget https://cmake.org/files/v3.18/cmake-3.18.5-Linux-x86_64.sh
+RUN sudo sh cmake-3.18.5-Linux-x86_64.sh --prefix=/usr --exclude-subdir
+
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
 WORKDIR "/home/serac"
@@ -20,7 +24,6 @@ RUN cd serac && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./script
                                                      --spec=%clang@10.0.0 --prefix=/home/serac/serac_tpls -k
 
 # Make sure the new hostconfig worked
-RUN ls -l && cd serac && ls -l && cd scripts/uberenv && ls -l && cd /home/serac/serac_tpls && ls -l
 RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
 
 RUN mkdir -p /home/serac/export_hostconfig
