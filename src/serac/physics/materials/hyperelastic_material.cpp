@@ -49,12 +49,6 @@ void NeoHookeanMaterial::EvalPK2(const mfem::DenseMatrix& C, mfem::Vector& S) co
   S_.SetSize(dim);
   Cinv_.SetSize(dim);
 
-  eye_.SetSize(dim);
-  eye_ = 0.0;
-  for (int i = 0; i < dim; ++i) {
-    eye_(i, i) = 1.0;
-  }
-
   CalcInverse(C, Cinv_);
 
   S_ = 0.0;

@@ -66,7 +66,6 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
 
   DSh_.SetSize(dof, dim);
   Jrt_.SetSize(dim);
-  Jpr_.SetSize(dim);
   F_.SetSize(dim);
   C_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
@@ -100,7 +99,6 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
   F_.SetSize(dim);
   C_.SetSize(dim);
   S_.SetSize(dim);
-  P_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
   elvect.SetSize(dof * dim);
   PMatO_.UseExternalData(elvect.GetData(), dof, dim);
@@ -191,7 +189,6 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
         for (int i = 0; i < dim; ++i) {
           for (int j = 0; j < dim; ++j) {
             elmat(i * dof + n, j * dof + m) += K_(i, j) * ip.weight * Ttr.Weight();
-            ;
           }
         }
       }
