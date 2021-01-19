@@ -50,6 +50,33 @@ public:
     std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
+  /**
+   * @brief Stores all information held in the input file that
+   * is used to configure the solver
+   */
+  struct InputOptions {
+    /**
+     * @brief Input file parameters specific to this class
+     *
+     * @param[in] table Inlet's Table that input files will be added to
+     **/
+    static void defineInputFileSchema(axom::inlet::Table& table);
+
+    // The order of the field
+    int           order;
+    SolverOptions solver_options;
+    // Conductivity
+    double kappa;
+    double cp;
+    double rho;
+
+    // Boundary condition information
+    std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
+
+    // Initial conditions for temperature
+    std::optional<input::CoefficientInputOptions> initial_temperature;
+  };
+
   static IterativeSolverOptions defaultLinearOptions()
   {
     return {.rel_tol     = 1.0e-6,
@@ -83,6 +110,14 @@ public:
    * @param[in] options The system solver parameters
    */
   ThermalConduction(int order, const SolverOptions& options);
+
+  /**
+   * @brief Construct a new Thermal Solver object
+   *
+   * @param[in] mesh The MFEM parallel mesh to solve the PDE on
+   * @param[in] options The solver information parsed from the input file
+   */
+  ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -273,3 +308,8 @@ protected:
 };
 
 }  // namespace serac
+
+template <>
+struct FromInlet<serac::ThermalConduction::InputOptions> {
+  serac::ThermalConduction::InputOptions operator()(const axom::inlet::Table& base);
+};
