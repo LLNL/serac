@@ -39,7 +39,7 @@ TEST(thermal_solver, dyn_imp_solve)
     auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
 
     // Initialize the second order thermal solver on the parallel mesh
-    ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicParameters());
+    ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicOptions());
 
     // Initialize the state grid function
     auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
@@ -109,7 +109,7 @@ TEST(thermal_solver, dyn_imp_solve)
     auto        pmesh     = buildMeshFromFile(mesh_file, 1, 1);
 
     // Initialize the second order thermal solver on the parallel mesh
-    ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicParameters());
+    ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicOptions());
 
     auto u_0 = std::make_shared<mfem::FunctionCoefficient>(InitialTemperature);
     // Don't initialize the state grid function
