@@ -27,7 +27,7 @@ If you haven't used Docker before, it is recommended that you check out the
 
 .. image:: pull_complete.png
 
-5. You can now run the image.  Run ``docker run -it -v /your/serac/repo:/home/serac/serac seracllnl/tpls:gcc-8_12-15-20_20h-36m bash``,
+5. You can now run the image.  Run ``docker run -it -u serac -v /your/serac/repo:/home/serac/serac seracllnl/tpls:gcc-8_12-15-20_20h-36m bash``,
    replacing the tag (the compiler/timestamp combo following the ``tpls:``) with the tag you used in the ``docker pull`` command and
    replacing ``/your/serac/repo`` with the path to the Serac repo you cloned in the first step.  This will open a terminal into the image.
 
