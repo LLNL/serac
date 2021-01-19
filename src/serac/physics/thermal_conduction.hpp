@@ -10,10 +10,10 @@
  * @brief An object containing the solver for a thermal conduction PDE
  */
 
-#ifndef THERMAL_CONDUCTION
-#define THERMAL_CONDUCTION
+#pragma once
 
 #include "mfem.hpp"
+
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/operators/odes.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
@@ -237,20 +237,20 @@ protected:
    * @brief mfem::Operator that describes the weight residual
    * and its gradient with respect to temperature
    */
-  StdFunctionOperator residual_;
+  mfem_ext::StdFunctionOperator residual_;
 
   /**
    * @brief the ordinary differential equation that describes
    * how to solve for the time derivative of temperature, given
    * the current temperature and source terms
    */
-  FirstOrderODE ode_;
+  mfem_ext::FirstOrderODE ode_;
 
   /**
    * @brief the specific methods and tolerances specified to
    * solve the nonlinear residual equations
    */
-  EquationSolver nonlin_solver_;
+  mfem_ext::EquationSolver nonlin_solver_;
 
   /**
    * @brief assembled sparse matrix for the Jacobian
@@ -274,5 +274,3 @@ protected:
 };
 
 }  // namespace serac
-
-#endif
