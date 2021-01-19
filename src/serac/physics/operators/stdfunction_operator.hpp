@@ -10,6 +10,8 @@
 
 #include "mfem.hpp"
 
+namespace serac::mfem_ext {
+
 /**
  * @brief StdFunctionOperator is a class wrapping mfem::Operator
  *   so that the user can use std::function to define the implementations of
@@ -58,3 +60,5 @@ private:
    */
   std::function<mfem::Operator&(const mfem::Vector&)> jacobian_;
 };
+
+}  // namespace serac::mfem_ext
