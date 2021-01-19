@@ -5,13 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file boundary_condition.hpp
+ * @file finite_element_state.hpp
  *
- * @brief This file contains the declaration of the boundary condition class
+ * @brief This file contains the declaration of structure that manages the MFEM objects
+ * that make up the state for a given field
  */
 
-#ifndef FINITE_ELEMENT_STATE
-#define FINITE_ELEMENT_STATE
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -272,5 +272,3 @@ private:
 };
 
 }  // namespace serac
-
-#endif

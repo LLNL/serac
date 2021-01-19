@@ -9,12 +9,14 @@ Status](https://dev.azure.com/llnl-serac/serac/_apis/build/status/LLNL.serac?bra
 
 Serac is a 3D implicit nonlinear thermal-structural simulation code. Its primary purpose is to investigate multiphysics 
 abstraction strategies and implicit finite element-based algorithm development for emerging computing architectures. 
-It also serves as a proxy-app for LLNL's DIABLO and ALE3D codes.
+It also serves as a proxy-app for LLNL's Smith code.
 
 Documentation
 ------
 
 Build, run, and design documentation can be found at [readthedocs](https://serac.readthedocs.io).
+
+Source documentation can be found [here](https://serac.readthedocs.io/en/latest/doxygen/html/index.html).
 
 Contributions
 -------------

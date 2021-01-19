@@ -640,7 +640,7 @@ def get_shared_libs_dir():
 
 
 def get_uberenv_path():
-    return "scripts/uberenv/uberenv.py"
+    return pjoin(get_script_dir(), "../uberenv/uberenv.py")
 
 
 def on_rz():

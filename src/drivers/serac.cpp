@@ -72,10 +72,10 @@ int main(int argc, char* argv[])
     input_file_path = search->second;
   }
   std::optional<int> restart_cycle;
-  if (auto cycle = cli_opts.find("restart_cycle"); cycle != cli_opts.end())
-  {
+  if (auto cycle = cli_opts.find("restart_cycle"); cycle != cli_opts.end()) {
     restart_cycle = std::stoi(cycle->second);
   }
+  bool create_input_file_docs = cli_opts.find("create_input_file_docs") != cli_opts.end();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -86,9 +86,12 @@ int main(int argc, char* argv[])
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
   serac::defineInputFileSchema(inlet, rank);
-  auto writer = std::make_unique<axom::inlet::SphinxDocWriter>("serac_input.rst", inlet.sidreGroup());
-  inlet.registerDocWriter(std::move(writer));
-  inlet.writeDoc();
+  if (create_input_file_docs) {
+    auto writer = std::make_unique<axom::inlet::SphinxDocWriter>("serac_input.rst", inlet.sidreGroup());
+    inlet.registerDocWriter(std::move(writer));
+    inlet.writeDoc();
+    serac::exitGracefully();
+  }
 
   // Save input values to file
   datastore.getRoot()->save("serac_input.json", "json");
