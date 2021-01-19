@@ -50,29 +50,18 @@ nonlinear_solid = {
     mu = 0.,
     K  = 0.,
 
---[[
+
     -- initial conditions
     initial_displacement = {
         vec_coef = function (x, y, z)
-            return 0, 0
+            return 0, 0, 0
         end  
     },
 
     initial_velocity = {
         vec_coef = function (x, y, z)
-            return 0, 1
+            return 0, 1, 0
         end 
     },
 
-    -- boundary condition parameters
-    boundary_conds = {
-        ['displacement'] = {
-            -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
-            attrs = {1},
-            vec_coef = function (x, y, z)
-                return 0, 0, 0
-            end 
-        },
-    },
-    --]]
 }

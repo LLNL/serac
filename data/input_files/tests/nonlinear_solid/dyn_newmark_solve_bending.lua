@@ -75,22 +75,6 @@ nonlinear_solid = {
     mu = linear_bulk(E, nu)/2.;
     K  = linear_bulk(E, nu)/2.;
 
---[[
-    -- initial conditions
-    initial_displacement = {
-        vec_coef = function (x, y, z)
-            return 0, 0
-        end  
-    },
-
-    initial_velocity = {
-        vec_coef = function (x, y, z)
-            return 0, 1
-        end 
-    },
-
-    --]]
-
     -- boundary condition parameters
     boundary_conds = {
         ['displacement'] = {

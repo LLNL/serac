@@ -76,7 +76,7 @@ void defineVectorInputFileSchema(axom::inlet::Table& table)
 
 void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
-  table.addIntArray("attrs", "Boundary attributes to which the BC should be applied").required();
+  table.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
   CoefficientInputOptions::defineInputFileSchema(table);
 }
 
