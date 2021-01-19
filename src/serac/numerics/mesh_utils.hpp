@@ -34,7 +34,7 @@ namespace serac {
  * @param[in] refine_serial The number of serial refinements
  * @param[in] refine_parallel The number of parallel refinements
  * @param[in] MPI_Comm The MPI communicator
- * @return A shared_ptr containing the constructed and refined parallel mesh object
+ * @return A unique_ptr containing the constructed and refined parallel mesh object
  */
 std::unique_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial = 0,
                                                  const int refine_parallel = 0, const MPI_Comm = MPI_COMM_WORLD);
@@ -46,9 +46,9 @@ std::unique_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
  * number of elements is as close as possible to the user-specified number of elements
  *
  * @param[in] approx_number_of_elements
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
+std::unique_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a unit ball, centered at the origin
@@ -57,18 +57,18 @@ std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
  * number of elements is as close as possible to the user-specified number of elements
  *
  * @param[in] approx_number_of_elements
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
+std::unique_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 2D MFEM mesh of a rectangle
  *
  * @param[in] elements_in_x the number of elements in the x-direction
  * @param[in] elements_in_y the number of elements in the y-direction
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y,
+std::unique_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y,
                                                   const MPI_Comm = MPI_COMM_WORLD);
 
 /**
@@ -77,9 +77,9 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int element
  * @param[in] elements_in_x the number of elements in the x-direction
  * @param[in] elements_in_y the number of elements in the y-direction
  * @param[in] elements_in_z the number of elements in the z-direction
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
+std::unique_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
                                                const MPI_Comm = MPI_COMM_WORLD);
 
 namespace mesh {

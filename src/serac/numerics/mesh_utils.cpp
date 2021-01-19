@@ -85,7 +85,7 @@ void squish(mfem::Mesh& mesh)
   mesh.SetVertices(vertices);
 }
 
-std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm)
+std::unique_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm)
 {
   static constexpr int dim                   = 2;
   static constexpr int num_elems             = 4;
@@ -115,10 +115,10 @@ std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
 
   squish(mesh);
 
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm)
+std::unique_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm)
 {
   static constexpr int dim                   = 3;
   static constexpr int num_elems             = 8;
@@ -151,20 +151,20 @@ std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
 
   squish(mesh);
 
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, const MPI_Comm comm)
+std::unique_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, const MPI_Comm comm)
 {
   mfem::Mesh mesh(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true);
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
+std::unique_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
                                                const MPI_Comm comm)
 {
   mfem::Mesh mesh(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true);
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::ParMesh>(comm, mesh);
 }
 
 namespace mesh {

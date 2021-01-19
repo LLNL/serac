@@ -59,9 +59,10 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   test_utils::defineTestSchema<NonlinearSolid>(inlet);
 
   // Build the mesh
-  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
-  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  auto      mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto      full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto      mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  const int dim  = mesh->Dimension();
   serac::StateManager::setMesh(std::move(mesh));
 
   // Define the solid solver object
@@ -92,7 +93,6 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
 
   solid_solver.outputState();
 
-  int          dim = mesh->Dimension();
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);

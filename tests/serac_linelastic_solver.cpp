@@ -20,10 +20,16 @@ TEST(elastic_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore);
+
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-quad.mesh";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  auto      pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  const int dim   = pmesh->Dimension();
+  serac::StateManager::setMesh(std::move(pmesh));
 
   IterativeSolverOptions default_quasistatic = {.rel_tol     = 1.0e-4,
                                                 .abs_tol     = 1.0e-10,
@@ -31,13 +37,12 @@ TEST(elastic_solver, static_solve)
                                                 .max_iter    = 500,
                                                 .lin_solver  = LinearSolver::MINRES,
                                                 .prec        = HypreSmootherPrec{mfem::HypreSmoother::l1Jacobi}};
-
-  Elasticity elas_solver(1, pmesh, default_quasistatic);
+  Elasticity             elas_solver(1, default_quasistatic);
 
   std::set<int> disp_bdr = {1};
 
   // define the displacement vector
-  mfem::Vector disp(pmesh->Dimension());
+  mfem::Vector disp(dim);
   disp = 0.0;
 
   auto disp_coef = std::make_shared<mfem::VectorConstantCoefficient>(disp);
@@ -46,7 +51,7 @@ TEST(elastic_solver, static_solve)
   std::set<int> trac_bdr = {2};
 
   // define the traction vector
-  mfem::Vector traction(pmesh->Dimension());
+  mfem::Vector traction(dim);
   traction           = 0.0;
   traction(1)        = 1.0e-4;
   auto traction_coef = std::make_shared<mfem::VectorConstantCoefficient>(traction);
@@ -64,7 +69,7 @@ TEST(elastic_solver, static_solve)
   double dt = 1.0;
   elas_solver.advanceTimestep(dt);
 
-  mfem::Vector zero(pmesh->Dimension());
+  mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 

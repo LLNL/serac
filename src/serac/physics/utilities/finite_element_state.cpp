@@ -33,7 +33,10 @@ bool                                                StateManager::is_restart_;
 
 void StateManager::initialize(axom::sidre::DataStore& ds, const std::optional<int> cycle_to_load)
 {
-  SLIC_ERROR_IF(datacoll_, "Serac's datacollection can only be initialized once");
+  // If the global object has already been initialized, clear it out
+  if (datacoll_) {
+    reset();
+  }
 
   const std::string coll_name    = "serac_datacoll";
   auto              global_grp   = ds.getRoot()->createGroup(coll_name + "_global");

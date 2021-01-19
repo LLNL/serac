@@ -114,10 +114,9 @@ public:
   /**
    * @brief Construct a new Thermal Solver object
    *
-   * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    * @param[in] options The solver information parsed from the input file
    */
-  ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options);
+  ThermalConduction(const InputOptions& options);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)

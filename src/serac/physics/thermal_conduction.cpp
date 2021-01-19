@@ -53,8 +53,8 @@ ThermalConduction::ThermalConduction(int order, const SolverOptions& options)
   rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
 }
 
-ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options)
-    : ThermalConduction(options.order, mesh, options.solver_options)
+ThermalConduction::ThermalConduction(const InputOptions& options)
+    : ThermalConduction(options.order, options.solver_options)
 {
   setConductivity(std::make_unique<mfem::ConstantCoefficient>(options.kappa));
   setDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
@@ -240,7 +240,7 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
 
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
   auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");

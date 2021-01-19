@@ -24,7 +24,7 @@ void defineTestSchema(axom::inlet::Inlet& inlet);
  * @param[in] custom_mesh Overrides the mesh described in the input file
  */
 template <typename PhysicsModule>
-void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh = {});
+void runModuleTest(const std::string& input_file, std::unique_ptr<mfem::ParMesh> custom_mesh = {});
 
 class InputFileTest : public ::testing::TestWithParam<std::string> {
 };

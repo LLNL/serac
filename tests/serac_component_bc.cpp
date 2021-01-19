@@ -44,16 +44,15 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   test_utils::defineTestSchema<NonlinearSolid>(inlet);
 
   // Build the mesh
-  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
-  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  auto      mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto      full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
+  auto      mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  const int dim  = mesh->Dimension();
   serac::StateManager::setMesh(std::move(mesh));
 
   // Define the solid solver object
   auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   serac::NonlinearSolid solid_solver(solid_solver_options);
-
-  int dim = mesh->Dimension();
 
   // define the displacement vector
   const auto& disp_bc   = solid_solver_options.boundary_conditions.at("displacement");

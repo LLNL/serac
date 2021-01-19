@@ -40,7 +40,7 @@ TEST(thermal_solver, static_solve)
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/static_solve.lua";
   auto pmesh = buildBallMesh(10000);
-  test_utils::runModuleTest<ThermalConduction>(input_file_path, pmesh);
+  test_utils::runModuleTest<ThermalConduction>(input_file_path, std::move(pmesh));
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -62,13 +62,18 @@ TEST(thermal_solver_rework, dyn_imp_solve_time_varying)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore);
+
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
 
   auto pmesh = buildMeshFromFile(mesh_file, 2, 1);
+  serac::StateManager::setMesh(std::move(pmesh));
 
   // Initialize the second order thermal solver on the parallel mesh
-  ThermalConduction therm_solver(2, pmesh, ThermalConduction::defaultDynamicOptions());
+  ThermalConduction therm_solver(2, ThermalConduction::defaultDynamicOptions());
 
   // by construction, f(x, y, t) satisfies df_dt == d2f_dx2 + d2f_dy2
   auto f = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x, double t) {
