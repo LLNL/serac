@@ -9,14 +9,14 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_options,
                                const std::optional<NonlinearSolverOptions>& nonlin_options)
 {
   // If it's an iterative solver, build it and set the preconditioner
   if (auto iter_options = std::get_if<IterativeSolverOptions>(&lin_options)) {
-    lin_solver_ = buildIterativeLinearSolver(comm, *iter_options);
+    lin_solver_ = BuildIterativeLinearSolver(comm, *iter_options);
   }
   // If it's a custom solver, check that the mfem::Solver* is not null
   else if (auto custom = std::get_if<CustomSolverOptions>(&lin_options)) {
@@ -34,7 +34,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
 
   if (nonlin_options) {
-    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_options);
+    nonlin_solver_ = BuildNewtonSolver(comm, *nonlin_options);
   }
 }
 
@@ -201,7 +201,7 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
 #endif
 }  // namespace detail
 
-std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
+std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolver(
     MPI_Comm comm, const IterativeSolverOptions& lin_options)
 {
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
@@ -259,7 +259,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
   return iter_lin_solver;
 }
 
-std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                      comm,
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNewtonSolver(MPI_Comm                      comm,
                                                                       const NonlinearSolverOptions& nonlin_options)
 {
   std::unique_ptr<mfem::NewtonSolver> newton_solver;
@@ -296,7 +296,7 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
     }
     // Now that the nonlinear solver knows about the operator, we can set its linear solver
     if (!nonlin_solver_set_solver_called_) {
-      nonlin_solver_->SetSolver(linearSolver());
+      nonlin_solver_->SetSolver(LinearSolver());
       nonlin_solver_set_solver_called_ = true;
     }
   } else {
@@ -337,7 +337,7 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   return *superlu_grad_mat_;
 }
 
-void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
+void EquationSolver::DefineInputFileSchema(axom::inlet::Table& table)
 {
   auto& linear_table =
       table.addTable("linear", "Linear Equation Solver Parameters")
@@ -377,11 +377,11 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
       .defaultValue("MFEMNewton");
 }
 
-}  // namespace serac
+}  // namespace serac::mfem_ext
 
-using serac::EquationSolver;
 using serac::LinearSolverOptions;
 using serac::NonlinearSolverOptions;
+using serac::mfem_ext::EquationSolver;
 
 LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet::Table& base)
 {

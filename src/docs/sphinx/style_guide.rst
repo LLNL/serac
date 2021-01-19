@@ -13,8 +13,11 @@ Code Style
 This project follows Google's `C++ Style Guide <https://google.github.io/styleguide/cppguide.html>`_
 with the following amendments:
 
-    1. ``camelCase`` should be used for function names 
+    1. ``camelCase`` should be used for function names
     #. ``ALL_CAPS`` should be used for constants (in addition to macros)
+
+If a class/function could feasibly be upstreamed to MFEM or implements an MFEM interface, it should
+be part of the ``serac::mfem_ext`` namespace and use MFEM's ``PascalCase`` naming convention.
 
 The Google style guide is meant for style enforcement only. The design principles outlined in the 
 `C++ Core Guidelines <http://isocpp.github.io/CppCoreGuidelines/>`_ should be followed.

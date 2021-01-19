@@ -8,7 +8,8 @@
 
 #include "serac/numerics/expr_template_ops.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
+
 SecondOrderODE::SecondOrderODE(int n, State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs)
     : mfem::SecondOrderTimeDependentOperator(n, 0.0), state_(std::move(state)), solver_(solver), bcs_(bcs), zero_(n)
 {
@@ -119,7 +120,7 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
   d2u_dt2 += d2U_dt2_;
 
   solver_.Mult(zero_, d2u_dt2);
-  SLIC_WARNING_IF(!solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
+  SLIC_WARNING_IF(!solver_.NonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
   state_.d2u_dt2 = d2u_dt2;
 }
@@ -233,9 +234,10 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   du_dt += dU_dt_;
 
   solver_.Mult(zero_, du_dt);
-  SLIC_WARNING_IF(!solver_.nonlinearSolver().GetConverged(), "Newton Solver did not converge.");
+  SLIC_WARNING_IF(!solver_.NonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
   state_.du_dt       = du_dt;
   state_.previous_dt = dt;
 }
-}  // namespace serac
+
+}  // namespace serac::mfem_ext

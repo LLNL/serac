@@ -278,12 +278,12 @@ protected:
   /**
    * @brief Nonlinear system solver instance
    */
-  EquationSolver nonlin_solver_;
+  mfem_ext::EquationSolver nonlin_solver_;
 
   /**
    * @brief the system of ordinary differential equations for the physics module
    */
-  SecondOrderODE ode2_;
+  mfem_ext::SecondOrderODE ode2_;
 
   /**
    * @brief alias for the reference mesh coordinates

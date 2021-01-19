@@ -17,7 +17,7 @@
 
 #include "mfem.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 /**
  *  @brief A class to convert linearform integrators into a nonlinear residual-based one
@@ -221,4 +221,4 @@ private:
   std::function<transformed_gradient_func> transformed_function_grad_;
 };
 
-}  // namespace serac
+}  // namespace serac::mfem_ext
