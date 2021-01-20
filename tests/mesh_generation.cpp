@@ -58,9 +58,7 @@ TEST(meshgen, LuaInput)
     auto mesh_options   = inlet["main_mesh_cuboid"].get<serac::mesh::InputOptions>();
     auto cuboid_options = std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options);
     EXPECT_EQ(cuboid_options.elements.size(), 3);
-    auto mesh = serac::buildCuboidMesh(cuboid_options.elements[0], cuboid_options.elements[1],
-                                       cuboid_options.elements[2], cuboid_options.overall_size[0],
-                                       cuboid_options.overall_size[1], cuboid_options.overall_size[2]);
+    auto mesh = serac::buildCuboidMesh(cuboid_options);
   }
 
   // temporary scope to build a rectangular mesh
@@ -68,8 +66,7 @@ TEST(meshgen, LuaInput)
     auto mesh_options = inlet["main_mesh_rect"].get<serac::mesh::InputOptions>();
     auto rect_options = std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options);
     EXPECT_EQ(rect_options.elements.size(), 2);
-    auto mesh = serac::buildRectangleMesh(rect_options.elements[0], rect_options.elements[1],
-                                          rect_options.overall_size[0], rect_options.overall_size[1]);
+    auto mesh = serac::buildRectangleMesh(rect_options);
   }
 }
 

@@ -130,6 +130,27 @@ struct InputOptions {
 };
 
 }  // namespace mesh
+
+/**
+ * @brief Constructs a 3D MFEM mesh of a cuboid
+ *
+ * @param[in] extra_options Cuboid Mesh Options
+ * @param[in] MPI_Comm MPI Communicator
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions& options,
+                                               const MPI_Comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Constructs a 2D MFEM mesh of a rectangle
+ *
+ * @param[in] extra_options Rectangle Mesh Options
+ * @param[in] MPI_Comm MPI Communicator
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOptions& options,
+                                                  const MPI_Comm = MPI_COMM_WORLD);
+
 }  // namespace serac
 
 // Prototype the specialization

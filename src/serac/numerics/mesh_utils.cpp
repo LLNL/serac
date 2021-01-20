@@ -161,11 +161,23 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int element
   return std::make_shared<mfem::ParMesh>(comm, mesh);
 }
 
+std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOptions& options, const MPI_Comm comm)
+{
+  return buildRectangleMesh(options.elements[0], options.elements[1], options.overall_size[0], options.overall_size[2],
+                            comm);
+}
+
 std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x,
                                                double size_y, double size_z, const MPI_Comm comm)
 {
   mfem::Mesh mesh(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true, size_x, size_y, size_z);
   return std::make_shared<mfem::ParMesh>(comm, mesh);
+}
+
+std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions& options, const MPI_Comm comm)
+{
+  return buildCuboidMesh(options.elements[0], options.elements[1], options.elements[2], options.overall_size[0],
+                         options.overall_size[1], options.overall_size[2], comm);
 }
 
 namespace mesh {
