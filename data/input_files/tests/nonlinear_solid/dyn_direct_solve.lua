@@ -15,6 +15,9 @@ main_mesh = {
     par_ref_levels = 0,
 }
 
+-- Simulation output format
+output_type = "VisIt"
+
 -- Solver parameters
 nonlinear_solid = {
     stiffness_solver = {
@@ -44,6 +47,8 @@ nonlinear_solid = {
     -- neo-Hookean material parameters
     mu = 0.25,
     K  = 5.0,
+
+    viscosity = 0.0,
 
     -- initial conditions
     initial_displacement = {
