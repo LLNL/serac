@@ -19,6 +19,10 @@ if (ENABLE_TESTS)
     blt_add_test(NAME          serac_driver_help
                  COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac --help 
                  NUM_MPI_TASKS 1 )
+
+    blt_add_test(NAME          serac_driver_docs
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -d -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/default.lua
+                 NUM_MPI_TASKS 1 )
 endif()
 
 install( TARGETS serac_driver

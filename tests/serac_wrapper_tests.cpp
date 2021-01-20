@@ -5,12 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 // # Author: Jonathan Wong @ LLNL.
 
-#include <gtest/gtest.h>
+#include "serac/coefficients/coefficient_extensions.hpp"
 
 #include <memory>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
-#include "serac/coefficients/coefficient_extensions.hpp"
+
 #include "serac/integrators/wrapper_integrator.hpp"
 
 using namespace mfem;
@@ -91,13 +92,13 @@ void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int>& es
 
   auto diffusion = std::make_shared<DiffusionIntegrator>(one);
 
-  A_nonlin.AddDomainIntegrator(new BilinearToNonlinearFormIntegrator(diffusion));
+  A_nonlin.AddDomainIntegrator(new mfem_ext::BilinearToNonlinearFormIntegrator(diffusion));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
   ConstantCoefficient coeff_zero(0.0);
 
   auto zero_integrator = std::make_shared<DomainLFIntegrator>(coeff_zero);
-  A_nonlin.AddDomainIntegrator(new LinearToNonlinearFormIntegrator(zero_integrator, pfes_));
+  A_nonlin.AddDomainIntegrator(new mfem_ext::LinearToNonlinearFormIntegrator(zero_integrator, pfes_));
 
   // The temperature solution vector already contains the essential boundary condition values
   std::unique_ptr<HypreParVector> T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
@@ -123,7 +124,7 @@ void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int
 
   auto diffusion = std::make_shared<DiffusionIntegrator>(one);
 
-  A_nonlin.AddDomainIntegrator(new MixedBilinearToNonlinearFormIntegrator(diffusion, pfes_));
+  A_nonlin.AddDomainIntegrator(new mfem_ext::MixedBilinearToNonlinearFormIntegrator(diffusion, pfes_));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
   // The temperature solution vector already contains the essential boundary condition values
@@ -160,8 +161,8 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
     return 0.;
   });
 
-  Array<int> bdr_attr_list_zero = serac::makeBdrAttributeList(*pmesh_, x_zero);
-  Array<int> bdr_attr_list_one  = serac::makeBdrAttributeList(*pmesh_, x_one);
+  Array<int> bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList(*pmesh_, x_zero);
+  Array<int> bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   Array<int> bdr_attr_list(pfes_->GetNBE());
@@ -236,8 +237,8 @@ TEST_F(WrapperTests, Transformed)
     return 0.;
   });
 
-  Array<int> bdr_attr_list_zero = serac::makeBdrAttributeList(*pmesh_, x_zero);
-  Array<int> bdr_attr_list_one  = serac::makeBdrAttributeList(*pmesh_, x_one);
+  Array<int> bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList(*pmesh_, x_zero);
+  Array<int> bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   Array<int> bdr_attr_list(pfes_->GetNBE());
@@ -271,7 +272,7 @@ TEST_F(WrapperTests, Transformed)
   ConstantCoefficient one(1.);
 
   auto   diffusion           = std::make_shared<DiffusionIntegrator>(one);
-  auto   nonlinear_diffusion = std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion);
+  auto   nonlinear_diffusion = std::make_unique<mfem_ext::BilinearToNonlinearFormIntegrator>(diffusion);
   double multiplier          = 2.;
   double offset              = 1.;
   auto   transform           = [=](const mfem::FiniteElement&, mfem::ElementTransformation&, const mfem::Vector& x) {
@@ -285,8 +286,8 @@ TEST_F(WrapperTests, Transformed)
     m *= multiplier;
     return m;
   };
-  auto transformed_diffusion = std::make_unique<TransformedNonlinearFormIntegrator>(
-      std::make_unique<BilinearToNonlinearFormIntegrator>(diffusion), transform, transform_grad);
+  auto transformed_diffusion = std::make_unique<mfem_ext::TransformedNonlinearFormIntegrator>(
+      std::make_unique<mfem_ext::BilinearToNonlinearFormIntegrator>(diffusion), transform, transform_grad);
 
   ParGridFunction temp(pfes_.get());
   {
@@ -357,7 +358,7 @@ TEST_F(WrapperTests, attribute_modifier_coef)
   // Everything gets converted to 2
   mfem::Array<int> modified_attrs(pmesh_->GetNE());
   modified_attrs = 2;
-  AttributeModifierCoefficient am_coef(modified_attrs, restrict_coef);
+  mfem_ext::AttributeModifierCoefficient am_coef(modified_attrs, restrict_coef);
 
   ParGridFunction gf(pfes_.get());
   gf.ProjectCoefficient(am_coef);
@@ -384,16 +385,16 @@ TEST_F(WrapperTests, vector_transform_coef)
 
   // Both of these do the same thing, but we can test both the single- and dual-vector transformations
   // by capturing the operand
-  TransformedVectorCoefficient mono_tv_coef(first_vec_coef,
-                                            [&four_five_six](const mfem::Vector& in, mfem::Vector& out) {
-                                              out = in;
-                                              out += four_five_six;
-                                            });
-  ParGridFunction              mono_gf(pfes_v_.get());
+  mfem_ext::TransformedVectorCoefficient mono_tv_coef(first_vec_coef,
+                                                      [&four_five_six](const mfem::Vector& in, mfem::Vector& out) {
+                                                        out = in;
+                                                        out += four_five_six;
+                                                      });
+  ParGridFunction                        mono_gf(pfes_v_.get());
   mono_gf.ProjectCoefficient(mono_tv_coef);
   EXPECT_NEAR(mono_gf.ComputeL2Error(sum_coef), 0.0, 1.e-8);
 
-  TransformedVectorCoefficient dual_tv_coef(
+  mfem_ext::TransformedVectorCoefficient dual_tv_coef(
       first_vec_coef, second_vec_coef, [](const mfem::Vector& first, const mfem::Vector& second, mfem::Vector& out) {
         out = first;
         out += second;

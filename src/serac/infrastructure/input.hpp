@@ -5,25 +5,21 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file cli.hpp
+ * @file input.hpp
  *
- * @brief This file contains the all the necessary functions and macros required
- *        for interacting with the command line interface.
+ * @brief This file contains the all the necessary functions for reading input files
  */
 
-#ifndef SERAC_INPUT
-#define SERAC_INPUT
+#pragma once
 
 #include <string>
 #include <variant>
 
+#include "mfem.hpp"
 #include "axom/inlet.hpp"
 #include "axom/sidre.hpp"
-#include "mfem.hpp"
 
-namespace serac {
-
-namespace input {
+namespace serac::input {
 
 /**
  * @brief Initializes Inlet with the given datastore and input file.
@@ -110,8 +106,7 @@ struct BoundaryConditionInputOptions {
   static void defineInputFileSchema(axom::inlet::Table& table);
 };
 
-}  // namespace input
-}  // namespace serac
+}  // namespace serac::input
 
 // Template specializations
 template <>
@@ -128,5 +123,3 @@ template <>
 struct FromInlet<serac::input::BoundaryConditionInputOptions> {
   serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Table& base);
 };
-
-#endif

@@ -11,6 +11,10 @@ Serac is a 3D implicit nonlinear thermal-structural simulation code. It's primar
 strategies and implicit finite element-based alogrithm development for emerging computing architectures. It also serves as a proxy-app for
 LLNL's DIABLO and ALE3D codes.
 
+
+  *  `Source documentation <doxygen/html/index.html>`_
+
+
 ======================
 Quickstart Guide
 ======================

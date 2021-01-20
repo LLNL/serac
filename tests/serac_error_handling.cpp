@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
-
 #include <exception>
+
+#include <gtest/gtest.h>
 
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
@@ -20,6 +20,8 @@ class SlicErrorException : public std::exception {
 };
 
 namespace serac {
+
+using mfem_ext::EquationSolver;
 
 TEST(serac_error_handling, equationsolver_bad_lin_solver)
 {

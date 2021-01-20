@@ -40,9 +40,9 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
   // to be the displacement
-  const auto& augmented_options = augmentAMGForElasticity(lin_options, displacement_.space());
+  const auto& augmented_options = mfem_ext::AugmentAMGForElasticity(lin_options, displacement_.space());
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_options, options.H_nonlin_options);
+  nonlin_solver_ = mfem_ext::EquationSolver(mesh->GetComm(), augmented_options, options.H_nonlin_options);
 
   // Check for dynamic mode
   if (options.dyn_options) {
@@ -81,6 +81,8 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
     auto velo = options.initial_velocity->constructVector(dim);
     setVelocity(velo);
   }
+  setViscosity(std::make_unique<mfem::ConstantCoefficient>(options.viscosity));
+
   for (const auto& [name, bc] : options.boundary_conditions) {
     // FIXME: Better naming for boundary conditions?
     if (name.find("displacement") != std::string::npos) {
@@ -146,14 +148,14 @@ void NonlinearSolid::completeSetup()
 
   // Add the hyperelastic integrator
   if (is_quasistatic_) {
-    H_->AddDomainIntegrator(new IncrementalHyperelasticIntegrator(model_.get()));
+    H_->AddDomainIntegrator(new mfem_ext::IncrementalHyperelasticIntegrator(model_.get()));
   } else {
     H_->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
   }
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
-    H_->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
+    H_->AddBdrFaceIntegrator(new mfem_ext::HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
                              nat_bc_data.markers());
   }
 
@@ -193,7 +195,7 @@ void NonlinearSolid::completeSetup()
   // Setting iterative_mode to true ensures that these
   // prescribed acceleration values are not modified by
   // the nonlinear solve.
-  nonlin_solver_.nonlinearSolver().iterative_mode = true;
+  nonlin_solver_.NonlinearSolver().iterative_mode = true;
 
   if (is_quasistatic_) {
     residual_ = buildQuasistaticOperator();
@@ -202,7 +204,7 @@ void NonlinearSolid::completeSetup()
     // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
-    residual_ = std::make_unique<StdFunctionOperator>(
+    residual_ = std::make_unique<mfem_ext::StdFunctionOperator>(
         displacement_.space().TrueVSize(),
 
         // residual function
@@ -232,7 +234,7 @@ std::unique_ptr<mfem::Operator> NonlinearSolid::buildQuasistaticOperator()
 {
   // the quasistatic case is entirely described by the residual,
   // there is no ordinary differential equation
-  auto residual = std::make_unique<StdFunctionOperator>(
+  auto residual = std::make_unique<mfem_ext::StdFunctionOperator>(
       displacement_.space().TrueVSize(),
 
       // residual function
@@ -290,9 +292,11 @@ void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& tab
   table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
   table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
 
+  table.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
+
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
   auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
@@ -350,6 +354,8 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
   // neo-Hookean material parameters
   result.mu = base["mu"];
   result.K  = base["K"];
+
+  result.viscosity = base["viscosity"];
 
   result.boundary_conditions =
       base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();

@@ -10,12 +10,11 @@
  * @brief MFEM coefficients for handling traction boundaries
  */
 
-#ifndef TRACTION_COEF
-#define TRACTION_COEF
+#pragma once
 
 #include "mfem.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 /**
  * @brief A vector coefficient with a mutable scalar scaling factor
@@ -60,6 +59,4 @@ private:
   double scale_ = 1.0;
 };
 
-}  // namespace serac
-
-#endif
+}  // namespace serac::mfem_ext
