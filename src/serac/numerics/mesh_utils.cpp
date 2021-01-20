@@ -246,7 +246,7 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
 
   // If it reaches here, we haven't found a supported type
   serac::logger::flush();
-  std::string err_msg = fmt::format("Specified type not supported: {0}", base["type"]);
+  std::string err_msg = fmt::format("Specified type not supported: {0}", mesh_type);
   SLIC_ERROR(err_msg);
   return {};
 }
