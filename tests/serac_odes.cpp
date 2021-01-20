@@ -17,6 +17,7 @@
 #include "serac/physics/operators/stdfunction_operator.hpp"
 
 using namespace serac;
+using namespace serac::mfem_ext;
 
 bool with_print_statements = true;
 

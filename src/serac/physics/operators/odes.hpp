@@ -27,11 +27,10 @@ namespace serac::mfem_ext {
  */
 class SecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
 public:
-
   /**
    * @brief a small number used to compute finite difference approximations
    * to time derivatives of boundary conditions.
-   * 
+   *
    * Note: this is intended to be temporary
    * Ideally, epsilon should be "small" relative to the characteristic
    * time of the ODE, but we can't ensure that at present (we don't have
@@ -141,8 +140,9 @@ public:
    *
    * @see mfem::SecondOrderODESolver::Step
    */
-  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt) { 
-    ode_solver_->Step(x, dxdt, t, dt); 
+  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt)
+  {
+    ode_solver_->Step(x, dxdt, t, dt);
 
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
       U_minus_ = 0.0;
@@ -156,8 +156,8 @@ public:
 
       auto constrained_dofs = bcs_.allEssentialDofs();
       for (int i = 0; i < constrained_dofs.Size(); i++) {
-        x[i] = U_[i];
-        dxdt[i] = (U_plus_[i] - U_minus_[i]) / (2.0 * epsilon); 
+        x[i]    = U_[i];
+        dxdt[i] = (U_plus_[i] - U_minus_[i]) / (2.0 * epsilon);
       }
     }
   }
@@ -219,11 +219,10 @@ private:
  */
 class FirstOrderODE : public mfem::TimeDependentOperator {
 public:
-
   /**
    * @brief a small number used to compute finite difference approximations
    * to time derivatives of boundary conditions.
-   * 
+   *
    * Note: this is intended to be temporary
    * Ideally, epsilon should be "small" relative to the characteristic
    * time of the ODE, but we can't ensure that at present (we don't have
