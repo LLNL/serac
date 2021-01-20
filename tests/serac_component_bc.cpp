@@ -48,7 +48,7 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   if (std::holds_alternative<serac::mesh::FileInputOptions>(mesh_options.extra_options)) {
     auto full_mesh_path = serac::input::findMeshFilePath(
         std::get<serac::mesh::FileInputOptions>(mesh_options.extra_options).relative_mesh_file_name, input_file_path);
-    auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+    mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
   }
 
   // Define the solid solver object
