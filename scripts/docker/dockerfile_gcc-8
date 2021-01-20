@@ -21,7 +21,7 @@ RUN sudo useradd -m -s /bin/bash -G sudo serac
 WORKDIR "/home/serac"
 USER serac
 
-RUN git clone --recursive --branch $branch --single-branch https://github.com/LLNL/serac.git
+RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git
 
 # New containers will use Python3
 RUN cd serac && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu16/ --project-json=.uberenv_config.json \
