@@ -23,3 +23,11 @@ main_mesh_rect = {
     ser_ref_levels = 1,
     par_ref_levels = 0,
 }
+
+main_mesh_fail = {
+    type = "invalid", -- this is invalid
+    mesh = "../../../meshes/beam-hex.mesh",
+    -- serial and parallel refinement levels
+    ser_ref_levels = 1,
+    par_ref_levels = 0
+}
