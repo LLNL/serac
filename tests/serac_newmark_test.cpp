@@ -216,7 +216,7 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   int                       ne = nex;
   mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
 
-  mfem::Array<int> bdr_attr_list = serac::makeBdrAttributeList(*pmesh, fixed);
+  mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);
   for (int be = 0; be < pmesh->GetNBE(); be++) {
     pmesh->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
   }
@@ -315,7 +315,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   int                       ne = nex;
   mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
 
-  mfem::Array<int> bdr_attr_list = serac::makeBdrAttributeList(*pmesh, fixed);
+  mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);
   for (int be = 0; be < pmesh->GetNBE(); be++) {
     pmesh->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
   }

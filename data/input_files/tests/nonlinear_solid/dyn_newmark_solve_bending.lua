@@ -5,6 +5,7 @@ epsilon = 0.0001
 
 
 main_mesh = {
+    type = "generate",
     -- mesh file
     mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels

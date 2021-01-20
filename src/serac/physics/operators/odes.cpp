@@ -85,7 +85,7 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double
 
 void SecondOrderODE::ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt)
 {
-  /* A second order p.d.e can be recast as a first order system
+  /* A second order o.d.e can be recast as a first order system
     u_next = u_prev + dt * v_next
     v_next = v_prev + dt * a_next
 
