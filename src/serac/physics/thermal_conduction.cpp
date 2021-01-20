@@ -239,7 +239,7 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
 
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
   auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
