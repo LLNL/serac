@@ -92,9 +92,6 @@ TEST_F(NewmarkBetaTest, SimpleLua)
 
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  // FIXME: Remove once Inlet's "contains" logic improvements are merged
-
-  // we copy and paste this for now.. we want to disable bc_conditions because there aren't any in this case
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
@@ -252,13 +249,6 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
 
   double dt = inlet["dt"];
 
-  mfem::VisItDataCollection visit("NewmarkBetaLua", pmesh.get());
-  visit.RegisterField("u_next", &solid_solver.displacement().gridFunc());
-  visit.RegisterField("v_next", &solid_solver.velocity().gridFunc());
-  visit.SetCycle(0);
-  visit.SetTime(0.);
-  visit.Save();
-
   // Check if dynamic
   if (is_dynamic) {
     double t       = 0.0;
@@ -267,7 +257,6 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
     // Perform time-integration
     // (looping over the time iterations, ti, with a time-step dt).
     bool last_step = false;
-    int  nsteps    = 0;
     for (int ti = 1; !last_step; ti++) {
       double dt_real = std::min(dt, t_final - t);
       t += dt_real;
@@ -276,9 +265,6 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
       solid_solver.advanceTimestep(dt_real);
 
       solid_solver.outputState();
-      visit.SetTime(t);
-      visit.SetCycle(++nsteps);
-      visit.Save();
     }
   } else {
     solid_solver.advanceTimestep(dt);
@@ -313,31 +299,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
   // FIXME: Remove once Inlet's "contains" logic improvements are merged
-
-  // serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
-  // Polynomial interpolation order - currently up to 8th order is allowed
-  solid_solver_table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
-
-  // neo-Hookean material parameters
-  solid_solver_table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
-  solid_solver_table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
-
-  auto& stiffness_solver_solid_solver_table =
-      solid_solver_table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(stiffness_solver_solid_solver_table);
-
-  auto& dynamics_solid_solver_table = solid_solver_table.addTable("dynamics", "Parameters for mass matrix inversion");
-  dynamics_solid_solver_table.addString("timestepper", "Timestepper (ODE) method to use");
-  dynamics_solid_solver_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
-
-  auto& bc_solid_solver_table =
-      solid_solver_table.addGenericDictionary("boundary_conds", "Solid_Solver_Table of boundary conditions");
-  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_solid_solver_table);
-
-  auto& init_displ = solid_solver_table.addTable("initial_displacement", "Coefficient for initial condition");
-  serac::input::CoefficientInputOptions::defineInputFileSchema(init_displ);
-  auto& init_velo = solid_solver_table.addTable("initial_velocity", "Coefficient for initial condition");
-  serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
+  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // get gravity parameter for this problem
   inlet.addDouble("g", "the gravity acceleration");
@@ -386,13 +348,6 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 
   double dt = inlet["dt"];
 
-  mfem::VisItDataCollection visit("FirsOrderLua", pmesh.get());
-  visit.RegisterField("u_next", &solid_solver.displacement().gridFunc());
-  visit.RegisterField("v_next", &solid_solver.velocity().gridFunc());
-  visit.SetCycle(0);
-  visit.SetTime(0.);
-  visit.Save();
-
   // Check if dynamic
   if (is_dynamic) {
     double t       = 0.0;
@@ -401,7 +356,6 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
     // Perform time-integration
     // (looping over the time iterations, ti, with a time-step dt).
     bool last_step = false;
-    int  nsteps    = 0;
     for (int ti = 1; !last_step; ti++) {
       double dt_real = std::min(dt, t_final - t);
       t += dt_real;
@@ -410,9 +364,6 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
       solid_solver.advanceTimestep(dt_real);
 
       solid_solver.outputState();
-      visit.SetTime(t);
-      visit.SetCycle(++nsteps);
-      visit.Save();
     }
   } else {
     solid_solver.advanceTimestep(dt);
