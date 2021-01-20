@@ -80,11 +80,6 @@ public:
      * @brief The name of the field encapsulated by the state object
      */
     std::string name = "";
-
-    /**
-     * @brief Whether to allocate memory for the GridFunction
-     */
-    bool allocate_gf = true;
   };
 
   /**
@@ -94,12 +89,9 @@ public:
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementState(mfem::ParMesh& mesh, Options&& options = {.order       = 1,
-                                                               .space_dim   = {},
-                                                               .coll        = {},
-                                                               .ordering    = mfem::Ordering::byVDIM,
-                                                               .name        = "",
-                                                               .allocate_gf = true});
+  FiniteElementState(mfem::ParMesh& mesh,
+                     Options&&      options = {
+                         .order = 1, .space_dim = {}, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
 
   /**
    * @brief Minimal constructor for a FiniteElementState given an already-existing field
