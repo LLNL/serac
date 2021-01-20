@@ -10,12 +10,16 @@
  * @brief Various helper functions and macros for profiling using Caliper
  */
 
-#ifndef PROFILING_CALIPER
-#define PROFILING_CALIPER
+#pragma once
 
 #include <string>
 
 #include "serac/serac_config.hpp"
+
+#ifdef SERAC_USE_CALIPER
+#include "caliper/cali-manager.h"
+#include "caliper/cali.h"
+#endif
 
 /**
  * @def SERAC_MARK_FUNCTION
@@ -38,9 +42,6 @@
  */
 
 #ifdef SERAC_USE_CALIPER
-
-#include "caliper/cali-manager.h"
-#include "caliper/cali.h"
 
 #define SERAC_MARK_FUNCTION CALI_CXX_MARK_FUNCTION
 #define SERAC_MARK_LOOP_START(id, name) CALI_CXX_MARK_LOOP_BEGIN(id, name)
@@ -71,5 +72,3 @@ void initializeCaliper(const std::string& options = "");
 void terminateCaliper();
 
 }  // namespace serac::profiling
-
-#endif

@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "mfem.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 
 namespace serac {

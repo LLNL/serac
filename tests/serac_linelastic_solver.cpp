@@ -4,13 +4,14 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
+#include "serac/physics/elasticity.hpp"
 
 #include <fstream>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
+
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/elasticity.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {

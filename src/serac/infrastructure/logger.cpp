@@ -9,9 +9,7 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac {
-
-namespace logger {
+namespace serac::logger {
 
 bool initialize(MPI_Comm comm)
 {
@@ -86,5 +84,4 @@ void finalize() { axom::slic::finalize(); }
 
 void flush() { axom::slic::flushStreams(); }
 
-}  // namespace logger
-}  // namespace serac
+}  // namespace serac::logger

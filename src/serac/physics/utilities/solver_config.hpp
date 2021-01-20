@@ -10,8 +10,7 @@
  * @brief This file contains enumerations and record types for physics solver configuration
  */
 
-#ifndef SOLVER_CONFIG
-#define SOLVER_CONFIG
+#pragma once
 
 #include <variant>
 
@@ -272,5 +271,3 @@ struct NonlinearSolverOptions {
 };
 
 }  // namespace serac
-
-#endif

@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
-
 #include "serac/infrastructure/input.hpp"
+
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 class SlicErrorException : public std::exception {
