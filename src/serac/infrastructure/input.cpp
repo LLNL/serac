@@ -19,6 +19,7 @@ axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::stri
 {
   // Initialize Inlet
   auto luareader = std::make_unique<axom::inlet::LuaReader>();
+  luareader->solState().open_libraries(sol::lib::math);
   luareader->parseFile(input_file_path);
 
   // Store inlet data under its own group
@@ -156,7 +157,8 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     auto scalar_func = [func(std::move(func))](const mfem::Vector& input) {
       return func({input.GetData(), input.Size()});
     };
-    return {std::move(scalar_func), base["component"]};
+    const int component = base.contains("component") ? base["component"] : -1;
+    return {std::move(scalar_func), component};
   }
   return {};
 }
