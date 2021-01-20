@@ -14,13 +14,14 @@ TEST(meshgen, successful_creation)
   // of elements specified, they refine to get as close as possible
   ASSERT_EQ(serac::buildDiskMesh(1000)->GetNE(), 1024);
   ASSERT_EQ(serac::buildBallMesh(6000)->GetNE(), 4096);
-  ASSERT_EQ(serac::buildRectangleMesh(20, 20, 1., 2., 3.)->GetNE(), 400);
+  ASSERT_EQ(serac::buildRectangleMesh(20, 20, 1., 2.)->GetNE(), 400);
   ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20, 1., 2., 3.)->GetNE(), 8000);
 }
 
-TEST(meshgen, LuaInput)
+TEST(meshgen, lua_input)
 {
   MPI_Barrier(MPI_COMM_WORLD);
+
   // Create DataStore
   axom::sidre::DataStore datastore;
 
@@ -46,28 +47,31 @@ TEST(meshgen, LuaInput)
   // temporary scope to build mesh from file
   {
     auto mesh_options = inlet["main_mesh_from_file"].get<serac::mesh::InputOptions>();
-    if (std::holds_alternative<serac::mesh::FileInputOptions>(mesh_options.extra_options)) {
-      auto full_mesh_path = serac::input::findMeshFilePath(
-          std::get<serac::mesh::FileInputOptions>(mesh_options.extra_options).relative_mesh_file_name, input_file);
+    if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+      auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
       auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
     }
   }
 
   // temporary scope to build a cuboid mesh
   {
-    auto mesh_options   = inlet["main_mesh_cuboid"].get<serac::mesh::InputOptions>();
-    auto cuboid_options = std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options);
-    EXPECT_EQ(cuboid_options.elements.size(), 3);
-    auto mesh = serac::buildCuboidMesh(cuboid_options);
+    auto mesh_options = inlet["main_mesh_cuboid"].get<serac::mesh::InputOptions>();
+    if (const auto cuboid_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options)) {
+      EXPECT_EQ(cuboid_options->elements.size(), 3);
+      auto mesh = serac::buildCuboidMesh(*cuboid_options);
+    }
   }
 
   // temporary scope to build a rectangular mesh
   {
     auto mesh_options = inlet["main_mesh_rect"].get<serac::mesh::InputOptions>();
-    auto rect_options = std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options);
-    EXPECT_EQ(rect_options.elements.size(), 2);
-    auto mesh = serac::buildRectangleMesh(rect_options);
+    if (const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options)) {
+      EXPECT_EQ(rect_options->elements.size(), 2);
+      auto mesh = serac::buildRectangleMesh(*rect_options);
+    }
   }
+
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 //------------------------------------------------------------------------------
