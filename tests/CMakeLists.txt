@@ -10,7 +10,7 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies serac_physics serac_coefficients gtest test_utils)
+    set(test_dependencies serac_physics serac_coefficients test_utils)
 
     blt_add_library(
         NAME        test_utils
