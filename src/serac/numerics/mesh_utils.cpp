@@ -184,13 +184,15 @@ namespace mesh {
 
 void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
-  // mesh path
-  table.addString("mesh", "Path to Mesh file");
-
   // Refinement levels
   table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
   table.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
 
+  table.addString("type", "Type of mesh").required();
+
+  // mesh path
+  table.addString("mesh", "Path to Mesh file");
+  
   // mesh generation options
   auto& elements = table.addTable("elements");
   // JW: Can these be specified as requierd if elements is defined?
@@ -214,30 +216,37 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
   int par_ref = base["par_ref_levels"];
 
   // This is for cuboid/rectangular meshes
-  if (base.contains("elements")) {
-    auto elements_input = base["elements"];
-    bool z_present      = elements_input.contains("z");
+  std::string mesh_type = base["type"];
+  if (mesh_type == "generate") {
+  auto elements_input = base["elements"];
+  bool z_present      = elements_input.contains("z");
 
-    std::vector<int> elements(z_present ? 3 : 2);
-    elements[0] = elements_input["x"];
-    elements[1] = elements_input["y"];
-    if (z_present) elements[2] = elements_input["z"];
+  std::vector<int> elements(z_present ? 3 : 2);
+  elements[0] = elements_input["x"];
+  elements[1] = elements_input["y"];
+  if (z_present) elements[2] = elements_input["z"];
 
-    std::vector<double> overall_size(elements.size());
-    if (base.contains("size")) {
-      auto size_input = base["size"];
-      overall_size    = {size_input["x"], size_input["y"]};
+  std::vector<double> overall_size(elements.size());
+  if (base.contains("size")) {
+    auto size_input = base["size"];
+    overall_size    = {size_input["x"], size_input["y"]};
 
-      if (size_input.contains("z")) {
-        overall_size[2] = size_input["z"];
-      }
-    } else {
-      overall_size = std::vector<double>(overall_size.size(), 1.);
+    if (size_input.contains("z")) {
+      overall_size[2] = size_input["z"];
     }
-
-    return {serac::mesh::GenerateInputOptions{elements, overall_size}, ser_ref, par_ref};
-  } else {  // This is for file-based meshes
-    std::string mesh_path = base["mesh"];
-    return {serac::mesh::FileInputOptions{mesh_path}, ser_ref, par_ref};
+  } else {
+    overall_size = std::vector<double>(overall_size.size(), 1.);
   }
+
+  return {serac::mesh::GenerateInputOptions{elements, overall_size}, ser_ref, par_ref};
+} else if (mesh_type == "file") {  // This is for file-based meshes
+  std::string mesh_path = base["mesh"];
+  return {serac::mesh::FileInputOptions{mesh_path}, ser_ref, par_ref};
+ }
+
+  // If it reaches here, we haven't found a supported type
+  serac::logger::flush();
+  std::string err_msg = fmt::format("Specified type not supported: {0}", base["type"]);
+  SLIC_ERROR(err_msg);  
+  return {};
 }

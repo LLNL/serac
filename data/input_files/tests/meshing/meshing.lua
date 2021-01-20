@@ -1,4 +1,5 @@
 main_mesh_from_file = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
@@ -7,6 +8,7 @@ main_mesh_from_file = {
 }
 
 main_mesh_cuboid = {
+    type = "generate",
     -- mesh file
     elements = {x = 3, y = 3, z = 3},
     size = {x = 1, y = 2, z = 3},
@@ -15,6 +17,7 @@ main_mesh_cuboid = {
 }
 
 main_mesh_rect = {
+    type = "generate",
     -- mesh file
     elements = {x = 3, y = 3},
     ser_ref_levels = 1,
