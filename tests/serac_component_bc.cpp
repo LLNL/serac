@@ -44,9 +44,10 @@ TEST(nonlinear_solid_solver, qs_component_solve)
 
   // Build the mesh
   std::shared_ptr<mfem::ParMesh> mesh;
-  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto                           mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
   if (std::holds_alternative<serac::mesh::FileInputOptions>(mesh_options.extra_options)) {
-    auto full_mesh_path = serac::input::findMeshFilePath(std::get<serac::mesh::FileInputOptions>(mesh_options.extra_options).relative_mesh_file_name, input_file_path);
+    auto full_mesh_path = serac::input::findMeshFilePath(
+        std::get<serac::mesh::FileInputOptions>(mesh_options.extra_options).relative_mesh_file_name, input_file_path);
     auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
   }
 

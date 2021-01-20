@@ -59,7 +59,7 @@ std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
  * @param[in] approx_number_of_elements
  * @return A shared_ptr containing the constructed mesh
  */
-  std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 2D MFEM mesh of a rectangle
@@ -70,8 +70,8 @@ std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
  * @param[in] size_y Overall size in the y-direction
  * @return A shared_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1., double size_y = 1.,
-                                                  const MPI_Comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
+                                                  double size_y = 1., const MPI_Comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a cuboid
@@ -86,7 +86,8 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int element
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
-					       double size_x = 1., double size_y = 1., double size_z = 1.,                                               const MPI_Comm = MPI_COMM_WORLD );
+                                               double size_x = 1., double size_y = 1., double size_z = 1.,
+                                               const MPI_Comm = MPI_COMM_WORLD);
 
 namespace mesh {
 
@@ -101,33 +102,33 @@ struct FileInputOptions {
   std::string relative_mesh_file_name;
 };
 
-  struct GenerateInputOptions {
-    /**
-     * @brief Input file parameters for mesh generation
-     *
-     * @param[in] table Inlet's SchemaCreator that input files will be added to
-     **/
-    static void defineInputFileSchema(axom::inlet::Table& table);
+struct GenerateInputOptions {
+  /**
+   * @brief Input file parameters for mesh generation
+   *
+   * @param[in] table Inlet's SchemaCreator that input files will be added to
+   **/
+  static void defineInputFileSchema(axom::inlet::Table& table);
 
-    /// For rectangular and cuboid meshes
-    std::vector<int> elements;
-    std::vector<double> overall_size;
-  };
+  /// For rectangular and cuboid meshes
+  std::vector<int>    elements;
+  std::vector<double> overall_size;
+};
 
-  struct InputOptions {
-    /**
-     * @brief Input file parameters for mesh generation
-     *
-     * @param[in] table Inlet's SchemaCreator that input files will be added to
-     **/
-    static void defineInputFileSchema(axom::inlet::Table& table);
-    
-    std::variant<FileInputOptions, GenerateInputOptions> extra_options;
-    // Serial/parallel refinement iterations
-    int ser_ref_levels;
-    int par_ref_levels;    
-  };
-  
+struct InputOptions {
+  /**
+   * @brief Input file parameters for mesh generation
+   *
+   * @param[in] table Inlet's SchemaCreator that input files will be added to
+   **/
+  static void defineInputFileSchema(axom::inlet::Table& table);
+
+  std::variant<FileInputOptions, GenerateInputOptions> extra_options;
+  // Serial/parallel refinement iterations
+  int ser_ref_levels;
+  int par_ref_levels;
+};
+
 }  // namespace mesh
 }  // namespace serac
 
