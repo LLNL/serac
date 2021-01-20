@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/numerics/mesh_utils.hpp"
-
+#include "serac/serac_config.hpp"
 #include <gtest/gtest.h>
 
 TEST(meshgen, successful_creation)
@@ -14,11 +14,67 @@ TEST(meshgen, successful_creation)
   // of elements specified, they refine to get as close as possible
   ASSERT_EQ(serac::buildDiskMesh(1000)->GetNE(), 1024);
   ASSERT_EQ(serac::buildBallMesh(6000)->GetNE(), 4096);
-  ASSERT_EQ(serac::buildRectangleMesh(20, 20)->GetNE(), 400);
-  ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20)->GetNE(), 8000);
+  ASSERT_EQ(serac::buildRectangleMesh(20, 20, 1., 2., 3.)->GetNE(), 400);
+  ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20, 1., 2., 3.)->GetNE(), 8000);
 }
 
-//------------------------------------------------------------------------------
+TEST(meshgen, LuaInput)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+
+  // Initialize Inlet and read input file
+  std::string input_file =
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/meshing/meshing.lua";
+  std::cout << input_file << std::endl;
+  auto inlet = serac::input::initialize(datastore, input_file);
+
+  auto& mesh_file_table = inlet.addTable("main_mesh_from_file", "A mesh to build from file");
+  serac::mesh::InputOptions::defineInputFileSchema(mesh_file_table);
+
+  auto& mesh_cuboid_table = inlet.addTable("main_mesh_cuboid", "A cuboid mesh");
+  serac::mesh::InputOptions::defineInputFileSchema(mesh_cuboid_table);
+
+  auto& mesh_rect_table = inlet.addTable("main_mesh_rect", "A rectangular mesh");
+  serac::mesh::InputOptions::defineInputFileSchema(mesh_rect_table);  
+
+  // Verify input file
+  if (!inlet.verify()) {
+    SLIC_ERROR("Input file failed to verify.");
+  }   
+  
+  // temporary scope to build mesh from file
+  {
+    auto mesh_options   = inlet["main_mesh_from_file"].get<serac::mesh::InputOptions>();
+    if (std::holds_alternative<serac::mesh::FileInputOptions>(mesh_options.extra_options)) {
+      auto full_mesh_path = serac::input::findMeshFilePath(std::get<serac::mesh::FileInputOptions>(mesh_options.extra_options).relative_mesh_file_name, input_file);
+    auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+    }
+  }
+
+  // temporary scope to build a cuboid mesh
+  {
+    auto mesh_options   = inlet["main_mesh_cuboid"].get<serac::mesh::InputOptions>();
+    auto cuboid_options = std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options);
+    EXPECT_EQ(cuboid_options.elements.size(), 3);
+    auto mesh = serac::buildCuboidMesh(cuboid_options.elements[0], cuboid_options.elements[1], cuboid_options.elements[2],
+				       cuboid_options.overall_size[0], cuboid_options.overall_size[1], cuboid_options.overall_size[2]);
+  }
+
+  // temporary scope to build a rectangular mesh
+  {
+    auto mesh_options   = inlet["main_mesh_rect"].get<serac::mesh::InputOptions>();
+    auto rect_options = std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options);
+    EXPECT_EQ(rect_options.elements.size(), 2);
+    auto mesh = serac::buildRectangleMesh(rect_options.elements[0], rect_options.elements[1], 
+				       rect_options.overall_size[0], rect_options.overall_size[1]);
+    
+  }
+
+}
+
+  //------------------------------------------------------------------------------
 #include "axom/slic/core/UnitTestLogger.hpp"
 using axom::slic::UnitTestLogger;
 

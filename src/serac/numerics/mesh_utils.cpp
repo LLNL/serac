@@ -154,16 +154,16 @@ std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
   return std::make_shared<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, const MPI_Comm comm)
+  std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y, const MPI_Comm comm)
 {
-  mfem::Mesh mesh(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true);
+  mfem::Mesh mesh(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y);
   return std::make_shared<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
-                                               const MPI_Comm comm)
+  std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x, double size_y, double size_z,
+                                               const MPI_Comm comm )
 {
-  mfem::Mesh mesh(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true);
+  mfem::Mesh mesh(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true, size_x, size_y, size_z);
   return std::make_shared<mfem::ParMesh>(comm, mesh);
 }
 
@@ -172,11 +172,24 @@ namespace mesh {
 void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // mesh path
-  table.addString("mesh", "Path to Mesh file").required();
+  table.addString("mesh", "Path to Mesh file");
 
   // Refinement levels
   table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
   table.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
+
+  // mesh generation options
+  auto & elements = table.addTable("elements");
+  // JW: Can these be specified as requierd if elements is defined?
+  elements.addInt("x", "x-dimension");
+  elements.addInt("y", "y-dimension");
+  elements.addInt("z", "z-dimension");
+
+  auto & size = table.addTable("size");
+  // JW: Can these be specified as requierd if elements is defined?
+  size.addDouble("x", "Size in the x-dimension");
+  size.addDouble("y", "Size in the y-dimension");
+  size.addDouble("z", "Size in the z-dimension");
 }
 
 }  // namespace mesh
@@ -184,8 +197,35 @@ void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 
 serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const axom::inlet::Table& base)
 {
-  std::string mesh_path = base["mesh"];
   int         ser_ref   = base["ser_ref_levels"];
   int         par_ref   = base["par_ref_levels"];
-  return {mesh_path, ser_ref, par_ref};
+
+  // This is for cuboid/rectangular meshes
+  if (base.contains("elements")) {
+    auto elements_input = base["elements"];
+    bool z_present = elements_input.contains("z");
+
+    std::vector<int> elements (z_present ? 3 : 2);
+    elements[0] = elements_input["x"];
+    elements[1] = elements_input["y"];
+    if (z_present)
+      elements[2] = elements_input["z"];
+
+    std::vector<double> overall_size(elements.size());
+    if (base.contains("size")) {
+      auto size_input = base["size"];
+      overall_size = { size_input["x"], size_input["y"] };
+
+      if (size_input.contains("z")) {
+	overall_size[2] = size_input["z"];
+      }
+    } else {
+      overall_size =std::vector<double>(overall_size.size(), 1.);
+    }
+    
+    return { serac::mesh::GenerateInputOptions{elements, overall_size}, ser_ref, par_ref };
+  } else { // This is for file-based meshes
+    std::string mesh_path = base["mesh"];
+    return { serac::mesh::FileInputOptions{mesh_path}, ser_ref, par_ref};
+  } 
 }
