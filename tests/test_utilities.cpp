@@ -55,6 +55,7 @@ void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet)
 
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  // This is the "standard" schema for the actual physics module
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   defineCommonTestSchema(inlet);
@@ -68,6 +69,7 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
 
   // Physics
   auto& conduction_table = inlet.addTable("thermal_conduction", "Thermal conduction module");
+  // This is the "standard" schema for the actual physics module
   serac::ThermalConduction::InputOptions::defineInputFileSchema(conduction_table);
 
   defineCommonTestSchema(inlet);

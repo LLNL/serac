@@ -414,6 +414,8 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
       iter_options.prec = serac::HypreBoomerAMGPrec{};
     } else if (prec_type == "AMGX") {
       iter_options.prec = serac::AMGXPrec{};
+    } else if (prec_type == "L1JacobiAMGX") {
+      iter_options.prec = serac::AMGXPrec{.smoother = serac::AMGXSolver::JACOBI_L1};
     } else if (prec_type == "BlockILU") {
       iter_options.prec = serac::BlockILUPrec{};
     } else {
