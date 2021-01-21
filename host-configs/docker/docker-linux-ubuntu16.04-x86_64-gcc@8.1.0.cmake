@@ -41,25 +41,25 @@ set(MPIEXEC_EXECUTABLE "/usr/bin/mpiexec" CACHE PATH "")
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/home/serac/serac_tpls/spack/opt/spack/linux-ubuntu16.04-ivybridge/gcc-8.1.0" CACHE PATH "")
+set(TPL_ROOT "/home/serac/serac_tpls/gcc-8.1.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac-ckqrwspn72elkfva774xfmvkwsicwdbt" CACHE PATH "")
+set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.5.1p1-bice4mdypixlz4qulcpmx2mjurt2ujfv" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.5.1p1" CACHE PATH "")
 
-set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21-3buukei7lmhc5562bjhpan473fv3g3vf" CACHE PATH "")
+set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 
-set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2-gwxjqg5yp5hmmggtuwow62hedyhku2eu" CACHE PATH "")
+set(HYPRE_DIR "${TPL_ROOT}/hypre-2.18.2" CACHE PATH "")
 
-set(METIS_DIR "${TPL_ROOT}/metis-5.1.0-qpvakedloz2z23w4gok4td2y6yz7ddja" CACHE PATH "")
+set(METIS_DIR "${TPL_ROOT}/metis-5.1.0" CACHE PATH "")
 
-set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4-3oym5cajjaq6afv7kpfm5xe5p7vgdcox" CACHE PATH "")
+set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
 
-set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3-wg3mvktayajlfrc73wt2c4cgeux67av2" CACHE PATH "")
+set(PARMETIS_DIR "${TPL_ROOT}/parmetis-4.0.3" CACHE PATH "")
 
-set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1-24l5p5wbbiam5aa7oqy5qvhqoyqgkedw" CACHE PATH "")
+set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.2.0-hajo2v6wzty4uep52flvl5dg2uy4hzgq" CACHE PATH "")
+set(MFEM_DIR "${TPL_ROOT}/mfem-4.2.0" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools
