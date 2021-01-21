@@ -33,17 +33,17 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
     case serac::TimestepMethod::WBZAlpha:
       ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
       break;
-    // case serac::TimestepMethod::AverageAcceleration:
-    //  // WARNING: apparently mfem's implementation of AverageAccelerationSolver
-    //  // is NOT equivalent to Newmark (beta = 0.25, gamma = 0.5), so the
-    //  // stability analysis of using DirichletEnforcementMethod::DirectControl
-    //  // with Newmark methods does not apply.
-    //  //
-    //  // TODO: do a more thorough stability analysis for mfem::GeneralizedAlpha2Solver
-    //  // to characterize which parameter combinations work with time-varying
-    //  // dirichlet constraints
-    //  ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
-    //  break;
+     case serac::TimestepMethod::AverageAcceleration:
+      // WARNING: apparently mfem's implementation of AverageAccelerationSolver
+      // is NOT equivalent to Newmark (beta = 0.25, gamma = 0.5), so the
+      // stability analysis of using DirichletEnforcementMethod::DirectControl
+      // with Newmark methods does not apply.
+      //
+      // TODO: do a more thorough stability analysis for mfem::GeneralizedAlpha2Solver
+      // to characterize which parameter combinations work with time-varying
+      // dirichlet constraints
+      ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
+      break;
     case serac::TimestepMethod::LinearAcceleration:
       ode_solver_ = std::make_unique<mfem::LinearAccelerationSolver>();
       break;
@@ -195,6 +195,8 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
     bc.projectBdrToDofs(U_, t);
     bc.projectBdrToDofs(U_plus_, t + epsilon);
   }
+
+  std::cout << t << " " << u.Size() << " " << U_.Size() << std::endl;
 
   bool implicit = (dt != 0.0);
   if (implicit) {
