@@ -196,8 +196,6 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
     bc.projectBdrToDofs(U_plus_, t + epsilon);
   }
 
-  std::cout << t << " " << u.Size() << " " << U_.Size() << std::endl;
-
   bool implicit = (dt != 0.0);
   if (implicit) {
     if (enforcement_method_ == DirichletEnforcementMethod::DirectControl) {
