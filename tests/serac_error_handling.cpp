@@ -141,8 +141,7 @@ TEST(serac_error_handling, nonexistent_mesh_path)
 }  // namespace serac
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -152,8 +151,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when
-                          // exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
   axom::slic::setAbortFunction([]() { throw SlicErrorException{}; });
   axom::slic::setAbortOnError(true);
   axom::slic::setAbortOnWarning(false);
