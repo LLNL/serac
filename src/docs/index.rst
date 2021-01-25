@@ -249,11 +249,7 @@ LLNL-CODE-805541
    :hidden:
    :maxdepth: 2
 
-   sphinx/developer_guide
-   sphinx/style_guide
-   sphinx/logging
+   sphinx/user_guide/index
+   sphinx/dev_guide/index
    sphinx/expr_templates
-   sphinx/memory_checking
-   sphinx/profiling
    sphinx/docker_info
-   sphinx/input_schema

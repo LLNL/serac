@@ -7,6 +7,14 @@
 Developer Guide
 ===============
 
+.. toctree::
+   :maxdepth: 2
+
+   style_guide
+   logging
+   profiling
+   mfemory_checking
+
 Physics Module User Guide
 -------------------------
 
