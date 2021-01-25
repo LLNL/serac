@@ -33,7 +33,7 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
     case serac::TimestepMethod::WBZAlpha:
       ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
       break;
-     case serac::TimestepMethod::AverageAcceleration:
+    case serac::TimestepMethod::AverageAcceleration:
       // WARNING: apparently mfem's implementation of AverageAccelerationSolver
       // is NOT equivalent to Newmark (beta = 0.25, gamma = 0.5), so the
       // stability analysis of using DirichletEnforcementMethod::DirectControl
@@ -42,6 +42,8 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
       // TODO: do a more thorough stability analysis for mfem::GeneralizedAlpha2Solver
       // to characterize which parameter combinations work with time-varying
       // dirichlet constraints
+      SLIC_WARNING(
+          "Cannot guarantee stability for AverageAccerlation with time-dependent Dirichlet Boundary Conditions");
       ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
       break;
     case serac::TimestepMethod::LinearAcceleration:
@@ -225,8 +227,6 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   du_dt.SetSubVector(constrained_dofs, 0.0);
   dU_dt_.SetSubVectorComplement(constrained_dofs, 0.0);
   du_dt += dU_dt_;
-
-  // std::cout << "inside: " << t << " " << du_dt(0) << std::endl;
 
   solver_.Mult(zero_, du_dt);
   SLIC_WARNING_IF(!solver_.NonlinearSolver().GetConverged(), "Newton Solver did not converge.");

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -19,22 +19,17 @@
 using namespace serac;
 using namespace serac::mfem_ext;
 
-bool with_print_statements = true;
+const IterativeSolverOptions linear_options{.rel_tol     = 1.0e-12,
+                                            .abs_tol     = 1.0e-12,
+                                            .print_level = -1,
+                                            .max_iter    = 10,
+                                            .lin_solver  = LinearSolver::CG,
+                                            .prec        = {}};
 
-DirichletEnforcementMethod enforcement_methods[3] = {DirichletEnforcementMethod::DirectControl,
-                                                     DirichletEnforcementMethod::RateControl,
-                                                     DirichletEnforcementMethod::FullControl};
+const NonlinearSolverOptions nonlinear_options{
+    .rel_tol = 1.0e-12, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = -1};
 
-IterativeSolverOptions linear_options{.rel_tol     = 1.0e-12,
-                                      .abs_tol     = 1.0e-12,
-                                      .print_level = -1,
-                                      .max_iter    = 10,
-                                      .lin_solver  = LinearSolver::CG,
-                                      .prec        = {}};
-
-NonlinearSolverOptions nonlinear_options{.rel_tol = 1.0e-12, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = -1};
-
-mfem::DenseMatrix M = []() {
+const mfem::DenseMatrix M = []() {
   mfem::DenseMatrix M(3, 3);
   M(0, 0) = 2.0;
   M(0, 1) = 1.0;
@@ -50,7 +45,7 @@ mfem::DenseMatrix M = []() {
   return M;
 }();
 
-mfem::DenseMatrix C = []() {
+const mfem::DenseMatrix C = []() {
   mfem::DenseMatrix C(3, 3);
   C(0, 0) = 1.0;
   C(0, 1) = 0.0;
@@ -66,7 +61,7 @@ mfem::DenseMatrix C = []() {
   return C;
 }();
 
-std::function stiffness_linear = [](const mfem::Vector & /*x*/) -> mfem::DenseMatrix {
+const std::function stiffness_linear = [](const mfem::Vector & /*x*/) -> mfem::DenseMatrix {
   mfem::DenseMatrix K(3, 3);
   K(0, 0) = 1.0;
   K(0, 1) = -1.0;
@@ -82,9 +77,11 @@ std::function stiffness_linear = [](const mfem::Vector & /*x*/) -> mfem::DenseMa
   return K;
 };
 
-std::function internal_force_linear = [](const mfem::Vector& x) -> mfem::Vector { return stiffness_linear(x) * x; };
+const std::function internal_force_linear = [](const mfem::Vector& x) -> mfem::Vector {
+  return stiffness_linear(x) * x;
+};
 
-std::function stiffness_nonlinear = [](const mfem::Vector& x) -> mfem::DenseMatrix {
+const std::function stiffness_nonlinear = [](const mfem::Vector& x) -> mfem::DenseMatrix {
   mfem::DenseMatrix K(3, 3);
   K(0, 0) = 1.0;
   K(0, 1) = -1.0;
@@ -100,7 +97,7 @@ std::function stiffness_nonlinear = [](const mfem::Vector& x) -> mfem::DenseMatr
   return K;
 };
 
-std::function internal_force_nonlinear = [](const mfem::Vector& x) -> mfem::Vector {
+const std::function internal_force_nonlinear = [](const mfem::Vector& x) -> mfem::Vector {
   mfem::Vector f(3);
   f(0) = x(0) - x(1);
   f(1) = (2.0 - x(1)) * x(1) + (x(1) - 1.0) * x(2) - x(0);
@@ -108,7 +105,7 @@ std::function internal_force_nonlinear = [](const mfem::Vector& x) -> mfem::Vect
   return f;
 };
 
-mfem::Vector f_ext = []() {
+const mfem::Vector f_ext = []() {
   mfem::Vector f(3);
   f(0) = 1.0;
   f(1) = 2.0;
@@ -132,8 +129,8 @@ enum ode_type
 
 std::string to_string(ode_type o)
 {
-  if (o == LINEAR) return std::string("linear");
-  if (o == NONLINEAR) return std::string("nonlinear");
+  if (o == LINEAR) return "linear";
+  if (o == NONLINEAR) return "nonlinear";
   return "unknown";
 }
 
@@ -146,43 +143,43 @@ enum constraint_type
 
 std::string to_string(constraint_type c)
 {
-  if (c == UNCONSTRAINED) return std::string("unconstrained");
-  if (c == SINE_WAVE) return std::string("sine wave");
-  if (c == TRIANGLE_WAVE) return std::string("triangle wave");
+  if (c == UNCONSTRAINED) return "unconstrained";
+  if (c == SINE_WAVE) return "sine wave";
+  if (c == TRIANGLE_WAVE) return "triangle wave";
   return "unknown";
 }
 
 std::string to_string(serac::TimestepMethod m)
 {
   // for first order odes
-  if (m == serac::TimestepMethod::BackwardEuler) return std::string("BackwardEuler");
-  if (m == serac::TimestepMethod::SDIRK33) return std::string("SDIRK33");
-  if (m == serac::TimestepMethod::ForwardEuler) return std::string("ForwardEuler");
-  if (m == serac::TimestepMethod::RK2) return std::string("RK2");
-  if (m == serac::TimestepMethod::RK3SSP) return std::string("RK3SSP");
-  if (m == serac::TimestepMethod::RK4) return std::string("RK4");
-  if (m == serac::TimestepMethod::GeneralizedAlpha) return std::string("GeneralizedAlpha");
-  if (m == serac::TimestepMethod::ImplicitMidpoint) return std::string("ImplicitMidpoint");
-  if (m == serac::TimestepMethod::SDIRK23) return std::string("SDIRK23");
-  if (m == serac::TimestepMethod::SDIRK34) return std::string("SDIRK34");
+  if (m == serac::TimestepMethod::BackwardEuler) return "BackwardEuler";
+  if (m == serac::TimestepMethod::SDIRK33) return "SDIRK33";
+  if (m == serac::TimestepMethod::ForwardEuler) return "ForwardEuler";
+  if (m == serac::TimestepMethod::RK2) return "RK2";
+  if (m == serac::TimestepMethod::RK3SSP) return "RK3SSP";
+  if (m == serac::TimestepMethod::RK4) return "RK4";
+  if (m == serac::TimestepMethod::GeneralizedAlpha) return "GeneralizedAlpha";
+  if (m == serac::TimestepMethod::ImplicitMidpoint) return "ImplicitMidpoint";
+  if (m == serac::TimestepMethod::SDIRK23) return "SDIRK23";
+  if (m == serac::TimestepMethod::SDIRK34) return "SDIRK34";
 
   // for second order odes
-  if (m == serac::TimestepMethod::Newmark) return std::string("Newmark");
-  if (m == serac::TimestepMethod::HHTAlpha) return std::string("HHTAlpha");
-  if (m == serac::TimestepMethod::WBZAlpha) return std::string("WBZAlpha");
-  if (m == serac::TimestepMethod::AverageAcceleration) return std::string("AverageAcceleration");
-  if (m == serac::TimestepMethod::LinearAcceleration) return std::string("LinearAcceleration");
-  if (m == serac::TimestepMethod::CentralDifference) return std::string("CentralDifference");
-  if (m == serac::TimestepMethod::FoxGoodwin) return std::string("FoxGoodwin");
+  if (m == serac::TimestepMethod::Newmark) return "Newmark";
+  if (m == serac::TimestepMethod::HHTAlpha) return "HHTAlpha";
+  if (m == serac::TimestepMethod::WBZAlpha) return "WBZAlpha";
+  if (m == serac::TimestepMethod::AverageAcceleration) return "AverageAcceleration";
+  if (m == serac::TimestepMethod::LinearAcceleration) return "LinearAcceleration";
+  if (m == serac::TimestepMethod::CentralDifference) return "CentralDifference";
+  if (m == serac::TimestepMethod::FoxGoodwin) return "FoxGoodwin";
   return "unknown";
 }
 
 std::string to_string(serac::DirichletEnforcementMethod m)
 {
   // for first order odes
-  if (m == serac::DirichletEnforcementMethod::DirectControl) return std::string("direct control");
-  if (m == serac::DirichletEnforcementMethod::RateControl) return std::string("rate control");
-  if (m == serac::DirichletEnforcementMethod::FullControl) return std::string("full control");
+  if (m == serac::DirichletEnforcementMethod::DirectControl) return "direct control";
+  if (m == serac::DirichletEnforcementMethod::RateControl) return "rate control";
+  if (m == serac::DirichletEnforcementMethod::FullControl) return "full control";
   return "unknown";
 }
 
@@ -190,12 +187,12 @@ int order_of_convergence(serac::TimestepMethod m)
 {
   // for first order odes
   if (m == serac::TimestepMethod::BackwardEuler) return 1;
-  if (m == serac::TimestepMethod::SDIRK33) return 3;  // ?
+  if (m == serac::TimestepMethod::SDIRK33) return 3;
   if (m == serac::TimestepMethod::ForwardEuler) return 1;
-  if (m == serac::TimestepMethod::RK2) return 2;     // ?
-  if (m == serac::TimestepMethod::RK3SSP) return 3;  // ?
+  if (m == serac::TimestepMethod::RK2) return 2;
+  if (m == serac::TimestepMethod::RK3SSP) return 3;
   if (m == serac::TimestepMethod::RK4) return 4;
-  if (m == serac::TimestepMethod::GeneralizedAlpha) return 2;  // ?
+  if (m == serac::TimestepMethod::GeneralizedAlpha) return 2;
   if (m == serac::TimestepMethod::ImplicitMidpoint) return 2;
   if (m == serac::TimestepMethod::SDIRK23) return 2;
   if (m == serac::TimestepMethod::SDIRK34) return 3;
@@ -203,15 +200,16 @@ int order_of_convergence(serac::TimestepMethod m)
   // for second order odes
   if (m == serac::TimestepMethod::Newmark) return 2;
   if (m == serac::TimestepMethod::HHTAlpha) return 2;
-  if (m == serac::TimestepMethod::WBZAlpha) return 2;             // ?
-  if (m == serac::TimestepMethod::AverageAcceleration) return 2;  // ?
-  if (m == serac::TimestepMethod::LinearAcceleration) return 2;   // ?
-  if (m == serac::TimestepMethod::CentralDifference) return 2;    // ?
-  if (m == serac::TimestepMethod::FoxGoodwin) return 2;           // ?
+  if (m == serac::TimestepMethod::WBZAlpha) return 2;
+  if (m == serac::TimestepMethod::AverageAcceleration) return 2;
+  if (m == serac::TimestepMethod::LinearAcceleration) return 2;
+  if (m == serac::TimestepMethod::CentralDifference) return 2;
+  if (m == serac::TimestepMethod::FoxGoodwin) return 2;
 
   return -1;
 }
 
+// does this method apply to a first- or second-order ode?
 int which_kind_of_ode(serac::TimestepMethod m)
 {
   // for first order odes
@@ -322,6 +320,9 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
     ode.Step(soln, t, dt);
   }
 
+  // these solutions are computed to machine precision in
+  // the wolfram language script: scripts/wolfram/serac_odes_solutions.wls
+  //
   // clang-format off
   double exact_solutions[2][3][3] = {
     { // Linear
@@ -428,6 +429,7 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
   velocity[1] = -1.0;
   velocity[2] = 0.0;
 
+  // ensure that initial conditions agree with the constraint
   if (constraint == SINE_WAVE) {
     velocity[0] = 2.0 * M_PI;
   }
@@ -439,6 +441,9 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
     ode.Step(displacement, velocity, t, dt);
   }
 
+  // these solutions are computed to machine precision in
+  // the wolfram language script: scripts/wolfram/serac_odes_solutions.wls
+  //
   // clang-format off
   double exact_displacements[2][3][3] = {
     { // Linear
@@ -472,9 +477,6 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
   mfem::Vector error_displacement = (exact_displacement - displacement) / exact_displacement.Norml2();
   mfem::Vector error_velocity     = (exact_velocity - velocity) / exact_velocity.Norml2();
 
-  // std::cout << "displacement constraint error: " << error_displacement(0) << std::endl;
-  // std::cout << "velocity constraint error: " << error_velocity(0) << std::endl;
-
   return std::max(error_displacement.Norml2(), error_velocity.Norml2());
 }
 
@@ -491,14 +493,6 @@ protected:
 
 TEST_P(FirstOrderODE_suite, all)
 {
-  if (with_print_statements) {
-    std::cout << "running first order test (";
-    std::cout << to_string(type) << ", ";
-    std::cout << to_string(constraint) << ", ";
-    std::cout << to_string(timestepper) << ", ";
-    std::cout << to_string(enforcement) << "): ";
-  }
-
   int o = order_of_convergence(timestepper);
 
   // there is enough variety in first order timestep methods
@@ -510,9 +504,10 @@ TEST_P(FirstOrderODE_suite, all)
                       first_order_ode_test(nsteps[o] * 2, type, constraint, timestepper, enforcement),
                       first_order_ode_test(nsteps[o] * 4, type, constraint, timestepper, enforcement)};
 
-  if (with_print_statements) {
-    std::cout << errors[0] << " " << errors[1] << " " << errors[2] << std::endl;
-  }
+  std::string message = fmt::format("running first order test({0}, {1}, {2}, {3}), errors: ({4}, {5}, {6})",
+                                    to_string(type), to_string(constraint), to_string(timestepper),
+                                    to_string(enforcement), errors[0], errors[1], errors[2]);
+  SLIC_INFO(message);
 
   // this tolerance is pretty loose, since some some of the
   // methods converge pretty slowly, but we still want to
@@ -576,21 +571,16 @@ TEST_P(SecondOrderODE_suite, all)
                                     std::tuple{constraint, timestepper, enforcement}) != std::end(unstable_cases);
 
   if (!expected_to_fail) {
-    if (with_print_statements) {
-      std::cout << "running second order test (";
-      std::cout << to_string(type) << ", ";
-      std::cout << to_string(constraint) << ", ";
-      std::cout << to_string(timestepper) << ", ";
-      std::cout << to_string(enforcement) << "): ";
-    }
 
     double errors[3] = {second_order_ode_test(30, type, constraint, timestepper, enforcement),
                         second_order_ode_test(60, type, constraint, timestepper, enforcement),
                         second_order_ode_test(120, type, constraint, timestepper, enforcement)};
 
-    if (with_print_statements) {
-      std::cout << errors[0] << " " << errors[1] << " " << errors[2] << std::endl;
-    }
+    std::string message = fmt::format("running second order test({0}, {1}, {2}, {3}), errors: ({4}, {5}, {6})",
+                                      to_string(type), to_string(constraint), to_string(timestepper),
+                                      to_string(enforcement), errors[0], errors[1], errors[2]);
+
+    SLIC_INFO(message);
 
     EXPECT_LT(errors[2], 1.0e-3);
 
