@@ -571,7 +571,6 @@ TEST_P(SecondOrderODE_suite, all)
                                     std::tuple{constraint, timestepper, enforcement}) != std::end(unstable_cases);
 
   if (!expected_to_fail) {
-
     double errors[3] = {second_order_ode_test(30, type, constraint, timestepper, enforcement),
                         second_order_ode_test(60, type, constraint, timestepper, enforcement),
                         second_order_ode_test(120, type, constraint, timestepper, enforcement)};
