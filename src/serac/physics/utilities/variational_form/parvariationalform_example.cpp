@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 
   ParVariationalForm form(&fespace);
 
-  auto plaplacian = new QFunctionIntegrator(
+  auto plaplacian = new QFunctionIntegrator(QFunctionIntegrator(
       [&](auto u, auto du, auto x) {
         // auto f0 = -1.0;
         // auto f1 = pow(norm(du), p - 2.0) * du;
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
         auto f1 = (1.0 + u) * du;
         return std::tuple{f0, f1};
       },
-      0, pmesh);
+      0, pmesh));
 
   form.AddDomainIntegrator(plaplacian);
 
