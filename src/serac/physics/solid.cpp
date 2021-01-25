@@ -9,6 +9,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/physics/integrators/hyperelastic_traction_integrator.hpp"
 #include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
+#include "serac/physics/integrators/wrapper_integrator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 
@@ -41,9 +42,9 @@ Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
   // to be the displacement
-  const auto& augmented_options = augmentAMGForElasticity(lin_options, displacement_.space());
+  const auto& augmented_options = mfem_ext::AugmentAMGForElasticity(lin_options, displacement_.space());
 
-  nonlin_solver_ = EquationSolver(mesh->GetComm(), augmented_options, options.H_nonlin_options);
+  nonlin_solver_ = mfem_ext::EquationSolver(mesh->GetComm(), augmented_options, options.H_nonlin_options);
 
   // Check for dynamic mode
   if (options.dyn_options) {
@@ -82,6 +83,8 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
     auto velo = options.initial_velocity->constructVector(dim);
     setVelocity(velo);
   }
+  setViscosity(std::make_unique<mfem::ConstantCoefficient>(options.viscosity));
+
   for (const auto& [name, bc] : options.boundary_conditions) {
     // FIXME: Better naming for boundary conditions?
     if (name.find("displacement") != std::string::npos) {
@@ -118,6 +121,11 @@ void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
+void Solid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
+{
+  ext_force_coefs_.push_back(ext_force_coef);
+}
+
 void Solid::setHyperelasticMaterialParameters(const double mu, const double K)
 {
   material_ = std::make_unique<serac::NeoHookeanMaterial>(mesh_->Dimension(), mu, K);
@@ -149,8 +157,15 @@ void Solid::completeSetup()
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
-    H_->AddBdrFaceIntegrator(new HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
+    H_->AddBdrFaceIntegrator(new mfem_ext::HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
                              nat_bc_data.markers());
+  }
+
+  // Add external forces
+  for (auto& force : ext_force_coefs_) {
+    H_->AddDomainIntegrator(new serac::mfem_ext::LinearToNonlinearFormIntegrator(
+        std::make_shared<mfem::VectorDomainLFIntegrator>(*force),
+        std::make_shared<mfem::ParFiniteElementSpace>(*H_->ParFESpace())));
   }
 
   // Build the dof array lookup tables
@@ -189,7 +204,7 @@ void Solid::completeSetup()
   // Setting iterative_mode to true ensures that these
   // prescribed acceleration values are not modified by
   // the nonlinear solve.
-  nonlin_solver_.nonlinearSolver().iterative_mode = true;
+  nonlin_solver_.NonlinearSolver().iterative_mode = true;
 
   if (is_quasistatic_) {
     residual_ = buildQuasistaticOperator();
@@ -198,7 +213,7 @@ void Solid::completeSetup()
     // the dynamic case is described by a residual function and a second order
     // ordinary differential equation. Here, we define the residual function in
     // terms of an acceleration.
-    residual_ = std::make_unique<StdFunctionOperator>(
+    residual_ = std::make_unique<mfem_ext::StdFunctionOperator>(
         displacement_.space().TrueVSize(),
 
         // residual function
@@ -228,7 +243,7 @@ std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
 {
   // the quasistatic case is entirely described by the residual,
   // there is no ordinary differential equation
-  auto residual = std::make_unique<StdFunctionOperator>(
+  auto residual = std::make_unique<mfem_ext::StdFunctionOperator>(
       displacement_.space().TrueVSize(),
 
       // residual function
@@ -290,9 +305,11 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   table.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
       .defaultValue(true);
 
+  table.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
+
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::EquationSolver::defineInputFileSchema(stiffness_solver_table);
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
   auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
@@ -354,8 +371,13 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
   // Set the geometric nonlinearities flag
   result.geom_nonlin = base["geometric_nonlin"];
 
-  result.boundary_conditions =
-      base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
+  if (base.contains("boundary_conds")) {
+    result.boundary_conditions =
+        base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
+  }
+
+  result.viscosity = base["viscosity"];
+
 
   if (base.contains("initial_displacement")) {
     result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputOptions>();

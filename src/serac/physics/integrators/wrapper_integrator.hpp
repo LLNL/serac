@@ -10,15 +10,14 @@
  * @brief Wrappers to turn bilinear and linear integrators into nonlinear ones
  */
 
-#ifndef WRAPPER_INTEGRATOR_HPP
-#define WRAPPER_INTEGRATOR_HPP
+#pragma once
 
 #include <functional>
 #include <memory>
 
 #include "mfem.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 /**
  *  @brief A class to convert linearform integrators into a nonlinear residual-based one
@@ -222,6 +221,4 @@ private:
   std::function<transformed_gradient_func> transformed_function_grad_;
 };
 
-}  // namespace serac
-
-#endif
+}  // namespace serac::mfem_ext

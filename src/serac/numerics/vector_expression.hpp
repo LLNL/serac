@@ -11,8 +11,7 @@
  * on vectors
  */
 
-#ifndef VECTOR_EXPRESSION
-#define VECTOR_EXPRESSION
+#pragma once
 
 #include "mfem.hpp"
 
@@ -136,5 +135,3 @@ void evaluate(const VectorExpr<T>& expr, mfem::Vector& result, MPI_Comm comm)
 }
 
 }  // namespace serac
-
-#endif

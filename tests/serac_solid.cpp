@@ -7,8 +7,8 @@
 #include "serac/physics/solid.hpp"
 
 #include <fstream>
-#include <gtest/gtest.h>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/coefficients/coefficient_extensions.hpp"
@@ -19,15 +19,14 @@
 
 namespace serac {
 
-class InputFileTest : public ::testing::TestWithParam<std::string> {
-};
+using test_utils::InputFileTest;
 
 TEST_P(InputFileTest, nonlin_solid)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/" + GetParam() + ".lua";
-  test_utils::runSolidTest(input_file_path);
+  test_utils::runModuleTest<Solid>(input_file_path);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -56,7 +55,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  test_utils::defineSolidInputFileSchema(inlet);
+  test_utils::defineTestSchema<Solid>(inlet);
 
   // Build the mesh
   auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();

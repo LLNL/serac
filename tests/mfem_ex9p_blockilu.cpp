@@ -105,11 +105,11 @@ Vector bb_min, bb_max;
 
 class DG_Solver : public Solver {
 private:
-  HypreParMatrix &      M, &K;
-  SparseMatrix          M_diag;
-  HypreParMatrix*       A;
-  serac::EquationSolver linear_solver;
-  double                dt;
+  HypreParMatrix &                M, &K;
+  SparseMatrix                    M_diag;
+  HypreParMatrix*                 A;
+  serac::mfem_ext::EquationSolver linear_solver;
+  double                          dt;
 
 public:
   DG_Solver(HypreParMatrix& M_, HypreParMatrix& K_, const FiniteElementSpace& fes)
@@ -124,7 +124,7 @@ public:
                                                                  .prec = serac::BlockILUPrec{fes.GetFE(0)->GetDof()}}),
         dt(-1.0)
   {
-    linear_solver.linearSolver().iterative_mode = false;
+    linear_solver.LinearSolver().iterative_mode = false;
 
     M.GetDiag(M_diag);
   }

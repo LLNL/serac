@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
-
 #include "serac/infrastructure/input.hpp"
+
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 class SlicErrorException : public std::exception {
@@ -88,14 +88,6 @@ TEST_F(InputTest, coef_build_scalar)
   auto        expected_result = test_vec(1) * 2 + test_vec(2);
   EXPECT_FLOAT_EQ(func(test_vec), expected_result);
   EXPECT_NO_THROW(coef_opts.constructScalar());
-}
-
-TEST_F(InputTest, coef_build_scalar_missing_component)
-{
-  reader_->parseString("coef_opts = { coef = function(x, y, z) return y * 2 + z end }");
-  auto& coef_table = inlet_->addTable("coef_opts");
-  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
-  EXPECT_THROW(coef_table.get<input::CoefficientInputOptions>(), SlicErrorException);
 }
 
 TEST_F(InputTest, coef_build_vec_from_scalar)

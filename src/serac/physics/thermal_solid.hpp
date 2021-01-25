@@ -10,10 +10,10 @@
  * @brief An object containing an operator-split thermal structural solver
  */
 
-#ifndef THERMAL_SOLID
-#define THERMAL_SOLID
+#pragma once
 
 #include "mfem.hpp"
+
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/solid.hpp"
 #include "serac/physics/thermal_conduction.hpp"
@@ -251,5 +251,3 @@ protected:
 };
 
 }  // namespace serac
-
-#endif

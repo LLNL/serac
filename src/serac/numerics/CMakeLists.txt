@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(numerics_headers
-    expr_template_internal.hpp
+    expr_template_impl.hpp
     expr_template_ops.hpp
     mesh_utils.hpp
     vector_expression.hpp

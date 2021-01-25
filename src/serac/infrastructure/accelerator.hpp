@@ -11,12 +11,9 @@
  * any hardware accelerator-related functionality
  */
 
-#ifndef SERAC_ACCELERATOR
-#define SERAC_ACCELERATOR
+#pragma once
 
-namespace serac {
-
-namespace accelerator {
+namespace serac::accelerator {
 
 /**
  * @brief Initializes the device (GPU)
@@ -30,8 +27,4 @@ void initializeDevice();
  */
 void terminateDevice();
 
-}  // namespace accelerator
-
-}  // namespace serac
-
-#endif  // SERAC_ACCELERATOR
+}  // namespace serac::accelerator

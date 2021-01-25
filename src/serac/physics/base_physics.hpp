@@ -10,13 +10,13 @@
  * @brief The base interface class for a generic PDE solver
  */
 
-#ifndef BASE_PHYSICS
-#define BASE_PHYSICS
+#pragma once
 
 #include <functional>
 #include <memory>
 
 #include "mfem.hpp"
+
 #include "serac/physics/utilities/boundary_condition_manager.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
 #include "serac/physics/utilities/finite_element_state.hpp"
@@ -223,5 +223,3 @@ protected:
 };
 
 }  // namespace serac
-
-#endif

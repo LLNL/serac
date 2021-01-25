@@ -4,10 +4,10 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <cstdio>
+
 #include <cuda.h>
 #include <cuda_runtime.h>
-
-#include <cstdio>
 
 __global__ void vector_add_kernel(float* out, float* a, float* b, int n)
 {
