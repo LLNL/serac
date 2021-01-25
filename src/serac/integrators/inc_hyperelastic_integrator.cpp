@@ -8,7 +8,7 @@
 
 #include "serac/infrastructure/profiling.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 double IncrementalHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
                                                            mfem::ElementTransformation& Ttr, const mfem::Vector& elfun)
@@ -131,4 +131,4 @@ void IncrementalHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteEl
   SERAC_MARK_LOOP_END(ip_loop_id);
 }
 
-}  // namespace serac
+}  // namespace serac::mfem_ext

@@ -14,7 +14,7 @@
 
 #include "mfem.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 /**
  * @brief A vector coefficient with a mutable scalar scaling factor
@@ -59,4 +59,4 @@ private:
   double scale_ = 1.0;
 };
 
-}  // namespace serac
+}  // namespace serac::mfem_ext

@@ -109,6 +109,11 @@ class Serac(CMakePackage, CudaPackage):
     depends_on('python', when="+devtools")
     depends_on('py-sphinx', when="+devtools")
 
+    # Workaround for concretizer bug
+    #depends_on("mfem+sundials", when="+sundials")
+    #depends_on("sundials~shared", when="+sundials")
+    depends_on("sundials~shared+hypre")
+
     # Libraries that support +debug
     debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
@@ -121,9 +126,6 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0}+debug".format(dep), when="+debug")
     #depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
-    #depends_on("mfem+sundials", when="+sundials")
-    #depends_on("sundials~shared", when="+sundials")
-    depends_on("sundials~shared")
 
     # Needs to be first due to a bug with the Spack concretizer
     depends_on("hdf5+hl@1.8.21~shared")
