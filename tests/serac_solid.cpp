@@ -25,7 +25,7 @@ TEST_P(InputFileTest, nonlin_solid)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/" + GetParam() + ".lua";
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/" + GetParam() + ".lua";
   test_utils::runModuleTest<Solid>(input_file_path);
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -41,13 +41,13 @@ const std::string input_files[] = {"dyn_solve",
                                    "qs_solve",
                                    "qs_direct_solve"};
 
-INSTANTIATE_TEST_SUITE_P(NonlinearSolidInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
+INSTANTIATE_TEST_SUITE_P(SolidInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
 
-TEST(nonlinear_solid_solver, qs_custom_solve)
+TEST(solid_solver, qs_custom_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_solve.lua";
+  std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_solve.lua";
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -63,12 +63,12 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
+  auto solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
   // qs_solve test
-  auto custom_options = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::LinearSolverOptions>();
+  auto custom_options = inlet["solid/stiffness_solver/linear"].get<serac::LinearSolverOptions>();
   auto iter_options   = std::get<serac::IterativeSolverOptions>(custom_options);
   auto custom_solver  = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
   custom_solver->SetRelTol(iter_options.rel_tol);

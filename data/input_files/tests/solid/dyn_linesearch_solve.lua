@@ -19,7 +19,7 @@ main_mesh = {
 output_type = "VisIt"
 
 -- Solver parameters
-nonlinear_solid = {
+solid = {
     stiffness_solver = {
         linear = {
             type = "iterative",

@@ -19,20 +19,20 @@
 
 namespace serac {
 
-TEST(nonlinear_solid_solver, qs_attribute_solve)
+TEST(solid_solver, qs_attribute_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_attribute_solve.lua";
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_attribute_solve.lua";
   test_utils::runModuleTest<Solid>(input_file_path);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(nonlinear_solid_solver, qs_component_solve)
+TEST(solid_solver, qs_component_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_component_solve.lua";
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_component_solve.lua";
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -48,7 +48,7 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto         solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
+  auto         solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
   serac::Solid solid_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();

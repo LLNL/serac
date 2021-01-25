@@ -45,7 +45,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto& solid_solver_table = inlet.addTable("solid", "Finite deformation solid mechanics module");
   serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
@@ -95,11 +95,11 @@ int main(int argc, char* argv[])
   auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
 
   // Define the solid solver object
-  auto         solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
+  auto         solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
   serac::Solid solid_solver(mesh, solid_solver_options);
 
   // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-  // auto traction      = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
+  // auto traction      = inlet["solid/traction"].get<mfem::Vector>();
   // auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
 
   // Complete the solver setup

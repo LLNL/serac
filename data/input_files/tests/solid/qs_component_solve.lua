@@ -1,5 +1,5 @@
 -- Comparison information
-expected_x_l2norm = 0.03330115
+expected_x_l2norm = 0.08363646
 epsilon = 0.0001
 
 -- Simulation time parameters
@@ -14,10 +14,10 @@ main_mesh = {
 }
 
 -- Simulation output format
-output_type = "GLVis"
+output_type = "VisIt"
 
 -- Solver parameters
-nonlinear_solid = {
+solid = {
     stiffness_solver = {
         linear = {
             type = "iterative",
@@ -40,7 +40,7 @@ nonlinear_solid = {
     },
 
     -- polynomial interpolation order
-    order = 2,
+    order = 1,
 
     -- neo-Hookean material parameters
     mu = 0.25,
@@ -48,19 +48,12 @@ nonlinear_solid = {
 
     -- boundary condition parameters
     boundary_conds = {
-        ['displacement_x'] = {
+        ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
             component = 0,
             coef = function (x, y, z)
-                return x * 3.0e-2
-            end
-        },
-        ['displacement_y'] = {
-            attrs = {2},
-            component = 1,
-            coef = function (x, y, z)
-                return y * -5.0e-2
+                return x * -1.0e-1
             end
         },
     },

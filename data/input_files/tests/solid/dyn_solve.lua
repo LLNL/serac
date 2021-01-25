@@ -7,6 +7,9 @@ epsilon = 0.0001
 dt      = 1.0
 t_final = 6.0
 
+-- Simulation output format
+output_type = "VisIt"
+
 main_mesh = {
     -- mesh file
     mesh = "../../../meshes/beam-hex.mesh",
@@ -15,11 +18,8 @@ main_mesh = {
     par_ref_levels = 0,
 }
 
--- Simulation output format
-output_type = "VisIt"
-
 -- Solver parameters
-nonlinear_solid = {
+solid = {
     stiffness_solver = {
         linear = {
             type = "iterative",
@@ -29,7 +29,7 @@ nonlinear_solid = {
                 max_iter    = 500,
                 print_level = 0,
                 solver_type = "gmres",
-                prec_type   = "AMGX",
+                prec_type   = "HypreAMG",
             },
         },
 
