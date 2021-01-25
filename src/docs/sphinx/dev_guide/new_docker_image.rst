@@ -3,47 +3,9 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-===========
-Docker Info
-===========
-
-Using a Docker image for development
-------------------------------------
-
-If you haven't used Docker before, it is recommended that you check out the 
-`Docker tutorial <https://docs.docker.com/get-started/>`_ before proceeding.
-
-1. Clone a copy of the Serac repo to your computer: ``git clone --recursive https://github.com/LLNL/serac.git``
-
-#. Once you've installed ``docker``, navigate to our `Dockerhub page <https://hub.docker.com/r/seracllnl/tpls/tags?page=1&ordering=last_updated>`_
-   and select find the most recent image corresponding to the compiler you'd like to use.  Clang 10 and GCC 8 images are currently offered.
-#. Copy the pull command corresponding to the image you've selected (in this case, it's ``docker pull seracllnl/tpls:gcc-8_12-15-20_20h-36m``):
-
-.. image:: copy_pull_cmd.png
-   :scale: 50 %
-
-4. Next, run the copied command.  Our images are around 2.5 GB, so it may take a while for the image to be downloaded to your machine.
-   When the download completes, you will see something like the following:
-
-.. image:: pull_complete.png
-
-5. You can now run the image.  Run ``docker run -it -u axom -v /your/serac/repo:/home/serac/serac seracllnl/tpls:gcc-8_12-15-20_20h-36m bash``,
-   replacing the tag (the compiler/timestamp combo following the ``tpls:``) with the tag you used in the ``docker pull`` command and
-   replacing ``/your/serac/repo`` with the path to the Serac repo you cloned in the first step.  This will open a terminal into the image.
-
-.. note::
-   The ``-v`` option to ``docker run`` mounts a `Docker volume <https://docs.docker.com/storage/volumes/>`_ into the container.
-   This means that part of your filesystem (in this case, your copy of the Serac repo) will be accessible from the container.
-
-6. Follow the build instructions detailed in :ref:`building-serac`, using the host-config in ``host-configs/docker`` that
-   corresponds to the compiler you've selected.  These commands should be run using the terminal you opened in the previous step.
-
-#. You can now make modifications to the code from your host machine (e.g., via a graphical text editor), and use the Docker container
-   terminal to recompile/run/test your changes.
-
-
-Building a new image
---------------------
+=======================
+Building a Docker Image
+=======================
 
 The following instructions apply to the creation of a new compiler image.
 
