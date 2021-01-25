@@ -4,11 +4,8 @@
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
 ===========
-Docker Info
+Building a Docker Image
 ===========
-
-Building a new image
---------------------
 
 The following instructions apply to the creation of a new compiler image.
 
