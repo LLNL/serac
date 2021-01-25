@@ -44,7 +44,7 @@ Important Data Structures
 * `BasePhysics <../../doxygen/html/classserac_1_1BasePhysics.html>`_: Interface class for a generic PDE simulation module.
 * `BoundaryCondition <../../doxygen/html/classserac_1_1BoundaryCondition.html>`_: Class for storage of boundary condition-related data.
 * `BoundaryConditionManager <../../doxygen/html/classserac_1_1BoundaryConditionManager.html>`_: Storage class for related boundary conditions.
-* `EquationSolver <../../doxygen/html/classserac_1_1EquationSolver.html>`_: Class for solving nonlinear and linear systems of equations.
+* `EquationSolver <../../doxygen/html/classserac_1_1mfem__ext_1_1EquationSolver.html>`_: Class for solving nonlinear and linear systems of equations.
 * `FiniteElementState <../../doxygen/html/classserac_1_1FiniteElementState.html>`_: Data structure describing a solution field and its underlying finite element discretization.
 
 Frequently Used Modern C++ Features
