@@ -251,5 +251,3 @@ LLNL-CODE-805541
 
    sphinx/user_guide/index
    sphinx/dev_guide/index
-   sphinx/expr_templates
-   sphinx/docker_info
