@@ -375,7 +375,6 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
 
   result.viscosity = base["viscosity"];
 
-
   if (base.contains("initial_displacement")) {
     result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputOptions>();
   }
