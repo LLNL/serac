@@ -10,7 +10,6 @@ User Guide
 .. toctree::
   :maxdepth: 2
 
-  docker_dev_env
   input_schema
 
 Physics Module User Guide
