@@ -15,7 +15,8 @@ constexpr int NUM_FIELDS = 1;
 
 Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& options)
     : BasePhysics(mesh, NUM_FIELDS, order),
-      displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"})
+      displacement_(
+          *mesh, FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "displacement"})
 {
   mesh->EnsureNodes();
   state_.push_back(displacement_);
