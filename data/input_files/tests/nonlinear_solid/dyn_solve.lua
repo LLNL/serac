@@ -11,6 +11,7 @@ t_final = 6.0
 output_type = "VisIt"
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels

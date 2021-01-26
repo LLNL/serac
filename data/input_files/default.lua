@@ -3,6 +3,7 @@ t_final = 1.0
 dt      = 0.25
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels

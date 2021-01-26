@@ -10,6 +10,7 @@ t_final = 0.001
 output_type = "ParaView"
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/star.mesh",
     -- serial and parallel refinement levels
