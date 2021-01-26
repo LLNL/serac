@@ -68,6 +68,8 @@ public:
     double mu;
     double K;
 
+    double viscosity;
+
     // Boundary condition information
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 
@@ -120,6 +122,13 @@ public:
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
                       int component = -1);
+
+  /**
+   * @brief Add body force vectors on the domain
+   *
+   * @param[in] ext_force_coef Add a vector-valued external force coefficient applied to the domain
+   */
+  void addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef);
 
   /**
    * @brief Set the viscosity coefficient
@@ -267,6 +276,11 @@ protected:
    * @brief Stiffness bilinear form object
    */
   std::unique_ptr<mfem::ParNonlinearForm> H_;
+
+  /**
+   * @brief external force coefficents
+   */
+  std::vector<std::shared_ptr<mfem::VectorCoefficient>> ext_force_coefs_;
 
   /**
    * @brief zero vector of the appropriate dimensions

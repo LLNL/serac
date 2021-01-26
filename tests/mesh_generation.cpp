@@ -12,7 +12,6 @@
 class SlicErrorException : public std::exception {
 };
 
-
 TEST(meshgen, successful_creation)
 {
   // the disk and ball meshes don't exactly hit the number
@@ -46,7 +45,7 @@ TEST(meshgen, lua_input)
 
   auto& mesh_fail_table = inlet.addTable("main_mesh_fail", "An invalid mesh description");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_fail_table);
-  
+
   // Verify input file
   if (!inlet.verify()) {
     SLIC_ERROR("Input file failed to verify.");
@@ -81,17 +80,14 @@ TEST(meshgen, lua_input)
 
   // temporary scope to build a rectangular mesh
   {
-    EXPECT_THROW(auto mesh_options = inlet["main_mesh_fail"].get<serac::mesh::InputOptions>(),
-  		 SlicErrorException);
+    EXPECT_THROW(auto mesh_options = inlet["main_mesh_fail"].get<serac::mesh::InputOptions>(), SlicErrorException);
   }
 
-  
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -101,13 +97,13 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when
-                          // exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
 
   axom::slic::setAbortFunction([]() { throw SlicErrorException{}; });
   axom::slic::setAbortOnError(true);
   axom::slic::setAbortOnWarning(false);
-  
+
   result = RUN_ALL_TESTS();
 
   MPI_Finalize();

@@ -90,14 +90,6 @@ TEST_F(InputTest, coef_build_scalar)
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
-TEST_F(InputTest, coef_build_scalar_missing_component)
-{
-  reader_->parseString("coef_opts = { coef = function(x, y, z) return y * 2 + z end }");
-  auto& coef_table = inlet_->addTable("coef_opts");
-  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
-  EXPECT_THROW(coef_table.get<input::CoefficientInputOptions>(), SlicErrorException);
-}
-
 TEST_F(InputTest, coef_build_vec_from_scalar)
 {
   reader_->parseString("coef_opts = { coef = function(x, y, z) return y * 2 + z end, component = 1}");
@@ -143,8 +135,7 @@ TEST_F(InputTest, coef_build_scalar_from_vec)
 }  // namespace serac
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -154,8 +145,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when
-                          // exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
 
   result = RUN_ALL_TESTS();
 

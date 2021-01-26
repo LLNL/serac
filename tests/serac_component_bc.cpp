@@ -24,7 +24,7 @@ TEST(nonlinear_solid_solver, qs_attribute_solve)
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_attribute_solve.lua";
-  test_utils::runNonlinSolidTest(input_file_path);
+  test_utils::runModuleTest<NonlinearSolid>(input_file_path);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -40,7 +40,7 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  test_utils::defineNonlinSolidInputFileSchema(inlet);
+  test_utils::defineTestSchema<NonlinearSolid>(inlet);
 
   // Build the mesh
   std::shared_ptr<mfem::ParMesh> mesh;
@@ -100,8 +100,7 @@ TEST(nonlinear_solid_solver, qs_component_solve)
 }  // namespace serac
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -111,7 +110,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
 
   result = RUN_ALL_TESTS();
 
