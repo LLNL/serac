@@ -5,13 +5,12 @@ epsilon = 0.0001
 
 
 main_mesh = {
-    -- mesh file
-    mesh = "../../../meshes/beam-hex.mesh",
+    type = "generate",
+    elements = {x = 3, y = 1},
+    size = {x = 8., y = 1.},
     -- serial and parallel refinement levels
     ser_ref_levels = 0,
     par_ref_levels = 0,
-    width = 1.,
-    len = 8.
 }
 
 -- material property helper functions
@@ -28,9 +27,9 @@ E = 17.e6;
 nu = 0.3;
 r = 1.; -- density
 g = -32.3; -- gravity
-i = 1./12 * main_mesh.width * main_mesh.width * main_mesh.width;
-m = main_mesh.width * r;
-omega = (1.875) * (1.875) * math.sqrt(E * i / (m * main_mesh.len * main_mesh.len * main_mesh.len * main_mesh.len));
+i = 1./12 * main_mesh.size.y * main_mesh.size.y * main_mesh.size.y;
+m = main_mesh.size.y * r;
+omega = (1.875) * (1.875) * math.sqrt(E * i / (m * main_mesh.size.x * main_mesh.size.x * main_mesh.size.x * main_mesh.size.x));
 period = 2. * math.pi / omega;
 
 -- Simulation time parameters

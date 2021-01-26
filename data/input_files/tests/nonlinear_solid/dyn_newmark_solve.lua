@@ -8,8 +8,9 @@ dt      = 0.01
 t_final = 0.01
 
 main_mesh = {
-    -- mesh file
-    mesh = "../../../meshes/beam-hex.mesh",
+    type = "generate",
+    elements = {x = 3, y = 1},
+    size = {x = 8, y = 1},
     -- serial and parallel refinement levels
     ser_ref_levels = 0,
     par_ref_levels = 0,

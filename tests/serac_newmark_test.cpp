@@ -35,35 +35,9 @@ int main(int argc, char** argv)
 class NewmarkBetaTest : public ::testing::Test {
 protected:
   void SetUp()
-  {
-    // Set up mesh
-    dim = 2;
-    nex = 3;
-    ney = 1;
-
-    len   = 8.;
-    width = 1.;
-
-    mfem::Mesh mesh(nex, ney, mfem::Element::QUADRILATERAL, 1, len, width);
-    pmesh = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, mesh);
-    pfes  = std::make_shared<mfem::ParFiniteElementSpace>(
-        pmesh.get(), new mfem::H1_FECollection(1, dim, mfem::BasisType::GaussLobatto), 1, mfem::Ordering::byNODES);
-    pfes_v = std::make_shared<mfem::ParFiniteElementSpace>(
-        pmesh.get(), new mfem::H1_FECollection(1, dim, mfem::BasisType::GaussLobatto), dim, mfem::Ordering::byNODES);
-
-    pfes_l2 = std::make_shared<mfem::ParFiniteElementSpace>(pmesh.get(), new mfem::L2_FECollection(0, dim), 1,
-                                                            mfem::Ordering::byNODES);
-  }
+  {}
 
   void TearDown() {}
-
-  double                                       width, len;
-  int                                          nex, ney, nez;
-  int                                          dim;
-  std::shared_ptr<mfem::ParMesh>               pmesh;
-  std::shared_ptr<mfem::ParFiniteElementSpace> pfes;
-  std::shared_ptr<mfem::ParFiniteElementSpace> pfes_v;
-  std::shared_ptr<mfem::ParFiniteElementSpace> pfes_l2;
 };
 
 TEST_F(NewmarkBetaTest, SimpleLua)
@@ -99,6 +73,11 @@ TEST_F(NewmarkBetaTest, SimpleLua)
     SLIC_ERROR("Input file failed to verify.");
   }
 
+  // Build Mesh
+  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+  auto pmesh = serac::buildRectangleMesh(*rect_options);
+  
   // Define the solid solver object
   auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   serac::NonlinearSolid solid_solver(pmesh, solid_solver_options);
@@ -111,7 +90,7 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   }
 
   // initialize in 2D
-  mfem::Vector up(2);
+  mfem::Vector up(pmesh->SpaceDimension());
   up[0] = 0.;
   up[1] = 1.;
   mfem::VectorConstantCoefficient up_coef(up);
@@ -210,10 +189,15 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
     SLIC_ERROR("Input file failed to verify.");
   }
 
+  // Build Mesh
+  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+  auto pmesh = serac::buildRectangleMesh(*rect_options);
+  
   // Define the solid solver object
   auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
 
-  int                       ne = nex;
+  int                       ne = rect_options->elements[0];
   mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
 
   mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);
@@ -232,7 +216,7 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   }
 
   // add gravity load
-  mfem::Vector gravity(dim);
+  mfem::Vector gravity(pmesh->SpaceDimension());
   gravity    = 0.;
   gravity[1] = inlet["g"];
   solid_solver.addBodyForce(std::make_shared<mfem::VectorConstantCoefficient>(gravity));
@@ -309,10 +293,15 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
     SLIC_ERROR("Input file failed to verify.");
   }
 
+  // Build Mesh
+  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+  auto pmesh = serac::buildRectangleMesh(*rect_options);
+  
   // Define the solid solver object
   auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
 
-  int                       ne = nex;
+  int                       ne = rect_options->elements[0];
   mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
 
   mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);
@@ -331,7 +320,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   }
 
   // add gravity load
-  mfem::Vector gravity(dim);
+  mfem::Vector gravity(pmesh->SpaceDimension());
   gravity    = 0.;
   gravity[1] = inlet["g"];
   solid_solver.addBodyForce(std::make_shared<mfem::VectorConstantCoefficient>(gravity));
