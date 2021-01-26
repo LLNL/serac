@@ -82,6 +82,8 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
     auto velo = options.initial_velocity->constructVector(dim);
     setVelocity(velo);
   }
+  setViscosity(std::make_unique<mfem::ConstantCoefficient>(options.viscosity));
+
   for (const auto& [name, bc] : options.boundary_conditions) {
     // FIXME: Better naming for boundary conditions?
     if (name.find("displacement") != std::string::npos) {
@@ -303,6 +305,8 @@ void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& tab
   table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
   table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
 
+  table.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
+
   auto& stiffness_solver_table =
       table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
@@ -370,6 +374,8 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
     result.boundary_conditions =
         base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
   }
+
+  result.viscosity = base["viscosity"];
 
   if (base.contains("initial_displacement")) {
     result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputOptions>();

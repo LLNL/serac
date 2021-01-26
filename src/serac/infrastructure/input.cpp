@@ -103,9 +103,9 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Vectors are expanded to three arguments in Lua (x, y, z)
   // and should be returned as a 3-tuple
-  table.addFunction("vec_coef", axom::inlet::FunctionType::Vec3D, {axom::inlet::FunctionType::Vec3D},
+  table.addFunction("vec_coef", axom::inlet::FunctionTag::Vec3D, {axom::inlet::FunctionTag::Vec3D},
                     "The function to use for an mfem::VectorFunctionCoefficient");
-  table.addFunction("coef", axom::inlet::FunctionType::Double, {axom::inlet::FunctionType::Vec3D},
+  table.addFunction("coef", axom::inlet::FunctionTag::Double, {axom::inlet::FunctionTag::Vec3D},
                     "The function to use for an mfem::FunctionCoefficient");
   table.addInt("component", "The vector component to which the scalar coefficient should be applied");
 }
@@ -157,7 +157,8 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     auto scalar_func = [func(std::move(func))](const mfem::Vector& input) {
       return func({input.GetData(), input.Size()});
     };
-    return {std::move(scalar_func), base["component"]};
+    const int component = base.contains("component") ? base["component"] : -1;
+    return {std::move(scalar_func), component};
   }
   return {};
 }
