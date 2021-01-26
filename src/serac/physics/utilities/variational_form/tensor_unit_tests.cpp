@@ -2,6 +2,8 @@
 #include "detail/meta.h"
 #include "tensor.hpp"
 
+// note: these tests are actually all static_assert-ions, 
+// so if this compiles without error, the tests have already passed
 void basic_tensor_tests() {
 
   constexpr auto abs = [](auto x){ return (x < 0) ? -x : x; };
