@@ -136,14 +136,16 @@ tensor<T, n> GaussLobattoInterpolationDerivative(T x) {
     return {-0.5, 0.5};
   }
   if constexpr (n == 3) {
-    return {0.5 * x * (x - 1.0), 1.0 - x * x, 0.5 * x * (x + 1.0)};
+    return {x - 0.5, -2.0 * x, x + 0.5};
   }
   if constexpr (n == 4) {
     static constexpr double s = 2.23606797749978981;
-    return {-0.125 * (x - 1.0) * (5.0 * x * x - 1.0),
-            0.625 * (s * x - 1.0) * (x * x - 1.0),
-            -0.625 * (s * x + 1.0) * (x * x - 1.0),
-            0.125 * (x + 1.0) * (5.0 * x * x - 1.0)};
+    return {
+         0.125 * (1.0 + 5.0*(2.0 - 3.0*x)*x),
+         0.125 * (-5.0*(s + x*(2.0 - 3.0*s*x))),
+         0.125 * (5.0*(s - x*(2.0 + 3.0*s*x))),
+         0.125 * (-1.0 + 5.0*x*(2 + 3.0*x))
+    };
   }
 
   return tensor<T, n>{};
@@ -163,6 +165,26 @@ tensor<T, n> GaussLegendreInterpolation(T x) {
     return {-0.645497224367903 * x + 0.833333333333333 * x * x,
             1.000000000000000 - 1.666666666666667 * x * x,
             0.6454972243679028 * x + 0.8333333333333333 * x * x};
+  }
+
+  return tensor<T, n>{};
+}
+
+
+template <int n, typename T>
+tensor<T, n> GaussLegendreInterpolationDerivative(T x) {
+  if constexpr (n == 1) {
+    return {0.0};
+  }
+
+  if constexpr (n == 2) {
+    return {-0.866025403784439, 0.866025403784439};
+  }
+
+  if constexpr (n == 3) {
+    return {0.1666666666666667 * (-3.872983346207417 + 10.0 * x),
+            -3.333333333333333 * x,
+            0.1666666666666667 * (3.872983346207417 + 10.0 * x)};
   }
 
   return tensor<T, n>{};
