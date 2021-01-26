@@ -89,10 +89,11 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
  * @param[in] elements_lengthwise the number of elements in the z-direction
  * @param[in] radius the radius of the cylinder
  * @param[in] height the number of elements in the z-direction
- * 
+ *
  * @return A shared_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius, double height, const MPI_Comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
+                                                 double height, const MPI_Comm = MPI_COMM_WORLD);
 
 namespace mesh {
 

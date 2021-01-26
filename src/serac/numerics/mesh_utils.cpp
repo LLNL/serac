@@ -167,22 +167,38 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
   return std::make_shared<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius, double height, const MPI_Comm comm) {
+std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
+                                                 double height, const MPI_Comm comm)
+{
   static constexpr int dim                   = 2;
   static constexpr int num_vertices          = 17;
   static constexpr int num_elems             = 12;
   static constexpr int num_boundary_elements = 8;
 
-  static constexpr double vertices[num_vertices][dim] = {
-      {0.0000000000000000, 0.0000000000000000},   {0.5773502691896258, 0.0000000000000000},
-      {0.4082482904638630, 0.4082482904638630},   {0.0000000000000000, 0.5773502691896258},
-      {-0.4082482904638630, 0.4082482904638630},  {-0.5773502691896258, 0.0000000000000000},
-      {-0.4082482904638630, -0.4082482904638630}, {0.0000000000000000, -0.5773502691896258},
-      {0.4082482904638630, -0.4082482904638630},  {1.000000000000000, 0.0000000000000000},
-      {0.7071067811865475, 0.7071067811865475},   {0.0000000000000000, 1.000000000000000},
-      {-0.707106781186548, 0.7071067811865475},   {-1.000000000000000, 0.0000000000000000},
-      {-0.707106781186548, -0.707106781186548},   {0.0000000000000000, -1.000000000000000},
-      {0.7071067811865475, -0.707106781186548}};
+  // a == 1.0 produces a mesh of a cylindrical "core" surrounded by
+  // a cylindrical "shell", but makes some of the elements in the "core" section
+  // nearly degenerate
+  //
+  // a > 1 makes the "core" section no longer a cylinder, but its elements
+  // are no long nearly degenerate
+  constexpr double        a                           = 1.3;
+  static constexpr double vertices[num_vertices][dim] = {{0.0000000000000000, 0.0000000000000000},
+                                                         {0.5773502691896258, 0.0000000000000000},
+                                                         {0.4082482904638630 * a, 0.4082482904638630 * a},
+                                                         {0.0000000000000000, 0.5773502691896258},
+                                                         {-0.4082482904638630 * a, 0.4082482904638630 * a},
+                                                         {-0.5773502691896258, 0.0000000000000000},
+                                                         {-0.4082482904638630 * a, -0.4082482904638630 * a},
+                                                         {0.0000000000000000, -0.5773502691896258},
+                                                         {0.4082482904638630 * a, -0.4082482904638630 * a},
+                                                         {1.000000000000000, 0.0000000000000000},
+                                                         {0.7071067811865475, 0.7071067811865475},
+                                                         {0.0000000000000000, 1.000000000000000},
+                                                         {-0.707106781186548, 0.7071067811865475},
+                                                         {-1.000000000000000, 0.0000000000000000},
+                                                         {-0.707106781186548, -0.707106781186548},
+                                                         {0.0000000000000000, -1.000000000000000},
+                                                         {0.7071067811865475, -0.707106781186548}};
 
   static constexpr int elems[num_elems][4] = {{0, 1, 2, 3},   {0, 3, 4, 5},   {0, 5, 6, 7},   {0, 7, 8, 1},
                                               {1, 9, 10, 2},  {2, 10, 11, 3}, {3, 11, 12, 4}, {4, 12, 13, 5},
@@ -221,18 +237,18 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
         vertex(d) = new_vertices[d * n + i];
       }
 
-      double phi = fmod(atan2(vertex(1), vertex(0)), M_PI_4); 
-
+      // stretch the octagonal shape into a circle of the appropriate radius
+      double phi = fmod(atan2(vertex(1), vertex(0)) + M_PI, M_PI_4);
       vertex *= radius * (cos(phi) + (-1.0 + sqrt(2.0)) * sin(phi));
 
       for (int d = 0; d < dim; d++) {
-        new_vertices[d * num_vertices + i] = vertex(d);
+        new_vertices[d * n + i] = vertex(d);
       }
     }
     mesh.SetVertices(new_vertices);
   }
 
-  mfem::Mesh * extruded_mesh = mfem::Extrude2D(&mesh, elements_lengthwise, height);
+  mfem::Mesh* extruded_mesh = mfem::Extrude2D(&mesh, elements_lengthwise, height);
 
   auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
 

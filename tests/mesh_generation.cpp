@@ -16,9 +16,7 @@ TEST(meshgen, successful_creation)
   ASSERT_EQ(serac::buildBallMesh(6000)->GetNE(), 4096);
   ASSERT_EQ(serac::buildRectangleMesh(20, 20)->GetNE(), 400);
   ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20)->GetNE(), 8000);
-
-  auto mesh = serac::buildCylinderMesh(2, 10, 2.0, 5.0);
-  mesh->Print(std::cout);
+  ASSERT_EQ(serac::buildCylinderMesh(2, 2, 2.0, 5.0)->GetNE(), 384);
 }
 
 //------------------------------------------------------------------------------
