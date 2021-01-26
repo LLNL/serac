@@ -674,14 +674,11 @@ auto derivative_wrt(tensor < double, m, n > A) {
 constexpr auto make_dual(double x) { return dual{x, 1.0}; }
 
 template < int ... n >
-constexpr auto make_dual(tensor < double, n ... > A) {
-  tensor< dual< tensor< double, n ... > >, n ... > A_dual{};
-  for (auto ijkl : indices(A)) {
-    A_dual(ijkl).value = A(ijkl);
-    A_dual(ijkl).gradient(ijkl) = 1.0;
-  }
+constexpr auto make_dual(tensor< double, n...> A){
+  tensor < dual < tensor< double, n... > >, n... > A_dual{};
+  for_constexpr<n...>([&](auto ... i){
+    A_dual({i...}).value = A({i...});
+    A_dual({i...}).gradient({i...}) = 1.0;
+  });
   return A_dual;
 }
-
-
-

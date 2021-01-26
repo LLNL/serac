@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <cmath>
+
 template < typename gradient_type >
 struct dual {
   double value;

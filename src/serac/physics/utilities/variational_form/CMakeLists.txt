@@ -36,7 +36,8 @@ install(TARGETS              serac_parvariationalform
 
 # Then add the examples/tests
 set(parvariationalform_tests
-    test_tensor_ad.cpp)
+    test_tensor_ad.cpp
+    tensor_unit_tests.cpp)
     
 foreach(filename ${parvariationalform_tests})
     get_filename_component(test_name ${filename} NAME_WE)
