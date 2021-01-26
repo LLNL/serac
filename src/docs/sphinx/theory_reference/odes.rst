@@ -3,14 +3,9 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-===============================
-Ordinary Differential Equations
-===============================
-
-Dirichlet Enforcement Methods
-=============================
-
-.. _header-n4:
+=========================================================
+Dirichlet Enforcement for Ordinary Differential Equations
+=========================================================
 
 Unconstrained Ordinary Differential Equations
 =============================================
