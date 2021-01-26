@@ -4,6 +4,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "serac/serac_config.hpp"
+
 using namespace std;
 using namespace mfem;
 
@@ -14,7 +16,7 @@ int main(int argc, char* argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
-  const char* mesh_file = "../data/inline-quad.mesh";
+  const char * mesh_file = SERAC_REPO_DIR"/data/meshes/inline-quad.mesh";
   int         order     = 1;
   // SERAC EDIT BEGIN
   // bool static_cond = false;
