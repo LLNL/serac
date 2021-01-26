@@ -25,47 +25,48 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 {
   switch (timestepper) {
     case serac::TimestepMethod::HHTAlpha:
-      ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
       break;
     case serac::TimestepMethod::WBZAlpha:
-      ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
       break;
     case serac::TimestepMethod::AverageAcceleration:
-      ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
       break;
     case serac::TimestepMethod::LinearAcceleration:
-      ode_solver_ = std::make_unique<mfem::LinearAccelerationSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::LinearAccelerationSolver>();
       break;
     case serac::TimestepMethod::CentralDifference:
-      ode_solver_ = std::make_unique<mfem::CentralDifferenceSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::CentralDifferenceSolver>();
       break;
     case serac::TimestepMethod::FoxGoodwin:
-      ode_solver_ = std::make_unique<mfem::FoxGoodwinSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::FoxGoodwinSolver>();
       break;
     case serac::TimestepMethod::NewmarkBeta:
-      ode_solver_ = std::make_unique<mfem::NewmarkSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::NewmarkSolver>();
       break;
     case serac::TimestepMethod::BackwardEuler:
-      ode_system_solver_ = std::make_unique<mfem::BackwardEulerSolver>();
+      first_order_system_ode_solver_ = std::make_unique<mfem::BackwardEulerSolver>();
       break;
     default:
       SLIC_ERROR("Timestep method was not a supported second-order ODE method");
   }
 
-  if (ode_solver_) ode_solver_->Init(*this);
-
-  if (ode_system_solver_) {
+  if (second_order_ode_solver_) {
+    second_order_ode_solver_->Init(*this);
+  } else if (first_order_system_ode_solver_) {
     // we need to adjust the width of this operator
     width *= 2;
-    ode_system_solver_->Init(*this);
+    first_order_system_ode_solver_->Init(*this);
   }
 }
 
 void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt)
 {
-  if (ode_solver_) {  // if we used a 2nd order method
-    ode_solver_->Step(x, dxdt, t, dt);
-  } else if (ode_system_solver_) {
+  if (second_order_ode_solver_) {
+    // if we used a 2nd order method
+    second_order_ode_solver_->Step(x, dxdt, t, dt);
+  } else if (first_order_system_ode_solver_) {
     // Would be better if displacement and velocity were from a block vector?
     mfem::Array<int> boffsets(3);
     boffsets[0] = 0;
@@ -75,7 +76,7 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double
     bx.GetBlock(0) = x;
     bx.GetBlock(1) = dxdt;
 
-    ode_system_solver_->Step(bx, t, dt);
+    first_order_system_ode_solver_->Step(bx, t, dt);
 
     // Copy back
     x    = bx.GetBlock(0);

@@ -8,7 +8,7 @@ main_mesh = {
     -- mesh file
     mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
-    ser_ref_levels = 1,
+    ser_ref_levels = 0,
     par_ref_levels = 0,
     width = 1.,
     len = 8.

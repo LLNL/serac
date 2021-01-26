@@ -164,12 +164,12 @@ private:
   /**
    * @brief MFEM solver object for second-order ODEs
    */
-  std::unique_ptr<mfem::SecondOrderODESolver> ode_solver_;
+  std::unique_ptr<mfem::SecondOrderODESolver> second_order_ode_solver_;
 
   /**
    * @brief MFEM solver object for second-order ODEs recast as first order
    */
-  std::unique_ptr<mfem::ODESolver> ode_system_solver_;
+  std::unique_ptr<mfem::ODESolver> first_order_system_ode_solver_;
 
   /**
    * @brief Reference to boundary conditions used to constrain the solution
