@@ -1,34 +1,29 @@
-template <PolynomialDegree p, int c>
-struct finite_element<Hexahedron, H1, p, c> {
-  static constexpr Geometry         geometry = Segment;
-  static constexpr Family           family   = H1;
-  static constexpr PolynomialDegree degree   = p;
+template <PolynomialDegree degree, int c>
+struct finite_element<Geometry::Hexahedron, Family::H1, degree, c> {
 
+  static constexpr auto geometry = Geometry::Hexahedron;
+  static constexpr auto family = Family::H1;
+  static constexpr int p = static_cast<int>(degree);
   static constexpr int components = c;
-  static constexpr int dim        = 3;
-  static constexpr int ndof       = (p + 1) * (p + 1) * (p + 1);
+  static constexpr int dim = 3;
+  static constexpr int ndof = (p + 1) * (p + 1) * (p + 1);
 
-  using value_type    = reduced_tensor<double, c>;
-  using gradient_type = reduced_tensor<double, c, dim>;
-  using tensor_type   = reduced_tensor<double, ndof, c>;
+  static constexpr tensor<double,ndof> shape_functions(tensor< double, dim > /*xi*/) {
+    return tensor< double, ndof >{};
+  }
 
-  static constexpr tensor<double, dofs> shape_functions(double xi) { return tensor<double, ndof>{}; }
+  static constexpr tensor<double, ndof, dim> shape_function_gradients(tensor< double, dim > /*xi*/) {
+    return tensor< double, ndof, dim >{};
+  }
 
-  static constexpr tensor<double, dofs> shape_function_gradients(double xi) { return tensor<double, ndof>{}; }
-
-  template <eval_type op = BOTH>
-  static auto evaluate(tensor_type values, double xi, int i)
-  {
-    if constexpr (op == VALUE) {
-      return value_type{};
+  template <Evaluation op = Evaluation::Interpolate>
+  static auto evaluate(tensor<double, ndof> /*values*/, double /*xi*/, int /*i*/) {
+    if constexpr (op == Evaluation::Interpolate) {
+      return double{};
     }
 
-    if constexpr (op == GRAD) {
-      return gradient_type{};
-    }
-
-    if constexpr (op == BOTH) {
-      return std::tuple{value_type{}, gradient_type{}};
+    if constexpr (op == Evaluation::Gradient) {
+      return double{};
     }
   }
 
