@@ -10,6 +10,7 @@ t_final = 5.0
 output_type = "VisIt"
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/star.mesh",
     -- serial and parallel refinement levels

@@ -6,6 +6,7 @@ epsilon = 0.00001
 dt      = 1.0
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",
     -- serial and parallel refinement levels
