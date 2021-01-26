@@ -76,7 +76,7 @@ TEST(meshgen, lua_input)
     if (const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options)) {
       EXPECT_EQ(rect_options->elements.size(), 2);
       auto mesh = serac::buildRectangleMesh(*rect_options);
-      EXPECT_EQ(mesh->GetNE(), rect_options->elements[0] * rect_options->elements[1]);      
+      EXPECT_EQ(mesh->GetNE(), rect_options->elements[0] * rect_options->elements[1]);
     }
   }
 

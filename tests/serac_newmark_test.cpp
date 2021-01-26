@@ -34,10 +34,83 @@ int main(int argc, char** argv)
 
 class NewmarkBetaTest : public ::testing::Test {
 protected:
-  void SetUp()
-  {}
+  void SetUp() {}
 
   void TearDown() {}
+
+  // Helper method to run serac_newmark_tests
+  std::unique_ptr<serac::NonlinearSolid> runDynamicTest(axom::inlet::Inlet& inlet, const std::string& root_name)
+  {
+    // Define schema
+    // Simulation time parameters
+    inlet.addDouble("dt", "Time step.");
+    inlet.addDouble("t_final", "Stopping point");
+
+    // Integration test parameters
+    inlet.addDouble("epsilon", "Threshold to be used in the comparison");
+
+    auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+    serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
+
+    // Physics
+    auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+    // FIXME: Remove once Inlet's "contains" logic improvements are merged
+    serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
+    // get gravity parameter for this problem
+    inlet.addDouble("g", "the gravity acceleration");
+
+    // Verify input file
+    if (!inlet.verify()) {
+      SLIC_ERROR("Input file failed to verify.");
+    }
+
+    // Build Mesh
+    auto       mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+    auto       pmesh        = serac::buildRectangleMesh(*rect_options);
+
+    // Define the solid solver object
+    auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+
+    // We only want to add these boundary conditions if we've defined boundary_conds for the serac_newmark_beta test
+    if (inlet["nonlinear_solid"].contains("boundary_conds")) {
+      int                       ne = rect_options->elements[0];
+      mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
+
+      mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);
+      for (int be = 0; be < pmesh->GetNBE(); be++) {
+        pmesh->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
+      }
+      pmesh->SetAttributes();
+    }
+
+    auto solid_solver = std::make_unique<serac::NonlinearSolid>(pmesh, solid_solver_options);
+
+    const bool is_dynamic = inlet["nonlinear_solid"].contains("dynamics");
+
+    if (is_dynamic) {
+      auto visc = std::make_unique<mfem::ConstantCoefficient>(0.0);
+      solid_solver->setViscosity(std::move(visc));
+    }
+
+    // add gravity load
+    if (inlet.contains("g")) {
+      mfem::Vector gravity(pmesh->SpaceDimension());
+      gravity    = 0.;
+      gravity[1] = inlet["g"];
+      solid_solver->addBodyForce(std::make_shared<mfem::VectorConstantCoefficient>(gravity));
+    }
+
+    // Initialize the output
+    solid_solver->initializeOutput(serac::OutputType::VisIt, root_name);
+
+    // Complete the solver setup
+    solid_solver->completeSetup();
+    // Output the initial state
+    solid_solver->outputState();
+
+    return solid_solver;
+  }
 };
 
 TEST_F(NewmarkBetaTest, SimpleLua)
@@ -53,64 +126,16 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  // define schema
-  // Simulation time parameters
-  inlet.addDouble("dt", "Time step.");
-  inlet.addDouble("t_final", "Stopping point");
+  auto solid_solver = runDynamicTest(inlet, "nonlin_solid_simple");
 
-  // Integration test parameters
-  inlet.addDouble("epsilon", "Threshold to be used in the comparison");
-
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
-  serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
-
-  // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
-
-  // Verify input file
-  if (!inlet.verify()) {
-    SLIC_ERROR("Input file failed to verify.");
-  }
-
-  // Build Mesh
-  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
-  auto pmesh = serac::buildRectangleMesh(*rect_options);
-  
-  // Define the solid solver object
-  auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  serac::NonlinearSolid solid_solver(pmesh, solid_solver_options);
-
-  const bool is_dynamic = inlet["nonlinear_solid"].contains("dynamics");
-
-  if (is_dynamic) {
-    auto visc = std::make_unique<mfem::ConstantCoefficient>(0.0);
-    solid_solver.setViscosity(std::move(visc));
-  }
-
-  // initialize in 2D
-  mfem::Vector up(pmesh->SpaceDimension());
-  up[0] = 0.;
-  up[1] = 1.;
-  mfem::VectorConstantCoefficient up_coef(up);
-  solid_solver.setVelocity(up_coef);
-
-  // Initialize the output
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "nonlin_solid");
-
-  // Complete the solver setup
-  solid_solver.completeSetup();
-  // Output the initial state
-  solid_solver.outputState();
-
-  mfem::Vector u_prev(solid_solver.displacement().gridFunc());
-  mfem::Vector v_prev(solid_solver.velocity().gridFunc());
+  // Save initial state
+  mfem::Vector u_prev(solid_solver->displacement().gridFunc());
+  mfem::Vector v_prev(solid_solver->velocity().gridFunc());
 
   double dt = inlet["dt"];
 
   // Check if dynamic
-  if (is_dynamic) {
+  if (inlet["nonlinear_solid"].contains("dynamics")) {
     double t       = 0.0;
     double t_final = inlet["t_final"];
 
@@ -122,16 +147,19 @@ TEST_F(NewmarkBetaTest, SimpleLua)
       t += dt_real;
       last_step = (t >= t_final - 1e-8 * dt);
 
-      solid_solver.advanceTimestep(dt_real);
+      solid_solver->advanceTimestep(dt_real);
+
+      solid_solver->outputState();
     }
   } else {
-    solid_solver.advanceTimestep(dt);
+    solid_solver->advanceTimestep(dt);
   }
 
   // Output the final state
-  solid_solver.outputState();
-  mfem::Vector u_next(solid_solver.displacement().gridFunc());
-  mfem::Vector v_next(solid_solver.velocity().gridFunc());
+  solid_solver->outputState();
+
+  mfem::Vector u_next(solid_solver->displacement().gridFunc());
+  mfem::Vector v_next(solid_solver->velocity().gridFunc());
 
   // back out a_next
   mfem::Vector a_prev(u_next.Size());
@@ -166,75 +194,13 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  // define schema
-  // Simulation time parameters
-  inlet.addDouble("dt", "Time step.");
-  inlet.addDouble("t_final", "Stopping point");
-
-  // Integration test parameters
-  inlet.addDouble("epsilon", "Threshold to be used in the comparison");
-
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
-  serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
-
-  // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  // FIXME: Remove once Inlet's "contains" logic improvements are merged
-  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
-  // get gravity parameter for this problem
-  inlet.addDouble("g", "the gravity acceleration");
-
-  // Verify input file
-  if (!inlet.verify()) {
-    SLIC_ERROR("Input file failed to verify.");
-  }
-
-  // Build Mesh
-  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
-  auto pmesh = serac::buildRectangleMesh(*rect_options);
-  
-  // Define the solid solver object
-  auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-
-  int                       ne = rect_options->elements[0];
-  mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
-
-  mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);
-  for (int be = 0; be < pmesh->GetNBE(); be++) {
-    pmesh->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
-  }
-  pmesh->SetAttributes();
-
-  serac::NonlinearSolid solid_solver(pmesh, solid_solver_options);
-
-  const bool is_dynamic = inlet["nonlinear_solid"].contains("dynamics");
-
-  if (is_dynamic) {
-    auto visc = std::make_unique<mfem::ConstantCoefficient>(0.0);
-    solid_solver.setViscosity(std::move(visc));
-  }
-
-  // add gravity load
-  mfem::Vector gravity(pmesh->SpaceDimension());
-  gravity    = 0.;
-  gravity[1] = inlet["g"];
-  solid_solver.addBodyForce(std::make_shared<mfem::VectorConstantCoefficient>(gravity));
-
-  // Assume everything is initially at rest
-
-  // Initialize the output
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "nonlin_solid");
-
-  // Complete the solver setup
-  solid_solver.completeSetup();
-  // Output the initial state
-  solid_solver.outputState();
+  // User helper to run test
+  auto solid_solver = runDynamicTest(inlet, "nonlin_solid");
 
   double dt = inlet["dt"];
 
   // Check if dynamic
-  if (is_dynamic) {
+  if (inlet["nonlinear_solid"].contains("dynamics")) {
     double t       = 0.0;
     double t_final = inlet["t_final"];
 
@@ -246,16 +212,16 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
       t += dt_real;
       last_step = (t >= t_final - 1e-8 * dt);
 
-      solid_solver.advanceTimestep(dt_real);
+      solid_solver->advanceTimestep(dt_real);
 
-      solid_solver.outputState();
+      solid_solver->outputState();
     }
   } else {
-    solid_solver.advanceTimestep(dt);
+    solid_solver->advanceTimestep(dt);
   }
 
   // Output the final state
-  solid_solver.outputState();
+  solid_solver->outputState();
 }
 
 TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
@@ -269,76 +235,13 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  // define schema
-  // Simulation time parameters
-  inlet.addDouble("dt", "Time step.");
-  inlet.addDouble("t_final", "Stopping point");
-
-  // Integration test parameters
-  inlet.addDouble("epsilon", "Threshold to be used in the comparison");
-
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
-  serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
-
-  // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  // FIXME: Remove once Inlet's "contains" logic improvements are merged
-  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
-
-  // get gravity parameter for this problem
-  inlet.addDouble("g", "the gravity acceleration");
-
-  // Verify input file
-  if (!inlet.verify()) {
-    SLIC_ERROR("Input file failed to verify.");
-  }
-
-  // Build Mesh
-  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
-  auto pmesh = serac::buildRectangleMesh(*rect_options);
-  
-  // Define the solid solver object
-  auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-
-  int                       ne = rect_options->elements[0];
-  mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
-
-  mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);
-  for (int be = 0; be < pmesh->GetNBE(); be++) {
-    pmesh->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
-  }
-  pmesh->SetAttributes();
-
-  serac::NonlinearSolid solid_solver(pmesh, solid_solver_options);
-
-  const bool is_dynamic = inlet["nonlinear_solid"].contains("dynamics");
-
-  if (is_dynamic) {
-    auto visc = std::make_unique<mfem::ConstantCoefficient>(0.0);
-    solid_solver.setViscosity(std::move(visc));
-  }
-
-  // add gravity load
-  mfem::Vector gravity(pmesh->SpaceDimension());
-  gravity    = 0.;
-  gravity[1] = inlet["g"];
-  solid_solver.addBodyForce(std::make_shared<mfem::VectorConstantCoefficient>(gravity));
-
-  // Assume everything is initially at rest
-
-  // Initialize the output
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "nonlin_solid_first_orderlua");
-
-  // Complete the solver setup
-  solid_solver.completeSetup();
-  // Output the initial state
-  solid_solver.outputState();
+  // User helper to run test
+  auto solid_solver = runDynamicTest(inlet, "nonlin_solid_first_orderlua");
 
   double dt = inlet["dt"];
 
   // Check if dynamic
-  if (is_dynamic) {
+  if (inlet["nonlinear_solid"].contains("dynamics")) {
     double t       = 0.0;
     double t_final = inlet["t_final"];
 
@@ -350,14 +253,14 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
       t += dt_real;
       last_step = (t >= t_final - 1e-8 * dt);
 
-      solid_solver.advanceTimestep(dt_real);
+      solid_solver->advanceTimestep(dt_real);
 
-      solid_solver.outputState();
+      solid_solver->outputState();
     }
   } else {
-    solid_solver.advanceTimestep(dt);
+    solid_solver->advanceTimestep(dt);
   }
 
   // Output the final state
-  solid_solver.outputState();
+  solid_solver->outputState();
 }

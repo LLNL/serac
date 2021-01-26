@@ -58,6 +58,9 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
     // we need to adjust the width of this operator
     width *= 2;
     first_order_system_ode_solver_->Init(*this);
+  } else {
+    // there is no ode_solver
+    SLIC_ERROR("Neither second_order_ode_solver_ nor first_order_system_ode_solver_ specified");
   }
 }
 
@@ -81,6 +84,8 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double
     // Copy back
     x    = bx.GetBlock(0);
     dxdt = bx.GetBlock(1);
+  } else {
+    SLIC_ERROR("Neither second_order_ode_solver_ nor first_order_system_ode_solver_ specified");
   }
 }
 
