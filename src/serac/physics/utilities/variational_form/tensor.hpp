@@ -1,7 +1,7 @@
 #pragma once
 
-#include "dual.h"
-#include "array.h"
+#include "dual.hpp"
+#include "array.hpp"
 
 #include "detail/meta.h"
 #include "detail/for_constexpr.h"

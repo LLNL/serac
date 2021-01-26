@@ -1,9 +1,11 @@
+#pragma once
+
 #include "mfem.hpp"
 #include "mfem/general/forall.hpp"
 #include "genericintegrator.hpp"
 #include "tensor.hpp"
 
-#pragma once
+#include "finite_element.hpp"
 
 namespace mfem {
 template <typename T>
@@ -141,6 +143,8 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
     }
   }
 }
+
+//template < Geometry g, PolynomialDegree p, int Q > 
 
 template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
 template <int D1D, int Q1D>
