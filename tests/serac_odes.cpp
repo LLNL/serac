@@ -624,8 +624,9 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  axom::slic::UnitTestLogger logger;  // create & initialize test logger, finalized when
-                                      // exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
+
   result = RUN_ALL_TESTS();
 
   MPI_Finalize();
