@@ -180,7 +180,7 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
   // nearly degenerate
   //
   // a > 1 makes the "core" section no longer a cylinder, but its elements
-  // are no long nearly degenerate
+  // are no longer nearly degenerate
   constexpr double        a                           = 1.3;
   static constexpr double vertices[num_vertices][dim] = {{0.0000000000000000, 0.0000000000000000},
                                                          {0.5773502691896258, 0.0000000000000000},
