@@ -40,11 +40,11 @@ TEST(dynamic_solver, dyn_solve)
       std::make_shared<mfem::VectorFunctionCoefficient>(dim, [](const mfem::Vector&, mfem::Vector& v) { v = 0.0; });
 
   auto temp = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) {
-    double temp = 2.0;
+    double t = 2.0;
     if (x(0) < 1.0) {
-      temp = 5.0;
+      t = 5.0;
     }
-    return temp;
+    return t;
   });
 
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);

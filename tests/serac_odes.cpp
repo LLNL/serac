@@ -30,35 +30,35 @@ const NonlinearSolverOptions nonlinear_options{
     .rel_tol = 1.0e-12, .abs_tol = 1.0e-12, .max_iter = 10, .print_level = -1};
 
 const mfem::DenseMatrix M = []() {
-  mfem::DenseMatrix M(3, 3);
-  M(0, 0) = 2.0;
-  M(0, 1) = 1.0;
-  M(0, 2) = 0.0;
+  mfem::DenseMatrix M_mat(3, 3);
+  M_mat(0, 0) = 2.0;
+  M_mat(0, 1) = 1.0;
+  M_mat(0, 2) = 0.0;
 
-  M(1, 0) = 1.0;
-  M(1, 1) = 4.0;
-  M(1, 2) = 1.0;
+  M_mat(1, 0) = 1.0;
+  M_mat(1, 1) = 4.0;
+  M_mat(1, 2) = 1.0;
 
-  M(2, 0) = 0.0;
-  M(2, 1) = 1.0;
-  M(2, 2) = 2.0;
-  return M;
+  M_mat(2, 0) = 0.0;
+  M_mat(2, 1) = 1.0;
+  M_mat(2, 2) = 2.0;
+  return M_mat;
 }();
 
 const mfem::DenseMatrix C = []() {
-  mfem::DenseMatrix C(3, 3);
-  C(0, 0) = 1.0;
-  C(0, 1) = 0.0;
-  C(0, 2) = 0.0;
+  mfem::DenseMatrix C_mat(3, 3);
+  C_mat(0, 0) = 1.0;
+  C_mat(0, 1) = 0.0;
+  C_mat(0, 2) = 0.0;
 
-  C(1, 0) = 0.0;
-  C(1, 1) = 1.0;
-  C(1, 2) = 0.0;
+  C_mat(1, 0) = 0.0;
+  C_mat(1, 1) = 1.0;
+  C_mat(1, 2) = 0.0;
 
-  C(2, 0) = 0.0;
-  C(2, 1) = 0.0;
-  C(2, 2) = 1.0;
-  return C;
+  C_mat(2, 0) = 0.0;
+  C_mat(2, 1) = 0.0;
+  C_mat(2, 2) = 1.0;
+  return C_mat;
 }();
 
 const std::function stiffness_linear = [](const mfem::Vector & /*x*/) -> mfem::DenseMatrix {
