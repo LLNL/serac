@@ -107,6 +107,10 @@ int main(int argc, char* argv[])
 
   x.Distribute(X);
 
+  mfem::ConstantCoefficient zero_coef(0.0);
+  std::cout << x.ComputeL2Error(zero_coef) << std::endl;
+  std::cout << "expected: 0.873569 (with \"-r 2\")" << std::endl;
+
   // x.ProjectCoefficient(u_excoeff);
 
   char         vishost[] = "localhost";

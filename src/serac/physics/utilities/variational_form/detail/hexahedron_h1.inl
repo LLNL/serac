@@ -13,7 +13,7 @@ struct finite_element<Geometry::Hexahedron, Family::H1, degree, c> {
     auto N_eta  = GaussLobattoInterpolation<p + 1>(xi[1]);
     auto N_zeta = GaussLobattoInterpolation<p + 1>(xi[2]);
 
-    int                  count = 0;
+    int count = 0;
 
     tensor<double, ndof> N{};
     for (int k = 0; k < p + 1; k++) {
@@ -52,7 +52,6 @@ struct finite_element<Geometry::Hexahedron, Family::H1, degree, c> {
     }
     return dN;
     // clang-format on
-
   }
 
   template <Evaluation op = Evaluation::Interpolate>
