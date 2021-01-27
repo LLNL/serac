@@ -34,3 +34,4 @@ LLNL-CODE-805541
    sphinx/quickstart
    sphinx/user_guide/index
    sphinx/dev_guide/index
+   sphinx/theory_reference/index

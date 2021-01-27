@@ -67,6 +67,7 @@ if (ENABLE_GTEST)
         mfem_array_std_algo.cpp
         expr_templates.cpp
         serac_error_handling.cpp
+        serac_odes.cpp
         serac_input.cpp)
 
     foreach(filename ${language_tests})
