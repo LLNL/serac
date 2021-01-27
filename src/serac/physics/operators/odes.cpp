@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -145,7 +145,7 @@ void SecondOrderODE::ImplicitSolve(const double dt, const mfem::Vector& u, mfem:
   bdu_dt.GetBlock(0) = bu.GetBlock(1) + dt * bdu_dt.GetBlock(1);
 }
 
-void SecondOrderODE::Solve(const double t, const double c0, const double c1, const mfem::Vector& u,
+void SecondOrderODE::Solve(const double time, const double c0, const double c1, const mfem::Vector& u,
                            const mfem::Vector& du_dt, mfem::Vector& d2u_dt2) const
 {
   // assign these values to variables with greater scope,
@@ -163,9 +163,9 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
   U_       = 0.0;
   U_plus_  = 0.0;
   for (const auto& bc : bcs_.essentials()) {
-    bc.projectBdrToDofs(U_minus_, t - epsilon);
-    bc.projectBdrToDofs(U_, t);
-    bc.projectBdrToDofs(U_plus_, t + epsilon);
+    bc.projectBdrToDofs(U_minus_, time - epsilon);
+    bc.projectBdrToDofs(U_, time);
+    bc.projectBdrToDofs(U_plus_, time + epsilon);
   }
 
   bool implicit = (c0 != 0.0 || c1 != 0.0);

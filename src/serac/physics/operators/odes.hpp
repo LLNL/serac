@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -140,7 +140,7 @@ public:
    *
    * @param[inout] x The predicted solution
    * @param[inout] dxdt The predicted rate
-   * @param[inout] t The current time
+   * @param[inout] time The current time
    * @param[inout] dt The desired time step
    *
    * @see mfem::SecondOrderODESolver::Step
@@ -150,14 +150,14 @@ public:
 private:
   /**
    * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
-   * @param[in] t The current time
+   * @param[in] time The current time
    * @param[in] c0 The current time step
    * @param[in] c1 The previous time step
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    * @param[out] d2u_dt2 The second time derivative of u
    */
-  void Solve(const double t, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
+  void Solve(const double time, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
              mfem::Vector& d2u_dt2) const;
 
   /**
@@ -310,7 +310,7 @@ public:
    * @brief Performs a time step
    *
    * @param[inout] x The predicted solution
-   * @param[inout] t The current time
+   * @param[inout] time The current time
    * @param[inout] dt The desired time step
    *
    * @see mfem::ODESolver::Step
@@ -323,6 +323,7 @@ public:
       SLIC_ERROR("ode_solver_ unspecified");
     }
   }
+
 
   /**
    * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve

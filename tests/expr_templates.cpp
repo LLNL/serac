@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -161,7 +161,7 @@ TEST(expr_templates, basic_add_lambda)
   mfem::Vector mfem_result(size);
   add(lhs, rhs, mfem_result);
 
-  auto lambda_add = [](const auto& lhs, const auto& rhs) { return lhs + rhs; };
+  auto lambda_add = [](const auto& l, const auto& r) { return l + r; };
 
   mfem::Vector expr_result = lambda_add(lhs, rhs);
 
@@ -270,9 +270,9 @@ TEST(expr_templates, move_from_temp_lambda)
   mfem::Vector mfem_result(size);
   add(lhs, 3.5, rhs, mfem_result);
 
-  auto lambda_add = [](const auto& lhs, const auto& rhs) {
-    auto r35 = rhs * 3.5;
-    return lhs + std::move(r35);
+  auto lambda_add = [](const auto& l, const auto& r) {
+    auto r35 = r * 3.5;
+    return l + std::move(r35);
   };
 
   mfem::Vector expr_result = lambda_add(lhs, rhs);
@@ -293,9 +293,9 @@ TEST(expr_templates, move_from_temp_vec_lambda)
   mfem::Vector mfem_result(size);
   add(lhs, 3.5, rhs, mfem_result);
 
-  auto lambda_add = [](const auto& lhs, const auto& rhs) {
-    mfem::Vector r35 = rhs * 3.5;
-    return lhs + std::move(r35);
+  auto lambda_add = [](const auto& l, const auto& r) {
+    mfem::Vector r35 = r * 3.5;
+    return l + std::move(r35);
   };
 
   mfem::Vector expr_result = lambda_add(lhs, rhs);
@@ -433,8 +433,8 @@ TEST(expr_templates, complex_expr_lambda)
   mfem::Vector mfem_result(rows);
   add(vec_negate_scale, -0.3, matvec, mfem_result);
 
-  auto lambda_expr = [](const auto& lhs, const auto& rhs, const auto& matrix, const auto& vec_in) {
-    return -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in);
+  auto lambda_expr = [](const auto& l, const auto& r, const auto& mat, const auto& vec) {
+    return -l + r * 3.0 - 0.3 * (mat * vec);
   };
 
   mfem::Vector expr_result = lambda_expr(lhs, rhs, matrix, vec_in);
