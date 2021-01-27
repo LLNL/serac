@@ -248,11 +248,9 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
     mesh.SetVertices(new_vertices);
   }
 
-  mfem::Mesh* extruded_mesh = mfem::Extrude2D(&mesh, elements_lengthwise, height);
+  std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(&mesh, elements_lengthwise, height));
 
   auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
-
-  delete extruded_mesh;
 
   return extruded_pmesh;
 }
