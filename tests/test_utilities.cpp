@@ -161,9 +161,13 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
   if (custom_mesh) {
     mesh = custom_mesh;
   } else {
-    auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-    auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file);
-    mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+      auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
+      mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+    } else {
+      SLIC_ERROR("Physics module test is attempting to run without a file path or a custom mesh!");
+    }
   }
 
   const std::string module_name = detail::moduleName<PhysicsModule>();

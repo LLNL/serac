@@ -146,6 +146,9 @@ TEST(dynamic_solver, dyn_solve)
 
 }  // namespace serac
 
+//------------------------------------------------------------------------------
+#include "axom/slic/core/SimpleLogger.hpp"
+
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -153,6 +156,9 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
 
   result = RUN_ALL_TESTS();
 

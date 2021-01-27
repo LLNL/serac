@@ -24,6 +24,9 @@ SecondOrderODE::SecondOrderODE(int n, State&& state, const EquationSolver& solve
 void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 {
   switch (timestepper) {
+    case serac::TimestepMethod::Newmark:
+      ode_solver_ = std::make_unique<mfem::NewmarkSolver>();
+      break;
     case serac::TimestepMethod::HHTAlpha:
       ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
       break;
@@ -31,6 +34,16 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
       ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
       break;
     case serac::TimestepMethod::AverageAcceleration:
+      // WARNING: apparently mfem's implementation of AverageAccelerationSolver
+      // is NOT equivalent to Newmark (beta = 0.25, gamma = 0.5), so the
+      // stability analysis of using DirichletEnforcementMethod::DirectControl
+      // with Newmark methods does not apply.
+      //
+      // TODO: do a more thorough stability analysis for mfem::GeneralizedAlpha2Solver
+      // to characterize which parameter combinations work with time-varying
+      // dirichlet constraints
+      SLIC_WARNING(
+          "Cannot guarantee stability for AverageAccerlation with time-dependent Dirichlet Boundary Conditions");
       ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
       break;
     case serac::TimestepMethod::LinearAcceleration:
@@ -51,12 +64,6 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 void SecondOrderODE::Solve(const double t, const double c0, const double c1, const mfem::Vector& u,
                            const mfem::Vector& du_dt, mfem::Vector& d2u_dt2) const
 {
-  // this is intended to be temporary
-  // Ideally, epsilon should be "small" relative to the characteristic time
-  // of the ODE, but we can't ensure that at present (we don't have a
-  // critical timestep estimate)
-  constexpr double epsilon = 0.0001;
-
   // assign these values to variables with greater scope,
   // so that the residual operator can see them
   state_.c0    = c0;
@@ -64,9 +71,6 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
   state_.u     = u;
   state_.du_dt = du_dt;
 
-  // TODO: take care of this last part of the ODE definition
-  //       automatically by wrapping mfem's ODE solvers
-  //
   // evaluate the constraint functions at a 3-point
   // stencil of times centered on the time of interest
   // in order to compute finite-difference approximations
@@ -89,7 +93,7 @@ void SecondOrderODE::Solve(const double t, const double c0, const double c1, con
     }
 
     if (enforcement_method_ == DirichletEnforcementMethod::RateControl) {
-      d2U_dt2_ = (dU_dt_ - du_dt) / c1;
+      d2U_dt2_ = ((U_plus_ - U_minus_) / (2.0 * epsilon) - du_dt) / c1;
       dU_dt_   = du_dt;
       U_       = u;
     }
@@ -176,20 +180,11 @@ void FirstOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 
 void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const
 {
-  // this is intended to be temporary
-  // Ideally, epsilon should be "small" relative to the characteristic
-  // time of the ODE, but we can't ensure that at present (we don't have
-  // a critical timestep estimate)
-  constexpr double epsilon = 0.0001;
-
   // assign these values to variables with greater scope,
   // so that the residual operator can see them
   state_.dt = dt;
   state_.u  = u;
 
-  // TODO: take care of this last part of the ODE definition
-  //       automatically by wrapping mfem's ODE solvers
-  //
   // evaluate the constraint functions at a 3-point
   // stencil of times centered on the time of interest
   // in order to compute finite-difference approximations
