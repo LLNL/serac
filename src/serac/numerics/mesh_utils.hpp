@@ -95,6 +95,21 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
 std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
                                                  double height, const MPI_Comm = MPI_COMM_WORLD);
 
+/**
+ * @brief Constructs a 3D MFEM mesh of a hollow cylinder
+ *
+ * @param[in] radial_refinement the number of times to apply uniform mesh refinement to the cross section
+ * @param[in] elements_lengthwise the number of elements in the z-direction
+ * @param[in] inner inner radius the radius of the cylindrical shell
+ * @param[in] outer ouer radius the radius of the cylindrical shell
+ * @param[in] height the number of elements in the z-direction
+ *
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
+                                                       double inner_radius, double outer_radius, double height,
+                                                       const MPI_Comm = MPI_COMM_WORLD);
+
 namespace mesh {
 
 struct InputOptions {

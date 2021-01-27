@@ -255,6 +255,91 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
   return extruded_pmesh;
 }
 
+std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
+                                                       double inner_radius, double outer_radius, double height,
+                                                       const MPI_Comm comm)
+{
+  static constexpr int dim                   = 2;
+  static constexpr int num_vertices          = 16;
+  static constexpr int num_elems             = 8;
+  static constexpr int num_boundary_elements = 16;
+
+  double vertices[num_vertices][dim];
+  for (int i = 0; i < 8; i++) {
+    double s       = sin(M_PI_4 * i);
+    double c       = cos(M_PI_4 * i);
+    vertices[i][0] = inner_radius * c;
+    vertices[i][1] = inner_radius * s;
+
+    vertices[i + 8][0] = outer_radius * c;
+    vertices[i + 8][1] = outer_radius * s;
+  }
+
+  int elems[num_elems][4];
+  int boundary_elems[num_boundary_elements][2];
+  for (int i = 0; i < num_elems; i++) {
+    elems[i][0] = i;
+    elems[i][1] = 8 + i;
+    elems[i][2] = 8 + (i + 1) % 8;
+    elems[i][3] = (i + 1) % 8;
+
+    // inner boundary
+    boundary_elems[i][0] = elems[i][3];
+    boundary_elems[i][1] = elems[i][0];
+
+    // outer boundary
+    boundary_elems[i + 8][0] = elems[i][1];
+    boundary_elems[i + 8][1] = elems[i][2];
+  }
+
+  auto mesh = mfem::Mesh(dim, num_vertices, num_elems, num_boundary_elements);
+
+  for (auto vertex : vertices) {
+    mesh.AddVertex(vertex);
+  }
+  for (auto elem : elems) {
+    mesh.AddQuad(elem);
+  }
+  for (auto boundary_elem : boundary_elems) {
+    mesh.AddBdrSegment(boundary_elem);
+  }
+
+  for (int i = 0; i < radial_refinement; i++) {
+    mesh.UniformRefinement();
+  }
+
+  // the coarse mesh is actually a filled octagon
+  // this deforms the vertices slightly to make it
+  // into filled disk instead
+  {
+    int n = mesh.GetNV();
+
+    mfem::Vector new_vertices;
+    mesh.GetVertices(new_vertices);
+    mfem::Vector vertex(dim);
+    for (int i = 0; i < n; i++) {
+      for (int d = 0; d < dim; d++) {
+        vertex(d) = new_vertices[d * n + i];
+      }
+
+      // stretch the octagonal shape into a circle of the appropriate radius
+      double phi = fmod(atan2(vertex(1), vertex(0)) + M_PI, M_PI_4);
+      vertex *= (cos(phi) + (-1.0 + sqrt(2.0)) * sin(phi));
+
+      for (int d = 0; d < dim; d++) {
+        new_vertices[d * n + i] = vertex(d);
+      }
+    }
+    mesh.SetVertices(new_vertices);
+  }
+
+  std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(&mesh, elements_lengthwise, height));
+
+  auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
+
+  return extruded_pmesh;
+}
+
 namespace mesh {
 
 void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
