@@ -224,97 +224,56 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
 
   static constexpr auto qpts = GaussLegendreNodes<Q1D>(0.0, 1.0);
 
-  auto v1d     = Reshape(maps->B.Read(), Q1D, D1D);
-  auto dv1d_dX = Reshape(maps->G.Read(), Q1D, D1D);
   // (NQ x SDIM x DIM x NE)
   auto J = Reshape(J_.Read(), Q1D, Q1D, 2, 2, NE);
   auto W = Reshape(W_.Read(), Q1D, Q1D);
-  auto u = Reshape(u_in_.Read(), D1D, D1D, NE);
-  auto u2 = Reshape(u_in_.Read(), D1D * D1D, NE);
-  auto y = Reshape(y_.ReadWrite(), D1D, D1D, NE);
+  auto u = Reshape(u_in_.Read(), D1D * D1D, NE);
+  auto y = Reshape(y_.ReadWrite(), D1D * D1D, NE);
 
   // MFEM_FORALL(e, NE, {
   for (int e = 0; e < NE; e++) {
-    // loop over quadrature points
-    tensor u_local = make_tensor<D1D * D1D>([&u2, e](int i){ return u2(i, e); });
 
-    tensor< double, D1D, D1D > y_local{};
+    tensor u_local = make_tensor<D1D * D1D>([&u, e](int i){ return u(i, e); });
+
+    tensor< double, D1D * D1D > y_local{};
     for (int qy = 0; qy < Q1D; ++qy) {
       for (int qx = 0; qx < Q1D; ++qx) {
-        double u_q        = 0.0;
-        double du_dX_q[2] = {0.0, 0.0};
-        for (int ix = 0; ix < D1D; ix++) {
-          for (int iy = 0; iy < D1D; iy++) {
-            u_q += u(ix, iy, e) * v1d(qx, ix) * v1d(qy, iy);
-            du_dX_q[0] += u(ix, iy, e) * dv1d_dX(qx, ix) * v1d(qy, iy);
-            du_dX_q[1] += u(ix, iy, e) * v1d(qx, ix) * dv1d_dX(qy, iy);
-          }
-        }
-
         tensor< double, 2> xi{qpts[qx], qpts[qy]};
 
-        std::cout << "1d shape functions: " << std::endl;
-        std::cout << GaussLobattoInterpolation01<D1D>(qpts[qx]) << std::endl;
-        for (int i = 0; i < D1D; i++) {
-          std::cout << v1d(qx, i) << " ";
-        }
-        std::cout << std::endl;
+        auto N = element_type::shape_functions(xi);
+        auto dN_dxi = element_type::shape_function_gradients(xi);
 
-        std::cout << "1d shape function gradients: " << std::endl;
-        std::cout << GaussLobattoInterpolationDerivative01<D1D>(qpts[qx]) << std::endl;
-        for (int i = 0; i < D1D; i++) {
-          std::cout << dv1d_dX(qx, i) << " ";
-        }
-        std::cout << std::endl;
+        auto u_q = dot(u_local, N);
+        auto du_dxi_q = dot(u_local, dN_dxi);
 
-        auto U = dot(u_local, element_type::shape_functions(xi));
-        auto dU_dX = dot(u_local, element_type::shape_function_gradients(xi));
+        tensor< double, 2, 2 > dx_dxi_q = {{
+          {J(qx, qy, 0, 0, e), J(qx, qy, 0, 1, e)},
+          {J(qx, qy, 1, 0, e), J(qx, qy, 1, 1, e)}
+        }};
 
-        std::cout << U << " " << u_q << std::endl;
-        std::cout << dU_dX << " " << du_dX_q[0] << " " << du_dX_q[1] << std::endl;
-        std::cout << std::endl;
+        // chain rule: dx = dx_dxi * dxi
+        double dxi = W(qx, qy);
+        double dx = det(dx_dxi_q) * dxi;
 
-        // du_dx_q = invJ^T * du_dX_q
-        //         = (adjJ^T * du_dX_q) / detJ
-        double J_q[2][2] = {{J(qx, qy, 0, 0, e), J(qx, qy, 0, 1, e)},   // J_q[0][0], J_q[0][1]
-                            {J(qx, qy, 1, 0, e), J(qx, qy, 1, 1, e)}};  // J_q[1][0], J_q[1][1]
-
-        double detJ_q = (J_q[0][0] * J_q[1][1]) - (J_q[0][1] * J_q[1][0]);
-
-        double adjJ[2][2] = {{J_q[1][1], -J_q[0][1]}, {-J_q[1][0], J_q[0][0]}};
-
-        tensor<double, 2> du_dx_q = {(adjJ[0][0] * du_dX_q[0] + adjJ[1][0] * du_dX_q[1]) / detJ_q,
-                                     (adjJ[0][1] * du_dX_q[0] + adjJ[1][1] * du_dX_q[1]) / detJ_q};
+        // chain rule: du_dx = du_dxi * dxi_dx = du_dxi * inv(dx_dxi)
+        auto du_dx_q = dot(du_dxi_q, inv(dx_dxi_q));
 
         auto processed_qf_farg_values = std::apply(
             [=](auto&... a) { return std::make_tuple(u_q, du_dx_q, EvaluateFargValue(a, qx, qy)...); }, qf_farg_values);
 
         auto [f0, f1] = std::apply(qf, processed_qf_farg_values);
 
-        double f0_X = f0 * detJ_q;
+        // chain rule: dN_dx = dN_dxi * dxi_dx = dN_dxi * inv(dx_dxi)
+        // ===>        dN_dx * f1 = dN_dxi * inv(dx_dxi) * f1
+        // we perform (inv(dx_dxi) * f1) first, because f1 has smaller
+        // dimensions than dN_dxi, so it should be less expensive
+        y_local += (N * f0 + dot(dN_dxi, dot(inv(dx_dxi_q), f1))) * dx;
 
-        // f1_X = invJ * f1 * detJ
-        //      = adjJ * f1
-        double f1_X[2] = {
-            adjJ[0][0] * f1[0] + adjJ[0][1] * f1[1],
-            adjJ[1][0] * f1[0] + adjJ[1][1] * f1[1],
-        };
-
-        for (int ix = 0; ix < D1D; ix++) {
-          for (int iy = 0; iy < D1D; iy++) {
-            // accumulate v * f0 + dot(dv_dx, f1)
-            y_local[ix][iy] += (f0_X * v1d(qx, ix) * v1d(qy, iy) + f1_X[0] * dv1d_dX(qx, ix) * v1d(qy, iy) +
-                             f1_X[1] * dv1d_dX(qy, iy) * v1d(qx, ix)) *
-                            W(qx, qy);
-          }
-        }
       }
     }
 
-    for (int ix = 0; ix < D1D; ix++) {
-      for (int iy = 0; iy < D1D; iy++) {
-        y(ix, iy, e) += y_local[ix][iy];
-      }
+    for (int i = 0; i < D1D * D1D; i++) {
+      y(i, e) += y_local[i];
     }
 
   }
