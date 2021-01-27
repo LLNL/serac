@@ -9,11 +9,11 @@ struct finite_element<Geometry::Segment, Family::H1, degree, c> {
   static constexpr int ndof = (p + 1);
 
   static constexpr tensor<double, ndof> shape_functions(double xi) {
-    return GaussLobattoInterpolation<ndof>(xi);
+    return GaussLobattoInterpolation01<ndof>(xi);
   }
 
   static constexpr tensor<double, ndof> shape_function_gradients(double xi) {
-    return GaussLobattoInterpolationDerivative<ndof>(xi);
+    return GaussLobattoInterpolationDerivative01<ndof>(xi);
   }
 
   template <Evaluation op = Evaluation::Interpolate>

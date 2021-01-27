@@ -21,7 +21,8 @@ constexpr tensor<T, n> GaussLegendreNodes(T a = T(0), T b = T(1)) {
 };
 // clang-format on
 
-constexpr int factorial(int n) {
+constexpr int factorial(int n)
+{
   int nfactorial = 1;
   for (int i = 2; i <= n; i++) {
     nfactorial *= i;
@@ -30,7 +31,8 @@ constexpr int factorial(int n) {
 }
 
 template <int n, typename T>
-constexpr tensor<T, n> powers(T x) {
+constexpr tensor<T, n> powers(T x)
+{
   tensor<T, n> values{};
   values[0] = T(1.0);
   for (int i = 1; i < n; i++) {
@@ -44,7 +46,8 @@ constexpr tensor<T, n> powers(T x) {
  * T_n(cos(t)) == cos(n*t)
  */
 template <int n, typename S>
-constexpr tensor<S, n> ChebyshevT(S x) {
+constexpr tensor<S, n> ChebyshevT(S x)
+{
   tensor<S, n> T{};
 
   if (0 < n) T[0] = 1.0;
@@ -61,7 +64,8 @@ constexpr tensor<S, n> ChebyshevT(S x) {
  * sin(t) U_n(cos(t)) == sin((n+1)*t)
  */
 template <int n, typename T>
-tensor<T, n> ChebyshevU(T x) {
+tensor<T, n> ChebyshevU(T x)
+{
   tensor<T, n> U{};
 
   if (0 < n) U[0] = 1.0;
@@ -78,7 +82,8 @@ tensor<T, n> ChebyshevU(T x) {
  * with unit weight function.
  */
 template <int n, typename T>
-tensor<T, n> Legendre(T x) {
+tensor<T, n> Legendre(T x)
+{
   tensor<T, n> P{};
 
   if (0 < n) P[0] = 1.0;
@@ -91,7 +96,8 @@ tensor<T, n> Legendre(T x) {
 }
 
 template <int n, typename T>
-tensor<T, n> Bernstein(T s) {
+tensor<T, n> Bernstein(T s)
+{
   tensor<T, n> B;
 
   T t = 1.0 - s;
@@ -112,7 +118,8 @@ tensor<T, n> Bernstein(T s) {
 }
 
 template <int n, typename T>
-tensor<T, n> GaussLobattoInterpolation(T x) {
+tensor<T, n> GaussLobattoInterpolation(T x)
+{
   if constexpr (n == 2) {
     return {0.5 * (1.0 - x), 0.5 * (1.0 + x)};
   }
@@ -121,17 +128,16 @@ tensor<T, n> GaussLobattoInterpolation(T x) {
   }
   if constexpr (n == 4) {
     static constexpr double s = 2.23606797749978981;
-    return {-0.125 * (x - 1.0) * (5.0 * x * x - 1.0),
-            0.625 * (s * x - 1.0) * (x * x - 1.0),
-            -0.625 * (s * x + 1.0) * (x * x - 1.0),
-            0.125 * (x + 1.0) * (5.0 * x * x - 1.0)};
+    return {-0.125 * (x - 1.0) * (5.0 * x * x - 1.0), 0.625 * (s * x - 1.0) * (x * x - 1.0),
+            -0.625 * (s * x + 1.0) * (x * x - 1.0), 0.125 * (x + 1.0) * (5.0 * x * x - 1.0)};
   }
 
   return tensor<T, n>{};
 }
 
 template <int n, typename T>
-tensor<T, n> GaussLobattoInterpolationDerivative(T x) {
+tensor<T, n> GaussLobattoInterpolationDerivative(T x)
+{
   if constexpr (n == 2) {
     return {-0.5, 0.5};
   }
@@ -140,19 +146,52 @@ tensor<T, n> GaussLobattoInterpolationDerivative(T x) {
   }
   if constexpr (n == 4) {
     static constexpr double s = 2.23606797749978981;
-    return {
-         0.125 * (1.0 + 5.0*(2.0 - 3.0*x)*x),
-         0.125 * (-5.0*(s + x*(2.0 - 3.0*s*x))),
-         0.125 * (5.0*(s - x*(2.0 + 3.0*s*x))),
-         0.125 * (-1.0 + 5.0*x*(2 + 3.0*x))
-    };
+    return {0.125 * (1.0 + 5.0 * (2.0 - 3.0 * x) * x), 0.125 * (-5.0 * (s + x * (2.0 - 3.0 * s * x))),
+            0.125 * (5.0 * (s - x * (2.0 + 3.0 * s * x))), 0.125 * (-1.0 + 5.0 * x * (2 + 3.0 * x))};
   }
 
   return tensor<T, n>{};
 }
 
 template <int n, typename T>
-tensor<T, n> GaussLegendreInterpolation(T x) {
+tensor<T, n> GaussLobattoInterpolation01(T x)
+{
+  if constexpr (n == 2) {
+    return {1.0 - x, x};
+  }
+  if constexpr (n == 3) {
+    return {(-1.0 + x) * (-1.0 + 2.0 * x), -4.0 * (-1.0 + x) * x, x * (-1.0 + 2.0 * x)};
+  }
+  if constexpr (n == 4) {
+    static constexpr double sqrt5 = 2.23606797749978981;  // sqrt5
+    return {-(-1.0 + x) * (1.0 + 5.0 * (-1.0 + x) * x), -0.5 * sqrt5 * (5.0 + sqrt5 - 10.0 * x) * (-1.0 + x) * x,
+            -0.5 * sqrt5 * (-1.0 + x) * x * (-5.0 + sqrt5 + 10.0 * x), x * (1.0 + 5.0 * (-1.0 + x) * x)};
+  }
+
+  return tensor<T, n>{};
+}
+
+template <int n, typename T>
+tensor<T, n> GaussLobattoInterpolationDerivative01(T x)
+{
+  if constexpr (n == 2) {
+    return {-1, 1};
+  }
+  if constexpr (n == 3) {
+    return {-3.0 + 4.0 * x, 4.0 - 8.0 * x, -1.0 + 4.0 * x};
+  }
+  if constexpr (n == 4) {
+    static constexpr double sqrt5 = 2.23606797749978981;
+    return {-6.0 + 5.0 * (4.0 - 3.0 * x) * x, 2.5 * (1.0 + sqrt5 + 2.0 * x * (-1.0 - 3.0 * sqrt5 + 3.0 * sqrt5 * x)),
+            -2.5 * (-1.0 + sqrt5 + 2.0 * x * (1.0 - 3.0 * sqrt5 + 3.0 * sqrt5 * x)), 1.0 + 5.0 * x * (-2.0 + 3.0 * x)};
+  }
+
+  return tensor<T, n>{};
+}
+
+template <int n, typename T>
+tensor<T, n> GaussLegendreInterpolation(T x)
+{
   if constexpr (n == 1) {
     return {1.0};
   }
@@ -162,17 +201,16 @@ tensor<T, n> GaussLegendreInterpolation(T x) {
   }
 
   if constexpr (n == 3) {
-    return {-0.645497224367903 * x + 0.833333333333333 * x * x,
-            1.000000000000000 - 1.666666666666667 * x * x,
+    return {-0.645497224367903 * x + 0.833333333333333 * x * x, 1.000000000000000 - 1.666666666666667 * x * x,
             0.6454972243679028 * x + 0.8333333333333333 * x * x};
   }
 
   return tensor<T, n>{};
 }
 
-
 template <int n, typename T>
-tensor<T, n> GaussLegendreInterpolationDerivative(T x) {
+tensor<T, n> GaussLegendreInterpolationDerivative(T x)
+{
   if constexpr (n == 1) {
     return {0.0};
   }
@@ -182,8 +220,7 @@ tensor<T, n> GaussLegendreInterpolationDerivative(T x) {
   }
 
   if constexpr (n == 3) {
-    return {0.1666666666666667 * (-3.872983346207417 + 10.0 * x),
-            -3.333333333333333 * x,
+    return {0.1666666666666667 * (-3.872983346207417 + 10.0 * x), -3.333333333333333 * x,
             0.1666666666666667 * (3.872983346207417 + 10.0 * x)};
   }
 

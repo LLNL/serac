@@ -203,6 +203,10 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
     switch ((dofs1D << 4) | quad1D) {
       case 0x22:
         return Apply2D<2, 2>(x, y);
+      case 0x33:
+        return Apply2D<3, 3>(x, y);
+      case 0x44:
+        return Apply2D<4, 4>(x, y);
       default:
         MFEM_ASSERT(false, "NOPE");
     }
@@ -218,7 +222,7 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
 
   using element_type = finite_element< ::Geometry::Quadrilateral, Family::H1, static_cast< PolynomialDegree >(D1D-1) >;
 
-  static constexpr auto qpts = GaussLegendreNodes<Q1D>(-1.0, 1.0);
+  static constexpr auto qpts = GaussLegendreNodes<Q1D>(0.0, 1.0);
 
   auto v1d     = Reshape(maps->B.Read(), Q1D, D1D);
   auto dv1d_dX = Reshape(maps->G.Read(), Q1D, D1D);
@@ -248,6 +252,20 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
         }
 
         tensor< double, 2> xi{qpts[qx], qpts[qy]};
+
+        std::cout << "1d shape functions: " << std::endl;
+        std::cout << GaussLobattoInterpolation01<D1D>(qpts[qx]) << std::endl;
+        for (int i = 0; i < D1D; i++) {
+          std::cout << v1d(qx, i) << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "1d shape function gradients: " << std::endl;
+        std::cout << GaussLobattoInterpolationDerivative01<D1D>(qpts[qx]) << std::endl;
+        for (int i = 0; i < D1D; i++) {
+          std::cout << dv1d_dX(qx, i) << " ";
+        }
+        std::cout << std::endl;
 
         auto U = dot(u_local, element_type::shape_functions(xi));
         auto dU_dX = dot(u_local, element_type::shape_function_gradients(xi));

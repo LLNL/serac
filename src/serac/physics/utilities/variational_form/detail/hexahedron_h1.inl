@@ -9,9 +9,9 @@ struct finite_element<Geometry::Hexahedron, Family::H1, degree, c> {
 
   static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
-    auto N_xi   = GaussLobattoInterpolation<p + 1>(xi[0]);
-    auto N_eta  = GaussLobattoInterpolation<p + 1>(xi[1]);
-    auto N_zeta = GaussLobattoInterpolation<p + 1>(xi[2]);
+    auto N_xi   = GaussLobattoInterpolation01<p + 1>(xi[0]);
+    auto N_eta  = GaussLobattoInterpolation01<p + 1>(xi[1]);
+    auto N_zeta = GaussLobattoInterpolation01<p + 1>(xi[2]);
 
     int count = 0;
 
@@ -28,12 +28,12 @@ struct finite_element<Geometry::Hexahedron, Family::H1, degree, c> {
 
   static constexpr tensor<double, ndof, dim> shape_function_gradients(tensor<double, dim> xi)
   {
-    auto N_xi    = GaussLobattoInterpolation<p + 1>(xi[0]);
-    auto N_eta   = GaussLobattoInterpolation<p + 1>(xi[1]);
-    auto N_zeta  = GaussLobattoInterpolation<p + 1>(xi[2]);
-    auto dN_xi   = GaussLobattoInterpolationDerivative<p + 1>(xi[0]);
-    auto dN_eta  = GaussLobattoInterpolationDerivative<p + 1>(xi[1]);
-    auto dN_zeta = GaussLobattoInterpolationDerivative<p + 1>(xi[2]);
+    auto N_xi    = GaussLobattoInterpolation01<p + 1>(xi[0]);
+    auto N_eta   = GaussLobattoInterpolation01<p + 1>(xi[1]);
+    auto N_zeta  = GaussLobattoInterpolation01<p + 1>(xi[2]);
+    auto dN_xi   = GaussLobattoInterpolationDerivative01<p + 1>(xi[0]);
+    auto dN_eta  = GaussLobattoInterpolationDerivative01<p + 1>(xi[1]);
+    auto dN_zeta = GaussLobattoInterpolationDerivative01<p + 1>(xi[2]);
 
     int count = 0;
 
