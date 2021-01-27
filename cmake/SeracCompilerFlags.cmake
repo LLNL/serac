@@ -13,3 +13,6 @@ endif()
 
 # Need to add symbols to dynamic symtab in order to be visible from stacktraces
 string(APPEND CMAKE_EXE_LINKER_FLAGS " -rdynamic")
+
+# Enable warnings for overshadowed variable definitions
+blt_append_custom_compiler_flag(FLAGS_VAR CMAKE_CXX_FLAGS DEFAULT "-Wshadow")
