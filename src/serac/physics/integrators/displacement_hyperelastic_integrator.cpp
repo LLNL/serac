@@ -155,8 +155,8 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
   K_.SetSize(dim);
 
   B_0_.resize(dof);
-  for (int i = 0; i < dof; ++i) {
-    B_0_[i].SetSize(dim + shear_terms_.size(), dim);
+  for (int shp = 0; shp < dof; ++shp) {
+    B_0_[shp].SetSize(dim + shear_terms_.size(), dim);
   }
 
   B_0T.SetSize(dim, dim + shear_terms_.size());
@@ -173,9 +173,9 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
   elmat = 0.0;
   material_.SetTransformation(Ttr);
   SERAC_MARK_LOOP_START(ip_loop_id, "IntegrationPt Loop");
-  for (int i = 0; i < ir->GetNPoints(); i++) {
+  for (int ip_num = 0; ip_num < ir->GetNPoints(); ip_num++) {
     SERAC_MARK_LOOP_ITER(ip_loop_id, i);
-    const mfem::IntegrationPoint& ip = ir->IntPoint(i);
+    const mfem::IntegrationPoint& ip = ir->IntPoint(ip_num);
     Ttr.SetIntPoint(&ip);
     CalcDeformationGradient(el, ip, Ttr);
     CalcBMatrix();
