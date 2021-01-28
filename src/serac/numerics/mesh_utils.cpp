@@ -163,7 +163,7 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int element
 
 std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOptions& options, const MPI_Comm comm)
 {
-  return buildRectangleMesh(options.elements[0], options.elements[1], options.overall_size[0], options.overall_size[2],
+  return buildRectangleMesh(options.elements[0], options.elements[1], options.overall_size[0], options.overall_size[1],
                             comm);
 }
 

@@ -19,7 +19,6 @@ axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::stri
 {
   // Initialize Inlet
   auto luareader = std::make_unique<axom::inlet::LuaReader>();
-  luareader->solState().open_libraries(sol::lib::math);
   luareader->parseFile(input_file_path);
 
   // Store inlet data under its own group
@@ -76,7 +75,7 @@ void defineVectorInputFileSchema(axom::inlet::Table& table)
 
 void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
-  table.addIntArray("attrs", "Boundary attributes to which the BC should be applied").required();
+  table.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
   CoefficientInputOptions::defineInputFileSchema(table);
 }
 
