@@ -378,7 +378,6 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
 
   result.viscosity = base["viscosity"];
 
-
   if (base.contains("initial_displacement")) {
     result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputOptions>();
   }

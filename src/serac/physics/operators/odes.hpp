@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -27,6 +27,17 @@ namespace serac::mfem_ext {
  */
 class SecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
 public:
+  /**
+   * @brief a small number used to compute finite difference approximations
+   * to time derivatives of boundary conditions.
+   *
+   * Note: this is intended to be temporary
+   * Ideally, epsilon should be "small" relative to the characteristic
+   * time of the ODE, but we can't ensure that at present (we don't have
+   * a critical timestep estimate)
+   */
+  static constexpr double epsilon = 0.0001;
+
   /**
    * @brief A set of references to physics-module-owned variables
    * used by the residual operator
@@ -124,24 +135,44 @@ public:
    *
    * @param[inout] x The predicted solution
    * @param[inout] dxdt The predicted rate
-   * @param[inout] t The current time
+   * @param[inout] time The current time
    * @param[inout] dt The desired time step
    *
    * @see mfem::SecondOrderODESolver::Step
    */
-  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt) { ode_solver_->Step(x, dxdt, t, dt); }
+  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, double& dt)
+  {
+    ode_solver_->Step(x, dxdt, time, dt);
+
+    if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
+      U_minus_ = 0.0;
+      U_       = 0.0;
+      U_plus_  = 0.0;
+      for (const auto& bc : bcs_.essentials()) {
+        bc.projectBdrToDofs(U_minus_, t - epsilon);
+        bc.projectBdrToDofs(U_, t);
+        bc.projectBdrToDofs(U_plus_, t + epsilon);
+      }
+
+      auto constrained_dofs = bcs_.allEssentialDofs();
+      for (int i = 0; i < constrained_dofs.Size(); i++) {
+        x[i]    = U_[i];
+        dxdt[i] = (U_plus_[i] - U_minus_[i]) / (2.0 * epsilon);
+      }
+    }
+  }
 
 private:
   /**
    * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
-   * @param[in] t The current time
+   * @param[in] time The current time
    * @param[in] c0 The current time step
    * @param[in] c1 The previous time step
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    * @param[out] d2u_dt2 The second time derivative of u
    */
-  void Solve(const double t, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
+  void Solve(const double time, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
              mfem::Vector& d2u_dt2) const;
 
   /**
@@ -188,6 +219,17 @@ private:
  */
 class FirstOrderODE : public mfem::TimeDependentOperator {
 public:
+  /**
+   * @brief a small number used to compute finite difference approximations
+   * to time derivatives of boundary conditions.
+   *
+   * Note: this is intended to be temporary
+   * Ideally, epsilon should be "small" relative to the characteristic
+   * time of the ODE, but we can't ensure that at present (we don't have
+   * a critical timestep estimate)
+   */
+  static constexpr double epsilon = 0.000001;
+
   /**
    * @brief A set of references to physics-module-owned variables
    * used by the residual operator
@@ -266,12 +308,12 @@ public:
    * @brief Performs a time step
    *
    * @param[inout] x The predicted solution
-   * @param[inout] t The current time
+   * @param[inout] time The current time
    * @param[inout] dt The desired time step
    *
    * @see mfem::ODESolver::Step
    */
-  void Step(mfem::Vector& x, double& t, double& dt) { ode_solver_->Step(x, t, dt); }
+  void Step(mfem::Vector& x, double& time, double& dt) { ode_solver_->Step(x, time, dt); }
 
 private:
   /**

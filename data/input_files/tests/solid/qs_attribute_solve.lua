@@ -6,6 +6,7 @@ epsilon = 0.0001
 dt      = 1.0
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/square.mesh",
     -- serial and parallel refinement levels
