@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -66,6 +66,7 @@ if (ENABLE_GTEST)
         mfem_array_std_algo.cpp
         expr_templates.cpp
         serac_error_handling.cpp
+        serac_odes.cpp
         serac_input.cpp)
 
     foreach(filename ${language_tests})

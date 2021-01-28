@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -48,6 +48,12 @@ enum class TimestepMethod
   SDIRK34,
 
   // options for second order ODEs
+  //
+  // note: we don't have a way to communicate
+  //       parameters to the TimestepMethod,
+  //       right now, so Newmark implies
+  //       (beta = 0.25, gamma = 0.5)
+  Newmark,
   HHTAlpha,
   WBZAlpha,
   AverageAcceleration,
