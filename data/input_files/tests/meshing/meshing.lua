@@ -18,7 +18,6 @@ main_mesh_cuboid = {
 
 main_mesh_rect = {
     type = "generate",
-    -- mesh file
     elements = {x = 3, y = 3},
     ser_ref_levels = 1,
     par_ref_levels = 0,
