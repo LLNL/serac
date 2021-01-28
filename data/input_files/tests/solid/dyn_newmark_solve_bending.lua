@@ -40,7 +40,7 @@ dt      = t_final / nsteps;
 print("t_final = " .. t_final);
 
 -- Solver parameters
-nonlinear_solid = {
+solid = {
     stiffness_solver = {
         linear = {
             type = "iterative",

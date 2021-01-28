@@ -17,7 +17,7 @@ main_mesh = {
 }
 
 -- Solver parameters
-nonlinear_solid = {
+solid = {
     stiffness_solver = {
         linear = {
             type = "iterative",
