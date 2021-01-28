@@ -74,11 +74,11 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
   }
 }
 
-void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt)
+void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, double& dt)
 {
   if (second_order_ode_solver_) {
     // if we used a 2nd order method
-    second_order_ode_solver_->Step(x, dxdt, t, dt);
+    second_order_ode_solver_->Step(x, dxdt, time, dt);
 
     if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
       U_minus_ = 0.0;
@@ -107,7 +107,7 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double
     bx.GetBlock(0) = x;
     bx.GetBlock(1) = dxdt;
 
-    first_order_system_ode_solver_->Step(bx, t, dt);
+    first_order_system_ode_solver_->Step(bx, time, dt);
 
     // Copy back
     x    = bx.GetBlock(0);

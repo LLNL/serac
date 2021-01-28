@@ -145,7 +145,7 @@ public:
    *
    * @see mfem::SecondOrderODESolver::Step
    */
-  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt);
+  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, double& dt);
 
 private:
   /**
@@ -315,15 +315,14 @@ public:
    *
    * @see mfem::ODESolver::Step
    */
-  void Step(mfem::Vector& x, double& t, double& dt)
+  void Step(mfem::Vector& x, double& time, double& dt)
   {
     if (ode_solver_) {
-      ode_solver_->Step(x, t, dt);
+      ode_solver_->Step(x, time, dt);
     } else {
       SLIC_ERROR("ode_solver_ unspecified");
     }
   }
-
 
   /**
    * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve
