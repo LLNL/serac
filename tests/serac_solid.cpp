@@ -24,8 +24,7 @@ using test_utils::InputFileTest;
 TEST_P(InputFileTest, nonlin_solid)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  std::string input_file_path =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/" + GetParam() + ".lua";
+  std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/" + GetParam() + ".lua";
   test_utils::runModuleTest<Solid>(input_file_path);
   MPI_Barrier(MPI_COMM_WORLD);
 }

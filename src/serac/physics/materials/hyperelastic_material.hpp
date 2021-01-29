@@ -106,10 +106,10 @@ protected:
   mutable double mu_, lambda_;
 
   /**
-   * @brief Lame parameters in coefficient form
+   * @brief Shear and bulk modulus in coefficient form
    *
    */
-  mfem::Coefficient *c_mu_, *c_lambda_;
+  mfem::Coefficient *c_mu_, *c_bulk_;
 
   /**
    * @brief The inverse of the right Cauchy-Green deformation tensor
@@ -147,25 +147,36 @@ public:
    * @brief Construct a new Neo Hookean Material object
    *
    * @param[in] dim Dimension of the problem
-   * @param[in] mu Lame parameter mu
-   * @param[in] lambda Lame parameter lambda
+   * @param[in] mu Shear modulus
+   * @param[in] bulk Bulk modulus
    */
-  NeoHookeanMaterial(const int dim, double mu, double lambda) : HyperelasticMaterial(dim), mu_(mu), lambda_(lambda)
+  NeoHookeanMaterial(const int dim, double mu, double bulk)
+      : HyperelasticMaterial(dim), mu_(mu), lambda_(bulk - (2.0 / 3.0) * mu)
   {
-    c_mu_     = nullptr;
-    c_lambda_ = nullptr;
+    c_mu_   = nullptr;
+    c_bulk_ = nullptr;
+
+    getShearTerms(dim, shear_terms_);
+
+    eye_.SetSize(dim);
+    eye_ = 0.0;
+    for (int i = 0; i < dim; ++i) {
+      eye_(i, i) = 1.0;
+    }
   }
 
   /**
    * @brief Construct a new Neo Hookean Material object
    *
    * @param[in] dim Dimension of the problem
-   * @param[in] mu Lame parameter mu
-   * @param[in] lambda Lame parameter lambda
+   * @param[in] mu Shear modulus mu
+   * @param[in] bulk Bulk modulus K
    */
-  NeoHookeanMaterial(const int dim, mfem::Coefficient& mu, mfem::Coefficient& lambda)
-      : HyperelasticMaterial(dim), mu_(0.0), lambda_(0.0), c_mu_(&mu), c_lambda_(&lambda)
+  NeoHookeanMaterial(const int dim, mfem::Coefficient& mu, mfem::Coefficient& bulk)
+      : HyperelasticMaterial(dim), mu_(0.0), lambda_(0.0), c_mu_(&mu), c_bulk_(&bulk)
   {
+    getShearTerms(dim, shear_terms_);
+
     eye_.SetSize(dim);
     eye_ = 0.0;
     for (int i = 0; i < dim; ++i) {

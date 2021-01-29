@@ -100,7 +100,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
   Jrt_.SetSize(dim);
   F_.SetSize(dim);
   C_.SetSize(dim);
-  S_.SetSize(dim);
+  S_.SetSize(dim + shear_terms_.size());
   H_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
   elvect.SetSize(dof * dim);
@@ -153,7 +153,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
   elmat.SetSize(dof * dim);
   C_.SetSize(dim);
-  temp_.SetSize(dim + shear_terms_.size(), dim);
+  temp_.SetSize(dim, dim + shear_terms_.size());
   K_.SetSize(dim);
   H_.SetSize(dim);
 
@@ -188,6 +188,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
     // material stiffness
     for (int n = 0; n < dof; ++n) {
       B_0T.Transpose(B_0_[n]);
+      mfem::Mult(B_0T, T_, temp_);
       for (int m = 0; m < dof; ++m) {
         mfem::Mult(temp_, B_0_[m], K_);
         for (int i = 0; i < dim; ++i) {

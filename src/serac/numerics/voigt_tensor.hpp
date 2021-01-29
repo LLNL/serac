@@ -31,9 +31,9 @@ inline void getShearTerms(const int dim, std::vector<std::pair<int, int>>& shear
 {
   if (shear_terms.size() == 0) {
     if (dim == 2) {
-      shear_terms = {{1, 2}};
+      shear_terms = {{0, 1}};
     } else {
-      shear_terms = {{2, 3}, {1, 3}, {1, 2}};
+      shear_terms = {{1, 2}, {0, 2}, {0, 1}};
     }
   }
 }

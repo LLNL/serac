@@ -15,7 +15,7 @@ namespace serac {
 inline void NeoHookeanMaterial::EvalCoeffs() const
 {
   mu_     = c_mu_->Eval(*Ttr_, Ttr_->GetIntPoint());
-  lambda_ = c_lambda_->Eval(*Ttr_, Ttr_->GetIntPoint());
+  lambda_ = c_bulk_->Eval(*Ttr_, Ttr_->GetIntPoint()) - (2.0 / 3.0) * mu_;
 }
 
 double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& C) const
