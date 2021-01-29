@@ -38,11 +38,11 @@ If you haven't used Docker before, it is recommended that you check out the
 
    .. code-block:: bash
 
-   $ cd /home/serac/serac 
-   $ python ./config-build.py -hc host-configs/docker/<container-host-config>.cmake -bp ../build -ip ../install
-   $ cd ../build
-   $ make -j4
-   $ make test
+      $ cd /home/serac/serac 
+      $ python ./config-build.py -hc host-configs/docker/<container-host-config>.cmake -bp ../build -ip ../install
+      $ cd ../build
+      $ make -j4
+      $ make test
 
 #. You can now make modifications to the code from your host machine (e.g., via a graphical text editor), and use the Docker container
    terminal to recompile/run/test your changes.
