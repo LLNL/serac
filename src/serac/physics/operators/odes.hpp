@@ -147,6 +147,11 @@ public:
    */
   void Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, double& dt);
 
+  /**
+   * @brief Get a reference to the current state
+   */
+  const State GetState() { return state_; }
+
 private:
   /**
    * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
@@ -264,17 +269,6 @@ public:
    *
    */
   FirstOrderODE(int n, FirstOrderODE::State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs);
-
-  /**
-   * @brief Recasts a second order equation as a set of first order equations
-   *
-   * @param[in] n The number of components in each vector of the ODE
-   * @param[in] state The SecondOrderODE state
-   * @param[in] solver The equation solver for the residual equation that is solved at the next time step
-   * @param[in] bcs boundary conditions for the ode
-   *
-   */
-  FirstOrderODE(int n, SecondOrderODE& ode2, const EquationSolver& solver, const BoundaryConditionManager& bcs);
 
   /**
    * @brief Solves the equation du_dt = f(u, t)

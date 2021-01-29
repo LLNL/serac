@@ -189,6 +189,11 @@ public:
   void advanceTimestep(double& dt) override;
 
   /**
+   * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
+   */
+  mfem::Operator& getOutputGradient();
+
+  /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
   virtual ~NonlinearSolid();
@@ -221,11 +226,6 @@ protected:
    * @brief The quasi-static operator for use with the MFEM newton solvers
    */
   std::unique_ptr<mfem::Operator> residual_;
-
-  /**
-   * @brief The time dependent operator for use with the MFEM ODE solvers
-   */
-  std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
 
   /**
    * @brief The viscosity coefficient

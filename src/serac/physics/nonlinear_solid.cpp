@@ -294,6 +294,21 @@ void NonlinearSolid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
+// Get an Operator that computes
+mfem::Operator& NonlinearSolid::getOutputGradient()
+{
+  // This appears to be option dependent
+  if (is_quasistatic_) {
+    // The input to the residual is displacment
+    return residual_->GetGradient(displacement_.trueVec());
+  }
+
+  // Currently the residual constructed uses d2u_dt2 as input,
+  // but this could change?
+
+  return residual_->GetGradient(ode2_.GetState().d2u_dt2);
+}
+
 NonlinearSolid::~NonlinearSolid() {}
 
 void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
