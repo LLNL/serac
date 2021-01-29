@@ -25,13 +25,13 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
 {
   switch (timestepper) {
     case serac::TimestepMethod::Newmark:
-      ode_solver_ = std::make_unique<mfem::NewmarkSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::NewmarkSolver>();
       break;
     case serac::TimestepMethod::HHTAlpha:
-      ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::HHTAlphaSolver>();
       break;
     case serac::TimestepMethod::WBZAlpha:
-      ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::WBZAlphaSolver>();
       break;
     case serac::TimestepMethod::AverageAcceleration:
       // WARNING: apparently mfem's implementation of AverageAccelerationSolver
@@ -44,21 +44,105 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
       // dirichlet constraints
       SLIC_WARNING(
           "Cannot guarantee stability for AverageAccerlation with time-dependent Dirichlet Boundary Conditions");
-      ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
       break;
     case serac::TimestepMethod::LinearAcceleration:
-      ode_solver_ = std::make_unique<mfem::LinearAccelerationSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::LinearAccelerationSolver>();
       break;
     case serac::TimestepMethod::CentralDifference:
-      ode_solver_ = std::make_unique<mfem::CentralDifferenceSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::CentralDifferenceSolver>();
       break;
     case serac::TimestepMethod::FoxGoodwin:
-      ode_solver_ = std::make_unique<mfem::FoxGoodwinSolver>();
+      second_order_ode_solver_ = std::make_unique<mfem::FoxGoodwinSolver>();
+      break;
+    case serac::TimestepMethod::BackwardEuler:
+      first_order_system_ode_solver_ = std::make_unique<mfem::BackwardEulerSolver>();
       break;
     default:
       SLIC_ERROR("Timestep method was not a supported second-order ODE method");
   }
-  ode_solver_->Init(*this);
+
+  if (second_order_ode_solver_) {
+    second_order_ode_solver_->Init(*this);
+  } else if (first_order_system_ode_solver_) {
+    // we need to adjust the width of this operator
+    width *= 2;
+    first_order_system_ode_solver_->Init(*this);
+  } else {
+    // there is no ode_solver
+    SLIC_ERROR("Neither second_order_ode_solver_ nor first_order_system_ode_solver_ specified");
+  }
+}
+
+void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, double& dt)
+{
+  if (second_order_ode_solver_) {
+    // if we used a 2nd order method
+    second_order_ode_solver_->Step(x, dxdt, time, dt);
+
+    if (enforcement_method_ == DirichletEnforcementMethod::FullControl) {
+      U_minus_ = 0.0;
+      U_       = 0.0;
+      U_plus_  = 0.0;
+      for (const auto& bc : bcs_.essentials()) {
+        bc.projectBdrToDofs(U_minus_, t - epsilon);
+        bc.projectBdrToDofs(U_, t);
+        bc.projectBdrToDofs(U_plus_, t + epsilon);
+      }
+
+      auto constrained_dofs = bcs_.allEssentialDofs();
+      for (int i = 0; i < constrained_dofs.Size(); i++) {
+        x[i]    = U_[i];
+        dxdt[i] = (U_plus_[i] - U_minus_[i]) / (2.0 * epsilon);
+      }
+    }
+
+  } else if (first_order_system_ode_solver_) {
+    // Would be better if displacement and velocity were from a block vector?
+    mfem::Array<int> boffsets(3);
+    boffsets[0] = 0;
+    boffsets[1] = x.Size();
+    boffsets[2] = x.Size() + dxdt.Size();
+    mfem::BlockVector bx(boffsets);
+    bx.GetBlock(0) = x;
+    bx.GetBlock(1) = dxdt;
+
+    first_order_system_ode_solver_->Step(bx, time, dt);
+
+    // Copy back
+    x    = bx.GetBlock(0);
+    dxdt = bx.GetBlock(1);
+  } else {
+    SLIC_ERROR("Neither second_order_ode_solver_ nor first_order_system_ode_solver_ specified");
+  }
+}
+
+void SecondOrderODE::ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt)
+{
+  /* A second order o.d.e can be recast as a first order system
+    u_next = u_prev + dt * v_next
+    v_next = v_prev + dt * a_next
+
+    This means:
+    u_next = u_prev + dt * (v_prev + dt * a_next);
+    u_next = (u_prev + dt * v_prev) + dt*dt*a_next
+  */
+
+  // Split u in half and du_dt in half?
+  mfem::Array<int> boffsets(3);
+  boffsets[0] = 0;
+  boffsets[1] = u.Size() / 2;
+  boffsets[2] = u.Size();
+
+  const mfem::BlockVector bu(u.GetData(), boffsets);
+
+  mfem::BlockVector bdu_dt(du_dt.GetData(), boffsets);
+  Solve(t, dt * dt, dt,
+        bu.GetBlock(0) + bu.GetBlock(1) * dt,  // u_next
+        bu.GetBlock(1),                        // v_next
+        bdu_dt.GetBlock(1));                   // a_next
+
+  bdu_dt.GetBlock(0) = bu.GetBlock(1) + dt * bdu_dt.GetBlock(1);
 }
 
 void SecondOrderODE::Solve(const double time, const double c0, const double c1, const mfem::Vector& u,
@@ -129,7 +213,8 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
   state_.d2u_dt2 = d2u_dt2;
 }
 
-FirstOrderODE::FirstOrderODE(int n, State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs)
+FirstOrderODE::FirstOrderODE(int n, FirstOrderODE::State&& state, const EquationSolver& solver,
+                             const BoundaryConditionManager& bcs)
     : mfem::TimeDependentOperator(n, 0.0), state_(std::move(state)), solver_(solver), bcs_(bcs), zero_(n)
 {
   zero_ = 0.0;
