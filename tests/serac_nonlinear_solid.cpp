@@ -100,6 +100,27 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
 
   EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
 
+  // 0 = R(u) + K(u) du
+  // u_sol = u + du
+  // R(u_sol) < exit_tol
+  // -R(u_sol) = K(u_sol) du_sol
+  // R(u_sol + du_sol) < R(u_sol)
+
+  mfem::Vector residual(solid_solver.displacement().gridFunc().Size());
+  residual = solid_solver.getOutputResidual();
+
+  mfem::Vector du(residual.Size());
+
+  mfem::MINRESSolver minres_solver(MPI_COMM_WORLD);
+  minres_solver.SetOperator(solid_solver.getOutputGradient());
+  minres_solver.Mult(residual, du);
+
+  // modify the displacement just to recompute the residual
+  solid_solver.displacement().gridFunc() += du;
+  mfem::Vector residual_lower(residual.Size());
+  residual_lower = solid_solver.getOutputResidual();
+  EXPECT_LE(residual.Norml2(), residual_lower.Norml2());
+
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

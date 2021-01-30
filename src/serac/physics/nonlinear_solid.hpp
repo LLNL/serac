@@ -189,6 +189,11 @@ public:
   void advanceTimestep(double& dt) override;
 
   /**
+   * @brief Get an mfem::Operator that calculates the residual at the current outputState
+   */
+  mfem::Vector getOutputResidual();
+
+  /**
    * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
    */
   mfem::Operator& getOutputGradient();

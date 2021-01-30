@@ -294,6 +294,23 @@ void NonlinearSolid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
+// Evaluate the residual at the current state
+mfem::Vector NonlinearSolid::getOutputResidual()
+{
+  mfem::Vector eval(displacement_.trueVec().Size());
+  // This appears to be option dependent
+  if (is_quasistatic_) {
+    // The input to the residual is displacment
+    residual_->Mult(displacement_.trueVec(), eval);
+  } else {
+    // Currently the residual constructed uses d2u_dt2 as input,
+    // but this could change?
+
+    residual_->Mult(ode2_.GetState().d2u_dt2, eval);
+  }
+  return eval;
+}
+
 // Get an Operator that computes
 mfem::Operator& NonlinearSolid::getOutputGradient()
 {
