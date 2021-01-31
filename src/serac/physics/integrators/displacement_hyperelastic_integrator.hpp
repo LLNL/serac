@@ -120,6 +120,17 @@ private:
   mfem::DenseMatrix F_;
 
   /**
+   * @brief the PK1 Stress
+   *
+   */
+  mfem::DenseMatrix P_;
+
+  /**
+   * @brief the PK2 Stress in tensor form
+   *
+   */
+  mfem::DenseMatrix Smat_;
+  /**
    * @brief right Cauchy-Green deformation tensor
    *
    */

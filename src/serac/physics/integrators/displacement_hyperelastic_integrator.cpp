@@ -23,41 +23,6 @@ void DisplacementHyperelasticIntegrator::CalcDeformationGradient(const mfem::Fin
   MultAtB(PMatI_, DS_, H_);
 
   mfem::Add(1.0, H_, 1.0, eye_, F_);
-  HT_.Transpose(H_);
-
-  C_ = eye_;
-
-  C_ += H_;
-  C_ += HT_;
-
-  mfem::AddMult(HT_, H_, C_);
-}
-
-void DisplacementHyperelasticIntegrator::CalcBMatrix()
-{
-  int dof = DSh_.Height();
-  int dim = DSh_.Width();
-
-  if (geom_nonlin_) {
-    for (int n = 0; n < dof; ++n) {
-      for (int j = 0; j < dim; ++j) {
-        for (int i = 0; i < dim; ++i) {
-          B_0_[n](i, j) = DS_(n, i) * F_(j, i);
-        }
-        for (int i = 0; i < (int)shear_terms_.size(); ++i) {
-          B_0_[n](dim + i, j) = DS_(n, shear_terms_[i].first) * F_(j, shear_terms_[i].second) +
-                                DS_(n, shear_terms_[i].second) * F_(j, shear_terms_[i].first);
-        }
-      }
-    }
-  } else {
-    for (int n = 0; n < dof; ++n) {
-      B_0_[n] = 0.0;
-      for (int i = 0; i < dim; ++i) {
-        B_0_[n](i, i) = DS_(n, i);
-      }
-    }
-  }
 }
 
 double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
@@ -83,7 +48,7 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
     const mfem::IntegrationPoint& ip = ir->IntPoint(i);
     Ttr.SetIntPoint(&ip);
     CalcDeformationGradient(el, ip, Ttr);
-    energy += ip.weight * Ttr.Weight() * material_.EvalW(C_);
+    energy += ip.weight * Ttr.Weight() * material_.EvalW(F_);
   }
 
   return energy;
@@ -101,7 +66,9 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
   F_.SetSize(dim);
   C_.SetSize(dim);
   S_.SetSize(dim + shear_terms_.size());
+  Smat_.SetSize(dim);
   H_.SetSize(dim);
+  P_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
   elvect.SetSize(dof * dim);
   PMatO_.UseExternalData(elvect.GetData(), dof, dim);
@@ -126,15 +93,12 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
     const mfem::IntegrationPoint& ip = ir->IntPoint(i);
     Ttr.SetIntPoint(&ip);
     CalcDeformationGradient(el, ip, Ttr);
-    CalcBMatrix();
 
-    material_.EvalPK2(C_, S_);
+    material_.EvalP(F_, Smat_);
 
-    for (int n = 0; n < dof; ++n) {
-      B_0_[n].MultTranspose(S_, force_);
-      force_ *= ip.weight * Ttr.Weight();
-      PMatO_.SetRow(n, force_);
-    }
+    P_ *= ip.weight * Ttr.Weight();
+    AddMultABt(DS_, Smat_, PMatO_);
+
   }
 }
 
@@ -142,6 +106,26 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
                                                              mfem::ElementTransformation& Ttr,
                                                              const mfem::Vector& elfun, mfem::DenseMatrix& elmat)
 {
+
+  double       diff_step = 1.0e-8;
+  mfem::Vector temp_out_1;
+  mfem::Vector temp_out_2;
+  mfem::Vector temp(elfun.GetData(), elfun.Size());
+
+  elmat.SetSize(elfun.Size(), elfun.Size());
+
+  for (int j = 0; j < temp.Size(); j++) {
+    temp[j] += diff_step;
+    AssembleElementVector(el, Ttr, temp, temp_out_1);
+    temp[j] -= 2.0 * diff_step;
+    AssembleElementVector(el, Ttr, temp, temp_out_2);
+
+    for (int k = 0; k < temp.Size(); k++) {
+      elmat(k, j) = (temp_out_1[k] - temp_out_2[k]) / (2.0 * diff_step);
+    }
+    temp[j] = elfun[j];
+  }
+  /*
   SERAC_MARK_FUNCTION;
 
   int dof = el.GetDof(), dim = el.GetDim();
@@ -216,6 +200,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
     }
   }
   SERAC_MARK_LOOP_END(ip_loop_id);
+  */
 }
 
 }  // namespace serac

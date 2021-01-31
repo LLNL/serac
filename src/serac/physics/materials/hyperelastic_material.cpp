@@ -15,12 +15,13 @@ namespace serac {
 inline void NeoHookeanMaterial::EvalCoeffs() const
 {
   mu_     = c_mu_->Eval(*Ttr_, Ttr_->GetIntPoint());
-  lambda_ = c_bulk_->Eval(*Ttr_, Ttr_->GetIntPoint()) - (2.0 / 3.0) * mu_;
+  bulk_ = c_bulk_->Eval(*Ttr_, Ttr_->GetIntPoint());
 }
 
-double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& C) const
+double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& F) const
 {
-  int dim = C.Width();
+
+  int dim = F.Width();
 
   SLIC_ERROR_IF(dim != 2 && dim != 3, "NeoHookean material used for spatial dimension not 2 or 3!");
 
@@ -28,84 +29,36 @@ double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& C) const
     EvalCoeffs();
   }
 
-  double J = std::sqrt(C.Det());
+  double J = F.Det();
+  double I1_bar = pow(J, -2.0/dim)*(F*F); // \bar{I}_1
 
-  return 0.5 * lambda_ * std::log(J) * std::log(J) - mu_ * std::log(J) + 0.5 * mu_ * (C.Trace() - dim);
+  return 0.5*(mu_*(I1_bar - dim) + bulk_*(J - 1.0)*(J - 1.0));
 }
 
-void NeoHookeanMaterial::EvalPK2(const mfem::DenseMatrix& C, mfem::Vector& S) const
+void NeoHookeanMaterial::EvalP(const mfem::DenseMatrix& F, mfem::DenseMatrix& P) const
 {
-  int dim = C.Width();
+   int dim = F.Width();
 
-  SLIC_ERROR_IF(dim != 2 && dim != 3, "NeoHookean material used for spatial dimension not 2 or 3!");
+   if (c_mu_)
+   {
+      EvalCoeffs();
+   }
 
-  if (c_mu_) {
-    EvalCoeffs();
-  }
+   FadjT_.SetSize(dim);
+   CalcAdjugateTranspose(F, FadjT_);
 
-  double J = std::sqrt(C.Det());
+   double dJ = F.Det();
+   double a  = mu_*pow(dJ, -2.0/dim);
+   double b  = bulk_*(dJ - 1.0) - a*(F*F)/(dim*dJ);
 
-  S.SetSize(dim + shear_terms_.size());
-  S_.SetSize(dim);
-  Cinv_.SetSize(dim);
-
-  CalcInverse(C, Cinv_);
-
-  S_ = 0.0;
-
-  S_.Add(lambda_ * std::log(J), Cinv_);
-  S_.Add(mu_, eye_);
-  S_.Add(-1.0 * mu_, Cinv_);
-
-  getVoigtVectorFromTensor(shear_terms_, S_, S);
+   P = 0.0;
+   P.Add(a, F);
+   P.Add(b, FadjT_);
 }
 
-void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& C, mfem::DenseMatrix& T) const
+void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix&, mfem::DenseMatrix&) const
 {
-  int dim = C.Width();
-
-  SLIC_ERROR_IF(dim != 2 && dim != 3, "NeoHookean material used for spatial dimension not 2 or 3!");
-
-  if (c_mu_) {
-    EvalCoeffs();
-  }
-
-  T.SetSize(dim + shear_terms_.size());
-
-  CalcInverse(C, Cinv_);
-  double J = std::sqrt(C.Det());
-
-  double lambda = lambda_;
-  double mu     = mu_ - lambda * std::log(J);
-
-  auto neo_hookean_stiffness = [=](int i, int j, int k, int l) {
-    return lambda * Cinv_(i, j) * Cinv_(k, l) + mu * (Cinv_(i, k) * Cinv_(j, l) + Cinv_(i, l) * Cinv_(k, j));
-  };
-
-  // Add the volumetric-volumetric terms
-  for (int i = 0; i < dim; ++i) {
-    for (int j = i; j < dim; ++j) {
-      T(i, j) = neo_hookean_stiffness(i, i, j, j);
-    }
-  }
-
-  for (int j = 0; j < (int)shear_terms_.size(); ++j) {
-    for (int i = 0; i < dim; ++i) {
-      // Add the volumetric-shear terms
-      T(i, dim + j) = neo_hookean_stiffness(i, i, shear_terms_[j].first, shear_terms_[j].second);
-    }
-    for (int i = 0; i < j; ++i) {
-      // Add the shear-shear terms
-      T(dim + i, dim + j) = neo_hookean_stiffness(shear_terms_[i].first, shear_terms_[i].second, shear_terms_[j].first,
-                                                  shear_terms_[j].second);
-    }
-  }
-
-  for (int i = 0; i < dim + (int)shear_terms_.size(); ++i) {
-    for (int j = 0; j < i; ++j) {
-      T(i, j) = T(j, i);
-    }
-  }
+  fmt::print("test\n");
 }
 
 }  // namespace serac

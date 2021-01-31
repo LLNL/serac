@@ -62,32 +62,30 @@ public:
    */
   void SetTransformation(mfem::ElementTransformation& Ttr) { Ttr_ = &Ttr; }
 
-  /** @brief
-      @param[in] C  Right Cauchy-Green Deformation Tensor (F^T F) */
-
   /**
    * @brief Evaluate the strain energy density function, W = W(C).
    *
-   * @param[in] C Right Cauchy-Green Deformation Tensor (F^T F)
+   * @param[in] F The deformation gradient
    * @return double Strain energy density
    */
-  virtual double EvalW(const mfem::DenseMatrix& C) const = 0;
+  virtual double EvalW(const mfem::DenseMatrix& F) const = 0;
 
   /**
-   * @brief Evaluate the 2nd Piola-Kirchhoff stress tensor, S = S(C).
+   * @brief Evaluate the 1st Piola-Kirchhoff stress tensor, P = P(F).
    *
-   * @param[in] C Right Cauchy-Green Deformation Tensor (F^T F)
-   * @param[out] S The evaluated 2nd Piola-Kirchhoff stress tensor in Voigt notation.
+   * @param[in] F The deformation gradient
+   * @param[out] P The evaluated PK1 stress
    */
-  virtual void EvalPK2(const mfem::DenseMatrix& C, mfem::Vector& S) const = 0;
+  virtual void EvalP(const mfem::DenseMatrix& C, mfem::DenseMatrix& S) const = 0;
 
   /**
    * @brief Evaluate the derivative of the 1st Piola-Kirchhoff stress tensor in Voigt notation
    * and assemble its contribution to the local gradient matrix 'A'.
-   * @param[in] C     Right Cauchy-Green Deformation Tensor (F^T F)
-   * @param[out] T  Tangent moduli matrix in Voigt notation
+
+   * @param[in] F The deformation gradient
+   * @param[out] T Tangent moduli matrix in Voigt notation
    */
-  virtual void AssembleTangentModuli(const mfem::DenseMatrix& C, mfem::DenseMatrix& T) const = 0;
+  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem::DenseMatrix& T) const = 0;
 };
 
 /**
@@ -103,19 +101,13 @@ protected:
    * @brief Lame parameters in constant form
    *
    */
-  mutable double mu_, lambda_;
+  mutable double mu_, bulk_;
 
   /**
    * @brief Shear and bulk modulus in coefficient form
    *
    */
   mfem::Coefficient *c_mu_, *c_bulk_;
-
-  /**
-   * @brief The inverse of the right Cauchy-Green deformation tensor
-   *
-   */
-  mutable mfem::DenseMatrix Cinv_;
 
   /**
    * @brief The identity matrix
@@ -127,7 +119,7 @@ protected:
    * @brief The 2nd Piola-Kirchoff stress
    *
    */
-  mutable mfem::DenseMatrix S_;
+  mutable mfem::DenseMatrix FadjT_;
 
   /**
    * @brief A vector of pairs of shear terms for Voigt notation
@@ -151,7 +143,7 @@ public:
    * @param[in] bulk Bulk modulus
    */
   NeoHookeanMaterial(const int dim, double mu, double bulk)
-      : HyperelasticMaterial(dim), mu_(mu), lambda_(bulk - (2.0 / 3.0) * mu)
+      : HyperelasticMaterial(dim), mu_(mu), bulk_(bulk)
   {
     c_mu_   = nullptr;
     c_bulk_ = nullptr;
@@ -173,7 +165,7 @@ public:
    * @param[in] bulk Bulk modulus K
    */
   NeoHookeanMaterial(const int dim, mfem::Coefficient& mu, mfem::Coefficient& bulk)
-      : HyperelasticMaterial(dim), mu_(0.0), lambda_(0.0), c_mu_(&mu), c_bulk_(&bulk)
+      : HyperelasticMaterial(dim), mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
   {
     getShearTerms(dim, shear_terms_);
 
@@ -184,32 +176,29 @@ public:
     }
   }
 
-  /** @brief
-      @param[in] C  Right Cauchy-Green Deformation Tensor (F^T F) */
-
   /**
-   * @brief Evaluate the strain energy density function, W = W(C).
+   * @brief Evaluate the strain energy density function, W = W(F).
    *
-   * @param[in] C Right Cauchy-Green Deformation Tensor (F^T F)
+   * @param[in] F The deformation gradient
    * @return double Strain energy density
    */
   virtual double EvalW(const mfem::DenseMatrix& C) const;
 
   /**
-   * @brief Evaluate the 2nd Piola-Kirchhoff stress tensor, S = S(C).
+   * @brief Evaluate the 1st Piola-Kirchhoff stress tensor, P = P(F).
    *
-   * @param[in] C Right Cauchy-Green Deformation Tensor (F^T F)
-   * @param[out] S The evaluated 2nd Piola-Kirchhoff stress tensor in Voigt notation.
+   * @param[in] F The deformation gradient
+   * @param[out] P The evaluated PK1 stress
    */
-  virtual void EvalPK2(const mfem::DenseMatrix& C, mfem::Vector& S) const;
+  virtual void EvalP(const mfem::DenseMatrix& F, mfem::DenseMatrix& S) const;
 
   /**
    * @brief Evaluate the derivative of the 1st Piola-Kirchhoff stress tensor in Voigt notation
    * and assemble its contribution to the local gradient matrix 'A'.
-   * @param[in] C     Right Cauchy-Green Deformation Tensor (F^T F)
-   * @param[out] T  Tangent moduli matrix in Voigt notation
+   * @param[in] F The deformation gradient
+   * @param[out] T Tangent moduli matrix in Voigt notation
    */
-  virtual void AssembleTangentModuli(const mfem::DenseMatrix& C, mfem::DenseMatrix& T) const;
+  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem::DenseMatrix& T) const;
 };
 
 }  // namespace serac
