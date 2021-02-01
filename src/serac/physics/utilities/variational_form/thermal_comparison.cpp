@@ -114,13 +114,10 @@ int main(int argc, char* argv[])
     }
   );
 
-  auto tmp = new HypreBoomerAMG();
-
   CGSolver cg(MPI_COMM_WORLD);
   cg.SetRelTol(1e-10);
   cg.SetMaxIter(2000);
   cg.SetPrintLevel(1);
-  //cg.SetPreconditioner(*tmp);
 
   cg.iterative_mode = 0;
 
@@ -139,8 +136,35 @@ int main(int argc, char* argv[])
 
   x.Distribute(X);
 
+  ParVariationalForm form(&fespace);
+
+  auto tmp = new QFunctionIntegrator(QFunctionIntegrator(
+      [&](auto u, auto du, auto x) {
+        auto f0 = a * u - (100 * x[0] * x[1]);
+        auto f1 = b * du;
+        return std::tuple{f0, f1};
+      }, 0, pmesh));
+
+  form.AddDomainIntegrator(tmp);
+
+  form.SetEssentialBC(ess_bdr);
+
+  ParGridFunction x2(&fespace);
+  Vector X2(fespace.TrueVSize());
+  x2 = 0.0;
+  x2.ProjectBdrCoefficient(boundary_func, ess_bdr);
+
+  newton.SetOperator(form);
+
+  x2.GetTrueDofs(X2);
+  newton.Mult(zero, X2);
+
+  x2.Distribute(X2);
+
   mfem::ConstantCoefficient zero_coef(0.0);
+  std::cout << "error: " << mfem::Vector(x - x2).Norml2() << std::endl;
   std::cout << x.ComputeL2Error(zero_coef) << std::endl;
+  std::cout << x2.ComputeL2Error(zero_coef) << std::endl;
 
   char         vishost[] = "localhost";
   int          visport   = 19916;
@@ -149,9 +173,12 @@ int main(int argc, char* argv[])
   sol_sock.precision(8);
   sol_sock << "solution\n" << pmesh << x << flush;
 
-  MPI_Finalize();
+  socketstream sol_sock2(vishost, visport);
+  sol_sock2 << "parallel " << num_procs << " " << myid << "\n";
+  sol_sock2.precision(8);
+  sol_sock2 << "solution\n" << pmesh << x2 << flush;
 
-  delete tmp;
+  MPI_Finalize();
 
   return 0;
 }
