@@ -102,9 +102,9 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Vectors are expanded to three arguments in Lua (x, y, z)
   // and should be returned as a 3-tuple
-  table.addFunction("vec_coef", axom::inlet::FunctionTag::Vec3D, {axom::inlet::FunctionTag::Vec3D},
+  table.addFunction("vec_coef", axom::inlet::FunctionTag::Vector, {axom::inlet::FunctionTag::Vector},
                     "The function to use for an mfem::VectorFunctionCoefficient");
-  table.addFunction("coef", axom::inlet::FunctionTag::Double, {axom::inlet::FunctionTag::Vec3D},
+  table.addFunction("coef", axom::inlet::FunctionTag::Double, {axom::inlet::FunctionTag::Vector},
                     "The function to use for an mfem::FunctionCoefficient");
   table.addInt("component", "The vector component to which the scalar coefficient should be applied");
 }
@@ -144,15 +144,16 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     const axom::inlet::Table& base)
 {
   if (base.contains("vec_coef")) {
-    auto func     = base["vec_coef"].get<std::function<axom::primal::Vector3D(axom::primal::Vector3D)>>();
+    auto func =
+        base["vec_coef"].get<std::function<axom::inlet::FunctionType::Vector(axom::inlet::FunctionType::Vector)>>();
     auto vec_func = [func(std::move(func))](const mfem::Vector& input, mfem::Vector& output) {
       auto ret = func({input.GetData(), input.Size()});
       // Copy from the primal vector into the MFEM vector
-      std::copy(ret.data(), ret.data() + ret.dimension(), output.GetData());
+      std::copy(ret.vec.data(), ret.vec.data() + input.Size(), output.GetData());
     };
     return {std::move(vec_func), -1};
   } else if (base.contains("coef")) {
-    auto func        = base["coef"].get<std::function<double(axom::primal::Vector3D)>>();
+    auto func        = base["coef"].get<std::function<double(axom::inlet::FunctionType::Vector)>>();
     auto scalar_func = [func(std::move(func))](const mfem::Vector& input) {
       return func({input.GetData(), input.Size()});
     };

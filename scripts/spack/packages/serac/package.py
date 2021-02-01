@@ -112,7 +112,7 @@ class Serac(CMakePackage, CudaPackage):
     # Workaround for concretizer bug
     #depends_on("mfem+sundials", when="+sundials")
     #depends_on("sundials~shared", when="+sundials")
-    depends_on("sundials~shared+hypre")
+    depends_on("sundials~shared+hypre+monitoring")
 
     # Libraries that support +debug
     debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials",
