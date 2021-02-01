@@ -48,14 +48,14 @@ void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatri
 
   double dJ = F.Det();
 
-  double a  = mu_*pow(dJ, -2.0/dim);
-  double b  = bulk_*(dJ - 1.0) - a*(F*F)/(dim*dJ);
+  double a  = mu_*std::pow(dJ, -(2.0 + dim)/dim);
+  double b  = bulk_*(dJ - 1.0) - a*(F*F)/(dim);
 
   mfem::MultABt(F, F, B_);
 
   sigma = 0.0;
 
-  sigma.Add(a/dJ, B_);
+  sigma.Add(a, B_);
 
   for (int i=0; i < dim; ++i) {
     sigma(i,i) += b;
