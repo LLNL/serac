@@ -77,7 +77,7 @@ nonlinear_solid = {
     -- initial conditions
     initial_displacement = {
         vec_coef = function (v)
-            return Vector.new(0, 0, 0)
+            return Vector.new(0, 0)
         end 
     },   
 
@@ -87,7 +87,7 @@ nonlinear_solid = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {2},
             vec_coef = function (v)
-                return Vector.new(0, 0, 0)
+                return Vector.new(0, 0)
             end
         },
     },
