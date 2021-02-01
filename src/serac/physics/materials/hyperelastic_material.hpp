@@ -10,12 +10,11 @@
  * @brief The hyperelastic material models for the solid module
  */
 
-#ifndef HYPERELAS
-#define HYPERELAS
+#pragma once
 
 #include "mfem.hpp"
 
-#include "serac/numerics/voigt_tensor.hpp"
+#include "serac/numerics/array_4D.hpp"
 
 namespace serac {
 
@@ -31,18 +30,13 @@ protected:
    */
   mfem::ElementTransformation* Ttr_;
 
-  /**
-   * @brief The shear terms needed for Voigt tensor notation
-   */
-  std::vector<std::pair<int, int>> shear_terms_;
-
 public:
   /**
    * @brief Construct a new Hyperelastic Material object
    *
    * @param[in] dim The dimension of the problem
    */
-  HyperelasticMaterial(const int dim) : Ttr_(nullptr) { getShearTerms(dim, shear_terms_); }
+  HyperelasticMaterial() : Ttr_(nullptr) { }
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -71,12 +65,12 @@ public:
   virtual double EvalW(const mfem::DenseMatrix& F) const = 0;
 
   /**
-   * @brief Evaluate the 1st Piola-Kirchhoff stress tensor, P = P(F).
+   * @brief Evaluate the Cauchy stress sigma = sigma(F).
    *
    * @param[in] F The deformation gradient
-   * @param[out] P The evaluated PK1 stress
+   * @param[out] sigma The evaluated Cauchy stress
    */
-  virtual void EvalP(const mfem::DenseMatrix& C, mfem::DenseMatrix& S) const = 0;
+  virtual void EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const = 0;
 
   /**
    * @brief Evaluate the derivative of the 1st Piola-Kirchhoff stress tensor in Voigt notation
@@ -116,16 +110,10 @@ protected:
   mutable mfem::DenseMatrix eye_;
 
   /**
-   * @brief The 2nd Piola-Kirchoff stress
+   * @brief The left Cauchy-Green deformation tensor (FF^T)
    *
    */
-  mutable mfem::DenseMatrix FadjT_;
-
-  /**
-   * @brief A vector of pairs of shear terms for Voigt notation
-   *
-   */
-  mutable std::vector<std::pair<int, int>> shear_terms_;
+  mutable mfem::DenseMatrix B_;
 
   /**
    * @brief Evaluate the coefficient.
@@ -143,12 +131,10 @@ public:
    * @param[in] bulk Bulk modulus
    */
   NeoHookeanMaterial(const int dim, double mu, double bulk)
-      : HyperelasticMaterial(dim), mu_(mu), bulk_(bulk)
+      : HyperelasticMaterial(), mu_(mu), bulk_(bulk)
   {
     c_mu_   = nullptr;
     c_bulk_ = nullptr;
-
-    getShearTerms(dim, shear_terms_);
 
     eye_.SetSize(dim);
     eye_ = 0.0;
@@ -165,10 +151,8 @@ public:
    * @param[in] bulk Bulk modulus K
    */
   NeoHookeanMaterial(const int dim, mfem::Coefficient& mu, mfem::Coefficient& bulk)
-      : HyperelasticMaterial(dim), mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
+      : HyperelasticMaterial(), mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
   {
-    getShearTerms(dim, shear_terms_);
-
     eye_.SetSize(dim);
     eye_ = 0.0;
     for (int i = 0; i < dim; ++i) {
@@ -182,7 +166,7 @@ public:
    * @param[in] F The deformation gradient
    * @return double Strain energy density
    */
-  virtual double EvalW(const mfem::DenseMatrix& C) const;
+  virtual double EvalW(const mfem::DenseMatrix& F) const;
 
   /**
    * @brief Evaluate the 1st Piola-Kirchhoff stress tensor, P = P(F).
@@ -190,7 +174,7 @@ public:
    * @param[in] F The deformation gradient
    * @param[out] P The evaluated PK1 stress
    */
-  virtual void EvalP(const mfem::DenseMatrix& F, mfem::DenseMatrix& S) const;
+  virtual void EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const;
 
   /**
    * @brief Evaluate the derivative of the 1st Piola-Kirchhoff stress tensor in Voigt notation
@@ -202,5 +186,3 @@ public:
 };
 
 }  // namespace serac
-
-#endif

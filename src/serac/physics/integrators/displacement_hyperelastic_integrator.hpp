@@ -33,7 +33,6 @@ public:
   explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, const int dim, bool geom_nonlin = true)
       : material_(m), geom_nonlin_(geom_nonlin)
   {
-    getShearTerms(dim, shear_terms_);
     eye_.SetSize(dim);
     eye_ = 0.0;
     for (int i = 0; i < dim; ++i) {
@@ -85,12 +84,6 @@ private:
                                mfem::ElementTransformation& Ttr);
 
   /**
-   * @brief Calculate the B matrix in Voigt notation
-   *
-   */
-  void CalcBMatrix();
-
-  /**
    * @brief The associated hyperelastic model
    */
   serac::HyperelasticMaterial& material_;
@@ -108,6 +101,12 @@ private:
   mfem::DenseMatrix DS_;
 
   /**
+   * @brief gradients of the shape functions in the current configuration (DN_i, Dx_j)
+   *
+   */
+  mfem::DenseMatrix B_;
+
+  /**
    * @brief the Jacobian of the target-to-reference-element transformation.
    *
    */
@@ -120,27 +119,16 @@ private:
   mfem::DenseMatrix F_;
 
   /**
-   * @brief the PK1 Stress
+   * @brief the adjugate of the deformation gradient
    *
    */
-  mfem::DenseMatrix P_;
+  mfem::DenseMatrix Fadj_;
 
   /**
-   * @brief the PK2 Stress in tensor form
+   * @brief the Cauchy stress
    *
    */
-  mfem::DenseMatrix Smat_;
-  /**
-   * @brief right Cauchy-Green deformation tensor
-   *
-   */
-  mfem::DenseMatrix C_;
-
-  /**
-   * @brief Tangent stiffness module in Voigt notation
-   *
-   */
-  mfem::DenseMatrix T_;
+  mfem::DenseMatrix sigma_;
 
   /**
    * @brief Current input state dofs (dof x dim)
@@ -155,22 +143,10 @@ private:
   mfem::DenseMatrix PMatO_;
 
   /**
-   * @brief Temporary matrix for calculating matrix-matrix products
-   *
-   */
-  mfem::DenseMatrix temp_;
-
-  /**
    * @brief Assembled material stiffness contributions
    *
    */
   mfem::DenseMatrix K_;
-
-  /**
-   * @brief B_0T matrix (in Voigt notation) for a specific shape function
-   *
-   */
-  mfem::DenseMatrix B_0T;
 
   /**
    * @brief The displacement gradient
@@ -179,46 +155,16 @@ private:
   mfem::DenseMatrix H_;
 
   /**
-   * @brief The transpose of the displcement gradient
-   *
-   */
-  mfem::DenseMatrix HT_;
-
-  /**
    * @brief The identity matrix
    *
    */
   mfem::DenseMatrix eye_;
 
   /**
-   * @brief The PK2 stress in tensor form
-   *
+   * @brief The determinant of the deformation gradient
+   * 
    */
-  mfem::DenseMatrix S_mat_;
-
-  /**
-   * @brief The vector of shear terms for Voigt notation
-   *
-   */
-  std::vector<std::pair<int, int>> shear_terms_;
-
-  /**
-   * @brief A vector of the Voigt-notation B matrix for each shape function
-   *
-   */
-  std::vector<mfem::DenseMatrix> B_0_;
-
-  /**
-   * @brief The PK2 stress in Voigt notation
-   *
-   */
-  mfem::Vector S_;
-
-  /**
-   * @brief The local contributions to the residual vector
-   *
-   */
-  mfem::Vector force_;
+  double J_;
 
   /**
    * @brief The geometric nonlinearity flag

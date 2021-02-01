@@ -5,16 +5,15 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(numerics_headers
+    array_4D.hpp
     expr_template_impl.hpp
     expr_template_ops.hpp
     mesh_utils.hpp
     vector_expression.hpp
-    voigt_tensor.hpp
     )
 
 set(numerics_sources
     mesh_utils.cpp
-    voigt_tensor.cpp
     )
 
 set(numerics_depends serac_infrastructure)

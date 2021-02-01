@@ -8,7 +8,7 @@
 
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-#include "serac/numerics/voigt_tensor.hpp"
+#include "serac/numerics/array_4D.hpp"
 
 namespace serac {
 
@@ -21,8 +21,8 @@ void DisplacementHyperelasticIntegrator::CalcDeformationGradient(const mfem::Fin
   Mult(DSh_, Jrt_, DS_);
 
   MultAtB(PMatI_, DS_, H_);
-
   mfem::Add(1.0, H_, 1.0, eye_, F_);
+  mfem::CalcAdjugate(F_, Fadj_);
 }
 
 double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
@@ -33,7 +33,6 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
   DSh_.SetSize(dof, dim);
   Jrt_.SetSize(dim);
   F_.SetSize(dim);
-  C_.SetSize(dim);
   H_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
 
@@ -62,22 +61,15 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
 
   DSh_.SetSize(dof, dim);
   DS_.SetSize(dof, dim);
+  B_.SetSize(dof, dim);
   Jrt_.SetSize(dim);
   F_.SetSize(dim);
-  C_.SetSize(dim);
-  S_.SetSize(dim + shear_terms_.size());
-  Smat_.SetSize(dim);
+  Fadj_.SetSize(dim);
   H_.SetSize(dim);
-  P_.SetSize(dim);
+  sigma_.SetSize(dim);
   PMatI_.UseExternalData(elfun.GetData(), dof, dim);
   elvect.SetSize(dof * dim);
   PMatO_.UseExternalData(elvect.GetData(), dof, dim);
-  force_.SetSize(dim);
-
-  B_0_.resize(dof);
-  for (int i = 0; i < dof; ++i) {
-    B_0_[i].SetSize(dim + shear_terms_.size(), dim);
-  }
 
   const mfem::IntegrationRule* ir = IntRule;
   if (!ir) {
@@ -94,11 +86,16 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
     Ttr.SetIntPoint(&ip);
     CalcDeformationGradient(el, ip, Ttr);
 
-    material_.EvalP(F_, Smat_);
+    material_.EvalStress(F_, sigma_);
 
-    P_ *= ip.weight * Ttr.Weight();
-    AddMultABt(DS_, Smat_, PMatO_);
+    sigma_ *= ip.weight * Ttr.Weight();
 
+    if (geom_nonlin_) {
+      mfem::Mult(DS_, Fadj_, B_);
+    } else {
+      B_ = DS_;
+    }
+    mfem::AddMult(B_, sigma_, PMatO_);
   }
 }
 

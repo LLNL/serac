@@ -35,25 +35,31 @@ double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& F) const
   return 0.5*(mu_*(I1_bar - dim) + bulk_*(J - 1.0)*(J - 1.0));
 }
 
-void NeoHookeanMaterial::EvalP(const mfem::DenseMatrix& F, mfem::DenseMatrix& P) const
+void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const
 {
-   int dim = F.Width();
+  int dim = F.Width();
+  B_.SetSize(dim);
+  sigma.SetSize(dim);
 
-   if (c_mu_)
-   {
-      EvalCoeffs();
-   }
+  if (c_mu_)
+  {
+    EvalCoeffs();
+  }
 
-   FadjT_.SetSize(dim);
-   CalcAdjugateTranspose(F, FadjT_);
+  double dJ = F.Det();
 
-   double dJ = F.Det();
-   double a  = mu_*pow(dJ, -2.0/dim);
-   double b  = bulk_*(dJ - 1.0) - a*(F*F)/(dim*dJ);
+  double a  = mu_*pow(dJ, -2.0/dim);
+  double b  = bulk_*(dJ - 1.0) - a*(F*F)/(dim*dJ);
 
-   P = 0.0;
-   P.Add(a, F);
-   P.Add(b, FadjT_);
+  mfem::MultABt(F, F, B_);
+
+  sigma = 0.0;
+
+  sigma.Add(a/dJ, B_);
+
+  for (int i=0; i < dim; ++i) {
+    sigma(i,i) += b;
+  }
 }
 
 void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix&, mfem::DenseMatrix&) const
