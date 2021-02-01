@@ -58,19 +58,23 @@ nonlinear_solid = {
 
     -- initial conditions
     initial_displacement = {
-        vec_coef = function (x, y, z)
-            return 0, 0, 0
-        end  
+        vec_coef = function (v)
+            return Vector.new(0, 0, 0)
+        end 
     },
 
     initial_velocity = {
-        vec_coef = function (x, y, z)
+        vec_coef = function (v)
+            x = v.x
             s = 0.1 / 64
             first = -s * x * x
             last = s * x * x * (8.0 - x)
-            -- FIXME: How can we detect the dimension?
-            return first, 0, last
-        end 
+            if v.dim == 2 then
+                return Vector.new(first, last)
+            else
+                return Vector.new(first, 0, last)
+            end
+        end
     },
 
     -- boundary condition parameters
@@ -78,9 +82,9 @@ nonlinear_solid = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
-            vec_coef = function (x, y, z)
-                return 0, 0, 0
-            end 
+            vec_coef = function (v)
+                return Vector.new(0, 0, 0)
+            end
         },
     },
 }

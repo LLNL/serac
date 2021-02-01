@@ -141,8 +141,6 @@ static void BM_large_expr_MFEM(benchmark::State& state)
   const int rows  = state.range(0);
   auto [lhs, rhs] = sample_vectors(rows);
 
-  mfem::Vector mfem_result(rows);
-
   for (auto _ : state) {
     // This code gets timed
     mfem::Vector mfem_result(rows);
