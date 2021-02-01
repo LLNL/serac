@@ -19,6 +19,15 @@ constexpr tensor<T, n> GaussLegendreNodes(T a = T(0), T b = T(1)) {
   if constexpr (n == 4) return {a + 0.06943184420297371 * (b-a), a + 0.3300094782075719 * (b-a), a + 0.6699905217924281 * (b-a), a + 0.9305681557970263 * (b-a)};
   return tensor<double, n>{};
 };
+
+template <int n, typename T = double >
+constexpr tensor<T, n> GaussLegendreWeights() {
+  if constexpr (n == 1) return {1.000000000000000};
+  if constexpr (n == 2) return {0.500000000000000, 0.500000000000000}; 
+  if constexpr (n == 3) return {0.277777777777778, 0.444444444444444, 0.277777777777778};
+  if constexpr (n == 4) return {0.173927422568727, 0.326072577431273, 0.326072577431273, 0.173927422568727};
+  return tensor<double, n>{};
+};
 // clang-format on
 
 constexpr int factorial(int n)

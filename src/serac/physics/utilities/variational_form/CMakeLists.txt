@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(parvariantionalform_depends mfem mpi)
+set(parvariantionalform_depends serac_physics mfem mpi)
 
 # Add the library first
 set(parvariationalform_headers
@@ -50,6 +50,24 @@ foreach(filename ${parvariationalform_tests})
     blt_add_test(NAME          ${test_name}
                  COMMAND       ${test_name}
                  NUM_MPI_TASKS 1 )
+endforeach()
+
+# Then add the examples/tests
+set(parvariationalform_mpi_tests
+    thermal_comparison.cpp
+    elasticity_comparison.cpp)
+    
+foreach(filename ${parvariationalform_mpi_tests})
+    get_filename_component(test_name ${filename} NAME_WE)
+    
+    blt_add_executable(NAME        ${test_name}
+                       SOURCES     ${filename}
+                       OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                       DEPENDS_ON  gtest serac_parvariationalform ${parvariantionalform_depends}
+                       FOLDER      serac/tests )
+    blt_add_test(NAME          ${test_name}
+                 COMMAND       ${test_name}
+                 NUM_MPI_TASKS 4)
 endforeach()
     
 set(parvariationalform_examples
