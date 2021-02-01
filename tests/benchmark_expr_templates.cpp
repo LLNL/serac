@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -140,8 +140,6 @@ static void BM_large_expr_MFEM(benchmark::State& state)
   // Number of rows is the argument that varies
   const int rows  = state.range(0);
   auto [lhs, rhs] = sample_vectors(rows);
-
-  mfem::Vector mfem_result(rows);
 
   for (auto _ : state) {
     // This code gets timed

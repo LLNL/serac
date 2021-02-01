@@ -9,6 +9,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/integrators/hyperelastic_traction_integrator.hpp"
 #include "serac/integrators/inc_hyperelastic_integrator.hpp"
+#include "serac/integrators/wrapper_integrator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 
@@ -120,6 +121,11 @@ void NonlinearSolid::setTractionBCs(const std::set<int>&                     tra
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
 
+void NonlinearSolid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
+{
+  ext_force_coefs_.push_back(ext_force_coef);
+}
+
 void NonlinearSolid::setHyperelasticMaterialParameters(const double mu, const double K)
 {
   model_ = std::make_unique<mfem::NeoHookeanModel>(mu, K);
@@ -157,6 +163,13 @@ void NonlinearSolid::completeSetup()
   for (auto& nat_bc_data : bcs_.naturals()) {
     H_->AddBdrFaceIntegrator(new mfem_ext::HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
                              nat_bc_data.markers());
+  }
+
+  // Add external forces
+  for (auto& force : ext_force_coefs_) {
+    H_->AddDomainIntegrator(new serac::mfem_ext::LinearToNonlinearFormIntegrator(
+        std::make_shared<mfem::VectorDomainLFIntegrator>(*force),
+        std::make_shared<mfem::ParFiniteElementSpace>(*H_->ParFESpace())));
   }
 
   // Build the dof array lookup tables
@@ -334,7 +347,9 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {
-        {"AverageAcceleration", TimestepMethod::AverageAcceleration}};
+        {"AverageAcceleration", TimestepMethod::AverageAcceleration},
+        {"NewmarkBeta", TimestepMethod::Newmark},
+        {"BackwardEuler", TimestepMethod::BackwardEuler}};
     std::string timestep_method = dynamics["timestepper"];
     SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
     dyn_options.timestepper = timestep_methods.at(timestep_method);
@@ -355,10 +370,12 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
   result.mu = base["mu"];
   result.K  = base["K"];
 
-  result.viscosity = base["viscosity"];
+  if (base.contains("boundary_conds")) {
+    result.boundary_conditions =
+        base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
+  }
 
-  result.boundary_conditions =
-      base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
+  result.viscosity = base["viscosity"];
 
   if (base.contains("initial_displacement")) {
     result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputOptions>();

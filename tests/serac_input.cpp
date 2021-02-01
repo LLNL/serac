@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -74,7 +74,7 @@ TEST_F(InputTest, vec_3d)
 
 TEST_F(InputTest, coef_build_scalar)
 {
-  reader_->parseString("coef_opts = { coef = function(x, y, z) return y * 2 + z end, component = 1}");
+  reader_->parseString("coef_opts = { coef = function(v) return v.y * 2 + v.z end, component = 1}");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -92,7 +92,7 @@ TEST_F(InputTest, coef_build_scalar)
 
 TEST_F(InputTest, coef_build_vec_from_scalar)
 {
-  reader_->parseString("coef_opts = { coef = function(x, y, z) return y * 2 + z end, component = 1}");
+  reader_->parseString("coef_opts = { coef = function(v) return v.y * 2 + v.z end, component = 1}");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -101,7 +101,7 @@ TEST_F(InputTest, coef_build_vec_from_scalar)
 
 TEST_F(InputTest, coef_build_vector)
 {
-  reader_->parseString("coef_opts = { vec_coef = function(x, y, z) return y * 2, z, x end }");
+  reader_->parseString("coef_opts = { vec_coef = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -125,7 +125,7 @@ TEST_F(InputTest, coef_build_vector)
 
 TEST_F(InputTest, coef_build_scalar_from_vec)
 {
-  reader_->parseString("coef_opts = { vec_coef = function(x, y, z) return y * 2, z, x end }");
+  reader_->parseString("coef_opts = { vec_coef = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -135,8 +135,7 @@ TEST_F(InputTest, coef_build_scalar_from_vec)
 }  // namespace serac
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -146,8 +145,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when
-                          // exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
 
   result = RUN_ALL_TESTS();
 
