@@ -16,7 +16,6 @@ void DisplacementHyperelasticIntegrator::CalcDeformationGradient(const mfem::Fin
                                                                  const mfem::IntegrationPoint& ip,
                                                                  mfem::ElementTransformation&  Ttr)
 {
-  
   CalcInverse(Ttr.Jacobian(), Jrt_);
   el.CalcDShape(ip, DSh_);
   Mult(DSh_, Jrt_, DS_);
@@ -26,8 +25,8 @@ void DisplacementHyperelasticIntegrator::CalcDeformationGradient(const mfem::Fin
   MultAtB(PMatI_, DS_, H_);
 
   F_ = H_;
-  for (int i=0; i < dim; ++i) {
-    F_(i,i) += 1.0;
+  for (int i = 0; i < dim; ++i) {
+    F_(i, i) += 1.0;
   }
 
   mfem::CalcInverse(F_, Finv_);
@@ -63,7 +62,7 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
     const mfem::IntegrationPoint& ip = ir->IntPoint(i);
     Ttr.SetIntPoint(&ip);
     CalcDeformationGradient(el, ip, Ttr);
-    energy += ip.weight * Ttr.Weight() * material_.EvalW(F_);
+    energy += ip.weight * Ttr.Weight() * material_.EvalStrainEnergy(F_);
   }
 
   return energy;
@@ -174,7 +173,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
           for (int k = 0; k < dim; ++k) {
             for (int j = 0; j < dim; ++j) {
               for (int l = 0; l < dim; ++l) {
-                elmat(i * dof + a, k * dof + b) += C_(i,j,k,l) * B_(a,j) * B_(b,l) * J * ip.weight * Ttr.Weight();
+                elmat(i * dof + a, k * dof + b) += C_(i, j, k, l) * B_(a, j) * B_(b, l) * J * ip.weight * Ttr.Weight();
               }
             }
           }
@@ -189,7 +188,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
           for (int b = 0; b < dof; ++b) {
             for (int k = 0; k < dim; ++k) {
               for (int j = 0; j < dim; ++j) {
-                elmat(i * dof + a, k * dof + b) -=  J * sigma_(i,j) * B_(a,k) * B_(b,j) * ip.weight * Ttr.Weight();
+                elmat(i * dof + a, k * dof + b) -= J * sigma_(i, j) * B_(a, k) * B_(b, j) * ip.weight * Ttr.Weight();
               }
             }
           }

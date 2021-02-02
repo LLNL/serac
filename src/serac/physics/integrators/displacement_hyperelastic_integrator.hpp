@@ -32,7 +32,8 @@ public:
    */
   explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, bool geom_nonlin = true)
       : material_(m), geom_nonlin_(geom_nonlin)
-  { }
+  {
+  }
 
   /**
    * @brief Computes the integral of W(Jacobian(Trt)) over a target zone
@@ -120,7 +121,7 @@ private:
 
   /**
    * @brief the spatial tangent moduli
-   * 
+   *
    */
   mfem_ext::Array4D<double> C_;
 

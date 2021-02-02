@@ -35,13 +35,13 @@ public:
    * @brief Construct a new Hyperelastic Material object
    *
    */
-  HyperelasticMaterial() : Ttr_(nullptr) {};
+  HyperelasticMaterial() : Ttr_(nullptr) {}
 
   /**
    * @brief Destroy the Hyperelastic Material object
    *
    */
-  virtual ~HyperelasticMaterial() {}
+  virtual ~HyperelasticMaterial() = default;
 
   /// A reference-element to target-element transformation that can be used to
   /// evaluate mfem::Coefficient%s.
@@ -54,14 +54,14 @@ public:
    * @param[in] Ttr The reference-to-target (stress-free) transformation
    */
   void SetTransformation(mfem::ElementTransformation& Ttr) { Ttr_ = &Ttr; }
-  
+
   /**
    * @brief Evaluate the strain energy density function, W = W(F).
    *
    * @param[in] F The deformation gradient
    * @return double Strain energy density
    */
-  virtual double EvalW(const mfem::DenseMatrix& F) const;
+  virtual double EvalStrainEnergy(const mfem::DenseMatrix& F) const = 0;
 
   /**
    * @brief Evaluate the Cauchy stress sigma = sigma(F).
@@ -76,8 +76,8 @@ public:
    * and assemble its contribution to the local gradient matrix 'A'.
 
    * @param[in] F The deformation gradient
-   * @param[out] C Tangent moduli 4D Array in spatial form (C^e_ijkl=(d tau_ij)/(d F_km) * F_lm = J * sigma_ij delta_kl +
-                J * (d sigma_ij)/(d F_km) F_lm )
+   * @param[out] C Tangent moduli 4D Array in spatial form (C^e_ijkl=(d tau_ij)/(d F_km) * F_lm = J * sigma_ij delta_kl
+   + J * (d sigma_ij)/(d F_km) F_lm )
    */
   virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const = 0;
 };
@@ -137,8 +137,7 @@ public:
    * @param[in] mu Shear modulus mu
    * @param[in] bulk Bulk modulus K
    */
-  NeoHookeanMaterial(mfem::Coefficient& mu, mfem::Coefficient& bulk)
-      : mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
+  NeoHookeanMaterial(mfem::Coefficient& mu, mfem::Coefficient& bulk) : mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
   {
   }
 
@@ -148,7 +147,7 @@ public:
    * @param[in] F The deformation gradient
    * @return double Strain energy density
    */
-  virtual double EvalW(const mfem::DenseMatrix& F) const;
+  virtual double EvalStrainEnergy(const mfem::DenseMatrix& F) const;
 
   /**
    * @brief Evaluate the 1st Piola-Kirchhoff stress tensor, P = P(F).
@@ -166,7 +165,7 @@ public:
    */
   virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const;
 
-    /**
+  /**
    * @brief Destroy the Hyperelastic Material object
    *
    */

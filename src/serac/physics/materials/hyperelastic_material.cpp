@@ -18,7 +18,7 @@ inline void NeoHookeanMaterial::EvalCoeffs() const
   bulk_ = c_bulk_->Eval(*Ttr_, Ttr_->GetIntPoint());
 }
 
-double NeoHookeanMaterial::EvalW(const mfem::DenseMatrix& F) const
+double NeoHookeanMaterial::EvalStrainEnergy(const mfem::DenseMatrix& F) const
 {
   int dim = F.Width();
 
