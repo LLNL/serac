@@ -138,12 +138,12 @@ int main(int argc, char* argv[])
 
   ParVariationalForm form(&fespace);
 
-  auto tmp = new QFunctionIntegrator(QFunctionIntegrator(
+  auto tmp = new QFunctionIntegrator(
       [&](auto x, auto u, auto du) {
         auto f0 = a * u - (100 * x[0] * x[1]);
         auto f1 = b * du;
         return std::tuple{f0, f1};
-      }, pmesh));
+      }, pmesh);
 
   form.AddDomainIntegrator(tmp);
 
