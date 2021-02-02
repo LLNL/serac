@@ -79,8 +79,8 @@ nonlinear_solid = {
                 return Vector.new(0, 1.0e-3, 0)
             end
             -- FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-            -- vec_coef = function (x, y, z, t)
-            --     return 0 * t, 1.0e-3 * t, 0 * t
+            -- vec_coef = function (v, t)
+            --     return Vector.new(0, 1.0e-3, 0) * t
             -- end
         },
     },
