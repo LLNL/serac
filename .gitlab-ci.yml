@@ -46,6 +46,9 @@ stages:
       Build and test ${CI_PROJECT_NAME}"
     - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
+  artifacts:
+    reports:
+      junit: _serac_build_and_test_*/build-*/junit.xml
 
 .srun_build_with_deps_script:
   script:
@@ -64,6 +67,9 @@ stages:
     # Autodetects hostconfig created by build_tpls
     - ${EXEC_PREFIX} ${RESOURCES} scripts/llnl/build_src.py -v --automation
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
+  artifacts:
+    reports:
+      junit: _serac_build_and_test_*/build-*/junit.xml
 
 .srun_build_devtools_script:
   script:
