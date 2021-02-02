@@ -7,23 +7,24 @@
 
 #include "finite_element.hpp"
 
-template < int n, int dim >
+template <int n, int dim>
 struct QuadratureRule {
-  array < double, n > weights; 
-  array < tensor< double, dim >, n > points; 
-  constexpr size_t size() const { return n; }
+  array<double, n>              weights;
+  array<tensor<double, dim>, n> points;
+  constexpr size_t              size() const { return n; }
 };
 
-template < ::Geometry g, int Q > 
-constexpr auto GaussQuadratureRule() {
+template <::Geometry g, int Q>
+constexpr auto GaussQuadratureRule()
+{
   auto x = GaussLegendreNodes<Q>(0.0, 1.0);
   auto w = GaussLegendreWeights<Q>();
   if constexpr (g == Geometry::Quadrilateral) {
-    QuadratureRule< Q * Q, 2 > rule{};
-    int count = 0;
+    QuadratureRule<Q * Q, 2> rule{};
+    int                      count = 0;
     for (int j = 0; j < Q; j++) {
       for (int i = 0; i < Q; i++) {
-        rule.points[count] = {x[i], x[j]};
+        rule.points[count]    = {x[i], x[j]};
         rule.weights[count++] = w[i] * w[j];
       }
     }
@@ -31,12 +32,12 @@ constexpr auto GaussQuadratureRule() {
   }
 
   if constexpr (g == Geometry::Hexahedron) {
-    QuadratureRule< Q * Q * Q, 3 > rule{};
-    int count = 0;
+    QuadratureRule<Q * Q * Q, 3> rule{};
+    int                          count = 0;
     for (int k = 0; k < Q; k++) {
       for (int j = 0; j < Q; j++) {
         for (int i = 0; i < Q; i++) {
-          rule.points[count] = {x[i], x[j], x[k]};
+          rule.points[count]    = {x[i], x[j], x[k]};
           rule.weights[count++] = w[i] * w[j] * w[k];
         }
       }
@@ -44,51 +45,6 @@ constexpr auto GaussQuadratureRule() {
     return rule;
   }
 }
-
-#if 0
-template < Geometry g, PolynomialDegree p, int Q, int components > 
-void fem_kernel(const mfem::Vector & values, mfem::Vector & residuals, mfem::Vector & J, mfem::Vector & W, int num_elements) {
-
-  using element_type = finite_element< g, Family::H1, p, components >;
-
-  static constexpr auto quadrature_rule = 
-
-  // for each element
-  for (int e = 0; e < num_elements; e++) {
-
-    // load the values associated with that element
-    reduced_tensor < double, element_type::ndof, components > element_values{};
-    for (int i = 0; i < element_type::ndof; i++) {
-      if constexpr (components == 1) {
-        element_values[i] = values[element_type::ndof * e + i];
-      } else {
-        for (int j = 0; j < components; j++) {
-          element_values[i] = values[components * (element_type::ndof * e + i) + j];
-        }
-      }
-    }
-
-    // loop over quadrature points
-    reduced_tensor < double, element_type::ndof, components > element_residuals{};
-    for (int q = 0; q < Q; q++) {
-
-    }
-
-    // store the element residuals 
-    for (int i = 0; i < element_type::ndof; i++) {
-      if constexpr (components == 1) {
-        residuals[element_type::ndof * e + i] = element_residuals[i];
-      } else {
-        for (int j = 0; j < components; j++) {
-          residuals[components * (element_type::ndof * e + i) + j] = element_residuals[i][j];
-        }
-      }
-    }
-
-  }
-
-}
-#endif
 
 namespace mfem {
 template <typename T>
@@ -203,8 +159,7 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Setup
 }
 
 template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
-auto QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::EvaluateFargValue(const Mesh&  m,
-                                                                                             const int q, 
+auto QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::EvaluateFargValue(const Mesh& m, const int q,
                                                                                              const int e) const
 {
   Vector trip(3);
@@ -230,7 +185,6 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
     }
   }
 }
-
 
 #if 0
 template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
@@ -302,101 +256,95 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
 }
 #else
 
-template<typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
-template<int D1D, int Q1D>
-void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply2D(
-   const Vector &u_in_, Vector &y_) const
+template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
+template <int D1D, int Q1D>
+void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply2D(const Vector& u_in_,
+                                                                                   Vector&       y_) const
 {
-   int NE = ne;
+  int NE = ne;
 
-   auto v1d = Reshape(maps->B.Read(), Q1D, D1D);
-   auto dv1d_dX = Reshape(maps->G.Read(), Q1D, D1D);
-   // (NQ x SDIM x DIM x NE)
-   auto J = Reshape(J_.Read(), Q1D, Q1D, 2, 2, NE);
-   auto W = Reshape(W_.Read(), Q1D, Q1D);
-   auto u = Reshape(u_in_.Read(), D1D, D1D, NE);
-   auto y = Reshape(y_.ReadWrite(), D1D, D1D, NE);
+  using element_type = finite_element<::Geometry::Quadrilateral, Family::H1, static_cast<PolynomialDegree>(D1D - 1)>;
+  static constexpr int dim = element_type::dim;
 
-   // MFEM_FORALL(e, NE, {
-   for (int e = 0; e < NE; e++)
-   {
-      // loop over quadrature points
-      for (int qy = 0; qy < Q1D; ++qy)
-      {
-         for (int qx = 0; qx < Q1D; ++qx)
-         {
-            double u_q = 0.0;
-            double du_dX_q[2] = {0.0};
-            for (int ix = 0; ix < D1D; ix++)
-            {
-               for (int iy = 0; iy < D1D; iy++)
-               {
-                  u_q += u(ix, iy, e) * v1d(qx, ix) * v1d(qy, iy);
-                  du_dX_q[0] += u(ix, iy, e) * dv1d_dX(qx, ix) * v1d(qy, iy);
-                  du_dX_q[1] += u(ix, iy, e) * v1d(qx, ix) * dv1d_dX(qy, iy);
-               }
-            }
+  static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
 
-            // du_dx_q = invJ^T * du_dX_q
-            //         = (adjJ^T * du_dX_q) / detJ
-            double J_q[2][2] = {{J(qx, qy, 0, 0, e),
-                                 J(qx, qy, 0, 1, e)}, // J_q[0][0], J_q[0][1]
-                                {J(qx, qy, 1, 0, e),
-                                 J(qx, qy, 1, 1, e)}}; // J_q[1][0], J_q[1][1]
+  auto v1d     = Reshape(maps->B.Read(), Q1D, D1D);
+  auto dv1d_dX = Reshape(maps->G.Read(), Q1D, D1D);
+  // (NQ x SDIM x DIM x NE)
+  auto J = Reshape(J_.Read(), Q1D, Q1D, 2, 2, NE);
+  //auto W = Reshape(W_.Read(), Q1D, Q1D);
+  //auto u = Reshape(u_in_.Read(), D1D, D1D, NE);
+  auto u = Reshape(u_in_.Read(), D1D * D1D, NE);
+  auto y = Reshape(y_.ReadWrite(), D1D, D1D, NE);
 
-            double detJ_q = (J_q[0][0] * J_q[1][1]) - (J_q[0][1] * J_q[1][0]);
+  // MFEM_FORALL(e, NE, {
+  for (int e = 0; e < NE; e++) {
+    // loop over quadrature points
 
-            double adjJ[2][2] = {{J_q[1][1], -J_q[0][1]},
-                                 {-J_q[1][0], J_q[0][0]}};
+    tensor u_local = make_tensor<D1D * D1D>([&u, e](int i){ return u(i, e); });
 
-            tensor<double, 2> du_dx_q
-               = {(adjJ[0][0] * du_dX_q[0] + adjJ[1][0] * du_dX_q[1]) / detJ_q,
-                  (adjJ[0][1] * du_dX_q[0] + adjJ[1][1] * du_dX_q[1]) / detJ_q};
+    for (int qy = 0; qy < Q1D; ++qy) {
+      for (int qx = 0; qx < Q1D; ++qx) {
 
-            auto processed_qf_farg_values = std::apply(
-               [=](auto &... a) {
-                  return std::make_tuple(u_q,
-                                         du_dx_q,
-                                         EvaluateFargValue(a, qx + Q1D * qy, e)...);
-               },
-               qf_farg_values);
+        int q = qx + Q1D * qy;
 
-            auto [f0, f1] = std::apply(qf, processed_qf_farg_values);
+        auto xi = rule.points[q];
+        auto dxi = rule.weights[q];
 
-            double f0_X = f0 * detJ_q;
+        auto N = element_type::shape_functions(xi);
+        auto dN_dxi = element_type::shape_function_gradients(xi);
 
-            // f1_X = invJ * f1 * detJ
-            //      = adjJ * f1
-            double f1_X[2] = {
-               adjJ[0][0] * f1[0] + adjJ[0][1] * f1[1],
-               adjJ[1][0] * f1[0] + adjJ[1][1] * f1[1],
-            };
+        auto u_q = dot(u_local, N);
+        auto du_dX_q = dot(u_local, dN_dxi);
 
-            for (int ix = 0; ix < D1D; ix++)
-            {
-               for (int iy = 0; iy < D1D; iy++)
-               {
-                  // accumulate v * f0 + dot(dv_dx, f1)
-                  y(ix, iy, e) += (f0_X * v1d(qx, ix) * v1d(qy, iy)
-                                   + f1_X[0] * dv1d_dX(qx, ix) * v1d(qy, iy)
-                                   + f1_X[1] * dv1d_dX(qy, iy) * v1d(qx, ix))
-                                  * W(qx, qy);
-               }
-            }
-         }
+        // auto dx_dxi_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
+        tensor<double, dim, dim> J_q = {
+            {{J(qx, qy, 0, 0, e), J(qx, qy, 0, 1, e)}, {J(qx, qy, 1, 0, e), J(qx, qy, 1, 1, e)}}};
+
+        double detJ_q = det(J_q);
+
+        double adjJ[2][2] = {{J_q[1][1], -J_q[0][1]}, {-J_q[1][0], J_q[0][0]}};
+
+        tensor<double, 2> du_dx_q = {(adjJ[0][0] * du_dX_q[0] + adjJ[1][0] * du_dX_q[1]) / detJ_q,
+                                     (adjJ[0][1] * du_dX_q[0] + adjJ[1][1] * du_dX_q[1]) / detJ_q};
+
+        auto processed_qf_farg_values = std::apply(
+            [=](auto&... a) { return std::make_tuple(u_q, du_dx_q, EvaluateFargValue(a, qx + Q1D * qy, e)...); },
+            qf_farg_values);
+
+        auto [f0, f1] = std::apply(qf, processed_qf_farg_values);
+
+        double f0_X = f0 * detJ_q;
+
+        // f1_X = invJ * f1 * detJ
+        //      = adjJ * f1
+        double f1_X[2] = {
+            adjJ[0][0] * f1[0] + adjJ[0][1] * f1[1],
+            adjJ[1][0] * f1[0] + adjJ[1][1] * f1[1],
+        };
+
+        for (int ix = 0; ix < D1D; ix++) {
+          for (int iy = 0; iy < D1D; iy++) {
+            // accumulate v * f0 + dot(dv_dx, f1)
+            y(ix, iy, e) += (f0_X * v1d(qx, ix) * v1d(qy, iy) + f1_X[0] * dv1d_dX(qx, ix) * v1d(qy, iy) +
+                             f1_X[1] * dv1d_dX(qy, iy) * v1d(qx, ix)) *
+                             dxi;
+          }
+        }
       }
-   }
+    }
+  }
 }
 
-
-//template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
-//template <int D1D, int Q1D>
-//void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply2D(const Vector& u_in_,
+// template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
+// template <int D1D, int Q1D>
+// void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply2D(const Vector& u_in_,
 //                                                                                   Vector&       y_) const
 //{
 //  int NE = ne;
 //
-//  using element_type = finite_element< ::Geometry::Quadrilateral, Family::H1, static_cast< PolynomialDegree >(D1D-1) >;
+//  using element_type = finite_element< ::Geometry::Quadrilateral, Family::H1, static_cast< PolynomialDegree >(D1D-1)
+//  >;
 //
 //  static constexpr auto qpts = GaussLegendreNodes<Q1D>(0.0, 1.0);
 //
@@ -435,7 +383,8 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
 //        auto du_dx_q = dot(du_dxi_q, inv(dx_dxi_q));
 //
 //        auto processed_qf_farg_values = std::apply(
-//            [=](auto&... a) { return std::make_tuple(u_q, du_dx_q, EvaluateFargValue(a, qx, qy)...); }, qf_farg_values);
+//            [=](auto&... a) { return std::make_tuple(u_q, du_dx_q, EvaluateFargValue(a, qx, qy)...); },
+//            qf_farg_values);
 //
 //        auto [f0, f1] = std::apply(qf, processed_qf_farg_values);
 //
@@ -471,19 +420,26 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
                                                                                            const Vector& v_in_,
                                                                                            Vector&       y_) const
 {
-  int NE = ne;
+  int NE             = ne;
+  using element_type = finite_element<::Geometry::Quadrilateral, Family::H1, static_cast<PolynomialDegree>(D1D - 1)>;
+  static constexpr int dim = element_type::dim;
+
+  static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
 
   auto v1d     = Reshape(maps->B.Read(), Q1D, D1D);
   auto dv1d_dX = Reshape(maps->G.Read(), Q1D, D1D);
   // (NQ x SDIM x DIM x NE)
   auto J = Reshape(J_.Read(), Q1D, Q1D, 2, 2, NE);
-  auto W = Reshape(W_.Read(), Q1D, Q1D);
+  //auto W = Reshape(W_.Read(), Q1D, Q1D);
   auto u = Reshape(u_in_.Read(), D1D, D1D, NE);
+  auto U = Reshape(u_in_.Read(), D1D * D1D, NE);
   auto v = Reshape(v_in_.Read(), D1D, D1D, NE);
   auto y = Reshape(y_.ReadWrite(), D1D, D1D, NE);
 
   for (int e = 0; e < NE; e++) {
     // loop over quadrature points
+    tensor u_local = make_tensor<D1D * D1D>([&U, e](int i){ return U(i, e); });
+
     for (int qy = 0; qy < Q1D; ++qy) {
       for (int qx = 0; qx < Q1D; ++qx) {
         double u_q        = 0.0;
@@ -504,12 +460,25 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
           }
         }
 
-        // du_dx_q = invJ^T * du_dX_q
-        //         = (adjJ^T * du_dX_q) / detJ
-        double J_q[2][2] = {{J(qx, qy, 0, 0, e), J(qx, qy, 0, 1, e)},   // J_q[0][0], J_q[0][1]
-                            {J(qx, qy, 1, 0, e), J(qx, qy, 1, 1, e)}};  // J_q[1][0], J_q[1][1]
+        int q = qx + Q1D * qy;
 
-        double detJ_q = (J_q[0][0] * J_q[1][1]) - (J_q[0][1] * J_q[1][0]);
+        auto xi = rule.points[q];
+        auto dxi = rule.weights[q];
+
+        auto N = element_type::shape_functions(xi);
+        auto dN_dxi = element_type::shape_function_gradients(xi);
+
+        auto U_q = dot(u_local, N);
+        auto dU_dxi_q = dot(u_local, dN_dxi);
+
+        u_q = U_q;
+        du_dX_q[0] = dU_dxi_q[0];
+        du_dX_q[1] = dU_dxi_q[1];
+
+        tensor<double, dim, dim> J_q = {
+            {{J(qx, qy, 0, 0, e), J(qx, qy, 0, 1, e)}, {J(qx, qy, 1, 0, e), J(qx, qy, 1, 1, e)}}};
+
+        double detJ_q = det(J_q);
 
         double adjJ[2][2] = {{J_q[1][1], -J_q[0][1]}, {-J_q[1][0], J_q[0][0]}};
 
@@ -521,7 +490,9 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
 
         // compute dF(u, du)/du
         auto processed_qf_farg_values_u = std::apply(
-            [=](auto&... a) { return std::make_tuple(derivative_wrt(u_q), du_dx_q, EvaluateFargValue(a, qx, qy)...); },
+            [=](auto&... a) {
+              return std::make_tuple(derivative_wrt(u_q), du_dx_q, EvaluateFargValue(a, qx + Q1D * qy, e)...);
+            },
             qf_farg_values);
 
         auto [f0u, f1u] = std::apply(qf, processed_qf_farg_values_u);
@@ -542,7 +513,9 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
 
         // compute dF(u, du)/ddu
         auto processed_qf_farg_values_du = std::apply(
-            [=](auto&... a) { return std::make_tuple(u_q, derivative_wrt(du_dx_q), EvaluateFargValue(a, qx, qy)...); },
+            [=](auto&... a) {
+              return std::make_tuple(u_q, derivative_wrt(du_dx_q), EvaluateFargValue(a, qx + Q1D * qy, e)...);
+            },
             qf_farg_values);
 
         auto [f0du, f1du] = std::apply(qf, processed_qf_farg_values_du);
@@ -574,8 +547,7 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
           for (int iy = 0; iy < D1D; iy++) {
             // @TODO: proper comment
             y(ix, iy, e) += (W0_X * v1d(qx, ix) * v1d(qy, iy) + W1_X[0] * dv1d_dX(qx, ix) * v1d(qy, iy) +
-                             W1_X[1] * dv1d_dX(qy, iy) * v1d(qx, ix)) *
-                            W(qx, qy);
+                             W1_X[1] * dv1d_dX(qy, iy) * v1d(qx, ix)) * dxi;
           }
         }
       }
