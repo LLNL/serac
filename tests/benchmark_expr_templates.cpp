@@ -180,25 +180,6 @@ static void BM_large_expr_single_alloc_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-static void BM_large_expr_single_alloc_par_EXPR(benchmark::State& state)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  // Number of rows is the argument that varies
-  const int rows  = state.range(0);
-  auto [lhs, rhs] = sample_vectors(rows);
-
-  mfem::Vector expr_result(rows);
-
-  for (auto _ : state) {
-    // This code gets timed
-    evaluate(lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs, expr_result,
-             MPI_COMM_WORLD);
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
 static void BM_large_expr_single_alloc_hypre_par_EXPR(benchmark::State& state)
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -229,7 +210,6 @@ BENCHMARK(BM_large_expr_MFEM)->RangeMultiplier(2)->Range(10, 10 << 10);
 BENCHMARK(BM_large_expr_single_alloc_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
 
 // Too slow
-BENCHMARK(BM_large_expr_single_alloc_par_EXPR)->RangeMultiplier(2)->Range(10, 10 << 5);
 BENCHMARK(BM_large_expr_single_alloc_hypre_par_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
 
 //------------------------------------------------------------------------------
