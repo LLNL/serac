@@ -295,15 +295,20 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
             print(test_out.read())
 
     # Convert CTest output to JUnit, do not overwrite previous res
-    junit_file = pjoin(build_dir, "junit.xml")
-    xsl_file = "cmake/blt/tests/ctest-to-junit.xsl"
-    ctest_file = pjoin(build_dir, "Testing/*/Test.xml")
+    print("[Checking to see if xsltproc exists...]")
+    test_xsltproc_res = sexe("xsltproc --help", echo=True)
+    if test_xsltproc_res != 0:
+        print("[WARNING: xsltproc does not exist skipping JUnit conversion]")
+    else:
+        junit_file = pjoin(build_dir, "junit.xml")
+        xsl_file = "cmake/blt/tests/ctest-to-junit.xsl"
+        ctest_file = pjoin(build_dir, "Testing/*/Test.xml")
 
-    print("[Converting CTest XML to JUnit XML]")
-    convert_cmd  = "xsltproc -o {0} {1} {2}".format(junit_file, xsl_file, ctest_file)
-    convert_res = sexe(convert_cmd, echo=True)
-    if convert_res != 0:
-        print("[WARNING: Converting to JUnit failed.]")
+        print("[Converting CTest XML to JUnit XML]")
+        convert_cmd  = "xsltproc -o {0} {1} {2}".format(junit_file, xsl_file, ctest_file)
+        convert_res = sexe(convert_cmd, echo=True)
+        if convert_res != 0:
+            print("[WARNING: Converting to JUnit failed.]")
 
     if res != 0:
         print("[ERROR: Tests for host-config: %s failed]\n" % host_config)
