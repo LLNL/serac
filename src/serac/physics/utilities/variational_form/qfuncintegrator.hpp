@@ -4,8 +4,24 @@
 #include "mfem/general/forall.hpp"
 #include "genericintegrator.hpp"
 #include "tensor.hpp"
+#include "tuple_arithmetic.hpp"
 
 #include "finite_element.hpp"
+
+template < typename T >
+struct underlying{
+  using type = void;
+};
+
+template < typename T, int ... n >
+struct underlying < tensor < T, n ... > >{
+  using type = T;
+};
+
+template <>
+struct underlying < double >{
+  using type = double;
+};
 
 template <int n, int dim>
 struct QuadratureRule {
@@ -240,8 +256,6 @@ void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const
 
   static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
 
-  //auto v1d     = Reshape(maps->B.Read(), Q1D, D1D);
-  //auto dv1d_dX = Reshape(maps->G.Read(), Q1D, D1D);
   // (NQ x SDIM x DIM x NE)
   auto J = Reshape(J_.Read(), Q1D, Q1D, 2, 2, NE);
   auto u = Reshape(u_in_.Read(), D1D * D1D, NE);
@@ -277,40 +291,38 @@ void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const
         auto du_dx_q = dot(du_dX_q, inv(J_q));
         auto dv_dx_q = dot(dv_dX_q, inv(J_q));
 
-        // compute dF(u, du)/du
-        auto args0 = std::tuple{IntegrationPointPosition(qx + Q1D * qy, e), derivative_wrt(u_q), du_dx_q};
-        auto [f0u, f1u] = std::apply(qf, args0);
+        auto x = IntegrationPointPosition(qx + Q1D * qy, e);
 
-        double f00 = 0.0;
-        if constexpr (std::is_same_v<decltype(f0u), double>) {
-          f00 = 0.0;
-        } else {
-          f00 = f0u.gradient;
+        auto args = std::tuple_cat(std::tuple{x}, make_dual(u_q, du_dx_q));
+
+        auto [f0, f1] = std::apply(qf, args);
+
+        // the following conditional blocks are to catch the cases where f0 or f1 do not actually
+        // depend on the arguments to the q-function. 
+        // 
+        // In that case, the dual number types will not propagate through to the return statement, 
+        // so the output will be a double or a tensor of doubles, rather than dual < ... >
+        // or tensor< dual < ... >, n ... >. 
+        //
+        // underlying< ... >::type lets us do some metaprogramming to detect this, and
+        // issue a no-op in the event that f0 or f1 does not depend on the input arguments
+        // 
+        // in summary: if the user gives us a function where some of the outputs do not depend on
+        // inputs, we can detect this at compile time and skip unnecessary calculation/storage
+        if constexpr (!std::is_same_v<typename underlying<decltype(f0)>::type, double>) {
+          double f00 = std::get<0>(f0.gradient);
+          tensor<double, 2> f01 = std::get<1>(f0.gradient);
+          y_local += (N * (f00 * v_q + dot(f01, dv_dx_q))) * dx;
         }
 
-        tensor<double, 2> f10;
-        if constexpr (std::is_same_v<decltype(f1u), tensor<double, 2>>) {
-          f10 = {0.0, 0.0};
-        } else {
-          f10 = {f1u[0].gradient, f1u[1].gradient};
+        if constexpr (!std::is_same_v<typename underlying<decltype(f1)>::type, double>) {
+          tensor<double, 2> f10 = {std::get<0>(f1[0].gradient), std::get<0>(f1[1].gradient)};
+          tensor<double, 2, 2> f11{{
+            {std::get<1>(f1[0].gradient)[0], std::get<1>(f1[0].gradient)[1]}, 
+            {std::get<1>(f1[1].gradient)[0], std::get<1>(f1[1].gradient)[1]}
+          }};
+          y_local += dot(dN_dxi, dot(inv(J_q), outer(f10, v_q) + dot(f11, dv_dx_q))) * dx;
         }
-
-        auto args1 = std::tuple{IntegrationPointPosition(qx + Q1D * qy, e), u_q, derivative_wrt(du_dx_q)};
-        auto [f0du, f1du] = std::apply(qf, args1);
-
-        tensor<double, 2> f01;
-        if constexpr (std::is_same_v<decltype(f0du), double>) {
-          f01 = {0.0, 0.0};
-        } else {
-          f01 = f0du.gradient;
-        }
-        tensor<double, 2, 2> f11 = {
-            {{f1du[0].gradient[0], f1du[0].gradient[1]}, {f1du[1].gradient[0], f1du[1].gradient[1]}}};
-
-        double W0 = f00 * v_q + dot(f01, dv_dx_q);
-        tensor W1 = outer(f10, v_q) + dot(f11, dv_dx_q);
-
-        y_local += (N * W0 + dot(dN_dxi, dot(inv(J_q), W1))) * dx;
       }
     }
 

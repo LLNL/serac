@@ -37,6 +37,7 @@ install(TARGETS              serac_parvariationalform
 # Then add the examples/tests
 set(parvariationalform_tests
     test_tensor_ad.cpp
+    tuple_arithmetic_unit_tests.cpp
     tensor_unit_tests.cpp)
     
 foreach(filename ${parvariationalform_tests})
