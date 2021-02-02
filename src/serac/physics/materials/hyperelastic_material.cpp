@@ -47,8 +47,8 @@ void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatri
   // See http://solidmechanics.org/Text/Chapter3_5/Chapter3_5.php for a sample derivation
   double dJ = F.Det();
 
-  double a = mu_ * std::pow(dJ, -(2.0 + dim) / dim);
-  double b = bulk_ * (dJ - 1.0) - a * (F * F) / (dim);
+  double a = mu_ * std::pow(dJ, -(2.0 / dim) - 1.0);
+  double b = bulk_ * (dJ - 1.0) - a * (F * F) / dim;
 
   mfem::MultABt(F, F, B_);
 

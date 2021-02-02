@@ -43,9 +43,11 @@ void DisplacementHyperelasticIntegrator::CalcDeformationGradient(const mfem::Fin
   // If we're including geometric nonlinearities, integrate on the current configuration
   if (geom_nonlin_) {
     mfem::Mult(DS_, Finv_, B_);
-    B_ *= F_.Det();
+    // Calculate the determinant of the deformation gradient
+    J_ = F_.Det();
   } else {
     B_ = DS_;
+    J_ = 1.0;
   }
 }
 
@@ -71,7 +73,7 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
 
     // Calculate the deformation gradent and accumulate the strain energy at the current integration point
     CalcDeformationGradient(el, ip, Ttr);
-    energy += ip.weight * Ttr.Weight() * material_.EvalStrainEnergy(F_);
+    energy += J_ * ip.weight * Ttr.Weight() * material_.EvalStrainEnergy(F_);
   }
 
   return energy;
@@ -119,7 +121,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
     material_.EvalStress(F_, sigma_);
 
     // Accumulate the residual using the Cauchy stress and the B matrix
-    sigma_ *= ip.weight * Ttr.Weight();
+    sigma_ *= J_ * ip.weight * Ttr.Weight();
     mfem::AddMult(B_, sigma_, PMatO_);
   }
 }

@@ -121,8 +121,7 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   axom::sidre::DataStore datastore;
 
   // Initialize Inlet and read input file
-  std::string input_file =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve.lua";
+  std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve.lua";
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
@@ -189,8 +188,7 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   axom::sidre::DataStore datastore;
 
   // Initialize Inlet and read input file
-  std::string input_file =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve_bending.lua";
+  std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve_bending.lua";
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
