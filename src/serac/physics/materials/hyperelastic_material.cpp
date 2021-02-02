@@ -44,6 +44,7 @@ void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatri
     EvalCoeffs();
   }
 
+  // See http://solidmechanics.org/Text/Chapter3_5/Chapter3_5.php for a sample derivation
   double dJ = F.Det();
 
   double a = mu_ * std::pow(dJ, -(2.0 + dim) / dim);
@@ -70,6 +71,7 @@ void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_
 
   double dJ = F.Det();
 
+  // See http://solidmechanics.org/Text/Chapter8_4/Chapter8_4.php for a sample derivation
   double a = mu_ * std::pow(dJ, -2.0 / dim);
   double b = bulk_ * (2.0 * dJ - 1.0) * dJ + a * (2.0 / (dim * dim)) * (F * F);
 

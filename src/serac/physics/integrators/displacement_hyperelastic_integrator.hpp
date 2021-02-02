@@ -144,12 +144,6 @@ private:
   mfem::DenseMatrix PMatO_;
 
   /**
-   * @brief Assembled material stiffness contributions
-   *
-   */
-  mfem::DenseMatrix K_;
-
-  /**
    * @brief The displacement gradient
    *
    */

@@ -23,13 +23,6 @@ namespace serac {
  *
  */
 class HyperelasticMaterial {
-protected:
-  /**
-   * @brief Reference element to stree-free configuration (target) transformation
-   *
-   */
-  mfem::ElementTransformation* Ttr_;
-
 public:
   /**
    * @brief Construct a new Hyperelastic Material object
@@ -80,6 +73,13 @@ public:
    + J * (d sigma_ij)/(d F_km) F_lm )
    */
   virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const = 0;
+
+protected:
+  /**
+   * @brief Reference element to stree-free configuration (target) transformation
+   *
+   */
+  mfem::ElementTransformation* Ttr_;
 };
 
 /**
@@ -90,32 +90,6 @@ public:
  *
  */
 class NeoHookeanMaterial : public HyperelasticMaterial {
-protected:
-  /**
-   * @brief Lame parameters in constant form
-   *
-   */
-  mutable double mu_, bulk_;
-
-  /**
-   * @brief Shear and bulk modulus in coefficient form
-   *
-   */
-  mfem::Coefficient *c_mu_, *c_bulk_;
-
-  /**
-   * @brief The left Cauchy-Green deformation tensor (FF^T)
-   *
-   */
-  mutable mfem::DenseMatrix B_;
-
-  /**
-   * @brief Evaluate the coefficient.
-   * @note The reference-to-target transformation must be set before this call.
-   *
-   */
-  inline void EvalCoeffs() const;
-
 public:
   /**
    * @brief Construct a new Neo Hookean Material object
@@ -145,21 +119,21 @@ public:
    * @brief Evaluate the strain energy density function, W = W(F).
    *
    * @param[in] F The deformation gradient
-   * @return double Strain energy density
+   * @return Strain energy density
    */
   virtual double EvalStrainEnergy(const mfem::DenseMatrix& F) const;
 
   /**
-   * @brief Evaluate the 1st Piola-Kirchhoff stress tensor, P = P(F).
+   * @brief Evaluate the Cauchy stress
    *
    * @param[in] F The deformation gradient
-   * @param[out] P The evaluated PK1 stress
+   * @param[out] sigma The evaluated Cauchy stress
    */
   virtual void EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const;
 
   /**
-   * @brief Evaluate the derivative of the 1st Piola-Kirchhoff stress tensor in Voigt notation
-   * and assemble its contribution to the local gradient matrix 'A'.
+   * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
+   * and assemble its contribution to the 4D array (spatial elasticity tensor)
    * @param[in] F The deformation gradient
    * @param[out] C Tangent moduli 4D Array
    */
@@ -170,6 +144,44 @@ public:
    *
    */
   virtual ~NeoHookeanMaterial() = default;
+
+protected:
+  /**
+   * @brief Shear modulus in constant form
+   *
+   */
+  mutable double mu_;
+
+  /**
+   * @brief Bulk modulus in constant form
+   *
+   */
+  mutable double bulk_;
+
+  /**
+   * @brief Shear modulus in coefficient form
+   *
+   */
+  mfem::Coefficient* c_mu_;
+
+  /**
+   * @brief Bulk modulus in coefficient form
+   *
+   */
+  mfem::Coefficient* c_bulk_;
+
+  /**
+   * @brief The left Cauchy-Green deformation (finger) tensor (FF^T)
+   *
+   */
+  mutable mfem::DenseMatrix B_;
+
+  /**
+   * @brief Evaluate the coefficients
+   * @note The reference-to-target transformation must be set before this call.
+   *
+   */
+  inline void EvalCoeffs() const;
 };
 
 }  // namespace serac
