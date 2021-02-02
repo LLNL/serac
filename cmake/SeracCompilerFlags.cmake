@@ -14,9 +14,9 @@ endif()
 # Need to add symbols to dynamic symtab in order to be visible from stacktraces
 string(APPEND CMAKE_EXE_LINKER_FLAGS " -rdynamic")
 
-# Enable extra warnings and warnings for overshadowed variable definitions
-blt_append_custom_compiler_flag(FLAGS_VAR CMAKE_CXX_FLAGS DEFAULT "-Wshadow -Wall -Wextra")
+# Enable warnings for overshadowed variable definitions
+blt_append_custom_compiler_flag(FLAGS_VAR CMAKE_CXX_FLAGS DEFAULT "-Wshadow")
 
 # Only clang has fine-grained control over the designated initializer warnings
-# This can be removed when C++20 is available
+# This can be added to the GCC flags when C++20 is available
 blt_append_custom_compiler_flag(FLAGS_VAR CMAKE_CXX_FLAGS CLANG "-Wpedantic -Wno-c++20-designator")
