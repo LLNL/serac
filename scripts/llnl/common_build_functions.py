@@ -40,6 +40,8 @@ def sexe(cmd,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)
         res =p.communicate()[0]
+        if isinstance(res, bytes):
+            res = res.decode()
         return p.returncode,res
     elif output_file != None:
         ofile = open(output_file,"w")
