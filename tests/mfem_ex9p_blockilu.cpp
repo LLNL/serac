@@ -501,7 +501,7 @@ int main(int argc, char* argv[])
       *u = *U;
 
       if (myid == 0) {
-        EXPECT_FLOAT_EQ(u->Norml2(), UNMODIFIED_SOLN.at(static_cast<std::size_t>(ti / vis_steps) - 1));
+        EXPECT_DOUBLE_EQ(u->Norml2(), UNMODIFIED_SOLN.at(static_cast<std::size_t>(ti / vis_steps) - 1));
       }
 
       if (visualization) {
