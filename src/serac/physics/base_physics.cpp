@@ -26,7 +26,7 @@ BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
 BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
 {
   order_ = p;
-  gf_initialized_.assign(n, false);
+  gf_initialized_.assign(static_cast<std::size_t>(n), false);
 }
 
 void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)

@@ -38,9 +38,9 @@ static auto build_partitioning(MPI_Comm comm, const int size)
   int rank      = 0;
   MPI_Comm_size(comm, &num_procs);
   MPI_Comm_rank(comm, &rank);
-  bool assumed_partition = HYPRE_AssumedPartitionCheck();
-  auto partitioning      = std::make_unique<int[]>(assumed_partition ? 2 : (num_procs + 1));
-  auto per_proc          = (size / num_procs) + ((size % num_procs != 0) ? 1 : 0);
+  bool      assumed_partition = HYPRE_AssumedPartitionCheck();
+  auto      partitioning = std::make_unique<int[]>(assumed_partition ? 2 : static_cast<std::size_t>(num_procs + 1));
+  const int per_proc     = (size / num_procs) + ((size % num_procs != 0) ? 1 : 0);
 
   if (assumed_partition) {
     auto n_entries  = (rank == num_procs - 1) ? size - ((num_procs - 1) * per_proc) : per_proc;
@@ -48,9 +48,9 @@ static auto build_partitioning(MPI_Comm comm, const int size)
     partitioning[1] = (per_proc * rank) + n_entries;
   } else {
     for (int i = 0; i < num_procs; i++) {
-      partitioning[i] = per_proc * i;
+      partitioning[static_cast<std::size_t>(i)] = per_proc * i;
     }
-    partitioning[num_procs] = size;
+    partitioning[static_cast<std::size_t>(num_procs)] = size;
   }
   return std::make_pair(std::move(partitioning), per_proc * rank);
 }
@@ -65,24 +65,6 @@ TEST(expr_templates, basic_add)
   add(lhs, rhs, mfem_result);
 
   mfem::Vector expr_result = lhs + rhs;
-
-  for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
-TEST(expr_templates, basic_add_parallel)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-  constexpr int size = 10;
-  auto [lhs, rhs]    = sample_vectors(size);
-
-  mfem::Vector mfem_result(size);
-  add(lhs, rhs, mfem_result);
-
-  mfem::Vector expr_result(size);
-  evaluate(lhs + rhs, expr_result, MPI_COMM_WORLD);
 
   for (int i = 0; i < size; i++) {
     EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
