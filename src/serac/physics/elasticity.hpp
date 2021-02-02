@@ -88,6 +88,11 @@ public:
   void completeSetup() override;
 
   /**
+   * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
+   */
+  mfem::Operator& getOutputGradient();
+
+  /**
    * @brief The destructor
    */
   virtual ~Elasticity();

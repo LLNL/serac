@@ -124,6 +124,8 @@ void Elasticity::QuasiStaticSolve()
   K_inv_.Mult(*bc_rhs_, displacement_.trueVec());
 }
 
+mfem::Operator& Elasticity::getOutputGradient() { return *K_mat_; }
+
 Elasticity::~Elasticity() {}
 
 }  // namespace serac
