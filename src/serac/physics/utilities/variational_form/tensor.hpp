@@ -11,6 +11,7 @@ struct tensor;
 
 template < typename T >
 struct tensor<T> { 
+  using type = T;
   static constexpr int ndim = 0;
   static constexpr int shape[1] = {0};
   constexpr auto& operator()(array< int, ndim >) { return value; }
@@ -21,6 +22,7 @@ struct tensor<T> {
 
 template <typename T, int n>
 struct tensor<T, n> {
+  using type = T;
   static constexpr int ndim = 1;
   static constexpr int shape[ndim] = {n};
   template < typename S, typename = std::enable_if_t<std::is_integral<S>::value> > 
@@ -37,6 +39,7 @@ struct tensor<T, n> {
 
 template <typename T, int first, int... rest>
 struct tensor<T, first, rest...> {
+  using type = T;
   static constexpr int ndim = 1 + sizeof ... (rest);
   static constexpr int shape[ndim] = {first, rest...};
   template < typename S, typename = std::enable_if_t<std::is_integral<S>::value> > 
