@@ -34,9 +34,8 @@ public:
   /**
    * @brief Construct a new Hyperelastic Material object
    *
-   * @param[in] dim The dimension of the problem
    */
-  HyperelasticMaterial() : Ttr_(nullptr) { }
+  HyperelasticMaterial() : Ttr_(nullptr) {};
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -55,14 +54,14 @@ public:
    * @param[in] Ttr The reference-to-target (stress-free) transformation
    */
   void SetTransformation(mfem::ElementTransformation& Ttr) { Ttr_ = &Ttr; }
-
+  
   /**
-   * @brief Evaluate the strain energy density function, W = W(C).
+   * @brief Evaluate the strain energy density function, W = W(F).
    *
    * @param[in] F The deformation gradient
    * @return double Strain energy density
    */
-  virtual double EvalW(const mfem::DenseMatrix& F) const = 0;
+  virtual double EvalW(const mfem::DenseMatrix& F) const;
 
   /**
    * @brief Evaluate the Cauchy stress sigma = sigma(F).
@@ -77,9 +76,10 @@ public:
    * and assemble its contribution to the local gradient matrix 'A'.
 
    * @param[in] F The deformation gradient
-   * @param[out] T Tangent moduli matrix in Voigt notation
+   * @param[out] C Tangent moduli 4D Array in spatial form (C^e_ijkl=(d tau_ij)/(d F_km) * F_lm = J * sigma_ij delta_kl +
+                J * (d sigma_ij)/(d F_km) F_lm )
    */
-  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem::DenseMatrix& T) const = 0;
+  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const = 0;
 };
 
 /**
@@ -104,12 +104,6 @@ protected:
   mfem::Coefficient *c_mu_, *c_bulk_;
 
   /**
-   * @brief The identity matrix
-   *
-   */
-  mutable mfem::DenseMatrix eye_;
-
-  /**
    * @brief The left Cauchy-Green deformation tensor (FF^T)
    *
    */
@@ -130,17 +124,10 @@ public:
    * @param[in] mu Shear modulus
    * @param[in] bulk Bulk modulus
    */
-  NeoHookeanMaterial(const int dim, double mu, double bulk)
-      : HyperelasticMaterial(), mu_(mu), bulk_(bulk)
+  NeoHookeanMaterial(double mu, double bulk) : mu_(mu), bulk_(bulk)
   {
     c_mu_   = nullptr;
     c_bulk_ = nullptr;
-
-    eye_.SetSize(dim);
-    eye_ = 0.0;
-    for (int i = 0; i < dim; ++i) {
-      eye_(i, i) = 1.0;
-    }
   }
 
   /**
@@ -150,14 +137,9 @@ public:
    * @param[in] mu Shear modulus mu
    * @param[in] bulk Bulk modulus K
    */
-  NeoHookeanMaterial(const int dim, mfem::Coefficient& mu, mfem::Coefficient& bulk)
-      : HyperelasticMaterial(), mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
+  NeoHookeanMaterial(mfem::Coefficient& mu, mfem::Coefficient& bulk)
+      : mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
   {
-    eye_.SetSize(dim);
-    eye_ = 0.0;
-    for (int i = 0; i < dim; ++i) {
-      eye_(i, i) = 1.0;
-    }
   }
 
   /**
@@ -180,9 +162,15 @@ public:
    * @brief Evaluate the derivative of the 1st Piola-Kirchhoff stress tensor in Voigt notation
    * and assemble its contribution to the local gradient matrix 'A'.
    * @param[in] F The deformation gradient
-   * @param[out] T Tangent moduli matrix in Voigt notation
+   * @param[out] C Tangent moduli 4D Array
    */
-  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem::DenseMatrix& T) const;
+  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const;
+
+    /**
+   * @brief Destroy the Hyperelastic Material object
+   *
+   */
+  virtual ~NeoHookeanMaterial() = default;
 };
 
 }  // namespace serac

@@ -30,15 +30,9 @@ public:
    *
    * @param[in] m  HyperelasticModel that will be integrated.
    */
-  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, const int dim, bool geom_nonlin = true)
+  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, bool geom_nonlin = true)
       : material_(m), geom_nonlin_(geom_nonlin)
-  {
-    eye_.SetSize(dim);
-    eye_ = 0.0;
-    for (int i = 0; i < dim; ++i) {
-      eye_(i, i) = 1.0;
-    }
-  }
+  { }
 
   /**
    * @brief Computes the integral of W(Jacobian(Trt)) over a target zone
@@ -119,10 +113,16 @@ private:
   mfem::DenseMatrix F_;
 
   /**
-   * @brief the adjugate of the deformation gradient
+   * @brief the inverse of the deformation gradient
    *
    */
-  mfem::DenseMatrix Fadj_;
+  mfem::DenseMatrix Finv_;
+
+  /**
+   * @brief the spatial tangent moduli
+   * 
+   */
+  mfem_ext::Array4D<double> C_;
 
   /**
    * @brief the Cauchy stress
@@ -155,14 +155,8 @@ private:
   mfem::DenseMatrix H_;
 
   /**
-   * @brief The identity matrix
-   *
-   */
-  mfem::DenseMatrix eye_;
-
-  /**
    * @brief The determinant of the deformation gradient
-   * 
+   *
    */
   double J_;
 

@@ -128,7 +128,7 @@ void Solid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef
 
 void Solid::setHyperelasticMaterialParameters(const double mu, const double K)
 {
-  material_ = std::make_unique<serac::NeoHookeanMaterial>(mesh_->Dimension(), mu, K);
+  material_ = std::make_unique<serac::NeoHookeanMaterial>(mu, K);
 }
 
 void Solid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
@@ -153,7 +153,7 @@ void Solid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  H_->AddDomainIntegrator(new DisplacementHyperelasticIntegrator(*material_, mesh_->Dimension(), geom_nonlin_));
+  H_->AddDomainIntegrator(new DisplacementHyperelasticIntegrator(*material_, geom_nonlin_));
 
   // Add the traction integrator
   for (auto& nat_bc_data : bcs_.naturals()) {
