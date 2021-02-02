@@ -57,14 +57,43 @@ struct supported_type<ParMesh> {
   static constexpr bool value = true;
 };
 
-template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
+template <typename qfunc_type>
 class QFunctionIntegrator : public GenericIntegrator {
 public:
-  QFunctionIntegrator(qfunc_type f, qfunc_grad_type f_grad, qfunc_args_type const&... fargs);
+  QFunctionIntegrator(qfunc_type f, Mesh & m) : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), mesh(m) {}
 
-  QFunctionIntegrator(qfunc_type f, qfunc_args_type const&... fargs);
+  void Setup(const FiniteElementSpace& fes) override {
+    // Assuming the same element type
+    fespace    = &fes;
+    Mesh* mesh = fes.GetMesh();
+    if (mesh->GetNE() == 0) {
+      return;
+    }
+    const FiniteElement& el = *fes.GetFE(0);
+    // SERAC EDIT BEGIN
+    // ElementTransformation *T = mesh->GetElementTransformation(0);
+    // SERAC EDIT END
+    const IntegrationRule* ir = nullptr;
+    if (!IntRule) {
+      IntRule = &IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+    }
+    ir = IntRule;
 
-  void Setup(const FiniteElementSpace& fes) override;
+    dim    = mesh->Dimension();
+    ne     = fes.GetMesh()->GetNE();
+    nq     = ir->GetNPoints();
+    geom   = mesh->GetGeometricFactors(*ir, GeometricFactors::COORDINATES | GeometricFactors::JACOBIANS);
+    maps   = &el.GetDofToQuad(*ir, DofToQuad::TENSOR);
+    dofs1D = maps->ndof;
+    quad1D = maps->nqpt;
+    //    pa_data.SetSize(ne * nq, Device::GetDeviceMemoryType());
+
+    W_.SetSize(nq, Device::GetDeviceMemoryType());
+    W_.GetMemory().CopyFrom(ir->GetWeights().GetMemory(), nq);
+
+    // J.SetSize(ne * nq, Device::GetDeviceMemoryType());
+    J_ = geom->J;
+  };
 
   void Apply(const Vector&, Vector&) const override;
 
@@ -78,7 +107,7 @@ protected:
   template <int D1D, int Q1D>
   void ApplyGradient2D(const Vector& u_in_, const Vector& v_in_, Vector& y_) const;
 
-  auto EvaluateFargValue(const Mesh& m, const int q, const int e) const;
+  auto IntegrationPointPosition(const int q, const int e) const;
 
   const FiniteElementSpace* fespace;
   const DofToQuad*          maps;  ///< Not owned
@@ -90,87 +119,21 @@ protected:
   Vector W_;
 
   qfunc_type                     qf;
-  qfunc_grad_type                qf_grad;
-  std::tuple<qfunc_args_type...> qf_farg_values;
+  Mesh & mesh;
 };
 
-template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
-QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::QFunctionIntegrator(
-    qfunc_type f, qfunc_grad_type df, qfunc_args_type const&... fargs)
-    : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), qf_grad(df), qf_farg_values(std::tuple{fargs...})
-{
-  static_assert((supported_type<qfunc_args_type>::value && ...),
-                "Type not supported for parameter expansion. See "
-                "documentation for supported types.");
-}
-
-template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
-QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::QFunctionIntegrator(
-    qfunc_type f, qfunc_args_type const&... fargs)
-    : GenericIntegrator(nullptr),
-      maps(nullptr),
-      geom(nullptr),
-      qf(f),
-      qf_grad(qfunc_grad_type{}),
-      qf_farg_values(std::tuple{fargs...})
-{
-  static_assert((supported_type<qfunc_args_type>::value && ...),
-                "Type not supported for parameter expansion. See "
-                "documentation for supported types.");
-}
-
-template <typename qfunc_type, typename... qfunc_args_type>
-QFunctionIntegrator(qfunc_type, qfunc_args_type const&...)
-    -> QFunctionIntegrator<qfunc_type, int, qfunc_args_type const&...>;
-
-template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
-void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Setup(const FiniteElementSpace& fes)
-{
-  // Assuming the same element type
-  fespace    = &fes;
-  Mesh* mesh = fes.GetMesh();
-  if (mesh->GetNE() == 0) {
-    return;
-  }
-  const FiniteElement& el = *fes.GetFE(0);
-  // SERAC EDIT BEGIN
-  // ElementTransformation *T = mesh->GetElementTransformation(0);
-  // SERAC EDIT END
-  const IntegrationRule* ir = nullptr;
-  if (!IntRule) {
-    IntRule = &IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-  }
-  ir = IntRule;
-
-  dim    = mesh->Dimension();
-  ne     = fes.GetMesh()->GetNE();
-  nq     = ir->GetNPoints();
-  geom   = mesh->GetGeometricFactors(*ir, GeometricFactors::COORDINATES | GeometricFactors::JACOBIANS);
-  maps   = &el.GetDofToQuad(*ir, DofToQuad::TENSOR);
-  dofs1D = maps->ndof;
-  quad1D = maps->nqpt;
-  //    pa_data.SetSize(ne * nq, Device::GetDeviceMemoryType());
-
-  W_.SetSize(nq, Device::GetDeviceMemoryType());
-  W_.GetMemory().CopyFrom(ir->GetWeights().GetMemory(), nq);
-
-  // J.SetSize(ne * nq, Device::GetDeviceMemoryType());
-  J_ = geom->J;
-}
-
-template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
-auto QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::EvaluateFargValue(const Mesh& m, const int q,
-                                                                                             const int e) const
+template <typename qfunc_type>
+auto QFunctionIntegrator<qfunc_type>::IntegrationPointPosition(const int q, const int e) const
 {
   Vector trip(3);
   trip                      = 0.0;
-  ElementTransformation* tr = const_cast<Mesh&>(m).GetElementTransformation(e);
+  ElementTransformation* tr = const_cast<Mesh&>(mesh).GetElementTransformation(e);
   tr->Transform(IntRule->IntPoint(q), trip);
-  return tensor<double, 3>{{trip(0), trip(1), m.SpaceDimension() == 2 ? 0.0 : trip(2)}};
+  return tensor<double, 3>{{trip(0), trip(1), mesh.SpaceDimension() == 2 ? 0.0 : trip(2)}};
 }
 
-template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
-void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply(const Vector& x, Vector& y) const
+template <typename qfunc_type>
+void QFunctionIntegrator<qfunc_type>::Apply(const Vector& x, Vector& y) const
 {
   if (dim == 2) {
     switch ((dofs1D << 4) | quad1D) {
@@ -256,10 +219,9 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
 }
 #else
 
-template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
+template <typename qfunc_type>
 template <int D1D, int Q1D>
-void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply2D(const Vector& u_in_,
-                                                                                   Vector&       y_) const
+void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) const
 {
   int NE = ne;
 
@@ -300,11 +262,13 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
 
         auto du_dx_q = dot(du_dX_q, inv(J_q));
 
-        auto processed_qf_farg_values = std::apply(
-            [=](auto&... a) { return std::make_tuple(u_q, du_dx_q, EvaluateFargValue(a, qx + Q1D * qy, e)...); },
-            qf_farg_values);
+        auto args = std::tuple{IntegrationPointPosition(qx + Q1D * qy, e), u_q, du_dx_q};
 
-        auto [f0, f1] = std::apply(qf, processed_qf_farg_values);
+        //auto processed_qf_farg_values = std::apply(
+        //    [=](auto&... a) { return std::make_tuple(u_q, du_dx_q, EvaluateFargValue(a, qx + Q1D * qy, e)...); },
+        //    qf_farg_values);
+
+        auto [f0, f1] = std::apply(qf, args);
 
         // chain rule: dN_dx = dN_dxi * dxi_dx = dN_dxi * inv(dx_dxi)
         // ===>        dN_dx * f1 = dN_dxi * inv(dx_dxi) * f1
@@ -392,19 +356,26 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
 //}
 #endif
 
-template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
-void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::ApplyGradient(const Vector& x,
-                                                                                         const Vector& v,
-                                                                                         Vector&       y) const
+template <typename qfunc_type>
+void QFunctionIntegrator<qfunc_type>::ApplyGradient(const Vector& x, const Vector& v, Vector& y) const
 {
-  ApplyGradient2D<2, 2>(x, v, y);
+  if (dim == 2) {
+    switch ((dofs1D << 4) | quad1D) {
+      case 0x22:
+        return ApplyGradient2D<2, 2>(x, v, y);
+      case 0x33:
+        return ApplyGradient2D<3, 3>(x, v, y);
+      case 0x44:
+        return ApplyGradient2D<4, 4>(x, v, y);
+      default:
+        MFEM_ASSERT(false, "NOPE");
+    }
+  }
 }
 
-template <typename qfunc_type, typename qfunc_grad_type, typename... qfunc_args_type>
+template <typename qfunc_type>
 template <int D1D, int Q1D>
-void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::ApplyGradient2D(const Vector& u_in_,
-                                                                                           const Vector& v_in_,
-                                                                                           Vector&       y_) const
+void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const Vector& v_in_, Vector& y_) const
 {
   int NE             = ne;
   using element_type = finite_element<::Geometry::Quadrilateral, Family::H1, static_cast<PolynomialDegree>(D1D - 1)>;
@@ -450,13 +421,8 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
         auto dv_dx_q = dot(dv_dX_q, inv(J_q));
 
         // compute dF(u, du)/du
-        auto processed_qf_farg_values_u = std::apply(
-            [=](auto&... a) {
-              return std::make_tuple(derivative_wrt(u_q), du_dx_q, EvaluateFargValue(a, qx + Q1D * qy, e)...);
-            },
-            qf_farg_values);
-
-        auto [f0u, f1u] = std::apply(qf, processed_qf_farg_values_u);
+        auto args0 = std::tuple{IntegrationPointPosition(qx + Q1D * qy, e), derivative_wrt(u_q), du_dx_q};
+        auto [f0u, f1u] = std::apply(qf, args0);
 
         double f00 = 0.0;
         if constexpr (std::is_same_v<decltype(f0u), double>) {
@@ -472,14 +438,8 @@ void QFunctionIntegrator<qfunc_type, qfunc_grad_type, qfunc_args_type...>::Apply
           f10 = {f1u[0].gradient, f1u[1].gradient};
         }
 
-        // compute dF(u, du)/ddu
-        auto processed_qf_farg_values_du = std::apply(
-            [=](auto&... a) {
-              return std::make_tuple(u_q, derivative_wrt(du_dx_q), EvaluateFargValue(a, qx + Q1D * qy, e)...);
-            },
-            qf_farg_values);
-
-        auto [f0du, f1du] = std::apply(qf, processed_qf_farg_values_du);
+        auto args1 = std::tuple{IntegrationPointPosition(qx + Q1D * qy, e), u_q, derivative_wrt(du_dx_q)};
+        auto [f0du, f1du] = std::apply(qf, args1);
 
         tensor<double, 2> f01;
         if constexpr (std::is_same_v<decltype(f0du), double>) {

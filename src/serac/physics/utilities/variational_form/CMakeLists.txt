@@ -71,8 +71,7 @@ foreach(filename ${parvariationalform_mpi_tests})
 endforeach()
     
 set(parvariationalform_examples
-    parvariationalform_example.cpp
-    parvariationalform_ex1.cpp)
+    parvariationalform_example.cpp)
 
 foreach(filename ${parvariationalform_examples})
     get_filename_component(ex_name ${filename} NAME_WE)
