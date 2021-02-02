@@ -4,113 +4,122 @@
 
 #pragma once
 
+template < ::Geometry g, PolynomialDegree p, int Q, int components > 
+void fem_kernel(const mfem::Vector & values, mfem::Vector & residuals, mfem::Vector & J, mfem::Vector & W, int num_elements) {
+
+  using element_type = finite_element< g, Family::H1, p, components >;
+
+  // for each element
+  for (int e = 0; e < num_elements; e++) {
+
+    // load the values associated with that element
+    reduced_tensor < double, element_type::ndof, components > element_values{};
+    for (int i = 0; i < element_type::ndof; i++) {
+      if constexpr (components == 1) {
+        element_values[i] = values[element_type::ndof * e + i];
+      } else {
+        for (int j = 0; j < components; j++) {
+          element_values[i] = values[components * (element_type::ndof * e + i) + j];
+        }
+      }
+    }
+
+    // loop over quadrature points
+    reduced_tensor < double, element_type::ndof, components > element_residuals{};
+    for (int q = 0; q < Q; q++) {
+
+    }
+
+    // store the element residuals 
+    for (int i = 0; i < element_type::ndof; i++) {
+      if constexpr (components == 1) {
+        residuals[element_type::ndof * e + i] = element_residuals[i];
+      } else {
+        for (int j = 0; j < components; j++) {
+          residuals[components * (element_type::ndof * e + i) + j] = element_residuals[i][j];
+        }
+      }
+    }
+
+  }
+
+}
+
+struct VolumeIntegral {
+
+  mfem::Vector & operator()(const Vector & x) {
+    return output;
+  }
+
+  mfem::Vector output;
+
+};
+
+struct Gradient {
+
+  mfem::Vector & operator()(const Vector & x) {
+    return output;
+  }
+
+  // operator HypreParMatrix() { /* not currently supported */ }
+
+  mfem::Vector output;
+
+};
+
 template < typename T >
 class WeakForm;
 
-template < typename test_space, typename trial_space >
-class WeakForm< test_space(trial_space) > : public mfem::Operator {
+template < typename test, typename trial >
+class WeakForm< test(trial) > : public mfem::Operator {
 
-  WeakForm();
+  WeakForm(ParFiniteElementSpace * test_space, ParFiniteElementSpace * trial_space) {
+    P_test = test_space->GetProlongationMatrix();
+    G_test = test_space->GetElementRestriction(ElementDofOrdering::LEXICOGRAPHIC);
+    MFEM_ASSERT(G_test, "Some GetElementRestriction error");
 
-  template < typename integrand >
-  void AddVolumeIntegral(integrand f) {}
+    input_L.SetSize(P_test->Height(), Device::GetMemoryType());
+    input_E.SetSize(G_test->Height(), Device::GetMemoryType());
 
-  template < typename integrand >
-  void AddBoundaryIntegral(integrand f) {}
 
-  mfem::Vector & operator()(const Vector & x) { return output; }
+    P_trial = trial_space->GetProlongationMatrix();
+    G_trial = trial_space->GetElementRestriction(ElementDofOrdering::LEXICOGRAPHIC);
+    MFEM_ASSERT(G_trial, "Some GetElementRestriction error");
 
-  mfem::Vector output;
-};
-
-template <
- : public Operator {
-  class Gradient : public Operator {
-  public:
-    Gradient(ParVariationalForm& f) : Operator(f.Height()), form(f){};
-
-    void Mult(const Vector& x, Vector& y) const override { form.GradientMult(x, y); }
-
-  private:
-    ParVariationalForm& form;
-  };
-
-public:
-  ParVariationalForm(ParFiniteElementSpace* f);
-
-  void Mult(const Vector& x, Vector& y) const override;
-
-  void AddDomainIntegrator(GenericIntegrator* i)
-  {
-    domain_integrators.Append(i);
-    i->Setup(*fes);
+    output_E.SetSize(G_trial->Height(), Device::GetMemoryType());
+    output_L.SetSize(P_trial->Height(), Device::GetMemoryType());
+    output_T.SetSize(P_trial->Width(), Device::GetMemoryType());
   }
 
-  template <typename integrator_type, typename qfunc_type, typename... qfunc_args_type>
-  void AddDomainIntegrator(qfunc_type f, qfunc_args_type const&... fargs)
-  {
-    if constexpr (std::is_same_v<integrator_type, DomainLFIntegrator>) {
-      // FIXME: Remove when GCC 8 is no longer supported, clumsy fix for
-      // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85883.  Overhead should
-      // be low as this will just call the implicit move constructor
-      auto i = new QFunctionIntegrator(QFunctionIntegrator(
-          [&](auto... args) {
-            auto du = std::get<1>(std::tuple{args...});
-            return std::tuple{f(args...), decltype(du){}};
-          },
-          0, *fes->GetParMesh(), fargs...));
+  template < typename integrand >
+  void AddVolumeIntegral(integrand f) {
 
-      domain_integrators.Append(i);
-      i->Setup(*fes);
-    }
-
-    if constexpr (std::is_same_v<integrator_type, DiffusionIntegrator>) {
-      auto i = new QFunctionIntegrator(QFunctionIntegrator(
-          [&](auto... args) {
-            auto du = std::get<1>(std::tuple{args...});
-            return std::tuple{0.0, f(args...) * du};
-          },
-          0, *fes->GetParMesh(), fargs...));
-
-      domain_integrators.Append(i);
-      i->Setup(*fes);
-    }
   }
 
-  void AssumeLinear() { is_linear = true; }
+  mfem::Vector & operator()(const Vector & input_T) {
+    P_trial->Mult(input_T, input_L);
+    G_trial->Mult(input_L, input_E);
 
-  // Return an Operator that provides a Mult(x, y) which is the MatVec of the
-  // gradient of the ParVariationalForm wrt x. Acts as a "passthrough" to
-  // ::GradientMult in order to satisfy mfem interfaces.
-  Operator& GetGradient(const Vector& x) const override;
+    output_E = 0.0;
+    for (auto integral : volume_integrals) {
+      output_E += integral(input_E);
+    }
 
-  // Return an assmbled parallel matrix which represents the gradient of the
-  // ParVariationalForm wrt to x.
-  HypreParMatrix* GetGradientMatrix(const Vector& x);
+    G_test->MultTranspose(output_E, output_L);
+    P_test->MultTranspose(output_L, output_T);
 
-  void SetEssentialBC(const Array<int>& ess_attr);
+    return output_T;
+  }
 
-protected:
-  // y = F'(x_lin) * v
-  void GradientMult(const Vector& v, Vector& y) const;
+  Gradient & gradient() { return grad; }
 
-  bool                      is_linear = false;
-  ParFiniteElementSpace*    fes;
-  Array<GenericIntegrator*> domain_integrators;
-  Array<int>                ess_tdof_list;
+  mfem::Vector input_L, input_E, output_T, output_L, output_E;
 
-  // T -> L
-  const Operator* P;
+  mfem::Operator * P_test, * G_test;
+  mfem::Operator * P_trial, * G_trial;
 
-  // L -> E
-  const Operator* G;
+  std::vector < VolumeIntegral > volume_integrals;
 
-  mutable Vector x_local, y_local, v_local, px, py, pv;
+  Gradient grad;
 
-  // State to build the Gradient on, single source of the true state.
-  mutable Vector x_lin;
-
-  mutable Gradient grad;
-
-  HypreParMatrix* gradient_matrix = nullptr;
-};
+}
