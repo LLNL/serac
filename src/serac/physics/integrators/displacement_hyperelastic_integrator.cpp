@@ -164,7 +164,6 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
 
     // Assemble the spatial tangent moduli at the current integration point
     material_.AssembleTangentModuli(F_, C_);
-    double J = F_.Det();
 
     // Accumulate the material stiffness using the spatial tangent moduli and the B matrix
     for (int a = 0; a < dof; ++a) {
@@ -189,7 +188,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
           for (int b = 0; b < dof; ++b) {
             for (int k = 0; k < dim; ++k) {
               for (int j = 0; j < dim; ++j) {
-                elmat(i * dof + a, k * dof + b) -= J * sigma_(i, j) * B_(a, k) * B_(b, j) * ip.weight * Ttr.Weight();
+                elmat(i * dof + a, k * dof + b) -= J_ * sigma_(i, j) * B_(a, k) * B_(b, j) * ip.weight * Ttr.Weight();
               }
             }
           }

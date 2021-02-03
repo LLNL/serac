@@ -23,7 +23,7 @@ TEST(solid_solver, qs_attribute_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_attribute_solve.lua";
-  test_utils::runModuleTest<Solid>(input_file_path);
+  test_utils::runModuleTest<Solid>(input_file_path, "qs_attribute_solve");
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

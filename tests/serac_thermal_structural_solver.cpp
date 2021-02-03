@@ -82,14 +82,14 @@ TEST(dynamic_solver, dyn_solve)
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_options, default_dynamic);
-  ts_solver.SetDisplacementBCs(ess_bdr, deform);
-  ts_solver.SetTractionBCs(trac_bdr, traction_coef);
-  ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  ts_solver.SetConductivity(std::move(kappa));
-  ts_solver.SetDisplacement(*deform);
-  ts_solver.SetVelocity(*velo);
-  ts_solver.SetTemperature(*temp);
-  ts_solver.SetCouplingScheme(serac::CouplingScheme::OperatorSplit);
+  ts_solver.setDisplacementBCs(ess_bdr, deform);
+  ts_solver.setTractionBCs(trac_bdr, traction_coef);
+  ts_solver.setSolidMaterialParameters(0.25, 5.0);
+  ts_solver.setConductivity(std::move(kappa));
+  ts_solver.setDisplacement(*deform);
+  ts_solver.setVelocity(*velo);
+  ts_solver.setTemperature(*temp);
+  ts_solver.setCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity
   double offset = 0.1;
@@ -98,7 +98,7 @@ TEST(dynamic_solver, dyn_solve)
   auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature().gridFunc());
   auto visc_coef    = std::make_unique<mfem_ext::TransformedScalarCoefficient>(
       temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
-  ts_solver.SetViscosity(std::move(visc_coef));
+  ts_solver.setViscosity(std::move(visc_coef));
 
   // Initialize the VisIt output
   ts_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");

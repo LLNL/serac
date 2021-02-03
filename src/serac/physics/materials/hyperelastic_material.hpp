@@ -94,7 +94,6 @@ public:
   /**
    * @brief Construct a new Neo Hookean Material object
    *
-   * @param[in] dim Dimension of the problem
    * @param[in] mu Shear modulus
    * @param[in] bulk Bulk modulus
    */
@@ -107,7 +106,6 @@ public:
   /**
    * @brief Construct a new Neo Hookean Material object
    *
-   * @param[in] dim Dimension of the problem
    * @param[in] mu Shear modulus mu
    * @param[in] bulk Bulk modulus K
    */
@@ -175,6 +173,114 @@ protected:
    *
    */
   mutable mfem::DenseMatrix B_;
+
+  /**
+   * @brief Evaluate the coefficients
+   * @note The reference-to-target transformation must be set before this call.
+   *
+   */
+  inline void EvalCoeffs() const;
+};
+
+/**
+ * @brief Linear elastic material model
+ *
+ */
+class LinearElasticMaterial : public HyperelasticMaterial {
+public:
+  /**
+   * @brief Construct a new Linear Elastic Material object
+   *
+   * @param[in] mu Shear modulus
+   * @param[in] bulk Bulk modulus
+   */
+  LinearElasticMaterial(double mu, double bulk) : mu_(mu), bulk_(bulk)
+  {
+    c_mu_   = nullptr;
+    c_bulk_ = nullptr;
+  }
+
+  /**
+   * @brief Construct a new Linear Elastic Material object
+   *
+   * @param[in] mu Shear modulus mu
+   * @param[in] bulk Bulk modulus K
+   */
+  LinearElasticMaterial(mfem::Coefficient& mu, mfem::Coefficient& bulk)
+      : mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
+  {
+  }
+
+  /**
+   * @brief Evaluate the strain energy density function, W = W(F).
+   *
+   * @param[in] F The deformation gradient
+   * @return Strain energy density
+   */
+  virtual double EvalStrainEnergy(const mfem::DenseMatrix&) const
+  {
+    SLIC_ERROR("Strain energy not implemented for the linear elastic material!");
+    return 0.0;
+  }
+
+  /**
+   * @brief Evaluate the Cauchy stress
+   *
+   * @param[in] F The deformation gradient
+   * @param[out] sigma The evaluated Cauchy stress
+   */
+  virtual void EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const;
+
+  /**
+   * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
+   * and assemble its contribution to the 4D array (spatial elasticity tensor)
+   * @param[in] F The deformation gradient
+   * @param[out] C Tangent moduli 4D Array
+   */
+  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const;
+
+  /**
+   * @brief Destroy the Hyperelastic Material object
+   *
+   */
+  virtual ~LinearElasticMaterial() = default;
+
+protected:
+  /**
+   * @brief Shear modulus in constant form
+   *
+   */
+  mutable double mu_;
+
+  /**
+   * @brief Bulk modulus in constant form
+   *
+   */
+  mutable double bulk_;
+
+  /**
+   * @brief Shear modulus in coefficient form
+   *
+   */
+  mfem::Coefficient* c_mu_;
+
+  /**
+   * @brief Bulk modulus in coefficient form
+   *
+   */
+  mfem::Coefficient* c_bulk_;
+
+  /**
+   * @brief Transpose of the deformation gradient
+   *
+   */
+  mutable mfem::DenseMatrix FT_;
+
+  /**
+   * @brief The linearized strain tensor
+   *
+   */
+  mutable mfem::DenseMatrix epsilon_;
 
   /**
    * @brief Evaluate the coefficients

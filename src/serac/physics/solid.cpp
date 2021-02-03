@@ -71,7 +71,7 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
 {
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
-  setHyperelasticMaterialParameters(options.mu, options.K);
+  setMaterialParameters(options.mu, options.K, options.material_nonlin);
 
   auto dim = mesh->Dimension();
   if (options.initial_displacement) {
@@ -126,9 +126,13 @@ void Solid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef
   ext_force_coefs_.push_back(ext_force_coef);
 }
 
-void Solid::setHyperelasticMaterialParameters(const double mu, const double K)
+void Solid::setMaterialParameters(const double mu, const double K, const bool material_nonlin)
 {
-  material_ = std::make_unique<serac::NeoHookeanMaterial>(mu, K);
+  if (material_nonlin) {
+    material_ = std::make_unique<serac::NeoHookeanMaterial>(mu, K);
+  } else {
+    material_ = std::make_unique<serac::LinearElasticMaterial>(mu, K);
+  }
 }
 
 void Solid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
@@ -305,6 +309,12 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   table.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
       .defaultValue(true);
 
+  // Geometric nonlinearities flag
+  table
+      .addBool("material_nonlin",
+               "Flag to include material nonlinearities (linear elastic vs. neo-Hookean material model).")
+      .defaultValue(true);
+
   table.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
 
   auto& stiffness_solver_table =
@@ -372,6 +382,9 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
 
   // Set the geometric nonlinearities flag
   result.geom_nonlin = base["geometric_nonlin"];
+
+  // Set the material nonlinearity flag
+  result.material_nonlin = base["material_nonlin"];
 
   if (base.contains("boundary_conds")) {
     result.boundary_conditions =

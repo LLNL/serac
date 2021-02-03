@@ -146,7 +146,8 @@ void verifyFields(const ThermalConduction& module, const axom::inlet::Inlet& inl
 }  // namespace detail
 
 template <typename PhysicsModule>
-void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh)
+void runModuleTest(const std::string& input_file, const std::string& test_name,
+                   std::shared_ptr<mfem::ParMesh> custom_mesh)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -188,7 +189,7 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
     return result;
   }();
 
-  module.initializeOutput(output_names.at(inlet["output_type"]), module_name);
+  module.initializeOutput(output_names.at(inlet["output_type"]), test_name);
 
   // Complete the solver setup
   module.completeSetup();
@@ -222,8 +223,9 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
   detail::verifyFields(module, inlet, mesh->Dimension());
 }
 
-template void runModuleTest<Solid>(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh);
-template void runModuleTest<ThermalConduction>(const std::string&             input_file,
+template void runModuleTest<Solid>(const std::string& input_file, const std::string& test_name,
+                                   std::shared_ptr<mfem::ParMesh> custom_mesh);
+template void runModuleTest<ThermalConduction>(const std::string& input_file, const std::string& test_name,
                                                std::shared_ptr<mfem::ParMesh> custom_mesh);
 
 }  // end namespace test_utils

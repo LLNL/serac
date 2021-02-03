@@ -74,6 +74,9 @@ public:
     // Geometric nonlinearities flag
     bool geom_nonlin;
 
+    // Material nonlinearities flag
+    bool material_nonlin;
+
     // Boundary condition information
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 
@@ -142,12 +145,13 @@ public:
   void setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef);
 
   /**
-   * @brief Set the hyperelastic material parameters
+   * @brief Set the material parameters
    *
-   * @param[in] mu Set the mu Lame parameter for the hyperelastic solid
-   * @param[in] K Set the K Lame parameter for the hyperelastic solid
+   * @param[in] mu Set the shear modulus for the solid
+   * @param[in] K Set the bulk modulus for the solid
+   * @param[in] material_nonlin Flag to include material nonlinearities (linear elastic vs. neo-Hookean model)
    */
-  void setHyperelasticMaterialParameters(double mu, double K);
+  void setMaterialParameters(double mu, double K, bool material_nonlin = true);
 
   /**
    * @brief Set the initial displacement value

@@ -21,11 +21,11 @@ namespace serac {
 
 using test_utils::InputFileTest;
 
-TEST_P(InputFileTest, nonlin_solid)
+TEST_P(InputFileTest, solid)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/" + GetParam() + ".lua";
-  test_utils::runModuleTest<Solid>(input_file_path);
+  test_utils::runModuleTest<Solid>(input_file_path, GetParam());
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -38,7 +38,8 @@ const std::string input_files[] = {"dyn_solve",
                                    "dyn_amgx_solve",
 #endif
                                    "qs_solve",
-                                   "qs_direct_solve"};
+                                   "qs_direct_solve",
+                                   "qs_linear"};
 
 INSTANTIATE_TEST_SUITE_P(SolidInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
 

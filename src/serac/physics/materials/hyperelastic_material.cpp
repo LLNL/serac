@@ -71,6 +71,10 @@ void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_
 
   double dJ = F.Det();
 
+  if (c_mu_) {
+    EvalCoeffs();
+  }
+
   // See http://solidmechanics.org/Text/Chapter8_4/Chapter8_4.php for a sample derivation
   double a = mu_ * std::pow(dJ, -2.0 / dim);
   double b = bulk_ * (2.0 * dJ - 1.0) * dJ + a * (2.0 / (dim * dim)) * (F * F);
@@ -95,6 +99,72 @@ void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_
           }
           if (i == j && k == l) {
             C(i, j, k, l) += b;
+          }
+        }
+      }
+    }
+  }
+}
+
+inline void LinearElasticMaterial::EvalCoeffs() const
+{
+  mu_   = c_mu_->Eval(*Ttr_, Ttr_->GetIntPoint());
+  bulk_ = c_bulk_->Eval(*Ttr_, Ttr_->GetIntPoint());
+}
+
+void LinearElasticMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const
+{
+  int dim = F.Width();
+  sigma.SetSize(dim);
+  epsilon_.SetSize(dim);
+  FT_.SetSize(dim);
+
+  if (c_mu_) {
+    EvalCoeffs();
+  }
+
+  // Evaluate the linearized strain tensor from the deformation gradient
+  epsilon_ = 0.0;
+  epsilon_.Add(0.5, F);
+  FT_.Transpose(F);
+  epsilon_.Add(0.5, FT_);
+
+  for (int i = 0; i < dim; ++i) {
+    epsilon_(i, i) -= 1.0;
+  }
+
+  sigma                = 0.0;
+  double trace_epsilon = epsilon_.Trace();
+
+  // Calculate the stress by Hooke's law
+  sigma.Add(2.0 * mu_, epsilon_);
+  for (int i = 0; i < dim; ++i) {
+    sigma(i, i) += bulk_ * trace_epsilon - (2.0 / dim) * mu_ * trace_epsilon;
+  }
+}
+
+void LinearElasticMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const
+{
+  int dim = F.Width();
+
+  if (c_mu_) {
+    EvalCoeffs();
+  }
+
+  C = 0.0;
+
+  for (int i = 0; i < dim; ++i) {
+    for (int j = 0; j < dim; ++j) {
+      for (int k = 0; k < dim; ++k) {
+        for (int l = 0; l < dim; ++l) {
+          if (i == j && k == l) {
+            C(i, j, k, l) += bulk_ - (2.0 / dim) * mu_;
+          }
+          if (i == k && j == l) {
+            C(i, j, k, l) += mu_;
+          }
+          if (i == l && j == k) {
+            C(i, j, k, l) += mu_;
           }
         }
       }
