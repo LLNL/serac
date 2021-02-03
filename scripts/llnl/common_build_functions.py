@@ -301,7 +301,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
         print("[WARNING: xsltproc does not exist skipping JUnit conversion]")
     else:
         junit_file = pjoin(build_dir, "junit.xml")
-        xsl_file = "cmake/blt/tests/ctest-to-junit.xsl"
+        xsl_file = pjoin(get_blt_dir(), "tests/ctest-to-junit.xsl")
         ctest_file = pjoin(build_dir, "Testing/*/Test.xml")
 
         print("[Converting CTest XML to JUnit XML]")
@@ -605,6 +605,14 @@ def get_host_configs_for_current_machine(src_dir, use_generated_host_configs):
 
 def get_host_config_root(host_config):
     return os.path.splitext(os.path.basename(host_config))[0]
+
+
+def get_blt_dir():
+    _path = "cmake/blt"
+    if os.path.exists(_path):
+        return _path
+    _path = pjoin("serac", _path)
+    return _path
 
 
 def get_build_dir(prefix, host_config):
