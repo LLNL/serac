@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -27,6 +27,17 @@ namespace serac::mfem_ext {
  */
 class SecondOrderODE : public mfem::SecondOrderTimeDependentOperator {
 public:
+  /**
+   * @brief a small number used to compute finite difference approximations
+   * to time derivatives of boundary conditions.
+   *
+   * Note: this is intended to be temporary
+   * Ideally, epsilon should be "small" relative to the characteristic
+   * time of the ODE, but we can't ensure that at present (we don't have
+   * a critical timestep estimate)
+   */
+  static constexpr double epsilon = 0.0001;
+
   /**
    * @brief A set of references to physics-module-owned variables
    * used by the residual operator
@@ -107,6 +118,11 @@ public:
   }
 
   /**
+     The FirstOrder recast that can be used by a first order ode solver
+   */
+  void ImplicitSolve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt);
+
+  /**
    * @brief Configures the Dirichlet enforcement method to use
    * @param[in] method The selected method
    */
@@ -124,24 +140,24 @@ public:
    *
    * @param[inout] x The predicted solution
    * @param[inout] dxdt The predicted rate
-   * @param[inout] t The current time
+   * @param[inout] time The current time
    * @param[inout] dt The desired time step
    *
    * @see mfem::SecondOrderODESolver::Step
    */
-  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& t, double& dt) { ode_solver_->Step(x, dxdt, t, dt); }
+  void Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, double& dt);
 
 private:
   /**
    * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
-   * @param[in] t The current time
+   * @param[in] time The current time
    * @param[in] c0 The current time step
    * @param[in] c1 The previous time step
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    * @param[out] d2u_dt2 The second time derivative of u
    */
-  void Solve(const double t, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
+  void Solve(const double time, const double c0, const double c1, const mfem::Vector& u, const mfem::Vector& du_dt,
              mfem::Vector& d2u_dt2) const;
 
   /**
@@ -159,7 +175,13 @@ private:
   /**
    * @brief MFEM solver object for second-order ODEs
    */
-  std::unique_ptr<mfem::SecondOrderODESolver> ode_solver_;
+  std::unique_ptr<mfem::SecondOrderODESolver> second_order_ode_solver_;
+
+  /**
+   * @brief MFEM solver object for second-order ODEs recast as first order
+   */
+  std::unique_ptr<mfem::ODESolver> first_order_system_ode_solver_;
+
   /**
    * @brief Reference to boundary conditions used to constrain the solution
    */
@@ -188,6 +210,17 @@ private:
  */
 class FirstOrderODE : public mfem::TimeDependentOperator {
 public:
+  /**
+   * @brief a small number used to compute finite difference approximations
+   * to time derivatives of boundary conditions.
+   *
+   * Note: this is intended to be temporary
+   * Ideally, epsilon should be "small" relative to the characteristic
+   * time of the ODE, but we can't ensure that at present (we don't have
+   * a critical timestep estimate)
+   */
+  static constexpr double epsilon = 0.000001;
+
   /**
    * @brief A set of references to physics-module-owned variables
    * used by the residual operator
@@ -230,7 +263,18 @@ public:
    * mfem::TimeDependentOperator::ImplicitSolve corresponds to the case where dt is nonzero
    *
    */
-  FirstOrderODE(int n, State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs);
+  FirstOrderODE(int n, FirstOrderODE::State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs);
+
+  /**
+   * @brief Recasts a second order equation as a set of first order equations
+   *
+   * @param[in] n The number of components in each vector of the ODE
+   * @param[in] state The SecondOrderODE state
+   * @param[in] solver The equation solver for the residual equation that is solved at the next time step
+   * @param[in] bcs boundary conditions for the ode
+   *
+   */
+  FirstOrderODE(int n, SecondOrderODE& ode2, const EquationSolver& solver, const BoundaryConditionManager& bcs);
 
   /**
    * @brief Solves the equation du_dt = f(u, t)
@@ -266,26 +310,34 @@ public:
    * @brief Performs a time step
    *
    * @param[inout] x The predicted solution
-   * @param[inout] t The current time
+   * @param[inout] time The current time
    * @param[inout] dt The desired time step
    *
    * @see mfem::ODESolver::Step
    */
-  void Step(mfem::Vector& x, double& t, double& dt) { ode_solver_->Step(x, t, dt); }
+  void Step(mfem::Vector& x, double& time, double& dt)
+  {
+    if (ode_solver_) {
+      ode_solver_->Step(x, time, dt);
+    } else {
+      SLIC_ERROR("ode_solver_ unspecified");
+    }
+  }
 
-private:
   /**
    * @brief Internal implementation used for mfem::TDO::Mult and mfem::TDO::ImplicitSolve
    * @param[in] dt The time step
    * @param[in] u The true DOFs
    * @param[in] du_dt The first time derivative of u
    */
-  void Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
+  virtual void Solve(const double dt, const mfem::Vector& u, mfem::Vector& du_dt) const;
 
+private:
   /**
    * @brief Set of references to external variables used by residual operator
    */
-  State state_;
+  FirstOrderODE::State state_;
+
   /**
    * @brief The method of enforcing time-varying dirichlet boundary conditions
    */

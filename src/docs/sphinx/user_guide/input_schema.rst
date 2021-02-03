@@ -1,6 +1,9 @@
-==========
-input_file
-==========
+=================
+Input File Schema
+=================
+
+Below is the documentation for Serac input files, generated automatically by `Axom's inlet component <https://axom.readthedocs.io/en/develop/axom/inlet/docs/sphinx/index.html>`_.
+
 .. |uncheck|    unicode:: U+2610 .. UNCHECKED BOX
 .. |check|      unicode:: U+2611 .. CHECKED BOX
 

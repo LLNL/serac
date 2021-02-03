@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -38,9 +38,9 @@ static auto build_partitioning(MPI_Comm comm, const int size)
   int rank      = 0;
   MPI_Comm_size(comm, &num_procs);
   MPI_Comm_rank(comm, &rank);
-  bool assumed_partition = HYPRE_AssumedPartitionCheck();
-  auto partitioning      = std::make_unique<int[]>(assumed_partition ? 2 : (num_procs + 1));
-  auto per_proc          = (size / num_procs) + ((size % num_procs != 0) ? 1 : 0);
+  bool      assumed_partition = HYPRE_AssumedPartitionCheck();
+  auto      partitioning = std::make_unique<int[]>(assumed_partition ? 2 : static_cast<std::size_t>(num_procs + 1));
+  const int per_proc     = (size / num_procs) + ((size % num_procs != 0) ? 1 : 0);
 
   if (assumed_partition) {
     auto n_entries  = (rank == num_procs - 1) ? size - ((num_procs - 1) * per_proc) : per_proc;
@@ -48,9 +48,9 @@ static auto build_partitioning(MPI_Comm comm, const int size)
     partitioning[1] = (per_proc * rank) + n_entries;
   } else {
     for (int i = 0; i < num_procs; i++) {
-      partitioning[i] = per_proc * i;
+      partitioning[static_cast<std::size_t>(i)] = per_proc * i;
     }
-    partitioning[num_procs] = size;
+    partitioning[static_cast<std::size_t>(num_procs)] = size;
   }
   return std::make_pair(std::move(partitioning), per_proc * rank);
 }
@@ -67,25 +67,7 @@ TEST(expr_templates, basic_add)
   mfem::Vector expr_result = lhs + rhs;
 
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
-TEST(expr_templates, basic_add_parallel)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-  constexpr int size = 10;
-  auto [lhs, rhs]    = sample_vectors(size);
-
-  mfem::Vector mfem_result(size);
-  add(lhs, rhs, mfem_result);
-
-  mfem::Vector expr_result(size);
-  evaluate(lhs + rhs, expr_result, MPI_COMM_WORLD);
-
-  for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -111,7 +93,7 @@ TEST(expr_templates, basic_add_hyprepar)
   double* expr_local = expr_result;
 
   for (int i = 0; i < expr_result.Size(); i++) {
-    EXPECT_FLOAT_EQ(mfem_local[i], expr_local[i]);
+    EXPECT_DOUBLE_EQ(mfem_local[i], expr_local[i]);
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -135,7 +117,7 @@ TEST(expr_templates, basic_div)
   mfem::Vector expr_result = a / scalar;
 
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
 
   // Dividing a scalar by a vector
@@ -147,7 +129,7 @@ TEST(expr_templates, basic_div)
   expr_result = scalar / a;
 
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -161,13 +143,13 @@ TEST(expr_templates, basic_add_lambda)
   mfem::Vector mfem_result(size);
   add(lhs, rhs, mfem_result);
 
-  auto lambda_add = [](const auto& lhs, const auto& rhs) { return lhs + rhs; };
+  auto lambda_add = [](const auto& l, const auto& r) { return l + r; };
 
   mfem::Vector expr_result = lambda_add(lhs, rhs);
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -191,7 +173,7 @@ TEST(expr_templates, subtraction_not_commutative)
   mfem::Vector result1 = a + c - b;  // Parsed as (a + c) - b
   mfem::Vector result2 = c - b + a;  // Parsed as (c - b) + a
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(result1[i], result2[i]);
+    EXPECT_DOUBLE_EQ(result1[i], result2[i]);
   }
 
   mfem::Vector result3 = a - c;
@@ -223,7 +205,7 @@ TEST(expr_templates, subtraction_not_commutative_rvalue)
   mfem::Vector resulta1 = c - a - b;
   mfem::Vector resulta2 = fext(0.0) - a - b;
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(resulta1[i], resulta2[i]);
+    EXPECT_DOUBLE_EQ(resulta1[i], resulta2[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -237,7 +219,7 @@ TEST(expr_templates, addition_commutative)
   mfem::Vector result1 = a + b;
   mfem::Vector result2 = b + a;
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(result1[i], result2[i]);
+    EXPECT_DOUBLE_EQ(result1[i], result2[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -256,7 +238,7 @@ TEST(expr_templates, scalar_mult_commutative)
   mfem::Vector result1 = scalar * a;
   mfem::Vector result2 = a * scalar;
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(result1[i], result2[i]);
+    EXPECT_DOUBLE_EQ(result1[i], result2[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -270,16 +252,16 @@ TEST(expr_templates, move_from_temp_lambda)
   mfem::Vector mfem_result(size);
   add(lhs, 3.5, rhs, mfem_result);
 
-  auto lambda_add = [](const auto& lhs, const auto& rhs) {
-    auto r35 = rhs * 3.5;
-    return lhs + std::move(r35);
+  auto lambda_add = [](const auto& l, const auto& r) {
+    auto r35 = r * 3.5;
+    return l + std::move(r35);
   };
 
   mfem::Vector expr_result = lambda_add(lhs, rhs);
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -293,16 +275,16 @@ TEST(expr_templates, move_from_temp_vec_lambda)
   mfem::Vector mfem_result(size);
   add(lhs, 3.5, rhs, mfem_result);
 
-  auto lambda_add = [](const auto& lhs, const auto& rhs) {
-    mfem::Vector r35 = rhs * 3.5;
-    return lhs + std::move(r35);
+  auto lambda_add = [](const auto& l, const auto& r) {
+    mfem::Vector r35 = r * 3.5;
+    return l + std::move(r35);
   };
 
   mfem::Vector expr_result = lambda_add(lhs, rhs);
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
   for (int i = 0; i < size; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -321,7 +303,7 @@ TEST(expr_templates, small_matvec)
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
   for (int i = 0; i < rows; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -351,7 +333,7 @@ TEST(expr_templates, small_mixed_expr)
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
   for (int i = 0; i < rows; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -381,7 +363,7 @@ TEST(expr_templates, small_mixed_expr_single_alloc)
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
   for (int i = 0; i < rows; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -410,7 +392,7 @@ TEST(expr_templates, large_mixed_expr)
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
   for (int i = 0; i < rows; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -433,22 +415,21 @@ TEST(expr_templates, complex_expr_lambda)
   mfem::Vector mfem_result(rows);
   add(vec_negate_scale, -0.3, matvec, mfem_result);
 
-  auto lambda_expr = [](const auto& lhs, const auto& rhs, const auto& matrix, const auto& vec_in) {
-    return -lhs + rhs * 3.0 - 0.3 * (matrix * vec_in);
+  auto lambda_expr = [](const auto& l, const auto& r, const auto& mat, const auto& vec) {
+    return -l + r * 3.0 - 0.3 * (mat * vec);
   };
 
   mfem::Vector expr_result = lambda_expr(lhs, rhs, matrix, vec_in);
 
   EXPECT_EQ(mfem_result.Size(), expr_result.Size());
   for (int i = 0; i < rows; i++) {
-    EXPECT_FLOAT_EQ(mfem_result[i], expr_result[i]);
+    EXPECT_DOUBLE_EQ(mfem_result[i], expr_result[i]);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -458,7 +439,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
 
   result = RUN_ALL_TESTS();
 
