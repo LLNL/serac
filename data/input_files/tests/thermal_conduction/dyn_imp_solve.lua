@@ -10,6 +10,7 @@ t_final = 5.0
 output_type = "VisIt"
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/star.mesh",
     -- serial and parallel refinement levels
@@ -17,9 +18,8 @@ main_mesh = {
     par_ref_levels = 1,
 }
 
-temp_func = function (x, y, z)
-    local norm = math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
-    if norm < 0.5 then return 2.0 else return 1.0 end
+temp_func = function (v)
+    if v:norm() < 0.5 then return 2.0 else return 1.0 end
 end
 
 -- Solver parameters

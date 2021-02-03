@@ -112,7 +112,7 @@ class Serac(CMakePackage, CudaPackage):
     # Workaround for concretizer bug
     #depends_on("mfem+sundials", when="+sundials")
     #depends_on("sundials~shared", when="+sundials")
-    depends_on("sundials~shared+hypre")
+    depends_on("sundials~shared+hypre+monitoring")
 
     # Libraries that support +debug
     debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials",
@@ -240,7 +240,7 @@ class Serac(CMakePackage, CudaPackage):
         cfg.write("####################################################################\n")
         cfg.write("# Generated host-config - Edit at own risk!\n")
         cfg.write("####################################################################\n")
-        cfg.write("# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and\n")
+        cfg.write("# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and\n")
         cfg.write("# other Serac Project Developers. See the top-level LICENSE file for\n")
         cfg.write("# details.\n")
         cfg.write("#\n")

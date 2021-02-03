@@ -6,6 +6,7 @@ epsilon = 0.00001
 dt      = 1.0
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/star.mesh",
     -- serial and parallel refinement levels
@@ -13,8 +14,8 @@ main_mesh = {
     par_ref_levels = 1,
 }
 
-temp_func = function (x, y, z)
-    return math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
+temp_func = function (v)
+    return v:norm()
 end
 
 -- Solver parameters
@@ -54,8 +55,8 @@ thermal_conduction = {
         },
         ['temperature_2'] = {
             attrs = {1},
-            coef = function (x, y, z)
-                return 2 * temp_func(x, y, z)
+            coef = function (v)
+                return 2 * temp_func(v)
             end
         },
     },

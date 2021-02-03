@@ -6,6 +6,7 @@ epsilon = 0.0001
 dt      = 1.0
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/square.mesh",
     -- serial and parallel refinement levels
@@ -52,8 +53,8 @@ nonlinear_solid = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
             component = 0,
-            coef = function (x, y, z)
-                return x * -1.0e-1
+            coef = function (v)
+                return v.x * -1.0e-1
             end
         },
     },

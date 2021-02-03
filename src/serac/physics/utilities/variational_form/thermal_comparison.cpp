@@ -12,6 +12,8 @@
 using namespace std;
 using namespace mfem;
 
+#include "axom/slic/core/SimpleLogger.hpp"
+
 // solve an equation of the form
 // (a * M + b * K) x == f
 // 
@@ -26,7 +28,7 @@ int main(int argc, char* argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
-  axom::slic::UnitTestLogger logger;
+  axom::slic::SimpleLogger logger;
 
   const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
 

@@ -43,13 +43,13 @@ public:
   void Setup(const FiniteElementSpace& fes) override {
     // Assuming the same element type
     fespace    = &fes;
-    Mesh* mesh = fes.GetMesh();
-    if (mesh->GetNE() == 0) {
+    Mesh* f_mesh = fes.GetMesh();
+    if (f_mesh->GetNE() == 0) {
       return;
     }
     const FiniteElement& el = *fes.GetFE(0);
     // SERAC EDIT BEGIN
-    // ElementTransformation *T = mesh->GetElementTransformation(0);
+    // ElementTransformation *T = f_mesh->GetElementTransformation(0);
     // SERAC EDIT END
     const IntegrationRule* ir = nullptr;
     if (!IntRule) {
@@ -57,10 +57,10 @@ public:
     }
     ir = IntRule;
 
-    dim    = mesh->Dimension();
+    dim    = f_mesh->Dimension();
     ne     = fes.GetMesh()->GetNE();
     nq     = ir->GetNPoints();
-    geom   = mesh->GetGeometricFactors(*ir, GeometricFactors::COORDINATES | GeometricFactors::JACOBIANS);
+    geom   = f_mesh->GetGeometricFactors(*ir, GeometricFactors::COORDINATES | GeometricFactors::JACOBIANS);
     maps   = &el.GetDofToQuad(*ir, DofToQuad::TENSOR);
     dofs1D = maps->ndof;
     quad1D = maps->nqpt;
@@ -137,8 +137,8 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
 
     tensor <double, ndof > y_local{};
     for (size_t q = 0; q < rule.size(); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
+      auto xi = rule.points[static_cast<int>(q)];
+      auto dxi = rule.weights[static_cast<int>(q)];
       auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
       double dx = det(J_q) * dxi;
 
@@ -206,9 +206,9 @@ void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const
     tensor< double, ndof > y_local{};
 
     for (size_t q = 0; q < rule.size(); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
+      auto xi = rule.points[static_cast<int>(q)];
+      auto dxi = rule.weights[static_cast<int>(q)];
+      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(static_cast<int>(q), i, j, e); });
       double dx = det(J_q) * dxi;
 
       auto N = element_type::shape_functions(xi);

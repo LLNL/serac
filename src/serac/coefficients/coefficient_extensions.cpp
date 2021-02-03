@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -80,8 +80,8 @@ mfem::Array<int> MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::
 double AttributeModifierCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
   // Store old attribute and change to new attribute
-  double attr  = Tr.Attribute;
-  Tr.Attribute = attr_list_[Tr.ElementNo];
+  const int attr = Tr.Attribute;
+  Tr.Attribute   = attr_list_[Tr.ElementNo];
 
   // Evaluate with new attribute
   double result = coef_.Eval(Tr, ip);
