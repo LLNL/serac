@@ -45,14 +45,14 @@ struct finite_element<Geometry::Quadrilateral, Family::HCURL, degree, c> {
 
   */
 
-  static constexpr tensor<double, ndof, 2> shape_functions(tensor<double, dim> xi)
+  static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
   {
     int count = 0;
-    tensor<double, ndof> N{};
+    tensor<double, ndof, dim> N{};
 
     // do all the x-facing nodes first
-    tensor<double, p> N_closed = GaussLobattoInterpolation01<p+1>(xi[0]);
-    tensor<double, p> N_open   = GaussLegendreInterpolation<p>(xi[1]);
+    tensor<double, p+1> N_closed = GaussLobattoInterpolation01<p+1>(xi[1]);
+    tensor<double, p> N_open   = GaussLegendreInterpolation01<p>(xi[0]);
     for (int j = 0; j < p + 1; j++) {
       for (int i = 0; i < p; i++) {
         N[count++] = {N_open[i] * N_closed[j], 0.0};
@@ -60,8 +60,8 @@ struct finite_element<Geometry::Quadrilateral, Family::HCURL, degree, c> {
     }
 
     // then all the y-facing nodes
-    N_closed = GaussLobattoInterpolation01<p+1>(xi[1]);
-    N_open   = GaussLegendreInterpolation<p>(xi[0]);
+    N_closed = GaussLobattoInterpolation01<p+1>(xi[0]);
+    N_open   = GaussLegendreInterpolation01<p>(xi[1]);
     for (int j = 0; j < p; j++) {
       for (int i = 0; i < p + 1; i++) {
         N[count++] = {0.0, N_closed[i] * N_open[j]};
@@ -77,20 +77,20 @@ struct finite_element<Geometry::Quadrilateral, Family::HCURL, degree, c> {
     tensor<double, ndof> curl_z{};
 
     // do all the x-facing nodes first
-    tensor<double, p+1> dN_closed = GaussLobattoInterpolationDerivative01<p+1>(xi[0]);
-    tensor<double, p> N_open    = GaussLegendreInterpolation<p>(xi[1]);
+    tensor<double, p+1> N_closed = GaussLobattoInterpolation01<p+1>(xi[1]);
+    tensor<double, p> dN_open   = GaussLegendreInterpolationDerivative01<p>(xi[0]);
     for (int j = 0; j < p + 1; j++) {
       for (int i = 0; i < p; i++) {
-        curl_z[count++] = N_open[i] * dN_closed[j];
+        curl_z[count++] = -dN_open[i] * N_closed[j];
       }
     }
 
     // then all the y-facing nodes
-    dN_closed = GaussLobattoInterpolationDerivative01<p+1>(xi[0]);
-    N_open    = GaussLegendreInterpolation<p>(xi[1]);
+    N_closed = GaussLobattoInterpolation01<p+1>(xi[0]);
+    dN_open   = GaussLegendreInterpolationDerivative01<p>(xi[1]);
     for (int j = 0; j < p; j++) {
       for (int i = 0; i < p + 1; i++) {
-        N[count++] = {0.0, N_closed[i] * N_open[j]};
+        curl_z[count++] = N_closed[i] * dN_open[j];
       }
     }
  

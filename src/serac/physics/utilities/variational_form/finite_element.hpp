@@ -43,13 +43,13 @@ struct is_quadrature_data< quadrature_data < T > >{
 //#include "detail/segment_hcurl.inl"
 
 //#include "detail/triangle_h1.inl"
-//#include "detail/triangle_hcurl.inl
+//#include "detail/triangle_hcurl.inl"
 
 #include "detail/quadrilateral_h1.inl"
-//#include "detail/quadrilateral_hcurl.inl
+#include "detail/quadrilateral_hcurl.inl"
 
 //#include "detail/tetrahedron_h1.inl"
-//#include "detail/tetrahedron_hcurl.inl
+//#include "detail/tetrahedron_hcurl.inl"
 
 #include "detail/hexahedron_h1.inl"
-//#include "detail/hexahedron_hcurl.inl
+//#include "detail/hexahedron_hcurl.inl"
