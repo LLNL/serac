@@ -81,13 +81,13 @@ public:
   void Setup(const FiniteElementSpace& fes) override {
     // Assuming the same element type
     fespace    = &fes;
-    Mesh* mesh = fes.GetMesh();
-    if (mesh->GetNE() == 0) {
+    Mesh* f_mesh = fes.GetMesh();
+    if (f_mesh->GetNE() == 0) {
       return;
     }
     const FiniteElement& el = *fes.GetFE(0);
     // SERAC EDIT BEGIN
-    // ElementTransformation *T = mesh->GetElementTransformation(0);
+    // ElementTransformation *T = f_mesh->GetElementTransformation(0);
     // SERAC EDIT END
     const IntegrationRule* ir = nullptr;
     if (!IntRule) {
@@ -95,10 +95,10 @@ public:
     }
     ir = IntRule;
 
-    dim    = mesh->Dimension();
+    dim    = f_mesh->Dimension();
     ne     = fes.GetMesh()->GetNE();
     nq     = ir->GetNPoints();
-    geom   = mesh->GetGeometricFactors(*ir, GeometricFactors::COORDINATES | GeometricFactors::JACOBIANS);
+    geom   = f_mesh->GetGeometricFactors(*ir, GeometricFactors::COORDINATES | GeometricFactors::JACOBIANS);
     maps   = &el.GetDofToQuad(*ir, DofToQuad::TENSOR);
     dofs1D = maps->ndof;
     quad1D = maps->nqpt;
@@ -187,8 +187,8 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
 
     tensor <double, ndof > y_local{};
     for (size_t q = 0; q < rule.size(); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
+      auto xi = rule.points[static_cast<int>(q)];
+      auto dxi = rule.weights[static_cast<int>(q)];
       auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
       double dx = det(J_q) * dxi;
 
@@ -198,7 +198,7 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
       auto u_q = dot(u_local, N);
       auto du_dx_q = dot(dot(u_local, dN_dxi), inv(J_q));
 
-      auto args = std::tuple{IntegrationPointPosition(q, e), u_q, du_dx_q};
+      auto args = std::tuple{IntegrationPointPosition(static_cast<int>(q), e), u_q, du_dx_q};
 
       auto [f0, f1] = std::apply(qf, args);
 
@@ -258,9 +258,9 @@ void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const
     tensor< double, ndof > y_local{};
 
     for (size_t q = 0; q < rule.size(); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
+      auto xi = rule.points[static_cast<int>(q)];
+      auto dxi = rule.weights[static_cast<int>(q)];
+      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(static_cast<int>(q), i, j, e); });
       double dx = det(J_q) * dxi;
 
       auto N = element_type::shape_functions(xi);
@@ -272,7 +272,7 @@ void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const
       auto v_q = dot(v_local, N);
       auto dv_dx_q = dot(dot(v_local, dN_dxi), inv(J_q));
 
-      auto x = IntegrationPointPosition(q, e);
+      auto x = IntegrationPointPosition(static_cast<int>(q), e);
 
       auto args = std::tuple_cat(std::tuple{x}, make_dual(u_q, du_dx_q));
 

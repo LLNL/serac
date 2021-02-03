@@ -131,7 +131,7 @@ constexpr auto all(const array<bool, n> a) {
     using S = decltype(T {} x T{});                                \
     array<S, n...> c{};                                            \
     for (int i = 0; i < (n * ...); i++) {                          \
-      ((S*)c.values)[i] = ((T*)a.values)[i] x((T*)b.values)[i];    \
+      static_cast<S*>(c.values)[i] = static_cast<T*>(a.values)[i] x(static_cast<T*>(b.values)[i]); \
     }                                                              \
     return c;                                                      \
   }                                                                \
@@ -140,7 +140,7 @@ constexpr auto all(const array<bool, n> a) {
     using S = decltype(T {} x T{});                                \
     array<S, n...> c{};                                            \
     for (int i = 0; i < (n * ...); i++) {                          \
-      ((S*)c.values)[i] = ((T*)a.values)[i] x b;                   \
+      static_cast<S*>(c.values)[i] = static_cast<T*>(a.values)[i] x b;	\
     }                                                              \
     return c;                                                      \
   }                                                                \
@@ -149,7 +149,7 @@ constexpr auto all(const array<bool, n> a) {
     using S = decltype(T {} x T{});                                \
     array<S, n...> c{};                                            \
     for (int i = 0; i < (n * ...); i++) {                          \
-      ((S*)c.values)[i] = a x((T*)b.values)[i];                    \
+      static_cast<S*>(c.values)[i] = a x(static_cast<T*>(b.values))[i];	\
     }                                                              \
     return c;                                                      \
   }
@@ -171,14 +171,14 @@ binary_operator_overload(!=);
   template <typename T, int... n>                                              \
   constexpr auto& operator x(array<T, n...>& arr, const T& rhs) {              \
     for (int i = 0; i < (n * ...); i++) {                                      \
-      ((T*)arr.values)[i] x rhs;                                               \
+      static_cast<T*>(arr.values)[i] x rhs;				\
     }                                                                          \
     return arr;                                                                \
   }                                                                            \
   template <typename T, int... n>                                              \
   constexpr auto& operator x(array<T, n...>& arr, const array<T, n...>& rhs) { \
     for (int i = 0; i < (n * ...); i++) {                                      \
-      ((T*)arr.values)[i] x((T*)rhs.values)[i];                                \
+      static_cast<T*>(arr.values)[i] x(static_cast<T*>(rhs.values))[i];	\
     }                                                                          \
     return arr;                                                                \
   }
