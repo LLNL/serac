@@ -296,7 +296,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
 
     # Convert CTest output to JUnit, do not overwrite previous res
     print("[Checking to see if xsltproc exists...]")
-    test_xsltproc_res = sexe("xsltproc --help", echo=True)
+    test_xsltproc_res = sexe("xsltproc --version", echo=True)
     if test_xsltproc_res != 0:
         print("[WARNING: xsltproc does not exist skipping JUnit conversion]")
     else:
