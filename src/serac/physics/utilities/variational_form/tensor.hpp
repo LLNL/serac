@@ -685,3 +685,18 @@ constexpr auto make_dual(tensor< double, n...> A){
   });
   return A_dual;
 }
+
+template < typename T >
+struct underlying{
+  using type = void;
+};
+
+template < typename T, int ... n >
+struct underlying < tensor < T, n ... > >{
+  using type = T;
+};
+
+template <>
+struct underlying < double >{
+  using type = double;
+};

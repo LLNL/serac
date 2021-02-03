@@ -11,9 +11,9 @@
 
 namespace mfem {
 template <typename qfunc_type>
-class QFunctionIntegrator : public GenericIntegrator {
+class HCurlQFunctionIntegrator : public GenericIntegrator {
 public:
-  QFunctionIntegrator(qfunc_type f, Mesh & m) : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), mesh(m) {}
+  HCurlQFunctionIntegrator(qfunc_type f, Mesh & m) : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), mesh(m) {}
 
   void Setup(const FiniteElementSpace& fes) override {
     // Assuming the same element type
@@ -69,7 +69,7 @@ protected:
 };
 
 template <typename qfunc_type>
-void QFunctionIntegrator<qfunc_type>::Apply(const Vector& x, Vector& y) const
+void HCurlQFunctionIntegrator<qfunc_type>::Apply(const Vector& x, Vector& y) const
 {
   if (dim == 2) {
     switch ((dofs1D << 4) | quad1D) {
@@ -87,11 +87,11 @@ void QFunctionIntegrator<qfunc_type>::Apply(const Vector& x, Vector& y) const
 
 template <typename qfunc_type>
 template <int D1D, int Q1D>
-void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) const
+void HCurlQFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) const
 {
   int NE = ne;
 
-  using element_type = finite_element<::Geometry::Quadrilateral, Family::H1, static_cast<PolynomialDegree>(D1D - 1)>;
+  using element_type = finite_element<::Geometry::Quadrilateral, Family::HCURL, static_cast<PolynomialDegree>(D1D - 1)>;
   static constexpr int dim = element_type::dim;
   static constexpr int ndof = element_type::ndof;
 
@@ -137,7 +137,7 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
 
 
 template <typename qfunc_type>
-void QFunctionIntegrator<qfunc_type>::ApplyGradient(const Vector& x, const Vector& v, Vector& y) const
+void HCurlQFunctionIntegrator<qfunc_type>::ApplyGradient(const Vector& x, const Vector& v, Vector& y) const
 {
   if (dim == 2) {
     switch ((dofs1D << 4) | quad1D) {
@@ -155,10 +155,10 @@ void QFunctionIntegrator<qfunc_type>::ApplyGradient(const Vector& x, const Vecto
 
 template <typename qfunc_type>
 template <int D1D, int Q1D>
-void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const Vector& v_in_, Vector& y_) const
+void HCurlQFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const Vector& v_in_, Vector& y_) const
 {
   int NE             = ne;
-  using element_type = finite_element<::Geometry::Quadrilateral, Family::H1, static_cast<PolynomialDegree>(D1D - 1)>;
+  using element_type = finite_element<::Geometry::Quadrilateral, Family::HCURL, static_cast<PolynomialDegree>(D1D - 1)>;
   static constexpr int dim = element_type::dim;
   static constexpr int ndof = element_type::ndof;
 

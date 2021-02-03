@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
   x2.Distribute(X2);
 
   mfem::ConstantCoefficient zero_coef(0.0);
-  std::cout << "error: " << mfem::Vector(x - x2).Norml2() << std::endl;
+  std::cout << "relative error: " << mfem::Vector(x - x2).Norml2() / x.Norml2() << std::endl;
   std::cout << x.ComputeL2Error(zero_coef) << std::endl;
   std::cout << x2.ComputeL2Error(zero_coef) << std::endl;
 
