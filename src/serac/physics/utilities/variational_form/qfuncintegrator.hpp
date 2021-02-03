@@ -5,6 +5,7 @@
 #include "genericintegrator.hpp"
 #include "tensor.hpp"
 #include "tuple_arithmetic.hpp"
+#include "quadrature.hpp"
 
 #include "finite_element.hpp"
 
@@ -22,45 +23,6 @@ template <>
 struct underlying < double >{
   using type = double;
 };
-
-template <int n, int dim>
-struct QuadratureRule {
-  array<double, n>              weights;
-  array<tensor<double, dim>, n> points;
-  constexpr size_t              size() const { return n; }
-};
-
-template <::Geometry g, int Q>
-constexpr auto GaussQuadratureRule()
-{
-  auto x = GaussLegendreNodes<Q>(0.0, 1.0);
-  auto w = GaussLegendreWeights<Q>();
-  if constexpr (g == Geometry::Quadrilateral) {
-    QuadratureRule<Q * Q, 2> rule{};
-    int                      count = 0;
-    for (int j = 0; j < Q; j++) {
-      for (int i = 0; i < Q; i++) {
-        rule.points[count]    = {x[i], x[j]};
-        rule.weights[count++] = w[i] * w[j];
-      }
-    }
-    return rule;
-  }
-
-  if constexpr (g == Geometry::Hexahedron) {
-    QuadratureRule<Q * Q * Q, 3> rule{};
-    int                          count = 0;
-    for (int k = 0; k < Q; k++) {
-      for (int j = 0; j < Q; j++) {
-        for (int i = 0; i < Q; i++) {
-          rule.points[count]    = {x[i], x[j], x[k]};
-          rule.weights[count++] = w[i] * w[j] * w[k];
-        }
-      }
-    }
-    return rule;
-  }
-}
 
 namespace mfem {
 template <typename T>
@@ -104,11 +66,8 @@ public:
     quad1D = maps->nqpt;
     //    pa_data.SetSize(ne * nq, Device::GetDeviceMemoryType());
 
-    W_.SetSize(nq, Device::GetDeviceMemoryType());
-    W_.GetMemory().CopyFrom(ir->GetWeights().GetMemory(), nq);
-
-    // J.SetSize(ne * nq, Device::GetDeviceMemoryType());
     J_ = geom->J;
+    X_ = geom->X;
   };
 
   void Apply(const Vector&, Vector&) const override;
@@ -132,21 +91,11 @@ protected:
 
   // Geometric factors
   Vector J_;
-  Vector W_;
+  Vector X_;
 
-  qfunc_type                     qf;
+  qfunc_type qf;
   Mesh & mesh;
 };
-
-template <typename qfunc_type>
-auto QFunctionIntegrator<qfunc_type>::IntegrationPointPosition(const int q, const int e) const
-{
-  Vector trip(3);
-  trip                      = 0.0;
-  ElementTransformation* tr = const_cast<Mesh&>(mesh).GetElementTransformation(e);
-  tr->Transform(IntRule->IntPoint(q), trip);
-  return tensor<double, 3>{{trip(0), trip(1), mesh.SpaceDimension() == 2 ? 0.0 : trip(2)}};
-}
 
 template <typename qfunc_type>
 void QFunctionIntegrator<qfunc_type>::Apply(const Vector& x, Vector& y) const
@@ -177,6 +126,7 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
 
   static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
 
+  auto X = Reshape(X_.Read(), rule.size(), 2, NE);
   auto J = Reshape(J_.Read(), rule.size(), 2, 2, NE);
   auto u = Reshape(u_in_.Read(), ndof, NE);
   auto y = Reshape(y_.ReadWrite(), ndof, NE);
@@ -198,16 +148,13 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
       auto u_q = dot(u_local, N);
       auto du_dx_q = dot(dot(u_local, dN_dxi), inv(J_q));
 
-      auto args = std::tuple{IntegrationPointPosition(q, e), u_q, du_dx_q};
+      tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
+
+      auto args = std::tuple{x, u_q, du_dx_q};
 
       auto [f0, f1] = std::apply(qf, args);
 
-      // chain rule: dN_dx = dN_dxi * dxi_dx = dN_dxi * inv(dx_dxi)
-      // ===>        dN_dx * f1 = dN_dxi * inv(dx_dxi) * f1
-      // we perform (inv(dx_dxi) * f1) first, because f1 has smaller
-      // dimensions than dN_dxi, so it should be less expensive
       y_local += (N * f0 + dot(dN_dxi, dot(inv(J_q), f1))) * dx;
-
     }
 
     for (int i = 0; i < ndof; i++) {
@@ -246,6 +193,7 @@ void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const
 
   static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
 
+  auto X = Reshape(X_.Read(), rule.size(), 2, NE);
   auto J = Reshape(J_.Read(), rule.size(), 2, 2, NE);
   auto u = Reshape(u_in_.Read(), ndof, NE);
   auto v = Reshape(v_in_.Read(), ndof, NE);
@@ -272,7 +220,7 @@ void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const
       auto v_q = dot(v_local, N);
       auto dv_dx_q = dot(dot(v_local, dN_dxi), inv(J_q));
 
-      auto x = IntegrationPointPosition(q, e);
+      tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
 
       auto args = std::tuple_cat(std::tuple{x}, make_dual(u_q, du_dx_q));
 
