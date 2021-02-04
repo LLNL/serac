@@ -57,4 +57,17 @@ void BoundaryConditionManager::updateAllEssentialDofs() const
   all_dofs_valid_ = true;
 }
 
+void BoundaryConditionManager::setTime(const double time)
+{
+  for (auto& bc : ess_bdr_) {
+    bc.setTime(time);
+  }
+  for (auto& bc : nat_bdr_) {
+    bc.setTime(time);
+  }
+  for (auto& bc : other_bdr_) {
+    bc.setTime(time);
+  }
+}
+
 }  // namespace serac

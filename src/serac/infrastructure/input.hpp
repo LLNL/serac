@@ -58,8 +58,8 @@ void defineVectorInputFileSchema(axom::inlet::Table& table);
  * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
  */
 struct CoefficientInputOptions {
-  using VecFunc    = std::function<void(const mfem::Vector&, mfem::Vector&)>;
-  using ScalarFunc = std::function<double(const mfem::Vector&)>;
+  using VecFunc    = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
+  using ScalarFunc = std::function<double(const mfem::Vector&, double)>;
   /**
    * @brief The std::function corresponding to a function coefficient
    */
