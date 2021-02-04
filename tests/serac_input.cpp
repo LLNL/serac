@@ -86,7 +86,26 @@ TEST_F(InputTest, coef_build_scalar)
   test_vec(2)                 = 3;
   const auto& func            = std::get<input::CoefficientInputOptions::ScalarFunc>(coef_opts.func);
   auto        expected_result = test_vec(1) * 2 + test_vec(2);
-  EXPECT_DOUBLE_EQ(func(test_vec), expected_result);
+  EXPECT_DOUBLE_EQ(func(test_vec, 0.0), expected_result);
+  EXPECT_NO_THROW(coef_opts.constructScalar());
+}
+
+TEST_F(InputTest, coef_build_scalar_timedep)
+{
+  reader_->parseString("coef_opts = { coef = function(v, t) return (v.y * 2 + v.z) * t end, component = 1}");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_EQ(coef_opts.component, 1);
+  EXPECT_FALSE(coef_opts.isVector());
+  mfem::Vector test_vec(3);
+  test_vec(0)                  = 1;
+  test_vec(1)                  = 2;
+  test_vec(2)                  = 3;
+  const auto&  func            = std::get<input::CoefficientInputOptions::ScalarFunc>(coef_opts.func);
+  const double time            = 6.7;
+  auto         expected_result = (test_vec(1) * 2 + test_vec(2)) * time;
+  EXPECT_DOUBLE_EQ(func(test_vec, time), expected_result);
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
@@ -116,7 +135,33 @@ TEST_F(InputTest, coef_build_vector)
   expected_result(1) = test_vec(2);
   expected_result(2) = test_vec(0);
   mfem::Vector result(3);
-  func(test_vec, result);
+  func(test_vec, 0.0, result);
+  for (int i = 0; i < result.Size(); i++) {
+    EXPECT_DOUBLE_EQ(result[i], expected_result[i]);
+  }
+  EXPECT_NO_THROW(coef_opts.constructVector());
+}
+
+TEST_F(InputTest, coef_build_vector_timedep)
+{
+  reader_->parseString("coef_opts = { vec_coef = function(v, t) return Vector.new(v.y * 2, v.z, v.x) * t end }");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_TRUE(coef_opts.isVector());
+  mfem::Vector test_vec(3);
+  test_vec(0)       = 1;
+  test_vec(1)       = 2;
+  test_vec(2)       = 3;
+  const auto&  func = std::get<input::CoefficientInputOptions::VecFunc>(coef_opts.func);
+  const double time = 6.7;
+  mfem::Vector expected_result(3);
+  expected_result(0) = test_vec(1) * 2;
+  expected_result(1) = test_vec(2);
+  expected_result(2) = test_vec(0);
+  expected_result *= time;
+  mfem::Vector result(3);
+  func(test_vec, time, result);
   for (int i = 0; i < result.Size(); i++) {
     EXPECT_DOUBLE_EQ(result[i], expected_result[i]);
   }
