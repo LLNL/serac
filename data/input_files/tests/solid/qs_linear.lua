@@ -59,12 +59,11 @@ solid = {
                 return Vector.new(0, 0, 0)
             end
         },
-        ['displacement'] = {
+        ['traction'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {2},
-            component = 1,
-            coef = function (v)
-                return v.x * -1.0e-3
+            vec_coef = function (v)
+                return Vector.new(0, -1.0e-3, 0)
             end
         },
     },
