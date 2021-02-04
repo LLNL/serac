@@ -277,8 +277,12 @@ void NonlinearSolid::advanceTimestep(double& dt)
   // Set the mesh nodes to the reference configuration
   mesh_->NewNodes(*reference_nodes_);
 
+  bcs_.setTime(time_);
+
   if (is_quasistatic_) {
     quasiStaticSolve();
+    // Update the time for housekeeping purposes
+    time_ += dt;
   } else {
     ode2_.Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }
