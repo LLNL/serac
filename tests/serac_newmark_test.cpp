@@ -10,8 +10,8 @@
 #include <memory>
 
 #include "serac/coefficients/coefficient_extensions.hpp"
-#include "../src/serac/physics/integrators/wrapper_integrator.hpp"
-#include "../src/serac/numerics/expr_template_ops.hpp"
+#include "serac/physics/integrators/wrapper_integrator.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 #include "mfem.hpp"
 
 #include "serac/infrastructure/input.hpp"
