@@ -74,7 +74,7 @@ public:
    * @param[in] j second index
    * @param[in] k third index
    * @param[in] l fourth index
-   * 
+   *
    * @return a const reference to the value at array(i,j,k,l)
    */
   inline const T& operator()(int i, int j, int k, int l) const;
@@ -86,7 +86,7 @@ public:
    * @param[in] j second index
    * @param[in] k third index
    * @param[in] l fourth index
-   * 
+   *
    * @return a reference to the value at array(i,j,k,l)
    */
   inline T& operator()(int i, int j, int k, int l);
@@ -124,9 +124,9 @@ private:
 template <class T>
 inline const T& Array4D<T>::operator()(int i, int j, int k, int l) const
 {
-  SLIC_ASSERT_MSG(
-      i >= 0 && i < array1d_.Size() / dim_2_ / dim_3_ / dim_4_ && j >= 0 && j < dim_2_ && k >= 0 && k < dim_3_ && k >= 0 && k < dim_4_,
-      "Array4D: invalid access of element.");
+  SLIC_ASSERT_MSG(i >= 0 && i < array1d_.Size() / dim_2_ / dim_3_ / dim_4_ && j >= 0 && j < dim_2_ && k >= 0 &&
+                      k < dim_3_ && k >= 0 && k < dim_4_,
+                  "Array4D: invalid access of element.");
 
   // Access the correct offset in the 1D array corresponding to index (i,j,k,l)
   return array1d_[((i * dim_2_ + j) * dim_3_ + k) * dim_4_ + l];
@@ -135,9 +135,9 @@ inline const T& Array4D<T>::operator()(int i, int j, int k, int l) const
 template <class T>
 inline T& Array4D<T>::operator()(int i, int j, int k, int l)
 {
-  SLIC_ASSERT_MSG(
-      i >= 0 && i < array1d_.Size() / dim_2_ / dim_3_ / dim_4_ && j >= 0 && j < dim_2_ && k >= 0 && k < dim_3_ && k >= 0 && k < dim_4_,
-      "Array4D: invalid access of element.");
+  SLIC_ASSERT_MSG(i >= 0 && i < array1d_.Size() / dim_2_ / dim_3_ / dim_4_ && j >= 0 && j < dim_2_ && k >= 0 &&
+                      k < dim_3_ && k >= 0 && k < dim_4_,
+                  "Array4D: invalid access of element.");
 
   // Access the correct offset in the 1D array corresponding to index (i,j,k,l)
   return array1d_[((i * dim_2_ + j) * dim_3_ + k) * dim_4_ + l];

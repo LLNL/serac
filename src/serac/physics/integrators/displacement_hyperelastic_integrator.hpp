@@ -16,7 +16,6 @@
 
 #include "mfem.hpp"
 
-
 namespace serac::mfem_ext {
 
 /**
@@ -39,45 +38,48 @@ public:
   /**
    * @brief Computes the integral of W(Jacobian(Trt)) over a target zone
    *
-   * @param[in] el     Type of FiniteElement.
-   * @param[in] Ttr    Represents ref->target coordinates transformation.
-   * @param[in] elfun  Physical coordinates of the zone.
+   * @param[in] element     Type of FiniteElement.
+   * @param[in] basis_to_reference_transformation    Represents ref->target coordinates transformation.
+   * @param[in] state_vector  Physical coordinates of the zone.
    */
-  virtual double GetElementEnergy(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
-                                  const mfem::Vector& elfun);
+  virtual double GetElementEnergy(const mfem::FiniteElement&   element,
+                                  mfem::ElementTransformation& basis_to_reference_transformation,
+                                  const mfem::Vector&          state_vector);
 
   /**
    * @brief The residual evaluation for the nonlinear incremental integrator
    *
-   * @param[in] el The finite element to integrate
-   * @param[in] Ttr The element transformation operators
-   * @param[in] elfun The state vector to evaluate the residual
-   * @param[out] elvect The output residual
+   * @param[in] element The finite element to integrate
+   * @param[in] basis_to_reference_transformation The element transformation operators
+   * @param[in] state_vector The state vector to evaluate the residual
+   * @param[out] residual The output residual
    */
-  virtual void AssembleElementVector(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
-                                     const mfem::Vector& elfun, mfem::Vector& elvect);
+  virtual void AssembleElementVector(const mfem::FiniteElement&   element,
+                                     mfem::ElementTransformation& basis_to_reference_transformation,
+                                     const mfem::Vector& state_vector, mfem::Vector& residual);
 
   /**
    * @brief Assemble the local gradient
    *
-   * @param[in] el The finite element to integrate
-   * @param[in] Ttr The element transformation operators
-   * @param[in] elfun The state vector to evaluate the gradient
+   * @param[in] element The finite element to integrate
+   * @param[in] basis_to_reference_transformation The element transformation operators
+   * @param[in] state_vector The state vector to evaluate the gradient
    * @param[out] elmat The output local gradient
    */
-  virtual void AssembleElementGrad(const mfem::FiniteElement& el, mfem::ElementTransformation& Ttr,
-                                   const mfem::Vector& elfun, mfem::DenseMatrix& elmat);
+  virtual void AssembleElementGrad(const mfem::FiniteElement&   element,
+                                   mfem::ElementTransformation& basis_to_reference_transformation,
+                                   const mfem::Vector& state_vector, mfem::DenseMatrix& stiffness_matrix);
 
 private:
   /**
    * @brief Calculate the deformation gradient and right Cauchy-Green deformation tensor at a quadrature point
    *
-   * @param[in] el The finite element
-   * @param[in] ip The integration point
-   * @param[in] Ttr The reference-to-target (stress-free) transformation
+   * @param[in] element The finite element
+   * @param[in] int_point The integration point
+   * @param[in] basis_to_reference_transformation The reference-to-target (stress-free) transformation
    */
-  void CalcDeformationGradient(const mfem::FiniteElement& el, const mfem::IntegrationPoint& ip,
-                               mfem::ElementTransformation& Ttr);
+  void CalcDeformationGradient(const mfem::FiniteElement& element, const mfem::IntegrationPoint& int_point,
+                               mfem::ElementTransformation& basis_to_reference_transformation);
 
   /**
    * @brief The associated hyperelastic model
@@ -162,4 +164,4 @@ private:
   bool geom_nonlin_;
 };
 
-}  // namespace serac
+}  // namespace serac::mfem_ext
