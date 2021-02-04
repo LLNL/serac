@@ -56,6 +56,7 @@ endforeach()
 
 # Then add the examples/tests
 set(parvariationalform_mpi_tests
+    hcurl_comparison.cpp
     thermal_comparison.cpp
     elasticity_comparison.cpp)
     

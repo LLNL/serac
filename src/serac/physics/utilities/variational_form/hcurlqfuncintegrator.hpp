@@ -114,18 +114,18 @@ void HCurlQFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& 
       double dx = det(J_q) * dxi;
 
       auto N = element_type::shape_functions(xi);
-      auto dN_dxi = element_type::shape_function_gradients(xi);
+      auto curl_N = element_type::shape_function_curl(xi) / det(J_q);
 
       auto u_q = dot(u_local, N);
-      auto du_dx_q = dot(dot(u_local, dN_dxi), inv(J_q));
+      auto curl_u_q = dot(u_local, curl_N);
 
       tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
 
-      auto args = std::tuple{x, u_q, du_dx_q};
+      auto args = std::tuple{x, u_q, curl_u_q};
 
       auto [f0, f1] = std::apply(qf, args);
 
-      y_local += (N * f0 + dot(dN_dxi, dot(inv(J_q), f1))) * dx;
+      y_local += (N * f0 + curl_N * f1) * dx;
     }
 
     for (int i = 0; i < ndof; i++) {
@@ -183,17 +183,17 @@ void HCurlQFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, 
       double dx = det(J_q) * dxi;
 
       auto N = element_type::shape_functions(xi);
-      auto dN_dxi = element_type::shape_function_gradients(xi);
+      auto curl_N = element_type::shape_function_curl(xi) / det(J_q);
 
       auto u_q = dot(u_local, N);
-      auto du_dx_q = dot(dot(u_local, dN_dxi), inv(J_q));
+      auto curl_u_q = dot(u_local, curl_N);
 
       auto v_q = dot(v_local, N);
-      auto dv_dx_q = dot(dot(v_local, dN_dxi), inv(J_q));
+      auto curl_v_q = dot(v_local, curl_N);
 
       tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
 
-      auto args = std::tuple_cat(std::tuple{x}, make_dual(u_q, du_dx_q));
+      auto args = std::tuple_cat(std::tuple{x}, make_dual(u_q, curl_u_q));
 
       auto [f0, f1] = std::apply(qf, args);
 
@@ -210,18 +210,18 @@ void HCurlQFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, 
       // in summary: if the user gives us a function where some of the outputs do not depend on
       // inputs, we can detect this at compile time and skip unnecessary calculation/storage
       if constexpr (!std::is_same_v<typename underlying<decltype(f0)>::type, double>) {
-        double f00 = std::get<0>(f0.gradient);
-        tensor<double, 2> f01 = std::get<1>(f0.gradient);
-        y_local += (N * (f00 * v_q + dot(f01, dv_dx_q))) * dx;
+        tensor<double, 2, 2> f00{{
+          {std::get<0>(f0[0].gradient)[0], std::get<0>(f0[0].gradient)[1]}, 
+          {std::get<0>(f0[1].gradient)[0], std::get<0>(f0[1].gradient)[1]}
+        }};
+        tensor<double, 2> f01 = {std::get<1>(f0[0].gradient), std::get<1>(f0[1].gradient)};
+        y_local += (N * (dot(f00, v_q) + f01 * curl_v_q)) * dx;
       }
 
       if constexpr (!std::is_same_v<typename underlying<decltype(f1)>::type, double>) {
-        tensor<double, 2> f10 = {std::get<0>(f1[0].gradient), std::get<0>(f1[1].gradient)};
-        tensor<double, 2, 2> f11{{
-          {std::get<1>(f1[0].gradient)[0], std::get<1>(f1[0].gradient)[1]}, 
-          {std::get<1>(f1[1].gradient)[0], std::get<1>(f1[1].gradient)[1]}
-        }};
-        y_local += dot(dN_dxi, dot(inv(J_q), outer(f10, v_q) + dot(f11, dv_dx_q))) * dx;
+        tensor<double, 2> f10 = std::get<0>(f1.gradient);
+        double f11 = std::get<1>(f1.gradient);
+        y_local += curl_N * (dot(f10, v_q) + f11 * curl_v_q) * dx;
       }
       
     }
