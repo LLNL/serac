@@ -97,7 +97,16 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
       }
     } else if (name.find("traction") != std::string::npos) {
       auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
-      setTractionBCs(bc.attrs, trac_coef);
+      setTractionBCs(bc.attrs, trac_coef, !geom_nonlin_);
+    } else if (name.find("traction_ref") != std::string::npos) {
+      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+      setTractionBCs(bc.attrs, trac_coef, true);
+    } else if (name.find("pressure") != std::string::npos) {
+      auto pres_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      setPressureBCs(bc.attrs, pres_coef, !geom_nonlin_);
+    } else if (name.find("pressure_ref") != std::string::npos) {
+      auto pres_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      setPressureBCs(bc.attrs, pres_coef, true);
     } else {
       SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
     }
@@ -116,9 +125,23 @@ void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mf
 }
 
 void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                           int component)
+                           bool compute_on_reference, int component)
 {
-  bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
+  if (compute_on_reference) {
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::ReferenceTraction, component);
+  } else {
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::DeformedTraction, component);
+  }
+}
+
+void Solid::setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::Coefficient> pres_bdr_coef,
+                           bool compute_on_reference)
+{
+  if (compute_on_reference) {
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::ReferencePressure);
+  } else {
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::DeformedPressure);
+  }
 }
 
 void Solid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
@@ -159,10 +182,32 @@ void Solid::completeSetup()
   // Add the hyperelastic integrator
   H_->AddDomainIntegrator(new DisplacementHyperelasticIntegrator(*material_, geom_nonlin_));
 
-  // Add the traction integrator
-  for (auto& nat_bc_data : bcs_.naturals()) {
-    H_->AddBdrFaceIntegrator(new mfem_ext::HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
-                             nat_bc_data.markers());
+  // Add the deformed traction integrator
+  for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedTraction)) {
+    H_->AddBdrFaceIntegrator(
+        new mfem_ext::HyperelasticTractionIntegrator(deformed_traction_data.vectorCoefficient(), false),
+        deformed_traction_data.markers());
+  }
+
+  // Add the reference traction integrator
+  for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferenceTraction)) {
+    H_->AddBdrFaceIntegrator(
+        new mfem_ext::HyperelasticTractionIntegrator(deformed_traction_data.vectorCoefficient(), true),
+        deformed_traction_data.markers());
+  }
+
+  // Add the deformed pressure integrator
+  for (auto& deformed_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedPressure)) {
+    H_->AddBdrFaceIntegrator(
+        new mfem_ext::HyperelasticPressureIntegrator(deformed_pressure_data.scalarCoefficient(), false),
+        deformed_pressure_data.markers());
+  }
+
+  // Add the reference pressure integrator
+  for (auto& reference_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferencePressure)) {
+    H_->AddBdrFaceIntegrator(
+        new mfem_ext::HyperelasticPressureIntegrator(reference_pressure_data.scalarCoefficient(), true),
+        reference_pressure_data.markers());
   }
 
   // Add external forces

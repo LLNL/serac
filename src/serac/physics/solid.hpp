@@ -25,6 +25,18 @@
 namespace serac {
 
 /**
+ * @brief Enum describing the generic solid boundary conditions
+ *
+ */
+enum class SolidBoundaryCondition
+{
+  ReferencePressure,
+  ReferenceTraction,
+  DeformedPressure,
+  DeformedTraction
+};
+
+/**
  * @brief The nonlinear solid solver class
  *
  * The nonlinear hyperelastic quasi-static and dynamic
@@ -125,10 +137,23 @@ public:
    *
    * @param[in] trac_bdr The set of boundary attributes to apply a traction to
    * @param[in] trac_bdr_coef The vector valued traction coefficient
+   * @param[in] compute_on_reference Flag to compute on the reference stress-free configuration vs. the deformed
+   * configuration
    * @param[in] component The component to apply the traction on
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      int component = -1);
+                      bool compute_on_reference, int component = -1);
+
+  /**
+   * @brief Set the pressure boundary conditions
+   *
+   * @param[in] pres_bdr The set of boundary attributes to apply a pressure to
+   * @param[in] pres_bdr_coef The scalar valued pressure coefficient
+   * @param[in] compute_on_reference Flag to compute on the reference stress-free configuration vs. the deformed
+   * configuration
+   */
+  void setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::Coefficient> pres_bdr_coef,
+                      bool compute_on_reference);
 
   /**
    * @brief Add body force vectors on the domain

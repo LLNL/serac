@@ -83,7 +83,7 @@ TEST(dynamic_solver, dyn_solve)
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, pmesh, therm_options, default_dynamic);
   ts_solver.setDisplacementBCs(ess_bdr, deform);
-  ts_solver.setTractionBCs(trac_bdr, traction_coef);
+  ts_solver.setTractionBCs(trac_bdr, traction_coef, false);
   ts_solver.setSolidMaterialParameters(0.25, 5.0);
   ts_solver.setConductivity(std::move(kappa));
   ts_solver.setDisplacement(*deform);
