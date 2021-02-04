@@ -25,8 +25,8 @@ set(physics_headers
 
 set(physics_dependencies
     serac_infrastructure
-    serac_integrators
-    serac_materials
+    serac_physics_integrators
+    serac_physics_materials
     serac_numerics
     serac_physics_utilities
     serac_physics_operators

@@ -19,11 +19,11 @@ set(integrators_headers
 set(integrators_depends
     serac_infrastructure
     serac_numerics
-    serac_materials
+    serac_physics_materials
     )
 
 blt_add_library(
-    NAME        serac_integrators
+    NAME        serac_physics_integrators
     SOURCES     ${integrators_sources}
     HEADERS     ${integrators_headers}
     DEPENDS_ON  ${integrators_depends}
@@ -31,7 +31,7 @@ blt_add_library(
 
 install(FILES ${integrators_headers} DESTINATION include/serac/physics/integrators )
 
-install(TARGETS              serac_integrators 
+install(TARGETS              serac_physics_integrators 
         EXPORT               serac-targets
         DESTINATION          lib
         )

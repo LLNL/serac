@@ -10,8 +10,7 @@
  * @brief The MFEM integrators for the incremental hyperelastic formulation
  */
 
-#ifndef DISPLACEMENT_INTEGRATOR_HPP
-#define DISPLACEMENT_INTEGRATOR_HPP
+#pragma once
 
 #include "serac/physics/materials/hyperelastic_material.hpp"
 
@@ -162,5 +161,3 @@ private:
 };
 
 }  // namespace serac
-
-#endif

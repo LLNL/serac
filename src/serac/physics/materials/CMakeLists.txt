@@ -18,7 +18,7 @@ set(materials_depends
     )
 
 blt_add_library(
-   NAME        serac_materials
+   NAME        serac_physics_materials
    HEADERS     ${materials_headers}
    SOURCES     ${materials_sources}
    DEPENDS_ON  ${materials_depends}
@@ -26,7 +26,7 @@ blt_add_library(
 
 install(FILES ${materials_headers} DESTINATION include/serac/physics/materials )
 
-install(TARGETS              serac_materials
+install(TARGETS              serac_physics_materials
         EXPORT               serac-targets
         DESTINATION          lib
         )

@@ -157,10 +157,11 @@ void HyperelasticPressureIntegrator::AssembleFaceVector(const mfem::FiniteElemen
       CalcInverse(J_, Jinv_);
 
       Jinv_.MultTranspose(nor_, fnor_);
-
-      el1.CalcShape(eip, shape_);
-      fnor_ *= pressure_.Eval(*Tr.Face, ip) * J_.Det();
     }
+
+    el1.CalcShape(eip, shape_);
+    fnor_ *= pressure_.Eval(*Tr.Face, ip) * J_.Det();
+
     for (int j = 0; j < dof; j++) {
       for (int k = 0; k < dim; k++) {
         elvec(dof * k + j) += ip.weight * Tr.Face->Weight() * fnor_(k) * shape_(j);
