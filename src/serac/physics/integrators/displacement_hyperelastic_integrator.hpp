@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file inc_hyperelastic_integrator.hpp
+ * @file displacement_hyperelastic_integrator.hpp
  *
- * @brief The MFEM integrators for the incremental hyperelastic formulation
+ * @brief The MFEM integrators for the displacement hyperelastic formulation
  */
 
 #pragma once
@@ -16,18 +16,20 @@
 
 #include "mfem.hpp"
 
-namespace serac {
+
+namespace serac::mfem_ext {
 
 /**
- * @brief Incremental hyperelastic integrator for any given HyperelasticModel.
+ * @brief Displacement hyperelastic integrator for any given serac::HyperelasticModel.
  *
  */
 class DisplacementHyperelasticIntegrator : public mfem::NonlinearFormIntegrator {
 public:
   /**
-   * @brief The constructor for the incremental hyperelastic integrator
+   * @brief The constructor for the displacement hyperelastic integrator
    *
    * @param[in] m  HyperelasticModel that will be integrated.
+   * @param[in] geom_nonlin Flag to include geometric nonlinearities in the residual calculation
    */
   explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, bool geom_nonlin = true)
       : material_(m), geom_nonlin_(geom_nonlin)
@@ -101,7 +103,7 @@ private:
   mfem::DenseMatrix B_;
 
   /**
-   * @brief the Jacobian of the target-to-reference-element transformation.
+   * @brief the Jacobian of the target (stress-free) to reference element transformation.
    *
    */
   mfem::DenseMatrix Jrt_;
@@ -134,13 +136,13 @@ private:
    * @brief Current input state dofs (dof x dim)
    *
    */
-  mfem::DenseMatrix PMatI_;
+  mfem::DenseMatrix input_state_matrix_;
 
   /**
    * @brief Current residual contribution (dof x dim)
    *
    */
-  mfem::DenseMatrix PMatO_;
+  mfem::DenseMatrix output_residual_matrix_;
 
   /**
    * @brief The displacement gradient

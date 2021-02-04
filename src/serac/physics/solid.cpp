@@ -180,7 +180,7 @@ void Solid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  H_->AddDomainIntegrator(new DisplacementHyperelasticIntegrator(*material_, geom_nonlin_));
+  H_->AddDomainIntegrator(new mfem_ext::DisplacementHyperelasticIntegrator(*material_, geom_nonlin_));
 
   // Add the deformed traction integrator
   for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedTraction)) {

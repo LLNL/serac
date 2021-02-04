@@ -10,7 +10,7 @@
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/array_4D.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 void DisplacementHyperelasticIntegrator::CalcDeformationGradient(const mfem::FiniteElement&    el,
                                                                  const mfem::IntegrationPoint& ip,
@@ -25,10 +25,11 @@ void DisplacementHyperelasticIntegrator::CalcDeformationGradient(const mfem::Fin
   // Calculate the derivatives of the shape functions in the stress free configuration
   Mult(DSh_, Jrt_, DS_);
 
+  // Get the dimesion of the problem (2 or 3)
   int dim = Jrt_.Width();
 
   // Calculate the displacement gradient using the current DOFs
-  MultAtB(PMatI_, DS_, H_);
+  MultAtB(input_state_matrix_, DS_, H_);
 
   // Add the identity matrix to calculate the deformation gradient F_
   F_ = H_;
@@ -40,32 +41,38 @@ void DisplacementHyperelasticIntegrator::CalcDeformationGradient(const mfem::Fin
   mfem::CalcInverse(F_, Finv_);
 
   // Calculate the B matrix (dN/Dx where x is the current configuration)
-  // If we're including geometric nonlinearities, integrate on the current configuration
+
   if (geom_nonlin_) {
+    // If we're including geometric nonlinearities, we integrate on the current deformed configuration
     mfem::Mult(DS_, Finv_, B_);
-    // Calculate the determinant of the deformation gradient
     J_ = F_.Det();
   } else {
+    // If not, we integrate on the undeformed stress-free configuration
     B_ = DS_;
     J_ = 1.0;
   }
 }
 
 double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteElement&   el,
-                                                            mfem::ElementTransformation& Ttr, const mfem::Vector& elfun)
+                                                            mfem::ElementTransformation& Ttr, const mfem::Vector& state_vector)
 {
-  int dof = el.GetDof(), dim = el.GetDim();
+  int dof = el.GetDof();
+  int dim = el.GetDim();
 
   // Reshape the state vector
-  PMatI_.UseExternalData(elfun.GetData(), dof, dim);
+  input_state_matrix_.UseExternalData(state_vector.GetData(), dof, dim);
 
+  // Determine the integration rule from the order of the FE space
   const mfem::IntegrationRule* ir = IntRule;
   if (!ir) {
-    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
+    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  
   }
 
   double energy = 0.0;
+  
+  // Set the transformation for the underlying material. This is required for coefficient evaluation.
   material_.SetTransformation(Ttr);
+  
   for (int i = 0; i < ir->GetNPoints(); i++) {
     // Set the current integration point
     const mfem::IntegrationPoint& ip = ir->IntPoint(i);
@@ -81,10 +88,12 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(const mfem::FiniteEl
 
 void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::FiniteElement&   el,
                                                                mfem::ElementTransformation& Ttr,
-                                                               const mfem::Vector& elfun, mfem::Vector& elvect)
+                                                               const mfem::Vector& state_vector, mfem::Vector& residual_vector)
 {
-  int dof = el.GetDof(), dim = el.GetDim();
+  int dof = el.GetDof();
+  int dim = el.GetDim();
 
+  // Ensure that the working vectors are sized appropriately
   DSh_.SetSize(dof, dim);
   DS_.SetSize(dof, dim);
   B_.SetSize(dof, dim);
@@ -94,20 +103,21 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
   H_.SetSize(dim);
   sigma_.SetSize(dim);
 
-  // Reshape the input state and residual vectors
-  PMatI_.UseExternalData(elfun.GetData(), dof, dim);
-  elvect.SetSize(dof * dim);
-  PMatO_.UseExternalData(elvect.GetData(), dof, dim);
+  // Reshape the input state and residual vectors as matrices 
+  input_state_matrix_.UseExternalData(state_vector.GetData(), dof, dim);
+  residual_vector.SetSize(dof * dim);
+  output_residual_matrix_.UseExternalData(residual_vector.GetData(), dof, dim);
 
+  // Select an integration rule based on the order of the underlying FE space
   const mfem::IntegrationRule* ir = IntRule;
   if (!ir) {
-    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
+    ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3)); 
   }
 
-  elvect = 0.0;
+  // Set the transformation for the underlying material. This is required for coefficient evaluation.
   material_.SetTransformation(Ttr);
 
-  PMatO_ = 0.0;
+  output_residual_matrix_ = 0.0;
 
   for (int i = 0; i < ir->GetNPoints(); i++) {
     // Set the current integration point
@@ -122,18 +132,20 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(const mfem::Finit
 
     // Accumulate the residual using the Cauchy stress and the B matrix
     sigma_ *= J_ * ip.weight * Ttr.Weight();
-    mfem::AddMult(B_, sigma_, PMatO_);
+    mfem::AddMult(B_, sigma_, output_residual_matrix_);
   }
 }
 
 void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteElement&   el,
                                                              mfem::ElementTransformation& Ttr,
-                                                             const mfem::Vector& elfun, mfem::DenseMatrix& elmat)
+                                                             const mfem::Vector& state_vector, mfem::DenseMatrix& stiffness_matrix)
 {
   SERAC_MARK_FUNCTION;
 
-  int dof = el.GetDof(), dim = el.GetDim();
+  int dof = el.GetDof();
+  int dim = el.GetDim();
 
+  // Ensure that the working vectors are sized appropriately
   DSh_.SetSize(dof, dim);
   DS_.SetSize(dof, dim);
   B_.SetSize(dof, dim);
@@ -142,16 +154,21 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
   Finv_.SetSize(dim);
   H_.SetSize(dim);
   sigma_.SetSize(dim);
-  PMatI_.UseExternalData(elfun.GetData(), dof, dim);
-  elmat.SetSize(dof * dim);
+  stiffness_matrix.SetSize(dof * dim);
   C_.SetSize(dim, dim, dim, dim);
 
+  // Reshape the input state as a matrix 
+  input_state_matrix_.UseExternalData(state_vector.GetData(), dof, dim);
+
+  // Select an integration rule based on the order of the underlying FE space
   const mfem::IntegrationRule* ir = IntRule;
   if (!ir) {
     ir = &(mfem::IntRules.Get(el.GetGeomType(), 2 * el.GetOrder() + 3));  // <---
   }
 
-  elmat = 0.0;
+  stiffness_matrix = 0.0;
+
+  // Set the transformation for the underlying material. This is required for coefficient evaluation.
   material_.SetTransformation(Ttr);
   SERAC_MARK_LOOP_START(ip_loop_id, "IntegrationPt Loop");
 
@@ -172,7 +189,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
           for (int k = 0; k < dim; ++k) {
             for (int j = 0; j < dim; ++j) {
               for (int l = 0; l < dim; ++l) {
-                elmat(i * dof + a, k * dof + b) += C_(i, j, k, l) * B_(a, j) * B_(b, l) * ip.weight * Ttr.Weight();
+                stiffness_matrix(i * dof + a, k * dof + b) += C_(i, j, k, l) * B_(a, j) * B_(b, l) * ip.weight * Ttr.Weight();
               }
             }
           }
@@ -188,7 +205,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(const mfem::FiniteE
           for (int b = 0; b < dof; ++b) {
             for (int k = 0; k < dim; ++k) {
               for (int j = 0; j < dim; ++j) {
-                elmat(i * dof + a, k * dof + b) -= J_ * sigma_(i, j) * B_(a, k) * B_(b, j) * ip.weight * Ttr.Weight();
+                stiffness_matrix(i * dof + a, k * dof + b) -= J_ * sigma_(i, j) * B_(a, k) * B_(b, j) * ip.weight * Ttr.Weight();
               }
             }
           }
