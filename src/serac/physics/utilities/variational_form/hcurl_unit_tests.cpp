@@ -38,8 +38,50 @@ void verify_kronecker_delta_property() {
 
 }
 
+
+/*
+  compare the direct curl evaluation to a finite difference approximation
+*/
+template < PolynomialDegree degree >
+void verify_curl_calculation() {
+
+  static constexpr double eps = 1.0e-6;
+
+  static constexpr tensor I = Identity<2>();
+
+  static constexpr tensor< double, 2 > random_points[8] = {
+    {0.721555, 0.907109}, 
+    {0.458141, 0.0644415}, 
+    {0.825454, 0.910218}, 
+    {0.444205, 0.193282}, 
+    {0.59453, 0.121452}, 
+    {0.0473772, 0.865351}, 
+    {0.537781, 0.528525}, 
+    {0.745137, 0.572603}
+  };
+
+  using element_type = finite_element< ::Geometry::Quadrilateral, Family::HCURL, degree >;
+
+  constexpr auto N = element_type::shape_functions;
+  constexpr auto curlN = element_type::shape_function_curl;
+
+  for (auto x : random_points) {
+    auto dN_dx = (N(x + eps * I[0]) - N(x - eps * I[0])) / (2.0 * eps);
+    auto dN_dy = (N(x + eps * I[1]) - N(x - eps * I[1])) / (2.0 * eps);
+
+    std::cout << norm(curlN(x) - (dot(dN_dx, I[1]) - dot(dN_dy, I[0]))) << std::endl;
+  }
+
+  std::cout << std::endl;
+
+}
+
 int main() {
   verify_kronecker_delta_property<PolynomialDegree::Linear>();
   verify_kronecker_delta_property<PolynomialDegree::Quadratic>();
   verify_kronecker_delta_property<PolynomialDegree::Cubic>();
+
+  verify_curl_calculation<PolynomialDegree::Linear>();
+  verify_curl_calculation<PolynomialDegree::Quadratic>();
+  verify_curl_calculation<PolynomialDegree::Cubic>();
 }

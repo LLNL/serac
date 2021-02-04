@@ -27,37 +27,6 @@ public:
     i->Setup(*fes);
   }
 
-  template <typename integrator_type, typename qfunc_type, typename... qfunc_args_type>
-  void AddDomainIntegrator(qfunc_type f, qfunc_args_type const&... fargs)
-  {
-    if constexpr (std::is_same_v<integrator_type, DomainLFIntegrator>) {
-      // FIXME: Remove when GCC 8 is no longer supported, clumsy fix for
-      // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85883.  Overhead should
-      // be low as this will just call the implicit move constructor
-      auto i = new QFunctionIntegrator(QFunctionIntegrator(
-          [&](auto... args) {
-            auto du = std::get<1>(std::tuple{args...});
-            return std::tuple{f(args...), decltype(du){}};
-          },
-          0, *fes->GetParMesh(), fargs...));
-
-      domain_integrators.Append(i);
-      i->Setup(*fes);
-    }
-
-    if constexpr (std::is_same_v<integrator_type, DiffusionIntegrator>) {
-      auto i = new QFunctionIntegrator(QFunctionIntegrator(
-          [&](auto... args) {
-            auto du = std::get<1>(std::tuple{args...});
-            return std::tuple{0.0, f(args...) * du};
-          },
-          0, *fes->GetParMesh(), fargs...));
-
-      domain_integrators.Append(i);
-      i->Setup(*fes);
-    }
-  }
-
   void AssumeLinear() { is_linear = true; }
 
   // Return an Operator that provides a Mult(x, y) which is the MatVec of the
