@@ -70,7 +70,7 @@ using enable_if_mfem_vec = std::enable_if_t<std::is_base_of_v<mfem::Vector, std:
  * types on which pointer arithmetic can be performed.
  */
 template <typename vec>
-auto index(vec&& v, const std::size_t idx)
+auto index(vec&& v, const int idx)
 {
   if constexpr (std::is_same_v<std::decay_t<vec>, mfem::HypreParVector>) {
     return static_cast<const double*>(v)[idx];
@@ -103,11 +103,11 @@ public:
    * expression at index @p i
    * @param i The index to evaluate at
    */
-  double operator[](size_t i) const { return op_(index(v_, i)); }
+  double operator[](int i) const { return op_(index(v_, i)); }
   /**
    * @brief Returns the size of the vector expression
    */
-  size_t Size() const { return v_.Size(); }
+  int Size() const { return v_.Size(); }
 
 private:
   const vec_t<vec> v_;
@@ -190,20 +190,19 @@ public:
   BinaryVectorExpr(vec_arg_t<lhs> u, vec_arg_t<rhs> v)
       : u_(std::forward<vec_t<lhs>>(u)), v_(std::forward<vec_t<rhs>>(v))
   {
-    // MFEM uses int to represent a size type, so cast to size_t for consistency
-    SLIC_ERROR_IF(static_cast<std::size_t>(u_.Size()) != static_cast<std::size_t>(v_.Size()),
-                  "Vector sizes in binary operation must be equal");
+    // MFEM uses int to represent a size type, so cast to int for consistency
+    SLIC_ERROR_IF(u_.Size() != v_.Size(), "Vector sizes in binary operation must be equal");
   }
   /**
    * @brief Returns the fully evaluated value for the vector
    * expression at index @p i
    * @param i The index to evaluate at
    */
-  double operator[](size_t i) const { return op_(index(u_, i), index(v_, i)); }
+  double operator[](int i) const { return op_(index(u_, i), index(v_, i)); }
   /**
    * @brief Returns the size of the vector expression
    */
-  size_t Size() const { return v_.Size(); }
+  int Size() const { return v_.Size(); }
 
 private:
   const vec_t<lhs> u_;
@@ -249,11 +248,11 @@ public:
    * expression at index @p i
    * @param i The index to evaluate at
    */
-  double operator[](size_t i) const { return result_[i]; }
+  double operator[](int i) const { return result_[i]; }
   /**
    * @brief Returns the size of the vector expression
    */
-  size_t Size() const { return result_.Size(); }
+  int Size() const { return result_.Size(); }
 
 private:
   mfem::Vector result_;
