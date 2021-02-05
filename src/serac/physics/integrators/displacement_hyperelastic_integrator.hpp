@@ -87,13 +87,13 @@ private:
   serac::HyperelasticMaterial& material_;
 
   /**
-   * @brief gradients of reference shape functions (dof x dim).
+   * @brief gradients of shape functions on the parent element (dof x dim).
    *
    */
   mfem::DenseMatrix DSh_;
 
   /**
-   * @brief gradients of the shape functions in the target configuration (DN_i, DX_j)
+   * @brief gradients of the shape functions in the reference configuration (DN_i, DX_j)
    *
    */
   mfem::DenseMatrix DS_;
@@ -105,10 +105,10 @@ private:
   mfem::DenseMatrix B_;
 
   /**
-   * @brief the Jacobian of the target (stress-free) to reference element transformation.
+   * @brief the Jacobian of the reference to parent element transformation.
    *
    */
-  mfem::DenseMatrix Jrt_;
+  mfem::DenseMatrix Jrp_;
 
   /**
    * @brief the deformation gradient
@@ -156,7 +156,7 @@ private:
    * @brief The determinant of the deformation gradient
    *
    */
-  double J_;
+  double detF_;
 
   /**
    * @brief The geometric nonlinearity flag

@@ -14,19 +14,19 @@ namespace serac::mfem_ext {
 
 void DisplacementHyperelasticIntegrator::CalcDeformationGradient(
     const mfem::FiniteElement& element, const mfem::IntegrationPoint& int_point,
-    mfem::ElementTransformation& basis_to_reference_transformation)
+    mfem::ElementTransformation& parent_to_reference_transformation)
 {
   // Calculate the reference to stress-free transformation
-  CalcInverse(basis_to_reference_transformation.Jacobian(), Jrt_);
+  CalcInverse(parent_to_reference_transformation.Jacobian(), Jrp_);
 
   // Calculate the derivatives of the shape functions in the reference space
   element.CalcDShape(int_point, DSh_);
 
   // Calculate the derivatives of the shape functions in the stress free configuration
-  Mult(DSh_, Jrt_, DS_);
+  Mult(DSh_, Jrp_, DS_);
 
   // Get the dimesion of the problem (2 or 3)
-  int dim = Jrt_.Width();
+  int dim = Jrp_.Width();
 
   // Calculate the displacement gradient using the current DOFs
   MultAtB(input_state_matrix_, DS_, H_);
@@ -45,16 +45,16 @@ void DisplacementHyperelasticIntegrator::CalcDeformationGradient(
   if (geom_nonlin_) {
     // If we're including geometric nonlinearities, we integrate on the current deformed configuration
     mfem::Mult(DS_, Finv_, B_);
-    J_ = F_.Det();
+    detF_ = F_.Det();
   } else {
     // If not, we integrate on the undeformed stress-free configuration
-    B_ = DS_;
-    J_ = 1.0;
+    B_    = DS_;
+    detF_ = 1.0;
   }
 }
 
 double DisplacementHyperelasticIntegrator::GetElementEnergy(
-    const mfem::FiniteElement& element, mfem::ElementTransformation& basis_to_reference_transformation,
+    const mfem::FiniteElement& element, mfem::ElementTransformation& parent_to_reference_transformation,
     const mfem::Vector& state_vector)
 {
   int dof = element.GetDof();
@@ -72,23 +72,23 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(
   double energy = 0.0;
 
   // Set the transformation for the underlying material. This is required for coefficient evaluation.
-  material_.SetTransformation(basis_to_reference_transformation);
+  material_.SetTransformation(parent_to_reference_transformation);
 
   for (int i = 0; i < ir->GetNPoints(); i++) {
     // Set the current integration point
     const mfem::IntegrationPoint& int_point = ir->IntPoint(i);
-    basis_to_reference_transformation.SetIntPoint(&int_point);
+    parent_to_reference_transformation.SetIntPoint(&int_point);
 
     // Calculate the deformation gradent and accumulate the strain energy at the current integration point
-    CalcDeformationGradient(element, int_point, basis_to_reference_transformation);
-    energy += J_ * int_point.weight * basis_to_reference_transformation.Weight() * material_.EvalStrainEnergy(F_);
+    CalcDeformationGradient(element, int_point, parent_to_reference_transformation);
+    energy += detF_ * int_point.weight * parent_to_reference_transformation.Weight() * material_.EvalStrainEnergy(F_);
   }
 
   return energy;
 }
 
 void DisplacementHyperelasticIntegrator::AssembleElementVector(
-    const mfem::FiniteElement& element, mfem::ElementTransformation& basis_to_reference_transformation,
+    const mfem::FiniteElement& element, mfem::ElementTransformation& parent_to_reference_transformation,
     const mfem::Vector& state_vector, mfem::Vector& residual_vector)
 {
   int dof = element.GetDof();
@@ -98,7 +98,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(
   DSh_.SetSize(dof, dim);
   DS_.SetSize(dof, dim);
   B_.SetSize(dof, dim);
-  Jrt_.SetSize(dim);
+  Jrp_.SetSize(dim);
   F_.SetSize(dim);
   Finv_.SetSize(dim);
   H_.SetSize(dim);
@@ -116,29 +116,29 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(
   }
 
   // Set the transformation for the underlying material. This is required for coefficient evaluation.
-  material_.SetTransformation(basis_to_reference_transformation);
+  material_.SetTransformation(parent_to_reference_transformation);
 
   output_residual_matrix_ = 0.0;
 
   for (int i = 0; i < ir->GetNPoints(); i++) {
     // Set the current integration point
     const mfem::IntegrationPoint& int_point = ir->IntPoint(i);
-    basis_to_reference_transformation.SetIntPoint(&int_point);
+    parent_to_reference_transformation.SetIntPoint(&int_point);
 
     // Calculate the deformation gradient at the current integration point
-    CalcDeformationGradient(element, int_point, basis_to_reference_transformation);
+    CalcDeformationGradient(element, int_point, parent_to_reference_transformation);
 
     // Evaluate the Cauchy stress using the calculated deformation gradient
     material_.EvalStress(F_, sigma_);
 
     // Accumulate the residual using the Cauchy stress and the B matrix
-    sigma_ *= J_ * int_point.weight * basis_to_reference_transformation.Weight();
+    sigma_ *= detF_ * int_point.weight * parent_to_reference_transformation.Weight();
     mfem::AddMult(B_, sigma_, output_residual_matrix_);
   }
 }
 
 void DisplacementHyperelasticIntegrator::AssembleElementGrad(
-    const mfem::FiniteElement& element, mfem::ElementTransformation& basis_to_reference_transformation,
+    const mfem::FiniteElement& element, mfem::ElementTransformation& parent_to_reference_transformation,
     const mfem::Vector& state_vector, mfem::DenseMatrix& stiffness_matrix)
 {
   SERAC_MARK_FUNCTION;
@@ -150,7 +150,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
   DSh_.SetSize(dof, dim);
   DS_.SetSize(dof, dim);
   B_.SetSize(dof, dim);
-  Jrt_.SetSize(dim);
+  Jrp_.SetSize(dim);
   F_.SetSize(dim);
   Finv_.SetSize(dim);
   H_.SetSize(dim);
@@ -170,15 +170,15 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
   stiffness_matrix = 0.0;
 
   // Set the transformation for the underlying material. This is required for coefficient evaluation.
-  material_.SetTransformation(basis_to_reference_transformation);
+  material_.SetTransformation(parent_to_reference_transformation);
   SERAC_MARK_LOOP_START(ip_loop_id, "IntegrationPt Loop");
 
   for (int ip_num = 0; ip_num < ir->GetNPoints(); ip_num++) {
     // Set the integration point and calculate the deformation gradient
     SERAC_MARK_LOOP_ITER(ip_loop_id, i);
     const mfem::IntegrationPoint& int_point = ir->IntPoint(ip_num);
-    basis_to_reference_transformation.SetIntPoint(&int_point);
-    CalcDeformationGradient(element, int_point, basis_to_reference_transformation);
+    parent_to_reference_transformation.SetIntPoint(&int_point);
+    CalcDeformationGradient(element, int_point, parent_to_reference_transformation);
 
     // Assemble the spatial tangent moduli at the current integration point
     material_.AssembleTangentModuli(F_, C_);
@@ -191,7 +191,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
             for (int j = 0; j < dim; ++j) {
               for (int l = 0; l < dim; ++l) {
                 stiffness_matrix(i * dof + a, k * dof + b) += C_(i, j, k, l) * B_(a, j) * B_(b, l) * int_point.weight *
-                                                              basis_to_reference_transformation.Weight();
+                                                              parent_to_reference_transformation.Weight();
               }
             }
           }
@@ -207,9 +207,9 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
           for (int b = 0; b < dof; ++b) {
             for (int k = 0; k < dim; ++k) {
               for (int j = 0; j < dim; ++j) {
-                stiffness_matrix(i * dof + a, k * dof + b) -= J_ * sigma_(i, j) * B_(a, k) * B_(b, j) *
+                stiffness_matrix(i * dof + a, k * dof + b) -= detF_ * sigma_(i, j) * B_(a, k) * B_(b, j) *
                                                               int_point.weight *
-                                                              basis_to_reference_transformation.Weight();
+                                                              parent_to_reference_transformation.Weight();
               }
             }
           }
