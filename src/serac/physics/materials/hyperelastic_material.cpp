@@ -14,8 +14,8 @@ namespace serac {
 
 inline void NeoHookeanMaterial::EvalCoeffs() const
 {
-  mu_   = c_mu_->Eval(*Ttr_, Ttr_->GetIntPoint());
-  bulk_ = c_bulk_->Eval(*Ttr_, Ttr_->GetIntPoint());
+  mu_   = c_mu_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
+  bulk_ = c_bulk_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
 }
 
 double NeoHookeanMaterial::EvalStrainEnergy(const mfem::DenseMatrix& F) const
@@ -28,10 +28,12 @@ double NeoHookeanMaterial::EvalStrainEnergy(const mfem::DenseMatrix& F) const
     EvalCoeffs();
   }
 
-  double J      = F.Det();
-  double I1_bar = pow(J, -2.0 / dim) * (F * F);  // \bar{I}_1
+  double det_F = F.Det();
 
-  return 0.5 * (mu_ * (I1_bar - dim) + bulk_ * (J - 1.0) * (J - 1.0));
+  // First invariant of FF^T
+  double I1_bar = pow(det_F, -2.0 / dim) * (F * F);
+
+  return 0.5 * (mu_ * (I1_bar - dim) + bulk_ * (det_F - 1.0) * (det_F - 1.0));
 }
 
 void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const
@@ -45,11 +47,12 @@ void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatri
   }
 
   // See http://solidmechanics.org/Text/Chapter3_5/Chapter3_5.php for a sample derivation
-  double dJ = F.Det();
+  double det_F = F.Det();
 
-  double a = mu_ * std::pow(dJ, -(2.0 / dim) - 1.0);
-  double b = bulk_ * (dJ - 1.0) - a * (F * F) / dim;
+  double a = mu_ * std::pow(det_F, -(2.0 / dim) - 1.0);
+  double b = bulk_ * (det_F - 1.0) - a * (F * F) / dim;
 
+  // Form the left Cauchy-Green deformation tensor
   mfem::MultABt(F, F, B_);
 
   sigma = 0.0;
@@ -69,15 +72,15 @@ void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_
 
   mfem::MultABt(F, F, B_);
 
-  double dJ = F.Det();
+  double det_F = F.Det();
 
   if (c_mu_) {
     EvalCoeffs();
   }
 
   // See http://solidmechanics.org/Text/Chapter8_4/Chapter8_4.php for a sample derivation
-  double a = mu_ * std::pow(dJ, -2.0 / dim);
-  double b = bulk_ * (2.0 * dJ - 1.0) * dJ + a * (2.0 / (dim * dim)) * (F * F);
+  double a = mu_ * std::pow(det_F, -2.0 / dim);
+  double b = bulk_ * (2.0 * det_F - 1.0) * det_F + a * (2.0 / (dim * dim)) * (F * F);
 
   C = 0.0;
 
@@ -85,21 +88,8 @@ void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_
     for (int j = 0; j < dim; ++j) {
       for (int k = 0; k < dim; ++k) {
         for (int l = 0; l < dim; ++l) {
-          if (i == k) {
-            C(i, j, k, l) += a * B_(j, l);
-          }
-          if (j == k) {
-            C(i, j, k, l) += a * B_(i, l);
-          }
-          if (k == l) {
-            C(i, j, k, l) -= a * (2.0 / dim) * B_(i, j);
-          }
-          if (i == j) {
-            C(i, j, k, l) -= a * (2.0 / dim) * B_(k, l);
-          }
-          if (i == j && k == l) {
-            C(i, j, k, l) += b;
-          }
+          C(i, j, k, l) += a * (B_(j, l) * (i == k) + B_(i, l) * (j == k)) -
+                           a * (2.0 / dim) * (B_(i, j) * (k == l) + B_(k, l) * (i == j)) + b * (i == j) * (k == l);
         }
       }
     }
@@ -108,8 +98,8 @@ void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_
 
 inline void LinearElasticMaterial::EvalCoeffs() const
 {
-  mu_   = c_mu_->Eval(*Ttr_, Ttr_->GetIntPoint());
-  bulk_ = c_bulk_->Eval(*Ttr_, Ttr_->GetIntPoint());
+  mu_   = c_mu_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
+  bulk_ = c_bulk_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
 }
 
 void LinearElasticMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const
@@ -153,19 +143,13 @@ void LinearElasticMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mf
 
   C = 0.0;
 
+  double lambda = bulk_ - (2.0 / dim) * mu_;
+
   for (int i = 0; i < dim; ++i) {
     for (int j = 0; j < dim; ++j) {
       for (int k = 0; k < dim; ++k) {
         for (int l = 0; l < dim; ++l) {
-          if (i == j && k == l) {
-            C(i, j, k, l) += bulk_ - (2.0 / dim) * mu_;
-          }
-          if (i == k && j == l) {
-            C(i, j, k, l) += mu_;
-          }
-          if (i == l && j == k) {
-            C(i, j, k, l) += mu_;
-          }
+          C(i, j, k, l) += lambda * (i == j && k == l) + mu_ * ((i == k && j == l) + (i == l && j == k));
         }
       }
     }

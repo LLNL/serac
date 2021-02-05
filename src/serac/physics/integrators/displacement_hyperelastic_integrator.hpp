@@ -90,13 +90,13 @@ private:
    * @brief gradients of shape functions on the parent element (dof x dim).
    *
    */
-  mfem::DenseMatrix DSh_;
+  mfem::DenseMatrix dN_dxi_;
 
   /**
    * @brief gradients of the shape functions in the reference configuration (DN_i, DX_j)
    *
    */
-  mfem::DenseMatrix DS_;
+  mfem::DenseMatrix dN_dX_;
 
   /**
    * @brief gradients of the shape functions in the current configuration (DN_i, Dx_j)
@@ -108,7 +108,7 @@ private:
    * @brief the Jacobian of the reference to parent element transformation.
    *
    */
-  mfem::DenseMatrix Jrp_;
+  mfem::DenseMatrix dxi_dX_;
 
   /**
    * @brief the deformation gradient
@@ -156,7 +156,7 @@ private:
    * @brief The determinant of the deformation gradient
    *
    */
-  double detF_;
+  double det_F_;
 
   /**
    * @brief The geometric nonlinearity flag

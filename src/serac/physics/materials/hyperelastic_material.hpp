@@ -28,7 +28,7 @@ public:
    * @brief Construct a new Hyperelastic Material object
    *
    */
-  HyperelasticMaterial() : Ttr_(nullptr) {}
+  HyperelasticMaterial() : parent_to_reference_transformation_(nullptr) {}
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -36,17 +36,17 @@ public:
    */
   virtual ~HyperelasticMaterial() = default;
 
-  /// A reference-element to target-element transformation that can be used to
+  /// A parent-element to reference-element transformation that can be used to
   /// evaluate mfem::Coefficient%s.
-  /** @note It is assumed that _Ttr.SetIntPoint() is already called for the
+  /** @note It is assumed that parent_to_reference_transformation_.SetIntPoint() is already called for the
       point of interest. */
 
   /**
    * @brief Set the reference-to-target transformation. This is required to use coefficient parameters.
    *
-   * @param[in] Ttr The reference-to-target (stress-free) transformation
+   * @param[in] parent_to_reference_transformation_ The reference-to-target (stress-free) transformation
    */
-  void SetTransformation(mfem::ElementTransformation& Ttr) { Ttr_ = &Ttr; }
+  void SetTransformation(mfem::ElementTransformation& Ttr) { parent_to_reference_transformation_ = &Ttr; }
 
   /**
    * @brief Evaluate the strain energy density function, W = W(F).
@@ -79,7 +79,7 @@ protected:
    * @brief Reference element to stree-free configuration (target) transformation
    *
    */
-  mfem::ElementTransformation* Ttr_;
+  mfem::ElementTransformation* parent_to_reference_transformation_;
 };
 
 /**
