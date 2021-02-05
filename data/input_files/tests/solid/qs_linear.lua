@@ -19,7 +19,7 @@ output_type = "VisIt"
 
 -- Solver parameters
 solid = {
-    stiffness_solver = {
+    equation_solver = {
         -- Use a direct solver to check for machine precision convergence in one Newton step
         linear = {
             type = "direct",

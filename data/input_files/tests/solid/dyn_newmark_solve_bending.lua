@@ -41,7 +41,7 @@ print("t_final = " .. t_final);
 
 -- Solver parameters
 solid = {
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {

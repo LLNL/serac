@@ -69,7 +69,7 @@ TEST(solid_solver, qs_custom_solve)
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
   // qs_solve test
-  auto custom_options = inlet["solid/stiffness_solver/linear"].get<serac::LinearSolverOptions>();
+  auto custom_options = inlet["solid/equation_solver/linear"].get<serac::LinearSolverOptions>();
   auto iter_options   = std::get<serac::IterativeSolverOptions>(custom_options);
   auto custom_solver  = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
   custom_solver->SetRelTol(iter_options.rel_tol);

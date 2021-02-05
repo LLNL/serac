@@ -358,8 +358,7 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 
   table.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
 
-  auto& stiffness_solver_table =
-      table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  auto& stiffness_solver_table = table.addTable("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
   auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
@@ -388,9 +387,9 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
   result.order = base["order"];
 
   // Solver parameters
-  auto stiffness_solver                  = base["stiffness_solver"];
-  result.solver_options.H_lin_options    = stiffness_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.H_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  auto equation_solver                   = base["equation_solver"];
+  result.solver_options.H_lin_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
+  result.solver_options.H_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
     Solid::TimesteppingOptions dyn_options;

@@ -19,7 +19,7 @@ output_type = "VisIt"
 
 -- Solver parameters
 solid = {
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "direct",
             direct_options = {

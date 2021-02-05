@@ -13,7 +13,7 @@ main_mesh = {
 
 -- Solver parameters
 solid = {
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
