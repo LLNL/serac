@@ -5,14 +5,14 @@
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
 set(integrators_sources
-    hyperelastic_traction_integrator.cpp
     displacement_hyperelastic_integrator.cpp
+    traction_integrator.cpp
     wrapper_integrator.cpp
     )
 
 set(integrators_headers
-    hyperelastic_traction_integrator.hpp
     displacement_hyperelastic_integrator.hpp
+    traction_integrator.hpp
     wrapper_integrator.hpp
     )
 
