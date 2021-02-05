@@ -84,6 +84,7 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
     setVelocity(velo);
   }
   setViscosity(std::make_unique<mfem::ConstantCoefficient>(options.viscosity));
+  setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.initial_mass_density));
 
   for (const auto& [name, bc] : options.boundary_conditions) {
     // FIXME: Better naming for boundary conditions?
@@ -160,6 +161,11 @@ void Solid::setMaterialParameters(const double mu, const double K, const bool ma
 
 void Solid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
 
+void Solid::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho_coef)
+{
+  initial_mass_density_ = std::move(rho_coef);
+}
+
 void Solid::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
@@ -224,11 +230,8 @@ void Solid::completeSetup()
 
   // If dynamic, create the mass and viscosity forms
   if (!is_quasistatic_) {
-    const double              ref_density = 1.0;  // density in the reference configuration
-    mfem::ConstantCoefficient rho0(ref_density);
-
     M_ = displacement_.createOnSpace<mfem::ParBilinearForm>();
-    M_->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
+    M_->AddDomainIntegrator(new mfem::VectorMassIntegrator(*initial_mass_density_));
     M_->Assemble(0);
     M_->Finalize(0);
 
@@ -358,6 +361,8 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 
   table.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
 
+  table.addDouble("density", "Initial mass density").defaultValue(1.0);
+
   auto& stiffness_solver_table = table.addTable("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
@@ -432,6 +437,8 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
   }
 
   result.viscosity = base["viscosity"];
+
+  result.initial_mass_density = base["density"];
 
   if (base.contains("initial_displacement")) {
     result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputOptions>();

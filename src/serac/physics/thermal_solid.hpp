@@ -70,7 +70,11 @@ public:
    *
    * @param[in] rho The mass density coefficient
    */
-  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho) { therm_solver_.setMassDensity(std::move(rho)); };
+  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho)
+  {
+    therm_solver_.setMassDensity(std::move(rho));
+    solid_solver_.setMassDensity(std::move(rho));
+  };
 
   /**
    * @brief Set the specific heat capacity

@@ -83,6 +83,9 @@ public:
 
     double viscosity;
 
+    // initial density
+    double initial_mass_density;
+
     // Geometric nonlinearities flag
     bool geom_nonlin;
 
@@ -168,6 +171,13 @@ public:
    * @param[in] visc_coef The abstract viscosity coefficient
    */
   void setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef);
+
+  /**
+   * @brief Set the mass density coefficient
+   *
+   * @param[in] mass_density_coef The mass density coefficient
+   */
+  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho_coef);
 
   /**
    * @brief Set the material parameters
@@ -264,6 +274,11 @@ protected:
    * @brief The viscosity coefficient
    */
   std::unique_ptr<mfem::Coefficient> viscosity_;
+
+  /**
+   * @brief The mass density coefficient
+   */
+  std::unique_ptr<mfem::Coefficient> initial_mass_density_;
 
   /**
    * @brief The hyperelastic material model
