@@ -97,11 +97,8 @@ int main(int argc, char* argv[])
   f.AddDomainIntegrator(new VectorFEDomainLFIntegrator(load_func));
   f.Assemble();
 
-  VectorFunctionCoefficient boundary_func(dim, [&](const Vector& coords, Vector& output) {
-    double x = coords(0);
-    double y = coords(1);
+  VectorFunctionCoefficient boundary_func(dim, [&](const Vector& /*coords*/, Vector& output) {
     output = 0.0;
-    output(0) = 1 + x + 2 * y;
   });
 
   Array<int> ess_bdr(pmesh.bdr_attributes.Max());
@@ -153,9 +150,9 @@ int main(int argc, char* argv[])
   ParVariationalForm form(&fespace);
 
   auto tmp = new HCurlQFunctionIntegrator(
-      [&](auto x, auto u, auto du) {
+      [&](auto x, auto u, auto curl_u) {
         auto f0 = a * u - tensor{{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]}};
-        auto f1 = b * du;
+        auto f1 = b * curl_u;
         return std::tuple{f0, f1};
       }, pmesh);
 

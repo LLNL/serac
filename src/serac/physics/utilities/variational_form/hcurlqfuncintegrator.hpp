@@ -113,7 +113,7 @@ void HCurlQFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& 
       auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
       double dx = det(J_q) * dxi;
 
-      auto N = element_type::shape_functions(xi);
+      auto N = dot(element_type::shape_functions(xi), inv(J_q));
       auto curl_N = element_type::shape_function_curl(xi) / det(J_q);
 
       auto u_q = dot(u_local, N);
@@ -182,7 +182,7 @@ void HCurlQFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, 
       auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
       double dx = det(J_q) * dxi;
 
-      auto N = element_type::shape_functions(xi);
+      auto N = dot(element_type::shape_functions(xi), inv(J_q));
       auto curl_N = element_type::shape_function_curl(xi) / det(J_q);
 
       auto u_q = dot(u_local, N);
