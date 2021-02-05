@@ -45,11 +45,11 @@ void DisplacementHyperelasticIntegrator::CalcDeformationGradient(
   if (geom_nonlin_) {
     // If we're including geometric nonlinearities, we integrate on the current deformed configuration
     mfem::Mult(dN_dX_, Finv_, B_);
-    det_F_ = F_.Det();
+    det_J_ = F_.Det();
   } else {
     // If not, we integrate on the undeformed stress-free configuration
     B_     = dN_dX_;
-    det_F_ = 1.0;
+    det_J_ = 1.0;
   }
 }
 
@@ -81,7 +81,7 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(
 
     // Calculate the deformation gradent and accumulate the strain energy at the current integration point
     CalcDeformationGradient(element, int_point, parent_to_reference_transformation);
-    energy += det_F_ * int_point.weight * parent_to_reference_transformation.Weight() * material_.EvalStrainEnergy(F_);
+    energy += det_J_ * int_point.weight * parent_to_reference_transformation.Weight() * material_.EvalStrainEnergy(F_);
   }
 
   return energy;
@@ -132,7 +132,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(
     material_.EvalStress(F_, sigma_);
 
     // Accumulate the residual using the Cauchy stress and the B matrix
-    sigma_ *= det_F_ * int_point.weight * parent_to_reference_transformation.Weight();
+    sigma_ *= det_J_ * int_point.weight * parent_to_reference_transformation.Weight();
     mfem::AddMult(B_, sigma_, output_residual_matrix_);
   }
 }
@@ -207,7 +207,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
           for (int b = 0; b < dof; ++b) {
             for (int k = 0; k < dim; ++k) {
               for (int j = 0; j < dim; ++j) {
-                stiffness_matrix(i * dof + a, k * dof + b) -= det_F_ * sigma_(i, j) * B_(a, k) * B_(b, j) *
+                stiffness_matrix(i * dof + a, k * dof + b) -= det_J_ * sigma_(i, j) * B_(a, k) * B_(b, j) *
                                                               int_point.weight *
                                                               parent_to_reference_transformation.Weight();
               }

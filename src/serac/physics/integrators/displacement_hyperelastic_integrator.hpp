@@ -156,7 +156,7 @@ private:
    * @brief The determinant of the deformation gradient
    *
    */
-  double det_F_;
+  double det_J_;
 
   /**
    * @brief The geometric nonlinearity flag
