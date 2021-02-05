@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/materials/hyperelastic_material.hpp"
+#include "serac/physics/utilities/solid_utils.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 
@@ -18,9 +19,11 @@ inline void NeoHookeanMaterial::EvalCoeffs() const
   bulk_ = c_bulk_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
 }
 
-double NeoHookeanMaterial::EvalStrainEnergy(const mfem::DenseMatrix& F) const
+double NeoHookeanMaterial::EvalStrainEnergy(const mfem::DenseMatrix& du_dX) const
 {
-  int dim = F.Width();
+  calcDeformationGradient(du_dX, F_);
+
+  int dim = F_.Width();
 
   SLIC_ERROR_IF(dim != 2 && dim != 3, "NeoHookean material used for spatial dimension not 2 or 3!");
 
@@ -28,17 +31,18 @@ double NeoHookeanMaterial::EvalStrainEnergy(const mfem::DenseMatrix& F) const
     EvalCoeffs();
   }
 
-  double det_F = F.Det();
+  double det_J = F_.Det();
 
   // First invariant of FF^T
-  double I1_bar = pow(det_F, -2.0 / dim) * (F * F);
+  double I1_bar = pow(det_J, -2.0 / dim) * (F_ * F_);
 
-  return 0.5 * (mu_ * (I1_bar - dim) + bulk_ * (det_F - 1.0) * (det_F - 1.0));
+  return 0.5 * (mu_ * (I1_bar - dim) + bulk_ * (det_J - 1.0) * (det_J - 1.0));
 }
 
-void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const
+void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const
 {
-  int dim = F.Width();
+  calcDeformationGradient(du_dX, F_);
+  int dim = F_.Width();
   B_.SetSize(dim);
   sigma.SetSize(dim);
 
@@ -47,13 +51,13 @@ void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatri
   }
 
   // See http://solidmechanics.org/Text/Chapter3_5/Chapter3_5.php for a sample derivation
-  double det_F = F.Det();
+  double det_J = F_.Det();
 
-  double a = mu_ * std::pow(det_F, -(2.0 / dim) - 1.0);
-  double b = bulk_ * (det_F - 1.0) - a * (F * F) / dim;
+  double a = mu_ * std::pow(det_J, -(2.0 / dim) - 1.0);
+  double b = bulk_ * (det_J - 1.0) - a * (F_ * F_) / dim;
 
   // Form the left Cauchy-Green deformation tensor
-  mfem::MultABt(F, F, B_);
+  mfem::MultABt(F_, F_, B_);
 
   sigma = 0.0;
 
@@ -64,23 +68,24 @@ void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatri
   }
 }
 
-void NeoHookeanMaterial::EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const
+void NeoHookeanMaterial::EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const
 {
-  int dim = F.Width();
+  calcDeformationGradient(du_dX, F_);
+  int dim = F_.Width();
   B_.SetSize(dim);
   C.SetSize(dim, dim, dim, dim);
 
-  mfem::MultABt(F, F, B_);
+  mfem::MultABt(F_, F_, B_);
 
-  double det_F = F.Det();
+  double det_J = F_.Det();
 
   if (c_mu_) {
     EvalCoeffs();
   }
 
   // See http://solidmechanics.org/Text/Chapter8_4/Chapter8_4.php for a sample derivation
-  double a = mu_ * std::pow(det_F, -2.0 / dim);
-  double b = bulk_ * (2.0 * det_F - 1.0) * det_F + a * (2.0 / (dim * dim)) * (F * F);
+  double a = mu_ * std::pow(det_J, -2.0 / dim);
+  double b = bulk_ * (2.0 * det_J - 1.0) * det_J + a * (2.0 / (dim * dim)) * (F_ * F_);
 
   C = 0.0;
 
@@ -102,26 +107,18 @@ inline void LinearElasticMaterial::EvalCoeffs() const
   bulk_ = c_bulk_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
 }
 
-void LinearElasticMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const
+void LinearElasticMaterial::EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const
 {
-  int dim = F.Width();
+  int dim = du_dX.Width();
   sigma.SetSize(dim);
   epsilon_.SetSize(dim);
-  FT_.SetSize(dim);
 
   if (c_mu_) {
     EvalCoeffs();
   }
 
-  // Evaluate the linearized strain tensor from the deformation gradient
-  epsilon_ = 0.0;
-  epsilon_.Add(0.5, F);
-  FT_.Transpose(F);
-  epsilon_.Add(0.5, FT_);
-
-  for (int i = 0; i < dim; ++i) {
-    epsilon_(i, i) -= 1.0;
-  }
+  // Evaluate the linearized strain tensor from the displacement gradient
+  calcLinearizedStrain(du_dX, epsilon_);
 
   sigma                = 0.0;
   double trace_epsilon = epsilon_.Trace();
@@ -133,9 +130,9 @@ void LinearElasticMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMa
   }
 }
 
-void LinearElasticMaterial::EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const
+void LinearElasticMaterial::EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const
 {
-  int dim = F.Width();
+  int dim = du_dX.Width();
 
   if (c_mu_) {
     EvalCoeffs();

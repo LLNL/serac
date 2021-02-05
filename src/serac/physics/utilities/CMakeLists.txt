@@ -9,6 +9,7 @@ set(physics_utilities_headers
     boundary_condition_manager.hpp
     equation_solver.hpp
     finite_element_state.hpp
+    solid_utils.hpp
     solver_config.hpp
     )
 
@@ -17,6 +18,7 @@ set(physics_utilities_sources
     boundary_condition_manager.cpp
     equation_solver.cpp
     finite_element_state.cpp
+    solid_utils.cpp
     )
 
 set(physics_utilities_depends serac_infrastructure)

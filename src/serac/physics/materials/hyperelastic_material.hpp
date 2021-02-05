@@ -51,28 +51,28 @@ public:
   /**
    * @brief Evaluate the strain energy density function, W = W(F).
    *
-   * @param[in] F The deformation gradient
+   * @param[in] du_dX the displacement gradient
    * @return double Strain energy density
    */
-  virtual double EvalStrainEnergy(const mfem::DenseMatrix& F) const = 0;
+  virtual double EvalStrainEnergy(const mfem::DenseMatrix& du_dX) const = 0;
 
   /**
    * @brief Evaluate the Cauchy stress sigma = sigma(F).
    *
-   * @param[in] F The deformation gradient
+   * @param[in] du_dX the displacement gradient
    * @param[out] sigma The evaluated Cauchy stress
    */
-  virtual void EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const = 0;
+  virtual void EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const = 0;
 
   /**
    * @brief Evaluate the derivative of the 1st Piola-Kirchhoff stress tensor in Voigt notation
    * and assemble its contribution to the local gradient matrix 'A'.
 
-   * @param[in] F The deformation gradient
+   * @param[in] du_dX the displacement gradient
    * @param[out] C Tangent moduli 4D Array in spatial form (C^e_ijkl=(d tau_ij)/(d F_km) * F_lm = J * sigma_ij delta_kl
    + J * (d sigma_ij)/(d F_km) F_lm )
    */
-  virtual void EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const = 0;
+  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const = 0;
 
 protected:
   /**
@@ -116,26 +116,26 @@ public:
   /**
    * @brief Evaluate the strain energy density function, W = W(F).
    *
-   * @param[in] F The deformation gradient
+   * @param[in] du_dX The displacement gradient
    * @return Strain energy density
    */
-  virtual double EvalStrainEnergy(const mfem::DenseMatrix& F) const;
+  virtual double EvalStrainEnergy(const mfem::DenseMatrix& du_dX) const;
 
   /**
    * @brief Evaluate the Cauchy stress
    *
-   * @param[in] F The deformation gradient
+   * @param[in] du_dX The displacement gradient
    * @param[out] sigma The evaluated Cauchy stress
    */
-  virtual void EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const;
+  virtual void EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const;
 
   /**
    * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
    * and assemble its contribution to the 4D array (spatial elasticity tensor)
-   * @param[in] F The deformation gradient
+   * @param[in] du_dX The displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const;
+  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -169,7 +169,13 @@ protected:
   mfem::Coefficient* c_bulk_;
 
   /**
-   * @brief The left Cauchy-Green deformation (finger) tensor (FF^T)
+   * @brief The deformation gradient (dx_dX)
+   *
+   */
+  mutable mfem::DenseMatrix F_;
+
+  /**
+   * @brief The left Cauchy-Green deformation tensor (FF^T)
    *
    */
   mutable mfem::DenseMatrix B_;
@@ -214,7 +220,7 @@ public:
   /**
    * @brief Evaluate the strain energy density function, W = W(F).
    *
-   * @param[in] F The deformation gradient
+   * @param[in] du_dX the displacement gradient
    * @return Strain energy density
    */
   virtual double EvalStrainEnergy(const mfem::DenseMatrix&) const
@@ -226,18 +232,18 @@ public:
   /**
    * @brief Evaluate the Cauchy stress
    *
-   * @param[in] F The deformation gradient
+   * @param[in] du_dX the displacement gradient
    * @param[out] sigma The evaluated Cauchy stress
    */
-  virtual void EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatrix& sigma) const;
+  virtual void EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const;
 
   /**
    * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
    * and assemble its contribution to the 4D array (spatial elasticity tensor)
-   * @param[in] F The deformation gradient
+   * @param[in] du_dX the displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const;
+  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -269,12 +275,6 @@ protected:
    *
    */
   mfem::Coefficient* c_bulk_;
-
-  /**
-   * @brief Transpose of the deformation gradient
-   *
-   */
-  mutable mfem::DenseMatrix FT_;
 
   /**
    * @brief The linearized strain tensor

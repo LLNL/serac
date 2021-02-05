@@ -78,8 +78,8 @@ private:
    * @param[in] int_point The integration point
    * @param[in] basis_to_reference_transformation The reference-to-target (stress-free) transformation
    */
-  void CalcDeformationGradient(const mfem::FiniteElement& element, const mfem::IntegrationPoint& int_point,
-                               mfem::ElementTransformation& basis_to_reference_transformation);
+  void CalcKinematics(const mfem::FiniteElement& element, const mfem::IntegrationPoint& int_point,
+                      mfem::ElementTransformation& basis_to_reference_transformation);
 
   /**
    * @brief The associated hyperelastic model
@@ -150,7 +150,7 @@ private:
    * @brief The displacement gradient
    *
    */
-  mfem::DenseMatrix H_;
+  mfem::DenseMatrix du_dX_;
 
   /**
    * @brief The determinant of the deformation gradient
