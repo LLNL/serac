@@ -66,11 +66,11 @@ public:
   void setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa) { therm_solver_.setConductivity(std::move(kappa)); };
 
   /**
-   * @brief Set the density
+   * @brief Set the mass density
    *
-   * @param[in] rho The density coefficient
+   * @param[in] rho The mass density coefficient
    */
-  void setDensity(std::unique_ptr<mfem::Coefficient>&& rho) { therm_solver_.setDensity(std::move(rho)); };
+  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho) { therm_solver_.setMassDensity(std::move(rho)); };
 
   /**
    * @brief Set the specific heat capacity

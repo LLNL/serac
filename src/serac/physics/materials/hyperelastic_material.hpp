@@ -72,7 +72,7 @@ public:
    * @param[out] C Tangent moduli 4D Array in spatial form (C^e_ijkl=(d tau_ij)/(d F_km) * F_lm = J * sigma_ij delta_kl
    + J * (d sigma_ij)/(d F_km) F_lm )
    */
-  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const = 0;
+  virtual void EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const = 0;
 
 protected:
   /**
@@ -135,7 +135,7 @@ public:
    * @param[in] F The deformation gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const;
+  virtual void EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -237,7 +237,7 @@ public:
    * @param[in] F The deformation gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const;
+  virtual void EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object

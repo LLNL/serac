@@ -169,7 +169,7 @@ public:
    *
    * @param[in] rho The density field coefficient
    */
-  void setDensity(std::unique_ptr<mfem::Coefficient>&& rho);
+  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho);
 
   /**
    * @brief Set the specific heat capacity. Defaults to 1.0 if not set.

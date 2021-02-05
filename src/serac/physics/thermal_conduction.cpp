@@ -56,7 +56,7 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
     : ThermalConduction(options.order, mesh, options.solver_options)
 {
   setConductivity(std::make_unique<mfem::ConstantCoefficient>(options.kappa));
-  setDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
+  setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
   setSpecificHeatCapacity(std::make_unique<mfem::ConstantCoefficient>(options.cp));
 
   if (options.initial_temperature) {
@@ -119,7 +119,7 @@ void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficien
   cp_ = std::move(cp);
 }
 
-void ThermalConduction::setDensity(std::unique_ptr<mfem::Coefficient>&& rho)
+void ThermalConduction::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho)
 {
   // Set the density coefficient
   rho_ = std::move(rho);

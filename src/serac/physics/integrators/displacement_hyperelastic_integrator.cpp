@@ -181,7 +181,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
     CalcDeformationGradient(element, int_point, parent_to_reference_transformation);
 
     // Assemble the spatial tangent moduli at the current integration point
-    material_.AssembleTangentModuli(F_, C_);
+    material_.EvalTangentStiffness(F_, C_);
 
     // Accumulate the material stiffness using the spatial tangent moduli and the B matrix
     for (int a = 0; a < dof; ++a) {

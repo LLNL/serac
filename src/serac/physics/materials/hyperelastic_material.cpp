@@ -64,7 +64,7 @@ void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMatri
   }
 }
 
-void NeoHookeanMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const
+void NeoHookeanMaterial::EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const
 {
   int dim = F.Width();
   B_.SetSize(dim);
@@ -133,7 +133,7 @@ void LinearElasticMaterial::EvalStress(const mfem::DenseMatrix& F, mfem::DenseMa
   }
 }
 
-void LinearElasticMaterial::AssembleTangentModuli(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const
+void LinearElasticMaterial::EvalTangentStiffness(const mfem::DenseMatrix& F, mfem_ext::Array4D<double>& C) const
 {
   int dim = F.Width();
 
