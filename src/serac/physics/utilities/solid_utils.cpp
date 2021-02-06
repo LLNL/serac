@@ -6,7 +6,7 @@
 
 #include "serac/physics/utilities/solid_utils.hpp"
 
-namespace serac {
+namespace serac::solid {
 
 void calcDeformationGradient(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& F)
 {
@@ -33,4 +33,4 @@ void calcCauchyStressFromPK1Stress(const mfem::DenseMatrix& F, const mfem::Dense
   sigma *= 1.0 / F.Det();
 }
 
-}  // namespace serac
+}  // namespace serac::solid

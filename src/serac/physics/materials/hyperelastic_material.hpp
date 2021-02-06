@@ -16,7 +16,7 @@
 
 #include "serac/numerics/array_4D.hpp"
 
-namespace serac {
+namespace serac::solid {
 
 /**
  * @brief Abstract interface class for a generic hyperelastic material
@@ -290,4 +290,4 @@ protected:
   inline void EvalCoeffs() const;
 };
 
-}  // namespace serac
+}  // namespace serac::solid

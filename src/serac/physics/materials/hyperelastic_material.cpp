@@ -11,7 +11,7 @@
 
 #include <cmath>
 
-namespace serac {
+namespace serac::solid {
 
 inline void NeoHookeanMaterial::EvalCoeffs() const
 {
@@ -153,4 +153,4 @@ void LinearElasticMaterial::EvalTangentStiffness(const mfem::DenseMatrix& du_dX,
   }
 }
 
-}  // namespace serac
+}  // namespace serac::solid

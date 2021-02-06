@@ -11,7 +11,7 @@
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/array_4D.hpp"
 
-namespace serac::mfem_ext {
+namespace serac::solid::mfem_ext {
 
 void DisplacementHyperelasticIntegrator::CalcKinematics(const mfem::FiniteElement&    element,
                                                         const mfem::IntegrationPoint& int_point,
@@ -214,4 +214,4 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
   SERAC_MARK_LOOP_END(ip_loop_id);
 }
 
-}  // namespace serac::mfem_ext
+}  // namespace serac::solid::mfem_ext

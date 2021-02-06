@@ -283,7 +283,7 @@ protected:
   /**
    * @brief The hyperelastic material model
    */
-  std::unique_ptr<serac::HyperelasticMaterial> material_;
+  std::unique_ptr<solid::HyperelasticMaterial> material_;
 
   /**
    * @brief Flag for enabling geometric nonlinearities in the residual calculation

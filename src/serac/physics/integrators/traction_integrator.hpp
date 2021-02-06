@@ -14,7 +14,7 @@
 
 #include "mfem.hpp"
 
-namespace serac::mfem_ext {
+namespace serac::solid::mfem_ext {
 
 /**
  * @brief Custom MFEM integrator for nonlinear finite deformation traction loads
@@ -252,4 +252,4 @@ private:
   bool compute_on_reference_;
 };
 
-}  // namespace serac::mfem_ext
+}  // namespace serac::solid::mfem_ext

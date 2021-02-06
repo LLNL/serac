@@ -14,7 +14,7 @@
 
 #include "mfem.hpp"
 
-namespace serac {
+namespace serac::solid {
 
 /**
  * @brief Calculate the deformation gradient from the displacement gradient (F = H + I)
@@ -41,4 +41,4 @@ void calcLinearizedStrain(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& eps
  */
 void calcCauchyStressFromPK1Stress(const mfem::DenseMatrix& F, const mfem::DenseMatrix& P, mfem::DenseMatrix& sigma);
 
-}  // namespace serac
+}  // namespace serac::solid

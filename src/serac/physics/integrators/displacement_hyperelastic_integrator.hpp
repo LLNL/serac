@@ -16,7 +16,7 @@
 
 #include "mfem.hpp"
 
-namespace serac::mfem_ext {
+namespace serac::solid::mfem_ext {
 
 /**
  * @brief Displacement hyperelastic integrator for any given serac::HyperelasticModel.
@@ -30,7 +30,7 @@ public:
    * @param[in] m  HyperelasticModel that will be integrated.
    * @param[in] geom_nonlin Flag to include geometric nonlinearities in the residual calculation
    */
-  explicit DisplacementHyperelasticIntegrator(serac::HyperelasticMaterial& m, bool geom_nonlin = true)
+  explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial& m, bool geom_nonlin = true)
       : material_(m), geom_nonlin_(geom_nonlin)
   {
   }
@@ -84,7 +84,7 @@ private:
   /**
    * @brief The associated hyperelastic model
    */
-  serac::HyperelasticMaterial& material_;
+  HyperelasticMaterial& material_;
 
   /**
    * @brief gradients of shape functions on the parent element (dof x dim).
@@ -126,7 +126,7 @@ private:
    * @brief the spatial tangent moduli
    *
    */
-  mfem_ext::Array4D<double> C_;
+  serac::mfem_ext::Array4D<double> C_;
 
   /**
    * @brief the Cauchy stress
@@ -164,4 +164,4 @@ private:
   bool geom_nonlin_;
 };
 
-}  // namespace serac::mfem_ext
+}  // namespace serac::solid::mfem_ext
