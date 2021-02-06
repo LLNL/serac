@@ -237,9 +237,8 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   table.addDouble("rho", "Density").defaultValue(1.0);
   table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
-  auto& stiffness_solver_table =
-      table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
+  auto& equation_solver_table = table.addTable("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
 
   auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
@@ -265,7 +264,7 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
   result.order = base["order"];
 
   // Solver parameters
-  auto stiffness_solver                  = base["stiffness_solver"];
+  auto stiffness_solver                  = base["equation_solver"];
   result.solver_options.T_lin_options    = stiffness_solver["linear"].get<serac::LinearSolverOptions>();
   result.solver_options.T_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
