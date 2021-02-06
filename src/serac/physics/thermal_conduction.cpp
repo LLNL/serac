@@ -264,9 +264,9 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
   result.order = base["order"];
 
   // Solver parameters
-  auto stiffness_solver                  = base["equation_solver"];
-  result.solver_options.T_lin_options    = stiffness_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.T_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  auto equation_solver                   = base["equation_solver"];
+  result.solver_options.T_lin_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
+  result.solver_options.T_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
     ThermalConduction::TimesteppingOptions dyn_options;

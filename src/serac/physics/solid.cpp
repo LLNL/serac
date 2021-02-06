@@ -365,8 +365,8 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 
   table.addDouble("density", "Initial mass density").defaultValue(1.0);
 
-  auto& stiffness_solver_table = table.addTable("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
+  auto& equation_solver_table = table.addTable("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
 
   auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
