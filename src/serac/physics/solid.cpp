@@ -153,9 +153,9 @@ void Solid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef
 void Solid::setMaterialParameters(const double mu, const double K, const bool material_nonlin)
 {
   if (material_nonlin) {
-    material_ = std::make_unique<serac::NeoHookeanMaterial>(mu, K);
+    material_ = std::make_unique<solid::NeoHookeanMaterial>(mu, K);
   } else {
-    material_ = std::make_unique<serac::LinearElasticMaterial>(mu, K);
+    material_ = std::make_unique<solid::LinearElasticMaterial>(mu, K);
   }
 }
 
@@ -186,29 +186,29 @@ void Solid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  H_->AddDomainIntegrator(new mfem_ext::DisplacementHyperelasticIntegrator(*material_, geom_nonlin_));
+  H_->AddDomainIntegrator(new solid::mfem_ext::DisplacementHyperelasticIntegrator(*material_, geom_nonlin_));
 
   // Add the deformed traction integrator
   for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedTraction)) {
-    H_->AddBdrFaceIntegrator(new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), false),
+    H_->AddBdrFaceIntegrator(new solid::mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), false),
                              deformed_traction_data.markers());
   }
 
   // Add the reference traction integrator
   for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferenceTraction)) {
-    H_->AddBdrFaceIntegrator(new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), true),
+    H_->AddBdrFaceIntegrator(new solid::mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), true),
                              deformed_traction_data.markers());
   }
 
   // Add the deformed pressure integrator
   for (auto& deformed_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedPressure)) {
-    H_->AddBdrFaceIntegrator(new mfem_ext::PressureIntegrator(deformed_pressure_data.scalarCoefficient(), false),
+    H_->AddBdrFaceIntegrator(new solid::mfem_ext::PressureIntegrator(deformed_pressure_data.scalarCoefficient(), false),
                              deformed_pressure_data.markers());
   }
 
   // Add the reference pressure integrator
   for (auto& reference_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferencePressure)) {
-    H_->AddBdrFaceIntegrator(new mfem_ext::PressureIntegrator(reference_pressure_data.scalarCoefficient(), true),
+    H_->AddBdrFaceIntegrator(new solid::mfem_ext::PressureIntegrator(reference_pressure_data.scalarCoefficient(), true),
                              reference_pressure_data.markers());
   }
 
