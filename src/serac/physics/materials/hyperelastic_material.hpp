@@ -72,7 +72,7 @@ public:
    * @param[out] C Tangent moduli 4D Array in spatial form (C^e_ijkl=(d tau_ij)/(d F_km) * F_lm = J * sigma_ij delta_kl
    + J * (d sigma_ij)/(d F_km) F_lm )
    */
-  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const = 0;
+  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const = 0;
 
 protected:
   /**
@@ -94,22 +94,11 @@ public:
   /**
    * @brief Construct a new Neo Hookean Material object
    *
-   * @param[in] mu Shear modulus
-   * @param[in] bulk Bulk modulus
-   */
-  NeoHookeanMaterial(double mu, double bulk) : mu_(mu), bulk_(bulk)
-  {
-    c_mu_   = nullptr;
-    c_bulk_ = nullptr;
-  }
-
-  /**
-   * @brief Construct a new Neo Hookean Material object
-   *
    * @param[in] mu Shear modulus mu
    * @param[in] bulk Bulk modulus K
    */
-  NeoHookeanMaterial(mfem::Coefficient& mu, mfem::Coefficient& bulk) : mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
+  NeoHookeanMaterial(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& bulk)
+      : c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
   {
   }
 
@@ -135,13 +124,19 @@ public:
    * @param[in] du_dX The displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const;
+  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object
    *
    */
   virtual ~NeoHookeanMaterial() = default;
+
+  /**
+   * @brief Disable the default constructor
+   *
+   */
+  NeoHookeanMaterial() = delete;
 
 protected:
   /**
@@ -160,13 +155,13 @@ protected:
    * @brief Shear modulus in coefficient form
    *
    */
-  mfem::Coefficient* c_mu_;
+  std::unique_ptr<mfem::Coefficient> c_mu_;
 
   /**
    * @brief Bulk modulus in coefficient form
    *
    */
-  mfem::Coefficient* c_bulk_;
+  std::unique_ptr<mfem::Coefficient> c_bulk_;
 
   /**
    * @brief The deformation gradient (dx_dX)
@@ -197,23 +192,11 @@ public:
   /**
    * @brief Construct a new Linear Elastic Material object
    *
-   * @param[in] mu Shear modulus
-   * @param[in] bulk Bulk modulus
-   */
-  LinearElasticMaterial(double mu, double bulk) : mu_(mu), bulk_(bulk)
-  {
-    c_mu_   = nullptr;
-    c_bulk_ = nullptr;
-  }
-
-  /**
-   * @brief Construct a new Linear Elastic Material object
-   *
    * @param[in] mu Shear modulus mu
    * @param[in] bulk Bulk modulus K
    */
-  LinearElasticMaterial(mfem::Coefficient& mu, mfem::Coefficient& bulk)
-      : mu_(0.0), bulk_(0.0), c_mu_(&mu), c_bulk_(&bulk)
+  LinearElasticMaterial(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& bulk)
+      : c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
   {
   }
 
@@ -243,13 +226,19 @@ public:
    * @param[in] du_dX the displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const;
+  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object
    *
    */
   virtual ~LinearElasticMaterial() = default;
+
+  /**
+   * @brief Disable the default constructor
+   *
+   */
+  LinearElasticMaterial() = delete;
 
 protected:
   /**
@@ -268,13 +257,13 @@ protected:
    * @brief Shear modulus in coefficient form
    *
    */
-  mfem::Coefficient* c_mu_;
+  std::unique_ptr<mfem::Coefficient> c_mu_;
 
   /**
    * @brief Bulk modulus in coefficient form
    *
    */
-  mfem::Coefficient* c_bulk_;
+  std::unique_ptr<mfem::Coefficient> c_bulk_;
 
   /**
    * @brief The linearized strain tensor

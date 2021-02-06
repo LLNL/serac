@@ -186,7 +186,8 @@ public:
    * @param[in] K Set the bulk modulus for the solid
    * @param[in] material_nonlin Flag to include material nonlinearities (linear elastic vs. neo-Hookean model)
    */
-  void setMaterialParameters(double mu, double K, bool material_nonlin = true);
+  void setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
+                             bool material_nonlin = true);
 
   /**
    * @brief Set the initial displacement value

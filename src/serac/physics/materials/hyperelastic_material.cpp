@@ -27,9 +27,7 @@ double NeoHookeanMaterial::EvalStrainEnergy(const mfem::DenseMatrix& du_dX) cons
 
   SLIC_ERROR_IF(dim != 2 && dim != 3, "NeoHookean material used for spatial dimension not 2 or 3!");
 
-  if (c_mu_) {
-    EvalCoeffs();
-  }
+  EvalCoeffs();
 
   double det_J = F_.Det();
 
@@ -46,9 +44,7 @@ void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseM
   B_.SetSize(dim);
   sigma.SetSize(dim);
 
-  if (c_mu_) {
-    EvalCoeffs();
-  }
+  EvalCoeffs();
 
   // See http://solidmechanics.org/Text/Chapter3_5/Chapter3_5.php for a sample derivation
   double det_J = F_.Det();
@@ -79,9 +75,7 @@ void NeoHookeanMaterial::EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mf
 
   double det_J = F_.Det();
 
-  if (c_mu_) {
-    EvalCoeffs();
-  }
+  EvalCoeffs();
 
   // See http://solidmechanics.org/Text/Chapter8_4/Chapter8_4.php for a sample derivation
   double a = mu_ * std::pow(det_J, -2.0 / dim);
@@ -113,9 +107,7 @@ void LinearElasticMaterial::EvalStress(const mfem::DenseMatrix& du_dX, mfem::Den
   sigma.SetSize(dim);
   epsilon_.SetSize(dim);
 
-  if (c_mu_) {
-    EvalCoeffs();
-  }
+  EvalCoeffs();
 
   // Evaluate the linearized strain tensor from the displacement gradient
   calcLinearizedStrain(du_dX, epsilon_);
@@ -134,9 +126,7 @@ void LinearElasticMaterial::EvalTangentStiffness(const mfem::DenseMatrix& du_dX,
 {
   int dim = du_dX.Width();
 
-  if (c_mu_) {
-    EvalCoeffs();
-  }
+  EvalCoeffs();
 
   C = 0.0;
 

@@ -84,7 +84,8 @@ TEST(dynamic_solver, dyn_solve)
   ThermalSolid ts_solver(1, pmesh, therm_options, default_dynamic);
   ts_solver.setDisplacementBCs(ess_bdr, deform);
   ts_solver.setTractionBCs(trac_bdr, traction_coef, false);
-  ts_solver.setSolidMaterialParameters(0.25, 5.0);
+  ts_solver.setSolidMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
+                                       std::make_unique<mfem::ConstantCoefficient>(5.0));
   ts_solver.setConductivity(std::move(kappa));
   ts_solver.setDisplacement(*deform);
   ts_solver.setVelocity(*velo);

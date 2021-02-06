@@ -170,9 +170,10 @@ public:
    * @param[in] K Set the bulk modulus for the solid
    * @param[in] material_nonlin Flag to include material nonlinearities (linear elastic vs. neo-Hookean model)
    */
-  void setSolidMaterialParameters(double mu, double K, bool material_nonlin = true)
+  void setSolidMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
+                                  bool material_nonlin = true)
   {
-    solid_solver_.setMaterialParameters(mu, K, material_nonlin);
+    solid_solver_.setMaterialParameters(std::move(mu), std::move(K), material_nonlin);
   };
 
   /**

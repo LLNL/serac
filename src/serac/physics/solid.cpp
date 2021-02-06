@@ -71,7 +71,8 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
 {
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
-  setMaterialParameters(options.mu, options.K, options.material_nonlin);
+  setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(options.mu),
+                        std::make_unique<mfem::ConstantCoefficient>(options.K), options.material_nonlin);
 
   auto dim = mesh->Dimension();
   if (options.initial_displacement) {
@@ -150,12 +151,13 @@ void Solid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef
   ext_force_coefs_.push_back(ext_force_coef);
 }
 
-void Solid::setMaterialParameters(const double mu, const double K, const bool material_nonlin)
+void Solid::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
+                                  const bool material_nonlin)
 {
   if (material_nonlin) {
-    material_ = std::make_unique<solid::NeoHookeanMaterial>(mu, K);
+    material_ = std::make_unique<solid::NeoHookeanMaterial>(std::move(mu), std::move(K));
   } else {
-    material_ = std::make_unique<solid::LinearElasticMaterial>(mu, K);
+    material_ = std::make_unique<solid::LinearElasticMaterial>(std::move(mu), std::move(K));
   }
 }
 
