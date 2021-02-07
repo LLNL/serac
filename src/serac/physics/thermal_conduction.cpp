@@ -8,6 +8,7 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
+#include "serac/physics/integrators/wrapper_integrator.hpp"
 
 namespace serac {
 
@@ -129,20 +130,15 @@ void ThermalConduction::completeSetup()
 {
   SLIC_ASSERT_MSG(kappa_, "Conductivity not set in ThermalSolver!");
 
-  // Add the domain diffusion integrator to the K form and assemble the matrix
-  K_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
-  K_form_->AddDomainIntegrator(new mfem::DiffusionIntegrator(*kappa_));
-  K_form_->Assemble(0);  // keep sparsity pattern of M and K the same
-  K_form_->Finalize();
+  // Add the domain diffusion integrator to the K form
+  K_form_ = temperature_.createOnSpace<mfem::ParNonlinearForm>();
+  K_form_->AddDomainIntegrator(
+      new mfem_ext::BilinearToNonlinearFormIntegrator(std::make_unique<mfem::DiffusionIntegrator>(*kappa_)));
 
   // Add the body source to the RS if specified
-  l_form_ = temperature_.createOnSpace<mfem::ParLinearForm>();
   if (source_) {
-    l_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*source_));
-    rhs_.reset(l_form_->ParallelAssemble());
-  } else {
-    rhs_  = temperature_.createOnSpace<mfem::HypreParVector>();
-    *rhs_ = 0.0;
+    K_form_->AddDomainIntegrator(new mfem_ext::LinearToNonlinearFormIntegrator(
+        std::make_unique<mfem::DomainLFIntegrator>(*source_), temperature_.space()));
   }
 
   // Build the dof array lookup tables
@@ -153,13 +149,6 @@ void ThermalConduction::completeSetup()
     bc.projectBdr(temperature_, time_);
   }
 
-  // Assemble the stiffness matrix
-  K_.reset(K_form_->ParallelAssemble());
-
-  // Initialize the eliminated BC RHS vector
-  bc_rhs_  = temperature_.createOnSpace<mfem::HypreParVector>();
-  *bc_rhs_ = 0.0;
-
   // Initialize the true vector
   temperature_.initializeTrueVec();
 
@@ -168,16 +157,14 @@ void ThermalConduction::completeSetup()
         temperature_.space().TrueVSize(),
 
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*K_) * u;
+          K_form_->Mult(u, r);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
-        [this](const mfem::Vector & /*du_dt*/) -> mfem::Operator& {
-          if (J_ == nullptr) {
-            J_.reset(K_form_->ParallelAssemble());
-            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-          }
-          return *J_;
+        [this](const mfem::Vector& u) -> mfem::Operator& {
+          auto& J = dynamic_cast<mfem::HypreParMatrix&>(K_form_->GetGradient(u));
+          bcs_.eliminateAllEssentialDofsFromMatrix(J);
+          return J;
         });
 
   } else {
@@ -196,13 +183,15 @@ void ThermalConduction::completeSetup()
     residual_ = mfem_ext::StdFunctionOperator(
         temperature_.space().TrueVSize(),
         [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-          r = (*M_) * du_dt + (*K_) * (u_ + dt_ * du_dt);
+          r = (*M_) * du_dt + (*K_form_) * (u_ + dt_ * du_dt);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
-        [this](const mfem::Vector & /*du_dt*/) -> mfem::Operator& {
+        [this](const mfem::Vector& du_dt) -> mfem::Operator& {
           if (dt_ != previous_dt_) {
-            J_.reset(mfem::Add(1.0, *M_, dt_, *K_));
+            auto localJ = std::unique_ptr<mfem::SparseMatrix>(
+                mfem::Add(1.0, M_form_->SpMat(), dt_, K_form_->GetLocalGradient(u_ + dt_ * du_dt)));
+            J_.reset(M_form_->ParallelAssemble(localJ.get()));
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           }
           return *J_;

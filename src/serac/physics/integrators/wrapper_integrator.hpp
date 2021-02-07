@@ -30,8 +30,8 @@ public:
    * @param[in] f A LinearFormIntegrator
    * @param[in] trial_fes The trial finite element space
    */
-  explicit LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator>  f,
-                                           std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes);
+  explicit LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator> f,
+                                           const mfem::ParFiniteElementSpace&          trial_fes);
 
   /**
    * @brief Compute the residual vector => -F
@@ -64,7 +64,7 @@ private:
   /**
    * @brief The trial FE space
    */
-  std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes_;
+  const mfem::ParFiniteElementSpace& trial_fes_;
 };
 
 /**
@@ -120,7 +120,7 @@ public:
    * @param[in] trial_fes The trial finite element space
    */
   MixedBilinearToNonlinearFormIntegrator(std::shared_ptr<mfem::BilinearFormIntegrator> A,
-                                         std::shared_ptr<mfem::ParFiniteElementSpace>  trial_fes);
+                                         const mfem::ParFiniteElementSpace&            trial_fes);
 
   /**
    * @brief Compute the residual vector => -F
@@ -153,7 +153,7 @@ private:
   /**
    * @brief The trial finite element space
    */
-  std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes_;
+  const mfem::ParFiniteElementSpace& trial_fes_;
 };
 
 /**

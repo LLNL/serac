@@ -211,24 +211,14 @@ protected:
   std::unique_ptr<mfem::ParBilinearForm> M_form_;
 
   /**
-   * @brief Stiffness bilinear form object
+   * @brief Stiffness nonlinear form object
    */
-  std::unique_ptr<mfem::ParBilinearForm> K_form_;
+  std::unique_ptr<mfem::ParNonlinearForm> K_form_;
 
   /**
    * @brief Assembled mass matrix
    */
   std::unique_ptr<mfem::HypreParMatrix> M_;
-
-  /**
-   * @brief Assembled stiffness matrix
-   */
-  std::unique_ptr<mfem::HypreParMatrix> K_;
-
-  /**
-   * @brief Thermal load linear form
-   */
-  std::unique_ptr<mfem::ParLinearForm> l_form_;
 
   /**
    * @brief Assembled BC load vector
