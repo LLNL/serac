@@ -70,6 +70,10 @@ public:
     double cp;
     double rho;
 
+    // Nonlinear reaction information
+    std::optional<std::function<double(double)>> reaction_func;
+    std::optional<std::function<double(double)>> d_reaction_func;
+
     // Boundary condition information
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 

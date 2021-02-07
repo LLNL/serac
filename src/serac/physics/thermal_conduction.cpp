@@ -61,6 +61,10 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
   setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
   setSpecificHeatCapacity(std::make_unique<mfem::ConstantCoefficient>(options.cp));
 
+  if (options.reaction_func) {
+    setNonlinearReaction(*options.reaction_func, *options.d_reaction_func);
+  }
+
   if (options.initial_temperature) {
     auto temp = options.initial_temperature->constructScalar();
     setTemperature(temp);
@@ -240,6 +244,13 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   table.addDouble("rho", "Density").defaultValue(1.0);
   table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
+  auto& reaction_table = table.addTable("nonlinear_reaction", "Nonlinear reaction term parameters");
+  reaction_table.addFunction("reaction_function", axom::inlet::FunctionTag::Double, {axom::inlet::FunctionTag::Double},
+                             "Nonlinear reaction function q = q(temperature)");
+  reaction_table.addFunction("d_reaction_function", axom::inlet::FunctionTag::Double,
+                             {axom::inlet::FunctionTag::Double},
+                             "Derivative of the nonlinear reaction function dq = dq / dTemperature");
+
   auto& equation_solver_table = table.addTable("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
 
@@ -293,6 +304,12 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
     dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
 
     result.solver_options.dyn_options = std::move(dyn_options);
+  }
+
+  if (base.contains("nonlinear_reaction")) {
+    auto reaction          = base["nonlinear_reaction"];
+    result.reaction_func   = reaction["reaction_function"].get<std::function<double(double)>>();
+    result.d_reaction_func = reaction["d_reaction_function"].get<std::function<double(double)>>();
   }
 
   // Set the material parameters
