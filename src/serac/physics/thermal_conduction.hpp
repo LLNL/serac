@@ -165,6 +165,14 @@ public:
   void setSource(std::unique_ptr<mfem::Coefficient>&& source);
 
   /**
+   * @brief Set a nonlinear temperature dependent reaction term
+   *
+   * @param[in] reaction A function describing the temperature dependent reaction q=q(T)
+   * @param[in] d_reaction A function describing the derivative of the reaction dq = dq(T)/dT
+   */
+  void setNonlinearSource(std::function<double(double)> reaction, std::function<double(double)> d_reaction);
+
+  /**
    * @brief Set the density field. Defaults to 1.0 if not set.
    *
    * @param[in] rho The density field coefficient
@@ -296,6 +304,18 @@ protected:
    * nonlinear solver
    */
   mfem::Vector previous_;
+
+  /**
+   * @brief the nonlinear reaction function
+   *
+   */
+  std::optional<std::function<double(double)>> reaction_;
+
+  /**
+   * @brief the derivative of the nonlinear reaction function
+   *
+   */
+  std::optional<std::function<double(double)>> d_reaction_;
 };
 
 }  // namespace serac

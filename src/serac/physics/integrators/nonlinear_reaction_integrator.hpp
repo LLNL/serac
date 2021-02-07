@@ -19,13 +19,13 @@
 namespace serac::thermal::mfem_ext {
 
 /**
- * @brief Displacement hyperelastic integrator for any given serac::HyperelasticModel.
+ * @brief Integrator describing a nonlinear scalar reaction in the thermal conduction equation
  *
  */
 class NonlinearReactionIntegrator : public mfem::NonlinearFormIntegrator {
 public:
   /**
-   * @brief The constructor for the displacement hyperelastic integrator
+   * @brief The constructor for the Nonlinear Reaction Integrator
    *
    */
   explicit NonlinearReactionIntegrator(std::function<double(double)> reaction, std::function<double(double)> d_reaction)
@@ -35,7 +35,7 @@ public:
   NonlinearReactionIntegrator() = delete;
 
   /**
-   * @brief The residual evaluation for the nonlinear incremental integrator
+   * @brief The residual evaluation for the nonlinear reaction integrator
    *
    * @param[in] element The finite element to integrate
    * @param[in] basis_to_reference_transformation The element transformation operators
@@ -59,9 +59,23 @@ public:
                                    const mfem::Vector& state_vector, mfem::DenseMatrix& stiffness_matrix);
 
 private:
+  /**
+   * @brief the reaction function q = q(T)
+   *
+   */
   std::function<double(double)> reaction_;
+
+  /**
+   * @brief the derivative of the reaction function dq = dq(T)/dT
+   *
+   */
   std::function<double(double)> d_reaction_;
-  mfem::Vector                  shape_;
+
+  /**
+   * @brief a working vector containing shape function evaluations
+   *
+   */
+  mutable mfem::Vector shape_;
 };
 
 }  // namespace serac::thermal::mfem_ext

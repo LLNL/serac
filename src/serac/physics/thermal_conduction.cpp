@@ -8,6 +8,7 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
+#include "serac/physics/integrators/nonlinear_reaction_integrator.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
 
 namespace serac {
@@ -114,6 +115,13 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
   source_ = std::move(source);
 }
 
+void ThermalConduction::setNonlinearSource(std::function<double(double)> reaction,
+                                           std::function<double(double)> d_reaction)
+{
+  reaction_  = reaction;
+  d_reaction = d_reaction;
+}
+
 void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
 {
   // Set the specific heat capacity coefficient
@@ -139,6 +147,11 @@ void ThermalConduction::completeSetup()
   if (source_) {
     K_form_->AddDomainIntegrator(new mfem_ext::LinearToNonlinearFormIntegrator(
         std::make_unique<mfem::DomainLFIntegrator>(*source_), temperature_.space()));
+  }
+
+  // Add a nonlinear reaction term if specified
+  if (reaction_) {
+    K_form_->AddDomainIntegrator(new serac::thermal::mfem_ext::NonlinearReactionIntegrator(*reaction_, *d_reaction_));
   }
 
   // Build the dof array lookup tables
@@ -188,7 +201,8 @@ void ThermalConduction::completeSetup()
         },
 
         [this](const mfem::Vector& du_dt) -> mfem::Operator& {
-          if (dt_ != previous_dt_) {
+          // Only reassemble the stiffness if it is a new timestep or we have a nonlinear reaction
+          if (dt_ != previous_dt_ || reaction_) {
             auto localJ = std::unique_ptr<mfem::SparseMatrix>(
                 mfem::Add(1.0, M_form_->SpMat(), dt_, K_form_->GetLocalGradient(u_ + dt_ * du_dt)));
             J_.reset(M_form_->ParallelAssemble(localJ.get()));
