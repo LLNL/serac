@@ -115,8 +115,8 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
   source_ = std::move(source);
 }
 
-void ThermalConduction::setNonlinearSource(std::function<double(double)> reaction,
-                                           std::function<double(double)> d_reaction)
+void ThermalConduction::setNonlinearReaction(std::function<double(double)> reaction,
+                                             std::function<double(double)> d_reaction)
 {
   reaction_   = reaction;
   d_reaction_ = d_reaction;

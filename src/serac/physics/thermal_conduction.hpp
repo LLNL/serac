@@ -170,7 +170,7 @@ public:
    * @param[in] reaction A function describing the temperature dependent reaction q=q(T)
    * @param[in] d_reaction A function describing the derivative of the reaction dq = dq(T)/dT
    */
-  void setNonlinearSource(std::function<double(double)> reaction, std::function<double(double)> d_reaction);
+  void setNonlinearReaction(std::function<double(double)> reaction, std::function<double(double)> d_reaction);
 
   /**
    * @brief Set the density field. Defaults to 1.0 if not set.
@@ -227,16 +227,6 @@ protected:
    * @brief Assembled mass matrix
    */
   std::unique_ptr<mfem::HypreParMatrix> M_;
-
-  /**
-   * @brief Assembled BC load vector
-   */
-  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
-
-  /**
-   * @brief Assembled RHS vector
-   */
-  std::unique_ptr<mfem::HypreParVector> rhs_;
 
   /**
    * @brief Conduction coefficient

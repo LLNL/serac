@@ -135,9 +135,9 @@ TEST(thermal_solver, nonlinear_reaction)
   ThermalConduction therm_solver(3, pmesh, {lin_options, nonlin_options});
 
   // Set the nonlinear reaction term
-  auto reaction   = [](double u) { return u * u; };
+  auto reaction   = [](double u) { return u * u + 5.0; };
   auto d_reaction = [](double u) { return 2.0 * u; };
-  therm_solver.setNonlinearSource(reaction, d_reaction);
+  therm_solver.setNonlinearReaction(reaction, d_reaction);
 
   // Define the exact solution
   auto exact = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[0] * x[0] * x[1]; });
@@ -149,7 +149,7 @@ TEST(thermal_solver, nonlinear_reaction)
 
   // Define the source term that corresponds to the exact solution
   auto source = std::make_unique<mfem::FunctionCoefficient>(
-      [](const mfem::Vector& x) { return std::pow(x[0], 4.0) * std::pow(x[1], 2.0) - 2.0 * x[1]; });
+      [](const mfem::Vector& x) { return std::pow(x[0], 4.0) * std::pow(x[1], 2.0) + 5.0 - 2.0 * x[1]; });
 
   therm_solver.setSource(std::move(source));
 
