@@ -70,6 +70,11 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
     setTemperature(temp);
   }
 
+  if (options.source_coef) {
+    auto source = std::make_unique<mfem::FunctionCoefficient>(options.source_coef->constructScalar());
+    setSource(std::move(source));
+  }
+
   // Process the BCs in sorted order for correct behavior with repeated attributes
   std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(options.boundary_conditions.begin(),
                                                                          options.boundary_conditions.end());
@@ -244,6 +249,9 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   table.addDouble("rho", "Density").defaultValue(1.0);
   table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
+  auto& source = table.addTable("source", "Scalar source term (RHS of the thermal conduction PDE)");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(source);
+
   auto& reaction_table = table.addTable("nonlinear_reaction", "Nonlinear reaction term parameters");
   reaction_table.addFunction("reaction_function", axom::inlet::FunctionTag::Double, {axom::inlet::FunctionTag::Double},
                              "Nonlinear reaction function q = q(temperature)");
@@ -310,6 +318,10 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
     auto reaction          = base["nonlinear_reaction"];
     result.reaction_func   = reaction["reaction_function"].get<std::function<double(double)>>();
     result.d_reaction_func = reaction["d_reaction_function"].get<std::function<double(double)>>();
+  }
+
+  if (base.contains("source")) {
+    result.source_coef = base["source"].get<serac::input::CoefficientInputOptions>();
   }
 
   // Set the material parameters

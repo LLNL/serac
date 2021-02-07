@@ -74,6 +74,9 @@ public:
     std::optional<std::function<double(double)>> reaction_func;
     std::optional<std::function<double(double)>> d_reaction_func;
 
+    // Source information
+    std::optional<input::CoefficientInputOptions> source_coef;
+
     // Boundary condition information
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 
