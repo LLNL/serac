@@ -58,7 +58,7 @@ const std::string input_files[] = {"static_solve_multiple_bcs", "static_solve_re
 
 INSTANTIATE_TEST_SUITE_P(ThermalConductionInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
 
-TEST(thermal_solver_rework, dyn_imp_solve_time_varying)
+TEST(thermal_solver, dyn_imp_solve_time_varying)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -113,6 +113,59 @@ TEST(thermal_solver_rework, dyn_imp_solve_time_varying)
 
   f->SetTime(t);
   double error = therm_solver.temperature().gridFunc().ComputeLpError(2.0, *f);
+  EXPECT_NEAR(0.0, error, 0.00005);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(thermal_solver, nonlinear_reaction)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  // Open the mesh
+  std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/star.mesh";
+
+  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
+
+  DirectSolverOptions lin_options = {};
+
+  NonlinearSolverOptions nonlin_options = {.rel_tol = 1.0e-6, .abs_tol = 1.0e-12, .max_iter = 500, .print_level = 1};
+
+  // Initialize the second order thermal solver on the parallel mesh
+  ThermalConduction therm_solver(3, pmesh, {lin_options, nonlin_options});
+
+  // Set the nonlinear reaction term
+  auto reaction   = [](double u) { return u * u; };
+  auto d_reaction = [](double u) { return 2.0 * u; };
+  therm_solver.setNonlinearSource(reaction, d_reaction);
+
+  // Define the exact solution
+  auto exact = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) { return x[0] * x[0] * x[1]; });
+  therm_solver.setTemperatureBCs({1}, exact);
+
+  // Set the conductivity of the thermal operator
+  auto kappa = std::make_unique<mfem::ConstantCoefficient>(1.0);
+  therm_solver.setConductivity(std::move(kappa));
+
+  // Define the source term that corresponds to the exact solution
+  auto source = std::make_unique<mfem::FunctionCoefficient>(
+      [](const mfem::Vector& x) { return std::pow(x[0], 4.0) * std::pow(x[1], 2.0) - 2.0 * x[1]; });
+
+  therm_solver.setSource(std::move(source));
+
+  // Setup glvis output
+  therm_solver.initializeOutput(serac::OutputType::VisIt, "thermal_nonlinear_reaction");
+
+  // Complete the setup including the dynamic operators
+  therm_solver.completeSetup();
+
+  double dt = 1.0;
+  therm_solver.advanceTimestep(dt);
+
+  // Output the final state
+  therm_solver.outputState();
+
+  double error = therm_solver.temperature().gridFunc().ComputeLpError(2.0, *exact);
   EXPECT_NEAR(0.0, error, 0.00005);
 
   MPI_Barrier(MPI_COMM_WORLD);
