@@ -118,8 +118,8 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 void ThermalConduction::setNonlinearSource(std::function<double(double)> reaction,
                                            std::function<double(double)> d_reaction)
 {
-  reaction_  = reaction;
-  d_reaction = d_reaction;
+  reaction_   = reaction;
+  d_reaction_ = d_reaction;
 }
 
 void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
