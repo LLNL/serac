@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file displacement_hyperelastic_integrator.hpp
+ * @file nonlinear_reaction_integrator.hpp
  *
- * @brief The MFEM integrators for the displacement hyperelastic formulation
+ * @brief The MFEM integrators for a nonlinear reaction term in the thermal conduction equation
  */
 
 #pragma once
@@ -27,6 +27,8 @@ public:
   /**
    * @brief The constructor for the Nonlinear Reaction Integrator
    *
+   * @param[in] reaction a function describing the nonlinear reaction term q = q(T)
+   * @param[in] d_reaction a function describing the derivative of the reaction dq = dq(T) / dT
    */
   explicit NonlinearReactionIntegrator(std::function<double(double)> reaction, std::function<double(double)> d_reaction)
       : reaction_(reaction), d_reaction_(d_reaction)

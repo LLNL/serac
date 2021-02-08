@@ -14,26 +14,34 @@ void NonlinearReactionIntegrator::AssembleElementVector(const mfem::FiniteElemen
 {
   int dof = element.GetDof();
 
-  shape_.SetSize(dof);  // vector of size dof
+  // Ensure the data containers are properly sized
+  shape_.SetSize(dof);
   residual_vector.SetSize(dof);
+
+  // Initialize the residual
   residual_vector = 0.0;
 
+  // Determine the integration rule from the element order
   const mfem::IntegrationRule* ir = IntRule;
   if (ir == nullptr) {
     ir = &mfem::IntRules.Get(element.GetGeomType(), 2 * element.GetOrder() + 3);
   }
 
   for (int i = 0; i < ir->GetNPoints(); i++) {
+    // Set the integration point
     const mfem::IntegrationPoint& ip = ir->IntPoint(i);
-
     parent_to_reference_transformation.SetIntPoint(&ip);
 
-    // Calculate the derivatives of the shape functions in the reference space
+    // Calculate the shape functions in the reference space
     element.CalcShape(ip, shape_);
+
+    // Calculate the temperature at the integration point
     double temp = shape_ * state_vector;
 
+    // Calculate the reaction term from the current temperature
     double source = reaction_(temp);
 
+    // Accumulate the residual contribution
     residual_vector.Add(ip.weight * parent_to_reference_transformation.Weight() * source, shape_);
   }
 }
@@ -45,27 +53,34 @@ void NonlinearReactionIntegrator::AssembleElementGrad(const mfem::FiniteElement&
 {
   int dof = element.GetDof();
 
-  shape_.SetSize(dof);  // vector of size dof
+  // Ensure the data containers are properly sized
+  shape_.SetSize(dof);
   stiffness_matrix.SetSize(dof);
 
+  // Initialize the stiffness matrix
   stiffness_matrix = 0.0;
 
+  // Determine the integration rule from the order of the element
   const mfem::IntegrationRule* ir = IntRule;
   if (ir == nullptr) {
     ir = &mfem::IntRules.Get(element.GetGeomType(), 2 * element.GetOrder() + 3);
   }
 
   for (int i = 0; i < ir->GetNPoints(); i++) {
+    // Set the current integration point
     const mfem::IntegrationPoint& ip = ir->IntPoint(i);
-
     parent_to_reference_transformation.SetIntPoint(&ip);
 
-    // Calculate the derivatives of the shape functions in the reference space
+    // Calculate the shape functions in the reference space
     element.CalcShape(ip, shape_);
+
+    // Calculate the temperature at the current integration point
     double temp = shape_ * state_vector;
 
+    // Calculate the derivative of the nonlinear reaction at the current integration point
     double d_source = d_reaction_(temp);
 
+    // Accumulate the stiffness matrix contributions
     mfem::AddMult_a_VVt(d_source * ip.weight * parent_to_reference_transformation.Weight(), shape_, stiffness_matrix);
   }
 }

@@ -46,7 +46,7 @@ thermal_conduction = {
     -- add a nonlinear source
     nonlinear_reaction = {
         reaction_function = function (temp)
-            return 0.1* temp * temp
+            return 0.1 * temp^2
         end,
         d_reaction_function = function (temp)
             return 0.2 * temp
