@@ -6,7 +6,7 @@
 
 #include "serac/physics/integrators/traction_integrator.hpp"
 
-namespace serac::solid::mfem_ext {
+namespace serac::mfem_ext {
 
 void TractionIntegrator::AssembleFaceVector(const mfem::FiniteElement&        element_1, const mfem::FiniteElement&,
                                             mfem::FaceElementTransformations& parent_to_reference_face_transformation,
@@ -223,4 +223,4 @@ void PressureIntegrator::AssembleFaceGrad(const mfem::FiniteElement& element_1, 
   }
 }
 
-}  // namespace serac::solid::mfem_ext
+}  // namespace serac::mfem_ext
