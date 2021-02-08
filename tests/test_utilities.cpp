@@ -105,7 +105,7 @@ std::string moduleName<ThermalConduction>()
 
 /**
  * @brief Verifies the solution fields against the input file
- * @param[in] module The module whose fields should be verified
+ * @param[in] phys_module The module whose fields should be verified
  * @param[in] inlet The Inlet object from which expected solution values will be obtained
  * @param[in] dim The mesh dimension
  */
@@ -116,28 +116,28 @@ void verifyFields(const PhysicsModule&, const axom::inlet::Inlet&, const int)
 }
 
 template <>
-void verifyFields(const NonlinearSolid& module, const axom::inlet::Inlet& inlet, const int dim)
+void verifyFields(const NonlinearSolid& phys_module, const axom::inlet::Inlet& inlet, const int dim)
 {
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
   if (inlet.contains("expected_x_l2norm")) {
-    double x_norm = module.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+    double x_norm = phys_module.displacement().gridFunc().ComputeLpError(2.0, zerovec);
     EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_v_l2norm")) {
-    double v_norm = module.velocity().gridFunc().ComputeLpError(2.0, zerovec);
+    double v_norm = phys_module.velocity().gridFunc().ComputeLpError(2.0, zerovec);
     EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
   }
 }
 
 template <>
-void verifyFields(const ThermalConduction& module, const axom::inlet::Inlet& inlet, const int)
+void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet, const int)
 {
   mfem::ConstantCoefficient zero(0.0);
   if (inlet.contains("expected_t_l2norm")) {
-    double t_norm = module.temperature().gridFunc().ComputeLpError(2.0, zero);
+    double t_norm = phys_module.temperature().gridFunc().ComputeLpError(2.0, zero);
     EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
   }
 }
@@ -172,7 +172,7 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
 
   // Define the solid solver object
   auto          module_options = inlet[module_name].get<typename PhysicsModule::InputOptions>();
-  PhysicsModule module(mesh, module_options);
+  PhysicsModule phys_module(mesh, module_options);
 
   const bool is_dynamic = inlet[module_name].contains("dynamics");
 
@@ -180,12 +180,12 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>() - Inlet obj
   // needs to allow for top-level scalar retrieval as well
-  module.initializeOutput(inlet.getGlobalTable().get<OutputType>(), module_name);
+  phys_module.initializeOutput(inlet.getGlobalTable().get<OutputType>(), module_name);
 
   // Complete the solver setup
-  module.completeSetup();
+  phys_module.completeSetup();
   // Output the initial state
-  module.outputState();
+  phys_module.outputState();
 
   double dt = inlet["dt"];
 
@@ -202,16 +202,16 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
       t += dt_real;
       last_step = (t >= t_final - 1e-8 * dt);
 
-      module.advanceTimestep(dt_real);
+      phys_module.advanceTimestep(dt_real);
     }
   } else {
-    module.advanceTimestep(dt);
+    phys_module.advanceTimestep(dt);
   }
 
   // Output the final state
-  module.outputState();
+  phys_module.outputState();
 
-  detail::verifyFields(module, inlet, mesh->Dimension());
+  detail::verifyFields(phys_module, inlet, mesh->Dimension());
 }
 
 template void runModuleTest<NonlinearSolid>(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh);
