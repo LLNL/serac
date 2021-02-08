@@ -1,5 +1,24 @@
 -- Comparison information
-expected_t_l2norm = 0.643674
+exact_function = function (v)
+  return v.x^2 * v.y
+end
+
+minus_laplacian_temp = function (v)
+  return -2.0 * v.y
+end
+
+reaction = function (temp)
+  return temp^2 + 5.0
+end
+
+d_reaction = function (temp)
+  return 2.0 * temp
+end
+
+exact_solution = {
+  coef = exact_function
+}
+
 epsilon = 0.00001
 
 -- Simulation time parameters
@@ -40,17 +59,13 @@ thermal_conduction = {
 
     -- add a nonlinear reaction
     nonlinear_reaction = {
-        reaction_function = function (temp)
-            return temp^2 + 5.0
-        end,
-        d_reaction_function = function (temp)
-            return 2.0 * temp
-        end
+        reaction_function = reaction,
+        d_reaction_function = d_reaction
     },
 
     source = {
         coef = function (v)
-            return v.x^4 * v.y^2 - 2.0 * v.y + 5.0
+            return reaction(exact_function(v)) + minus_laplacian_temp(v)
         end
     },
 
@@ -58,9 +73,7 @@ thermal_conduction = {
     boundary_conds = {
         ['temperature'] = {
             attrs = {1},
-            coef = function (v)
-                return v.x^2 * v.y
-            end
+            coef = exact_function
         },
     },
 }
