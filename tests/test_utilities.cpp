@@ -30,9 +30,7 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.");
   inlet.addDouble("t_final", "Stopping point");
 
-  inlet.addString("output_type", "Desired output format")
-      .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
-      .defaultValue("VisIt");
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
 
   // Comparison parameter
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
@@ -179,16 +177,10 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
   const bool is_dynamic = inlet[module_name].contains("dynamics");
 
   // Initialize the output
-  const static auto output_names = []() {
-    std::unordered_map<std::string, serac::OutputType> result;
-    result["GLVis"]      = serac::OutputType::GLVis;
-    result["ParaView"]   = serac::OutputType::ParaView;
-    result["VisIt"]      = serac::OutputType::VisIt;
-    result["SidreVisIt"] = serac::OutputType::SidreVisIt;
-    return result;
-  }();
-
-  module.initializeOutput(output_names.at(inlet["output_type"]), module_name);
+  // FIXME: This and the FromInlet specialization are hacked together,
+  // should be inlet["output_type"].get<OutputType>() - Inlet obj
+  // needs to allow for top-level scalar retrieval as well
+  module.initializeOutput(inlet.getGlobalTable().get<OutputType>(), module_name);
 
   // Complete the solver setup
   module.completeSetup();
