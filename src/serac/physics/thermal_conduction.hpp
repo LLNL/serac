@@ -71,8 +71,8 @@ public:
     double rho;
 
     // Nonlinear reaction information
-    std::optional<std::function<double(double)>> reaction_func;
-    std::optional<std::function<double(double)>> d_reaction_func;
+    std::function<double(double)> reaction_func;
+    std::function<double(double)> d_reaction_func;
 
     // Source information
     std::optional<input::CoefficientInputOptions> source_coef;
@@ -306,13 +306,13 @@ protected:
    * @brief the nonlinear reaction function
    *
    */
-  std::optional<std::function<double(double)>> reaction_;
+  std::function<double(double)> reaction_;
 
   /**
    * @brief the derivative of the nonlinear reaction function
    *
    */
-  std::optional<std::function<double(double)>> d_reaction_;
+  std::function<double(double)> d_reaction_;
 };
 
 }  // namespace serac
