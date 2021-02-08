@@ -62,7 +62,7 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
   setSpecificHeatCapacity(std::make_unique<mfem::ConstantCoefficient>(options.cp));
 
   if (options.reaction_func) {
-    setNonlinearReaction(*options.reaction_func, *options.d_reaction_func);
+    setNonlinearReaction(options.reaction_func, options.d_reaction_func);
   }
 
   if (options.initial_temperature) {
@@ -160,7 +160,7 @@ void ThermalConduction::completeSetup()
 
   // Add a nonlinear reaction term if specified
   if (reaction_) {
-    K_form_->AddDomainIntegrator(new serac::thermal::mfem_ext::NonlinearReactionIntegrator(*reaction_, *d_reaction_));
+    K_form_->AddDomainIntegrator(new serac::thermal::mfem_ext::NonlinearReactionIntegrator(reaction_, d_reaction_));
   }
 
   // Build the dof array lookup tables
