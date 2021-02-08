@@ -11,7 +11,7 @@
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/thermal/thermal_conduction.hpp"
 #include "serac/physics/utilities/boundary_condition.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
 #include "serac/serac_config.hpp"

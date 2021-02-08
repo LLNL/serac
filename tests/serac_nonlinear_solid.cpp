@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid/nonlinear_solid.hpp"
 
 #include <fstream>
 

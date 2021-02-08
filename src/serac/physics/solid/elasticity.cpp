@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/elasticity.hpp"
+#include "serac/physics/solid/elasticity.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"

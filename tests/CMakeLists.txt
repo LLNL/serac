@@ -10,13 +10,16 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies serac_physics serac_coefficients test_utils)
+    set(test_dependencies
+        serac_coefficients
+        test_utils
+    )
 
     blt_add_library(
         NAME        test_utils
         SOURCES     test_utilities.cpp
         HEADERS     test_utilities.hpp
-        DEPENDS_ON  serac_physics gtest
+        DEPENDS_ON  serac_physics_utilities gtest serac_physics_solid serac_physics_thermal serac_physics_thermal_solid
         )
 
     set(solver_tests

@@ -93,12 +93,13 @@ serac_add_code_checks(PREFIX   serac
 #------------------------------------------------------------------------------
 set(exported_targets
     serac_coefficients
-    serac_physics
     serac_infrastructure
     serac_numerics
     serac_physics_utilities
     serac_physics_operators
-    serac_integrators)
+    serac_physics_solid
+    serac_physics_thermal
+    serac_physics_thermal_solid)
 
 add_library(serac INTERFACE)
 target_link_libraries(serac INTERFACE ${exported_targets})

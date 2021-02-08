@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_solid.hpp"
+#include "serac/physics/thermal_solid/thermal_solid.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/physics/utilities/solver_config.hpp"

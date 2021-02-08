@@ -6,41 +6,6 @@
 
 add_subdirectory(utilities)
 add_subdirectory(operators)
-
-set(physics_sources
-    base_physics.cpp
-    nonlinear_solid.cpp
-    thermal_conduction.cpp
-    thermal_solid.cpp
-    elasticity.cpp
-    )
-
-set(physics_headers
-    base_physics.hpp
-    nonlinear_solid.hpp
-    thermal_conduction.hpp
-    thermal_solid.hpp
-    elasticity.hpp
-    )
-
-set(physics_dependencies
-    serac_infrastructure
-    serac_integrators
-    serac_numerics
-    serac_physics_utilities
-    serac_physics_operators
-    )
-
-blt_add_library(
-    NAME        serac_physics
-    SOURCES     ${physics_sources}
-    HEADERS     ${physics_headers}
-    DEPENDS_ON  ${physics_dependencies}
-    )
-
-install(FILES ${physics_headers} DESTINATION include/serac/physics )
-
-install(TARGETS              serac_physics
-        EXPORT               serac-targets
-        DESTINATION          lib
-        )
+add_subdirectory(solid)
+add_subdirectory(thermal)
+add_subdirectory(thermal_solid)

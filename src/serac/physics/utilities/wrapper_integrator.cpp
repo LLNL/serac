@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/integrators/wrapper_integrator.hpp"
+#include "serac/physics/utilities/wrapper_integrator.hpp"
 
 namespace serac::mfem_ext {
 

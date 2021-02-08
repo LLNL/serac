@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/base_physics.hpp"
+#include "serac/physics/utilities/base_physics.hpp"
 
 #include <fstream>
 

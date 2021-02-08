@@ -10,8 +10,8 @@
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/nonlinear_solid.hpp"
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/solid/nonlinear_solid.hpp"
+#include "serac/physics/thermal/thermal_conduction.hpp"
 
 namespace serac {
 

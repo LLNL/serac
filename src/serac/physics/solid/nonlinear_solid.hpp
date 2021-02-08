@@ -17,7 +17,7 @@
 #include "mfem.hpp"
 
 #include "serac/infrastructure/input.hpp"
-#include "serac/physics/base_physics.hpp"
+#include "serac/physics/utilities/base_physics.hpp"
 #include "serac/physics/operators/odes.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
 

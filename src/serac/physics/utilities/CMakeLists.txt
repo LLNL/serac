@@ -5,18 +5,22 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(physics_utilities_headers
+    base_physics.hpp
     boundary_condition.hpp
     boundary_condition_manager.hpp
     equation_solver.hpp
     finite_element_state.hpp
     solver_config.hpp
+    wrapper_integrator.hpp
     )
 
 set(physics_utilities_sources
+    base_physics.cpp
     boundary_condition.cpp
     boundary_condition_manager.cpp
     equation_solver.cpp
     finite_element_state.cpp
+    wrapper_integrator.cpp
     )
 
 set(physics_utilities_depends serac_infrastructure)

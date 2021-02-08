@@ -10,14 +10,14 @@
 #include <memory>
 
 #include "serac/coefficients/coefficient_extensions.hpp"
-#include "../src/serac/integrators/wrapper_integrator.hpp"
-#include "../src/serac/numerics/expr_template_ops.hpp"
+#include "serac/physics/utilities/wrapper_integrator.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 #include "mfem.hpp"
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid/nonlinear_solid.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/operators/odes.hpp"
 

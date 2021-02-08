@@ -14,9 +14,9 @@
 
 #include "mfem.hpp"
 
-#include "serac/physics/base_physics.hpp"
-#include "serac/physics/nonlinear_solid.hpp"
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/utilities/base_physics.hpp"
+#include "serac/physics/solid/nonlinear_solid.hpp"
+#include "serac/physics/thermal/thermal_conduction.hpp"
 
 namespace serac {
 

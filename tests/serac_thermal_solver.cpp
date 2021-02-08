@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/thermal/thermal_conduction.hpp"
 
 #include <sys/stat.h>
 
