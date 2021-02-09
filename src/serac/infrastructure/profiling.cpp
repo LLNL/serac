@@ -50,4 +50,21 @@ void terminateCaliper()
 #endif
 }
 
+  template<> void setCaliperMetaData<double>(const std::string &name, double data) {
+    cali_set_global_double_byname(name.c_str(), data);
+  }
+
+  template<> void setCaliperMetaData<int>(const std::string &name, int data) {
+    cali_set_global_int_byname(name.c_str(), data);
+  }
+
+  template<> void setCaliperMetaData<const char *>(const std::string &name, const char * data) {
+    cali_set_global_string_byname(name.c_str(), data);
+  }
+
+  template<> void setCaliperMetaData<unsigned int>(const std::string &name, unsigned int data) {
+    cali_set_global_uint_byname(name.c_str(), data);
+  }
+
+  
 }  // namespace serac::profiling
