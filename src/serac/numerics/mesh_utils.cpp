@@ -278,7 +278,8 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
       }
 
       // stretch the octagonal shape into a circle of the appropriate radius
-      double phi = fmod(atan2(vertex(1), vertex(0)) + M_PI, M_PI_4);
+      double theta = atan2(vertex(1), vertex(0));
+      double phi   = fmod(theta + M_PI, M_PI_4);
       vertex *= radius * (cos(phi) + (-1.0 + sqrt(2.0)) * sin(phi));
 
       for (int d = 0; d < dim; d++) {
@@ -303,6 +304,9 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
   static constexpr int num_vertices          = 16;
   static constexpr int num_elems             = 8;
   static constexpr int num_boundary_elements = 16;
+
+  SLIC_ERROR_IF(outer_radius <= inner_radius,
+                "Outer radius is smaller than inner radius while building a cylinder mesh.");
 
   double vertices[num_vertices][dim];
   for (int i = 0; i < 8; i++) {
