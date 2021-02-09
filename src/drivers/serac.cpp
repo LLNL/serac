@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -40,6 +40,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   // Simulation time parameters
   inlet.addDouble("t_final", "Final time for simulation.").defaultValue(1.0);
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
 
   auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
@@ -89,10 +90,13 @@ int main(int argc, char* argv[])
   // Save input values to file
   datastore.getRoot()->save("serac_input.json", "json");
 
+  std::shared_ptr<mfem::ParMesh> mesh;
   // Build the mesh
-  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
-  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+    auto full_mesh_path = serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
+    mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  }
 
   // Define the solid solver object
   auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
@@ -112,7 +116,9 @@ int main(int argc, char* argv[])
 
   bool last_step = false;
 
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "serac");
+  // FIXME: This and the FromInlet specialization are hacked together,
+  // should be inlet["output_type"].get<OutputType>()
+  solid_solver.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "serac");
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {

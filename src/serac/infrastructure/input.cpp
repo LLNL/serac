@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -12,6 +12,7 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
+#include "serac/physics/utilities/solver_config.hpp"
 
 namespace serac::input {
 
@@ -19,7 +20,6 @@ axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::stri
 {
   // Initialize Inlet
   auto luareader = std::make_unique<axom::inlet::LuaReader>();
-  luareader->solState().open_libraries(sol::lib::math);
   luareader->parseFile(input_file_path);
 
   // Store inlet data under its own group
@@ -74,9 +74,16 @@ void defineVectorInputFileSchema(axom::inlet::Table& table)
   table.addDouble("z", "z-component of vector");
 }
 
+void defineOutputTypeInputFileSchema(axom::inlet::Table& table)
+{
+  table.addString("output_type", "Desired output format")
+      .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
+      .defaultValue("VisIt");
+}
+
 void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
-  table.addIntArray("attrs", "Boundary attributes to which the BC should be applied").required();
+  table.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
   CoefficientInputOptions::defineInputFileSchema(table);
 }
 
@@ -103,9 +110,9 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Vectors are expanded to three arguments in Lua (x, y, z)
   // and should be returned as a 3-tuple
-  table.addFunction("vec_coef", axom::inlet::FunctionType::Vec3D, {axom::inlet::FunctionType::Vec3D},
+  table.addFunction("vec_coef", axom::inlet::FunctionTag::Vector, {axom::inlet::FunctionTag::Vector},
                     "The function to use for an mfem::VectorFunctionCoefficient");
-  table.addFunction("coef", axom::inlet::FunctionType::Double, {axom::inlet::FunctionType::Vec3D},
+  table.addFunction("coef", axom::inlet::FunctionTag::Double, {axom::inlet::FunctionTag::Vector},
                     "The function to use for an mfem::FunctionCoefficient");
   table.addInt("component", "The vector component to which the scalar coefficient should be applied");
 }
@@ -129,6 +136,24 @@ mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
   return result;
 }
 
+serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Table& base)
+{
+  const static auto output_names = []() {
+    std::unordered_map<std::string, serac::OutputType> result;
+    result["glvis"]      = serac::OutputType::GLVis;
+    result["paraview"]   = serac::OutputType::ParaView;
+    result["visit"]      = serac::OutputType::VisIt;
+    result["sidrevisit"] = serac::OutputType::SidreVisIt;
+    return result;
+  }();
+
+  // FIXME: This is a hack because we're converting from a primitive
+  // Remove this when FromInlet takes a Proxy
+  std::string output_type = base["output_type"];
+  axom::utilities::string::toLower(output_type);
+  return output_names.at(output_type);
+}
+
 serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
     const axom::inlet::Table& base)
 {
@@ -145,15 +170,16 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     const axom::inlet::Table& base)
 {
   if (base.contains("vec_coef")) {
-    auto func     = base["vec_coef"].get<std::function<axom::primal::Vector3D(axom::primal::Vector3D)>>();
+    auto func =
+        base["vec_coef"].get<std::function<axom::inlet::FunctionType::Vector(axom::inlet::FunctionType::Vector)>>();
     auto vec_func = [func(std::move(func))](const mfem::Vector& input, mfem::Vector& output) {
       auto ret = func({input.GetData(), input.Size()});
       // Copy from the primal vector into the MFEM vector
-      std::copy(ret.data(), ret.data() + ret.dimension(), output.GetData());
+      std::copy(ret.vec.data(), ret.vec.data() + input.Size(), output.GetData());
     };
     return {std::move(vec_func), -1};
   } else if (base.contains("coef")) {
-    auto func        = base["coef"].get<std::function<double(axom::primal::Vector3D)>>();
+    auto func        = base["coef"].get<std::function<double(axom::inlet::FunctionType::Vector)>>();
     auto scalar_func = [func(std::move(func))](const mfem::Vector& input) {
       return func({input.GetData(), input.Size()});
     };
