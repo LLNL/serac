@@ -1,5 +1,5 @@
 -- Comparison information
-expected_x_l2norm = 2.2309025
+expected_u_l2norm = 0.015934784
 epsilon = 0.001
 
 -- Simulation time parameters
@@ -56,10 +56,10 @@ solid = {
                 return Vector.new(0, 0, 0)
             end
         },
-        ['traction'] = {
+        ['pressure'] = {
             attrs = {2},
-            vec_coef = function (v)
-                return Vector.new(0, 1.0e-3, 0)
+            coef = function (v)
+                return 1.0e-3
             end
         },
     },

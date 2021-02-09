@@ -1,5 +1,5 @@
 -- Comparison information
-expected_x_l2norm = 2.4276439
+expected_u_l2norm = 2.9787340
 epsilon = 0.0001
 
 -- Simulation time parameters
@@ -8,7 +8,7 @@ dt      = 1.0
 main_mesh = {
     type = "file",
     -- mesh file
-    mesh = "../../../meshes/beam-hex.mesh",
+    mesh = "../../../meshes/beam-quad.mesh",
     -- serial and parallel refinement levels
     ser_ref_levels = 1,
     par_ref_levels = 0,
@@ -37,7 +37,7 @@ solid = {
     },
 
     -- polynomial interpolation order
-    order = 1,
+    order = 2,
 
     -- neo-Hookean material parameters
     mu = 0.25,

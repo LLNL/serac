@@ -98,7 +98,7 @@ TEST(solid_solver, qs_custom_solve)
 
   double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
