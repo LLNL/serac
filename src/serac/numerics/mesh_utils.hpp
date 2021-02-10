@@ -100,7 +100,7 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
-                                                 double height, const MPI_Comm = MPI_COMM_WORLD);
+                                                 double height, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a hollow cylinder

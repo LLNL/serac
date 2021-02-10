@@ -251,8 +251,8 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
       }
 
       // stretch the octagonal shape into a circle of the appropriate radius
-      // phi is the angle from the last sector
-      double phi = fmod(atan2(vertex(1), vertex(0)) + M_PI, M_PI_4);
+      double theta = atan2(vertex(1), vertex(0));
+      double phi   = fmod(theta + M_PI, M_PI_4);
       vertex *= radius * (cos(phi) + (-1.0 + sqrt(2.0)) * sin(phi));
 
       for (int d = 0; d < dim; d++) {
@@ -286,6 +286,9 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
   int num_vertices_ring     = (sectors == sectors_d) ? sectors : sectors + 1;
   int num_vertices          = num_vertices_ring * 2;
   int num_boundary_elements = num_elems * 2;
+
+  SLIC_ERROR_IF(outer_radius <= inner_radius,
+                "Outer radius is smaller than inner radius while building a cylinder mesh.");
 
   double vertices[num_vertices][dim];
   for (int i = 0; i < num_vertices_ring; i++) {
@@ -347,7 +350,8 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
 
       // stretch the polygonal shape into a cylinder
       // phi is the angle to the closest multiple of a sector angle
-      double phi = fmod(atan2(vertex(1), vertex(0)) + 2. * M_PI, angle);
+      double theta = atan2(vertex(1), vertex(0));
+      double phi = fmod(theta + 2. * M_PI, angle);
 
       // this calculation assumes the 0 <= phi <= angle
       // the distance from the center of the cylinder to the midpoint of the radial edge is known

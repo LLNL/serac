@@ -55,6 +55,12 @@ std::string fullDirectoryFromPath(const std::string& file_path);
 void defineVectorInputFileSchema(axom::inlet::Table& table);
 
 /**
+ * @brief Defines the schema for serac::OutputType
+ * @param[inout] table The base table on which to define the schema
+ */
+void defineOutputTypeInputFileSchema(axom::inlet::Table& table);
+
+/**
  * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
  */
 struct CoefficientInputOptions {
@@ -112,6 +118,16 @@ struct BoundaryConditionInputOptions {
 template <>
 struct FromInlet<mfem::Vector> {
   mfem::Vector operator()(const axom::inlet::Table& base);
+};
+
+// Forward declaration
+namespace serac {
+enum class OutputType;
+}  // namespace serac
+
+template <>
+struct FromInlet<serac::OutputType> {
+  serac::OutputType operator()(const axom::inlet::Table& base);
 };
 
 template <>
