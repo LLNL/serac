@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -385,19 +385,20 @@ TEST_F(WrapperTests, vector_transform_coef)
 
   // Both of these do the same thing, but we can test both the single- and dual-vector transformations
   // by capturing the operand
-  mfem_ext::TransformedVectorCoefficient mono_tv_coef(first_vec_coef,
-                                                      [&four_five_six](const mfem::Vector& in, mfem::Vector& out) {
-                                                        out = in;
-                                                        out += four_five_six;
-                                                      });
-  ParGridFunction                        mono_gf(pfes_v_.get());
+  mfem_ext::TransformedVectorCoefficient mono_tv_coef(
+      first_vec_coef, [&four_five_six](const mfem::Vector& in_vec, mfem::Vector& out_vec) {
+        out_vec = in_vec;
+        out_vec += four_five_six;
+      });
+  ParGridFunction mono_gf(pfes_v_.get());
   mono_gf.ProjectCoefficient(mono_tv_coef);
   EXPECT_NEAR(mono_gf.ComputeL2Error(sum_coef), 0.0, 1.e-8);
 
   mfem_ext::TransformedVectorCoefficient dual_tv_coef(
-      first_vec_coef, second_vec_coef, [](const mfem::Vector& first, const mfem::Vector& second, mfem::Vector& out) {
-        out = first;
-        out += second;
+      first_vec_coef, second_vec_coef,
+      [](const mfem::Vector& first_vec, const mfem::Vector& second_vec, mfem::Vector& out_vec) {
+        out_vec = first_vec;
+        out_vec += second_vec;
       });
   ParGridFunction dual_gf(pfes_v_.get());
   dual_gf.ProjectCoefficient(dual_tv_coef);
@@ -405,8 +406,7 @@ TEST_F(WrapperTests, vector_transform_coef)
 }
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -416,7 +416,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
 
   result = RUN_ALL_TESTS();
 

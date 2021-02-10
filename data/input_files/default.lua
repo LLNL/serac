@@ -3,6 +3,7 @@ t_final = 1.0
 dt      = 0.25
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
@@ -53,33 +54,33 @@ nonlinear_solid = {
     -- VectorFunctionCoefficient function onto them
 
     initial_displacement = {
-        vec_coef = function (x, y, z)
-            return 0, 0, 0
-        end  
+        vec_coef = function (v)
+            return Vector.new(0, 0, 0)
+        end
     },
 
     initial_velocity = {
-        vec_coef = function (x, y, z)
-            return 0, 0, 0
-        end 
+        vec_coef = function (v)
+            return Vector.new(0, 0, 0)
+        end
     },
 
     -- boundary condition parameters
     boundary_conds = {
         ['displacement'] = {
             attrs = {1},
-            vec_coef = function (x, y, z)
-                return 0, 0, 0
+            vec_coef = function (v)
+                return Vector.new(0, 0, 0)
             end
         },
         ['traction'] = {
             attrs = {2},
-            vec_coef = function (x, y, z)
-                return 0, 1.0e-3, 0
+            vec_coef = function (v)
+                return Vector.new(0, 1.0e-3, 0)
             end
             -- FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-            -- vec_coef = function (x, y, z, t)
-            --     return 0 * t, 1.0e-3 * t, 0 * t
+            -- vec_coef = function (v, t)
+            --     return Vector.new(0, 1.0e-3, 0) * t
             -- end
         },
     },

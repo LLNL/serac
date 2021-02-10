@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -14,7 +14,7 @@
 #pragma once
 
 #include <memory>
-
+#include <variant>
 #include "mfem.hpp"
 
 #include "serac/infrastructure/input.hpp"
@@ -37,7 +37,7 @@ namespace serac {
  * @return A shared_ptr containing the constructed and refined parallel mesh object
  */
 std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial = 0,
-                                                 const int refine_parallel = 0, const MPI_Comm = MPI_COMM_WORLD);
+                                                 const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 2D MFEM mesh of a unit disk, centered at the origin
@@ -48,7 +48,7 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
  * @param[in] approx_number_of_elements
  * @return A shared_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a unit ball, centered at the origin
@@ -59,17 +59,19 @@ std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
  * @param[in] approx_number_of_elements
  * @return A shared_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 2D MFEM mesh of a rectangle
  *
  * @param[in] elements_in_x the number of elements in the x-direction
  * @param[in] elements_in_y the number of elements in the y-direction
+ * @param[in] size_x Overall size in the x-direction
+ * @param[in] size_y Overall size in the y-direction
  * @return A shared_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y,
-                                                  const MPI_Comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
+                                                  double size_y = 1., const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a cuboid
@@ -77,10 +79,15 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int element
  * @param[in] elements_in_x the number of elements in the x-direction
  * @param[in] elements_in_y the number of elements in the y-direction
  * @param[in] elements_in_z the number of elements in the z-direction
+ * @param[in] size_x Overall size in the x-direction
+ * @param[in] size_y Overall size in the y-direction
+ * @param[in] size_z Overall size in the z-direction
+ * @param[in] MPI_Comm MPI Communicator
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
-                                               const MPI_Comm = MPI_COMM_WORLD);
+                                               double size_x = 1., double size_y = 1., double size_z = 1.,
+                                               const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a cylinder
@@ -103,16 +110,17 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
  * @param[in] inner inner radius the radius of the cylindrical shell
  * @param[in] outer ouer radius the radius of the cylindrical shell
  * @param[in] height the number of elements in the z-direction
+ * @param[in] sectors the number of starting sectors in the hollow cylinder
  *
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
-                                                       double inner_radius, double outer_radius, double height,
+                                                       double inner_radius, double outer_radius, double height, double angle=M_PI_4, int sectors = 8,
                                                        const MPI_Comm = MPI_COMM_WORLD);
 
 namespace mesh {
 
-struct InputOptions {
+struct FileInputOptions {
   /**
    * @brief Input file parameters specific to this class
    *
@@ -121,12 +129,57 @@ struct InputOptions {
   static void defineInputFileSchema(axom::inlet::Table& table);
 
   std::string relative_mesh_file_name;
+};
+
+struct GenerateInputOptions {
+  /**
+   * @brief Input file parameters for mesh generation
+   *
+   * @param[in] table Inlet's SchemaCreator that input files will be added to
+   **/
+  static void defineInputFileSchema(axom::inlet::Table& table);
+
+  /// For rectangular and cuboid meshes
+  std::vector<int>    elements;
+  std::vector<double> overall_size;
+};
+
+struct InputOptions {
+  /**
+   * @brief Input file parameters for mesh generation
+   *
+   * @param[in] table Inlet's SchemaCreator that input files will be added to
+   **/
+  static void defineInputFileSchema(axom::inlet::Table& table);
+
+  std::variant<FileInputOptions, GenerateInputOptions> extra_options;
   // Serial/parallel refinement iterations
   int ser_ref_levels;
   int par_ref_levels;
 };
 
 }  // namespace mesh
+
+/**
+ * @brief Constructs a 3D MFEM mesh of a cuboid
+ *
+ * @param[in] extra_options Cuboid Mesh Options
+ * @param[in] MPI_Comm MPI Communicator
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions& options,
+                                               const MPI_Comm                     comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Constructs a 2D MFEM mesh of a rectangle
+ *
+ * @param[in] extra_options Rectangle Mesh Options
+ * @param[in] MPI_Comm MPI Communicator
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOptions& options,
+                                                  const MPI_Comm                     comm = MPI_COMM_WORLD);
+
 }  // namespace serac
 
 // Prototype the specialization

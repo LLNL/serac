@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -47,5 +47,5 @@ TEST(cuda_smoketest, vec_add)
 
   vector_add(out, a, b, N);
 
-  std::for_each(out, out + N, [](const float f) { EXPECT_FLOAT_EQ(f, 6.0); });
+  std::for_each(out, out + N, [](const float f) { EXPECT_DOUBLE_EQ(f, 6.0); });
 }

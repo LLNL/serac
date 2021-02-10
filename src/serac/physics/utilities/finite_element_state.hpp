@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -99,7 +99,8 @@ public:
   /**
    * Returns a non-owning reference to the internal grid function
    */
-  mfem::ParGridFunction&       gridFunc() { return *gf_; }
+  mfem::ParGridFunction& gridFunc() { return *gf_; }
+  /// \overload
   const mfem::ParGridFunction& gridFunc() const { return *gf_; }
 
   /**
@@ -111,10 +112,7 @@ public:
    * Returns a non-owning reference to the internal FESpace
    */
   mfem::ParFiniteElementSpace& space() { return space_; }
-
-  /**
-   * Returns a non-owning const reference to the internal FESpace
-   */
+  /// \overload
   const mfem::ParFiniteElementSpace& space() const { return space_; }
 
   /**
@@ -137,17 +135,9 @@ public:
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
     std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(*concrete_coef); }, coef);
   }
-
-  /**
-   * Projects a coefficient (vector or scalar) onto the field
-   * @param[in] coef The coefficient to project
-   */
+  /// \overload
   void project(mfem::Coefficient& coef) { gf_->ProjectCoefficient(coef); }
-
-  /**
-   * Projects a coefficient (vector or scalar) onto the field
-   * @param[in] coef The coefficient to project
-   */
+  /// \overload
   void project(mfem::VectorCoefficient& coef) { gf_->ProjectCoefficient(coef); }
 
   /**
