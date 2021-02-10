@@ -62,7 +62,8 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
   setSpecificHeatCapacity(std::make_unique<mfem::ConstantCoefficient>(options.cp));
 
   if (options.reaction_func) {
-    setNonlinearReaction(*options.reaction_func, *options.d_reaction_func);
+    auto scale = std::make_unique<mfem::FunctionCoefficient>(options.reaction_scale_coef->constructScalar());
+    setNonlinearReaction(options.reaction_func, options.d_reaction_func, std::move(scale));
   }
 
   if (options.initial_temperature) {
@@ -161,7 +162,7 @@ void ThermalConduction::completeSetup()
 
   // Add a nonlinear reaction term if specified
   if (reaction_) {
-    K_form_->AddDomainIntegrator(new serac::thermal::mfem_ext::NonlinearReactionIntegrator(*reaction_, *d_reaction_, *reaction_scale_));
+    K_form_->AddDomainIntegrator(new serac::thermal::mfem_ext::NonlinearReactionIntegrator(reaction_, d_reaction_, *reaction_scale_));
   }
 
   // Build the dof array lookup tables
