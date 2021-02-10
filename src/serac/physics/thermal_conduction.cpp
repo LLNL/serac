@@ -125,10 +125,11 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
 }
 
 void ThermalConduction::setNonlinearReaction(std::function<double(double)> reaction,
-                                             std::function<double(double)> d_reaction)
+                                             std::function<double(double)> d_reaction, std::unique_ptr<mfem::Coefficient>&& scale)
 {
   reaction_   = reaction;
   d_reaction_ = d_reaction;
+  reaction_scale_ = std::move(scale);
 }
 
 void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
@@ -160,7 +161,7 @@ void ThermalConduction::completeSetup()
 
   // Add a nonlinear reaction term if specified
   if (reaction_) {
-    K_form_->AddDomainIntegrator(new serac::thermal::mfem_ext::NonlinearReactionIntegrator(*reaction_, *d_reaction_));
+    K_form_->AddDomainIntegrator(new serac::thermal::mfem_ext::NonlinearReactionIntegrator(*reaction_, *d_reaction_, *reaction_scale_));
   }
 
   // Build the dof array lookup tables
@@ -258,6 +259,8 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   reaction_table.addFunction("d_reaction_function", axom::inlet::FunctionTag::Double,
                              {axom::inlet::FunctionTag::Double},
                              "Derivative of the nonlinear reaction function dq = dq / dTemperature");
+  auto& scale_coef_table = reaction_table.addTable("scale", "Spatially varying scale factor for the reaction");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(scale_coef_table);
 
   auto& equation_solver_table = table.addTable("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
@@ -318,6 +321,7 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
     auto reaction          = base["nonlinear_reaction"];
     result.reaction_func   = reaction["reaction_function"].get<std::function<double(double)>>();
     result.d_reaction_func = reaction["d_reaction_function"].get<std::function<double(double)>>();
+    result.reaction_scale_coef = reaction["scale"].get<serac::input::CoefficientInputOptions>();
   }
 
   if (base.contains("source")) {

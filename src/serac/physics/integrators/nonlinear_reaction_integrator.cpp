@@ -38,11 +38,14 @@ void NonlinearReactionIntegrator::AssembleElementVector(const mfem::FiniteElemen
     // Calculate the temperature at the integration point
     double temp = shape_ * state_vector;
 
+    // Evaluate the scaling coefficent
+    double scale = scale_.Eval(parent_to_reference_transformation, ip);
+
     // Calculate the reaction term from the current temperature
     double source = reaction_(temp);
 
     // Accumulate the residual contribution
-    residual_vector.Add(ip.weight * parent_to_reference_transformation.Weight() * source, shape_);
+    residual_vector.Add(ip.weight * parent_to_reference_transformation.Weight() * source * scale, shape_);
   }
 }
 
@@ -77,11 +80,14 @@ void NonlinearReactionIntegrator::AssembleElementGrad(const mfem::FiniteElement&
     // Calculate the temperature at the current integration point
     double temp = shape_ * state_vector;
 
+    // Evaluate the scaling coefficent
+    double scale = scale_.Eval(parent_to_reference_transformation, ip);
+
     // Calculate the derivative of the nonlinear reaction at the current integration point
     double d_source = d_reaction_(temp);
 
     // Accumulate the stiffness matrix contributions
-    mfem::AddMult_a_VVt(d_source * ip.weight * parent_to_reference_transformation.Weight(), shape_, stiffness_matrix);
+    mfem::AddMult_a_VVt(d_source * scale * ip.weight * parent_to_reference_transformation.Weight(), shape_, stiffness_matrix);
   }
 }
 
