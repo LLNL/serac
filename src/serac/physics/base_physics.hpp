@@ -112,7 +112,6 @@ public:
    *
    * @param[in] output_type The type of output files to produce
    * @param[in] root_name The root name of the output files
-   * @param[in] extra_states The extra finite element state fields to include in the output file
    */
   virtual void initializeOutput(const serac::OutputType output_type, const std::string& root_name);
 

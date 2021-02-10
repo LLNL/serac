@@ -56,6 +56,10 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
     case serac::OutputType::ParaView: {
       auto pv_dc = std::make_unique<mfem::ParaViewDataCollection>(root_name_, &state_.front().get().mesh());
       int  max_order_in_fields = 0;
+      for (FiniteElementState& state : state_) {
+        pv_dc->RegisterField(state.name(), &state.gridFunc());
+        max_order_in_fields = std::max(max_order_in_fields, state.space().GetOrder(0));
+      }
       pv_dc->SetLevelsOfDetail(max_order_in_fields);
       pv_dc->SetHighOrderOutput(true);
       pv_dc->SetDataFormat(mfem::VTKFormat::BINARY);
