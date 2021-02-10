@@ -40,6 +40,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   // Simulation time parameters
   inlet.addDouble("t_final", "Final time for simulation.").defaultValue(1.0);
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
 
   auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
@@ -115,7 +116,9 @@ int main(int argc, char* argv[])
 
   bool last_step = false;
 
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "serac");
+  // FIXME: This and the FromInlet specialization are hacked together,
+  // should be inlet["output_type"].get<OutputType>()
+  solid_solver.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "serac");
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {
