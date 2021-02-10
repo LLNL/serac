@@ -22,6 +22,8 @@ TEST(meshgen, successful_creation)
   ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20)->GetNE(), 8000);
   ASSERT_EQ(serac::buildRectangleMesh(20, 20, 1., 2.)->GetNE(), 400);
   ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20, 1., 2., 3.)->GetNE(), 8000);
+  ASSERT_EQ(serac::buildCylinderMesh(2, 2, 2.0, 5.0)->GetNE(), 384);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0)->GetNE(), 256);
 }
 
 TEST(meshgen, lua_input)
