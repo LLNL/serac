@@ -6,7 +6,7 @@
 
 #include "serac/physics/integrators/traction_integrator.hpp"
 
-namespace serac::solid::mfem_ext {
+namespace serac::mfem_ext {
 
 void TractionIntegrator::AssembleFaceVector(const mfem::FiniteElement&        element_1, const mfem::FiniteElement&,
                                             mfem::FaceElementTransformations& parent_to_reference_face_transformation,
@@ -80,9 +80,9 @@ void TractionIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
     for (int j = 0; j < dof; j++) {
       for (int k = 0; k < dim; k++) {
         double residual_contribution =
-            traction_vector_(k) * shape_(j) * ip.weight * parent_to_reference_face_transformation.Face->Weight();
+            -1.0 * traction_vector_(k) * shape_(j) * ip.weight * parent_to_reference_face_transformation.Face->Weight();
         if (!compute_on_reference_) {
-          residual_contribution *= -1.0 * F_.Det() * fnor_.Norml2();
+          residual_contribution *= F_.Det() * fnor_.Norml2();
         }
         output_residual_vector(dof * k + j) += residual_contribution;
       }
@@ -223,4 +223,4 @@ void PressureIntegrator::AssembleFaceGrad(const mfem::FiniteElement& element_1, 
   }
 }
 
-}  // namespace serac::solid::mfem_ext
+}  // namespace serac::mfem_ext

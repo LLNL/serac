@@ -5,13 +5,38 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/materials/hyperelastic_material.hpp"
-#include "serac/physics/utilities/solid_utils.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 
 #include <cmath>
 
-namespace serac::solid {
+namespace serac {
+
+void HyperelasticMaterial::calcDeformationGradient(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& F)
+{
+  int dim = du_dX.Size();
+  F.SetSize(dim);
+  F = du_dX;
+
+  for (int i = 0; i < dim; ++i) {
+    F(i, i) += 1.0;
+  }
+}
+
+void HyperelasticMaterial::calcLinearizedStrain(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& epsilon)
+{
+  epsilon.SetSize(du_dX.Size());
+  epsilon = du_dX;
+  epsilon.Symmetrize();
+}
+
+void HyperelasticMaterial::calcCauchyStressFromPK1Stress(const mfem::DenseMatrix& F, const mfem::DenseMatrix& P,
+                                                         mfem::DenseMatrix& sigma)
+{
+  sigma.SetSize(F.Size());
+  mfem::MultABt(P, F, sigma);
+  sigma *= 1.0 / F.Det();
+}
 
 inline void NeoHookeanMaterial::EvalCoeffs() const
 {
@@ -19,7 +44,7 @@ inline void NeoHookeanMaterial::EvalCoeffs() const
   bulk_ = c_bulk_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
 }
 
-double NeoHookeanMaterial::EvalStrainEnergy(const mfem::DenseMatrix& du_dX) const
+double NeoHookeanMaterial::evalStrainEnergy(const mfem::DenseMatrix& du_dX) const
 {
   calcDeformationGradient(du_dX, F_);
 
@@ -37,7 +62,7 @@ double NeoHookeanMaterial::EvalStrainEnergy(const mfem::DenseMatrix& du_dX) cons
   return 0.5 * (mu_ * (I1_bar - dim) + bulk_ * (det_J - 1.0) * (det_J - 1.0));
 }
 
-void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const
+void NeoHookeanMaterial::evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const
 {
   calcDeformationGradient(du_dX, F_);
   int dim = F_.Width();
@@ -64,7 +89,7 @@ void NeoHookeanMaterial::EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseM
   }
 }
 
-void NeoHookeanMaterial::EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const
+void NeoHookeanMaterial::evalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const
 {
   calcDeformationGradient(du_dX, F_);
   int dim = F_.Width();
@@ -101,7 +126,7 @@ inline void LinearElasticMaterial::EvalCoeffs() const
   bulk_ = c_bulk_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
 }
 
-void LinearElasticMaterial::EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const
+void LinearElasticMaterial::evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const
 {
   int dim = du_dX.Width();
   sigma.SetSize(dim);
@@ -122,7 +147,7 @@ void LinearElasticMaterial::EvalStress(const mfem::DenseMatrix& du_dX, mfem::Den
   }
 }
 
-void LinearElasticMaterial::EvalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const
+void LinearElasticMaterial::evalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const
 {
   int dim = du_dX.Width();
 
@@ -143,4 +168,4 @@ void LinearElasticMaterial::EvalTangentStiffness(const mfem::DenseMatrix& du_dX,
   }
 }
 
-}  // namespace serac::solid
+}  // namespace serac

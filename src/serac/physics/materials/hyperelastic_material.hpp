@@ -16,7 +16,7 @@
 
 #include "serac/numerics/array_4D.hpp"
 
-namespace serac::solid {
+namespace serac {
 
 /**
  * @brief Abstract interface class for a generic hyperelastic material
@@ -46,7 +46,7 @@ public:
    *
    * @param[in] parent_to_reference_transformation_ The reference-to-target (stress-free) transformation
    */
-  void SetTransformation(mfem::ElementTransformation& Ttr) { parent_to_reference_transformation_ = &Ttr; }
+  void setTransformation(mfem::ElementTransformation& Ttr) { parent_to_reference_transformation_ = &Ttr; }
 
   /**
    * @brief Evaluate the strain energy density function, W = W(F).
@@ -54,7 +54,7 @@ public:
    * @param[in] du_dX the displacement gradient
    * @return double Strain energy density
    */
-  virtual double EvalStrainEnergy(const mfem::DenseMatrix& du_dX) const = 0;
+  virtual double evalStrainEnergy(const mfem::DenseMatrix& du_dX) const = 0;
 
   /**
    * @brief Evaluate the Cauchy stress sigma = sigma(F).
@@ -62,7 +62,7 @@ public:
    * @param[in] du_dX the displacement gradient
    * @param[out] sigma The evaluated Cauchy stress
    */
-  virtual void EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const = 0;
+  virtual void evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const = 0;
 
   /**
    * @brief Evaluate the derivative of the 1st Piola-Kirchhoff stress tensor in Voigt notation
@@ -72,7 +72,33 @@ public:
    * @param[out] C Tangent moduli 4D Array in spatial form (C^e_ijkl=(d tau_ij)/(d F_km) * F_lm = J * sigma_ij delta_kl
    + J * (d sigma_ij)/(d F_km) F_lm )
    */
-  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const = 0;
+  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const = 0;
+
+  /**
+   * @brief Calculate the deformation gradient from the displacement gradient (F = H + I)
+   *
+   * @param[in] du_dX the displacement gradient (du_dX)
+   * @param[out] F the deformation gradient (dx_dX)
+   */
+  static void calcDeformationGradient(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& F);
+
+  /**
+   * @brief Calculate the linearized strain tensor (epsilon = 1/2 * (du_dX + du_dX^T))
+   *
+   * @param[in] du_dX the displacement gradient (du_dX)
+   * @param[out] epsilon the linearized strain tensor epsilon = 1/2 * (du_dX + du_dX^T)
+   */
+  static void calcLinearizedStrain(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& epsilon);
+
+  /**
+   * @brief Calculate the Cauchy stress from the PK1 stress
+   *
+   * @param[in] F the deformation gradient dx_dX
+   * @param[in] P the first Piola-Kirchoff stress tensor
+   * @param[out] sigma the Cauchy stress tensor
+   */
+  static void calcCauchyStressFromPK1Stress(const mfem::DenseMatrix& F, const mfem::DenseMatrix& P,
+                                            mfem::DenseMatrix& sigma);
 
 protected:
   /**
@@ -108,7 +134,7 @@ public:
    * @param[in] du_dX The displacement gradient
    * @return Strain energy density
    */
-  virtual double EvalStrainEnergy(const mfem::DenseMatrix& du_dX) const;
+  virtual double evalStrainEnergy(const mfem::DenseMatrix& du_dX) const;
 
   /**
    * @brief Evaluate the Cauchy stress
@@ -116,7 +142,7 @@ public:
    * @param[in] du_dX The displacement gradient
    * @param[out] sigma The evaluated Cauchy stress
    */
-  virtual void EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const;
+  virtual void evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const;
 
   /**
    * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
@@ -124,7 +150,7 @@ public:
    * @param[in] du_dX The displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const;
+  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -206,7 +232,7 @@ public:
    * @param[in] du_dX the displacement gradient
    * @return Strain energy density
    */
-  virtual double EvalStrainEnergy(const mfem::DenseMatrix&) const
+  virtual double evalStrainEnergy(const mfem::DenseMatrix&) const
   {
     SLIC_ERROR("Strain energy not implemented for the linear elastic material!");
     return 0.0;
@@ -218,7 +244,7 @@ public:
    * @param[in] du_dX the displacement gradient
    * @param[out] sigma The evaluated Cauchy stress
    */
-  virtual void EvalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const;
+  virtual void evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const;
 
   /**
    * @brief Evaluate the derivative of the Kirchoff stress wrt the deformation gradient
@@ -226,7 +252,7 @@ public:
    * @param[in] du_dX the displacement gradient
    * @param[out] C Tangent moduli 4D Array
    */
-  virtual void EvalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const;
+  virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const;
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -279,4 +305,4 @@ protected:
   inline void EvalCoeffs() const;
 };
 
-}  // namespace serac::solid
+}  // namespace serac

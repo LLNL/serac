@@ -16,7 +16,7 @@
 
 #include "mfem.hpp"
 
-namespace serac::solid::mfem_ext {
+namespace serac::mfem_ext {
 
 /**
  * @brief Displacement hyperelastic integrator for any given serac::HyperelasticModel.
@@ -164,4 +164,4 @@ private:
   bool geom_nonlin_;
 };
 
-}  // namespace serac::solid::mfem_ext
+}  // namespace serac::mfem_ext

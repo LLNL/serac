@@ -48,7 +48,7 @@ template <>
 void defineTestSchema<Solid>(axom::inlet::Inlet& inlet)
 {
   // Integration test parameters
-  inlet.addDouble("expected_x_l2norm", "Correct L2 norm of the displacement field");
+  inlet.addDouble("expected_u_l2norm", "Correct L2 norm of the displacement field");
   inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
 
   // Physics
@@ -125,9 +125,9 @@ void verifyFields(const Solid& phys_module, const axom::inlet::Inlet& inlet, con
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  if (inlet.contains("expected_x_l2norm")) {
+  if (inlet.contains("expected_u_l2norm")) {
     double x_norm = phys_module.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-    EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+    EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_v_l2norm")) {
     double v_norm = phys_module.velocity().gridFunc().ComputeLpError(2.0, zerovec);
