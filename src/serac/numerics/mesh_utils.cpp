@@ -180,33 +180,6 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions
                          options.overall_size[1], options.overall_size[2], comm);
 }
 
-namespace mesh {
-
-void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
-{
-  // Refinement levels
-  table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
-  table.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
-
-  table.addString("type", "Type of mesh").required();
-
-  // mesh path
-  table.addString("mesh", "Path to Mesh file");
-
-  // mesh generation options
-  auto& elements = table.addTable("elements");
-  // JW: Can these be specified as requierd if elements is defined?
-  elements.addInt("x", "x-dimension");
-  elements.addInt("y", "y-dimension");
-  elements.addInt("z", "z-dimension");
-
-  auto& size = table.addTable("size");
-  // JW: Can these be specified as requierd if elements is defined?
-  size.addDouble("x", "Size in the x-dimension");
-  size.addDouble("y", "Size in the y-dimension");
-  size.addDouble("z", "Size in the z-dimension");
-}
-
 std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
                                                  double height, const MPI_Comm comm)
 {
@@ -382,6 +355,33 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
   auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
 
   return extruded_pmesh;
+}
+
+namespace mesh {
+
+void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
+{
+  // Refinement levels
+  table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
+  table.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
+
+  table.addString("type", "Type of mesh").required();
+
+  // mesh path
+  table.addString("mesh", "Path to Mesh file");
+
+  // mesh generation options
+  auto& elements = table.addTable("elements");
+  // JW: Can these be specified as requierd if elements is defined?
+  elements.addInt("x", "x-dimension");
+  elements.addInt("y", "y-dimension");
+  elements.addInt("z", "z-dimension");
+
+  auto& size = table.addTable("size");
+  // JW: Can these be specified as requierd if elements is defined?
+  size.addDouble("x", "Size in the x-dimension");
+  size.addDouble("y", "Size in the y-dimension");
+  size.addDouble("z", "Size in the z-dimension");
 }
 
 }  // namespace mesh
