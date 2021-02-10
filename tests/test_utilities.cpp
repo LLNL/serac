@@ -147,7 +147,7 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
   if (inlet.contains("exact_solution")) {
     auto   coef_options = inlet["exact_solution"].get<serac::input::CoefficientInputOptions>();
     auto   exact        = coef_options.constructScalar();
-    double error        = module.temperature().gridFunc().ComputeLpError(2.0, exact);
+    double error        = phys_module.temperature().gridFunc().ComputeLpError(2.0, exact);
     EXPECT_NEAR(error, 0.0, inlet["epsilon"]);
   }
 }
