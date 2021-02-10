@@ -12,6 +12,7 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
+#include "serac/physics/utilities/solver_config.hpp"
 
 namespace serac::input {
 
@@ -73,6 +74,13 @@ void defineVectorInputFileSchema(axom::inlet::Table& table)
   table.addDouble("z", "z-component of vector");
 }
 
+void defineOutputTypeInputFileSchema(axom::inlet::Table& table)
+{
+  table.addString("output_type", "Desired output format")
+      .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
+      .defaultValue("VisIt");
+}
+
 void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   table.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
@@ -127,6 +135,24 @@ mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
     result.SetSize(1);  // Shrink to a 1D vector, leaving the data intact
   }
   return result;
+}
+
+serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Table& base)
+{
+  const static auto output_names = []() {
+    std::unordered_map<std::string, serac::OutputType> result;
+    result["glvis"]      = serac::OutputType::GLVis;
+    result["paraview"]   = serac::OutputType::ParaView;
+    result["visit"]      = serac::OutputType::VisIt;
+    result["sidrevisit"] = serac::OutputType::SidreVisIt;
+    return result;
+  }();
+
+  // FIXME: This is a hack because we're converting from a primitive
+  // Remove this when FromInlet takes a Proxy
+  std::string output_type = base["output_type"];
+  axom::utilities::string::toLower(output_type);
+  return output_names.at(output_type);
 }
 
 serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
