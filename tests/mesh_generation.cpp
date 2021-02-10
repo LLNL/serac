@@ -23,8 +23,9 @@ TEST(meshgen, successful_creation)
   ASSERT_EQ(serac::buildCylinderMesh(2, 2, 2.0, 5.0)->GetNE(), 384);
   ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0)->GetNE(), 256);
   ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0, M_PI_4, 8)->GetNE(), 256);
-  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0, M_PI/3., 6)->GetNE(), 192);
-  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, M_PI/3., 1)->GetNE(), 16);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0, M_PI / 3., 6)->GetNE(), 192);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, M_PI / 3., 1)->GetNE(), 16);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, M_PI / 3.5, 7)->GetNE(), 112);
 }
 
 TEST(meshgen, lua_input)
@@ -91,7 +92,6 @@ TEST(meshgen, lua_input)
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
-
 }
 
 //------------------------------------------------------------------------------

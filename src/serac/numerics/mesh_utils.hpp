@@ -115,7 +115,8 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
-                                                       double inner_radius, double outer_radius, double height, double angle=M_PI_4, int sectors = 8,
+                                                       double inner_radius, double outer_radius, double height,
+                                                       double angle = M_PI_4, int sectors = 8,
                                                        const MPI_Comm = MPI_COMM_WORLD);
 
 namespace mesh {

@@ -179,7 +179,7 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions
   return buildCuboidMesh(options.elements[0], options.elements[1], options.elements[2], options.overall_size[0],
                          options.overall_size[1], options.overall_size[2], comm);
 }
-  
+
 std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
                                                  double height, const MPI_Comm comm)
 {
@@ -270,24 +270,23 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
 }
 
 std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
-                                                       double inner_radius, double outer_radius, double height, double angle, int sectors,
-                                                       const MPI_Comm comm)
+                                                       double inner_radius, double outer_radius, double height,
+                                                       double angle, int sectors, const MPI_Comm comm)
 {
-  static constexpr int dim                   = 2;
+  static constexpr int dim = 2;
 
   SLIC_ASSERT_MSG(angle > 0., "only positive angles supported");
-  
+
   // check that sectors is < 2*M_PI/angle
-  int angle_d = static_cast<int>(180./M_PI * angle);
-  int sectors_d = (360 + angle_d - 1)/(angle_d);
-  SLIC_ERROR_IF( 0 >= sectors  && sectors > sectors_d, "specified sectors surpass 2 M_PI");
-  
+  double angle_d   = 180. / M_PI * angle;
+  int    sectors_d = static_cast<int>(std::round(360. / angle_d));
+  SLIC_ERROR_IF(0 >= sectors && sectors > sectors_d, "specified sectors surpass 2 M_PI");
+
   int num_elems             = sectors;
   int num_vertices_ring     = (sectors == sectors_d) ? sectors : sectors + 1;
   int num_vertices          = num_vertices_ring * 2;
-  int num_boundary_elements = num_elems * 2; // ? + 2 on the ends?
+  int num_boundary_elements = num_elems * 2;
 
-  
   double vertices[num_vertices][dim];
   for (int i = 0; i < num_vertices_ring; i++) {
     double s       = sin(angle * i);
@@ -347,9 +346,14 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
       }
 
       // stretch the polygonal shape into a cylinder
-      double phi = fmod(atan2(vertex(1), vertex(0)) + M_PI, angle);
+      // phi is the angle to the closest multiple of a sector angle
+      double phi = fmod(atan2(vertex(1), vertex(0)) + 2. * M_PI, angle);
 
-      double factor = cos(abs(0.5 * angle - phi))/cos(0.5 * angle);
+      // this calculation assumes the 0 <= phi <= angle
+      // the distance from the center of the cylinder to the midpoint of the radial edge is known
+      // the midpoint can also be used to form a right triangle to phi where
+      // the angle is given by abs(0.5 * angle - phi)
+      double factor = cos(fabs(0.5 * angle - phi)) / cos(0.5 * angle);
       vertex *= factor;
 
       for (int d = 0; d < dim; d++) {
