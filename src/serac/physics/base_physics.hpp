@@ -57,28 +57,19 @@ public:
                            const int component = -1);
 
   /**
-   * @brief Set the state variables from a vector of coefficients
-   *
-   * @param[in] state_coef A vector of coefficients to project on the state grid functions
+   * @brief Add an extra state to the state container for output purposes
+   * 
+   * @param[in] extra_state The extra state to package
+   * @note This expects the caller to manage the extra state to ensure it lives as long as the base physics module
    */
-  virtual void setState(const std::vector<serac::GeneralCoefficient>& state_coef);
-
-  /**
-   * @brief Set the state variables from an existing grid function
-   *
-   * @param[in] state A vector of finite element states to initialze the solver
-   * @note This will move from each element of the vector, so the vector cannot
-   * be used in the calling scope after this function is called (as it has been
-   * moved from)
-   */
-  virtual void setState(std::vector<serac::FiniteElementState>&& state);
+  virtual void addState(FiniteElementState& extra_state) { state_.push_back(extra_state); }
 
   /**
    * @brief Get the list of state variable grid functions
    *
    * @return the current vector of finite element states
    */
-  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState> >& getState() const;
+  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState>>& getState() const;
 
   /**
    * @brief Set the current time
@@ -121,6 +112,7 @@ public:
    *
    * @param[in] output_type The type of output files to produce
    * @param[in] root_name The root name of the output files
+   * @param[in] extra_states The extra finite element state fields to include in the output file
    */
   virtual void initializeOutput(const serac::OutputType output_type, const std::string& root_name);
 
@@ -154,7 +146,7 @@ protected:
   /**
    * @brief List of finite element data structures
    */
-  std::vector<std::reference_wrapper<serac::FiniteElementState> > state_;
+  std::vector<std::reference_wrapper<serac::FiniteElementState>> state_;
 
   /**
    * @brief Block vector storage of the true state
