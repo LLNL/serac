@@ -30,7 +30,8 @@ public:
    * @param[in] reaction a function describing the nonlinear reaction term q = q(T)
    * @param[in] d_reaction a function describing the derivative of the reaction dq = dq(T) / dT
    */
-  explicit NonlinearReactionIntegrator(std::function<double(double)> reaction, std::function<double(double)> d_reaction, mfem::Coefficient &scale)
+  explicit NonlinearReactionIntegrator(std::function<double(double)> reaction, std::function<double(double)> d_reaction,
+                                       mfem::Coefficient& scale)
       : reaction_(reaction), d_reaction_(d_reaction), scale_(scale)
   {
   }
@@ -75,9 +76,9 @@ private:
 
   /**
    * @brief a scaling coefficient for the reaction
-   * 
+   *
    */
-  mfem::Coefficient &scale_;
+  mfem::Coefficient& scale_;
 
   /**
    * @brief a working vector containing shape function evaluations

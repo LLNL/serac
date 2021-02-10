@@ -87,7 +87,8 @@ void NonlinearReactionIntegrator::AssembleElementGrad(const mfem::FiniteElement&
     double d_source = d_reaction_(temp);
 
     // Accumulate the stiffness matrix contributions
-    mfem::AddMult_a_VVt(d_source * scale * ip.weight * parent_to_reference_transformation.Weight(), shape_, stiffness_matrix);
+    mfem::AddMult_a_VVt(d_source * scale * ip.weight * parent_to_reference_transformation.Weight(), shape_,
+                        stiffness_matrix);
   }
 }
 

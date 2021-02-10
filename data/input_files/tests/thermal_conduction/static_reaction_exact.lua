@@ -15,6 +15,10 @@ d_reaction = function (temp)
   return 2.0 * temp
 end
 
+scale_function = function (v)
+    return math.sin(v.x) + math.cos(v.y)
+end
+
 exact_solution = {
   coef = exact_function
 }
@@ -44,7 +48,7 @@ thermal_conduction = {
         },
 
         nonlinear = {
-            rel_tol     = 1.0e-6,
+            rel_tol     = 1.0e-8,
             abs_tol     = 1.0e-12,
             max_iter    = 500,
             print_level = 1,
@@ -60,12 +64,15 @@ thermal_conduction = {
     -- add a nonlinear reaction
     nonlinear_reaction = {
         reaction_function = reaction,
-        d_reaction_function = d_reaction
+        d_reaction_function = d_reaction,
+        scale = {
+            coef = scale_function
+        }
     },
 
     source = {
         coef = function (v)
-            return reaction(exact_function(v)) + minus_laplacian_temp(v)
+            return scale_function(v) * reaction(exact_function(v)) + minus_laplacian_temp(v)
         end
     },
 

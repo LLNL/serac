@@ -62,8 +62,13 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
   setSpecificHeatCapacity(std::make_unique<mfem::ConstantCoefficient>(options.cp));
 
   if (options.reaction_func) {
-    auto scale = std::make_unique<mfem::FunctionCoefficient>(options.reaction_scale_coef->constructScalar());
-    setNonlinearReaction(options.reaction_func, options.d_reaction_func, std::move(scale));
+    if (options.reaction_scale_coef) {
+      auto scale = std::make_unique<mfem::FunctionCoefficient>(options.reaction_scale_coef->constructScalar());
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func, std::move(scale));
+    } else {
+      auto one = std::make_unique<mfem::ConstantCoefficient>(1.0);
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func, std::move(one));
+    }
   }
 
   if (options.initial_temperature) {
@@ -125,11 +130,12 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
   source_ = std::move(source);
 }
 
-void ThermalConduction::setNonlinearReaction(std::function<double(double)> reaction,
-                                             std::function<double(double)> d_reaction, std::unique_ptr<mfem::Coefficient>&& scale)
+void ThermalConduction::setNonlinearReaction(std::function<double(double)>        reaction,
+                                             std::function<double(double)>        d_reaction,
+                                             std::unique_ptr<mfem::Coefficient>&& scale)
 {
-  reaction_   = reaction;
-  d_reaction_ = d_reaction;
+  reaction_       = reaction;
+  d_reaction_     = d_reaction;
   reaction_scale_ = std::move(scale);
 }
 
@@ -162,7 +168,8 @@ void ThermalConduction::completeSetup()
 
   // Add a nonlinear reaction term if specified
   if (reaction_) {
-    K_form_->AddDomainIntegrator(new serac::thermal::mfem_ext::NonlinearReactionIntegrator(reaction_, d_reaction_, *reaction_scale_));
+    K_form_->AddDomainIntegrator(
+        new serac::thermal::mfem_ext::NonlinearReactionIntegrator(reaction_, d_reaction_, *reaction_scale_));
   }
 
   // Build the dof array lookup tables
@@ -322,7 +329,9 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
     auto reaction          = base["nonlinear_reaction"];
     result.reaction_func   = reaction["reaction_function"].get<std::function<double(double)>>();
     result.d_reaction_func = reaction["d_reaction_function"].get<std::function<double(double)>>();
-    result.reaction_scale_coef = reaction["scale"].get<serac::input::CoefficientInputOptions>();
+    if (reaction.contains("scale")) {
+      result.reaction_scale_coef = reaction["scale"].get<serac::input::CoefficientInputOptions>();
+    }
   }
 
   if (base.contains("source")) {
