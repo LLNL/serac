@@ -27,7 +27,7 @@ where
 
    \begin{align*}
    T(x,t) & =\text{ temperature} \\
-   c_p & =\text{ specific heat} \\
+   c_p & =\text{ specific heat capacity} \\
    \rho & =\text{ density} \\
    \kappa & =\text { conductivity} \\
    f(T) & =\text{ nonlinear reaction} \\
@@ -45,7 +45,7 @@ parts to obtain the weak form
 
    \begin{align*}
    &\text{Find } T \in V \text{ such that}\\
-   &\int_\Omega \left( \left(c_p \rho\frac{\partial T}{\partial t} + s(x,t) r(u) - g(x, t) \right) v- \kappa \nabla T \cdot \nabla v \right) dV + \int_{\Gamma_N} q v\, dA = 0, & & \forall v \in \hat V
+   &\int_\Omega \left( \left(c_p \rho\frac{\partial T}{\partial t} + s(x,t) r(u) - g(x, t) \right) v + \kappa \nabla T \cdot \nabla v \right) dV - \int_{\Gamma_N} q v\, dA = 0, & & \forall v \in \hat V
    \end{align*}
 
 where
@@ -67,7 +67,7 @@ method, i.e.
    \end{align*}
 
 where :math:`\phi_i` are nodal shape functions and :math:`u_i` are
-degrees of freedom, we obtain the discrete equations
+degrees of freedom, we obtain the discrete equations in residual form
 
 .. math:: \mathbf{M} \dot{\mathbf{u}} +\mathbf{Ku} + f(\mathbf{u}) - \mathbf{G} = \mathbf{0}
 
@@ -91,7 +91,7 @@ backward Euler method, we obtain
 
 Given a known :math:`\mathbf{u}_n`, this is solved at each timestep
 :math:`\Delta t` for :math:`\mathbf{u}_{n+1}` using a nonlinear solver,
-the most common of which is Newton's method. To accomplish this, the above
+typically Newton's method. To accomplish this, the above
 equation is linearized which yields
 
 .. math:: \left(\mathbf{M} + \Delta t \mathbf{K} + \Delta t\frac{\partial f}{\partial \mathbf{u}}\left(\mathbf{u}_{n+1}^i\right)\right)\Delta \mathbf{u}^{i+1}_{n+1} = -(\mathbf{M} + \Delta t \mathbf{K}) \mathbf{u}_{n+1}^i - \Delta t f(\mathbf{u}_{n+1}^i)) + \Delta t \mathbf{G} + \mathbf{Mu}_n.
