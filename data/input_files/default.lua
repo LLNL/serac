@@ -75,13 +75,9 @@ solid = {
         },
         ['traction'] = {
             attrs = {2},
-            vec_coef = function (v)
-                return Vector.new(0, 1.0e-3, 0)
+            vec_coef = function (v, t)
+                return Vector.new(0, 1.0e-3, 0) * t
             end
-            -- FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-            -- vec_coef = function (v, t)
-            --     return Vector.new(0, 1.0e-3, 0) * t
-            -- end
         },
     },
 }
