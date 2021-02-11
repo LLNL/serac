@@ -7,4 +7,5 @@ Theory Reference
    :maxdepth: 2
 
    thermal
+   solid
    odes
