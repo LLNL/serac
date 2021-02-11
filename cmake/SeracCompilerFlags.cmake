@@ -20,4 +20,5 @@ blt_append_custom_compiler_flag(FLAGS_VAR CMAKE_CXX_FLAGS DEFAULT ${_extra_flags
 
 # Only clang has fine-grained control over the designated initializer warnings
 # This can be added to the GCC flags when C++20 is available
-blt_append_custom_compiler_flag(FLAGS_VAR CMAKE_CXX_FLAGS CLANG "-Wpedantic -Wno-c++20-designator")
+# This should be compatible with Clang 8 through Clang 12
+blt_append_custom_compiler_flag(FLAGS_VAR CMAKE_CXX_FLAGS CLANG "-Wpedantic -Wno-c++2a-extensions")

@@ -230,6 +230,15 @@ public:
   void apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
              const double time = 0.0, const bool should_be_scalar = true) const;
 
+  /**
+   * @brief Sets the underlying coefficient's time
+   *
+   * @param[in] time The current simulation time
+   *
+   * Used for time-dependent coefficients
+   */
+  void setTime(const double time);
+
 private:
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient

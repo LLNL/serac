@@ -211,6 +211,15 @@ public:
   }
 
   /**
+   * @brief Sets the time for all stored boundary conditions
+   *
+   * @param[in] time The current simulation time
+   *
+   * Used for time-dependent boundary conditions
+   */
+  void setTime(const double time);
+
+  /**
    * @brief Accessor for the essential BC objects
    */
   std::vector<BoundaryCondition>& essentials() { return ess_bdr_; }
