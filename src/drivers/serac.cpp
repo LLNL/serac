@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
   }
 
   // Define the solid solver object
-  auto                  solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
+  auto         solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
   serac::Solid solid_solver(mesh, solid_solver_options);
 
   // Complete the solver setup
