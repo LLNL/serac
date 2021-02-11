@@ -273,6 +273,9 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
                                                        double inner_radius, double outer_radius, double height,
                                                        double angle, int sectors, const MPI_Comm comm)
 {
+  using index_type = int;
+  using size_type = std::vector<index_type>::size_type;
+  
   static constexpr int dim = 2;
 
   SLIC_ASSERT_MSG(angle > 0., "only positive angles supported");
@@ -281,19 +284,19 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
   double angle_d   = 180. / M_PI * angle;
   int    sectors_d = static_cast<int>(std::round(360. / angle_d));
   SLIC_ERROR_IF(0 >= sectors && sectors > sectors_d, "specified sectors surpass 2 M_PI");
-
-  int num_elems             = sectors;
-  int num_vertices_ring     = (sectors == sectors_d) ? sectors : sectors + 1;
-  int num_vertices          = num_vertices_ring * 2;
-  int num_boundary_elements = num_elems * 2;
+  
+  auto num_elems             = static_cast<size_type>(sectors);
+  auto num_vertices_ring     = static_cast<size_type>((sectors == sectors_d) ? sectors : sectors + 1);
+  auto num_vertices          = num_vertices_ring * 2;
+  auto num_boundary_elements = num_elems * 2;
 
   SLIC_ERROR_IF(outer_radius <= inner_radius,
                 "Outer radius is smaller than inner radius while building a cylinder mesh.");
 
-  double vertices[num_vertices][dim];
-  for (int i = 0; i < num_vertices_ring; i++) {
-    double s       = sin(angle * i);
-    double c       = cos(angle * i);
+  std::vector<std::vector<double> > vertices(static_cast<size_type>(num_vertices), std::vector<double>(dim, 0.));
+  for (size_type i = 0; i < num_vertices_ring; i++) {
+    double s       = sin(angle * static_cast<double>(i));
+    double c       = cos(angle * static_cast<double>(i));
     vertices[i][0] = inner_radius * c;
     vertices[i][1] = inner_radius * s;
 
@@ -301,13 +304,13 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
     vertices[i + num_vertices_ring][1] = outer_radius * s;
   }
 
-  int elems[num_elems][4];
-  int boundary_elems[num_boundary_elements][2];
-  for (int i = 0; i < num_elems; i++) {
-    elems[i][0] = i;
-    elems[i][1] = num_vertices_ring + i;
-    elems[i][2] = num_vertices_ring + (i + 1) % (num_vertices_ring);
-    elems[i][3] = (i + 1) % num_vertices_ring;
+  std::vector<std::vector<index_type>> elems( static_cast<size_type>(num_elems), std::vector<index_type>(4, 0));
+  std::vector<std::vector<index_type>> boundary_elems( static_cast<size_type>(num_boundary_elements), std::vector<index_type> ( 2, 0));
+  for (size_type i = 0; i < num_elems; i++) {
+    elems[i][0] = static_cast<index_type>(i);
+    elems[i][1] = static_cast<index_type>(num_vertices_ring + i);
+    elems[i][2] = static_cast<index_type>(num_vertices_ring + (i + 1) % (num_vertices_ring));
+    elems[i][3] = static_cast<index_type>((i + 1) % num_vertices_ring);
 
     // inner boundary
     boundary_elems[i][0] = elems[i][3];
@@ -318,16 +321,16 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
     boundary_elems[i + num_elems][1] = elems[i][2];
   }
 
-  auto mesh = mfem::Mesh(dim, num_vertices, num_elems, num_boundary_elements);
+  auto mesh = mfem::Mesh(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems), static_cast<int>(num_boundary_elements));
 
   for (auto vertex : vertices) {
-    mesh.AddVertex(vertex);
+    mesh.AddVertex(vertex.data());
   }
   for (auto elem : elems) {
-    mesh.AddQuad(elem);
+    mesh.AddQuad(elem[0], elem[1], elem[2], elem[3]);
   }
   for (auto boundary_elem : boundary_elems) {
-    mesh.AddBdrSegment(boundary_elem);
+    mesh.AddBdrSegment(boundary_elem[0], boundary_elem[1]);
   }
 
   for (int i = 0; i < radial_refinement; i++) {
