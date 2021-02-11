@@ -18,8 +18,12 @@ TEST(meshgen, successful_creation)
   // of elements specified, they refine to get as close as possible
   ASSERT_EQ(serac::buildDiskMesh(1000)->GetNE(), 1024);
   ASSERT_EQ(serac::buildBallMesh(6000)->GetNE(), 4096);
+  ASSERT_EQ(serac::buildRectangleMesh(20, 20)->GetNE(), 400);
+  ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20)->GetNE(), 8000);
   ASSERT_EQ(serac::buildRectangleMesh(20, 20, 1., 2.)->GetNE(), 400);
   ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20, 1., 2., 3.)->GetNE(), 8000);
+  ASSERT_EQ(serac::buildCylinderMesh(2, 2, 2.0, 5.0)->GetNE(), 384);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0)->GetNE(), 256);
 }
 
 TEST(meshgen, lua_input)

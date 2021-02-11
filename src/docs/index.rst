@@ -15,7 +15,6 @@ strategies and implicit finite element-based alogrithm development for emerging 
   *  `Source documentation <doxygen/html/index.html>`_
 
 
-
 ======================================================
 Copyright and License Information
 ======================================================
