@@ -50,21 +50,36 @@ void terminateCaliper()
 #endif
 }
 
-  template<> void setCaliperMetaData<double>(const std::string &name, double data) {
-    cali_set_global_double_byname(name.c_str(), data);
-  }
+template <>
+void setCaliperMetaData<double>([[maybe_unused]] const std::string& name, [[maybe_unused]] double data)
+{
+#ifdef SERAC_USE_CALIPER
+  cali_set_global_double_byname(name.c_str(), data);
+#endif
+}
 
-  template<> void setCaliperMetaData<int>(const std::string &name, int data) {
-    cali_set_global_int_byname(name.c_str(), data);
-  }
+template <>
+void setCaliperMetaData<int>([[maybe_unused]] const std::string& name, [[maybe_unused]] int data)
+{
+#ifdef SERAC_USE_CALIPER
+  cali_set_global_int_byname(name.c_str(), data);
+#endif
+}
 
-  template<> void setCaliperMetaData<const char *>(const std::string &name, const char * data) {
-    cali_set_global_string_byname(name.c_str(), data);
-  }
+template <>
+void setCaliperMetaData<const char*>([[maybe_unused]] const std::string& name, [[maybe_unused]] const char* data)
+{
+#ifdef SERAC_USE_CALIPER
+  cali_set_global_string_byname(name.c_str(), data);
+#endif
+}
 
-  template<> void setCaliperMetaData<unsigned int>(const std::string &name, unsigned int data) {
-    cali_set_global_uint_byname(name.c_str(), data);
-  }
+template <>
+void setCaliperMetaData<unsigned int>([[maybe_unused]] const std::string& name, [[maybe_unused]] unsigned int data)
+{
+#ifdef SERAC_USE_CALIPER
+  cali_set_global_uint_byname(name.c_str(), data);
+#endif
+}
 
-  
 }  // namespace serac::profiling

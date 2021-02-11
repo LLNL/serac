@@ -111,7 +111,7 @@ std::ostream& operator<<(std::ostream& out, const JSONTable& table)
 {
   out << "{";
   std::string indent(static_cast<std::size_t>(table.depth_) * 2, ' ');  // Double-space indenting
-  char        sep = ' ';                      // Start with empty separator to avoid trailing comma
+  char        sep = ' ';  // Start with empty separator to avoid trailing comma
   for (const auto& [key, val] : table.literals_) {
     out << sep << "\n" << indent << "\"" << key << "\": ";
     // Strings need to be wrapped in escaped quotes
