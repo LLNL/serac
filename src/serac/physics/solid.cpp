@@ -19,8 +19,10 @@ constexpr int NUM_FIELDS = 2;
 
 Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin)
     : BasePhysics(mesh, NUM_FIELDS, order),
-      velocity_(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"}),
-      displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"}),
+      velocity_(*mesh,
+                FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "velocity"}),
+      displacement_(
+          *mesh, FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "displacement"}),
       geom_nonlin_(geom_nonlin),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
@@ -320,8 +322,12 @@ void Solid::advanceTimestep(double& dt)
   // Set the mesh nodes to the reference configuration
   mesh_->NewNodes(*reference_nodes_);
 
+  bcs_.setTime(time_);
+
   if (is_quasistatic_) {
     quasiStaticSolve();
+    // Update the time for housekeeping purposes
+    time_ += dt;
   } else {
     ode2_.Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }

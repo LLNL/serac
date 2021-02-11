@@ -102,10 +102,6 @@ int main(int argc, char* argv[])
   auto         solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
   serac::Solid solid_solver(mesh, solid_solver_options);
 
-  // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-  // auto traction      = inlet["solid/traction"].get<mfem::Vector>();
-  // auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
-
   // Complete the solver setup
   solid_solver.completeSetup();
 
@@ -127,9 +123,6 @@ int main(int argc, char* argv[])
     t = t + dt_real;
 
     SLIC_INFO_ROOT(rank, "step " << ti << ", t = " << t);
-
-    // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-    // traction_coef->SetScale(t);
 
     // Solve the Newton system
     solid_solver.advanceTimestep(dt_real);
