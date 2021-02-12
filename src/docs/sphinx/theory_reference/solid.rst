@@ -12,7 +12,7 @@ Consider the kinematics of finite deformation
 .. raw:: html
 
    <html xmlns="http://www.w3.org/1999/xhtml"><head></head><body><figure>
-     <img alt="my alt text" src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Displacement_of_a_continuum.svg" width="512" data-src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Displacement_of_a_continuum.svg" onerror="this.style.display = 'none';" />
+     <img vspace="20" alt="my alt text" src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Displacement_of_a_continuum.svg" width="512" data-src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Displacement_of_a_continuum.svg" onerror="this.style.display = 'none';" />
      <figcaption>
        <a href="https://commons.wikimedia.org/wiki/File:Displacement_of_a_continuum.svg">Displacement_of_a_continuum.png: Sanpaz derivative work: Nicoguaro</a>, <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY-SA 3.0</a>, via Wikimedia Commons
      </figcaption>
@@ -97,7 +97,7 @@ write this equation in the reference (undeformed) configuration
 .. math::
 
    \begin{align*}
-   \int_{\Omega_0} \left( \sigma(\mathbf{u}) \cdot \left(\nabla_\mathbf{X} \delta \mathbf{v} \mathbf{F}^{-1}\right)  \rho \mathbf{b} \cdot \delta \mathbf{v}\right) \text{det}\mathbf{F}\, dV_0  \\ 
+   \int_{\Omega_0} \sigma(\mathbf{u}) \cdot \left(\nabla_\mathbf{X} \delta \mathbf{v} \mathbf{F}^{-1} \right) \text{det}\mathbf{F}\, dV_0  - \int \rho_0 \mathbf{b} \cdot \delta \mathbf{v} dV_0 \\ 
    - \int_{\Gamma_{N_0}} \delta\mathbf{v}\cdot \mathbf{t}\,||\mathbf{F}^{-T}\mathbf{n}_0||\text{det}\mathbf{F}\, dA_0 + \int_{\Omega_0} \rho_0\ddot{\mathbf{u}} \cdot \delta\mathbf{v}\, dV_0= 0, & & \forall \delta\mathbf{v} \in \hat{\mathbf{U}}
    \end{align*}
 
