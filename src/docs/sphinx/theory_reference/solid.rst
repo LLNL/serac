@@ -10,7 +10,7 @@ Solid Mechanics
 Consider the kinematics of finite deformation
 
 .. image:: ../figures/deformed_body.png
-   :scale: 60 %
+   :scale: 40 %
 
 where :math:`\mathbf{x}(\mathbf{X}, t)` is the current position of a
 point originally located at :math:`\mathbf{X}` in the undeformed (or
@@ -71,7 +71,7 @@ the weak form
 
    \begin{align*}
    &\text{Find } \mathbf{u} \in \mathbf{U} \text{ such that}\\
-   &\int_\Omega \left( \sigma(\mathbf{u}) \cdot \nabla_\mathbf{x} \delta \mathbf{v} - \rho \mathbf{b} \cdot \delta \mathbf{v}\right) dV - \int_{\Gamma_N} \delta\mathbf{v}\cdot \mathbf{t}\, dA + \int_\Omega \rho\ddot{\mathbf{u}} \cdot \delta\mathbf{v} \,dV = 0, & & \forall \delta\mathbf{v} \in \hat{\mathbf{U}}
+   &\int_{\Omega_t} \left( \sigma(\mathbf{u}) \cdot \nabla_\mathbf{x} \delta \mathbf{v} - \rho \mathbf{b} \cdot \delta \mathbf{v}\right) dV - \int_{\Gamma_N} \delta\mathbf{v}\cdot \mathbf{t}\, dA + \int_{\Omega_t} \rho\ddot{\mathbf{u}} \cdot \delta\mathbf{v} \,dV = 0, & & \forall \delta\mathbf{v} \in \hat{\mathbf{U}}
    \end{align*}
 
 where
@@ -91,7 +91,7 @@ write this equation in the reference (undeformed) configuration
 .. math::
 
    \begin{align*}
-   \int_{\Omega_0} \sigma(\mathbf{u}) \cdot \left(\nabla_\mathbf{X} \delta \mathbf{v} \mathbf{F}^{-1} \right) \text{det}\mathbf{F}\, dV_0  - \int \rho_0 \mathbf{b} \cdot \delta \mathbf{v} dV_0 \\ 
+   \int_{\Omega_0} \sigma(\mathbf{u}) \cdot \left(\nabla_\mathbf{X} \delta \mathbf{v} \mathbf{F}^{-1} \right) \text{det}\mathbf{F}\, dV_0  - \int_{\Omega_0} \rho_0 \mathbf{b} \cdot \delta \mathbf{v} dV_0 \\ 
    - \int_{\Gamma_{N_0}} \delta\mathbf{v}\cdot \mathbf{t}\,||\mathbf{F}^{-T}\mathbf{n}_0||\text{det}\mathbf{F}\, dA_0 + \int_{\Omega_0} \rho_0\ddot{\mathbf{u}} \cdot \delta\mathbf{v}\, dV_0= 0, & & \forall \delta\mathbf{v} \in \hat{\mathbf{U}}
    \end{align*}
 
