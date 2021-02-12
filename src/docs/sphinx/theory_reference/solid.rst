@@ -11,12 +11,8 @@ Consider the kinematics of finite deformation
 
 .. raw:: html
 
-   <html xmlns="http://www.w3.org/1999/xhtml"><head></head><body><figure>
-     <img vspace="20" alt="my alt text" src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Displacement_of_a_continuum.svg" width="512" data-src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Displacement_of_a_continuum.svg" onerror="this.style.display = 'none';" />
-     <figcaption>
-       <a href="https://commons.wikimedia.org/wiki/File:Displacement_of_a_continuum.svg">Displacement_of_a_continuum.png: Sanpaz derivative work: Nicoguaro</a>, <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY-SA 3.0</a>, via Wikimedia Commons
-     </figcaption>
-   </figure></body></html>
+    <a title="Displacement_of_a_continuum.png: Sanpaz
+    derivative work: Nicoguaro, CC BY-SA 3.0 &lt;https://creativecommons.org/licenses/by-sa/3.0&gt;, via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File:Displacement_of_a_continuum.svg"><img  alt="Displacement of a continuum" src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Displacement_of_a_continuum.svg/512px-Displacement_of_a_continuum.svg.png"></a>
 
 where :math:`\mathbf{x}(\mathbf{X}, t)` is the current position of a
 point originally located at :math:`\mathbf{X}` in the undeformed (or
