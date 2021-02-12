@@ -9,10 +9,7 @@ Solid Mechanics
 
 Consider the kinematics of finite deformation
 
-.. raw:: html
-
-    <a title="Displacement_of_a_continuum.png: Sanpaz
-    derivative work: Nicoguaro, CC BY-SA 3.0 &lt;https://creativecommons.org/licenses/by-sa/3.0&gt;, via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File:Displacement_of_a_continuum.svg"><img  alt="Displacement of a continuum" src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Displacement_of_a_continuum.svg/512px-Displacement_of_a_continuum.svg.png"></a>
+.. image:: ../figures/deformed_body.png
 
 where :math:`\mathbf{x}(\mathbf{X}, t)` is the current position of a
 point originally located at :math:`\mathbf{X}` in the undeformed (or
@@ -34,7 +31,7 @@ traction vector :math:`\mathbf{t}` is defined as
 .. math:: \mathbf{t} = \mathbf{\sigma} \mathbf{n}.
 
 This stress is a function of the deformation gradient
-:math:`\sigma  = \sigma(\mathbf{F})` by the appropriate constitutive
+:math:`\sigma  = \sigma(\mathbf{F})` by the appropriate hyperelastic constitutive
 (material) model. The conservation of angular momentum implies this
 stress tensor must be symmetric, i.e. :math:`\sigma = \sigma^T`. We can
 then use the conservation of linear momentum to formulate the boundary
