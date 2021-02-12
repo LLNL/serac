@@ -271,29 +271,28 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
 
 std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
                                                        double inner_radius, double outer_radius, double height,
-                                                       double angle, int sectors, const MPI_Comm comm)
+                                                       double total_angle, int sectors, const MPI_Comm comm)
 {
   using index_type = int;
-  using size_type = std::vector<index_type>::size_type;
-  
+  using size_type  = std::vector<index_type>::size_type;
+
   static constexpr int dim = 2;
 
-  SLIC_ASSERT_MSG(angle > 0., "only positive angles supported");
+  SLIC_ASSERT_MSG(total_angle > 0., "only positive angles supported");
 
-  // check that sectors is < 2*M_PI/angle
-  double angle_d   = 180. / M_PI * angle;
-  int    sectors_d = static_cast<int>(std::round(360. / angle_d));
-  SLIC_ERROR_IF(0 >= sectors && sectors > sectors_d, "specified sectors surpass 2 M_PI");
-  
+  // ensure total_angle is (0, 2 * pi]
+  total_angle        = std::min(total_angle, 2. * M_PI);
+  const double angle = total_angle / sectors;
+
   auto num_elems             = static_cast<size_type>(sectors);
-  auto num_vertices_ring     = static_cast<size_type>((sectors == sectors_d) ? sectors : sectors + 1);
+  auto num_vertices_ring     = static_cast<size_type>((total_angle == 2. * M_PI) ? sectors : sectors + 1);
   auto num_vertices          = num_vertices_ring * 2;
   auto num_boundary_elements = num_elems * 2;
 
   SLIC_ERROR_IF(outer_radius <= inner_radius,
                 "Outer radius is smaller than inner radius while building a cylinder mesh.");
 
-  std::vector<std::vector<double> > vertices(static_cast<size_type>(num_vertices), std::vector<double>(dim, 0.));
+  std::vector<std::vector<double>> vertices(static_cast<size_type>(num_vertices), std::vector<double>(dim, 0.));
   for (size_type i = 0; i < num_vertices_ring; i++) {
     double s       = sin(angle * static_cast<double>(i));
     double c       = cos(angle * static_cast<double>(i));
@@ -304,8 +303,9 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
     vertices[i + num_vertices_ring][1] = outer_radius * s;
   }
 
-  std::vector<std::vector<index_type>> elems( static_cast<size_type>(num_elems), std::vector<index_type>(4, 0));
-  std::vector<std::vector<index_type>> boundary_elems( static_cast<size_type>(num_boundary_elements), std::vector<index_type> ( 2, 0));
+  std::vector<std::vector<index_type>> elems(static_cast<size_type>(num_elems), std::vector<index_type>(4, 0));
+  std::vector<std::vector<index_type>> boundary_elems(static_cast<size_type>(num_boundary_elements),
+                                                      std::vector<index_type>(2, 0));
   for (size_type i = 0; i < num_elems; i++) {
     elems[i][0] = static_cast<index_type>(i);
     elems[i][1] = static_cast<index_type>(num_vertices_ring + i);
@@ -321,7 +321,8 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
     boundary_elems[i + num_elems][1] = elems[i][2];
   }
 
-  auto mesh = mfem::Mesh(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems), static_cast<int>(num_boundary_elements));
+  auto mesh = mfem::Mesh(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
+                         static_cast<int>(num_boundary_elements));
 
   for (auto vertex : vertices) {
     mesh.AddVertex(vertex.data());
@@ -354,7 +355,7 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
       // stretch the polygonal shape into a cylinder
       // phi is the angle to the closest multiple of a sector angle
       double theta = atan2(vertex(1), vertex(0));
-      double phi = fmod(theta + 2. * M_PI, angle);
+      double phi   = fmod(theta + 2. * M_PI, angle);
 
       // this calculation assumes the 0 <= phi <= angle
       // the distance from the center of the cylinder to the midpoint of the radial edge is known
