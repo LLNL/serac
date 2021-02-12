@@ -330,6 +330,19 @@ constexpr auto dot(tensor< S, n > A, tensor< T, n > B) {
   return AB;
 }
 
+template < typename S, typename T, int m, int n, int p >
+constexpr auto dot(tensor< S, m, n, p > A, tensor< T, p > B) {
+  tensor< decltype(S{} * T{}), m, n > AB{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      for (int k = 0; k < p; k++) {
+        AB[i][j] += A[i][j][k] * B[k];
+      }
+    }
+  }
+  return AB;
+}
+
 template < typename S, typename T, typename U, int m, int n >
 constexpr auto dot(tensor< S, m > u, tensor< T, m, n > A, tensor< U, n > v) {
   decltype(S{} * T{} * U{}) uAv{};
@@ -342,18 +355,42 @@ constexpr auto dot(tensor< S, m > u, tensor< T, m, n > A, tensor< U, n > v) {
 }
 
 template < typename S, typename T, int m, int n, int p, int q >
-constexpr auto ddot(tensor< S, m, n, p, q > A, tensor< T, p, q > v) {
-  tensor< decltype(S{} * T{}), m, n > Av{};
+constexpr auto ddot(tensor< S, m, n, p, q > A, tensor< T, p, q > B) {
+  tensor< decltype(S{} * T{}), m, n > AB{};
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++) {
       for (int k = 0; k < p; k++) {
         for (int l = 0; l < q; l++) {
-          Av[i][j] += A[i][j][k][l] * v[k][l];
+          AB[i][j] += A[i][j][k][l] * B[k][l];
         }
       }
     }
   }
-  return Av;
+  return AB;
+}
+
+template < typename S, typename T, int m, int n, int p >
+constexpr auto ddot(tensor< S, m, n, p > A, tensor< T, n, p > B) {
+  tensor< decltype(S{} * T{}), m > AB{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      for (int k = 0; k < p; k++) {
+        AB[i] += A[i][j][k] * B[j][k];
+      }
+    }
+  }
+  return AB;
+}
+
+template < typename S, typename T, int m, int n >
+constexpr auto ddot(tensor< S, m, n > A, tensor< T, m, n > B) {
+  decltype(S{} * T{}) AB{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      AB += A[i][j] * B[i][j];
+    }
+  }
+  return AB;
 }
 
 template < typename S, typename T, int m, int n, int p >
@@ -684,6 +721,22 @@ constexpr auto make_dual(tensor< double, n...> A){
     A_dual({i...}).gradient({i...}) = 1.0;
   });
   return A_dual;
+}
+
+template < int ... n >
+auto get_gradient(const dual < tensor< double, n ... > > & A) {
+  return make_tensor< n ... >([&A](auto ... i){ return A({i...}); });
+}
+
+template < int ... m, int ... n >
+auto get_gradient(const tensor< dual < tensor< double, n ... > >, m ... > & A) {
+  tensor< double, m ..., n ... > grad{};
+  for_constexpr<m...>([&](auto ... i){
+    for_constexpr<n...>([&](auto ... j){
+      grad({i..., j...}) = A({i...}).gradient({j...});
+    });
+  });
+  return grad;
 }
 
 template < typename T >

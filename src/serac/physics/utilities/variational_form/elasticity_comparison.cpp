@@ -1,6 +1,6 @@
 #include "mfem.hpp"
 #include "parvariationalform.hpp"
-#include "qfuncintegrator.hpp"
+#include "vectorh1qfuncintegrator.hpp"
 #include "tensor.hpp"
 #include <fstream>
 #include <iostream>
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 
   int         order       = 1;
   int         refinements = 0;
-  double a = 0.0;
+  double a = 1.0;
   double b = 1.0;
   // SERAC EDIT BEGIN
   // double p = 5.0;
@@ -68,6 +68,7 @@ int main(int argc, char* argv[])
   auto fec = H1_FECollection(order, dim);
   ParFiniteElementSpace fespace(&pmesh, &fec, dim);
 
+  //ParNonlinearForm A(&fespace);
   ParBilinearForm A(&fespace);
 
   ConstantCoefficient a_coef(a);
@@ -83,7 +84,7 @@ int main(int argc, char* argv[])
   LinearForm f(&fespace);
   VectorFunctionCoefficient load_func(dim, [&](const Vector& /*coords*/, Vector & force) {
     force = 0.0;
-    force(dim - 1) = -1.0;
+    force(0) = -1.0;
   });
 
   f.AddDomainIntegrator(new VectorDomainLFIntegrator(load_func));
@@ -95,6 +96,13 @@ int main(int argc, char* argv[])
     u = 0.0;
   });
 
+  VectorFunctionCoefficient initial_displacement(dim, [&](const Vector& coords, Vector & u) {
+    double x = coords(0);
+    double y = coords(1);
+    u(0) = x + 3 * y * y;
+    u(1) = 2 * x - y;
+  });
+
   Array<int> ess_bdr(pmesh.bdr_attributes.Max());
   ess_bdr = 1;
   Array<int> ess_tdof_list;
@@ -102,6 +110,8 @@ int main(int argc, char* argv[])
   ParGridFunction x(&fespace);
   x = 0.0;
   x.ProjectBdrCoefficient(boundary_func, ess_bdr);
+
+  x.ProjectCoefficient(initial_displacement); // DEBUG
   J->EliminateRowsCols(ess_tdof_list);
 
   auto residual = serac::mfem_ext::StdFunctionOperator(
@@ -114,7 +124,7 @@ int main(int argc, char* argv[])
       }
     },
 
-    [&](const mfem::Vector & /*du_dt*/) -> mfem::Operator& {
+    [&](const mfem::Vector & /*u*/) -> mfem::Operator& {
       return *J;
     }
   );
@@ -141,8 +151,40 @@ int main(int argc, char* argv[])
 
   x.Distribute(X);
 
+  ParVariationalForm form(&fespace);
+
+  static constexpr auto I = Identity<2>();
+
+  auto tmp = new VectorH1QFunctionIntegrator(
+    [&](auto /*x*/, auto u, auto grad_u) {
+      auto f0 = a * u - tensor{{-1.0, 0.0}};
+      auto strain = 0.5 * (grad_u + transpose(grad_u));
+      auto f1 = b * tr(strain) * I + 2.0 * b * strain;
+      return std::tuple{f0, f1};
+    }, pmesh);
+
+  form.AddDomainIntegrator(tmp);
+
+  form.SetEssentialBC(ess_bdr);
+
+  ParGridFunction x2(&fespace);
+  Vector X2(fespace.TrueVSize());
+  x2 = 0.0;
+  x2.ProjectBdrCoefficient(boundary_func, ess_bdr);
+
+  x2.ProjectCoefficient(initial_displacement); // DEBUG
+
+  newton.SetOperator(form);
+
+  x2.GetTrueDofs(X2);
+  newton.Mult(zero, X2);
+
+  x2.Distribute(X2);
+
   mfem::ConstantCoefficient zero_coef(0.0);
+  std::cout << "relative error: " << mfem::Vector(x - x2).Norml2() / x.Norml2() << std::endl;
   std::cout << x.ComputeL2Error(zero_coef) << std::endl;
+  std::cout << x2.ComputeL2Error(zero_coef) << std::endl;
 
   char         vishost[] = "localhost";
   int          visport   = 19916;
