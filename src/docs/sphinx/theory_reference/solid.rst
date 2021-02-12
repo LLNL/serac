@@ -10,6 +10,7 @@ Solid Mechanics
 Consider the kinematics of finite deformation
 
 .. image:: ../figures/deformed_body.png
+   :scale: 60 %
 
 where :math:`\mathbf{x}(\mathbf{X}, t)` is the current position of a
 point originally located at :math:`\mathbf{X}` in the undeformed (or
