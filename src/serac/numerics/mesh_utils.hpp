@@ -110,12 +110,15 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
  * @param[in] inner inner radius the radius of the cylindrical shell
  * @param[in] outer ouer radius the radius of the cylindrical shell
  * @param[in] height the number of elements in the z-direction
+ * @param[in] total_angle the angle in radians over which to generate the portion of an extruded cylinder
+ * @param[in] sectors the number of starting sectors in the hollow cylinder
  *
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
                                                        double inner_radius, double outer_radius, double height,
-                                                       const MPI_Comm comm = MPI_COMM_WORLD);
+                                                       double total_angle = M_PI, int sectors = 8,
+                                                       const MPI_Comm = MPI_COMM_WORLD);
 
 namespace mesh {
 
