@@ -121,9 +121,7 @@ where
 
    \mathbf{P} =  \frac{\partial W}{\partial \mathbf{F}} = {\text{det}}\mathbf{F} \sigma \mathbf{F}^{-T}
 
-is the *first Piola-Kirchhoff stress*. Serac currently only has two material models:
-
-1. A neo-Hookean material where
+is the *first Piola-Kirchhoff stress*. Serac currently only has two material models. First, a neo-Hookean material where
    
 .. math::
 
@@ -133,17 +131,15 @@ is the *first Piola-Kirchhoff stress*. Serac currently only has two material mod
    \end{align*}
 
 and :math:`\mu` and :math:`K` are the shear and bulk modulus, respectively. This definition also
-implies that the 2D simulations are using a plane strain assumption.
-
-2. A small strain isotropic linear elastic material where
+implies that the 2D simulations are using a plane strain assumption. The second model a small strain isotropic linear elastic material where
 
 .. math::
 
    \begin{align*}
    \sigma(\epsilon) &= \lambda \text{trace}(\epsilon) \mathbf{I} + 2\mu \epsilon \\
-   \epsilon &= \frac{1}{2}\left(\mathbf{F} + \mathbf{F}^T \right) - \mathbf{I}
+   \epsilon &= \frac{1}{2}\left(\mathbf{F} + \mathbf{F}^T \right) - \mathbf{I} \\
+   \lambda &= K - \frac{2}{\text{dim}} \mu
    \end{align*}
 
-and :math:`\lambda = K - \frac{2}{\text{dim}} \mu` is Lamè's first parameter and :math:`\epsilon` is the linearized strain tensor. Note that 
-this model is only valid for small strains and the neo-Hookean model reduces to this formulation in that case. It is included mostly for
-testing purposes.
+and :math:`\epsilon` is the linearized strain tensor. Note that this model is only valid for small strains 
+where the neo-Hookean model is nearly equivalent. It is included mostly for testing purposes.
