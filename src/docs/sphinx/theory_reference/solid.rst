@@ -174,4 +174,9 @@ and subsitutite these quantities back into the weak form to obtain the vector-va
    \int_{\Omega_0} \tau \frac{\partial N^a}{\mathbf{X}} \mathbf{F}^{-1} \, dV_0  - \int_{\Omega_0} \rho_0 \mathbf{b} N^a dV_0  - \int_{\Gamma_{N_0}} \mathbf{t}^* N^a \, dA_0 + \int_{\Omega_0} \rho_0\ddot{\mathbf{u}}N^a\, dV_0 = 0
 
 where :math:`\tau = \sigma \, \text{det}\mathbf{F}` is the Kirchhoff stress and :math:`\mathbf{t}^*` 
-is the traction applied in the reference configuration.
+is the traction applied in the reference configuration. 
+
+Optionally, we allow diabling the geometric nonlinearities by setting :math:`\mathbf{F} = \mathbf{I}` everywhere
+in this residual evaluation except for the material response (stress) function. 
+
+This discrete nonlinear second order ODE system can now be solved using the selected linear algebra methods.
