@@ -61,7 +61,7 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
 
   if (options.initial_temperature) {
     auto temp = options.initial_temperature->constructScalar();
-    setTemperature(temp);
+    setTemperature(*temp);
   }
 
   // Process the BCs in sorted order for correct behavior with repeated attributes
@@ -70,10 +70,10 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
   for (const auto& [name, bc] : sorted_bcs) {
     // FIXME: Better naming for boundary conditions?
     if (name.find("temperature") != std::string::npos) {
-      auto temp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      std::shared_ptr<mfem::Coefficient> temp_coef(bc.coef_opts.constructScalar());
       setTemperatureBCs(bc.attrs, temp_coef);
     } else if (name.find("flux") != std::string::npos) {
-      auto flux_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      std::shared_ptr<mfem::Coefficient> flux_coef(bc.coef_opts.constructScalar());
       setFluxBCs(bc.attrs, flux_coef);
     } else {
       SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);

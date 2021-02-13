@@ -77,12 +77,12 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
   auto dim = mesh->Dimension();
   if (options.initial_displacement) {
     auto deform = options.initial_displacement->constructVector(dim);
-    setDisplacement(deform);
+    setDisplacement(*deform);
   }
 
   if (options.initial_velocity) {
     auto velo = options.initial_velocity->constructVector(dim);
-    setVelocity(velo);
+    setVelocity(*velo);
   }
   setViscosity(std::make_unique<mfem::ConstantCoefficient>(options.viscosity));
 
@@ -90,14 +90,14 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
     // FIXME: Better naming for boundary conditions?
     if (name.find("displacement") != std::string::npos) {
       if (bc.coef_opts.isVector()) {
-        auto disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+        std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(dim));
         setDisplacementBCs(bc.attrs, disp_coef);
       } else {
-        auto disp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+        std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
         setDisplacementBCs(bc.attrs, disp_coef, bc.coef_opts.component);
       }
     } else if (name.find("traction") != std::string::npos) {
-      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+      std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
       setTractionBCs(bc.attrs, trac_coef);
     } else {
       SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);

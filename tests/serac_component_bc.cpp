@@ -57,8 +57,8 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   int dim = mesh->Dimension();
 
   // define the displacement vector
-  const auto& disp_bc   = solid_solver_options.boundary_conditions.at("displacement");
-  auto        disp_coef = std::make_shared<mfem::FunctionCoefficient>(disp_bc.coef_opts.constructScalar());
+  const auto&                        disp_bc = solid_solver_options.boundary_conditions.at("displacement");
+  std::shared_ptr<mfem::Coefficient> disp_coef(disp_bc.coef_opts.constructScalar());
 
   // Create an indicator function to set all vertices that are x=0
   mfem::VectorFunctionCoefficient zero_bc(dim, [](const mfem::Vector& x, mfem::Vector& X) {

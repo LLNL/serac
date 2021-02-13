@@ -69,7 +69,9 @@ std::string fullDirectoryFromPath(const std::string& path)
 
 void defineVectorInputFileSchema(axom::inlet::Table& table)
 {
-  table.addDouble("x", "x-component of vector").required();
+  // TODO: I had to remove the required tag on x as we now have an optional vector input in the coefficients. IT would
+  // be nice to support "If this exists, this subcomponent is required."
+  table.addDouble("x", "x-component of vector");
   table.addDouble("y", "y-component of vector");
   table.addDouble("z", "z-component of vector");
 }
@@ -87,35 +89,45 @@ void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& ta
   CoefficientInputOptions::defineInputFileSchema(table);
 }
 
-bool CoefficientInputOptions::isVector() const
+bool CoefficientInputOptions::isVector() const { return vector_function || constant_vector; }
+
+std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVector(const int dim) const
 {
-  return std::holds_alternative<CoefficientInputOptions::VecFunc>(func);
+  SLIC_ERROR_IF(!isVector(), "Cannot construct a vector coefficient from scalar input");
+
+  if (vector_function) {
+    return std::make_unique<mfem::VectorFunctionCoefficient>(dim, vector_function);
+  } else {
+    return std::make_unique<mfem::VectorConstantCoefficient>(*constant_vector);
+  }
 }
 
-mfem::VectorFunctionCoefficient CoefficientInputOptions::constructVector(const int dim) const
+std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() const
 {
-  auto vec_func = std::get_if<CoefficientInputOptions::VecFunc>(&func);
-  SLIC_ERROR_IF(!vec_func, "Cannot construct a vector coefficient from a scalar function");
-  return {dim, *vec_func};
-}
+  SLIC_ERROR_IF(isVector(), "Cannot construct a scalar coefficient from vector input");
 
-mfem::FunctionCoefficient CoefficientInputOptions::constructScalar() const
-{
-  auto scalar_func = std::get_if<CoefficientInputOptions::ScalarFunc>(&func);
-  SLIC_ERROR_IF(!scalar_func, "Cannot construct a scalar coefficient from a vector function");
-  return {*scalar_func};
+  if (scalar_function) {
+    return std::make_unique<mfem::FunctionCoefficient>(scalar_function);
+  } else {
+    return std::make_unique<mfem::ConstantCoefficient>(*constant_value);
+  }
 }
 
 void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Vectors are implemented as lua usertypes and can be converted to/from mfem::Vector
-  table.addFunction("vec_coef", axom::inlet::FunctionTag::Vector,
+  table.addFunction("vector_function", axom::inlet::FunctionTag::Vector,
                     {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
                     "The function to use for an mfem::VectorFunctionCoefficient");
-  table.addFunction("coef", axom::inlet::FunctionTag::Double,
+  table.addFunction("scalar_function", axom::inlet::FunctionTag::Double,
                     {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
                     "The function to use for an mfem::FunctionCoefficient");
   table.addInt("component", "The vector component to which the scalar coefficient should be applied");
+
+  table.addDouble("constant", "The constant scalar value to use as the coefficient");
+
+  auto& vector_table = table.addTable("vector_constant", "The constant vector to use as the coefficient");
+  serac::input::defineVectorInputFileSchema(vector_table);
 }
 
 }  // namespace serac::input
@@ -170,22 +182,35 @@ serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryCond
 serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOptions>::operator()(
     const axom::inlet::Table& base)
 {
-  if (base.contains("vec_coef")) {
-    auto func = base["vec_coef"]
+  serac::input::CoefficientInputOptions result;
+
+  // Check if functions have been assigned and store them appropriately
+  if (base.contains("vector_function")) {
+    auto func = base["vector_function"]
                     .get<std::function<axom::inlet::FunctionType::Vector(axom::inlet::FunctionType::Vector, double)>>();
-    auto vec_func = [func(std::move(func))](const mfem::Vector& input, double t, mfem::Vector& output) {
+    result.vector_function = [func(std::move(func))](const mfem::Vector& input, double t, mfem::Vector& output) {
       auto ret = func({input.GetData(), input.Size()}, t);
       // Copy from the primal vector into the MFEM vector
       std::copy(ret.vec.data(), ret.vec.data() + input.Size(), output.GetData());
     };
-    return {std::move(vec_func), -1};
-  } else if (base.contains("coef")) {
-    auto func        = base["coef"].get<std::function<double(axom::inlet::FunctionType::Vector, double)>>();
-    auto scalar_func = [func(std::move(func))](const mfem::Vector& input, double t) {
+    result.component = -1;
+
+  } else if (base.contains("scalar_function")) {
+    auto func = base["scalar_function"].get<std::function<double(axom::inlet::FunctionType::Vector, double)>>();
+    result.scalar_function = [func(std::move(func))](const mfem::Vector& input, double t) {
       return func({input.GetData(), input.Size()}, t);
     };
-    const int component = base.contains("component") ? base["component"] : -1;
-    return {std::move(scalar_func), component};
+    result.component = base.contains("component") ? base["component"] : -1;
+
+    // Then check for constant value definitions
+  } else if (base.contains("constant")) {
+    result.constant_value = base["constant"];
+    result.component      = base.contains("component") ? base["component"] : -1;
+
+  } else if (base.contains("vector_constant")) {
+    result.constant_vector = base["vector_constant"].get<mfem::Vector>();
+    result.component       = -1;
   }
-  return {};
+
+  return result;
 }

@@ -69,7 +69,15 @@ struct CoefficientInputOptions {
   /**
    * @brief The std::function corresponding to a function coefficient
    */
-  std::variant<ScalarFunc, VecFunc> func;
+  ScalarFunc scalar_function;
+  VecFunc    vector_function;
+
+  /**
+   * @brief The constants associated with the coefficient
+   */
+  std::optional<double>       constant_value;
+  std::optional<mfem::Vector> constant_vector;
+
   /**
    * @brief The component to which a scalar coefficient should be applied
    */
@@ -81,11 +89,11 @@ struct CoefficientInputOptions {
   /**
    * @brief Constructs a vector coefficient with the requested dimension
    */
-  mfem::VectorFunctionCoefficient constructVector(const int dim = 3) const;
+  std::unique_ptr<mfem::VectorCoefficient> constructVector(const int dim = 3) const;
   /**
    * @brief Constructs a scalar coefficient
    */
-  mfem::FunctionCoefficient constructScalar() const;
+  std::unique_ptr<mfem::Coefficient> constructScalar() const;
   /**
    * @brief Defines the input file schema on the provided inlet table
    */

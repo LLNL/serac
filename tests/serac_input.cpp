@@ -74,7 +74,7 @@ TEST_F(InputTest, vec_3d)
 
 TEST_F(InputTest, coef_build_scalar)
 {
-  reader_->parseString("coef_opts = { coef = function(v) return v.y * 2 + v.z end, component = 1}");
+  reader_->parseString("coef_opts = { scalar_function = function(v) return v.y * 2 + v.z end, component = 1}");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -84,7 +84,7 @@ TEST_F(InputTest, coef_build_scalar)
   test_vec(0)                 = 1;
   test_vec(1)                 = 2;
   test_vec(2)                 = 3;
-  const auto& func            = std::get<input::CoefficientInputOptions::ScalarFunc>(coef_opts.func);
+  const auto& func            = coef_opts.scalar_function;
   auto        expected_result = test_vec(1) * 2 + test_vec(2);
   EXPECT_DOUBLE_EQ(func(test_vec, 0.0), expected_result);
   EXPECT_NO_THROW(coef_opts.constructScalar());
@@ -92,7 +92,7 @@ TEST_F(InputTest, coef_build_scalar)
 
 TEST_F(InputTest, coef_build_scalar_timedep)
 {
-  reader_->parseString("coef_opts = { coef = function(v, t) return (v.y * 2 + v.z) * t end, component = 1}");
+  reader_->parseString("coef_opts = { scalar_function = function(v, t) return (v.y * 2 + v.z) * t end, component = 1}");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -102,7 +102,7 @@ TEST_F(InputTest, coef_build_scalar_timedep)
   test_vec(0)                  = 1;
   test_vec(1)                  = 2;
   test_vec(2)                  = 3;
-  const auto&  func            = std::get<input::CoefficientInputOptions::ScalarFunc>(coef_opts.func);
+  const auto&  func            = coef_opts.scalar_function;
   const double time            = 6.7;
   auto         expected_result = (test_vec(1) * 2 + test_vec(2)) * time;
   EXPECT_DOUBLE_EQ(func(test_vec, time), expected_result);
@@ -111,7 +111,7 @@ TEST_F(InputTest, coef_build_scalar_timedep)
 
 TEST_F(InputTest, coef_build_vec_from_scalar)
 {
-  reader_->parseString("coef_opts = { coef = function(v) return v.y * 2 + v.z end, component = 1}");
+  reader_->parseString("coef_opts = { scalar_function = function(v) return v.y * 2 + v.z end, component = 1}");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -120,7 +120,7 @@ TEST_F(InputTest, coef_build_vec_from_scalar)
 
 TEST_F(InputTest, coef_build_vector)
 {
-  reader_->parseString("coef_opts = { vec_coef = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
+  reader_->parseString("coef_opts = { vector_function = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -129,7 +129,7 @@ TEST_F(InputTest, coef_build_vector)
   test_vec(0)       = 1;
   test_vec(1)       = 2;
   test_vec(2)       = 3;
-  const auto&  func = std::get<input::CoefficientInputOptions::VecFunc>(coef_opts.func);
+  const auto&  func = coef_opts.vector_function;
   mfem::Vector expected_result(3);
   expected_result(0) = test_vec(1) * 2;
   expected_result(1) = test_vec(2);
@@ -144,7 +144,7 @@ TEST_F(InputTest, coef_build_vector)
 
 TEST_F(InputTest, coef_build_vector_timedep)
 {
-  reader_->parseString("coef_opts = { vec_coef = function(v, t) return Vector.new(v.y * 2, v.z, v.x) * t end }");
+  reader_->parseString("coef_opts = { vector_function = function(v, t) return Vector.new(v.y * 2, v.z, v.x) * t end }");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -153,7 +153,7 @@ TEST_F(InputTest, coef_build_vector_timedep)
   test_vec(0)       = 1;
   test_vec(1)       = 2;
   test_vec(2)       = 3;
-  const auto&  func = std::get<input::CoefficientInputOptions::VecFunc>(coef_opts.func);
+  const auto&  func = coef_opts.vector_function;
   const double time = 6.7;
   mfem::Vector expected_result(3);
   expected_result(0) = test_vec(1) * 2;
@@ -170,7 +170,7 @@ TEST_F(InputTest, coef_build_vector_timedep)
 
 TEST_F(InputTest, coef_build_scalar_from_vec)
 {
-  reader_->parseString("coef_opts = { vec_coef = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
+  reader_->parseString("coef_opts = { vector_function = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();

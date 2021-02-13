@@ -20,7 +20,6 @@
 #include "axom/core.hpp"
 #include "mfem.hpp"
 #include "serac/coefficients/loading_functions.hpp"
-#include "serac/coefficients/traction_coefficient.hpp"
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
