@@ -75,7 +75,7 @@ struct CoefficientInputOptions {
   /**
    * @brief The constants associated with the coefficient
    */
-  std::optional<double>       constant_value;
+  std::optional<double>       constant_scalar;
   std::optional<mfem::Vector> constant_vector;
 
   /**

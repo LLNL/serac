@@ -90,6 +90,18 @@ TEST_F(InputTest, coef_build_scalar)
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
+TEST_F(InputTest, coef_build_constant_scalar)
+{
+  reader_->parseString("coef_opts = { constant = 2.5 }");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_EQ(coef_opts.component, -1);
+  EXPECT_FALSE(coef_opts.isVector());
+  EXPECT_DOUBLE_EQ(*coef_opts.constant_scalar, 2.5);
+  EXPECT_NO_THROW(coef_opts.constructScalar());
+}
+
 TEST_F(InputTest, coef_build_scalar_timedep)
 {
   reader_->parseString("coef_opts = { scalar_function = function(v, t) return (v.y * 2 + v.z) * t end, component = 1}");
@@ -138,6 +150,24 @@ TEST_F(InputTest, coef_build_vector)
   func(test_vec, 0.0, result);
   for (int i = 0; i < result.Size(); i++) {
     EXPECT_DOUBLE_EQ(result[i], expected_result[i]);
+  }
+  EXPECT_NO_THROW(coef_opts.constructVector());
+}
+
+TEST_F(InputTest, coef_build_constant_vector)
+{
+  reader_->parseString("coef_opts = { constant_vector = { x = 0.0, y = 1.0, z = 2.0 } }");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_TRUE(coef_opts.isVector());
+  mfem::Vector expected_result(3);
+  expected_result(0) = 0.0;
+  expected_result(1) = 1.0;
+  expected_result(2) = 2.0;
+
+  for (int i = 0; i < coef_opts.constant_vector->Size(); i++) {
+    EXPECT_DOUBLE_EQ((*coef_opts.constant_vector)[i], expected_result[i]);
   }
   EXPECT_NO_THROW(coef_opts.constructVector());
 }

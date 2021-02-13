@@ -86,10 +86,13 @@ void defineOutputTypeInputFileSchema(axom::inlet::Table& table)
 void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   table.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
-  CoefficientInputOptions::defineInputFileSchema(table);
+  auto& coef_table = table.addTable("coef", "Coefficient options for the boundary condition");
+  CoefficientInputOptions::defineInputFileSchema(coef_table);
 }
 
-bool CoefficientInputOptions::isVector() const { return vector_function || constant_vector; }
+bool CoefficientInputOptions::isVector() const { 
+  return vector_function || constant_vector; 
+}
 
 std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVector(const int dim) const
 {
@@ -109,7 +112,7 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
   if (scalar_function) {
     return std::make_unique<mfem::FunctionCoefficient>(scalar_function);
   } else {
-    return std::make_unique<mfem::ConstantCoefficient>(*constant_value);
+    return std::make_unique<mfem::ConstantCoefficient>(*constant_scalar);
   }
 }
 
@@ -126,7 +129,7 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 
   table.addDouble("constant", "The constant scalar value to use as the coefficient");
 
-  auto& vector_table = table.addTable("vector_constant", "The constant vector to use as the coefficient");
+  auto& vector_table = table.addTable("constant_vector", "The constant vector to use as the coefficient");
   serac::input::defineVectorInputFileSchema(vector_table);
 }
 
@@ -170,7 +173,7 @@ serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Ta
 serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
     const axom::inlet::Table& base)
 {
-  serac::input::BoundaryConditionInputOptions result{.coef_opts = base.get<serac::input::CoefficientInputOptions>()};
+  serac::input::BoundaryConditionInputOptions result{.coef_opts = base["coef"].get<serac::input::CoefficientInputOptions>()};
   // Build a set with just the values of the map
   auto bdr_attr_map = base["attrs"].get<std::unordered_map<int, int>>();
   for (const auto& [_, val] : bdr_attr_map) {
@@ -204,11 +207,11 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
 
     // Then check for constant value definitions
   } else if (base.contains("constant")) {
-    result.constant_value = base["constant"];
+    result.constant_scalar = base["constant"];
     result.component      = base.contains("component") ? base["component"] : -1;
 
-  } else if (base.contains("vector_constant")) {
-    result.constant_vector = base["vector_constant"].get<mfem::Vector>();
+  } else if (base.contains("constant_vector")) {
+    result.constant_vector = base["constant_vector"].get<mfem::Vector>();
     result.component       = -1;
   }
 
