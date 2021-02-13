@@ -7,6 +7,9 @@
 Solid Mechanics
 ===============
 
+Strong Form
+===========
+
 Consider the kinematics of finite deformation
 
 .. image:: ../figures/deformed_body.png
@@ -63,7 +66,12 @@ where
    \end{align*}
 
 and :math:`\nabla_\mathbf{x}` implies the gradient with respect to the
-current (deformed) configuration. Multiplying the PDE by a vector-valued
+current (deformed) configuration. 
+
+Weak Form
+=========
+
+Multiplying the PDE by a vector-valued
 test function :math:`\delta \mathbf{v}` and integrating by parts yields
 the weak form
 
@@ -85,7 +93,7 @@ where
 
 and :math:`\Omega` is the current (deformed) configuration. In
 mechanics, the weak form is often referred to as the *principle of
-virtual power*. As serac uses hyperelastic models, it is convenient to
+virtual power*. As Serac uses hyperelastic models, it is convenient to
 write this equation in the reference (undeformed) configuration
 
 .. math::
@@ -96,3 +104,46 @@ write this equation in the reference (undeformed) configuration
    \end{align*}
 
 where :math:`\nabla_X` is the gradient with respect to the reference (material) coordinates.
+
+Material Models
+===============
+
+Serac uses *hyperelastic* material formulations, i.e. materials that behave elastically under large deformations. Mathemaically,
+this implies they are derived from a *strain energy density* function :math:`W=W(\mathbf{F})`. It can be shown that
+
+.. math::
+
+   \sigma(\mathbf{F}) = \frac{1}{\text{det}\mathbf{F}} \frac{\partial W}{\partial \mathbf{F}} \mathbf{F}^T  = \frac{1}{\text{det}\mathbf{F}} \mathbf{P}  \mathbf{F}^T
+
+where
+
+.. math::
+
+   \mathbf{P} =  \frac{\partial W}{\partial \mathbf{F}} = {\text{det}}\mathbf{F} \sigma \mathbf{F}^{-T}
+
+is the *first Piola-Kirchhoff stress*. Serac currently only has two material models:
+
+1. A neo-Hookean material where
+   
+.. math::
+
+   \begin{align*}
+   W(\mathbf{F}) &= \frac{\mu}{2}(\bar{I}_1 - \text{dim}) + \frac{K}{2}(\text{det}\mathbf{F} - 1)^2 \\
+   \bar{I}_1 &= \frac{\text{trace}(\mathbf{F}\mathbf{F}^T)}{(\text{det}\mathbf{F})^{2/\text{dim}}}
+   \end{align*}
+
+and :math:`\mu` and :math:`K` are the shear and bulk modulus, respectively. This definition also
+implies that the 2D simulations are using a plane strain assumption.
+
+2. A small strain isotropic linear elastic material where
+
+.. math::
+
+   \begin{align*}
+   \sigma(\epsilon) &= \lambda \text{trace}(\epsilon) \mathbf{I} + 2\mu \epsilon \\
+   \epsilon &= \frac{1}{2}\left(\mathbf{F} + \mathbf{F}^T \right) - \mathbf{I}
+   \end{align*}
+
+and :math:`\lambda = K - \frac{2}{\text{dim}} \mu` is Lamè's first parameter and :math:`\epsilon` is the linearized strain tensor. Note that 
+this model is only valid for small strains and the neo-Hookean model reduces to this formulation in that case. It is included mostly for
+testing purposes.

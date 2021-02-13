@@ -7,6 +7,9 @@
 Thermal Conduction
 ==================
 
+Strong Form
+=========
+
 The thermal conduction module solves the heat equation
 
 .. math:: c_p \rho\frac{\partial T}{\partial t} - \nabla \cdot (\kappa \nabla T ) + s(x, t)f(T) = g(x, t)
@@ -38,6 +41,9 @@ where
    q(x,t) & = \text { fixed boundary heat flux.}
    \end{align*}
 
+Weak Form
+=========
+
 We multiply this strong form of the PDE by an arbitrary function and integrate by
 parts to obtain the weak form
 
@@ -56,6 +62,9 @@ where
    V &= \left\{ v \in H_1(\Omega):v=T_D \text{ on } \Gamma_D \right\} \\
    \hat{V} &= \left\{v \in H_1(\Omega):v=0 \text{ on } \Gamma_D \right\}.
    \end{align*}
+
+Discretization
+==============
 
 After discretizing by the standard continuous Galerkin finite element
 method, i.e.
