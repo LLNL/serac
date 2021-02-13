@@ -154,3 +154,24 @@ to the stress calculations in dynamic simulations.
 
 Discretization
 ==============
+
+We discretize the displacement field using vector-valued nodal shape functions, i.e.
+
+.. math::
+
+   u_i (\mathbf{X}) = \sum_{a=1}^n N^a (\mathbf{X}) u_i^a.
+
+We can then calculate the deformation gradient by
+
+.. math::
+
+   F_{ij}= \delta_{ij} + \sum_{i=1}^n \frac{\partial N}{\partial X_i} u_i^a
+
+and subsitutite these quantities back into the weak form to obtain
+
+.. math::
+
+   \int_{\Omega_0} \tau_{ij} \frac{\partial N^a}{X_m} F^{-1}_{mj} \, dV_0  - \int_{\Omega_0} \rho_0 b_i N^a dV_0  - \int_{\Gamma_{N_0}} t_i^* N^a \, dA_0 + \int_{\Omega_0} \rho_0\ddot{u_i}N^a\, dV_0 = 0
+
+where :math:`\tau = \sigma \, \text{det}\mathbf{F}` is the Kirchhoff stress and :math:`\mathbf{t}^*` 
+is the traction applied in the reference configuration.
