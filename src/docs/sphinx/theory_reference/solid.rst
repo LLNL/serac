@@ -178,4 +178,22 @@ where :math:`\mathbf{t}^*` is the traction applied in the reference configuratio
 Optionally, we allow diabling the geometric nonlinearities by setting :math:`\mathbf{F} = \mathbf{I}` everywhere
 in this residual evaluation except for the material response (stress) function. 
 
+Performing these integrals yields the discrete equations
+
+.. math::
+
+   H(\mathbf{u}) - \mathbf{f} - \mathbf{g} + \mathbf{M}\ddot{\mathbf{u}} = 0
+
+where
+
+.. math::
+
+   \begin{align*}
+   \mathbf{u} &= \text{displacement degree of freedom vector (unknowns)} \\
+   \mathbf{M} &= \text{mass matrix} \\
+   H(\mathbf{u}) &= \text{nonlinear internal force vector} \\
+   \mathbf{f} &= \text{body force} \\
+   \mathbf{g} &= \text{traction vector}. \\
+   \end{align*}
+
 This discrete nonlinear second order ODE system can now be solved using the selected linear algebra methods.
