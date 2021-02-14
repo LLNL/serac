@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * \@file expr_templates_impl.hpp
+ * @file expr_templates_impl.hpp
  *
  * @brief The internal implementation for a set of template classes used to
  * represent the evaluation of unary and binary operations on vectors
