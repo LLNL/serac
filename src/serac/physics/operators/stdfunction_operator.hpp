@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file stdfunction_operator.hpp
+ *
+ * @brief Classes for defining an mfem::Operator with std::functions
+ */
+
 #pragma once
 
 #include <functional>

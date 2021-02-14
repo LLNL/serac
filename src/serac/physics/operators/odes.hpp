@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file odes.hpp
+ *
+ * @brief Wrapper classes for using MFEM's ODE solver objects
+ */
+
 #pragma once
 
 #include <functional>
