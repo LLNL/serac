@@ -8,7 +8,7 @@ Thermal Conduction
 ==================
 
 Strong Form
-=========
+===========
 
 The thermal conduction module solves the heat equation
 
