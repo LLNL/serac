@@ -11,6 +11,10 @@
 
 namespace serac {
 
+/**
+ * @brief The number of fields in the elasticity module
+ *
+ */
 constexpr int NUM_FIELDS = 1;
 
 Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& options)

@@ -60,7 +60,11 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
   return par_mesh;
 }
 
-// a transformation from the unit disk/sphere (in L1 norm) to a unit disk/sphere (in L2 norm)
+/**
+ * @brief a transformation from the unit disk/sphere (in L1 norm) to a unit disk/sphere (in L2 norm)
+ *
+ * @param mesh The mesh to transform
+ */
 void squish(mfem::Mesh& mesh)
 {
   int num_vertices = mesh.GetNV();

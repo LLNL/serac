@@ -51,7 +51,7 @@ public:
   /**
    * @brief Determines whether a boundary condition is associated with a tag
    * @tparam Tag The type of the tag to compare against
-   * @param[in] The tag to compare against
+   * @param[in] tag The tag to compare against
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
@@ -67,7 +67,7 @@ public:
   /**
    * @brief Sets the tag for the BC
    * @tparam Tag The template type for the tag (label)
-   * @param[in] The new tag
+   * @param[in] tag The new tag
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
@@ -192,6 +192,7 @@ public:
 
   /**
    * @brief Projects the boundary condition over boundary to a DoF vector
+   * @param[in] dof_values The discrete dof values to project
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    * @pre A corresponding field (FiniteElementState) has been associated

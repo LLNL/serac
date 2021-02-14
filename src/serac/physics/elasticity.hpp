@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file elasticity_solver.hpp
+ * @file elasticity.hpp
  *
  * @brief A solver for the steady state solution of a linear elasticity PDE
  */

@@ -35,6 +35,12 @@ namespace serac {
 
 //------- Input file -------
 
+/**
+ * @brief Define the input file structure for the driver code
+ *
+ * @param[in] inlet The inlet instance
+ * @param[in] rank The MPI rank fo error reporing
+ */
 void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 {
   // Simulation time parameters
@@ -57,6 +63,14 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 
 }  // namespace serac
 
+/**
+ * @brief The main serac driver code
+ *
+ * @param[in] argc Number of input arguments
+ * @param[in] argv The vector of input arguments
+ *
+ * @return The return code
+ */
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
