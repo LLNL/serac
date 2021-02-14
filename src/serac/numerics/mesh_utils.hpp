@@ -122,6 +122,10 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
                                                        double inner_radius, double outer_radius, double height,
                                                        const MPI_Comm comm = MPI_COMM_WORLD);
 
+/**
+ * @brief Mesh related input options
+ *
+ */
 namespace mesh {
 
 /**

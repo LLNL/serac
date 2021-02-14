@@ -19,6 +19,10 @@
 #include "axom/inlet.hpp"
 #include "axom/sidre.hpp"
 
+/**
+ * @brief The input related helper functions and objects
+ *
+ */
 namespace serac::input {
 
 /**

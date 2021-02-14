@@ -24,7 +24,7 @@
 namespace serac::mfem_ext {
 
 /**
- * Wraps a (currently iterative) system solver and handles the configuration of linear
+ * @brief Wraps a (currently iterative) system solver and handles the configuration of linear
  * or nonlinear solvers.  This class solves a generic global system of (possibly) nonlinear algebraic equations.
  */
 class EquationSolver : public mfem::Solver {
