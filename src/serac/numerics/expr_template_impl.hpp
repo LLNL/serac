@@ -22,7 +22,7 @@
 
 /**
  * @brief The internals of the expression template implementation
- * 
+ *
  */
 namespace serac::detail {
 
