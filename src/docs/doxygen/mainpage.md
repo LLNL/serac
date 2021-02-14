@@ -1,5 +1,4 @@
-Source Code Documentation
-=========================
+# Source Code Documentation #
 
 #### Physics simulation modules ####
 
