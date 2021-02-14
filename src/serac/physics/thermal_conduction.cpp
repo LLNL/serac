@@ -238,17 +238,17 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
   auto& stiffness_solver_table =
-      table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+      table.addStruct("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
-  auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
+  auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
   dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
   auto& bc_table = table.addGenericDictionary("boundary_conds", "Table of boundary conditions");
   serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
 
-  auto& init_temp = table.addTable("initial_temperature", "Coefficient for initial condition");
+  auto& init_temp = table.addStruct("initial_temperature", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_temp);
 }
 
