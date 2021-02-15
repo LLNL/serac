@@ -90,7 +90,10 @@ void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& ta
   CoefficientInputOptions::defineInputFileSchema(table);
 }
 
-bool CoefficientInputOptions::isVector() const { return vector_function || constant_vector; }
+bool CoefficientInputOptions::isVector() const
+{
+  return vector_function || constant_vector || (!pw_const_vector.empty());
+}
 
 std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVector(const int dim) const
 {
@@ -100,6 +103,29 @@ std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVecto
     return std::make_unique<mfem::VectorFunctionCoefficient>(dim, vector_function);
   } else if (constant_vector) {
     return std::make_unique<mfem::VectorConstantCoefficient>(*constant_vector);
+  } else if (!pw_const_vector.empty()) {
+    // Find the maximum mesh attribute
+    auto max_attr_elem = std::max_element(pw_const_vector.begin(), pw_const_vector.end(),
+                                          [](auto a, auto b) { return a.first < b.first; });
+
+    // Create the vector array coefficient. We will use this as an array of piecewise constant scalars
+    auto pw_vec_coeff = std::make_unique<mfem::VectorArrayCoefficient>(max_attr_elem->second.Size());
+
+    // Loop over each spatial dimension
+    for (int i = 0; i < max_attr_elem->second.Size(); ++i) {
+      // Create an mfem vector for the attributes
+      // Note that this vector expects zero indexing
+      mfem::Vector pw_constants(max_attr_elem->first);
+      pw_constants = 0.0;
+
+      for (auto& entry : pw_const_vector) {
+        pw_constants(entry.first - 1) = entry.second[i];
+      }
+
+      pw_vec_coeff->Set(i, new mfem::PWConstCoefficient(pw_constants));
+    }
+    return pw_vec_coeff;
+
   } else {
     SLIC_ERROR("Trying to build a vector coefficient when no appropriate input data exists.");
     return nullptr;
@@ -153,7 +179,11 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
   auto& vector_table = table.addStruct("constant_vector", "The constant vector to use as the coefficient");
   serac::input::defineVectorInputFileSchema(vector_table);
 
-  table.addDoubleArray("piecewise_constant", "Map of mesh attributes to constant value");
+  table.addDoubleArray("piecewise_constant", "Map of mesh attributes to constant values");
+
+  auto& pw_vector_table =
+      table.addGenericArray("piecewise_constant_vector", "Map of mesh attributes to constant vectors");
+  serac::input::defineVectorInputFileSchema(pw_vector_table);
 }
 
 }  // namespace serac::input
@@ -241,6 +271,8 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     result.pw_const_scalar = base["piecewise_constant"].get<std::unordered_map<int, double>>();
     result.component       = base.contains("component") ? base["component"] : -1;
 
+  } else if (base.contains("piecewise_constant_vector")) {
+    result.pw_const_vector = base["piecewise_constant_vector"].get<std::unordered_map<int, mfem::Vector>>();
   } else {
     SLIC_ERROR("Coefficient definition does not contain known type.");
   }

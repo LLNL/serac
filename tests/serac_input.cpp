@@ -185,6 +185,29 @@ TEST_F(InputTest, coef_build_constant_vector)
   EXPECT_NO_THROW(coef_opts.constructVector());
 }
 
+TEST_F(InputTest, coef_build_piecewise_constant_vector)
+{
+  reader_->parseString(
+      "coef_opts = { piecewise_constant_vector = { [1] = { x = 0.0, y = 1.0 }, [4] = {x = -2.0, y = 1.0} } }");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_TRUE(coef_opts.isVector());
+  mfem::Vector expected_result_1(2);
+  mfem::Vector expected_result_4(2);
+  expected_result_1(0) = 0.0;
+  expected_result_1(1) = 1.0;
+  expected_result_4(0) = -2.0;
+  expected_result_4(1) = 1.0;
+
+  for (int i = 0; i < 2; ++i) {
+    EXPECT_DOUBLE_EQ(expected_result_1(i), coef_opts.pw_const_vector[1](i));
+    EXPECT_DOUBLE_EQ(expected_result_4(i), coef_opts.pw_const_vector[4](i));
+  }
+
+  EXPECT_NO_THROW(coef_opts.constructVector());
+}
+
 TEST_F(InputTest, coef_build_vector_timedep)
 {
   reader_->parseString("coef_opts = { vector_function = function(v, t) return Vector.new(v.y * 2, v.z, v.x) * t end }");
