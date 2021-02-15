@@ -78,9 +78,6 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   custom_solver->SetPrintLevel(iter_options.print_level);
 
   solid_solver_options.solver_options.H_lin_options = CustomSolverOptions{custom_solver.get()};
-
-  datastore.getRoot()->save("test_input.json", "json");
-
   NonlinearSolid solid_solver(mesh, solid_solver_options);
 
   // Initialize the output
