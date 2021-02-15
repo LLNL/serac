@@ -73,7 +73,7 @@ struct CoefficientInputOptions {
   /**
    * @brief The component to which a scalar coefficient should be applied
    */
-  int component;
+  std::optional<int> component;
   /**
    * @brief Returns whether the contained function corresponds to a vector coefficient
    */

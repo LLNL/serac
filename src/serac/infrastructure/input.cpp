@@ -184,7 +184,10 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     auto scalar_func = [func(std::move(func))](const mfem::Vector& input, double t) {
       return func({input.GetData(), input.Size()}, t);
     };
-    const int component = base.contains("component") ? base["component"] : -1;
+    std::optional<int> component;
+    if (base.contains("component")) {
+      component = base["component"];
+    }
     return {std::move(scalar_func), component};
   }
   return {};
