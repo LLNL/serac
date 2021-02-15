@@ -7,6 +7,7 @@
 #include "serac/infrastructure/input.hpp"
 
 #include <stdlib.h>
+#include <algorithm>
 
 #include "axom/core.hpp"
 
@@ -97,8 +98,11 @@ std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVecto
 
   if (vector_function) {
     return std::make_unique<mfem::VectorFunctionCoefficient>(dim, vector_function);
-  } else {
+  } else if (constant_vector) {
     return std::make_unique<mfem::VectorConstantCoefficient>(*constant_vector);
+  } else {
+    SLIC_ERROR("Trying to build a vector coefficient when no appropriate input data exists.");
+    return nullptr;
   }
 }
 
@@ -108,8 +112,28 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
 
   if (scalar_function) {
     return std::make_unique<mfem::FunctionCoefficient>(scalar_function);
-  } else {
+  } else if (constant_scalar) {
     return std::make_unique<mfem::ConstantCoefficient>(*constant_scalar);
+  } else if (!pw_const_scalar.empty()) {
+    // First, find the element with the maximum attribute key
+    auto max_attr_elem = std::max_element(pw_const_scalar.begin(), pw_const_scalar.end(),
+                                          [](auto a, auto b) { return a.first < b.first; });
+
+    // Create an mfem vector for the attributes
+    // Note that this vector expects zero indexing
+    mfem::Vector pw_constants(max_attr_elem->first);
+    pw_constants = 0.0;
+
+    for (auto& entry : pw_const_scalar) {
+      pw_constants(entry.first - 1) = entry.second;
+    }
+
+    // Create the MFEM coefficient
+    return std::make_unique<mfem::PWConstCoefficient>(pw_constants);
+
+  } else {
+    SLIC_ERROR("Trying to build a scalar coefficient when no appropriate input data exists.");
+    return nullptr;
   }
 }
 
@@ -128,6 +152,8 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 
   auto& vector_table = table.addStruct("constant_vector", "The constant vector to use as the coefficient");
   serac::input::defineVectorInputFileSchema(vector_table);
+
+  table.addDoubleArray("piecewise_constant", "Map of mesh attributes to constant value");
 }
 
 }  // namespace serac::input
@@ -210,6 +236,13 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
   } else if (base.contains("constant_vector")) {
     result.constant_vector = base["constant_vector"].get<mfem::Vector>();
     result.component       = -1;
+
+  } else if (base.contains("piecewise_constant")) {
+    result.pw_const_scalar = base["piecewise_constant"].get<std::unordered_map<int, double>>();
+    result.component       = base.contains("component") ? base["component"] : -1;
+
+  } else {
+    SLIC_ERROR("Coefficient definition does not contain known type.");
   }
 
   return result;

@@ -102,6 +102,19 @@ TEST_F(InputTest, coef_build_constant_scalar)
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
+TEST_F(InputTest, coef_build_piecewise_constant_scalar)
+{
+  reader_->parseString("coef_opts = { piecewise_constant = { [1] = 2.5, [3] = 3.0 } } ");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_EQ(coef_opts.component, -1);
+  EXPECT_FALSE(coef_opts.isVector());
+  EXPECT_DOUBLE_EQ(coef_opts.pw_const_scalar[1], 2.5);
+  EXPECT_DOUBLE_EQ(coef_opts.pw_const_scalar[3], 3.0);
+  EXPECT_NO_THROW(coef_opts.constructScalar());
+}
+
 TEST_F(InputTest, coef_build_scalar_timedep)
 {
   reader_->parseString("coef_opts = { scalar_function = function(v, t) return (v.y * 2 + v.z) * t end, component = 1}");
