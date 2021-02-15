@@ -58,7 +58,7 @@ nonlinear_solid = {
 
     -- initial conditions
     initial_displacement = {
-        vector_constant = {
+        constant_vector = {
             x = 0.0,
             y = 0.0,
             z = 0.0
@@ -66,7 +66,7 @@ nonlinear_solid = {
     },
 
     initial_velocity = {
-        vec_coef = function (v)
+        vector_function = function (v)
             x = v.x
             s = 0.1 / 64
             first = -s * x * x
@@ -84,7 +84,7 @@ nonlinear_solid = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
-            vector_constant = {
+            constant_vector = {
                 x = 0.0,
                 y = 0.0,
                 z = 0.0
