@@ -122,6 +122,7 @@ std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVecto
         pw_constants(entry.first - 1) = entry.second[i];
       }
 
+      // Set the spatial dimension coefficient to a newly constructed scalar piecewise coefficient
       pw_vec_coeff->Set(i, new mfem::PWConstCoefficient(pw_constants));
     }
     return pw_vec_coeff;
@@ -179,10 +180,11 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
   auto& vector_table = table.addStruct("constant_vector", "The constant vector to use as the coefficient");
   serac::input::defineVectorInputFileSchema(vector_table);
 
-  table.addDoubleArray("piecewise_constant", "Map of mesh attributes to constant values");
+  table.addDoubleArray("piecewise_constant",
+                       "Map of mesh attributes to constant values to use as a piecewise coefficient");
 
-  auto& pw_vector_table =
-      table.addGenericArray("piecewise_constant_vector", "Map of mesh attributes to constant vectors");
+  auto& pw_vector_table = table.addGenericArray(
+      "piecewise_constant_vector", "Map of mesh attributes to constant vectors to use as a piecewise coefficient");
   serac::input::defineVectorInputFileSchema(pw_vector_table);
 }
 
@@ -273,6 +275,8 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
 
   } else if (base.contains("piecewise_constant_vector")) {
     result.pw_const_vector = base["piecewise_constant_vector"].get<std::unordered_map<int, mfem::Vector>>();
+    result.component       = -1;
+
   } else {
     SLIC_ERROR("Coefficient definition does not contain known type.");
   }
