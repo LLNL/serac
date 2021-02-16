@@ -10,12 +10,12 @@
 
 namespace serac {
 
-BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int component, const std::set<int>& attrs,
-                                     const int num_attrs)
+BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
+                                     const std::set<int>& attrs, const int num_attrs)
     : coef_(coef), component_(component), markers_(num_attrs)
 {
   if (std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
-    SLIC_ERROR_IF(component_ != -1, "A vector coefficient must be applied to all components");
+    SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
   }
   markers_ = 0;
   for (const int attr : attrs) {
@@ -24,11 +24,12 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int componen
   }
 }
 
-BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs)
+BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component,
+                                     const mfem::Array<int>& true_dofs)
     : coef_(coef), component_(component), markers_(0), true_dofs_(true_dofs)
 {
   if (std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
-    SLIC_ERROR_IF(component_ != -1, "A vector coefficient must be applied to all components");
+    SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
   }
 }
 
@@ -38,7 +39,11 @@ void BoundaryCondition::setTrueDofs(FiniteElementState& state)
 {
   true_dofs_.emplace(0);
   state_ = &state;
-  state.space().GetEssentialTrueDofs(markers_, *true_dofs_, component_);
+  if (component_) {
+    state.space().GetEssentialTrueDofs(markers_, *true_dofs_, *component_);
+  } else {
+    state.space().GetEssentialTrueDofs(markers_, *true_dofs_, -1);
+  }
 }
 
 void BoundaryCondition::project(FiniteElementState& state) const
@@ -62,7 +67,11 @@ void BoundaryCondition::project(FiniteElementState& state) const
       // an mfem::Coefficient could be used to describe a scalar-valued function, or
       // a single component of a vector-valued function
       auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(coef_);
-      state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, std::max(0, component_));
+      if (component_) {
+        state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, *component_);
+      } else {
+        state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, 0);
+      }
     }
   }
 }
