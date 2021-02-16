@@ -7,12 +7,11 @@
 iterate over the node/direction pairs in the element, and verify that
 contributions from other shape functions in the element are orthogonal
 */ 
-template < PolynomialDegree degree >
+template < int p >
 void verify_kronecker_delta_property() {
 
-  using element_type = finite_element< ::Geometry::Quadrilateral, Family::HCURL, degree >;
+  using element_type = finite_element< ::Geometry::Quadrilateral, Hcurl<p> >;
 
-  constexpr int p = static_cast<int>(degree);
   constexpr auto legendre_nodes = GaussLegendreNodes<p>();
   constexpr auto lobatto_nodes = GaussLobattoNodes<p+1>();
 
@@ -42,7 +41,7 @@ void verify_kronecker_delta_property() {
 /*
   compare the direct curl evaluation to a finite difference approximation
 */
-template < PolynomialDegree degree >
+template < int p >
 void verify_curl_calculation() {
 
   static constexpr double eps = 1.0e-6;
@@ -60,7 +59,7 @@ void verify_curl_calculation() {
     {0.745137, 0.572603}
   };
 
-  using element_type = finite_element< ::Geometry::Quadrilateral, Family::HCURL, degree >;
+  using element_type = finite_element< ::Geometry::Quadrilateral, Hcurl<p> >;
 
   constexpr auto N = element_type::shape_functions;
   constexpr auto curlN = element_type::shape_function_curl;
@@ -77,11 +76,12 @@ void verify_curl_calculation() {
 }
 
 int main() {
-  verify_kronecker_delta_property<PolynomialDegree::Linear>();
-  verify_kronecker_delta_property<PolynomialDegree::Quadratic>();
-  verify_kronecker_delta_property<PolynomialDegree::Cubic>();
 
-  verify_curl_calculation<PolynomialDegree::Linear>();
-  verify_curl_calculation<PolynomialDegree::Quadratic>();
-  verify_curl_calculation<PolynomialDegree::Cubic>();
+  verify_kronecker_delta_property<1>();
+  verify_kronecker_delta_property<2>();
+  verify_kronecker_delta_property<3>();
+
+  verify_curl_calculation<1>();
+  verify_curl_calculation<2>();
+  verify_curl_calculation<3>();
 }

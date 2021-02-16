@@ -47,6 +47,8 @@ void fem_kernel(const mfem::Vector & values, mfem::Vector & residuals, mfem::Vec
 
 struct VolumeIntegral {
 
+  
+
   mfem::Vector & operator()(const Vector & x) {
     return output;
   }
@@ -91,8 +93,8 @@ class WeakForm< test(trial) > : public mfem::Operator {
     output_T.SetSize(P_trial->Width(), Device::GetMemoryType());
   }
 
-  template < typename integrand >
-  void AddVolumeIntegral(integrand f) {
+  template < typename annotation >
+  void Add(integrand f) {
 
   }
 

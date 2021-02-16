@@ -5,13 +5,25 @@
 
 enum class Geometry {Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron};
 
+template < int p, int c = 1 >
+struct H1{
+  static constexpr int order = p;
+  static constexpr int components = c;
+};
+
+template < int p, int c = 1 >
+struct Hcurl{
+  static constexpr int order = p;
+  static constexpr int components = c;
+};
+
 enum class Family {H1, HCURL, HDIV};
 
-enum class PolynomialDegree {Constant = 0, Linear = 1, Quadratic = 2, Cubic = 3};
+//enum class PolynomialDegree {Constant = 0, Linear = 1, Quadratic = 2, Cubic = 3};
 
 enum class Evaluation {Interpolate, Divergence, Gradient, Curl};
 
-template < Geometry g, Family f, PolynomialDegree p, int components = 1 >
+template < Geometry g, typename family >
 struct finite_element;
 
 template < typename T >
@@ -19,8 +31,13 @@ struct is_finite_element {
   static constexpr bool value = false;
 };
 
-template < Geometry g, Family f, PolynomialDegree p, int c >
-struct is_finite_element< finite_element< g, f, p, c > >{
+template < Geometry g, int p, int c >
+struct is_finite_element< finite_element< g, H1<p, c> > >{
+  static constexpr bool value = true;
+};
+
+template < Geometry g, int p >
+struct is_finite_element< finite_element< g, Hcurl<p> > >{
   static constexpr bool value = true;
 };
 

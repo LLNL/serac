@@ -1,8 +1,7 @@
-template <PolynomialDegree degree, int c>
-struct finite_element<Geometry::Quadrilateral, Family::H1, degree, c> {
+template <int p, int c>
+struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   static constexpr auto geometry   = Geometry::Quadrilateral;
   static constexpr auto family     = Family::H1;
-  static constexpr int  p          = static_cast<int>(degree);
   static constexpr int  components = c;
   static constexpr int  dim        = 2;
   static constexpr int  ndof       = (p + 1) * (p + 1);

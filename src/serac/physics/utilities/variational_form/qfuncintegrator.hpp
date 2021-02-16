@@ -91,7 +91,7 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
 {
   int NE = ne;
 
-  using element_type = finite_element<::Geometry::Quadrilateral, Family::H1, static_cast<PolynomialDegree>(D1D - 1)>;
+  using element_type = finite_element<::Geometry::Quadrilateral, H1<D1D-1> >;
   static constexpr int dim = element_type::dim;
   static constexpr int ndof = element_type::ndof;
 
@@ -158,7 +158,7 @@ template <int D1D, int Q1D>
 void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const Vector& v_in_, Vector& y_) const
 {
   int NE             = ne;
-  using element_type = finite_element<::Geometry::Quadrilateral, Family::H1, static_cast<PolynomialDegree>(D1D - 1)>;
+  using element_type = finite_element<::Geometry::Quadrilateral, H1<D1D-1> >;
   static constexpr int dim = element_type::dim;
   static constexpr int ndof = element_type::ndof;
 

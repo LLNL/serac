@@ -1,9 +1,8 @@
-template <PolynomialDegree degree, int c>
-struct finite_element<Geometry::Segment, Family::H1, degree, c> {
+template <int p, int c>
+struct finite_element<Geometry::Segment, H1< p, c > > {
 
   static constexpr auto geometry = Geometry::Segment;
   static constexpr auto family = Family::H1;
-  static constexpr int p = static_cast<int>(degree);
   static constexpr int components = c;
   static constexpr int dim = 1;
   static constexpr int ndof = (p + 1);
