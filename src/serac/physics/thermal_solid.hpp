@@ -127,7 +127,7 @@ public:
    * @param[in] component The component to apply the traction on
    */
   void SetTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      const int component = -1)
+                      const std::optional<int> component = {})
   {
     solid_solver_.setTractionBCs(trac_bdr, trac_bdr_coef, component);
   };

@@ -65,9 +65,10 @@ public:
      */
     int order = 1;
     /**
-     * @brief The vector dimension for the FiniteElementSpace - defaults to the dimension of the mesh
+     * @brief The number of copies of the finite element collections (e.g. vector_dim = 2 or 3 for solid mechanics).
+     * Defaults to scalar valued spaces.
      */
-    std::optional<int> space_dim = {};
+    int vector_dim = 1;
     /**
      * @brief The FECollection to use - defaults to an H1_FECollection
      */
@@ -91,7 +92,7 @@ public:
    */
   FiniteElementState(mfem::ParMesh& mesh,
                      Options&&      options = {
-                         .order = 1, .space_dim = {}, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
+                         .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
 
   /**
    * @brief Minimal constructor for a FiniteElementState given an already-existing field

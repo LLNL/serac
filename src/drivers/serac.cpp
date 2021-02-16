@@ -20,7 +20,6 @@
 #include "axom/core.hpp"
 #include "mfem.hpp"
 #include "serac/coefficients/loading_functions.hpp"
-#include "serac/coefficients/traction_coefficient.hpp"
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
@@ -40,12 +39,13 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   // Simulation time parameters
   inlet.addDouble("t_final", "Final time for simulation.").defaultValue(1.0);
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
 
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
@@ -109,10 +109,6 @@ int main(int argc, char* argv[])
   auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
   serac::NonlinearSolid solid_solver(solid_solver_options);
 
-  // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-  // auto traction      = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
-  // auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
-
   // Complete the solver setup
   solid_solver.completeSetup();
 
@@ -123,7 +119,9 @@ int main(int argc, char* argv[])
 
   bool last_step = false;
 
-  solid_solver.initializeOutput(serac::OutputType::SidreVisIt, "serac");
+  // FIXME: This and the FromInlet specialization are hacked together,
+  // should be inlet["output_type"].get<OutputType>()
+  solid_solver.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "serac");
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {
@@ -132,9 +130,6 @@ int main(int argc, char* argv[])
     t = t + dt_real;
 
     SLIC_INFO_ROOT(rank, "step " << ti << ", t = " << t);
-
-    // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-    // traction_coef->SetScale(t);
 
     // Solve the Newton system
     solid_solver.advanceTimestep(dt_real);

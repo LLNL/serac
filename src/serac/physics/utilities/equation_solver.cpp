@@ -110,8 +110,8 @@ private:
 std::ostream& operator<<(std::ostream& out, const JSONTable& table)
 {
   out << "{";
-  std::string indent(table.depth_ * 2, ' ');  // Double-space indenting
-  char        sep = ' ';                      // Start with empty separator to avoid trailing comma
+  std::string indent(static_cast<std::size_t>(table.depth_) * 2, ' ');  // Double-space indenting
+  char        sep = ' ';  // Start with empty separator to avoid trailing comma
   for (const auto& [key, val] : table.literals_) {
     out << sep << "\n" << indent << "\"" << key << "\": ";
     // Strings need to be wrapped in escaped quotes
@@ -339,7 +339,7 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
 
 void EquationSolver::DefineInputFileSchema(axom::inlet::Table& table)
 {
-  auto& linear_table = table.addTable("linear", "Linear Equation Solver Parameters")
+  auto& linear_table = table.addStruct("linear", "Linear Equation Solver Parameters")
                            .required()
                            .registerVerifier([](const axom::inlet::Table& table_to_verify) {
                              // Make sure that the provided options match the desired linear solver type
@@ -355,7 +355,7 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Table& table)
       .required()
       .validValues({"iterative", "direct"});
 
-  auto& iterative_table = linear_table.addTable("iterative_options", "Iterative solver parameters");
+  auto& iterative_table = linear_table.addStruct("iterative_options", "Iterative solver parameters");
   iterative_table.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
   iterative_table.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
   iterative_table.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
@@ -364,11 +364,11 @@ void EquationSolver::DefineInputFileSchema(axom::inlet::Table& table)
   iterative_table.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
       .defaultValue("JacobiSmoother");
 
-  auto& direct_table = linear_table.addTable("direct_options", "Direct solver parameters");
+  auto& direct_table = linear_table.addStruct("direct_options", "Direct solver parameters");
   direct_table.addInt("print_level", "Linear print level.").defaultValue(0);
 
   // Only needed for nonlinear problems
-  auto& nonlinear_table = table.addTable("nonlinear", "Newton Equation Solver Parameters").required(false);
+  auto& nonlinear_table = table.addStruct("nonlinear", "Newton Equation Solver Parameters").required(false);
   nonlinear_table.addDouble("rel_tol", "Relative tolerance for the Newton solve.").defaultValue(1.0e-2);
   nonlinear_table.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
   nonlinear_table.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);

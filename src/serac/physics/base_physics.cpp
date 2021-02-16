@@ -31,7 +31,7 @@ BasePhysics::BasePhysics()
 BasePhysics::BasePhysics(int n, int p) : BasePhysics()
 {
   order_ = p;
-  gf_initialized_.assign(n, false);
+  gf_initialized_.assign(static_cast<std::size_t>(n), false);
 }
 
 void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
@@ -61,7 +61,11 @@ void BasePhysics::setState(std::vector<serac::FiniteElementState>&& state)
 
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
-void BasePhysics::setTime(const double time) { time_ = time; }
+void BasePhysics::setTime(const double time)
+{
+  time_ = time;
+  bcs_.setTime(time_);
+}
 
 double BasePhysics::time() const { return time_; }
 

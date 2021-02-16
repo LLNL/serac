@@ -12,8 +12,8 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
     : mesh_(&mesh),
       coll_(options.coll ? std::move(options.coll)
                          : std::make_unique<mfem::H1_FECollection>(options.order, mesh.Dimension())),
-      space_(std::make_unique<mfem::ParFiniteElementSpace>(
-          &mesh, &retrieve(coll_), options.space_dim ? *options.space_dim : mesh.Dimension(), options.ordering)),
+      space_(
+          std::make_unique<mfem::ParFiniteElementSpace>(&mesh, &retrieve(coll_), options.vector_dim, options.ordering)),
       // Leave the gridfunction unallocated so the allocation can happen inside the datastore
       gf_(new mfem::ParGridFunction(&retrieve(space_), static_cast<double*>(nullptr))),
       true_vec_(&retrieve(space_)),

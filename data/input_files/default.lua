@@ -2,6 +2,8 @@
 t_final = 1.0
 dt      = 0.25
 
+output_type = "SidreVisIt"
+
 main_mesh = {
     type = "file",
     -- mesh file
@@ -41,47 +43,42 @@ nonlinear_solid = {
     mu = 0.25,
     K  = 5.0,
 
-    -- loading parameters
-    traction = {
-        x = 0.0,
-        y = 1.0e-3,
-        z = 0.0,
-    },
-
     -- initial conditions
     -- initialize x_cur, boundary condition, deformation, and
     -- incremental nodal displacment grid functions by projecting the
     -- VectorFunctionCoefficient function onto them
 
     initial_displacement = {
-        vec_coef = function (v)
-            return Vector.new(0, 0, 0)
-        end
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
     },
 
     initial_velocity = {
-        vec_coef = function (v)
-            return Vector.new(0, 0, 0)
-        end
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
     },
 
     -- boundary condition parameters
     boundary_conds = {
         ['displacement'] = {
             attrs = {1},
-            vec_coef = function (v)
-                return Vector.new(0, 0, 0)
-            end
+            vector_constant = {
+                x = 0.0,
+                y = 0.0,
+                z = 0.0
+            }
         },
         ['traction'] = {
             attrs = {2},
-            vec_coef = function (v)
-                return Vector.new(0, 1.0e-3, 0)
+            vector_function = function (v, t)
+                return Vector.new(0, 1.0e-3, 0) * t
             end
-            -- FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-            -- vec_coef = function (v, t)
-            --     return Vector.new(0, 1.0e-3, 0) * t
-            -- end
         },
     },
 }

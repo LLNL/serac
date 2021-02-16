@@ -80,8 +80,8 @@ mfem::Array<int> MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::
 double AttributeModifierCoefficient::Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
   // Store old attribute and change to new attribute
-  double attr  = Tr.Attribute;
-  Tr.Attribute = attr_list_[Tr.ElementNo];
+  const int attr = Tr.Attribute;
+  Tr.Attribute   = attr_list_[Tr.ElementNo];
 
   // Evaluate with new attribute
   double result = coef_.Eval(Tr, ip);

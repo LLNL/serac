@@ -15,7 +15,8 @@ constexpr int NUM_FIELDS = 1;
 
 Elasticity::Elasticity(int order, const LinearSolverOptions& options)
     : BasePhysics(NUM_FIELDS, order),
-      displacement_(StateManager::newState(mesh_, FiniteElementState::Options{.order = order, .name = "displacement"}))
+      displacement_(StateManager::newState(
+          mesh_, FiniteElementState::Options{.order = order, .vector_dim = mesh_.Dimension(), .name = "displacement"}))
 {
   mesh_.EnsureNodes();
   state_.push_back(displacement_);
@@ -28,13 +29,14 @@ Elasticity::Elasticity(int order, const LinearSolverOptions& options)
 }
 
 void Elasticity::setDisplacementBCs(const std::set<int>&                     disp_bdr,
-                                    std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
+                                    std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
+                                    const std::optional<int>                 component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
 }
 
 void Elasticity::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                                const int component)
+                                const std::optional<int> component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }

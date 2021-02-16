@@ -14,7 +14,7 @@
 namespace serac {
 
 void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef,
-                                            FiniteElementState& state, const int component)
+                                            FiniteElementState& state, const std::optional<int> component)
 {
   std::set<int> filtered_attrs;
   std::set_difference(ess_bdr.begin(), ess_bdr.end(), attrs_in_use_.begin(), attrs_in_use_.end(),
@@ -33,14 +33,15 @@ void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac:
 }
 
 void BoundaryConditionManager::addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
-                                          const int component)
+                                          const std::optional<int> component)
 {
   nat_bdr_.emplace_back(nat_bdr_coef, component, nat_bdr, num_attrs_);
   all_dofs_valid_ = false;
 }
 
 void BoundaryConditionManager::addEssentialTrueDofs(const mfem::Array<int>&   true_dofs,
-                                                    serac::GeneralCoefficient ess_bdr_coef, int component)
+                                                    serac::GeneralCoefficient ess_bdr_coef,
+                                                    std::optional<int>        component)
 {
   ess_bdr_.emplace_back(ess_bdr_coef, component, true_dofs);
   all_dofs_valid_ = false;
@@ -55,6 +56,19 @@ void BoundaryConditionManager::updateAllEssentialDofs() const
   all_dofs_.Sort();
   all_dofs_.Unique();
   all_dofs_valid_ = true;
+}
+
+void BoundaryConditionManager::setTime(const double time)
+{
+  for (auto& bc : ess_bdr_) {
+    bc.setTime(time);
+  }
+  for (auto& bc : nat_bdr_) {
+    bc.setTime(time);
+  }
+  for (auto& bc : other_bdr_) {
+    bc.setTime(time);
+  }
 }
 
 }  // namespace serac

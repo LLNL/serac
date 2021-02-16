@@ -59,8 +59,8 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   serac::NonlinearSolid solid_solver(solid_solver_options);
 
   // define the displacement vector
-  const auto& disp_bc   = solid_solver_options.boundary_conditions.at("displacement");
-  auto        disp_coef = std::make_shared<mfem::FunctionCoefficient>(disp_bc.coef_opts.constructScalar());
+  const auto&                        disp_bc = solid_solver_options.boundary_conditions.at("displacement");
+  std::shared_ptr<mfem::Coefficient> disp_coef(disp_bc.coef_opts.constructScalar());
 
   // Create an indicator function to set all vertices that are x=0
   mfem::VectorFunctionCoefficient zero_bc(dim, [](const mfem::Vector& x, mfem::Vector& X) {
@@ -73,7 +73,7 @@ TEST(nonlinear_solid_solver, qs_component_solve)
 
   mfem::Array<int> ess_corner_bc_list = mfem_ext::MakeTrueEssList(solid_solver.displacement().space(), zero_bc);
 
-  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, disp_bc.coef_opts.component);
+  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, *disp_bc.coef_opts.component);
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::GLVis, "component_bc");

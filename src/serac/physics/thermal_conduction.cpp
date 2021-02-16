@@ -18,7 +18,7 @@ ThermalConduction::ThermalConduction(int order, const SolverOptions& options)
       temperature_(StateManager::newState(
           mesh_,
           FiniteElementState::Options{
-              .order = order, .space_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})),
+              .order = order, .vector_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})),
       residual_(temperature_.space().TrueVSize()),
       ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
            nonlin_solver_, bcs_)
@@ -62,7 +62,7 @@ ThermalConduction::ThermalConduction(const InputOptions& options)
 
   if (options.initial_temperature) {
     auto temp = options.initial_temperature->constructScalar();
-    setTemperature(temp);
+    setTemperature(*temp);
   }
 
   // Process the BCs in sorted order for correct behavior with repeated attributes
@@ -71,10 +71,10 @@ ThermalConduction::ThermalConduction(const InputOptions& options)
   for (const auto& [name, bc] : sorted_bcs) {
     // FIXME: Better naming for boundary conditions?
     if (name.find("temperature") != std::string::npos) {
-      auto temp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      std::shared_ptr<mfem::Coefficient> temp_coef(bc.coef_opts.constructScalar());
       setTemperatureBCs(bc.attrs, temp_coef);
     } else if (name.find("flux") != std::string::npos) {
-      auto flux_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      std::shared_ptr<mfem::Coefficient> flux_coef(bc.coef_opts.constructScalar());
       setFluxBCs(bc.attrs, flux_coef);
     } else {
       SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
@@ -239,17 +239,17 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
   auto& stiffness_solver_table =
-      table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+      table.addStruct("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
-  auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
+  auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
   dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
-  auto& bc_table = table.addGenericDictionary("boundary_conds", "Table of boundary conditions");
+  auto& bc_table = table.addStructDictionary("boundary_conds", "Table of boundary conditions");
   serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
 
-  auto& init_temp = table.addTable("initial_temperature", "Coefficient for initial condition");
+  auto& init_temp = table.addStruct("initial_temperature", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_temp);
 }
 
