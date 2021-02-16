@@ -245,6 +245,9 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
 {
   serac::input::CoefficientInputOptions result;
 
+  // Create a counter for definition of the coefficient
+  int coefficient_definitions = 0;
+
   // Check if functions have been assigned and store them appropriately
   if (base.contains("vector_function")) {
     auto func = base["vector_function"]
@@ -255,34 +258,46 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
       std::copy(ret.vec.data(), ret.vec.data() + input.Size(), output.GetData());
     };
     result.component = -1;
+    coefficient_definitions++;
+  }
 
-  } else if (base.contains("scalar_function")) {
+  if (base.contains("scalar_function")) {
     auto func = base["scalar_function"].get<std::function<double(axom::inlet::FunctionType::Vector, double)>>();
     result.scalar_function = [func(std::move(func))](const mfem::Vector& input, double t) {
       return func({input.GetData(), input.Size()}, t);
     };
     result.component = base.contains("component") ? base["component"] : -1;
+    coefficient_definitions++;
+  }
 
-    // Then check for constant value definitions
-  } else if (base.contains("constant")) {
+  if (base.contains("constant")) {
     result.scalar_constant = base["constant"];
     result.component       = base.contains("component") ? base["component"] : -1;
+    coefficient_definitions++;
+  }
 
-  } else if (base.contains("vector_constant")) {
+  if (base.contains("vector_constant")) {
     result.vector_constant = base["vector_constant"].get<mfem::Vector>();
     result.component       = -1;
+    coefficient_definitions++;
+  }
 
-  } else if (base.contains("piecewise_constant")) {
+  if (base.contains("piecewise_constant")) {
     result.scalar_pw_const = base["piecewise_constant"].get<std::unordered_map<int, double>>();
     result.component       = base.contains("component") ? base["component"] : -1;
+    coefficient_definitions++;
+  }
 
-  } else if (base.contains("vector_piecewise_constant")) {
+  if (base.contains("vector_piecewise_constant")) {
     result.vector_pw_const = base["vector_piecewise_constant"].get<std::unordered_map<int, mfem::Vector>>();
     result.component       = -1;
-
-  } else {
-    SLIC_ERROR("Coefficient definition does not contain known type.");
+    coefficient_definitions++;
   }
+
+  SLIC_ERROR_IF(coefficient_definitions > 1,
+                "Coefficient has multiple definitions. Please use only one of (constant, vector_constant, "
+                "piecewise_constant, vector_piecewise_constant, scalar_function, vector_function");
+  SLIC_ERROR_IF(coefficient_definitions == 0, "Coefficient definition does not contain known type.");
 
   return result;
 }
