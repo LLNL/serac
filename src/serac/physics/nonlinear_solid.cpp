@@ -321,7 +321,7 @@ void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& tab
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
   dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
-  auto& bc_table = table.addGenericDictionary("boundary_conds", "Table of boundary conditions");
+  auto& bc_table = table.addStructDictionary("boundary_conds", "Table of boundary conditions");
   serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
 
   auto& init_displ = table.addStruct("initial_displacement", "Coefficient for initial condition");

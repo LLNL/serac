@@ -183,7 +183,7 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
   table.addDoubleArray("piecewise_constant",
                        "Map of mesh attributes to constant values to use as a piecewise coefficient");
 
-  auto& pw_vector_table = table.addGenericArray(
+  auto& pw_vector_table = table.addStructArray(
       "piecewise_constant_vector", "Map of mesh attributes to constant vectors to use as a piecewise coefficient");
   serac::input::defineVectorInputFileSchema(pw_vector_table);
 }
