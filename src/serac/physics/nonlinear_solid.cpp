@@ -93,8 +93,10 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
         std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(dim));
         setDisplacementBCs(bc.attrs, disp_coef);
       } else {
+        SLIC_ERROR_ROOT_IF(!bc.coef_opts.component, mpi_rank_,
+                           "Component not specified with scalar coefficient when setting the displacement condition.");
         std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
-        setDisplacementBCs(bc.attrs, disp_coef, bc.coef_opts.component);
+        setDisplacementBCs(bc.attrs, disp_coef, *bc.coef_opts.component);
       }
     } else if (name.find("traction") != std::string::npos) {
       std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
@@ -108,7 +110,7 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                         std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, -1);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_);
 }
 
 void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
@@ -118,7 +120,8 @@ void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shar
 }
 
 void NonlinearSolid::setTractionBCs(const std::set<int>&                     trac_bdr,
-                                    std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
+                                    std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                                    std::optional<int>                       component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }

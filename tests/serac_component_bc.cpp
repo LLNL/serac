@@ -71,7 +71,7 @@ TEST(nonlinear_solid_solver, qs_component_solve)
 
   mfem::Array<int> ess_corner_bc_list = mfem_ext::MakeTrueEssList(solid_solver.displacement().space(), zero_bc);
 
-  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, disp_bc.coef_opts.component);
+  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, *disp_bc.coef_opts.component);
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::GLVis, "component_bc");

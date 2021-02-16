@@ -257,7 +257,6 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
       // Copy from the primal vector into the MFEM vector
       std::copy(ret.vec.data(), ret.vec.data() + input.Size(), output.GetData());
     };
-    result.component = -1;
     coefficient_definitions++;
   }
 
@@ -266,32 +265,35 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     result.scalar_function = [func(std::move(func))](const mfem::Vector& input, double t) {
       return func({input.GetData(), input.Size()}, t);
     };
-    result.component = base.contains("component") ? base["component"] : -1;
     coefficient_definitions++;
   }
 
   if (base.contains("constant")) {
     result.scalar_constant = base["constant"];
-    result.component       = base.contains("component") ? base["component"] : -1;
     coefficient_definitions++;
   }
 
   if (base.contains("vector_constant")) {
     result.vector_constant = base["vector_constant"].get<mfem::Vector>();
-    result.component       = -1;
     coefficient_definitions++;
   }
 
   if (base.contains("piecewise_constant")) {
     result.scalar_pw_const = base["piecewise_constant"].get<std::unordered_map<int, double>>();
-    result.component       = base.contains("component") ? base["component"] : -1;
     coefficient_definitions++;
   }
 
   if (base.contains("vector_piecewise_constant")) {
     result.vector_pw_const = base["vector_piecewise_constant"].get<std::unordered_map<int, mfem::Vector>>();
-    result.component       = -1;
     coefficient_definitions++;
+  }
+
+  // If scalar valued, check of a component
+  if (result.scalar_constant || result.scalar_function || !result.scalar_pw_const.empty()) {
+    // If component input exists, set it in the option struct
+    if (base.contains("component")) {
+      result.component = base["component"];
+    }
   }
 
   SLIC_ERROR_IF(coefficient_definitions > 1,

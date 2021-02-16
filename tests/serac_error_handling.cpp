@@ -105,7 +105,7 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
 {
   mfem::Vector      vec;
   auto              coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
-  BoundaryCondition bc(coef, -1, std::set<int>{});
+  BoundaryCondition bc(coef, {}, std::set<int>{});
   EXPECT_NO_THROW(bc.vectorCoefficient());
   EXPECT_THROW(bc.scalarCoefficient(), SlicErrorException);
 
