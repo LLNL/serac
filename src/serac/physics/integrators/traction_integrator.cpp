@@ -26,8 +26,8 @@ void TractionIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
   F_.SetSize(dim);
   Finv_.SetSize(dim);
   traction_vector_.SetSize(dim);
-  nor_.SetSize(dim);
-  fnor_.SetSize(dim);
+  reference_normal_.SetSize(dim);
+  current_normal_.SetSize(dim);
 
   // Reshape the input state as a matrix (dof x dim)
   input_state_matrix_.UseExternalData(input_state_vector.GetData(), dof, dim);
@@ -65,14 +65,14 @@ void TractionIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
       CalcInverse(F_, Finv_);
 
       // Calculate the normal vector in the reference configuration
-      CalcOrtho(parent_to_reference_face_transformation.Face->Jacobian(), nor_);
+      CalcOrtho(parent_to_reference_face_transformation.Face->Jacobian(), reference_normal_);
 
       // Normalize vector
-      double norm = nor_.Norml2();
-      nor_ /= norm;
+      double norm = reference_normal_.Norml2();
+      reference_normal_ /= norm;
 
       // Calculate F inverse time the normal vector
-      Finv_.MultTranspose(nor_, fnor_);
+      Finv_.MultTranspose(reference_normal_, current_normal_);
     }
 
     // Calculate the shape functions
@@ -82,7 +82,7 @@ void TractionIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
         double residual_contribution =
             -1.0 * traction_vector_(k) * shape_(j) * ip.weight * parent_to_reference_face_transformation.Face->Weight();
         if (!compute_on_reference_) {
-          residual_contribution *= F_.Det() * fnor_.Norml2();
+          residual_contribution *= F_.Det() * current_normal_.Norml2();
         }
         output_residual_vector(dof * k + j) += residual_contribution;
       }
@@ -136,8 +136,8 @@ void PressureIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
   dxi_dX_.SetSize(dim);
   F_.SetSize(dim);
   Finv_.SetSize(dim);
-  nor_.SetSize(dim);
-  fnor_.SetSize(dim);
+  reference_normal_.SetSize(dim);
+  current_normal_.SetSize(dim);
 
   // Reshape the input state as a matrix (dof x dim)
   input_state_matrix_.UseExternalData(input_state_vector.GetData(), dof, dim);
@@ -157,12 +157,12 @@ void PressureIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
     parent_to_reference_face_transformation.Face->SetIntPoint(&ip);
 
     // Calculate the normal vector in the reference configuration
-    CalcOrtho(parent_to_reference_face_transformation.Face->Jacobian(), nor_);
-    double norm = nor_.Norml2();
-    nor_ /= norm;
+    CalcOrtho(parent_to_reference_face_transformation.Face->Jacobian(), reference_normal_);
+    double norm = reference_normal_.Norml2();
+    reference_normal_ /= norm;
 
     if (compute_on_reference_) {
-      fnor_ = nor_;
+      current_normal_ = reference_normal_;
     } else {
       // Calculate the deformation gradient and its inverse
       parent_to_reference_face_transformation.Elem1->SetIntPoint(&eip);
@@ -177,17 +177,17 @@ void PressureIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
 
       CalcInverse(F_, Finv_);
 
-      Finv_.MultTranspose(nor_, fnor_);
-      fnor_ *= F_.Det();
+      Finv_.MultTranspose(reference_normal_, current_normal_);
+      current_normal_ *= F_.Det();
     }
 
     element_1.CalcShape(eip, shape_);
-    fnor_ *= pressure_.Eval(*parent_to_reference_face_transformation.Face, ip);
+    current_normal_ *= pressure_.Eval(*parent_to_reference_face_transformation.Face, ip);
 
     for (int j = 0; j < dof; j++) {
       for (int k = 0; k < dim; k++) {
         output_residual_vector(dof * k + j) +=
-            ip.weight * parent_to_reference_face_transformation.Face->Weight() * fnor_(k) * shape_(j);
+            ip.weight * parent_to_reference_face_transformation.Face->Weight() * current_normal_(k) * shape_(j);
       }
     }
   }
