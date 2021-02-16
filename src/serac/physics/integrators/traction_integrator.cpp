@@ -207,7 +207,7 @@ void PressureIntegrator::AssembleFaceGrad(const mfem::FiniteElement& element_1, 
   stiffness_matrix = 0.0;
 
   // If computing on the deformed configuration calculate the stiffness contributions via finite difference
-  // Otherwise, the contributuion is zero
+  // Otherwise, the contribution is zero
   if (!compute_on_reference_) {
     for (int j = 0; j < temp.Size(); j++) {
       temp[j] += diff_step;
