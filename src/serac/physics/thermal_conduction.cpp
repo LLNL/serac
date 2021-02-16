@@ -237,8 +237,7 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   table.addDouble("rho", "Density").defaultValue(1.0);
   table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
-  auto& equation_solver_table =
-      table.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  auto& equation_solver_table = table.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
 
   auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");

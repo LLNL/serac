@@ -73,15 +73,10 @@ solid = {
                 y = 0.0,
                 z = 0.0
             }
-        
         },
         ['pressure'] = {
             attrs = {2},
-            vector_constant = {
-                x = 0.0,
-                y = 1.0e-3,
-                z = 0.0
-            }
-        },
+            constant = 1.0e-3
+        }
     },
 }

@@ -45,7 +45,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Physics
-  auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
   serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
