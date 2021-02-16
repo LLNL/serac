@@ -146,7 +146,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, FiniteElementState& state,
-                    const int component = -1);
+                    const std::optional<int> component = {});
 
   /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
@@ -155,7 +155,8 @@ public:
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, const int component = -1);
+  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
+                  const std::optional<int> component = {});
 
   /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
@@ -169,7 +170,7 @@ public:
    */
   template <typename Tag>
   void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, const Tag tag,
-                  const int component = -1)
+                  const std::optional<int> component = {})
   {
     other_bdr_.emplace_back(bdr_coef, component, bdr_attr, num_attrs_);
     other_bdr_.back().setTag(tag);
@@ -184,7 +185,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            int component = -1);
+                            std::optional<int> component = {});
 
   /**
    * @brief Returns all the degrees of freedom associated with all the essential BCs

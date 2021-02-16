@@ -145,7 +145,7 @@ public:
    * @param[in] component The component to apply the traction on
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      bool compute_on_reference, int component = -1);
+                      bool compute_on_reference, std::optional<int> component = {});
 
   /**
    * @brief Set the pressure boundary conditions

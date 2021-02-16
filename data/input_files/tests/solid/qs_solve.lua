@@ -47,20 +47,41 @@ solid = {
     mu = 0.25,
     K  = 10.0,
 
+    initial_displacement = {
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
+    },
+
+    initial_velocity = {
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
+    }, 
+
     -- boundary condition parameters
     boundary_conds = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
-            vec_coef = function (v)
-                return Vector.new(0, 0, 0)
-            end
+            vector_constant = {
+                x = 0.0,
+                y = 0.0,
+                z = 0.0
+            }
+        
         },
         ['pressure'] = {
             attrs = {2},
-            coef = function (v)
-                return 1.0e-3
-            end
+            vector_constant = {
+                x = 0.0,
+                y = 1.0e-3,
+                z = 0.0
+            }
         },
     },
 }

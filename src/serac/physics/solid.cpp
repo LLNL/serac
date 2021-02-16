@@ -79,12 +79,12 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
   auto dim = mesh->Dimension();
   if (options.initial_displacement) {
     auto deform = options.initial_displacement->constructVector(dim);
-    setDisplacement(deform);
+    setDisplacement(*deform);
   }
 
   if (options.initial_velocity) {
     auto velo = options.initial_velocity->constructVector(dim);
-    setVelocity(velo);
+    setVelocity(*velo);
   }
   setViscosity(std::make_unique<mfem::ConstantCoefficient>(options.viscosity));
   setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.initial_mass_density));
@@ -93,23 +93,25 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
     // FIXME: Better naming for boundary conditions?
     if (name.find("displacement") != std::string::npos) {
       if (bc.coef_opts.isVector()) {
-        auto disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+        std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(dim));
         setDisplacementBCs(bc.attrs, disp_coef);
       } else {
-        auto disp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
-        setDisplacementBCs(bc.attrs, disp_coef, bc.coef_opts.component);
+        SLIC_ERROR_ROOT_IF(!bc.coef_opts.component, mpi_rank_,
+                           "Component not specified with scalar coefficient when setting the displacement condition.");
+        std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
+        setDisplacementBCs(bc.attrs, disp_coef, *bc.coef_opts.component);
       }
     } else if (name.find("traction") != std::string::npos) {
-      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+      std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
       setTractionBCs(bc.attrs, trac_coef, !geom_nonlin_);
     } else if (name.find("traction_ref") != std::string::npos) {
-      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+      std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
       setTractionBCs(bc.attrs, trac_coef, true);
     } else if (name.find("pressure") != std::string::npos) {
-      auto pres_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
       setPressureBCs(bc.attrs, pres_coef, !geom_nonlin_);
     } else if (name.find("pressure_ref") != std::string::npos) {
-      auto pres_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
+      std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
       setPressureBCs(bc.attrs, pres_coef, true);
     } else {
       SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
@@ -119,7 +121,7 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, -1);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_);
 }
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
@@ -129,7 +131,7 @@ void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mf
 }
 
 void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                           bool compute_on_reference, int component)
+                           bool compute_on_reference, std::optional<int> component)
 {
   if (compute_on_reference) {
     bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::ReferenceTraction, component);
@@ -371,19 +373,20 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 
   table.addDouble("density", "Initial mass density").defaultValue(1.0);
 
-  auto& equation_solver_table = table.addTable("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  auto& equation_solver_table =
+      table.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
 
-  auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
+  auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
   dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
-  auto& bc_table = table.addGenericDictionary("boundary_conds", "Table of boundary conditions");
+  auto& bc_table = table.addStructDictionary("boundary_conds", "Table of boundary conditions");
   serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
 
-  auto& init_displ = table.addTable("initial_displacement", "Coefficient for initial condition");
+  auto& init_displ = table.addStruct("initial_displacement", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_displ);
-  auto& init_velo = table.addTable("initial_velocity", "Coefficient for initial condition");
+  auto& init_velo = table.addStruct("initial_velocity", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
 }
 
