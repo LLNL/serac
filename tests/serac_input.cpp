@@ -98,7 +98,7 @@ TEST_F(InputTest, coef_build_constant_scalar)
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
   EXPECT_EQ(coef_opts.component, -1);
   EXPECT_FALSE(coef_opts.isVector());
-  EXPECT_DOUBLE_EQ(*coef_opts.constant_scalar, 2.5);
+  EXPECT_DOUBLE_EQ(*coef_opts.scalar_constant, 2.5);
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
@@ -110,8 +110,8 @@ TEST_F(InputTest, coef_build_piecewise_constant_scalar)
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
   EXPECT_EQ(coef_opts.component, -1);
   EXPECT_FALSE(coef_opts.isVector());
-  EXPECT_DOUBLE_EQ(coef_opts.pw_const_scalar[1], 2.5);
-  EXPECT_DOUBLE_EQ(coef_opts.pw_const_scalar[3], 3.0);
+  EXPECT_DOUBLE_EQ(coef_opts.scalar_pw_const[1], 2.5);
+  EXPECT_DOUBLE_EQ(coef_opts.scalar_pw_const[3], 3.0);
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
@@ -167,9 +167,9 @@ TEST_F(InputTest, coef_build_vector)
   EXPECT_NO_THROW(coef_opts.constructVector());
 }
 
-TEST_F(InputTest, coef_build_constant_vector)
+TEST_F(InputTest, coef_build_vector_constant)
 {
-  reader_->parseString("coef_opts = { constant_vector = { x = 0.0, y = 1.0, z = 2.0 } }");
+  reader_->parseString("coef_opts = { vector_constant = { x = 0.0, y = 1.0, z = 2.0 } }");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -179,16 +179,16 @@ TEST_F(InputTest, coef_build_constant_vector)
   expected_result(1) = 1.0;
   expected_result(2) = 2.0;
 
-  for (int i = 0; i < coef_opts.constant_vector->Size(); i++) {
-    EXPECT_DOUBLE_EQ((*coef_opts.constant_vector)[i], expected_result[i]);
+  for (int i = 0; i < coef_opts.vector_constant->Size(); i++) {
+    EXPECT_DOUBLE_EQ((*coef_opts.vector_constant)[i], expected_result[i]);
   }
   EXPECT_NO_THROW(coef_opts.constructVector());
 }
 
-TEST_F(InputTest, coef_build_piecewise_constant_vector)
+TEST_F(InputTest, coef_build_vector_piecewise_constant)
 {
   reader_->parseString(
-      "coef_opts = { piecewise_constant_vector = { [1] = { x = 0.0, y = 1.0 }, [4] = {x = -2.0, y = 1.0} } }");
+      "coef_opts = { vector_piecewise_constant = { [1] = { x = 0.0, y = 1.0 }, [4] = {x = -2.0, y = 1.0} } }");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -201,8 +201,8 @@ TEST_F(InputTest, coef_build_piecewise_constant_vector)
   expected_result_4(1) = 1.0;
 
   for (int i = 0; i < 2; ++i) {
-    EXPECT_DOUBLE_EQ(expected_result_1(i), coef_opts.pw_const_vector[1](i));
-    EXPECT_DOUBLE_EQ(expected_result_4(i), coef_opts.pw_const_vector[4](i));
+    EXPECT_DOUBLE_EQ(expected_result_1(i), coef_opts.vector_pw_const[1](i));
+    EXPECT_DOUBLE_EQ(expected_result_4(i), coef_opts.vector_pw_const[4](i));
   }
 
   EXPECT_NO_THROW(coef_opts.constructVector());

@@ -54,14 +54,14 @@ nonlinear_solid = {
 
     -- initial conditions
     initial_displacement = {
-        constant_vector = {
+        vector_constant = {
             x = 0.0,
             y = 0.0
         }
     },
 
     initial_velocity = {
-        constant_vector = {
+        vector_constant = {
             x = 0.0,
             y = 1.0
         }

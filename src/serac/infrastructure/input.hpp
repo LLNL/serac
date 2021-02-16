@@ -75,14 +75,14 @@ struct CoefficientInputOptions {
   /**
    * @brief The constants associated with the coefficient
    */
-  std::optional<double>       constant_scalar;
-  std::optional<mfem::Vector> constant_vector;
+  std::optional<double>       scalar_constant;
+  std::optional<mfem::Vector> vector_constant;
 
   /**
    * @brief Piecewise constant definition maps
    */
-  std::unordered_map<int, double>       pw_const_scalar;
-  std::unordered_map<int, mfem::Vector> pw_const_vector;
+  std::unordered_map<int, double>       scalar_pw_const;
+  std::unordered_map<int, mfem::Vector> vector_pw_const;
 
   /**
    * @brief The component to which a scalar coefficient should be applied

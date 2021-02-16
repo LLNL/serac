@@ -48,7 +48,7 @@ nonlinear_solid = {
     K  = 10.0,
 
     initial_displacement = {
-        constant_vector = {
+        vector_constant = {
             x = 0.0,
             y = 0.0,
             z = 0.0
@@ -56,7 +56,7 @@ nonlinear_solid = {
     },
 
     initial_velocity = {
-        constant_vector = {
+        vector_constant = {
             x = 0.0,
             y = 0.0,
             z = 0.0
@@ -68,7 +68,7 @@ nonlinear_solid = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
-            constant_vector = {
+            vector_constant = {
                 x = 0.0,
                 y = 0.0,
                 z = 0.0
@@ -77,7 +77,7 @@ nonlinear_solid = {
         },
         ['traction'] = {
             attrs = {2},
-            constant_vector = {
+            vector_constant = {
                 x = 0.0,
                 y = 1.0e-3,
                 z = 0.0

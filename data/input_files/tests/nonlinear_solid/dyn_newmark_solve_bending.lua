@@ -75,7 +75,7 @@ nonlinear_solid = {
 
     -- initial conditions
     initial_displacement = {
-        constant_vector = {
+        vector_constant = {
             x = 0.0,
             y = 0.0
         }
@@ -86,7 +86,7 @@ nonlinear_solid = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {2},
-            constant_vector = {
+            vector_constant = {
                 x = 0.0,
                 y = 0.0
             }

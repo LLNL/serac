@@ -92,7 +92,7 @@ void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& ta
 
 bool CoefficientInputOptions::isVector() const
 {
-  return vector_function || constant_vector || (!pw_const_vector.empty());
+  return vector_function || vector_constant || (!vector_pw_const.empty());
 }
 
 std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVector(const int dim) const
@@ -101,15 +101,15 @@ std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVecto
 
   if (vector_function) {
     return std::make_unique<mfem::VectorFunctionCoefficient>(dim, vector_function);
-  } else if (constant_vector) {
-    return std::make_unique<mfem::VectorConstantCoefficient>(*constant_vector);
-  } else if (!pw_const_vector.empty()) {
+  } else if (vector_constant) {
+    return std::make_unique<mfem::VectorConstantCoefficient>(*vector_constant);
+  } else if (!vector_pw_const.empty()) {
     // Find the maximum mesh attribute
-    auto max_attr_elem = std::max_element(pw_const_vector.begin(), pw_const_vector.end(),
+    auto max_attr_elem = std::max_element(vector_pw_const.begin(), vector_pw_const.end(),
                                           [](auto a, auto b) { return a.first < b.first; });
 
     // Create the vector array coefficient. We will use this as an array of piecewise constant scalars
-    auto pw_vec_coeff = std::make_unique<mfem::VectorArrayCoefficient>(max_attr_elem->second.Size());
+    auto vec_pw_coeff = std::make_unique<mfem::VectorArrayCoefficient>(max_attr_elem->second.Size());
 
     // Loop over each spatial dimension
     for (int i = 0; i < max_attr_elem->second.Size(); ++i) {
@@ -118,17 +118,19 @@ std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVecto
       mfem::Vector pw_constants(max_attr_elem->first);
       pw_constants = 0.0;
 
-      for (auto& entry : pw_const_vector) {
+      for (auto& entry : vector_pw_const) {
         pw_constants(entry.first - 1) = entry.second[i];
       }
 
       // Set the spatial dimension coefficient to a newly constructed scalar piecewise coefficient
-      pw_vec_coeff->Set(i, new mfem::PWConstCoefficient(pw_constants));
+      vec_pw_coeff->Set(i, new mfem::PWConstCoefficient(pw_constants));
     }
-    return pw_vec_coeff;
+    return vec_pw_coeff;
 
   } else {
-    SLIC_ERROR("Trying to build a vector coefficient when no appropriate input data exists.");
+    SLIC_ERROR(
+        "Trying to build a vector coefficient without specifying a vector_function, vector_constant, or "
+        "vector_piecewise_constant.");
     return nullptr;
   }
 }
@@ -139,11 +141,11 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
 
   if (scalar_function) {
     return std::make_unique<mfem::FunctionCoefficient>(scalar_function);
-  } else if (constant_scalar) {
-    return std::make_unique<mfem::ConstantCoefficient>(*constant_scalar);
-  } else if (!pw_const_scalar.empty()) {
+  } else if (scalar_constant) {
+    return std::make_unique<mfem::ConstantCoefficient>(*scalar_constant);
+  } else if (!scalar_pw_const.empty()) {
     // First, find the element with the maximum attribute key
-    auto max_attr_elem = std::max_element(pw_const_scalar.begin(), pw_const_scalar.end(),
+    auto max_attr_elem = std::max_element(scalar_pw_const.begin(), scalar_pw_const.end(),
                                           [](auto a, auto b) { return a.first < b.first; });
 
     // Create an mfem vector for the attributes
@@ -151,7 +153,7 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
     mfem::Vector pw_constants(max_attr_elem->first);
     pw_constants = 0.0;
 
-    for (auto& entry : pw_const_scalar) {
+    for (auto& entry : scalar_pw_const) {
       pw_constants(entry.first - 1) = entry.second;
     }
 
@@ -159,7 +161,8 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
     return std::make_unique<mfem::PWConstCoefficient>(pw_constants);
 
   } else {
-    SLIC_ERROR("Trying to build a scalar coefficient when no appropriate input data exists.");
+    SLIC_ERROR(
+        "Trying to build a scalar coefficient without specifying a scalar_function, constant, or piecewise_constant.");
     return nullptr;
   }
 }
@@ -177,14 +180,14 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 
   table.addDouble("constant", "The constant scalar value to use as the coefficient");
 
-  auto& vector_table = table.addStruct("constant_vector", "The constant vector to use as the coefficient");
+  auto& vector_table = table.addStruct("vector_constant", "The constant vector to use as the coefficient");
   serac::input::defineVectorInputFileSchema(vector_table);
 
   table.addDoubleArray("piecewise_constant",
                        "Map of mesh attributes to constant values to use as a piecewise coefficient");
 
   auto& pw_vector_table = table.addStructArray(
-      "piecewise_constant_vector", "Map of mesh attributes to constant vectors to use as a piecewise coefficient");
+      "vector_piecewise_constant", "Map of mesh attributes to constant vectors to use as a piecewise coefficient");
   serac::input::defineVectorInputFileSchema(pw_vector_table);
 }
 
@@ -262,19 +265,19 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
 
     // Then check for constant value definitions
   } else if (base.contains("constant")) {
-    result.constant_scalar = base["constant"];
+    result.scalar_constant = base["constant"];
     result.component       = base.contains("component") ? base["component"] : -1;
 
-  } else if (base.contains("constant_vector")) {
-    result.constant_vector = base["constant_vector"].get<mfem::Vector>();
+  } else if (base.contains("vector_constant")) {
+    result.vector_constant = base["vector_constant"].get<mfem::Vector>();
     result.component       = -1;
 
   } else if (base.contains("piecewise_constant")) {
-    result.pw_const_scalar = base["piecewise_constant"].get<std::unordered_map<int, double>>();
+    result.scalar_pw_const = base["piecewise_constant"].get<std::unordered_map<int, double>>();
     result.component       = base.contains("component") ? base["component"] : -1;
 
-  } else if (base.contains("piecewise_constant_vector")) {
-    result.pw_const_vector = base["piecewise_constant_vector"].get<std::unordered_map<int, mfem::Vector>>();
+  } else if (base.contains("vector_piecewise_constant")) {
+    result.vector_pw_const = base["vector_piecewise_constant"].get<std::unordered_map<int, mfem::Vector>>();
     result.component       = -1;
 
   } else {

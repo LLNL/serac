@@ -47,7 +47,7 @@ nonlinear_solid = {
     -- VectorFunctionCoefficient function onto them
 
     initial_displacement = {
-        constant_vector = {
+        vector_constant = {
             x = 0.0,
             y = 0.0,
             z = 0.0
@@ -55,7 +55,7 @@ nonlinear_solid = {
     },
 
     initial_velocity = {
-        constant_vector = {
+        vector_constant = {
             x = 0.0,
             y = 0.0,
             z = 0.0
@@ -66,7 +66,7 @@ nonlinear_solid = {
     boundary_conds = {
         ['displacement'] = {
             attrs = {1},
-            constant_vector = {
+            vector_constant = {
                 x = 0.0,
                 y = 0.0,
                 z = 0.0
