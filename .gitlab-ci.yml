@@ -47,6 +47,9 @@ stages:
     - ${EXEC_PREFIX} ${RESOURCES} python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
   artifacts:
+    paths:
+      - _serac_build_and_test_*/output.log*.txt
+      - _serac_build_and_test_*/build-*/output.log*.txt
     reports:
       junit: _serac_build_and_test_*/build-*/junit.xml
 
@@ -68,6 +71,9 @@ stages:
     - ${EXEC_PREFIX} ${RESOURCES} python3 scripts/llnl/build_src.py -v --automation
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
   artifacts:
+    paths:
+      - _serac_build_and_test_*/output.log*.txt
+      - _serac_build_and_test_*/build-*/output.log*.txt
     reports:
       junit: _serac_build_and_test_*/build-*/junit.xml
 
@@ -89,6 +95,12 @@ stages:
       Build and test ${CI_PROJECT_NAME}"
     - lalloc 1 -W 10 ${LSF_ACCOUNT} python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
+  artifacts:
+    paths:
+      - _serac_build_and_test_*/output.log*.txt
+      - _serac_build_and_test_*/build-*/output.log*.txt
+    reports:
+      junit: _serac_build_and_test_*/build-*/junit.xml
 
 .build_with_deps_blueos_3_ppc64le_ib_p9_script:
   script:
@@ -103,6 +115,12 @@ stages:
       Build and test ${CI_PROJECT_NAME}"
     - lalloc 1 -W 10 ${LSF_ACCOUNT} python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
     - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
+  artifacts:
+    paths:
+      - _serac_build_and_test_*/output.log*.txt
+      - _serac_build_and_test_*/build-*/output.log*.txt
+    reports:
+      junit: _serac_build_and_test_*/build-*/junit.xml
 
 # This is where jobs are included
 include:
