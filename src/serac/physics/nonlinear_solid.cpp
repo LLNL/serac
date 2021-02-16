@@ -93,9 +93,8 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
         auto disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
         setDisplacementBCs(bc.attrs, disp_coef);
       } else {
-        SLIC_ERROR_ROOT_IF(!bc.coef_opts.component,
-                           "Component not specified with scalar coefficient when setting the displacement condition.",
-                           mpi_rank_);
+        SLIC_ERROR_ROOT_IF(!bc.coef_opts.component, mpi_rank_,
+                           "Component not specified with scalar coefficient when setting the displacement condition.");
         auto disp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
         setDisplacementBCs(bc.attrs, disp_coef, *bc.coef_opts.component);
       }
