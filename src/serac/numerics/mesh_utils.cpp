@@ -371,13 +371,13 @@ void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   table.addString("mesh", "Path to Mesh file");
 
   // mesh generation options
-  auto& elements = table.addTable("elements");
+  auto& elements = table.addStruct("elements");
   // JW: Can these be specified as requierd if elements is defined?
   elements.addInt("x", "x-dimension");
   elements.addInt("y", "y-dimension");
   elements.addInt("z", "z-dimension");
 
-  auto& size = table.addTable("size");
+  auto& size = table.addStruct("size");
   // JW: Can these be specified as requierd if elements is defined?
   size.addDouble("x", "Size in the x-dimension");
   size.addDouble("y", "Size in the y-dimension");
