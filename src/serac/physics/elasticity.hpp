@@ -99,7 +99,7 @@ public:
   /**
    * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
    */
-  mfem::Operator& outputGradient();
+  mfem::Operator& outputGradient() override;
 
   /**
    * @brief The destructor
