@@ -7,6 +7,9 @@
 Solid Mechanics
 ===============
 
+Strong Form
+===========
+
 Consider the kinematics of finite deformation
 
 .. image:: ../figures/deformed_body.png
@@ -26,12 +29,12 @@ gradient*
 
 We also define the internal forces due to deformation in the solid in
 terms of the *Cauchy stress* :math:`\mathbf{\sigma}`. If the deformed
-body is cut surface with normal vector :math:`\mathbf{n}`, the resulting
+body is cut by a surface with normal vector :math:`\mathbf{n}`, the resulting
 traction vector :math:`\mathbf{t}` is defined as
 
 .. math:: \mathbf{t} = \mathbf{\sigma} \mathbf{n}.
 
-This stress is a function of the deformation gradient
+This stress is taken here as a function of the deformation gradient
 :math:`\sigma  = \sigma(\mathbf{F})` by the appropriate hyperelastic constitutive
 (material) model. The conservation of angular momentum implies this
 stress tensor must be symmetric, i.e. :math:`\sigma = \sigma^T`. We can
@@ -63,7 +66,12 @@ where
    \end{align*}
 
 and :math:`\nabla_\mathbf{x}` implies the gradient with respect to the
-current (deformed) configuration. Multiplying the PDE by a vector-valued
+current (deformed) configuration. 
+
+Weak Form
+=========
+
+Multiplying the PDE by a vector-valued
 test function :math:`\delta \mathbf{v}` and integrating by parts yields
 the weak form
 
@@ -85,7 +93,7 @@ where
 
 and :math:`\Omega` is the current (deformed) configuration. In
 mechanics, the weak form is often referred to as the *principle of
-virtual power*. As serac uses hyperelastic models, it is convenient to
+virtual power*. As Serac uses hyperelastic models, it is convenient to
 write this equation in the reference (undeformed) configuration
 
 .. math::
@@ -96,3 +104,96 @@ write this equation in the reference (undeformed) configuration
    \end{align*}
 
 where :math:`\nabla_X` is the gradient with respect to the reference (material) coordinates.
+
+Material Models
+===============
+
+Serac uses *hyperelastic* material formulations, i.e. materials that behave elastically under large deformations. Mathemaically,
+this implies they are derived from a *strain energy density* function :math:`W=W(\mathbf{F})`. It can be shown that
+
+.. math::
+
+   \sigma(\mathbf{F}) = \frac{1}{\text{det}\mathbf{F}} \frac{\partial W}{\partial \mathbf{F}} \mathbf{F}^T  = \frac{1}{\text{det}\mathbf{F}} \mathbf{P}  \mathbf{F}^T
+
+where
+
+.. math::
+
+   \mathbf{P} =  \frac{\partial W}{\partial \mathbf{F}} = {\text{det}}\mathbf{F} \sigma \mathbf{F}^{-T}
+
+is the *first Piola-Kirchhoff stress*. Serac currently only has two material models. First, a neo-Hookean material where
+   
+.. math::
+
+   \begin{align*}
+   W(\mathbf{F}) &= \frac{\mu}{2}(\bar{I}_1 - \text{dim}) + \frac{K}{2}(\text{det}\mathbf{F} - 1)^2 \\
+   \bar{I}_1 &= \frac{\text{trace}(\mathbf{F}\mathbf{F}^T)}{(\text{det}\mathbf{F})^{2/\text{dim}}}
+   \end{align*}
+
+and :math:`\mu` and :math:`K` are the shear and bulk modulus, respectively. This definition also
+implies that the 2D simulations are using a plane strain assumption. The second model a small strain isotropic linear elastic material where
+
+.. math::
+
+   \begin{align*}
+   \sigma(\epsilon) &= \lambda \text{trace}(\epsilon) \mathbf{I} + 2\mu \epsilon \\
+   \epsilon &= \frac{1}{2}\left(\mathbf{F} + \mathbf{F}^T \right) - \mathbf{I} \\
+   \lambda &= K - \frac{2}{\text{dim}} \mu
+   \end{align*}
+
+and :math:`\epsilon` is the linearized strain tensor. Note that this model is only valid for small strains 
+where the neo-Hookean model is nearly equivalent. It is included mostly for testing purposes.
+
+Optionally, we can also model linear viscoelasticity by adding
+
+.. math::
+
+   \sigma(\dot{\epsilon}) = \eta \dot{\epsilon}
+
+to the stress calculations in dynamic simulations.
+
+Discretization
+==============
+
+We discretize the displacement field using nodal shape functions, i.e.
+
+.. math::
+
+   \mathbf{u} (\mathbf{X}) = \sum_{a=1}^n N^a (\mathbf{X}) \mathbf{u}^a
+
+where :math:`\mathbf{u}^a` are the degrees of freedom. We can then calculate the deformation gradient by
+
+.. math::
+
+   \mathbf{F} = \mathbf{I} + \sum_{a=1}^n \frac{\partial N^a}{\partial \mathbf{X}} \mathbf{u}^a
+
+and subsitutite these quantities back into the weak form to obtain the vector-valued discrete residual equation
+
+.. math::
+
+   \int_{\Omega_0} \sigma \frac{\partial N^a}{\partial \mathbf{X}} \mathbf{F}^{-1} \text{det}\mathbf{F} \, dV_0  - \int_{\Omega_0} \rho_0 \mathbf{b} N^a dV_0  - \int_{\Gamma_{N_0}} \mathbf{t}^* N^a \, dA_0 + \int_{\Omega_0} \rho_0\ddot{\mathbf{u}}N^a\, dV_0 = 0
+
+where :math:`\mathbf{t}^*` is the traction applied in the reference configuration. 
+
+Optionally, we allow disabling the geometric nonlinearities by setting :math:`\mathbf{F} = \mathbf{I}` everywhere
+in this residual evaluation except for the material response (stress) function. 
+
+Performing these integrals yields the discrete equations
+
+.. math::
+
+   H(\mathbf{u}) - \mathbf{f} - \mathbf{g} + \mathbf{M}\ddot{\mathbf{u}} = 0
+
+where
+
+.. math::
+
+   \begin{align*}
+   \mathbf{u} &= \text{displacement degree of freedom vector (unknowns)} \\
+   \mathbf{M} &= \text{mass matrix} \\
+   H(\mathbf{u}) &= \text{nonlinear internal force vector} \\
+   \mathbf{f} &= \text{body force} \\
+   \mathbf{g} &= \text{traction vector}. \\
+   \end{align*}
+
+This discrete nonlinear second order ODE system can now be solved using the selected linear algebra methods.

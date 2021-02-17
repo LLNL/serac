@@ -19,6 +19,10 @@
 #include "axom/inlet.hpp"
 #include "axom/sidre.hpp"
 
+/**
+ * @brief The input related helper functions and objects
+ *
+ */
 namespace serac::input {
 
 /**
@@ -64,16 +68,39 @@ void defineOutputTypeInputFileSchema(axom::inlet::Table& table);
  * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
  */
 struct CoefficientInputOptions {
-  using VecFunc    = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
+  /**
+   * @brief The type for coefficient functions that are vector-valued
+   *
+   */
+  using VecFunc = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
+
+  /**
+   * @brief The type for coefficient functions that are scalar-valued
+   *
+   */
   using ScalarFunc = std::function<double(const mfem::Vector&, double)>;
   /**
    * @brief The std::function corresponding to a function coefficient
    */
-  std::variant<ScalarFunc, VecFunc> func;
+  ScalarFunc scalar_function;
+  VecFunc    vector_function;
+
+  /**
+   * @brief The constants associated with the coefficient
+   */
+  std::optional<double>       scalar_constant;
+  std::optional<mfem::Vector> vector_constant;
+
+  /**
+   * @brief Piecewise constant definition maps
+   */
+  std::unordered_map<int, double>       scalar_pw_const;
+  std::unordered_map<int, mfem::Vector> vector_pw_const;
+
   /**
    * @brief The component to which a scalar coefficient should be applied
    */
-  int component;
+  std::optional<int> component;
   /**
    * @brief Returns whether the contained function corresponds to a vector coefficient
    */
@@ -81,11 +108,11 @@ struct CoefficientInputOptions {
   /**
    * @brief Constructs a vector coefficient with the requested dimension
    */
-  mfem::VectorFunctionCoefficient constructVector(const int dim = 3) const;
+  std::unique_ptr<mfem::VectorCoefficient> constructVector(const int dim = 3) const;
   /**
    * @brief Constructs a scalar coefficient
    */
-  mfem::FunctionCoefficient constructScalar() const;
+  std::unique_ptr<mfem::Coefficient> constructScalar() const;
   /**
    * @brief Defines the input file schema on the provided inlet table
    */
@@ -114,7 +141,11 @@ struct BoundaryConditionInputOptions {
 
 }  // namespace serac::input
 
-// Template specializations
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<mfem::Vector> {
   mfem::Vector operator()(const axom::inlet::Table& base);
@@ -125,16 +156,31 @@ namespace serac {
 enum class OutputType;
 }  // namespace serac
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::OutputType> {
   serac::OutputType operator()(const axom::inlet::Table& base);
 };
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::input::CoefficientInputOptions> {
   serac::input::CoefficientInputOptions operator()(const axom::inlet::Table& base);
 };
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::input::BoundaryConditionInputOptions> {
   serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Table& base);

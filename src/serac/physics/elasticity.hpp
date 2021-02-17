@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file elasticity_solver.hpp
+ * @file elasticity.hpp
  *
  * @brief A solver for the steady state solution of a linear elasticity PDE
  */
@@ -48,7 +48,7 @@ public:
    * @param[in] component Component to set (-1 indicates all components)
    */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
-                          const int component = -1);
+                          const std::optional<int> component = {});
 
   /**
    * @brief Set the vector-valued natural traction boundary conditions
@@ -58,7 +58,7 @@ public:
    * @param[in] component Component to set (-1 indicates all components)
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      const int component = -1);
+                      const std::optional<int> component = {});
 
   /**
    * @brief Driver for advancing the timestep

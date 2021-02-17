@@ -11,6 +11,10 @@
 
 namespace serac {
 
+/**
+ * @brief The number of fields in the elasticity module
+ *
+ */
 constexpr int NUM_FIELDS = 1;
 
 Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& options)
@@ -29,13 +33,14 @@ Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const Lin
 }
 
 void Elasticity::setDisplacementBCs(const std::set<int>&                     disp_bdr,
-                                    std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
+                                    std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
+                                    const std::optional<int>                 component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
 }
 
 void Elasticity::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                                const int component)
+                                const std::optional<int> component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }

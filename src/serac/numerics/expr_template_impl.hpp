@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * \@file expr_templates_impl.hpp
+ * @file expr_template_impl.hpp
  *
  * @brief The internal implementation for a set of template classes used to
  * represent the evaluation of unary and binary operations on vectors
@@ -20,6 +20,10 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/vector_expression.hpp"
 
+/**
+ * @brief The internals of the expression template implementation
+ *
+ */
 namespace serac::detail {
 
 /**

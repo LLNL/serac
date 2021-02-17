@@ -37,7 +37,8 @@ public:
    * @param[in] attrs The set of boundary condition attributes in the mesh that the BC applies to
    * @param[in] num_attrs The total number of boundary attributes for the mesh
    */
-  BoundaryCondition(GeneralCoefficient coef, const int component, const std::set<int>& attrs, const int num_attrs = 0);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const std::set<int>& attrs,
+                    const int num_attrs = 0);
 
   /**
    * @brief Minimal constructor for setting the true DOFs directly
@@ -46,12 +47,12 @@ public:
    * should be -1 for all components
    * @param[in] true_dofs The indices of the relevant DOFs
    */
-  BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const mfem::Array<int>& true_dofs);
 
   /**
    * @brief Determines whether a boundary condition is associated with a tag
    * @tparam Tag The type of the tag to compare against
-   * @param[in] The tag to compare against
+   * @param[in] tag The tag to compare against
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
@@ -67,7 +68,7 @@ public:
   /**
    * @brief Sets the tag for the BC
    * @tparam Tag The template type for the tag (label)
-   * @param[in] The new tag
+   * @param[in] tag The new tag
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
@@ -192,6 +193,7 @@ public:
 
   /**
    * @brief Projects the boundary condition over boundary to a DoF vector
+   * @param[in] dof_values The discrete dof values to project
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    * @pre A corresponding field (FiniteElementState) has been associated
@@ -245,9 +247,9 @@ private:
    */
   GeneralCoefficient coef_;
   /**
-   * @brief The vector component affected by this BC (-1 implies all components)
+   * @brief The vector component affected by this BC (empty implies all components)
    */
-  int component_;
+  std::optional<int> component_;
   /**
    * @brief The attribute marker array where this BC is active
    */

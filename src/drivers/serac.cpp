@@ -20,7 +20,6 @@
 #include "axom/core.hpp"
 #include "mfem.hpp"
 #include "serac/coefficients/loading_functions.hpp"
-#include "serac/coefficients/traction_coefficient.hpp"
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
@@ -35,6 +34,12 @@ namespace serac {
 
 //------- Input file -------
 
+/**
+ * @brief Define the input file structure for the driver code
+ *
+ * @param[in] inlet The inlet instance
+ * @param[in] rank The MPI rank fo error reporing
+ */
 void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 {
   // Simulation time parameters
@@ -42,11 +47,11 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
   serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
 
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
@@ -57,6 +62,14 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 
 }  // namespace serac
 
+/**
+ * @brief The main serac driver code
+ *
+ * @param[in] argc Number of input arguments
+ * @param[in] argv The vector of input arguments
+ *
+ * @return The return code
+ */
 int main(int argc, char* argv[])
 {
   auto [num_procs, rank] = serac::initialize(argc, argv);
