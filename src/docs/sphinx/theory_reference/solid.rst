@@ -29,12 +29,12 @@ gradient*
 
 We also define the internal forces due to deformation in the solid in
 terms of the *Cauchy stress* :math:`\mathbf{\sigma}`. If the deformed
-body is cut surface with normal vector :math:`\mathbf{n}`, the resulting
+body is cut by a surface with normal vector :math:`\mathbf{n}`, the resulting
 traction vector :math:`\mathbf{t}` is defined as
 
 .. math:: \mathbf{t} = \mathbf{\sigma} \mathbf{n}.
 
-This stress is a function of the deformation gradient
+This stress is taken here as a function of the deformation gradient
 :math:`\sigma  = \sigma(\mathbf{F})` by the appropriate hyperelastic constitutive
 (material) model. The conservation of angular momentum implies this
 stress tensor must be symmetric, i.e. :math:`\sigma = \sigma^T`. We can
@@ -175,7 +175,7 @@ and subsitutite these quantities back into the weak form to obtain the vector-va
 
 where :math:`\mathbf{t}^*` is the traction applied in the reference configuration. 
 
-Optionally, we allow diabling the geometric nonlinearities by setting :math:`\mathbf{F} = \mathbf{I}` everywhere
+Optionally, we allow disabling the geometric nonlinearities by setting :math:`\mathbf{F} = \mathbf{I}` everywhere
 in this residual evaluation except for the material response (stress) function. 
 
 Performing these integrals yields the discrete equations
