@@ -20,7 +20,6 @@
 #include "axom/core.hpp"
 #include "mfem.hpp"
 #include "serac/coefficients/loading_functions.hpp"
-#include "serac/coefficients/traction_coefficient.hpp"
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
@@ -42,11 +41,11 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
   serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
 
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   auto& thermal_solver_table = inlet.addTable("thermal_conduction", "Thermal conduction module");
