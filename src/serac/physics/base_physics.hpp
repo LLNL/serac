@@ -140,7 +140,6 @@ public:
    */
   virtual mfem::Operator& outputGradient() = 0;
 
-  
   /**
    * @brief Destroy the Base Solver object
    */
