@@ -35,7 +35,7 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
   // Comparison parameter
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Verify input file
@@ -52,7 +52,7 @@ void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet)
   inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
 
   // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
   // This is the "standard" schema for the actual physics module
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
@@ -65,11 +65,11 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
   // Integration test parameters
   inlet.addDouble("expected_t_l2norm", "Correct L2 norm of the temperature field");
 
-  auto& exact = inlet.addTable("exact_solution", "Exact solution for the temperature field");
+  auto& exact = inlet.addStruct("exact_solution", "Exact solution for the temperature field");
   serac::input::CoefficientInputOptions::defineInputFileSchema(exact);
 
   // Physics
-  auto& conduction_table = inlet.addTable("thermal_conduction", "Thermal conduction module");
+  auto& conduction_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   // This is the "standard" schema for the actual physics module
   serac::ThermalConduction::InputOptions::defineInputFileSchema(conduction_table);
 
@@ -145,9 +145,10 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
   }
 
   if (inlet.contains("exact_solution")) {
-    auto   coef_options = inlet["exact_solution"].get<serac::input::CoefficientInputOptions>();
-    auto   exact        = coef_options.constructScalar();
-    double error        = module.temperature().gridFunc().ComputeLpError(2.0, exact);
+    auto coef_options = inlet["exact_solution"].get<serac::input::CoefficientInputOptions>();
+    auto exact        = coef_options.constructScalar();
+    exact->SetTime(phys_module.time());
+    double error = phys_module.temperature().gridFunc().ComputeLpError(2.0, *exact);
     EXPECT_NEAR(error, 0.0, inlet["epsilon"]);
   }
 }
@@ -214,6 +215,7 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
 
       phys_module.advanceTimestep(dt_real);
     }
+    phys_module.setTime(t);
   } else {
     phys_module.advanceTimestep(dt);
   }
