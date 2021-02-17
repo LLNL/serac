@@ -37,7 +37,7 @@ public:
                const NonlinearSolid::SolverOptions& solid_options);
 
   /**
-   * @brief Construct a new Thermal Solid object from input deck options
+   * @brief Construct a new Thermal Solid object from input file options
    *
    * @param mesh The parallel mesh object on which to solve
    * @param thermal_input The thermal physics module input file option struct
