@@ -38,16 +38,16 @@ TEST(meshgen, lua_input)
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  auto& mesh_file_table = inlet.addTable("main_mesh_from_file", "A mesh to build from file");
+  auto& mesh_file_table = inlet.addStruct("main_mesh_from_file", "A mesh to build from file");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_file_table);
 
-  auto& mesh_cuboid_table = inlet.addTable("main_mesh_cuboid", "A cuboid mesh");
+  auto& mesh_cuboid_table = inlet.addStruct("main_mesh_cuboid", "A cuboid mesh");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_cuboid_table);
 
-  auto& mesh_rect_table = inlet.addTable("main_mesh_rect", "A rectangular mesh");
+  auto& mesh_rect_table = inlet.addStruct("main_mesh_rect", "A rectangular mesh");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_rect_table);
 
-  auto& mesh_fail_table = inlet.addTable("main_mesh_fail", "An invalid mesh description");
+  auto& mesh_fail_table = inlet.addStruct("main_mesh_fail", "An invalid mesh description");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_fail_table);
 
   // Verify input file

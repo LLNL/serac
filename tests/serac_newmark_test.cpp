@@ -49,11 +49,11 @@ protected:
     // Integration test parameters
     inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
-    auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+    auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
     serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
     // Physics
-    auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+    auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
     // FIXME: Remove once Inlet's "contains" logic improvements are merged
     serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
     // get gravity parameter for this problem

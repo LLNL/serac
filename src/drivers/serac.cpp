@@ -87,8 +87,8 @@ int main(int argc, char* argv[])
   auto inlet = serac::input::initialize(datastore, input_file_path);
   serac::defineInputFileSchema(inlet, rank);
   if (create_input_file_docs) {
-    auto writer = std::make_unique<axom::inlet::SphinxDocWriter>("serac_input.rst", inlet.sidreGroup());
-    inlet.registerDocWriter(std::move(writer));
+    auto writer = std::make_unique<axom::inlet::SphinxWriter>("serac_input.rst");
+    inlet.registerWriter(std::move(writer));
     inlet.writeDoc();
     serac::exitGracefully();
   }
