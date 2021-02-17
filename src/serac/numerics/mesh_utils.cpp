@@ -269,9 +269,9 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
   return extruded_pmesh;
 }
 
-std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
-                                                       double inner_radius, double outer_radius, double height,
-                                                       double total_angle, int sectors, const MPI_Comm comm)
+std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, 
+				      double inner_radius, double outer_radius, 
+				      double total_angle, int sectors)
 {
   using index_type = int;
   using size_type  = std::vector<index_type>::size_type;
@@ -321,31 +321,31 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
     boundary_elems[i + num_elems][1] = elems[i][2];
   }
 
-  auto mesh = mfem::Mesh(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
-                         static_cast<int>(num_boundary_elements));
+  auto mesh = std::make_shared<mfem::Mesh>(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
+					   static_cast<int>(num_boundary_elements));
 
   for (auto vertex : vertices) {
-    mesh.AddVertex(vertex.data());
+    mesh->AddVertex(vertex.data());
   }
   for (auto elem : elems) {
-    mesh.AddQuad(elem[0], elem[1], elem[2], elem[3]);
+    mesh->AddQuad(elem[0], elem[1], elem[2], elem[3]);
   }
   for (auto boundary_elem : boundary_elems) {
-    mesh.AddBdrSegment(boundary_elem[0], boundary_elem[1]);
+    mesh->AddBdrSegment(boundary_elem[0], boundary_elem[1]);
   }
 
   for (int i = 0; i < radial_refinement; i++) {
-    mesh.UniformRefinement();
+    mesh->UniformRefinement();
   }
 
   // the coarse mesh is actually a filled octagon
   // this deforms the vertices slightly to make it
   // into filled disk instead
   {
-    int n = mesh.GetNV();
+    int n = mesh->GetNV();
 
     mfem::Vector new_vertices;
-    mesh.GetVertices(new_vertices);
+    mesh->GetVertices(new_vertices);
     mfem::Vector vertex(dim);
     for (int i = 0; i < n; i++) {
       for (int d = 0; d < dim; d++) {
@@ -368,15 +368,35 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
         new_vertices[d * n + i] = vertex(d);
       }
     }
-    mesh.SetVertices(new_vertices);
+    mesh->SetVertices(new_vertices);
   }
 
-  std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(&mesh, elements_lengthwise, height));
+  return mesh;
+}
+
+std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement,
+					     double inner_radius, double outer_radius, 
+					     double total_angle, int sectors,
+					     const MPI_Comm comm)
+{
+  return std::make_shared<mfem::ParMesh>(comm,
+					 *buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors));
+}
+
+
+std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
+                                                       double inner_radius, double outer_radius, double height,
+                                                       double total_angle, int sectors, const MPI_Comm comm)
+{
+  auto mesh = buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors);
+  std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(mesh.get(), elements_lengthwise, height));
 
   auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
 
   return extruded_pmesh;
 }
+
+
 
 namespace mesh {
 

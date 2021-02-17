@@ -120,6 +120,23 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
                                                        double total_angle = M_PI, int sectors = 8,
                                                        const MPI_Comm = MPI_COMM_WORLD);
 
+/**
+ * @brief Constructs a 2D MFEM mesh of a ring
+ *
+ * @param[in] radial_refinement the number of times to apply uniform mesh refinement to the cross section
+ * @param[in] inner inner radius the radius of the cylindrical shell
+ * @param[in] outer ouer radius the radius of the cylindrical shell
+ * @param[in] total_angle the angle in radians over which to generate the portion of an extruded cylinder
+ * @param[in] sectors the number of starting sectors in the hollow cylinder
+ *
+ * @return A shared_ptr containing the constructed mesh
+ */
+  std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement,
+					       double inner_radius, double outer_radius, 
+					       double total_angle = M_PI, int sectors = 8,
+					       const MPI_Comm = MPI_COMM_WORLD);
+
+  
 namespace mesh {
 
 struct FileInputOptions {
