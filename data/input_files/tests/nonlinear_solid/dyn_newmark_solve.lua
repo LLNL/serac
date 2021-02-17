@@ -54,15 +54,17 @@ nonlinear_solid = {
 
     -- initial conditions
     initial_displacement = {
-        vec_coef = function (x, y, z)
-            return 0, 0, 0
-        end  
+        vector_constant = {
+            x = 0.0,
+            y = 0.0
+        }
     },
 
     initial_velocity = {
-        vec_coef = function (x, y, z)
-            return 0, 1, 0
-        end 
+        vector_constant = {
+            x = 0.0,
+            y = 1.0
+        }
     },
 
 }

@@ -11,7 +11,6 @@ set(coefficients_sources
 
 set(coefficients_headers
     loading_functions.hpp
-    traction_coefficient.hpp
     coefficient_extensions.hpp
     )
 

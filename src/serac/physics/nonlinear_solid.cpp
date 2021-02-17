@@ -19,8 +19,10 @@ constexpr int NUM_FIELDS = 2;
 
 NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options)
     : BasePhysics(mesh, NUM_FIELDS, order),
-      velocity_(*mesh, FiniteElementState::Options{.order = order, .name = "velocity"}),
-      displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"}),
+      velocity_(*mesh,
+                FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "velocity"}),
+      displacement_(
+          *mesh, FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "displacement"}),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {
@@ -75,12 +77,12 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
   auto dim = mesh->Dimension();
   if (options.initial_displacement) {
     auto deform = options.initial_displacement->constructVector(dim);
-    setDisplacement(deform);
+    setDisplacement(*deform);
   }
 
   if (options.initial_velocity) {
     auto velo = options.initial_velocity->constructVector(dim);
-    setVelocity(velo);
+    setVelocity(*velo);
   }
   setViscosity(std::make_unique<mfem::ConstantCoefficient>(options.viscosity));
 
@@ -88,14 +90,16 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
     // FIXME: Better naming for boundary conditions?
     if (name.find("displacement") != std::string::npos) {
       if (bc.coef_opts.isVector()) {
-        auto disp_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+        std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(dim));
         setDisplacementBCs(bc.attrs, disp_coef);
       } else {
-        auto disp_coef = std::make_shared<mfem::FunctionCoefficient>(bc.coef_opts.constructScalar());
-        setDisplacementBCs(bc.attrs, disp_coef, bc.coef_opts.component);
+        SLIC_ERROR_ROOT_IF(!bc.coef_opts.component, mpi_rank_,
+                           "Component not specified with scalar coefficient when setting the displacement condition.");
+        std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
+        setDisplacementBCs(bc.attrs, disp_coef, *bc.coef_opts.component);
       }
     } else if (name.find("traction") != std::string::npos) {
-      auto trac_coef = std::make_shared<mfem::VectorFunctionCoefficient>(bc.coef_opts.constructVector(dim));
+      std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
       setTractionBCs(bc.attrs, trac_coef);
     } else {
       SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
@@ -106,7 +110,7 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
 void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
                                         std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
-  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, -1);
+  bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_);
 }
 
 void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
@@ -116,7 +120,8 @@ void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shar
 }
 
 void NonlinearSolid::setTractionBCs(const std::set<int>&                     trac_bdr,
-                                    std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef, int component)
+                                    std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                                    std::optional<int>                       component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
@@ -275,8 +280,12 @@ void NonlinearSolid::advanceTimestep(double& dt)
   // Set the mesh nodes to the reference configuration
   mesh_->NewNodes(*reference_nodes_);
 
+  bcs_.setTime(time_);
+
   if (is_quasistatic_) {
     quasiStaticSolve();
+    // Update the time for housekeeping purposes
+    time_ += dt;
   } else {
     ode2_.Step(displacement_.trueVec(), velocity_.trueVec(), time_, dt);
   }
@@ -340,19 +349,19 @@ void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& tab
   table.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
 
   auto& stiffness_solver_table =
-      table.addTable("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+      table.addStruct("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
   serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
 
-  auto& dynamics_table = table.addTable("dynamics", "Parameters for mass matrix inversion");
+  auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
   dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
-  auto& bc_table = table.addGenericDictionary("boundary_conds", "Table of boundary conditions");
+  auto& bc_table = table.addStructDictionary("boundary_conds", "Table of boundary conditions");
   serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
 
-  auto& init_displ = table.addTable("initial_displacement", "Coefficient for initial condition");
+  auto& init_displ = table.addStruct("initial_displacement", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_displ);
-  auto& init_velo = table.addTable("initial_velocity", "Coefficient for initial condition");
+  auto& init_velo = table.addStruct("initial_velocity", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
 }
 

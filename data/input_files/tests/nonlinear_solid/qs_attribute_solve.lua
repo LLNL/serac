@@ -53,15 +53,15 @@ nonlinear_solid = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
             component = 0,
-            coef = function (x, y, z)
-                return x * 3.0e-2
+            scalar_function = function (v)
+                return v.x * 3.0e-2
             end
         },
         ['displacement_y'] = {
             attrs = {2},
             component = 1,
-            coef = function (x, y, z)
-                return y * -5.0e-2
+            scalar_function = function (v)
+                return v.y * -5.0e-2
             end
         },
     },

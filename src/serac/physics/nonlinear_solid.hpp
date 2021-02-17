@@ -121,7 +121,7 @@ public:
    * @param[in] component The component to apply the traction on
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      int component = -1);
+                      std::optional<int> component = {});
 
   /**
    * @brief Add body force vectors on the domain

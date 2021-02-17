@@ -8,9 +8,9 @@ User Guide
 ==========
 
 .. toctree::
-   :maxdepth: 2
+  :maxdepth: 2
 
-   input_schema
+  input_schema
 
 Physics Module User Guide
 -------------------------

@@ -46,7 +46,7 @@ TEST_F(InputTest, vec_1d)
   input::defineVectorInputFileSchema(vec_table);
   auto vec = vec_table.get<mfem::Vector>();
   EXPECT_EQ(vec.Size(), 1);
-  EXPECT_FLOAT_EQ(vec(0), 4.75);
+  EXPECT_DOUBLE_EQ(vec(0), 4.75);
 }
 
 TEST_F(InputTest, vec_2d)
@@ -56,8 +56,8 @@ TEST_F(InputTest, vec_2d)
   input::defineVectorInputFileSchema(vec_table);
   auto vec = vec_table.get<mfem::Vector>();
   EXPECT_EQ(vec.Size(), 2);
-  EXPECT_FLOAT_EQ(vec(0), 4.75);
-  EXPECT_FLOAT_EQ(vec(1), 6.81);
+  EXPECT_DOUBLE_EQ(vec(0), 4.75);
+  EXPECT_DOUBLE_EQ(vec(1), 6.81);
 }
 
 TEST_F(InputTest, vec_3d)
@@ -67,14 +67,14 @@ TEST_F(InputTest, vec_3d)
   input::defineVectorInputFileSchema(vec_table);
   auto vec = vec_table.get<mfem::Vector>();
   EXPECT_EQ(vec.Size(), 3);
-  EXPECT_FLOAT_EQ(vec(0), 4.75);
-  EXPECT_FLOAT_EQ(vec(1), 6.81);
-  EXPECT_FLOAT_EQ(vec(2), -8.33);
+  EXPECT_DOUBLE_EQ(vec(0), 4.75);
+  EXPECT_DOUBLE_EQ(vec(1), 6.81);
+  EXPECT_DOUBLE_EQ(vec(2), -8.33);
 }
 
 TEST_F(InputTest, coef_build_scalar)
 {
-  reader_->parseString("coef_opts = { coef = function(x, y, z) return y * 2 + z end, component = 1}");
+  reader_->parseString("coef_opts = { scalar_function = function(v) return v.y * 2 + v.z end, component = 1}");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -84,15 +84,59 @@ TEST_F(InputTest, coef_build_scalar)
   test_vec(0)                 = 1;
   test_vec(1)                 = 2;
   test_vec(2)                 = 3;
-  const auto& func            = std::get<input::CoefficientInputOptions::ScalarFunc>(coef_opts.func);
+  const auto& func            = coef_opts.scalar_function;
   auto        expected_result = test_vec(1) * 2 + test_vec(2);
-  EXPECT_FLOAT_EQ(func(test_vec), expected_result);
+  EXPECT_DOUBLE_EQ(func(test_vec, 0.0), expected_result);
+  EXPECT_NO_THROW(coef_opts.constructScalar());
+}
+
+TEST_F(InputTest, coef_build_constant_scalar)
+{
+  reader_->parseString("coef_opts = { constant = 2.5 }");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_FALSE(coef_opts.component);
+  EXPECT_FALSE(coef_opts.isVector());
+  EXPECT_DOUBLE_EQ(*coef_opts.scalar_constant, 2.5);
+  EXPECT_NO_THROW(coef_opts.constructScalar());
+}
+
+TEST_F(InputTest, coef_build_piecewise_constant_scalar)
+{
+  reader_->parseString("coef_opts = { piecewise_constant = { [1] = 2.5, [3] = 3.0 }, component = 2 } ");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_EQ(*coef_opts.component, 2);
+  EXPECT_FALSE(coef_opts.isVector());
+  EXPECT_DOUBLE_EQ(coef_opts.scalar_pw_const[1], 2.5);
+  EXPECT_DOUBLE_EQ(coef_opts.scalar_pw_const[3], 3.0);
+  EXPECT_NO_THROW(coef_opts.constructScalar());
+}
+
+TEST_F(InputTest, coef_build_scalar_timedep)
+{
+  reader_->parseString("coef_opts = { scalar_function = function(v, t) return (v.y * 2 + v.z) * t end, component = 1}");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_EQ(coef_opts.component, 1);
+  EXPECT_FALSE(coef_opts.isVector());
+  mfem::Vector test_vec(3);
+  test_vec(0)                  = 1;
+  test_vec(1)                  = 2;
+  test_vec(2)                  = 3;
+  const auto&  func            = coef_opts.scalar_function;
+  const double time            = 6.7;
+  auto         expected_result = (test_vec(1) * 2 + test_vec(2)) * time;
+  EXPECT_DOUBLE_EQ(func(test_vec, time), expected_result);
   EXPECT_NO_THROW(coef_opts.constructScalar());
 }
 
 TEST_F(InputTest, coef_build_vec_from_scalar)
 {
-  reader_->parseString("coef_opts = { coef = function(x, y, z) return y * 2 + z end, component = 1}");
+  reader_->parseString("coef_opts = { scalar_function = function(v) return v.y * 2 + v.z end, component = 1}");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -101,7 +145,7 @@ TEST_F(InputTest, coef_build_vec_from_scalar)
 
 TEST_F(InputTest, coef_build_vector)
 {
-  reader_->parseString("coef_opts = { vec_coef = function(x, y, z) return y * 2, z, x end }");
+  reader_->parseString("coef_opts = { vector_function = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
@@ -110,22 +154,89 @@ TEST_F(InputTest, coef_build_vector)
   test_vec(0)       = 1;
   test_vec(1)       = 2;
   test_vec(2)       = 3;
-  const auto&  func = std::get<input::CoefficientInputOptions::VecFunc>(coef_opts.func);
+  const auto&  func = coef_opts.vector_function;
   mfem::Vector expected_result(3);
   expected_result(0) = test_vec(1) * 2;
   expected_result(1) = test_vec(2);
   expected_result(2) = test_vec(0);
   mfem::Vector result(3);
-  func(test_vec, result);
+  func(test_vec, 0.0, result);
   for (int i = 0; i < result.Size(); i++) {
-    EXPECT_FLOAT_EQ(result[i], expected_result[i]);
+    EXPECT_DOUBLE_EQ(result[i], expected_result[i]);
+  }
+  EXPECT_NO_THROW(coef_opts.constructVector());
+}
+
+TEST_F(InputTest, coef_build_vector_constant)
+{
+  reader_->parseString("coef_opts = { vector_constant = { x = 0.0, y = 1.0, z = 2.0 } }");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_TRUE(coef_opts.isVector());
+  mfem::Vector expected_result(3);
+  expected_result(0) = 0.0;
+  expected_result(1) = 1.0;
+  expected_result(2) = 2.0;
+
+  for (int i = 0; i < coef_opts.vector_constant->Size(); i++) {
+    EXPECT_DOUBLE_EQ((*coef_opts.vector_constant)[i], expected_result[i]);
+  }
+  EXPECT_NO_THROW(coef_opts.constructVector());
+}
+
+TEST_F(InputTest, coef_build_vector_piecewise_constant)
+{
+  reader_->parseString(
+      "coef_opts = { vector_piecewise_constant = { [1] = { x = 0.0, y = 1.0 }, [4] = {x = -2.0, y = 1.0} } }");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_TRUE(coef_opts.isVector());
+  mfem::Vector expected_result_1(2);
+  mfem::Vector expected_result_4(2);
+  expected_result_1(0) = 0.0;
+  expected_result_1(1) = 1.0;
+  expected_result_4(0) = -2.0;
+  expected_result_4(1) = 1.0;
+
+  for (int i = 0; i < 2; ++i) {
+    EXPECT_DOUBLE_EQ(expected_result_1(i), coef_opts.vector_pw_const[1](i));
+    EXPECT_DOUBLE_EQ(expected_result_4(i), coef_opts.vector_pw_const[4](i));
+  }
+
+  EXPECT_NO_THROW(coef_opts.constructVector());
+}
+
+TEST_F(InputTest, coef_build_vector_timedep)
+{
+  reader_->parseString("coef_opts = { vector_function = function(v, t) return Vector.new(v.y * 2, v.z, v.x) * t end }");
+  auto& coef_table = inlet_->addTable("coef_opts");
+  input::CoefficientInputOptions::defineInputFileSchema(coef_table);
+  auto coef_opts = coef_table.get<input::CoefficientInputOptions>();
+  EXPECT_TRUE(coef_opts.isVector());
+  mfem::Vector test_vec(3);
+  test_vec(0)       = 1;
+  test_vec(1)       = 2;
+  test_vec(2)       = 3;
+  const auto&  func = coef_opts.vector_function;
+  const double time = 6.7;
+  mfem::Vector expected_result(3);
+  expected_result(0) = test_vec(1) * 2;
+  expected_result(1) = test_vec(2);
+  expected_result(2) = test_vec(0);
+  expected_result *= time;
+  mfem::Vector result(3);
+  func(test_vec, time, result);
+  for (int i = 0; i < result.Size(); i++) {
+    EXPECT_DOUBLE_EQ(result[i], expected_result[i]);
   }
   EXPECT_NO_THROW(coef_opts.constructVector());
 }
 
 TEST_F(InputTest, coef_build_scalar_from_vec)
 {
-  reader_->parseString("coef_opts = { vec_coef = function(x, y, z) return y * 2, z, x end }");
+  reader_->parseString("coef_opts = { vector_function = function(v) return Vector.new(v.y * 2, v.z, v.x) end }");
   auto& coef_table = inlet_->addTable("coef_opts");
   input::CoefficientInputOptions::defineInputFileSchema(coef_table);
   auto coef_opts = coef_table.get<input::CoefficientInputOptions>();

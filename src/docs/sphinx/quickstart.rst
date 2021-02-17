@@ -170,9 +170,20 @@ one of the following commands:
    # If you are on an LC machine and want to use our public pre-built dependencies
    $ python ./config-build.py -hc host-configs/<machine name>-<SYS_TYPE>-<compiler>.cmake
 
+   # If you'd like to configure specific build options, e.g., a release build
+   $ python ./config-build.py -hc /path/to/host-config.cmake -DCMAKE_BUILD_TYPE=Release <more CMake build options...>
+
 If you built the dependencies using Spack/uberenv, the host-config file is output at the
 project root. To use the pre-built dependencies on LC, you must be in the appropriate 
-LC group. Contact `Jamie Bramwell <bramwell1@llnl.gov>`_ for access. 
+LC group. Contact `Jamie Bramwell <bramwell1@llnl.gov>`_ for access.
+
+Some build options frequently used by Serac include:
+
+* ``CMAKE_BUILD_TYPE``: Specifies the build type, see the `CMake docs <https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html>`_
+* ``ENABLE_BENCHMARKS``: Enables Google Benchmark performance tests, defaults to ``OFF``
+* ``ENABLE_WARNINGS_AS_ERRORS``: Turns compiler warnings into errors, defaults to ``ON``
+* ``ENABLE_ASAN``: Enables the Address Sanitizer for memory safety inspections, defaults to ``OFF``
+
 Once the build has been configured, Serac can be built with the following commands:
 
 .. code-block:: bash

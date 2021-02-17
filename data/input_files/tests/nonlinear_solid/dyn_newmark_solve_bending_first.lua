@@ -76,9 +76,10 @@ nonlinear_solid = {
 
     -- initial conditions
     initial_displacement = {
-        vec_coef = function (x, y, z)
-            return 0, 0, 0
-        end  
+        vector_constant = {
+            x = 0.0,
+            y = 0.0
+        }
     },   
 
     -- boundary condition parameters
@@ -86,9 +87,10 @@ nonlinear_solid = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {2},
-            vec_coef = function (x, y, z)
-                return 0, 0, 0
-            end 
+            vector_constant = {
+                x = 0.0,
+                y = 0.0
+            }
         },
     },
 

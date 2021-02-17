@@ -17,8 +17,8 @@ main_mesh = {
     par_ref_levels = 1,
 }
 
-temp_func = function (x, y, z)
-    return math.sqrt(x ^ 2 + y ^ 2 + z ^ 2)
+temp_func = function (v)
+    return v:norm()
 end
 
 -- Solver parameters
@@ -54,11 +54,11 @@ thermal_conduction = {
     boundary_conds = {
         ['temperature_1'] = {
             attrs = {1},
-            coef = temp_func
+            scalar_function = temp_func
         },
         ['temperature_2'] = {
             attrs = {2},
-            coef = temp_func
+            scalar_function = temp_func
         },
     },
 }

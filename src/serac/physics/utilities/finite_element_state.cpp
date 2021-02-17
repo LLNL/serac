@@ -12,7 +12,7 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
     : mesh_(mesh),
       coll_(options.coll ? std::move(options.coll)
                          : std::make_unique<mfem::H1_FECollection>(options.order, mesh.Dimension())),
-      space_(&mesh, coll_.get(), options.space_dim ? *options.space_dim : mesh.Dimension(), options.ordering),
+      space_(&mesh, coll_.get(), options.vector_dim, options.ordering),
       gf_(std::make_unique<mfem::ParGridFunction>(&space_)),
       true_vec_(&space_),
       name_(options.name)
