@@ -30,7 +30,7 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunctio
 }
 
 std::optional<axom::sidre::MFEMSidreDataCollection> StateManager::datacoll_;
-bool                                                StateManager::is_restart_;
+bool                                                StateManager::is_restart_ = false;
 
 void StateManager::initialize(axom::sidre::DataStore& ds, const std::optional<int> cycle_to_load)
 {

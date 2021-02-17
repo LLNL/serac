@@ -241,7 +241,11 @@ public:
   /**
    * @brief Resets the underlying global datacollection object
    */
-  static void reset() { datacoll_.reset(); };
+  static void reset()
+  {
+    datacoll_.reset();
+    is_restart_ = false;
+  };
 
   static void setMesh(std::unique_ptr<mfem::ParMesh> mesh);
 
