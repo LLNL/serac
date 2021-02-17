@@ -58,13 +58,15 @@ solid = {
 
     -- initial conditions
     initial_displacement = {
-        vec_coef = function (v)
-            return Vector.new(0, 0, 0)
-        end 
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
     },
 
     initial_velocity = {
-        vec_coef = function (v)
+        vector_function = function (v)
             x = v.x
             s = 0.1 / 64
             first = -s * x * x
@@ -82,9 +84,11 @@ solid = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
-            vec_coef = function (v)
-                return Vector.new(0, 0, 0)
-            end
+            vector_constant = {
+                x = 0.0,
+                y = 0.0,
+                z = 0.0
+            }
         },
     },
 }

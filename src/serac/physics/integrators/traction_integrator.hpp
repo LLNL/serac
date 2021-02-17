@@ -122,13 +122,13 @@ private:
    * @brief The normal vector in the reference configuration
    *
    */
-  mutable mfem::Vector nor_;
+  mutable mfem::Vector reference_normal_;
 
   /**
    * @brief The normal vector in the deformed configuration
    *
    */
-  mutable mfem::Vector fnor_;
+  mutable mfem::Vector current_normal_;
 
   /**
    * @brief Flag to compute on the reference configuration (linear traction)
@@ -237,13 +237,13 @@ private:
    * @brief The normal vector in the reference configuration
    *
    */
-  mutable mfem::Vector nor_;
+  mutable mfem::Vector reference_normal_;
 
   /**
    * @brief The normal vector in the deformed configuration
    *
    */
-  mutable mfem::Vector fnor_;
+  mutable mfem::Vector current_normal_;
 
   /**
    * @brief Flag to compute on the reference configuration (linear traction)

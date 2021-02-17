@@ -3,7 +3,6 @@ expected_u_l2norm = 1.4225
 expected_v_l2norm = 0.2252
 epsilon = 0.0001
 
-
 main_mesh = {
     type = "generate",
     elements = {x = 3, y = 1},
@@ -76,9 +75,10 @@ solid = {
 
     -- initial conditions
     initial_displacement = {
-        vec_coef = function (v)
-            return Vector.new(0, 0)
-        end
+        vector_constant = {
+            x = 0.0,
+            y = 0.0
+        }
     },   
 
     -- boundary condition parameters
@@ -86,9 +86,10 @@ solid = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {2},
-            vec_coef = function (v)
-                return Vector.new(0, 0)
-            end
+            vector_constant = {
+                x = 0.0,
+                y = 0.0
+            }
         },
     },
 

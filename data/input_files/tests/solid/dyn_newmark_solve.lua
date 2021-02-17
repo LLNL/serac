@@ -54,15 +54,17 @@ solid = {
 
     -- initial conditions
     initial_displacement = {
-        vec_coef = function (v)
-            return Vector.new(0, 0)
-        end
+        vector_constant = {
+            x = 0.0,
+            y = 0.0
+        }
     },
 
     initial_velocity = {
-        vec_coef = function (v)
-            return Vector.new(0, 1)
-        end
+        vector_constant = {
+            x = 0.0,
+            y = 1.0
+        }
     },
 
 }

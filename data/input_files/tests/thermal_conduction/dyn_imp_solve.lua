@@ -60,14 +60,14 @@ thermal_conduction = {
 
     -- initial conditions
     initial_temperature = {
-        coef = temp_func
+        scalar_function = temp_func
     },
 
     -- boundary condition parameters
     boundary_conds = {
         ['temperature'] = {
             attrs = {1},
-            coef = temp_func
+            scalar_function = temp_func
         },
     },
 }

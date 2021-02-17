@@ -57,9 +57,7 @@ thermal_conduction = {
     boundary_conds = {
         ['temperature'] = {
             attrs = {1},
-            coef = function (v)
-                return 1.0
-            end
+            constant = 1.0
         },
     },
 }

@@ -51,11 +51,11 @@ thermal_conduction = {
     boundary_conds = {
         ['temperature_1'] = {
             attrs = {1},
-            coef = temp_func
+            scalar_function = temp_func
         },
         ['temperature_2'] = {
             attrs = {1},
-            coef = function (v)
+            scalar_function = function (v)
                 return 2 * temp_func(v)
             end
         },
