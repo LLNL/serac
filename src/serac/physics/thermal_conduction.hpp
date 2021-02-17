@@ -199,6 +199,23 @@ public:
    */
   virtual ~ThermalConduction() = default;
 
+  /**
+   * @brief Get an mfem::Operator that calculates the residual at the current outputState
+   */
+  [[noreturn]] mfem::Vector outputResidual() override {
+     SLIC_ERROR("outputResidual not implemented yet.");
+     throw "outputResidual not implemented yet.";
+  }
+
+  /**
+   * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
+   */
+  [[noreturn]] mfem::Operator& outputGradient() override {
+    SLIC_ERROR("outputGradient not implemented yet.");
+    throw "outputGradient not implemented yet.";
+  }
+
+  
 protected:
   /**
    * @brief The temperature finite element state

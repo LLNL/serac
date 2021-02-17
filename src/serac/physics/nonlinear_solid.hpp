@@ -191,13 +191,13 @@ public:
   /**
    * @brief Get an mfem::Operator that calculates the residual at the current outputState
    */
-  mfem::Vector getOutputResidual();
+  mfem::Vector outputResidual() override;
 
   /**
    * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
    */
-  mfem::Operator& getOutputGradient();
-
+  mfem::Operator& outputGradient() override;
+  
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */

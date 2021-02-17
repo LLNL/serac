@@ -304,7 +304,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
 }
 
 // Evaluate the residual at the current state
-mfem::Vector NonlinearSolid::getOutputResidual()
+mfem::Vector NonlinearSolid::outputResidual()
 {
   mfem::Vector eval(displacement_.trueVec().Size());
   // This appears to be option dependent
@@ -321,7 +321,7 @@ mfem::Vector NonlinearSolid::getOutputResidual()
 }
 
 // Get an Operator that computes
-mfem::Operator& NonlinearSolid::getOutputGradient()
+mfem::Operator& NonlinearSolid::outputGradient()
 {
   // This appears to be option dependent
   if (is_quasistatic_) {
