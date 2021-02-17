@@ -59,8 +59,6 @@ thermal_conduction = {
 
     -- material parameters
     kappa = 1.0,
-    -- rho = 0.5,
-    -- cp = 0.5,
 
     -- initial conditions
     initial_temperature = {

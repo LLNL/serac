@@ -21,19 +21,6 @@ namespace serac {
 
 using test_utils::InputFileTest;
 
-double One(const mfem::Vector& /*x*/) { return 1.0; }
-double BoundaryTemperature(const mfem::Vector& x) { return x.Norml2(); }
-double OtherBoundaryTemperature(const mfem::Vector& x) { return 2 * x.Norml2(); }
-
-double InitialTemperature(const mfem::Vector& x)
-{
-  if (x.Norml2() < 0.5) {
-    return 2.0;
-  } else {
-    return 1.0;
-  }
-}
-
 TEST(thermal_solver, static_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
