@@ -1,10 +1,13 @@
 -- Comparison information
-expected_t_l2norm = 2.1806652643
-epsilon = 0.00001
+-- Running the initial simulation for an extra 5s produced this result,
+-- so we would expect it to be the exact same
+expected_t_l2norm = 2.1806604032633987
+epsilon = 0.000001
 
 -- Simulation time parameters
 dt      = 1.0
-t_final = 5.0
+-- Run for 10s, since the restart is at 5s
+t_final = 10.0
 
 -- Simulation output format
 output_type = "SidreVisIt"

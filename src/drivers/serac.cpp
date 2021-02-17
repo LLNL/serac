@@ -96,13 +96,14 @@ int main(int argc, char* argv[])
   // Save input values to file
   datastore.getRoot()->save("serac_input.json", "json");
 
-  std::unique_ptr<mfem::ParMesh> mesh;
-  // Build the mesh
-  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-    auto full_mesh_path = serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
-    mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
-    serac::StateManager::setMesh(std::move(mesh));
+  if (!restart_cycle) {
+    // Build the mesh
+    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+      auto full_mesh_path = serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
+      auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+      serac::StateManager::setMesh(std::move(mesh));
+    }
   }
 
   // Define the solid solver object

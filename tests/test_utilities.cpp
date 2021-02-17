@@ -144,32 +144,40 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
 }  // namespace detail
 
 template <typename PhysicsModule>
-void runModuleTest(const std::string& input_file, std::unique_ptr<mfem::ParMesh> custom_mesh)
+void runModuleTest(const std::string& input_file, std::unique_ptr<mfem::ParMesh> custom_mesh,
+                   std::optional<int> restart_cycle)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file);
-  serac::StateManager::initialize(datastore);
+  if (restart_cycle) {
+    serac::StateManager::initialize(datastore, *restart_cycle);
+  } else {
+    serac::StateManager::initialize(datastore);
+  }
 
   defineTestSchema<PhysicsModule>(inlet);
 
   // Build the mesh
-  std::unique_ptr<mfem::ParMesh> mesh;
-  if (custom_mesh) {
-    mesh = std::move(custom_mesh);
-  } else {
-    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-    if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-      auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
-      mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  if (!restart_cycle) {
+    std::unique_ptr<mfem::ParMesh> mesh;
+    if (custom_mesh) {
+      mesh = std::move(custom_mesh);
     } else {
-      SLIC_ERROR("Physics module test is attempting to run without a file path or a custom mesh!");
+      auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+      if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+        auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
+        mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+      } else {
+        SLIC_ERROR("Physics module test is attempting to run without a file path or a custom mesh!");
+      }
     }
+    serac::StateManager::setMesh(std::move(mesh));
   }
-  const int dim = mesh->Dimension();
-  serac::StateManager::setMesh(std::move(mesh));
+
+  const int dim = serac::StateManager::mesh().Dimension();
 
   const std::string module_name = detail::moduleName<PhysicsModule>();
 
@@ -218,9 +226,8 @@ void runModuleTest(const std::string& input_file, std::unique_ptr<mfem::ParMesh>
   serac::StateManager::reset();
 }
 
-template void runModuleTest<NonlinearSolid>(const std::string& input_file, std::unique_ptr<mfem::ParMesh> custom_mesh);
-template void runModuleTest<ThermalConduction>(const std::string&             input_file,
-                                               std::unique_ptr<mfem::ParMesh> custom_mesh);
+template void runModuleTest<NonlinearSolid>(const std::string&, std::unique_ptr<mfem::ParMesh>, std::optional<int>);
+template void runModuleTest<ThermalConduction>(const std::string&, std::unique_ptr<mfem::ParMesh>, std::optional<int>);
 
 }  // end namespace test_utils
 

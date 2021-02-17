@@ -98,12 +98,9 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
       break;
     }
 
-    case serac::OutputType::GLVis: {
-      break;
-    }
-
+    case serac::OutputType::GLVis:
+      [[fallthrough]];
     case OutputType::SidreVisIt: {
-      // dc_ = std::make_unique<axom::sidre::MFEMSidreDataCollection>(root_name_, &state_.front().get().mesh());
       break;
     }
 
