@@ -7,7 +7,7 @@
 /**
  * @file serac.cpp
  *
- * @brief Nonlinear implicit proxy app driver
+ * @brief Nonlinear implicit thermal-structural driver
  *
  * The purpose of this code is to act as a proxy app for nonlinear implicit mechanics codes at LLNL.
  */
@@ -27,7 +27,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/thermal_solid.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
 #include "serac/serac_config.hpp"
 
@@ -47,6 +47,9 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 
   // Physics
   auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
+
+  auto& thermal_solver_table = inlet.addTable("thermal_conduction", "Thermal conduction module");
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // Verify input file
@@ -98,12 +101,32 @@ int main(int argc, char* argv[])
     mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
   }
 
-  // Define the solid solver object
-  auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  serac::NonlinearSolid solid_solver(mesh, solid_solver_options);
+  // Create the physics object
+  std::unique_ptr<serac::BasePhysics> main_physics;
+
+  std::optional<serac::NonlinearSolid::InputOptions> solid_solver_options;
+  std::optional<serac::ThermalConduction::InputOptions> thermal_solver_options;
+
+  if (inlet.contains("nonlinear_solid")) {
+    solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  }
+
+  if (inlet.contains("thermal_conduction")) {
+    thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
+  }
+
+  if (solid_solver_options && thermal_solver_options) {
+    main_physics = std::make_unique<serac::ThermalSolid>(mesh, solid_solver_options, thermal_solver_options);
+  } else if (solid_solver_options) {
+    main_physics = std::make_unique<serac::NonlinearSolid>(mesh, solid_solver_options);
+  } else if (thermal_solver_options) {
+    main_physics = std::make_unique<serac::ThermalConduction>(mesh, thermal_solver_options);
+  } else {
+    SLIC_ERROR_ROOT(rank, "Neither nonlinear_solid nor thermal_conduction blocks specified in the input file.");
+  }
 
   // Complete the solver setup
-  solid_solver.completeSetup();
+  main_physics->completeSetup();
 
   // initialize/set the time
   double t       = 0;
@@ -114,7 +137,7 @@ int main(int argc, char* argv[])
 
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>()
-  solid_solver.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "serac");
+  main_physics->initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "serac");
 
   // enter the time step loop. This was modeled after example 10p.
   for (int ti = 1; !last_step; ti++) {
@@ -125,9 +148,9 @@ int main(int argc, char* argv[])
     SLIC_INFO_ROOT(rank, "step " << ti << ", t = " << t);
 
     // Solve the Newton system
-    solid_solver.advanceTimestep(dt_real);
+    main_physics->advanceTimestep(dt_real);
 
-    solid_solver.outputState();
+    main_physics->outputState();
 
     last_step = (t >= t_final - 1e-8 * dt);
   }
