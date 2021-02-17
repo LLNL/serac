@@ -63,11 +63,9 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
 
   if (options.reaction_func) {
     if (options.reaction_scale_coef) {
-      auto scale = std::make_unique<mfem::FunctionCoefficient>(options.reaction_scale_coef->constructScalar());
-      setNonlinearReaction(options.reaction_func, options.d_reaction_func, std::move(scale));
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func, options.reaction_scale_coef->constructScalar());
     } else {
-      auto one = std::make_unique<mfem::ConstantCoefficient>(1.0);
-      setNonlinearReaction(options.reaction_func, options.d_reaction_func, std::move(one));
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func, std::make_unique<mfem::ConstantCoefficient>(1.0));
     }
   }
 
@@ -77,8 +75,7 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
   }
 
   if (options.source_coef) {
-    auto source = std::make_unique<mfem::FunctionCoefficient>(options.source_coef->constructScalar());
-    setSource(std::move(source));
+    setSource(options.source_coef->constructScalar());
   }
 
   // Process the BCs in sorted order for correct behavior with repeated attributes
