@@ -75,11 +75,6 @@ packages:
     externals:
     - spec: openblas
       prefix: /usr/lib/x86_64-linux-gnu/
-  zlib:
-    buildable: false
-    externals:
-    - spec: zlib
-      prefix: /usr
 
   # Lock in versions of Devtools
   cmake:
