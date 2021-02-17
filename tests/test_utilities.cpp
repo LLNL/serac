@@ -150,13 +150,17 @@ void runModuleTest(const std::string& input_file, std::unique_ptr<mfem::ParMesh>
   // Create DataStore
   axom::sidre::DataStore datastore;
 
-  // Initialize Inlet and read input file
-  auto inlet = serac::input::initialize(datastore, input_file);
+  // Initialize the DataCollection
+  // WARNING: This must happen before serac::input::initialize, as the loading
+  // process will wipe out the datastore
   if (restart_cycle) {
     serac::StateManager::initialize(datastore, *restart_cycle);
   } else {
     serac::StateManager::initialize(datastore);
   }
+
+  // Initialize Inlet and read input file
+  auto inlet = serac::input::initialize(datastore, input_file);
 
   defineTestSchema<PhysicsModule>(inlet);
 
