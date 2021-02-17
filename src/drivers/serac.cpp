@@ -50,7 +50,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 
   // The solid mechanics options
   auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
-  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
+  serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // The thermal conduction options
   auto& thermal_solver_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
@@ -113,12 +113,12 @@ int main(int argc, char* argv[])
   std::unique_ptr<serac::BasePhysics> main_physics;
 
   // Create nullable contains for the solid and thermal input file options
-  std::optional<serac::NonlinearSolid::InputOptions>    solid_solver_options;
+  std::optional<serac::Solid::InputOptions>    solid_solver_options;
   std::optional<serac::ThermalConduction::InputOptions> thermal_solver_options;
 
   // If the blocks exist, read the appropriate input file options
   if (inlet.contains("nonlinear_solid")) {
-    solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+    solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
   }
   if (inlet.contains("thermal_conduction")) {
     thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
   if (solid_solver_options && thermal_solver_options) {
     main_physics = std::make_unique<serac::ThermalSolid>(mesh, *thermal_solver_options, *solid_solver_options);
   } else if (solid_solver_options) {
-    main_physics = std::make_unique<serac::NonlinearSolid>(mesh, *solid_solver_options);
+    main_physics = std::make_unique<serac::Solid>(mesh, *solid_solver_options);
   } else if (thermal_solver_options) {
     main_physics = std::make_unique<serac::ThermalConduction>(mesh, *thermal_solver_options);
   } else {

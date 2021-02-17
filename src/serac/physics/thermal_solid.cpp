@@ -34,7 +34,7 @@ ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
 }
 
 ThermalSolid::ThermalSolid(std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::InputOptions& thermal_input,
-                           const NonlinearSolid::InputOptions& solid_input)
+                           const Solid::InputOptions& solid_input)
     : BasePhysics(mesh, NUM_FIELDS, std::max(thermal_input.order, solid_input.order)),
       therm_solver_(mesh, thermal_input),
       solid_solver_(mesh, solid_input),

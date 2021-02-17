@@ -44,7 +44,7 @@ public:
    * @param solid_input The solid mechanics module input file option struct
    */
   ThermalSolid(std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::InputOptions& thermal_input,
-               const NonlinearSolid::InputOptions& solid_input);
+               const Solid::InputOptions& solid_input);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
