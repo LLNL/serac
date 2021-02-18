@@ -118,7 +118,6 @@ public:
 
     /**
      * @brief The boundary condition information
-     *
      */
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 
@@ -378,13 +377,11 @@ protected:
 
   /**
    * @brief The previous timestep
-   *
    */
   double previous_dt_;
 
   /**
    * @brief A zero vector
-   *
    */
   mfem::Vector zero_;
 

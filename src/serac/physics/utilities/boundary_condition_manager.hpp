@@ -152,7 +152,6 @@ FilterView(Iter, Iter, Pred &&) -> FilterView<Iter, Pred>;
 
 /**
  * @brief A container for the boundary condition information relating to a specific physics module
- *
  */
 class BoundaryConditionManager {
 public:

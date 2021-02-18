@@ -184,7 +184,6 @@ struct AMGXPrec {
 struct BlockILUPrec {
   /**
    * @brief The block size for the ILU preconditioner
-   *
    */
   int block_size;
 };
@@ -247,7 +246,6 @@ struct IterativeSolverOptions {
 struct CustomSolverOptions {
   /**
    * @brief A non-owning pointer to the custom mfem solver to use
-   *
    */
   mfem::Solver* solver = nullptr;
 };
