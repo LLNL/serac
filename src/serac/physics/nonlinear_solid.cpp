@@ -20,9 +20,9 @@ constexpr int NUM_FIELDS = 2;
 NonlinearSolid::NonlinearSolid(int order, const SolverOptions& options)
     : BasePhysics(NUM_FIELDS, order),
       velocity_(StateManager::newState(
-          mesh_, FiniteElementState::Options{.order = order, .vector_dim = mesh_.Dimension(), .name = "velocity"})),
+          FiniteElementState::Options{.order = order, .vector_dim = mesh_.Dimension(), .name = "velocity"})),
       displacement_(StateManager::newState(
-          mesh_, FiniteElementState::Options{.order = order, .vector_dim = mesh_.Dimension(), .name = "displacement"})),
+          FiniteElementState::Options{.order = order, .vector_dim = mesh_.Dimension(), .name = "displacement"})),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {

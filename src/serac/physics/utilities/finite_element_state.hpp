@@ -224,12 +224,11 @@ public:
 
   /**
    * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
-   * @param[in] mesh The problem mesh
    * @param[in] options Configuration options for the FEState, if a new state is created
    * @see FiniteElementState::FiniteElementState
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementState newState(mfem::ParMesh& mesh, FiniteElementState::Options&& options = {});
+  static FiniteElementState newState(FiniteElementState::Options&& options = {});
 
   /**
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file

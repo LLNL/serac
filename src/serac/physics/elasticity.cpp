@@ -16,7 +16,7 @@ constexpr int NUM_FIELDS = 1;
 Elasticity::Elasticity(int order, const LinearSolverOptions& options)
     : BasePhysics(NUM_FIELDS, order),
       displacement_(StateManager::newState(
-          mesh_, FiniteElementState::Options{.order = order, .vector_dim = mesh_.Dimension(), .name = "displacement"}))
+          FiniteElementState::Options{.order = order, .vector_dim = mesh_.Dimension(), .name = "displacement"}))
 {
   mesh_.EnsureNodes();
   state_.push_back(displacement_);

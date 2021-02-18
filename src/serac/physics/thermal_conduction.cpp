@@ -15,10 +15,8 @@ constexpr int NUM_FIELDS = 1;
 
 ThermalConduction::ThermalConduction(int order, const SolverOptions& options)
     : BasePhysics(NUM_FIELDS, order),
-      temperature_(StateManager::newState(
-          mesh_,
-          FiniteElementState::Options{
-              .order = order, .vector_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})),
+      temperature_(StateManager::newState(FiniteElementState::Options{
+          .order = order, .vector_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"})),
       residual_(temperature_.space().TrueVSize()),
       ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
            nonlin_solver_, bcs_)

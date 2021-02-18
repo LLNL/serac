@@ -15,6 +15,7 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
       space_(
           std::make_unique<mfem::ParFiniteElementSpace>(&mesh, &retrieve(coll_), options.vector_dim, options.ordering)),
       // Leave the gridfunction unallocated so the allocation can happen inside the datastore
+      // Use a raw pointer here, lifetime will be managed by the DataCollection
       gf_(new mfem::ParGridFunction(&retrieve(space_), static_cast<double*>(nullptr))),
       true_vec_(&retrieve(space_)),
       name_(options.name)
@@ -65,27 +66,18 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::optional<in
   }
 }
 
-FiniteElementState StateManager::newState(mfem::ParMesh& mesh, FiniteElementState::Options&& options)
+FiniteElementState StateManager::newState(FiniteElementState::Options&& options)
 {
-  auto dc_mesh = datacoll_ ? datacoll_->GetMesh() : nullptr;
+  SLIC_ERROR_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
   if (is_restart_) {
     auto field = datacoll_->GetParField(options.name);
-    SLIC_INFO("Restoring field from saved data: " << options.name);
-    return {*static_cast<mfem::ParMesh*>(dc_mesh), *field, options.name};
-  } else if (datacoll_) {
-    SLIC_INFO("Creating new state for field: " << options.name);
-    FiniteElementState state(mesh, std::move(options));
-    if (!dc_mesh) {
-      datacoll_->SetMesh(&mesh);
-      datacoll_->SetOwnData(true);
-    }
+    return {mesh(), *field, options.name};
+  } else {
+    FiniteElementState state(mesh(), std::move(options));
     datacoll_->RegisterField(options.name, &(state.gridFunc()));
     // Now that it's been allocated, we can set it to zero
     state.gridFunc() = 0.0;
     return state;
-  } else {
-    // If the datcollection was not initialzed, just call the constructor directly
-    return {mesh, std::move(options)};
   }
 }
 
