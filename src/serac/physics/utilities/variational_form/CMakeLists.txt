@@ -59,7 +59,7 @@ endforeach()
 set(parvariationalform_mpi_tests
     hcurl_comparison.cpp
     thermal_comparison.cpp
-    #thermal_comparison_weak_form.cpp
+    thermal_comparison_weak_form.cpp
     elasticity_comparison.cpp)
     
 foreach(filename ${parvariationalform_mpi_tests})

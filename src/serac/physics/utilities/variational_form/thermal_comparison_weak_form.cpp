@@ -1,6 +1,7 @@
 #include "mfem.hpp"
 #include "parvariationalform.hpp"
 #include "qfuncintegrator.hpp"
+#include "weak_form.hpp"
 #include "tensor.hpp"
 #include <fstream>
 #include <iostream>
@@ -32,7 +33,7 @@ int main(int argc, char* argv[])
 
   const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
 
-  int         order       = 1;
+  constexpr int p = 1;
   int         refinements = 0;
   double a = 1.0;
   double b = 1.0;
@@ -43,7 +44,6 @@ int main(int argc, char* argv[])
   OptionsParser args(argc, argv);
   args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.");
   args.AddOption(&refinements, "-r", "--ref", "");
-  args.AddOption(&order, "-o", "--order", "");
 
   args.Parse();
   if (!args.Good()) {
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
   ParMesh pmesh(MPI_COMM_WORLD, mesh);
 
-  auto fec = H1_FECollection(order, pmesh.Dimension());
+  auto fec = H1_FECollection(p, pmesh.Dimension());
   ParFiniteElementSpace fespace(&pmesh, &fec);
 
   ParBilinearForm A(&fespace);
@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
   x.ProjectBdrCoefficient(boundary_func, ess_bdr);
   J->EliminateRowsCols(ess_tdof_list);
 
-  auto residual = serac::mfem_ext::StdFunctionOperator(
+  auto residual_wrapper = serac::mfem_ext::StdFunctionOperator(
     fespace.TrueVSize(),
 
     [&](const mfem::Vector& u, mfem::Vector& r) {
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
   cg.iterative_mode = 0;
 
   NewtonSolver newton(MPI_COMM_WORLD);
-  newton.SetOperator(residual);
+  newton.SetOperator(residual_wrapper);
   newton.SetSolver(cg);
   newton.SetPrintLevel(1);
   newton.SetRelTol(1e-8);
@@ -138,7 +138,10 @@ int main(int argc, char* argv[])
 
   x.Distribute(X);
 
-  WeakForm< H1<H1> > residual(&fespace);
+  using test_space = H1<p>;
+  using trial_space = H1<p>;
+
+  WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
   residual.Add(VolumeIntegral<>([](){
     [&](auto x, auto u, auto du) {

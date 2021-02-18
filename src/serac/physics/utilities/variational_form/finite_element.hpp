@@ -5,6 +5,22 @@
 
 enum class Geometry {Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron};
 
+constexpr int dimension(Geometry g) {
+  if (g == ::Geometry::Segment) {
+    return 1;
+  }
+
+  if (g == ::Geometry::Triangle || g == ::Geometry::Quadrilateral) {
+    return 2;
+  }
+
+  if (g == ::Geometry::Tetrahedron || g == ::Geometry::Hexahedron) {
+    return 3;
+  }
+
+  return -1;
+}
+
 template < int p, int c = 1 >
 struct H1{
   static constexpr int order = p;
