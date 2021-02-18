@@ -454,7 +454,7 @@ NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom:
 EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Table& base)
 {
   auto lin = base["linear"].get<LinearSolverOptions>();
-  if (base.hasTable("nonlinear")) {
+  if (base.contains("nonlinear")) {
     auto nonlin = base["nonlinear"].get<NonlinearSolverOptions>();
     return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
   }
