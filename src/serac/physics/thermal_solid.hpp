@@ -37,6 +37,16 @@ public:
                const NonlinearSolid::SolverOptions& solid_options);
 
   /**
+   * @brief Construct a new Thermal Solid object from input file options
+   *
+   * @param mesh The parallel mesh object on which to solve
+   * @param thermal_input The thermal physics module input file option struct
+   * @param solid_input The solid mechanics module input file option struct
+   */
+  ThermalSolid(std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::InputOptions& thermal_input,
+               const NonlinearSolid::InputOptions& solid_input);
+
+  /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
    * @param[in] temp_bdr The attributes denotiving the fixed temperature boundary
