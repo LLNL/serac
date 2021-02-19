@@ -108,7 +108,7 @@ where :math:`\nabla_X` is the gradient with respect to the reference (material) 
 Material Models
 ===============
 
-Serac uses *hyperelastic* material formulations, i.e. materials that behave elastically under large deformations. Mathemaically,
+Serac uses *hyperelastic* material formulations, i.e. materials that behave elastically under large deformations. Mathematically,
 this implies they are derived from a *strain energy density* function :math:`W=W(\mathbf{F})`. It can be shown that
 
 .. math::
@@ -131,7 +131,7 @@ is the *first Piola-Kirchhoff stress*. Serac currently only has two material mod
    \end{align*}
 
 and :math:`\mu` and :math:`K` are the shear and bulk modulus, respectively. This definition also
-implies that the 2D simulations are using a plane strain assumption. The second model a small strain isotropic linear elastic material where
+implies that the 2D simulations are using a plane strain assumption. The second model is a small strain isotropic linear elastic material where
 
 .. math::
 
@@ -167,7 +167,7 @@ where :math:`\mathbf{u}^a` are the degrees of freedom. We can then calculate the
 
    \mathbf{F} = \mathbf{I} + \sum_{a=1}^n \frac{\partial N^a}{\partial \mathbf{X}} \mathbf{u}^a
 
-and subsitutite these quantities back into the weak form to obtain the vector-valued discrete residual equation
+and substitute these quantities back into the weak form to obtain the vector-valued discrete residual equation
 
 .. math::
 

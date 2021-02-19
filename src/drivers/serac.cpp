@@ -38,7 +38,7 @@ namespace serac {
  * @brief Define the input file structure for the driver code
  *
  * @param[in] inlet The inlet instance
- * @param[in] rank The MPI rank fo error reporing
+ * @param[in] rank The MPI rank fo error reporting
  */
 void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 {

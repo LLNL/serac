@@ -1,6 +1,6 @@
 # Source Code Documentation #
 
-#### Physics simulation modules ####
+#### Physics Simulation Modules ####
 
 * [Base physics](@ref serac::BasePhysics)
 * [Thermal conduction](@ref serac::ThermalConduction)
@@ -8,14 +8,14 @@
 * [Elasticity](@ref serac::Elasticity)
 * [Thermal-structural mechanics](@ref serac::ThermalSolid)
 
-#### Simulation utilities ####
+#### Simulation Utilities ####
 
 * [Boundary conditions](@ref serac::BoundaryCondition)
 * [Boundary condition manager](@ref serac::BoundaryConditionManager)
 * [Finite element state](@ref serac::FiniteElementState)
 * [Standard function operator](@ref serac::mfem_ext::StdFunctionOperator)
 
-#### Numerics utilities ####
+#### Numerics Utilities ####
 
 * [Equation solver](@ref serac::mfem_ext::EquationSolver)
 * [Solver configuration](@ref solver_config.hpp)

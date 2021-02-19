@@ -144,7 +144,7 @@ struct BoundaryConditionInputOptions {
 /**
  * @brief Prototype the specialization for Inlet parsing
  *
- * @tparam The object to be created by inlet
+ * @tparam The object to be created by Inlet
  */
 template <>
 struct FromInlet<mfem::Vector> {
@@ -159,7 +159,7 @@ enum class OutputType;
 /**
  * @brief Prototype the specialization for Inlet parsing
  *
- * @tparam The object to be created by inlet
+ * @tparam The object to be created by Inlet
  */
 template <>
 struct FromInlet<serac::OutputType> {
@@ -169,7 +169,7 @@ struct FromInlet<serac::OutputType> {
 /**
  * @brief Prototype the specialization for Inlet parsing
  *
- * @tparam The object to be created by inlet
+ * @tparam The object to be created by Inlet
  */
 template <>
 struct FromInlet<serac::input::CoefficientInputOptions> {
@@ -179,7 +179,7 @@ struct FromInlet<serac::input::CoefficientInputOptions> {
 /**
  * @brief Prototype the specialization for Inlet parsing
  *
- * @tparam The object to be created by inlet
+ * @tparam The object to be created by Inlet
  */
 template <>
 struct FromInlet<serac::input::BoundaryConditionInputOptions> {

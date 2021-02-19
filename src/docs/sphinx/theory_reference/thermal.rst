@@ -93,8 +93,8 @@ where
    \end{align*}
 
 This system can then be solved using the selected nonlinear and ordinary
-differential equation solution methods. For example if we use the
-backward Euler method, we obtain
+differential equation solution methods. For example, if we use the
+backward Euler method we obtain
 
 .. math:: \mathbf{Mu}_{n+1} + \Delta t (\mathbf{Ku}_{n+1} + f(\mathbf{u}_{n+1})) = \Delta t \mathbf{G} + \mathbf{Mu}_n.
 
