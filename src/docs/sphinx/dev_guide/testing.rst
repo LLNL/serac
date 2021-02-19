@@ -8,8 +8,8 @@ Testing
 =======
 
 Serac has two levels of tests, unit and integration. Unit tests are used to test
-and individual components of code, such as a class or function.  While integration tests
-are for testing the code as a whole. For example, testing the `serac` driver through
+individual components of code, such as a class or function.  While integration tests
+are for testing the code as a whole. For example, testing the `serac` driver with
 an input file against blessed answers.
 
 Unit Tests
@@ -21,7 +21,8 @@ Integration Tests
 -----------------
 
 .. note::
-  This is very much in development and is not fully featured.
+  This is very much in development and is not fully featured. Only the rzgenie clang@10.0.0 host-config
+  has ATS_DIR defined currently. You could use this on any by adding "-DATS_DIR=/path/to/ats/base/dir".
 
 Requirements:
 
