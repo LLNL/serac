@@ -17,8 +17,10 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
       true_vec_(&space_),
       name_(options.name)
 {
-  *gf_      = 0.0;
-  true_vec_ = 0.0;
+  *gf_        = 0.0;
+  true_vec_   = 0.0;
+  scalar_coef = std::make_shared<mfem::GridFunctionCoefficient>(gf_.get());
+  vector_coef = std::make_shared<mfem::VectorGridFunctionCoefficient>(gf_.get());
 }
 
 }  // namespace serac

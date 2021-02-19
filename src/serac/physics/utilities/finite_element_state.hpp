@@ -152,6 +152,9 @@ public:
    */
   void distributeSharedDofs() { gf_->SetFromTrueDofs(true_vec_); }
 
+  std::shared_ptr<mfem::Coefficient>       scalarCoef() { return scalar_coef; }
+  std::shared_ptr<mfem::VectorCoefficient> vectorCoef() { return vector_coef; }
+
   /**
    * Utility function for creating a tensor, e.g. mfem::HypreParVector,
    * mfem::ParBilinearForm, etc on the FESpace encapsulated by an FEState object
@@ -174,6 +177,8 @@ private:
   std::unique_ptr<mfem::ParGridFunction>         gf_;
   mfem::HypreParVector                           true_vec_;
   std::string                                    name_ = "";
+  std::shared_ptr<mfem::Coefficient>             scalar_coef;
+  std::shared_ptr<mfem::VectorCoefficient>       vector_coef;
 };
 
 }  // namespace serac

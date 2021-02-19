@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <tuple>
 
 #include "axom/core.hpp"
 #include "mfem.hpp"
@@ -70,12 +71,9 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   }
 }
 
-}  // namespace serac
-
-int main(int argc, char* argv[])
+axom::inlet::Inlet initializeInletAndMesh(int argc, char* argv[], int rank, axom::sidre::DataStore& datastore,
+                                          std::shared_ptr<mfem::ParMesh>& mesh)
 {
-  auto [num_procs, rank] = serac::initialize(argc, argv);
-
   // Handle Command line
   std::unordered_map<std::string, std::string> cli_opts =
       serac::cli::defineAndParse(argc, argv, rank, "Inverse thermal problem driver");
@@ -88,9 +86,6 @@ int main(int argc, char* argv[])
   SLIC_ERROR_ROOT_IF(search == cli_opts.end(), rank, "Input file must be specified in the command line.");
   input_file_path = search->second;
 
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
   serac::defineInputFileSchema(inlet, rank);
@@ -98,10 +93,6 @@ int main(int argc, char* argv[])
   // Save input values to file
   datastore.getRoot()->save("thermal_inverse_input.json", "json");
 
-  int unknown_boundary  = inlet["unknown_boundary"];
-  int measured_boundary = inlet["measured_boundary"];
-
-  std::shared_ptr<mfem::ParMesh> mesh;
   // Build the mesh
   auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
   if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
@@ -109,13 +100,45 @@ int main(int argc, char* argv[])
     mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
   }
 
-  // BUILD AND SETUP THE FORWARD SOLVER
+  return inlet;
+}
 
-  // Create the forward physics solver object
+mfem::VectorConstantCoefficient makeNormalCoef(std::shared_ptr<mfem::ParMesh> mesh)
+{
+  mfem::Vector vec(mesh->Dimension());
+  vec    = 0.0;
+  vec(1) = -1.0;
+  return mfem::VectorConstantCoefficient(vec);
+}
+
+std::unique_ptr<serac::ThermalConduction> setupForwardSolver(axom::inlet::Inlet&            inlet,
+                                                             std::shared_ptr<mfem::ParMesh> mesh,
+                                                             FiniteElementState&            designed_flux)
+{
   auto thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
-  serac::ThermalConduction thermal_solver(mesh, thermal_solver_options);
+  auto thermal_solver         = std::make_unique<serac::ThermalConduction>(mesh, thermal_solver_options);
 
-  // Create and initialize the design field
+  int unknown_boundary = inlet["unknown_boundary"];
+
+  // Load up the forward solver with the design parameter
+  thermal_solver->setFluxBCs({unknown_boundary}, designed_flux.scalarCoef());
+
+  // Complete the solver setup
+  thermal_solver->completeSetup();
+
+  // Initialize the output
+  thermal_solver->initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "thermal_inverse");
+
+  return thermal_solver;
+}
+
+}  // namespace serac
+
+namespace lido {
+
+serac::FiniteElementState setupDesignedFlux(axom::inlet::Inlet& inlet, std::shared_ptr<mfem::ParMesh> mesh)
+{
+  // Set up the finite element state for the optimized (inverse) flux
   auto initial_flux_guess = inlet["initial_top_flux_guess"].get<serac::input::CoefficientInputOptions>();
   auto flux_guess_coef    = initial_flux_guess.constructScalar();
 
@@ -125,33 +148,14 @@ int main(int argc, char* argv[])
           .order = 1, .coll = std::make_unique<mfem::H1_FECollection>(1, mesh->Dimension()), .name = "designed_flux"});
   designed_flux.project(*flux_guess_coef);
 
-  auto designed_flux_coef = std::make_shared<mfem::GridFunctionCoefficient>(&designed_flux.gridFunc());
+  return designed_flux;
+}
 
-  // Load up the forward solver with the design parameter
-  thermal_solver.setFluxBCs({unknown_boundary}, designed_flux_coef);
-
-  // DO THE FORWARD SOLVE
-
-  // Complete the solver setup
-  thermal_solver.completeSetup();
-
-  // Initialize the output
-  thermal_solver.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "thermal_inverse");
-
-  // Solve the physics module appropriately
-  double dt = 1.0;
-  thermal_solver.advanceTimestep(dt);
-
-  // COMPUTE THE ADJOINT LOAD
-  // NOTE: this should be replaced by weak_form
-
-  // Make grid function coefficient for the temperature field
-  mfem::GradientGridFunctionCoefficient grad_temp_coef(&thermal_solver.temperature().gridFunc());
-  mfem::Vector                          vec(mesh->Dimension());
-  vec    = 0.0;
-  vec(1) = -1.0;
-  mfem::VectorConstantCoefficient normal_coef(vec);
-  auto computed_flux_coef = std::make_shared<mfem::InnerProductCoefficient>(normal_coef, grad_temp_coef);
+serac::mfem_ext::TransformedScalarCoefficient computeAdjointLoad(axom::inlet::Inlet& inlet, serac::FiniteElementState&,
+                                                                 mfem::GradientGridFunctionCoefficient& grad_temp,
+                                                                 mfem::VectorCoefficient&               mesh_normal)
+{
+  auto computed_flux_coef = std::make_shared<mfem::InnerProductCoefficient>(mesh_normal, grad_temp);
 
   auto exact_flux_coef_options = inlet["experimental_flux_coef"].get<serac::input::CoefficientInputOptions>();
   std::shared_ptr<mfem::Coefficient> exact_flux_coef(exact_flux_coef_options.constructScalar());
@@ -160,33 +164,83 @@ int main(int argc, char* argv[])
       exact_flux_coef, computed_flux_coef,
       [](double exact_flux, double computed_flux) { return -2.0 * (computed_flux - exact_flux); });
 
-  thermal_solver.setAdjointEssentialBCs({measured_boundary}, misfit_coef);
-  // could have a similar setAdjointLoad call
+  return misfit_coef;
+}
 
-  // SOLVE THE ADJOINT PROBLEM
-  thermal_solver.solveAdjoint();
-
-  // Turn the adjoint and state field into a coefficient
-  auto adjoint_coef = std::make_shared<mfem::GridFunctionCoefficient>(&thermal_solver.adjointTemperature().gridFunc());
-  auto temp_coef    = std::make_shared<mfem::GridFunctionCoefficient>(&thermal_solver.temperature().gridFunc());
-
-  // COMPUTE THE SENSITIVITY
-  // This should also get replaced by a weak form
-
+std::unique_ptr<mfem::ParLinearForm> assembleSensitivityForm(axom::inlet::Inlet& inlet, serac::FiniteElementState& temp,
+                                                             serac::FiniteElementState&         adjoint,
+                                                             serac::FiniteElementState&         designed_flux,
+                                                             std::shared_ptr<mfem::Coefficient> sensitivity_coef)
+{
   // Make the sensitivity coefficient
-  double                                        epsilon = inlet["epsilon"];
-  serac::mfem_ext::TransformedScalarCoefficient sensitivity_coef(
-      adjoint_coef, designed_flux_coef, [epsilon](double adjoint_value, double designed_flux_value) {
+  double epsilon          = inlet["epsilon"];
+  int    unknown_boundary = inlet["unknown_boundary"];
+
+  sensitivity_coef = std::make_shared<serac::mfem_ext::TransformedScalarCoefficient>(
+      adjoint.scalarCoef(), designed_flux.scalarCoef(), [epsilon](double adjoint_value, double designed_flux_value) {
         return 2.0 * epsilon * designed_flux_value - adjoint_value;
       });
 
-  mfem::ParLinearForm sensitivity_form(&designed_flux.space());
-  mfem::Array<int>    markers(mesh->bdr_attributes.Max());
+  auto             sensitivity_form = std::make_unique<mfem::ParLinearForm>(&designed_flux.space());
+  mfem::Array<int> markers(temp.mesh().bdr_attributes.Max());
   markers                       = 0;
   markers[unknown_boundary - 1] = 1;
-  sensitivity_form.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(sensitivity_coef));
+  sensitivity_form->AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(*sensitivity_coef));
 
-  std::unique_ptr<mfem::HypreParVector> discrete_sensitivity(sensitivity_form.ParallelAssemble());
+  return sensitivity_form;
+}
+
+}  // namespace lido
+
+int main(int argc, char* argv[])
+{
+  auto [num_procs, rank] = serac::initialize(argc, argv);
+
+  // Read the command line and fill inlet
+  axom::sidre::DataStore         datastore;
+  std::shared_ptr<mfem::ParMesh> mesh;
+  auto                           inlet = serac::initializeInletAndMesh(argc, argv, rank, datastore, mesh);
+
+  // Set up the finite element state containing the designed flux field
+  auto designed_flux = lido::setupDesignedFlux(inlet, mesh);
+
+  // Create the forward physics solver object
+  auto thermal_solver = serac::setupForwardSolver(inlet, mesh, designed_flux);
+
+  // Solve the forward physics
+  double dt = 1.0;
+  thermal_solver->advanceTimestep(dt);
+
+  // Compute the adjoint load
+  //
+  // NOTE: this should be replaced by weak_form
+  // NOTE: this computes an essential boundary coefficient, but it could also assemble a load vector for other
+  // opimization scenario
+
+  // NOTE: These coefficients have to be defined here for MFEM memory management reasons. It should get
+  // cleaned up when we move away from coefficients and instead use weak_forms
+  mfem::GradientGridFunctionCoefficient grad_temp_coef(&thermal_solver->temperature().gridFunc());
+
+  auto normal_coef = serac::makeNormalCoef(mesh);
+
+  auto misfit_coef = lido::computeAdjointLoad(inlet, thermal_solver->temperature(), grad_temp_coef, normal_coef);
+
+  // Set the adjoint solve boundary conditions and/or loads
+  int measured_boundary = inlet["measured_boundary"];
+  thermal_solver->setAdjointEssentialBCs({measured_boundary}, misfit_coef);
+
+  // could have a similar setAdjointLoad or possibly solveAdjoint(adjoint_load)
+  thermal_solver->solveAdjoint();
+
+  // Generate the form of the sensitivity
+  // This should also get replaced by a weak form
+  std::shared_ptr<mfem::Coefficient> sensitivity_coef;
+
+  auto sensitivity_form = lido::assembleSensitivityForm(
+      inlet, thermal_solver->temperature(), thermal_solver->adjointTemperature(), designed_flux, sensitivity_coef);
+
+  // Compute the discrete sensitivity
+  std::unique_ptr<mfem::HypreParVector> discrete_sensitivity_vector(sensitivity_form->ParallelAssemble());
 
   serac::exitGracefully();
 }
