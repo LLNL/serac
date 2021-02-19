@@ -10,6 +10,12 @@ blt_add_executable( NAME        serac_driver
                     OUTPUT_NAME serac
                     )
 
+blt_add_executable( NAME        serac_thermal_inverse
+                    SOURCES     thermal_inverse.cpp
+                    DEPENDS_ON  serac_physics serac_coefficients
+                    OUTPUT_NAME serac
+                    )
+
 if (ENABLE_TESTS)
     # Make sure running serac driver doesn't completely fail
     blt_add_test(NAME          serac_driver_default

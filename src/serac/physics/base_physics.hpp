@@ -58,7 +58,7 @@ public:
 
   /**
    * @brief Add an extra state to the state container for output purposes
-   * 
+   *
    * @param[in] extra_state The extra state to package
    * @note This expects the caller to manage the extra state to ensure it lives as long as the base physics module
    */

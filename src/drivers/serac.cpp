@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
   std::unique_ptr<serac::BasePhysics> main_physics;
 
   // Create nullable contains for the solid and thermal input file options
-  std::optional<serac::Solid::InputOptions>    solid_solver_options;
+  std::optional<serac::Solid::InputOptions>             solid_solver_options;
   std::optional<serac::ThermalConduction::InputOptions> thermal_solver_options;
 
   // If the blocks exist, read the appropriate input file options

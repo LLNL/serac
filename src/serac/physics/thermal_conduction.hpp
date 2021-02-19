@@ -136,6 +136,8 @@ public:
    */
   void setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);
 
+  void setAdjointEssentialBCs(const std::set<int>& temp_bdr, mfem::Coefficient& adjoint_bdr_coef);
+
   /**
    * @brief Set flux boundary conditions (weakly enforced)
    *
@@ -150,6 +152,8 @@ public:
    * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
    */
   void advanceTimestep(double& dt) override;
+
+  void solveAdjoint();
 
   /**
    * @brief Set the thermal conductivity
@@ -203,6 +207,9 @@ public:
   const serac::FiniteElementState& temperature() const { return temperature_; };
   serac::FiniteElementState&       temperature() { return temperature_; };
 
+  const serac::FiniteElementState& adjointTemperature() const { return adjoint_temperature_; };
+  serac::FiniteElementState&       adjointTemperature() { return adjoint_temperature_; };
+
   /**
    * @brief Complete the initialization and allocation of the data structures.
    *
@@ -221,6 +228,7 @@ protected:
    * @brief The temperature finite element state
    */
   serac::FiniteElementState temperature_;
+  serac::FiniteElementState adjoint_temperature_;
 
   /**
    * @brief Mass bilinear form object

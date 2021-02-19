@@ -20,6 +20,10 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
       temperature_(*mesh,
                    FiniteElementState::Options{
                        .order = order, .vector_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}),
+      adjoint_temperature_(
+          *mesh,
+          FiniteElementState::Options{
+              .order = order, .vector_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "adjoint_temperature"}),
       residual_(temperature_.space().TrueVSize()),
       ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
            nonlin_solver_, bcs_)
@@ -63,9 +67,11 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
 
   if (options.reaction_func) {
     if (options.reaction_scale_coef) {
-      setNonlinearReaction(options.reaction_func, options.d_reaction_func, options.reaction_scale_coef->constructScalar());
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func,
+                           options.reaction_scale_coef->constructScalar());
     } else {
-      setNonlinearReaction(options.reaction_func, options.d_reaction_func, std::make_unique<mfem::ConstantCoefficient>(1.0));
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func,
+                           std::make_unique<mfem::ConstantCoefficient>(1.0));
     }
   }
 
@@ -107,6 +113,21 @@ void ThermalConduction::setTemperatureBCs(const std::set<int>&               tem
                                           std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
   bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_);
+}
+
+void ThermalConduction::setAdjointEssentialBCs(const std::set<int>& adj_bdr, mfem::Coefficient& adj_ess_bdr_coef)
+{
+  adjoint_temperature_.gridFunc() = 0.0;
+  mfem::Array<int> markers(mesh_->bdr_attributes.Max());
+
+  markers = 0;
+
+  for (auto attr : adj_bdr) {
+    markers[attr - 1] = 1;
+  }
+
+  adjoint_temperature_.gridFunc().ProjectBdrCoefficient(adj_ess_bdr_coef, markers);
+  adjoint_temperature_.initializeTrueVec();
 }
 
 void ThermalConduction::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
@@ -243,6 +264,14 @@ void ThermalConduction::advanceTimestep(double& dt)
 
   temperature_.distributeSharedDofs();
   cycle_ += 1;
+}
+
+void ThermalConduction::solveAdjoint()
+{
+  adjoint_temperature_.initializeTrueVec();
+  auto& linear_solver = nonlin_solver_.LinearSolver();
+  linear_solver.Mult(zero_, temperature_.trueVec());
+  adjoint_temperature_.distributeSharedDofs();
 }
 
 void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
