@@ -50,6 +50,9 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   inlet.addInt("measured_boundary", "Boundary indicator for the measured side");
   inlet.addInt("unknown_boundary", "Boundary indicator for the unknown side");
 
+  // Epsilon for the regularization term
+  inlet.addDouble("epsilon", "Scaling factor for the regularization parameter").required();
+
   // The output type (visit, glvis, paraview, etc)
   serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
 
@@ -127,13 +130,13 @@ int main(int argc, char* argv[])
   // Load up the forward solver with the design parameter
   thermal_solver.setFluxBCs({unknown_boundary}, designed_flux_coef);
 
-  // Initialize the output
-  thermal_solver.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "thermal_inverse");
-
   // DO THE FORWARD SOLVE
 
   // Complete the solver setup
   thermal_solver.completeSetup();
+
+  // Initialize the output
+  thermal_solver.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "thermal_inverse");
 
   // Solve the physics module appropriately
   double dt = 1.0;

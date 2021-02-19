@@ -6,7 +6,7 @@ experimental_flux_coef = {
 }
 
 bottom_temp  = function (position)
-  return 200 + v.x * 0.5
+  return 200 + position.x * 0.5
 end
 
 -- Regularization parameter
@@ -56,7 +56,7 @@ thermal_conduction = {
     -- NOTE: the driver code knows how to add the flux term
     boundary_conds = {
         ['temperature'] = {
-            attrs = measured_boundaries,
+            attrs = {measured_boundary},
             scalar_function = bottom_temp
         },
     },
