@@ -49,7 +49,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // The solid mechanics options
-  auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
   serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   // The thermal conduction options
@@ -117,8 +117,8 @@ int main(int argc, char* argv[])
   std::optional<serac::ThermalConduction::InputOptions> thermal_solver_options;
 
   // If the blocks exist, read the appropriate input file options
-  if (inlet.contains("nonlinear_solid")) {
-    solid_solver_options = inlet["nonlinear_solid"].get<serac::Solid::InputOptions>();
+  if (inlet.contains("solid")) {
+    solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
   }
   if (inlet.contains("thermal_conduction")) {
     thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
   } else if (thermal_solver_options) {
     main_physics = std::make_unique<serac::ThermalConduction>(mesh, *thermal_solver_options);
   } else {
-    SLIC_ERROR_ROOT(rank, "Neither nonlinear_solid nor thermal_conduction blocks specified in the input file.");
+    SLIC_ERROR_ROOT(rank, "Neither solid nor thermal_conduction blocks specified in the input file.");
   }
 
   // Complete the solver setup
