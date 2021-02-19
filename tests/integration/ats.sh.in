@@ -1,14 +1,16 @@
 #!/bin/bash
 
-export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@
+export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@/bin
 export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
 
-export PATH=@ATS_DIR@/bin:@SERAC_BIN_DIR@:$PATH
+export PATH=@ATS_DIR@/bin:$ATS_SERAC_BIN_DIR:$PATH
+
+#Note: This is needed on my installed version because something is wrong with ATS's install
 #export MACHINE_TYPE=slurm36
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "ATS:" `which ats`
-echo "BIN DIR: " @SERAC_BIN_DIR@
+echo "BIN DIR: " $ATS_SERAC_BIN_DIR
 echo "REPO DIR: " @SERAC_REPO_DIR@
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
