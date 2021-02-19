@@ -80,4 +80,4 @@ set(CLANGTIDY_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-tidy" C
 
 set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-1.87/bin/cppcheck" CACHE PATH "")
 
-
+set(ATS_DIR "/usr/apps/ats/6.4.0" CACHE PATH "")
