@@ -5,7 +5,19 @@
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
 #------------------------------------------------------------------------------
-# Tests for Serac objects 
+# Integration Tests
+#------------------------------------------------------------------------------
+if (ATS_DIR)
+    configure_file(
+        ${PROJECT_SOURCE_DIR}/tests/integration/ats.sh.in
+        ${CMAKE_BINARY_DIR}/ats.sh
+    )
+
+endif()
+
+
+#------------------------------------------------------------------------------
+# Unit Tests
 #------------------------------------------------------------------------------
 
 if (ENABLE_GTEST)
