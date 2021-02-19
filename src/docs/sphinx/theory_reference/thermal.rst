@@ -105,6 +105,6 @@ equation is linearized which yields
 
 .. math:: \left(\mathbf{M} + \Delta t \mathbf{K} + \Delta t\frac{\partial f}{\partial \mathbf{u}}\left(\mathbf{u}_{n+1}^i\right)\right)\Delta \mathbf{u}^{i+1}_{n+1} = -(\mathbf{M} + \Delta t \mathbf{K}) \mathbf{u}_{n+1}^i - \Delta t f(\mathbf{u}_{n+1}^i)) + \Delta t \mathbf{G} + \mathbf{Mu}_n.
 
-where the newton iterations
+where the Newton iterations
 :math:`\mathbf{u}_{n+1}^{i+1} = \mathbf{u}_{n+1}^{i} + \Delta \mathbf{u}_{n+1}^{i+1}`
 continue until the solution is converged.
