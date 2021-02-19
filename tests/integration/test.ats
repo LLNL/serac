@@ -1,0 +1,26 @@
+import os
+
+glue(independent=True)
+glue(keep=True)
+
+# Check for required environment variables
+for var in ["ATS_SERAC_BIN_DIR", "ATS_SERAC_REPO_DIR"]
+    if not os.environ.get(var):
+        print("ERROR: Required environment variable not found: {0}".format(var))
+        sys.exit(1)
+
+serac_bin_dir = os.environment.get("ATS_SERAC_BIN_DIR")
+serac_repo_dir = os.environment.get("ATS_SERAC_REPO_DIR")
+
+serac_path = os.path.join(serac_bin_dir, "serac")
+serac_input_files_dir = os.path.join(serac_repo_dir, "data", "input_files")
+
+#my_checker = '/usr/WS2/white238/ats/repo/src/atsASC/HelloATS/ats_check_log.py'
+
+t1=test(executable=serac_path, 
+        clas="-i {0}/default.lua".format(serac_input_files_dir),
+        label='default',
+        np=1,
+        sandbox=False)
+#t2=testif(t1, executable=my_checker, clas=t1.outname, nosrun=True)
+

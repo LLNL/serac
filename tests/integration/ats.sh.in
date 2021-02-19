@@ -1,0 +1,16 @@
+#!/bin/bash
+
+export ATS_SERAC_BIN_DIR=@SERAC_BIN_DIR@
+export ATS_SERAC_REPO_DIR=@SERAC_REPO_DIR@
+
+export PATH=@ATS_DIR@/bin:@SERAC_BIN_DIR@:$PATH
+#export MACHINE_TYPE=slurm36
+
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "ATS:" `which ats`
+echo "BIN DIR: " @SERAC_BIN_DIR@
+echo "REPO DIR: " @SERAC_REPO_DIR@
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+rm -rf $SYS_TYPE.*
+ats @SERAC_REPO_DIR@/tests/integration/test.ats
