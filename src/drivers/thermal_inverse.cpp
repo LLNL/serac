@@ -142,6 +142,7 @@ serac::FiniteElementState setupDesignedFlux(axom::inlet::Inlet& inlet, std::shar
   auto initial_flux_guess = inlet["initial_top_flux_guess"].get<serac::input::CoefficientInputOptions>();
   auto flux_guess_coef    = initial_flux_guess.constructScalar();
 
+  // Make a finite element state to contain the design parameter
   serac::FiniteElementState designed_flux(
       *mesh,
       serac::FiniteElementState::Options{
@@ -155,6 +156,7 @@ serac::mfem_ext::TransformedScalarCoefficient computeAdjointLoad(axom::inlet::In
                                                                  mfem::GradientGridFunctionCoefficient& grad_temp,
                                                                  mfem::VectorCoefficient&               mesh_normal)
 {
+  // Using a known QOI form, compute the adjoint load based on the state (or here, it's gradient) solution
   auto computed_flux_coef = std::make_shared<mfem::InnerProductCoefficient>(mesh_normal, grad_temp);
 
   auto exact_flux_coef_options = inlet["experimental_flux_coef"].get<serac::input::CoefficientInputOptions>();
@@ -176,6 +178,10 @@ std::unique_ptr<mfem::ParLinearForm> assembleSensitivityForm(axom::inlet::Inlet&
   double epsilon          = inlet["epsilon"];
   int    unknown_boundary = inlet["unknown_boundary"];
 
+  // Using the known QOI form, make a linear form for the sensitivities based on the current state, adjoint, and design
+  // fields
+  //
+  // NOTE: this grossness should be replaced by a weak form
   sensitivity_coef = std::make_shared<serac::mfem_ext::TransformedScalarCoefficient>(
       adjoint.scalarCoef(), designed_flux.scalarCoef(), [epsilon](double adjoint_value, double designed_flux_value) {
         return 2.0 * epsilon * designed_flux_value - adjoint_value;
@@ -226,8 +232,7 @@ int main(int argc, char* argv[])
   auto misfit_coef = lido::computeAdjointLoad(inlet, thermal_solver->temperature(), grad_temp_coef, normal_coef);
 
   // Set the adjoint solve boundary conditions and/or loads
-  int measured_boundary = inlet["measured_boundary"];
-  thermal_solver->setAdjointEssentialBCs({measured_boundary}, misfit_coef);
+  thermal_solver->setAdjointEssentialBCs(misfit_coef);
 
   // could have a similar setAdjointLoad or possibly solveAdjoint(adjoint_load)
   thermal_solver->solveAdjoint();
@@ -236,8 +241,8 @@ int main(int argc, char* argv[])
   // This should also get replaced by a weak form
   std::shared_ptr<mfem::Coefficient> sensitivity_coef;
 
-  auto sensitivity_form = lido::assembleSensitivityForm(
-      inlet, thermal_solver->temperature(), thermal_solver->adjointTemperature(), designed_flux, sensitivity_coef);
+  auto sensitivity_form = lido::assembleSensitivityForm(inlet, thermal_solver->temperature(), thermal_solver->adjoint(),
+                                                        designed_flux, sensitivity_coef);
 
   // Compute the discrete sensitivity
   std::unique_ptr<mfem::HypreParVector> discrete_sensitivity_vector(sensitivity_form->ParallelAssemble());

@@ -136,7 +136,7 @@ public:
    */
   void setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);
 
-  void setAdjointEssentialBCs(const std::set<int>& temp_bdr, mfem::Coefficient& adjoint_bdr_coef);
+  void setAdjointEssentialBCs(mfem::Coefficient& adjoint_bdr_coef);
 
   /**
    * @brief Set flux boundary conditions (weakly enforced)
@@ -207,8 +207,8 @@ public:
   const serac::FiniteElementState& temperature() const { return temperature_; };
   serac::FiniteElementState&       temperature() { return temperature_; };
 
-  const serac::FiniteElementState& adjointTemperature() const { return adjoint_temperature_; };
-  serac::FiniteElementState&       adjointTemperature() { return adjoint_temperature_; };
+  const serac::FiniteElementState& adjoint() const { return adjoint_; };
+  serac::FiniteElementState&       adjoint() { return adjoint_; };
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -228,7 +228,7 @@ protected:
    * @brief The temperature finite element state
    */
   serac::FiniteElementState temperature_;
-  serac::FiniteElementState adjoint_temperature_;
+  serac::FiniteElementState adjoint_;
 
   /**
    * @brief Mass bilinear form object

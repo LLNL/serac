@@ -1,3 +1,5 @@
+---- LIDO RELATED INPUT ------
+
 -- Experimental data
 experimental_flux_coef = {
   scalar_function = function (position)
@@ -20,6 +22,8 @@ unknown_boundary = 1
 initial_top_flux_guess = {
   constant = 1.0
 }
+
+--- SERAC RELATED INPUT -----
 
 main_mesh = {
     type = "file",
