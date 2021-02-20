@@ -1,9 +1,6 @@
 import os
 import sys
 
-glue(independent=True)
-glue(keep=True)
-
 # Check for required environment variables
 for var in ["ATS_SERAC_BIN_DIR", "ATS_SERAC_REPO_DIR"]:
     if not os.environ.get(var):
@@ -16,4 +13,8 @@ serac_repo_dir = os.environ.get("ATS_SERAC_REPO_DIR")
 serac_path = os.path.join(serac_bin_dir, "serac")
 serac_input_files_dir = os.path.join(serac_repo_dir, "data", "input_files")
 
-source("default/default.ats")
+test(executable=serac_path, 
+     clas="-i {0}/default.lua".format(serac_input_files_dir),
+     label='default',
+     np=1,
+     sandbox=False)
