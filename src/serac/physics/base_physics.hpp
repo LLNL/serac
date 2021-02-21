@@ -57,14 +57,6 @@ public:
                            const int component = -1);
 
   /**
-   * @brief Add an extra state to the state container for output purposes
-   *
-   * @param[in] extra_state The extra state to package
-   * @note This expects the caller to manage the extra state to ensure it lives as long as the base physics module
-   */
-  virtual void addState(FiniteElementState& extra_state) { state_.push_back(extra_state); }
-
-  /**
    * @brief Get the list of state variable grid functions
    *
    * @return the current vector of finite element states
