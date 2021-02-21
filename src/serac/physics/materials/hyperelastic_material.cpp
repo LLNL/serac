@@ -5,38 +5,13 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/materials/hyperelastic_material.hpp"
+#include "serac/physics/utilities/physics_utils.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 
 #include <cmath>
 
 namespace serac {
-
-void HyperelasticMaterial::calcDeformationGradient(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& F)
-{
-  int dim = du_dX.Size();
-  F.SetSize(dim);
-  F = du_dX;
-
-  for (int i = 0; i < dim; ++i) {
-    F(i, i) += 1.0;
-  }
-}
-
-void HyperelasticMaterial::calcLinearizedStrain(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& epsilon)
-{
-  epsilon.SetSize(du_dX.Size());
-  epsilon = du_dX;
-  epsilon.Symmetrize();
-}
-
-void HyperelasticMaterial::calcCauchyStressFromPK1Stress(const mfem::DenseMatrix& F, const mfem::DenseMatrix& P,
-                                                         mfem::DenseMatrix& sigma)
-{
-  sigma.SetSize(F.Size());
-  mfem::MultABt(P, F, sigma);
-  sigma *= 1.0 / F.Det();
-}
 
 inline void NeoHookeanMaterial::EvalCoeffs() const
 {
@@ -46,7 +21,7 @@ inline void NeoHookeanMaterial::EvalCoeffs() const
 
 double NeoHookeanMaterial::evalStrainEnergy(const mfem::DenseMatrix& du_dX) const
 {
-  calcDeformationGradient(du_dX, F_);
+  solid_util::calcDeformationGradient(du_dX, F_);
 
   int dim = F_.Width();
 
@@ -64,7 +39,7 @@ double NeoHookeanMaterial::evalStrainEnergy(const mfem::DenseMatrix& du_dX) cons
 
 void NeoHookeanMaterial::evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const
 {
-  calcDeformationGradient(du_dX, F_);
+  serac::solid_util::calcDeformationGradient(du_dX, F_);
   int dim = F_.Width();
   B_.SetSize(dim);
   sigma.SetSize(dim);
@@ -91,7 +66,7 @@ void NeoHookeanMaterial::evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseM
 
 void NeoHookeanMaterial::evalTangentStiffness(const mfem::DenseMatrix& du_dX, mfem_ext::Array4D<double>& C) const
 {
-  calcDeformationGradient(du_dX, F_);
+  serac::solid_util::calcDeformationGradient(du_dX, F_);
   int dim = F_.Width();
   B_.SetSize(dim);
   C.SetSize(dim, dim, dim, dim);
@@ -135,7 +110,7 @@ void LinearElasticMaterial::evalStress(const mfem::DenseMatrix& du_dX, mfem::Den
   EvalCoeffs();
 
   // Evaluate the linearized strain tensor from the displacement gradient
-  calcLinearizedStrain(du_dX, epsilon_);
+  serac::solid_util::calcLinearizedStrain(du_dX, epsilon_);
 
   sigma                = 0.0;
   double trace_epsilon = epsilon_.Trace();
