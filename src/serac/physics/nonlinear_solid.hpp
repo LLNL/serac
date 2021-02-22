@@ -23,6 +23,22 @@
 
 namespace serac {
 
+class NonlinearSolid;
+
+namespace detail {
+
+/**
+ * @brief Get an mfem::Operator that calculates the residual at the current outputState
+ */
+mfem::Vector outputResidual(NonlinearSolid& ns);
+
+/**
+ * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
+ */
+mfem::Operator& outputGradient(NonlinearSolid& ns);
+
+}  // namespace detail
+
 /**
  * @brief The nonlinear solid solver class
  *
@@ -189,19 +205,19 @@ public:
   void advanceTimestep(double& dt) override;
 
   /**
+   * @brief Destroy the Nonlinear Solid Solver object
+   */
+  virtual ~NonlinearSolid();
+
+  /**
    * @brief Get an mfem::Operator that calculates the residual at the current outputState
    */
-  mfem::Vector outputResidual() override;
+  friend mfem::Vector serac::detail::outputResidual(NonlinearSolid& ns);
 
   /**
    * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
    */
-  mfem::Operator& outputGradient() override;
-
-  /**
-   * @brief Destroy the Nonlinear Solid Solver object
-   */
-  virtual ~NonlinearSolid();
+  friend mfem::Operator& serac::detail::outputGradient(NonlinearSolid& ns);
 
 protected:
   /**

@@ -131,16 +131,6 @@ public:
   virtual void outputState() const;
 
   /**
-   * @brief Get an mfem::Operator that calculates the residual at the current outputState
-   */
-  virtual mfem::Vector outputResidual() = 0;
-
-  /**
-   * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
-   */
-  virtual mfem::Operator& outputGradient() = 0;
-
-  /**
    * @brief Destroy the Base Solver object
    */
   virtual ~BasePhysics() = default;

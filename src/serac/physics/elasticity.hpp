@@ -18,6 +18,16 @@
 
 namespace serac {
 
+class Elasticity;
+
+namespace detail {
+/**
+ * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
+ */
+mfem::Operator& outputGradient(Elasticity& es);
+
+}  // namespace detail
+
 /**
  * @brief A solver for the steady state solution of a linear elasticity PDE
  *
@@ -88,23 +98,14 @@ public:
   void completeSetup() override;
 
   /**
-   * @brief Get an mfem::Operator that calculates the residual at the current outputState
+   * @brief The destructor
    */
-  [[noreturn]] mfem::Vector outputResidual() override
-  {
-    SLIC_ERROR("outputResidual not implemented yet.");
-    throw "outputResidual not implemented yet.";
-  }
+  virtual ~Elasticity();
 
   /**
    * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
    */
-  mfem::Operator& outputGradient() override;
-
-  /**
-   * @brief The destructor
-   */
-  virtual ~Elasticity();
+  friend mfem::Operator& detail::outputGradient(Elasticity& es);
 
 protected:
   /**

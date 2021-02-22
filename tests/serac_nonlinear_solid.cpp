@@ -107,18 +107,18 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   // R(u_sol + du_sol) < R(u_sol)
 
   mfem::Vector residual(solid_solver.displacement().gridFunc().Size());
-  residual = solid_solver.outputResidual();
+  residual = serac::detail::outputResidual(solid_solver);
 
   mfem::Vector du(residual.Size());
 
   mfem::MINRESSolver minres_solver(MPI_COMM_WORLD);
-  minres_solver.SetOperator(solid_solver.outputGradient());
+  minres_solver.SetOperator(serac::detail::outputGradient(solid_solver));
   minres_solver.Mult(residual, du);
 
   // modify the displacement just to recompute the residual
   solid_solver.displacement().gridFunc() += du;
   mfem::Vector residual_lower(residual.Size());
-  residual_lower = solid_solver.outputResidual();
+  residual_lower = serac::detail::outputResidual(solid_solver);
   EXPECT_LE(residual.Norml2(), residual_lower.Norml2());
 
   MPI_Barrier(MPI_COMM_WORLD);
