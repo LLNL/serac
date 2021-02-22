@@ -52,6 +52,11 @@ packages:
     externals:
     - spec: libx11
       prefix: /usr
+  netcdf-c:
+    buildable: false
+    externals:
+    - spec: netcdf-c
+      prefix: /usr
   autoconf:
     buildable: false
     externals:

@@ -143,7 +143,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
     # Unconditional for now until concretizer fixed
-    depends_on("netcdf-c@4.7.4~shared")
+    depends_on("netcdf-c")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
