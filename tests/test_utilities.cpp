@@ -65,6 +65,9 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
   // Integration test parameters
   inlet.addDouble("expected_t_l2norm", "Correct L2 norm of the temperature field");
 
+  auto& exact = inlet.addStruct("exact_solution", "Exact solution for the temperature field");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(exact);
+
   // Physics
   auto& conduction_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   // This is the "standard" schema for the actual physics module
@@ -139,6 +142,14 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
   if (inlet.contains("expected_t_l2norm")) {
     double t_norm = phys_module.temperature().gridFunc().ComputeLpError(2.0, zero);
     EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
+  }
+
+  if (inlet.contains("exact_solution")) {
+    auto coef_options = inlet["exact_solution"].get<serac::input::CoefficientInputOptions>();
+    auto exact        = coef_options.constructScalar();
+    exact->SetTime(phys_module.time());
+    double error = phys_module.temperature().gridFunc().ComputeLpError(2.0, *exact);
+    EXPECT_NEAR(error, 0.0, inlet["epsilon"]);
   }
 }
 }  // namespace detail
@@ -219,6 +230,7 @@ void runModuleTest(const std::string& input_file, std::unique_ptr<mfem::ParMesh>
 
       phys_module.advanceTimestep(dt_real);
     }
+    phys_module.setTime(t);
   } else {
     phys_module.advanceTimestep(dt);
   }

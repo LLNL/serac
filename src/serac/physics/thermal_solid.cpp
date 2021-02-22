@@ -32,6 +32,25 @@ ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& th
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
+ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input,
+                           const NonlinearSolid::InputOptions&    solid_input)
+    : BasePhysics(NUM_FIELDS, std::max(thermal_input.order, solid_input.order)),
+      therm_solver_(thermal_input),
+      solid_solver_(solid_input),
+      temperature_(therm_solver_.temperature()),
+      velocity_(solid_solver_.velocity()),
+      displacement_(solid_solver_.displacement())
+{
+  // The temperature_, velocity_, displacement_ members are not currently used
+  // but presumably will be needed when further coupling schemes are implemented
+  // This calls the non-const version
+  state_.push_back(therm_solver_.temperature());
+  state_.push_back(solid_solver_.velocity());
+  state_.push_back(solid_solver_.displacement());
+
+  coupling_ = serac::CouplingScheme::OperatorSplit;
+}
+
 void ThermalSolid::completeSetup()
 {
   SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit, mpi_rank_,

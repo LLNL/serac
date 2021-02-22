@@ -36,6 +36,14 @@ public:
                const NonlinearSolid::SolverOptions& solid_options);
 
   /**
+   * @brief Construct a new Thermal Solid object from input file options
+   *
+   * @param thermal_input The thermal physics module input file option struct
+   * @param solid_input The solid mechanics module input file option struct
+   */
+  ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const NonlinearSolid::InputOptions& solid_input);
+
+  /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
    * @param[in] temp_bdr The attributes denotiving the fixed temperature boundary
