@@ -10,6 +10,7 @@ User Guide
 .. toctree::
   :maxdepth: 2
 
+  simple_conduction_tutorial
   input_schema
 
 Physics Module User Guide

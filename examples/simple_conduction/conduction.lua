@@ -1,15 +1,18 @@
--- Simulation output format
-output_type = "VisIt"
+-- _output_type_start
+output_type = "ParaView"
+-- _output_type_end
 
 -- Mesh information
+-- _mesh_start
 main_mesh = {
   type = "generate",
-  -- 10-by-10 quad mesh
   elements = {x = 10, y = 10}
 }
+-- _mesh_end
 
 -- Solver parameters
 thermal_conduction = {
+  -- _solver_opts_start
   stiffness_solver = {
       linear = {
           type = "iterative",
@@ -31,17 +34,19 @@ thermal_conduction = {
       },
   },
 
-  -- polynomial interpolation order
   order = 2,
+  -- _solver_opts_end
 
-  -- material parameters
+  -- _conductivity_start
   kappa = 0.5,
+  -- _conductivity_end
 
-  -- boundary condition parameters
+  -- _bc_start
   boundary_conds = {
       ['temperature'] = {
           attrs = {1},
           constant = 1.0
       },
   },
+  -- _bc_end
 }
