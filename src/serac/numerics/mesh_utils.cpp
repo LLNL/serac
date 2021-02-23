@@ -394,6 +394,8 @@ std::shared_ptr<mfem::ParMesh> build(const InputOptions& options, const MPI_Comm
   std::shared_ptr<mfem::Mesh> serial_mesh;
 
   if (const auto file_opts = std::get_if<FileInputOptions>(&options.extra_options)) {
+    SLIC_ERROR_IF(file_opts->absolute_mesh_file_name.empty(),
+                  "Absolute path to mesh file was not configured, did you forget to call findMeshFilePath?");
     serial_mesh = buildMeshFromFile(file_opts->absolute_mesh_file_name);
   } else if (const auto generate_opts = std::get_if<GenerateInputOptions>(&options.extra_options)) {
     const auto& eles  = generate_opts->elements;
