@@ -108,6 +108,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
 
   auto         residual = solid_solver.currentResidual();
   mfem::Vector du(residual.Size());
+  du = 0.0;
 
   mfem::MINRESSolver minres_solver(MPI_COMM_WORLD);
   minres_solver.SetOperator(solid_solver.currentGradient());
