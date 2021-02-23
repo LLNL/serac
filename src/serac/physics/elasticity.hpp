@@ -18,8 +18,6 @@
 
 namespace serac {
 
-class Elasticity;
-
 /**
  * @brief A solver for the steady state solution of a linear elasticity PDE
  *
