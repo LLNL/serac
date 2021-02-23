@@ -337,31 +337,27 @@ void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& tab
 mfem::Vector NonlinearSolid::currentResidual()
 {
   mfem::Vector eval(displacement_.trueVec().Size());
-  // This appears to be option dependent
   if (is_quasistatic_) {
     // The input to the residual is displacment
     residual_->Mult(displacement_.trueVec(), eval);
   } else {
     // Currently the residual constructed uses d2u_dt2 as input,
-    // but this could change?
-
+    // but this could change
     residual_->Mult(ode2_.GetState().d2u_dt2, eval);
   }
   return eval;
 }
 
-// Get an Operator that computes
+// Get an Operator that computes the gradient (tangent stiffness) at the current internal state
 const mfem::Operator& NonlinearSolid::currentGradient()
 {
-  // This appears to be option dependent
   if (is_quasistatic_) {
     // The input to the residual is displacment
     return residual_->GetGradient(displacement_.trueVec());
   }
 
   // Currently the residual constructed uses d2u_dt2 as input,
-  // but this could change?
-
+  // but this could change
   return residual_->GetGradient(ode2_.GetState().d2u_dt2);
 }
 

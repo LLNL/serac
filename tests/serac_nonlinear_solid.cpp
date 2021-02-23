@@ -106,8 +106,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   // -R(u_sol) = K(u_sol) du_sol
   // R(u_sol + du_sol) < R(u_sol)
 
-  mfem::Vector residual(solid_solver.displacement().gridFunc().Size());
-  residual = solid_solver.currentResidual();
+  mfem::Vector residual = solid_solver.currentResidual();
 
   mfem::Vector du(residual.Size());
 
@@ -116,7 +115,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   minres_solver.Mult(residual, du);
 
   // modify the displacement just to recompute the residual
-  solid_solver.displacement().gridFunc() += du;
+  solid_solver.displacement().trueVec() += du;
   mfem::Vector residual_lower(residual.Size());
   residual_lower = solid_solver.currentResidual();
   EXPECT_LE(residual.Norml2(), residual_lower.Norml2());

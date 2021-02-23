@@ -194,14 +194,17 @@ public:
   virtual ~NonlinearSolid();
 
   /**
-   * @brief Get an mfem::Operator that calculates the residual at the current outputState
+   * @brief Compute the current residual vector at the current internal state value
+   * 
+   * @note This is of length true degrees of freedom, i.e. the length of the underlying mfem::HypreParVector (true_vec)
    */
   mfem::Vector currentResidual();
 
   /**
-   * Get the current gradient MFEM operator
+   * Get the current gradient (tangent stiffness) MFEM operator at the current internal state value
    *
-   * Note:  This is for expert users only, changing any values inside of the returned data structures can have drastic
+   * @note This is of size true degrees of freedom x true degrees of freedom, i.e. the length of the underlying mfem::HypreParVector (true_vec)
+   * @note This is for expert users only, changing any values inside of the returned data structures can have drastic
    *and unrecoverable runtime consequences.
    **/
   const mfem::Operator& currentGradient();
