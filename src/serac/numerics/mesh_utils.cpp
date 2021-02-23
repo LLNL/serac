@@ -269,9 +269,8 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
   return extruded_pmesh;
 }
 
-std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, 
-				      double inner_radius, double outer_radius, 
-				      double total_angle, int sectors)
+std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius, double outer_radius,
+                                      double total_angle, int sectors)
 {
   using index_type = int;
   using size_type  = std::vector<index_type>::size_type;
@@ -322,7 +321,7 @@ std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement,
   }
 
   auto mesh = std::make_shared<mfem::Mesh>(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
-					   static_cast<int>(num_boundary_elements));
+                                           static_cast<int>(num_boundary_elements));
 
   for (auto vertex : vertices) {
     mesh->AddVertex(vertex.data());
@@ -374,29 +373,24 @@ std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement,
   return mesh;
 }
 
-std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement,
-					     double inner_radius, double outer_radius, 
-					     double total_angle, int sectors,
-					     const MPI_Comm comm)
+std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
+                                             double total_angle, int sectors, const MPI_Comm comm)
 {
-  return std::make_shared<mfem::ParMesh>(comm,
-					 *buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors));
+  return std::make_shared<mfem::ParMesh>(
+      comm, *buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors));
 }
-
 
 std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
                                                        double inner_radius, double outer_radius, double height,
                                                        double total_angle, int sectors, const MPI_Comm comm)
 {
-  auto mesh = buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors);
+  auto                        mesh = buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors);
   std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(mesh.get(), elements_lengthwise, height));
 
   auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
 
   return extruded_pmesh;
 }
-
-
 
 namespace mesh {
 

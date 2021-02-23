@@ -131,12 +131,10 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
  *
  * @return A shared_ptr containing the constructed mesh
  */
-  std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement,
-					       double inner_radius, double outer_radius, 
-					       double total_angle = M_PI, int sectors = 8,
-					       const MPI_Comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
+                                             double total_angle = M_PI, int sectors = 8,
+                                             const MPI_Comm = MPI_COMM_WORLD);
 
-  
 namespace mesh {
 
 struct FileInputOptions {
