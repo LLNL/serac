@@ -106,7 +106,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   // -R(u_sol) = K(u_sol) du_sol
   // R(u_sol + du_sol) < R(u_sol)
 
-  auto residual = solid_solver.currentResidual();
+  auto         residual = solid_solver.currentResidual();
   mfem::Vector du(residual.Size());
 
   mfem::MINRESSolver minres_solver(MPI_COMM_WORLD);
