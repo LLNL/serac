@@ -25,20 +25,6 @@ namespace serac {
 
 class NonlinearSolid;
 
-namespace detail {
-
-/**
- * @brief Get an mfem::Operator that calculates the residual at the current outputState
- */
-mfem::Vector outputResidual(NonlinearSolid& ns);
-
-/**
- * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
- */
-mfem::Operator& outputGradient(NonlinearSolid& ns);
-
-}  // namespace detail
-
 /**
  * @brief The nonlinear solid solver class
  *
@@ -212,12 +198,15 @@ public:
   /**
    * @brief Get an mfem::Operator that calculates the residual at the current outputState
    */
-  friend mfem::Vector serac::detail::outputResidual(NonlinearSolid& ns);
+  mfem::Vector currentResidual();
 
   /**
-   * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
-   */
-  friend mfem::Operator& serac::detail::outputGradient(NonlinearSolid& ns);
+   * Get the current gradient MFEM operator
+   *
+   * Note:  This is for expert users only, changing any values inside of the returned data structures can have drastic
+   *and unrecoverable runtime consequences.
+   **/
+  const mfem::Operator& currentGradient();
 
 protected:
   /**

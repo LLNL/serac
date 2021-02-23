@@ -150,7 +150,7 @@ public:
   /**
    * @brief Get a reference to the current state
    */
-  const State GetState() { return state_; }
+  const State& GetState() { return state_; }
 
 private:
   /**

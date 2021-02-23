@@ -130,8 +130,6 @@ Elasticity::~Elasticity() {}
 
 // Gradient operator
 
-namespace detail {
-mfem::Operator& outputGradient(Elasticity& es) { return *(es.K_mat_); }
-}  // namespace detail
+const mfem::Operator& Elasticity::currentGradient() { return *K_mat_; }
 
 }  // namespace serac

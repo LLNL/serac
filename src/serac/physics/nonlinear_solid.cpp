@@ -333,39 +333,37 @@ void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& tab
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
 }
 
-namespace detail {
 // Evaluate the residual at the current state
-mfem::Vector outputResidual(NonlinearSolid& ns)
+mfem::Vector NonlinearSolid::currentResidual()
 {
-  mfem::Vector eval(ns.displacement_.trueVec().Size());
+  mfem::Vector eval(displacement_.trueVec().Size());
   // This appears to be option dependent
-  if (ns.is_quasistatic_) {
+  if (is_quasistatic_) {
     // The input to the residual is displacment
-    ns.residual_->Mult(ns.displacement_.trueVec(), eval);
+    residual_->Mult(displacement_.trueVec(), eval);
   } else {
     // Currently the residual constructed uses d2u_dt2 as input,
     // but this could change?
 
-    ns.residual_->Mult(ns.ode2_.GetState().d2u_dt2, eval);
+    residual_->Mult(ode2_.GetState().d2u_dt2, eval);
   }
   return eval;
 }
 
 // Get an Operator that computes
-mfem::Operator& outputGradient(NonlinearSolid& ns)
+const mfem::Operator& NonlinearSolid::currentGradient()
 {
   // This appears to be option dependent
-  if (ns.is_quasistatic_) {
+  if (is_quasistatic_) {
     // The input to the residual is displacment
-    return ns.residual_->GetGradient(ns.displacement_.trueVec());
+    return residual_->GetGradient(displacement_.trueVec());
   }
 
   // Currently the residual constructed uses d2u_dt2 as input,
   // but this could change?
 
-  return ns.residual_->GetGradient(ns.ode2_.GetState().d2u_dt2);
+  return residual_->GetGradient(ode2_.GetState().d2u_dt2);
 }
-}  // namespace detail
 
 }  // namespace serac
 

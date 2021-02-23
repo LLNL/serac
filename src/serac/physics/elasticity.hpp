@@ -20,14 +20,6 @@ namespace serac {
 
 class Elasticity;
 
-namespace detail {
-/**
- * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
- */
-mfem::Operator& outputGradient(Elasticity& es);
-
-}  // namespace detail
-
 /**
  * @brief A solver for the steady state solution of a linear elasticity PDE
  *
@@ -103,9 +95,12 @@ public:
   virtual ~Elasticity();
 
   /**
-   * @brief Get an mfem::Operator that calculates the gradient of the residual at the current outputState
-   */
-  friend mfem::Operator& detail::outputGradient(Elasticity& es);
+   * Get the current gradient MFEM operator
+   *
+   * Note:  This is for expert users only, changing any values inside of the returned data structures can have drastic
+   *and unrecoverable runtime consequences.
+   **/
+  const mfem::Operator& currentGradient();
 
 protected:
   /**
