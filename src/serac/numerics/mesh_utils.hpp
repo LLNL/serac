@@ -63,10 +63,10 @@ std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
  * @param[in] elements_in_y the number of elements in the y-direction
  * @param[in] size_x Overall size in the x-direction
  * @param[in] size_y Overall size in the y-direction
- * @return A shared_ptr containing the constructed mesh
+ * @return A shared_ptr containing the constructed serial mesh
  */
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
-                                                  double size_y = 1., const MPI_Comm comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
+                                               double size_y = 1.);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a cuboid
@@ -78,11 +78,10 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int element
  * @param[in] size_y Overall size in the y-direction
  * @param[in] size_z Overall size in the z-direction
  * @param[in] MPI_Comm MPI Communicator
- * @return A shared_ptr containing the constructed mesh
+ * @return A shared_ptr containing the constructed serial mesh
  */
-std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
-                                               double size_x = 1., double size_y = 1., double size_z = 1.,
-                                               const MPI_Comm comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x = 1.,
+                                            double size_y = 1., double size_z = 1.);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a cylinder
