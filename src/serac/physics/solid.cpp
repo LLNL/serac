@@ -389,6 +389,34 @@ void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
 }
 
+// Evaluate the residual at the current state
+mfem::Vector Solid::currentResidual()
+{
+  mfem::Vector eval(displacement_.trueVec().Size());
+  if (is_quasistatic_) {
+    // The input to the residual is displacment
+    residual_->Mult(displacement_.trueVec(), eval);
+  } else {
+    // Currently the residual constructed uses d2u_dt2 as input,
+    // but this could change
+    residual_->Mult(ode2_.GetState().d2u_dt2, eval);
+  }
+  return eval;
+}
+
+// Get an Operator that computes the gradient (tangent stiffness) at the current internal state
+const mfem::Operator& Solid::currentGradient()
+{
+  if (is_quasistatic_) {
+    // The input to the residual is displacment
+    return residual_->GetGradient(displacement_.trueVec());
+  }
+
+  // Currently the residual constructed uses d2u_dt2 as input,
+  // but this could change
+  return residual_->GetGradient(ode2_.GetState().d2u_dt2);
+}
+
 }  // namespace serac
 
 using serac::DirichletEnforcementMethod;
