@@ -263,9 +263,9 @@ std::unique_ptr<mfem::Operator> NonlinearSolid::buildQuasistaticOperator()
 
       // gradient of residual function
       [this](const mfem::Vector& u) -> mfem::Operator& {
-        auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u));
-        bcs_.eliminateAllEssentialDofsFromMatrix(J);
-        return J;
+        J_mat_ = std::make_unique<mfem::HypreParMatrix>(dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(u)));
+        bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat_);
+        return *J_mat_;
       });
   return residual;
 }
