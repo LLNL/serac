@@ -11,11 +11,11 @@
  * a Lua input file to configure the simulation
  */
 
+#include "serac/physics/thermal_conduction.hpp"
+#include "serac/infrastructure/initialize.hpp"
+#include "serac/infrastructure/terminator.hpp"
+#include "serac/numerics/mesh_utils.hpp"
 #include "serac/serac_config.hpp" // for SERAC_REPO_DIR
-#include "serac/physics/thermal_conduction.hpp" // for serac's thermal conduction module
-#include "serac/infrastructure/initialize.hpp" // for serac::initialize
-#include "serac/infrastructure/terminator.hpp" // for serac::exitGracefully
-#include "serac/numerics/mesh_utils.hpp" // for serac::buildRectangleMesh
 
 const auto input_file = SERAC_REPO_DIR "/examples/simple_conduction/conduction.lua";
 
@@ -23,33 +23,38 @@ int main(int argc, char* argv[])
 {
   /*auto [num_procs, rank] = */serac::initialize(argc, argv);
 
-  // Create DataStore
+  // _inlet_init_start
   axom::sidre::DataStore datastore;
-
-  // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file);
+  // _inlet_init_end
 
+  // _inlet_schema_start
   auto& mesh_schema = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_schema);
 
   auto& thermal_schema = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_schema);
 
-  // The output type (visit, glvis, paraview, etc)
   serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
+  // _inlet_schema_end
 
+  // _inlet_verify_start
   SLIC_ERROR_IF(!inlet.verify(), "Input file contained errors");
+  // _inlet_verify_end
 
   // FIXME: Replace with mesh::build
+  // _create_mesh_start
   auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
   auto mesh = serac::buildRectangleMesh(std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options));
+  // _create_mesh_end
 
+  // _create_module_start
   auto conduction_opts = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
-
   serac::ThermalConduction conduction(mesh, conduction_opts);
-
+  // _create_module_end
+  // _output_type_start
   conduction.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "simple_conduction_with_input_file");
-
+  // _output_type_end
   // Complete the solver setup
   conduction.completeSetup();
   // Output the initial state
