@@ -6,6 +6,32 @@
 #include "detail/meta.h"
 #include "detail/for_constexpr.h"
 
+namespace impl {
+  template < typename T, typename i0_t >
+  constexpr auto get(const T & values, i0_t i0) { return values[i0]; }
+
+  template < typename T, typename i0_t, typename i1_t >
+  constexpr auto get(const T & values, i0_t i0, i1_t i1) { return values[i0][i1]; }
+
+  template < typename T, typename i0_t, typename i1_t, typename i2_t >
+  constexpr auto get(const T & values, i0_t i0, i1_t i1, i2_t i2) { return values[i0][i1][i2]; }
+
+  template < typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t >
+  constexpr auto get(const T & values, i0_t i0, i1_t i1, i2_t i2, i3_t i3) { return values[i0][i1][i2][i3]; }
+
+  template < typename T, typename i0_t >
+  constexpr auto & get(T & values, i0_t i0) { return values[i0]; }
+
+  template < typename T, typename i0_t, typename i1_t >
+  constexpr auto & get(T & values, i0_t i0, i1_t i1) { return values[i0][i1]; }
+
+  template < typename T, typename i0_t, typename i1_t, typename i2_t >
+  constexpr auto & get(T & values, i0_t i0, i1_t i1, i2_t i2) { return values[i0][i1][i2]; }
+
+  template < typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t >
+  constexpr auto & get(T & values, i0_t i0, i1_t i1, i2_t i2, i3_t i3) { return values[i0][i1][i2][i3]; }
+}
+
 template < typename T, int ... n >
 struct tensor;
 
@@ -25,13 +51,13 @@ struct tensor<T, n> {
   using type = T;
   static constexpr int ndim = 1;
   static constexpr int shape[ndim] = {n};
-  template < typename S, typename = std::enable_if_t<std::is_integral<S>::value> > 
-  constexpr auto& operator()(array< S, 1 > i) { return value[i[0]]; } 
-  template < typename S, typename = std::enable_if_t<std::is_integral<S>::value> > 
-  constexpr auto operator()(array< S, 1 > i) const { return value[i[0]]; } 
 
-  constexpr auto& operator()(array< int, ndim > i) { return operator()<int>(i); }
-  constexpr auto operator()(array< int, ndim > i) const { return operator()<int>(i); }
+  template < typename S >
+  constexpr auto & operator()(S i) { return impl::get(value, i); }
+
+  template < typename S >
+  constexpr auto operator()(S i) const { return impl::get(value, i); }
+
   constexpr auto& operator[](int i) { return value[i]; };
   constexpr auto operator[](int i) const { return value[i]; };
   T value[n];
@@ -42,24 +68,12 @@ struct tensor<T, first, rest...> {
   using type = T;
   static constexpr int ndim = 1 + sizeof ... (rest);
   static constexpr int shape[ndim] = {first, rest...};
-  template < typename S, typename = std::enable_if_t<std::is_integral<S>::value> > 
-  constexpr auto& operator()(array< S, ndim > i) { 
-    if constexpr (ndim == 2) { return value[i[0]][i[1]]; } 
-    if constexpr (ndim == 3) { return value[i[0]][i[1]][i[2]]; } 
-    if constexpr (ndim == 4) { return value[i[0]][i[1]][i[2]][i[3]]; } 
-    if constexpr (ndim == 5) { return value[i[0]][i[1]][i[2]][i[3]][i[4]]; } 
-  };
 
-  template < typename S, typename = std::enable_if_t<std::is_integral<S>::value> > 
-  constexpr auto operator()(array< S, ndim > i) const { 
-    if constexpr (ndim == 2) { return value[i[0]][i[1]]; } 
-    if constexpr (ndim == 3) { return value[i[0]][i[1]][i[2]]; } 
-    if constexpr (ndim == 4) { return value[i[0]][i[1]][i[2]][i[3]]; } 
-    if constexpr (ndim == 5) { return value[i[0]][i[1]][i[2]][i[3]][i[4]]; } 
-  };
+  template < typename ... S >
+  constexpr auto & operator()(S ... i) { return impl::get(value, i...); };
 
-  constexpr auto& operator()(array< int, ndim > i) { return operator()<int>(i); }
-  constexpr auto operator()(array< int, ndim > i) const { return operator()<int>(i); }
+  template < typename ... S >
+  constexpr auto operator()(S ... i) const { return impl::get(value, i...); };
 
   constexpr auto& operator[](int i) { return value[i]; };
   constexpr auto operator[](int i) const { return value[i]; };
@@ -103,7 +117,7 @@ template < int ... n, typename lambda_type >
 constexpr auto make_tensor(lambda_type f) {
   using T = typename std::invoke_result_t<lambda_type, impl::always_int<n>...>;
   tensor<T,n...> A{};
-  for_constexpr<n...>([&](auto ... i){ A({i...}) = f(i...); });
+  for_constexpr<n...>([&](auto ... i){ A(i...) = f(i...); });
   return A;
 }
 
@@ -717,8 +731,8 @@ template < int ... n >
 constexpr auto make_dual(tensor< double, n...> A){
   tensor < dual < tensor< double, n... > >, n... > A_dual{};
   for_constexpr<n...>([&](auto ... i){
-    A_dual({i...}).value = A({i...});
-    A_dual({i...}).gradient({i...}) = 1.0;
+    A_dual(i...).value = A(i...);
+    A_dual(i...).gradient(i...) = 1.0;
   });
   return A_dual;
 }

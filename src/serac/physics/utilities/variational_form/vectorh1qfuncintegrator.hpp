@@ -126,8 +126,6 @@ void VectorH1QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vecto
 
       tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
 
-      //std::cout << x << ": " << u_q << " " << du_dx_q << std::endl;
-
       auto args = std::tuple{x, u_q, du_dx_q};
 
       auto [f0, f1] = std::apply(qf, args);
@@ -184,7 +182,6 @@ void VectorH1QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in
     tensor v_local = make_tensor<dim, ndof>([&v, e](int j, int i){ return v(i, j, e); });
 
     tensor <double, ndof, dim> y_local{};
-    //exit(1);
 
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       auto xi = rule.points[q];

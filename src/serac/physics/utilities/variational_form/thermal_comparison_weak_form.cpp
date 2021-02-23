@@ -143,12 +143,12 @@ int main(int argc, char* argv[])
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.Add(VolumeIntegral<>([](){
-    [&](auto x, auto u, auto du) {
+
+  residual.AddVolumeIntegral([&](auto x, auto u, auto du) {
       auto f0 = a * u - (100 * x[0] * x[1]);
       auto f1 = b * du;
       return std::tuple{f0, f1};
-  }, pmesh));
+  }, mesh);
 
   residual.SetEssentialBC(ess_bdr);
 
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
   x2 = 0.0;
   x2.ProjectBdrCoefficient(boundary_func, ess_bdr);
 
-  newton.SetOperator(form);
+  newton.SetOperator(residual);
 
   x2.GetTrueDofs(X2);
   newton.Mult(zero, X2);

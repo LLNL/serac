@@ -2,6 +2,72 @@
 
 #include <iostream>
 
+namespace impl {
+
+  template < typename T1, typename T2 >
+  struct outer_prod;
+
+  template < int ... m, int ... n >
+  struct outer_prod< tensor< double, m ... >, tensor< double, n ... > >{
+    using type = tensor< double, m ..., n ... >;
+  };
+
+  template < int ... n >
+  struct outer_prod< double, tensor< double, n ... > >{
+    using type = tensor< double, n ... >;
+  };
+
+  template < int ... n >
+  struct outer_prod< tensor< double, n ... >, double >{
+    using type = tensor< double, n ... >;
+  };
+
+  template <>
+  struct outer_prod< double, double >{
+    using type = tensor< double >;
+  };
+
+}
+
+template < typename T1, typename T2 >
+using outer_product_t = typename impl::outer_prod<T1, T2>::type;
+
+template < typename T, int ... n >
+void get_grad(tensor< dual< double >, n ... > arg) {
+  tensor< double, n ... > g{};
+  for_constexpr< n ... >([&](auto ... i){
+    g[{i...}] = arg[{i...}].gradient;
+  });
+  return g;
+}
+
+template < typename ... T, int ... n >
+auto get_grad(tensor< dual< std::tuple < T ... > >, n ... > arg) {
+  std::tuple < outer_product_t< tensor< double, n... >, T > ... > g{};
+  for_constexpr< n ... >([&](auto ... i){
+    for_constexpr< sizeof ... (T) >([&](auto j){
+      std::get<j>(g)(i...) = std::get<j>(arg(i...).gradient);
+    });
+  });
+  return g;
+}
+
+template < typename T, int ... n, int ... m >
+auto get_grad(tensor< dual< tensor< double, m ... > >, n ... > arg) {
+  tensor< double, n ..., m... > g{};
+  for_constexpr< n ... >([&](auto ... i){
+    g[{i...}] = arg[{i...}].gradient;
+  });
+  return g;
+}
+
+template < typename ... T >
+auto get_grad(std::tuple < T ... > tuple_of_values) {
+  return std::apply([](auto ... each_value){
+    return std::tuple{get_gradient(each_value) ...};
+  }, tuple_of_values);
+}
+
 int main() {
 
   constexpr auto abs = [](auto x){ return (x < 0) ? -x : x; };
@@ -43,5 +109,11 @@ int main() {
     std::cout << abs(sqnorm(exact_dsigma_dv[i][j] - std::get<1>(stress[i][j].gradient))) << std::endl;
     std::cout << abs(sqnorm(exact_dsigma_dL[i][j] - std::get<2>(stress[i][j].gradient))) << std::endl;
   });
+
+  auto grad = get_grad(stress);
+
+  std::cout << std::get<0>(grad) - exact_dsigma_dp << std::endl;
+  std::cout << std::get<1>(grad) - exact_dsigma_dv << std::endl;
+  std::cout << std::get<2>(grad) - exact_dsigma_dL << std::endl;
 
 }

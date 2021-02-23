@@ -40,15 +40,11 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     return dN;
   }
 
-  template <Evaluation op = Evaluation::Interpolate>
-  static auto evaluate(tensor<double, ndof> /*values*/, double /*xi*/, int /*i*/)
+  static auto evaluate(tensor<double, c, ndof> values, tensor<double, dim> xi)
   {
-    if constexpr (op == Evaluation::Interpolate) {
-      return double{};
-    }
-
-    if constexpr (op == Evaluation::Gradient) {
-      return double{};
-    }
+    return std::tuple {
+      dot(values, shape_functions(xi)),
+      dot(values, shape_function_gradients(xi))
+    };
   }
 };
