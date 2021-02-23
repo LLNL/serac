@@ -24,20 +24,15 @@
  */
 namespace serac {
 /**
- * @brief Constructs an MFEM parallel mesh from a file and refines it
+ * @brief Constructs an MFEM mesh from a file and refines it
  *
- * This opens and reads an external mesh file and constructs a parallel
- * MFEM ParMesh object. The mesh will be refined both serially and
- * in parallel as requested
+ * This opens and reads an external mesh file and constructs a serial
+ * MFEM Mesh object.
  *
  * @param[in] mesh_file The mesh file to open
- * @param[in] refine_serial The number of serial refinements
- * @param[in] refine_parallel The number of parallel refinements
- * @param[in] MPI_Comm The MPI communicator
- * @return A shared_ptr containing the constructed and refined parallel mesh object
+ * @return A shared_ptr containing the serial mesh object
  */
-std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial = 0,
-                                                 const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file);
 
 /**
  * @brief Constructs a 2D MFEM mesh of a unit disk, centered at the origin
@@ -145,7 +140,8 @@ struct FileInputOptions {
    **/
   static void defineInputFileSchema(axom::inlet::Table& table);
 
-  std::string relative_mesh_file_name;
+  std::string         relative_mesh_file_name;
+  mutable std::string absolute_mesh_file_name{};
 };
 
 struct GenerateInputOptions {
@@ -175,28 +171,30 @@ struct InputOptions {
   int par_ref_levels;
 };
 
+/**
+ * @brief Constructs an MFEM parallel mesh from a set of input options
+ *
+ * @param[in] options The options used to construct the mesh
+ * @param[in] comm The MPI communicator to use with the parallel mesh
+ *
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> build(const InputOptions& options, const MPI_Comm comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Finalizes a serial mesh into a refined parallel mesh
+ *
+ * @param[in] serial_mesh The "base" serial mesh
+ * @param[in] refine_serial The number of serial refinements
+ * @param[in] refine_parallel The number of parallel refinements
+ * @param[in] MPI_Comm The MPI communicator
+ *
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> finalize(mfem::Mesh& serial_mesh, const int refine_serial = 0,
+                                        const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD);
+
 }  // namespace mesh
-
-/**
- * @brief Constructs a 3D MFEM mesh of a cuboid
- *
- * @param[in] extra_options Cuboid Mesh Options
- * @param[in] MPI_Comm MPI Communicator
- * @return A shared_ptr containing the constructed mesh
- */
-std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions& options,
-                                               const MPI_Comm                     comm = MPI_COMM_WORLD);
-
-/**
- * @brief Constructs a 2D MFEM mesh of a rectangle
- *
- * @param[in] extra_options Rectangle Mesh Options
- * @param[in] MPI_Comm MPI Communicator
- * @return A shared_ptr containing the constructed mesh
- */
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOptions& options,
-                                                  const MPI_Comm                     comm = MPI_COMM_WORLD);
-
 }  // namespace serac
 
 // Prototype the specialization

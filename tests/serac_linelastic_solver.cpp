@@ -23,7 +23,7 @@ TEST(elastic_solver, static_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-quad.mesh";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  auto pmesh = mesh::finalize(*buildMeshFromFile(mesh_file), 1, 0);
 
   IterativeSolverOptions default_quasistatic = {.rel_tol     = 1.0e-4,
                                                 .abs_tol     = 1.0e-10,

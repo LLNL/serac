@@ -49,11 +49,11 @@ protected:
     // Integration test parameters
     inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
-    auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+    auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
     serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
     // Physics
-    auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+    auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
     // FIXME: Remove once Inlet's "contains" logic improvements are merged
     serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
     // get gravity parameter for this problem
@@ -65,16 +65,15 @@ protected:
     }
 
     // Build Mesh
-    auto       mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-    const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
-    auto       pmesh        = serac::buildRectangleMesh(*rect_options);
+    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    auto pmesh        = serac::mesh::build(mesh_options);
 
     // Define the solid solver object
     auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
 
     // We only want to add these boundary conditions if we've defined boundary_conds for the serac_newmark_beta test
     if (inlet["nonlinear_solid"].contains("boundary_conds")) {
-      int                       ne = rect_options->elements[0];
+      int ne = std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options).elements[0];
       mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
 
       mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);

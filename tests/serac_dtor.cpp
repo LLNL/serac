@@ -26,7 +26,7 @@ TEST(serac_dtor, test1)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  auto pmesh = mesh::finalize(*buildMeshFromFile(mesh_file), 1, 0);
 
   // Initialize the second order thermal solver on the parallel mesh
   auto therm_solver = std::make_unique<ThermalConduction>(2, pmesh, ThermalConduction::defaultQuasistaticOptions());
