@@ -74,32 +74,6 @@ public:
    */
   virtual void evalTangentStiffness(const mfem::DenseMatrix& du_dX, serac::mfem_ext::Array4D<double>& C) const = 0;
 
-  /**
-   * @brief Calculate the deformation gradient from the displacement gradient (F = H + I)
-   *
-   * @param[in] du_dX the displacement gradient (du_dX)
-   * @param[out] F the deformation gradient (dx_dX)
-   */
-  static void calcDeformationGradient(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& F);
-
-  /**
-   * @brief Calculate the linearized strain tensor (epsilon = 1/2 * (du_dX + du_dX^T))
-   *
-   * @param[in] du_dX the displacement gradient (du_dX)
-   * @param[out] epsilon the linearized strain tensor epsilon = 1/2 * (du_dX + du_dX^T)
-   */
-  static void calcLinearizedStrain(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& epsilon);
-
-  /**
-   * @brief Calculate the Cauchy stress from the PK1 stress
-   *
-   * @param[in] F the deformation gradient dx_dX
-   * @param[in] P the first Piola-Kirchoff stress tensor
-   * @param[out] sigma the Cauchy stress tensor
-   */
-  static void calcCauchyStressFromPK1Stress(const mfem::DenseMatrix& F, const mfem::DenseMatrix& P,
-                                            mfem::DenseMatrix& sigma);
-
 protected:
   /**
    * @brief Reference element to stree-free configuration (target) transformation

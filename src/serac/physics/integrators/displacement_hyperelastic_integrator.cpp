@@ -9,6 +9,7 @@
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/array_4D.hpp"
+#include "serac/physics/utilities/physics_utils.hpp"
 
 namespace serac::mfem_ext {
 
@@ -28,7 +29,7 @@ void DisplacementHyperelasticIntegrator::CalcKinematics(const mfem::FiniteElemen
   // Calculate the displacement gradient using the current DOFs
   MultAtB(input_state_matrix_, dN_dX_, du_dX_);
 
-  HyperelasticMaterial::calcDeformationGradient(du_dX_, F_);
+  solid_util::calcDeformationGradient(du_dX_, F_);
 
   // Calculate the inverse of the deformation gradient
   mfem::CalcInverse(F_, Finv_);

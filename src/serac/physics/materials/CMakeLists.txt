@@ -15,6 +15,7 @@ set(materials_headers
 set(materials_depends
     serac_infrastructure
     serac_numerics
+    serac_physics_utilities
     )
 
 blt_add_library(
