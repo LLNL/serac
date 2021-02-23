@@ -35,7 +35,31 @@ int main(int argc, char* argv[])
   auto& thermal_schema = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_schema);
 
-  auto mesh = serac::buildRectangleMesh(10, 10);
+  // The output type (visit, glvis, paraview, etc)
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
+
+  SLIC_ERROR_IF(!inlet.verify(), "Input file contained errors");
+
+  // FIXME: Replace with mesh::build
+  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  auto mesh = serac::buildRectangleMesh(std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options));
+
+  auto conduction_opts = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
+
+  serac::ThermalConduction conduction(mesh, conduction_opts);
+
+  conduction.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "simple_conduction_with_input_file");
+
+  // Complete the solver setup
+  conduction.completeSetup();
+  // Output the initial state
+  conduction.outputState();
+
+  double dt; // Unused for steady-state simulations
+  conduction.advanceTimestep(dt);
+
+  // Output the final state
+  conduction.outputState();
 
   serac::exitGracefully();
 }
