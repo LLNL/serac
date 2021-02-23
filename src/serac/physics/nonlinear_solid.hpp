@@ -23,8 +23,6 @@
 
 namespace serac {
 
-class NonlinearSolid;
-
 /**
  * @brief The nonlinear solid solver class
  *
