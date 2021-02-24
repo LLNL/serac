@@ -42,10 +42,16 @@ int main(int argc, char* argv[])
   conduction.setConductivity(std::move(kappa_coef));
   // _conductivity_end
   // _bc_start
-  const std::set<int> boundary_attributes = {1};
-  constexpr double boundary_value = 1.0;
-  auto boundary_coef = std::make_unique<mfem::ConstantCoefficient>(boundary_value);
-  conduction.setTemperatureBCs(boundary_attributes, std::move(boundary_coef));
+  const std::set<int> boundary_constant_attributes = {1};
+  constexpr double boundary_constant = 1.0;
+  auto boundary_constant_coef = std::make_unique<mfem::ConstantCoefficient>(boundary_constant);
+  conduction.setTemperatureBCs(boundary_constant_attributes, std::move(boundary_constant_coef));
+
+  const std::set<int> boundary_function_attributes = {2, 3};
+  auto boundary_function_coef = std::make_unique<mfem::FunctionCoefficient>([](const mfem::Vector& vec){
+    return vec[0] * vec[0] + vec[1] - 1;
+  });
+  conduction.setTemperatureBCs(boundary_function_attributes, std::move(boundary_function_coef));
   // _bc_end
 
   // _output_type_start

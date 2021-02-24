@@ -202,9 +202,12 @@ Using Lua
 Setting Thermal (Dirichlet) Boundary Conditions
 -----------------------------------------------
 
-The following snippets add a Dirichlet boundary condition that constrains the temperature to 1.0 at boundary
-attribute 1, which for this mesh corresponds to the side of the square mesh along the x-axis, i.e., the "bottom"
-of the mesh.
+The following snippets add two Dirichlet boundary conditions:
+
+- One that constrains the temperature to 1.0 at boundary attribute 1, which for this mesh corresponds
+  to the side of the square mesh along the x-axis, i.e., the "bottom" of the mesh.
+- One that constrains the temperature to :math:`x^2 + y - 1` at boundary attributes 2 and 3, which for
+  this mesh correspond to the right side and top of the mesh, respectively.
 
 Using C++
 """""""""
@@ -221,6 +224,10 @@ Using Lua
    :start-after: _bc_start
    :end-before: _bc_end
    :language: Lua
+
+.. note::
+  The exact names here are not critical, any entry whose name contains the string ``temperature``
+  will be applied as a Dirichlet condition to the temperature field.
 
 Setting Output Type
 -------------------
@@ -273,7 +280,7 @@ This should produce the following initial state:
 
 .. image:: initial_cond_state.png
 
-Note the bottom of the mesh where the boundary condition was applied.
+Note the areas of the mesh where the boundary conditions were applied.
 
 The final (steady-state) solution should look like the following:
 
