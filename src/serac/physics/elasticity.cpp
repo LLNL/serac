@@ -128,4 +128,8 @@ void Elasticity::QuasiStaticSolve()
 
 Elasticity::~Elasticity() {}
 
+// Gradient operator
+
+const mfem::Operator& Elasticity::currentGradient() { return *K_mat_; }
+
 }  // namespace serac

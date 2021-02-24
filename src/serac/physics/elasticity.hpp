@@ -91,6 +91,14 @@ public:
    */
   virtual ~Elasticity();
 
+  /**
+   * Get the current gradient MFEM operator
+   *
+   * Note:  This is for expert users only, changing any values inside of the returned data structures can have drastic
+   *and unrecoverable runtime consequences.
+   **/
+  const mfem::Operator& currentGradient();
+
 protected:
   /**
    * @brief Displacement field
