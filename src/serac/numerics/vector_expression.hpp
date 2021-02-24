@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -11,8 +11,7 @@
  * on vectors
  */
 
-#ifndef VECTOR_EXPRESSION
-#define VECTOR_EXPRESSION
+#pragma once
 
 #include "mfem.hpp"
 
@@ -30,12 +29,12 @@ public:
    * expression at index @p i
    * @param i The index to evaluate at
    */
-  double operator[](size_t i) const { return asDerived()[i]; }
+  double operator[](int i) const { return asDerived()[i]; }
 
   /**
    * @brief Returns the size of the vector expression
    */
-  size_t Size() const { return asDerived().Size(); }
+  int Size() const { return asDerived().Size(); }
 
   /**
    * @brief Implicit conversion operator for fully evaluating
@@ -45,7 +44,7 @@ public:
   operator mfem::Vector() const
   {
     mfem::Vector result(Size());
-    for (size_t i = 0; i < Size(); i++) {
+    for (int i = 0; i < Size(); i++) {
       result[i] = (*this)[i];
     }
     return result;
@@ -86,55 +85,12 @@ mfem::Vector evaluate(const VectorExpr<T>& expr)
 template <typename T>
 void evaluate(const VectorExpr<T>& expr, mfem::Vector& result)
 {
-  SLIC_ERROR_IF(expr.Size() != static_cast<std::size_t>(result.Size()),
-                "Vector sizes in expression assignment must be equal");
+  SLIC_ERROR_IF(expr.Size() != result.Size(), "Vector sizes in expression assignment must be equal");
   // Get the underlying array for indexing compatibility with mfem::HypreParVector
   double* result_arr = result;
-  for (size_t i = 0; i < expr.Size(); i++) {
+  for (int i = 0; i < expr.Size(); i++) {
     result_arr[i] = expr[i];
   }
 }
 
-/**
- * @brief Fully evaluates a vector expression into an actual mfem::Vector
- * @param expr The expression to evaluate
- * @param vec The vector to populate with the expression result
- * @param comm The MPI_Comm to use for parallel evaluation
- * @note The performance in a release build is comparable to the serial
- * implementation, though because this populates the vector on all ranks
- * the cost of the data copies may exceed any parallelization benefit
- * for the actual calculation
- */
-template <typename T>
-void evaluate(const VectorExpr<T>& expr, mfem::Vector& result, MPI_Comm comm)
-{
-  const auto SIZE = expr.Size();
-  SLIC_ERROR_IF(SIZE != static_cast<std::size_t>(result.Size()), "Vector sizes in expression assignment must be equal");
-  int num_procs = 0;
-  int rank      = 0;
-  MPI_Comm_size(comm, &num_procs);
-  MPI_Comm_rank(comm, &rank);
-
-  double* result_arr = result;
-
-  // If the array size is not divisible by # elements, add one
-  const long long per_proc = (SIZE / num_procs) + ((SIZE % num_procs != 0) ? 1 : 0);
-
-  // Truncate the number of elements for the last process
-  const long long n_entries = (rank == num_procs - 1) ? SIZE - ((num_procs - 1) * per_proc) : per_proc;
-
-  // Fill in this rank's segment of the vector
-  for (long long i = 0; i < n_entries; i++) {
-    result_arr[i + (per_proc * rank)] = expr[i + (per_proc * rank)];
-  }
-
-  // Transmit each segment of the vector to all the other processes
-  for (int i = 0; i < num_procs; i++) {
-    const long long n_ele = (i == num_procs - 1) ? SIZE - ((num_procs - 1) * per_proc) : per_proc;
-    MPI_Bcast(&result_arr[per_proc * i], n_ele, MPI_DOUBLE, i, comm);
-  }
-}
-
 }  // namespace serac
-
-#endif

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -6,7 +6,7 @@
 
 #include "serac/integrators/hyperelastic_traction_integrator.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 void HyperelasticTractionIntegrator::AssembleFaceVector(const mfem::FiniteElement& el1, const mfem::FiniteElement&,
                                                         mfem::FaceElementTransformations& Tr, const mfem::Vector& elfun,
@@ -103,4 +103,4 @@ void HyperelasticTractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement&
   }
 }
 
-}  // namespace serac
+}  // namespace serac::mfem_ext

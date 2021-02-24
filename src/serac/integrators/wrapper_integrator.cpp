@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -6,7 +6,7 @@
 
 #include "serac/integrators/wrapper_integrator.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 LinearToNonlinearFormIntegrator::LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator>  f,
                                                                  std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes)
@@ -104,4 +104,4 @@ void TransformedNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteE
   elmat = transformed_function_grad_(el, Tr, elmat);
 }
 
-}  // namespace serac
+}  // namespace serac::mfem_ext

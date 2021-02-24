@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -7,12 +7,11 @@
 #include "serac/infrastructure/cli.hpp"
 
 #include "CLI11/CLI11.hpp"
+
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac {
-
-namespace cli {
+namespace serac::cli {
 
 //------- Command Line Interface -------
 
@@ -23,6 +22,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   CLI::App    app{app_description};
   std::string input_file_path;
   app.add_option("-i, --input_file", input_file_path, "Input file to use.")->required()->check(CLI::ExistingFile);
+  bool create_input_file_docs{false};
+  app.add_flag("-d, --create-input-file-docs", create_input_file_docs,
+               "Writes Sphinx documentation for input file, then exits");
 
   // Parse the arguments and check if they are good
   try {
@@ -42,6 +44,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   // Store found values
   std::unordered_map<std::string, std::string> cli_opts;
   cli_opts.insert({std::string("input_file"), input_file_path});
+  if (create_input_file_docs) {
+    cli_opts.insert({"create_input_file_docs", {}});
+  }
 
   return cli_opts;
 }
@@ -62,5 +67,4 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank
   serac::logger::flush();
 }
 
-}  // namespace cli
-}  // namespace serac
+}  // namespace serac::cli

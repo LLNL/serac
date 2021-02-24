@@ -1,17 +1,18 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
+#include "serac/physics/thermal_solid.hpp"
 
 #include <fstream>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
+
 #include "serac/coefficients/coefficient_extensions.hpp"
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/thermal_solid.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -39,11 +40,11 @@ TEST(dynamic_solver, dyn_solve)
       std::make_shared<mfem::VectorFunctionCoefficient>(dim, [](const mfem::Vector&, mfem::Vector& v) { v = 0.0; });
 
   auto temp = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) {
-    double temp = 2.0;
+    double t = 2.0;
     if (x(0) < 1.0) {
-      temp = 5.0;
+      t = 5.0;
     }
-    return temp;
+    return t;
   });
 
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
@@ -96,7 +97,7 @@ TEST(dynamic_solver, dyn_solve)
   double scale  = 1.0;
 
   auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature().gridFunc());
-  auto visc_coef    = std::make_unique<TransformedScalarCoefficient>(
+  auto visc_coef    = std::make_unique<mfem_ext::TransformedScalarCoefficient>(
       temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
   ts_solver.SetViscosity(std::move(visc_coef));
 
@@ -145,6 +146,9 @@ TEST(dynamic_solver, dyn_solve)
 
 }  // namespace serac
 
+//------------------------------------------------------------------------------
+#include "axom/slic/core/SimpleLogger.hpp"
+
 int main(int argc, char* argv[])
 {
   int result = 0;
@@ -152,6 +156,9 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
 
   result = RUN_ALL_TESTS();
 

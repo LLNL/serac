@@ -1,14 +1,14 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <benchmark/benchmark.h>
+#include "serac/numerics/expr_template_ops.hpp"
 
 #include <utility>
 
-#include "numerics/expr_template_ops.hpp"
+#include <benchmark/benchmark.h>
 
 static std::pair<mfem::Vector, mfem::Vector> sample_vectors(const int entries)
 {
@@ -62,7 +62,7 @@ static void BM_mixed_expr_MFEM(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   // Arbitrary
@@ -92,7 +92,7 @@ static void BM_mixed_expr_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   // Arbitrary
@@ -115,7 +115,7 @@ static void BM_mixed_expr_single_alloc_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   // Arbitrary
@@ -138,10 +138,8 @@ static void BM_large_expr_MFEM(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
-
-  mfem::Vector mfem_result(rows);
 
   for (auto _ : state) {
     // This code gets timed
@@ -169,7 +167,7 @@ static void BM_large_expr_single_alloc_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   mfem::Vector expr_result(rows);
@@ -182,31 +180,12 @@ static void BM_large_expr_single_alloc_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-static void BM_large_expr_single_alloc_par_EXPR(benchmark::State& state)
-{
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  // Number of rows is the argument that varies
-  const int rows  = state.range(0);
-  auto [lhs, rhs] = sample_vectors(rows);
-
-  mfem::Vector expr_result(rows);
-
-  for (auto _ : state) {
-    // This code gets timed
-    evaluate(lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs + lhs + rhs, expr_result,
-             MPI_COMM_WORLD);
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-
 static void BM_large_expr_single_alloc_hypre_par_EXPR(benchmark::State& state)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   auto [partitioning, start] = build_partitioning(MPI_COMM_WORLD, rows);
@@ -231,7 +210,6 @@ BENCHMARK(BM_large_expr_MFEM)->RangeMultiplier(2)->Range(10, 10 << 10);
 BENCHMARK(BM_large_expr_single_alloc_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
 
 // Too slow
-BENCHMARK(BM_large_expr_single_alloc_par_EXPR)->RangeMultiplier(2)->Range(10, 10 << 5);
 BENCHMARK(BM_large_expr_single_alloc_hypre_par_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
 
 //------------------------------------------------------------------------------

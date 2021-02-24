@@ -10,12 +10,12 @@
  * @brief The solver object for finite deformation hyperelasticity
  */
 
-#ifndef NONLIN_SOLID
-#define NONLIN_SOLID
+#pragma once
 
 #include <optional>
 
 #include "mfem.hpp"
+
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/operators/odes.hpp"
@@ -68,6 +68,8 @@ public:
     double mu;
     double K;
 
+    double viscosity;
+
     // Boundary condition information
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 
@@ -119,7 +121,14 @@ public:
    * @param[in] component The component to apply the traction on
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      int component = -1);
+                      std::optional<int> component = {});
+
+  /**
+   * @brief Add body force vectors on the domain
+   *
+   * @param[in] ext_force_coef Add a vector-valued external force coefficient applied to the domain
+   */
+  void addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef);
 
   /**
    * @brief Set the viscosity coefficient
@@ -184,6 +193,23 @@ public:
    */
   virtual ~NonlinearSolid();
 
+  /**
+   * @brief Compute the current residual vector at the current internal state value
+   *
+   * @note This is of length true degrees of freedom, i.e. the length of the underlying mfem::HypreParVector (true_vec)
+   */
+  mfem::Vector currentResidual();
+
+  /**
+   * Get the current gradient (tangent stiffness) MFEM operator at the current internal state value
+   *
+   * @note This is of size true degrees of freedom x true degrees of freedom, i.e. the length of the underlying
+   *mfem::HypreParVector (true_vec)
+   * @note This is for expert users only, changing any values inside of the returned data structures can have drastic
+   *and unrecoverable runtime consequences.
+   **/
+  const mfem::Operator& currentGradient();
+
 protected:
   /**
    * @brief Extensible means of constructing the nonlinear quasistatic
@@ -212,11 +238,6 @@ protected:
    * @brief The quasi-static operator for use with the MFEM newton solvers
    */
   std::unique_ptr<mfem::Operator> residual_;
-
-  /**
-   * @brief The time dependent operator for use with the MFEM ODE solvers
-   */
-  std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
 
   /**
    * @brief The viscosity coefficient
@@ -269,6 +290,11 @@ protected:
   std::unique_ptr<mfem::ParNonlinearForm> H_;
 
   /**
+   * @brief external force coefficents
+   */
+  std::vector<std::shared_ptr<mfem::VectorCoefficient>> ext_force_coefs_;
+
+  /**
    * @brief zero vector of the appropriate dimensions
    */
   mfem::Vector zero_;
@@ -276,12 +302,12 @@ protected:
   /**
    * @brief Nonlinear system solver instance
    */
-  EquationSolver nonlin_solver_;
+  mfem_ext::EquationSolver nonlin_solver_;
 
   /**
    * @brief the system of ordinary differential equations for the physics module
    */
-  SecondOrderODE ode2_;
+  mfem_ext::SecondOrderODE ode2_;
 
   /**
    * @brief alias for the reference mesh coordinates
@@ -316,5 +342,3 @@ template <>
 struct FromInlet<serac::NonlinearSolid::InputOptions> {
   serac::NonlinearSolid::InputOptions operator()(const axom::inlet::Table& base);
 };
-
-#endif

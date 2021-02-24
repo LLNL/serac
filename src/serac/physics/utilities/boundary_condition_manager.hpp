@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -10,8 +10,7 @@
  * @brief This file contains the declaration of the boundary condition manager class
  */
 
-#ifndef BOUNDARY_CONDITION_MANAGER
-#define BOUNDARY_CONDITION_MANAGER
+#pragma once
 
 #include <memory>
 #include <set>
@@ -147,7 +146,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, FiniteElementState& state,
-                    const int component = -1);
+                    const std::optional<int> component = {});
 
   /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
@@ -156,7 +155,8 @@ public:
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, const int component = -1);
+  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
+                  const std::optional<int> component = {});
 
   /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
@@ -170,7 +170,7 @@ public:
    */
   template <typename Tag>
   void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, const Tag tag,
-                  const int component = -1)
+                  const std::optional<int> component = {})
   {
     other_bdr_.emplace_back(bdr_coef, component, bdr_attr, num_attrs_);
     other_bdr_.back().setTag(tag);
@@ -185,7 +185,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            int component = -1);
+                            std::optional<int> component = {});
 
   /**
    * @brief Returns all the degrees of freedom associated with all the essential BCs
@@ -210,6 +210,15 @@ public:
   {
     return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allEssentialDofs()));
   }
+
+  /**
+   * @brief Sets the time for all stored boundary conditions
+   *
+   * @param[in] time The current simulation time
+   *
+   * Used for time-dependent boundary conditions
+   */
+  void setTime(const double time);
 
   /**
    * @brief Accessor for the essential BC objects
@@ -296,5 +305,3 @@ private:
 };
 
 }  // namespace serac
-
-#endif

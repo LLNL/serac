@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -15,26 +15,28 @@ constexpr int NUM_FIELDS = 1;
 
 Elasticity::Elasticity(int order, std::shared_ptr<mfem::ParMesh> mesh, const LinearSolverOptions& options)
     : BasePhysics(mesh, NUM_FIELDS, order),
-      displacement_(*mesh, FiniteElementState::Options{.order = order, .name = "displacement"})
+      displacement_(
+          *mesh, FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "displacement"})
 {
   mesh->EnsureNodes();
   state_.push_back(displacement_);
 
   // If the user wants the AMG preconditioner with a linear solver, set the pfes to be the displacement
-  const auto& augmented_options = augmentAMGForElasticity(options, displacement_.space());
+  const auto& augmented_options = mfem_ext::AugmentAMGForElasticity(options, displacement_.space());
 
-  K_inv_          = EquationSolver(mesh->GetComm(), augmented_options);
+  K_inv_          = mfem_ext::EquationSolver(mesh->GetComm(), augmented_options);
   is_quasistatic_ = true;
 }
 
 void Elasticity::setDisplacementBCs(const std::set<int>&                     disp_bdr,
-                                    std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef, const int component)
+                                    std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
+                                    const std::optional<int>                 component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
 }
 
 void Elasticity::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                                const int component)
+                                const std::optional<int> component)
 {
   bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
 }
@@ -125,5 +127,9 @@ void Elasticity::QuasiStaticSolve()
 }
 
 Elasticity::~Elasticity() {}
+
+// Gradient operator
+
+const mfem::Operator& Elasticity::currentGradient() { return *K_mat_; }
 
 }  // namespace serac

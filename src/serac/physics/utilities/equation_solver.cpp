@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -9,14 +9,14 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_options,
                                const std::optional<NonlinearSolverOptions>& nonlin_options)
 {
   // If it's an iterative solver, build it and set the preconditioner
   if (auto iter_options = std::get_if<IterativeSolverOptions>(&lin_options)) {
-    lin_solver_ = buildIterativeLinearSolver(comm, *iter_options);
+    lin_solver_ = BuildIterativeLinearSolver(comm, *iter_options);
   }
   // If it's a custom solver, check that the mfem::Solver* is not null
   else if (auto custom = std::get_if<CustomSolverOptions>(&lin_options)) {
@@ -34,7 +34,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
 
   if (nonlin_options) {
-    nonlin_solver_ = buildNewtonSolver(comm, *nonlin_options);
+    nonlin_solver_ = BuildNewtonSolver(comm, *nonlin_options);
   }
 }
 
@@ -110,8 +110,8 @@ private:
 std::ostream& operator<<(std::ostream& out, const JSONTable& table)
 {
   out << "{";
-  std::string indent(table.depth_ * 2, ' ');  // Double-space indenting
-  char        sep = ' ';                      // Start with empty separator to avoid trailing comma
+  std::string indent(static_cast<std::size_t>(table.depth_) * 2, ' ');  // Double-space indenting
+  char        sep = ' ';  // Start with empty separator to avoid trailing comma
   for (const auto& [key, val] : table.literals_) {
     out << sep << "\n" << indent << "\"" << key << "\": ";
     // Strings need to be wrapped in escaped quotes
@@ -201,7 +201,7 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
 #endif
 }  // namespace detail
 
-std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolver(
+std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolver(
     MPI_Comm comm, const IterativeSolverOptions& lin_options)
 {
   std::unique_ptr<mfem::IterativeSolver> iter_lin_solver;
@@ -259,7 +259,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::buildIterativeLinearSolve
   return iter_lin_solver;
 }
 
-std::unique_ptr<mfem::NewtonSolver> EquationSolver::buildNewtonSolver(MPI_Comm                      comm,
+std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNewtonSolver(MPI_Comm                      comm,
                                                                       const NonlinearSolverOptions& nonlin_options)
 {
   std::unique_ptr<mfem::NewtonSolver> newton_solver;
@@ -296,7 +296,7 @@ void EquationSolver::SetOperator(const mfem::Operator& op)
     }
     // Now that the nonlinear solver knows about the operator, we can set its linear solver
     if (!nonlin_solver_set_solver_called_) {
-      nonlin_solver_->SetSolver(linearSolver());
+      nonlin_solver_->SetSolver(LinearSolver());
       nonlin_solver_set_solver_called_ = true;
     }
   } else {
@@ -337,38 +337,38 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   return *superlu_grad_mat_;
 }
 
-void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
+void EquationSolver::DefineInputFileSchema(axom::inlet::Table& table)
 {
-  auto& linear_table =
-      table.addTable("linear", "Linear Equation Solver Parameters")
-          .required()
-          .registerVerifier([](const axom::inlet::Table& table) {
-            // Make sure that the provided options match the desired linear solver type
-            const bool is_iterative =
-                (table["type"].get<std::string>() == "iterative") && table.contains("iterative_options");
-            const bool is_direct = (table["type"].get<std::string>() == "direct") && table.contains("direct_options");
-            return is_iterative || is_direct;
-          });
+  auto& linear_table = table.addStruct("linear", "Linear Equation Solver Parameters")
+                           .required()
+                           .registerVerifier([](const axom::inlet::Table& table_to_verify) {
+                             // Make sure that the provided options match the desired linear solver type
+                             const bool is_iterative = (table_to_verify["type"].get<std::string>() == "iterative") &&
+                                                       table_to_verify.contains("iterative_options");
+                             const bool is_direct = (table_to_verify["type"].get<std::string>() == "direct") &&
+                                                    table_to_verify.contains("direct_options");
+                             return is_iterative || is_direct;
+                           });
 
   // Enforce the solver type - must be iterative or direct
   linear_table.addString("type", "The type of solver parameters to use (iterative|direct)")
       .required()
       .validValues({"iterative", "direct"});
 
-  auto& iterative_table = linear_table.addTable("iterative_options", "Iterative solver parameters");
+  auto& iterative_table = linear_table.addStruct("iterative_options", "Iterative solver parameters");
   iterative_table.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
   iterative_table.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
   iterative_table.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
   iterative_table.addInt("print_level", "Linear print level.").defaultValue(0);
-  iterative_table.addString("solver_type", "Solver type (gmres|minres).").defaultValue("gmres");
+  iterative_table.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
   iterative_table.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
       .defaultValue("JacobiSmoother");
 
-  auto& direct_table = linear_table.addTable("direct_options", "Direct solver parameters");
+  auto& direct_table = linear_table.addStruct("direct_options", "Direct solver parameters");
   direct_table.addInt("print_level", "Linear print level.").defaultValue(0);
 
   // Only needed for nonlinear problems
-  auto& nonlinear_table = table.addTable("nonlinear", "Newton Equation Solver Parameters").required(false);
+  auto& nonlinear_table = table.addStruct("nonlinear", "Newton Equation Solver Parameters").required(false);
   nonlinear_table.addDouble("rel_tol", "Relative tolerance for the Newton solve.").defaultValue(1.0e-2);
   nonlinear_table.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
   nonlinear_table.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
@@ -377,11 +377,11 @@ void EquationSolver::defineInputFileSchema(axom::inlet::Table& table)
       .defaultValue("MFEMNewton");
 }
 
-}  // namespace serac
+}  // namespace serac::mfem_ext
 
-using serac::EquationSolver;
 using serac::LinearSolverOptions;
 using serac::NonlinearSolverOptions;
+using serac::mfem_ext::EquationSolver;
 
 LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet::Table& base)
 {
@@ -399,6 +399,8 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
       iter_options.lin_solver = serac::LinearSolver::GMRES;
     } else if (solver_type == "minres") {
       iter_options.lin_solver = serac::LinearSolver::MINRES;
+    } else if (solver_type == "cg") {
+      iter_options.lin_solver = serac::LinearSolver::CG;
     } else {
       std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
       SLIC_ERROR(msg);
@@ -412,6 +414,8 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
       iter_options.prec = serac::HypreBoomerAMGPrec{};
     } else if (prec_type == "AMGX") {
       iter_options.prec = serac::AMGXPrec{};
+    } else if (prec_type == "L1JacobiAMGX") {
+      iter_options.prec = serac::AMGXPrec{.smoother = serac::AMGXSolver::JACOBI_L1};
     } else if (prec_type == "BlockILU") {
       iter_options.prec = serac::BlockILUPrec{};
     } else {
@@ -450,7 +454,7 @@ NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom:
 EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Table& base)
 {
   auto lin = base["linear"].get<LinearSolverOptions>();
-  if (base.hasTable("nonlinear")) {
+  if (base.contains("nonlinear")) {
     auto nonlin = base["nonlinear"].get<NonlinearSolverOptions>();
     return EquationSolver(MPI_COMM_WORLD, lin, nonlin);
   }

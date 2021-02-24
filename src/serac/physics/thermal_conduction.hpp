@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -10,10 +10,10 @@
  * @brief An object containing the solver for a thermal conduction PDE
  */
 
-#ifndef THERMAL_CONDUCTION
-#define THERMAL_CONDUCTION
+#pragma once
 
 #include "mfem.hpp"
+
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/operators/odes.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
@@ -50,6 +50,33 @@ public:
     std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
+  /**
+   * @brief Stores all information held in the input file that
+   * is used to configure the solver
+   */
+  struct InputOptions {
+    /**
+     * @brief Input file parameters specific to this class
+     *
+     * @param[in] table Inlet's Table that input files will be added to
+     **/
+    static void defineInputFileSchema(axom::inlet::Table& table);
+
+    // The order of the field
+    int           order;
+    SolverOptions solver_options;
+    // Conductivity
+    double kappa;
+    double cp;
+    double rho;
+
+    // Boundary condition information
+    std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
+
+    // Initial conditions for temperature
+    std::optional<input::CoefficientInputOptions> initial_temperature;
+  };
+
   static IterativeSolverOptions defaultLinearOptions()
   {
     return {.rel_tol     = 1.0e-6,
@@ -84,6 +111,14 @@ public:
    * @param[in] options The system solver parameters
    */
   ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options);
+
+  /**
+   * @brief Construct a new Thermal Solver object
+   *
+   * @param[in] mesh The MFEM parallel mesh to solve the PDE on
+   * @param[in] options The solver information parsed from the input file
+   */
+  ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -237,20 +272,20 @@ protected:
    * @brief mfem::Operator that describes the weight residual
    * and its gradient with respect to temperature
    */
-  StdFunctionOperator residual_;
+  mfem_ext::StdFunctionOperator residual_;
 
   /**
    * @brief the ordinary differential equation that describes
    * how to solve for the time derivative of temperature, given
    * the current temperature and source terms
    */
-  FirstOrderODE ode_;
+  mfem_ext::FirstOrderODE ode_;
 
   /**
    * @brief the specific methods and tolerances specified to
    * solve the nonlinear residual equations
    */
-  EquationSolver nonlin_solver_;
+  mfem_ext::EquationSolver nonlin_solver_;
 
   /**
    * @brief assembled sparse matrix for the Jacobian
@@ -275,4 +310,7 @@ protected:
 
 }  // namespace serac
 
-#endif
+template <>
+struct FromInlet<serac::ThermalConduction::InputOptions> {
+  serac::ThermalConduction::InputOptions operator()(const axom::inlet::Table& base);
+};

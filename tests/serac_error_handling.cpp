@@ -1,12 +1,12 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
-
 #include <exception>
+
+#include <gtest/gtest.h>
 
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
@@ -20,6 +20,8 @@ class SlicErrorException : public std::exception {
 };
 
 namespace serac {
+
+using mfem_ext::EquationSolver;
 
 TEST(serac_error_handling, equationsolver_bad_lin_solver)
 {
@@ -103,7 +105,7 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
 {
   mfem::Vector      vec;
   auto              coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
-  BoundaryCondition bc(coef, -1, std::set<int>{});
+  BoundaryCondition bc(coef, {}, std::set<int>{});
   EXPECT_NO_THROW(bc.vectorCoefficient());
   EXPECT_THROW(bc.scalarCoefficient(), SlicErrorException);
 
@@ -139,8 +141,7 @@ TEST(serac_error_handling, nonexistent_mesh_path)
 }  // namespace serac
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -150,8 +151,8 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when
-                          // exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
   axom::slic::setAbortFunction([]() { throw SlicErrorException{}; });
   axom::slic::setAbortOnError(true);
   axom::slic::setAbortOnWarning(false);

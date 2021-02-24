@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -10,10 +10,10 @@
  * @brief A solver for the steady state solution of a linear elasticity PDE
  */
 
-#ifndef LINEAR_ELASTICITY
-#define LINEAR_ELASTICITY
+#pragma once
 
 #include "mfem.hpp"
+
 #include "serac/physics/base_physics.hpp"
 
 namespace serac {
@@ -48,7 +48,7 @@ public:
    * @param[in] component Component to set (-1 indicates all components)
    */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
-                          const int component = -1);
+                          const std::optional<int> component = {});
 
   /**
    * @brief Set the vector-valued natural traction boundary conditions
@@ -58,7 +58,7 @@ public:
    * @param[in] component Component to set (-1 indicates all components)
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      const int component = -1);
+                      const std::optional<int> component = {});
 
   /**
    * @brief Driver for advancing the timestep
@@ -91,6 +91,14 @@ public:
    * @brief The destructor
    */
   virtual ~Elasticity();
+
+  /**
+   * Get the current gradient MFEM operator
+   *
+   * Note:  This is for expert users only, changing any values inside of the returned data structures can have drastic
+   *and unrecoverable runtime consequences.
+   **/
+  const mfem::Operator& currentGradient();
 
 protected:
   /**
@@ -126,7 +134,7 @@ protected:
   /**
    * @brief System solver instance for quasistatic K solver
    */
-  EquationSolver K_inv_;
+  mfem_ext::EquationSolver K_inv_;
 
   /**
    * @brief Lame mu elasticity parameter
@@ -150,5 +158,3 @@ protected:
 };
 
 }  // namespace serac
-
-#endif

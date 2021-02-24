@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -11,17 +11,14 @@
  *        for logging as well as a helper function to exit the program gracefully.
  */
 
-#ifndef SERAC_LOGGER
-#define SERAC_LOGGER
+#pragma once
 
 #include "axom/slic.hpp"
 #include "fmt/fmt.hpp"
 #include "mpi.h"
 
-namespace serac {
-
 // Logger functionality
-namespace logger {
+namespace serac::logger {
 /**
  * @brief Initializes and setups the logger.
  *
@@ -50,8 +47,7 @@ void finalize();
  */
 void flush();
 
-}  // namespace logger
-}  // namespace serac
+}  // namespace serac::logger
 
 // Utility SLIC macros
 
@@ -94,5 +90,3 @@ void flush();
  * @brief Macro that logs given debug message only on rank 0 if EXP is true.
  */
 #define SLIC_DEBUG_ROOT_IF(EXP, rank, msg) SLIC_DEBUG_IF((EXP) && (rank == 0), msg)
-
-#endif

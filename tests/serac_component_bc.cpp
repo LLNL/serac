@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -7,8 +7,8 @@
 #include "serac/physics/nonlinear_solid.hpp"
 
 #include <fstream>
-#include <gtest/gtest.h>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
 
 #include "serac/coefficients/coefficient_extensions.hpp"
@@ -24,7 +24,7 @@ TEST(nonlinear_solid_solver, qs_attribute_solve)
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_attribute_solve.lua";
-  test_utils::runNonlinSolidTest(input_file_path);
+  test_utils::runModuleTest<NonlinearSolid>(input_file_path);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -40,12 +40,15 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  test_utils::defineNonlinSolidInputFileSchema(inlet);
+  test_utils::defineTestSchema<NonlinearSolid>(inlet);
 
   // Build the mesh
-  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
-  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  std::shared_ptr<mfem::ParMesh> mesh;
+  auto                           mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+    auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file_path);
+    mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  }
 
   // Define the solid solver object
   auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
@@ -54,8 +57,8 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   int dim = mesh->Dimension();
 
   // define the displacement vector
-  const auto& disp_bc   = solid_solver_options.boundary_conditions.at("displacement");
-  auto        disp_coef = std::make_shared<mfem::FunctionCoefficient>(disp_bc.coef_opts.constructScalar());
+  const auto&                        disp_bc = solid_solver_options.boundary_conditions.at("displacement");
+  std::shared_ptr<mfem::Coefficient> disp_coef(disp_bc.coef_opts.constructScalar());
 
   // Create an indicator function to set all vertices that are x=0
   mfem::VectorFunctionCoefficient zero_bc(dim, [](const mfem::Vector& x, mfem::Vector& X) {
@@ -66,9 +69,9 @@ TEST(nonlinear_solid_solver, qs_component_solve)
       }
   });
 
-  mfem::Array<int> ess_corner_bc_list = makeTrueEssList(solid_solver.displacement().space(), zero_bc);
+  mfem::Array<int> ess_corner_bc_list = mfem_ext::MakeTrueEssList(solid_solver.displacement().space(), zero_bc);
 
-  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, disp_bc.coef_opts.component);
+  solid_solver.setTrueDofs(ess_corner_bc_list, disp_coef, *disp_bc.coef_opts.component);
 
   // Setup glvis output
   solid_solver.initializeOutput(serac::OutputType::GLVis, "component_bc");
@@ -97,8 +100,7 @@ TEST(nonlinear_solid_solver, qs_component_solve)
 }  // namespace serac
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -108,7 +110,7 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
 
   result = RUN_ALL_TESTS();
 

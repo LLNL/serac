@@ -67,7 +67,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Serac'
-copyright = u'2019-2020, Lawrence Livermore National Security, LLNS'
+copyright = u'2019-2021, Lawrence Livermore National Security, LLNS'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -158,7 +158,13 @@ else:
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
+html_static_path = ['_static']
+
+html_context = {
+    'css_files': [
+        '_static/theme_overrides.css',  # override wide tables in RTD theme
+        ],
+     }
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -222,7 +228,7 @@ latex_elements = {
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
   ('index', 'Serac.tex', u'Serac Documentation',
-   u'2019-2020, Lawrence Livermore National Security, LLNS', 'manual'),
+   u'2019-2021, Lawrence Livermore National Security, LLNS', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -252,7 +258,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'serac', u'Serac Documentation',
-     [u'2019-2020, Lawrence Livermore National Security, LLNS'], 1)
+     [u'2019-2021, Lawrence Livermore National Security, LLNS'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -266,7 +272,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'Serac', u'Serac Documentation',
-   u'2019-2020, Lawrence Livermore National Security, LLNS', 'Serac', 'One line description of project.',
+   u'2019-2021, Lawrence Livermore National Security, LLNS', 'Serac', 'One line description of project.',
    'Miscellaneous'),
 ]
 

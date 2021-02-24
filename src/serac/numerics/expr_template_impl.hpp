@@ -1,18 +1,17 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * \@file expr_templates_internal.hpp
+ * \@file expr_templates_impl.hpp
  *
  * @brief The internal implementation for a set of template classes used to
  * represent the evaluation of unary and binary operations on vectors
  */
 
-#ifndef EXPR_TEMPLATES_INTERNAL
-#define EXPR_TEMPLATES_INTERNAL
+#pragma once
 
 #include <functional>
 #include <type_traits>
@@ -21,7 +20,7 @@
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/vector_expression.hpp"
 
-namespace serac::internal {
+namespace serac::detail {
 
 /**
  * @brief Determines whether a given type should be owned by a vector expression
@@ -54,6 +53,13 @@ template <typename vec>
 using vec_arg_t = typename std::conditional_t<owns_v<vec>, std::decay_t<vec>&&, const vec&>;
 
 /**
+ * @brief A utility for conditionally enabling templates if a given type
+ * is an mfem::Vector (including by inheritance)
+ */
+template <typename MFEMVec>
+using enable_if_mfem_vec = std::enable_if_t<std::is_base_of_v<mfem::Vector, std::decay_t<MFEMVec>>>;
+
+/**
  * @brief Wraps the indexing of a vector type
  * @param[in] v The vector to index
  * @param[in] idx The offset of the indexing
@@ -64,7 +70,7 @@ using vec_arg_t = typename std::conditional_t<owns_v<vec>, std::decay_t<vec>&&, 
  * types on which pointer arithmetic can be performed.
  */
 template <typename vec>
-auto index(vec&& v, const std::size_t idx)
+auto index(vec&& v, const int idx)
 {
   if constexpr (std::is_same_v<std::decay_t<vec>, mfem::HypreParVector>) {
     return static_cast<const double*>(v)[idx];
@@ -72,6 +78,8 @@ auto index(vec&& v, const std::size_t idx)
     return v[idx];
   }
 }
+
+using serac::VectorExpr;
 
 /**
  * @brief Derived VectorExpr class for representing the application of a unary
@@ -95,11 +103,11 @@ public:
    * expression at index @p i
    * @param i The index to evaluate at
    */
-  double operator[](size_t i) const { return op_(index(v_, i)); }
+  double operator[](int i) const { return op_(index(v_, i)); }
   /**
    * @brief Returns the size of the vector expression
    */
-  size_t Size() const { return v_.Size(); }
+  int Size() const { return v_.Size(); }
 
 private:
   const vec_t<vec> v_;
@@ -182,20 +190,19 @@ public:
   BinaryVectorExpr(vec_arg_t<lhs> u, vec_arg_t<rhs> v)
       : u_(std::forward<vec_t<lhs>>(u)), v_(std::forward<vec_t<rhs>>(v))
   {
-    // MFEM uses int to represent a size type, so cast to size_t for consistency
-    SLIC_ERROR_IF(static_cast<std::size_t>(u_.Size()) != static_cast<std::size_t>(v_.Size()),
-                  "Vector sizes in binary operation must be equal");
+    // MFEM uses int to represent a size type, so cast to int for consistency
+    SLIC_ERROR_IF(u_.Size() != v_.Size(), "Vector sizes in binary operation must be equal");
   }
   /**
    * @brief Returns the fully evaluated value for the vector
    * expression at index @p i
    * @param i The index to evaluate at
    */
-  double operator[](size_t i) const { return op_(index(u_, i), index(v_, i)); }
+  double operator[](int i) const { return op_(index(u_, i), index(v_, i)); }
   /**
    * @brief Returns the size of the vector expression
    */
-  size_t Size() const { return v_.Size(); }
+  int Size() const { return v_.Size(); }
 
 private:
   const vec_t<lhs> u_;
@@ -241,16 +248,14 @@ public:
    * expression at index @p i
    * @param i The index to evaluate at
    */
-  double operator[](size_t i) const { return result_[i]; }
+  double operator[](int i) const { return result_[i]; }
   /**
    * @brief Returns the size of the vector expression
    */
-  size_t Size() const { return result_.Size(); }
+  int Size() const { return result_.Size(); }
 
 private:
   mfem::Vector result_;
 };
 
-}  // namespace serac::internal
-
-#endif
+}  // namespace serac::detail

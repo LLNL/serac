@@ -1,17 +1,17 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file boundary_condition.hpp
+ * @file finite_element_state.hpp
  *
- * @brief This file contains the declaration of the boundary condition class
+ * @brief This file contains the declaration of structure that manages the MFEM objects
+ * that make up the state for a given field
  */
 
-#ifndef FINITE_ELEMENT_STATE
-#define FINITE_ELEMENT_STATE
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -63,9 +63,10 @@ public:
      */
     int order = 1;
     /**
-     * The vector dimension for the FiniteElementSpace - defaults to the dimension of the mesh
+     * The number of copies of the finite element collections (e.g. vector_dim = 2 or 3 for solid mechanics). Defaults
+     * to scalar valued spaces.
      */
-    std::optional<int> space_dim = {};
+    int vector_dim = 1;
     /**
      * The FECollection to use - defaults to an H1_FECollection
      */
@@ -89,7 +90,7 @@ public:
    */
   FiniteElementState(mfem::ParMesh& mesh,
                      Options&&      options = {
-                         .order = 1, .space_dim = {}, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
+                         .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
 
   /**
    * Returns the MPI communicator for the state
@@ -99,7 +100,8 @@ public:
   /**
    * Returns a non-owning reference to the internal grid function
    */
-  mfem::ParGridFunction&       gridFunc() { return *gf_; }
+  mfem::ParGridFunction& gridFunc() { return *gf_; }
+  /// \overload
   const mfem::ParGridFunction& gridFunc() const { return *gf_; }
 
   /**
@@ -111,10 +113,7 @@ public:
    * Returns a non-owning reference to the internal FESpace
    */
   mfem::ParFiniteElementSpace& space() { return space_; }
-
-  /**
-   * Returns a non-owning const reference to the internal FESpace
-   */
+  /// \overload
   const mfem::ParFiniteElementSpace& space() const { return space_; }
 
   /**
@@ -137,17 +136,9 @@ public:
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
     std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(*concrete_coef); }, coef);
   }
-
-  /**
-   * Projects a coefficient (vector or scalar) onto the field
-   * @param[in] coef The coefficient to project
-   */
+  /// \overload
   void project(mfem::Coefficient& coef) { gf_->ProjectCoefficient(coef); }
-
-  /**
-   * Projects a coefficient (vector or scalar) onto the field
-   * @param[in] coef The coefficient to project
-   */
+  /// \overload
   void project(mfem::VectorCoefficient& coef) { gf_->ProjectCoefficient(coef); }
 
   /**
@@ -186,5 +177,3 @@ private:
 };
 
 }  // namespace serac
-
-#endif

@@ -10,10 +10,10 @@
  * @brief An object containing an operator-split thermal structural solver
  */
 
-#ifndef THERMAL_SOLID
-#define THERMAL_SOLID
+#pragma once
 
 #include "mfem.hpp"
+
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/nonlinear_solid.hpp"
 #include "serac/physics/thermal_conduction.hpp"
@@ -35,6 +35,16 @@ public:
    */
   ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverOptions& therm_options,
                const NonlinearSolid::SolverOptions& solid_options);
+
+  /**
+   * @brief Construct a new Thermal Solid object from input file options
+   *
+   * @param mesh The parallel mesh object on which to solve
+   * @param thermal_input The thermal physics module input file option struct
+   * @param solid_input The solid mechanics module input file option struct
+   */
+  ThermalSolid(std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::InputOptions& thermal_input,
+               const NonlinearSolid::InputOptions& solid_input);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -128,7 +138,7 @@ public:
    * @param[in] component The component to apply the traction on
    */
   void SetTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      const int component = -1)
+                      const std::optional<int> component = {})
   {
     solid_solver_.setTractionBCs(trac_bdr, trac_bdr_coef, component);
   };
@@ -251,5 +261,3 @@ protected:
 };
 
 }  // namespace serac
-
-#endif

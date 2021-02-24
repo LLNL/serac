@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -9,8 +9,7 @@
  *
  * @brief A function intended to be used as part of a driver to initialize common libraries
  */
-#ifndef INITIALIZE
-#define INITIALIZE
+#pragma once
 
 #include <utility>
 
@@ -34,6 +33,5 @@ std::pair<int, int> getMPIInfo(MPI_Comm comm = MPI_COMM_WORLD);
  * @return A pair containing the size and rank relative to the provided MPI communicator
  */
 std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm = MPI_COMM_WORLD);
-}  // namespace serac
 
-#endif
+}  // namespace serac

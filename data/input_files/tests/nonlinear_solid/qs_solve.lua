@@ -6,12 +6,16 @@ epsilon = 0.001
 dt      = 1.0
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
     ser_ref_levels = 1,
     par_ref_levels = 0,
 }
+
+-- Simulation output format
+output_type = "VisIt"
 
 -- Solver parameters
 nonlinear_solid = {
@@ -43,20 +47,41 @@ nonlinear_solid = {
     mu = 0.25,
     K  = 10.0,
 
+    initial_displacement = {
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
+    },
+
+    initial_velocity = {
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
+    }, 
+
     -- boundary condition parameters
     boundary_conds = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
-            vec_coef = function (x, y, z)
-                return 0, 0, 0
-            end
+            vector_constant = {
+                x = 0.0,
+                y = 0.0,
+                z = 0.0
+            }
+        
         },
         ['traction'] = {
             attrs = {2},
-            vec_coef = function (x, y, z)
-                return 0, 1.0e-3, 0
-            end
+            vector_constant = {
+                x = 0.0,
+                y = 1.0e-3,
+                z = 0.0
+            }
         },
     },
 }

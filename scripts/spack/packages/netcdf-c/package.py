@@ -184,6 +184,11 @@ class NetcdfC(AutotoolsPackage):
         if hdf5_hl.satisfies('~shared'):
             libs.append(hdf5_hl.libs.link_flags)
 
+            # SERAC EDIT BEGIN
+            # WSL gcc 9 needs ldl and lz at the end of the link line
+            libs.append('-ldl -lz')
+            # SERAC EDIT END
+
         if '+parallel-netcdf' in self.spec:
             config_args.append('--enable-pnetcdf')
             pnetcdf = self.spec['parallel-netcdf']

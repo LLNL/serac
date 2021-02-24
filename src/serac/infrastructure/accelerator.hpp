@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -11,12 +11,9 @@
  * any hardware accelerator-related functionality
  */
 
-#ifndef SERAC_ACCELERATOR
-#define SERAC_ACCELERATOR
+#pragma once
 
-namespace serac {
-
-namespace accelerator {
+namespace serac::accelerator {
 
 /**
  * @brief Initializes the device (GPU)
@@ -30,8 +27,4 @@ void initializeDevice();
  */
 void terminateDevice();
 
-}  // namespace accelerator
-
-}  // namespace serac
-
-#endif  // SERAC_ACCELERATOR
+}  // namespace serac::accelerator

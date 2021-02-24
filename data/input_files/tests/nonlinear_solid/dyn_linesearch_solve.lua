@@ -8,12 +8,16 @@ dt      = 1.0
 t_final = 6.0
 
 main_mesh = {
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
     ser_ref_levels = 1,
     par_ref_levels = 0,
 }
+
+-- Simulation output format
+output_type = "VisIt"
 
 -- Solver parameters
 nonlinear_solid = {
@@ -51,21 +55,29 @@ nonlinear_solid = {
     mu = 0.25,
     K  = 5.0,
 
+    viscosity = 0.0,
+
     -- initial conditions
     initial_displacement = {
-        vec_coef = function (x, y, z)
-            return 0, 0, 0
-        end  
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
     },
 
     initial_velocity = {
-        vec_coef = function (x, y, z)
+        vector_function = function (v)
+            x = v.x
             s = 0.1 / 64
             first = -s * x * x
             last = s * x * x * (8.0 - x)
-            -- FIXME: How can we detect the dimension?
-            return first, 0, last
-        end 
+            if v.dim == 2 then
+                return Vector.new(first, last)
+            else
+                return Vector.new(first, 0, last)
+            end
+        end
     },
 
     -- boundary condition parameters
@@ -73,9 +85,11 @@ nonlinear_solid = {
         ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
-            vec_coef = function (x, y, z)
-                return 0, 0, 0
-            end 
+            vector_constant = {
+                x = 0.0,
+                y = 0.0,
+                z = 0.0
+            }
         },
     },
 }
