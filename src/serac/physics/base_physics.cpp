@@ -127,7 +127,7 @@ void BasePhysics::outputState() const
       dc_->Save();
       break;
     case serac::OutputType::SidreVisIt: {
-      StateManager::step(time_, cycle_);
+      StateManager::save(time_, cycle_);
       break;
     }
 

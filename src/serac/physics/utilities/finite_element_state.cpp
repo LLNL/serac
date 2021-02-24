@@ -9,7 +9,7 @@
 namespace serac {
 
 FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::Options&& options)
-    : mesh_(&mesh),
+    : mesh_(mesh),
       coll_(options.coll ? std::move(options.coll)
                          : std::make_unique<mfem::H1_FECollection>(options.order, mesh.Dimension())),
       space_(
@@ -24,12 +24,13 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
 }
 
 FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name)
-    : mesh_(&mesh), space_(gf.ParFESpace()), gf_(&gf), true_vec_(&retrieve(space_)), name_(name)
+    : mesh_(mesh), space_(gf.ParFESpace()), gf_(&gf), true_vec_(&retrieve(space_)), name_(name)
 {
   coll_     = retrieve(space_).FEColl();
   true_vec_ = 0.0;
 }
 
+// Initialize StateManager's static members - both of these will be fully initialized in StateManager::initialize
 std::optional<axom::sidre::MFEMSidreDataCollection> StateManager::datacoll_;
 bool                                                StateManager::is_restart_ = false;
 
@@ -81,7 +82,7 @@ FiniteElementState StateManager::newState(FiniteElementState::Options&& options)
   }
 }
 
-void StateManager::step(const double t, const int cycle)
+void StateManager::save(const double t, const int cycle)
 {
   SLIC_ERROR_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
   datacoll_->SetTime(t);

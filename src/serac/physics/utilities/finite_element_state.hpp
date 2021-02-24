@@ -117,7 +117,7 @@ public:
   /**
    * Returns a non-owning reference to the internal mesh object
    */
-  mfem::ParMesh& mesh() { return *mesh_; }
+  mfem::ParMesh& mesh() { return mesh_; }
 
   /**
    * Returns a non-owning reference to the internal FESpace
@@ -179,31 +179,53 @@ public:
 private:
   /**
    * @brief A helper type for uniform semantics over owning/non-owning pointers
+   *
+   * This logic is needed to integrate with the mesh and field reconstruction logic
+   * provided by Sidre's MFEMSidreDataCollection.  When a Serac restart occurs, the
+   * saved data is used to construct fully functional mfem::(Par)Mesh and
+   * mfem::(Par)GridFunction objects.  The FiniteElementCollection and (Par)FiniteElementSpace
+   * objects are intermediates in the construction of these objects and are therefore owned
+   * by the MFEMSidreDataCollection in the case of a restart/reconstruction.  In a normal run,
+   * Serac constructs the mesh and fields, so these FEColl and FESpace objects are owned
+   * by Serac.  In both cases, the MFEMSidreDataCollection maintains ownership of the mesh
+   * and field objects themselves.
    */
   template <typename T>
-  using MaybeOwner = std::variant<T*, std::unique_ptr<T>>;
+  using MaybeOwningPointer = std::variant<T*, std::unique_ptr<T>>;
 
   /**
-   * @brief Retrieves a reference to the underlying object in a MaybeOwner
+   * @brief Retrieves a reference to the underlying object in a MaybeOwningPointer
    * @param[in] obj The object to dereference
    */
   template <typename T>
-  static T& retrieve(MaybeOwner<T>& obj)
+  static T& retrieve(MaybeOwningPointer<T>& obj)
   {
     return std::visit([](auto&& ptr) -> T& { return *ptr; }, obj);
   }
   /// @overload
   template <typename T>
-  static const T& retrieve(const MaybeOwner<T>& obj)
+  static const T& retrieve(const MaybeOwningPointer<T>& obj)
   {
     return std::visit([](auto&& ptr) -> const T& { return *ptr; }, obj);
   }
 
-  // Allows for copy/move assignment
-  mfem::ParMesh* mesh_;
-  // Must be const as FESpaces store a const reference to their FEColls
-  MaybeOwner<const mfem::FiniteElementCollection> coll_;
-  MaybeOwner<mfem::ParFiniteElementSpace>         space_;
+  /**
+   * @brief A reference to the mesh object on which the field is defined
+   */
+  std::reference_wrapper<mfem::ParMesh> mesh_;
+  /**
+   * @brief Possibly-owning handle to the FiniteElementCollection, as it is owned
+   * by the FiniteElementState in a normal run and by the MFEMSidreDataCollection
+   * in a restart run
+   * @note Must be const as FESpaces store a const reference to their FEColls
+   */
+  MaybeOwningPointer<const mfem::FiniteElementCollection> coll_;
+  /**
+   * @brief Possibly-owning handle to the FiniteElementCollection, as it is owned
+   * by the FiniteElementState in a normal run and by the MFEMSidreDataCollection
+   * in a restart run
+   */
+  MaybeOwningPointer<mfem::ParFiniteElementSpace> space_;
   mfem::ParGridFunction*                          gf_;
   mfem::HypreParVector                            true_vec_;
   std::string                                     name_ = "";
@@ -235,7 +257,7 @@ public:
    * @param[in] t The current sim time
    * @param[in] cycle The current iteration number of the simulation
    */
-  static void step(const double t, const int cycle);
+  static void save(const double t, const int cycle);
 
   /**
    * @brief Resets the underlying global datacollection object
@@ -253,6 +275,9 @@ public:
 private:
   /**
    * @brief The datacollection instance
+   *
+   * The std::optional is used here to allow for deferred construction on the stack.
+   * The object is constructed when the user calls StateManager::initialize.
    */
   static std::optional<axom::sidre::MFEMSidreDataCollection> datacoll_;
   /**
