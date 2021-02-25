@@ -21,7 +21,7 @@ subject to the boundary conditions
    \begin{align*}
    T(x,0) &= T_0(x)  \\
    T(x,t) &= T_D(x,t) & \text{on } \Gamma_D \\
-   \frac{\partial T}{\partial n} &= q(x,t) & \text{on } \Gamma_N
+   \kappa \frac{\partial T}{\partial n} &= q(x,t) & \text{on } \Gamma_N
    \end{align*}
 
 where
@@ -86,9 +86,9 @@ where
 
    \begin{align*}
    \mathbf{u} &= \text{degree of freedom vector (unknowns)} \\
-   \mathbf{M} &= \text{mass matrix} \\
-   \mathbf{K} &= \text{stiffness matrix} \\
-   f(\mathbf{u}) &= \text{nonlinear reaction vector} \\
+   \mathbf{M} &= \text{thermal mass (heat capacity or capacitance) matrix} \\
+   \mathbf{K} &= \text{thamal stiffness (thermal conductivity or conductance) matrix} \\
+   f(\mathbf{u}) &= \text{possibly nonlinear reaction vector} \\
    \mathbf{G} &= \text{source vector}. \\
    \end{align*}
 
@@ -105,6 +105,7 @@ equation is linearized which yields
 
 .. math:: \left(\mathbf{M} + \Delta t \mathbf{K} + \Delta t\frac{\partial f}{\partial \mathbf{u}}\left(\mathbf{u}_{n+1}^i\right)\right)\Delta \mathbf{u}^{i+1}_{n+1} = -(\mathbf{M} + \Delta t \mathbf{K}) \mathbf{u}_{n+1}^i - \Delta t f(\mathbf{u}_{n+1}^i)) + \Delta t \mathbf{G} + \mathbf{Mu}_n.
 
-where the Newton iterations
+Note the above equation assumes the thermal capacitance and conductance are independent of temperature.
+The computed Newton iterations
 :math:`\mathbf{u}_{n+1}^{i+1} = \mathbf{u}_{n+1}^{i} + \Delta \mathbf{u}_{n+1}^{i+1}`
 continue until the solution is converged.

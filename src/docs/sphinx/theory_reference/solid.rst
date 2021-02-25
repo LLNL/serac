@@ -108,8 +108,9 @@ where :math:`\nabla_X` is the gradient with respect to the reference (material) 
 Material Models
 ===============
 
-Serac uses *hyperelastic* material formulations, i.e. materials that behave elastically under large deformations. Mathematically,
-this implies they are derived from a *strain energy density* function :math:`W=W(\mathbf{F})`. It can be shown that
+Serac currently is restricted to *hyperelastic* material formulations, i.e. materials that behave in a reversibly elastic fashion 
+under large deformations. Mathematically, this implies they are derived from a *strain energy density* function 
+:math:`W=W(\mathbf{F})`. It can be shown that
 
 .. math::
 
@@ -144,7 +145,7 @@ implies that the 2D simulations are using a plane strain assumption. The second 
 and :math:`\epsilon` is the linearized strain tensor. Note that this model is only valid for small strains 
 where the neo-Hookean model is nearly equivalent. It is included mostly for testing purposes.
 
-Optionally, we can also model linear viscoelasticity by adding
+Optionally, we can add a Kelvin-Voigt linear visoelastic term by adding
 
 .. math::
 
