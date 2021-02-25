@@ -107,7 +107,7 @@ void Elasticity::advanceTimestep(double&)
   if (is_quasistatic_) {
     QuasiStaticSolve();
   } else {
-    SLIC_ERROR_ROOT(mpi_rank_, "Only quasistatics implemented for linear elasticity!");
+    SLIC_ERROR_ROOT("Only quasistatics implemented for linear elasticity!");
   }
 
   // Distribute the shared DOFs
@@ -131,5 +131,9 @@ void Elasticity::QuasiStaticSolve()
 }
 
 Elasticity::~Elasticity() {}
+
+// Gradient operator
+
+const mfem::Operator& Elasticity::currentGradient() { return *K_mat_; }
 
 }  // namespace serac

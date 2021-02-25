@@ -18,12 +18,14 @@ TEST(meshgen, successful_creation)
   // of elements specified, they refine to get as close as possible
   ASSERT_EQ(serac::buildDiskMesh(1000)->GetNE(), 1024);
   ASSERT_EQ(serac::buildBallMesh(6000)->GetNE(), 4096);
-  ASSERT_EQ(serac::buildRectangleMesh(20, 20)->GetNE(), 400);
-  ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20)->GetNE(), 8000);
   ASSERT_EQ(serac::buildRectangleMesh(20, 20, 1., 2.)->GetNE(), 400);
   ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20, 1., 2., 3.)->GetNE(), 8000);
   ASSERT_EQ(serac::buildCylinderMesh(2, 2, 2.0, 5.0)->GetNE(), 384);
   ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0)->GetNE(), 256);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0, 2. * M_PI, 8)->GetNE(), 256);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0, 2. * M_PI, 6)->GetNE(), 192);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, M_PI / 3., 1)->GetNE(), 16);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, 2. * M_PI, 7)->GetNE(), 112);
 }
 
 TEST(meshgen, lua_input)
@@ -38,16 +40,16 @@ TEST(meshgen, lua_input)
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  auto& mesh_file_table = inlet.addTable("main_mesh_from_file", "A mesh to build from file");
+  auto& mesh_file_table = inlet.addStruct("main_mesh_from_file", "A mesh to build from file");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_file_table);
 
-  auto& mesh_cuboid_table = inlet.addTable("main_mesh_cuboid", "A cuboid mesh");
+  auto& mesh_cuboid_table = inlet.addStruct("main_mesh_cuboid", "A cuboid mesh");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_cuboid_table);
 
-  auto& mesh_rect_table = inlet.addTable("main_mesh_rect", "A rectangular mesh");
+  auto& mesh_rect_table = inlet.addStruct("main_mesh_rect", "A rectangular mesh");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_rect_table);
 
-  auto& mesh_fail_table = inlet.addTable("main_mesh_fail", "An invalid mesh description");
+  auto& mesh_fail_table = inlet.addStruct("main_mesh_fail", "An invalid mesh description");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_fail_table);
 
   // Verify input file
