@@ -103,7 +103,7 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
     }
 
     default:
-      SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
+      SLIC_ERROR_ROOT("OutputType not recognized!");
   }
 
   if ((output_type_ == OutputType::VisIt) || (output_type_ == OutputType::SidreVisIt)) {
@@ -144,7 +144,7 @@ void BasePhysics::outputState() const
     }
 
     default:
-      SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
+      SLIC_ERROR_ROOT("OutputType not recognized!");
   }
 }
 

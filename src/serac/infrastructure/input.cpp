@@ -50,9 +50,7 @@ std::string findMeshFilePath(const std::string& mesh_path, const std::string& in
 
   // Failed to find mesh file
   std::string msg = fmt::format("Input file: Given mesh file does not exist: {0}", mesh_path);
-  int         rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  SLIC_ERROR_ROOT(rank, msg);
+  SLIC_ERROR_ROOT(msg);
   return "";
 }
 
