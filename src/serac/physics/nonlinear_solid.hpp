@@ -121,7 +121,7 @@ public:
    * @param[in] component The component to apply the traction on
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      int component = -1);
+                      std::optional<int> component = {});
 
   /**
    * @brief Add body force vectors on the domain
@@ -193,6 +193,23 @@ public:
    */
   virtual ~NonlinearSolid();
 
+  /**
+   * @brief Compute the current residual vector at the current internal state value
+   *
+   * @note This is of length true degrees of freedom, i.e. the length of the underlying mfem::HypreParVector (true_vec)
+   */
+  mfem::Vector currentResidual();
+
+  /**
+   * Get the current gradient (tangent stiffness) MFEM operator at the current internal state value
+   *
+   * @note This is of size true degrees of freedom x true degrees of freedom, i.e. the length of the underlying
+   *mfem::HypreParVector (true_vec)
+   * @note This is for expert users only, changing any values inside of the returned data structures can have drastic
+   *and unrecoverable runtime consequences.
+   **/
+  const mfem::Operator& currentGradient();
+
 protected:
   /**
    * @brief Extensible means of constructing the nonlinear quasistatic
@@ -221,11 +238,6 @@ protected:
    * @brief The quasi-static operator for use with the MFEM newton solvers
    */
   std::unique_ptr<mfem::Operator> residual_;
-
-  /**
-   * @brief The time dependent operator for use with the MFEM ODE solvers
-   */
-  std::unique_ptr<mfem::TimeDependentOperator> timedep_oper_;
 
   /**
    * @brief The viscosity coefficient

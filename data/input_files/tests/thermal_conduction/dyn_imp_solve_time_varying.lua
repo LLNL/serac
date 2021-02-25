@@ -1,16 +1,28 @@
+-- by construction, f(x, y, t) satisfies df_dt == d2f_dx2 + d2f_dy2
+temp_func = function (v, t)
+    return 1.0 + 6.0 * v.x * t - 2.0 * v.y * t + (v.x - v.y) * v.x * v.x
+end
+
 -- Comparison information
-expected_t_l2norm = 2.02263
-epsilon = 0.00001
+epsilon = 0.00005
+
+exact_solution = {
+    scalar_function = temp_func
+}
 
 -- Simulation time parameters
-dt      = 1.0
+dt      = 0.5
+t_final = 5.0
+
+-- Simulation output format
+output_type = "VisIt"
 
 main_mesh = {
     type = "file",
     -- mesh file
-    mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",
+    mesh = "../../../meshes/star.mesh",
     -- serial and parallel refinement levels
-    ser_ref_levels = 1,
+    ser_ref_levels = 2,
     par_ref_levels = 1,
 }
 
@@ -37,17 +49,27 @@ thermal_conduction = {
         },
     },
 
+    dynamics = {
+        timestepper = "BackwardEuler",
+        enforcement_method = "RateControl",
+    },
+
     -- polynomial interpolation order
     order = 2,
 
     -- material parameters
-    kappa = 0.5,
+    kappa = 1.0,
+
+    -- initial conditions
+    initial_temperature = {
+        scalar_function = temp_func
+    },
 
     -- boundary condition parameters
     boundary_conds = {
         ['temperature'] = {
             attrs = {1},
-            constant = 1.0
+            scalar_function = temp_func
         },
     },
 }

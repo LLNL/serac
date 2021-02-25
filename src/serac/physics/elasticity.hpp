@@ -48,7 +48,7 @@ public:
    * @param[in] component Component to set (-1 indicates all components)
    */
   void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef,
-                          const int component = -1);
+                          const std::optional<int> component = {});
 
   /**
    * @brief Set the vector-valued natural traction boundary conditions
@@ -58,7 +58,7 @@ public:
    * @param[in] component Component to set (-1 indicates all components)
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      const int component = -1);
+                      const std::optional<int> component = {});
 
   /**
    * @brief Driver for advancing the timestep
@@ -91,6 +91,14 @@ public:
    * @brief The destructor
    */
   virtual ~Elasticity();
+
+  /**
+   * Get the current gradient MFEM operator
+   *
+   * Note:  This is for expert users only, changing any values inside of the returned data structures can have drastic
+   *and unrecoverable runtime consequences.
+   **/
+  const mfem::Operator& currentGradient();
 
 protected:
   /**

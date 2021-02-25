@@ -30,14 +30,12 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.");
   inlet.addDouble("t_final", "Stopping point");
 
-  inlet.addString("output_type", "Desired output format")
-      .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
-      .defaultValue("VisIt");
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
 
   // Comparison parameter
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Verify input file
@@ -54,7 +52,7 @@ void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet)
   inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
 
   // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
   // This is the "standard" schema for the actual physics module
   serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
 
@@ -67,8 +65,11 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
   // Integration test parameters
   inlet.addDouble("expected_t_l2norm", "Correct L2 norm of the temperature field");
 
+  auto& exact = inlet.addStruct("exact_solution", "Exact solution for the temperature field");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(exact);
+
   // Physics
-  auto& conduction_table = inlet.addTable("thermal_conduction", "Thermal conduction module");
+  auto& conduction_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   // This is the "standard" schema for the actual physics module
   serac::ThermalConduction::InputOptions::defineInputFileSchema(conduction_table);
 
@@ -107,7 +108,7 @@ std::string moduleName<ThermalConduction>()
 
 /**
  * @brief Verifies the solution fields against the input file
- * @param[in] module The module whose fields should be verified
+ * @param[in] phys_module The module whose fields should be verified
  * @param[in] inlet The Inlet object from which expected solution values will be obtained
  * @param[in] dim The mesh dimension
  */
@@ -118,29 +119,37 @@ void verifyFields(const PhysicsModule&, const axom::inlet::Inlet&, const int)
 }
 
 template <>
-void verifyFields(const NonlinearSolid& module, const axom::inlet::Inlet& inlet, const int dim)
+void verifyFields(const NonlinearSolid& phys_module, const axom::inlet::Inlet& inlet, const int dim)
 {
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
   if (inlet.contains("expected_x_l2norm")) {
-    double x_norm = module.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+    double x_norm = phys_module.displacement().gridFunc().ComputeLpError(2.0, zerovec);
     EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_v_l2norm")) {
-    double v_norm = module.velocity().gridFunc().ComputeLpError(2.0, zerovec);
+    double v_norm = phys_module.velocity().gridFunc().ComputeLpError(2.0, zerovec);
     EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
   }
 }
 
 template <>
-void verifyFields(const ThermalConduction& module, const axom::inlet::Inlet& inlet, const int)
+void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet, const int)
 {
   mfem::ConstantCoefficient zero(0.0);
   if (inlet.contains("expected_t_l2norm")) {
-    double t_norm = module.temperature().gridFunc().ComputeLpError(2.0, zero);
+    double t_norm = phys_module.temperature().gridFunc().ComputeLpError(2.0, zero);
     EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
+  }
+
+  if (inlet.contains("exact_solution")) {
+    auto coef_options = inlet["exact_solution"].get<serac::input::CoefficientInputOptions>();
+    auto exact        = coef_options.constructScalar();
+    exact->SetTime(phys_module.time());
+    double error = phys_module.temperature().gridFunc().ComputeLpError(2.0, *exact);
+    EXPECT_NEAR(error, 0.0, inlet["epsilon"]);
   }
 }
 }  // namespace detail
@@ -174,26 +183,20 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
 
   // Define the solid solver object
   auto          module_options = inlet[module_name].get<typename PhysicsModule::InputOptions>();
-  PhysicsModule module(mesh, module_options);
+  PhysicsModule phys_module(mesh, module_options);
 
   const bool is_dynamic = inlet[module_name].contains("dynamics");
 
   // Initialize the output
-  const static auto output_names = []() {
-    std::unordered_map<std::string, serac::OutputType> result;
-    result["GLVis"]      = serac::OutputType::GLVis;
-    result["ParaView"]   = serac::OutputType::ParaView;
-    result["VisIt"]      = serac::OutputType::VisIt;
-    result["SidreVisIt"] = serac::OutputType::SidreVisIt;
-    return result;
-  }();
-
-  module.initializeOutput(output_names.at(inlet["output_type"]), module_name);
+  // FIXME: This and the FromInlet specialization are hacked together,
+  // should be inlet["output_type"].get<OutputType>() - Inlet obj
+  // needs to allow for top-level scalar retrieval as well
+  phys_module.initializeOutput(inlet.getGlobalTable().get<OutputType>(), module_name);
 
   // Complete the solver setup
-  module.completeSetup();
+  phys_module.completeSetup();
   // Output the initial state
-  module.outputState();
+  phys_module.outputState();
 
   double dt = inlet["dt"];
 
@@ -210,16 +213,17 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
       t += dt_real;
       last_step = (t >= t_final - 1e-8 * dt);
 
-      module.advanceTimestep(dt_real);
+      phys_module.advanceTimestep(dt_real);
     }
+    phys_module.setTime(t);
   } else {
-    module.advanceTimestep(dt);
+    phys_module.advanceTimestep(dt);
   }
 
   // Output the final state
-  module.outputState();
+  phys_module.outputState();
 
-  detail::verifyFields(module, inlet, mesh->Dimension());
+  detail::verifyFields(phys_module, inlet, mesh->Dimension());
 }
 
 template void runModuleTest<NonlinearSolid>(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh);

@@ -56,7 +56,11 @@ void BasePhysics::setState(std::vector<serac::FiniteElementState>&& state)
 
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
-void BasePhysics::setTime(const double time) { time_ = time; }
+void BasePhysics::setTime(const double time)
+{
+  time_ = time;
+  bcs_.setTime(time_);
+}
 
 double BasePhysics::time() const { return time_; }
 
@@ -99,7 +103,7 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
     }
 
     default:
-      SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
+      SLIC_ERROR_ROOT("OutputType not recognized!");
   }
 
   if ((output_type_ == OutputType::VisIt) || (output_type_ == OutputType::SidreVisIt)) {
@@ -140,7 +144,7 @@ void BasePhysics::outputState() const
     }
 
     default:
-      SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
+      SLIC_ERROR_ROOT("OutputType not recognized!");
   }
 }
 

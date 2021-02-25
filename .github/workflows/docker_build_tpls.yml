@@ -30,6 +30,7 @@ jobs:
       run: |
         echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`
         echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`)"
+        echo "##[set-output name=repo_plus_latest;]$(echo ${REPO}:${{ matrix.compiler }}_latest)"
       id: repo_name
 
     - name: Checkout
@@ -49,7 +50,7 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         push: true
-        tags: ${{ steps.repo_name.outputs.repo_plus_tag }}
+        tags: ${{ steps.repo_name.outputs.repo_plus_tag }},${{ steps.repo_name.outputs.repo_plus_latest }}
         file: ${{ steps.dockerfile_name.outputs.filename }}
         context: .
         platforms: linux/amd64

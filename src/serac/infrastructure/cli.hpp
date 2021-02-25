@@ -24,19 +24,16 @@ namespace serac::cli {
  *
  * @param[in] argc Argument count
  * @param[in] argv Argument vector
- * @param[in] rank MPI rank of the current node
  * @param[in] app_description Description of application to be printed by usage
  * @return map of all given command line options
  */
-std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], int rank,
-                                                            std::string app_description);
+std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], std::string app_description);
 
 /**
  * @brief Prints all given command line options to the screen.
  *
  * @param[in] cli_opts Given command line options to be printed
- * @param[in] rank     MPI rank of the current node
  */
-void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank);
+void printGiven(std::unordered_map<std::string, std::string>& cli_opts);
 
 }  // namespace serac::cli

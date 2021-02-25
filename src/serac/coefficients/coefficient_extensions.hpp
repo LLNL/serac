@@ -19,6 +19,10 @@
 
 #include "serac/numerics/expr_template_ops.hpp"
 
+/**
+ * The Serac mfem extension namespace
+ */
+
 namespace serac::mfem_ext {
 
 /**
