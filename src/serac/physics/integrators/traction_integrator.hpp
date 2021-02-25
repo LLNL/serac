@@ -48,6 +48,8 @@ public:
 
   /**
    * @brief Assemble the gradient for the nonlinear residual at a current state
+   * @note When the traction is defined on the current configuration, this is computed via finite difference.
+   *       This is not a performant method and is intended as a stop gap until an uncoming code refactoring.
    *
    * @param[in] element_1 The first element attached to the face
    * @param[in] element_2 The second element attached to the face
@@ -175,6 +177,8 @@ public:
 
   /**
    * @brief Assemble the gradient for the nonlinear residual at a current state
+   * @note When the traction is defined on the current configuration, this is computed via finite difference.
+   *       This is not a performant method and is intended as a stop gap until an uncoming code refactoring.
    *
    * @param[in] element_1 The first element attached to the face
    * @param[in] element_2 The second element attached to the face
