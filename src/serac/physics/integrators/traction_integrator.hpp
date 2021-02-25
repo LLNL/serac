@@ -34,7 +34,7 @@ public:
   }
 
   /**
-   * @brief Assemble the nonlinear residual on a boundary element at a current state
+   * @brief Assemble the nonlinear residual on a boundary facet at a current state
    *
    * @param[in] element_1 The first element attached to the face
    * @param[in] element_2 The second element attached to the face
@@ -87,6 +87,12 @@ private:
    *
    */
   mutable mfem::DenseMatrix dxi_dX_;
+
+  /**
+   * @brief the displacement gradient
+   *
+   */
+  mutable mfem::DenseMatrix du_dX_;
 
   /**
    * @brief the deformation gradient
@@ -208,6 +214,12 @@ private:
    *
    */
   mutable mfem::DenseMatrix dxi_dX_;
+
+  /**
+   * @brief the displacement gradient
+   *
+   */
+  mutable mfem::DenseMatrix du_dX_;
 
   /**
    * @brief the deformation gradient

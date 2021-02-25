@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/integrators/traction_integrator.hpp"
+#include "serac/physics/utilities/physics_utils.hpp"
 
 namespace serac::mfem_ext {
 
@@ -22,6 +23,7 @@ void TractionIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
   output_residual_vector.SetSize(dim * dof);
   dN_dxi_.SetSize(dof, dim);
   dN_dX_.SetSize(dof, dim);
+  du_dX_.SetSize(dim);
   dxi_dX_.SetSize(dim);
   F_.SetSize(dim);
   Finv_.SetSize(dim);
@@ -53,14 +55,20 @@ void TractionIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
     if (!compute_on_reference_) {
       // Calculate the deformation gradient and its inverse
       parent_to_reference_face_transformation.Elem1->SetIntPoint(&eip);
-      CalcInverse(parent_to_reference_face_transformation.Elem1->Jacobian(), dxi_dX_);
-      element_1.CalcDShape(eip, dN_dxi_);
-      Mult(dN_dxi_, dxi_dX_, dN_dX_);
-      MultAtB(input_state_matrix_, dN_dX_, F_);
 
-      for (int d = 0; d < dim; d++) {
-        F_(d, d) += 1.0;
-      }
+      // Calculate the reference to stress-free transformation
+      CalcInverse(parent_to_reference_face_transformation.Elem1->Jacobian(), dxi_dX_);
+
+      // Calculate the derivatives of the shape functions in the reference space
+      element_1.CalcDShape(eip, dN_dxi_);
+
+      // Calculate the derivatives of the shape functions in the stress free configuration
+      Mult(dN_dxi_, dxi_dX_, dN_dX_);
+
+      // Calculate the displacement gradient using the current DOFs
+      MultAtB(input_state_matrix_, dN_dX_, du_dX_);
+
+      solid_util::calcDeformationGradient(du_dX_, F_);
 
       CalcInverse(F_, Finv_);
 
@@ -134,6 +142,7 @@ void PressureIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
   dN_dxi_.SetSize(dof, dim);
   dN_dX_.SetSize(dof, dim);
   dxi_dX_.SetSize(dim);
+  du_dX_.SetSize(dim);
   F_.SetSize(dim);
   Finv_.SetSize(dim);
   reference_normal_.SetSize(dim);
@@ -166,17 +175,29 @@ void PressureIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
     } else {
       // Calculate the deformation gradient and its inverse
       parent_to_reference_face_transformation.Elem1->SetIntPoint(&eip);
-      CalcInverse(parent_to_reference_face_transformation.Elem1->Jacobian(), dxi_dX_);
-      element_1.CalcDShape(eip, dN_dxi_);
-      Mult(dN_dxi_, dxi_dX_, dN_dX_);
-      MultAtB(input_state_matrix_, dN_dX_, F_);
 
-      for (int d = 0; d < dim; d++) {
-        F_(d, d) += 1.0;
-      }
+      // Calculate the reference to stress-free transformation
+      CalcInverse(parent_to_reference_face_transformation.Elem1->Jacobian(), dxi_dX_);
+
+      // Calculate the derivatives of the shape functions in the reference space
+      element_1.CalcDShape(eip, dN_dxi_);
+
+      // Calculate the derivatives of the shape functions in the stress free configuration
+      Mult(dN_dxi_, dxi_dX_, dN_dX_);
+
+      // Calculate the displacement gradient using the current DOFs
+      MultAtB(input_state_matrix_, dN_dX_, du_dX_);
+
+      solid_util::calcDeformationGradient(du_dX_, F_);
 
       CalcInverse(F_, Finv_);
 
+      // Note that this is not normalized due to the use of Nanson's rule
+      //
+      // da n = J dA F^-T N
+      //
+      // where da and n are in the current configuration and dA and N are
+      // in the reference configuration
       Finv_.MultTranspose(reference_normal_, current_normal_);
       current_normal_ *= F_.Det();
     }
@@ -186,6 +207,7 @@ void PressureIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
 
     for (int j = 0; j < dof; j++) {
       for (int k = 0; k < dim; k++) {
+        // current_normal has the area transformations per Nanson's formula and includes the applied pressure
         output_residual_vector(dof * k + j) +=
             ip.weight * parent_to_reference_face_transformation.Face->Weight() * current_normal_(k) * shape_(j);
       }
