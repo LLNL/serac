@@ -19,6 +19,10 @@
 #include "axom/inlet.hpp"
 #include "axom/sidre.hpp"
 
+/**
+ * @brief The input related helper functions and objects
+ *
+ */
 namespace serac::input {
 
 /**
@@ -64,7 +68,16 @@ void defineOutputTypeInputFileSchema(axom::inlet::Table& table);
  * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
  */
 struct CoefficientInputOptions {
-  using VecFunc    = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
+  /**
+   * @brief The type for coefficient functions that are vector-valued
+   *
+   */
+  using VecFunc = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
+
+  /**
+   * @brief The type for coefficient functions that are scalar-valued
+   *
+   */
   using ScalarFunc = std::function<double(const mfem::Vector&, double)>;
   /**
    * @brief The std::function corresponding to a function coefficient
@@ -128,7 +141,11 @@ struct BoundaryConditionInputOptions {
 
 }  // namespace serac::input
 
-// Template specializations
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by Inlet
+ */
 template <>
 struct FromInlet<mfem::Vector> {
   mfem::Vector operator()(const axom::inlet::Table& base);
@@ -139,16 +156,31 @@ namespace serac {
 enum class OutputType;
 }  // namespace serac
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by Inlet
+ */
 template <>
 struct FromInlet<serac::OutputType> {
   serac::OutputType operator()(const axom::inlet::Table& base);
 };
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by Inlet
+ */
 template <>
 struct FromInlet<serac::input::CoefficientInputOptions> {
   serac::input::CoefficientInputOptions operator()(const axom::inlet::Table& base);
 };
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by Inlet
+ */
 template <>
 struct FromInlet<serac::input::BoundaryConditionInputOptions> {
   serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Table& base);
