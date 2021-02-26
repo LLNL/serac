@@ -153,6 +153,8 @@ To build Serac's dependencies by hand, use of a ``host-config`` CMake configurat
 stongly encouraged. A good place to start is by copying an existing host config in the 
 ``host-config`` directory and modifying it according to your system setup.
 
+.. _build-label:
+
 Building Serac
 --------------
 

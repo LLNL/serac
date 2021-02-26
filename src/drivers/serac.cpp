@@ -32,9 +32,11 @@
 
 namespace serac {
 
-//------- Input file -------
-//
-// This defines what we expect to extract from the input file
+/**
+ * @brief Define the input file structure for the driver code
+ *
+ * @param[in] inlet The inlet instance
+ */
 void defineInputFileSchema(axom::inlet::Inlet& inlet)
 {
   // Simulation time parameters
@@ -64,6 +66,14 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
 
 }  // namespace serac
 
+/**
+ * @brief The main serac driver code
+ *
+ * @param[in] argc Number of input arguments
+ * @param[in] argv The vector of input arguments
+ *
+ * @return The return code
+ */
 int main(int argc, char* argv[])
 {
   serac::initialize(argc, argv);

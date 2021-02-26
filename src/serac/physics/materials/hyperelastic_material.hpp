@@ -36,15 +36,10 @@ public:
    */
   virtual ~HyperelasticMaterial() = default;
 
-  /// A parent-element to reference-element transformation that can be used to
-  /// evaluate mfem::Coefficient%s.
-  /** @note It is assumed that parent_to_reference_transformation_.SetIntPoint() is already called for the
-      point of interest. */
-
   /**
    * @brief Set the reference-to-target transformation. This is required to use coefficient parameters.
    *
-   * @param[in] parent_to_reference_transformation_ The reference-to-target (stress-free) transformation
+   * @param[in] Ttr The reference-to-target (stress-free) transformation
    */
   void setTransformation(mfem::ElementTransformation& Ttr) { parent_to_reference_transformation_ = &Ttr; }
 

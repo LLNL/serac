@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file hyperelastic_traction_integrator.hpp
+ * @file traction_integrator.hpp
  *
  * @brief Custom MFEM integrator for nonlinear finite deformation traction loads
  */

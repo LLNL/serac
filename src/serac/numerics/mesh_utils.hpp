@@ -33,7 +33,7 @@ namespace serac {
  * @param[in] mesh_file The mesh file to open
  * @param[in] refine_serial The number of serial refinements
  * @param[in] refine_parallel The number of parallel refinements
- * @param[in] MPI_Comm The MPI communicator
+ * @param[in] comm The MPI communicator
  * @return A shared_ptr containing the constructed and refined parallel mesh object
  */
 std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial = 0,
@@ -45,7 +45,8 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
  * This routine creates a mesh by refining a coarse disk mesh until the
  * number of elements is as close as possible to the user-specified number of elements
  *
- * @param[in] approx_number_of_elements
+ * @param[in] approx_number_of_elements The appoximate number of elements
+ * @param[in] comm The MPI communicator to build the parmesh on
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm = MPI_COMM_WORLD);
@@ -56,7 +57,8 @@ std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
  * This routine creates a mesh by refining a coarse ball mesh until the
  * number of elements is as close as possible to the user-specified number of elements
  *
- * @param[in] approx_number_of_elements
+ * @param[in] approx_number_of_elements Approximate number of elements
+ * @param[in] comm The MPI communicator to build the parmesh on
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm = MPI_COMM_WORLD);
@@ -68,6 +70,7 @@ std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
  * @param[in] elements_in_y the number of elements in the y-direction
  * @param[in] size_x Overall size in the x-direction
  * @param[in] size_y Overall size in the y-direction
+ * @param[in] comm The MPI communicator to build the parmesh on
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
@@ -82,7 +85,7 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int element
  * @param[in] size_x Overall size in the x-direction
  * @param[in] size_y Overall size in the y-direction
  * @param[in] size_z Overall size in the z-direction
- * @param[in] MPI_Comm MPI Communicator
+ * @param[in] comm MPI Communicator
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
@@ -96,6 +99,7 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_i
  * @param[in] elements_lengthwise the number of elements in the z-direction
  * @param[in] radius the radius of the cylinder
  * @param[in] height the number of elements in the z-direction
+ * @param[in] comm the MPI communicator to build the parmesh on
  *
  * @return A shared_ptr containing the constructed mesh
  */
@@ -107,36 +111,46 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
  *
  * @param[in] radial_refinement the number of times to apply uniform mesh refinement to the cross section
  * @param[in] elements_lengthwise the number of elements in the z-direction
- * @param[in] inner inner radius the radius of the cylindrical shell
- * @param[in] outer ouer radius the radius of the cylindrical shell
+ * @param[in] inner_radius inner radius the radius of the cylindrical shell
+ * @param[in] outer_radius ouer radius the radius of the cylindrical shell
  * @param[in] height the number of elements in the z-direction
  * @param[in] total_angle the angle in radians over which to generate the portion of an extruded cylinder
  * @param[in] sectors the number of starting sectors in the hollow cylinder
+ * @param[in] comm the MPI communicator to build the parmesh on
  *
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
                                                        double inner_radius, double outer_radius, double height,
                                                        double total_angle = M_PI, int sectors = 8,
-                                                       const MPI_Comm = MPI_COMM_WORLD);
+                                                       const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 2D MFEM mesh of a ring
  *
  * @param[in] radial_refinement the number of times to apply uniform mesh refinement to the cross section
- * @param[in] inner inner radius the radius of the cylindrical shell
- * @param[in] outer ouer radius the radius of the cylindrical shell
+ * @param[in] inner_radius inner radius the radius of the cylindrical shell
+ * @param[in] outer_radius ouer radius the radius of the cylindrical shell
  * @param[in] total_angle the angle in radians over which to generate the portion of an extruded cylinder
  * @param[in] sectors the number of starting sectors in the hollow cylinder
+ * @param[in] comm the MPI communicator to build the parmesh on
  *
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
                                              double total_angle = M_PI, int sectors = 8,
-                                             const MPI_Comm = MPI_COMM_WORLD);
+                                             const MPI_Comm comm = MPI_COMM_WORLD);
 
+/**
+ * @brief Mesh related input options
+ *
+ */
 namespace mesh {
 
+/**
+ * @brief Input options for meshes read from files
+ *
+ */
 struct FileInputOptions {
   /**
    * @brief Input file parameters specific to this class
@@ -145,9 +159,17 @@ struct FileInputOptions {
    **/
   static void defineInputFileSchema(axom::inlet::Table& table);
 
+  /**
+   * @brief The relative path for the mesh file
+   *
+   */
   std::string relative_mesh_file_name;
 };
 
+/**
+ * @brief Input options for generated meshes
+ *
+ */
 struct GenerateInputOptions {
   /**
    * @brief Input file parameters for mesh generation
@@ -156,11 +178,23 @@ struct GenerateInputOptions {
    **/
   static void defineInputFileSchema(axom::inlet::Table& table);
 
-  /// For rectangular and cuboid meshes
-  std::vector<int>    elements;
+  /**
+   * @brief The number of elements in each direction
+   *
+   */
+  std::vector<int> elements;
+
+  /**
+   * @brief The physical size in each direction
+   *
+   */
   std::vector<double> overall_size;
 };
 
+/**
+ * @brief Container for the mesh input options
+ *
+ */
 struct InputOptions {
   /**
    * @brief Input file parameters for mesh generation
@@ -169,9 +203,22 @@ struct InputOptions {
    **/
   static void defineInputFileSchema(axom::inlet::Table& table);
 
+  /**
+   * @brief The mesh input options (either file or generated)
+   *
+   */
   std::variant<FileInputOptions, GenerateInputOptions> extra_options;
-  // Serial/parallel refinement iterations
+
+  /**
+   * @brief The number of serial refinement levels
+   *
+   */
   int ser_ref_levels;
+
+  /**
+   * @brief The number of parallel refinement levels
+   *
+   */
   int par_ref_levels;
 };
 
@@ -180,8 +227,8 @@ struct InputOptions {
 /**
  * @brief Constructs a 3D MFEM mesh of a cuboid
  *
- * @param[in] extra_options Cuboid Mesh Options
- * @param[in] MPI_Comm MPI Communicator
+ * @param[in] options Cuboid Mesh Options
+ * @param[in] comm MPI Communicator
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions& options,
@@ -190,8 +237,8 @@ std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions
 /**
  * @brief Constructs a 2D MFEM mesh of a rectangle
  *
- * @param[in] extra_options Rectangle Mesh Options
- * @param[in] MPI_Comm MPI Communicator
+ * @param[in] options Rectangle Mesh Options
+ * @param[in] comm MPI Communicator
  * @return A shared_ptr containing the constructed mesh
  */
 std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOptions& options,
@@ -199,7 +246,11 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOpti
 
 }  // namespace serac
 
-// Prototype the specialization
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::mesh::InputOptions> {
   serac::mesh::InputOptions operator()(const axom::inlet::Table& base);
