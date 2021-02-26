@@ -155,7 +155,7 @@ stongly encouraged. A good place to start is by copying an existing host config 
 
 .. _build-label:
 
-Using a Docker image with preinstalled dependencies
+Using a Docker Image with Preinstalled Dependencies
 ---------------------------------------------------
 
 As an alternative, you can build Serac using preinstalled dependencies inside a Docker
