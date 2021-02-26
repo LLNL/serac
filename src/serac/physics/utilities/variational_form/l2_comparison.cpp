@@ -81,23 +81,13 @@ int main(int argc, char* argv[])
     return 1 + x + 2 * y;
   });
 
-  Array<int> ess_bdr(pmesh.bdr_attributes.Max());
-  ess_bdr = 1;
-  Array<int> ess_tdof_list;
-  fespace.GetEssentialTrueDofs(ess_bdr, ess_tdof_list);
   ParGridFunction x(&fespace);
   x = 0.0;
-  x.ProjectBdrCoefficient(boundary_func, ess_bdr);
-  J->EliminateRowsCols(ess_tdof_list);
-
   auto residual = serac::mfem_ext::StdFunctionOperator(
     fespace.TrueVSize(),
 
     [&](const mfem::Vector& u, mfem::Vector& r) {
       r = A * u - f;
-      for (int i = 0; i < ess_tdof_list.Size(); i++) {
-        r(ess_tdof_list[i]) = 0.0;
-      }
     },
 
     [&](const mfem::Vector & /*du_dt*/) -> mfem::Operator& {
@@ -136,12 +126,9 @@ int main(int argc, char* argv[])
 
   form.AddDomainIntegrator(tmp);
 
-  form.SetEssentialBC(ess_bdr);
-
   ParGridFunction x2(&fespace);
   Vector X2(fespace.TrueVSize());
   x2 = 0.0;
-  x2.ProjectBdrCoefficient(boundary_func, ess_bdr);
 
   newton.SetOperator(form);
 
