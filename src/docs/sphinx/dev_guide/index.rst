@@ -7,19 +7,6 @@
 Developer Guide
 ===============
 
-.. toctree::
-   :maxdepth: 2
-
-   style_guide
-   docker_dev_env
-   modern_cpp
-   logging
-   new_docker_image
-   expr_templates
-   profiling
-   memory_checking
-
-
 Developing a New Physics Module
 -------------------------------
 
@@ -53,3 +40,16 @@ Source Code Documentation
 -------------------------
 
 Doxygen documentation for the Serac source code is located in the `Doxygen directory <../../doxygen/html/index.html>`_.
+
+
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+
+   style_guide
+   modern_cpp
+   logging
+   new_docker_image
+   expr_templates
+   profiling
+   memory_checking
