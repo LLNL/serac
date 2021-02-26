@@ -119,9 +119,7 @@ void L2QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_)
 
       tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
 
-      auto args = std::tuple{x, u_q};
-
-      auto f0 = std::apply(qf, args);
+      auto f0 = qf(x, u_q);
 
       y_local += N * (f0 * dx);
     }
@@ -183,7 +181,6 @@ void L2QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, con
       auto N = element_type::shape_functions(xi);
 
       auto u_q = dot(u_local, N);
-
       auto v_q = dot(v_local, N);
 
       tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
