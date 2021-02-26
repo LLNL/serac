@@ -27,6 +27,16 @@ namespace impl {
     using type = tensor< double >;
   };
 
+  template < typename T >
+  struct outer_prod< zero, T >{
+    using type = zero;
+  };
+
+  template < typename T >
+  struct outer_prod< T, zero >{
+    using type = zero;
+  };
+
 }
 
 template < typename T1, typename T2 >
@@ -115,5 +125,23 @@ int main() {
   std::cout << std::get<0>(grad) - exact_dsigma_dp << std::endl;
   std::cout << std::get<1>(grad) - exact_dsigma_dv << std::endl;
   std::cout << std::get<2>(grad) - exact_dsigma_dL << std::endl;
+
+  constexpr auto func = [](auto p, auto v, auto L) {      
+    return std::tuple{
+      rho * outer(v, v) + 2.0 * mu * sym(L) - p * I,
+      tr(L)  
+    };
+  };
+
+  auto stress_and_dilatation = std::apply(func, make_dual(p, v, L));
+
+  std::cout << std::get<0>(stress_and_dilatation)[0][0].value;
+
+  //double q = stress_and_dilatation;
+
+  //auto grad2 = get_grad(stress_and_dilatation);
+
+  //std::cout << std::get<0>(std::get<0>(grad2)) - exact_dsigma_dp << std::endl;
+
 
 }
