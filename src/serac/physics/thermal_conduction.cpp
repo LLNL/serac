@@ -56,7 +56,7 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
     : ThermalConduction(options.order, mesh, options.solver_options)
 {
   setConductivity(std::make_unique<mfem::ConstantCoefficient>(options.kappa));
-  setDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
+  setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
   setSpecificHeatCapacity(std::make_unique<mfem::ConstantCoefficient>(options.cp));
 
   if (options.initial_temperature) {
@@ -119,7 +119,7 @@ void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficien
   cp_ = std::move(cp);
 }
 
-void ThermalConduction::setDensity(std::unique_ptr<mfem::Coefficient>&& rho)
+void ThermalConduction::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho)
 {
   // Set the density coefficient
   rho_ = std::move(rho);
@@ -237,9 +237,8 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   table.addDouble("rho", "Density").defaultValue(1.0);
   table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
-  auto& stiffness_solver_table =
-      table.addStruct("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
+  auto& equation_solver_table = table.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
 
   auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
@@ -265,9 +264,9 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
   result.order = base["order"];
 
   // Solver parameters
-  auto stiffness_solver                  = base["stiffness_solver"];
-  result.solver_options.T_lin_options    = stiffness_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.T_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  auto equation_solver                   = base["equation_solver"];
+  result.solver_options.T_lin_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
+  result.solver_options.T_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
     ThermalConduction::TimesteppingOptions dyn_options;
