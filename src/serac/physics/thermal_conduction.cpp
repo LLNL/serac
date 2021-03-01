@@ -76,7 +76,7 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
       std::shared_ptr<mfem::Coefficient> flux_coef(bc.coef_opts.constructScalar());
       setFluxBCs(bc.attrs, flux_coef);
     } else {
-      SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
+      SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
     }
   }
 }
@@ -278,15 +278,16 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
         {"BackwardEuler", TimestepMethod::BackwardEuler},
         {"ForwardEuler", TimestepMethod::ForwardEuler}};
     std::string timestep_method = dynamics["timestepper"];
-    SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
+    SLIC_ERROR_ROOT_IF(timestep_methods.count(timestep_method) == 0,
+                       "Unrecognized timestep method: " << timestep_method);
     dyn_options.timestepper = timestep_methods.at(timestep_method);
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
         {"RateControl", DirichletEnforcementMethod::RateControl}};
     std::string enforcement_method = dynamics["enforcement_method"];
-    SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
-                  "Unrecognized enforcement method: " << enforcement_method);
+    SLIC_ERROR_ROOT_IF(enforcement_methods.count(enforcement_method) == 0,
+                       "Unrecognized enforcement method: " << enforcement_method);
     dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
 
     result.solver_options.dyn_options = std::move(dyn_options);
