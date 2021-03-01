@@ -73,7 +73,7 @@ protected:
 
     // We only want to add these boundary conditions if we've defined boundary_conds for the serac_newmark_beta test
     if (inlet["solid"].contains("boundary_conds")) {
-      int ne = std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options).elements[0];
+      int                       ne = std::get<serac::mesh::BoxInputOptions>(mesh_options.extra_options).elements[0];
       mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
 
       mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);

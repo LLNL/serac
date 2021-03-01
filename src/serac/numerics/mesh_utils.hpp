@@ -156,7 +156,7 @@ struct FileInputOptions {
  * @brief Input options for generated meshes
  *
  */
-struct GenerateInputOptions {
+struct BoxInputOptions {
   /**
    * @brief Input file parameters for mesh generation
    *
@@ -177,6 +177,18 @@ struct GenerateInputOptions {
   std::vector<double> overall_size;
 };
 
+struct NBallInputOptions {
+  /**
+   * @brief The approximate total number of desired elements
+   */
+  int approx_elements;
+
+  /**
+   * @brief The space dimension of the n-ball
+   */
+  int dimension;
+};
+
 /**
  * @brief Container for the mesh input options
  *
@@ -193,7 +205,7 @@ struct InputOptions {
    * @brief The mesh input options (either file or generated)
    *
    */
-  std::variant<FileInputOptions, GenerateInputOptions> extra_options;
+  std::variant<FileInputOptions, BoxInputOptions, NBallInputOptions> extra_options;
 
   /**
    * @brief The number of serial refinement levels

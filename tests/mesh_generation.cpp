@@ -71,7 +71,7 @@ TEST(meshgen, lua_input)
   // temporary scope to build a cuboid mesh
   {
     auto       mesh_options   = inlet["main_mesh_cuboid"].get<serac::mesh::InputOptions>();
-    const auto cuboid_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+    const auto cuboid_options = std::get_if<serac::mesh::BoxInputOptions>(&mesh_options.extra_options);
     ASSERT_NE(cuboid_options, nullptr);
     EXPECT_EQ(cuboid_options->elements.size(), 3);
     auto mesh = serac::mesh::buildParallelMesh(mesh_options);
@@ -81,7 +81,7 @@ TEST(meshgen, lua_input)
   // temporary scope to build a rectangular mesh
   {
     auto       mesh_options = inlet["main_mesh_rect"].get<serac::mesh::InputOptions>();
-    const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+    const auto rect_options = std::get_if<serac::mesh::BoxInputOptions>(&mesh_options.extra_options);
     ASSERT_NE(rect_options, nullptr);
     EXPECT_EQ(rect_options->elements.size(), 2);
     auto mesh = serac::mesh::buildParallelMesh(mesh_options);

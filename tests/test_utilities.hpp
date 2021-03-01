@@ -21,11 +21,9 @@ void defineTestSchema(axom::inlet::Inlet& inlet);
  * @brief Runs a simulation and checks the output fields if "correct" answers
  * were defined in the input file
  * @param[in] input_file The Lua input file
- * @param[in] custom_mesh Overrides the mesh described in the input file
  */
 template <typename PhysicsModule>
-void runModuleTest(const std::string& input_file, const std::string& test_name,
-                   std::shared_ptr<mfem::ParMesh> custom_mesh = {});
+void runModuleTest(const std::string& input_file, const std::string& test_name);
 
 class InputFileTest : public ::testing::TestWithParam<std::string> {
 };

@@ -368,7 +368,7 @@ void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   // mesh path
   table.addString("mesh", "Path to Mesh file");
 
-  // mesh generation options
+  // box mesh generation options
   auto& elements = table.addStruct("elements");
   // JW: Can these be specified as requierd if elements is defined?
   elements.addInt("x", "x-dimension");
@@ -380,6 +380,9 @@ void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   size.addDouble("x", "Size in the x-dimension");
   size.addDouble("y", "Size in the y-dimension");
   size.addDouble("z", "Size in the z-dimension");
+
+  // n-ball mesh generation options
+  table.addInt("approx_elements", "Approximate number of elements in an n-ball mesh");
 }
 
 std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
@@ -390,13 +393,19 @@ std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, co
     SLIC_ERROR_ROOT_IF(file_opts->absolute_mesh_file_name.empty(),
                        "Absolute path to mesh file was not configured, did you forget to call findMeshFilePath?");
     serial_mesh.emplace(buildMeshFromFile(file_opts->absolute_mesh_file_name));
-  } else if (const auto generate_opts = std::get_if<GenerateInputOptions>(&options.extra_options)) {
-    const auto& eles  = generate_opts->elements;
-    const auto& sizes = generate_opts->overall_size;
+  } else if (const auto box_opts = std::get_if<BoxInputOptions>(&options.extra_options)) {
+    const auto& eles  = box_opts->elements;
+    const auto& sizes = box_opts->overall_size;
     if (eles.size() == 2) {
       serial_mesh.emplace(buildRectangleMesh(eles.at(0), eles.at(1), sizes.at(0), sizes.at(1)));
     } else {
       serial_mesh.emplace(buildCuboidMesh(eles.at(0), eles.at(1), eles.at(2), sizes.at(0), sizes.at(1), sizes.at(2)));
+    }
+  } else if (const auto ball_opts = std::get_if<NBallInputOptions>(&options.extra_options)) {
+    if (ball_opts->dimension == 2) {
+      serial_mesh.emplace(buildDiskMesh(ball_opts->approx_elements));
+    } else {
+      serial_mesh.emplace(buildBallMesh(ball_opts->approx_elements));
     }
   }
 
@@ -431,7 +440,7 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
 
   // This is for cuboid/rectangular meshes
   std::string mesh_type = base["type"];
-  if (mesh_type == "generate") {
+  if (mesh_type == "box") {
     auto elements_input = base["elements"];
     bool z_present      = elements_input.contains("z");
 
@@ -452,7 +461,11 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
       overall_size = std::vector<double>(overall_size.size(), 1.);
     }
 
-    return {serac::mesh::GenerateInputOptions{elements, overall_size}, ser_ref, par_ref};
+    return {serac::mesh::BoxInputOptions{elements, overall_size}, ser_ref, par_ref};
+  } else if (mesh_type == "disk" || mesh_type == "ball") {
+    int approx_elements = base["approx_elements"];
+    int dim             = (mesh_type == "disk") ? 2 : 3;
+    return {serac::mesh::NBallInputOptions{approx_elements, dim}, ser_ref, par_ref};
   } else if (mesh_type == "file") {  // This is for file-based meshes
     std::string mesh_path = base["mesh"];
     return {serac::mesh::FileInputOptions{mesh_path}, ser_ref, par_ref};

@@ -155,8 +155,7 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
 }  // namespace detail
 
 template <typename PhysicsModule>
-void runModuleTest(const std::string& input_file, const std::string& test_name,
-                   std::shared_ptr<mfem::ParMesh> custom_mesh)
+void runModuleTest(const std::string& input_file, const std::string& test_name)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -167,17 +166,12 @@ void runModuleTest(const std::string& input_file, const std::string& test_name,
   defineTestSchema<PhysicsModule>(inlet);
 
   // Build the mesh
-  std::shared_ptr<mfem::ParMesh> mesh;
-  if (custom_mesh) {
-    mesh = custom_mesh;
-  } else {
-    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-    if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-      file_options->absolute_mesh_file_name =
-          serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
-    }
-    mesh = serac::mesh::buildParallelMesh(mesh_options);
+  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+    file_options->absolute_mesh_file_name =
+        serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
   }
+  auto mesh = serac::mesh::buildParallelMesh(mesh_options);
 
   const std::string module_name = detail::moduleName<PhysicsModule>();
 
@@ -226,10 +220,8 @@ void runModuleTest(const std::string& input_file, const std::string& test_name,
   detail::verifyFields(phys_module, inlet, mesh->Dimension());
 }
 
-template void runModuleTest<Solid>(const std::string& input_file, const std::string& test_name,
-                                   std::shared_ptr<mfem::ParMesh> custom_mesh);
-template void runModuleTest<ThermalConduction>(const std::string& input_file, const std::string& test_name,
-                                               std::shared_ptr<mfem::ParMesh> custom_mesh);
+template void runModuleTest<Solid>(const std::string&, const std::string&);
+template void runModuleTest<ThermalConduction>(const std::string&, const std::string&);
 
 }  // end namespace test_utils
 
