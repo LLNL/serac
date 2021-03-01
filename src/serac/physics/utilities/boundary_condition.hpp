@@ -59,9 +59,9 @@ public:
   bool tagEquals(const Tag tag) const
   {
     static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
-    SLIC_ERROR_IF(!tag_, "No tag has been configured for this boundary condition");
+    SLIC_ERROR_ROOT_IF(!tag_, "No tag has been configured for this boundary condition");
     bool tags_same_type = typeid(tag).hash_code() == tag_->second;
-    SLIC_WARNING_IF(!tags_same_type, "Attempting to compare tags of two different enum types (always false)");
+    SLIC_WARNING_ROOT_IF(!tags_same_type, "Attempting to compare tags of two different enum types (always false)");
     return (static_cast<int>(tag) == tag_->first) && tags_same_type;
   }
 
@@ -149,7 +149,7 @@ public:
    */
   const mfem::Array<int>& getTrueDofs() const
   {
-    SLIC_ERROR_IF(!true_dofs_, "True DOFs only available with essential BC.");
+    SLIC_ERROR_ROOT_IF(!true_dofs_, "True DOFs only available with essential BC.");
     return *true_dofs_;
   }
 

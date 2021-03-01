@@ -1,5 +1,5 @@
 -- Comparison information
-expected_x_l2norm = 1.4225
+expected_u_l2norm = 1.4225
 expected_v_l2norm = 0.2252
 epsilon = 0.0001
 
@@ -40,8 +40,8 @@ dt      = t_final / nsteps;
 print("t_final = " .. t_final);
 
 -- Solver parameters
-nonlinear_solid = {
-    stiffness_solver = {
+solid = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
