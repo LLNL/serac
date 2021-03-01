@@ -391,13 +391,13 @@ void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   size.addDouble("z", "Size in the z-dimension");
 }
 
-std::shared_ptr<mfem::ParMesh> build(const InputOptions& options, const MPI_Comm comm)
+std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
 {
   std::shared_ptr<mfem::Mesh> serial_mesh;
 
   if (const auto file_opts = std::get_if<FileInputOptions>(&options.extra_options)) {
-    SLIC_ERROR_IF(file_opts->absolute_mesh_file_name.empty(),
-                  "Absolute path to mesh file was not configured, did you forget to call findMeshFilePath?");
+    SLIC_ERROR_ROOT_IF(file_opts->absolute_mesh_file_name.empty(),
+                       "Absolute path to mesh file was not configured, did you forget to call findMeshFilePath?");
     serial_mesh = buildMeshFromFile(file_opts->absolute_mesh_file_name);
   } else if (const auto generate_opts = std::get_if<GenerateInputOptions>(&options.extra_options)) {
     const auto& eles  = generate_opts->elements;
@@ -409,12 +409,12 @@ std::shared_ptr<mfem::ParMesh> build(const InputOptions& options, const MPI_Comm
     }
   }
 
-  SLIC_ERROR_IF(!serial_mesh, "Mesh input options were invalid");
-  return finalize(*serial_mesh, options.ser_ref_levels, options.par_ref_levels, comm);
+  SLIC_ERROR_ROOT_IF(!serial_mesh, "Mesh input options were invalid");
+  return refineAndDistribute(*serial_mesh, options.ser_ref_levels, options.par_ref_levels, comm);
 }
 
-std::shared_ptr<mfem::ParMesh> finalize(mfem::Mesh& serial_mesh, const int refine_serial, const int refine_parallel,
-                                        const MPI_Comm comm)
+std::shared_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial,
+                                                   const int refine_parallel, const MPI_Comm comm)
 {
   // Serial refinement first
   for (int lev = 0; lev < refine_serial; lev++) {

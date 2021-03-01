@@ -175,7 +175,7 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
       file_options->absolute_mesh_file_name =
           serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
     }
-    mesh = serac::mesh::build(mesh_options);
+    mesh = serac::mesh::buildParallelMesh(mesh_options);
   }
 
   const std::string module_name = detail::moduleName<PhysicsModule>();

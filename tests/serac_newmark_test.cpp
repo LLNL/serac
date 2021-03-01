@@ -66,7 +66,7 @@ protected:
 
     // Build Mesh
     auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-    auto pmesh        = serac::mesh::build(mesh_options);
+    auto pmesh        = serac::mesh::buildParallelMesh(mesh_options);
 
     // Define the solid solver object
     auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();

@@ -24,20 +24,13 @@
  */
 namespace serac {
 /**
- * @brief Constructs an MFEM mesh from a file and refines it
+ * @brief Constructs an MFEM mesh from a file
  *
  * This opens and reads an external mesh file and constructs a serial
  * MFEM Mesh object.
  *
  * @param[in] mesh_file The mesh file to open
-<<<<<<< HEAD
  * @return A shared_ptr containing the serial mesh object
-=======
- * @param[in] refine_serial The number of serial refinements
- * @param[in] refine_parallel The number of parallel refinements
- * @param[in] comm The MPI communicator
- * @return A shared_ptr containing the constructed and refined parallel mesh object
->>>>>>> develop
  */
 std::shared_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file);
 
@@ -72,12 +65,8 @@ std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
  * @param[in] elements_in_y the number of elements in the y-direction
  * @param[in] size_x Overall size in the x-direction
  * @param[in] size_y Overall size in the y-direction
-<<<<<<< HEAD
- * @return A shared_ptr containing the constructed serial mesh
-=======
  * @param[in] comm The MPI communicator to build the parmesh on
- * @return A shared_ptr containing the constructed mesh
->>>>>>> develop
+ * @return A shared_ptr containing the constructed serial mesh
  */
 std::shared_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
                                                double size_y = 1.);
@@ -91,13 +80,8 @@ std::shared_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_i
  * @param[in] size_x Overall size in the x-direction
  * @param[in] size_y Overall size in the y-direction
  * @param[in] size_z Overall size in the z-direction
-<<<<<<< HEAD
- * @param[in] MPI_Comm MPI Communicator
- * @return A shared_ptr containing the constructed serial mesh
-=======
  * @param[in] comm MPI Communicator
- * @return A shared_ptr containing the constructed mesh
->>>>>>> develop
+ * @return A shared_ptr containing the constructed serial mesh
  */
 std::shared_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x = 1.,
                                             double size_y = 1., double size_z = 1.);
@@ -241,14 +225,9 @@ struct InputOptions {
  * @param[in] options The options used to construct the mesh
  * @param[in] comm The MPI communicator to use with the parallel mesh
  *
-<<<<<<< HEAD
-=======
- * @param[in] options Cuboid Mesh Options
- * @param[in] comm MPI Communicator
->>>>>>> develop
  * @return A shared_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> build(const InputOptions& options, const MPI_Comm comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Finalizes a serial mesh into a refined parallel mesh
@@ -256,17 +235,15 @@ std::shared_ptr<mfem::ParMesh> build(const InputOptions& options, const MPI_Comm
  * @param[in] serial_mesh The "base" serial mesh
  * @param[in] refine_serial The number of serial refinements
  * @param[in] refine_parallel The number of parallel refinements
- * @param[in] MPI_Comm The MPI communicator
+ * @param[in] comm The MPI communicator
  *
-<<<<<<< HEAD
-=======
- * @param[in] options Rectangle Mesh Options
- * @param[in] comm MPI Communicator
->>>>>>> develop
  * @return A shared_ptr containing the constructed mesh
+ *
+ * @note It is sometimes required to refine serially first if your number of processors
+ * is less than the original number of mesh elements
  */
-std::shared_ptr<mfem::ParMesh> finalize(mfem::Mesh& serial_mesh, const int refine_serial = 0,
-                                        const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial = 0,
+                                                   const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD);
 
 }  // namespace mesh
 }  // namespace serac

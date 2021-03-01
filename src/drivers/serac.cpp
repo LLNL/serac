@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
     file_opts->absolute_mesh_file_name =
         serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
   }
-  auto mesh = serac::mesh::build(mesh_options);
+  auto mesh = serac::mesh::buildParallelMesh(mesh_options);
 
   // Create the physics object
   std::unique_ptr<serac::BasePhysics> main_physics;

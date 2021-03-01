@@ -65,7 +65,7 @@ TEST(meshgen, lua_input)
     auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
     file_options->absolute_mesh_file_name =
         serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
-    auto mesh = serac::mesh::build(mesh_options);
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
   }
 
   // temporary scope to build a cuboid mesh
@@ -74,7 +74,7 @@ TEST(meshgen, lua_input)
     const auto cuboid_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
     ASSERT_NE(cuboid_options, nullptr);
     EXPECT_EQ(cuboid_options->elements.size(), 3);
-    auto mesh = serac::mesh::build(mesh_options);
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
     EXPECT_EQ(mesh->GetNE(), cuboid_options->elements[0] * cuboid_options->elements[1] * cuboid_options->elements[2]);
   }
 
@@ -84,7 +84,7 @@ TEST(meshgen, lua_input)
     const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
     ASSERT_NE(rect_options, nullptr);
     EXPECT_EQ(rect_options->elements.size(), 2);
-    auto mesh = serac::mesh::build(mesh_options);
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
     EXPECT_EQ(mesh->GetNE(), rect_options->elements[0] * rect_options->elements[1]);
   }
 
