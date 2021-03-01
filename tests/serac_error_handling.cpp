@@ -126,9 +126,7 @@ TEST(serac_error_handling, invalid_cmdline_arg)
   // The command is actually --input-file
   char const* fake_argv[] = {"serac", "--file", "input.lua"};
   const int   fake_argc   = 3;
-  int         rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  EXPECT_THROW(cli::defineAndParse(fake_argc, const_cast<char**>(fake_argv), rank, ""), SlicErrorException);
+  EXPECT_THROW(cli::defineAndParse(fake_argc, const_cast<char**>(fake_argv), ""), SlicErrorException);
 }
 
 TEST(serac_error_handling, nonexistent_mesh_path)

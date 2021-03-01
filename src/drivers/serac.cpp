@@ -32,10 +32,12 @@
 
 namespace serac {
 
-//------- Input file -------
-//
-// This defines what we expect to extract from the input file
-void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
+/**
+ * @brief Define the input file structure for the driver code
+ *
+ * @param[in] inlet The inlet instance
+ */
+void defineInputFileSchema(axom::inlet::Inlet& inlet)
 {
   // Simulation time parameters
   inlet.addDouble("t_final", "Final time for simulation.").defaultValue(1.0);
@@ -58,20 +60,28 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
 
   // Verify the input file
   if (!inlet.verify()) {
-    SLIC_ERROR_ROOT(rank, "Input file failed to verify.");
+    SLIC_ERROR_ROOT("Input file failed to verify.");
   }
 }
 
 }  // namespace serac
 
+/**
+ * @brief The main serac driver code
+ *
+ * @param[in] argc Number of input arguments
+ * @param[in] argv The vector of input arguments
+ *
+ * @return The return code
+ */
 int main(int argc, char* argv[])
 {
-  auto [num_procs, rank] = serac::initialize(argc, argv);
+  serac::initialize(argc, argv);
 
   // Handle Command line
   std::unordered_map<std::string, std::string> cli_opts =
-      serac::cli::defineAndParse(argc, argv, rank, "Serac: a high order nonlinear thermomechanical simulation code");
-  serac::cli::printGiven(cli_opts, rank);
+      serac::cli::defineAndParse(argc, argv, "Serac: a high order nonlinear thermomechanical simulation code");
+  serac::cli::printGiven(cli_opts);
 
   // Read input file
   std::string input_file_path = "";
@@ -88,7 +98,7 @@ int main(int argc, char* argv[])
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
-  serac::defineInputFileSchema(inlet, rank);
+  serac::defineInputFileSchema(inlet);
 
   // Optionally, create input file documentation and quit
   if (create_input_file_docs) {
@@ -132,7 +142,7 @@ int main(int argc, char* argv[])
   } else if (thermal_solver_options) {
     main_physics = std::make_unique<serac::ThermalConduction>(mesh, *thermal_solver_options);
   } else {
-    SLIC_ERROR_ROOT(rank, "Neither nonlinear_solid nor thermal_conduction blocks specified in the input file.");
+    SLIC_ERROR_ROOT("Neither nonlinear_solid nor thermal_conduction blocks specified in the input file.");
   }
 
   // Complete the solver setup
@@ -158,7 +168,7 @@ int main(int argc, char* argv[])
     t = t + dt_real;
 
     // Print the timestep information
-    SLIC_INFO_ROOT(rank, "step " << ti << ", t = " << t);
+    SLIC_INFO_ROOT("step " << ti << ", t = " << t);
 
     // Solve the physics module appropriately
     main_physics->advanceTimestep(dt_real);

@@ -20,13 +20,13 @@ std::shared_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file)
 {
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
-  SLIC_INFO(msg);
+  SLIC_INFO_ROOT(msg);
 
   // Ensure correctness
   serac::logger::flush();
   if (!axom::utilities::filesystem::pathExists(mesh_file)) {
     msg = fmt::format("Given mesh file does not exist: {0}", mesh_file);
-    SLIC_ERROR(msg);
+    SLIC_ERROR_ROOT(msg);
   }
 
   // This inherits from std::ifstream, and will work the same way as a std::ifstream,
@@ -36,13 +36,17 @@ std::shared_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file)
   if (!imesh) {
     serac::logger::flush();
     std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
-    SLIC_ERROR(err_msg);
+    SLIC_ERROR_ROOT(err_msg);
   }
 
   return std::make_shared<mfem::Mesh>(imesh, 1, 1, true);
 }
 
-// a transformation from the unit disk/sphere (in L1 norm) to a unit disk/sphere (in L2 norm)
+/**
+ * @brief a transformation from the unit disk/sphere (in L1 norm) to a unit disk/sphere (in L2 norm)
+ *
+ * @param mesh The mesh to transform
+ */
 void squish(mfem::Mesh& mesh)
 {
   int num_vertices = mesh.GetNV();
