@@ -54,7 +54,7 @@ TEST(serac_error_handling, equationsolver_kinsol_not_available)
 
 TEST(serac_error_handling, bc_project_requires_state)
 {
-  auto mesh      = buildDiskMesh(10);
+  auto mesh      = mesh::refineAndDistribute(buildDiskMesh(10));
   int  num_attrs = mesh->bdr_attributes.Max();
 
   auto              coef = std::make_shared<mfem::ConstantCoefficient>();
@@ -116,7 +116,8 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
 
 TEST(serac_error_handling, invalid_output_type)
 {
-  ThermalConduction physics(1, buildDiskMesh(100), ThermalConduction::defaultQuasistaticOptions());
+  ThermalConduction physics(1, mesh::refineAndDistribute(buildDiskMesh(100)),
+                            ThermalConduction::defaultQuasistaticOptions());
   // Try a definitely wrong number to ensure that an invalid output type is detected
   EXPECT_THROW(physics.initializeOutput(static_cast<OutputType>(-7), ""), SlicErrorException);
 }

@@ -26,7 +26,7 @@ TEST(thermal_solver, static_solve)
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/static_solve.lua";
-  auto pmesh = buildBallMesh(10000);
+  auto pmesh = mesh::refineAndDistribute(buildBallMesh(10000));
   test_utils::runModuleTest<ThermalConduction>(input_file_path, "static_solve", pmesh);
   MPI_Barrier(MPI_COMM_WORLD);
 }
