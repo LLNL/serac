@@ -80,21 +80,21 @@ TEST(dynamic_solver, dyn_solve)
   const NonlinearSolverOptions default_dyn_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
-  const NonlinearSolid::SolverOptions default_dynamic = {
+  const Solid::SolverOptions default_dynamic = {
       default_dyn_linear_options, default_dyn_nonlinear_options,
-      NonlinearSolid::TimesteppingOptions{TimestepMethod::AverageAcceleration,
-                                          DirichletEnforcementMethod::RateControl}};
+      Solid::TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
   ThermalSolid ts_solver(1, therm_options, default_dynamic);
-  ts_solver.SetDisplacementBCs(ess_bdr, deform);
-  ts_solver.SetTractionBCs(trac_bdr, traction_coef);
-  ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  ts_solver.SetConductivity(std::move(kappa));
-  ts_solver.SetDisplacement(*deform);
-  ts_solver.SetVelocity(*velo);
-  ts_solver.SetTemperature(*temp);
-  ts_solver.SetCouplingScheme(serac::CouplingScheme::OperatorSplit);
+  ts_solver.setDisplacementBCs(ess_bdr, deform);
+  ts_solver.setTractionBCs(trac_bdr, traction_coef, false);
+  ts_solver.setSolidMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
+                                       std::make_unique<mfem::ConstantCoefficient>(5.0));
+  ts_solver.setConductivity(std::move(kappa));
+  ts_solver.setDisplacement(*deform);
+  ts_solver.setVelocity(*velo);
+  ts_solver.setTemperature(*temp);
+  ts_solver.setCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity
   double offset = 0.1;
@@ -103,7 +103,7 @@ TEST(dynamic_solver, dyn_solve)
   auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature().gridFunc());
   auto visc_coef    = std::make_unique<mfem_ext::TransformedScalarCoefficient>(
       temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
-  ts_solver.SetViscosity(std::move(visc_coef));
+  ts_solver.setViscosity(std::move(visc_coef));
 
   // Initialize the VisIt output
   ts_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");
@@ -141,8 +141,8 @@ TEST(dynamic_solver, dyn_solve)
   double x_norm    = ts_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
   double temp_norm = ts_solver.temperature().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(0.146228, x_norm, 0.001);
-  EXPECT_NEAR(0.005227, v_norm, 0.001);
+  EXPECT_NEAR(0.122796, x_norm, 0.001);
+  EXPECT_NEAR(0.001791, v_norm, 0.001);
   EXPECT_NEAR(6.494477, temp_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);

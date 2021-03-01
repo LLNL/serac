@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid.hpp"
 
 #include <fstream>
 
@@ -21,12 +21,11 @@ namespace serac {
 
 using test_utils::InputFileTest;
 
-TEST_P(InputFileTest, nonlin_solid)
+TEST_P(InputFileTest, solid)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  std::string input_file_path =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/" + GetParam() + ".lua";
-  test_utils::runModuleTest<NonlinearSolid>(input_file_path);
+  std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/" + GetParam() + ".lua";
+  test_utils::runModuleTest<Solid>(input_file_path, GetParam());
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -39,15 +38,16 @@ const std::string input_files[] = {"dyn_solve",
                                    "dyn_amgx_solve",
 #endif
                                    "qs_solve",
-                                   "qs_direct_solve"};
+                                   "qs_direct_solve",
+                                   "qs_linear"};
 
-INSTANTIATE_TEST_SUITE_P(NonlinearSolidInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
+INSTANTIATE_TEST_SUITE_P(SolidInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
 
-TEST(nonlinear_solid_solver, qs_custom_solve)
+TEST(solid_solver, qs_custom_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
-  std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_solve.lua";
+  std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_solve.lua";
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -56,7 +56,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   auto inlet = serac::input::initialize(datastore, input_file_path);
   serac::StateManager::initialize(datastore);
 
-  test_utils::defineTestSchema<NonlinearSolid>(inlet);
+  test_utils::defineTestSchema<Solid>(inlet);
 
   // Build the mesh
   auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
@@ -67,12 +67,12 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   serac::StateManager::setMesh(std::move(mesh));
 
   // Define the solid solver object
-  auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+  auto solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
 
   // Simulate a custom solver by manually building the linear solver and passing it in
   // The custom solver built here should be identical to what is internally built in the
   // qs_solve test
-  auto custom_options = inlet["nonlinear_solid/stiffness_solver/linear"].get<serac::LinearSolverOptions>();
+  auto custom_options = inlet["solid/equation_solver/linear"].get<serac::LinearSolverOptions>();
   auto iter_options   = std::get<serac::IterativeSolverOptions>(custom_options);
   auto custom_solver  = std::make_unique<mfem::MINRESSolver>(MPI_COMM_WORLD);
   custom_solver->SetRelTol(iter_options.rel_tol);
@@ -81,7 +81,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
   custom_solver->SetPrintLevel(iter_options.print_level);
 
   solid_solver_options.solver_options.H_lin_options = CustomSolverOptions{custom_solver.get()};
-  NonlinearSolid solid_solver(solid_solver_options);
+  Solid solid_solver(solid_solver_options);
 
   // Initialize the output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
@@ -100,7 +100,7 @@ TEST(nonlinear_solid_solver, qs_custom_solve)
 
   double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
 
   // 0 = R(u) + K(u) du
   // u_sol = u + du

@@ -80,7 +80,7 @@ mfem::Vector evaluate(const VectorExpr<T>& expr)
 /**
  * @brief Fully evaluates a vector expression into an actual mfem::Vector
  * @param expr The expression to evaluate
- * @param vec The vector to populate with the expression result
+ * @param result The vector to populate with the expression result
  */
 template <typename T>
 void evaluate(const VectorExpr<T>& expr, mfem::Vector& result)

@@ -288,8 +288,8 @@ std::unique_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius
   auto num_vertices          = num_vertices_ring * 2;
   auto num_boundary_elements = num_elems * 2;
 
-  SLIC_ERROR_IF(outer_radius <= inner_radius,
-                "Outer radius is smaller than inner radius while building a cylinder mesh.");
+  SLIC_ERROR_ROOT_IF(outer_radius <= inner_radius,
+                     "Outer radius is smaller than inner radius while building a cylinder mesh.");
 
   std::vector<std::vector<double>> vertices(static_cast<size_type>(num_vertices), std::vector<double>(dim, 0.));
   for (size_type i = 0; i < num_vertices_ring; i++) {
@@ -459,6 +459,6 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
   // If it reaches here, we haven't found a supported type
   serac::logger::flush();
   std::string err_msg = fmt::format("Specified type not supported: {0}", mesh_type);
-  SLIC_ERROR(err_msg);
+  SLIC_ERROR_ROOT(err_msg);
   return {};
 }

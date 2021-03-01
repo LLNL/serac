@@ -98,7 +98,7 @@ set(exported_targets
     serac_numerics
     serac_physics_utilities
     serac_physics_operators
-    serac_integrators)
+    serac_physics_integrators)
 
 add_library(serac INTERFACE)
 target_link_libraries(serac INTERFACE ${exported_targets})

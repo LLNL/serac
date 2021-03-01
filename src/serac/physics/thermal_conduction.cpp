@@ -8,6 +8,8 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
+#include "serac/physics/integrators/nonlinear_reaction_integrator.hpp"
+#include "serac/physics/integrators/wrapper_integrator.hpp"
 
 namespace serac {
 
@@ -55,12 +57,26 @@ ThermalConduction::ThermalConduction(const InputOptions& options)
     : ThermalConduction(options.order, options.solver_options)
 {
   setConductivity(std::make_unique<mfem::ConstantCoefficient>(options.kappa));
-  setDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
+  setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
   setSpecificHeatCapacity(std::make_unique<mfem::ConstantCoefficient>(options.cp));
+
+  if (options.reaction_func) {
+    if (options.reaction_scale_coef) {
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func,
+                           options.reaction_scale_coef->constructScalar());
+    } else {
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func,
+                           std::make_unique<mfem::ConstantCoefficient>(1.0));
+    }
+  }
 
   if (options.initial_temperature) {
     auto temp = options.initial_temperature->constructScalar();
     setTemperature(*temp);
+  }
+
+  if (options.source_coef) {
+    setSource(options.source_coef->constructScalar());
   }
 
   // Process the BCs in sorted order for correct behavior with repeated attributes
@@ -75,7 +91,7 @@ ThermalConduction::ThermalConduction(const InputOptions& options)
       std::shared_ptr<mfem::Coefficient> flux_coef(bc.coef_opts.constructScalar());
       setFluxBCs(bc.attrs, flux_coef);
     } else {
-      SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
+      SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
     }
   }
 }
@@ -112,13 +128,22 @@ void ThermalConduction::setSource(std::unique_ptr<mfem::Coefficient>&& source)
   source_ = std::move(source);
 }
 
+void ThermalConduction::setNonlinearReaction(std::function<double(double)>        reaction,
+                                             std::function<double(double)>        d_reaction,
+                                             std::unique_ptr<mfem::Coefficient>&& scale)
+{
+  reaction_       = reaction;
+  d_reaction_     = d_reaction;
+  reaction_scale_ = std::move(scale);
+}
+
 void ThermalConduction::setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
 {
   // Set the specific heat capacity coefficient
   cp_ = std::move(cp);
 }
 
-void ThermalConduction::setDensity(std::unique_ptr<mfem::Coefficient>&& rho)
+void ThermalConduction::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho)
 {
   // Set the density coefficient
   rho_ = std::move(rho);
@@ -128,20 +153,21 @@ void ThermalConduction::completeSetup()
 {
   SLIC_ASSERT_MSG(kappa_, "Conductivity not set in ThermalSolver!");
 
-  // Add the domain diffusion integrator to the K form and assemble the matrix
-  K_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
-  K_form_->AddDomainIntegrator(new mfem::DiffusionIntegrator(*kappa_));
-  K_form_->Assemble(0);  // keep sparsity pattern of M and K the same
-  K_form_->Finalize();
+  // Add the domain diffusion integrator to the K form
+  K_form_ = temperature_.createOnSpace<mfem::ParNonlinearForm>();
+  K_form_->AddDomainIntegrator(
+      new mfem_ext::BilinearToNonlinearFormIntegrator(std::make_unique<mfem::DiffusionIntegrator>(*kappa_)));
 
   // Add the body source to the RS if specified
-  l_form_ = temperature_.createOnSpace<mfem::ParLinearForm>();
   if (source_) {
-    l_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*source_));
-    rhs_.reset(l_form_->ParallelAssemble());
-  } else {
-    rhs_  = temperature_.createOnSpace<mfem::HypreParVector>();
-    *rhs_ = 0.0;
+    K_form_->AddDomainIntegrator(new mfem_ext::LinearToNonlinearFormIntegrator(
+        std::make_unique<mfem::DomainLFIntegrator>(*source_), temperature_.space()));
+  }
+
+  // Add a nonlinear reaction term if specified
+  if (reaction_) {
+    K_form_->AddDomainIntegrator(
+        new serac::thermal::mfem_ext::NonlinearReactionIntegrator(reaction_, d_reaction_, *reaction_scale_));
   }
 
   // Build the dof array lookup tables
@@ -152,13 +178,6 @@ void ThermalConduction::completeSetup()
     bc.projectBdr(temperature_, time_);
   }
 
-  // Assemble the stiffness matrix
-  K_.reset(K_form_->ParallelAssemble());
-
-  // Initialize the eliminated BC RHS vector
-  bc_rhs_  = temperature_.createOnSpace<mfem::HypreParVector>();
-  *bc_rhs_ = 0.0;
-
   // Initialize the true vector
   temperature_.initializeTrueVec();
 
@@ -167,16 +186,14 @@ void ThermalConduction::completeSetup()
         temperature_.space().TrueVSize(),
 
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          r = (*K_) * u;
+          K_form_->Mult(u, r);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
-        [this](const mfem::Vector & /*du_dt*/) -> mfem::Operator& {
-          if (J_ == nullptr) {
-            J_.reset(K_form_->ParallelAssemble());
-            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
-          }
-          return *J_;
+        [this](const mfem::Vector& u) -> mfem::Operator& {
+          auto& J = dynamic_cast<mfem::HypreParMatrix&>(K_form_->GetGradient(u));
+          bcs_.eliminateAllEssentialDofsFromMatrix(J);
+          return J;
         });
 
   } else {
@@ -195,13 +212,16 @@ void ThermalConduction::completeSetup()
     residual_ = mfem_ext::StdFunctionOperator(
         temperature_.space().TrueVSize(),
         [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-          r = (*M_) * du_dt + (*K_) * (u_ + dt_ * du_dt);
+          r = (*M_) * du_dt + (*K_form_) * (u_ + dt_ * du_dt);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
-        [this](const mfem::Vector & /*du_dt*/) -> mfem::Operator& {
-          if (dt_ != previous_dt_) {
-            J_.reset(mfem::Add(1.0, *M_, dt_, *K_));
+        [this](const mfem::Vector& du_dt) -> mfem::Operator& {
+          // Only reassemble the stiffness if it is a new timestep or we have a nonlinear reaction
+          if (dt_ != previous_dt_ || reaction_) {
+            auto localJ = std::unique_ptr<mfem::SparseMatrix>(
+                mfem::Add(1.0, M_form_->SpMat(), dt_, K_form_->GetLocalGradient(u_ + dt_ * du_dt)));
+            J_.reset(M_form_->ParallelAssemble(localJ.get()));
             bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
           }
           return *J_;
@@ -236,9 +256,20 @@ void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& 
   table.addDouble("rho", "Density").defaultValue(1.0);
   table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
-  auto& stiffness_solver_table =
-      table.addStruct("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
+  auto& source = table.addStruct("source", "Scalar source term (RHS of the thermal conduction PDE)");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(source);
+
+  auto& reaction_table = table.addStruct("nonlinear_reaction", "Nonlinear reaction term parameters");
+  reaction_table.addFunction("reaction_function", axom::inlet::FunctionTag::Double, {axom::inlet::FunctionTag::Double},
+                             "Nonlinear reaction function q = q(temperature)");
+  reaction_table.addFunction("d_reaction_function", axom::inlet::FunctionTag::Double,
+                             {axom::inlet::FunctionTag::Double},
+                             "Derivative of the nonlinear reaction function dq = dq / dTemperature");
+  auto& scale_coef_table = reaction_table.addStruct("scale", "Spatially varying scale factor for the reaction");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(scale_coef_table);
+
+  auto& equation_solver_table = table.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
 
   auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
@@ -264,9 +295,9 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
   result.order = base["order"];
 
   // Solver parameters
-  auto stiffness_solver                  = base["stiffness_solver"];
-  result.solver_options.T_lin_options    = stiffness_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.T_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  auto equation_solver                   = base["equation_solver"];
+  result.solver_options.T_lin_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
+  result.solver_options.T_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
     ThermalConduction::TimesteppingOptions dyn_options;
@@ -278,18 +309,32 @@ ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::oper
         {"BackwardEuler", TimestepMethod::BackwardEuler},
         {"ForwardEuler", TimestepMethod::ForwardEuler}};
     std::string timestep_method = dynamics["timestepper"];
-    SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
+    SLIC_ERROR_ROOT_IF(timestep_methods.count(timestep_method) == 0,
+                       "Unrecognized timestep method: " << timestep_method);
     dyn_options.timestepper = timestep_methods.at(timestep_method);
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
         {"RateControl", DirichletEnforcementMethod::RateControl}};
     std::string enforcement_method = dynamics["enforcement_method"];
-    SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
-                  "Unrecognized enforcement method: " << enforcement_method);
+    SLIC_ERROR_ROOT_IF(enforcement_methods.count(enforcement_method) == 0,
+                       "Unrecognized enforcement method: " << enforcement_method);
     dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
 
     result.solver_options.dyn_options = std::move(dyn_options);
+  }
+
+  if (base.contains("nonlinear_reaction")) {
+    auto reaction          = base["nonlinear_reaction"];
+    result.reaction_func   = reaction["reaction_function"].get<std::function<double(double)>>();
+    result.d_reaction_func = reaction["d_reaction_function"].get<std::function<double(double)>>();
+    if (reaction.contains("scale")) {
+      result.reaction_scale_coef = reaction["scale"].get<serac::input::CoefficientInputOptions>();
+    }
+  }
+
+  if (base.contains("source")) {
+    result.source_coef = base["source"].get<serac::input::CoefficientInputOptions>();
   }
 
   // Set the material parameters

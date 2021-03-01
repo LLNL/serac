@@ -25,8 +25,8 @@ void defineTestSchema(axom::inlet::Inlet& inlet);
  * @param[in] restart_cycle Restores simulation state from a saved file
  */
 template <typename PhysicsModule>
-void runModuleTest(const std::string& input_file, std::unique_ptr<mfem::ParMesh> custom_mesh = {},
-                   std::optional<int> restart_cycle = {});
+void runModuleTest(const std::string& input_file, const std::string& test_name,
+                   std::unique_ptr<mfem::ParMesh> custom_mesh = {}, std::optional<int> restart_cycle = {});
 
 class InputFileTest : public ::testing::TestWithParam<std::string> {
 };

@@ -14,7 +14,7 @@ namespace serac {
 constexpr int NUM_FIELDS = 3;
 
 ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& therm_options,
-                           const NonlinearSolid::SolverOptions& solid_options)
+                           const Solid::SolverOptions& solid_options)
     : BasePhysics(NUM_FIELDS, order),
       therm_solver_(order, therm_options),
       solid_solver_(order, solid_options),
@@ -32,8 +32,7 @@ ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& th
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
-ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input,
-                           const NonlinearSolid::InputOptions&    solid_input)
+ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const Solid::InputOptions& solid_input)
     : BasePhysics(NUM_FIELDS, std::max(thermal_input.order, solid_input.order)),
       therm_solver_(thermal_input),
       solid_solver_(solid_input),

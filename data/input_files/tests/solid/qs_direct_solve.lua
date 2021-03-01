@@ -1,14 +1,12 @@
 -- Comparison information
-expected_x_l2norm = 1.4225
-expected_v_l2norm = 0.2252
-epsilon = 0.0001
+expected_u_l2norm = 2.2309025
+epsilon = 0.001
 
 -- Simulation time parameters
 dt      = 1.0
-t_final = 6.0
 
 main_mesh = {
-    type = "file",	  
+    type = "file",
     -- mesh file
     mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
@@ -20,8 +18,8 @@ main_mesh = {
 output_type = "VisIt"
 
 -- Solver parameters
-nonlinear_solid = {
-    stiffness_solver = {
+solid = {
+    equation_solver = {
         linear = {
             type = "direct",
             direct_options = {
@@ -30,16 +28,11 @@ nonlinear_solid = {
         },
 
         nonlinear = {
-            rel_tol     = 1.0e-4,
-            abs_tol     = 1.0e-8,
-            max_iter    = 500,
+            rel_tol     = 1.0e-3,
+            abs_tol     = 1.0e-6,
+            max_iter    = 5000,
             print_level = 1,
         },
-    },
-
-    dynamics = {
-        timestepper = "AverageAcceleration",
-        enforcement_method = "RateControl",
     },
 
     -- polynomial interpolation order
@@ -47,32 +40,7 @@ nonlinear_solid = {
 
     -- neo-Hookean material parameters
     mu = 0.25,
-    K  = 5.0,
-
-    viscosity = 0.0,
-
-    -- initial conditions
-    initial_displacement = {
-        vector_constant = {
-            x = 0.0,
-            y = 0.0,
-            z = 0.0
-        }
-    },
-
-    initial_velocity = {
-        vector_function = function (v)
-            x = v.x
-            s = 0.1 / 64
-            first = -s * x * x
-            last = s * x * x * (8.0 - x)
-            if v.dim == 2 then
-                return Vector.new(first, last)
-            else
-                return Vector.new(first, 0, last)
-            end
-        end
-    },
+    K  = 10.0,
 
     -- boundary condition parameters
     boundary_conds = {
@@ -82,6 +50,14 @@ nonlinear_solid = {
             vector_constant = {
                 x = 0.0,
                 y = 0.0,
+                z = 0.0
+            }
+        },
+        ['traction'] = {
+            attrs = {2},
+            vector_constant = {
+                x = 0.0,
+                y = 1.0e-3,
                 z = 0.0
             }
         },
