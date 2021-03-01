@@ -29,6 +29,7 @@ public:
    *
    * @param[in] reaction a function describing the nonlinear reaction term q = q(T)
    * @param[in] d_reaction a function describing the derivative of the reaction dq = dq(T) / dT
+   * @param[in] scale a coefficient for the reaction term
    */
   explicit NonlinearReactionIntegrator(std::function<double(double)> reaction, std::function<double(double)> d_reaction,
                                        mfem::Coefficient& scale)
@@ -55,7 +56,7 @@ public:
    * @param[in] element The finite element to integrate
    * @param[in] basis_to_reference_transformation The element transformation operators
    * @param[in] state_vector The state vector to evaluate the gradient
-   * @param[out] elmat The output local gradient
+   * @param[out] stiffness_matrix The output local gradient
    */
   virtual void AssembleElementGrad(const mfem::FiniteElement&   element,
                                    mfem::ElementTransformation& basis_to_reference_transformation,

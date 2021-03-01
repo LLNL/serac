@@ -63,9 +63,11 @@ ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const 
 
   if (options.reaction_func) {
     if (options.reaction_scale_coef) {
-      setNonlinearReaction(options.reaction_func, options.d_reaction_func, options.reaction_scale_coef->constructScalar());
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func,
+                           options.reaction_scale_coef->constructScalar());
     } else {
-      setNonlinearReaction(options.reaction_func, options.d_reaction_func, std::make_unique<mfem::ConstantCoefficient>(1.0));
+      setNonlinearReaction(options.reaction_func, options.d_reaction_func,
+                           std::make_unique<mfem::ConstantCoefficient>(1.0));
     }
   }
 

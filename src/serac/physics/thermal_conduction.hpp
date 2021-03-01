@@ -116,12 +116,28 @@ public:
      */
     double rho;
 
-    // Nonlinear reaction information
-    std::function<double(double)>                 reaction_func;
-    std::function<double(double)>                 d_reaction_func;
+    /**
+     * @brief Reaction function r(T)
+     *
+     */
+    std::function<double(double)> reaction_func;
+
+    /**
+     * @brief Derivative of the reaction function dR(T)/dT
+     *
+     */
+    std::function<double(double)> d_reaction_func;
+
+    /**
+     * @brief The coefficient options for the scaling factor
+     *
+     */
     std::optional<input::CoefficientInputOptions> reaction_scale_coef;
 
-    // Source information
+    /**
+     * @brief Source function coefficient
+     *
+     */
     std::optional<input::CoefficientInputOptions> source_coef;
 
     /**
@@ -250,6 +266,7 @@ public:
    *
    * @param[in] reaction A function describing the temperature dependent reaction q=q(T)
    * @param[in] d_reaction A function describing the derivative of the reaction dq = dq(T)/dT
+   * @param[in] scale A scaling coefficient for the reaction term
    */
   void setNonlinearReaction(std::function<double(double)> reaction, std::function<double(double)> d_reaction,
                             std::unique_ptr<mfem::Coefficient>&& scale);

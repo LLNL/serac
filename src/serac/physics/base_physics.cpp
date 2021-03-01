@@ -48,7 +48,7 @@ int BasePhysics::cycle() const { return cycle_; }
 
 void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
 {
-  root_name_ = root_name;
+  root_name_   = root_name;
   output_type_ = output_type;
 
   switch (output_type_) {
