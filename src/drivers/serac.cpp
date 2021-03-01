@@ -103,6 +103,7 @@ int main(int argc, char* argv[])
   axom::sidre::DataStore datastore;
 
   // Intialize MFEMSidreDataCollection
+  // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
   serac::StateManager::initialize(datastore, restart_cycle);
 
   // Initialize Inlet and read input file
@@ -118,16 +119,16 @@ int main(int argc, char* argv[])
   }
 
   // Save input values to file
-  datastore.getRoot()->save("serac_input.json", "json");
+  datastore.getRoot()->getGroup("input_file")->save("serac_input.json", "json");
 
+  // Not restarting, so we need to create the mesh and register it with the StateManager
   if (!restart_cycle) {
     // Build the mesh
-    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-    if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-      auto full_mesh_path = serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
-      auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
-      serac::StateManager::setMesh(std::move(mesh));
-    }
+    auto       mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    const auto file_opts      = std::get<serac::mesh::FileInputOptions>(mesh_options.extra_options);
+    auto       full_mesh_path = serac::input::findMeshFilePath(file_opts.relative_mesh_file_name, input_file_path);
+    auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+    serac::StateManager::setMesh(std::move(mesh));
   }
 
   // Create the physics object

@@ -46,7 +46,8 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   // Store found values
   std::unordered_map<std::string, std::string> cli_opts;
   cli_opts.insert({std::string("input_file"), input_file_path});
-  if (restart_opt->count()) {
+  // If a restart cycle was specified
+  if (restart_opt->count() > 0) {
     cli_opts["restart_cycle"] = std::to_string(restart_cycle);
   }
   if (create_input_file_docs) {
