@@ -224,8 +224,7 @@ void Solid::completeSetup()
   // Add external forces
   for (auto& force : ext_force_coefs_) {
     H_->AddDomainIntegrator(new serac::mfem_ext::LinearToNonlinearFormIntegrator(
-        std::make_shared<mfem::VectorDomainLFIntegrator>(*force),
-        std::make_shared<mfem::ParFiniteElementSpace>(*H_->ParFESpace())));
+        std::make_shared<mfem::VectorDomainLFIntegrator>(*force), displacement_.space()));
   }
 
   // Build the dof array lookup tables

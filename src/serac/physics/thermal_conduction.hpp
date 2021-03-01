@@ -117,6 +117,30 @@ public:
     double rho;
 
     /**
+     * @brief Reaction function r(T)
+     *
+     */
+    std::function<double(double)> reaction_func;
+
+    /**
+     * @brief Derivative of the reaction function dR(T)/dT
+     *
+     */
+    std::function<double(double)> d_reaction_func;
+
+    /**
+     * @brief The coefficient options for the scaling factor
+     *
+     */
+    std::optional<input::CoefficientInputOptions> reaction_scale_coef;
+
+    /**
+     * @brief Source function coefficient
+     *
+     */
+    std::optional<input::CoefficientInputOptions> source_coef;
+
+    /**
      * @brief The boundary condition information
      */
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
@@ -238,6 +262,16 @@ public:
   void setSource(std::unique_ptr<mfem::Coefficient>&& source);
 
   /**
+   * @brief Set a nonlinear temperature dependent reaction term
+   *
+   * @param[in] reaction A function describing the temperature dependent reaction q=q(T)
+   * @param[in] d_reaction A function describing the derivative of the reaction dq = dq(T)/dT
+   * @param[in] scale A scaling coefficient for the reaction term
+   */
+  void setNonlinearReaction(std::function<double(double)> reaction, std::function<double(double)> d_reaction,
+                            std::unique_ptr<mfem::Coefficient>&& scale);
+
+  /**
    * @brief Set the density field. Defaults to 1.0 if not set.
    *
    * @param[in] rho The density field coefficient
@@ -288,34 +322,14 @@ protected:
   std::unique_ptr<mfem::ParBilinearForm> M_form_;
 
   /**
-   * @brief Stiffness bilinear form object
+   * @brief Stiffness nonlinear form object
    */
-  std::unique_ptr<mfem::ParBilinearForm> K_form_;
+  std::unique_ptr<mfem::ParNonlinearForm> K_form_;
 
   /**
    * @brief Assembled mass matrix
    */
   std::unique_ptr<mfem::HypreParMatrix> M_;
-
-  /**
-   * @brief Assembled stiffness matrix
-   */
-  std::unique_ptr<mfem::HypreParMatrix> K_;
-
-  /**
-   * @brief Thermal load linear form
-   */
-  std::unique_ptr<mfem::ParLinearForm> l_form_;
-
-  /**
-   * @brief Assembled BC load vector
-   */
-  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
-
-  /**
-   * @brief Assembled RHS vector
-   */
-  std::unique_ptr<mfem::HypreParVector> rhs_;
 
   /**
    * @brief Conduction coefficient
@@ -395,6 +409,24 @@ protected:
    * nonlinear solver
    */
   mfem::Vector previous_;
+
+  /**
+   * @brief the nonlinear reaction function
+   *
+   */
+  std::function<double(double)> reaction_;
+
+  /**
+   * @brief the derivative of the nonlinear reaction function
+   *
+   */
+  std::function<double(double)> d_reaction_;
+
+  /**
+   * @brief a scaling factor for the reaction
+   *
+   */
+  std::unique_ptr<mfem::Coefficient> reaction_scale_;
 };
 
 }  // namespace serac

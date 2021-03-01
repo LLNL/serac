@@ -6,12 +6,14 @@
 
 set(integrators_sources
     displacement_hyperelastic_integrator.cpp
+    nonlinear_reaction_integrator.cpp
     traction_integrator.cpp
     wrapper_integrator.cpp
     )
 
 set(integrators_headers
     displacement_hyperelastic_integrator.hpp
+    nonlinear_reaction_integrator.hpp
     traction_integrator.hpp
     wrapper_integrator.hpp
     )

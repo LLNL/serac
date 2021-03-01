@@ -98,7 +98,7 @@ void SolveNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int>& es
   ConstantCoefficient coeff_zero(0.0);
 
   auto zero_integrator = std::make_shared<DomainLFIntegrator>(coeff_zero);
-  A_nonlin.AddDomainIntegrator(new mfem_ext::LinearToNonlinearFormIntegrator(zero_integrator, pfes_));
+  A_nonlin.AddDomainIntegrator(new mfem_ext::LinearToNonlinearFormIntegrator(zero_integrator, *pfes_));
 
   // The temperature solution vector already contains the essential boundary condition values
   std::unique_ptr<HypreParVector> T = std::unique_ptr<HypreParVector>(temp.GetTrueDofs());
@@ -124,7 +124,7 @@ void SolveMixedNonlinear(std::shared_ptr<ParFiniteElementSpace> pfes_, Array<int
 
   auto diffusion = std::make_shared<DiffusionIntegrator>(one);
 
-  A_nonlin.AddDomainIntegrator(new mfem_ext::MixedBilinearToNonlinearFormIntegrator(diffusion, pfes_));
+  A_nonlin.AddDomainIntegrator(new mfem_ext::MixedBilinearToNonlinearFormIntegrator(diffusion, *pfes_));
   A_nonlin.SetEssentialTrueDofs(ess_tdof_list);
 
   // The temperature solution vector already contains the essential boundary condition values
