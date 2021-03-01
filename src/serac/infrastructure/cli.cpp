@@ -15,8 +15,7 @@ namespace serac::cli {
 
 //------- Command Line Interface -------
 
-std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], int rank,
-                                                            std::string app_description)
+std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], std::string app_description)
 {
   // specify all input arguments
   CLI::App    app{app_description};
@@ -33,11 +32,11 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
     serac::logger::flush();
     if (e.get_name() == "CallForHelp") {
       auto msg = app.help();
-      SLIC_INFO_ROOT(rank, msg);
+      SLIC_INFO_ROOT(msg);
       serac::exitGracefully();
     } else {
       auto err_msg = CLI::FailureMessage::simple(&app, e);
-      SLIC_ERROR_ROOT(rank, err_msg);
+      SLIC_ERROR_ROOT(err_msg);
     }
   }
 
@@ -51,7 +50,7 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   return cli_opts;
 }
 
-void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank)
+void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
 {
   // Add header
   std::string optsMsg = fmt::format("\n{:*^80}\n", "Command Line Options");
@@ -63,7 +62,7 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank
   // Add footer
   optsMsg += fmt::format("{:*^80}\n", "*");
 
-  SLIC_INFO_ROOT(rank, optsMsg);
+  SLIC_INFO_ROOT(optsMsg);
   serac::logger::flush();
 }
 
