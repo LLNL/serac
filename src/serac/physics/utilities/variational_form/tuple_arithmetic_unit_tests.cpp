@@ -42,6 +42,14 @@ namespace impl {
 template < typename T1, typename T2 >
 using outer_product_t = typename impl::outer_prod<T1, T2>::type;
 
+template < typename ... T >
+auto get_grad(dual< std::tuple < T ... > > arg) {
+  return std::apply([](auto ... each_value){
+    return std::tuple{each_value ...};
+  }, arg.gradient);
+}
+
+
 template < typename T, int ... n >
 void get_grad(tensor< dual< double >, n ... > arg) {
   tensor< double, n ... > g{};
@@ -74,7 +82,7 @@ auto get_grad(tensor< dual< tensor< double, m ... > >, n ... > arg) {
 template < typename ... T >
 auto get_grad(std::tuple < T ... > tuple_of_values) {
   return std::apply([](auto ... each_value){
-    return std::tuple{get_gradient(each_value) ...};
+    return std::tuple{get_grad(each_value) ...};
   }, tuple_of_values);
 }
 
@@ -120,28 +128,49 @@ int main() {
     std::cout << abs(sqnorm(exact_dsigma_dL[i][j] - std::get<2>(stress[i][j].gradient))) << std::endl;
   });
 
-  auto grad = get_grad(stress);
+  {
+    auto grad = get_grad(stress);
+    std::cout << std::get<0>(grad) - exact_dsigma_dp << std::endl;
+    std::cout << std::get<1>(grad) - exact_dsigma_dv << std::endl;
+    std::cout << std::get<2>(grad) - exact_dsigma_dL << std::endl;
+  }
 
-  std::cout << std::get<0>(grad) - exact_dsigma_dp << std::endl;
-  std::cout << std::get<1>(grad) - exact_dsigma_dv << std::endl;
-  std::cout << std::get<2>(grad) - exact_dsigma_dL << std::endl;
+  constexpr auto incompressibility = [](auto /*p*/, auto /*v*/, auto L) {      
+    return tr(L);
+  };
 
-  constexpr auto func = [](auto p, auto v, auto L) {      
+  auto dilatation = std::apply(incompressibility, make_dual(p, v, L));
+
+  {
+    std::cout << "dilatation derivatives:" << std::endl;
+    auto grad = get_grad(dilatation);
+    std::cout << std::get<0>(grad) << std::endl;
+    std::cout << std::get<1>(grad) << std::endl;
+    std::cout << std::get<2>(grad) << std::endl;
+  }
+
+
+  constexpr auto tuple_func = [](auto p, auto v, auto L) {      
     return std::tuple{
       rho * outer(v, v) + 2.0 * mu * sym(L) - p * I,
       tr(L)  
     };
   };
 
-  auto stress_and_dilatation = std::apply(func, make_dual(p, v, L));
+  auto stress_and_dilatation = std::apply(tuple_func, make_dual(p, v, L));
 
-  std::cout << std::get<0>(stress_and_dilatation)[0][0].value;
+  {
+    auto grad = get_grad(stress_and_dilatation);
 
-  //double q = stress_and_dilatation;
+    std::cout << "stress derivatives:" << std::endl;
+    std::cout << std::get<0>(std::get<0>(grad)) << std::endl;
+    std::cout << std::get<1>(std::get<0>(grad)) << std::endl;
+    std::cout << std::get<2>(std::get<0>(grad)) << std::endl;
 
-  //auto grad2 = get_grad(stress_and_dilatation);
-
-  //std::cout << std::get<0>(std::get<0>(grad2)) - exact_dsigma_dp << std::endl;
-
+    std::cout << "dilatation derivatives:" << std::endl;
+    std::cout << std::get<0>(std::get<1>(grad)) << std::endl;
+    std::cout << std::get<1>(std::get<1>(grad)) << std::endl;
+    std::cout << std::get<2>(std::get<1>(grad)) << std::endl;
+  }
 
 }
