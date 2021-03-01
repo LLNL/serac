@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_structural_solver.hpp
+ * @file thermal_solid.hpp
  *
  * @brief An object containing an operator-split thermal structural solver
  */

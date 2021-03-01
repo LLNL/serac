@@ -50,9 +50,7 @@ std::string findMeshFilePath(const std::string& mesh_path, const std::string& in
 
   // Failed to find mesh file
   std::string msg = fmt::format("Input file: Given mesh file does not exist: {0}", mesh_path);
-  int         rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  SLIC_ERROR_ROOT(rank, msg);
+  SLIC_ERROR_ROOT(msg);
   return "";
 }
 
@@ -61,7 +59,7 @@ std::string fullDirectoryFromPath(const std::string& path)
   char  actualpath[PATH_MAX + 1];
   char* ptr = realpath(path.c_str(), actualpath);
   if (ptr == nullptr) {
-    SLIC_ERROR("Failed to find absolute path from input file.");
+    SLIC_ERROR_ROOT("Failed to find absolute path from input file.");
   }
   std::string dir;
   axom::utilities::filesystem::getDirName(dir, std::string(actualpath));
@@ -97,7 +95,7 @@ bool CoefficientInputOptions::isVector() const
 
 std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVector(const int dim) const
 {
-  SLIC_ERROR_IF(!isVector(), "Cannot construct a vector coefficient from scalar input");
+  SLIC_ERROR_ROOT_IF(!isVector(), "Cannot construct a vector coefficient from scalar input");
 
   if (vector_function) {
     return std::make_unique<mfem::VectorFunctionCoefficient>(dim, vector_function);
@@ -137,7 +135,7 @@ std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVecto
 
 std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() const
 {
-  SLIC_ERROR_IF(isVector(), "Cannot construct a scalar coefficient from vector input");
+  SLIC_ERROR_ROOT_IF(isVector(), "Cannot construct a scalar coefficient from vector input");
 
   if (scalar_function) {
     return std::make_unique<mfem::FunctionCoefficient>(scalar_function);
@@ -161,7 +159,7 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
     return std::make_unique<mfem::PWConstCoefficient>(pw_constants);
 
   } else {
-    SLIC_ERROR(
+    SLIC_ERROR_ROOT(
         "Trying to build a scalar coefficient without specifying a scalar_function, constant, or piecewise_constant.");
     return nullptr;
   }
@@ -296,10 +294,10 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     }
   }
 
-  SLIC_ERROR_IF(coefficient_definitions > 1,
-                "Coefficient has multiple definitions. Please use only one of (constant, vector_constant, "
-                "piecewise_constant, vector_piecewise_constant, scalar_function, vector_function");
-  SLIC_ERROR_IF(coefficient_definitions == 0, "Coefficient definition does not contain known type.");
+  SLIC_ERROR_ROOT_IF(coefficient_definitions > 1,
+                     "Coefficient has multiple definitions. Please use only one of (constant, vector_constant, "
+                     "piecewise_constant, vector_piecewise_constant, scalar_function, vector_function");
+  SLIC_ERROR_ROOT_IF(coefficient_definitions == 0, "Coefficient definition does not contain known type.");
 
   return result;
 }

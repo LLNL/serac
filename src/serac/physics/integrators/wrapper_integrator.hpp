@@ -228,6 +228,11 @@ private:
 
 class PointerNonlinearFormIntegrator : public mfem::NonlinearFormIntegrator {
 public:
+  /**
+   * @brief Construct a new Pointer Nonlinear Form Integrator object
+   *
+   * @param nonlin The underlying nonlinear form integrator
+   */
   PointerNonlinearFormIntegrator(std::shared_ptr<mfem::NonlinearFormIntegrator> nonlin) : integ_(nonlin) {}
 
   /**
@@ -258,6 +263,10 @@ public:
   }
 
 protected:
+  /**
+   * @brief The underlying nonlinear form integrator
+   *
+   */
   std::shared_ptr<mfem::NonlinearFormIntegrator> integ_;
 };
 

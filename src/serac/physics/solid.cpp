@@ -15,6 +15,9 @@
 
 namespace serac {
 
+/**
+ * @brief The number of fields in this physics module (displacement and velocity)
+ */
 constexpr int NUM_FIELDS = 2;
 
 Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin)
@@ -96,7 +99,7 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
         std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(dim));
         setDisplacementBCs(bc.attrs, disp_coef);
       } else {
-        SLIC_ERROR_ROOT_IF(!bc.coef_opts.component, mpi_rank_,
+        SLIC_ERROR_ROOT_IF(!bc.coef_opts.component,
                            "Component not specified with scalar coefficient when setting the displacement condition.");
         std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
         setDisplacementBCs(bc.attrs, disp_coef, *bc.coef_opts.component);
@@ -114,7 +117,7 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
       std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
       setPressureBCs(bc.attrs, pres_coef, true);
     } else {
-      SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
+      SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
     }
   }
 }
@@ -347,8 +350,6 @@ void Solid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-Solid::~Solid() {}
-
 void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
@@ -443,15 +444,16 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
         {"NewmarkBeta", TimestepMethod::Newmark},
         {"BackwardEuler", TimestepMethod::BackwardEuler}};
     std::string timestep_method = dynamics["timestepper"];
-    SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
+    SLIC_ERROR_ROOT_IF(timestep_methods.count(timestep_method) == 0,
+                       "Unrecognized timestep method: " << timestep_method);
     dyn_options.timestepper = timestep_methods.at(timestep_method);
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
         {"RateControl", DirichletEnforcementMethod::RateControl}};
     std::string enforcement_method = dynamics["enforcement_method"];
-    SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
-                  "Unrecognized enforcement method: " << enforcement_method);
+    SLIC_ERROR_ROOT_IF(enforcement_methods.count(enforcement_method) == 0,
+                       "Unrecognized enforcement method: " << enforcement_method);
     dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
 
     result.solver_options.dyn_options = std::move(dyn_options);

@@ -22,7 +22,7 @@ void BoundaryConditionManager::addEssential(const std::set<int>& ess_bdr, serac:
 
   // Check if anything was removed
   if (filtered_attrs.size() < ess_bdr.size()) {
-    SLIC_WARNING("Multiple definition of essential boundary! Using first definition given.");
+    SLIC_WARNING_ROOT("Multiple definition of essential boundary! Using first definition given.");
   }
 
   BoundaryCondition bc(ess_bdr_coef, component, filtered_attrs, num_attrs_);

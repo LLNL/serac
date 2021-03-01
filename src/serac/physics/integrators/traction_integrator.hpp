@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file hyperelastic_traction_integrator.hpp
+ * @file traction_integrator.hpp
  *
  * @brief Custom MFEM integrator for nonlinear finite deformation traction loads
  */
@@ -34,7 +34,7 @@ public:
   }
 
   /**
-   * @brief Assemble the nonlinear residual on a boundary element at a current state
+   * @brief Assemble the nonlinear residual on a boundary facet at a current state
    *
    * @param[in] element_1 The first element attached to the face
    * @param[in] element_2 The second element attached to the face
@@ -48,6 +48,8 @@ public:
 
   /**
    * @brief Assemble the gradient for the nonlinear residual at a current state
+   * @note When the traction is defined on the current configuration, this is computed via finite difference.
+   *       This is not a performant method and is intended as a stop gap until an uncoming code refactoring.
    *
    * @param[in] element_1 The first element attached to the face
    * @param[in] element_2 The second element attached to the face
@@ -87,6 +89,12 @@ private:
    *
    */
   mutable mfem::DenseMatrix dxi_dX_;
+
+  /**
+   * @brief the displacement gradient
+   *
+   */
+  mutable mfem::DenseMatrix du_dX_;
 
   /**
    * @brief the deformation gradient
@@ -169,6 +177,8 @@ public:
 
   /**
    * @brief Assemble the gradient for the nonlinear residual at a current state
+   * @note When the traction is defined on the current configuration, this is computed via finite difference.
+   *       This is not a performant method and is intended as a stop gap until an uncoming code refactoring.
    *
    * @param[in] element_1 The first element attached to the face
    * @param[in] element_2 The second element attached to the face
@@ -208,6 +218,12 @@ private:
    *
    */
   mutable mfem::DenseMatrix dxi_dX_;
+
+  /**
+   * @brief the displacement gradient
+   *
+   */
+  mutable mfem::DenseMatrix du_dX_;
 
   /**
    * @brief the deformation gradient

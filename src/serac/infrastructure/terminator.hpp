@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file terminator.hpp
+ *
+ * @brief Helper functions for exiting Serac cleanly
+ */
+
 #pragma once
 
 namespace serac {

@@ -36,15 +36,10 @@ public:
    */
   virtual ~HyperelasticMaterial() = default;
 
-  /// A parent-element to reference-element transformation that can be used to
-  /// evaluate mfem::Coefficient%s.
-  /** @note It is assumed that parent_to_reference_transformation_.SetIntPoint() is already called for the
-      point of interest. */
-
   /**
    * @brief Set the reference-to-target transformation. This is required to use coefficient parameters.
    *
-   * @param[in] parent_to_reference_transformation_ The reference-to-target (stress-free) transformation
+   * @param[in] Ttr The reference-to-target (stress-free) transformation
    */
   void setTransformation(mfem::ElementTransformation& Ttr) { parent_to_reference_transformation_ = &Ttr; }
 
@@ -76,7 +71,7 @@ public:
 
 protected:
   /**
-   * @brief Reference element to stree-free configuration (target) transformation
+   * @brief Non-owning pointer to the reference element to stree-free configuration (target) transformation
    *
    */
   mfem::ElementTransformation* parent_to_reference_transformation_;
@@ -203,7 +198,6 @@ public:
   /**
    * @brief Evaluate the strain energy density function, W = W(F).
    *
-   * @param[in] du_dX the displacement gradient
    * @return Strain energy density
    */
   virtual double evalStrainEnergy(const mfem::DenseMatrix&) const
