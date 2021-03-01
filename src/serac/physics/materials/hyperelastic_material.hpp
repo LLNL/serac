@@ -198,7 +198,6 @@ public:
   /**
    * @brief Evaluate the strain energy density function, W = W(F).
    *
-   * @param[in] du_dX the displacement gradient
    * @return Strain energy density
    */
   virtual double evalStrainEnergy(const mfem::DenseMatrix&) const

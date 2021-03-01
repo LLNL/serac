@@ -80,21 +80,33 @@ struct CoefficientInputOptions {
    */
   using ScalarFunc = std::function<double(const mfem::Vector&, double)>;
   /**
-   * @brief The std::function corresponding to a function coefficient
+   * @brief The scalar std::function corresponding to a function coefficient
    */
   ScalarFunc scalar_function;
-  VecFunc    vector_function;
 
   /**
-   * @brief The constants associated with the coefficient
+   * @brief The vector std::function corresponding to a function coefficient
    */
-  std::optional<double>       scalar_constant;
+  VecFunc vector_function;
+
+  /**
+   * @brief The scalar constant associated with the coefficient
+   */
+  std::optional<double> scalar_constant;
+
+  /**
+   * @brief The vector constant associated with the coefficient
+   */
   std::optional<mfem::Vector> vector_constant;
 
   /**
-   * @brief Piecewise constant definition maps
+   * @brief Scalar piecewise constant definition map
    */
-  std::unordered_map<int, double>       scalar_pw_const;
+  std::unordered_map<int, double> scalar_pw_const;
+
+  /**
+   * @brief Vector piecewise constant definition map
+   */
   std::unordered_map<int, mfem::Vector> vector_pw_const;
 
   /**

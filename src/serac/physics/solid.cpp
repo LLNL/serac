@@ -15,6 +15,9 @@
 
 namespace serac {
 
+/**
+ * @brief The number of fields in this physics module (displacement and velocity)
+ */
 constexpr int NUM_FIELDS = 2;
 
 Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin)
