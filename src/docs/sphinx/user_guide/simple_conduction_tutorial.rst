@@ -14,16 +14,16 @@ and Lua input files.
 
 The full source code for this tutorial is available in ``examples/simple_conduction/with_input_file.cpp``
 and ``examples/simple_conduction/without_input_file.cpp``, which demonstrate Lua and C++ configuration, respectively.
+The input file used for the Lua configuration is ``examples/simple_conduction/conduction.lua``.
 
-.. FIXME: Update this once the theory docs are merged in:
-  The thermal conduction modeled in this section is based on the formulation discussed in <theory-section-link>.
-
+The thermal conduction modeled in this section is based on the formulation discussed in :ref:`conduction-theory-label`.
 
 Setting Up Includes and Initializing
 ------------------------------------
 
-The most important part of Serac is its physics modules, each of which corresponds to a particular discretization
-of a PDE.  Since we are building a thermal conduction simulation, we include Serac's thermal conduction module:
+The most important parts of Serac are its physics modules, each of which corresponds to a particular discretization
+of a partial differential equation (e.g., continuous vs. discontinuous Galerkin finite element methods).
+In this example, we are building a thermal conduction simulation, so we include Serac's thermal conduction module:
 
 .. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
    :start-after: _incl_thermal_header_start
@@ -53,7 +53,7 @@ We're now ready to start our ``main()`` function by initializing Serac, which pe
    :end-before: _main_init_end
    :language: C++
 
-.. note::
+.. warning::
   Since Serac's initialization helper initializes MPI, you should not call ``MPI_Init`` directly.
 
 Setting Up Inlet
@@ -97,8 +97,8 @@ any other constraints:
    :language: C++
 
 .. hint::
-  The ``SLIC_ERROR_IF`` macro is part of Serac's :ref:`logging-label` functionality, which is enabled as part of the ``serac::initialize``
-  function described above.
+  The ``SLIC_ERROR_ROOT_IF`` macro is part of Serac's :ref:`logging-label` functionality,
+  which is enabled as part of the ``serac::initialize`` function described above.
 
 Constructing the Mesh
 ---------------------
@@ -122,8 +122,8 @@ Using Lua
    :end-before: _create_mesh_end
    :language: C++
 
-This snippet "indexes into" Inlet's internal hierarchy at the location where we defined the mesh schema (``main_mesh``),
-and deserializes the data into the ``struct`` Serac uses for storing mesh creation options.  Since we're
+This snippet queries Inlet's internal hierarchy at the location where we defined the mesh schema (``main_mesh``),
+and reads the data into the ``struct`` Serac uses for storing mesh creation options.  Since we're
 building a rectangular mesh, we extract the corresponding part of the options variant and use that to construct
 the mesh.  The Lua representation is as follows:
 
@@ -150,7 +150,7 @@ a steady-state simulation, we can just use the ``defaultQuasistaticOptions``.
 Using Lua
 """""""""
 
-Once the configuration options are deserialized from Inlet, we can use them to construct the ``ThermalConduction``
+Once the configuration options are read from Inlet, we can use them to construct the ``ThermalConduction``
 object:
 
 .. literalinclude:: ../../../../examples/simple_conduction/with_input_file.cpp
@@ -265,8 +265,10 @@ Running the Simulation
 
 Now that we've configured the ``ThermalConduction`` instance using a few of its configuration
 options, we're ready to run the simulation.  We call ``completeSetup`` to "finalize" the simulation
-configuration, and then save off the initial state of the simulation.  We can then perform the 
-steady-state solve and save the end result:
+configuration, and then save off the initial state of the simulation.  This also allocates and builds
+all of the internal finite element data structures.
+
+We can then perform the steady-state solve and save the end result:
 
 .. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
    :start-after: _run_sim_start

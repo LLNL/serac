@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
   // _inlet_schema_end
 
   // _inlet_verify_start
-  SLIC_ERROR_IF(!inlet.verify(), "Input file contained errors");
+  SLIC_ERROR_ROOT_IF(!inlet.verify(), "Input file contained errors");
   // _inlet_verify_end
 
   // FIXME: Replace with mesh::build
