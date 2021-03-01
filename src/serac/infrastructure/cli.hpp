@@ -16,7 +16,7 @@
 #include <string>
 #include <unordered_map>
 
-// Command line functionality
+/// Command line functionality
 namespace serac::cli {
 
 /**
