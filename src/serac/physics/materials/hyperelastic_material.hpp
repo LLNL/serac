@@ -71,7 +71,7 @@ public:
 
 protected:
   /**
-   * @brief Reference element to stree-free configuration (target) transformation
+   * @brief Non-owning pointer to the reference element to stree-free configuration (target) transformation
    *
    */
   mfem::ElementTransformation* parent_to_reference_transformation_;

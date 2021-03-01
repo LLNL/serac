@@ -348,8 +348,6 @@ void Solid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-Solid::~Solid() {}
-
 void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed

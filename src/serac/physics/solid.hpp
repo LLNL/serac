@@ -311,7 +311,7 @@ public:
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
-  virtual ~Solid();
+  virtual ~Solid() = default;
 
   /**
    * @brief Compute the current residual vector at the current internal state value
