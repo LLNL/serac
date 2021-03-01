@@ -22,12 +22,15 @@ In particular, Serac currently provides the following operations:
 1. Vector addition with ``a + b``
 2. Vector subtraction with ``a - b``
 3. Vector negation with ``-a``
-4. Scalar multiplication with ``s * a`` or ``a * s`` for scalar ``s`` and vector ``a``.
-5. Application of an ``mfem::Operator`` with ``op * a`` for ``mfem::Operator op`` and vector ``a`` - note that 
-    because ``mfem::Matrix`` inherits from ``mfem::Operator`` this functionality includes matrix-vector multiplication.
+4. Scalar multiplication with ``s * a`` or ``a * s`` for scalar ``s`` and vector ``a``
+5. Application of an ``mfem::Operator`` with ``op * a`` for ``mfem::Operator op`` and vector ``a`` 
 
-Note that all of these expressions can be composed, that is, an expression can be used as an argument
-to another expression.  This allows for chaining, e.g., ``-a + b + 0.3 * c``.
+.. note::
+  Because ``mfem::Matrix`` inherits from ``mfem::Operator`` this functionality includes matrix-vector multiplication.
+
+.. note::
+  All of these expressions can be composed, that is, an expression can be used as an argument
+  to another expression.  This allows for chaining, e.g., ``-a + b + 0.3 * c``.
 
 Memory Safety
 -------------

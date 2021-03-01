@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file base_solver.hpp
+ * @file base_physics.hpp
  *
  * @brief The base interface class for a generic PDE solver
  */
@@ -41,6 +41,11 @@ public:
    */
   BasePhysics(int n, int p);
 
+  /**
+   * @brief Construct a new Base Physics object (copy constructor)
+   *
+   * @param other The other base physics to copy from
+   */
   BasePhysics(BasePhysics&& other) = default;
 
   /**

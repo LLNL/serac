@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file nonlinear_solid_solver.hpp
+ * @file nonlinear_solid.hpp
  *
  * @brief The solver object for finite deformation hyperelasticity
  */
@@ -36,7 +36,16 @@ public:
    * @brief A timestep method and config for the M solver
    */
   struct TimesteppingOptions {
-    TimestepMethod             timestepper;
+    /**
+     * @brief The timestep method to apply
+     *
+     */
+    TimestepMethod timestepper;
+
+    /**
+     * @brief The essential boundary condition enforcement method
+     *
+     */
     DirichletEnforcementMethod enforcement_method;
   };
   /**
@@ -44,8 +53,23 @@ public:
    * Either quasistatic, or time-dependent with timestep and M options
    */
   struct SolverOptions {
-    LinearSolverOptions                H_lin_options;
-    NonlinearSolverOptions             H_nonlin_options;
+    /**
+     * @brief the options for the included linear solve
+     *
+     */
+    LinearSolverOptions H_lin_options;
+
+    /**
+     * @brief The options for the inlucded nonlinear solve
+     *
+     */
+    NonlinearSolverOptions H_nonlin_options;
+
+    /**
+     * @brief The optional parameters for dynamic problems
+     * @note If this is not included, quasi-static analysis is performed
+     *
+     */
     std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
@@ -61,20 +85,54 @@ public:
      **/
     static void defineInputFileSchema(axom::inlet::Table& table);
 
-    // The order of the field
-    int           order;
+    /**
+     * @brief The order of the discretization
+     *
+     */
+    int order;
+
+    /**
+     * @brief The options for the linear, nonlinear, and ODE solvers
+     *
+     */
     SolverOptions solver_options;
-    // Lame parameters
+
+    /**
+     * @brief The shear modulus
+     *
+     */
     double mu;
+
+    /**
+     * @brief The bulk modulus
+     *
+     */
     double K;
 
+    /**
+     * @brief The linear viscosity coefficient
+     *
+     */
     double viscosity;
 
-    // Boundary condition information
+    /**
+     * @brief Boundary condition information
+     *
+     */
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 
-    // Initial conditions for displacement and velocity
+    /**
+     * @brief The initial displacement
+     * @note This can be used as an initialization field for dynamic problems or an initial guess
+     *       for quasi-static solves
+     *
+     */
     std::optional<input::CoefficientInputOptions> initial_displacement;
+
+    /**
+     * @brief The initial velocity
+     *
+     */
     std::optional<input::CoefficientInputOptions> initial_velocity;
   };
 
@@ -82,7 +140,7 @@ public:
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] order The order of the displacement field
-   * @param[in] solver The system solver parameters
+   * @param[in] options The options for the linear, nonlinear, and ODE solves
    */
   NonlinearSolid(int order, const SolverOptions& options);
 
@@ -163,7 +221,11 @@ public:
    * @return The displacement state field
    */
   const FiniteElementState& displacement() const { return displacement_; };
-  FiniteElementState&       displacement() { return displacement_; };
+
+  /**
+   * @overload
+   */
+  FiniteElementState& displacement() { return displacement_; };
 
   /**
    * @brief Get the velocity state
@@ -171,7 +233,11 @@ public:
    * @return The velocity state field
    */
   const FiniteElementState& velocity() const { return velocity_; };
-  FiniteElementState&       velocity() { return velocity_; };
+
+  /**
+   * @overload
+   */
+  FiniteElementState& velocity() { return velocity_; };
 
   /**
    * @brief Complete the setup of all of the internal MFEM objects and prepare for timestepping
@@ -330,12 +396,24 @@ protected:
    */
   mfem::Vector previous_;
 
-  // current and previous timesteps
-  double c0_, c1_;
+  /**
+   * @brief Current time step
+   */
+  double c0_;
+
+  /**
+   * @brief Previous time step
+   */
+  double c1_;
 };
 
 }  // namespace serac
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::NonlinearSolid::InputOptions> {
   serac::NonlinearSolid::InputOptions operator()(const axom::inlet::Table& base);

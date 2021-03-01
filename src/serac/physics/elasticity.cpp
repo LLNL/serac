@@ -11,6 +11,10 @@
 
 namespace serac {
 
+/**
+ * @brief The number of fields in the elasticity module
+ *
+ */
 constexpr int NUM_FIELDS = 1;
 
 Elasticity::Elasticity(int order, const LinearSolverOptions& options)
@@ -103,7 +107,7 @@ void Elasticity::advanceTimestep(double&)
   if (is_quasistatic_) {
     QuasiStaticSolve();
   } else {
-    SLIC_ERROR_ROOT(mpi_rank_, "Only quasistatics implemented for linear elasticity!");
+    SLIC_ERROR_ROOT("Only quasistatics implemented for linear elasticity!");
   }
 
   // Distribute the shared DOFs

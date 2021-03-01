@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_solver.hpp
+ * @file thermal_conduction.hpp
  *
  * @brief An object containing the solver for a thermal conduction PDE
  */
@@ -36,7 +36,16 @@ public:
    * @brief A timestep method and config for the M solver
    */
   struct TimesteppingOptions {
-    TimestepMethod             timestepper;
+    /**
+     * @brief The timestepping method to be applied
+     *
+     */
+    TimestepMethod timestepper;
+
+    /**
+     * @brief The essential boundary enforcement method to use
+     *
+     */
     DirichletEnforcementMethod enforcement_method;
   };
 
@@ -45,8 +54,23 @@ public:
    * Either quasistatic, or time-dependent with timestep and M options
    */
   struct SolverOptions {
-    LinearSolverOptions                T_lin_options;
-    NonlinearSolverOptions             T_nonlin_options;
+    /**
+     * @brief The linear solver options
+     *
+     */
+    LinearSolverOptions T_lin_options;
+
+    /**
+     * @brief The nonlinear solver options
+     *
+     */
+    NonlinearSolverOptions T_nonlin_options;
+
+    /**
+     * @brief The optional ODE solver parameters
+     * @note If this is not defined, a quasi-static solve is performed
+     *
+     */
     std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
@@ -62,21 +86,55 @@ public:
      **/
     static void defineInputFileSchema(axom::inlet::Table& table);
 
-    // The order of the field
-    int           order;
+    /**
+     * @brief The order of the discretized field
+     *
+     */
+    int order;
+
+    /**
+     * @brief The linear, nonlinear, and ODE solver options
+     *
+     */
     SolverOptions solver_options;
-    // Conductivity
+
+    /**
+     * @brief The conductivity parameter
+     *
+     */
     double kappa;
+
+    /**
+     * @brief The specific heat capacity
+     *
+     */
     double cp;
+
+    /**
+     * @brief The mass density
+     *
+     */
     double rho;
 
-    // Boundary condition information
+    /**
+     * @brief The boundary condition information
+     */
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 
-    // Initial conditions for temperature
+    /**
+     * @brief The initial temperature field
+     * @note This can be used as either an intialization for dynamic simulations or an
+     *       initial guess for quasi-static ones
+     *
+     */
     std::optional<input::CoefficientInputOptions> initial_temperature;
   };
 
+  /**
+   * @brief Reasonable defaults for most thermal linear solver options
+   *
+   * @return The default thermal linear options
+   */
   static IterativeSolverOptions defaultLinearOptions()
   {
     return {.rel_tol     = 1.0e-6,
@@ -87,16 +145,31 @@ public:
             .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
   }
 
+  /**
+   * @brief Reasonable defaults for most thermal nonlinear solver options
+   *
+   * @return The default thermal nonlinear options
+   */
   static NonlinearSolverOptions defaultNonlinearOptions()
   {
     return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
   }
 
+  /**
+   * @brief Reasonable defaults for quasi-static thermal conduction simulations
+   *
+   * @return The default quasi-static solver options
+   */
   static SolverOptions defaultQuasistaticOptions()
   {
     return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt};
   }
 
+  /**
+   * @brief Reasonable defaults for dynamic thermal conduction simulations
+   *
+   * @return The default dynamic solver options
+   */
   static SolverOptions defaultDynamicOptions()
   {
     return {defaultLinearOptions(), defaultNonlinearOptions(),
@@ -182,7 +255,11 @@ public:
    * @return A reference to the current temperature finite element state
    */
   const serac::FiniteElementState& temperature() const { return temperature_; };
-  serac::FiniteElementState&       temperature() { return temperature_; };
+
+  /**
+   * @overload
+   */
+  serac::FiniteElementState& temperature() { return temperature_; };
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -291,7 +368,19 @@ protected:
    */
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-  double       dt_, previous_dt_;
+  /**
+   * @brief The current timestep
+   */
+  double dt_;
+
+  /**
+   * @brief The previous timestep
+   */
+  double previous_dt_;
+
+  /**
+   * @brief A zero vector
+   */
   mfem::Vector zero_;
 
   /**
@@ -308,6 +397,11 @@ protected:
 
 }  // namespace serac
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::ThermalConduction::InputOptions> {
   serac::ThermalConduction::InputOptions operator()(const axom::inlet::Table& base);

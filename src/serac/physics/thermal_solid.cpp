@@ -53,7 +53,7 @@ ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input,
 
 void ThermalSolid::completeSetup()
 {
-  SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit, mpi_rank_,
+  SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
                      "Only operator split is currently implemented in the thermal structural solver.");
 
   therm_solver_.completeSetup();
@@ -67,10 +67,10 @@ void ThermalSolid::advanceTimestep(double& dt)
     double initial_dt = dt;
     therm_solver_.advanceTimestep(dt);
     solid_solver_.advanceTimestep(dt);
-    SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6, mpi_rank_,
+    SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
                        "Operator split coupled solvers cannot adaptively change the timestep");
   } else {
-    SLIC_ERROR_ROOT(mpi_rank_, "Only operator split coupling is currently implemented");
+    SLIC_ERROR_ROOT("Only operator split coupling is currently implemented");
   }
 
   cycle_ += 1;
