@@ -221,6 +221,8 @@ void Solid::resetToReferenceConfiguration()
 
   velocity_.initializeTrueVec();
   displacement_.initializeTrueVec();
+
+  mesh_->NewNodes(*reference_nodes_);
 }
 
 void Solid::completeSetup()
