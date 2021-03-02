@@ -126,16 +126,24 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
 
 Solid::~Solid()
 {
-  // Remove the memory protections from the reference nodes object
-  mfem::ParGridFunction* released_reference_nodes = reference_nodes_.release();
-
   // Update the mesh with the new deformed nodes if requested
   if (keep_deformation_after_destructor_) {
-    released_reference_nodes->Add(1.0, displacement_.gridFunc());
+    reference_nodes_->Add(1.0, displacement_.gridFunc());
   }
 
-  // Set the mesh to the released grid function pointer nodes
-  mesh_->NewNodes(*released_reference_nodes, true);
+  // Build a new grid function to store the mesh nodes post-destruction
+  // NOTE: MFEM will manage the memory of this object
+
+  auto mesh_fe_coll = new mfem::H1_FECollection(order_, mesh_->Dimension());
+  auto mesh_fe_space = new mfem::ParFiniteElementSpace(displacement_.space(), mesh_.get(), mesh_fe_coll);
+  auto mesh_nodes = new mfem::ParGridFunction(mesh_fe_space);
+  mesh_nodes->MakeOwner(mesh_fe_coll);
+
+  *mesh_nodes = *reference_nodes_;
+
+  // Set the mesh to the newly created nodes object and pass ownership
+  mesh_->NewNodes(*mesh_nodes, true);
+
 }
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
