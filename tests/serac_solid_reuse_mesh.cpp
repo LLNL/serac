@@ -19,14 +19,14 @@
 
 namespace serac {
 
-TEST(solid_solver, qs_custom_solve)
+TEST(solid_solver, reuse_mesh)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
+  auto pmesh = buildMeshFromFile(mesh_file, 0, 0);
 
   int dim = pmesh->Dimension();
 
@@ -128,6 +128,10 @@ TEST(solid_solver, qs_custom_solve)
 
   double u_norm_3 = solid_solver_3.displacement().gridFunc().ComputeLpError(2.0, zerovec);
   EXPECT_NEAR(0.0, u_norm_1 - u_norm_3, 0.001);
+
+  solid_solver_3.resetToReferenceConfiguration();
+  EXPECT_NEAR(0.0, solid_solver_3.displacement().gridFunc().ComputeLpError(2.0, zerovec), 1.0e-8);
+  EXPECT_NEAR(0.0, solid_solver_3.velocity().gridFunc().ComputeLpError(2.0, zerovec), 1.0e-8);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

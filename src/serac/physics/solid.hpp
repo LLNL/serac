@@ -273,6 +273,11 @@ public:
   void setVelocity(mfem::VectorCoefficient& velo_state);
 
   /**
+   * @brief Reset the underlying state to the reference configuration with zero velocity
+   */
+  void resetToReferenceConfiguration();
+
+  /**
    * @brief Get the displacement state
    *
    * @return The displacement state field

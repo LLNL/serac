@@ -134,16 +134,15 @@ Solid::~Solid()
   // Build a new grid function to store the mesh nodes post-destruction
   // NOTE: MFEM will manage the memory of this object
 
-  auto mesh_fe_coll = new mfem::H1_FECollection(order_, mesh_->Dimension());
+  auto mesh_fe_coll  = new mfem::H1_FECollection(order_, mesh_->Dimension());
   auto mesh_fe_space = new mfem::ParFiniteElementSpace(displacement_.space(), mesh_.get(), mesh_fe_coll);
-  auto mesh_nodes = new mfem::ParGridFunction(mesh_fe_space);
+  auto mesh_nodes    = new mfem::ParGridFunction(mesh_fe_space);
   mesh_nodes->MakeOwner(mesh_fe_coll);
 
   *mesh_nodes = *reference_nodes_;
 
   // Set the mesh to the newly created nodes object and pass ownership
   mesh_->NewNodes(*mesh_nodes, true);
-
 }
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
@@ -203,6 +202,7 @@ void Solid::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_.project(disp_state);
+  displacement_.initializeTrueVec();
   gf_initialized_[1] = true;
 }
 
@@ -210,7 +210,17 @@ void Solid::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_.project(velo_state);
+  velocity_.initializeTrueVec();
   gf_initialized_[0] = true;
+}
+
+void Solid::resetToReferenceConfiguration()
+{
+  displacement_.gridFunc() = 0.0;
+  velocity_.gridFunc()     = 0.0;
+
+  velocity_.initializeTrueVec();
+  displacement_.initializeTrueVec();
 }
 
 void Solid::completeSetup()
