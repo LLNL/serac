@@ -391,7 +391,7 @@ protected:
   std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
 
   /**
-   * @brief Flag to indicate the intial storage model for the mesh nodes
+   * @brief Flag to indicate the final mesh node state post-destruction
    */
   bool keep_deformation_after_destructor_;
 
