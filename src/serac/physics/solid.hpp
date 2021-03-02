@@ -175,7 +175,8 @@ public:
    * @param[in] options The options for the linear, nonlinear, and ODE solves
    * @param[in] geom_nonlin Flag to include geometric nonlinearities
    */
-  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin = true);
+  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin = true,
+        bool keep_deformation = false);
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -311,7 +312,7 @@ public:
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
-  virtual ~Solid() = default;
+  virtual ~Solid();
 
   /**
    * @brief Compute the current residual vector at the current internal state value
@@ -383,6 +384,11 @@ protected:
    * @brief Pointer to the reference mesh data
    */
   std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
+
+  /**
+   * @brief Flag to indicate the intial storage model for the mesh nodes
+   */
+  bool keep_deformation_after_destructor_;
 
   /**
    * @brief Pointer to the deformed mesh data

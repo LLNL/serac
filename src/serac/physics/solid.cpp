@@ -20,13 +20,15 @@ namespace serac {
  */
 constexpr int NUM_FIELDS = 2;
 
-Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin)
+Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin,
+             bool keep_deformation)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh,
                 FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "velocity"}),
       displacement_(
           *mesh, FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "displacement"}),
       geom_nonlin_(geom_nonlin),
+      keep_deformation_after_destructor_(keep_deformation),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {
@@ -35,8 +37,8 @@ Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions
 
   // Initialize the mesh node pointers
   reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
+  mesh->EnsureNodes();
   mesh->GetNodes(*reference_nodes_);
-  mesh->NewNodes(*reference_nodes_);
 
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
@@ -120,6 +122,20 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
       SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
     }
   }
+}
+
+Solid::~Solid()
+{
+  // Remove the memory protections from the reference nodes object
+  mfem::ParGridFunction* released_reference_nodes = reference_nodes_.release();
+
+  // Update the mesh with the new deformed nodes if requested
+  if (keep_deformation_after_destructor_) {
+    released_reference_nodes->Add(1.0, displacement_.gridFunc());
+  }
+
+  // Set the mesh to the released grid function pointer nodes
+  mesh_->NewNodes(*released_reference_nodes, true);
 }
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
