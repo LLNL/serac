@@ -16,32 +16,32 @@ const double x   = 0.5;
 
 TEST(dual_number_tensor, cos)
 {
-  auto xd = cos(derivative_wrt(x));
+  auto xd = cos(make_dual(x));
   EXPECT_DOUBLE_EQ(abs(-sin(x) - xd.gradient), 0.0);
 }
 
 TEST(dual_number_tensor, exp)
 {
-  auto xd = exp(derivative_wrt(x));
+  auto xd = exp(make_dual(x));
   EXPECT_DOUBLE_EQ(abs(exp(x) - xd.gradient), 0.0);
 }
 
 TEST(dual_number_tensor, log)
 {
-  auto xd = log(derivative_wrt(x));
+  auto xd = log(make_dual(x));
   EXPECT_DOUBLE_EQ(abs(1.0 / x - xd.gradient), 0.0);
 }
 
 TEST(dual_number_tensor, pow)
 {
   // f(x) = x^3/2
-  auto xd = pow(derivative_wrt(x), 1.5);
+  auto xd = pow(make_dual(x), 1.5);
   EXPECT_DOUBLE_EQ(abs(1.5 * pow(x, 0.5) - xd.gradient), 0.0);
 }
 
 TEST(dual_number_tensor, mixed_operations)
 {
-  auto xd = derivative_wrt(x);
+  auto xd = make_dual(x);
   auto r  = cos(xd) * cos(xd);
   EXPECT_DOUBLE_EQ(abs(-2.0 * sin(x) * cos(x) - r.gradient), 0.0);
 
@@ -56,6 +56,6 @@ TEST(dual_number_tensor, mixed_operations)
 
   tensor<double, 2> vx  = {{0.5, 0.25}};
   tensor<double, 2> vre = {{0.894427190999916, 0.4472135954999579}};
-  auto              vr  = norm(derivative_wrt(vx));
+  auto              vr  = norm(make_dual(vx));
   EXPECT_LT(norm(vr.gradient - vre), eps);
 }

@@ -2,6 +2,7 @@
 
 #include <utility>
 
+
 namespace impl {
   template < typename lambda, int ... i >
   inline constexpr void for_constexpr(lambda && f, std::integral_constant< int, i > ... args) {
@@ -17,4 +18,4 @@ namespace impl {
 template < int ... n, typename lambda >
 inline constexpr void for_constexpr(lambda && f) {
   impl::for_constexpr(f, std::make_integer_sequence<int, n>{} ...);
-} 
+}

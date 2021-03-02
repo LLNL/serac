@@ -143,11 +143,10 @@ int main(int argc, char* argv[])
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-
   residual.AddVolumeIntegral([&](auto x, auto u, auto du) {
-      auto f0 = a * u - (100 * x[0] * x[1]);
-      auto f1 = b * du;
-      return std::tuple{f0, f1};
+    auto f0 = a * u - (100 * x[0] * x[1]);
+    auto f1 = b * du;
+    return std::tuple{f0, f1};
   }, mesh);
 
   residual.SetEssentialBC(ess_bdr);

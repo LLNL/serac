@@ -2,6 +2,7 @@
 
 #include "dual.hpp"
 #include "array.hpp"
+#include "dimensions.hpp"
 
 #include "detail/meta.h"
 #include "detail/for_constexpr.h"
@@ -42,6 +43,8 @@ struct tensor<T> {
   static constexpr int shape[1] = {0};
   constexpr auto& operator()(array< int, ndim >) { return value; }
   constexpr auto operator()(array< int, ndim >) const { return value; }
+  tensor () : value{} {}
+  tensor (T v) : value(v) {}
   operator T() { return value; }
   T value;
 };
@@ -86,6 +89,43 @@ tensor(const T (& data)[n1]) -> tensor<T, n1>;
 template < typename T, int n1, int n2 >
 tensor(const T (& data)[n1][n2]) -> tensor<T, n1, n2>;
 
+template < typename T, int ... n >
+constexpr auto dimensions_of(tensor< T, n ... >) { return Dimensions<n...>{}; }
+
+struct zero{
+  operator double() { return 0.0; }
+ 
+  template < typename T, int ... n >
+  operator tensor<T,n...>() { return tensor<T,n...>{}; }
+}; 
+
+constexpr auto operator+(zero, zero) { return zero{}; }
+
+template < typename T >
+constexpr auto operator+(zero, T other) { return other; }
+
+template < typename T >
+constexpr auto operator+(T other, zero) { return other; }
+
+/////////////////////////////////////////////////
+
+constexpr auto operator-(zero, zero) { return zero{}; }
+
+template < typename T >
+constexpr auto operator-(zero, T other) { return -other; }
+
+template < typename T >
+constexpr auto operator-(T other, zero) { return other; }
+
+/////////////////////////////////////////////////
+
+constexpr auto operator*(zero, zero) { return zero{}; }
+
+template < typename T >
+constexpr auto operator*(zero, T /*other*/) { return zero{}; }
+
+template < typename T >
+constexpr auto operator*(T /*other*/, zero) { return zero{}; }
 
 // reduced_tensor removes 1s from tensor dimensions
 template < typename T, int n1, int n2 = 1 >
@@ -703,30 +743,6 @@ constexpr auto chop(tensor< double, m, n > A) {
   return copy;
 }
 
-template < int n >
-auto derivative_wrt(tensor < double, n > A) {
-  tensor< dual< tensor< double, n > >, n > A_dual{};
-  for (int i = 0; i < n; i++) {
-    A_dual[i].value = A[i];
-    A_dual[i].gradient[i] = 1.0;
-  }
-  return A_dual;
-}
-
-template < int m, int n >
-auto derivative_wrt(tensor < double, m, n > A) {
-  tensor< dual< tensor< double, m, n > >, m, n > A_dual{};
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < n; j++) {
-      A_dual[i][j].value = A[i][j];
-      A_dual[i][j].gradient[i][j] = 1.0;
-    }
-  }
-  return A_dual;
-}
-
-constexpr auto make_dual(double x) { return dual{x, 1.0}; }
-
 template < int ... n >
 constexpr auto make_dual(tensor< double, n...> A){
   tensor < dual < tensor< double, n... > >, n... > A_dual{};
@@ -735,22 +751,6 @@ constexpr auto make_dual(tensor< double, n...> A){
     A_dual(i...).gradient(i...) = 1.0;
   });
   return A_dual;
-}
-
-template < int ... n >
-auto get_gradient(const dual < tensor< double, n ... > > & A) {
-  return make_tensor< n ... >([&A](auto ... i){ return A({i...}); });
-}
-
-template < int ... m, int ... n >
-auto get_gradient(const tensor< dual < tensor< double, n ... > >, m ... > & A) {
-  tensor< double, m ..., n ... > grad{};
-  for_constexpr<m...>([&](auto ... i){
-    for_constexpr<n...>([&](auto ... j){
-      grad({i..., j...}) = A({i...}).gradient({j...});
-    });
-  });
-  return grad;
 }
 
 template < typename T >
@@ -767,3 +767,86 @@ template <>
 struct underlying < double >{
   using type = double;
 };
+
+namespace impl {
+
+  template < typename T1, typename T2 >
+  struct outer_prod;
+
+  template < int ... m, int ... n >
+  struct outer_prod< tensor< double, m ... >, tensor< double, n ... > >{
+    using type = tensor< double, m ..., n ... >;
+  };
+
+  template < int ... n >
+  struct outer_prod< double, tensor< double, n ... > >{
+    using type = tensor< double, n ... >;
+  };
+
+  template < int ... n >
+  struct outer_prod< tensor< double, n ... >, double >{
+    using type = tensor< double, n ... >;
+  };
+
+  template <>
+  struct outer_prod< double, double >{
+    using type = tensor< double >;
+  };
+
+  template < typename T >
+  struct outer_prod< zero, T >{
+    using type = zero;
+  };
+
+  template < typename T >
+  struct outer_prod< T, zero >{
+    using type = zero;
+  };
+
+}
+
+template < typename T1, typename T2 >
+using outer_product_t = typename impl::outer_prod<T1, T2>::type;
+
+template < typename ... T >
+auto get_gradient(dual< std::tuple < T ... > > arg) {
+  return std::apply([](auto ... each_value){
+    return std::tuple{each_value ...};
+  }, arg.gradient);
+}
+
+template < typename T, int ... n >
+void get_gradient(tensor< dual< double >, n ... > arg) {
+  tensor< double, n ... > g{};
+  for_constexpr< n ... >([&](auto ... i){
+    g[{i...}] = arg[{i...}].gradient;
+  });
+  return g;
+}
+
+template < typename ... T, int ... n >
+auto get_gradient(tensor< dual< std::tuple < T ... > >, n ... > arg) {
+  std::tuple < outer_product_t< tensor< double, n... >, T > ... > g{};
+  for_constexpr< n ... >([&](auto ... i){
+    for_constexpr< sizeof ... (T) >([&](auto j){
+      std::get<j>(g)(i...) = std::get<j>(arg(i...).gradient);
+    });
+  });
+  return g;
+}
+
+template < typename T, int ... n, int ... m >
+auto get_gradient(tensor< dual< tensor< double, m ... > >, n ... > arg) {
+  tensor< double, n ..., m... > g{};
+  for_constexpr< n ... >([&](auto ... i){
+    g[{i...}] = arg[{i...}].gradient;
+  });
+  return g;
+}
+
+template < typename ... T >
+auto get_gradient(std::tuple < T ... > tuple_of_values) {
+  return std::apply([](auto ... each_value){
+    return std::tuple{get_gradient(each_value) ...};
+  }, tuple_of_values);
+}

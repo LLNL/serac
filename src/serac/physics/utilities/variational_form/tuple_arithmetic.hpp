@@ -4,40 +4,6 @@
 
 #include "tensor.hpp"
 
-struct zero{
-  operator double() { return 0.0; }
- 
-  template < typename T, int ... n >
-  operator tensor<T,n...>() { return tensor<T,n...>{}; }
-}; 
-
-constexpr auto operator+(zero, zero) { return zero{}; }
-
-template < typename T >
-constexpr auto operator+(zero, T other) { return other; }
-
-template < typename T >
-constexpr auto operator+(T other, zero) { return other; }
-
-/////////////////////////////////////////////////
-
-constexpr auto operator-(zero, zero) { return zero{}; }
-
-template < typename T >
-constexpr auto operator-(zero, T other) { return -other; }
-
-template < typename T >
-constexpr auto operator-(T other, zero) { return other; }
-
-/////////////////////////////////////////////////
-
-constexpr auto operator*(zero, zero) { return zero{}; }
-
-template < typename T >
-constexpr auto operator*(zero, T /*other*/) { return zero{}; }
-
-template < typename T >
-constexpr auto operator*(T /*other*/, zero) { return zero{}; }
 
 /////////////////////////////////////////////////
 

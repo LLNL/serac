@@ -5,7 +5,7 @@
 
 enum class Geometry {Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron};
 
-constexpr int dimension(Geometry g) {
+constexpr int dimension(::Geometry g) {
   if (g == ::Geometry::Segment) {
     return 1;
   }

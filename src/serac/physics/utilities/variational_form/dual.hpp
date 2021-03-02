@@ -149,9 +149,7 @@ auto& operator<<(std::ostream& out, dual<T> A) {
   return out;
 }
 
-constexpr auto derivative_wrt(double a) {
-  return dual< double >{a, 1};
-}
+constexpr auto make_dual(double x) { return dual{x, 1.0}; }
 
 template < typename T >
 struct is_dual_number {

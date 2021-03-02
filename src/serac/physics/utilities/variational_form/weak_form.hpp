@@ -115,31 +115,62 @@ auto Integrand(lambda_type lambda) {
   return IntegrandImpl< operations, lambda_type >{lambda};
 };
 
+namespace impl{
+  template < typename spaces >
+  struct get_trial_space; // undefined
 
+  template < typename test_space, typename trial_space >
+  struct get_trial_space< test_space(trial_space) >{
+    using type = trial_space;
+  }; 
+
+  template < typename spaces >
+  struct get_test_space; // undefined
+
+  template < typename test_space, typename trial_space >
+  struct get_test_space< test_space(trial_space) >{
+    using type = test_space;
+  };
+}
 
 template < typename T >
-struct derivative;
+using test_space_t = typename impl::get_test_space< T >::type;
 
-template < typename test, typename trial >
-struct derivative< test(trial) >{
-  using f00 = double;
-  using f01 = double;
-  using f10 = double;
-  using f11 = double;
+template < typename T >
+using trial_space_t = typename impl::get_trial_space< T >::type;
 
-  using type = std::tuple<
-    std::tuple< f00, f01 >, 
-    std::tuple< f10, f11 >
-  >;
+template < typename space, int dim >
+struct lambda_argument;
+
+template < int p, int c, int dim >
+struct lambda_argument< H1<p, c>, dim >{
+  using type = std::tuple< reduced_tensor<double, c >, reduced_tensor<double, c, dim> >;
+};
+
+template < int p >
+struct lambda_argument< Hcurl<p>, 2 >{
+  using type = std::tuple< tensor<double, 2>, double >;
+};
+
+template < int p >
+struct lambda_argument< Hcurl<p>, 3 >{
+  using type = std::tuple< tensor<double, 3>, tensor<double,3> >;
 };
 
 template < typename spaces >
 struct VolumeIntegral {
 
+  static constexpr int dim = 2;
+  using test_space = test_space_t< spaces >;
+  using trial_space = trial_space_t< spaces >;
+
   template < typename lambda_type >
   //VolumeIntegral(int num_elements, mfem::Vector & J_, mfem::Vector & X_, lambda_type qf) {
-  VolumeIntegral(int, const mfem::Vector &, const mfem::Vector &, lambda_type) {
-
+  VolumeIntegral(int, const mfem::Vector &, const mfem::Vector &, lambda_type /*qf*/) {
+    //using x_t = tensor< double, dim >;
+    //using u_du_t = typename lambda_argument< trial_space, dim >::type;
+    //using arg_t = decltype(std::tuple_cat(std::tuple{x_t{}}, make_dual(u_du_t{})));
+    //using derivative_type = decltype(get_gradient(std::apply(qf, arg_t{})));
   } 
 
   void Mult(const mfem::Vector & input_E, mfem::Vector & output_E) const {
@@ -148,11 +179,8 @@ struct VolumeIntegral {
 
   std::function < void(const mfem::Vector &, mfem::Vector &) > evaluation;
 
-
-  using df_type = typename derivative<spaces>::type; 
-
   // derivatives of integrand w.r.t. {u, du_dx}
-  std::vector < df_type > df;
+  std::vector < char > derivative_buffer;
 
 };
 

@@ -1,6 +1,9 @@
 
 #include "detail/meta.h"
 #include "tensor.hpp"
+#include "dimensions.hpp"
+
+#include "zero_tensor.hpp"
 
 // note: these tests are actually all static_assert-ions, 
 // so if this compiles without error, the tests have already passed
@@ -132,4 +135,37 @@ int main() {
   basic_tensor_tests();
   elasticity_tests();
   navier_stokes_tests();
+
+  {
+    Dimensions< 3, 4, 5 > A{};
+    Dimensions< 3, 4 > B = remove_last(A);
+    Dimensions< 4 > C = remove_first(B);
+
+    A = concatenate(remove_last(B), C) + Dimensions<5>{};
+
+    static_assert(first(A) == 3);
+    static_assert(last(B) == 4);
+    static_assert(A[2] == 5);
+  }
+
+  {
+    zero_tensor<3, 4, 5> A{};
+    tensor<double, 3, 4, 5> B{};
+    zero_tensor<5, 2> C{};
+    zero_tensor<> D{};
+    tensor<double> E{};
+
+    static_assert(std::is_same_v<decltype(A + B), tensor<double,3,4,5>>);
+    static_assert(std::is_same_v<decltype(A + A), zero_tensor<3,4,5>>);
+    static_assert(std::is_same_v<decltype(A * 3.0), zero_tensor<3,4,5>>);
+
+    static_assert(std::is_same_v<decltype(dot(A, C)), zero_tensor<3,4,2>>);
+    static_assert(std::is_same_v<decltype(dot(B, C)), zero_tensor<3,4,2>>);
+    static_assert(std::is_same_v<decltype(dot(D, C)), zero_tensor<5,2>>);
+    static_assert(std::is_same_v<decltype(dot(C, D)), zero_tensor<5,2>>);
+    static_assert(std::is_same_v<decltype(dot(D, D)), zero_tensor<>>);
+    static_assert(std::is_same_v<decltype(dot(D, E)), zero_tensor<>>);
+    static_assert(std::is_same_v<decltype(dot(C, E)), zero_tensor<5,2>>);
+  }
+
 }
