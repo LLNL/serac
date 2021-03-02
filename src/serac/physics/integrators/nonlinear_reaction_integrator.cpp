@@ -6,7 +6,7 @@
 
 #include "serac/physics/integrators/nonlinear_reaction_integrator.hpp"
 
-namespace serac::thermal::mfem_ext {
+namespace serac::mfem_ext {
 
 void NonlinearReactionIntegrator::AssembleElementVector(const mfem::FiniteElement&   element,
                                                         mfem::ElementTransformation& parent_to_reference_transformation,
@@ -92,4 +92,4 @@ void NonlinearReactionIntegrator::AssembleElementGrad(const mfem::FiniteElement&
   }
 }
 
-}  // namespace serac::thermal::mfem_ext
+}  // namespace serac::mfem_ext
