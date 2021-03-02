@@ -132,7 +132,7 @@ Solid::~Solid()
   }
 
   // Build a new grid function to store the mesh nodes post-destruction
-  // NOTE: MFEM will manage the memory of this object
+  // NOTE: MFEM will manage the memory of these objects
 
   auto mesh_fe_coll  = new mfem::H1_FECollection(order_, mesh_->Dimension());
   auto mesh_fe_space = new mfem::ParFiniteElementSpace(displacement_.space(), mesh_.get(), mesh_fe_coll);
