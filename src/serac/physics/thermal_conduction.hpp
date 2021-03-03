@@ -205,8 +205,9 @@ public:
    *
    * @param[in] order The order of the thermal field discretization
    * @param[in] options The system solver parameters
+   * @param[in] name An optional name for the physics module instance
    */
-  ThermalConduction(int order, const SolverOptions& options);
+  ThermalConduction(int order, const SolverOptions& options, const std::string& name = "");
 
   /**
    * @brief Construct a new Thermal Solver object
