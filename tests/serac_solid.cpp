@@ -58,10 +58,12 @@ TEST(solid_solver, qs_custom_solve)
   test_utils::defineTestSchema<Solid>(inlet);
 
   // Build the mesh
-  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(
-      std::get<serac::mesh::FileInputOptions>(mesh_options.extra_options).relative_mesh_file_name, input_file_path);
-  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+    file_opts->absolute_mesh_file_name =
+        serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
+  }
+  auto mesh = serac::mesh::buildParallelMesh(mesh_options);
 
   // Define the solid solver object
   auto solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
