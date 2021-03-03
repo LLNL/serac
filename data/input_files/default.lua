@@ -12,8 +12,8 @@ main_mesh = {
 }
 
 -- Solver parameters
-nonlinear_solid = {
-    stiffness_solver = {
+solid = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
@@ -87,7 +87,7 @@ end
 
 -- Solver parameters
 thermal_conduction = {
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {

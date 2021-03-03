@@ -15,7 +15,7 @@
 #include "mfem.hpp"
 
 #include "serac/physics/base_physics.hpp"
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid.hpp"
 #include "serac/physics/thermal_conduction.hpp"
 
 namespace serac {
@@ -34,7 +34,7 @@ public:
    * @param[in] solid_options The equation solver options for the solid physics
    */
   ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::SolverOptions& therm_options,
-               const NonlinearSolid::SolverOptions& solid_options);
+               const Solid::SolverOptions& solid_options);
 
   /**
    * @brief Construct a new Thermal Solid object from input file options
@@ -44,7 +44,7 @@ public:
    * @param solid_input The solid mechanics module input file option struct
    */
   ThermalSolid(std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::InputOptions& thermal_input,
-               const NonlinearSolid::InputOptions& solid_input);
+               const Solid::InputOptions& solid_input);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -52,7 +52,7 @@ public:
    * @param[in] temp_bdr The attributes denotiving the fixed temperature boundary
    * @param[in] temp_bdr_coef The coefficient that contains the fixed temperature boundary values
    */
-  void SetTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
+  void setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
   {
     therm_solver_.setTemperatureBCs(temp_bdr, temp_bdr_coef);
   };
@@ -63,7 +63,7 @@ public:
    * @param[in] flux_bdr The boundary attributes on which to enforce a heat flux (weakly enforced)
    * @param[in] flux_bdr_coef The prescribed boundary heat flux
    */
-  void SetFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
+  void setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
   {
     therm_solver_.setFluxBCs(flux_bdr, flux_bdr_coef);
   };
@@ -73,21 +73,25 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void SetConductivity(std::unique_ptr<mfem::Coefficient>&& kappa) { therm_solver_.setConductivity(std::move(kappa)); };
+  void setConductivity(std::unique_ptr<mfem::Coefficient>&& kappa) { therm_solver_.setConductivity(std::move(kappa)); };
 
   /**
-   * @brief Set the density
+   * @brief Set the mass density
    *
-   * @param[in] rho The density coefficient
+   * @param[in] rho The mass density coefficient
    */
-  void SetDensity(std::unique_ptr<mfem::Coefficient>&& rho) { therm_solver_.setDensity(std::move(rho)); };
+  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho)
+  {
+    therm_solver_.setMassDensity(std::move(rho));
+    solid_solver_.setMassDensity(std::move(rho));
+  };
 
   /**
    * @brief Set the specific heat capacity
    *
    * @param[in] cp The specific heat capacity
    */
-  void SetSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
+  void setSpecificHeatCapacity(std::unique_ptr<mfem::Coefficient>&& cp)
   {
     therm_solver_.setSpecificHeatCapacity(std::move(cp));
   };
@@ -97,14 +101,14 @@ public:
    *
    * @param[in] temp The temperature coefficient
    */
-  void SetTemperature(mfem::Coefficient& temp) { therm_solver_.setTemperature(temp); };
+  void setTemperature(mfem::Coefficient& temp) { therm_solver_.setTemperature(temp); };
 
   /**
    * @brief Set the thermal body source from a coefficient
    *
    * @param[in] source The source function coefficient
    */
-  void SetSource(std::unique_ptr<mfem::Coefficient>&& source) { therm_solver_.setSource(std::move(source)); };
+  void setSource(std::unique_ptr<mfem::Coefficient>&& source) { therm_solver_.setSource(std::move(source)); };
 
   /**
    * @brief Set displacement boundary conditions
@@ -112,7 +116,7 @@ public:
    * @param[in] disp_bdr The set of boundary attributes to set the displacement on
    * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
    */
-  void SetDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
   {
     solid_solver_.setDisplacementBCs(disp_bdr, disp_bdr_coef);
   };
@@ -124,7 +128,7 @@ public:
    * @param[in] disp_bdr_coef The vector coefficient containing the set displacement values
    * @param[in] component The component to set the displacment on
    */
-  void SetDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+  void setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
                           const int component)
   {
     solid_solver_.setDisplacementBCs(disp_bdr, disp_bdr_coef, component);
@@ -135,33 +139,51 @@ public:
    *
    * @param[in] trac_bdr The set of boundary attributes to apply a traction to
    * @param[in] trac_bdr_coef The vector valued traction coefficient
+   * @param[in] compute_on_reference Flag to compute on the reference stress-free configuration vs. the deformed
+   * configuration
    * @param[in] component The component to apply the traction on
    */
-  void SetTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      const std::optional<int> component = {})
+  void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                      bool compute_on_reference, std::optional<int> component = {})
   {
-    solid_solver_.setTractionBCs(trac_bdr, trac_bdr_coef, component);
-  };
+    solid_solver_.setTractionBCs(trac_bdr, trac_bdr_coef, compute_on_reference, component);
+  }
+
+  /**
+   * @brief Set the pressure boundary conditions
+   *
+   * @param[in] pres_bdr The set of boundary attributes to apply a pressure to
+   * @param[in] pres_bdr_coef The scalar valued pressure coefficient
+   * @param[in] compute_on_reference Flag to compute on the reference stress-free configuration vs. the deformed
+   * configuration
+   */
+  void setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::Coefficient> pres_bdr_coef,
+                      bool compute_on_reference)
+  {
+    solid_solver_.setPressureBCs(pres_bdr, pres_bdr_coef, compute_on_reference);
+  }
 
   /**
    * @brief Set the viscosity coefficient
    *
    * @param[in] visc_coef The abstract viscosity coefficient
    */
-  void SetViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
+  void setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef)
   {
     solid_solver_.setViscosity(std::move(visc_coef));
   };
 
   /**
-   * @brief Set the hyperelastic material parameters
+   * @brief Set the material parameters
    *
-   * @param[in] mu Set the mu Lame parameter for the hyperelastic solid
-   * @param[in] K Set the K Lame parameter for the hyperelastic solid
+   * @param[in] mu Set the shear modulus for the solid
+   * @param[in] K Set the bulk modulus for the solid
+   * @param[in] material_nonlin Flag to include material nonlinearities (linear elastic vs. neo-Hookean model)
    */
-  void SetHyperelasticMaterialParameters(double mu, double K)
+  void setSolidMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
+                                  bool material_nonlin = true)
   {
-    solid_solver_.setHyperelasticMaterialParameters(mu, K);
+    solid_solver_.setMaterialParameters(std::move(mu), std::move(K), material_nonlin);
   };
 
   /**
@@ -169,14 +191,14 @@ public:
    *
    * @param[in] disp_state The initial displacement state
    */
-  void SetDisplacement(mfem::VectorCoefficient& disp_state) { solid_solver_.setDisplacement(disp_state); };
+  void setDisplacement(mfem::VectorCoefficient& disp_state) { solid_solver_.setDisplacement(disp_state); };
 
   /**
    * @brief Set the velocity state
    *
    * @param[in] velo_state The velocity state
    */
-  void SetVelocity(mfem::VectorCoefficient& velo_state) { solid_solver_.setVelocity(velo_state); };
+  void setVelocity(mfem::VectorCoefficient& velo_state) { solid_solver_.setVelocity(velo_state); };
 
   /**
    * @brief Set the coupling scheme between the thermal and structural solvers
@@ -185,7 +207,7 @@ public:
    *
    * @param[in] coupling The coupling scheme
    */
-  void SetCouplingScheme(serac::CouplingScheme coupling) { coupling_ = coupling; };
+  void setCouplingScheme(serac::CouplingScheme coupling) { coupling_ = coupling; };
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -237,7 +259,7 @@ protected:
   /**
    * @brief The single physics nonlinear solid solver
    */
-  NonlinearSolid solid_solver_;
+  Solid solid_solver_;
 
   /**
    * @brief The temperature finite element state

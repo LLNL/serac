@@ -15,7 +15,7 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
     : coef_(coef), component_(component), markers_(num_attrs)
 {
   if (std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
-    SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
+    SLIC_ERROR_ROOT_IF(component_, "A vector coefficient must be applied to all components");
   }
   markers_ = 0;
   for (const int attr : attrs) {
@@ -48,7 +48,7 @@ void BoundaryCondition::setTrueDofs(FiniteElementState& state)
 
 void BoundaryCondition::project(FiniteElementState& state) const
 {
-  SLIC_ERROR_IF(!true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
+  SLIC_ERROR_ROOT_IF(!true_dofs_, "Only essential boundary conditions can be projected over all DOFs.");
   // Value semantics for convenience
   auto tdofs = *true_dofs_;
   auto size  = tdofs.Size();
@@ -78,7 +78,7 @@ void BoundaryCondition::project(FiniteElementState& state) const
 
 void BoundaryCondition::project() const
 {
-  SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
+  SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   project(*state_);
 }
 
@@ -108,13 +108,13 @@ void BoundaryCondition::projectBdr(FiniteElementState& state, const double time,
 
 void BoundaryCondition::projectBdr(const double time, const bool should_be_scalar) const
 {
-  SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
+  SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   projectBdr(*state_, time, should_be_scalar);
 }
 
 void BoundaryCondition::projectBdrToDofs(mfem::Vector& dof_values, const double time, const bool should_be_scalar) const
 {
-  SLIC_ERROR_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
+  SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   auto gf = state_->gridFunc();
   gf.SetFromTrueDofs(dof_values);
   projectBdr(gf, time, should_be_scalar);
@@ -123,16 +123,16 @@ void BoundaryCondition::projectBdrToDofs(mfem::Vector& dof_values, const double 
 
 void BoundaryCondition::eliminateFromMatrix(mfem::HypreParMatrix& k_mat) const
 {
-  SLIC_ERROR_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
+  SLIC_ERROR_ROOT_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
   eliminated_matrix_entries_.reset(k_mat.EliminateRowsCols(*true_dofs_));
 }
 
 void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, const mfem::Vector& soln,
                                        mfem::Vector& rhs) const
 {
-  SLIC_ERROR_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
-  SLIC_ERROR_IF(!eliminated_matrix_entries_,
-                "Must set eliminated matrix entries with eliminateFrom before applying to RHS.");
+  SLIC_ERROR_ROOT_IF(!true_dofs_, "Can only eliminate essential boundary conditions.");
+  SLIC_ERROR_ROOT_IF(!eliminated_matrix_entries_,
+                     "Must set eliminated matrix entries with eliminateFrom before applying to RHS.");
   mfem::EliminateBC(k_mat_post_elim, *eliminated_matrix_entries_, *true_dofs_, soln, rhs);
 }
 
@@ -147,32 +147,32 @@ void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vecto
 const mfem::Coefficient& BoundaryCondition::scalarCoefficient() const
 {
   auto scalar_coef = std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
-  SLIC_ERROR_IF(!scalar_coef,
-                "Asking for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
+  SLIC_ERROR_ROOT_IF(!scalar_coef,
+                     "Asking for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
   return **scalar_coef;
 }
 
 mfem::Coefficient& BoundaryCondition::scalarCoefficient()
 {
   auto scalar_coef = std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
-  SLIC_ERROR_IF(!scalar_coef,
-                "Asking for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
+  SLIC_ERROR_ROOT_IF(!scalar_coef,
+                     "Asking for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
   return **scalar_coef;
 }
 
 const mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient() const
 {
   auto vec_coef = std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
-  SLIC_ERROR_IF(!vec_coef,
-                "Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
+  SLIC_ERROR_ROOT_IF(!vec_coef,
+                     "Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
   return **vec_coef;
 }
 
 mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
 {
   auto vec_coef = std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
-  SLIC_ERROR_IF(!vec_coef,
-                "Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
+  SLIC_ERROR_ROOT_IF(!vec_coef,
+                     "Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
   return **vec_coef;
 }
 

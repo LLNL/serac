@@ -1,14 +1,11 @@
 -- Comparison information
-expected_x_l2norm = 1.4225
+expected_u_l2norm = 1.4225
 expected_v_l2norm = 0.2252
 epsilon = 0.0001
 
 -- Simulation time parameters
 dt      = 1.0
 t_final = 6.0
-
--- Simulation output format
-output_type = "VisIt"
 
 main_mesh = {
     type = "file",
@@ -19,9 +16,12 @@ main_mesh = {
     par_ref_levels = 0,
 }
 
+-- Simulation output format
+output_type = "VisIt"
+
 -- Solver parameters
-nonlinear_solid = {
-    stiffness_solver = {
+solid = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
@@ -30,7 +30,7 @@ nonlinear_solid = {
                 max_iter    = 500,
                 print_level = 0,
                 solver_type = "gmres",
-                prec_type   = "HypreAMG",
+                prec_type   = "AMGX",
             },
         },
 
@@ -76,7 +76,7 @@ nonlinear_solid = {
             else
                 return Vector.new(first, 0, last)
             end
-        end 
+        end
     },
 
     -- boundary condition parameters

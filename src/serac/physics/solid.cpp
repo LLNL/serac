@@ -4,25 +4,31 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid.hpp"
 
 #include "serac/infrastructure/logger.hpp"
-#include "serac/integrators/hyperelastic_traction_integrator.hpp"
-#include "serac/integrators/inc_hyperelastic_integrator.hpp"
-#include "serac/integrators/wrapper_integrator.hpp"
+#include "serac/physics/integrators/traction_integrator.hpp"
+#include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
+#include "serac/physics/integrators/wrapper_integrator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 
 namespace serac {
 
+/**
+ * @brief The number of fields in this physics module (displacement and velocity)
+ */
 constexpr int NUM_FIELDS = 2;
 
-NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options)
+Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options,
+             GeometricNonlinearities geom_nonlin, FinalMeshOption keep_deformation)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh,
                 FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "velocity"}),
       displacement_(
           *mesh, FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "displacement"}),
+      geom_nonlin_(geom_nonlin),
+      keep_deformation_(keep_deformation),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {
@@ -31,8 +37,8 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
 
   // Initialize the mesh node pointers
   reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
+  mesh->EnsureNodes();
   mesh->GetNodes(*reference_nodes_);
-  mesh->NewNodes(*reference_nodes_);
 
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
@@ -67,12 +73,13 @@ NonlinearSolid::NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, c
   zero_ = 0.0;
 }
 
-NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const NonlinearSolid::InputOptions& options)
-    : NonlinearSolid(options.order, mesh, options.solver_options)
+Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& options)
+    : Solid(options.order, mesh, options.solver_options, options.geom_nonlin)
 {
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
-  setHyperelasticMaterialParameters(options.mu, options.K);
+  setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(options.mu),
+                        std::make_unique<mfem::ConstantCoefficient>(options.K), options.material_nonlin);
 
   auto dim = mesh->Dimension();
   if (options.initial_displacement) {
@@ -85,6 +92,7 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
     setVelocity(*velo);
   }
   setViscosity(std::make_unique<mfem::ConstantCoefficient>(options.viscosity));
+  setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.initial_mass_density));
 
   for (const auto& [name, bc] : options.boundary_conditions) {
     // FIXME: Better naming for boundary conditions?
@@ -100,81 +108,167 @@ NonlinearSolid::NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const Nonlin
       }
     } else if (name.find("traction") != std::string::npos) {
       std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
-      setTractionBCs(bc.attrs, trac_coef);
+      if (geom_nonlin_ == GeometricNonlinearities::Off) {
+        setTractionBCs(bc.attrs, trac_coef, true);
+      } else {
+        setTractionBCs(bc.attrs, trac_coef, false);
+      }
+    } else if (name.find("traction_ref") != std::string::npos) {
+      std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
+      setTractionBCs(bc.attrs, trac_coef, true);
+    } else if (name.find("pressure") != std::string::npos) {
+      std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
+      if (geom_nonlin_ == GeometricNonlinearities::Off) {
+        setPressureBCs(bc.attrs, pres_coef, true);
+      } else {
+        setPressureBCs(bc.attrs, pres_coef, false);
+      }
+    } else if (name.find("pressure_ref") != std::string::npos) {
+      std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
+      setPressureBCs(bc.attrs, pres_coef, true);
     } else {
-      SLIC_WARNING("Ignoring boundary condition with unknown name: " << name);
+      SLIC_WARNING_ROOT("Ignoring boundary condition with unknown name: " << name);
     }
   }
 }
 
-void NonlinearSolid::setDisplacementBCs(const std::set<int>&                     disp_bdr,
-                                        std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
+Solid::~Solid()
+{
+  // Update the mesh with the new deformed nodes if requested
+  if (keep_deformation_ == FinalMeshOption::Deformed) {
+    *reference_nodes_ += displacement_.gridFunc();
+  }
+
+  // Build a new grid function to store the mesh nodes post-destruction
+  // NOTE: MFEM will manage the memory of these objects
+
+  auto mesh_fe_coll  = new mfem::H1_FECollection(order_, mesh_->Dimension());
+  auto mesh_fe_space = new mfem::ParFiniteElementSpace(displacement_.space(), mesh_.get(), mesh_fe_coll);
+  auto mesh_nodes    = new mfem::ParGridFunction(mesh_fe_space);
+  mesh_nodes->MakeOwner(mesh_fe_coll);
+
+  *mesh_nodes = *reference_nodes_;
+
+  // Set the mesh to the newly created nodes object and pass ownership
+  mesh_->NewNodes(*mesh_nodes, true);
+}
+
+void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_);
 }
 
-void NonlinearSolid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
-                                        int component)
+void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::Coefficient> disp_bdr_coef,
+                               int component)
 {
   bcs_.addEssential(disp_bdr, disp_bdr_coef, displacement_, component);
 }
 
-void NonlinearSolid::setTractionBCs(const std::set<int>&                     trac_bdr,
-                                    std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                                    std::optional<int>                       component)
+void Solid::setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
+                           bool compute_on_reference, std::optional<int> component)
 {
-  bcs_.addNatural(trac_bdr, trac_bdr_coef, component);
+  if (compute_on_reference) {
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::ReferenceTraction, component);
+  } else {
+    bcs_.addGeneric(trac_bdr, trac_bdr_coef, SolidBoundaryCondition::DeformedTraction, component);
+  }
 }
 
-void NonlinearSolid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
+void Solid::setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::Coefficient> pres_bdr_coef,
+                           bool compute_on_reference)
+{
+  if (compute_on_reference) {
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::ReferencePressure);
+  } else {
+    bcs_.addGeneric(pres_bdr, pres_bdr_coef, SolidBoundaryCondition::DeformedPressure);
+  }
+}
+
+void Solid::addBodyForce(std::shared_ptr<mfem::VectorCoefficient> ext_force_coef)
 {
   ext_force_coefs_.push_back(ext_force_coef);
 }
 
-void NonlinearSolid::setHyperelasticMaterialParameters(const double mu, const double K)
+void Solid::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
+                                  const bool material_nonlin)
 {
-  model_ = std::make_unique<mfem::NeoHookeanModel>(mu, K);
+  if (material_nonlin) {
+    material_ = std::make_unique<NeoHookeanMaterial>(std::move(mu), std::move(K));
+  } else {
+    material_ = std::make_unique<LinearElasticMaterial>(std::move(mu), std::move(K));
+  }
 }
 
-void NonlinearSolid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
+void Solid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
 
-void NonlinearSolid::setDisplacement(mfem::VectorCoefficient& disp_state)
+void Solid::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho_coef)
+{
+  initial_mass_density_ = std::move(rho_coef);
+}
+
+void Solid::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_.project(disp_state);
+  displacement_.initializeTrueVec();
   gf_initialized_[1] = true;
 }
 
-void NonlinearSolid::setVelocity(mfem::VectorCoefficient& velo_state)
+void Solid::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_.project(velo_state);
+  velocity_.initializeTrueVec();
   gf_initialized_[0] = true;
 }
 
-void NonlinearSolid::completeSetup()
+void Solid::resetToReferenceConfiguration()
+{
+  displacement_.gridFunc() = 0.0;
+  velocity_.gridFunc()     = 0.0;
+
+  velocity_.initializeTrueVec();
+  displacement_.initializeTrueVec();
+
+  mesh_->NewNodes(*reference_nodes_);
+}
+
+void Solid::completeSetup()
 {
   // Define the nonlinear form
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  if (is_quasistatic_) {
-    H_->AddDomainIntegrator(new mfem_ext::IncrementalHyperelasticIntegrator(model_.get()));
-  } else {
-    H_->AddDomainIntegrator(new mfem::HyperelasticNLFIntegrator(model_.get()));
+  H_->AddDomainIntegrator(new mfem_ext::DisplacementHyperelasticIntegrator(*material_, geom_nonlin_));
+
+  // Add the deformed traction integrator
+  for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedTraction)) {
+    H_->AddBdrFaceIntegrator(new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), false),
+                             deformed_traction_data.markers());
   }
 
-  // Add the traction integrator
-  for (auto& nat_bc_data : bcs_.naturals()) {
-    H_->AddBdrFaceIntegrator(new mfem_ext::HyperelasticTractionIntegrator(nat_bc_data.vectorCoefficient()),
-                             nat_bc_data.markers());
+  // Add the reference traction integrator
+  for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferenceTraction)) {
+    H_->AddBdrFaceIntegrator(new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), true),
+                             deformed_traction_data.markers());
+  }
+
+  // Add the deformed pressure integrator
+  for (auto& deformed_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedPressure)) {
+    H_->AddBdrFaceIntegrator(new mfem_ext::PressureIntegrator(deformed_pressure_data.scalarCoefficient(), false),
+                             deformed_pressure_data.markers());
+  }
+
+  // Add the reference pressure integrator
+  for (auto& reference_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferencePressure)) {
+    H_->AddBdrFaceIntegrator(new mfem_ext::PressureIntegrator(reference_pressure_data.scalarCoefficient(), true),
+                             reference_pressure_data.markers());
   }
 
   // Add external forces
   for (auto& force : ext_force_coefs_) {
     H_->AddDomainIntegrator(new serac::mfem_ext::LinearToNonlinearFormIntegrator(
-        std::make_shared<mfem::VectorDomainLFIntegrator>(*force),
-        std::make_shared<mfem::ParFiniteElementSpace>(*H_->ParFESpace())));
+        std::make_shared<mfem::VectorDomainLFIntegrator>(*force), displacement_.space()));
   }
 
   // Build the dof array lookup tables
@@ -188,11 +282,8 @@ void NonlinearSolid::completeSetup()
 
   // If dynamic, create the mass and viscosity forms
   if (!is_quasistatic_) {
-    const double              ref_density = 1.0;  // density in the reference configuration
-    mfem::ConstantCoefficient rho0(ref_density);
-
     M_ = displacement_.createOnSpace<mfem::ParBilinearForm>();
-    M_->AddDomainIntegrator(new mfem::VectorMassIntegrator(rho0));
+    M_->AddDomainIntegrator(new mfem::VectorMassIntegrator(*initial_mass_density_));
     M_->Assemble(0);
     M_->Finalize(0);
 
@@ -227,7 +318,7 @@ void NonlinearSolid::completeSetup()
 
         // residual function
         [this](const mfem::Vector& d2u_dt2, mfem::Vector& r) {
-          r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (x_ + u_ + c0_ * d2u_dt2);
+          r = (*M_mat_) * d2u_dt2 + (*C_mat_) * (du_dt_ + c1_ * d2u_dt2) + (*H_) * (u_ + c0_ * d2u_dt2);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
@@ -235,7 +326,7 @@ void NonlinearSolid::completeSetup()
         [this](const mfem::Vector& d2u_dt2) -> mfem::Operator& {
           // J = M + c1 * C + c0 * H(u_predicted)
           auto localJ = std::unique_ptr<mfem::SparseMatrix>(Add(1.0, M_->SpMat(), c1_, C_->SpMat()));
-          localJ->Add(c0_, H_->GetLocalGradient(x_ + u_ + c0_ * d2u_dt2));
+          localJ->Add(c0_, H_->GetLocalGradient(u_ + c0_ * d2u_dt2));
           J_mat_.reset(M_->ParallelAssemble(localJ.get()));
           bcs_.eliminateAllEssentialDofsFromMatrix(*J_mat_);
           return *J_mat_;
@@ -246,9 +337,9 @@ void NonlinearSolid::completeSetup()
 }
 
 // Solve the Quasi-static Newton system
-void NonlinearSolid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
+void Solid::quasiStaticSolve() { nonlin_solver_.Mult(zero_, displacement_.trueVec()); }
 
-std::unique_ptr<mfem::Operator> NonlinearSolid::buildQuasistaticOperator()
+std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
 {
   // the quasistatic case is entirely described by the residual,
   // there is no ordinary differential equation
@@ -271,7 +362,7 @@ std::unique_ptr<mfem::Operator> NonlinearSolid::buildQuasistaticOperator()
 }
 
 // Advance the timestep
-void NonlinearSolid::advanceTimestep(double& dt)
+void Solid::advanceTimestep(double& dt)
 {
   // Initialize the true vector
   velocity_.initializeTrueVec();
@@ -303,9 +394,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-NonlinearSolid::~NonlinearSolid() {}
-
-void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
@@ -314,11 +403,22 @@ void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& tab
   table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
   table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
 
+  // Geometric nonlinearities flag
+  table.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
+      .defaultValue(true);
+
+  // Geometric nonlinearities flag
+  table
+      .addBool("material_nonlin",
+               "Flag to include material nonlinearities (linear elastic vs. neo-Hookean material model).")
+      .defaultValue(true);
+
   table.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
 
-  auto& stiffness_solver_table =
-      table.addStruct("stiffness_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_ext::EquationSolver::DefineInputFileSchema(stiffness_solver_table);
+  table.addDouble("density", "Initial mass density").defaultValue(1.0);
+
+  auto& equation_solver_table = table.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
 
   auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");
   dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
@@ -334,7 +434,7 @@ void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& tab
 }
 
 // Evaluate the residual at the current state
-mfem::Vector NonlinearSolid::currentResidual()
+mfem::Vector Solid::currentResidual()
 {
   mfem::Vector eval(displacement_.trueVec().Size());
   if (is_quasistatic_) {
@@ -349,7 +449,7 @@ mfem::Vector NonlinearSolid::currentResidual()
 }
 
 // Get an Operator that computes the gradient (tangent stiffness) at the current internal state
-const mfem::Operator& NonlinearSolid::currentGradient()
+const mfem::Operator& Solid::currentGradient()
 {
   if (is_quasistatic_) {
     // The input to the residual is displacment
@@ -364,23 +464,23 @@ const mfem::Operator& NonlinearSolid::currentGradient()
 }  // namespace serac
 
 using serac::DirichletEnforcementMethod;
-using serac::NonlinearSolid;
+using serac::Solid;
 using serac::TimestepMethod;
 
-NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()(const axom::inlet::Table& base)
+Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet::Table& base)
 {
-  NonlinearSolid::InputOptions result;
+  Solid::InputOptions result;
 
   result.order = base["order"];
 
   // Solver parameters
-  auto stiffness_solver                  = base["stiffness_solver"];
-  result.solver_options.H_lin_options    = stiffness_solver["linear"].get<serac::LinearSolverOptions>();
-  result.solver_options.H_nonlin_options = stiffness_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
+  auto equation_solver                   = base["equation_solver"];
+  result.solver_options.H_lin_options    = equation_solver["linear"].get<serac::LinearSolverOptions>();
+  result.solver_options.H_nonlin_options = equation_solver["nonlinear"].get<serac::NonlinearSolverOptions>();
 
   if (base.contains("dynamics")) {
-    NonlinearSolid::TimesteppingOptions dyn_options;
-    auto                                dynamics = base["dynamics"];
+    Solid::TimesteppingOptions dyn_options;
+    auto                       dynamics = base["dynamics"];
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, TimestepMethod> timestep_methods = {
@@ -388,15 +488,16 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
         {"NewmarkBeta", TimestepMethod::Newmark},
         {"BackwardEuler", TimestepMethod::BackwardEuler}};
     std::string timestep_method = dynamics["timestepper"];
-    SLIC_ERROR_IF(timestep_methods.count(timestep_method) == 0, "Unrecognized timestep method: " << timestep_method);
+    SLIC_ERROR_ROOT_IF(timestep_methods.count(timestep_method) == 0,
+                       "Unrecognized timestep method: " << timestep_method);
     dyn_options.timestepper = timestep_methods.at(timestep_method);
 
     // FIXME: Implement all supported methods as part of an ODE schema
     const static std::map<std::string, DirichletEnforcementMethod> enforcement_methods = {
         {"RateControl", DirichletEnforcementMethod::RateControl}};
     std::string enforcement_method = dynamics["enforcement_method"];
-    SLIC_ERROR_IF(enforcement_methods.count(enforcement_method) == 0,
-                  "Unrecognized enforcement method: " << enforcement_method);
+    SLIC_ERROR_ROOT_IF(enforcement_methods.count(enforcement_method) == 0,
+                       "Unrecognized enforcement method: " << enforcement_method);
     dyn_options.enforcement_method = enforcement_methods.at(enforcement_method);
 
     result.solver_options.dyn_options = std::move(dyn_options);
@@ -407,12 +508,25 @@ NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()
   result.mu = base["mu"];
   result.K  = base["K"];
 
+  // Set the geometric nonlinearities flag
+  bool input_geom_nonlin = base["geometric_nonlin"];
+  if (input_geom_nonlin) {
+    result.geom_nonlin = serac::GeometricNonlinearities::On;
+  } else {
+    result.geom_nonlin = serac::GeometricNonlinearities::Off;
+  }
+
+  // Set the material nonlinearity flag
+  result.material_nonlin = base["material_nonlin"];
+
   if (base.contains("boundary_conds")) {
     result.boundary_conditions =
         base["boundary_conds"].get<std::unordered_map<std::string, serac::input::BoundaryConditionInputOptions>>();
   }
 
   result.viscosity = base["viscosity"];
+
+  result.initial_mass_density = base["density"];
 
   if (base.contains("initial_displacement")) {
     result.initial_displacement = base["initial_displacement"].get<serac::input::CoefficientInputOptions>();

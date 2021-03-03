@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file nonlinear_solid.hpp
+ * @file solid.hpp
  *
  * @brief The solver object for finite deformation hyperelasticity
  */
@@ -20,8 +20,32 @@
 #include "serac/physics/base_physics.hpp"
 #include "serac/physics/operators/odes.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
+#include "serac/physics/materials/hyperelastic_material.hpp"
+#include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
 
 namespace serac {
+
+/**
+ * @brief Enum describing the generic solid boundary conditions
+ *
+ */
+enum class SolidBoundaryCondition
+{
+  ReferencePressure, /**< Pressure applied in the reference configuration */
+  ReferenceTraction, /**< Traction applied in the reference configuration */
+  DeformedPressure,  /**< Pressure applied in the deformed (current) configuration */
+  DeformedTraction   /**< Traction applied in the deformed (current) configuration */
+};
+
+/**
+ * @brief Enum to save the deformation after the Solid module is destructed
+ *
+ */
+enum class FinalMeshOption
+{
+  Deformed, /**< Keep the mesh in the deformed state post-destruction */
+  Reference /**< Revert the mesh to the reference state post-destruction */
+};
 
 /**
  * @brief The nonlinear solid solver class
@@ -30,7 +54,7 @@ namespace serac {
  * hyperelastic solver object. It is derived from MFEM
  * example 10p.
  */
-class NonlinearSolid : public BasePhysics {
+class Solid : public BasePhysics {
 public:
   /**
    * @brief A timestep method and config for the M solver
@@ -116,6 +140,24 @@ public:
     double viscosity;
 
     /**
+     * @brief Initial density
+     *
+     */
+    double initial_mass_density;
+
+    /**
+     * @brief Geometric nonlinearities flag
+     *
+     */
+    GeometricNonlinearities geom_nonlin;
+
+    /**
+     * @brief Material nonlinearities flag
+     *
+     */
+    bool material_nonlin;
+
+    /**
      * @brief Boundary condition information
      *
      */
@@ -142,8 +184,12 @@ public:
    * @param[in] order The order of the displacement field
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] options The options for the linear, nonlinear, and ODE solves
+   * @param[in] geom_nonlin Flag to include geometric nonlinearities
+   * @param[in] keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    */
-  NonlinearSolid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options);
+  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options,
+        GeometricNonlinearities geom_nonlin      = GeometricNonlinearities::On,
+        FinalMeshOption         keep_deformation = FinalMeshOption::Deformed);
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -151,7 +197,7 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] options The solver information parsed from the input file
    */
-  NonlinearSolid(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options);
+  Solid(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options);
 
   /**
    * @brief Set displacement boundary conditions
@@ -176,10 +222,23 @@ public:
    *
    * @param[in] trac_bdr The set of boundary attributes to apply a traction to
    * @param[in] trac_bdr_coef The vector valued traction coefficient
+   * @param[in] compute_on_reference Flag to compute on the reference stress-free configuration vs. the deformed
+   * configuration
    * @param[in] component The component to apply the traction on
    */
   void setTractionBCs(const std::set<int>& trac_bdr, std::shared_ptr<mfem::VectorCoefficient> trac_bdr_coef,
-                      std::optional<int> component = {});
+                      bool compute_on_reference, std::optional<int> component = {});
+
+  /**
+   * @brief Set the pressure boundary conditions
+   *
+   * @param[in] pres_bdr The set of boundary attributes to apply a pressure to
+   * @param[in] pres_bdr_coef The scalar valued pressure coefficient
+   * @param[in] compute_on_reference Flag to compute on the reference stress-free configuration vs. the deformed
+   * configuration
+   */
+  void setPressureBCs(const std::set<int>& pres_bdr, std::shared_ptr<mfem::Coefficient> pres_bdr_coef,
+                      bool compute_on_reference);
 
   /**
    * @brief Add body force vectors on the domain
@@ -196,12 +255,21 @@ public:
   void setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef);
 
   /**
-   * @brief Set the hyperelastic material parameters
+   * @brief Set the mass density coefficient
    *
-   * @param[in] mu Set the mu Lame parameter for the hyperelastic solid
-   * @param[in] K Set the K Lame parameter for the hyperelastic solid
+   * @param[in] rho_coef The mass density coefficient
    */
-  void setHyperelasticMaterialParameters(double mu, double K);
+  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho_coef);
+
+  /**
+   * @brief Set the material parameters
+   *
+   * @param[in] mu Set the shear modulus for the solid
+   * @param[in] K Set the bulk modulus for the solid
+   * @param[in] material_nonlin Flag to include material nonlinearities (linear elastic vs. neo-Hookean model)
+   */
+  void setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& K,
+                             bool material_nonlin = true);
 
   /**
    * @brief Set the initial displacement value
@@ -216,6 +284,11 @@ public:
    * @param[in] velo_state The velocity state
    */
   void setVelocity(mfem::VectorCoefficient& velo_state);
+
+  /**
+   * @brief Reset the underlying state to the reference configuration with zero velocity
+   */
+  void resetToReferenceConfiguration();
 
   /**
    * @brief Get the displacement state
@@ -257,7 +330,7 @@ public:
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
-  virtual ~NonlinearSolid();
+  virtual ~Solid();
 
   /**
    * @brief Compute the current residual vector at the current internal state value
@@ -311,14 +384,29 @@ protected:
   std::unique_ptr<mfem::Coefficient> viscosity_;
 
   /**
+   * @brief The mass density coefficient
+   */
+  std::unique_ptr<mfem::Coefficient> initial_mass_density_;
+
+  /**
    * @brief The hyperelastic material model
    */
-  std::unique_ptr<mfem::HyperelasticModel> model_;
+  std::unique_ptr<HyperelasticMaterial> material_;
+
+  /**
+   * @brief Flag for enabling geometric nonlinearities in the residual calculation
+   */
+  GeometricNonlinearities geom_nonlin_;
 
   /**
    * @brief Pointer to the reference mesh data
    */
   std::unique_ptr<mfem::ParGridFunction> reference_nodes_;
+
+  /**
+   * @brief Flag to indicate the final mesh node state post-destruction
+   */
+  FinalMeshOption keep_deformation_;
 
   /**
    * @brief Pointer to the deformed mesh data
@@ -417,6 +505,6 @@ protected:
  * @tparam The object to be created by inlet
  */
 template <>
-struct FromInlet<serac::NonlinearSolid::InputOptions> {
-  serac::NonlinearSolid::InputOptions operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::Solid::InputOptions> {
+  serac::Solid::InputOptions operator()(const axom::inlet::Table& base);
 };

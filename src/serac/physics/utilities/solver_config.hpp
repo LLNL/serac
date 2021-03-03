@@ -22,10 +22,10 @@ namespace serac {
  */
 enum class OutputType
 {
-  GLVis,
-  ParaView,
-  VisIt,
-  SidreVisIt
+  GLVis,     /**< GLVis output */
+  ParaView,  /**< Paraview output */
+  VisIt,     /**< VisIt output */
+  SidreVisIt /**< Binary VisIt output via Sidre */
 };
 
 /**

@@ -4,12 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/integrators/wrapper_integrator.hpp"
+#include "serac/physics/integrators/wrapper_integrator.hpp"
 
 namespace serac::mfem_ext {
 
-LinearToNonlinearFormIntegrator::LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator>  f,
-                                                                 std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes)
+LinearToNonlinearFormIntegrator::LinearToNonlinearFormIntegrator(std::shared_ptr<mfem::LinearFormIntegrator> f,
+                                                                 const mfem::ParFiniteElementSpace&          trial_fes)
     : f_(f), trial_fes_(trial_fes)
 {
 }
@@ -26,7 +26,7 @@ void LinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteElem
                                                           mfem::ElementTransformation& Tr, const mfem::Vector&,
                                                           mfem::DenseMatrix&           elmat)
 {
-  const mfem::FiniteElement& trial_el = *(trial_fes_->FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
+  const mfem::FiniteElement& trial_el = *(trial_fes_.FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
 
   elmat.SetSize(trial_el.GetDof() * trial_el.GetDim(), el.GetDof() * el.GetDim());
   elmat = 0.;
@@ -55,7 +55,7 @@ void BilinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::FiniteEl
 }
 
 MixedBilinearToNonlinearFormIntegrator::MixedBilinearToNonlinearFormIntegrator(
-    std::shared_ptr<mfem::BilinearFormIntegrator> A, std::shared_ptr<mfem::ParFiniteElementSpace> trial_fes)
+    std::shared_ptr<mfem::BilinearFormIntegrator> A, const mfem::ParFiniteElementSpace& trial_fes)
     : A_(A), trial_fes_(trial_fes)
 {
 }
@@ -64,7 +64,7 @@ void MixedBilinearToNonlinearFormIntegrator::AssembleElementVector(const mfem::F
                                                                    mfem::ElementTransformation& Tr,
                                                                    const mfem::Vector& elfun, mfem::Vector& elvect)
 {
-  const mfem::FiniteElement& trial_el = *(trial_fes_->FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
+  const mfem::FiniteElement& trial_el = *(trial_fes_.FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
 
   mfem::DenseMatrix elmat;
   A_->AssembleElementMatrix2(trial_el, el, Tr, elmat);
@@ -76,7 +76,7 @@ void MixedBilinearToNonlinearFormIntegrator::AssembleElementGrad(const mfem::Fin
                                                                  mfem::ElementTransformation& Tr, const mfem::Vector&,
                                                                  mfem::DenseMatrix&           elmat)
 {
-  const mfem::FiniteElement& trial_el = *(trial_fes_->FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
+  const mfem::FiniteElement& trial_el = *(trial_fes_.FEColl()->FiniteElementForGeometry(Tr.GetGeometryType()));
 
   A_->AssembleElementMatrix2(trial_el, el, Tr, elmat);
 }

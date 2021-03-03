@@ -1,6 +1,6 @@
 -- Comparison information
-expected_x_l2norm = 0.03330115
-epsilon = 0.0001
+expected_u_l2norm = 0.015934784
+epsilon = 0.001
 
 -- Simulation time parameters
 dt      = 1.0
@@ -8,61 +8,75 @@ dt      = 1.0
 main_mesh = {
     type = "file",
     -- mesh file
-    mesh = "../../../meshes/square.mesh",
+    mesh = "../../../meshes/beam-hex.mesh",
     -- serial and parallel refinement levels
-    ser_ref_levels = 2,
+    ser_ref_levels = 1,
     par_ref_levels = 0,
 }
 
 -- Simulation output format
-output_type = "GLVis"
+output_type = "VisIt"
 
 -- Solver parameters
-nonlinear_solid = {
-    stiffness_solver = {
+solid = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
-                rel_tol     = 1.0e-8,
-                abs_tol     = 1.0e-12,
+                rel_tol     = 1.0e-6,
+                abs_tol     = 1.0e-8,
                 max_iter    = 5000,
                 print_level = 0,
                 solver_type = "minres",
                 prec_type   = "L1JacobiSmoother",
-            }
+            },
         },
 
         nonlinear = {
-            rel_tol     = 1.0e-6,
-            abs_tol     = 1.0e-8,
+            rel_tol     = 1.0e-3,
+            abs_tol     = 1.0e-6,
             max_iter    = 5000,
             print_level = 1,
         },
     },
 
     -- polynomial interpolation order
-    order = 2,
+    order = 1,
 
     -- neo-Hookean material parameters
     mu = 0.25,
     K  = 10.0,
 
+    initial_displacement = {
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
+    },
+
+    initial_velocity = {
+        vector_constant = {
+            x = 0.0,
+            y = 0.0,
+            z = 0.0
+        }
+    }, 
+
     -- boundary condition parameters
     boundary_conds = {
-        ['displacement_x'] = {
+        ['displacement'] = {
             -- boundary attribute 1 (index 0) is fixed (Dirichlet) in the x direction
             attrs = {1},
-            component = 0,
-            scalar_function = function (v)
-                return v.x * 3.0e-2
-            end
+            vector_constant = {
+                x = 0.0,
+                y = 0.0,
+                z = 0.0
+            }
         },
-        ['displacement_y'] = {
+        ['pressure'] = {
             attrs = {2},
-            component = 1,
-            scalar_function = function (v)
-                return v.y * -5.0e-2
-            end
-        },
+            constant = 1.0e-3
+        }
     },
 }
