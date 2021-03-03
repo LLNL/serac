@@ -24,8 +24,8 @@ namespace serac {
  */
 enum class GeometricOption
 {
-  Nonlinear,
-  Linear
+  Nonlinear, /**< Include geometric nonlinearities */
+  Off        /**< Do no include geometric nonlinearities */
 };
 
 namespace mfem_ext {

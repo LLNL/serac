@@ -108,7 +108,7 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
       }
     } else if (name.find("traction") != std::string::npos) {
       std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
-      if (geom_nonlin_ == GeometricOption::Linear) {
+      if (geom_nonlin_ == GeometricOption::Off) {
         setTractionBCs(bc.attrs, trac_coef, true);
       } else {
         setTractionBCs(bc.attrs, trac_coef, false);
@@ -118,7 +118,7 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
       setTractionBCs(bc.attrs, trac_coef, true);
     } else if (name.find("pressure") != std::string::npos) {
       std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
-      if (geom_nonlin_ == GeometricOption::Linear) {
+      if (geom_nonlin_ == GeometricOption::Off) {
         setPressureBCs(bc.attrs, pres_coef, true);
       } else {
         setPressureBCs(bc.attrs, pres_coef, false);
@@ -513,7 +513,7 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
   if (input_geom_nonlin) {
     result.geom_nonlin = serac::GeometricOption::Nonlinear;
   } else {
-    result.geom_nonlin = serac::GeometricOption::Linear;
+    result.geom_nonlin = serac::GeometricOption::Off;
   }
 
   // Set the material nonlinearity flag

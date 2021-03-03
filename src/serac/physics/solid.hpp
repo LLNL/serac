@@ -31,10 +31,10 @@ namespace serac {
  */
 enum class SolidBoundaryCondition
 {
-  ReferencePressure,
-  ReferenceTraction,
-  DeformedPressure,
-  DeformedTraction
+  ReferencePressure, /**< Pressure applied in the reference configuration */
+  ReferenceTraction, /**< Traction applied in the reference configuration */
+  DeformedPressure,  /**< Pressure applied in the deformed (current) configuration */
+  DeformedTraction   /**< Traction applied in the deformed (current) configuration */
 };
 
 /**
@@ -43,8 +43,8 @@ enum class SolidBoundaryCondition
  */
 enum class FinalMeshOption
 {
-  Deformed,
-  Reference
+  Deformed, /**< Keep the mesh in the deformed state post-destruction */
+  Reference /**< Revert the mesh to the reference state post-destruction */
 };
 
 /**
