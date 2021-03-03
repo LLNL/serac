@@ -24,20 +24,15 @@
  */
 namespace serac {
 /**
- * @brief Constructs an MFEM parallel mesh from a file and refines it
+ * @brief Constructs an MFEM mesh from a file
  *
- * This opens and reads an external mesh file and constructs a parallel
- * MFEM ParMesh object. The mesh will be refined both serially and
- * in parallel as requested
+ * This opens and reads an external mesh file and constructs a serial
+ * MFEM Mesh object.
  *
  * @param[in] mesh_file The mesh file to open
- * @param[in] refine_serial The number of serial refinements
- * @param[in] refine_parallel The number of parallel refinements
- * @param[in] comm The MPI communicator
- * @return A shared_ptr containing the constructed and refined parallel mesh object
+ * @return A shared_ptr containing the serial mesh object
  */
-std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial = 0,
-                                                 const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file);
 
 /**
  * @brief Constructs a 2D MFEM mesh of a unit disk, centered at the origin
@@ -71,10 +66,10 @@ std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
  * @param[in] size_x Overall size in the x-direction
  * @param[in] size_y Overall size in the y-direction
  * @param[in] comm The MPI communicator to build the parmesh on
- * @return A shared_ptr containing the constructed mesh
+ * @return A shared_ptr containing the constructed serial mesh
  */
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
-                                                  double size_y = 1., const MPI_Comm comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
+                                               double size_y = 1.);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a cuboid
@@ -86,11 +81,10 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int element
  * @param[in] size_y Overall size in the y-direction
  * @param[in] size_z Overall size in the z-direction
  * @param[in] comm MPI Communicator
- * @return A shared_ptr containing the constructed mesh
+ * @return A shared_ptr containing the constructed serial mesh
  */
-std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z,
-                                               double size_x = 1., double size_y = 1., double size_z = 1.,
-                                               const MPI_Comm comm = MPI_COMM_WORLD);
+std::shared_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x = 1.,
+                                            double size_y = 1., double size_z = 1.);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a cylinder
@@ -161,9 +155,13 @@ struct FileInputOptions {
 
   /**
    * @brief The relative path for the mesh file
-   *
    */
   std::string relative_mesh_file_name;
+
+  /**
+   * @brief The absolute path for the mesh file, intended to be populated by the user directly
+   */
+  mutable std::string absolute_mesh_file_name{};
 };
 
 /**
@@ -222,28 +220,33 @@ struct InputOptions {
   int par_ref_levels;
 };
 
+/**
+ * @brief Constructs an MFEM parallel mesh from a set of input options
+ *
+ * @param[in] options The options used to construct the mesh
+ * @param[in] comm The MPI communicator to use with the parallel mesh
+ *
+ * @return A shared_ptr containing the constructed mesh
+ */
+std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm = MPI_COMM_WORLD);
+
+/**
+ * @brief Finalizes a serial mesh into a refined parallel mesh
+ *
+ * @param[in] serial_mesh The "base" serial mesh
+ * @param[in] refine_serial The number of serial refinements
+ * @param[in] refine_parallel The number of parallel refinements
+ * @param[in] comm The MPI communicator
+ *
+ * @return A shared_ptr containing the constructed mesh
+ *
+ * @note It is sometimes required to refine serially first if your number of processors
+ * is less than the original number of mesh elements
+ */
+std::shared_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial = 0,
+                                                   const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD);
+
 }  // namespace mesh
-
-/**
- * @brief Constructs a 3D MFEM mesh of a cuboid
- *
- * @param[in] options Cuboid Mesh Options
- * @param[in] comm MPI Communicator
- * @return A shared_ptr containing the constructed mesh
- */
-std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions& options,
-                                               const MPI_Comm                     comm = MPI_COMM_WORLD);
-
-/**
- * @brief Constructs a 2D MFEM mesh of a rectangle
- *
- * @param[in] options Rectangle Mesh Options
- * @param[in] comm MPI Communicator
- * @return A shared_ptr containing the constructed mesh
- */
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOptions& options,
-                                                  const MPI_Comm                     comm = MPI_COMM_WORLD);
-
 }  // namespace serac
 
 /**
