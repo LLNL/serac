@@ -106,6 +106,8 @@ void BasePhysics::outputState() const
       dc_->Save();
       break;
     case serac::OutputType::SidreVisIt: {
+      // Implemented through a helper method as the full interface of the MFEMSidreDataCollection
+      // is restricted from global access
       StateManager::save(time_, cycle_);
       break;
     }
