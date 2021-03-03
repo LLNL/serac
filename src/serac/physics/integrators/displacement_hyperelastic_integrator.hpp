@@ -17,6 +17,7 @@
 #include "mfem.hpp"
 
 namespace serac {
+
 /**
  * @brief Enum to set the geometric nonlinearity flag
  *
