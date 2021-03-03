@@ -59,31 +59,33 @@ TEST(meshgen, lua_input)
 
   // temporary scope to build mesh from file
   {
-    auto mesh_options = inlet["main_mesh_from_file"].get<serac::mesh::InputOptions>();
-    if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-      auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
-      auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
-    }
+    auto       mesh_options = inlet["main_mesh_from_file"].get<serac::mesh::InputOptions>();
+    const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options);
+    ASSERT_NE(file_options, nullptr);
+    auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
+    file_options->absolute_mesh_file_name =
+        serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
   }
 
   // temporary scope to build a cuboid mesh
   {
-    auto mesh_options = inlet["main_mesh_cuboid"].get<serac::mesh::InputOptions>();
-    if (const auto cuboid_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options)) {
-      EXPECT_EQ(cuboid_options->elements.size(), 3);
-      auto mesh = serac::buildCuboidMesh(*cuboid_options);
-      EXPECT_EQ(mesh->GetNE(), cuboid_options->elements[0] * cuboid_options->elements[1] * cuboid_options->elements[2]);
-    }
+    auto       mesh_options   = inlet["main_mesh_cuboid"].get<serac::mesh::InputOptions>();
+    const auto cuboid_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+    ASSERT_NE(cuboid_options, nullptr);
+    EXPECT_EQ(cuboid_options->elements.size(), 3);
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+    EXPECT_EQ(mesh->GetNE(), cuboid_options->elements[0] * cuboid_options->elements[1] * cuboid_options->elements[2]);
   }
 
   // temporary scope to build a rectangular mesh
   {
-    auto mesh_options = inlet["main_mesh_rect"].get<serac::mesh::InputOptions>();
-    if (const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options)) {
-      EXPECT_EQ(rect_options->elements.size(), 2);
-      auto mesh = serac::buildRectangleMesh(*rect_options);
-      EXPECT_EQ(mesh->GetNE(), rect_options->elements[0] * rect_options->elements[1]);
-    }
+    auto       mesh_options = inlet["main_mesh_rect"].get<serac::mesh::InputOptions>();
+    const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+    ASSERT_NE(rect_options, nullptr);
+    EXPECT_EQ(rect_options->elements.size(), 2);
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+    EXPECT_EQ(mesh->GetNE(), rect_options->elements[0] * rect_options->elements[1]);
   }
 
   // temporary scope to build a rectangular mesh

@@ -16,8 +16,7 @@
 
 namespace serac {
 
-std::unique_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial,
-                                                 const int refine_parallel, const MPI_Comm comm)
+std::unique_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file)
 {
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
@@ -40,20 +39,7 @@ std::unique_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
     SLIC_ERROR_ROOT(err_msg);
   }
 
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-
-  // mesh refinement if specified in input
-  for (int lev = 0; lev < refine_serial; lev++) {
-    mesh->UniformRefinement();
-  }
-
-  // create the parallel mesh
-  auto par_mesh = std::make_unique<mfem::ParMesh>(comm, *mesh);
-  for (int lev = 0; lev < refine_parallel; lev++) {
-    par_mesh->UniformRefinement();
-  }
-
-  return par_mesh;
+  return std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
 }
 
 /**
@@ -154,30 +140,16 @@ std::unique_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
   return std::make_unique<mfem::ParMesh>(comm, mesh);
 }
 
-std::unique_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y,
-                                                  const MPI_Comm comm)
+std::unique_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y)
 {
-  mfem::Mesh mesh(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y);
-  return std::make_unique<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::Mesh>(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y);
 }
 
-std::unique_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOptions& options, const MPI_Comm comm)
+std::unique_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x,
+                                            double size_y, double size_z)
 {
-  return buildRectangleMesh(options.elements[0], options.elements[1], options.overall_size[0], options.overall_size[1],
-                            comm);
-}
-
-std::unique_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x,
-                                               double size_y, double size_z, const MPI_Comm comm)
-{
-  mfem::Mesh mesh(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true, size_x, size_y, size_z);
-  return std::make_unique<mfem::ParMesh>(comm, mesh);
-}
-
-std::unique_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions& options, const MPI_Comm comm)
-{
-  return buildCuboidMesh(options.elements[0], options.elements[1], options.elements[2], options.overall_size[0],
-                         options.overall_size[1], options.overall_size[2], comm);
+  return std::make_unique<mfem::Mesh>(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true,
+                                      size_x, size_y, size_z);
 }
 
 std::unique_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
@@ -419,6 +391,45 @@ void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   size.addDouble("z", "Size in the z-dimension");
 }
 
+std::unique_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
+{
+  std::unique_ptr<mfem::Mesh> serial_mesh;
+
+  if (const auto file_opts = std::get_if<FileInputOptions>(&options.extra_options)) {
+    SLIC_ERROR_ROOT_IF(file_opts->absolute_mesh_file_name.empty(),
+                       "Absolute path to mesh file was not configured, did you forget to call findMeshFilePath?");
+    serial_mesh = buildMeshFromFile(file_opts->absolute_mesh_file_name);
+  } else if (const auto generate_opts = std::get_if<GenerateInputOptions>(&options.extra_options)) {
+    const auto& eles  = generate_opts->elements;
+    const auto& sizes = generate_opts->overall_size;
+    if (eles.size() == 2) {
+      serial_mesh = buildRectangleMesh(eles.at(0), eles.at(1), sizes.at(0), sizes.at(1));
+    } else {
+      serial_mesh = buildCuboidMesh(eles.at(0), eles.at(1), eles.at(2), sizes.at(0), sizes.at(1), sizes.at(2));
+    }
+  }
+
+  SLIC_ERROR_ROOT_IF(!serial_mesh, "Mesh input options were invalid");
+  return refineAndDistribute(*serial_mesh, options.ser_ref_levels, options.par_ref_levels, comm);
+}
+
+std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial,
+                                                   const int refine_parallel, const MPI_Comm comm)
+{
+  // Serial refinement first
+  for (int lev = 0; lev < refine_serial; lev++) {
+    serial_mesh.UniformRefinement();
+  }
+
+  // Then create the parallel mesh and apply parallel refinement
+  auto parallel_mesh = std::make_unique<mfem::ParMesh>(comm, serial_mesh);
+  for (int lev = 0; lev < refine_parallel; lev++) {
+    parallel_mesh->UniformRefinement();
+  }
+
+  return parallel_mesh;
+}
+
 }  // namespace mesh
 }  // namespace serac
 
@@ -444,7 +455,7 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
       overall_size    = {size_input["x"], size_input["y"]};
 
       if (size_input.contains("z")) {
-        overall_size[2] = size_input["z"];
+        overall_size.push_back(size_input["z"]);
       }
     } else {
       overall_size = std::vector<double>(overall_size.size(), 1.);

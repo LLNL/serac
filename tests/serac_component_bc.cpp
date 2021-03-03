@@ -42,15 +42,14 @@ TEST(solid_solver, qs_component_solve)
   test_utils::defineTestSchema<Solid>(inlet);
 
   // Build the mesh
-  int                            dim = 0;
-  std::unique_ptr<mfem::ParMesh> mesh;
-  auto                           mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-    auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file_path);
-    mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
-    dim  = mesh->Dimension();
-    serac::StateManager::setMesh(std::move(mesh));
+  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+    file_opts->absolute_mesh_file_name =
+        serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
   }
+  auto      mesh = serac::mesh::buildParallelMesh(mesh_options);
+  const int dim  = mesh->Dimension();
+  serac::StateManager::setMesh(std::move(mesh));
 
   // Define the solid solver object
   auto         solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();

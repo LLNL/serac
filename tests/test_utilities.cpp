@@ -183,11 +183,10 @@ void runModuleTest(const std::string& input_file, const std::string& test_name,
     } else {
       auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
       if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-        auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
-        mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
-      } else {
-        SLIC_ERROR("Physics module test is attempting to run without a file path or a custom mesh!");
+        file_options->absolute_mesh_file_name =
+            serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
       }
+      mesh = serac::mesh::buildParallelMesh(mesh_options);
     }
     serac::StateManager::setMesh(std::move(mesh));
   }
@@ -239,7 +238,8 @@ void runModuleTest(const std::string& input_file, const std::string& test_name,
   phys_module.outputState();
 
   detail::verifyFields(phys_module, inlet, dim);
-  serac::StateManager::reset();
+  // WARNING: This will destroy the mesh before the Solid module destructor gets called
+  // serac::StateManager::reset();
 }
 
 template void runModuleTest<Solid>(const std::string&, const std::string&, std::unique_ptr<mfem::ParMesh>,

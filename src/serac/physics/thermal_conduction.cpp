@@ -167,7 +167,7 @@ void ThermalConduction::completeSetup()
   // Add a nonlinear reaction term if specified
   if (reaction_) {
     K_form_->AddDomainIntegrator(
-        new serac::thermal::mfem_ext::NonlinearReactionIntegrator(reaction_, d_reaction_, *reaction_scale_));
+        new serac::mfem_ext::NonlinearReactionIntegrator(reaction_, d_reaction_, *reaction_scale_));
   }
 
   // Build the dof array lookup tables

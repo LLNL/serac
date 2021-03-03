@@ -4,8 +4,7 @@
 
 * [Base physics](@ref serac::BasePhysics)
 * [Thermal conduction](@ref serac::ThermalConduction)
-* [Nonlinear solid mechanics](@ref serac::NonlinearSolid)
-* [Elasticity](@ref serac::Elasticity)
+* [Solid mechanics](@ref serac::Solid)
 * [Thermal-structural mechanics](@ref serac::ThermalSolid)
 
 #### Simulation Utilities ####
