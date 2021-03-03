@@ -42,10 +42,9 @@ int main(int argc, char* argv[])
   SLIC_ERROR_ROOT_IF(!inlet.verify(), "Input file contained errors");
   // _inlet_verify_end
 
-  // FIXME: Replace with mesh::build
   // _create_mesh_start
   auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto mesh = serac::buildRectangleMesh(std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options));
+  auto mesh = serac::mesh::buildParallelMesh(mesh_options);
   // _create_mesh_end
 
   // _create_module_start
