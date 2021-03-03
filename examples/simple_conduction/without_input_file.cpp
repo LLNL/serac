@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
   /*auto [num_procs, rank] = */serac::initialize(argc, argv);
   // _main_init_end
   // _create_mesh_start
-  auto mesh = serac::buildRectangleMesh(10, 10);
+  auto mesh = serac::mesh::refineAndDistribute(*serac::buildRectangleMesh(10, 10));
   // _create_mesh_end
 
   // _create_module_start

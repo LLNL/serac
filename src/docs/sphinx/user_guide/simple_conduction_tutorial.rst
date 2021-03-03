@@ -114,6 +114,8 @@ Using C++
    :end-before: _create_mesh_end
    :language: C++
 
+After constructing the serial mesh, we call ``refineAndDistribute`` to distribute it into a parallel mesh.
+
 Using Lua
 """""""""
 
@@ -123,9 +125,8 @@ Using Lua
    :language: C++
 
 This snippet queries Inlet's internal hierarchy at the location where we defined the mesh schema (``main_mesh``),
-and reads the data into the ``struct`` Serac uses for storing mesh creation options.  Since we're
-building a rectangular mesh, we extract the corresponding part of the options variant and use that to construct
-the mesh.  The Lua representation is as follows:
+and reads the data into the ``struct`` Serac uses for storing mesh creation options, which is all we need to
+construct the mesh.  The Lua representation is as follows:
 
 .. literalinclude:: ../../../../examples/simple_conduction/conduction.lua
    :start-after: _mesh_start
