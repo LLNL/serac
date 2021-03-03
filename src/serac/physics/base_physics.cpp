@@ -130,4 +130,14 @@ void BasePhysics::outputState() const
   }
 }
 
+namespace detail {
+std::string addPrefix(const std::string& prefix, const std::string& target)
+{
+  if (prefix.empty()) {
+    return target;
+  }
+  return prefix + "_" + target;
+}
+}  // namespace detail
+
 }  // namespace serac

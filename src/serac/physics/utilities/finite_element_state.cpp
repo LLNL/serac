@@ -6,6 +6,8 @@
 
 #include "serac/physics/utilities/finite_element_state.hpp"
 
+#include "serac/infrastructure/logger.hpp"
+
 namespace serac {
 
 FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::Options&& options)
@@ -55,9 +57,9 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::optional<in
     datacoll_->Load(*cycle_to_load);
     datacoll_->SetGroupPointers(ds.getRoot()->getGroup(coll_name + "_global/blueprint_index/" + coll_name),
                                 ds.getRoot()->getGroup(coll_name));
-    SLIC_ERROR_IF(datacoll_->GetBPGroup()->getNumGroups() == 0,
-                  "Loaded datastore is empty, was the datastore created on a "
-                  "different number of nodes?");
+    SLIC_ERROR_ROOT_IF(datacoll_->GetBPGroup()->getNumGroups() == 0,
+                       "Loaded datastore is empty, was the datastore created on a "
+                       "different number of nodes?");
 
     datacoll_->UpdateStateFromDS();
     datacoll_->UpdateMeshAndFieldsFromDS();
@@ -69,13 +71,16 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::optional<in
 
 FiniteElementState StateManager::newState(FiniteElementState::Options&& options)
 {
-  SLIC_ERROR_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
+  const std::string name = options.name;
   if (is_restart_) {
-    auto field = datacoll_->GetParField(options.name);
-    return {mesh(), *field, options.name};
+    auto field = datacoll_->GetParField(name);
+    return {mesh(), *field, name};
   } else {
+    SLIC_ERROR_ROOT_IF(datacoll_->HasField(name),
+                       fmt::format("Serac's datacollection was already given a field named '{0}'", name));
     FiniteElementState state(mesh(), std::move(options));
-    datacoll_->RegisterField(options.name, &(state.gridFunc()));
+    datacoll_->RegisterField(name, &(state.gridFunc()));
     // Now that it's been allocated, we can set it to zero
     state.gridFunc() = 0.0;
     return state;
@@ -84,7 +89,7 @@ FiniteElementState StateManager::newState(FiniteElementState::Options&& options)
 
 void StateManager::save(const double t, const int cycle)
 {
-  SLIC_ERROR_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
+  SLIC_ERROR_ROOT_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
   datacoll_->SetTime(t);
   datacoll_->SetCycle(cycle);
   datacoll_->Save();
@@ -99,7 +104,7 @@ void StateManager::setMesh(std::unique_ptr<mfem::ParMesh> mesh)
 mfem::ParMesh& StateManager::mesh()
 {
   auto mesh = datacoll_->GetMesh();
-  SLIC_ERROR_IF(!mesh, "The datastore does not contain a mesh object");
+  SLIC_ERROR_ROOT_IF(!mesh, "The datastore does not contain a mesh object");
   return static_cast<mfem::ParMesh&>(*mesh);
 }
 

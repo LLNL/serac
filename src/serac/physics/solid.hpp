@@ -185,9 +185,10 @@ public:
    * @param[in] options The options for the linear, nonlinear, and ODE solves
    * @param[in] geom_nonlin Flag to include geometric nonlinearities
    * @param[in] keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
+   * @param[in] name An optional name for the physics module instance
    */
   Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
-        FinalMeshOption keep_deformation = FinalMeshOption::Deformed);
+        FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "");
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object

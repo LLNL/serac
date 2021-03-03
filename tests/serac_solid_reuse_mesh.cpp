@@ -72,7 +72,7 @@ TEST(solid_solver, reuse_mesh)
   // Keep the solver_1 and solver_2 objects in a different scope for testing
   {
     // initialize the dynamic solver object
-    Solid solid_solver_1(1, default_static);
+    Solid solid_solver_1(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed, "first_solid");
     solid_solver_1.setDisplacementBCs(ess_bdr, deform);
     solid_solver_1.setTractionBCs(trac_bdr, traction_coef, false);
     solid_solver_1.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
@@ -85,7 +85,7 @@ TEST(solid_solver, reuse_mesh)
     // Construct the internal dynamic solver data structures
     solid_solver_1.completeSetup();
 
-    Solid solid_solver_2(1, default_static);
+    Solid solid_solver_2(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed, "second_solid");
     solid_solver_2.setDisplacementBCs(ess_bdr, deform);
     solid_solver_2.setTractionBCs(trac_bdr, traction_coef, false);
     solid_solver_2.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
