@@ -21,6 +21,7 @@ if (ENABLE_GTEST)
 
     set(solver_tests
         serac_solid.cpp
+        serac_solid_reuse_mesh.cpp
         serac_thermal_solver.cpp
         serac_thermal_structural_solver.cpp
         serac_dtor.cpp

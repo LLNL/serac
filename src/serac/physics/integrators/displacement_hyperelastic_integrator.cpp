@@ -36,7 +36,7 @@ void DisplacementHyperelasticIntegrator::CalcKinematics(const mfem::FiniteElemen
 
   // Calculate the B matrix (dN/Dx where x is the current configuration)
 
-  if (geom_nonlin_) {
+  if (geom_nonlin_ == GeometricNonlinearities::On) {
     // If we're including geometric nonlinearities, we integrate on the current deformed configuration
     mfem::Mult(dN_dX_, Finv_, B_);
     det_J_ = F_.Det();
@@ -194,7 +194,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
     }
 
     // Accumulate the geometric stiffness if desired
-    if (geom_nonlin_) {
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
       material_.evalStress(du_dX_, sigma_);
       for (int a = 0; a < dof; ++a) {
         for (int i = 0; i < dim; ++i) {
