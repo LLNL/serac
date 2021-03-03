@@ -21,6 +21,7 @@
 #include "serac/physics/operators/odes.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/physics/materials/hyperelastic_material.hpp"
+#include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
 
 namespace serac {
 
@@ -34,6 +35,16 @@ enum class SolidBoundaryCondition
   ReferenceTraction,
   DeformedPressure,
   DeformedTraction
+};
+
+/**
+ * @brief Enum to save the deformation after the Solid module is destructed
+ *
+ */
+enum class FinalMeshOption
+{
+  Deformed,
+  Reference
 };
 
 /**
@@ -138,7 +149,7 @@ public:
      * @brief Geometric nonlinearities flag
      *
      */
-    bool geom_nonlin;
+    GeometricOption geom_nonlin;
 
     /**
      * @brief Material nonlinearities flag
@@ -174,9 +185,11 @@ public:
    * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] options The options for the linear, nonlinear, and ODE solves
    * @param[in] geom_nonlin Flag to include geometric nonlinearities
+   * @param[in] keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    */
-  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin = true,
-        bool keep_deformation = false);
+  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options,
+        GeometricOption geom_nonlin      = GeometricOption::Nonlinear,
+        FinalMeshOption keep_deformation = FinalMeshOption::Deformed);
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -383,7 +396,7 @@ protected:
   /**
    * @brief Flag for enabling geometric nonlinearities in the residual calculation
    */
-  bool geom_nonlin_;
+  GeometricOption geom_nonlin_;
 
   /**
    * @brief Pointer to the reference mesh data
@@ -393,7 +406,7 @@ protected:
   /**
    * @brief Flag to indicate the final mesh node state post-destruction
    */
-  bool keep_deformation_after_destructor_;
+  FinalMeshOption keep_deformation_;
 
   /**
    * @brief Pointer to the deformed mesh data

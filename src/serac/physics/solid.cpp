@@ -20,15 +20,15 @@ namespace serac {
  */
 constexpr int NUM_FIELDS = 2;
 
-Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, bool geom_nonlin,
-             bool keep_deformation)
+Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, GeometricOption geom_nonlin,
+             FinalMeshOption keep_deformation)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh,
                 FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "velocity"}),
       displacement_(
           *mesh, FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "displacement"}),
       geom_nonlin_(geom_nonlin),
-      keep_deformation_after_destructor_(keep_deformation),
+      keep_deformation_(keep_deformation),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
             nonlin_solver_, bcs_)
 {
@@ -108,13 +108,21 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
       }
     } else if (name.find("traction") != std::string::npos) {
       std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
-      setTractionBCs(bc.attrs, trac_coef, !geom_nonlin_);
+      if (geom_nonlin_ == GeometricOption::Linear) {
+        setTractionBCs(bc.attrs, trac_coef, true);
+      } else {
+        setTractionBCs(bc.attrs, trac_coef, false);
+      }
     } else if (name.find("traction_ref") != std::string::npos) {
       std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
       setTractionBCs(bc.attrs, trac_coef, true);
     } else if (name.find("pressure") != std::string::npos) {
       std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
-      setPressureBCs(bc.attrs, pres_coef, !geom_nonlin_);
+      if (geom_nonlin_ == GeometricOption::Linear) {
+        setPressureBCs(bc.attrs, pres_coef, true);
+      } else {
+        setPressureBCs(bc.attrs, pres_coef, false);
+      }
     } else if (name.find("pressure_ref") != std::string::npos) {
       std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
       setPressureBCs(bc.attrs, pres_coef, true);
@@ -127,8 +135,8 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
 Solid::~Solid()
 {
   // Update the mesh with the new deformed nodes if requested
-  if (keep_deformation_after_destructor_) {
-    reference_nodes_->Add(1.0, displacement_.gridFunc());
+  if (keep_deformation_ == FinalMeshOption::Deformed) {
+    *reference_nodes_ += displacement_.gridFunc();
   }
 
   // Build a new grid function to store the mesh nodes post-destruction
@@ -501,7 +509,12 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
   result.K  = base["K"];
 
   // Set the geometric nonlinearities flag
-  result.geom_nonlin = base["geometric_nonlin"];
+  bool input_geom_nonlin = base["geometric_nonlin"];
+  if (input_geom_nonlin) {
+    result.geom_nonlin = serac::GeometricOption::Nonlinear;
+  } else {
+    result.geom_nonlin = serac::GeometricOption::Linear;
+  }
 
   // Set the material nonlinearity flag
   result.material_nonlin = base["material_nonlin"];

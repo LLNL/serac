@@ -16,7 +16,18 @@
 
 #include "mfem.hpp"
 
-namespace serac::mfem_ext {
+namespace serac {
+/**
+ * @brief Enum to set the geometric nonlinearity flag
+ *
+ */
+enum class GeometricOption
+{
+  Nonlinear,
+  Linear
+};
+
+namespace mfem_ext {
 
 /**
  * @brief Displacement hyperelastic integrator for any given serac::HyperelasticModel.
@@ -30,7 +41,8 @@ public:
    * @param[in] m  HyperelasticModel that will be integrated.
    * @param[in] geom_nonlin Flag to include geometric nonlinearities in the residual calculation
    */
-  explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial& m, bool geom_nonlin = true)
+  explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial& m,
+                                              GeometricOption       geom_nonlin = GeometricOption::Nonlinear)
       : material_(m), geom_nonlin_(geom_nonlin)
   {
   }
@@ -161,7 +173,9 @@ private:
   /**
    * @brief The geometric nonlinearity flag
    */
-  bool geom_nonlin_;
+  GeometricOption geom_nonlin_;
 };
 
-}  // namespace serac::mfem_ext
+}  // namespace mfem_ext
+
+}  // namespace serac
