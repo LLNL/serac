@@ -149,7 +149,7 @@ public:
      * @brief Geometric nonlinearities flag
      *
      */
-    GeometricOption geom_nonlin;
+    GeometricNonlinearities geom_nonlin;
 
     /**
      * @brief Material nonlinearities flag
@@ -188,8 +188,8 @@ public:
    * @param[in] keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
    */
   Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options,
-        GeometricOption geom_nonlin      = GeometricOption::Nonlinear,
-        FinalMeshOption keep_deformation = FinalMeshOption::Deformed);
+        GeometricNonlinearities geom_nonlin      = GeometricNonlinearities::On,
+        FinalMeshOption         keep_deformation = FinalMeshOption::Deformed);
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
@@ -396,7 +396,7 @@ protected:
   /**
    * @brief Flag for enabling geometric nonlinearities in the residual calculation
    */
-  GeometricOption geom_nonlin_;
+  GeometricNonlinearities geom_nonlin_;
 
   /**
    * @brief Pointer to the reference mesh data

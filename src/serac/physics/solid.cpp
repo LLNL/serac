@@ -20,8 +20,8 @@ namespace serac {
  */
 constexpr int NUM_FIELDS = 2;
 
-Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options, GeometricOption geom_nonlin,
-             FinalMeshOption keep_deformation)
+Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options,
+             GeometricNonlinearities geom_nonlin, FinalMeshOption keep_deformation)
     : BasePhysics(mesh, NUM_FIELDS, order),
       velocity_(*mesh,
                 FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "velocity"}),
@@ -108,7 +108,7 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
       }
     } else if (name.find("traction") != std::string::npos) {
       std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
-      if (geom_nonlin_ == GeometricOption::Off) {
+      if (geom_nonlin_ == GeometricNonlinearities::Off) {
         setTractionBCs(bc.attrs, trac_coef, true);
       } else {
         setTractionBCs(bc.attrs, trac_coef, false);
@@ -118,7 +118,7 @@ Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& opt
       setTractionBCs(bc.attrs, trac_coef, true);
     } else if (name.find("pressure") != std::string::npos) {
       std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
-      if (geom_nonlin_ == GeometricOption::Off) {
+      if (geom_nonlin_ == GeometricNonlinearities::Off) {
         setPressureBCs(bc.attrs, pres_coef, true);
       } else {
         setPressureBCs(bc.attrs, pres_coef, false);
@@ -511,9 +511,9 @@ Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet
   // Set the geometric nonlinearities flag
   bool input_geom_nonlin = base["geometric_nonlin"];
   if (input_geom_nonlin) {
-    result.geom_nonlin = serac::GeometricOption::Nonlinear;
+    result.geom_nonlin = serac::GeometricNonlinearities::On;
   } else {
-    result.geom_nonlin = serac::GeometricOption::Off;
+    result.geom_nonlin = serac::GeometricNonlinearities::Off;
   }
 
   // Set the material nonlinearity flag

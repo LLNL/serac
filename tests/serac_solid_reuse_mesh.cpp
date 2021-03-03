@@ -110,7 +110,7 @@ TEST(solid_solver, reuse_mesh)
     EXPECT_NEAR(0.0, u_norm_1 - u_norm_2, 0.001);
   }
 
-  Solid solid_solver_3(1, pmesh, default_static, GeometricOption::Nonlinear, FinalMeshOption::Deformed);
+  Solid solid_solver_3(1, pmesh, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);
   solid_solver_3.setDisplacementBCs(ess_bdr, deform);
   solid_solver_3.setTractionBCs(trac_bdr, traction_coef, false);
   solid_solver_3.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
