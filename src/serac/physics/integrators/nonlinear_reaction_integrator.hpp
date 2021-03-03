@@ -16,7 +16,7 @@
 
 #include <functional>
 
-namespace serac::thermal::mfem_ext {
+namespace serac::mfem_ext {
 
 /**
  * @brief Integrator describing a nonlinear scalar reaction in the thermal conduction equation
@@ -88,4 +88,4 @@ private:
   mutable mfem::Vector shape_;
 };
 
-}  // namespace serac::thermal::mfem_ext
+}  // namespace serac::mfem_ext
