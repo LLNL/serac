@@ -25,10 +25,6 @@ packages:
       mpi: [mvapich2]
   mpi:
     buildable: false
-  mvapich2:
-    externals:
-    - spec: mvapich2@2.3%gcc@8.3.1 arch=linux-rhel7-ivybridge
-      prefix: /usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.3.1
 
   # blas is a bit more complicated because its a virtual package so fake it with
   # the following per spack docs
@@ -49,15 +45,45 @@ packages:
     externals:
     - spec: automake
       prefix: /usr
+  binutils:
+    buildable: false
+    externals:
+    - spec: binutils
+      prefix: /usr
   bzip2:
     buildable: false
     externals:
     - spec: bzip2
       prefix: /usr
+  diffutils:
+    buildable: false
+    externals:
+    - spec: diffutils
+      prefix: /usr
+  epoxy:
+    buildable: false
+    externals:
+    - spec: epoxy
+      prefix: /usr
+  findutils:
+    buildable: false
+    externals:
+    - spec: findutils
+      prefix: /usr
   gettext:
     buildable: false
     externals:
     - spec: gettext
+      prefix: /usr
+  ghostscript:
+    buildable: false
+    externals:
+    - spec: ghostscript
+      prefix: /usr
+  groff:
+    buildable: false
+    externals:
+    - spec: groff
       prefix: /usr
   graphviz:
     buildable: false
@@ -89,15 +115,15 @@ packages:
     externals:
     - spec: pkg-config
       prefix: /usr
-  tar:
-    buildable: false
-    externals:
-    - spec: tar
-      prefix: /usr
   readline:
     buildable: false
     externals:
     - spec: readline
+      prefix: /usr
+  tar:
+    buildable: false
+    externals:
+    - spec: tar
       prefix: /usr
   unzip:
     buildable: false
