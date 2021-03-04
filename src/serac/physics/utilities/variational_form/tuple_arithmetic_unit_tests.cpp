@@ -2,6 +2,53 @@
 
 #include <iostream>
 
+template <int... n>
+auto& operator<<(std::ostream& out, zero_tensor<n...> A) {
+  out << tensor< double, n ... >(A);
+  return out;
+}
+
+namespace proto {
+
+  template < int I, int ... i >
+  constexpr auto make_dual_helper(double arg, std::integer_sequence<int, i...>){
+    using gradient_type = std::tuple<
+      typename std::conditional< i == I, double, zero >::type ...
+    >;
+    dual < gradient_type > arg_dual{};
+    arg_dual.value = arg;
+    std::get<I>(arg_dual.gradient) = 1.0;
+    return arg_dual;
+  }
+
+  template < int I, typename T, int ... n, typename ... S, int ... i >
+  constexpr auto make_dual_helper(tensor< T, n...> arg, std::tuple<S...>, std::integer_sequence<int, i...>){
+    using gradient_type = std::tuple<
+      typename std::conditional< i == I, tensor< T, n...>, decltype(zero_tensor{std::get<i>(std::tuple<S...>{})}) >::type ...
+    >;
+    tensor < dual < gradient_type >, n... > arg_dual{};
+    for_constexpr<n...>([&](auto ... j){
+      arg_dual(j...).value = arg(j...);
+      std::get<I>(arg_dual(j...).gradient)(j...) = 1.0;
+    });
+    return arg_dual;
+  }
+
+  template < typename ... T, int ... i >
+  constexpr auto make_dual_helper(std::tuple< T ... > args, std::integer_sequence<int, i...> seq){
+    return std::make_tuple(
+      (proto::make_dual_helper<i>(std::get<i>(args), args, seq))...
+    );
+  }
+
+  template < typename ... T >
+  constexpr auto make_dual(T ... args){
+    return proto::make_dual_helper(std::tuple{args...}, std::make_integer_sequence<int, sizeof...(T)>{});
+  }
+
+}
+
+
 int main() {
 
   constexpr auto abs = [](auto x){ return (x < 0) ? -x : x; };
@@ -68,11 +115,9 @@ int main() {
   constexpr auto tuple_func = [](auto p, auto v, auto L) {      
     return std::tuple{
       rho * outer(v, v) + 2.0 * mu * sym(L) - p * I,
-      tr(L)
+      v + dot(v, L)
     };
   };
-
-
 
   auto stress_and_dilatation = std::apply(tuple_func, make_dual(p, v, L));
 
@@ -99,5 +144,15 @@ int main() {
     std::cout << std::get<1>(std::get<1>(grad)) << std::endl;
     std::cout << std::get<2>(std::get<1>(grad)) << std::endl;
   }
+
+
+  //{
+  //  auto d = std::apply(incompressibility, proto::make_dual(p, v, L));
+  //  std::cout << "dilatation derivatives:" << std::endl;
+  //  auto grad = get_gradient(d);
+  //  std::cout << std::get<0>(grad) << std::endl;
+  //  std::cout << std::get<1>(grad) << std::endl;
+  //  std::cout << std::get<2>(grad) << std::endl;
+  //}
 
 }

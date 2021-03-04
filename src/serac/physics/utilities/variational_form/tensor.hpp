@@ -97,6 +97,12 @@ struct zero{
  
   template < typename T, int ... n >
   operator tensor<T,n...>() { return tensor<T,n...>{}; }
+
+  template < typename ... T >
+  auto operator()(T ...) { return zero{}; }
+
+  template < typename T >
+  auto operator=(T) { return zero{}; }
 }; 
 
 constexpr auto operator+(zero, zero) { return zero{}; }

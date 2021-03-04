@@ -12,8 +12,13 @@ struct zero_tensor{
 template < int ... n >
 constexpr auto dimensions_of(zero_tensor< n ... >) { return Dimensions<n...>{}; }
 
+constexpr auto make_zero_tensor(double) { return zero_tensor<>{}; }
+
 template < int ... n >
 constexpr auto make_zero_tensor(Dimensions< n ... >) { return zero_tensor<n...>{}; }
+
+template < typename T, int ... n >
+constexpr auto make_zero_tensor(tensor< T, n ... >) { return zero_tensor<n...>{}; }
 
 template < int ... n >
 constexpr auto operator+(zero_tensor<n ... >, zero_tensor< n ...>) { return zero_tensor<n...>{}; }

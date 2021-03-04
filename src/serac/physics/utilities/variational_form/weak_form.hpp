@@ -5,10 +5,10 @@
 #pragma once
 
 template < ::Geometry g, typename test, typename trial, int Q, typename lambda > 
-void evaluation_kernel(mfem::Vector & R, const mfem::Vector & U, mfem::Vector & J_, mfem::Vector & X_, int num_elements, lambda qf) {
+void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
 
-  using test_element = finite_element< g, typename test::space >;
-  using trial_element = finite_element< g, typename trial::space >;
+  using test_element = finite_element< g, test >;
+  using trial_element = finite_element< g, trial >;
   static constexpr int dim = dimension(g);
   static constexpr int test_ndof = test_element::ndof;
   static constexpr int trial_ndof = trial_element::ndof;
@@ -55,7 +55,7 @@ void evaluation_kernel(mfem::Vector & R, const mfem::Vector & U, mfem::Vector & 
 }
 
 template < ::Geometry g, typename test_space, typename trial_space, int Q, typename lambda > 
-void gradient_kernel(mfem::Vector & dR, const mfem::Vector & dU, mfem::Vector & J_, mfem::Vector & X_, int num_elements, lambda qf) {
+void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, mfem::Vector & J_, mfem::Vector & X_, int num_elements, lambda qf) {
 
   using test_element = finite_element< g, test_space >;
   using trial_element = finite_element< g, trial_space >;
@@ -165,22 +165,38 @@ struct VolumeIntegral {
   using trial_space = trial_space_t< spaces >;
 
   template < typename lambda_type >
-  //VolumeIntegral(int num_elements, mfem::Vector & J_, mfem::Vector & X_, lambda_type qf) {
-  VolumeIntegral(int, const mfem::Vector &, const mfem::Vector &, lambda_type /*qf*/) {
-    //using x_t = tensor< double, dim >;
-    //using u_du_t = typename lambda_argument< trial_space, dim >::type;
-    //using arg_t = decltype(std::tuple_cat(std::tuple{x_t{}}, make_dual(u_du_t{})));
-    //using derivative_type = decltype(get_gradient(std::apply(qf, arg_t{})));
-  } 
+  VolumeIntegral(int num_elements, const mfem::Vector & J, const mfem::Vector & X, lambda_type qf) : J_(J), X_(X) {
+
+    // these lines of code figure out the argument types that will be passed
+    // into the quadrature function in the finite element kernel.
+    //
+    // we use them to observe the output type and allocate memory to store 
+    // the derivative information at each quadrature point
+    using x_t = tensor< double, dim >;
+    using u_du_t = typename lambda_argument< trial_space, dim >::type;
+    using arg_t = decltype(std::tuple_cat(std::tuple{x_t{}}, make_dual(u_du_t{})));
+    using derivative_type = decltype(get_gradient(std::apply(qf, arg_t{})));
+
+    // derivatives of integrand w.r.t. {u, du_dx}
+    std::vector < derivative_type > derivative_buffer;
+
+    constexpr int Q = std::max(test_space::order, trial_space::order) + 1;
+
+    evaluation = [&](const mfem::Vector & U, mfem::Vector & R){ 
+      evaluation_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, J_, X_, num_elements, qf);
+    };
+
+  }
 
   void Mult(const mfem::Vector & input_E, mfem::Vector & output_E) const {
     evaluation(input_E, output_E);
   }
 
+  const mfem::Vector J_; 
+  const mfem::Vector X_;
+
   std::function < void(const mfem::Vector &, mfem::Vector &) > evaluation;
 
-  // derivatives of integrand w.r.t. {u, du_dx}
-  std::vector < char > derivative_buffer;
 
 };
 
@@ -242,7 +258,8 @@ struct WeakForm< test(trial) > : public mfem::Operator {
 
     auto geom = domain.GetGeometricFactors(ir, mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS);
 
-    volume_integrals.push_back(VolumeIntegral< test(trial) >(num_elements, geom->J, geom->X, integrand));
+    // emplace_back rather than push_back kto avoid dangling references in std::function
+    volume_integrals.emplace_back(num_elements, geom->J, geom->X, integrand);
 
   }
 
@@ -305,6 +322,6 @@ struct WeakForm< test(trial) > : public mfem::Operator {
     mfem::Element::SEGMENT,
     mfem::Element::QUADRILATERAL,
     mfem::Element::HEXAHEDRON
-  };  
+  };
 
 };

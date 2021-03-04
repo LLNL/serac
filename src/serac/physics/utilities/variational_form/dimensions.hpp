@@ -20,43 +20,10 @@ namespace impl {
     return values[I]; 
   }
 
-  template < typename T >
-  struct first;
-
-  template < int m, int ... n >
-  struct first< Dimensions<m, n...> >{
-    using type = Dimensions<m>;
-    static constexpr int value = m;
-  };
-
   template < int r, int ... n, int ... i >
   constexpr auto remove_helper(Dimensions<n...>, std::integer_sequence<int,i...>) {
     return Dimensions<get<i+(i>=r)>(std::integer_sequence<int,n ...>{}) ... >{};
   }
-
-  template < typename T >
-  struct remove_first;
-
-  template < int m, int ... n >
-  struct remove_first< Dimensions<m, n...> >{
-    using type = Dimensions< n ... >;
-  };
-
-  template < typename T >
-  struct remove_last;
-
-  template < int ... n >
-  struct remove_last< Dimensions<n...> >{
-    using type = decltype(remove_helper<(sizeof...(n)) - 1>(Dimensions<n...>{}, std::make_integer_sequence< int, (sizeof ... (n)) - 1 >{}));
-  };
-
-  template < typename S, typename T >
-  struct concatenate;
-
-  template < int ... m, int ... n >
-  struct concatenate< Dimensions< m ... >, Dimensions<n...> >{
-    using type = Dimensions< m..., n ... >;
-  };
 
 }
 

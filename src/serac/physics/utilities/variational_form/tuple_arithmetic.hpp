@@ -3,6 +3,7 @@
 #include <tuple>
 
 #include "tensor.hpp"
+#include "zero_tensor.hpp"
 
 
 /////////////////////////////////////////////////
