@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 
   constexpr int p = 1;
   int         refinements = 0;
-  double a = 0.0;
+  double a = 1.0;
   double b = 1.0;
   // SERAC EDIT BEGIN
   // double p = 5.0;

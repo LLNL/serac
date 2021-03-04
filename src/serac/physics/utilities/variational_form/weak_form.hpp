@@ -165,7 +165,7 @@ struct VolumeIntegral {
   using trial_space = trial_space_t< spaces >;
 
   template < typename lambda_type >
-  VolumeIntegral(int num_elements, const mfem::Vector & J, const mfem::Vector & X, lambda_type qf) : J_(J), X_(X) {
+  VolumeIntegral(int num_elements, const mfem::Vector & J, const mfem::Vector & X, lambda_type && qf) : J_(J), X_(X) {
 
     // these lines of code figure out the argument types that will be passed
     // into the quadrature function in the finite element kernel.
@@ -182,7 +182,7 @@ struct VolumeIntegral {
 
     constexpr int Q = std::max(test_space::order, trial_space::order) + 1;
 
-    evaluation = [&](const mfem::Vector & U, mfem::Vector & R){ 
+    evaluation = [=](const mfem::Vector & U, mfem::Vector & R){ 
       evaluation_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, J_, X_, num_elements, qf);
     };
 
@@ -237,7 +237,7 @@ struct WeakForm< test(trial) > : public mfem::Operator {
   }
 
   template < typename lambda >
-  void AddVolumeIntegral(lambda integrand, mfem::Mesh & domain) {
+  void AddVolumeIntegral(lambda && integrand, mfem::Mesh & domain) {
 
     auto num_elements = domain.GetNE();
     if (num_elements == 0) {
