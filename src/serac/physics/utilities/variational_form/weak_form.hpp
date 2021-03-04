@@ -4,8 +4,115 @@
 
 #pragma once
 
+namespace impl{
+
+template < typename space >
+auto Reshape(double * u, int n1, int n2) {
+  if constexpr (space::components == 1) {
+    return mfem::Reshape(u, n1, n2);
+  } else {
+    return mfem::Reshape(u, n1, space::components, n2);
+  }
+};
+
+template < typename space  >
+auto Reshape(const double * u, int n1, int n2) {
+  if constexpr (space::components == 1) {
+    return mfem::Reshape(u, n1, n2);
+  } else {
+    return mfem::Reshape(u, n1, space::components, n2);
+  }
+};
+
+template < int ndof >
+inline auto Load(const mfem::DeviceTensor<2, const double> & u, int e) {
+  return make_tensor<ndof>([&u, e](int i){ return u(i, e); });
+}
+
+template < int ndof, int components >
+inline auto Load(const mfem::DeviceTensor<3, const double> & u, int e) {
+  return make_tensor<components, ndof>([&u, e](int j, int i){ return u(i, j, e); });
+}
+
+template < typename space, typename T >
+auto Load(const T & u, int e) {
+  if constexpr (space::components == 1) {
+    return impl::Load<space::ndof>(u, e);
+  } else {
+    return impl::Load<space::ndof, space::components>(u, e);
+  }
+};
+
+template < int ndof >
+void Add(const mfem::DeviceTensor<2, double> & r_global, tensor< double, ndof > r_local, int e) {
+  for (int i = 0; i < ndof; i++) {
+    r_global(i, e) += r_local[i];
+  }
+}
+
+template < int ndof, int components >
+void Add(const mfem::DeviceTensor<3, double> & r_global, tensor< double, ndof, components > r_local, int e) {
+  for (int i = 0; i < ndof; i++) {
+    for (int j = 0; j < components; j++) {
+      r_global(i, j, e) += r_local[i][j];
+    }
+  }
+}
+
+}
+
+
+
 template < ::Geometry g, typename test, typename trial, int Q, typename lambda > 
 void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
+
+  using test_element = finite_element< g, test >;
+  using trial_element = finite_element< g, trial >;
+  static constexpr int dim = dimension(g);
+  static constexpr int test_ndof = test_element::ndof;
+  static constexpr int trial_ndof = trial_element::ndof;
+  static constexpr auto rule = GaussQuadratureRule< g, Q >();
+
+  auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements);
+  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
+  auto u = impl::Reshape<trial>(U.Read(), trial_ndof, num_elements);
+  auto r = impl::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
+
+  for (int e = 0; e < num_elements; e++) {
+    tensor u_local = impl::Load<trial_element>(u, e);
+
+    reduced_tensor <double, test_element::ndof, test_element::components> r_local{};
+    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
+      auto xi = rule.points[q];
+      auto dxi = rule.weights[q];
+      auto x_q = make_tensor< dim >([&](int i){ return X(q, i, e); });
+      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
+      double dx = det(J_q) * dxi;
+
+      auto N = trial_element::shape_functions(xi);
+      auto dN_dx = dot(trial_element::shape_function_gradients(xi), inv(J_q));
+
+      auto u_q = dot(u_local, N);
+      auto du_dx_q = dot(u_local, dN_dx);
+
+      auto args = std::tuple{x_q, u_q, du_dx_q};
+
+      auto [f0, f1] = std::apply(qf, args);
+
+      auto W = test_element::shape_functions(xi);
+      auto dW_dx = dot(test_element::shape_function_gradients(xi), inv(J_q));
+
+      r_local += (outer(W, f0) + dot(dW_dx, f1)) * dx;
+    }
+
+    impl::Add(r, r_local, e);
+
+  }
+
+}
+
+template < ::Geometry g, typename test, typename trial, int Q, typename lambda > 
+void evaluation_and_AD_kernel(const mfem::Vector & U, mfem::Vector & R, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
 
   using test_element = finite_element< g, test >;
   using trial_element = finite_element< g, trial >;

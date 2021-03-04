@@ -34,6 +34,7 @@ int main(int argc, char* argv[])
   const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
 
   constexpr int p = 1;
+  constexpr int dim = 2;
   int         refinements = 0;
   double a = 1.0;
   double b = 1.0;
@@ -70,20 +71,23 @@ int main(int argc, char* argv[])
   ParBilinearForm A(&fespace);
 
   ConstantCoefficient a_coef(a);
-  A.AddDomainIntegrator(new MassIntegrator(a_coef));
+  A.AddDomainIntegrator(new VectorMassIntegrator(a_coef));
 
-  ConstantCoefficient b_coef(b);
-  A.AddDomainIntegrator(new DiffusionIntegrator(b_coef));
+  ConstantCoefficient lambda_coef(b);
+  ConstantCoefficient mu_coef(b);
+  A.AddDomainIntegrator(new ElasticityIntegrator(lambda_coef, mu_coef));
   A.Assemble(0);
   A.Finalize();
+
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
   LinearForm f(&fespace);
-  FunctionCoefficient load_func([&](const Vector& coords) {
-    return 100 * coords(0) * coords(1);
+  VectorFunctionCoefficient load_func(dim, [&](const Vector& /*coords*/, Vector & force) {
+    force = 0.0;
+    force(0) = -1.0;
   });
 
-  f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
+  f.AddDomainIntegrator(new VectorDomainLFIntegrator(load_func));
   f.Assemble();
 
   ParGridFunction x(&fespace);
@@ -92,14 +96,17 @@ int main(int argc, char* argv[])
   Vector X(fespace.TrueVSize());
   x.GetTrueDofs(X);
 
-  using test_space = H1<p>;
-  using trial_space = H1<p>;
+  static constexpr auto I = Identity<2>();
+
+  using test_space = H1<p, dim>;
+  using trial_space = H1<p, dim>;
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto x, auto u, auto du) {
-    auto f0 = a * u - (100 * x[0] * x[1]);
-    auto f1 = b * du;
+  residual.AddVolumeIntegral([&](auto /*x*/, auto u, auto grad_u) {
+    auto f0 = a * u - tensor{{-1.0, 0.0}};
+    auto strain = 0.5 * (grad_u + transpose(grad_u));
+    auto f1 = b * tr(strain) * I + 2.0 * b * strain;
     return std::tuple{f0, f1};
   }, mesh);
 
