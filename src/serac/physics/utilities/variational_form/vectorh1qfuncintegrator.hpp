@@ -92,6 +92,20 @@ void VectorH1QFunctionIntegrator<qfunc_type>::Apply(const Vector& x, Vector& y) 
   }
 }
 
+template < int ndof, int components >
+inline auto Load(const mfem::DeviceTensor<3, const double> & u, int e) {
+  return make_tensor<components, ndof>([&u, e](int j, int i){ return u(i, j, e); });
+}
+
+template < int ndof, int components >
+void Add(const mfem::DeviceTensor<3, double> & r_global, tensor< double, ndof, components > r_local, int e) {
+  for (int i = 0; i < ndof; i++) {
+    for (int j = 0; j < components; j++) {
+      r_global(i, j, e) += r_local[i][j];
+    }
+  }
+}
+
 template <typename qfunc_type>
 template <int D1D, int Q1D>
 void VectorH1QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) const
@@ -109,7 +123,7 @@ void VectorH1QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vecto
   auto y = Reshape(y_.ReadWrite(), ndof, dim, NE);
 
   for (int e = 0; e < NE; e++) {
-    tensor u_local = make_tensor<dim, ndof>([&u, e](int j, int i){ return u(i, j, e); });
+    tensor u_local = Load<ndof, dim>(u, e);
 
     tensor <double, ndof, dim> y_local{};
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
@@ -133,11 +147,7 @@ void VectorH1QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vecto
       y_local += (outer(N, f0) + dot(dN_dx, f1)) * dx;
     }
 
-    for (int i = 0; i < ndof; i++) {
-      for (int j = 0; j < dim; j++) {
-        y(i, j, e) += y_local[i][j];
-      }
-    }
+    Add(y, y_local, e);
 
   }
 }
@@ -228,11 +238,7 @@ void VectorH1QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in
       
     }
 
-    for (int i = 0; i < ndof; i++) {
-      for (int j = 0; j < dim; j++) {
-        y(i, j, e) += y_local[i][j];
-      }
-    }
+    Add(y, y_local, e);
 
   }
 }

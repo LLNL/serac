@@ -59,14 +59,19 @@ int main(int argc, char* argv[])
   }
 
   Mesh mesh(mesh_file, 1, 1);
+
+  if (mesh.Dimension() != dim) {
+    std::cout << "invalid mesh dimension" << std::endl;
+  }
+
   for (int l = 0; l < refinements; l++) {
     mesh.UniformRefinement();
   }
 
   ParMesh pmesh(MPI_COMM_WORLD, mesh);
 
-  auto fec = H1_FECollection(p, pmesh.Dimension());
-  ParFiniteElementSpace fespace(&pmesh, &fec);
+  auto fec = H1_FECollection(p, dim);
+  ParFiniteElementSpace fespace(&pmesh, &fec, dim);
 
   ParBilinearForm A(&fespace);
 

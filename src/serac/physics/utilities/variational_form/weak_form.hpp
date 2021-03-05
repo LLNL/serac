@@ -62,7 +62,6 @@ void Add(const mfem::DeviceTensor<3, double> & r_global, tensor< double, ndof, c
 }
 
 
-
 template < ::Geometry g, typename test, typename trial, int Q, typename lambda > 
 void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
 
@@ -111,8 +110,8 @@ void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, const mfem::Vec
 
 }
 
-template < ::Geometry g, typename test, typename trial, int Q, typename lambda > 
-void evaluation_and_AD_kernel(const mfem::Vector & U, mfem::Vector & R, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
+template < ::Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda > 
+void evaluation_with_derivatives_kernel(const mfem::Vector & U, mfem::Vector & R, derivatives_type * derivatives_ptr, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
 
   using test_element = finite_element< g, test >;
   using trial_element = finite_element< g, trial >;
@@ -123,13 +122,13 @@ void evaluation_and_AD_kernel(const mfem::Vector & U, mfem::Vector & R, const mf
 
   auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements);
   auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-  auto u = mfem::Reshape(U.Read(), trial_ndof, num_elements);
-  auto r = mfem::Reshape(R.ReadWrite(), test_ndof, num_elements);
+  auto u = impl::Reshape<trial>(U.Read(), trial_ndof, num_elements);
+  auto r = impl::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
   for (int e = 0; e < num_elements; e++) {
-    tensor u_local = make_tensor<trial_ndof>([&u, e](int i){ return u(i, e); });
+    tensor u_local = impl::Load<trial_element>(u, e);
 
-    tensor <double, test_ndof > r_local{};
+    reduced_tensor <double, test_element::ndof, test_element::components> r_local{};
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       auto xi = rule.points[q];
       auto dxi = rule.weights[q];
@@ -150,12 +149,12 @@ void evaluation_and_AD_kernel(const mfem::Vector & U, mfem::Vector & R, const mf
       auto W = test_element::shape_functions(xi);
       auto dW_dx = dot(test_element::shape_function_gradients(xi), inv(J_q));
 
-      r_local += (W * f0 + dot(dW_dx, f1)) * dx;
+      r_local += (outer(W, f0) + dot(dW_dx, f1)) * dx;
+
+      derivatives_ptr[e * int(rule.size()) + q] = derivatives_type{};
     }
 
-    for (int i = 0; i < test_ndof; i++) {
-      r(i, e) += r_local[i];
-    }
+    impl::Add(r, r_local, e);
 
   }
 
@@ -285,7 +284,10 @@ struct VolumeIntegral {
     using derivative_type = decltype(get_gradient(std::apply(qf, arg_t{})));
 
     // derivatives of integrand w.r.t. {u, du_dx}
-    std::vector < derivative_type > derivative_buffer;
+    auto num_quadrature_points = static_cast<uint32_t>(X.Size() / dim);
+    qf_derivatives.resize(sizeof(derivative_type) * num_quadrature_points);
+
+    auto qf_derivatives_ptr = reinterpret_cast< derivative_type * >(qf_derivatives.data());
 
     constexpr int Q = std::max(test_space::order, trial_space::order) + 1;
 
@@ -293,17 +295,25 @@ struct VolumeIntegral {
       evaluation_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, J_, X_, num_elements, qf);
     };
 
+    evaluation_with_derivatives = [=](const mfem::Vector & U, mfem::Vector & R){ 
+      evaluation_with_derivatives_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
+    };
+
+
+
   }
 
   void Mult(const mfem::Vector & input_E, mfem::Vector & output_E) const {
-    evaluation(input_E, output_E);
+    evaluation_with_derivatives(input_E, output_E);
   }
 
   const mfem::Vector J_; 
   const mfem::Vector X_;
 
-  std::function < void(const mfem::Vector &, mfem::Vector &) > evaluation;
+  std::vector < char > qf_derivatives;
 
+  std::function < void(const mfem::Vector &, mfem::Vector &) > evaluation;
+  std::function < void(const mfem::Vector &, mfem::Vector &) > evaluation_with_derivatives;
 
 };
 
@@ -365,7 +375,7 @@ struct WeakForm< test(trial) > : public mfem::Operator {
 
     auto geom = domain.GetGeometricFactors(ir, mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS);
 
-    // emplace_back rather than push_back kto avoid dangling references in std::function
+    // emplace_back rather than push_back to avoid dangling references in std::function
     volume_integrals.emplace_back(num_elements, geom->J, geom->X, integrand);
 
   }
@@ -394,7 +404,6 @@ struct WeakForm< test(trial) > : public mfem::Operator {
 
     // scatter-add to compute global residuals
     P_test->MultTranspose(output_L, output_T);
-
 
     output_T.HostReadWrite();
     for (int i = 0; i < ess_tdof_list.Size(); i++) {
