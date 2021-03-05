@@ -15,7 +15,7 @@ constexpr int NUM_FIELDS = 3;
 
 ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
                            const ThermalConduction::SolverOptions& therm_options,
-                           const NonlinearSolid::SolverOptions&    solid_options)
+                           const Solid::SolverOptions&             solid_options)
     : BasePhysics(mesh, NUM_FIELDS, order),
       therm_solver_(order, mesh, therm_options),
       solid_solver_(order, mesh, solid_options),
@@ -34,7 +34,7 @@ ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
 }
 
 ThermalSolid::ThermalSolid(std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::InputOptions& thermal_input,
-                           const NonlinearSolid::InputOptions& solid_input)
+                           const Solid::InputOptions& solid_input)
     : BasePhysics(mesh, NUM_FIELDS, std::max(thermal_input.order, solid_input.order)),
       therm_solver_(mesh, thermal_input),
       solid_solver_(mesh, solid_input),

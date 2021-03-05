@@ -28,7 +28,7 @@ void initializeCaliper(const std::string& options)
   if (check_result.empty()) {
     mgr->add(options.c_str());
   } else {
-    SLIC_WARNING("Caliper options invalid, ignoring: " << check_result);
+    SLIC_WARNING_ROOT("Caliper options invalid, ignoring: " << check_result);
   }
   // Defaults, should probably always be enabled
   mgr->add("event-trace, runtime-report");

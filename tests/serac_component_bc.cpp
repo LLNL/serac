@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid.hpp"
 
 #include <fstream>
 
@@ -19,20 +19,18 @@
 
 namespace serac {
 
-TEST(nonlinear_solid_solver, qs_attribute_solve)
+TEST(solid_solver, qs_attribute_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  std::string input_file_path =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_attribute_solve.lua";
-  test_utils::runModuleTest<NonlinearSolid>(input_file_path);
+  std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_attribute_solve.lua";
+  test_utils::runModuleTest<Solid>(input_file_path, "qs_attribute_solve");
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-TEST(nonlinear_solid_solver, qs_component_solve)
+TEST(solid_solver, qs_component_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  std::string input_file_path =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/qs_component_solve.lua";
+  std::string input_file_path = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/qs_component_solve.lua";
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -40,19 +38,19 @@ TEST(nonlinear_solid_solver, qs_component_solve)
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
 
-  test_utils::defineTestSchema<NonlinearSolid>(inlet);
+  test_utils::defineTestSchema<Solid>(inlet);
 
   // Build the mesh
-  std::shared_ptr<mfem::ParMesh> mesh;
-  auto                           mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-    auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file_path);
-    mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+  if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+    file_opts->absolute_mesh_file_name =
+        serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
   }
+  auto mesh = serac::mesh::buildParallelMesh(mesh_options);
 
   // Define the solid solver object
-  auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  serac::NonlinearSolid solid_solver(mesh, solid_solver_options);
+  auto         solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
+  serac::Solid solid_solver(mesh, solid_solver_options);
 
   int dim = mesh->Dimension();
 
@@ -93,7 +91,7 @@ TEST(nonlinear_solid_solver, qs_component_solve)
 
   double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file base_solver.hpp
+ * @file base_physics.hpp
  *
  * @brief The base interface class for a generic PDE solver
  */
@@ -44,6 +44,11 @@ public:
    */
   BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
 
+  /**
+   * @brief Construct a new Base Physics object (copy constructor)
+   *
+   * @param other The other base physics to copy from
+   */
   BasePhysics(BasePhysics&& other) = default;
 
   /**
@@ -57,28 +62,11 @@ public:
                            const int component = -1);
 
   /**
-   * @brief Set the state variables from a vector of coefficients
-   *
-   * @param[in] state_coef A vector of coefficients to project on the state grid functions
-   */
-  virtual void setState(const std::vector<serac::GeneralCoefficient>& state_coef);
-
-  /**
-   * @brief Set the state variables from an existing grid function
-   *
-   * @param[in] state A vector of finite element states to initialze the solver
-   * @note This will move from each element of the vector, so the vector cannot
-   * be used in the calling scope after this function is called (as it has been
-   * moved from)
-   */
-  virtual void setState(std::vector<serac::FiniteElementState>&& state);
-
-  /**
    * @brief Get the list of state variable grid functions
    *
    * @return the current vector of finite element states
    */
-  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState> >& getState() const;
+  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState>>& getState() const;
 
   /**
    * @brief Set the current time
@@ -154,7 +142,7 @@ protected:
   /**
    * @brief List of finite element data structures
    */
-  std::vector<std::reference_wrapper<serac::FiniteElementState> > state_;
+  std::vector<std::reference_wrapper<serac::FiniteElementState>> state_;
 
   /**
    * @brief Block vector storage of the true state

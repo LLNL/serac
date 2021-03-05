@@ -10,14 +10,14 @@
 #include <memory>
 
 #include "serac/coefficients/coefficient_extensions.hpp"
-#include "../src/serac/integrators/wrapper_integrator.hpp"
-#include "../src/serac/numerics/expr_template_ops.hpp"
+#include "serac/physics/integrators/wrapper_integrator.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 #include "mfem.hpp"
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/operators/odes.hpp"
 
@@ -39,7 +39,7 @@ protected:
   void TearDown() {}
 
   // Helper method to run serac_newmark_tests
-  std::unique_ptr<serac::NonlinearSolid> runDynamicTest(axom::inlet::Inlet& inlet, const std::string& root_name)
+  std::unique_ptr<serac::Solid> runDynamicTest(axom::inlet::Inlet& inlet, const std::string& root_name)
   {
     // Define schema
     // Simulation time parameters
@@ -53,9 +53,9 @@ protected:
     serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
     // Physics
-    auto& solid_solver_table = inlet.addStruct("nonlinear_solid", "Finite deformation solid mechanics module");
+    auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
     // FIXME: Remove once Inlet's "contains" logic improvements are merged
-    serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
+    serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
     // get gravity parameter for this problem
     inlet.addDouble("g", "the gravity acceleration");
 
@@ -65,16 +65,15 @@ protected:
     }
 
     // Build Mesh
-    auto       mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-    const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
-    auto       pmesh        = serac::buildRectangleMesh(*rect_options);
+    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    auto pmesh        = serac::mesh::buildParallelMesh(mesh_options);
 
     // Define the solid solver object
-    auto solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
+    auto solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
 
     // We only want to add these boundary conditions if we've defined boundary_conds for the serac_newmark_beta test
-    if (inlet["nonlinear_solid"].contains("boundary_conds")) {
-      int                       ne = rect_options->elements[0];
+    if (inlet["solid"].contains("boundary_conds")) {
+      int ne = std::get<serac::mesh::GenerateInputOptions>(mesh_options.extra_options).elements[0];
       mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
 
       mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);
@@ -84,9 +83,9 @@ protected:
       pmesh->SetAttributes();
     }
 
-    auto solid_solver = std::make_unique<serac::NonlinearSolid>(pmesh, solid_solver_options);
+    auto solid_solver = std::make_unique<serac::Solid>(pmesh, solid_solver_options);
 
-    const bool is_dynamic = inlet["nonlinear_solid"].contains("dynamics");
+    const bool is_dynamic = inlet["solid"].contains("dynamics");
 
     if (is_dynamic) {
       auto visc = std::make_unique<mfem::ConstantCoefficient>(0.0);
@@ -121,12 +120,11 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   axom::sidre::DataStore datastore;
 
   // Initialize Inlet and read input file
-  std::string input_file =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/dyn_newmark_solve.lua";
+  std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve.lua";
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
-  auto solid_solver = runDynamicTest(inlet, "nonlin_solid_simple");
+  auto solid_solver = runDynamicTest(inlet, "solid_simple");
 
   // Save initial state
   mfem::Vector u_prev(solid_solver->displacement().gridFunc());
@@ -135,7 +133,7 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   double dt = inlet["dt"];
 
   // Check if dynamic
-  if (inlet["nonlinear_solid"].contains("dynamics")) {
+  if (inlet["solid"].contains("dynamics")) {
     double t       = 0.0;
     double t_final = inlet["t_final"];
 
@@ -189,18 +187,17 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   axom::sidre::DataStore datastore;
 
   // Initialize Inlet and read input file
-  std::string input_file =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/dyn_newmark_solve_bending.lua";
+  std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve_bending.lua";
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
   // User helper to run test
-  auto solid_solver = runDynamicTest(inlet, "nonlin_solid");
+  auto solid_solver = runDynamicTest(inlet, "solid");
 
   double dt = inlet["dt"];
 
   // Check if dynamic
-  if (inlet["nonlinear_solid"].contains("dynamics")) {
+  if (inlet["solid"].contains("dynamics")) {
     double t       = 0.0;
     double t_final = inlet["t_final"];
 
@@ -231,17 +228,17 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 
   // Initialize Inlet and read input file
   std::string input_file =
-      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/nonlinear_solid/dyn_newmark_solve_bending_first.lua";
+      std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve_bending_first.lua";
   std::cout << input_file << std::endl;
   auto inlet = serac::input::initialize(datastore, input_file);
 
   // User helper to run test
-  auto solid_solver = runDynamicTest(inlet, "nonlin_solid_first_orderlua");
+  auto solid_solver = runDynamicTest(inlet, "solid_first_orderlua");
 
   double dt = inlet["dt"];
 
   // Check if dynamic
-  if (inlet["nonlinear_solid"].contains("dynamics")) {
+  if (inlet["solid"].contains("dynamics")) {
     double t       = 0.0;
     double t_final = inlet["t_final"];
 

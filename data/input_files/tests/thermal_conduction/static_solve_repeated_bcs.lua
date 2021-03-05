@@ -20,7 +20,7 @@ end
 
 -- Solver parameters
 thermal_conduction = {
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
