@@ -53,6 +53,9 @@ We're now ready to start our ``main()`` function by initializing Serac, which pe
    :end-before: _main_init_end
    :language: C++
 
+To simplify saving to an output file and restarting a simulation, Serac stores critical state information, like
+the mesh and fields, in a single ``StateManager`` object, which is initialized here.
+
 .. warning::
   Since Serac's initialization helper initializes MPI, you should not call ``MPI_Init`` directly.
 
@@ -104,7 +107,7 @@ Constructing the Mesh
 ---------------------
 
 In this introductory example, we will use a simple square mesh with 10 quadrilateral elements in each space dimension
-for 100 elements total.
+for 100 elements total.  Once created, the primary mesh must always be registered with the ``StateManager``: 
 
 Using C++
 """""""""

@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
 
   // _inlet_init_start
   axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore);
   auto inlet = serac::input::initialize(datastore, input_file);
   // _inlet_init_end
 
@@ -45,11 +46,12 @@ int main(int argc, char* argv[])
   // _create_mesh_start
   auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
   auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+  serac::StateManager::setMesh(std::move(mesh));
   // _create_mesh_end
 
   // _create_module_start
   auto conduction_opts = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
-  serac::ThermalConduction conduction(mesh, conduction_opts);
+  serac::ThermalConduction conduction(conduction_opts);
   // _create_module_end
   // _output_type_start
   conduction.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "simple_conduction_with_input_file");

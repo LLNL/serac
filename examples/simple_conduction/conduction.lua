@@ -13,7 +13,7 @@ main_mesh = {
 -- Solver parameters
 thermal_conduction = {
   -- _solver_opts_start
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {

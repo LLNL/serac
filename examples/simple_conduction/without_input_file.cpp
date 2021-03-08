@@ -26,14 +26,17 @@
 int main(int argc, char* argv[])
 {
   /*auto [num_procs, rank] = */serac::initialize(argc, argv);
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore);
   // _main_init_end
   // _create_mesh_start
   auto mesh = serac::mesh::refineAndDistribute(*serac::buildRectangleMesh(10, 10));
+  serac::StateManager::setMesh(std::move(mesh));
   // _create_mesh_end
 
   // _create_module_start
   constexpr int order = 2;
-  serac::ThermalConduction conduction(order, mesh, serac::ThermalConduction::defaultQuasistaticOptions());
+  serac::ThermalConduction conduction(order, serac::ThermalConduction::defaultQuasistaticOptions());
   // _create_module_end
 
   // _conductivity_start
