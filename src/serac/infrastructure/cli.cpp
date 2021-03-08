@@ -21,6 +21,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   CLI::App    app{app_description};
   std::string input_file_path;
   app.add_option("-i, --input_file", input_file_path, "Input file to use.")->required()->check(CLI::ExistingFile);
+  int  restart_cycle;
+  auto restart_opt =
+      app.add_option("-c, --restart_cycle", restart_cycle, "Cycle to restart from.")->check(CLI::PositiveNumber);
   bool create_input_file_docs{false};
   app.add_flag("-d, --create-input-file-docs", create_input_file_docs,
                "Writes Sphinx documentation for input file, then exits");
@@ -43,6 +46,10 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   // Store found values
   std::unordered_map<std::string, std::string> cli_opts;
   cli_opts.insert({std::string("input_file"), input_file_path});
+  // If a restart cycle was specified
+  if (restart_opt->count() > 0) {
+    cli_opts["restart_cycle"] = std::to_string(restart_cycle);
+  }
   if (create_input_file_docs) {
     cli_opts.insert({"create_input_file_docs", {}});
   }

@@ -16,7 +16,7 @@
 
 namespace serac {
 
-std::shared_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file)
+std::unique_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file)
 {
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
@@ -39,7 +39,7 @@ std::shared_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file)
     SLIC_ERROR_ROOT(err_msg);
   }
 
-  return std::make_shared<mfem::Mesh>(imesh, 1, 1, true);
+  return std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
 }
 
 /**
@@ -71,7 +71,7 @@ void squish(mfem::Mesh& mesh)
   mesh.SetVertices(vertices);
 }
 
-std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm)
+std::unique_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm)
 {
   static constexpr int dim                   = 2;
   static constexpr int num_elems             = 4;
@@ -101,10 +101,10 @@ std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
 
   squish(mesh);
 
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm)
+std::unique_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm)
 {
   static constexpr int dim                   = 3;
   static constexpr int num_elems             = 8;
@@ -137,22 +137,22 @@ std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
 
   squish(mesh);
 
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y)
+std::unique_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y)
 {
-  return std::make_shared<mfem::Mesh>(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y);
+  return std::make_unique<mfem::Mesh>(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y);
 }
 
-std::shared_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x,
+std::unique_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x,
                                             double size_y, double size_z)
 {
-  return std::make_shared<mfem::Mesh>(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true,
+  return std::make_unique<mfem::Mesh>(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true,
                                       size_x, size_y, size_z);
 }
 
-std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
+std::unique_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
                                                  double height, const MPI_Comm comm)
 {
   static constexpr int dim                   = 2;
@@ -236,12 +236,12 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
 
   std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(&mesh, elements_lengthwise, height));
 
-  auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
+  auto extruded_pmesh = std::make_unique<mfem::ParMesh>(comm, *extruded_mesh);
 
   return extruded_pmesh;
 }
 
-std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius, double outer_radius,
+std::unique_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius, double outer_radius,
                                       double total_angle, int sectors)
 {
   using index_type = int;
@@ -292,7 +292,7 @@ std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius
     boundary_elems[i + num_elems][1] = elems[i][2];
   }
 
-  auto mesh = std::make_shared<mfem::Mesh>(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
+  auto mesh = std::make_unique<mfem::Mesh>(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
                                            static_cast<int>(num_boundary_elements));
 
   for (auto vertex : vertices) {
@@ -345,21 +345,21 @@ std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius
   return mesh;
 }
 
-std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
+std::unique_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
                                              double total_angle, int sectors, const MPI_Comm comm)
 {
-  return std::make_shared<mfem::ParMesh>(
+  return std::make_unique<mfem::ParMesh>(
       comm, *buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors));
 }
 
-std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
+std::unique_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
                                                        double inner_radius, double outer_radius, double height,
                                                        double total_angle, int sectors, const MPI_Comm comm)
 {
   auto                        mesh = buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors);
   std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(mesh.get(), elements_lengthwise, height));
 
-  auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
+  auto extruded_pmesh = std::make_unique<mfem::ParMesh>(comm, *extruded_mesh);
 
   return extruded_pmesh;
 }
@@ -391,9 +391,9 @@ void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   size.addDouble("z", "Size in the z-dimension");
 }
 
-std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
+std::unique_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
 {
-  std::shared_ptr<mfem::Mesh> serial_mesh;
+  std::unique_ptr<mfem::Mesh> serial_mesh;
 
   if (const auto file_opts = std::get_if<FileInputOptions>(&options.extra_options)) {
     SLIC_ERROR_ROOT_IF(file_opts->absolute_mesh_file_name.empty(),
@@ -413,7 +413,7 @@ std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, co
   return refineAndDistribute(*serial_mesh, options.ser_ref_levels, options.par_ref_levels, comm);
 }
 
-std::shared_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial,
+std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial,
                                                    const int refine_parallel, const MPI_Comm comm)
 {
   // Serial refinement first
@@ -422,7 +422,7 @@ std::shared_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, cons
   }
 
   // Then create the parallel mesh and apply parallel refinement
-  auto parallel_mesh = std::make_shared<mfem::ParMesh>(comm, serial_mesh);
+  auto parallel_mesh = std::make_unique<mfem::ParMesh>(comm, serial_mesh);
   for (int lev = 0; lev < refine_parallel; lev++) {
     parallel_mesh->UniformRefinement();
   }
