@@ -8,17 +8,17 @@ Developer Guide
 ===============
 
 .. toctree::
+   :hidden:
    :maxdepth: 2
 
    style_guide
-   docker_dev_env
+   docker_env
    modern_cpp
    logging
-   new_docker_image
    expr_templates
    profiling
    memory_checking
-
+   new_docker_image
 
 Developing a New Physics Module
 -------------------------------

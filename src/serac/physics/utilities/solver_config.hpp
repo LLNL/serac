@@ -22,10 +22,10 @@ namespace serac {
  */
 enum class OutputType
 {
-  GLVis,
-  ParaView,
-  VisIt,
-  SidreVisIt
+  GLVis,     /**< GLVis output */
+  ParaView,  /**< Paraview output */
+  VisIt,     /**< VisIt output */
+  SidreVisIt /**< Binary VisIt output via Sidre */
 };
 
 /**
@@ -122,6 +122,9 @@ enum class NonlinearSolver
  * @brief Stores the information required to configure a HypreSmoother
  */
 struct HypreSmootherPrec {
+  /**
+   * @brief The type of Hypre smoother to apply
+   */
   mfem::HypreSmoother::Type type;
 };
 
@@ -129,6 +132,10 @@ struct HypreSmootherPrec {
  * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
  */
 struct HypreBoomerAMGPrec {
+  /**
+   * @brief The par finite element space for the AMG object
+   * @note This is needed for some of the options specific to solid mechanics solves
+   */
   mfem::ParFiniteElementSpace* pfes = nullptr;
 };
 
@@ -175,6 +182,9 @@ struct AMGXPrec {
  * @brief Stores the information required to configure a BlockILU preconditioner
  */
 struct BlockILUPrec {
+  /**
+   * @brief The block size for the ILU preconditioner
+   */
   int block_size;
 };
 
@@ -234,6 +244,9 @@ struct IterativeSolverOptions {
  * and destructors are a nightmare in this context
  */
 struct CustomSolverOptions {
+  /**
+   * @brief A non-owning pointer to the custom mfem solver to use
+   */
   mfem::Solver* solver = nullptr;
 };
 

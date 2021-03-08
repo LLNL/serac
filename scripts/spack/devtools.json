@@ -1,9 +1,11 @@
 {
 "package_name" : "serac_devtools",
 "package_version" : "fakeversion",
-"package_final_phase" : "",
 "package_source_dir" : "../..",
+"package_final_phase" : "",
 "spack_url": "https://github.com/spack/spack",
 "spack_commit": "e75b76f433016a720027b41c0d36cdb9ef24a827",
+"spack_configs_path": "scripts/spack/devtools_configs",
+"spack_packages_path": "scripts/spack/packages",
 "spack_activate" : {"py-sphinx" : [""]}
 }

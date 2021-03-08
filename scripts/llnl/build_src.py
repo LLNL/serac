@@ -31,19 +31,17 @@ def parse_args():
     parser.add_option("--host-config",
                       dest="hostconfig",
                       default="",
-                      help="Build a specific hostconfig (Tries multiple known paths to locate given file)")
+                      help="Specific host-config file to build (Tries multiple known paths to locate given file)")
     # Extra cmake options to pass to config build
     parser.add_option("--extra-cmake-options",
                       dest="extra_cmake_options",
                       default="",
                       help="Extra cmake options to add to the cmake configure line")
-
     parser.add_option("--automation-mode",
                       action="store_true",
                       dest="automation",
                       default=False,
-                      help="Toggle automation mode which uses env $HOST_CONFIG, then to $SYS_TYPE/$COMPILER available")                 
-
+                      help="Toggle automation mode which uses env $HOST_CONFIG then $SYS_TYPE/$COMPILER if found")
     parser.add_option("-v", "--verbose",
                       action="store_true",
                       dest="verbose",
@@ -90,16 +88,16 @@ def main():
         timestamp = get_timestamp()
 
         # Default to build all SYS_TYPE's host-configs in host-config/
-        build_all = not (opts["automation"] or opts["hostconfig"] != "")
+        build_all = not opts["hostconfig"] and not opts["automation"]
         if build_all:
             res = build_and_test_host_configs(repo_dir, timestamp, False, opts["verbose"], opts["extra_cmake_options"])
         # Otherwise try to build a specific host-config
         else:
             # Command-line arg has highest priority
-            if opts["hostconfig"] != "":
+            if opts["hostconfig"]:
                 hostconfig = opts["hostconfig"]
             
-            # Otherwise try to build it
+            # Otherwise try to reconstruct host-config path from SYS_TYPE and COMPILER
             elif opts["automation"]:
                 if not "SYS_TYPE" in os.environ:
                     print("[ERROR: Automation mode required 'SYS_TYPE' environment variable]")

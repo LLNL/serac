@@ -1,6 +1,6 @@
-=================
-Input File Schema
-=================
+====================
+Input File Structure
+====================
 
 Below is the documentation for Serac input files, generated automatically by `Axom's inlet component <https://axom.readthedocs.io/en/develop/axom/inlet/docs/sphinx/index.html>`_.
 

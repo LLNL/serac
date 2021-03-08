@@ -20,15 +20,15 @@ if (ENABLE_GTEST)
         )
 
     set(solver_tests
-        serac_nonlinear_solid.cpp
-        serac_linelastic_solver.cpp
+        serac_solid.cpp
+        serac_solid_reuse_mesh.cpp
         serac_thermal_solver.cpp
         serac_thermal_structural_solver.cpp
         serac_dtor.cpp
         serac_boundary_cond.cpp
         serac_mesh.cpp
         mfem_ex9p_blockilu.cpp
-	serac_newmark_test.cpp)
+	    serac_newmark_test.cpp)
 
     foreach(filename ${solver_tests})
         get_filename_component(test_name ${filename} NAME_WE)

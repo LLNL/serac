@@ -27,7 +27,7 @@ TEST(thermal_solver, static_solve)
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/static_solve.lua";
   auto pmesh = buildBallMesh(10000);
-  test_utils::runModuleTest<ThermalConduction>(input_file_path, pmesh);
+  test_utils::runModuleTest<ThermalConduction>(input_file_path, "static_solve", std::move(pmesh));
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -36,7 +36,7 @@ TEST_P(InputFileTest, thermal_conduction)
   MPI_Barrier(MPI_COMM_WORLD);
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/" + GetParam() + ".lua";
-  test_utils::runModuleTest<ThermalConduction>(input_file_path);
+  test_utils::runModuleTest<ThermalConduction>(input_file_path, GetParam());
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
@@ -45,6 +45,33 @@ const std::string input_files[] = {"static_solve_multiple_bcs", "static_solve_re
 
 INSTANTIATE_TEST_SUITE_P(ThermalConductionInputFileTests, InputFileTest, ::testing::ValuesIn(input_files));
 
+TEST(thermal_solver, dyn_imp_solve_restart)
+{
+  // Start a scope block to guarantee separation between the simulated nominal/restart runs
+  {
+    MPI_Barrier(MPI_COMM_WORLD);
+    const std::string input_file_path =
+        std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/dyn_imp_solve.lua";
+    test_utils::runModuleTest<ThermalConduction>(input_file_path, "dyn_imp_solve_restart_first_phase");
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+
+  serac::StateManager::reset();
+
+  // Simulate a restart
+  {
+    MPI_Barrier(MPI_COMM_WORLD);
+    const std::string input_file_path =
+        std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/dyn_imp_solve_restart.lua";
+    const int restart_cycle = 5;
+    test_utils::runModuleTest<ThermalConduction>(input_file_path, "dyn_imp_solve_restart_second_phase", {},
+                                                 restart_cycle);
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+
+  serac::StateManager::reset();
+}
+
 #ifdef MFEM_USE_AMGX
 TEST(thermal_solver, static_amgx_solve)
 {
@@ -52,7 +79,7 @@ TEST(thermal_solver, static_amgx_solve)
   std::string input_file_path =
       std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/static_amgx_solve.lua";
   auto pmesh = buildBallMesh(10000);
-  test_utils::runModuleTest<ThermalConduction>(input_file_path, pmesh);
+  test_utils::runModuleTest<ThermalConduction>(input_file_path, "static_amgx_solve", std::move(pmesh));
   MPI_Barrier(MPI_COMM_WORLD);
 }
 #endif

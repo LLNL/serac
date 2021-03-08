@@ -62,6 +62,8 @@ TEST(serac_error_handling, bc_project_requires_state)
   EXPECT_THROW(bc.project(), SlicErrorException);
 
   FiniteElementState state(*mesh);
+  // Explicitly allocate the gridfunction as it is not being managed by Sidre
+  state.gridFunc().GetMemory().New(state.gridFunc().Size());
   bc.setTrueDofs(state);
   EXPECT_NO_THROW(bc.project());
 }
@@ -116,7 +118,11 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
 
 TEST(serac_error_handling, invalid_output_type)
 {
-  ThermalConduction physics(1, buildDiskMesh(100), ThermalConduction::defaultQuasistaticOptions());
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore);
+  serac::StateManager::setMesh(buildDiskMesh(1000));
+  ThermalConduction physics(1, ThermalConduction::defaultQuasistaticOptions());
   // Try a definitely wrong number to ensure that an invalid output type is detected
   EXPECT_THROW(physics.initializeOutput(static_cast<OutputType>(-7), ""), SlicErrorException);
 }
@@ -126,9 +132,7 @@ TEST(serac_error_handling, invalid_cmdline_arg)
   // The command is actually --input-file
   char const* fake_argv[] = {"serac", "--file", "input.lua"};
   const int   fake_argc   = 3;
-  int         rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  EXPECT_THROW(cli::defineAndParse(fake_argc, const_cast<char**>(fake_argv), rank, ""), SlicErrorException);
+  EXPECT_THROW(cli::defineAndParse(fake_argc, const_cast<char**>(fake_argv), ""), SlicErrorException);
 }
 
 TEST(serac_error_handling, nonexistent_mesh_path)

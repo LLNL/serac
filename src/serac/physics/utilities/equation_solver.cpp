@@ -20,7 +20,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
   // If it's a custom solver, check that the mfem::Solver* is not null
   else if (auto custom = std::get_if<CustomSolverOptions>(&lin_options)) {
-    SLIC_ERROR_IF(custom->solver == nullptr, "Custom solver pointer must be initialized.");
+    SLIC_ERROR_ROOT_IF(custom->solver == nullptr, "Custom solver pointer must be initialized.");
     lin_solver_ = custom->solver;
   }
   // If it's a direct solver (currently SuperLU only)
@@ -217,7 +217,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
       iter_lin_solver = std::make_unique<mfem::MINRESSolver>(comm);
       break;
     default:
-      SLIC_ERROR("Linear solver type not recognized.");
+      SLIC_ERROR_ROOT("Linear solver type not recognized.");
       exitGracefully(true);
   }
 
@@ -233,8 +233,8 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
       auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
       auto par_fes  = amg_options->pfes;
       if (par_fes != nullptr) {
-        SLIC_WARNING_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
-                        "Attempting to use BoomerAMG with nodal ordering on an elasticity problem.");
+        SLIC_WARNING_ROOT_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
+                             "Attempting to use BoomerAMG with nodal ordering on an elasticity problem.");
         prec_amg->SetElasticityOptions(par_fes);
       }
       prec_amg->SetPrintLevel(lin_options.print_level);
@@ -249,7 +249,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
       prec_ = detail::configureAMGX(comm, *amgx_options);
 #else
     } else if (std::get_if<AMGXPrec>(prec_ptr)) {
-      SLIC_ERROR("AMGX was not enabled when MFEM was built");
+      SLIC_ERROR_ROOT("AMGX was not enabled when MFEM was built");
 #endif
     } else if (auto ilu_options = std::get_if<BlockILUPrec>(prec_ptr)) {
       prec_ = std::make_unique<mfem::BlockILU>(ilu_options->block_size);
@@ -274,7 +274,7 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNewtonSolver(MPI_Comm  
         (nonlin_options.nonlin_solver == NonlinearSolver::KINBacktrackingLineSearch) ? KIN_LINESEARCH : KIN_NONE;
     newton_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
 #else
-    SLIC_ERROR("KINSOL was not enabled when MFEM was built");
+    SLIC_ERROR_ROOT("KINSOL was not enabled when MFEM was built");
 #endif
   }
 
@@ -332,7 +332,7 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   mfem::Operator&       grad      = oper_.GetGradient(x);
   mfem::HypreParMatrix* matr_grad = dynamic_cast<mfem::HypreParMatrix*>(&grad);
 
-  SLIC_ERROR_IF(matr_grad == nullptr, "Nonlinear operator gradient must be a HypreParMatrix");
+  SLIC_ERROR_ROOT_IF(matr_grad == nullptr, "Nonlinear operator gradient must be a HypreParMatrix");
   superlu_grad_mat_.emplace(*matr_grad);
   return *superlu_grad_mat_;
 }
@@ -403,7 +403,7 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
       iter_options.lin_solver = serac::LinearSolver::CG;
     } else {
       std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
-      SLIC_ERROR(msg);
+      SLIC_ERROR_ROOT(msg);
     }
     const std::string prec_type = config["prec_type"];
     if (prec_type == "JacobiSmoother") {
@@ -420,7 +420,7 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
       iter_options.prec = serac::BlockILUPrec{};
     } else {
       std::string msg = fmt::format("Unknown preconditioner type given: {0}", prec_type);
-      SLIC_ERROR(msg);
+      SLIC_ERROR_ROOT(msg);
     }
     options = iter_options;
   } else if (type == "direct") {
@@ -446,7 +446,7 @@ NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom:
   } else if (solver_type == "KINLineSearch") {
     options.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch;
   } else {
-    SLIC_ERROR(fmt::format("Unknown nonlinear solver type given: {0}", solver_type));
+    SLIC_ERROR_ROOT(fmt::format("Unknown nonlinear solver type given: {0}", solver_type));
   }
   return options;
 }

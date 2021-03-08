@@ -16,22 +16,17 @@
 
 namespace serac {
 
-std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, const int refine_serial,
-                                                 const int refine_parallel, const MPI_Comm comm)
+std::unique_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file)
 {
-  // Get the MPI rank for logging purposes
-  int rank = 0;
-  MPI_Comm_rank(comm, &rank);
-
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
-  SLIC_INFO_ROOT(rank, msg);
+  SLIC_INFO_ROOT(msg);
 
   // Ensure correctness
   serac::logger::flush();
   if (!axom::utilities::filesystem::pathExists(mesh_file)) {
     msg = fmt::format("Given mesh file does not exist: {0}", mesh_file);
-    SLIC_ERROR_ROOT(rank, msg);
+    SLIC_ERROR_ROOT(msg);
   }
 
   // This inherits from std::ifstream, and will work the same way as a std::ifstream,
@@ -41,26 +36,17 @@ std::shared_ptr<mfem::ParMesh> buildMeshFromFile(const std::string& mesh_file, c
   if (!imesh) {
     serac::logger::flush();
     std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
-    SLIC_ERROR_ROOT(rank, err_msg);
+    SLIC_ERROR_ROOT(err_msg);
   }
 
-  auto mesh = std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
-
-  // mesh refinement if specified in input
-  for (int lev = 0; lev < refine_serial; lev++) {
-    mesh->UniformRefinement();
-  }
-
-  // create the parallel mesh
-  auto par_mesh = std::make_shared<mfem::ParMesh>(comm, *mesh);
-  for (int lev = 0; lev < refine_parallel; lev++) {
-    par_mesh->UniformRefinement();
-  }
-
-  return par_mesh;
+  return std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
 }
 
-// a transformation from the unit disk/sphere (in L1 norm) to a unit disk/sphere (in L2 norm)
+/**
+ * @brief a transformation from the unit disk/sphere (in L1 norm) to a unit disk/sphere (in L2 norm)
+ *
+ * @param mesh The mesh to transform
+ */
 void squish(mfem::Mesh& mesh)
 {
   int num_vertices = mesh.GetNV();
@@ -85,7 +71,7 @@ void squish(mfem::Mesh& mesh)
   mesh.SetVertices(vertices);
 }
 
-std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm)
+std::unique_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm)
 {
   static constexpr int dim                   = 2;
   static constexpr int num_elems             = 4;
@@ -115,10 +101,10 @@ std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
 
   squish(mesh);
 
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm)
+std::unique_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm)
 {
   static constexpr int dim                   = 3;
   static constexpr int num_elems             = 8;
@@ -151,36 +137,22 @@ std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
 
   squish(mesh);
 
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::ParMesh>(comm, mesh);
 }
 
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y,
-                                                  const MPI_Comm comm)
+std::unique_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y)
 {
-  mfem::Mesh mesh(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y);
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
+  return std::make_unique<mfem::Mesh>(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y);
 }
 
-std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOptions& options, const MPI_Comm comm)
+std::unique_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x,
+                                            double size_y, double size_z)
 {
-  return buildRectangleMesh(options.elements[0], options.elements[1], options.overall_size[0], options.overall_size[1],
-                            comm);
+  return std::make_unique<mfem::Mesh>(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true,
+                                      size_x, size_y, size_z);
 }
 
-std::shared_ptr<mfem::ParMesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x,
-                                               double size_y, double size_z, const MPI_Comm comm)
-{
-  mfem::Mesh mesh(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true, size_x, size_y, size_z);
-  return std::make_shared<mfem::ParMesh>(comm, mesh);
-}
-
-std::shared_ptr<mfem::ParMesh> buildCuboidMesh(serac::mesh::GenerateInputOptions& options, const MPI_Comm comm)
-{
-  return buildCuboidMesh(options.elements[0], options.elements[1], options.elements[2], options.overall_size[0],
-                         options.overall_size[1], options.overall_size[2], comm);
-}
-
-std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
+std::unique_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
                                                  double height, const MPI_Comm comm)
 {
   static constexpr int dim                   = 2;
@@ -264,12 +236,12 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
 
   std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(&mesh, elements_lengthwise, height));
 
-  auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
+  auto extruded_pmesh = std::make_unique<mfem::ParMesh>(comm, *extruded_mesh);
 
   return extruded_pmesh;
 }
 
-std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius, double outer_radius,
+std::unique_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius, double outer_radius,
                                       double total_angle, int sectors)
 {
   using index_type = int;
@@ -288,8 +260,8 @@ std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius
   auto num_vertices          = num_vertices_ring * 2;
   auto num_boundary_elements = num_elems * 2;
 
-  SLIC_ERROR_IF(outer_radius <= inner_radius,
-                "Outer radius is smaller than inner radius while building a cylinder mesh.");
+  SLIC_ERROR_ROOT_IF(outer_radius <= inner_radius,
+                     "Outer radius is smaller than inner radius while building a cylinder mesh.");
 
   std::vector<std::vector<double>> vertices(static_cast<size_type>(num_vertices), std::vector<double>(dim, 0.));
   for (size_type i = 0; i < num_vertices_ring; i++) {
@@ -320,7 +292,7 @@ std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius
     boundary_elems[i + num_elems][1] = elems[i][2];
   }
 
-  auto mesh = std::make_shared<mfem::Mesh>(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
+  auto mesh = std::make_unique<mfem::Mesh>(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
                                            static_cast<int>(num_boundary_elements));
 
   for (auto vertex : vertices) {
@@ -373,21 +345,21 @@ std::shared_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius
   return mesh;
 }
 
-std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
+std::unique_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
                                              double total_angle, int sectors, const MPI_Comm comm)
 {
-  return std::make_shared<mfem::ParMesh>(
+  return std::make_unique<mfem::ParMesh>(
       comm, *buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors));
 }
 
-std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
+std::unique_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
                                                        double inner_radius, double outer_radius, double height,
                                                        double total_angle, int sectors, const MPI_Comm comm)
 {
   auto                        mesh = buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors);
   std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(mesh.get(), elements_lengthwise, height));
 
-  auto extruded_pmesh = std::make_shared<mfem::ParMesh>(comm, *extruded_mesh);
+  auto extruded_pmesh = std::make_unique<mfem::ParMesh>(comm, *extruded_mesh);
 
   return extruded_pmesh;
 }
@@ -419,6 +391,45 @@ void InputOptions::defineInputFileSchema(axom::inlet::Container& table)
   size.addDouble("z", "Size in the z-dimension");
 }
 
+std::unique_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
+{
+  std::unique_ptr<mfem::Mesh> serial_mesh;
+
+  if (const auto file_opts = std::get_if<FileInputOptions>(&options.extra_options)) {
+    SLIC_ERROR_ROOT_IF(file_opts->absolute_mesh_file_name.empty(),
+                       "Absolute path to mesh file was not configured, did you forget to call findMeshFilePath?");
+    serial_mesh = buildMeshFromFile(file_opts->absolute_mesh_file_name);
+  } else if (const auto generate_opts = std::get_if<GenerateInputOptions>(&options.extra_options)) {
+    const auto& eles  = generate_opts->elements;
+    const auto& sizes = generate_opts->overall_size;
+    if (eles.size() == 2) {
+      serial_mesh = buildRectangleMesh(eles.at(0), eles.at(1), sizes.at(0), sizes.at(1));
+    } else {
+      serial_mesh = buildCuboidMesh(eles.at(0), eles.at(1), eles.at(2), sizes.at(0), sizes.at(1), sizes.at(2));
+    }
+  }
+
+  SLIC_ERROR_ROOT_IF(!serial_mesh, "Mesh input options were invalid");
+  return refineAndDistribute(*serial_mesh, options.ser_ref_levels, options.par_ref_levels, comm);
+}
+
+std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial,
+                                                   const int refine_parallel, const MPI_Comm comm)
+{
+  // Serial refinement first
+  for (int lev = 0; lev < refine_serial; lev++) {
+    serial_mesh.UniformRefinement();
+  }
+
+  // Then create the parallel mesh and apply parallel refinement
+  auto parallel_mesh = std::make_unique<mfem::ParMesh>(comm, serial_mesh);
+  for (int lev = 0; lev < refine_parallel; lev++) {
+    parallel_mesh->UniformRefinement();
+  }
+
+  return parallel_mesh;
+}
+
 }  // namespace mesh
 }  // namespace serac
 
@@ -444,7 +455,7 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
       overall_size    = {size_input["x"], size_input["y"]};
 
       if (size_input.contains("z")) {
-        overall_size[2] = size_input["z"];
+        overall_size.push_back(size_input["z"]);
       }
     } else {
       overall_size = std::vector<double>(overall_size.size(), 1.);
@@ -459,6 +470,6 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
   // If it reaches here, we haven't found a supported type
   serac::logger::flush();
   std::string err_msg = fmt::format("Specified type not supported: {0}", mesh_type);
-  SLIC_ERROR(err_msg);
+  SLIC_ERROR_ROOT(err_msg);
   return {};
 }
