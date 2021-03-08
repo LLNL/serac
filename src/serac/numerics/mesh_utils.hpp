@@ -143,7 +143,7 @@ struct FileInputOptions {
    *
    * @param[in] table Inlet's SchemaCreator that input files will be added to
    **/
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void defineInputFileSchema(axom::inlet::Container& table);
 
   std::string relative_mesh_file_name;
 };
@@ -154,7 +154,7 @@ struct GenerateInputOptions {
    *
    * @param[in] table Inlet's SchemaCreator that input files will be added to
    **/
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void defineInputFileSchema(axom::inlet::Container& table);
 
   /// For rectangular and cuboid meshes
   std::vector<int>    elements;
@@ -167,7 +167,7 @@ struct InputOptions {
    *
    * @param[in] table Inlet's SchemaCreator that input files will be added to
    **/
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void defineInputFileSchema(axom::inlet::Container& table);
 
   std::variant<FileInputOptions, GenerateInputOptions> extra_options;
   // Serial/parallel refinement iterations
@@ -202,5 +202,5 @@ std::shared_ptr<mfem::ParMesh> buildRectangleMesh(serac::mesh::GenerateInputOpti
 // Prototype the specialization
 template <>
 struct FromInlet<serac::mesh::InputOptions> {
-  serac::mesh::InputOptions operator()(const axom::inlet::Table& base);
+  serac::mesh::InputOptions operator()(const axom::inlet::Container& base);
 };

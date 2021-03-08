@@ -88,7 +88,7 @@ public:
   /**
    * Input file parameters specific to this class
    **/
-  static void DefineInputFileSchema(axom::inlet::Table& table);
+  static void DefineInputFileSchema(axom::inlet::Container& table);
 
 private:
   /**
@@ -213,15 +213,15 @@ inline LinearSolverOptions AugmentAMGForElasticity(const LinearSolverOptions&   
 
 template <>
 struct FromInlet<serac::LinearSolverOptions> {
-  serac::LinearSolverOptions operator()(const axom::inlet::Table& base);
+  serac::LinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
 template <>
 struct FromInlet<serac::NonlinearSolverOptions> {
-  serac::NonlinearSolverOptions operator()(const axom::inlet::Table& base);
+  serac::NonlinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
 template <>
 struct FromInlet<serac::mfem_ext::EquationSolver> {
-  serac::mfem_ext::EquationSolver operator()(const axom::inlet::Table& base);
+  serac::mfem_ext::EquationSolver operator()(const axom::inlet::Container& base);
 };

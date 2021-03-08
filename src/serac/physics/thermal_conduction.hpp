@@ -60,7 +60,7 @@ public:
      *
      * @param[in] table Inlet's Table that input files will be added to
      **/
-    static void defineInputFileSchema(axom::inlet::Table& table);
+    static void defineInputFileSchema(axom::inlet::Container& table);
 
     // The order of the field
     int           order;
@@ -312,5 +312,5 @@ protected:
 
 template <>
 struct FromInlet<serac::ThermalConduction::InputOptions> {
-  serac::ThermalConduction::InputOptions operator()(const axom::inlet::Table& base);
+  serac::ThermalConduction::InputOptions operator()(const axom::inlet::Container& base);
 };

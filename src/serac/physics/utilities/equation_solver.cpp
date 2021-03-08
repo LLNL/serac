@@ -337,11 +337,11 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   return *superlu_grad_mat_;
 }
 
-void EquationSolver::DefineInputFileSchema(axom::inlet::Table& table)
+void EquationSolver::DefineInputFileSchema(axom::inlet::Container& table)
 {
   auto& linear_table = table.addStruct("linear", "Linear Equation Solver Parameters")
                            .required()
-                           .registerVerifier([](const axom::inlet::Table& table_to_verify) {
+                           .registerVerifier([](const axom::inlet::Container& table_to_verify) {
                              // Make sure that the provided options match the desired linear solver type
                              const bool is_iterative = (table_to_verify["type"].get<std::string>() == "iterative") &&
                                                        table_to_verify.contains("iterative_options");
@@ -383,7 +383,7 @@ using serac::LinearSolverOptions;
 using serac::NonlinearSolverOptions;
 using serac::mfem_ext::EquationSolver;
 
-LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet::Table& base)
+LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet::Container& base)
 {
   LinearSolverOptions options;
   std::string         type = base["type"];
@@ -431,7 +431,7 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
   return options;
 }
 
-NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom::inlet::Table& base)
+NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom::inlet::Container& base)
 {
   NonlinearSolverOptions options;
   options.rel_tol               = base["rel_tol"];
@@ -451,7 +451,7 @@ NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom:
   return options;
 }
 
-EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Table& base)
+EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Container& base)
 {
   auto lin = base["linear"].get<LinearSolverOptions>();
   if (base.contains("nonlinear")) {

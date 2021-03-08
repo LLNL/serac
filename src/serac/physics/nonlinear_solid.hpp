@@ -59,7 +59,7 @@ public:
      *
      * @param[in] table Inlet's SchemaCreator that input files will be added to
      **/
-    static void defineInputFileSchema(axom::inlet::Table& table);
+    static void defineInputFileSchema(axom::inlet::Container& table);
 
     // The order of the field
     int           order;
@@ -340,5 +340,5 @@ protected:
 
 template <>
 struct FromInlet<serac::NonlinearSolid::InputOptions> {
-  serac::NonlinearSolid::InputOptions operator()(const axom::inlet::Table& base);
+  serac::NonlinearSolid::InputOptions operator()(const axom::inlet::Container& base);
 };

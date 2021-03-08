@@ -103,6 +103,8 @@ class Serac(CMakePackage, CudaPackage):
 
     # Basic dependencies
     depends_on("mpi")
+    # JBE: Clingo doesn't correctly resolve external virtuals, I think...
+    depends_on("netlib-lapack")
     depends_on("cmake@3.8:")
 
     # Devtool dependencies these need to match serac_devtools/package.py
@@ -119,7 +121,7 @@ class Serac(CMakePackage, CudaPackage):
 
     # Libraries that support +debug
     debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi",
-                  "hypre@2.18.2~shared~superlu-dist+mpi"]
+                  "hypre@2.18.2~shared~superlu-dist+mpi~int64"]
 
     depends_on("petsc~shared", when="+petsc")
     depends_on("petsc+debug", when="+petsc+debug")
@@ -141,6 +143,9 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("axom~umpire", when="~umpire")
     depends_on("raja~openmp~shared", when="+raja")
     depends_on("umpire~shared", when="+umpire")
+
+    # JBE: Spack bug? Default is true...
+    depends_on("axom+lua")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran+mfem~shared",

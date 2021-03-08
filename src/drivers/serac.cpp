@@ -42,7 +42,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
 
   // The output type (visit, glvis, paraview, etc)
-  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
 
   // The mesh options
   auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
@@ -92,8 +92,8 @@ int main(int argc, char* argv[])
 
   // Optionally, create input file documentation and quit
   if (create_input_file_docs) {
-    auto writer = std::make_unique<axom::inlet::SphinxDocWriter>("serac_input.rst", inlet.sidreGroup());
-    inlet.registerDocWriter(std::move(writer));
+    auto writer = std::make_unique<axom::inlet::SphinxWriter>("serac_input.rst");
+    inlet.registerWriter(std::move(writer));
     inlet.writeDoc();
     serac::exitGracefully();
   }
@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
 
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>()
-  main_physics->initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "serac");
+  main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac");
 
   // Enter the time step loop.
   for (int ti = 1; !last_step; ti++) {

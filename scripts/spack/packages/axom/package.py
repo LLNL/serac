@@ -60,7 +60,9 @@ class Axom(CMakePackage, CudaPackage):
     version('develop', branch='develop', submodules=True)
 
     # SERAC EDIT START
-    version('0.4.0serac', commit='15f9a9929b6a56d67d038a6406b062eee65d49e9', submodules="True")
+    # version('0.4.0serac', commit='1f41b3662e1b0a5075fed7dc6074bb8e54c32c9f', submodules="True")
+    version('0.4.0serac', branch='bugfix/essman/cuda_build', submodules="True")
+
     # SERAC EDIT END
 
     version('0.4.0', tag='v0.4.0', submodules=True)
@@ -529,6 +531,11 @@ class Axom(CMakePackage, CudaPackage):
                 cfg.write(cmake_cache_option("CUDA_LINK_WITH_NVCC",
                                              True))
                 cfg.write(cmake_cache_option("AXOM_ENABLE_EXPORTS",
+                                             False))
+                # The mesh_tester appears to require relocatable device code
+                # which is not present if BLT introduces a device link stage
+                # for libaxom.a, so it needs to be disabled
+                cfg.write(cmake_cache_option("AXOM_ENABLE_QUEST",
                                              False))
                 # SERAC EDIT END
 

@@ -305,7 +305,7 @@ void NonlinearSolid::advanceTimestep(double& dt)
 
 NonlinearSolid::~NonlinearSolid() {}
 
-void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void NonlinearSolid::InputOptions::defineInputFileSchema(axom::inlet::Container& table)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
@@ -367,7 +367,7 @@ using serac::DirichletEnforcementMethod;
 using serac::NonlinearSolid;
 using serac::TimestepMethod;
 
-NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()(const axom::inlet::Table& base)
+NonlinearSolid::InputOptions FromInlet<NonlinearSolid::InputOptions>::operator()(const axom::inlet::Container& base)
 {
   NonlinearSolid::InputOptions result;
 

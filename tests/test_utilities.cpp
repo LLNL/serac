@@ -30,7 +30,7 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.");
   inlet.addDouble("t_final", "Stopping point");
 
-  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
 
   // Comparison parameter
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
@@ -191,7 +191,7 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>() - Inlet obj
   // needs to allow for top-level scalar retrieval as well
-  phys_module.initializeOutput(inlet.getGlobalTable().get<OutputType>(), module_name);
+  phys_module.initializeOutput(inlet.getGlobalContainer().get<OutputType>(), module_name);
 
   // Complete the solver setup
   phys_module.completeSetup();

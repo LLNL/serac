@@ -68,7 +68,7 @@ std::string fullDirectoryFromPath(const std::string& path)
   return dir;
 }
 
-void defineVectorInputFileSchema(axom::inlet::Table& table)
+void defineVectorInputFileSchema(axom::inlet::Container& table)
 {
   // TODO: I had to remove the required tag on x as we now have an optional vector input in the coefficients. IT would
   // be nice to support "If this exists, this subcomponent is required."
@@ -77,14 +77,14 @@ void defineVectorInputFileSchema(axom::inlet::Table& table)
   table.addDouble("z", "z-component of vector");
 }
 
-void defineOutputTypeInputFileSchema(axom::inlet::Table& table)
+void defineOutputTypeInputFileSchema(axom::inlet::Container& table)
 {
   table.addString("output_type", "Desired output format")
       .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
       .defaultValue("VisIt");
 }
 
-void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Container& table)
 {
   table.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
   CoefficientInputOptions::defineInputFileSchema(table);
@@ -167,7 +167,7 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
   }
 }
 
-void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& table)
 {
   // Vectors are implemented as lua usertypes and can be converted to/from mfem::Vector
   table.addFunction("vector_function", axom::inlet::FunctionTag::Vector,
@@ -193,7 +193,7 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
 
 }  // namespace serac::input
 
-mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
+mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Container& base)
 {
   mfem::Vector result(3);  // Allocate up front since it's small
   result[0] = base["x"];
@@ -210,7 +210,7 @@ mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
   return result;
 }
 
-serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Table& base)
+serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Container& base)
 {
   const static auto output_names = []() {
     std::unordered_map<std::string, serac::OutputType> result;
@@ -229,7 +229,7 @@ serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Ta
 }
 
 serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
-    const axom::inlet::Table& base)
+    const axom::inlet::Container& base)
 {
   serac::input::BoundaryConditionInputOptions result{.coef_opts = base.get<serac::input::CoefficientInputOptions>()};
   // Build a set with just the values of the map
@@ -241,7 +241,7 @@ serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryCond
 }
 
 serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOptions>::operator()(
-    const axom::inlet::Table& base)
+    const axom::inlet::Container& base)
 {
   serac::input::CoefficientInputOptions result;
 
