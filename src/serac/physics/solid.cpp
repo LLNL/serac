@@ -20,13 +20,13 @@ namespace serac {
  */
 constexpr int NUM_FIELDS = 2;
 
-Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options,
-             GeometricNonlinearities geom_nonlin, FinalMeshOption keep_deformation)
-    : BasePhysics(mesh, NUM_FIELDS, order),
-      velocity_(*mesh,
-                FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "velocity"}),
-      displacement_(
-          *mesh, FiniteElementState::Options{.order = order, .vector_dim = mesh->Dimension(), .name = "displacement"}),
+Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
+             FinalMeshOption keep_deformation, const std::string& name)
+    : BasePhysics(NUM_FIELDS, order),
+      velocity_(StateManager::newState(FiniteElementState::Options{
+          .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
+      displacement_(StateManager::newState(FiniteElementState::Options{
+          .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
       geom_nonlin_(geom_nonlin),
       keep_deformation_(keep_deformation),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
@@ -37,8 +37,8 @@ Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions
 
   // Initialize the mesh node pointers
   reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
-  mesh->EnsureNodes();
-  mesh->GetNodes(*reference_nodes_);
+  mesh_.EnsureNodes();
+  mesh_.GetNodes(*reference_nodes_);
 
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
@@ -51,7 +51,7 @@ Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions
   // to be the displacement
   const auto& augmented_options = mfem_ext::AugmentAMGForElasticity(lin_options, displacement_.space());
 
-  nonlin_solver_ = mfem_ext::EquationSolver(mesh->GetComm(), augmented_options, options.H_nonlin_options);
+  nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), augmented_options, options.H_nonlin_options);
 
   // Check for dynamic mode
   if (options.dyn_options) {
@@ -73,15 +73,14 @@ Solid::Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions
   zero_ = 0.0;
 }
 
-Solid::Solid(std::shared_ptr<mfem::ParMesh> mesh, const Solid::InputOptions& options)
-    : Solid(options.order, mesh, options.solver_options, options.geom_nonlin)
+Solid::Solid(const Solid::InputOptions& options) : Solid(options.order, options.solver_options, options.geom_nonlin)
 {
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
   setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(options.mu),
                         std::make_unique<mfem::ConstantCoefficient>(options.K), options.material_nonlin);
 
-  auto dim = mesh->Dimension();
+  auto dim = mesh_.Dimension();
   if (options.initial_displacement) {
     auto deform = options.initial_displacement->constructVector(dim);
     setDisplacement(*deform);
@@ -142,15 +141,15 @@ Solid::~Solid()
   // Build a new grid function to store the mesh nodes post-destruction
   // NOTE: MFEM will manage the memory of these objects
 
-  auto mesh_fe_coll  = new mfem::H1_FECollection(order_, mesh_->Dimension());
-  auto mesh_fe_space = new mfem::ParFiniteElementSpace(displacement_.space(), mesh_.get(), mesh_fe_coll);
+  auto mesh_fe_coll  = new mfem::H1_FECollection(order_, mesh_.Dimension());
+  auto mesh_fe_space = new mfem::ParFiniteElementSpace(displacement_.space(), &mesh_, mesh_fe_coll);
   auto mesh_nodes    = new mfem::ParGridFunction(mesh_fe_space);
   mesh_nodes->MakeOwner(mesh_fe_coll);
 
   *mesh_nodes = *reference_nodes_;
 
   // Set the mesh to the newly created nodes object and pass ownership
-  mesh_->NewNodes(*mesh_nodes, true);
+  mesh_.NewNodes(*mesh_nodes, true);
 }
 
 void Solid::setDisplacementBCs(const std::set<int>& disp_bdr, std::shared_ptr<mfem::VectorCoefficient> disp_bdr_coef)
@@ -230,7 +229,7 @@ void Solid::resetToReferenceConfiguration()
   velocity_.initializeTrueVec();
   displacement_.initializeTrueVec();
 
-  mesh_->NewNodes(*reference_nodes_);
+  mesh_.NewNodes(*reference_nodes_);
 }
 
 void Solid::completeSetup()
@@ -369,7 +368,7 @@ void Solid::advanceTimestep(double& dt)
   displacement_.initializeTrueVec();
 
   // Set the mesh nodes to the reference configuration
-  mesh_->NewNodes(*reference_nodes_);
+  mesh_.NewNodes(*reference_nodes_);
 
   bcs_.setTime(time_);
 
@@ -389,7 +388,7 @@ void Solid::advanceTimestep(double& dt)
   deformed_nodes_->Set(1.0, displacement_.gridFunc());
   deformed_nodes_->Add(1.0, *reference_nodes_);
 
-  mesh_->NewNodes(*deformed_nodes_);
+  mesh_.NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
 }

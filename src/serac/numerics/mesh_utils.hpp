@@ -104,7 +104,7 @@ mfem::Mesh buildCylinderMesh(int radial_refinement, int elements_lengthwise, dou
  * @param[in] total_angle the angle in radians over which to generate the portion of an extruded cylinder
  * @param[in] sectors the number of starting sectors in the hollow cylinder
  *
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
 mfem::Mesh buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise, double inner_radius,
                                    double outer_radius, double height, double total_angle = M_PI, int sectors = 8);
@@ -118,7 +118,7 @@ mfem::Mesh buildHollowCylinderMesh(int radial_refinement, int elements_lengthwis
  * @param[in] total_angle the angle in radians over which to generate the portion of an extruded cylinder
  * @param[in] sectors the number of starting sectors in the hollow cylinder
  *
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
 mfem::Mesh buildRingMesh(int radial_refinement, double inner_radius, double outer_radius, double total_angle = M_PI,
                          int sectors = 8);
@@ -226,9 +226,9 @@ struct InputOptions {
  * @param[in] options The options used to construct the mesh
  * @param[in] comm The MPI communicator to use with the parallel mesh
  *
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm = MPI_COMM_WORLD);
+std::unique_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Finalizes a serial mesh into a refined parallel mesh
@@ -238,12 +238,12 @@ std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, co
  * @param[in] refine_parallel The number of parallel refinements
  * @param[in] comm The MPI communicator
  *
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  *
  * @note It is sometimes required to refine serially first if your number of processors
  * is less than the original number of mesh elements
  */
-std::shared_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, const int refine_serial = 0,
+std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, const int refine_serial = 0,
                                                    const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD);
 
 }  // namespace mesh

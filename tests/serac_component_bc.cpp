@@ -37,6 +37,7 @@ TEST(solid_solver, qs_component_solve)
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
+  serac::StateManager::initialize(datastore);
 
   test_utils::defineTestSchema<Solid>(inlet);
 
@@ -46,13 +47,13 @@ TEST(solid_solver, qs_component_solve)
     file_opts->absolute_mesh_file_name =
         serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
   }
-  auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+  auto      mesh = serac::mesh::buildParallelMesh(mesh_options);
+  const int dim  = mesh->Dimension();
+  serac::StateManager::setMesh(std::move(mesh));
 
   // Define the solid solver object
   auto         solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
-  serac::Solid solid_solver(mesh, solid_solver_options);
-
-  int dim = mesh->Dimension();
+  serac::Solid solid_solver(solid_solver_options);
 
   // define the displacement vector
   const auto&                        disp_bc = solid_solver_options.boundary_conditions.at("displacement");

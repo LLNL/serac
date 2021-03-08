@@ -385,7 +385,7 @@ void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
   table.addInt("approx_elements", "Approximate number of elements in an n-ball mesh");
 }
 
-std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
+std::unique_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
 {
   std::optional<mfem::Mesh> serial_mesh;
 
@@ -414,7 +414,7 @@ std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, co
   return refineAndDistribute(std::move(*serial_mesh), options.ser_ref_levels, options.par_ref_levels, comm);
 }
 
-std::shared_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, const int refine_serial,
+std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, const int refine_serial,
                                                    const int refine_parallel, const MPI_Comm comm)
 {
   // Serial refinement first
@@ -423,7 +423,7 @@ std::shared_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, con
   }
 
   // Then create the parallel mesh and apply parallel refinement
-  auto parallel_mesh = std::make_shared<mfem::ParMesh>(comm, serial_mesh);
+  auto parallel_mesh = std::make_unique<mfem::ParMesh>(comm, serial_mesh);
   for (int lev = 0; lev < refine_parallel; lev++) {
     parallel_mesh->UniformRefinement();
   }

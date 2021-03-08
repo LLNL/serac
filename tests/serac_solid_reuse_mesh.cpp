@@ -23,11 +23,14 @@ TEST(solid_solver, reuse_mesh)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore);
+
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
   auto        pmesh     = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 0, 0);
-
-  int dim = pmesh->Dimension();
+  const int   dim       = pmesh->Dimension();
+  serac::StateManager::setMesh(std::move(pmesh));
 
   // define a boundary attribute set
   std::set<int> ess_bdr = {1};
@@ -69,7 +72,7 @@ TEST(solid_solver, reuse_mesh)
   // Keep the solver_1 and solver_2 objects in a different scope for testing
   {
     // initialize the dynamic solver object
-    Solid solid_solver_1(1, pmesh, default_static);
+    Solid solid_solver_1(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed, "first_solid");
     solid_solver_1.setDisplacementBCs(ess_bdr, deform);
     solid_solver_1.setTractionBCs(trac_bdr, traction_coef, false);
     solid_solver_1.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
@@ -82,7 +85,7 @@ TEST(solid_solver, reuse_mesh)
     // Construct the internal dynamic solver data structures
     solid_solver_1.completeSetup();
 
-    Solid solid_solver_2(1, pmesh, default_static);
+    Solid solid_solver_2(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed, "second_solid");
     solid_solver_2.setDisplacementBCs(ess_bdr, deform);
     solid_solver_2.setTractionBCs(trac_bdr, traction_coef, false);
     solid_solver_2.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
@@ -109,7 +112,7 @@ TEST(solid_solver, reuse_mesh)
     EXPECT_NEAR(0.0, u_norm_1 - u_norm_2, 0.001);
   }
 
-  Solid solid_solver_3(1, pmesh, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);
+  Solid solid_solver_3(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);
   solid_solver_3.setDisplacementBCs(ess_bdr, deform);
   solid_solver_3.setTractionBCs(trac_bdr, traction_coef, false);
   solid_solver_3.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),

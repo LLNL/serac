@@ -54,6 +54,7 @@ TEST(solid_solver, qs_custom_solve)
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
+  serac::StateManager::initialize(datastore);
 
   test_utils::defineTestSchema<Solid>(inlet);
 
@@ -63,7 +64,9 @@ TEST(solid_solver, qs_custom_solve)
     file_opts->absolute_mesh_file_name =
         serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
   }
-  auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+  auto      mesh = serac::mesh::buildParallelMesh(mesh_options);
+  const int dim  = mesh->Dimension();
+  serac::StateManager::setMesh(std::move(mesh));
 
   // Define the solid solver object
   auto solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
@@ -80,7 +83,7 @@ TEST(solid_solver, qs_custom_solve)
   custom_solver->SetPrintLevel(iter_options.print_level);
 
   solid_solver_options.solver_options.H_lin_options = CustomSolverOptions{custom_solver.get()};
-  Solid solid_solver(mesh, solid_solver_options);
+  Solid solid_solver(solid_solver_options);
 
   // Initialize the output
   solid_solver.initializeOutput(serac::OutputType::VisIt, "static_solid");
@@ -93,7 +96,6 @@ TEST(solid_solver, qs_custom_solve)
 
   solid_solver.outputState();
 
-  int          dim = mesh->Dimension();
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);

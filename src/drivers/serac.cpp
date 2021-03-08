@@ -90,11 +90,21 @@ int main(int argc, char* argv[])
     input_file_path = search->second;
   }
 
+  // Check if a restart was requested
+  std::optional<int> restart_cycle;
+  if (auto cycle = cli_opts.find("restart_cycle"); cycle != cli_opts.end()) {
+    restart_cycle = std::stoi(cycle->second);
+  }
+
   // Check for the doc creation command line argument
   bool create_input_file_docs = cli_opts.find("create_input_file_docs") != cli_opts.end();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
+
+  // Intialize MFEMSidreDataCollection
+  // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
+  serac::StateManager::initialize(datastore, restart_cycle);
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
@@ -102,22 +112,26 @@ int main(int argc, char* argv[])
 
   // Optionally, create input file documentation and quit
   if (create_input_file_docs) {
-    auto writer = std::make_unique<axom::inlet::SphinxDocWriter>("serac_input.rst", inlet.sidreGroup());
-    inlet.registerDocWriter(std::move(writer));
+    auto writer = std::make_unique<axom::inlet::SphinxWriter>("serac_input.rst");
+    inlet.registerWriter(std::move(writer));
     inlet.writeDoc();
     serac::exitGracefully();
   }
 
   // Save input values to file
-  datastore.getRoot()->save("serac_input.json", "json");
+  datastore.getRoot()->getGroup("input_file")->save("serac_input.json", "json");
 
-  // Build the mesh
-  auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-    file_opts->absolute_mesh_file_name =
-        serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
+  // Not restarting, so we need to create the mesh and register it with the StateManager
+  if (!restart_cycle) {
+    // Build the mesh
+    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+      file_opts->absolute_mesh_file_name =
+          serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
+    }
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+    serac::StateManager::setMesh(std::move(mesh));
   }
-  auto mesh = serac::mesh::buildParallelMesh(mesh_options);
 
   // Create the physics object
   std::unique_ptr<serac::BasePhysics> main_physics;
@@ -136,11 +150,11 @@ int main(int argc, char* argv[])
 
   // Construct the appropriate physics object using the input file options
   if (solid_solver_options && thermal_solver_options) {
-    main_physics = std::make_unique<serac::ThermalSolid>(mesh, *thermal_solver_options, *solid_solver_options);
+    main_physics = std::make_unique<serac::ThermalSolid>(*thermal_solver_options, *solid_solver_options);
   } else if (solid_solver_options) {
-    main_physics = std::make_unique<serac::Solid>(mesh, *solid_solver_options);
+    main_physics = std::make_unique<serac::Solid>(*solid_solver_options);
   } else if (thermal_solver_options) {
-    main_physics = std::make_unique<serac::ThermalConduction>(mesh, *thermal_solver_options);
+    main_physics = std::make_unique<serac::ThermalConduction>(*thermal_solver_options);
   } else {
     SLIC_ERROR_ROOT("Neither solid nor thermal_conduction blocks specified in the input file.");
   }
