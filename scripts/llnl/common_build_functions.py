@@ -133,24 +133,29 @@ def assertUberenvExists():
         sys.exit(1)
 
 
-def uberenv_create_mirror(prefix, project_file, mirror_path):
+def uberenv_create_mirror(prefix, spec, project_file, mirror_path):
     """
     Calls uberenv to create a spack mirror.
     """
     assertUberenvExists()
     cmd  = "python {0} --create-mirror -k ".format(get_uberenv_path())
     cmd += "--prefix=\"{0}\" --mirror=\"{1}\" ".format(prefix, mirror_path)
+    cmd += "--spec=\"{0}\" ".format(spec)
     if project_file:
         cmd += "--project-json=\"{0}\" ".format(project_file)
-    res = sexe(cmd, echo=True, error_prefix="WARNING:")
+
     print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
     print("[ It is expected for 'spack --create-mirror' to throw warnings.                ]")
+    print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
+    res = sexe(cmd, echo=True, error_prefix="WARNING:")
+    print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
+    print("[ End of expected warnings from 'spack --create-mirror'                        ]")
     print("[~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]")
     set_group_and_perms(mirror_path)
     return res
 
 
-def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
+def uberenv_build(prefix, spec, project_file, mirror_path):
     """
     Calls uberenv to install tpls for a given spec to given prefix.
     """
@@ -160,7 +165,6 @@ def uberenv_build(prefix, spec, project_file, config_dir, mirror_path):
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
     if project_file:
         cmd += "--project-json=\"{0}\" ".format(project_file)
-    cmd += "--spack-config-dir=\"{0}\" ".format(config_dir)
         
     spack_tpl_build_log = pjoin(prefix,"output.log.spack.tpl.build.%s.txt" % spec.replace(" ", "_"))
     print("[starting tpl install of spec %s]" % spec)
@@ -237,7 +241,7 @@ def test_examples(host_config, build_dir, install_dir, report_to_stdout = False)
 
 def build_and_test_host_config(test_root,host_config, report_to_stdout = False, extra_cmake_options = ""):
     host_config_root = get_host_config_root(host_config)
-
+    # setup build and install dirs
     build_dir   = pjoin(test_root,"build-%s"   % host_config_root)
     install_dir = pjoin(test_root,"install-%s"   % host_config_root)
     print("[Testing build, test, and docs of host config file: %s]" % host_config)
@@ -344,6 +348,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
     print("[SUCCESS: Build, test, and install for host-config: {0} complete]\n".format(host_config))
 
     set_group_and_perms(build_dir)
+    set_group_and_perms(install_dir)
 
     return 0
 
@@ -405,6 +410,7 @@ def set_group_and_perms(directory):
     Sets the proper group and access permissions of given input
     directory. 
     """
+
     skip = True
     shared_dirs = [get_shared_base_dir()]
     for shared_dir in shared_dirs:
@@ -430,8 +436,6 @@ def set_group_and_perms(directory):
 
 
 def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, mirror_location = ''):
-    config_dir = "scripts/spack/configs/{0}".format(get_system_type())
-
     if spec:
         specs = [spec]
     else:
@@ -457,7 +461,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     prefix = pjoin(prefix, timestamp)
 
     # create a mirror
-    uberenv_create_mirror(prefix, "", mirror_dir)
+    uberenv_create_mirror(prefix, spec, "", mirror_dir)
     # write info about this build
     write_build_info(pjoin(prefix, "info.json"))
 
@@ -473,7 +477,7 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
     for spec in specs:
         start_time = time.time()
         fullspec = "{0}".format(spec)
-        res = uberenv_build(prefix, fullspec, "", config_dir, mirror_dir)
+        res = uberenv_build(prefix, fullspec, "", mirror_dir)
         end_time = time.time()
         print("[build time: {0}]".format(convertSecondsToReadableTime(end_time - start_time)))
         if res != 0:
@@ -513,7 +517,6 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
 
 def build_devtools(builds_dir, timestamp):
     sys_type = get_system_type()
-    config_dir = "scripts/spack/configs/{0}/devtools".format(sys_type)
     project_file = "scripts/spack/devtools.json"
 
     if "toss_3" in sys_type:
@@ -536,14 +539,14 @@ def build_devtools(builds_dir, timestamp):
     # Use shared mirror
     mirror_dir = get_shared_mirror_dir()
     print("[Using mirror location: {0}]".format(mirror_dir))
-    uberenv_create_mirror(prefix, project_file, mirror_dir)
+    uberenv_create_mirror(prefix, compiler_spec, project_file, mirror_dir)
 
     # write info about this build
     write_build_info(pjoin(prefix,"info.json"))
 
     # use uberenv to install devtools
     start_time = time.time()
-    res = uberenv_build(prefix, compiler_spec, project_file, config_dir, mirror_dir)
+    res = uberenv_build(prefix, compiler_spec, project_file, mirror_dir)
     end_time = time.time()
 
     print("[Build time: {0}]".format(convertSecondsToReadableTime(end_time - start_time)))
