@@ -4,6 +4,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr auto family     = Family::HCURL;
   static constexpr int  dim        = 2;
   static constexpr int  ndof       = 2 * p * (p + 1);
+  static constexpr int  components = 1;
 
   /*
 

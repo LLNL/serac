@@ -59,6 +59,7 @@ endforeach()
 set(parvariationalform_mpi_tests
     l2_comparison.cpp
     hcurl_comparison.cpp
+    hcurl_comparison_weak_form.cpp
     thermal_comparison.cpp
     thermal_comparison_weak_form.cpp
     elasticity_comparison.cpp

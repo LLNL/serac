@@ -24,6 +24,7 @@ using namespace mfem;
 // 
 int main(int argc, char* argv[])
 {
+  #if 1
   int num_procs, myid;
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -59,40 +60,36 @@ int main(int argc, char* argv[])
   }
 
   Mesh mesh(mesh_file, 1, 1);
-
-  if (mesh.Dimension() != dim) {
-    std::cout << "invalid mesh dimension" << std::endl;
-  }
-
   for (int l = 0; l < refinements; l++) {
     mesh.UniformRefinement();
   }
 
   ParMesh pmesh(MPI_COMM_WORLD, mesh);
 
-  auto fec = H1_FECollection(p, dim);
-  ParFiniteElementSpace fespace(&pmesh, &fec, dim);
+  auto fec = ND_FECollection(p, dim);
+  ParFiniteElementSpace fespace(&pmesh, &fec);
 
   ParBilinearForm A(&fespace);
 
   ConstantCoefficient a_coef(a);
-  A.AddDomainIntegrator(new VectorMassIntegrator(a_coef));
+  A.AddDomainIntegrator(new VectorFEMassIntegrator(a_coef));
 
-  ConstantCoefficient lambda_coef(b);
-  ConstantCoefficient mu_coef(b);
-  A.AddDomainIntegrator(new ElasticityIntegrator(lambda_coef, mu_coef));
+  ConstantCoefficient b_coef(b);
+  A.AddDomainIntegrator(new CurlCurlIntegrator(b_coef));
   A.Assemble(0);
   A.Finalize();
-
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
   LinearForm f(&fespace);
-  VectorFunctionCoefficient load_func(dim, [&](const Vector& /*coords*/, Vector & force) {
-    force = 0.0;
-    force(0) = -1.0;
+  VectorFunctionCoefficient load_func(dim, [&](const Vector& coords, Vector& output) {
+    double x = coords(0);
+    double y = coords(1);
+    output = 0.0;
+    output(0) = 10 * x * y;
+    output(1) = -5 * (x - y) * y;
   });
 
-  f.AddDomainIntegrator(new VectorDomainLFIntegrator(load_func));
+  f.AddDomainIntegrator(new VectorFEDomainLFIntegrator(load_func));
   f.Assemble();
 
   ParGridFunction x(&fespace);
@@ -101,19 +98,16 @@ int main(int argc, char* argv[])
   Vector X(fespace.TrueVSize());
   x.GetTrueDofs(X);
 
-  static constexpr auto I = Identity<2>();
-
-  using test_space = H1<p, dim>;
-  using trial_space = H1<p, dim>;
+  using test_space = Hcurl<p>;
+  using trial_space = Hcurl<p>;
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto /*x*/, auto u, auto grad_u) {
-    auto f0 = a * u - tensor{{-1.0, 0.0}};
-    auto strain = 0.5 * (grad_u + transpose(grad_u));
-    auto f1 = b * tr(strain) * I + 2.0 * b * strain;
+  residual.AddVolumeIntegral([&](auto x, auto u, auto curl_u) {
+    auto f0 = a * u - tensor{{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]}};
+    auto f1 = b * curl_u;
     return std::tuple{f0, f1};
-  }, pmesh);
+  }, mesh);
 
   mfem::Vector r1 = A * x - f;
   mfem::Vector r2 = residual * x;
@@ -124,5 +118,6 @@ int main(int argc, char* argv[])
 
   MPI_Finalize();
 
+  #endif
   return 0;
 }

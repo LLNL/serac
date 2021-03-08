@@ -59,7 +59,39 @@ void Add(const mfem::DeviceTensor<3, double> & r_global, tensor< double, ndof, c
   }
 }
 
+template < typename element_type, typename T, int dim = element_type::dim >
+auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double,dim,dim> J) {
+  if constexpr (element_type::family == Family::H1) {
+    return std::tuple{
+      dot(u, element_type::shape_functions(xi)),
+      dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))
+    };
+  }
+
+  if constexpr (element_type::family == Family::HCURL) {
+    return std::tuple{
+      dot(u, dot(element_type::shape_functions(xi), inv(J))),
+      dot(u, element_type::shape_function_curl(xi) / det(J))
+    };
+  }
 }
+
+template < typename element_type, typename T, int dim = element_type::dim >
+auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double,dim,dim> J) {
+  if constexpr (element_type::family == Family::H1) {
+    auto W = element_type::shape_functions(xi);
+    auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
+    return outer(W, std::get<0>(f)) + dot(dW_dx, std::get<1>(f));
+  }
+
+  if constexpr (element_type::family == Family::HCURL) {
+    auto W = dot(element_type::shape_functions(xi), inv(J));
+    auto curl_W = element_type::shape_function_curl(xi) / det(J);
+    return (W * std::get<0>(f) + curl_W * std::get<1>(f));
+  }
+}
+
+} // namespace impl
 
 
 template < ::Geometry g, typename test, typename trial, int Q, typename lambda > 
@@ -88,20 +120,11 @@ void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, const mfem::Vec
       auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
       double dx = det(J_q) * dxi;
 
-      auto N = trial_element::shape_functions(xi);
-      auto dN_dx = dot(trial_element::shape_function_gradients(xi), inv(J_q));
+      auto [u_q, du_dx_q] = impl::Preprocess<trial_element>(u_local, xi, J_q);
 
-      auto u_q = dot(u_local, N);
-      auto du_dx_q = dot(u_local, dN_dx);
+      auto qf_output = qf(x_q, u_q, du_dx_q);
 
-      auto args = std::tuple{x_q, u_q, du_dx_q};
-
-      auto [f0, f1] = std::apply(qf, args);
-
-      auto W = test_element::shape_functions(xi);
-      auto dW_dx = dot(test_element::shape_function_gradients(xi), inv(J_q));
-
-      r_local += (outer(W, f0) + dot(dW_dx, f1)) * dx;
+      r_local += impl::Postprocess<test_element>(qf_output, xi, J_q) * dx;
     }
 
     impl::Add(r, r_local, e);
@@ -295,16 +318,14 @@ struct VolumeIntegral {
       evaluation_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, J_, X_, num_elements, qf);
     };
 
-    evaluation_with_derivatives = [=](const mfem::Vector & U, mfem::Vector & R){ 
-      evaluation_with_derivatives_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
-    };
-
-
+    //evaluation_with_derivatives = [=](const mfem::Vector & U, mfem::Vector & R){ 
+    //  evaluation_with_derivatives_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
+    //};
 
   }
 
   void Mult(const mfem::Vector & input_E, mfem::Vector & output_E) const {
-    evaluation_with_derivatives(input_E, output_E);
+    evaluation(input_E, output_E);
   }
 
   const mfem::Vector J_; 

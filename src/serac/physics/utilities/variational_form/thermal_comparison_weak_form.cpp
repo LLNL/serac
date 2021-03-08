@@ -34,6 +34,7 @@ int main(int argc, char* argv[])
   const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
 
   constexpr int p = 1;
+  constexpr int dim = 2;
   int         refinements = 0;
   double a = 1.0;
   double b = 1.0;
@@ -64,7 +65,7 @@ int main(int argc, char* argv[])
 
   ParMesh pmesh(MPI_COMM_WORLD, mesh);
 
-  auto fec = H1_FECollection(p, pmesh.Dimension());
+  auto fec = H1_FECollection(p, dim);
   ParFiniteElementSpace fespace(&pmesh, &fec);
 
   ParBilinearForm A(&fespace);
@@ -101,7 +102,7 @@ int main(int argc, char* argv[])
     auto f0 = a * u - (100 * x[0] * x[1]);
     auto f1 = b * du;
     return std::tuple{f0, f1};
-  }, mesh);
+  }, pmesh);
 
   mfem::Vector r1 = A * x - f;
   mfem::Vector r2 = residual * x;
