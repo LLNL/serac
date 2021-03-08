@@ -394,12 +394,13 @@ std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, co
                        "Absolute path to mesh file was not configured, did you forget to call findMeshFilePath?");
     serial_mesh.emplace(buildMeshFromFile(file_opts->absolute_mesh_file_name));
   } else if (const auto box_opts = std::get_if<BoxInputOptions>(&options.extra_options)) {
-    const auto& eles  = box_opts->elements;
+    const auto& elems = box_opts->elements;
     const auto& sizes = box_opts->overall_size;
-    if (eles.size() == 2) {
-      serial_mesh.emplace(buildRectangleMesh(eles.at(0), eles.at(1), sizes.at(0), sizes.at(1)));
+    if (elems.size() == 2) {
+      serial_mesh.emplace(buildRectangleMesh(elems.at(0), elems.at(1), sizes.at(0), sizes.at(1)));
     } else {
-      serial_mesh.emplace(buildCuboidMesh(eles.at(0), eles.at(1), eles.at(2), sizes.at(0), sizes.at(1), sizes.at(2)));
+      serial_mesh.emplace(
+          buildCuboidMesh(elems.at(0), elems.at(1), elems.at(2), sizes.at(0), sizes.at(1), sizes.at(2)));
     }
   } else if (const auto ball_opts = std::get_if<NBallInputOptions>(&options.extra_options)) {
     if (ball_opts->dimension == 2) {
@@ -464,7 +465,10 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
     return {serac::mesh::BoxInputOptions{elements, overall_size}, ser_ref, par_ref};
   } else if (mesh_type == "disk" || mesh_type == "ball") {
     int approx_elements = base["approx_elements"];
-    int dim             = (mesh_type == "disk") ? 2 : 3;
+    int dim             = 3;
+    if (mesh_type == "disk") {
+      dim = 2;
+    }
     return {serac::mesh::NBallInputOptions{approx_elements, dim}, ser_ref, par_ref};
   } else if (mesh_type == "file") {  // This is for file-based meshes
     std::string mesh_path = base["mesh"];
