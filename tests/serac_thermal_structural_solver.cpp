@@ -21,12 +21,16 @@ TEST(dynamic_solver, dyn_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore);
+
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
-  auto pmesh = mesh::refineAndDistribute(*buildMeshFromFile(mesh_file), 1, 0);
-
-  int dim = pmesh->Dimension();
+  auto      pmesh = mesh::refineAndDistribute(*buildMeshFromFile(mesh_file), 1, 0);
+  const int dim   = pmesh->Dimension();
+  serac::StateManager::setMesh(std::move(pmesh));
 
   // define a boundary attribute set
   std::set<int> ess_bdr = {1};
@@ -81,7 +85,7 @@ TEST(dynamic_solver, dyn_solve)
       Solid::TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
-  ThermalSolid ts_solver(1, pmesh, therm_options, default_dynamic);
+  ThermalSolid ts_solver(1, therm_options, default_dynamic);
   ts_solver.setDisplacementBCs(ess_bdr, deform);
   ts_solver.setTractionBCs(trac_bdr, traction_coef, false);
   ts_solver.setSolidMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),

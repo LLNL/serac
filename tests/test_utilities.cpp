@@ -156,10 +156,19 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
 
 template <typename PhysicsModule>
 void runModuleTest(const std::string& input_file, const std::string& test_name,
-                   std::shared_ptr<mfem::ParMesh> custom_mesh)
+                   std::unique_ptr<mfem::ParMesh> custom_mesh, std::optional<int> restart_cycle)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
+
+  // Initialize the DataCollection
+  // WARNING: This must happen before serac::input::initialize, as the loading
+  // process will wipe out the datastore
+  if (restart_cycle) {
+    serac::StateManager::initialize(datastore, *restart_cycle);
+  } else {
+    serac::StateManager::initialize(datastore);
+  }
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file);
@@ -167,23 +176,28 @@ void runModuleTest(const std::string& input_file, const std::string& test_name,
   defineTestSchema<PhysicsModule>(inlet);
 
   // Build the mesh
-  std::shared_ptr<mfem::ParMesh> mesh;
-  if (custom_mesh) {
-    mesh = custom_mesh;
-  } else {
-    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-    if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-      file_options->absolute_mesh_file_name =
-          serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
+  if (!restart_cycle) {
+    std::unique_ptr<mfem::ParMesh> mesh;
+    if (custom_mesh) {
+      mesh = std::move(custom_mesh);
+    } else {
+      auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+      if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+        file_options->absolute_mesh_file_name =
+            serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
+      }
+      mesh = serac::mesh::buildParallelMesh(mesh_options);
     }
-    mesh = serac::mesh::buildParallelMesh(mesh_options);
+    serac::StateManager::setMesh(std::move(mesh));
   }
+
+  const int dim = serac::StateManager::mesh().Dimension();
 
   const std::string module_name = detail::moduleName<PhysicsModule>();
 
   // Define the solid solver object
   auto          module_options = inlet[module_name].get<typename PhysicsModule::InputOptions>();
-  PhysicsModule phys_module(mesh, module_options);
+  PhysicsModule phys_module(module_options);
 
   const bool is_dynamic = inlet[module_name].contains("dynamics");
 
@@ -223,13 +237,15 @@ void runModuleTest(const std::string& input_file, const std::string& test_name,
   // Output the final state
   phys_module.outputState();
 
-  detail::verifyFields(phys_module, inlet, mesh->Dimension());
+  detail::verifyFields(phys_module, inlet, dim);
+  // WARNING: This will destroy the mesh before the Solid module destructor gets called
+  // serac::StateManager::reset();
 }
 
-template void runModuleTest<Solid>(const std::string& input_file, const std::string& test_name,
-                                   std::shared_ptr<mfem::ParMesh> custom_mesh);
-template void runModuleTest<ThermalConduction>(const std::string& input_file, const std::string& test_name,
-                                               std::shared_ptr<mfem::ParMesh> custom_mesh);
+template void runModuleTest<Solid>(const std::string&, const std::string&, std::unique_ptr<mfem::ParMesh>,
+                                   std::optional<int>);
+template void runModuleTest<ThermalConduction>(const std::string&, const std::string&, std::unique_ptr<mfem::ParMesh>,
+                                               std::optional<int>);
 
 }  // end namespace test_utils
 
