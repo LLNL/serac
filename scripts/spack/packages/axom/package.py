@@ -60,7 +60,7 @@ class Axom(CMakePackage, CudaPackage):
     version('develop', branch='develop', submodules=True)
 
     # SERAC EDIT START
-    # version('0.4.0serac', commit='df316b84b7dca4e8779efe62b31611ca79811c6a', submodules="True")
+    # version('0.4.0serac', commit='31c3d71bba8844cbcfff60a9d17ae0df5d9682d6', submodules="True")
     version('0.4.0serac', branch='bugfix/essman/cuda_build', submodules="True")
     # SERAC EDIT END
 

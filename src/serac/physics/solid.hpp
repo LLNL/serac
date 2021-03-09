@@ -105,9 +105,9 @@ public:
     /**
      * @brief Input file parameters specific to this class
      *
-     * @param[in] table Inlet's SchemaCreator that input files will be added to
+     * @param[in] container Inlet's SchemaCreator that input files will be added to
      **/
-    static void defineInputFileSchema(axom::inlet::Container& table);
+    static void defineInputFileSchema(axom::inlet::Container& container);
 
     /**
      * @brief The order of the discretization

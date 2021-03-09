@@ -149,9 +149,9 @@ struct FileInputOptions {
   /**
    * @brief Input file parameters specific to this class
    *
-   * @param[in] table Inlet's SchemaCreator that input files will be added to
+   * @param[in] container Inlet's SchemaCreator that input files will be added to
    **/
-  static void defineInputFileSchema(axom::inlet::Container& table);
+  static void defineInputFileSchema(axom::inlet::Container& container);
 
   /**
    * @brief The relative path for the mesh file
@@ -172,9 +172,9 @@ struct GenerateInputOptions {
   /**
    * @brief Input file parameters for mesh generation
    *
-   * @param[in] table Inlet's SchemaCreator that input files will be added to
+   * @param[in] container Inlet's SchemaCreator that input files will be added to
    **/
-  static void defineInputFileSchema(axom::inlet::Container& table);
+  static void defineInputFileSchema(axom::inlet::Container& container);
 
   /**
    * @brief The number of elements in each direction
@@ -197,9 +197,9 @@ struct InputOptions {
   /**
    * @brief Input file parameters for mesh generation
    *
-   * @param[in] table Inlet's SchemaCreator that input files will be added to
+   * @param[in] container Inlet's SchemaCreator that input files will be added to
    **/
-  static void defineInputFileSchema(axom::inlet::Container& table);
+  static void defineInputFileSchema(axom::inlet::Container& container);
 
   /**
    * @brief The mesh input options (either file or generated)
