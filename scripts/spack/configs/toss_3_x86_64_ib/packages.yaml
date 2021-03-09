@@ -103,7 +103,7 @@ packages:
   unzip:
     buildable: false
     externals:
-    - spec: unzip@6.00
+    - spec: unzip@6.0
       prefix: /usr
   zlib:
     buildable: false

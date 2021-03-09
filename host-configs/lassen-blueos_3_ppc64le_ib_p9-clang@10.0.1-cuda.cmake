@@ -53,7 +53,7 @@ set(MPIEXEC_EXECUTABLE "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-rele
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2021_03_08_06_06_06/clang-10.0.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2021_03_09_07_55_31/clang-10.0.1" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 
@@ -77,6 +77,8 @@ set(CALIPER_DIR "${TPL_ROOT}/caliper-master" CACHE PATH "")
 
 set(RAJA_DIR "${TPL_ROOT}/raja-0.13.0" CACHE PATH "")
 
+set(camp_DIR "${TPL_ROOT}/camp-0.1.0" CACHE PATH "")
+
 set(UMPIRE_DIR "${TPL_ROOT}/umpire-4.1.2" CACHE PATH "")
 
 #------------------------------------------------------------------------------
@@ -97,3 +99,5 @@ set(CLANGFORMAT_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-forma
 set(CLANGTIDY_EXECUTABLE "/usr/tce/packages/clang/clang-10.0.0/bin/clang-tidy" CACHE PATH "")
 
 set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-2.1/bin/cppcheck" CACHE PATH "")
+
+

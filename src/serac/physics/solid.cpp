@@ -396,39 +396,39 @@ void Solid::advanceTimestep(double& dt)
 void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& table)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
-  container.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
+  table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
 
   // neo-Hookean material parameters
-  container.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
-  container.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
+  table.addDouble("mu", "Shear modulus in the Neo-Hookean hyperelastic model.").defaultValue(0.25);
+  table.addDouble("K", "Bulk modulus in the Neo-Hookean hyperelastic model.").defaultValue(5.0);
 
   // Geometric nonlinearities flag
-  container.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
+  table.addBool("geometric_nonlin", "Flag to include geometric nonlinearities in the residual calculation.")
       .defaultValue(true);
 
   // Geometric nonlinearities flag
-  container
+  table
       .addBool("material_nonlin",
                "Flag to include material nonlinearities (linear elastic vs. neo-Hookean material model).")
       .defaultValue(true);
 
-  container.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
+  table.addDouble("viscosity", "Viscosity constant").defaultValue(0.0);
 
-  container.addDouble("density", "Initial mass density").defaultValue(1.0);
+  table.addDouble("density", "Initial mass density").defaultValue(1.0);
 
-  auto& equation_solver_container = container.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_container);
+  auto& equation_solver_table = table.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
 
-  auto& dynamics_container = container.addStruct("dynamics", "Parameters for mass matrix inversion");
-  dynamics_container.addString("timestepper", "Timestepper (ODE) method to use");
-  dynamics_container.addString("enforcement_method", "Time-varying constraint enforcement method to use");
+  auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");
+  dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
+  dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
-  auto& bc_container = container.addStructDictionary("boundary_conds", "Container of boundary conditions");
-  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_container);
+  auto& bc_table = table.addStructDictionary("boundary_conds", "Container of boundary conditions");
+  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
 
-  auto& init_displ = container.addStruct("initial_displacement", "Coefficient for initial condition");
+  auto& init_displ = table.addStruct("initial_displacement", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_displ);
-  auto& init_velo = container.addStruct("initial_velocity", "Coefficient for initial condition");
+  auto& init_velo = table.addStruct("initial_velocity", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_velo);
 }
 
