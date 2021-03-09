@@ -248,7 +248,7 @@ void ThermalConduction::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Container& table)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
@@ -290,7 +290,8 @@ using serac::DirichletEnforcementMethod;
 using serac::ThermalConduction;
 using serac::TimestepMethod;
 
-ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::operator()(const axom::inlet::Table& base)
+ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::operator()(
+    const axom::inlet::Container& base)
 {
   ThermalConduction::InputOptions result;
 

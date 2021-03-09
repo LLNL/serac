@@ -393,7 +393,7 @@ void Solid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-void Solid::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& table)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
   table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
@@ -466,7 +466,7 @@ using serac::DirichletEnforcementMethod;
 using serac::Solid;
 using serac::TimestepMethod;
 
-Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet::Table& base)
+Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet::Container& base)
 {
   Solid::InputOptions result;
 

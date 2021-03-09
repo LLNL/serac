@@ -366,7 +366,7 @@ std::unique_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
 
 namespace mesh {
 
-void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void InputOptions::defineInputFileSchema(axom::inlet::Container& table)
 {
   // Refinement levels
   table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
@@ -433,7 +433,7 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, cons
 }  // namespace mesh
 }  // namespace serac
 
-serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const axom::inlet::Table& base)
+serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const axom::inlet::Container& base)
 {
   int ser_ref = base["ser_ref_levels"];
   int par_ref = base["par_ref_levels"];
