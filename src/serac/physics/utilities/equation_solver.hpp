@@ -96,7 +96,7 @@ public:
   /**
    * Input file parameters specific to this class
    **/
-  static void DefineInputFileSchema(axom::inlet::Container& table);
+  static void DefineInputFileSchema(axom::inlet::Container& container);
 
 private:
   /**

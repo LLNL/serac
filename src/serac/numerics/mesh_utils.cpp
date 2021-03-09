@@ -366,25 +366,25 @@ std::unique_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
 
 namespace mesh {
 
-void InputOptions::defineInputFileSchema(axom::inlet::Container& table)
+void InputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Refinement levels
-  table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
-  table.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
+  container.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
+  container.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
 
-  table.addString("type", "Type of mesh").required();
+  container.addString("type", "Type of mesh").required();
 
   // mesh path
-  table.addString("mesh", "Path to Mesh file");
+  container.addString("mesh", "Path to Mesh file");
 
   // mesh generation options
-  auto& elements = table.addStruct("elements");
+  auto& elements = container.addStruct("elements");
   // JW: Can these be specified as requierd if elements is defined?
   elements.addInt("x", "x-dimension");
   elements.addInt("y", "y-dimension");
   elements.addInt("z", "z-dimension");
 
-  auto& size = table.addStruct("size");
+  auto& size = container.addStruct("size");
   // JW: Can these be specified as requierd if elements is defined?
   size.addDouble("x", "Size in the x-dimension");
   size.addDouble("y", "Size in the y-dimension");

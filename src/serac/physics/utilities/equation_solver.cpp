@@ -337,43 +337,44 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   return *superlu_grad_mat_;
 }
 
-void EquationSolver::DefineInputFileSchema(axom::inlet::Container& table)
+void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
 {
-  auto& linear_table = table.addStruct("linear", "Linear Equation Solver Parameters")
-                           .required()
-                           .registerVerifier([](const axom::inlet::Container& table_to_verify) {
-                             // Make sure that the provided options match the desired linear solver type
-                             const bool is_iterative = (table_to_verify["type"].get<std::string>() == "iterative") &&
-                                                       table_to_verify.contains("iterative_options");
-                             const bool is_direct = (table_to_verify["type"].get<std::string>() == "direct") &&
-                                                    table_to_verify.contains("direct_options");
-                             return is_iterative || is_direct;
-                           });
+  auto& linear_container = container.addStruct("linear", "Linear Equation Solver Parameters")
+                               .required()
+                               .registerVerifier([](const axom::inlet::Container& container_to_verify) {
+                                 // Make sure that the provided options match the desired linear solver type
+                                 const bool is_iterative =
+                                     (container_to_verify["type"].get<std::string>() == "iterative") &&
+                                     container_to_verify.contains("iterative_options");
+                                 const bool is_direct = (container_to_verify["type"].get<std::string>() == "direct") &&
+                                                        container_to_verify.contains("direct_options");
+                                 return is_iterative || is_direct;
+                               });
 
   // Enforce the solver type - must be iterative or direct
-  linear_table.addString("type", "The type of solver parameters to use (iterative|direct)")
+  linear_container.addString("type", "The type of solver parameters to use (iterative|direct)")
       .required()
       .validValues({"iterative", "direct"});
 
-  auto& iterative_table = linear_table.addStruct("iterative_options", "Iterative solver parameters");
-  iterative_table.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
-  iterative_table.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
-  iterative_table.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
-  iterative_table.addInt("print_level", "Linear print level.").defaultValue(0);
-  iterative_table.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
-  iterative_table.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
+  auto& iterative_container = linear_container.addStruct("iterative_options", "Iterative solver parameters");
+  iterative_container.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
+  iterative_container.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
+  iterative_container.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
+  iterative_container.addInt("print_level", "Linear print level.").defaultValue(0);
+  iterative_container.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
+  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
       .defaultValue("JacobiSmoother");
 
-  auto& direct_table = linear_table.addStruct("direct_options", "Direct solver parameters");
-  direct_table.addInt("print_level", "Linear print level.").defaultValue(0);
+  auto& direct_container = linear_container.addStruct("direct_options", "Direct solver parameters");
+  direct_container.addInt("print_level", "Linear print level.").defaultValue(0);
 
   // Only needed for nonlinear problems
-  auto& nonlinear_table = table.addStruct("nonlinear", "Newton Equation Solver Parameters").required(false);
-  nonlinear_table.addDouble("rel_tol", "Relative tolerance for the Newton solve.").defaultValue(1.0e-2);
-  nonlinear_table.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
-  nonlinear_table.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
-  nonlinear_table.addInt("print_level", "Nonlinear print level.").defaultValue(0);
-  nonlinear_table.addString("solver_type", "Solver type (MFEMNewton|KINFullStep|KINLineSearch)")
+  auto& nonlinear_container = container.addStruct("nonlinear", "Newton Equation Solver Parameters").required(false);
+  nonlinear_container.addDouble("rel_tol", "Relative tolerance for the Newton solve.").defaultValue(1.0e-2);
+  nonlinear_container.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
+  nonlinear_container.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
+  nonlinear_container.addInt("print_level", "Nonlinear print level.").defaultValue(0);
+  nonlinear_container.addString("solver_type", "Solver type (MFEMNewton|KINFullStep|KINLineSearch)")
       .defaultValue("MFEMNewton");
 }
 
