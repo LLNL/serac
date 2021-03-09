@@ -107,7 +107,7 @@ public:
      *
      * @param[in] table Inlet's SchemaCreator that input files will be added to
      **/
-    static void defineInputFileSchema(axom::inlet::Table& table);
+    static void defineInputFileSchema(axom::inlet::Container& table);
 
     /**
      * @brief The order of the discretization
@@ -504,5 +504,5 @@ protected:
  */
 template <>
 struct FromInlet<serac::Solid::InputOptions> {
-  serac::Solid::InputOptions operator()(const axom::inlet::Table& base);
+  serac::Solid::InputOptions operator()(const axom::inlet::Container& base);
 };

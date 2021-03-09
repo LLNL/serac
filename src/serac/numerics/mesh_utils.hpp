@@ -151,7 +151,7 @@ struct FileInputOptions {
    *
    * @param[in] table Inlet's SchemaCreator that input files will be added to
    **/
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void defineInputFileSchema(axom::inlet::Container& table);
 
   /**
    * @brief The relative path for the mesh file
@@ -174,7 +174,7 @@ struct GenerateInputOptions {
    *
    * @param[in] table Inlet's SchemaCreator that input files will be added to
    **/
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void defineInputFileSchema(axom::inlet::Container& table);
 
   /**
    * @brief The number of elements in each direction
@@ -199,7 +199,7 @@ struct InputOptions {
    *
    * @param[in] table Inlet's SchemaCreator that input files will be added to
    **/
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void defineInputFileSchema(axom::inlet::Container& table);
 
   /**
    * @brief The mesh input options (either file or generated)
@@ -256,5 +256,5 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, cons
  */
 template <>
 struct FromInlet<serac::mesh::InputOptions> {
-  serac::mesh::InputOptions operator()(const axom::inlet::Table& base);
+  serac::mesh::InputOptions operator()(const axom::inlet::Container& base);
 };
