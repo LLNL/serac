@@ -69,11 +69,7 @@ std::string fullDirectoryFromPath(const std::string& path)
   return dir;
 }
 
-<<<<<<< HEAD
-void defineVectorInputFileSchema(axom::inlet::Container& table)
-=======
 void defineVectorInputFileSchema(axom::inlet::Container& container)
->>>>>>> tpl/essman/table_to_container
 {
   // TODO: I had to remove the required tag on x as we now have an optional vector input in the coefficients. IT would
   // be nice to support "If this exists, this subcomponent is required."
@@ -82,22 +78,14 @@ void defineVectorInputFileSchema(axom::inlet::Container& container)
   container.addDouble("z", "z-component of vector");
 }
 
-<<<<<<< HEAD
-void defineOutputTypeInputFileSchema(axom::inlet::Container& table)
-=======
 void defineOutputTypeInputFileSchema(axom::inlet::Container& container)
->>>>>>> tpl/essman/table_to_container
 {
   container.addString("output_type", "Desired output format")
       .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
       .defaultValue("VisIt");
 }
 
-<<<<<<< HEAD
-void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Container& table)
-=======
 void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Container& container)
->>>>>>> tpl/essman/table_to_container
 {
   container.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
   CoefficientInputOptions::defineInputFileSchema(container);
@@ -180,11 +168,7 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
   }
 }
 
-<<<<<<< HEAD
-void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& table)
-=======
 void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& container)
->>>>>>> tpl/essman/table_to_container
 {
   // Vectors are implemented as lua usertypes and can be converted to/from mfem::Vector
   container.addFunction("vector_function", axom::inlet::FunctionTag::Vector,

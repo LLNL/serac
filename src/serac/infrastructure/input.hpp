@@ -56,21 +56,13 @@ std::string fullDirectoryFromPath(const std::string& file_path);
  * @brief Defines the schema for a vector in R^{1,2,3} space
  * @param[inout] container The base container on which to define the schema
  */
-<<<<<<< HEAD
-void defineVectorInputFileSchema(axom::inlet::Container& table);
-=======
 void defineVectorInputFileSchema(axom::inlet::Container& container);
->>>>>>> tpl/essman/table_to_container
 
 /**
  * @brief Defines the schema for serac::OutputType
  * @param[inout] container The base container on which to define the schema
  */
-<<<<<<< HEAD
-void defineOutputTypeInputFileSchema(axom::inlet::Container& table);
-=======
 void defineOutputTypeInputFileSchema(axom::inlet::Container& container);
->>>>>>> tpl/essman/table_to_container
 
 /**
  * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
