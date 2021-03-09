@@ -35,7 +35,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.3.1/bin/mpic
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_03_09_09_17_52/gcc-8.3.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_03_09_11_52_12/gcc-8.3.1" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 

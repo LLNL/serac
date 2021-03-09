@@ -145,7 +145,8 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("umpire~shared", when="+umpire")
 
     # JBE: Spack bug? Default is true...
-    depends_on("axom+lua")
+    # Cannot reproduce consistently, will flip between invocations of "spack spec"
+    depends_on("axom+lua+hdf5")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran+mfem~shared",
