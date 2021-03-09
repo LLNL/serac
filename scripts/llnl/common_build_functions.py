@@ -25,7 +25,6 @@ import shutil
 import time
 
 from os.path import join as pjoin
-from packaging import version
 
 def sexe(cmd,
          ret_output=False,
@@ -137,7 +136,9 @@ def setup_clingo():
         import pip
         pip_ver = pip.__version__
         # https://github.com/pypa/manylinux
-        if version.parse(pip_ver) < version.parse("19.3"):
+        # JBE: I think the string comparison is somewhat correct here, if not we'll
+        # need to install setuptools for 'packaging.version'
+        if pip_ver < "19.3":
             print("[ERROR: pip version {0} is too old to install clingo".format(pip_ver))
             print("  pip 19.3 is required for PEP 599 support")
             print("]")
