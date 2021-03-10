@@ -16,14 +16,19 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
-    : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0), bcs_(*mesh)
+BasePhysics::BasePhysics()
+    : mesh_(StateManager::mesh()),
+      comm_(mesh_.GetComm()),
+      output_type_(serac::OutputType::VisIt),
+      time_(0.0),
+      cycle_(0),
+      bcs_(mesh_)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
   order_                         = 1;
 }
 
-BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
+BasePhysics::BasePhysics(int n, int p) : BasePhysics()
 {
   order_ = p;
   gf_initialized_.assign(static_cast<std::size_t>(n), false);
@@ -72,12 +77,9 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
       break;
     }
 
-    case serac::OutputType::GLVis: {
-      break;
-    }
-
+    case serac::OutputType::GLVis:
+      [[fallthrough]];
     case OutputType::SidreVisIt: {
-      dc_ = std::make_unique<axom::sidre::MFEMSidreDataCollection>(root_name_, &state_.front().get().mesh());
       break;
     }
 
@@ -85,7 +87,7 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
       SLIC_ERROR_ROOT("OutputType not recognized!");
   }
 
-  if ((output_type_ == OutputType::VisIt) || (output_type_ == OutputType::SidreVisIt)) {
+  if (output_type_ == OutputType::VisIt) {
     // Implicitly convert from ref_wrapper
     for (FiniteElementState& state : state_) {
       dc_->RegisterField(state.name(), &state.gridFunc());
@@ -99,11 +101,14 @@ void BasePhysics::outputState() const
     case serac::OutputType::VisIt:
       [[fallthrough]];
     case serac::OutputType::ParaView:
-      [[fallthrough]];
-    case serac::OutputType::SidreVisIt: {
       dc_->SetCycle(cycle_);
       dc_->SetTime(time_);
       dc_->Save();
+      break;
+    case serac::OutputType::SidreVisIt: {
+      // Implemented through a helper method as the full interface of the MFEMSidreDataCollection
+      // is restricted from global access
+      StateManager::save(time_, cycle_);
       break;
     }
 
@@ -126,5 +131,15 @@ void BasePhysics::outputState() const
       SLIC_ERROR_ROOT("OutputType not recognized!");
   }
 }
+
+namespace detail {
+std::string addPrefix(const std::string& prefix, const std::string& target)
+{
+  if (prefix.empty()) {
+    return target;
+  }
+  return prefix + "_" + target;
+}
+}  // namespace detail
 
 }  // namespace serac

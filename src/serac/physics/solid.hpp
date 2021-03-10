@@ -182,22 +182,20 @@ public:
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] order The order of the displacement field
-   * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] options The options for the linear, nonlinear, and ODE solves
    * @param[in] geom_nonlin Flag to include geometric nonlinearities
    * @param[in] keep_deformation Flag to keep the deformation in the underlying mesh post-destruction
+   * @param[in] name An optional name for the physics module instance
    */
-  Solid(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options,
-        GeometricNonlinearities geom_nonlin      = GeometricNonlinearities::On,
-        FinalMeshOption         keep_deformation = FinalMeshOption::Deformed);
+  Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On,
+        FinalMeshOption keep_deformation = FinalMeshOption::Deformed, const std::string& name = "");
 
   /**
    * @brief Construct a new Nonlinear Solid Solver object
    *
-   * @param[in] mesh The MFEM parallel mesh to solve on
    * @param[in] options The solver information parsed from the input file
    */
-  Solid(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options);
+  Solid(const InputOptions& options);
 
   /**
    * @brief Set displacement boundary conditions

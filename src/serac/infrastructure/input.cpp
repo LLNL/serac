@@ -24,8 +24,11 @@ axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::stri
   luareader->parseFile(input_file_path);
 
   // Store inlet data under its own group
+  if (datastore.getRoot()->hasGroup("input_file")) {
+    // If this is a restart, wipe out the previous input file
+    datastore.getRoot()->destroyGroup("input_file");
+  }
   axom::sidre::Group* inlet_root = datastore.getRoot()->createGroup("input_file");
-
   return axom::inlet::Inlet(std::move(luareader), inlet_root);
 }
 

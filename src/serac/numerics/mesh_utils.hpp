@@ -30,9 +30,9 @@ namespace serac {
  * MFEM Mesh object.
  *
  * @param[in] mesh_file The mesh file to open
- * @return A shared_ptr containing the serial mesh object
+ * @return A unique_ptr containing the serial mesh object
  */
-std::shared_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file);
+std::unique_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file);
 
 /**
  * @brief Constructs a 2D MFEM mesh of a unit disk, centered at the origin
@@ -42,9 +42,9 @@ std::shared_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file);
  *
  * @param[in] approx_number_of_elements The appoximate number of elements
  * @param[in] comm The MPI communicator to build the parmesh on
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm = MPI_COMM_WORLD);
+std::unique_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 3D MFEM mesh of a unit ball, centered at the origin
@@ -54,9 +54,9 @@ std::shared_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
  *
  * @param[in] approx_number_of_elements Approximate number of elements
  * @param[in] comm The MPI communicator to build the parmesh on
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm = MPI_COMM_WORLD);
+std::unique_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Constructs a 2D MFEM mesh of a rectangle
@@ -66,9 +66,9 @@ std::shared_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
  * @param[in] size_x Overall size in the x-direction
  * @param[in] size_y Overall size in the y-direction
  * @param[in] comm The MPI communicator to build the parmesh on
- * @return A shared_ptr containing the constructed serial mesh
+ * @return A unique_ptr containing the constructed serial mesh
  */
-std::shared_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
+std::unique_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x = 1.,
                                                double size_y = 1.);
 
 /**
@@ -81,9 +81,9 @@ std::shared_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_i
  * @param[in] size_y Overall size in the y-direction
  * @param[in] size_z Overall size in the z-direction
  * @param[in] comm MPI Communicator
- * @return A shared_ptr containing the constructed serial mesh
+ * @return A unique_ptr containing the constructed serial mesh
  */
-std::shared_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x = 1.,
+std::unique_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x = 1.,
                                             double size_y = 1., double size_z = 1.);
 
 /**
@@ -95,9 +95,9 @@ std::shared_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y
  * @param[in] height the number of elements in the z-direction
  * @param[in] comm the MPI communicator to build the parmesh on
  *
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
+std::unique_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
                                                  double height, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
@@ -112,9 +112,9 @@ std::shared_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
  * @param[in] sectors the number of starting sectors in the hollow cylinder
  * @param[in] comm the MPI communicator to build the parmesh on
  *
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
+std::unique_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
                                                        double inner_radius, double outer_radius, double height,
                                                        double total_angle = M_PI, int sectors = 8,
                                                        const MPI_Comm comm = MPI_COMM_WORLD);
@@ -129,9 +129,9 @@ std::shared_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, in
  * @param[in] sectors the number of starting sectors in the hollow cylinder
  * @param[in] comm the MPI communicator to build the parmesh on
  *
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
+std::unique_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
                                              double total_angle = M_PI, int sectors = 8,
                                              const MPI_Comm comm = MPI_COMM_WORLD);
 
@@ -226,9 +226,9 @@ struct InputOptions {
  * @param[in] options The options used to construct the mesh
  * @param[in] comm The MPI communicator to use with the parallel mesh
  *
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  */
-std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm = MPI_COMM_WORLD);
+std::unique_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm = MPI_COMM_WORLD);
 
 /**
  * @brief Finalizes a serial mesh into a refined parallel mesh
@@ -238,12 +238,12 @@ std::shared_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, co
  * @param[in] refine_parallel The number of parallel refinements
  * @param[in] comm The MPI communicator
  *
- * @return A shared_ptr containing the constructed mesh
+ * @return A unique_ptr containing the constructed mesh
  *
  * @note It is sometimes required to refine serially first if your number of processors
  * is less than the original number of mesh elements
  */
-std::shared_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial = 0,
+std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial = 0,
                                                    const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD);
 
 }  // namespace mesh

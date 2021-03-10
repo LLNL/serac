@@ -15,18 +15,19 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options)
-    : BasePhysics(mesh, NUM_FIELDS, order),
-      temperature_(*mesh,
-                   FiniteElementState::Options{
-                       .order = order, .vector_dim = 1, .ordering = mfem::Ordering::byNODES, .name = "temperature"}),
+ThermalConduction::ThermalConduction(int order, const SolverOptions& options, const std::string& name)
+    : BasePhysics(NUM_FIELDS, order),
+      temperature_(StateManager::newState(FiniteElementState::Options{.order      = order,
+                                                                      .vector_dim = 1,
+                                                                      .ordering   = mfem::Ordering::byNODES,
+                                                                      .name = detail::addPrefix(name, "temperature")})),
       residual_(temperature_.space().TrueVSize()),
       ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
            nonlin_solver_, bcs_)
 {
   state_.push_back(temperature_);
 
-  nonlin_solver_ = mfem_ext::EquationSolver(mesh->GetComm(), options.T_lin_options, options.T_nonlin_options);
+  nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
   nonlin_solver_.SetOperator(residual_);
 
   // Check for dynamic mode
@@ -54,8 +55,8 @@ ThermalConduction::ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> m
   rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
 }
 
-ThermalConduction::ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options)
-    : ThermalConduction(options.order, mesh, options.solver_options)
+ThermalConduction::ThermalConduction(const InputOptions& options)
+    : ThermalConduction(options.order, options.solver_options)
 {
   setConductivity(std::make_unique<mfem::ConstantCoefficient>(options.kappa));
   setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));

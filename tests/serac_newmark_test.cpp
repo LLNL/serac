@@ -82,8 +82,10 @@ protected:
       }
       pmesh->SetAttributes();
     }
+    const int space_dim = pmesh->SpaceDimension();
+    serac::StateManager::setMesh(std::move(pmesh));
 
-    auto solid_solver = std::make_unique<serac::Solid>(pmesh, solid_solver_options);
+    auto solid_solver = std::make_unique<serac::Solid>(solid_solver_options);
 
     const bool is_dynamic = inlet["solid"].contains("dynamics");
 
@@ -94,7 +96,7 @@ protected:
 
     // add gravity load
     if (inlet.contains("g")) {
-      mfem::Vector gravity(pmesh->SpaceDimension());
+      mfem::Vector gravity(space_dim);
       gravity    = 0.;
       gravity[1] = inlet["g"];
       solid_solver->addBodyForce(std::make_shared<mfem::VectorConstantCoefficient>(gravity));
@@ -118,6 +120,8 @@ TEST_F(NewmarkBetaTest, SimpleLua)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
+  // Intialize MFEMSidreDataCollection
+  serac::StateManager::initialize(datastore);
 
   // Initialize Inlet and read input file
   std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve.lua";
@@ -185,6 +189,8 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
+  // Intialize MFEMSidreDataCollection
+  serac::StateManager::initialize(datastore);
 
   // Initialize Inlet and read input file
   std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve_bending.lua";
@@ -225,6 +231,8 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
+  // Intialize MFEMSidreDataCollection
+  serac::StateManager::initialize(datastore);
 
   // Initialize Inlet and read input file
   std::string input_file =
