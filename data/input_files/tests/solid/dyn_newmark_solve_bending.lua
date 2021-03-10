@@ -4,7 +4,7 @@ expected_v_l2norm = 0.2252
 epsilon = 0.0001
 
 main_mesh = {
-    type = "generate",
+    type = "box",
     elements = {x = 3, y = 1},
     size = {x = 8., y = 1.},
     -- serial and parallel refinement levels

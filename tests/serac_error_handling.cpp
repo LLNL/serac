@@ -54,7 +54,7 @@ TEST(serac_error_handling, equationsolver_kinsol_not_available)
 
 TEST(serac_error_handling, bc_project_requires_state)
 {
-  auto mesh      = buildDiskMesh(10);
+  auto mesh      = mesh::refineAndDistribute(buildDiskMesh(10));
   int  num_attrs = mesh->bdr_attributes.Max();
 
   auto              coef = std::make_shared<mfem::ConstantCoefficient>();
@@ -121,7 +121,7 @@ TEST(serac_error_handling, invalid_output_type)
   // Create DataStore
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore);
-  serac::StateManager::setMesh(buildDiskMesh(1000));
+  serac::StateManager::setMesh(mesh::refineAndDistribute(buildDiskMesh(1000)));
   ThermalConduction physics(1, ThermalConduction::defaultQuasistaticOptions());
   // Try a definitely wrong number to ensure that an invalid output type is detected
   EXPECT_THROW(physics.initializeOutput(static_cast<OutputType>(-7), ""), SlicErrorException);
