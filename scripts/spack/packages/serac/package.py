@@ -141,7 +141,7 @@ class Serac(CMakePackage, CudaPackage):
     # Axom enables RAJA/Umpire by default
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
-    depends_on("raja~openmp~shared", when="+raja")
+    depends_on("raja@camp_patch~openmp~shared", when="+raja")
     depends_on("umpire~shared", when="+umpire")
 
     # JBE: Spack bug? Default is true...
