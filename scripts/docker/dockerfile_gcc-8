@@ -3,13 +3,14 @@ LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
+RUN sudo add-apt-repository ppa:deadsnakes/ppa # python3.6 needed for clingo
 RUN sudo apt-get update -y
-RUN sudo apt-get install curl wget ssh pkg-config build-essential libopenblas-dev tar lcov xsltproc python3 python3-pip -fy
+RUN sudo apt-get install curl wget ssh pkg-config build-essential libopenblas-dev tar lcov xsltproc python3.6 python3-pip -fy
 RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-7 100
-RUN sudo ln -f -s python3 /usr/bin/python # Compatibility with legacy Python
-RUN sudo python3 -m pip install --upgrade "pip < 21.0" # py3.5 support dropped by pip in 21.0
-RUN sudo python3 -m pip install cffi
-RUN sudo python3 -m pip install -i https://test.pypi.org/simple/ clingo-cffi-wheel
+RUN sudo ln -f -s python3.6 /usr/bin/python # Compatibility with legacy Python
+RUN sudo python3.6 -m pip install --upgrade pip
+RUN sudo python3.6 -m pip install cffi
+RUN sudo python3.6 -m pip install -i https://test.pypi.org/simple/ clingo-cffi-wheel
 
 # Avoid building CMake from scratch
 RUN wget https://cmake.org/files/v3.18/cmake-3.18.5-Linux-x86_64.sh
@@ -27,11 +28,11 @@ USER serac
 RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git
 
 # New containers will use Python3
-RUN cd serac && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu16/ --project-json=.uberenv_config.json \
+RUN cd serac && python3.6 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu16/ --project-json=.uberenv_config.json \
                                                      --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
 
 # Make sure the new hostconfig worked
-RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
+RUN cd serac && python3.6 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
 
 RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac/*.cmake /home/serac/export_hostconfig
