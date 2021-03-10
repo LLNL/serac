@@ -21,7 +21,7 @@ const auto input_file = SERAC_REPO_DIR "/examples/simple_conduction/conduction.l
 
 int main(int argc, char* argv[])
 {
-  /*auto [num_procs, rank] = */serac::initialize(argc, argv);
+  serac::initialize(argc, argv);
 
   // _inlet_init_start
   axom::sidre::DataStore datastore;
