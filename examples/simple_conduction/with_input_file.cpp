@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
   auto& thermal_schema = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_schema);
 
-  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
   // _inlet_schema_end
 
   // _inlet_verify_start
@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
   serac::ThermalConduction conduction(conduction_opts);
   // _create_module_end
   // _output_type_start
-  conduction.initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "simple_conduction_with_input_file");
+  conduction.initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "simple_conduction_with_input_file");
   // _output_type_end
   // Complete the solver setup
   conduction.completeSetup();
