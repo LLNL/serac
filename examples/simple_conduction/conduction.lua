@@ -34,6 +34,10 @@ thermal_conduction = {
             rel_tol     = 1.0e-4, -- w.r.t. residual
             abs_tol     = 1.0e-8,
             max_iter    = 500,
+            -- WARNING: Undocumented in MFEM, but ranges from -1 to 3,
+            -- -1 is no output, 0 is warnings/errors only,
+            -- 1 is per-iteration norm only, 2 is final iteration count only,
+            -- 3 includes extra debug info
             print_level = 1,
         },
     },
