@@ -382,7 +382,7 @@ void InputOptions::defineInputFileSchema(axom::inlet::Container& container)
   size.addDouble("z", "Size in the z-dimension");
 
   // n-ball mesh generation options
-  table.addInt("approx_elements", "Approximate number of elements in an n-ball mesh");
+  container.addInt("approx_elements", "Approximate number of elements in an n-ball mesh");
 }
 
 std::unique_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
