@@ -103,8 +103,6 @@ class Serac(CMakePackage, CudaPackage):
 
     # Basic dependencies
     depends_on("mpi")
-    # JBE: Clingo doesn't correctly resolve external virtuals, I think...
-    depends_on("netlib-lapack")
     depends_on("cmake@3.8:")
 
     # Devtool dependencies these need to match serac_devtools/package.py
@@ -158,7 +156,7 @@ class Serac(CMakePackage, CudaPackage):
 
     # Libraries that do not have a debug variant
     depends_on("conduit@0.5.1p1~shared~python")
-    depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
+    depends_on("caliper@master~shared+mpi~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
 
     # Libraries that we do not build debug
