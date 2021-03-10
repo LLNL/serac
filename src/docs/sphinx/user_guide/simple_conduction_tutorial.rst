@@ -109,8 +109,7 @@ Constructing the Mesh
 In this introductory example, we will use a simple square mesh with 10 quadrilateral elements in each space dimension
 for 100 elements total.  Once created, the primary mesh must always be registered with the ``StateManager``: 
 
-Using C++
-"""""""""
+**Using C++**
 
 .. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
    :start-after: _create_mesh_start
@@ -119,8 +118,7 @@ Using C++
 
 After constructing the serial mesh, we call ``refineAndDistribute`` to distribute it into a parallel mesh.
 
-Using Lua
-"""""""""
+**Using Lua**
 
 .. literalinclude:: ../../../../examples/simple_conduction/with_input_file.cpp
    :start-after: _create_mesh_start
@@ -139,8 +137,7 @@ construct the mesh.  The Lua representation is as follows:
 Constructing the Physics Module
 -------------------------------
 
-Using C++
-"""""""""
+**Using C++**
 
 .. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
    :start-after: _create_module_start
@@ -151,8 +148,7 @@ When using the C++ API, the ``ThermalConduction`` constructor requires the polyn
 solver options to be used when inverting the stiffness matrix, in addition to the mesh.  Since we're setting up
 a steady-state simulation, we can just use the ``defaultQuasistaticOptions``.
 
-Using Lua
-"""""""""
+**Using Lua**
 
 Once the configuration options are read from Inlet, we can use them to construct the ``ThermalConduction``
 object:
@@ -187,16 +183,14 @@ Configuring Material Conductivity
 Instead of using a monolithic material model, the ``ThermalConduction`` module currently allows for material parameters
 like conductivity, specific heat capacity, and density to be configured individually.
 
-Using C++
-"""""""""
+**Using C++**
 
 .. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
    :start-after: _conductivity_start
    :end-before: _conductivity_end
    :language: C++
 
-Using Lua
-"""""""""
+**Using Lua**
 
 .. literalinclude:: ../../../../examples/simple_conduction/conduction.lua
    :start-after: _conductivity_start
@@ -213,16 +207,14 @@ The following snippets add two Dirichlet boundary conditions:
 - One that constrains the temperature to :math:`x^2 + y - 1` at boundary attributes 2 and 3, which for
   this mesh correspond to the right side and top of the mesh, respectively.
 
-Using C++
-"""""""""
+**Using C++**
 
 .. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
    :start-after: _bc_start
    :end-before: _bc_end
    :language: C++
 
-Using Lua
-"""""""""
+**Using Lua**
 
 .. literalinclude:: ../../../../examples/simple_conduction/conduction.lua
    :start-after: _bc_start
@@ -239,16 +231,14 @@ Setting Output Type
 .. hint::
   Serac currently supports ``VisIt``, ``ParaView``, ``GLVis``, and ``SidreVisit`` output.
 
-Using C++
-"""""""""
+**Using C++**
 
 .. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
    :start-after: _output_type_start
    :end-before: _output_type_end
    :language: C++
 
-Using Lua
-"""""""""
+**Using Lua**
 
 In the input file (``conduction.lua``):
 

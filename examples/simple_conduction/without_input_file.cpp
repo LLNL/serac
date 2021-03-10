@@ -25,7 +25,7 @@
 // _main_init_start
 int main(int argc, char* argv[])
 {
-  /*auto [num_procs, rank] = */serac::initialize(argc, argv);
+  serac::initialize(argc, argv);
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore);
   // _main_init_end

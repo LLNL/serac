@@ -7,11 +7,9 @@
 blt_add_executable( NAME        simple_conduction_with_input_file
                     SOURCES     with_input_file.cpp
                     DEPENDS_ON  serac_physics serac_coefficients
-                    OUTPUT_NAME simple_conduction_with_input_file
                     )
 
 blt_add_executable( NAME        simple_conduction_without_input_file
                     SOURCES     without_input_file.cpp
                     DEPENDS_ON  serac_physics serac_coefficients
-                    OUTPUT_NAME simple_conduction_without_input_file
                     )
