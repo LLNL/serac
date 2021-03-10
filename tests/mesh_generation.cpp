@@ -16,16 +16,16 @@ TEST(meshgen, successful_creation)
 {
   // the disk and ball meshes don't exactly hit the number
   // of elements specified, they refine to get as close as possible
-  ASSERT_EQ(serac::buildDiskMesh(1000)->GetNE(), 1024);
-  ASSERT_EQ(serac::buildBallMesh(6000)->GetNE(), 4096);
-  ASSERT_EQ(serac::buildRectangleMesh(20, 20, 1., 2.)->GetNE(), 400);
-  ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20, 1., 2., 3.)->GetNE(), 8000);
-  ASSERT_EQ(serac::buildCylinderMesh(2, 2, 2.0, 5.0)->GetNE(), 384);
-  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0)->GetNE(), 256);
-  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0, 2. * M_PI, 8)->GetNE(), 256);
-  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0, 2. * M_PI, 6)->GetNE(), 192);
-  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, M_PI / 3., 1)->GetNE(), 16);
-  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, 2. * M_PI, 7)->GetNE(), 112);
+  ASSERT_EQ(serac::buildDiskMesh(1000).GetNE(), 1024);
+  ASSERT_EQ(serac::buildBallMesh(6000).GetNE(), 4096);
+  ASSERT_EQ(serac::buildRectangleMesh(20, 20, 1., 2.).GetNE(), 400);
+  ASSERT_EQ(serac::buildCuboidMesh(20, 20, 20, 1., 2., 3.).GetNE(), 8000);
+  ASSERT_EQ(serac::buildCylinderMesh(2, 2, 2.0, 5.0).GetNE(), 384);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0).GetNE(), 256);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0, 2. * M_PI, 8).GetNE(), 256);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 2, 2.0, 3.0, 5.0, 2. * M_PI, 6).GetNE(), 192);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, M_PI / 3., 1).GetNE(), 16);
+  ASSERT_EQ(serac::buildHollowCylinderMesh(2, 1, 2.0, 3.0, 5.0, 2. * M_PI, 7).GetNE(), 112);
 }
 
 TEST(meshgen, lua_input)
@@ -71,7 +71,7 @@ TEST(meshgen, lua_input)
   // temporary scope to build a cuboid mesh
   {
     auto       mesh_options   = inlet["main_mesh_cuboid"].get<serac::mesh::InputOptions>();
-    const auto cuboid_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+    const auto cuboid_options = std::get_if<serac::mesh::BoxInputOptions>(&mesh_options.extra_options);
     ASSERT_NE(cuboid_options, nullptr);
     EXPECT_EQ(cuboid_options->elements.size(), 3);
     auto mesh = serac::mesh::buildParallelMesh(mesh_options);
@@ -81,7 +81,7 @@ TEST(meshgen, lua_input)
   // temporary scope to build a rectangular mesh
   {
     auto       mesh_options = inlet["main_mesh_rect"].get<serac::mesh::InputOptions>();
-    const auto rect_options = std::get_if<serac::mesh::GenerateInputOptions>(&mesh_options.extra_options);
+    const auto rect_options = std::get_if<serac::mesh::BoxInputOptions>(&mesh_options.extra_options);
     ASSERT_NE(rect_options, nullptr);
     EXPECT_EQ(rect_options->elements.size(), 2);
     auto mesh = serac::mesh::buildParallelMesh(mesh_options);
