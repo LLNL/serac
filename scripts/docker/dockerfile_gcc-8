@@ -3,6 +3,8 @@ LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
+RUN sudo apt-get update -y
+RUN sudo apt-get install software-properties-common # Needed for add-apt-repository
 RUN sudo add-apt-repository ppa:deadsnakes/ppa # python3.6 needed for clingo
 RUN sudo apt-get update -y
 RUN sudo apt-get install curl wget ssh pkg-config build-essential libopenblas-dev tar lcov xsltproc python3.6 python3-pip -fy
