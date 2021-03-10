@@ -44,7 +44,7 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
 
   // The output type (visit, glvis, paraview, etc)
-  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
 
   // The mesh options
   auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>()
-  main_physics->initializeOutput(inlet.getGlobalTable().get<serac::OutputType>(), "serac");
+  main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac");
 
   // Enter the time step loop.
   for (int ti = 1; !last_step; ti++) {

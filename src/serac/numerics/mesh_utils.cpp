@@ -357,25 +357,25 @@ mfem::Mesh buildHollowCylinderMesh(int radial_refinement, int elements_lengthwis
 
 namespace mesh {
 
-void InputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void InputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Refinement levels
-  table.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
-  table.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
+  container.addInt("ser_ref_levels", "Number of times to refine the mesh uniformly in serial.").defaultValue(0);
+  container.addInt("par_ref_levels", "Number of times to refine the mesh uniformly in parallel.").defaultValue(0);
 
-  table.addString("type", "Type of mesh").required();
+  container.addString("type", "Type of mesh").required();
 
   // mesh path
-  table.addString("mesh", "Path to Mesh file");
+  container.addString("mesh", "Path to Mesh file");
 
   // box mesh generation options
-  auto& elements = table.addStruct("elements");
+  auto& elements = container.addStruct("elements");
   // JW: Can these be specified as requierd if elements is defined?
   elements.addInt("x", "x-dimension");
   elements.addInt("y", "y-dimension");
   elements.addInt("z", "z-dimension");
 
-  auto& size = table.addStruct("size");
+  auto& size = container.addStruct("size");
   // JW: Can these be specified as requierd if elements is defined?
   size.addDouble("x", "Size in the x-dimension");
   size.addDouble("y", "Size in the y-dimension");
@@ -434,7 +434,7 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, con
 }  // namespace mesh
 }  // namespace serac
 
-serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const axom::inlet::Table& base)
+serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const axom::inlet::Container& base)
 {
   int ser_ref = base["ser_ref_levels"];
   int par_ref = base["par_ref_levels"];
