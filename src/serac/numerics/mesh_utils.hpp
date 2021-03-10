@@ -149,7 +149,7 @@ struct FileInputOptions {
   /**
    * @brief Input file parameters specific to this class
    *
-   * @param[in] container Inlet's SchemaCreator that input files will be added to
+   * @param[in] container Inlet container on which the input schema will be defined
    **/
   static void defineInputFileSchema(axom::inlet::Container& container);
 
@@ -172,7 +172,7 @@ struct GenerateInputOptions {
   /**
    * @brief Input file parameters for mesh generation
    *
-   * @param[in] container Inlet's SchemaCreator that input files will be added to
+   * @param[in] container Inlet container on which the input schema will be defined
    **/
   static void defineInputFileSchema(axom::inlet::Container& container);
 
@@ -197,7 +197,7 @@ struct InputOptions {
   /**
    * @brief Input file parameters for mesh generation
    *
-   * @param[in] container Inlet's SchemaCreator that input files will be added to
+   * @param[in] container Inlet container on which the input schema will be defined
    **/
   static void defineInputFileSchema(axom::inlet::Container& container);
 
