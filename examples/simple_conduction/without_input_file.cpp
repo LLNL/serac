@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
   serac::StateManager::initialize(datastore);
   // _main_init_end
   // _create_mesh_start
-  auto mesh = serac::mesh::refineAndDistribute(*serac::buildRectangleMesh(10, 10));
+  auto mesh = serac::mesh::refineAndDistribute(serac::buildRectangleMesh(10, 10));
   serac::StateManager::setMesh(std::move(mesh));
   // _create_mesh_end
 
