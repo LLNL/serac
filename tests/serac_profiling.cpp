@@ -44,17 +44,19 @@ TEST(serac_profiling, mesh_refinement)
   unsigned int magic_uint = 1819176044;
   SERAC_SET_METADATA("magic_uint", magic_uint);
 
-  char uint_string[sizeof(magic_uint)+1];
-  std::memcpy(uint_string, &magic_uint, sizeof(magic_uint));
-  std::cout << std::string(uint_string, sizeof(magic_uint)) << std::endl;
+  std::array<char, sizeof(magic_uint)+1> uint_string;
+  std::fill(std::begin(uint_string), std::end(uint_string), 0);
+  std::memcpy(uint_string.data(), &magic_uint, 4);
+  std::cout << uint_string.data() << std::endl;
   
   double magic_double;
   std::memcpy(&magic_double, "llnl", 4);
   SERAC_SET_METADATA("magic_double", magic_double);
 
   std::array<char, sizeof(magic_double) + 1> double_string;
-  std::memcpy(double_string.data(), &magic_double, sizeof(magic_double));
-  std::cout << std::string(double_string.data(), sizeof(magic_double)) << std::endl;
+  std::fill(std::begin(double_string), std::end(double_string), 0);
+  std::memcpy(double_string.data(), &magic_double, 4);
+  std::cout << double_string.data() << std::endl;
 
   EXPECT_EQ(2112, pmesh->GetNE());
   
