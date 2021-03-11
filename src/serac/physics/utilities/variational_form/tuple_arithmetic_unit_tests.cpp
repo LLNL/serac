@@ -17,10 +17,18 @@ auto random_real = [](auto ...){
 
 namespace proto {
 
-  auto chain_rule(tensor < double > df_dx, tensor< double > dx) { return df_dx * dx; }
+  auto chain_rule(zero /* df_dx */, zero /* dx */) { return zero{}; }
+
+  template < typename T >
+  auto chain_rule(zero /* df_dx */, T /* dx */) { return zero{}; }
+
+  template < typename T >
+  auto chain_rule(T /* df_dx */, zero /* dx */) { return zero{}; }
+
+  auto chain_rule(double df_dx, double dx) { return df_dx * dx; }
 
   template < int ... n >
-  auto chain_rule(tensor < double, n ... > df_dx, tensor< double > dx) { return df_dx * dx; }
+  auto chain_rule(tensor < double, n ... > df_dx, double dx) { return df_dx * dx; }
 
   template < int ... n >
   auto chain_rule(tensor < double, n ... > df_dx, tensor< double, n... > dx) {
@@ -51,24 +59,24 @@ namespace proto {
 
   template < typename ... T, typename ... S, int ... I >
   auto chain_rule_helper(std::tuple < T ... > df_dx, std::tuple < S ... > dx, std::integer_sequence<int, I...>) {
-    return ((std::get<I>(df_dx) * std::get<I>(dx)) + ...);
+    return (chain_rule(std::get<I>(df_dx), std::get<I>(dx)) + ...);
   }
 
   template < typename ... T, typename ... S >
   auto chain_rule(std::tuple < T ... > df_dx, std::tuple < S ... > dx) {
-    static_assert(df_dx.size() == dx.size());
-
+    static_assert(sizeof ... (T) == sizeof ... (S));
+    return proto::chain_rule_helper(df_dx, dx, std::make_integer_sequence<int, sizeof ...(T)>());
   }
 
   template < int rank, typename ... T, typename S >
   auto chain_rule(std::tuple < T ... > df_dx, S dx) {
     if constexpr (rank == 1) {
       return std::apply([&](auto ... each_component_of_df_dx){
-        return std::tuple{proto::chain_rule(each_component_of_df_dx, dx) ... };
+        return (proto::chain_rule(each_component_of_df_dx, dx) + ...);
       }, df_dx);
     } else {
       return std::apply([&](auto ... each_component_of_df_dx){
-        return std::tuple{proto::chain_rule<rank - 1>(each_component_of_df_dx, dx) ... };
+        return std::tuple{proto::chain_rule(each_component_of_df_dx, dx) ... };
       }, df_dx);
     }
   }
@@ -153,13 +161,12 @@ void chain_rule_tests(){
     std::tuple < 
       tensor< double, 3, 3 >,
       tensor< double, 3 >
-    > df = proto::chain_rule<1>(std::tuple{df1_dx, df2_dx}, dx);
+    > df = proto::chain_rule<2>(std::tuple{df1_dx, df2_dx}, dx);
 
     std::cout << std::get<0>(df) << std::endl;
     std::cout << std::get<1>(df) << std::endl;
   }
 
-/* 
   {
     constexpr auto tuple_func = [](auto p, auto v, auto L) {      
       return std::tuple{
@@ -172,21 +179,27 @@ void chain_rule_tests(){
 
     auto grad = get_gradient(tuple_of_values);
 
-    auto df_fd = (sigma(p + epsilon * dp, v + epsilon * dv, L + epsilon * dL) - 
+    auto df0_fd = (sigma(p + epsilon * dp, v + epsilon * dv, L + epsilon * dL) - 
                   sigma(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) / (2 * epsilon);
 
-    auto df1 = (std::get<0>(std::get<0>(grad)) * dp) +
+    auto df0 = (std::get<0>(std::get<0>(grad)) * dp) +
               dot(std::get<1>(std::get<0>(grad)), dv) +
               ddot(std::get<2>(std::get<0>(grad)), dL);  
 
-    auto df2 = proto::chain_rule<2>(grad, std::tuple{dp, dv, dL});
 
-    std::cout << df1 - df_fd << std::endl;
+    auto df1 = (std::get<0>(std::get<1>(grad)) * dp) +
+              dot(std::get<1>(std::get<1>(grad)), dv) +
+              ddot(std::get<2>(std::get<1>(grad)), dL);  
 
+    auto df_ad = proto::chain_rule<2>(grad, std::tuple{dp, dv, dL});
 
+    std::cout << "comparison with finite difference: ";
+    std::cout << df0 - df0_fd << std::endl;
+
+    std::cout << "comparison with chain_rule: ";
+    std::cout << std::get<0>(df_ad) - df0 << std::endl;
+    std::cout << std::get<1>(df_ad) - df1 << std::endl;
   }
-
-  */
 
 }
 
@@ -266,9 +279,6 @@ int main() {
     std::cout << std::get<0>(std::get<1>(grad)) << std::endl;
     std::cout << std::get<1>(std::get<1>(grad)) << std::endl;
     std::cout << std::get<2>(std::get<1>(grad)) << std::endl;
-
-
-
 
   }
 

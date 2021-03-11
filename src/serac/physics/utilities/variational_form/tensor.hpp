@@ -43,6 +43,14 @@ struct tensor<T> {
   static constexpr int shape[1] = {0};
   constexpr auto& operator()(array< int, ndim >) { return value; }
   constexpr auto operator()(array< int, ndim >) const { return value; }
+
+  template < typename ... S >
+  constexpr auto & operator()(S...) { return value; }
+
+  template < typename ... S >
+  constexpr auto operator()(S...) const { return value; }
+
+
   tensor () : value{} {}
   tensor (T v) : value(v) {}
   operator T() { return value; }
