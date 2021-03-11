@@ -139,12 +139,9 @@ class Serac(CMakePackage, CudaPackage):
     # Axom enables RAJA/Umpire by default
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
+    # patch for RAJA#978
     depends_on("raja@camp_patch~openmp~shared", when="+raja")
     depends_on("umpire~shared", when="+umpire")
-
-    # JBE: Spack bug? Default is true...
-    # Cannot reproduce consistently, will flip between invocations of "spack spec"
-    depends_on("axom+lua+hdf5")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran+mfem~shared",
@@ -422,11 +419,6 @@ class Serac(CMakePackage, CudaPackage):
         if "+raja" in spec:
             raja_dir = get_spec_path(spec, "raja", path_replacements)
             cfg.write(cmake_cache_entry("RAJA_DIR", raja_dir))
-        
-            # JBE: I think RAJA should be able to handle this on its own
-            # when it sets up raja-config.cmake, reported as RAJA#978
-            camp_dir = get_spec_path(spec, "camp", path_replacements)
-            cfg.write(cmake_cache_entry("camp_DIR", camp_dir))
 
         if "+umpire" in spec:
             umpire_dir = get_spec_path(spec, "umpire", path_replacements)
