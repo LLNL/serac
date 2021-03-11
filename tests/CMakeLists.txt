@@ -11,6 +11,7 @@
 if (ENABLE_GTEST)
 
     set(test_dependencies serac_physics serac_coefficients test_utils)
+    blt_list_append( TO test_dependencies ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
     blt_add_library(
         NAME        test_utils
@@ -68,7 +69,8 @@ if (ENABLE_GTEST)
         expr_templates.cpp
         serac_error_handling.cpp
         serac_odes.cpp
-        serac_input.cpp)
+        serac_input.cpp
+	serac_profiling.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -117,17 +119,5 @@ if (ENABLE_GTEST)
                     COMMAND       petsc_smoketest
                     NUM_MPI_TASKS 4 )
     endif()
-
-    if(SERAC_USE_CALIPER)
-        blt_add_executable( NAME        serac_profiling
-                            SOURCES     serac_profiling.cpp
-                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                            DEPENDS_ON  caliper ${test_dependencies}
-                            FOLDER      serac/tests )
-        blt_add_test(NAME         serac_profiling
-                    COMMAND       serac_profiling
-                    NUM_MPI_TASKS 4 )
-    endif()
-
 
 endif()

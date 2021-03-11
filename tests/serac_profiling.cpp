@@ -38,23 +38,25 @@ TEST(serac_profiling, mesh_refinement)
     }
   SERAC_MARK_LOOP_END(refinement_loop);
   
-  serac::profiling::setCaliperMetadata("mesh_file", mesh_file.c_str());
-  serac::profiling::setCaliperMetadata("number_mesh_elements", pmesh->GetNE());
-
+  SERAC_SET_METADATA("mesh_file", mesh_file.c_str());
+  SERAC_SET_METADATA("number_mesh_elements", pmesh->GetNE());
+  
   unsigned int magic_uint = 1819176044;
-  serac::profiling::setCaliperMetadata("magic_uint", magic_uint);
+  SERAC_SET_METADATA("magic_uint", magic_uint);
 
   char uint_string[sizeof(magic_uint)+1];
   std::memcpy(uint_string, &magic_uint, sizeof(magic_uint));
-  std::cout << uint_string << std::endl;
+  std::cout << std::string(uint_string, sizeof(magic_uint)) << std::endl;
   
   double magic_double;
   std::memcpy(&magic_double, "llnl", 4);
-  serac::profiling::setCaliperMetadata("magic_double", magic_double);
+  SERAC_SET_METADATA("magic_double", magic_double);
 
   std::array<char, sizeof(magic_double) + 1> double_string;
   std::memcpy(double_string.data(), &magic_double, sizeof(magic_double));
-  std::cout << double_string.data() << std::endl;
+  std::cout << std::string(double_string.data(), sizeof(magic_double)) << std::endl;
+
+  EXPECT_EQ(2112, pmesh->GetNE());
   
   serac::profiling::terminateCaliper();
   
