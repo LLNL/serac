@@ -2,7 +2,6 @@
 #include "tensor.hpp"
 #include "finite_element.hpp"
 
-
 /*
 iterate over the node/direction pairs in the element, and verify that
 contributions from other shape functions in the element are orthogonal

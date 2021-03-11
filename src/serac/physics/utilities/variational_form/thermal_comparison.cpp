@@ -165,8 +165,8 @@ int main(int argc, char* argv[])
 
   mfem::ConstantCoefficient zero_coef(0.0);
   std::cout << "relative error: " << mfem::Vector(x - x2).Norml2() / x.Norml2() << std::endl;
-  std::cout << x.ComputeL2Error(zero_coef) << std::endl;
-  std::cout << x2.ComputeL2Error(zero_coef) << std::endl;
+  std::cout << "||x||_2 (mfem):" << x.ComputeL2Error(zero_coef) << std::endl;
+  std::cout << "||x||_2 (ParVariationalForm):" << x2.ComputeL2Error(zero_coef) << std::endl;
 
   char         vishost[] = "localhost";
   int          visport   = 19916;

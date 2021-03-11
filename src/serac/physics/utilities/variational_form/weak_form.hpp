@@ -94,47 +94,8 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double,dim,dim>
 } // namespace impl
 
 
-template < ::Geometry g, typename test, typename trial, int Q, typename lambda > 
-void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
-
-  using test_element = finite_element< g, test >;
-  using trial_element = finite_element< g, trial >;
-  static constexpr int dim = dimension(g);
-  static constexpr int test_ndof = test_element::ndof;
-  static constexpr int trial_ndof = trial_element::ndof;
-  static constexpr auto rule = GaussQuadratureRule< g, Q >();
-
-  auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements);
-  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-  auto u = impl::Reshape<trial>(U.Read(), trial_ndof, num_elements);
-  auto r = impl::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
-
-  for (int e = 0; e < num_elements; e++) {
-    tensor u_local = impl::Load<trial_element>(u, e);
-
-    reduced_tensor <double, test_element::ndof, test_element::components> r_local{};
-    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
-      auto x_q = make_tensor< dim >([&](int i){ return X(q, i, e); });
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
-      double dx = det(J_q) * dxi;
-
-      auto [u_q, du_dx_q] = impl::Preprocess<trial_element>(u_local, xi, J_q);
-
-      auto qf_output = qf(x_q, u_q, du_dx_q);
-
-      r_local += impl::Postprocess<test_element>(qf_output, xi, J_q) * dx;
-    }
-
-    impl::Add(r, r_local, e);
-
-  }
-
-}
-
 template < ::Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda > 
-void evaluation_with_derivatives_kernel(const mfem::Vector & U, mfem::Vector & R, derivatives_type * derivatives_ptr, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
+void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, derivatives_type * derivatives_ptr, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
 
   using test_element = finite_element< g, test >;
   using trial_element = finite_element< g, trial >;
@@ -159,35 +120,25 @@ void evaluation_with_derivatives_kernel(const mfem::Vector & U, mfem::Vector & R
       auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
       double dx = det(J_q) * dxi;
 
-      auto N = trial_element::shape_functions(xi);
-      auto dN_dx = dot(trial_element::shape_function_gradients(xi), inv(J_q));
+      auto arg = impl::Preprocess<trial_element>(u_local, xi, J_q);
 
-      auto u_q = dot(u_local, N);
-      auto du_dx_q = dot(u_local, dN_dx);
+      auto qf_output = qf(x_q, make_dual(arg));
 
-      auto args = std::tuple{x_q, u_q, du_dx_q};
+      r_local += impl::Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
 
-      auto [f0, f1] = std::apply(qf, args);
-
-      auto W = test_element::shape_functions(xi);
-      auto dW_dx = dot(test_element::shape_function_gradients(xi), inv(J_q));
-
-      r_local += (outer(W, f0) + dot(dW_dx, f1)) * dx;
-
-      derivatives_ptr[e * int(rule.size()) + q] = derivatives_type{};
+      derivatives_ptr[e * int(rule.size()) + q] = get_gradient(qf_output);
     }
 
     impl::Add(r, r_local, e);
-
   }
 
 }
 
-template < ::Geometry g, typename test_space, typename trial_space, int Q, typename lambda > 
-void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, mfem::Vector & J_, mfem::Vector & X_, int num_elements, lambda qf) {
+template < ::Geometry g, typename test, typename trial, int Q, typename derivatives_type > 
+void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, derivatives_type * derivatives_ptr, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements) {
 
-  using test_element = finite_element< g, test_space >;
-  using trial_element = finite_element< g, trial_space >;
+  using test_element = finite_element< g, test >;
+  using trial_element = finite_element< g, trial >;
   static constexpr int dim = dimension(g);
   static constexpr int test_ndof = test_element::ndof;
   static constexpr int trial_ndof = trial_element::ndof;
@@ -195,44 +146,32 @@ void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, mfem::Vector & 
 
   auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements);
   auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-  auto du = mfem::Reshape(dU.Read(), trial_ndof, num_elements);
-  auto dr = mfem::Reshape(dR.ReadWrite(), test_ndof, num_elements);
+  auto du = impl::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
+  auto dr = impl::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
 
   for (int e = 0; e < num_elements; e++) {
-    tensor du_local = make_tensor<trial_ndof>([&du, e](int i){ return du(i, e); });
+    tensor du_local = impl::Load<trial_element>(du, e);
 
-    tensor <double, test_ndof > dr_local{};
+    reduced_tensor <double, test_element::ndof, test_element::components> dr_local{};
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       auto xi = rule.points[q];
       auto dxi = rule.weights[q];
-      auto x_q = make_tensor< dim >([&](int i){ return X(q, i, e); });
       auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
       double dx = det(J_q) * dxi;
 
-      auto N = trial_element::shape_functions(xi);
-      auto dN_dx = dot(trial_element::shape_function_gradients(xi), inv(J_q));
+      auto darg = impl::Preprocess<trial_element>(du_local, xi, J_q);
 
-      auto u_q = dot(du_local, N);
-      auto du_dx_q = dot(du_local, dN_dx);
+      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
 
-      auto args = std::tuple{x_q, u_q, du_dx_q};
+      auto dq = dot(dq_darg, darg);
 
-      auto [f0, f1] = std::apply(qf, args);
-
-      auto W = test_element::shape_functions(xi);
-      auto dW_dx = dot(test_element::shape_function_gradients(xi), inv(J_q));
-
-      dr_local += (W * f0 + dot(dW_dx, f1)) * dx;
+      dr_local += impl::Postprocess<test_element>(dq, xi, J_q) * dx;
     }
 
-    for (int i = 0; i < test_ndof; i++) {
-      dr(i, e) += dr_local[i];
-    }
-
+    impl::Add(dr, dr_local, e);
   }
 
 }
-
 
 template < typename operations, typename lambda_type >
 struct IntegrandImpl {
@@ -303,8 +242,7 @@ struct VolumeIntegral {
     // the derivative information at each quadrature point
     using x_t = tensor< double, dim >;
     using u_du_t = typename lambda_argument< trial_space, dim >::type;
-    using arg_t = decltype(std::tuple_cat(std::tuple{x_t{}}, make_dual(u_du_t{})));
-    using derivative_type = decltype(get_gradient(std::apply(qf, arg_t{})));
+    using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
     // derivatives of integrand w.r.t. {u, du_dx}
     auto num_quadrature_points = static_cast<uint32_t>(X.Size() / dim);
@@ -315,8 +253,12 @@ struct VolumeIntegral {
     constexpr int Q = std::max(test_space::order, trial_space::order) + 1;
 
     evaluation = [=](const mfem::Vector & U, mfem::Vector & R){ 
-      evaluation_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, J_, X_, num_elements, qf);
+      evaluation_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
     };
+
+    //gradient = [=](const mfem::Vector & dU, mfem::Vector & dR){ 
+    //  gradient_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(dU, dR, qf_derivatives_ptr, J_, X_, num_elements);
+    //};
 
     //evaluation_with_derivatives = [=](const mfem::Vector & U, mfem::Vector & R){ 
     //  evaluation_with_derivatives_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
@@ -334,7 +276,7 @@ struct VolumeIntegral {
   std::vector < char > qf_derivatives;
 
   std::function < void(const mfem::Vector &, mfem::Vector &) > evaluation;
-  std::function < void(const mfem::Vector &, mfem::Vector &) > evaluation_with_derivatives;
+  std::function < void(const mfem::Vector &, mfem::Vector &) > gradient;
 
 };
 

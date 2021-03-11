@@ -108,9 +108,10 @@ int main(int argc, char* argv[])
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto /*x*/, auto u, auto grad_u) {
+  residual.AddVolumeIntegral([&](auto /*x*/, auto displacement) {
+    auto [u, du_dx] = displacement;
     auto f0 = a * u - tensor{{-1.0, 0.0}};
-    auto strain = 0.5 * (grad_u + transpose(grad_u));
+    auto strain = 0.5 * (du_dx + transpose(du_dx));
     auto f1 = b * tr(strain) * I + 2.0 * b * strain;
     return std::tuple{f0, f1};
   }, pmesh);

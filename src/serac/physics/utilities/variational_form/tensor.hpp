@@ -163,7 +163,11 @@ template < int ... n, typename lambda_type >
 constexpr auto make_tensor(lambda_type f) {
   using T = typename std::invoke_result_t<lambda_type, impl::always_int<n>...>;
   tensor<T,n...> A{};
-  for_constexpr<n...>([&](auto ... i){ A(i...) = f(i...); });
+  if constexpr (sizeof ... (n) == 0) {
+    A.value = f();
+  } else {
+    for_constexpr<n...>([&](auto ... i){ A(i...) = f(i...); });
+  }
   return A;
 }
 
@@ -854,5 +858,26 @@ template < typename ... T >
 auto get_gradient(std::tuple < T ... > tuple_of_values) {
   return std::apply([](auto ... each_value){
     return std::tuple{get_gradient(each_value) ...};
+  }, tuple_of_values);
+}
+
+template < typename T, int ... n, int ... m >
+auto get_value(dual< T > arg) {
+  return arg.value;
+}
+
+template < typename T, int ... n, int ... m >
+auto get_value(tensor< dual< T >, n ... > arg) {
+  tensor< double, n ...> value{};
+  for_constexpr< n ... >([&](auto ... i){
+    value(i...) = arg(i...).value;
+  });
+  return value;
+}
+
+template < typename ... T >
+auto get_value(std::tuple < T ... > tuple_of_values) {
+  return std::apply([](auto ... each_value){
+    return std::tuple{get_value(each_value) ...};
   }, tuple_of_values);
 }

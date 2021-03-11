@@ -98,9 +98,10 @@ int main(int argc, char* argv[])
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto x, auto u, auto du) {
+  residual.AddVolumeIntegral([&](auto x, auto temperature) {
+    auto [u, du_dx] = temperature;
     auto f0 = a * u - (100 * x[0] * x[1]);
-    auto f1 = b * du;
+    auto f1 = b * du_dx;
     return std::tuple{f0, f1};
   }, pmesh);
 
