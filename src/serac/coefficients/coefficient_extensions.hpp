@@ -19,6 +19,10 @@
 
 #include "serac/numerics/expr_template_ops.hpp"
 
+/**
+ * @brief Functionality that extends current MFEM capabilities
+ *
+ */
 namespace serac::mfem_ext {
 
 /**

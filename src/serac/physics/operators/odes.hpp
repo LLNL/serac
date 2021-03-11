@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file odes.hpp
+ *
+ * @brief Wrapper classes for using MFEM's ODE solver objects
+ */
+
 #pragma once
 
 #include <functional>
@@ -147,6 +153,11 @@ public:
    */
   void Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, double& dt);
 
+  /**
+   * @brief Get a reference to the current state
+   */
+  const State& GetState() { return state_; }
+
 private:
   /**
    * @brief Internal implementation used for mfem::SOTDO::Mult and mfem::SOTDO::ImplicitSolve
@@ -250,9 +261,11 @@ public:
   /**
    * @brief Constructor defining the size and specific system of ordinary differential equations to be solved
    *
+   *
    * @param[in] n The number of components in each vector of the ODE
-   * @param[in] f The function that describing how to solve for the first derivative, given the current state.
-   *    The two functions
+   * @param[in] state The collection of references to input/output variables from the physics module
+   * @param[in] solver The solver that operates on the residual
+   * @param[in] bcs The set of Dirichlet conditions to enforce
    *
    * Implements mfem::TimeDependentOperator::Mult and mfem::TimeDependentOperator::ImplicitSolve
    *      (described in more detail here: https://mfem.github.io/doxygen/html/classmfem_1_1TimeDependentOperator.html)
@@ -264,17 +277,6 @@ public:
    *
    */
   FirstOrderODE(int n, FirstOrderODE::State&& state, const EquationSolver& solver, const BoundaryConditionManager& bcs);
-
-  /**
-   * @brief Recasts a second order equation as a set of first order equations
-   *
-   * @param[in] n The number of components in each vector of the ODE
-   * @param[in] state The SecondOrderODE state
-   * @param[in] solver The equation solver for the residual equation that is solved at the next time step
-   * @param[in] bcs boundary conditions for the ode
-   *
-   */
-  FirstOrderODE(int n, SecondOrderODE& ode2, const EquationSolver& solver, const BoundaryConditionManager& bcs);
 
   /**
    * @brief Solves the equation du_dt = f(u, t)

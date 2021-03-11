@@ -8,18 +8,18 @@ main_mesh_from_file = {
 }
 
 main_mesh_cuboid = {
-    type = "generate",
+    type = "box",
     -- mesh file
     elements = {x = 3, y = 3, z = 3},
     size = {x = 1, y = 2, z = 3},
-    ser_ref_levels = 1,
+    ser_ref_levels = 0,
     par_ref_levels = 0,
 }
 
 main_mesh_rect = {
-    type = "generate",
+    type = "box",
     elements = {x = 3, y = 3},
-    ser_ref_levels = 1,
+    ser_ref_levels = 0,
     par_ref_levels = 0,
 }
 

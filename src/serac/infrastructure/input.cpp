@@ -24,8 +24,11 @@ axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::stri
   luareader->parseFile(input_file_path);
 
   // Store inlet data under its own group
+  if (datastore.getRoot()->hasGroup("input_file")) {
+    // If this is a restart, wipe out the previous input file
+    datastore.getRoot()->destroyGroup("input_file");
+  }
   axom::sidre::Group* inlet_root = datastore.getRoot()->createGroup("input_file");
-
   return axom::inlet::Inlet(std::move(luareader), inlet_root);
 }
 
@@ -50,9 +53,7 @@ std::string findMeshFilePath(const std::string& mesh_path, const std::string& in
 
   // Failed to find mesh file
   std::string msg = fmt::format("Input file: Given mesh file does not exist: {0}", mesh_path);
-  int         rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  SLIC_ERROR_ROOT(rank, msg);
+  SLIC_ERROR_ROOT(msg);
   return "";
 }
 
@@ -61,33 +62,33 @@ std::string fullDirectoryFromPath(const std::string& path)
   char  actualpath[PATH_MAX + 1];
   char* ptr = realpath(path.c_str(), actualpath);
   if (ptr == nullptr) {
-    SLIC_ERROR("Failed to find absolute path from input file.");
+    SLIC_ERROR_ROOT("Failed to find absolute path from input file.");
   }
   std::string dir;
   axom::utilities::filesystem::getDirName(dir, std::string(actualpath));
   return dir;
 }
 
-void defineVectorInputFileSchema(axom::inlet::Table& table)
+void defineVectorInputFileSchema(axom::inlet::Container& container)
 {
   // TODO: I had to remove the required tag on x as we now have an optional vector input in the coefficients. IT would
   // be nice to support "If this exists, this subcomponent is required."
-  table.addDouble("x", "x-component of vector");
-  table.addDouble("y", "y-component of vector");
-  table.addDouble("z", "z-component of vector");
+  container.addDouble("x", "x-component of vector");
+  container.addDouble("y", "y-component of vector");
+  container.addDouble("z", "z-component of vector");
 }
 
-void defineOutputTypeInputFileSchema(axom::inlet::Table& table)
+void defineOutputTypeInputFileSchema(axom::inlet::Container& container)
 {
-  table.addString("output_type", "Desired output format")
+  container.addString("output_type", "Desired output format")
       .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
       .defaultValue("VisIt");
 }
 
-void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
-  table.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
-  CoefficientInputOptions::defineInputFileSchema(table);
+  container.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
+  CoefficientInputOptions::defineInputFileSchema(container);
 }
 
 bool CoefficientInputOptions::isVector() const
@@ -97,7 +98,7 @@ bool CoefficientInputOptions::isVector() const
 
 std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVector(const int dim) const
 {
-  SLIC_ERROR_IF(!isVector(), "Cannot construct a vector coefficient from scalar input");
+  SLIC_ERROR_ROOT_IF(!isVector(), "Cannot construct a vector coefficient from scalar input");
 
   if (vector_function) {
     return std::make_unique<mfem::VectorFunctionCoefficient>(dim, vector_function);
@@ -137,7 +138,7 @@ std::unique_ptr<mfem::VectorCoefficient> CoefficientInputOptions::constructVecto
 
 std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() const
 {
-  SLIC_ERROR_IF(isVector(), "Cannot construct a scalar coefficient from vector input");
+  SLIC_ERROR_ROOT_IF(isVector(), "Cannot construct a scalar coefficient from vector input");
 
   if (scalar_function) {
     return std::make_unique<mfem::FunctionCoefficient>(scalar_function);
@@ -161,39 +162,39 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
     return std::make_unique<mfem::PWConstCoefficient>(pw_constants);
 
   } else {
-    SLIC_ERROR(
+    SLIC_ERROR_ROOT(
         "Trying to build a scalar coefficient without specifying a scalar_function, constant, or piecewise_constant.");
     return nullptr;
   }
 }
 
-void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Vectors are implemented as lua usertypes and can be converted to/from mfem::Vector
-  table.addFunction("vector_function", axom::inlet::FunctionTag::Vector,
-                    {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
-                    "The function to use for an mfem::VectorFunctionCoefficient");
-  table.addFunction("scalar_function", axom::inlet::FunctionTag::Double,
-                    {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
-                    "The function to use for an mfem::FunctionCoefficient");
-  table.addInt("component", "The vector component to which the scalar coefficient should be applied");
+  container.addFunction("vector_function", axom::inlet::FunctionTag::Vector,
+                        {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
+                        "The function to use for an mfem::VectorFunctionCoefficient");
+  container.addFunction("scalar_function", axom::inlet::FunctionTag::Double,
+                        {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
+                        "The function to use for an mfem::FunctionCoefficient");
+  container.addInt("component", "The vector component to which the scalar coefficient should be applied");
 
-  table.addDouble("constant", "The constant scalar value to use as the coefficient");
+  container.addDouble("constant", "The constant scalar value to use as the coefficient");
 
-  auto& vector_table = table.addStruct("vector_constant", "The constant vector to use as the coefficient");
-  serac::input::defineVectorInputFileSchema(vector_table);
+  auto& vector_container = container.addStruct("vector_constant", "The constant vector to use as the coefficient");
+  serac::input::defineVectorInputFileSchema(vector_container);
 
-  table.addDoubleArray("piecewise_constant",
-                       "Map of mesh attributes to constant values to use as a piecewise coefficient");
+  container.addDoubleArray("piecewise_constant",
+                           "Map of mesh attributes to constant values to use as a piecewise coefficient");
 
-  auto& pw_vector_table = table.addStructArray(
+  auto& pw_vector_container = container.addStructArray(
       "vector_piecewise_constant", "Map of mesh attributes to constant vectors to use as a piecewise coefficient");
-  serac::input::defineVectorInputFileSchema(pw_vector_table);
+  serac::input::defineVectorInputFileSchema(pw_vector_container);
 }
 
 }  // namespace serac::input
 
-mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
+mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Container& base)
 {
   mfem::Vector result(3);  // Allocate up front since it's small
   result[0] = base["x"];
@@ -210,7 +211,7 @@ mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
   return result;
 }
 
-serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Table& base)
+serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Container& base)
 {
   const static auto output_names = []() {
     std::unordered_map<std::string, serac::OutputType> result;
@@ -229,7 +230,7 @@ serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Ta
 }
 
 serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
-    const axom::inlet::Table& base)
+    const axom::inlet::Container& base)
 {
   serac::input::BoundaryConditionInputOptions result{.coef_opts = base.get<serac::input::CoefficientInputOptions>()};
   // Build a set with just the values of the map
@@ -241,7 +242,7 @@ serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryCond
 }
 
 serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOptions>::operator()(
-    const axom::inlet::Table& base)
+    const axom::inlet::Container& base)
 {
   serac::input::CoefficientInputOptions result;
 
@@ -296,10 +297,10 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     }
   }
 
-  SLIC_ERROR_IF(coefficient_definitions > 1,
-                "Coefficient has multiple definitions. Please use only one of (constant, vector_constant, "
-                "piecewise_constant, vector_piecewise_constant, scalar_function, vector_function");
-  SLIC_ERROR_IF(coefficient_definitions == 0, "Coefficient definition does not contain known type.");
+  SLIC_ERROR_ROOT_IF(coefficient_definitions > 1,
+                     "Coefficient has multiple definitions. Please use only one of (constant, vector_constant, "
+                     "piecewise_constant, vector_piecewise_constant, scalar_function, vector_function");
+  SLIC_ERROR_ROOT_IF(coefficient_definitions == 0, "Coefficient definition does not contain known type.");
 
   return result;
 }

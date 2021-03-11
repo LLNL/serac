@@ -13,12 +13,11 @@ namespace serac {
 
 constexpr int NUM_FIELDS = 3;
 
-ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
-                           const ThermalConduction::SolverOptions& therm_options,
-                           const NonlinearSolid::SolverOptions&    solid_options)
-    : BasePhysics(mesh, NUM_FIELDS, order),
-      therm_solver_(order, mesh, therm_options),
-      solid_solver_(order, mesh, solid_options),
+ThermalSolid::ThermalSolid(int order, const ThermalConduction::SolverOptions& therm_options,
+                           const Solid::SolverOptions& solid_options)
+    : BasePhysics(NUM_FIELDS, order),
+      therm_solver_(order, therm_options),
+      solid_solver_(order, solid_options),
       temperature_(therm_solver_.temperature()),
       velocity_(solid_solver_.velocity()),
       displacement_(solid_solver_.displacement())
@@ -33,11 +32,10 @@ ThermalSolid::ThermalSolid(int order, std::shared_ptr<mfem::ParMesh> mesh,
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
-ThermalSolid::ThermalSolid(std::shared_ptr<mfem::ParMesh> mesh, const ThermalConduction::InputOptions& thermal_input,
-                           const NonlinearSolid::InputOptions& solid_input)
-    : BasePhysics(mesh, NUM_FIELDS, std::max(thermal_input.order, solid_input.order)),
-      therm_solver_(mesh, thermal_input),
-      solid_solver_(mesh, solid_input),
+ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const Solid::InputOptions& solid_input)
+    : BasePhysics(NUM_FIELDS, std::max(thermal_input.order, solid_input.order)),
+      therm_solver_(thermal_input),
+      solid_solver_(solid_input),
       temperature_(therm_solver_.temperature()),
       velocity_(solid_solver_.velocity()),
       displacement_(solid_solver_.displacement())
@@ -54,7 +52,7 @@ ThermalSolid::ThermalSolid(std::shared_ptr<mfem::ParMesh> mesh, const ThermalCon
 
 void ThermalSolid::completeSetup()
 {
-  SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit, mpi_rank_,
+  SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
                      "Only operator split is currently implemented in the thermal structural solver.");
 
   therm_solver_.completeSetup();
@@ -68,10 +66,10 @@ void ThermalSolid::advanceTimestep(double& dt)
     double initial_dt = dt;
     therm_solver_.advanceTimestep(dt);
     solid_solver_.advanceTimestep(dt);
-    SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6, mpi_rank_,
+    SLIC_ERROR_ROOT_IF(std::abs(dt - initial_dt) > 1.0e-6,
                        "Operator split coupled solvers cannot adaptively change the timestep");
   } else {
-    SLIC_ERROR_ROOT(mpi_rank_, "Only operator split coupling is currently implemented");
+    SLIC_ERROR_ROOT("Only operator split coupling is currently implemented");
   }
 
   cycle_ += 1;

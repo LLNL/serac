@@ -1,22 +1,22 @@
 -- Comparison information
-expected_t_l2norm = 2.02263
+expected_t_l2norm = 1.99716
 epsilon = 0.00001
 
 -- Simulation time parameters
 dt      = 1.0
 
 main_mesh = {
-    type = "file",
-    -- mesh file
-    mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",
+    type = "ball",
+    -- number of elements in the mesh
+    approx_elements = 10000,
     -- serial and parallel refinement levels
-    ser_ref_levels = 1,
-    par_ref_levels = 1,
+    ser_ref_levels = 0,
+    par_ref_levels = 0,
 }
 
 -- Solver parameters
 thermal_conduction = {
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
@@ -42,6 +42,16 @@ thermal_conduction = {
 
     -- material parameters
     kappa = 0.5,
+
+    -- add a nonlinear source
+    nonlinear_reaction = {
+        reaction_function = function (temp)
+            return 0.1 * temp^2
+        end,
+        d_reaction_function = function (temp)
+            return 0.2 * temp
+        end
+    },
 
     -- boundary condition parameters
     boundary_conds = {

@@ -52,23 +52,23 @@ public:
   /**
    * @brief Determines whether a boundary condition is associated with a tag
    * @tparam Tag The type of the tag to compare against
-   * @param[in] The tag to compare against
+   * @param[in] tag The tag to compare against
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
   bool tagEquals(const Tag tag) const
   {
     static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
-    SLIC_ERROR_IF(!tag_, "No tag has been configured for this boundary condition");
+    SLIC_ERROR_ROOT_IF(!tag_, "No tag has been configured for this boundary condition");
     bool tags_same_type = typeid(tag).hash_code() == tag_->second;
-    SLIC_WARNING_IF(!tags_same_type, "Attempting to compare tags of two different enum types (always false)");
+    SLIC_WARNING_ROOT_IF(!tags_same_type, "Attempting to compare tags of two different enum types (always false)");
     return (static_cast<int>(tag) == tag_->first) && tags_same_type;
   }
 
   /**
    * @brief Sets the tag for the BC
    * @tparam Tag The template type for the tag (label)
-   * @param[in] The new tag
+   * @param[in] tag The new tag
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
@@ -149,7 +149,7 @@ public:
    */
   const mfem::Array<int>& getTrueDofs() const
   {
-    SLIC_ERROR_IF(!true_dofs_, "True DOFs only available with essential BC.");
+    SLIC_ERROR_ROOT_IF(!true_dofs_, "True DOFs only available with essential BC.");
     return *true_dofs_;
   }
 
@@ -193,6 +193,7 @@ public:
 
   /**
    * @brief Projects the boundary condition over boundary to a DoF vector
+   * @param[in] dof_values The discrete dof values to project
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    * @pre A corresponding field (FiniteElementState) has been associated

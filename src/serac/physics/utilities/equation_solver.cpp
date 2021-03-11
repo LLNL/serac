@@ -20,7 +20,7 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
   }
   // If it's a custom solver, check that the mfem::Solver* is not null
   else if (auto custom = std::get_if<CustomSolverOptions>(&lin_options)) {
-    SLIC_ERROR_IF(custom->solver == nullptr, "Custom solver pointer must be initialized.");
+    SLIC_ERROR_ROOT_IF(custom->solver == nullptr, "Custom solver pointer must be initialized.");
     lin_solver_ = custom->solver;
   }
   // If it's a direct solver (currently SuperLU only)
@@ -217,7 +217,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
       iter_lin_solver = std::make_unique<mfem::MINRESSolver>(comm);
       break;
     default:
-      SLIC_ERROR("Linear solver type not recognized.");
+      SLIC_ERROR_ROOT("Linear solver type not recognized.");
       exitGracefully(true);
   }
 
@@ -233,8 +233,8 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
       auto prec_amg = std::make_unique<mfem::HypreBoomerAMG>();
       auto par_fes  = amg_options->pfes;
       if (par_fes != nullptr) {
-        SLIC_WARNING_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
-                        "Attempting to use BoomerAMG with nodal ordering on an elasticity problem.");
+        SLIC_WARNING_ROOT_IF(par_fes->GetOrdering() == mfem::Ordering::byNODES,
+                             "Attempting to use BoomerAMG with nodal ordering on an elasticity problem.");
         prec_amg->SetElasticityOptions(par_fes);
       }
       prec_amg->SetPrintLevel(lin_options.print_level);
@@ -249,7 +249,7 @@ std::unique_ptr<mfem::IterativeSolver> EquationSolver::BuildIterativeLinearSolve
       prec_ = detail::configureAMGX(comm, *amgx_options);
 #else
     } else if (std::get_if<AMGXPrec>(prec_ptr)) {
-      SLIC_ERROR("AMGX was not enabled when MFEM was built");
+      SLIC_ERROR_ROOT("AMGX was not enabled when MFEM was built");
 #endif
     } else if (auto ilu_options = std::get_if<BlockILUPrec>(prec_ptr)) {
       prec_ = std::make_unique<mfem::BlockILU>(ilu_options->block_size);
@@ -274,7 +274,7 @@ std::unique_ptr<mfem::NewtonSolver> EquationSolver::BuildNewtonSolver(MPI_Comm  
         (nonlin_options.nonlin_solver == NonlinearSolver::KINBacktrackingLineSearch) ? KIN_LINESEARCH : KIN_NONE;
     newton_solver = std::make_unique<mfem::KINSolver>(comm, kinsol_strat, true);
 #else
-    SLIC_ERROR("KINSOL was not enabled when MFEM was built");
+    SLIC_ERROR_ROOT("KINSOL was not enabled when MFEM was built");
 #endif
   }
 
@@ -332,48 +332,49 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
   mfem::Operator&       grad      = oper_.GetGradient(x);
   mfem::HypreParMatrix* matr_grad = dynamic_cast<mfem::HypreParMatrix*>(&grad);
 
-  SLIC_ERROR_IF(matr_grad == nullptr, "Nonlinear operator gradient must be a HypreParMatrix");
+  SLIC_ERROR_ROOT_IF(matr_grad == nullptr, "Nonlinear operator gradient must be a HypreParMatrix");
   superlu_grad_mat_.emplace(*matr_grad);
   return *superlu_grad_mat_;
 }
 
-void EquationSolver::DefineInputFileSchema(axom::inlet::Table& table)
+void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
 {
-  auto& linear_table = table.addStruct("linear", "Linear Equation Solver Parameters")
-                           .required()
-                           .registerVerifier([](const axom::inlet::Table& table_to_verify) {
-                             // Make sure that the provided options match the desired linear solver type
-                             const bool is_iterative = (table_to_verify["type"].get<std::string>() == "iterative") &&
-                                                       table_to_verify.contains("iterative_options");
-                             const bool is_direct = (table_to_verify["type"].get<std::string>() == "direct") &&
-                                                    table_to_verify.contains("direct_options");
-                             return is_iterative || is_direct;
-                           });
+  auto& linear_container = container.addStruct("linear", "Linear Equation Solver Parameters")
+                               .required()
+                               .registerVerifier([](const axom::inlet::Container& container_to_verify) {
+                                 // Make sure that the provided options match the desired linear solver type
+                                 const bool is_iterative =
+                                     (container_to_verify["type"].get<std::string>() == "iterative") &&
+                                     container_to_verify.contains("iterative_options");
+                                 const bool is_direct = (container_to_verify["type"].get<std::string>() == "direct") &&
+                                                        container_to_verify.contains("direct_options");
+                                 return is_iterative || is_direct;
+                               });
 
   // Enforce the solver type - must be iterative or direct
-  linear_table.addString("type", "The type of solver parameters to use (iterative|direct)")
+  linear_container.addString("type", "The type of solver parameters to use (iterative|direct)")
       .required()
       .validValues({"iterative", "direct"});
 
-  auto& iterative_table = linear_table.addStruct("iterative_options", "Iterative solver parameters");
-  iterative_table.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
-  iterative_table.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
-  iterative_table.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
-  iterative_table.addInt("print_level", "Linear print level.").defaultValue(0);
-  iterative_table.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
-  iterative_table.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
+  auto& iterative_container = linear_container.addStruct("iterative_options", "Iterative solver parameters");
+  iterative_container.addDouble("rel_tol", "Relative tolerance for the linear solve.").defaultValue(1.0e-6);
+  iterative_container.addDouble("abs_tol", "Absolute tolerance for the linear solve.").defaultValue(1.0e-8);
+  iterative_container.addInt("max_iter", "Maximum iterations for the linear solve.").defaultValue(5000);
+  iterative_container.addInt("print_level", "Linear print level.").defaultValue(0);
+  iterative_container.addString("solver_type", "Solver type (gmres|minres|cg).").defaultValue("gmres");
+  iterative_container.addString("prec_type", "Preconditioner type (JacobiSmoother|L1JacobiSmoother|AMG|BlockILU).")
       .defaultValue("JacobiSmoother");
 
-  auto& direct_table = linear_table.addStruct("direct_options", "Direct solver parameters");
-  direct_table.addInt("print_level", "Linear print level.").defaultValue(0);
+  auto& direct_container = linear_container.addStruct("direct_options", "Direct solver parameters");
+  direct_container.addInt("print_level", "Linear print level.").defaultValue(0);
 
   // Only needed for nonlinear problems
-  auto& nonlinear_table = table.addStruct("nonlinear", "Newton Equation Solver Parameters").required(false);
-  nonlinear_table.addDouble("rel_tol", "Relative tolerance for the Newton solve.").defaultValue(1.0e-2);
-  nonlinear_table.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
-  nonlinear_table.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
-  nonlinear_table.addInt("print_level", "Nonlinear print level.").defaultValue(0);
-  nonlinear_table.addString("solver_type", "Solver type (MFEMNewton|KINFullStep|KINLineSearch)")
+  auto& nonlinear_container = container.addStruct("nonlinear", "Newton Equation Solver Parameters").required(false);
+  nonlinear_container.addDouble("rel_tol", "Relative tolerance for the Newton solve.").defaultValue(1.0e-2);
+  nonlinear_container.addDouble("abs_tol", "Absolute tolerance for the Newton solve.").defaultValue(1.0e-4);
+  nonlinear_container.addInt("max_iter", "Maximum iterations for the Newton solve.").defaultValue(500);
+  nonlinear_container.addInt("print_level", "Nonlinear print level.").defaultValue(0);
+  nonlinear_container.addString("solver_type", "Solver type (MFEMNewton|KINFullStep|KINLineSearch)")
       .defaultValue("MFEMNewton");
 }
 
@@ -383,7 +384,7 @@ using serac::LinearSolverOptions;
 using serac::NonlinearSolverOptions;
 using serac::mfem_ext::EquationSolver;
 
-LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet::Table& base)
+LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet::Container& base)
 {
   LinearSolverOptions options;
   std::string         type = base["type"];
@@ -403,7 +404,7 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
       iter_options.lin_solver = serac::LinearSolver::CG;
     } else {
       std::string msg = fmt::format("Unknown Linear solver type given: {0}", solver_type);
-      SLIC_ERROR(msg);
+      SLIC_ERROR_ROOT(msg);
     }
     const std::string prec_type = config["prec_type"];
     if (prec_type == "JacobiSmoother") {
@@ -420,7 +421,7 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
       iter_options.prec = serac::BlockILUPrec{};
     } else {
       std::string msg = fmt::format("Unknown preconditioner type given: {0}", prec_type);
-      SLIC_ERROR(msg);
+      SLIC_ERROR_ROOT(msg);
     }
     options = iter_options;
   } else if (type == "direct") {
@@ -431,7 +432,7 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
   return options;
 }
 
-NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom::inlet::Table& base)
+NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom::inlet::Container& base)
 {
   NonlinearSolverOptions options;
   options.rel_tol               = base["rel_tol"];
@@ -446,12 +447,12 @@ NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom:
   } else if (solver_type == "KINLineSearch") {
     options.nonlin_solver = serac::NonlinearSolver::KINBacktrackingLineSearch;
   } else {
-    SLIC_ERROR(fmt::format("Unknown nonlinear solver type given: {0}", solver_type));
+    SLIC_ERROR_ROOT(fmt::format("Unknown nonlinear solver type given: {0}", solver_type));
   }
   return options;
 }
 
-EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Table& base)
+EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Container& base)
 {
   auto lin = base["linear"].get<LinearSolverOptions>();
   if (base.contains("nonlinear")) {
