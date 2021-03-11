@@ -6,12 +6,12 @@ epsilon = 0.00001
 dt      = 1.0
 
 main_mesh = {
-    type = "file",
-    -- mesh file
-    mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",
+    type = "ball",
+    -- number of elements in the mesh
+    approx_elements = 10000,
     -- serial and parallel refinement levels
-    ser_ref_levels = 1,
-    par_ref_levels = 1,
+    ser_ref_levels = 0,
+    par_ref_levels = 0,
 }
 
 -- Solver parameters

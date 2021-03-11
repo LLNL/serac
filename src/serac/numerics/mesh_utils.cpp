@@ -16,7 +16,7 @@
 
 namespace serac {
 
-std::unique_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file)
+mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
 {
   // Open the mesh
   std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
@@ -39,7 +39,7 @@ std::unique_ptr<mfem::Mesh> buildMeshFromFile(const std::string& mesh_file)
     SLIC_ERROR_ROOT(err_msg);
   }
 
-  return std::make_unique<mfem::Mesh>(imesh, 1, 1, true);
+  return mfem::Mesh{imesh, 1, 1, true};
 }
 
 /**
@@ -71,7 +71,7 @@ void squish(mfem::Mesh& mesh)
   mesh.SetVertices(vertices);
 }
 
-std::unique_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, const MPI_Comm comm)
+mfem::Mesh buildDiskMesh(int approx_number_of_elements)
 {
   static constexpr int dim                   = 2;
   static constexpr int num_elems             = 4;
@@ -101,10 +101,12 @@ std::unique_ptr<mfem::ParMesh> buildDiskMesh(int approx_number_of_elements, cons
 
   squish(mesh);
 
-  return std::make_unique<mfem::ParMesh>(comm, mesh);
+  // The copy ctor is marked explicit, but this should qualify for NRVO...
+  // It looks like this (and its analogues) don't have their copies elided...
+  return mfem::Mesh(mesh);
 }
 
-std::unique_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, const MPI_Comm comm)
+mfem::Mesh buildBallMesh(int approx_number_of_elements)
 {
   static constexpr int dim                   = 3;
   static constexpr int num_elems             = 8;
@@ -137,23 +139,23 @@ std::unique_ptr<mfem::ParMesh> buildBallMesh(int approx_number_of_elements, cons
 
   squish(mesh);
 
-  return std::make_unique<mfem::ParMesh>(comm, mesh);
+  // The copy ctor is marked explicit, but this should qualify for RVO...
+  return mfem::Mesh(mesh);
 }
 
-std::unique_ptr<mfem::Mesh> buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y)
+mfem::Mesh buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y)
 {
-  return std::make_unique<mfem::Mesh>(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y);
+  // Incoming: https://github.com/mfem/mfem/pull/2054
+  return {elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y};
 }
 
-std::unique_ptr<mfem::Mesh> buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x,
-                                            double size_y, double size_z)
+mfem::Mesh buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x, double size_y,
+                           double size_z)
 {
-  return std::make_unique<mfem::Mesh>(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true,
-                                      size_x, size_y, size_z);
+  return {elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true, size_x, size_y, size_z};
 }
 
-std::unique_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius,
-                                                 double height, const MPI_Comm comm)
+mfem::Mesh buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius, double height)
 {
   static constexpr int dim                   = 2;
   static constexpr int num_vertices          = 17;
@@ -234,15 +236,10 @@ std::unique_ptr<mfem::ParMesh> buildCylinderMesh(int radial_refinement, int elem
     mesh.SetVertices(new_vertices);
   }
 
-  std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(&mesh, elements_lengthwise, height));
-
-  auto extruded_pmesh = std::make_unique<mfem::ParMesh>(comm, *extruded_mesh);
-
-  return extruded_pmesh;
+  return mfem::Mesh(*mfem::Extrude2D(&mesh, elements_lengthwise, height));
 }
 
-std::unique_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius, double outer_radius,
-                                      double total_angle, int sectors)
+mfem::Mesh buildRing(int radial_refinement, double inner_radius, double outer_radius, double total_angle, int sectors)
 {
   using index_type = int;
   using size_type  = std::vector<index_type>::size_type;
@@ -292,31 +289,31 @@ std::unique_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius
     boundary_elems[i + num_elems][1] = elems[i][2];
   }
 
-  auto mesh = std::make_unique<mfem::Mesh>(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
-                                           static_cast<int>(num_boundary_elements));
+  mfem::Mesh mesh(dim, static_cast<int>(num_vertices), static_cast<int>(num_elems),
+                  static_cast<int>(num_boundary_elements));
 
   for (auto vertex : vertices) {
-    mesh->AddVertex(vertex.data());
+    mesh.AddVertex(vertex.data());
   }
   for (auto elem : elems) {
-    mesh->AddQuad(elem[0], elem[1], elem[2], elem[3]);
+    mesh.AddQuad(elem[0], elem[1], elem[2], elem[3]);
   }
   for (auto boundary_elem : boundary_elems) {
-    mesh->AddBdrSegment(boundary_elem[0], boundary_elem[1]);
+    mesh.AddBdrSegment(boundary_elem[0], boundary_elem[1]);
   }
 
   for (int i = 0; i < radial_refinement; i++) {
-    mesh->UniformRefinement();
+    mesh.UniformRefinement();
   }
 
   // the coarse mesh is actually a filled octagon
   // this deforms the vertices slightly to make it
   // into filled disk instead
   {
-    int n = mesh->GetNV();
+    int n = mesh.GetNV();
 
     mfem::Vector new_vertices;
-    mesh->GetVertices(new_vertices);
+    mesh.GetVertices(new_vertices);
     mfem::Vector vertex(dim);
     for (int i = 0; i < n; i++) {
       for (int d = 0; d < dim; d++) {
@@ -339,29 +336,23 @@ std::unique_ptr<mfem::Mesh> buildRing(int radial_refinement, double inner_radius
         new_vertices[d * n + i] = vertex(d);
       }
     }
-    mesh->SetVertices(new_vertices);
+    mesh.SetVertices(new_vertices);
   }
 
-  return mesh;
+  return mfem::Mesh(mesh);
 }
 
-std::unique_ptr<mfem::ParMesh> buildRingMesh(int radial_refinement, double inner_radius, double outer_radius,
-                                             double total_angle, int sectors, const MPI_Comm comm)
+mfem::Mesh buildRingMesh(int radial_refinement, double inner_radius, double outer_radius, double total_angle,
+                         int sectors)
 {
-  return std::make_unique<mfem::ParMesh>(
-      comm, *buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors));
+  return buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors);
 }
 
-std::unique_ptr<mfem::ParMesh> buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise,
-                                                       double inner_radius, double outer_radius, double height,
-                                                       double total_angle, int sectors, const MPI_Comm comm)
+mfem::Mesh buildHollowCylinderMesh(int radial_refinement, int elements_lengthwise, double inner_radius,
+                                   double outer_radius, double height, double total_angle, int sectors)
 {
-  auto                        mesh = buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors);
-  std::unique_ptr<mfem::Mesh> extruded_mesh(mfem::Extrude2D(mesh.get(), elements_lengthwise, height));
-
-  auto extruded_pmesh = std::make_unique<mfem::ParMesh>(comm, *extruded_mesh);
-
-  return extruded_pmesh;
+  auto mesh = buildRing(radial_refinement, inner_radius, outer_radius, total_angle, sectors);
+  return mfem::Mesh(*mfem::Extrude2D(&mesh, elements_lengthwise, height));
 }
 
 namespace mesh {
@@ -377,7 +368,7 @@ void InputOptions::defineInputFileSchema(axom::inlet::Container& container)
   // mesh path
   container.addString("mesh", "Path to Mesh file");
 
-  // mesh generation options
+  // box mesh generation options
   auto& elements = container.addStruct("elements");
   // JW: Can these be specified as requierd if elements is defined?
   elements.addInt("x", "x-dimension");
@@ -389,31 +380,41 @@ void InputOptions::defineInputFileSchema(axom::inlet::Container& container)
   size.addDouble("x", "Size in the x-dimension");
   size.addDouble("y", "Size in the y-dimension");
   size.addDouble("z", "Size in the z-dimension");
+
+  // n-ball mesh generation options
+  container.addInt("approx_elements", "Approximate number of elements in an n-ball mesh");
 }
 
 std::unique_ptr<mfem::ParMesh> buildParallelMesh(const InputOptions& options, const MPI_Comm comm)
 {
-  std::unique_ptr<mfem::Mesh> serial_mesh;
+  std::optional<mfem::Mesh> serial_mesh;
 
   if (const auto file_opts = std::get_if<FileInputOptions>(&options.extra_options)) {
     SLIC_ERROR_ROOT_IF(file_opts->absolute_mesh_file_name.empty(),
                        "Absolute path to mesh file was not configured, did you forget to call findMeshFilePath?");
-    serial_mesh = buildMeshFromFile(file_opts->absolute_mesh_file_name);
-  } else if (const auto generate_opts = std::get_if<GenerateInputOptions>(&options.extra_options)) {
-    const auto& eles  = generate_opts->elements;
-    const auto& sizes = generate_opts->overall_size;
-    if (eles.size() == 2) {
-      serial_mesh = buildRectangleMesh(eles.at(0), eles.at(1), sizes.at(0), sizes.at(1));
+    serial_mesh.emplace(buildMeshFromFile(file_opts->absolute_mesh_file_name));
+  } else if (const auto box_opts = std::get_if<BoxInputOptions>(&options.extra_options)) {
+    const auto& elems = box_opts->elements;
+    const auto& sizes = box_opts->overall_size;
+    if (elems.size() == 2) {
+      serial_mesh.emplace(buildRectangleMesh(elems.at(0), elems.at(1), sizes.at(0), sizes.at(1)));
     } else {
-      serial_mesh = buildCuboidMesh(eles.at(0), eles.at(1), eles.at(2), sizes.at(0), sizes.at(1), sizes.at(2));
+      serial_mesh.emplace(
+          buildCuboidMesh(elems.at(0), elems.at(1), elems.at(2), sizes.at(0), sizes.at(1), sizes.at(2)));
+    }
+  } else if (const auto ball_opts = std::get_if<NBallInputOptions>(&options.extra_options)) {
+    if (ball_opts->dimension == 2) {
+      serial_mesh.emplace(buildDiskMesh(ball_opts->approx_elements));
+    } else {
+      serial_mesh.emplace(buildBallMesh(ball_opts->approx_elements));
     }
   }
 
   SLIC_ERROR_ROOT_IF(!serial_mesh, "Mesh input options were invalid");
-  return refineAndDistribute(*serial_mesh, options.ser_ref_levels, options.par_ref_levels, comm);
+  return refineAndDistribute(std::move(*serial_mesh), options.ser_ref_levels, options.par_ref_levels, comm);
 }
 
-std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh& serial_mesh, const int refine_serial,
+std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, const int refine_serial,
                                                    const int refine_parallel, const MPI_Comm comm)
 {
   // Serial refinement first
@@ -440,7 +441,7 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
 
   // This is for cuboid/rectangular meshes
   std::string mesh_type = base["type"];
-  if (mesh_type == "generate") {
+  if (mesh_type == "box") {
     auto elements_input = base["elements"];
     bool z_present      = elements_input.contains("z");
 
@@ -461,7 +462,14 @@ serac::mesh::InputOptions FromInlet<serac::mesh::InputOptions>::operator()(const
       overall_size = std::vector<double>(overall_size.size(), 1.);
     }
 
-    return {serac::mesh::GenerateInputOptions{elements, overall_size}, ser_ref, par_ref};
+    return {serac::mesh::BoxInputOptions{elements, overall_size}, ser_ref, par_ref};
+  } else if (mesh_type == "disk" || mesh_type == "ball") {
+    int approx_elements = base["approx_elements"];
+    int dim             = 3;
+    if (mesh_type == "disk") {
+      dim = 2;
+    }
+    return {serac::mesh::NBallInputOptions{approx_elements, dim}, ser_ref, par_ref};
   } else if (mesh_type == "file") {  // This is for file-based meshes
     std::string mesh_path = base["mesh"];
     return {serac::mesh::FileInputOptions{mesh_path}, ser_ref, par_ref};
