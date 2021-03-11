@@ -30,7 +30,7 @@ TEST(serac_dtor, test1)
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore);
 
-  auto pmesh = mesh::refineAndDistribute(*buildMeshFromFile(mesh_file), 1, 0);
+  auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 1, 0);
   serac::StateManager::setMesh(std::move(pmesh));
 
   // Initialize the second order thermal solver on the parallel mesh
