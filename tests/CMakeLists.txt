@@ -28,7 +28,7 @@ if (ENABLE_GTEST)
         serac_boundary_cond.cpp
         serac_mesh.cpp
         mfem_ex9p_blockilu.cpp
-	    serac_newmark_test.cpp)
+	serac_newmark_test.cpp)
 
     foreach(filename ${solver_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -117,5 +117,17 @@ if (ENABLE_GTEST)
                     COMMAND       petsc_smoketest
                     NUM_MPI_TASKS 4 )
     endif()
+
+    if(SERAC_USE_CALIPER)
+        blt_add_executable( NAME        serac_profiling
+                            SOURCES     serac_profiling.cpp
+                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                            DEPENDS_ON  caliper ${test_dependencies}
+                            FOLDER      serac/tests )
+        blt_add_test(NAME         serac_profiling
+                    COMMAND       serac_profiling
+                    NUM_MPI_TASKS 4 )
+    endif()
+
 
 endif()

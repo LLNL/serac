@@ -169,7 +169,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
 
   for (int ip_num = 0; ip_num < ir->GetNPoints(); ip_num++) {
     // Set the integration point and calculate the deformation gradient
-    SERAC_MARK_LOOP_ITER(ip_loop_id, i);
+    SERAC_MARK_LOOP_ITER(ip_loop_id, ip_num);
     const mfem::IntegrationPoint& int_point = ir->IntPoint(ip_num);
     parent_to_reference_transformation.SetIntPoint(&int_point);
     CalcKinematics(element, int_point, parent_to_reference_transformation);
