@@ -28,7 +28,7 @@ TEST(dynamic_solver, dyn_solve)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
-  auto      pmesh = mesh::refineAndDistribute(*buildMeshFromFile(mesh_file), 1, 0);
+  auto      pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 1, 0);
   const int dim   = pmesh->Dimension();
   serac::StateManager::setMesh(std::move(pmesh));
 

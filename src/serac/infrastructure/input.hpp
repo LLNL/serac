@@ -54,15 +54,15 @@ std::string fullDirectoryFromPath(const std::string& file_path);
 
 /**
  * @brief Defines the schema for a vector in R^{1,2,3} space
- * @param[inout] table The base table on which to define the schema
+ * @param[inout] container The base container on which to define the schema
  */
-void defineVectorInputFileSchema(axom::inlet::Table& table);
+void defineVectorInputFileSchema(axom::inlet::Container& container);
 
 /**
  * @brief Defines the schema for serac::OutputType
- * @param[inout] table The base table on which to define the schema
+ * @param[inout] container The base container on which to define the schema
  */
-void defineOutputTypeInputFileSchema(axom::inlet::Table& table);
+void defineOutputTypeInputFileSchema(axom::inlet::Container& container);
 
 /**
  * @brief The information required from the input file for an mfem::(Vector)(Function)Coefficient
@@ -126,9 +126,9 @@ struct CoefficientInputOptions {
    */
   std::unique_ptr<mfem::Coefficient> constructScalar() const;
   /**
-   * @brief Defines the input file schema on the provided inlet table
+   * @brief Defines the input file schema on the provided inlet container
    */
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void defineInputFileSchema(axom::inlet::Container& container);
 };
 
 /**
@@ -146,9 +146,9 @@ struct BoundaryConditionInputOptions {
   /**
    * @brief Input file parameters specific to this class
    *
-   * @param[in] table Inlet's Table to which fields should be added
+   * @param[in] container Inlet's Container to which fields should be added
    **/
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void defineInputFileSchema(axom::inlet::Container& container);
 };
 
 }  // namespace serac::input
@@ -160,7 +160,7 @@ struct BoundaryConditionInputOptions {
  */
 template <>
 struct FromInlet<mfem::Vector> {
-  mfem::Vector operator()(const axom::inlet::Table& base);
+  mfem::Vector operator()(const axom::inlet::Container& base);
 };
 
 // Forward declaration
@@ -175,7 +175,7 @@ enum class OutputType;
  */
 template <>
 struct FromInlet<serac::OutputType> {
-  serac::OutputType operator()(const axom::inlet::Table& base);
+  serac::OutputType operator()(const axom::inlet::Container& base);
 };
 
 /**
@@ -185,7 +185,7 @@ struct FromInlet<serac::OutputType> {
  */
 template <>
 struct FromInlet<serac::input::CoefficientInputOptions> {
-  serac::input::CoefficientInputOptions operator()(const axom::inlet::Table& base);
+  serac::input::CoefficientInputOptions operator()(const axom::inlet::Container& base);
 };
 
 /**
@@ -195,5 +195,5 @@ struct FromInlet<serac::input::CoefficientInputOptions> {
  */
 template <>
 struct FromInlet<serac::input::BoundaryConditionInputOptions> {
-  serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Table& base);
+  serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Container& base);
 };

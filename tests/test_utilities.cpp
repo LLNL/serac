@@ -30,7 +30,7 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.");
   inlet.addDouble("t_final", "Stopping point");
 
-  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalTable());
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
 
   // Comparison parameter
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
@@ -155,8 +155,7 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
 }  // namespace detail
 
 template <typename PhysicsModule>
-void runModuleTest(const std::string& input_file, const std::string& test_name,
-                   std::unique_ptr<mfem::ParMesh> custom_mesh, std::optional<int> restart_cycle)
+void runModuleTest(const std::string& input_file, const std::string& test_name, std::optional<int> restart_cycle)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -177,17 +176,12 @@ void runModuleTest(const std::string& input_file, const std::string& test_name,
 
   // Build the mesh
   if (!restart_cycle) {
-    std::unique_ptr<mfem::ParMesh> mesh;
-    if (custom_mesh) {
-      mesh = std::move(custom_mesh);
-    } else {
-      auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-      if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-        file_options->absolute_mesh_file_name =
-            serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
-      }
-      mesh = serac::mesh::buildParallelMesh(mesh_options);
+    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+      file_options->absolute_mesh_file_name =
+          serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
     }
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
     serac::StateManager::setMesh(std::move(mesh));
   }
 
@@ -205,7 +199,7 @@ void runModuleTest(const std::string& input_file, const std::string& test_name,
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>() - Inlet obj
   // needs to allow for top-level scalar retrieval as well
-  phys_module.initializeOutput(inlet.getGlobalTable().get<OutputType>(), test_name);
+  phys_module.initializeOutput(inlet.getGlobalContainer().get<OutputType>(), test_name);
 
   // Complete the solver setup
   phys_module.completeSetup();
@@ -242,10 +236,8 @@ void runModuleTest(const std::string& input_file, const std::string& test_name,
   // serac::StateManager::reset();
 }
 
-template void runModuleTest<Solid>(const std::string&, const std::string&, std::unique_ptr<mfem::ParMesh>,
-                                   std::optional<int>);
-template void runModuleTest<ThermalConduction>(const std::string&, const std::string&, std::unique_ptr<mfem::ParMesh>,
-                                               std::optional<int>);
+template void runModuleTest<Solid>(const std::string&, const std::string&, std::optional<int>);
+template void runModuleTest<ThermalConduction>(const std::string&, const std::string&, std::optional<int>);
 
 }  // end namespace test_utils
 

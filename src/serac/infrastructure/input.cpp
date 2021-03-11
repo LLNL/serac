@@ -69,26 +69,26 @@ std::string fullDirectoryFromPath(const std::string& path)
   return dir;
 }
 
-void defineVectorInputFileSchema(axom::inlet::Table& table)
+void defineVectorInputFileSchema(axom::inlet::Container& container)
 {
   // TODO: I had to remove the required tag on x as we now have an optional vector input in the coefficients. IT would
   // be nice to support "If this exists, this subcomponent is required."
-  table.addDouble("x", "x-component of vector");
-  table.addDouble("y", "y-component of vector");
-  table.addDouble("z", "z-component of vector");
+  container.addDouble("x", "x-component of vector");
+  container.addDouble("y", "y-component of vector");
+  container.addDouble("z", "z-component of vector");
 }
 
-void defineOutputTypeInputFileSchema(axom::inlet::Table& table)
+void defineOutputTypeInputFileSchema(axom::inlet::Container& container)
 {
-  table.addString("output_type", "Desired output format")
+  container.addString("output_type", "Desired output format")
       .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
       .defaultValue("VisIt");
 }
 
-void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
-  table.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
-  CoefficientInputOptions::defineInputFileSchema(table);
+  container.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
+  CoefficientInputOptions::defineInputFileSchema(container);
 }
 
 bool CoefficientInputOptions::isVector() const
@@ -168,33 +168,33 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
   }
 }
 
-void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Vectors are implemented as lua usertypes and can be converted to/from mfem::Vector
-  table.addFunction("vector_function", axom::inlet::FunctionTag::Vector,
-                    {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
-                    "The function to use for an mfem::VectorFunctionCoefficient");
-  table.addFunction("scalar_function", axom::inlet::FunctionTag::Double,
-                    {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
-                    "The function to use for an mfem::FunctionCoefficient");
-  table.addInt("component", "The vector component to which the scalar coefficient should be applied");
+  container.addFunction("vector_function", axom::inlet::FunctionTag::Vector,
+                        {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
+                        "The function to use for an mfem::VectorFunctionCoefficient");
+  container.addFunction("scalar_function", axom::inlet::FunctionTag::Double,
+                        {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
+                        "The function to use for an mfem::FunctionCoefficient");
+  container.addInt("component", "The vector component to which the scalar coefficient should be applied");
 
-  table.addDouble("constant", "The constant scalar value to use as the coefficient");
+  container.addDouble("constant", "The constant scalar value to use as the coefficient");
 
-  auto& vector_table = table.addStruct("vector_constant", "The constant vector to use as the coefficient");
-  serac::input::defineVectorInputFileSchema(vector_table);
+  auto& vector_container = container.addStruct("vector_constant", "The constant vector to use as the coefficient");
+  serac::input::defineVectorInputFileSchema(vector_container);
 
-  table.addDoubleArray("piecewise_constant",
-                       "Map of mesh attributes to constant values to use as a piecewise coefficient");
+  container.addDoubleArray("piecewise_constant",
+                           "Map of mesh attributes to constant values to use as a piecewise coefficient");
 
-  auto& pw_vector_table = table.addStructArray(
+  auto& pw_vector_container = container.addStructArray(
       "vector_piecewise_constant", "Map of mesh attributes to constant vectors to use as a piecewise coefficient");
-  serac::input::defineVectorInputFileSchema(pw_vector_table);
+  serac::input::defineVectorInputFileSchema(pw_vector_container);
 }
 
 }  // namespace serac::input
 
-mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
+mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Container& base)
 {
   mfem::Vector result(3);  // Allocate up front since it's small
   result[0] = base["x"];
@@ -211,7 +211,7 @@ mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Table& base)
   return result;
 }
 
-serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Table& base)
+serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Container& base)
 {
   const static auto output_names = []() {
     std::unordered_map<std::string, serac::OutputType> result;
@@ -230,7 +230,7 @@ serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Ta
 }
 
 serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
-    const axom::inlet::Table& base)
+    const axom::inlet::Container& base)
 {
   serac::input::BoundaryConditionInputOptions result{.coef_opts = base.get<serac::input::CoefficientInputOptions>()};
   // Build a set with just the values of the map
@@ -242,7 +242,7 @@ serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryCond
 }
 
 serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOptions>::operator()(
-    const axom::inlet::Table& base)
+    const axom::inlet::Container& base)
 {
   serac::input::CoefficientInputOptions result;
 

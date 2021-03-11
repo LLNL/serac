@@ -248,39 +248,40 @@ void ThermalConduction::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Table& table)
+void ThermalConduction::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
-  table.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
+  container.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
 
   // material parameters
-  table.addDouble("kappa", "Thermal conductivity").defaultValue(0.5);
-  table.addDouble("rho", "Density").defaultValue(1.0);
-  table.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
+  container.addDouble("kappa", "Thermal conductivity").defaultValue(0.5);
+  container.addDouble("rho", "Density").defaultValue(1.0);
+  container.addDouble("cp", "Specific heat capacity").defaultValue(1.0);
 
-  auto& source = table.addStruct("source", "Scalar source term (RHS of the thermal conduction PDE)");
+  auto& source = container.addStruct("source", "Scalar source term (RHS of the thermal conduction PDE)");
   serac::input::CoefficientInputOptions::defineInputFileSchema(source);
 
-  auto& reaction_table = table.addStruct("nonlinear_reaction", "Nonlinear reaction term parameters");
-  reaction_table.addFunction("reaction_function", axom::inlet::FunctionTag::Double, {axom::inlet::FunctionTag::Double},
-                             "Nonlinear reaction function q = q(temperature)");
-  reaction_table.addFunction("d_reaction_function", axom::inlet::FunctionTag::Double,
-                             {axom::inlet::FunctionTag::Double},
-                             "Derivative of the nonlinear reaction function dq = dq / dTemperature");
-  auto& scale_coef_table = reaction_table.addStruct("scale", "Spatially varying scale factor for the reaction");
-  serac::input::CoefficientInputOptions::defineInputFileSchema(scale_coef_table);
+  auto& reaction_container = container.addStruct("nonlinear_reaction", "Nonlinear reaction term parameters");
+  reaction_container.addFunction("reaction_function", axom::inlet::FunctionTag::Double,
+                                 {axom::inlet::FunctionTag::Double}, "Nonlinear reaction function q = q(temperature)");
+  reaction_container.addFunction("d_reaction_function", axom::inlet::FunctionTag::Double,
+                                 {axom::inlet::FunctionTag::Double},
+                                 "Derivative of the nonlinear reaction function dq = dq / dTemperature");
+  auto& scale_coef_container = reaction_container.addStruct("scale", "Spatially varying scale factor for the reaction");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(scale_coef_container);
 
-  auto& equation_solver_table = table.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
-  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_table);
+  auto& equation_solver_container =
+      container.addStruct("equation_solver", "Linear and Nonlinear stiffness Solver Parameters.");
+  serac::mfem_ext::EquationSolver::DefineInputFileSchema(equation_solver_container);
 
-  auto& dynamics_table = table.addStruct("dynamics", "Parameters for mass matrix inversion");
-  dynamics_table.addString("timestepper", "Timestepper (ODE) method to use");
-  dynamics_table.addString("enforcement_method", "Time-varying constraint enforcement method to use");
+  auto& dynamics_container = container.addStruct("dynamics", "Parameters for mass matrix inversion");
+  dynamics_container.addString("timestepper", "Timestepper (ODE) method to use");
+  dynamics_container.addString("enforcement_method", "Time-varying constraint enforcement method to use");
 
-  auto& bc_table = table.addStructDictionary("boundary_conds", "Table of boundary conditions");
-  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_table);
+  auto& bc_container = container.addStructDictionary("boundary_conds", "Container of boundary conditions");
+  serac::input::BoundaryConditionInputOptions::defineInputFileSchema(bc_container);
 
-  auto& init_temp = table.addStruct("initial_temperature", "Coefficient for initial condition");
+  auto& init_temp = container.addStruct("initial_temperature", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_temp);
 }
 
@@ -290,7 +291,8 @@ using serac::DirichletEnforcementMethod;
 using serac::ThermalConduction;
 using serac::TimestepMethod;
 
-ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::operator()(const axom::inlet::Table& base)
+ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::operator()(
+    const axom::inlet::Container& base)
 {
   ThermalConduction::InputOptions result;
 
