@@ -51,7 +51,7 @@ To enable Caliper for a program, call ``serac::profiling::initializeCaliper()`` 
 Optionally, a Caliper `ConfigManager configuration string <https://software.llnl.gov/Caliper/ConfigManagerAPI.html#configmanager-configuration-string-syntax>`_
 can be passed to configure Caliper.
 
-Additionally, you can use ``serac::profiling::setCaliperMetadata(name, data)`` to add extra metadata into the ``.cali`` file. Supported metadata are ``char *, int, unsigned int, double``.
+Additionally, you can use ``SERAC_SET_METADATA(name, data)`` to add extra metadata into the ``.cali`` file. Supported metadata are ``string, int, unsigned int, double``.
 
 Call ``serac::profiling::terminateCaliper()`` to conclude performance monitoring and to write the data to a ``.cali`` file.
 
