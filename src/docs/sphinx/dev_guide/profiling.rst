@@ -24,11 +24,15 @@ to instrument your code:
 
 Use ``SERAC_MARK_FUNCTION`` at the very top of a function to mark it for profiling.
 
+Use ``SERAC_MARK_START(name)`` at the begining of a region and ``SERAC_MARK_END(name)`` at the end of the region.
+
 Use ``SERAC_MARK_LOOP_START(id, name)`` before a loop to mark it for profiling, ``SERAC_MARK_LOOP_ITER(id, i)`` at the beginning
 of the  ``i`` th iteration of a loop, and ``SERAC_MARK_LOOP_END(id)`` immediately after the loop ends:
 
 ::
 
+  SERAC_MARK_START("region_name");
+   
   SERAC_MARK_LOOP_START(doubling_loop, "doubling_loop");
   for (int i = 0; i < input.size(); i++)
   {
@@ -36,6 +40,8 @@ of the  ``i`` th iteration of a loop, and ``SERAC_MARK_LOOP_END(id)`` immediatel
     output[i] = input[i] * 2;
   }
   SERAC_MARK_LOOP_END(doubling_loop);
+
+  SERAC_MARK_END("region_name");
 
 
 Note that the ``id`` argument to the ``SERAC_MARK_LOOP_*`` macros can be any identifier as long as it is consistent
@@ -45,6 +51,9 @@ To enable Caliper for a program, call ``serac::profiling::initializeCaliper()`` 
 Optionally, a Caliper `ConfigManager configuration string <https://software.llnl.gov/Caliper/ConfigManagerAPI.html#configmanager-configuration-string-syntax>`_
 can be passed to configure Caliper.
 
+Additionally, you can use ``serac::profiling::setCaliperMetadata(name, type)`` to add extra metadata into the ``.cali`` file. Supported metadata types are ``char *, int, unsigned int, double``.
+
 Call ``serac::profiling::terminateCaliper()`` to conclude performance monitoring and to write the data to a ``.cali`` file.
+
 
 To analyze the contents of this file, use `cali-query <https://software.llnl.gov/Caliper/tools.html#cali-query>`_.
