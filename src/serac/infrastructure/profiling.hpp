@@ -91,31 +91,4 @@ void terminateCaliper();
 template <typename T>
 void setCaliperMetaData(const std::string& name, T data);
 
-/**
- * @brief Adds double with given name to caliper metadata
- */
-template <>
-void setCaliperMetaData<double>(const std::string& name, double data);
-
-/**
- * @brief Adds int with given name to caliper metadata
- */
-
-template <>
-void setCaliperMetaData<int>(const std::string& name, int data);
-
-/**
- * @brief Adds string with given name to caliper metadata
- */
-
-template <>
-void setCaliperMetaData<const char*>(const std::string& name, const char* data);
-
-/**
- * @brief Adds unsigned int with given name to caliper metadata
- */
-
-template <>
-void setCaliperMetaData<unsigned int>(const std::string& name, unsigned int data);
-
 }  // namespace serac::profiling
