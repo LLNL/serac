@@ -51,7 +51,7 @@ void terminateCaliper()
 }
 
 template <>
-void setCaliperMetaData<double>([[maybe_unused]] const std::string& name, [[maybe_unused]] double data)
+void setCaliperMetadata<double>([[maybe_unused]] const std::string& name, [[maybe_unused]] double data)
 {
 #ifdef SERAC_USE_CALIPER
   cali_set_global_double_byname(name.c_str(), data);
@@ -59,7 +59,7 @@ void setCaliperMetaData<double>([[maybe_unused]] const std::string& name, [[mayb
 }
 
 template <>
-void setCaliperMetaData<int>([[maybe_unused]] const std::string& name, [[maybe_unused]] int data)
+void setCaliperMetadata<int>([[maybe_unused]] const std::string& name, [[maybe_unused]] int data)
 {
 #ifdef SERAC_USE_CALIPER
   cali_set_global_int_byname(name.c_str(), data);
@@ -67,7 +67,7 @@ void setCaliperMetaData<int>([[maybe_unused]] const std::string& name, [[maybe_u
 }
 
 template <>
-void setCaliperMetaData<const char*>([[maybe_unused]] const std::string& name, [[maybe_unused]] const char* data)
+void setCaliperMetadata<const char*>([[maybe_unused]] const std::string& name, [[maybe_unused]] const char* data)
 {
 #ifdef SERAC_USE_CALIPER
   cali_set_global_string_byname(name.c_str(), data);
@@ -75,7 +75,7 @@ void setCaliperMetaData<const char*>([[maybe_unused]] const std::string& name, [
 }
 
 template <>
-void setCaliperMetaData<unsigned int>([[maybe_unused]] const std::string& name, [[maybe_unused]] unsigned int data)
+void setCaliperMetadata<unsigned int>([[maybe_unused]] const std::string& name, [[maybe_unused]] unsigned int data)
 {
 #ifdef SERAC_USE_CALIPER
   cali_set_global_uint_byname(name.c_str(), data);

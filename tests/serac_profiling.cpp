@@ -12,6 +12,7 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/numerics/mesh_utils.hpp"
+#include <cstring>
 
 namespace serac {
   
@@ -36,6 +37,24 @@ TEST(serac_profiling, mesh_refinement)
       pmesh->UniformRefinement();
     }
   SERAC_MARK_LOOP_END(refinement_loop);
+  
+  serac::profiling::setCaliperMetadata("mesh_file", mesh_file.c_str());
+  serac::profiling::setCaliperMetadata("number_mesh_elements", pmesh->GetNE());
+
+  unsigned int magic_uint = 1819176044;
+  serac::profiling::setCaliperMetadata("magic_uint", magic_uint);
+
+  char uint_string[sizeof(magic_uint)+1];
+  std::memcpy(uint_string, &magic_uint, sizeof(magic_uint));
+  std::cout << uint_string << std::endl;
+  
+  double magic_double;
+  std::memcpy(&magic_double, "llnl", 4);
+  serac::profiling::setCaliperMetadata("magic_double", magic_double);
+
+  std::array<char, sizeof(magic_double) + 1> double_string;
+  std::memcpy(double_string.data(), &magic_double, sizeof(magic_double));
+  std::cout << double_string.data() << std::endl;
   
   serac::profiling::terminateCaliper();
   

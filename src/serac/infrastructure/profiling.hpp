@@ -89,6 +89,6 @@ void terminateCaliper();
  * @brief Caliper metadata methods cali_set_global_(double|int|string|uint)_byname()
  */
 template <typename T>
-void setCaliperMetaData(const std::string& name, T data);
+void setCaliperMetadata(const std::string& name, T data);
 
 }  // namespace serac::profiling
