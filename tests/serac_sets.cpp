@@ -67,7 +67,7 @@ TEST_F(SetTest, set)
     std::cout << a7 << std::endl;
 }
 
-  TEST_F(SetTest, mesh)
+  TEST_F(SetTest, flag_mesh)
   {
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -77,11 +77,11 @@ TEST_F(SetTest, set)
     auto pmesh = mesh::refineAndDistribute(buildRectangleMesh(100, 100, flag_width, flag_height));
 
     // first we need our 13 stripes
-    // stripe_coef evaluates to 1 if red, 2 if white
+    // red = 2, white = 1
     auto stripes_coef = mfem::FunctionCoefficient([=](const mfem::Vector & coords){
 	auto stripe_height = flag_height/13;
 	auto stripe = static_cast<int>(coords[1] / stripe_height);
-	return stripe % 2 ? 1. : 2.;
+	return stripe % 2 ? 2. : 1.;
       });
 
     // blue portion
@@ -135,11 +135,11 @@ TEST_F(SetTest, set)
     auto red_white = stripes_attr_set.getDifference(blue);
 
     auto flag = blue.getUnion(red_white);
-    auto flag_list = flag.toList();
-    // mfem_ext::AssignMeshElementAttributes(*pmesh, flag_list);
+    mfem_ext::AssignMeshElementAttributes(*pmesh, flag.toList());
 
     visit.RegisterField("stripes", &stripes);
     visit.RegisterField("stars", &stars);
+
     visit.SetCycle(0);
     visit.Save();
 
