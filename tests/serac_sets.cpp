@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/infrastructure/input.hpp"
-
+#include "serac/coefficients/coefficient_extensions.hpp"
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
@@ -13,173 +13,13 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
+#include "serac/infrastructure/set.hpp"
+#include "serac/physics/utilities/finite_element_state.hpp"
+#include "serac/numerics/mesh_utils.hpp"
 
 class SlicErrorException : public std::exception {
 };
 
- template < typename S>
- std::vector<S> Union(std::vector<S> v1, std::vector<S> v2) {
-    std::vector<S> v(v1.size() + v2.size());
-        auto it = std::set_union(v1.begin(),
-        v1.end(),
-        v2.begin(),
-        v2.end(),
-        v.begin());
-    v.resize(it-v.begin());     
-    return v;
-}
- 
-template <typename S>
-std::vector<S> Intersection(std::vector<S> & v1, std::vector<S> & v2) {
-    std::vector<S> v(v1.size() + v2.size());
-        auto it = std::set_intersection(v1.begin(),
-        v1.end(),
-        v2.begin(),
-        v2.end(),
-        v.begin());
-    v.resize(it-v.begin());     
-    return v;
-}
- 
-template <typename S>
-std::vector<S> Difference(std::vector<S> & v1, std::vector<S> & v2) {
-    std::vector<S> v(v1.size() + v2.size());
-        auto it = std::set_difference(v1.begin(),
-        v1.end(),
-        v2.begin(),
-        v2.end(),
-        v.begin());
-    v.resize(it-v.begin());   
-    return v; 
-}
- 
-template <class T>
-class Set {
-public:
-    using index_type = typename std::vector<T>::size_type;
- 
-    Set() {}
- 
-    // convert an attribute list into a Set
-    Set(std::vector<T> attr_list) {
-        for (index_type i = 0; i < attr_list.size(); i++) {
-            values_index_list[attr_list[i]].push_back(i);
-        }
- 
-        for (auto kv : values_index_list) {
-            keys.push_back(kv.first);
-        }
-        std::sort(keys.begin(),keys.end());
-    }
- 
-    Set(std::initializer_list<T> l) {
-        std::vector<T> attr_list(l);
-                for (index_type i = 0; i < attr_list.size(); i++) {
-            values_index_list[attr_list[i]].push_back(i);
-        }
- 
-        for (auto kv : values_index_list) {
-            keys.push_back(kv.first);
-        }
-        std::sort(keys.begin(),keys.end());
-    }
- 
-    Set(std::unordered_map<T, std::vector<index_type>>  m) {
-        // set the map accordingly
-        for (auto [k, v] : m)
-        {
-            keys.push_back(k);
-            values_index_list[k] = v;
-        }
-    }
- 
-    // move constructor
-    Set(Set<T> && s) {
-        std::swap(keys, s.keys);
-        std::swap(values_index_list, s.values_index_list);
-    }
- 
-    std::size_t size() { return values_index_list.size(); }
- 
-    const auto values(std::initializer_list<T> t) { 
-        std::vector<T> combine_keys(t);
-        std::vector<index_type> combined_values;
-        for (auto k : combine_keys) {
-            combined_values = Union(values_index_list[k], combined_values);
-        }
-        return combined_values;
-        }
- 
-    // calls union on all of the std::vectors with the same value
-    Set<T> getUnion(Set<T> & s2) {
-        // find the union of all the keys in the sets
-        Set<T> sunion;
-        sunion.keys = Union(keys, s2.keys);
-        // go through each of the keys and combine them
-        for (auto k : sunion.keys) {
-            sunion.values_index_list[k] = Union(values_index_list[k], s2.values_index_list[k]);
-        }
-        return sunion; 
-    }
- 
-    // Get the intersection of the keys. union on values
-    Set<T> getIntersection(Set<T> & s2) {
-        // find the union of all the keys in the sets
-        Set<T> sall;
-        sall.keys = Intersection(keys, s2.keys);
-       // go through each of the keys and combine them
-        for (auto k : sall.keys) {
-            sall.values_index_list[k] = Intersection(values_index_list[k], s2.values_index_list[k]);
-        }
-        return sall; 
-    }
- 
-    // Get the intersection of the keys. union on values
-    Set<T> getDifference(Set<T> & s2) {
-        // find the union of all the keys in the sets
-        Set<T> sall;
-        sall.keys = Difference(keys, s2.keys); 
-       // go through each of the keys and combine them
-        for (auto k : sall.keys) {
-            // the keys are either in one set or the other
-            if (values_index_list.find(k) != values_index_list.end()) {
-                sall.values_index_list[k] = values_index_list[k];
-            } else {
-                sall.values_index_list[k] = s2.values_index_list[k];
-            }
-        }
-        return sall; 
-    }
- 
-    // Get the complement of a given subset of keys
-    Set<T> getComplement(std::vector<T> subkeys) {
-        // find the difference of the keys
-        Set<T> sall;
-        sall.keys = Difference(keys, subkeys);
-        // copy over only the vectors that are part of the commplement
-        for (auto k : sall.keys)
-        {
-            sall.values_index_list[k] = values_index_list[k];
-        }
-        return sall;
-    }
- 
-    friend std::ostream& operator<<(std::ostream& os, const Set<T> & set)
-    {
-            for (auto [k,v] : set.values_index_list) {
-        os << k << " : ";
-        for (auto i : v) {
-            os << i << " ";
-        }
-        os << std::endl;
-    }
-    return os;
-    }
- 
-protected:
-    std::unordered_map<T, std::vector<std::size_t>> values_index_list;
-    std::vector<T> keys;
-};
 
 class SetTest : public ::testing::Test {
 protected:
@@ -203,7 +43,7 @@ TEST_F(SetTest, set)
 {
     Set<int> a1(std::vector<int>{1,2,4,2,2,3,4});
     Set<int> a2({1,2,3});
-    std::cout << "values size: " << a1.size() << std::endl;
+    std::cout << "values size: " << a1.keys_size() << std::endl;
     auto a3 = a1.getUnion(a2);
     std::cout << "Union of a1 and a2" << std::endl;
     std::cout << a3 << std::endl;
@@ -225,9 +65,89 @@ TEST_F(SetTest, set)
     auto a7 = a1.getComplement({1,3});
     std::cout << "Subset of a1 without (1,3)" << std::endl;
     std::cout << a7 << std::endl;
-
 }
 
+  TEST_F(SetTest, mesh)
+  {
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    // Let's draw a flag
+    double flag_width = 1.5;
+    double flag_height = 1.;
+    auto pmesh = mesh::refineAndDistribute(buildRectangleMesh(100, 100, flag_width, flag_height));
+
+    // first we need our 13 stripes
+    // stripe_coef evaluates to 1 if red, 2 if white
+    auto stripes_coef = mfem::FunctionCoefficient([=](const mfem::Vector & coords){
+	auto stripe_height = flag_height/13;
+	auto stripe = static_cast<int>(coords[1] / stripe_height);
+	return stripe % 2 ? 1. : 2.;
+      });
+
+    // blue portion
+    // blue = 3, white 2, outside = 1
+    auto stars_coef = mfem::FunctionCoefficient([=](const mfem::Vector & coords) {
+	auto blue_height = flag_height/2;
+	auto blue_width = flag_width/2.5;
+	double color = 1.; // not blue
+	if (coords[0] <= blue_width && coords[1] >= blue_height) {
+	  // could be blue, check to see if it's in a "star"
+	  // 9 down 11 across
+	  auto checker_height = blue_height/9;
+	  auto checker_width = blue_width/11;
+	  auto checker_x = static_cast<int>(coords[0]/checker_width);
+	  auto checker_y = static_cast<int>((coords[1]-blue_height)/checker_height);
+	  if ((checker_x + checker_y * 11) % 2 == 0) {
+	    color = 3;
+	  } else {
+	    color = 2;
+	  }
+	}
+	return color;
+      });
+
+    mfem::VisItDataCollection visit(pmesh->GetComm(), "flag", pmesh.get());
+
+    // serac::FiniteElementState stripes(*pmesh, FiniteElementState::Options{
+    // 	.order=0,.vector_dim=1,.coll={std::make_unique<mfem::L2_FECollection>( 0, pmesh->SpaceDimension())},.ordering=mfem::Ordering::byVDIM,.name="stripes"});
+    auto fec = mfem::L2_FECollection(0, pmesh->SpaceDimension());
+    auto pfes = mfem::ParFiniteElementSpace(pmesh.get(), &fec);
+    auto stripes = mfem::ParGridFunction(&pfes);
+    //    stripes.project(stripes_coef);
+    stripes.ProjectCoefficient(stripes_coef);
+    
+    auto stripes_attr_set = Set(mfem_ext::MakeAttributeList<std::vector<int>>(*pmesh, stripes_coef, mfem_ext::digitize::floor));
+    
+    // serac::FiniteElementState stars(*pmesh, FiniteElementState::Options{
+    // 	.order=0,.vector_dim=1,.coll={std::make_unique<mfem::L2_FECollection>( 0, pmesh->SpaceDimension())},.ordering=mfem::Ordering::byVDIM,.name="stars"});   
+    //    stars.project(stars_coef);
+    auto stars = mfem::ParGridFunction(&pfes);
+    stars.ProjectCoefficient(stars_coef);
+    
+    auto stars_attr_set = Set(mfem_ext::MakeAttributeList<std::vector<int>>(*pmesh, stars_coef, mfem_ext::digitize::floor));
+
+    // we'll get the top blue corner
+    auto blue = stars_attr_set.getComplement({1});
+    
+    // we want all the indices that composite the stripes
+    // intersect stars_attr_set = 1 and stripes_attr_set
+    // auto red_white = Intersection(stars_attr_set.values({1}), stripe_attr_set.values({1,2}));
+    auto red_white = stripes_attr_set.getDifference(blue);
+
+    auto flag = blue.getUnion(red_white);
+    auto flag_list = flag.toList();
+    // mfem_ext::AssignMeshElementAttributes(*pmesh, flag_list);
+
+    visit.RegisterField("stripes", &stripes);
+    visit.RegisterField("stars", &stars);
+    visit.SetCycle(0);
+    visit.Save();
+
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+
+  
 }  // namespace serac
 
 //------------------------------------------------------------------------------

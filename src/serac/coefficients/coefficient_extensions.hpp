@@ -14,7 +14,8 @@
 
 #include <functional>
 #include <memory>
-
+#include <variant>
+#include <vector>
 #include "mfem.hpp"
 
 #include "serac/numerics/expr_template_ops.hpp"
@@ -25,6 +26,14 @@
  */
 namespace serac::mfem_ext {
 
+  namespace digitize {
+    /**
+     * @brief takes floating point value and rounds down to the nearest integer
+     * @param[in] v floating point value
+     */
+    int floor(double v);  
+  }
+  
 /**
  * @brief MakeTrueEssList takes in a FESpace, a vector coefficient, and produces a list
  *  of essential boundary conditions
@@ -65,9 +74,43 @@ mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoef
  * attribute 2, otherwise attribute 1.
  * @return An array holding the attributes that correspond to each element
  */
-mfem::Array<int> MakeAttributeList(
-    mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = [](double v) { return v > 0. ? 2 : 1; });
 
+  template <typename T>
+  T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = [](double v) { return v > 0. ? 2 : 1; });
+
+  
+  template <>
+  mfem::Array<int> MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize );
+
+  /**
+ * @brief This method creates an array of size(local_elems), and assigns
+ * attributes based on the coefficient c
+ *
+ * This method is useful for creating lists of attributes that correspond to
+ * elements in the mesh
+ *
+ * @param[in] m The mesh
+ * @param[in] c The coefficient provided that will be evaluated on the mesh
+ * @param[in] digitize An optional function that can be
+ * called to assign attributes based on the value of c at a given projection
+ * point. By default, values of c at a given d.o.f that are > 0. are assigned
+ * attribute 2, otherwise attribute 1.
+ * @return A std::vector holding the attributes that correspond to each element
+ */
+
+  template <>
+  std::vector<int> MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize );
+  
+  /**
+   * @brief Assign element attributes to mesh
+   *
+   * @param[in] m the mesh
+   * @param[in] attr_list a list of attributes to assign to the given mesh
+   */
+
+  void AssignMeshElementAttributes(mfem::Mesh &m, std::variant<mfem::Array<int>, std::vector<int>> &&list);
+
+  
 /**
  * @brief This method creates an array of size(local_bdr_elems), and assigns
  * attributes based on the coefficient c
@@ -85,10 +128,36 @@ mfem::Array<int> MakeAttributeList(
  * attribute 2.
  * @return An array holding the attributes that correspond to each element
  */
-mfem::Array<int> MakeBdrAttributeList(
-    mfem::Mesh& m, mfem::Coefficient& c,
-    std::function<int(double)> digitize = [](double v) { return v == 1. ? 2 : 1; });
+  template <typename T>
+T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = [](double v) { return v == 1. ? 2 : 1; })
+{
+  // Need to use H1_fec because boundary elements don't exist in L2
+  mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
+  mfem::FiniteElementSpace fes(&m, &h1_fec);
+  T         attr_list(fes.GetNBE());
+  mfem::Vector             elem_attr(fes.GetNBE());
 
+  for (int e = 0; e < fes.GetNBE(); e++) {
+    mfem::Vector dofs(fes.GetBE(e)->GetDof());
+    fes.GetBE(e)->Project(c, *fes.GetBdrElementTransformation(e), dofs);
+    elem_attr[e] = dofs.Sum() / (dofs.Size() * 1.);
+    attr_list[e] = digitize(elem_attr[e]);
+  }
+
+  return attr_list;
+}
+
+ 
+  /**
+   * @brief Assign bdr element attributes to mesh
+   *
+   * @param[in] m the mesh
+   * @param[in] attr_list a list of attributes to assign to the given mesh
+   */
+
+  void AssignMeshBdrAttributes(mfem::Mesh &m, std::variant<mfem::Array<int>, std::vector<int>> & list);
+
+  
 /**
  * @brief AttributemodifierCoefficient class
  *

@@ -161,8 +161,8 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
     return 0.;
   });
 
-  Array<int> bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList(*pmesh_, x_zero);
-  Array<int> bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList(*pmesh_, x_one);
+  auto bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList<mfem::Array<int>>(*pmesh_, x_zero);
+  auto bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList<mfem::Array<int>>(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   Array<int> bdr_attr_list(pfes_->GetNBE());
@@ -237,8 +237,8 @@ TEST_F(WrapperTests, Transformed)
     return 0.;
   });
 
-  Array<int> bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList(*pmesh_, x_zero);
-  Array<int> bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList(*pmesh_, x_one);
+  auto bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList<mfem::Array<int>>(*pmesh_, x_zero);
+  auto bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList<mfem::Array<int>>(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   Array<int> bdr_attr_list(pfes_->GetNBE());
