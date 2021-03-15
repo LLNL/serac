@@ -42,22 +42,18 @@ namespace detail {
 #ifdef MFEM_USE_AMGX
 std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXPrec& options)
 {
-  auto              amgx                 = std::make_unique<mfem::AmgXSolver>();
-  static const auto default_prec_options = []() {
-    conduit::Node default_options;
-    default_options["config_version"] = 2;
-    auto& solver_options              = default_options["solver"];
-    solver_options["solver"]          = "AMG";
-    solver_options["presweeps"]       = 1;
-    solver_options["postsweeps"]      = 2;
-    solver_options["interpolator"]    = "D2";
-    solver_options["max_iters"]       = 2;
-    solver_options["convergence"]     = "ABSOLUTE";
-    solver_options["cycle"]           = "V";
-    return default_options;
-  }();
+  auto          amgx = std::make_unique<mfem::AmgXSolver>();
+  conduit::Node options_node;
+  options_node["config_version"] = 2;
+  auto& solver_options           = options_node["solver"];
+  solver_options["solver"]       = "AMG";
+  solver_options["presweeps"]    = 1;
+  solver_options["postsweeps"]   = 2;
+  solver_options["interpolator"] = "D2";
+  solver_options["max_iters"]    = 2;
+  solver_options["convergence"]  = "ABSOLUTE";
+  solver_options["cycle"]        = "V";
 
-  conduit::Node options_node = default_prec_options;
   if (options.verbose) {
     options_node["solver/obtain_timings"]    = 1;
     options_node["solver/monitor_residual"]  = 1;
