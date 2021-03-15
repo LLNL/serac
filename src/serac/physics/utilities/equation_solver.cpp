@@ -61,6 +61,9 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
   }
 
   // FIXME: magic_enum?
+  // This is an immediately-invoked lambda so that the map
+  // can be const without needed to initialize all the values
+  // in the constructor     
   static const auto solver_names = []() {
     std::unordered_map<AMGXSolver, std::string> names;
     names[AMGXSolver::AMG]             = "AMG";
