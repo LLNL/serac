@@ -1,13 +1,7 @@
-#include "tuple_arithmetic.hpp"
+#include "../tuple_arithmetic.hpp"
 
 #include <random>
 #include <iostream>
-
-template <int... n>
-auto& operator<<(std::ostream& out, zero_tensor<n...> A) {
-  out << tensor< double, n ... >(A);
-  return out;
-}
 
 auto random_real = [](auto ...){
   static std::default_random_engine generator;

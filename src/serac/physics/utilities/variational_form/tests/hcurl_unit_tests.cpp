@@ -1,6 +1,6 @@
-#include "detail/meta.h"
-#include "tensor.hpp"
-#include "finite_element.hpp"
+#include "../detail/meta.h"
+#include "../tensor.hpp"
+#include "../finite_element.hpp"
 
 /*
 iterate over the node/direction pairs in the element, and verify that

@@ -1,5 +1,5 @@
 #include "mfem.hpp"
-#include "tensor.hpp"
+#include "serac/physics/utilities/variational_form/tensor.hpp"
 
 #include <gtest/gtest.h>
 

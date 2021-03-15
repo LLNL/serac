@@ -1,8 +1,12 @@
-#include "mfem.hpp"
-#include "genericintegrator.hpp"
-#include "qfuncintegrator.hpp"
-
 #pragma once
+
+#include "mfem.hpp"
+#include "mfem/general/forall.hpp"
+
+#include "serac/physics/utilities/variational_form/tensor.hpp"
+#include "serac/physics/utilities/variational_form/quadrature.hpp"
+#include "serac/physics/utilities/variational_form/finite_element.hpp"
+#include "serac/physics/utilities/variational_form/tuple_arithmetic.hpp"
 
 namespace impl{
 

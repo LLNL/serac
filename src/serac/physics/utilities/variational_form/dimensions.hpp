@@ -13,7 +13,6 @@ struct Dimensions{
 };
 
 namespace impl {
-
   template < int I, int ... n >
   constexpr auto get(std::integer_sequence<int, n...>) {
     constexpr int values[sizeof...(n)] = {n ...};
@@ -24,7 +23,6 @@ namespace impl {
   constexpr auto remove_helper(Dimensions<n...>, std::integer_sequence<int,i...>) {
     return Dimensions<get<i+(i>=r)>(std::integer_sequence<int,n ...>{}) ... >{};
   }
-
 }
 
 template < int m, int ... n >

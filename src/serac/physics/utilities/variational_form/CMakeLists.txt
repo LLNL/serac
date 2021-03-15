@@ -4,51 +4,49 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(parvariantionalform_depends serac_physics mfem mpi)
+set(weakform_depends serac_physics mfem mpi)
 
 # Add the library first
-set(parvariationalform_headers
-    parvariationalform.hpp
-    genericintegrator.hpp
-    tensor.hpp
-    qfuncintegrator.hpp
+set(weakform_headers
     weak_form.hpp
-    )
-
-set(parvariationalform_sources
-    parvariationalform.cpp
+    tensor.hpp
+    array.hpp
+    dual.hpp
+    tuple_arithmetic.hpp
+    polynomials.hpp
+    quadrature.hpp
     )
 
 blt_add_library(
-      NAME        serac_parvariationalform
-      HEADERS     ${parvariationalform_headers}
-      SOURCES     ${parvariationalform_sources}
-      DEPENDS_ON  ${parvariantionalform_depends}
+      NAME        serac_weakform
+      HEADERS     ${weakform_headers}
+      SOURCES     ${weakform_sources}
+      DEPENDS_ON  ${weakform_depends}
       )
 
 
-install(FILES ${parvariationalform_headers} DESTINATION include/serac/physics/utilities/variational_form )
+install(FILES ${weakform_headers} DESTINATION include/serac/physics/utilities/weak_form )
 
-install(TARGETS              serac_parvariationalform
+install(TARGETS              serac_weakform
         EXPORT               serac-targets
         DESTINATION          lib
         )
 
 
 # Then add the examples/tests
-set(parvariationalform_tests
-    hcurl_unit_tests.cpp
-    test_tensor_ad.cpp
-    tuple_arithmetic_unit_tests.cpp
-    tensor_unit_tests.cpp)
+set(weakform_tests_serial
+    tests/hcurl_unit_tests.cpp
+    tests/test_tensor_ad.cpp
+    tests/tuple_arithmetic_unit_tests.cpp
+    tests/tensor_unit_tests.cpp)
     
-foreach(filename ${parvariationalform_tests})
+foreach(filename ${weakform_tests_serial})
     get_filename_component(test_name ${filename} NAME_WE)
     
     blt_add_executable(NAME        ${test_name}
                        SOURCES     ${filename}
                        OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                       DEPENDS_ON  gtest serac_parvariationalform ${parvariantionalform_depends}
+                       DEPENDS_ON  gtest serac_weakform ${weakform_depends}
                        FOLDER      serac/tests )
     blt_add_test(NAME          ${test_name}
                  COMMAND       ${test_name}
@@ -56,39 +54,21 @@ foreach(filename ${parvariationalform_tests})
 endforeach()
 
 # Then add the examples/tests
-set(parvariationalform_mpi_tests
-    l2_comparison.cpp
-    hcurl_comparison.cpp
-    hcurl_comparison_weak_form.cpp
-    thermal_comparison.cpp
-    thermal_comparison_weak_form.cpp
-    elasticity_comparison.cpp
-    elasticity_comparison_weak_form.cpp)
+set(weakform_tests_mpi
+    tests/hcurl_comparison_weak_form.cpp
+    tests/thermal_comparison_weak_form.cpp
+    tests/elasticity_comparison_weak_form.cpp)
     
-foreach(filename ${parvariationalform_mpi_tests})
+foreach(filename ${weakform_tests_mpi})
     get_filename_component(test_name ${filename} NAME_WE)
     
     blt_add_executable(NAME        ${test_name}
                        SOURCES     ${filename}
                        OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                       DEPENDS_ON  gtest serac_parvariationalform ${parvariantionalform_depends}
+                       DEPENDS_ON  gtest serac_weakform ${weakform_depends}
                        FOLDER      serac/tests )
     blt_add_test(NAME          ${test_name}
                  COMMAND       ${test_name}
                  NUM_MPI_TASKS 4)
 endforeach()
     
-set(parvariationalform_examples
-    parvariationalform_example.cpp)
-
-foreach(filename ${parvariationalform_examples})
-    get_filename_component(ex_name ${filename} NAME_WE)
-    
-    blt_add_executable(NAME        ${ex_name}
-                       SOURCES     ${filename}
-                       OUTPUT_DIR  ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-                       DEPENDS_ON  ${parvariantionalform_depends} serac_parvariationalform )
-    blt_add_test(NAME          ${ex_name}
-                 COMMAND       ${ex_name} --mesh ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../data/meshes/beam-quad.mesh
-                 NUM_MPI_TASKS 1 )
-endforeach()

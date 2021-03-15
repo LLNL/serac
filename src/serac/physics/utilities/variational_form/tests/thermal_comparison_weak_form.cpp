@@ -1,14 +1,13 @@
 #include "mfem.hpp"
-#include "parvariationalform.hpp"
-#include "qfuncintegrator.hpp"
-#include "weak_form.hpp"
-#include "tensor.hpp"
 #include <fstream>
 #include <iostream>
 
 #include "serac/serac_config.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
+
+#include "serac/physics/utilities/variational_form/weak_form.hpp"
+#include "serac/physics/utilities/variational_form/tensor.hpp"
 
 using namespace std;
 using namespace mfem;
@@ -59,11 +58,6 @@ int main(int argc, char* argv[])
   }
 
   Mesh mesh(mesh_file, 1, 1);
-
-  if (mesh.Dimension() != dim) {
-    std::cout << "invalid mesh dimension" << std::endl;
-  }
-
   for (int l = 0; l < refinements; l++) {
     mesh.UniformRefinement();
   }
@@ -71,28 +65,25 @@ int main(int argc, char* argv[])
   ParMesh pmesh(MPI_COMM_WORLD, mesh);
 
   auto fec = H1_FECollection(p, dim);
-  ParFiniteElementSpace fespace(&pmesh, &fec, dim);
+  ParFiniteElementSpace fespace(&pmesh, &fec);
 
   ParBilinearForm A(&fespace);
 
   ConstantCoefficient a_coef(a);
-  A.AddDomainIntegrator(new VectorMassIntegrator(a_coef));
+  A.AddDomainIntegrator(new MassIntegrator(a_coef));
 
-  ConstantCoefficient lambda_coef(b);
-  ConstantCoefficient mu_coef(b);
-  A.AddDomainIntegrator(new ElasticityIntegrator(lambda_coef, mu_coef));
+  ConstantCoefficient b_coef(b);
+  A.AddDomainIntegrator(new DiffusionIntegrator(b_coef));
   A.Assemble(0);
   A.Finalize();
-
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
   LinearForm f(&fespace);
-  VectorFunctionCoefficient load_func(dim, [&](const Vector& /*coords*/, Vector & force) {
-    force = 0.0;
-    force(0) = -1.0;
+  FunctionCoefficient load_func([&](const Vector& coords) {
+    return 100 * coords(0) * coords(1);
   });
 
-  f.AddDomainIntegrator(new VectorDomainLFIntegrator(load_func));
+  f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
   f.Assemble();
 
   ParGridFunction x(&fespace);
@@ -101,18 +92,15 @@ int main(int argc, char* argv[])
   Vector X(fespace.TrueVSize());
   x.GetTrueDofs(X);
 
-  static constexpr auto I = Identity<2>();
-
-  using test_space = H1<p, dim>;
-  using trial_space = H1<p, dim>;
+  using test_space = H1<p>;
+  using trial_space = H1<p>;
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto /*x*/, auto displacement) {
-    auto [u, du_dx] = displacement;
-    auto f0 = a * u - tensor{{-1.0, 0.0}};
-    auto strain = 0.5 * (du_dx + transpose(du_dx));
-    auto f1 = b * tr(strain) * I + 2.0 * b * strain;
+  residual.AddVolumeIntegral([&](auto x, auto temperature) {
+    auto [u, du_dx] = temperature;
+    auto f0 = a * u - (100 * x[0] * x[1]);
+    auto f1 = b * du_dx;
     return std::tuple{f0, f1};
   }, pmesh);
 

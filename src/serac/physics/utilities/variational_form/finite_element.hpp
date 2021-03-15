@@ -40,8 +40,6 @@ struct L2{
 
 enum class Family {H1, HCURL, HDIV, L2};
 
-//enum class PolynomialDegree {Constant = 0, Linear = 1, Quadratic = 2, Cubic = 3};
-
 enum class Evaluation {Interpolate, Divergence, Gradient, Curl};
 
 template < ::Geometry g, typename family >
