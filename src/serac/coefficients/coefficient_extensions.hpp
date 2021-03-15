@@ -26,12 +26,46 @@
  */
 namespace serac::mfem_ext {
 
+  namespace detail {
+    template <typename T>
+    struct index_t {
+      using type = std::size_t;
+    };
+  
+    template <typename T>
+    struct index_t<mfem::Array<T>> {
+      using type = int;
+    };
+
+    template <typename T>
+    int size(T container) { return static_cast<int> ( container.size() ); }
+
+    template <typename T>
+    int size(mfem::Array<T> container) { return container.Size(); }
+    
+  }
+  
   namespace digitize {
     /**
      * @brief takes floating point value and rounds down to the nearest integer
      * @param[in] v floating point value
      */
-    int floor(double v);  
+    
+    [[maybe_unused]] static int floor(double v) {
+      return static_cast<int>(v);
+    }
+
+
+    /**
+     * @brief Thresholds a real function so that it is 2 if greater than 0.
+     * @param[in] v floating point value
+     */
+    [[maybe_unused]] static int threshold(double v) { return v > 0. ? 2 : 1; }
+
+    /**
+     * @brief Checks if floating point value is equal to 1, if return 2 otherwise return 1.
+     */
+    [[maybe_unused]] static int equals1(double v) { return v == 1. ? 2 : 1; }    
   }
   
 /**
@@ -76,30 +110,23 @@ mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoef
  */
 
   template <typename T>
-  T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = [](double v) { return v > 0. ? 2 : 1; });
+  T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::threshold)
+{
+  mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
+  mfem::FiniteElementSpace fes(&m, &l2_fec);
+  T attr_list(static_cast<typename detail::index_t<T>::type>(fes.GetNE()));
 
+  mfem::GridFunction elem_attr(&fes);
+  elem_attr.ProjectCoefficient(c);
+
+  for (auto e = attr_list.begin(); e != attr_list.end(); e++)
+    {
+      *e = digitize(elem_attr[ e - attr_list.begin() ]);
+    }
   
-  template <>
-  mfem::Array<int> MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize );
+  return attr_list;
+}
 
-  /**
- * @brief This method creates an array of size(local_elems), and assigns
- * attributes based on the coefficient c
- *
- * This method is useful for creating lists of attributes that correspond to
- * elements in the mesh
- *
- * @param[in] m The mesh
- * @param[in] c The coefficient provided that will be evaluated on the mesh
- * @param[in] digitize An optional function that can be
- * called to assign attributes based on the value of c at a given projection
- * point. By default, values of c at a given d.o.f that are > 0. are assigned
- * attribute 2, otherwise attribute 1.
- * @return A std::vector holding the attributes that correspond to each element
- */
-
-  template <>
-  std::vector<int> MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize );
   
   /**
    * @brief Assign element attributes to mesh
@@ -108,7 +135,18 @@ mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoef
    * @param[in] attr_list a list of attributes to assign to the given mesh
    */
 
-  void AssignMeshElementAttributes(mfem::Mesh &m, std::variant<mfem::Array<int>, std::vector<int>> &&list);
+  template <typename T>
+  void AssignMeshElementAttributes(mfem::Mesh &m, T &&list)
+   {
+    // check to make sure the lists are match the number of elements     
+     SLIC_ERROR_IF(detail::size(list) != m.GetNE(), "list size does not match the number of mesh elements");
+    
+    for (int e = 0; e < m.GetNE(); e++ ) {
+      m.GetElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
+    }
+    m.SetAttributes();
+  }
+     
 
   
 /**
@@ -129,12 +167,12 @@ mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoef
  * @return An array holding the attributes that correspond to each element
  */
   template <typename T>
-T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = [](double v) { return v == 1. ? 2 : 1; })
+  T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::equals1)
 {
   // Need to use H1_fec because boundary elements don't exist in L2
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &h1_fec);
-  T         attr_list(fes.GetNBE());
+  T                        attr_list(fes.GetNBE());
   mfem::Vector             elem_attr(fes.GetNBE());
 
   for (int e = 0; e < fes.GetNBE(); e++) {
@@ -155,7 +193,18 @@ T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(do
    * @param[in] attr_list a list of attributes to assign to the given mesh
    */
 
-  void AssignMeshBdrAttributes(mfem::Mesh &m, std::variant<mfem::Array<int>, std::vector<int>> & list);
+  template <typename T>
+  void AssignMeshBdrAttributes(mfem::Mesh &m, T & list)
+  {
+    // check to make sure the lists are match the number of elements
+    SLIC_ERROR_IF(detail::size(list) != m.GetNBE(), "list size does not match the number of mesh elements");
+    
+    for (int e = 0; e < m.GetNBE(); e++ ) {
+      m.GetBdrElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
+    }
+    m.SetAttributes();
+  }
+    
 
   
 /**

@@ -43,61 +43,7 @@ mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoef
   return ess_vdof_list;
 }
 
-  template <>
-  mfem::Array<int> MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize )
-{
-  mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
-  mfem::FiniteElementSpace fes(&m, &l2_fec);
-  mfem::Array<int> attr_list(fes.GetNE());
-
-  mfem::GridFunction elem_attr(&fes);
-  elem_attr.ProjectCoefficient(c);
-
-  for (int e = 0; e < fes.GetNE(); e++) {
-    attr_list[e] = digitize(elem_attr[e]);
-  }
-
-  return attr_list;
-}
-
-    template <>
-  std::vector<int> MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize )
-{
-  mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
-  mfem::FiniteElementSpace fes(&m, &l2_fec);
-  std::vector<int> attr_list(static_cast<typename std::vector<int>::size_type>(fes.GetNE()));
-
-  mfem::GridFunction elem_attr(&fes);
-  elem_attr.ProjectCoefficient(c);
-
-  for (int e = 0; e < fes.GetNE(); e++) {
-    attr_list[static_cast<typename std::vector<int>::size_type>(e)] = digitize(elem_attr[e]);
-  }
-
-  return attr_list;
-}
-
-  
-  void AssignMeshElementAttributes(mfem::Mesh &m, std::variant<mfem::Array<int>, std::vector<int>> && list) {
-    // check to make sure the lists are match the number of elements
-    if (auto arr = std::get_if<mfem::Array<int>>(&list)) {
-      SLIC_ERROR_IF(arr->Size() != m.GetNE(), "list size does not match the number of mesh elements");
-    } else if (auto vec = std::get_if<std::vector<int>>(&list)) {
-      SLIC_ERROR_IF(static_cast<int>(vec->size()) != m.GetNE(), "list size does not match the number of mesh elements");
-    }
-    
-    for (int e = 0; e < m.GetNE(); e++ ) {
-      m.GetElement(e)->SetAttribute(std::visit([=](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, mfem::Array<int>>)
-			   return arg[e];
-            else 
-	      return arg[static_cast<std::vector<int>::size_type>(e)];
-	  }, list));
-    }
-    m.SetAttributes();
-  }
-  
+   
   void AssignMeshBdrAttributes(mfem::Mesh &m, std::variant<mfem::Array<int>, std::vector<int>> & list) {
     // check to make sure the lists are match the number of elements
     if (auto arr = std::get_if<mfem::Array<int>>(&list)) {
@@ -189,11 +135,5 @@ double TransformedScalarCoefficient::Eval(mfem::ElementTransformation& T, const 
     return bi_function_(temp, temp2);
   }
 }
-
-  namespace digitize {
-    int floor(double v) {
-      return static_cast<int>(v);
-    }
-  }
   
 }  // namespace serac::mfem_ext
