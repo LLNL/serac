@@ -889,3 +889,67 @@ auto get_value(std::tuple < T ... > tuple_of_values) {
     return std::tuple{get_value(each_value) ...};
   }, tuple_of_values);
 }
+
+constexpr auto chain_rule(const zero /* df_dx */, const zero /* dx */) { return zero{}; }
+
+template < typename T >
+constexpr auto chain_rule(const zero /* df_dx */, const T /* dx */) { return zero{}; }
+
+template < typename T >
+constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */) { return zero{}; }
+
+constexpr auto chain_rule(const double df_dx, const double dx) { return df_dx * dx; }
+
+template < int ... n >
+constexpr auto chain_rule(const tensor < double, n ... > df_dx, const double dx) { return df_dx * dx; }
+
+template < int ... n >
+constexpr auto chain_rule(const tensor < double, n ... > df_dx, const tensor< double, n... > dx) {
+  double total{};
+  for_constexpr < n ... >([&](auto ... i){ total += df_dx(i...) * dx(i...); });
+  return total;
+}
+
+template < int m, int ... n >
+constexpr auto chain_rule(tensor < double, m, n ... > df_dx, tensor< double, n... > dx) {
+  tensor< double, m > total{};
+  for (int i = 0; i < m; i++) {
+    total[i] = chain_rule(df_dx[i], dx);
+  }
+  return total;
+}
+
+template < int m, int n, int ... p>
+auto chain_rule(tensor < double, m, n, p ... > df_dx, tensor< double, p... > dx) {
+  tensor< double, m, n > total{};
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      total[i][j] = chain_rule(df_dx[i][j], dx);
+    }
+  }
+  return total;
+}
+
+template < typename ... T, typename ... S, int ... I >
+auto chain_rule_helper(std::tuple < T ... > df_dx, std::tuple < S ... > dx, std::integer_sequence<int, I...>) {
+  return (chain_rule(std::get<I>(df_dx), std::get<I>(dx)) + ...);
+}
+
+template < typename ... T, typename ... S >
+auto chain_rule(std::tuple < T ... > df_dx, std::tuple < S ... > dx) {
+  static_assert(sizeof ... (T) == sizeof ... (S));
+  return chain_rule_helper(df_dx, dx, std::make_integer_sequence<int, sizeof ...(T)>());
+}
+
+template < int rank, typename ... T, typename S >
+auto chain_rule(std::tuple < T ... > df_dx, S dx) {
+  if constexpr (rank == 1) {
+    return std::apply([&](auto ... each_component_of_df_dx){
+      return (chain_rule(each_component_of_df_dx, dx) + ...);
+    }, df_dx);
+  } else {
+    return std::apply([&](auto ... each_component_of_df_dx){
+      return std::tuple{chain_rule(each_component_of_df_dx, dx) ... };
+    }, df_dx);
+  }
+}

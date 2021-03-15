@@ -15,74 +15,6 @@ auto random_real = [](auto ...){
   return distribution(generator);
 };
 
-namespace proto {
-
-  auto chain_rule(zero /* df_dx */, zero /* dx */) { return zero{}; }
-
-  template < typename T >
-  auto chain_rule(zero /* df_dx */, T /* dx */) { return zero{}; }
-
-  template < typename T >
-  auto chain_rule(T /* df_dx */, zero /* dx */) { return zero{}; }
-
-  auto chain_rule(double df_dx, double dx) { return df_dx * dx; }
-
-  template < int ... n >
-  auto chain_rule(tensor < double, n ... > df_dx, double dx) { return df_dx * dx; }
-
-  template < int ... n >
-  auto chain_rule(tensor < double, n ... > df_dx, tensor< double, n... > dx) {
-    double total{};
-    for_constexpr < n ... >([&](auto ... i){ total += df_dx(i...) * dx(i...); });
-    return total;
-  }
-
-  template < int m, int ... n >
-  auto chain_rule(tensor < double, m, n ... > df_dx, tensor< double, n... > dx) {
-    tensor< double, m > total{};
-    for (int i = 0; i < m; i++) {
-      total[i] = proto::chain_rule(df_dx[i], dx);
-    }
-    return total;
-  }
-
-  template < int m, int n, int ... p>
-  auto chain_rule(tensor < double, m, n, p ... > df_dx, tensor< double, p... > dx) {
-    tensor< double, m, n > total{};
-    for (int i = 0; i < m; i++) {
-      for (int j = 0; j < n; j++) {
-        total[i][j] = proto::chain_rule(df_dx[i][j], dx);
-      }
-    }
-    return total;
-  }
-
-  template < typename ... T, typename ... S, int ... I >
-  auto chain_rule_helper(std::tuple < T ... > df_dx, std::tuple < S ... > dx, std::integer_sequence<int, I...>) {
-    return (chain_rule(std::get<I>(df_dx), std::get<I>(dx)) + ...);
-  }
-
-  template < typename ... T, typename ... S >
-  auto chain_rule(std::tuple < T ... > df_dx, std::tuple < S ... > dx) {
-    static_assert(sizeof ... (T) == sizeof ... (S));
-    return proto::chain_rule_helper(df_dx, dx, std::make_integer_sequence<int, sizeof ...(T)>());
-  }
-
-  template < int rank, typename ... T, typename S >
-  auto chain_rule(std::tuple < T ... > df_dx, S dx) {
-    if constexpr (rank == 1) {
-      return std::apply([&](auto ... each_component_of_df_dx){
-        return (proto::chain_rule(each_component_of_df_dx, dx) + ...);
-      }, df_dx);
-    } else {
-      return std::apply([&](auto ... each_component_of_df_dx){
-        return std::tuple{proto::chain_rule(each_component_of_df_dx, dx) ... };
-      }, df_dx);
-    }
-  }
-
-}
-
 static constexpr auto I = Identity<3>();
 static constexpr double rho = 3.0;
 static constexpr double mu = 2.0;
@@ -122,35 +54,35 @@ void chain_rule_tests(){
   {
     auto df_dx = make_tensor<>(random_real);
     auto dx = make_tensor<>(random_real);
-    auto df = proto::chain_rule(df_dx, dx);
+    auto df = chain_rule(df_dx, dx);
     std::cout << df << std::endl;
   }
 
   {
     auto df_dx = make_tensor< 3, 3 >(random_real);
     auto dx = make_tensor< 3 >(random_real);
-    tensor< double, 3 > df = proto::chain_rule(df_dx, dx);
+    tensor< double, 3 > df = chain_rule(df_dx, dx);
     std::cout << df << std::endl;
   }
 
   {
     auto df_dx = make_tensor< 3, 3 >(random_real);
     auto dx = make_tensor< 3, 3 >(random_real);
-    double df = proto::chain_rule(df_dx, dx);
+    double df = chain_rule(df_dx, dx);
     std::cout << df << std::endl;
   }
 
   {
     auto df_dx = make_tensor< 3, 3, 3 >(random_real);
     auto dx = make_tensor< 3 >(random_real);
-    tensor< double, 3, 3 > df = proto::chain_rule(df_dx, dx);
+    tensor< double, 3, 3 > df = chain_rule(df_dx, dx);
     std::cout << df << std::endl;
   }
 
   {
     auto df_dx = make_tensor< 3, 3, 3, 3 >(random_real);
     auto dx = make_tensor< 3, 3 >(random_real);
-    tensor< double, 3, 3 > df = proto::chain_rule(df_dx, dx);
+    tensor< double, 3, 3 > df = chain_rule(df_dx, dx);
     std::cout << df << std::endl;
   }
 
@@ -161,7 +93,7 @@ void chain_rule_tests(){
     std::tuple < 
       tensor< double, 3, 3 >,
       tensor< double, 3 >
-    > df = proto::chain_rule<2>(std::tuple{df1_dx, df2_dx}, dx);
+    > df = chain_rule<2>(std::tuple{df1_dx, df2_dx}, dx);
 
     std::cout << std::get<0>(df) << std::endl;
     std::cout << std::get<1>(df) << std::endl;
@@ -191,7 +123,7 @@ void chain_rule_tests(){
               dot(std::get<1>(std::get<1>(grad)), dv) +
               ddot(std::get<2>(std::get<1>(grad)), dL);  
 
-    auto df_ad = proto::chain_rule<2>(grad, std::tuple{dp, dv, dL});
+    auto df_ad = chain_rule<2>(grad, std::tuple{dp, dv, dL});
 
     std::cout << "comparison with finite difference: ";
     std::cout << df0 - df0_fd << std::endl;
@@ -199,6 +131,51 @@ void chain_rule_tests(){
     std::cout << "comparison with chain_rule: ";
     std::cout << std::get<0>(df_ad) - df0 << std::endl;
     std::cout << std::get<1>(df_ad) - df1 << std::endl;
+  }
+
+  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/tensor.hpp:935:22: error: cannot cast 'const std::tuple<zero, tensor<double, 2, 2> >' to its private base class 'const zero'
+  //[build]   return (chain_rule(std::get<I>(df_dx), std::get<I>(dx)) + ...);
+  //[build]                      ^
+  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/tensor.hpp:941:10: note: in instantiation of function template specialization 'chain_rule_helper<std::tuple<double, zero>, std::tuple<zero, tensor<double, 2, 2> > , double, tensor<double, 2> , 0, 1>' requested here
+  //[build]   return chain_rule_helper(df_dx, dx, std::make_integer_sequence<int, sizeof ...(T)>());
+  //[build]          ^
+  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/weak_form.hpp:165:17: note: in instantiation of function template specialization 'chain_rule<std::tuple<double, zero>, std::tuple<zero, tensor<double, 2, 2> > , double, tensor<double, 2> >' requested here
+  //[build]       auto dq = chain_rule(dq_darg, darg);
+  //[build]                 ^
+  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/weak_form.hpp:259:7: note: in instantiation of function template specialization 'gradient_kernel<Geometry::Quadrilateral, H1<1, 1>, H1<1, 1>, 2, std::tuple<std::tuple<double, zero>, std::tuple<zero, tensor<double, 2, 2> > > >' requested here
+  //[build]       gradient_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(dU, dR, qf_derivatives_ptr, J_, num_elements);
+  //[build]       ^
+  //[build] /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/ext/new_allocator.h:147:23: note: in instantiation of function template specialization 'VolumeIntegral<H1<1, 1> (H1<1, 1>)>::VolumeIntegral<(lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30) &>' requested here
+  //[build]         { ::new((void *)__p) _Up(std::forward<_Args>(__args)...); }
+  //[build]                              ^
+  //[build] /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/alloc_traits.h:484:8: note: in instantiation of function template specialization '__gnu_cxx::new_allocator<VolumeIntegral<H1<1, 1> (H1<1, 1>)> >::construct<VolumeIntegral<H1<1, 1> (H1<1, 1>)>, int &, const mfem::Vector &, const mfem::Vector &, (lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30) &>' requested here
+  //[build]         { __a.construct(__p, std::forward<_Args>(__args)...); }
+  //[build]               ^
+  //[build] /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/vector.tcc:115:21: note: in instantiation of function template specialization 'std::allocator_traits<std::allocator<VolumeIntegral<H1<1, 1> (H1<1, 1>)> > >::construct<VolumeIntegral<H1<1, 1> (H1<1, 1>)>, int &, const mfem::Vector &, const mfem::Vector &, (lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30) &>' requested here
+  //[build]             _Alloc_traits::construct(this->_M_impl, this->_M_impl._M_finish,
+  //[build]                            ^
+  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/weak_form.hpp:341:22: note: in instantiation of function template specialization 'std::vector<VolumeIntegral<H1<1, 1> (H1<1, 1>)>, std::allocator<VolumeIntegral<H1<1, 1> (H1<1, 1>)> > >::emplace_back<int &, const mfem::Vector &, const mfem::Vector &, (lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30) &>' requested here
+  //[build]     volume_integrals.emplace_back(num_elements, geom->J, geom->X, integrand);
+  //[build]                      ^
+  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:12: note: in instantiation of function template specialization 'WeakForm<H1<1, 1> (H1<1, 1>)>::AddVolumeIntegral<(lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30)>' requested here
+  //[build]   residual.AddVolumeIntegral([&](auto x, auto temperature) {
+  //[build]            ^
+  //[build] /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/tuple:187:7: note: constrained by private inheritance here
+  //[build]       private _Head_base<_Idx, _Head>
+  //[build]       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  {
+    std::tuple <
+      std::tuple<double, zero>, 
+      std::tuple<zero, tensor<double, 2, 2> >
+    > df_dx{};
+
+    std::tuple <
+      double, tensor<double, 2>
+    > dx;
+
+    auto df = chain_rule<2>(df_dx, dx);
+
   }
 
 }

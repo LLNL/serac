@@ -135,7 +135,7 @@ void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, derivatives_typ
 }
 
 template < ::Geometry g, typename test, typename trial, int Q, typename derivatives_type > 
-void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, derivatives_type * derivatives_ptr, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements) {
+void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, derivatives_type * derivatives_ptr, const mfem::Vector & J_, int num_elements) {
 
   using test_element = finite_element< g, test >;
   using trial_element = finite_element< g, trial >;
@@ -144,7 +144,6 @@ void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, derivatives_typ
   static constexpr int trial_ndof = trial_element::ndof;
   static constexpr auto rule = GaussQuadratureRule< g, Q >();
 
-  auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements);
   auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
   auto du = impl::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
   auto dr = impl::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
@@ -163,7 +162,7 @@ void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, derivatives_typ
 
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
 
-      auto dq = dot(dq_darg, darg);
+      auto dq = chain_rule<2>(dq_darg, darg);
 
       dr_local += impl::Postprocess<test_element>(dq, xi, J_q) * dx;
     }
@@ -256,18 +255,18 @@ struct VolumeIntegral {
       evaluation_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
     };
 
-    //gradient = [=](const mfem::Vector & dU, mfem::Vector & dR){ 
-    //  gradient_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(dU, dR, qf_derivatives_ptr, J_, X_, num_elements);
-    //};
-
-    //evaluation_with_derivatives = [=](const mfem::Vector & U, mfem::Vector & R){ 
-    //  evaluation_with_derivatives_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
-    //};
+    gradient = [=](const mfem::Vector & dU, mfem::Vector & dR){ 
+      gradient_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(dU, dR, qf_derivatives_ptr, J_, num_elements);
+    };
 
   }
 
   void Mult(const mfem::Vector & input_E, mfem::Vector & output_E) const {
     evaluation(input_E, output_E);
+  }
+
+  void GradientMult(const mfem::Vector & input_E, mfem::Vector & output_E) const {
+    gradient(input_E, output_E);
   }
 
   const mfem::Vector J_; 
@@ -280,15 +279,17 @@ struct VolumeIntegral {
 
 };
 
-struct Gradient {
+struct Gradient : public mfem::Operator {
 
-  mfem::Vector & operator()(const mfem::Vector & /*x*/) {
-    return output;
+  Gradient(std::function < void(const mfem::Vector &, mfem::Vector &) > & gradient_func) : gradient(gradient_func) {}
+
+  void Mult(const mfem::Vector & input_E, mfem::Vector & output_E) const {
+    gradient(input_E, output_E);
   }
 
   // operator HypreParMatrix() { /* not currently supported */ }
 
-  mfem::Vector output;
+  std::function < void(const mfem::Vector &, mfem::Vector &) > & gradient;
 
 };
 
@@ -298,13 +299,27 @@ struct WeakForm;
 template < typename test, typename trial >
 struct WeakForm< test(trial) > : public mfem::Operator {
 
+  enum class Operation{Mult, GradientMult};
+
+  class Gradient : public mfem::Operator {
+  public:
+    Gradient(WeakForm & f) : mfem::Operator(f.Height()), form(f){};
+
+    void Mult(const mfem::Vector& x, mfem::Vector& y) const override { form.GradientMult(x, y); }
+
+  private:
+    WeakForm< test(trial) > & form;
+  };
+
   WeakForm(mfem::ParFiniteElementSpace * test_fes, mfem::ParFiniteElementSpace * trial_fes) :
+    Operator(test_fes->GetTrueVSize(), trial_fes->GetTrueVSize()),
     test_space(test_fes),
     trial_space(trial_fes),
     P_test(test_space->GetProlongationMatrix()),
     G_test(test_space->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
     P_trial(trial_space->GetProlongationMatrix()),
-    G_trial(trial_space->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)) {
+    G_trial(trial_space->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
+    grad(*this) {
 
     MFEM_ASSERT(G_test, "Some GetElementRestriction error");
     MFEM_ASSERT(G_trial, "Some GetElementRestriction error");
@@ -314,6 +329,8 @@ struct WeakForm< test(trial) > : public mfem::Operator {
 
     output_E.SetSize(G_trial->Height(), mfem::Device::GetMemoryType());
     output_L.SetSize(P_trial->Height(), mfem::Device::GetMemoryType());
+
+    dummy.SetSize(trial_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
   }
 
   template < typename lambda >
@@ -343,7 +360,8 @@ struct WeakForm< test(trial) > : public mfem::Operator {
 
   }
 
-  virtual void Mult(const mfem::Vector & input_T, mfem::Vector & output_T) const {
+  template < Operation op = Operation::Mult >
+  void Evaluation(const mfem::Vector & input_T, mfem::Vector & output_T) const {
 
     // get the values for each local processor
     P_trial->Mult(input_T, input_L); 
@@ -359,7 +377,13 @@ struct WeakForm< test(trial) > : public mfem::Operator {
     // TODO investigate performance of alternative implementation described above
     output_E = 0.0;
     for (auto integral : volume_integrals) {
-      integral.Mult(input_E, output_E);
+      if constexpr (op == Operation::Mult) {
+        integral.Mult(input_E, output_E);
+      }
+
+      if constexpr (op == Operation::GradientMult) {
+        integral.GradientMult(input_E, output_E);
+      }
     }
     
     // scatter-add to compute residuals on the local processor
@@ -370,9 +394,29 @@ struct WeakForm< test(trial) > : public mfem::Operator {
 
     output_T.HostReadWrite();
     for (int i = 0; i < ess_tdof_list.Size(); i++) {
-      output_T(ess_tdof_list[i]) = 0.0;
+      if constexpr (op == Operation::Mult) {
+        output_T(ess_tdof_list[i]) = 0.0;
+      }
+
+      if constexpr (op == Operation::GradientMult) {
+        output_T(ess_tdof_list[i]) = input_T(ess_tdof_list[i]);
+      }
     }
 
+  }
+
+  virtual void Mult(const mfem::Vector & input_T, mfem::Vector & output_T) const {
+    Evaluation<Operation::Mult>(input_T, output_T);
+  }
+
+  virtual void GradientMult(const mfem::Vector & input_T, mfem::Vector & output_T) const {
+    Evaluation<Operation::GradientMult>(input_T, output_T);
+  }
+
+  virtual mfem::Operator & GetGradient(const mfem::Vector &x) const
+  {
+    Mult(x, dummy); // this is ugly
+    return grad;
   }
 
   // note: this gets more interesting when having more than one trial space
@@ -381,19 +425,16 @@ struct WeakForm< test(trial) > : public mfem::Operator {
     test_space->GetEssentialTrueDofs(ess_attr, ess_tdof_list);
   }
 
-  Gradient & gradient() { return grad; }
-
-  mutable mfem::Vector input_L, input_E, output_L, output_E;
+  mutable mfem::Vector input_L, input_E, output_L, output_E, dummy;
 
   mfem::ParFiniteElementSpace * test_space, * trial_space;
   mfem::Array<int> ess_tdof_list;
+
 
   const mfem::Operator * P_test, * G_test;
   const mfem::Operator * P_trial, * G_trial;
 
   std::vector < VolumeIntegral< test(trial) > > volume_integrals;
-
-  Gradient grad;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {
@@ -402,5 +443,7 @@ struct WeakForm< test(trial) > : public mfem::Operator {
     mfem::Element::QUADRILATERAL,
     mfem::Element::HEXAHEDRON
   };
+
+  mutable Gradient grad;
 
 };
