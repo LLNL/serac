@@ -17,3 +17,6 @@ install(
     DESTINATION
         examples/using-with-cmake
 )
+
+# Add the simple conduction examples
+add_subdirectory(simple_conduction)

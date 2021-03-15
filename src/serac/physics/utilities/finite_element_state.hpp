@@ -81,6 +81,10 @@ public:
      * @brief The name of the field encapsulated by the state object
      */
     std::string name = "";
+    /**
+     * @brief Whether the GridFunction should be allocated (and owned by the FEState object)
+     */
+    bool alloc_gf = true;
   };
 
   /**
@@ -90,9 +94,10 @@ public:
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementState(mfem::ParMesh& mesh,
-                     Options&&      options = {
-                         .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
+  FiniteElementState(
+      mfem::ParMesh& mesh,
+      Options&&      options = {
+          .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = "", .alloc_gf = true});
 
   /**
    * @brief Minimal constructor for a FiniteElementState given an already-existing field
@@ -110,9 +115,9 @@ public:
   /**
    * Returns a non-owning reference to the internal grid function
    */
-  mfem::ParGridFunction& gridFunc() { return *gf_; }
+  mfem::ParGridFunction& gridFunc() { return retrieve(gf_); }
   /// \overload
-  const mfem::ParGridFunction& gridFunc() const { return *gf_; }
+  const mfem::ParGridFunction& gridFunc() const { return retrieve(gf_); }
 
   /**
    * Returns a non-owning reference to the internal mesh object
@@ -144,23 +149,23 @@ public:
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit([this](auto&& concrete_coef) { gf_->ProjectCoefficient(*concrete_coef); }, coef);
+    std::visit([this](auto&& concrete_coef) { retrieve(gf_).ProjectCoefficient(*concrete_coef); }, coef);
   }
   /// \overload
-  void project(mfem::Coefficient& coef) { gf_->ProjectCoefficient(coef); }
+  void project(mfem::Coefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
   /// \overload
-  void project(mfem::VectorCoefficient& coef) { gf_->ProjectCoefficient(coef); }
+  void project(mfem::VectorCoefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
 
   /**
    * Initialize the true DOF vector by extracting true DOFs from the internal
    * grid function into the internal true DOF vector
    */
-  void initializeTrueVec() { gf_->GetTrueDofs(true_vec_); }
+  void initializeTrueVec() { retrieve(gf_).GetTrueDofs(true_vec_); }
 
   /**
    * Set the internal grid function using the true DOF values
    */
-  void distributeSharedDofs() { gf_->SetFromTrueDofs(true_vec_); }
+  void distributeSharedDofs() { retrieve(gf_).SetFromTrueDofs(true_vec_); }
 
   /**
    * Utility function for creating a tensor, e.g. mfem::HypreParVector,
@@ -226,9 +231,14 @@ private:
    * in a restart run
    */
   MaybeOwningPointer<mfem::ParFiniteElementSpace> space_;
-  mfem::ParGridFunction*                          gf_;
-  mfem::HypreParVector                            true_vec_;
-  std::string                                     name_ = "";
+  /**
+   * @brief Possibly-owning handle to the ParGridFunction, as it is owned
+   * by the FiniteElementState in a normal run and by the MFEMSidreDataCollection
+   * in a restart run
+   */
+  MaybeOwningPointer<mfem::ParGridFunction> gf_;
+  mfem::HypreParVector                      true_vec_;
+  std::string                               name_ = "";
 };
 
 /**
