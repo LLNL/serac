@@ -15,6 +15,7 @@ an input file against blessed answers.
 Unit Tests
 ----------
 
+Unit Tests can be ran via the build target `test`.
 
 
 Integration Tests
@@ -27,7 +28,7 @@ Integration Tests
 Requirements:
 
 * Installed ATS
-* `ATS_DIR` defined in the host-config
+* `ATS_DIR` defined in the host-config (Added automatically on LC)
 
 #. Build `serac` with the normal steps.  This generates a script in the build directory called `ats.sh`.
 #. Run ats: `salloc -N2 ats.sh`
