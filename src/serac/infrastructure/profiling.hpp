@@ -75,14 +75,13 @@
 #define SERAC_MARK_LOOP_END(id)
 #define SERAC_MARK_START(name)
 #define SERAC_MARK_END(name)
-#define SERAC_SET_METADATA(name, data) 
+#define SERAC_SET_METADATA(name, data)
 
 #endif
 
-// profiling namespace
+/// profiling namespace
 namespace serac::profiling {
 
-  
 /**
  * @brief Initializes performance monitoring using the Caliper library
  * @param options The Caliper ConfigManager config string, optional
@@ -95,30 +94,29 @@ void initializeCaliper(const std::string& options = "");
  */
 void terminateCaliper();
 
-  /// detail namespace
-  namespace detail {
-    /** 
-     * @fn void serac::profiling::setCaliperMetadata(const std::string & name, double data)
-     * 
-     * Caliper metadata methods cali_set_global_(double|int|string|uint)_byname(
-     */
-    void setCaliperMetadata(const std::string& name, double data);
+/// detail namespace
+namespace detail {
+/**
+ * @fn void serac::profiling::setCaliperMetadata(const std::string & name, double data)
+ *
+ * Caliper metadata methods cali_set_global_(double|int|string|uint)_byname(
+ */
+void setCaliperMetadata(const std::string& name, double data);
 
-    /*! 
-      @overload void serac::profiling::setCaliperMetadata(const std::string & name, int data)
-    */
-    void setCaliperMetadata(const std::string& name, int data);
+/*!
+  @overload void serac::profiling::setCaliperMetadata(const std::string & name, int data)
+*/
+void setCaliperMetadata(const std::string& name, int data);
 
-    /*! 
-      @overload void serac::profiling::setCaliperMetadata(const std::string & name, std::string data)
-    */
-    void setCaliperMetadata(const std::string& name, std::string data);
+/*!
+  @overload void serac::profiling::setCaliperMetadata(const std::string & name, std::string data)
+*/
+void setCaliperMetadata(const std::string& name, std::string data);
 
-    /*! 
-      @overload void serac::profiling::setCaliperMetadata(const std::string & name, unsigned int data)
-    */
-    void setCaliperMetadata(const std::string& name, unsigned int data);
-  } // namespace serac::profiling::detail
-  
-  
+/*!
+  @overload void serac::profiling::setCaliperMetadata(const std::string & name, unsigned int data)
+*/
+void setCaliperMetadata(const std::string& name, unsigned int data);
+}  // namespace detail
+
 }  // namespace serac::profiling

@@ -24,7 +24,7 @@ to instrument your code:
 
 Use ``SERAC_MARK_FUNCTION`` at the very top of a function to mark it for profiling.
 
-Use ``SERAC_MARK_START(name)`` at the begining of a region and ``SERAC_MARK_END(name)`` at the end of the region.
+Use ``SERAC_MARK_START(name)`` at the beginning of a region and ``SERAC_MARK_END(name)`` at the end of the region.
 
 Use ``SERAC_MARK_LOOP_START(id, name)`` before a loop to mark it for profiling, ``SERAC_MARK_LOOP_ITER(id, i)`` at the beginning
 of the  ``i`` th iteration of a loop, and ``SERAC_MARK_LOOP_END(id)`` immediately after the loop ends:
@@ -52,6 +52,10 @@ Optionally, a Caliper `ConfigManager configuration string <https://software.llnl
 can be passed to configure Caliper.
 
 Additionally, you can use ``SERAC_SET_METADATA(name, data)`` to add extra metadata into the ``.cali`` file. Supported metadata are ``string, int, unsigned int, double``.
+
+::
+   SERAC_SET_METADATA("mesh", "../data/star.mesh");
+   
 
 Call ``serac::profiling::terminateCaliper()`` to conclude performance monitoring and to write the data to a ``.cali`` file.
 

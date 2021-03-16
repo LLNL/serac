@@ -15,7 +15,7 @@
 #include <cstring>
 
 namespace serac {
-  
+
 TEST(serac_profiling, mesh_refinement)
 {
   // profile mesh refinement
@@ -23,7 +23,7 @@ TEST(serac_profiling, mesh_refinement)
   serac::profiling::initializeCaliper();
 
   SERAC_MARK_START("LOAD_MESH");
-		     
+
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/bortel_echem.e";
 
   SERAC_MARK_END("LOAD_MESH");
@@ -31,41 +31,42 @@ TEST(serac_profiling, mesh_refinement)
   auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 0, 0);
 
   SERAC_MARK_LOOP_START(refinement_loop, "refinement_loop");
-  for (int i = 0; i < 2 ; i++)
-    {
-      SERAC_MARK_LOOP_ITER(refinement_loop, i);
-      pmesh->UniformRefinement();
-    }
+  for (int i = 0; i < 2; i++) {
+    SERAC_MARK_LOOP_ITER(refinement_loop, i);
+    pmesh->UniformRefinement();
+  }
   SERAC_MARK_LOOP_END(refinement_loop);
-  
+
   SERAC_SET_METADATA("mesh_file", mesh_file.c_str());
   SERAC_SET_METADATA("number_mesh_elements", pmesh->GetNE());
-  
+
+  // this number represents "llnl" as an unsigned integer
   unsigned int magic_uint = 1819176044;
   SERAC_SET_METADATA("magic_uint", magic_uint);
 
-  std::array<char, sizeof(magic_uint)+1> uint_string;
+  // decode unsigned int back into char[4]
+  std::array<char, sizeof(magic_uint) + 1> uint_string;
   std::fill(std::begin(uint_string), std::end(uint_string), 0);
   std::memcpy(uint_string.data(), &magic_uint, 4);
   std::cout << uint_string.data() << std::endl;
-  
+
+  // encode double with "llnl" bytes
   double magic_double;
   std::memcpy(&magic_double, "llnl", 4);
   SERAC_SET_METADATA("magic_double", magic_double);
 
+  // decode the double and print
   std::array<char, sizeof(magic_double) + 1> double_string;
   std::fill(std::begin(double_string), std::end(double_string), 0);
   std::memcpy(double_string.data(), &magic_double, 4);
   std::cout << double_string.data() << std::endl;
 
   EXPECT_EQ(2112, pmesh->GetNE());
-  
-  serac::profiling::terminateCaliper();
-  
-  MPI_Barrier(MPI_COMM_WORLD);
-  
-}
 
+  serac::profiling::terminateCaliper();
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
 
 }  // namespace serac
 
