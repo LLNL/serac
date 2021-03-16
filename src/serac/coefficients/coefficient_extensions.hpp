@@ -27,6 +27,7 @@
 namespace serac::mfem_ext {
 
   namespace detail {
+    // methods for determining index type
     template <typename T>
     struct index_t {
       using type = std::size_t;
@@ -37,11 +38,44 @@ namespace serac::mfem_ext {
       using type = int;
     };
 
+
+    // methods for determining the size of a container
     template <typename T>
     int size(T container) { return static_cast<int> ( container.size() ); }
 
     template <typename T>
     int size(mfem::Array<T> container) { return container.Size(); }
+
+    //methods for determining type of coefficient evaluations
+    template <typename T>
+    struct eval_t {
+      using type = T;
+    };
+
+    template <>
+    struct eval_t<mfem::Coefficient> {
+      using type = double;
+    };
+
+    template <>
+    struct eval_t<mfem::VectorCoefficient> {
+      using type = mfem::Vector;
+    };
+    
+    // methods for evaluating coefficient stuff
+    template <typename T>
+    typename eval_t<T>::type
+    eval(T & t, mfem::ElementTransformation &, const mfem::IntegrationPoint &) {
+      return t;
+    }
+
+    template <>
+    typename eval_t<mfem::Coefficient>::type
+    eval<mfem::Coefficient>(mfem::Coefficient & c, mfem::ElementTransformation &Tr, const mfem::IntegrationPoint & ip);
+
+    template <>
+    typename eval_t<mfem::VectorCoefficient>::type
+    eval<mfem::VectorCoefficient> (mfem::VectorCoefficient &v, mfem::ElementTransformation &Tr, const mfem::IntegrationPoint & ip);
     
   }
   
@@ -359,6 +393,7 @@ protected:
  * @brief Applies various operations to modify a
  * VectorCoefficient
  */
+template <typename ...Types>
 class TransformedVectorCoefficient : public mfem::VectorCoefficient {
 public:
   /**
@@ -368,19 +403,13 @@ public:
    * @param[in] func A function that takes in an input vector, and returns the
    * output as the second argument.
    */
-  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>                v1,
-                               std::function<void(const mfem::Vector&, mfem::Vector&)> func);
-
-  /**
-   * @brief Apply a vector function, Func, to v1 and v2
-   *
-   * @param[in] v1 A VectorCoefficient to apply Func to
-   * @param[in] v2 A VectorCoefficient to apply Func to
-   * @param[in] func A function that takes in two input vectors, and returns the
-   * output as the third argument.
-   */
-  TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient> v1, std::shared_ptr<mfem::VectorCoefficient> v2,
-                               std::function<void(const mfem::Vector&, const mfem::Vector&, mfem::Vector&)> func);
+  TransformedVectorCoefficient(int dim,
+			       std::function<mfem::Vector(typename detail::eval_t<Types>::type &...)> func,
+			       Types&... types) :
+    mfem::VectorCoefficient(dim),
+    references_(std::make_tuple(std::ref(types)...)),
+    function_(func)
+{ }
 
   /**
    * @brief Evaluate the coefficient at a quadrature point
@@ -389,28 +418,22 @@ public:
    * @param[in] T The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
    */
-  virtual void Eval(mfem::Vector& V, mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
+void Eval(mfem::Vector& V, mfem::ElementTransformation& Tr , const mfem::IntegrationPoint& ip) override {
+  // Evaluate all the references types
+  V.SetSize(GetVDim());
+  auto results = std::apply([&](auto&&... args) {
+      return std::make_tuple(detail::eval(args.get(), Tr, ip)...);
+    }, references_);
+  V = std::apply(function_, results);  
+}
 
 private:
-  /**
-   * @brief The first vector coefficient in the transformation
-   */
-  std::shared_ptr<mfem::VectorCoefficient> v1_;
+  std::tuple<std::reference_wrapper<Types>...> references_;
 
   /**
-   * @brief The first vector coefficient in the transformation
+   * @brief function to return a vector on evaluated arguments
    */
-  std::shared_ptr<mfem::VectorCoefficient> v2_;
-
-  /**
-   * @brief The one argument function for a transformed coefficient
-   */
-  std::function<void(const mfem::Vector&, mfem::Vector&)> mono_function_;
-
-  /**
-   * @brief The two argument function for a transformed coefficient
-   */
-  std::function<void(const mfem::Vector&, const mfem::Vector&, mfem::Vector&)> bi_function_;
+  std::function<mfem::Vector(typename detail::eval_t<Types>::type &...)> function_;
 };
 
 /**

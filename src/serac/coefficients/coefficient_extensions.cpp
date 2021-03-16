@@ -11,36 +11,25 @@
 
 namespace serac::mfem_ext {
 
-TransformedVectorCoefficient::TransformedVectorCoefficient(std::shared_ptr<mfem::VectorCoefficient>                v1,
-                                                           std::function<void(const mfem::Vector&, mfem::Vector&)> func)
-    : mfem::VectorCoefficient(v1->GetVDim()), v1_(v1), v2_(nullptr), mono_function_(func), bi_function_(nullptr)
-{
-}
+  namespace detail {
 
-TransformedVectorCoefficient::TransformedVectorCoefficient(
-    std::shared_ptr<mfem::VectorCoefficient> v1, std::shared_ptr<mfem::VectorCoefficient> v2,
-    std::function<void(const mfem::Vector&, const mfem::Vector&, mfem::Vector&)> func)
-    : mfem::VectorCoefficient(v1->GetVDim()), v1_(v1), v2_(v2), mono_function_(nullptr), bi_function_(func)
-{
-  SLIC_CHECK_MSG(v1_->GetVDim() == v2_->GetVDim(), "v1 and v2 are not the same size");
-}
+    template <>
+    typename eval_t<mfem::Coefficient>::type
+    eval<mfem::Coefficient>(mfem::Coefficient & c, mfem::ElementTransformation &Tr, const mfem::IntegrationPoint & ip) {
+      return c.Eval(Tr, ip);
+    }
 
-void TransformedVectorCoefficient::Eval(mfem::Vector& V, mfem::ElementTransformation& T,
-                                        const mfem::IntegrationPoint& ip)
-{
-  V.SetSize(v1_->GetVDim());
-  mfem::Vector temp(v1_->GetVDim());
-  v1_->Eval(temp, T, ip);
-
-  if (mono_function_) {
-    mono_function_(temp, V);
-  } else {
-    mfem::Vector temp2(v1_->GetVDim());
-    v2_->Eval(temp2, T, ip);
-    bi_function_(temp, temp2, V);
+    template <>
+    eval_t<mfem::VectorCoefficient>::type
+    eval<mfem::VectorCoefficient> (mfem::VectorCoefficient &v, mfem::ElementTransformation &Tr, const mfem::IntegrationPoint & ip) {
+      mfem::Vector temp(v.GetVDim());
+      v.Eval(temp, Tr, ip);
+      return temp;
+    }
+    
   }
-}
 
+  
 TransformedScalarCoefficient::TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient>  s1,
                                                            std::function<double(const double)> func)
     : mfem::Coefficient(), s1_(s1), s2_(nullptr), mono_function_(func), bi_function_(nullptr)
