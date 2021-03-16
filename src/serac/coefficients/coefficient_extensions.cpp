@@ -11,25 +11,27 @@
 
 namespace serac::mfem_ext {
 
-  namespace detail {
+namespace detail {
 
-    template <>
-    typename eval_t<mfem::Coefficient>::type
-    eval<mfem::Coefficient>(mfem::Coefficient & c, mfem::ElementTransformation &Tr, const mfem::IntegrationPoint & ip) {
-      return c.Eval(Tr, ip);
-    }
+template <>
+typename eval_t<mfem::Coefficient>::type eval<mfem::Coefficient>(mfem::Coefficient& c, mfem::ElementTransformation& Tr,
+                                                                 const mfem::IntegrationPoint& ip)
+{
+  return c.Eval(Tr, ip);
+}
 
-    template <>
-    eval_t<mfem::VectorCoefficient>::type
-    eval<mfem::VectorCoefficient> (mfem::VectorCoefficient &v, mfem::ElementTransformation &Tr, const mfem::IntegrationPoint & ip) {
-      mfem::Vector temp(v.GetVDim());
-      v.Eval(temp, Tr, ip);
-      return temp;
-    }
-    
-  }
+template <>
+eval_t<mfem::VectorCoefficient>::type eval<mfem::VectorCoefficient>(mfem::VectorCoefficient&      v,
+                                                                    mfem::ElementTransformation&  Tr,
+                                                                    const mfem::IntegrationPoint& ip)
+{
+  mfem::Vector temp(v.GetVDim());
+  v.Eval(temp, Tr, ip);
+  return temp;
+}
 
-  
+}  // namespace detail
+
 TransformedScalarCoefficient::TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient>  s1,
                                                            std::function<double(const double)> func)
     : mfem::Coefficient(), s1_(s1), s2_(nullptr), mono_function_(func), bi_function_(nullptr)
@@ -54,5 +56,5 @@ double TransformedScalarCoefficient::Eval(mfem::ElementTransformation& T, const 
     return bi_function_(temp, temp2);
   }
 }
-  
+
 }  // namespace serac::mfem_ext

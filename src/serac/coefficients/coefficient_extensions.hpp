@@ -26,81 +26,84 @@
  */
 namespace serac::mfem_ext {
 
-  namespace detail {
-    // methods for determining index type
-    template <typename T>
-    struct index_t {
-      using type = std::size_t;
-    };
-  
-    template <typename T>
-    struct index_t<mfem::Array<T>> {
-      using type = int;
-    };
+namespace detail {
+// methods for determining index type
+template <typename T>
+struct index_t {
+  using type = std::size_t;
+};
 
+template <typename T>
+struct index_t<mfem::Array<T>> {
+  using type = int;
+};
 
-    // methods for determining the size of a container
-    template <typename T>
-    int size(T container) { return static_cast<int> ( container.size() ); }
+// methods for determining the size of a container
+template <typename T>
+int size(T container)
+{
+  return static_cast<int>(container.size());
+}
 
-    template <typename T>
-    int size(mfem::Array<T> container) { return container.Size(); }
+template <typename T>
+int size(mfem::Array<T> container)
+{
+  return container.Size();
+}
 
-    //methods for determining type of coefficient evaluations
-    template <typename T>
-    struct eval_t {
-      using type = T;
-    };
+// methods for determining type of coefficient evaluations
+template <typename T>
+struct eval_t {
+  using type = T;
+};
 
-    template <>
-    struct eval_t<mfem::Coefficient> {
-      using type = double;
-    };
+template <>
+struct eval_t<mfem::Coefficient> {
+  using type = double;
+};
 
-    template <>
-    struct eval_t<mfem::VectorCoefficient> {
-      using type = mfem::Vector;
-    };
-    
-    // methods for evaluating coefficient stuff
-    template <typename T>
-    typename eval_t<T>::type
-    eval(T & t, mfem::ElementTransformation &, const mfem::IntegrationPoint &) {
-      return t;
-    }
+template <>
+struct eval_t<mfem::VectorCoefficient> {
+  using type = mfem::Vector;
+};
 
-    template <>
-    typename eval_t<mfem::Coefficient>::type
-    eval<mfem::Coefficient>(mfem::Coefficient & c, mfem::ElementTransformation &Tr, const mfem::IntegrationPoint & ip);
+// methods for evaluating coefficient stuff
+template <typename T>
+typename eval_t<T>::type eval(T& t, mfem::ElementTransformation&, const mfem::IntegrationPoint&)
+{
+  return t;
+}
 
-    template <>
-    typename eval_t<mfem::VectorCoefficient>::type
-    eval<mfem::VectorCoefficient> (mfem::VectorCoefficient &v, mfem::ElementTransformation &Tr, const mfem::IntegrationPoint & ip);
-    
-  }
-  
-  namespace digitize {
-    /**
-     * @brief takes floating point value and rounds down to the nearest integer
-     * @param[in] v floating point value
-     */
-    
-    [[maybe_unused]] static int floor(double v) {
-      return static_cast<int>(v);
-    }
+template <>
+typename eval_t<mfem::Coefficient>::type eval<mfem::Coefficient>(mfem::Coefficient& c, mfem::ElementTransformation& Tr,
+                                                                 const mfem::IntegrationPoint& ip);
 
+template <>
+typename eval_t<mfem::VectorCoefficient>::type eval<mfem::VectorCoefficient>(mfem::VectorCoefficient&      v,
+                                                                             mfem::ElementTransformation&  Tr,
+                                                                             const mfem::IntegrationPoint& ip);
 
-    /**
-     * @brief Thresholds a real function so that it is 2 if greater than 0.
-     * @param[in] v floating point value
-     */
-    [[maybe_unused]] static int threshold(double v) { return v > 0. ? 2 : 1; }
+}  // namespace detail
 
-    /**
-     * @brief Checks if floating point value is equal to 1, if return 2 otherwise return 1.
-     */
-    [[maybe_unused]] static int equals1(double v) { return v == 1. ? 2 : 1; }    
-  }
+namespace digitize {
+/**
+ * @brief takes floating point value and rounds down to the nearest integer
+ * @param[in] v floating point value
+ */
+
+[[maybe_unused]] static int floor(double v) { return static_cast<int>(v); }
+
+/**
+ * @brief Thresholds a real function so that it is 2 if greater than 0.
+ * @param[in] v floating point value
+ */
+[[maybe_unused]] static int threshold(double v) { return v > 0. ? 2 : 1; }
+
+/**
+ * @brief Checks if floating point value is equal to 1, if return 2 otherwise return 1.
+ */
+[[maybe_unused]] static int equals1(double v) { return v == 1. ? 2 : 1; }
+}  // namespace digitize
 
 /**
  * @brief MakeEssList takes in a FESpace, a vector coefficient, and produces a list
@@ -113,8 +116,8 @@ namespace serac::mfem_ext {
  * @return The list of vector dofs that should be
  * part of the essential boundary conditions
  */
-  template <typename T>
-  mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, T & c)
+template <typename T>
+mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, T& c)
 {
   mfem::Array<int> ess_vdof_list(0);
 
@@ -130,7 +133,6 @@ namespace serac::mfem_ext {
   return ess_vdof_list;
 }
 
-  
 /**
  * @brief MakeTrueEssList takes in a FESpace, a vector coefficient, and produces a list
  *  of essential boundary conditions
@@ -141,8 +143,8 @@ namespace serac::mfem_ext {
  * the vdof list.
  * @return The list of true dofs that should be part of the essential boundary conditions
  */
-  template <typename T>
-  mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, T & c)
+template <typename T>
+mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, T& c)
 {
   mfem::Array<int> ess_tdof_list(0);
 
@@ -174,46 +176,42 @@ namespace serac::mfem_ext {
  * @return An array holding the attributes that correspond to each element
  */
 
-  template <typename T>
-  T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::threshold)
+template <typename T>
+T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::threshold)
 {
   mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &l2_fec);
-  T attr_list(static_cast<typename detail::index_t<T>::type>(fes.GetNE()));
+  T                        attr_list(static_cast<typename detail::index_t<T>::type>(fes.GetNE()));
 
   mfem::GridFunction elem_attr(&fes);
   elem_attr.ProjectCoefficient(c);
 
-  for (auto e = attr_list.begin(); e != attr_list.end(); e++)
-    {
-      *e = digitize(elem_attr[ e - attr_list.begin() ]);
-    }
-  
+  for (auto e = attr_list.begin(); e != attr_list.end(); e++) {
+    *e = digitize(elem_attr[e - attr_list.begin()]);
+  }
+
   return attr_list;
 }
 
-  
-  /**
-   * @brief Assign element attributes to mesh
-   *
-   * @param[in] m the mesh
-   * @param[in] attr_list a list of attributes to assign to the given mesh
-   */
+/**
+ * @brief Assign element attributes to mesh
+ *
+ * @param[in] m the mesh
+ * @param[in] attr_list a list of attributes to assign to the given mesh
+ */
 
-  template <typename T>
-  void AssignMeshElementAttributes(mfem::Mesh &m, T &&list)
-   {
-    // check to make sure the lists are match the number of elements     
-     SLIC_ERROR_IF(detail::size(list) != m.GetNE(), "list size does not match the number of mesh elements");
-    
-    for (int e = 0; e < m.GetNE(); e++ ) {
-      m.GetElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
-    }
-    m.SetAttributes();
+template <typename T>
+void AssignMeshElementAttributes(mfem::Mesh& m, T&& list)
+{
+  // check to make sure the lists are match the number of elements
+  SLIC_ERROR_IF(detail::size(list) != m.GetNE(), "list size does not match the number of mesh elements");
+
+  for (int e = 0; e < m.GetNE(); e++) {
+    m.GetElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
   }
-     
+  m.SetAttributes();
+}
 
-  
 /**
  * @brief This method creates an array of size(local_bdr_elems), and assigns
  * attributes based on the coefficient c
@@ -231,8 +229,8 @@ namespace serac::mfem_ext {
  * attribute 2.
  * @return An array holding the attributes that correspond to each element
  */
-  template <typename T>
-  T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::equals1)
+template <typename T>
+T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::equals1)
 {
   // Need to use H1_fec because boundary elements don't exist in L2
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
@@ -250,28 +248,25 @@ namespace serac::mfem_ext {
   return attr_list;
 }
 
- 
-  /**
-   * @brief Assign bdr element attributes to mesh
-   *
-   * @param[in] m the mesh
-   * @param[in] attr_list a list of attributes to assign to the given mesh
-   */
+/**
+ * @brief Assign bdr element attributes to mesh
+ *
+ * @param[in] m the mesh
+ * @param[in] attr_list a list of attributes to assign to the given mesh
+ */
 
-  template <typename T>
-  void AssignMeshBdrAttributes(mfem::Mesh &m, T & list)
-  {
-    // check to make sure the lists are match the number of elements
-    SLIC_ERROR_IF(detail::size(list) != m.GetNBE(), "list size does not match the number of mesh elements");
-    
-    for (int e = 0; e < m.GetNBE(); e++ ) {
-      m.GetBdrElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
-    }
-    m.SetAttributes();
+template <typename T>
+void AssignMeshBdrAttributes(mfem::Mesh& m, T& list)
+{
+  // check to make sure the lists are match the number of elements
+  SLIC_ERROR_IF(detail::size(list) != m.GetNBE(), "list size does not match the number of mesh elements");
+
+  for (int e = 0; e < m.GetNBE(); e++) {
+    m.GetBdrElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
   }
-    
+  m.SetAttributes();
+}
 
-  
 /**
  * @brief AttributemodifierCoefficient class
  *
@@ -289,9 +284,7 @@ public:
    * of coefficient at each element.
    * @param[in] c The coefficient to "modify" the element attributes
    */
-  AttributeModifierCoefficient(const T& attr_list, mfem::Coefficient& c)
-      : attr_list_(attr_list), coef_(c)
-  { }
+  AttributeModifierCoefficient(const T& attr_list, mfem::Coefficient& c) : attr_list_(attr_list), coef_(c) {}
 
   /**
    * @brief Evaluate the coefficient at a quadrature point
@@ -301,21 +294,20 @@ public:
    * @return The value of the coefficient at the quadrature point
    */
   double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
-{
-  // Store old attribute and change to new attribute
-  const int attr = Tr.Attribute;
-  Tr.Attribute   = attr_list_[static_cast< typename detail::index_t<T>::type >( Tr.ElementNo)];
+  {
+    // Store old attribute and change to new attribute
+    const int attr = Tr.Attribute;
+    Tr.Attribute   = attr_list_[static_cast<typename detail::index_t<T>::type>(Tr.ElementNo)];
 
-  // Evaluate with new attribute
-  double result = coef_.Eval(Tr, ip);
+    // Evaluate with new attribute
+    double result = coef_.Eval(Tr, ip);
 
-  // Set back to original attribute (maybe it's not necessary?.. just to be
-  // safe)
-  Tr.Attribute = attr;
+    // Set back to original attribute (maybe it's not necessary?.. just to be
+    // safe)
+    Tr.Attribute = attr;
 
-  return result;
-}
-
+    return result;
+  }
 
 protected:
   /**
@@ -350,7 +342,8 @@ public:
    */
   AttributeModifierVectorCoefficient(int dim, const T& attr_list, mfem::VectorCoefficient& c)
       : attr_list_(attr_list), coef_(c), mfem::VectorCoefficient(dim)
-  { }
+  {
+  }
 
   /**
    * @brief Evaluate the coefficient at a quadrature point
@@ -359,21 +352,19 @@ public:
    * @param[in] ip The integration point for the evaluation
    * @return The value of the coefficient at the quadrature point
    */
-  void Eval(mfem::Vector &v, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
-{
-  // Store old attribute and change to new attribute
-  const int attr = Tr.Attribute;
-  Tr.Attribute   = attr_list_[static_cast< typename detail::index_t<T>::type >( Tr.ElementNo)];
+  void Eval(mfem::Vector& v, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
+  {
+    // Store old attribute and change to new attribute
+    const int attr = Tr.Attribute;
+    Tr.Attribute   = attr_list_[static_cast<typename detail::index_t<T>::type>(Tr.ElementNo)];
 
-  // Evaluate with new attribute
-  coef_.Eval(v, Tr, ip);
+    // Evaluate with new attribute
+    coef_.Eval(v, Tr, ip);
 
-  // Set back to original attribute (maybe it's not necessary?.. just to be
-  // safe)
-  Tr.Attribute = attr;
-
-}
-
+    // Set back to original attribute (maybe it's not necessary?.. just to be
+    // safe)
+    Tr.Attribute = attr;
+  }
 
 protected:
   /**
@@ -388,12 +379,11 @@ protected:
   mfem::VectorCoefficient& coef_;
 };
 
-
 /**
  * @brief Applies various operations to modify a
  * VectorCoefficient
  */
-template <typename ...Types>
+template <typename... Types>
 class TransformedVectorCoefficient : public mfem::VectorCoefficient {
 public:
   /**
@@ -403,13 +393,11 @@ public:
    * @param[in] func A function that takes in an input vector, and returns the
    * output as the second argument.
    */
-  TransformedVectorCoefficient(int dim,
-			       std::function<mfem::Vector(typename detail::eval_t<Types>::type &...)> func,
-			       Types&... types) :
-    mfem::VectorCoefficient(dim),
-    references_(std::make_tuple(std::ref(types)...)),
-    function_(func)
-{ }
+  TransformedVectorCoefficient(int dim, std::function<mfem::Vector(typename detail::eval_t<Types>::type&...)> func,
+                               Types&... types)
+      : mfem::VectorCoefficient(dim), references_(std::make_tuple(std::ref(types)...)), function_(func)
+  {
+  }
 
   /**
    * @brief Evaluate the coefficient at a quadrature point
@@ -418,14 +406,14 @@ public:
    * @param[in] T The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
    */
-void Eval(mfem::Vector& V, mfem::ElementTransformation& Tr , const mfem::IntegrationPoint& ip) override {
-  // Evaluate all the references types
-  V.SetSize(GetVDim());
-  auto results = std::apply([&](auto&&... args) {
-      return std::make_tuple(detail::eval(args.get(), Tr, ip)...);
-    }, references_);
-  V = std::apply(function_, results);  
-}
+  void Eval(mfem::Vector& V, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
+  {
+    // Evaluate all the references types
+    V.SetSize(GetVDim());
+    auto results =
+        std::apply([&](auto&&... args) { return std::make_tuple(detail::eval(args.get(), Tr, ip)...); }, references_);
+    V = std::apply(function_, results);
+  }
 
 private:
   std::tuple<std::reference_wrapper<Types>...> references_;
@@ -433,7 +421,7 @@ private:
   /**
    * @brief function to return a vector on evaluated arguments
    */
-  std::function<mfem::Vector(typename detail::eval_t<Types>::type &...)> function_;
+  std::function<mfem::Vector(typename detail::eval_t<Types>::type&...)> function_;
 };
 
 /**
