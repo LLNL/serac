@@ -62,8 +62,6 @@ TEST(serac_error_handling, bc_project_requires_state)
   EXPECT_THROW(bc.project(), SlicErrorException);
 
   FiniteElementState state(*mesh);
-  // Explicitly allocate the gridfunction as it is not being managed by Sidre
-  state.gridFunc().GetMemory().New(state.gridFunc().Size());
   bc.setTrueDofs(state);
   EXPECT_NO_THROW(bc.project());
 }
