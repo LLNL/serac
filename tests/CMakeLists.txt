@@ -70,7 +70,7 @@ if (ENABLE_GTEST)
         serac_error_handling.cpp
         serac_odes.cpp
         serac_input.cpp
-	serac_profiling.cpp)
+        serac_profiling.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)
