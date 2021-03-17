@@ -40,133 +40,30 @@ EquationSolver::EquationSolver(MPI_Comm comm, const LinearSolverOptions& lin_opt
 
 namespace detail {
 #ifdef MFEM_USE_AMGX
-using JSONLiteral  = std::variant<std::string, double, int>;
-using JSONLiterals = std::unordered_map<std::string, JSONLiteral>;
-
-/**
- * @brief A structure for storing simple JSON data
- *
- * Used to produce the configuration for AMGX
- */
-class JSONTable {
-public:
-  /**
-   * @brief Creates a new table
-   * @param[in] depth The depth of the created table
-   */
-  JSONTable(const int depth = 0) : depth_(depth) {}
-  /**
-   * @brief Returns the subtable at the given index, creating a new table if necessary
-   * @param[in] idx The string key of the subtable (object)
-   */
-  JSONTable& operator[](const std::string& idx)
-  {
-    if (tables_.count(idx) == 0) {
-      tables_[idx] = std::make_unique<JSONTable>(depth_ + 1);
-    }
-    return *(tables_[idx]);
-  }
-
-  /**
-   * @brief Returns the literal at the given index, creating a new one if it doesn't exist
-   * @param[in] idx The string key of the subtable (object)
-   */
-  JSONLiteral& literal(const std::string& idx) { return literals_[idx]; }
-
-  /**
-   * @brief Adds (appends) a table to the calling table
-   * @param[in] other The table to add
-   */
-  void add(const JSONTable& other)
-  {
-    literals_.insert(other.literals_.begin(), other.literals_.end());
-    for (const auto& [key, subtable] : other.tables_) {
-      operator[](key).add(*subtable);
-    }
-  }
-
-  /**
-   * @brief Inserts the JSON representation to a stream
-   * @param[inout] out The stream to insert into
-   * @param[in] table The table to be inserted (printed)
-   */
-  friend std::ostream& operator<<(std::ostream& out, const JSONTable& table);
-
-private:
-  /**
-   * @brief Literal (primitive) members of the table
-   */
-  JSONLiterals literals_;
-  /**
-   * @brief Subtable (object) members of the table
-   */
-  std::unordered_map<std::string, std::unique_ptr<JSONTable>> tables_;
-  /**
-   * @brief Current depth of the table relative to the root
-   */
-  const int depth_;
-};
-
-std::ostream& operator<<(std::ostream& out, const JSONTable& table)
-{
-  out << "{";
-  std::string indent(static_cast<std::size_t>(table.depth_) * 2, ' ');  // Double-space indenting
-  char        sep = ' ';  // Start with empty separator to avoid trailing comma
-  for (const auto& [key, val] : table.literals_) {
-    out << sep << "\n" << indent << "\"" << key << "\": ";
-    // Strings need to be wrapped in escaped quotes
-    if (auto str_ptr = std::get_if<std::string>(&val)) {
-      out << "\"" << *str_ptr << "\"";
-    } else {
-      std::visit([&out](const auto contained_val) { out << contained_val; }, val);
-    }
-    sep = ',';
-  }
-
-  // Recursively insert subtables into the stream
-  for (const auto& [key, subtable] : table.tables_) {
-    out << sep << "\n" << indent << "\"" << key << "\": ";
-    out << *subtable;
-    sep = ',';
-  }
-  out << "\n" << indent << "}";
-  return out;
-}
-
 std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXPrec& options)
 {
-  auto              amgx                 = std::make_unique<mfem::AmgXSolver>();
-  static const auto default_prec_options = []() {
-    JSONTable solver_table;
-    solver_table.literal("solver")       = "AMG";
-    solver_table.literal("presweeps")    = 1;
-    solver_table.literal("postsweeps")   = 2;
-    solver_table.literal("interpolator") = "D2";
-    solver_table.literal("max_iters")    = 2;
-    solver_table.literal("convergence")  = "ABSOLUTE";
-    solver_table.literal("cycle")        = "V";
+  auto          amgx = std::make_unique<mfem::AmgXSolver>();
+  conduit::Node options_node;
+  options_node["config_version"] = 2;
+  auto& solver_options           = options_node["solver"];
+  solver_options["solver"]       = "AMG";
+  solver_options["presweeps"]    = 1;
+  solver_options["postsweeps"]   = 2;
+  solver_options["interpolator"] = "D2";
+  solver_options["max_iters"]    = 2;
+  solver_options["convergence"]  = "ABSOLUTE";
+  solver_options["cycle"]        = "V";
 
-    JSONTable top_level;
-    top_level.literal("config_version") = 2;
-    top_level["solver"].add(solver_table);
-    return top_level;
-  }();
-
-  JSONTable options_table;
-  options_table.add(default_prec_options);
   if (options.verbose) {
-    static const auto default_verbose_options = []() {
-      JSONTable result;
-      result.literal("obtain_timings")    = 1;
-      result.literal("monitor_residual")  = 1;
-      result.literal("print_solve_stats") = 1;
-      result.literal("print_solve_stats") = 1;
-      return result;
-    }();
-    options_table["solver"].add(default_verbose_options);
+    options_node["solver/obtain_timings"]    = 1;
+    options_node["solver/monitor_residual"]  = 1;
+    options_node["solver/print_solve_stats"] = 1;
   }
 
   // FIXME: magic_enum?
+  // This is an immediately-invoked lambda so that the map
+  // can be const without needed to initialize all the values
+  // in the constructor     
   static const auto solver_names = []() {
     std::unordered_map<AMGXSolver, std::string> names;
     names[AMGXSolver::AMG]             = "AMG";
@@ -186,13 +83,11 @@ std::unique_ptr<mfem::AmgXSolver> configureAMGX(const MPI_Comm comm, const AMGXP
     return names;
   }();
 
-  options_table["solver"].literal("solver")   = solver_names.at(options.solver);
-  options_table["solver"].literal("smoother") = solver_names.at(options.smoother);
+  options_node["solver/solver"]   = solver_names.at(options.solver);
+  options_node["solver/smoother"] = solver_names.at(options.smoother);
 
-  std::ostringstream oss;
-  oss << options_table;
   // Treat the string as the config (not a filename)
-  amgx->ReadParameters(oss.str(), mfem::AmgXSolver::INTERNAL);
+  amgx->ReadParameters(options_node.to_json(), mfem::AmgXSolver::INTERNAL);
   amgx->InitExclusiveGPU(comm);
 
   return amgx;

@@ -11,6 +11,7 @@ User Guide
   :hidden:
   :maxdepth: 2
 
+  simple_conduction_tutorial
   input_schema
 
 Serac can be used either by providing input files to the main executable or through a C++ API. Example lua input files are located in the `data 
