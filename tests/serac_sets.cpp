@@ -102,24 +102,26 @@ TEST_F(SetTest, flag_mesh)
 
   mfem::VisItDataCollection visit(pmesh->GetComm(), "flag", pmesh.get());
 
-  // serac::FiniteElementState stripes(*pmesh, FiniteElementState::Options{
-  // 	.order=0,.vector_dim=1,.coll={std::make_unique<mfem::L2_FECollection>( 0,
-  // pmesh->SpaceDimension())},.ordering=mfem::Ordering::byVDIM,.name="stripes"});
-  auto fec     = mfem::L2_FECollection(0, pmesh->SpaceDimension());
-  auto pfes    = mfem::ParFiniteElementSpace(pmesh.get(), &fec);
-  auto stripes = mfem::ParGridFunction(&pfes);
-  //    stripes.project(stripes_coef);
-  stripes.ProjectCoefficient(stripes_coef);
+  serac::FiniteElementState stripes(
+      *pmesh, FiniteElementState::Options{.order      = 0,
+                                          .vector_dim = 1,
+                                          .coll = {std::make_unique<mfem::L2_FECollection>(0, pmesh->SpaceDimension())},
+                                          .ordering = mfem::Ordering::byVDIM,
+                                          .name     = "stripes",
+                                          .alloc_gf = true});
+  stripes.project(stripes_coef);
 
   auto stripes_attr_set =
       Set(mfem_ext::MakeAttributeList<std::vector<int>>(*pmesh, stripes_coef, mfem_ext::digitize::floor));
 
-  // serac::FiniteElementState stars(
-  //     *pmesh, FiniteElementState::Options{
-  //                 .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byNODES, .name = "stars"});
-  // stars.project(stars_coef);
-  auto stars = mfem::ParGridFunction(&pfes);
-  stars.ProjectCoefficient(stars_coef);
+  serac::FiniteElementState stars(
+      *pmesh, FiniteElementState::Options{.order      = 0,
+                                          .vector_dim = 1,
+                                          .coll = {std::make_unique<mfem::L2_FECollection>(0, pmesh->SpaceDimension())},
+                                          .ordering = mfem::Ordering::byNODES,
+                                          .name     = "stars",
+                                          .alloc_gf = true});
+  stars.project(stars_coef);
 
   auto stars_attr_set =
       Set(mfem_ext::MakeAttributeList<std::vector<int>>(*pmesh, stars_coef, mfem_ext::digitize::floor));
@@ -135,8 +137,8 @@ TEST_F(SetTest, flag_mesh)
   auto flag = blue.getUnion(red_white);
   mfem_ext::AssignMeshElementAttributes(*pmesh, flag.toList());
 
-  visit.RegisterField("stripes", &stripes);
-  visit.RegisterField("stars", &stars);
+  visit.RegisterField("stripes", &stripes.gridFunc());
+  visit.RegisterField("stars", &stars.gridFunc());
 
   visit.SetCycle(0);
   visit.Save();
