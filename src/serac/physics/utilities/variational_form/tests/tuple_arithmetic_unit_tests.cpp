@@ -127,37 +127,6 @@ void chain_rule_tests(){
     std::cout << std::get<1>(df_ad) - df1 << std::endl;
   }
 
-  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/tensor.hpp:935:22: error: cannot cast 'const std::tuple<zero, tensor<double, 2, 2> >' to its private base class 'const zero'
-  //[build]   return (chain_rule(std::get<I>(df_dx), std::get<I>(dx)) + ...);
-  //[build]                      ^
-  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/tensor.hpp:941:10: note: in instantiation of function template specialization 'chain_rule_helper<std::tuple<double, zero>, std::tuple<zero, tensor<double, 2, 2> > , double, tensor<double, 2> , 0, 1>' requested here
-  //[build]   return chain_rule_helper(df_dx, dx, std::make_integer_sequence<int, sizeof ...(T)>());
-  //[build]          ^
-  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/weak_form.hpp:165:17: note: in instantiation of function template specialization 'chain_rule<std::tuple<double, zero>, std::tuple<zero, tensor<double, 2, 2> > , double, tensor<double, 2> >' requested here
-  //[build]       auto dq = chain_rule(dq_darg, darg);
-  //[build]                 ^
-  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/weak_form.hpp:259:7: note: in instantiation of function template specialization 'gradient_kernel<Geometry::Quadrilateral, H1<1, 1>, H1<1, 1>, 2, std::tuple<std::tuple<double, zero>, std::tuple<zero, tensor<double, 2, 2> > > >' requested here
-  //[build]       gradient_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(dU, dR, qf_derivatives_ptr, J_, num_elements);
-  //[build]       ^
-  //[build] /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/ext/new_allocator.h:147:23: note: in instantiation of function template specialization 'VolumeIntegral<H1<1, 1> (H1<1, 1>)>::VolumeIntegral<(lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30) &>' requested here
-  //[build]         { ::new((void *)__p) _Up(std::forward<_Args>(__args)...); }
-  //[build]                              ^
-  //[build] /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/alloc_traits.h:484:8: note: in instantiation of function template specialization '__gnu_cxx::new_allocator<VolumeIntegral<H1<1, 1> (H1<1, 1>)> >::construct<VolumeIntegral<H1<1, 1> (H1<1, 1>)>, int &, const mfem::Vector &, const mfem::Vector &, (lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30) &>' requested here
-  //[build]         { __a.construct(__p, std::forward<_Args>(__args)...); }
-  //[build]               ^
-  //[build] /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/vector.tcc:115:21: note: in instantiation of function template specialization 'std::allocator_traits<std::allocator<VolumeIntegral<H1<1, 1> (H1<1, 1>)> > >::construct<VolumeIntegral<H1<1, 1> (H1<1, 1>)>, int &, const mfem::Vector &, const mfem::Vector &, (lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30) &>' requested here
-  //[build]             _Alloc_traits::construct(this->_M_impl, this->_M_impl._M_finish,
-  //[build]                            ^
-  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/weak_form.hpp:341:22: note: in instantiation of function template specialization 'std::vector<VolumeIntegral<H1<1, 1> (H1<1, 1>)>, std::allocator<VolumeIntegral<H1<1, 1> (H1<1, 1>)> > >::emplace_back<int &, const mfem::Vector &, const mfem::Vector &, (lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30) &>' requested here
-  //[build]     volume_integrals.emplace_back(num_elements, geom->J, geom->X, integrand);
-  //[build]                      ^
-  //[build] /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:12: note: in instantiation of function template specialization 'WeakForm<H1<1, 1> (H1<1, 1>)>::AddVolumeIntegral<(lambda at /home/sam/code/serac/src/serac/physics/utilities/variational_form/thermal_comparison_weak_form.cpp:101:30)>' requested here
-  //[build]   residual.AddVolumeIntegral([&](auto x, auto temperature) {
-  //[build]            ^
-  //[build] /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/tuple:187:7: note: constrained by private inheritance here
-  //[build]       private _Head_base<_Idx, _Head>
-  //[build]       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
   {
     std::tuple <
       std::tuple<double, zero>, 

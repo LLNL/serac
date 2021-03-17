@@ -55,6 +55,8 @@ endforeach()
 
 # Then add the examples/tests
 set(weakform_tests_mpi
+    tests/integration_rule_problem.cpp
+    tests/weak_form_comparisons.cpp
     tests/hcurl_comparison_weak_form.cpp
     tests/thermal_comparison_weak_form.cpp
     tests/elasticity_comparison_weak_form.cpp)

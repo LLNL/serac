@@ -283,20 +283,6 @@ struct VolumeIntegral {
 
 };
 
-struct Gradient : public mfem::Operator {
-
-  Gradient(std::function < void(const mfem::Vector &, mfem::Vector &) > & gradient_func) : gradient(gradient_func) {}
-
-  void Mult(const mfem::Vector & input_E, mfem::Vector & output_E) const {
-    gradient(input_E, output_E);
-  }
-
-  // operator HypreParMatrix() { /* not currently supported */ }
-
-  std::function < void(const mfem::Vector &, mfem::Vector &) > & gradient;
-
-};
-
 template < typename T >
 struct WeakForm;
 
@@ -309,7 +295,7 @@ struct WeakForm< test(trial) > : public mfem::Operator {
   public:
     Gradient(WeakForm & f) : mfem::Operator(f.Height()), form(f){};
 
-    void Mult(const mfem::Vector& x, mfem::Vector& y) const override { form.GradientMult(x, y); }
+    virtual void Mult(const mfem::Vector& x, mfem::Vector& y) const override { form.GradientMult(x, y); }
 
   private:
     WeakForm< test(trial) > & form;
@@ -380,7 +366,7 @@ struct WeakForm< test(trial) > : public mfem::Operator {
     //
     // TODO investigate performance of alternative implementation described above
     output_E = 0.0;
-    for (auto integral : volume_integrals) {
+    for (auto & integral : volume_integrals) {
       if constexpr (op == Operation::Mult) {
         integral.Mult(input_E, output_E);
       }

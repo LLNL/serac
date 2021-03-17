@@ -1,6 +1,9 @@
-#include "mfem.hpp"
 #include <fstream>
 #include <iostream>
+
+#include "mfem.hpp"
+
+#include "axom/slic/core/SimpleLogger.hpp"
 
 #include "serac/serac_config.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
@@ -12,57 +15,18 @@
 using namespace std;
 using namespace mfem;
 
-#include "axom/slic/core/SimpleLogger.hpp"
+static constexpr int dim = 2;
 
-// solve an equation of the form
-// (a * M + b * K) x == f
-// 
-// where M is the H1 mass matrix
-//       K is the H1 stiffness matrix
-//       f is some load term
-// 
-int main(int argc, char* argv[])
-{
-  int num_procs, myid;
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+int num_procs, myid;
 
-  axom::slic::SimpleLogger logger;
+template < int p >
+void thermal_test(mfem::ParMesh & mesh, H1<p> test, H1<p> trial) {
 
-  const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
-
-  constexpr int p = 2;
-  constexpr int dim = 2;
-  int         refinements = 0;
-  double a = 1.0;
-  double b = 1.0;
-
-  OptionsParser args(argc, argv);
-  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.");
-  args.AddOption(&refinements, "-r", "--ref", "");
-
-  args.Parse();
-  if (!args.Good()) {
-    if (myid == 0) {
-      args.PrintUsage(cout);
-    }
-    MPI_Finalize();
-    return 1;
-  }
-  if (myid == 0) {
-    args.PrintOptions(cout);
-  }
-
-  Mesh mesh(mesh_file, 1, 1);
-  for (int l = 0; l < refinements; l++) {
-    mesh.UniformRefinement();
-  }
-
-  ParMesh pmesh(MPI_COMM_WORLD, mesh);
+  static constexpr double a = 1.7;
+  static constexpr double b = 2.1;
 
   auto fec = H1_FECollection(p, dim);
-  ParFiniteElementSpace fespace(&pmesh, &fec);
+  ParFiniteElementSpace fespace(&mesh, &fec);
 
   ParBilinearForm A(&fespace);
 
@@ -89,8 +53,8 @@ int main(int argc, char* argv[])
   Vector X(fespace.TrueVSize());
   x.GetTrueDofs(X);
 
-  using test_space = H1<p>;
-  using trial_space = H1<p>;
+  using test_space = decltype(test);
+  using trial_space = decltype(trial);
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
@@ -99,7 +63,7 @@ int main(int argc, char* argv[])
     auto f0 = a * u - (100 * x[0] * x[1]);
     auto f1 = b * du_dx;
     return std::tuple{f0, f1};
-  }, pmesh);
+  }, mesh);
 
   mfem::Vector r1 = A * x - f;
   mfem::Vector r2 = residual * x;
@@ -116,6 +80,65 @@ int main(int argc, char* argv[])
   std::cout << "||g1||: " << g1.Norml2() << std::endl;
   std::cout << "||g2||: " << g2.Norml2() << std::endl;
   std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+
+}
+
+template < int p, int c >
+void weak_form_test(mfem::ParMesh & mesh, Hcurl<p, c> /* test */, Hcurl<p, c> /* trial */) {
+
+}
+
+auto setup(int argc, char* argv[]) {
+
+  const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
+
+  int refinements = 0;
+
+  OptionsParser args(argc, argv);
+  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.");
+  args.AddOption(&refinements, "-r", "--ref", "");
+
+  args.Parse();
+  if (!args.Good()) {
+    if (myid == 0) {
+      args.PrintUsage(cout);
+    }
+    MPI_Finalize();
+    exit(1);
+  }
+  if (myid == 0) {
+    args.PrintOptions(cout);
+  }
+
+  mfem::Mesh mesh(mesh_file, 1, 1);
+  for (int l = 0; l < refinements; l++) {
+    mesh.UniformRefinement();
+  }
+
+  return mfem::ParMesh(MPI_COMM_WORLD, mesh);
+
+}
+
+int main(int argc, char* argv[])
+{
+
+  MPI_Init(&argc, &argv);
+  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
+  axom::slic::SimpleLogger logger;
+
+  auto mesh = setup(argc, argv);
+
+  //thermal_test(mesh, H1<1>{}, H1<1>{});
+  thermal_test(mesh, H1<2>{}, H1<2>{});
+  thermal_test(mesh, H1<3>{}, H1<3>{});
+
+  //weak_form_test(mesh, H1<1, 2>{}, H1<1, 2>{});
+  //weak_form_test(mesh, H1<2, 2>{}, H1<2, 2>{});
+  //weak_form_test(mesh, H1<3, 2>{}, H1<3, 2>{});
+
+  //weak_form_test(mesh, Hcurl<2>{}, Hcurl<2>{});
 
   MPI_Finalize();
 
