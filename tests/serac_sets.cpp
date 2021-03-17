@@ -114,12 +114,12 @@ TEST_F(SetTest, flag_mesh)
   auto stripes_attr_set =
       Set(mfem_ext::MakeAttributeList<std::vector<int>>(*pmesh, stripes_coef, mfem_ext::digitize::floor));
 
-  serac::FiniteElementState stars(
-      *pmesh, FiniteElementState::Options{
-                  .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byNODES, .name = "stars"});
-  stars.project(stars_coef);
-  // auto stars = mfem::ParGridFunction(&pfes);
-  // stars.ProjectCoefficient(stars_coef);
+  // serac::FiniteElementState stars(
+  //     *pmesh, FiniteElementState::Options{
+  //                 .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byNODES, .name = "stars"});
+  // stars.project(stars_coef);
+  auto stars = mfem::ParGridFunction(&pfes);
+  stars.ProjectCoefficient(stars_coef);
 
   auto stars_attr_set =
       Set(mfem_ext::MakeAttributeList<std::vector<int>>(*pmesh, stars_coef, mfem_ext::digitize::floor));
@@ -136,7 +136,7 @@ TEST_F(SetTest, flag_mesh)
   mfem_ext::AssignMeshElementAttributes(*pmesh, flag.toList());
 
   visit.RegisterField("stripes", &stripes);
-  visit.RegisterField("stars", &stars.gridFunc());
+  visit.RegisterField("stars", &stars);
 
   visit.SetCycle(0);
   visit.Save();
