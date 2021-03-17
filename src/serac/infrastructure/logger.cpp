@@ -9,11 +9,16 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 
+#include <fstream>
+
 namespace serac::logger {
 
 static int logger_rank = 0;
 
 int rank() { return logger_rank; }
+
+// output file stream for SLIC file logger stream
+static std::unique_ptr<std::ostream> logger_file_stream;
 
 bool initialize(MPI_Comm comm)
 {
@@ -35,43 +40,87 @@ bool initialize(MPI_Comm comm)
     return false;
   }
 
-  // Separate streams for different message levels
-  slic::LogStream* iStream  = nullptr;  // info
-  slic::LogStream* dStream  = nullptr;  // debug
-  slic::LogStream* weStream = nullptr;  // warnings and errors
+  // Console streams, std::cout for info/debug, std::cerr for warnings/errors
+  slic::LogStream* i_console_stream  = nullptr;  // info
+  slic::LogStream* d_console_stream  = nullptr;  // debug
+  slic::LogStream* we_console_stream = nullptr;  // warnings and errors
 
-  std::string fmt_i  = "<MESSAGE>\n";
-  std::string fmt_d  = "[<LEVEL>]: <MESSAGE>\n";
-  std::string fmt_we = "[<LEVEL> (<FILE>:<LINE>)]\n<MESSAGE>\n\n";
+  // File streams, all message levels go to one file
+  if (rank == 0) {
+    // Only root node writes/opens the file
+    auto file_stream = std::make_unique<std::ofstream>();
+    file_stream->open("serac.out", std::ofstream::out);
+    logger_file_stream = std::move(file_stream);
+  } else {
+    // Create a noop stream for non-root nodes since they won't write to them anyways
+    logger_file_stream = std::make_unique<std::ostream>(nullptr);
+  }
+
+  slic::LogStream* i_file_stream  = nullptr;
+  slic::LogStream* d_file_stream  = nullptr;
+  slic::LogStream* we_file_stream = nullptr;
+
+  // Stream formatting strings
+  std::string i_format_string  = "<MESSAGE>\n";
+  std::string d_format_string  = "[<LEVEL>]: <MESSAGE>\n";
+  std::string we_format_string = "[<LEVEL> (<FILE>:<LINE>)]\n<MESSAGE>\n\n";
 
   // Only create a parallel logger when there is more than one rank
   if (num_ranks > 1) {
-    fmt_i  = "[<RANK>] " + fmt_i;
-    fmt_d  = "[<RANK>]" + fmt_d;
-    fmt_we = "[<RANK>]" + fmt_we;
+    // Add rank to format strings if parallel
+    // Note: i_format_string's extra space is on purpose due to no space on above string
+    i_format_string  = "[<RANK>] " + i_format_string;
+    d_format_string  = "[<RANK>]" + d_format_string;
+    we_format_string = "[<RANK>]" + we_format_string;
 
 #ifdef SERAC_USE_LUMBERJACK
     const int RLIMIT = 8;
-    iStream          = new slic::LumberjackStream(&std::cout, comm, RLIMIT, fmt_i);
-    dStream          = new slic::LumberjackStream(&std::cout, comm, RLIMIT, fmt_d);
-    weStream         = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, fmt_we);
+
+    // Console streams
+    i_console_stream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, i_format_string);
+    d_console_stream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, d_format_string);
+    we_console_stream = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, we_format_string);
+
+    // File streams
+    i_file_stream  = new slic::LumberjackStream(logger_file_stream.get(), comm, RLIMIT, i_format_string);
+    d_file_stream  = new slic::LumberjackStream(logger_file_stream.get(), comm, RLIMIT, d_format_string);
+    we_file_stream = new slic::LumberjackStream(logger_file_stream.get(), comm, RLIMIT, we_format_string);
 #else
-    iStream  = new slic::SynchronizedStream(&std::cout, comm, fmt_i);
-    dStream  = new slic::SynchronizedStream(&std::cout, comm, fmt_d);
-    weStream = new slic::SynchronizedStream(&std::cerr, comm, fmt_we);
+    // Console streams
+    i_console_stream  = new slic::SynchronizedStream(&std::cout, comm, i_format_string);
+    d_console_stream  = new slic::SynchronizedStream(&std::cout, comm, d_format_string);
+    we_console_stream = new slic::SynchronizedStream(&std::cerr, comm, we_format_string);
+
+    // File streams
+    i_file_stream  = new slic::SynchronizedStream(logger_file_stream.get(), comm, i_format_string);
+    d_file_stream  = new slic::SynchronizedStream(logger_file_stream.get(), comm, d_format_string);
+    we_file_stream = new slic::SynchronizedStream(logger_file_stream.get(), comm, we_format_string);
 #endif
   } else {
-    iStream  = new slic::GenericOutputStream(&std::cout, fmt_i);
-    dStream  = new slic::GenericOutputStream(&std::cout, fmt_d);
-    weStream = new slic::GenericOutputStream(&std::cerr, fmt_we);
+    // Console streams
+    i_console_stream  = new slic::GenericOutputStream(&std::cout, i_format_string);
+    d_console_stream  = new slic::GenericOutputStream(&std::cout, d_format_string);
+    we_console_stream = new slic::GenericOutputStream(&std::cerr, we_format_string);
+
+    // File streams
+    i_file_stream  = new slic::GenericOutputStream(logger_file_stream.get(), i_format_string);
+    d_file_stream  = new slic::GenericOutputStream(logger_file_stream.get(), d_format_string);
+    we_file_stream = new slic::GenericOutputStream(logger_file_stream.get(), we_format_string);
   }
 
   slic::setLoggingMsgLevel(slic::message::Debug);
 
-  addStreamToMsgLevel(weStream, slic::message::Error);
-  addStreamToMsgLevel(weStream, slic::message::Warning);
-  addStreamToMsgLevel(iStream, slic::message::Info);
-  addStreamToMsgLevel(dStream, slic::message::Debug);
+  // Add message levels to console streams
+  addStreamToMsgLevel(i_console_stream, slic::message::Info);
+  addStreamToMsgLevel(d_console_stream, slic::message::Debug);
+  addStreamToMsgLevel(we_console_stream, slic::message::Warning);
+  addStreamToMsgLevel(we_console_stream, slic::message::Error);
+
+  // Add message levels to file streams
+  addStreamToMsgLevel(i_file_stream, slic::message::Info);
+  addStreamToMsgLevel(d_file_stream, slic::message::Debug);
+  addStreamToMsgLevel(we_file_stream, slic::message::Warning);
+  addStreamToMsgLevel(we_file_stream, slic::message::Error);
 
   // Exit gracefully on error
   slic::setAbortFunction([]() { exitGracefully(true); });
