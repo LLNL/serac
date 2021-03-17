@@ -16,9 +16,12 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
                          : std::make_unique<mfem::H1_FECollection>(options.order, mesh.Dimension())),
       space_(
           std::make_unique<mfem::ParFiniteElementSpace>(&mesh, &retrieve(coll_), options.vector_dim, options.ordering)),
-      // Leave the gridfunction unallocated so the allocation can happen inside the datastore
-      // Use a raw pointer here, lifetime will be managed by the DataCollection
-      gf_(new mfem::ParGridFunction(&retrieve(space_), static_cast<double*>(nullptr))),
+      // When left unallocated, the allocation can happen inside the datastore
+      // Use a raw pointer here when unallocated, lifetime will be managed by the DataCollection
+      gf_(options.alloc_gf
+              ? MaybeOwningPointer<mfem::ParGridFunction>{std::make_unique<mfem::ParGridFunction>(&retrieve(space_))}
+              : MaybeOwningPointer<mfem::ParGridFunction>{new mfem::ParGridFunction(&retrieve(space_),
+                                                                                    static_cast<double*>(nullptr))}),
       true_vec_(&retrieve(space_)),
       name_(options.name)
 {
@@ -79,6 +82,7 @@ FiniteElementState StateManager::newState(FiniteElementState::Options&& options)
   } else {
     SLIC_ERROR_ROOT_IF(datacoll_->HasField(name),
                        fmt::format("Serac's datacollection was already given a field named '{0}'", name));
+    options.alloc_gf = false;
     FiniteElementState state(mesh(), std::move(options));
     datacoll_->RegisterField(name, &(state.gridFunc()));
     // Now that it's been allocated, we can set it to zero

@@ -112,7 +112,7 @@ Unless otherwise specified Spack will default to a compiler.  This is generally 
 developing large codes. To specify which compiler to use add the compiler specification to the ``--spec`` Uberenv
 command line option. On TOSS3, we recommend and have tested ``--spec=%clang@9.0.0``.  More compiler specs
 can be found in the Spack compiler files in our repository: 
-``scripts/uberenv/spack_configs/<System type>/compilers.yaml``.
+``scripts/spack/configs/<platform>/compilers.yaml``.
 
 We currently regularly test the following Spack configuration files:
 
@@ -122,7 +122,7 @@ We currently regularly test the following Spack configuration files:
 * BlueOS (On Lassen at LC)
 
 To install Serac on a new platform, it is a good idea to start with a known Spack configuration directory
-(located in the Serac repo at ``scripts/uberenv/spack_configs/<platform>``). The ``compilers.yaml`` file
+(located in the Serac repo at ``scripts/spack/configs/<platform>``). The ``compilers.yaml`` file
 describes the compilers and associated flags required for the platform and the ``packages.yaml`` file 
 describes the low-level libraries on the system to prevent Spack from building the world. Documentation on 
 these configuration files is located in the `Spack docs <https://spack.readthedocs.io/en/latest/configuration.html>`_.
@@ -217,8 +217,10 @@ We provide the following useful build targets that can be run from the build dir
 Preparing Windows WSL/Ubuntu for Serac installation
 ---------------------------------------------------------
 
-For faster installation of the Serac dependencies via Spack on Windows WSL/Ubuntu systems, install cmake, MPICH, openblas, OpenGL, and the devtools
-using the following commands for Ubuntu 20.04:
+For faster installation of the Serac dependencies via Spack on Windows WSL/Ubuntu systems,
+install cmake, MPICH, openblas, OpenGL, and the various developer tools using the following commands:
+
+**Ubuntu 20.04**
 
 .. code-block:: bash
 
@@ -227,7 +229,7 @@ using the following commands for Ubuntu 20.04:
    $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-sphinx clang-format-10 zlib1g-dev libnetcdf-dev libnetcdf15
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
-and the following commands for Ubuntu 18.04:
+**Ubuntu 18.04**
 
 .. code-block:: bash
 
@@ -238,7 +240,14 @@ and the following commands for Ubuntu 18.04:
    $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-distutils
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
-Note that the last line is required since Spack expects the system libraries to exist in a directory named ``lib``. During the third
-party library build phase, the appropriate Spack config directory must be specified using either 
-``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_18`` or
-``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/uberenv/spack_configs/linux_ubuntu_20`` as appropriate.
+Note that the last line is required since Spack expects the system libraries to exist in a directory
+named ``lib``. During the third party library build phase, the appropriate Spack config directory
+must be specified using either:
+
+**Ubuntu 20.04**
+
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_20``
+
+**Ubuntu 18.04**
+
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_18``
