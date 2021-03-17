@@ -1,5 +1,5 @@
 ####
-# This is the share configuration of jobs for quartz
+# This is the shared configuration of jobs for quartz
 .on_quartz:
   tags:
     - shell
@@ -39,6 +39,7 @@ release_resources_build_quartz:
 .pr_build_on_quartz:
   stage: q_build
   extends: [.srun_build_script, .on_quartz, .pr_workflow]
+  needs: [allocate_resources_build_quartz]
 
 .main_build_with_deps_on_quartz:
   stage: q_build_with_deps
