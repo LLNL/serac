@@ -89,4 +89,4 @@ struct is_quadrature_data< quadrature_data < T > >{
 //#include "detail/tetrahedron_hcurl.inl"
 
 #include "detail/hexahedron_h1.inl"
-//#include "detail/hexahedron_hcurl.inl"
+#include "detail/hexahedron_hcurl.inl"

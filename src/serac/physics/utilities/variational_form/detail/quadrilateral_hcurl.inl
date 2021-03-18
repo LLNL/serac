@@ -6,6 +6,40 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr int  ndof       = 2 * p * (p + 1);
   static constexpr int  components = 1;
 
+  static constexpr auto directions = []{
+    int dof_per_direction = p * (p + 1);
+
+    tensor < double, ndof, dim > directions{};
+    for (int i = 0; i < dof_per_direction; i++) {
+      directions[i + 0 * dof_per_direction] = {1.0, 0.0};
+      directions[i + 1 * dof_per_direction] = {0.0, 1.0};
+    }
+    return directions;
+  }();
+
+  static constexpr auto nodes = [](){
+
+    auto legendre_nodes = GaussLegendreNodes<p>();
+    auto lobatto_nodes = GaussLobattoNodes<p+1>();
+
+    tensor < double, ndof, dim > nodes{};
+
+    int count = 0;
+    for (int j = 0; j < p + 1; j++) {
+      for (int i = 0; i < p; i++) {
+        nodes[count++] = {legendre_nodes[i], lobatto_nodes[j]};
+      }
+    }
+
+    for (int j = 0; j < p; j++) {
+      for (int i = 0; i < p + 1; i++) {
+        nodes[count++] = {lobatto_nodes[i], legendre_nodes[j]};
+      }
+    }
+
+    return nodes;
+  }();
+
   /*
 
     interpolation nodes/directions and their associated numbering:
