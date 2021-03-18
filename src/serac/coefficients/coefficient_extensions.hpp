@@ -52,18 +52,18 @@ int size(mfem::Array<T> container)
 }
 
 // methods for determining type of coefficient evaluations
-template <typename T>
+template <typename T, typename = void>
 struct eval_t {
   using type = T;
 };
 
-template <>
-struct eval_t<mfem::Coefficient> {
+template <typename T>
+struct eval_t<T, std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T>>> {
   using type = double;
 };
 
-template <>
-struct eval_t<mfem::VectorCoefficient> {
+template <typename T>
+struct eval_t<T, std::enable_if_t<std::is_base_of_v<mfem::VectorCoefficient, T>>> {
   using type = mfem::Vector;
 };
 
@@ -380,22 +380,26 @@ protected:
 };
 
 /**
- * @brief Applies various operations to modify a
- * VectorCoefficient
+ * @brief TransformedVectorCoefficient applies various operations to modify a list of arguments
  */
 template <typename... Types>
 class TransformedVectorCoefficient : public mfem::VectorCoefficient {
 public:
   /**
-   * @brief Apply a vector function, Func, to v1
+   * @brief Apply a vector function, Func, to args_1.... args_n
    *
-   * @param[in] v1 A VectorCoefficient to apply Func to
-   * @param[in] func A function that takes in an input vector, and returns the
-   * output as the second argument.
+   * The arguments must correspond to the function signature of the supplied function:
+   * e.g. (mfem::Coefficient -> double), (mfem::VectorCoefficient -> mfem::Vector), or POD-numeric types which return
+   * POD-numeric types
+   *
+   *
+   * @param[in] dim d.o.f of this mfem::Vectorcoefficient
+   * @param[in] func A function to apply to the evaluations of all args and return mfem::Vector
+   * @param[in[ args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
    */
   TransformedVectorCoefficient(int dim, std::function<mfem::Vector(typename detail::eval_t<Types>::type&...)> func,
-                               Types&... types)
-      : mfem::VectorCoefficient(dim), references_(std::make_tuple(std::ref(types)...)), function_(func)
+                               Types&... args)
+      : mfem::VectorCoefficient(dim), references_(std::make_tuple(std::ref(args)...)), function_(func)
   {
   }
 
@@ -416,6 +420,9 @@ public:
   }
 
 private:
+  /**
+   * @brief tuple of references to input arguments
+   */
   std::tuple<std::reference_wrapper<Types>...> references_;
 
   /**
@@ -425,30 +432,26 @@ private:
 };
 
 /**
- * @brief TransformedScalarCoefficient applies various operations to modify a
- * scalar Coefficient
+ * @brief TransformedScalarCoefficient is a coefficient that applies various operations to modify a list of arguments
  */
+template <typename... Types>
 class TransformedScalarCoefficient : public mfem::Coefficient {
 public:
   /**
-   * @brief Apply a scalar function, Func, to s1
+   * @brief Apply a scalar function, Func, to args_1.... args_n
    *
-   * @param[in] s1 A Coefficient to apply Func to
-   * @param[in] func A function that takes in an input scalar, and returns the
-   * output.
-   */
-  TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::function<double(const double)> func);
-
-  /**
-   * @brief Apply a scalar function, Func, to s1 and s2
+   * The arguments must correspond to the function signature of the supplied function:
+   * e.g. (mfem::Coefficient -> double), (mfem::VectorCoefficient -> mfem::Vector), or POD-numeric types which return
+   * POD-numeric types
    *
-   * @param[in] s1 A scalar Coefficient to apply Func to
-   * @param[in] s2 A scalar Coefficient to apply Func to
-   * @param[in] func A function that takes in two input scalars, and returns the
-   * output.
+   *
+   * @param[in] func A function to apply to the evaluations of all args and return double
+   * @param[in[ args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
    */
-  TransformedScalarCoefficient(std::shared_ptr<mfem::Coefficient> s1, std::shared_ptr<mfem::Coefficient> s2,
-                               std::function<double(const double, const double)> func);
+  TransformedScalarCoefficient(std::function<double(typename detail::eval_t<Types>::type&...)> func, Types&... args)
+      : mfem::Coefficient(), references_(std::make_tuple(std::ref(args)...)), function_(func)
+  {
+  }
 
   /**
    * @brief Evaluate the coefficient at a quadrature point
@@ -457,28 +460,88 @@ public:
    * @param[in] ip The integration point for the evaluation
    * @return The value of the coefficient at the quadrature point
    */
-  virtual double Eval(mfem::ElementTransformation& T, const mfem::IntegrationPoint& ip);
+  double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
+  {
+    auto results =
+        std::apply([&](auto&&... args) { return std::make_tuple(detail::eval(args.get(), Tr, ip)...); }, references_);
+    return std::apply(function_, results);
+  }
 
 private:
   /**
-   * @brief The first scalar coefficient in the transformation
+   * @brief tuple of references to input arguments
    */
-  std::shared_ptr<mfem::Coefficient> s1_;
+  std::tuple<std::reference_wrapper<Types>...> references_;
 
   /**
-   * @brief The second scalar coefficient in the transformation
+   * @brief function to return a vector on evaluated arguments
    */
-  std::shared_ptr<mfem::Coefficient> s2_;
+  std::function<double(typename detail::eval_t<Types>::type&...)> function_;
+};
 
-  /**
-   * @brief The one argument transformation function
-   */
-  std::function<double(const double)> mono_function_;
+/**
+ * @brief SurfaceElementAttrCoefficient evaluates an element attribute-based coefficient on the surface
+ */
 
+class SurfaceElementAttrCoefficient : public mfem::Coefficient {
+public:
   /**
-   * @brief The two argument transformation function
+   * @brief Evaluates an element attribute-based coefficient on the a boundary element
+   *
+   * @param[in] mesh The mesh we want to evaluate the element attribute-based coefficient with
+   * @param[in] c The element attribute-based coefficient to evaluate on the boundary
    */
-  std::function<double(const double, const double)> bi_function_;
+  SurfaceElementAttrCoefficient(mfem::ParMesh& mesh, mfem::Coefficient& c) : coef_(c), pmesh_(mesh) {}
+
+  double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
+  {
+    // Find attached element
+    int bdr_el = Tr.ElementNo;
+    int el, face_info;
+
+    pmesh_.GetBdrElementAdjacentElement(bdr_el, el, face_info);
+
+    return coef_.Eval(*pmesh_.GetElementTransformation(el), ip);
+  }
+
+protected:
+  mfem::Coefficient& coef_;
+  mfem::ParMesh&     pmesh_;
+};
+
+/**
+ * @brief SurfaceVectorElementAttrCoefficient evaluates an element attribute-based VectorCoefficient on the surface
+ */
+
+class SurfaceVectorElementAttrCoefficient : public mfem::VectorCoefficient {
+public:
+  /**
+   * @brief Evaluates an element attribute-based coefficient on the a boundary element
+   *
+   * @param[in] mesh The mesh we want to evaluate the element attribute-based coefficient with
+   * @param[in] c The element attribute-based VectorCoefficient to evaluate on the boundary
+   */
+  SurfaceVectorElementAttrCoefficient(mfem::ParMesh& mesh, mfem::VectorCoefficient& c)
+      : mfem::VectorCoefficient(c.GetVDim()), coef_(c), pmesh_(mesh)
+  {
+  }
+
+  void Eval(mfem::Vector& V, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
+  {
+    // Find attached element
+    int bdr_el = Tr.ElementNo;
+    int el, face_info;
+
+    pmesh_.GetBdrElementAdjacentElement(bdr_el, el, face_info);
+
+    V.SetSize(coef_.GetVDim());
+
+    coef_.Eval(V, *pmesh_.GetElementTransformation(el), ip);
+  }
+
+protected:
+  mfem::VectorCoefficient& coef_;
+  mfem::ParMesh&           pmesh_;
 };
 
 }  // namespace serac::mfem_ext
