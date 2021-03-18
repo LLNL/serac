@@ -2,6 +2,8 @@
 #include "../tensor.hpp"
 #include "../finite_element.hpp"
 
+static constexpr double kronecker_tolerance  = 1.0e-13;
+static constexpr double curl_tolerance  = 1.0e-10; // coarser, since comparing to a finite difference approximation
 static constexpr int    num_points     = 10;
 static constexpr tensor random_numbers = {
     {-0.886787, -0.850126, 0.464212,  -0.0733101, -0.397738, 0.302355,   -0.570758, 0.977727,  0.282365,  -0.768947,
@@ -15,13 +17,12 @@ contributions from other shape functions in the element are orthogonal
 template <typename element_type>
 void verify_kronecker_delta_property()
 {
-  static constexpr double tolerance  = 1.0e-13;
   static constexpr tensor nodes      = element_type::nodes;
   static constexpr tensor directions = element_type::directions;
   static constexpr tensor I          = Identity<element_type::ndof>();
 
   for (int i = 0; i < element_type::ndof; i++) {
-    if (norm(I[i] - dot(element_type::shape_functions(nodes[i]), directions[i])) > tolerance) {
+    if (norm(I[i] - dot(element_type::shape_functions(nodes[i]), directions[i])) > kronecker_tolerance) {
       exit(1);
     }
   }
@@ -48,7 +49,11 @@ void verify_curl_calculation()
       auto dN_dx = (N(x + eps * I[0]) - N(x - eps * I[0])) / (2.0 * eps);
       auto dN_dy = (N(x + eps * I[1]) - N(x - eps * I[1])) / (2.0 * eps);
 
-      std::cout << norm(curlN(x) - (dot(dN_dx, I[1]) - dot(dN_dy, I[0]))) / norm(curlN(x)) << std::endl;
+      double relative_error = norm(curlN(x) - (dot(dN_dx, I[1]) - dot(dN_dy, I[0]))) / norm(curlN(x)); 
+      if (relative_error > curl_tolerance) {
+        std::cout << "2D curl verification failed" << std::endl;
+        exit(1);
+      }
     }
 
     if constexpr (dim == 3) {
@@ -56,9 +61,16 @@ void verify_curl_calculation()
       auto dN_dy = (N(x + eps * I[1]) - N(x - eps * I[1])) / (2.0 * eps);
       auto dN_dz = (N(x + eps * I[2]) - N(x - eps * I[2])) / (2.0 * eps);
 
-      std::cout << norm(transpose(curlN(x))[0] - (dot(dN_dy, I[2]) - dot(dN_dz, I[1]))) << std::endl;
-      std::cout << norm(transpose(curlN(x))[1] - (dot(dN_dz, I[0]) - dot(dN_dx, I[2]))) << std::endl;
-      std::cout << norm(transpose(curlN(x))[2] - (dot(dN_dx, I[1]) - dot(dN_dy, I[0]))) << std::endl;
+      double relative_error = norm(tensor{{
+        norm(transpose(curlN(x))[0] - (dot(dN_dy, I[2]) - dot(dN_dz, I[1]))),
+        norm(transpose(curlN(x))[1] - (dot(dN_dz, I[0]) - dot(dN_dx, I[2]))),
+        norm(transpose(curlN(x))[2] - (dot(dN_dx, I[1]) - dot(dN_dy, I[0])))
+      }}) / norm(curlN(x)); 
+
+      if (relative_error > curl_tolerance) {
+        std::cout << "3D curl verification failed: " << relative_error << " " << norm(curlN(x)) << std::endl;
+        exit(1);
+      }
     }
   }
 
