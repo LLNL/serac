@@ -7,8 +7,8 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
-  SLURM_ACCOUNT: -p pdebug -A eng
-  LSF_ACCOUNT: -q pdebug -G eng
+  SLURM_ACCOUNT: -p pdebug -A radiuss
+  LSF_ACCOUNT: -q pdebug -G radiuss
 
 # There are no tests for now
 stages:
