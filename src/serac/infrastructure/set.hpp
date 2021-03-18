@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <vector>
+
 namespace serac {
 
 template <typename S>
@@ -105,19 +108,19 @@ public:
   }
 
   /// the number of keys
-  typename std::vector<T>::size_type keys_size() { return values_index_list.size(); }
+  index_type keys_size() { return values_index_list.size(); }
 
   /// the total size of all the indices in the set
-  typename std::vector<T>::size_type values_size() { return total_size; }
+  index_type values_size() { return total_size; }
 
   /**
-   * @brief Get all the values that have these keys
+   * @brief Get all the index values that have these keys
    *
    * if the initialize list is empty, just return all values
    *
    * @param[in] t initializer list of keys
    */
-  std::vector<index_type> values(std::initializer_list<T> t = {})
+  std::vector<index_type> values(std::initializer_list<T> t = {}) const
   {
     std::vector<T> combine_keys(t);
 
@@ -127,7 +130,7 @@ public:
     }
     std::vector<index_type> combined_values;
     for (auto k : combine_keys) {
-      combined_values = Union(values_index_list[k], combined_values);
+      combined_values = Union(values_index_list.at(k), combined_values);
     }
     return combined_values;
   }
@@ -172,16 +175,19 @@ public:
       sall.values_index_list[k] = Intersection(values_index_list[k], s2.values_index_list[k]);
       sall.total_size += sall.values_index_list[k].size();
     }
+
+    sall.removeEmptyValues();
     return sall;
   }
 
-  /// Get the difference of the values while retaining original set values
+  /**
+   * @brief  Get the difference of the values while retaining original set values
+   */
   Set<T> getDifference(Set<T>& s2)
   {
     // for each key in this set diff with each key in s2
     Set<T> diff;
     for (auto s1_key : keys) {
-      //	  auto s1_intersect_s2 = Intersection(values_index_list[s1_key], s2.values_index_list[s2_key]);
       auto s1_diff = Difference(values_index_list[s1_key], s2.values());
       if (diff.values_index_list.find(s1_key) == diff.values_index_list.end()) {
         // key doesn't exist yet
@@ -200,6 +206,7 @@ public:
       diff.total_size += list.size();
     }
 
+    diff.removeEmptyValues();
     return diff;
   }
 
@@ -231,12 +238,33 @@ public:
     return sall;
   }
 
+  /// Remove empty values and keys
+  void removeEmptyValues()
+  {
+    // some values_index_lists[key] might be empty. If so get rid of them
+    for (auto k = keys.begin(); k != keys.end();) {
+      if (values_index_list[*k].size() == 0) {
+        k = keys.erase(k);
+      } else {
+        k++;
+      }
+    }
+
+    for (auto it = values_index_list.begin(); it != values_index_list.end();) {
+      if (values_index_list[it->first].size() == 0) {
+        it = values_index_list.erase(it);
+      } else {
+        it++;
+      }
+    }
+  }
+
   /// Allows us to print sets to stream
   friend std::ostream& operator<<(std::ostream& os, const Set<T>& set)
   {
-    for (auto [k, v] : set.values_index_list) {
+    for (auto k : set.keys) {
       os << k << " : ";
-      for (auto i : v) {
+      for (auto i : set.values_index_list.at(k)) {
         os << i << " ";
       }
       os << std::endl;
@@ -244,14 +272,36 @@ public:
     return os;
   }
 
-  // converts a Set<T> to a std::vector<T>
+  /*
+   * @brief  Method to check if two sets are the same
+   * @param[in] set1
+   * @param[in[ set2
+   */
+  friend bool operator==(const Set<T>& s1, const Set<T>& s2)
+  {
+    bool isSame = (s1.keys == s2.keys);
+    if (isSame) {
+      for (auto k : s1.keys) {
+        isSame = isSame && (s1.values_index_list.at(k) == s2.values_index_list.at(k));
+        if (!isSame) break;
+      }
+    }
+    return isSame;
+  }
+
+  /// Converts a "complete" Set<T> to a std::vector<T> of the same size
   std::vector<T> toList()
   {
-    std::vector<T> attr_list(values_size());
+    std::unordered_map<index_type, T> attr_map;
     for (auto k : keys) {
       for (auto i : values_index_list[k]) {
-        attr_list[i] = k;
+        attr_map[i] = k;
       }
+    }
+
+    std::vector<T> attr_list(attr_map.size());
+    for (auto [k, v] : attr_map) {
+      attr_list[k] = v;
     }
     return attr_list;
   }
@@ -259,7 +309,7 @@ public:
 protected:
   std::unordered_map<T, std::vector<std::size_t>> values_index_list;
   std::vector<T>                                  keys;
-  typename std::vector<T>::size_type              total_size;
+  index_type                                      total_size;
 };
 
 }  // namespace serac

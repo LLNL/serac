@@ -37,29 +37,52 @@ namespace serac {
 TEST_F(SetTest, set)
 {
   Set<int> a1(std::vector<int>{1, 2, 4, 2, 2, 3, 4});
+  std::cout << "Set a1:" << std::endl << a1 << std::endl;
+  EXPECT_EQ(a1, Set<int>({1, 2, 4, 2, 2, 3, 4}));
+
   Set<int> a2({1, 2, 3});
-  std::cout << "values size: " << a1.keys_size() << std::endl;
+  std::cout << "Set a2:" << std::endl << a2 << std::endl;
+  EXPECT_EQ(a2, Set<int>({1, 2, 3}));
+
   auto a3 = a1.getUnion(a2);
   std::cout << "Union of a1 and a2" << std::endl;
   std::cout << a3 << std::endl;
+  // a1 = 1, 2, 4, 2, 2, 3, 4
+  // a2 = 1, 2, 3
+  // a3 = 1, 2, 4, 2, 2, 3, 4
+  EXPECT_EQ(a3, Set<int>({1, 2, 4, 2, 2, 3, 4}));
 
   auto a4 = a1.getIntersection(a2);
   std::cout << "Intersection of a1 and a2" << std::endl;
   std::cout << a4 << std::endl;
+  // a1 = 1, 2, 4, 2, 2, 3, 4
+  // a2 = 1, 2, 3
+  // a4 = 1, 2
+  EXPECT_EQ(a4, Set<int>({1, 2}));
 
   auto a5 = a1.getDifference(a2);
   std::cout << "Difference of a1 and a2" << std::endl;
   std::cout << a5 << std::endl;
+  // a1 = 1, 2, 4, 2, 2, 3, 4
+  // a2 = 1, 2, 3
+  // Note a5: is smaller than max_size(a1, a2)
+  // a5 = , , , 2, 2, 3, 4
+  EXPECT_EQ(a5.values({2, 3, 4}), (std::vector<decltype(a5)::index_type>{3, 4, 5, 6}));
 
-  // Just calculate the set operations on a set of attributes
+  // Calculate the set operations on a set of attributes
   std::vector<Set<int>::index_type> specific_union = Union(a1.values({2}), a2.values({2, 3}));
   Set<int>                          a6({{2, specific_union}});
   std::cout << "Specific union" << std::endl;
   std::cout << a6 << std::endl;
+  // a1.values({2})   = 1 3 4
+  // a2.values({2,3}) = 1 2
+  // union => 1 2 3 4
+  EXPECT_EQ(a6.values(), (std::vector<decltype(a6)::index_type>{1, 2, 3, 4}));
 
   auto a7 = a1.getComplement({1, 3});
   std::cout << "Subset of a1 without (1,3)" << std::endl;
   std::cout << a7 << std::endl;
+  EXPECT_EQ(a7.values(), (std::vector<decltype(a7)::index_type>{1, 2, 3, 4, 6}));
 }
 
 TEST_F(SetTest, flag_mesh)
