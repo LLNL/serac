@@ -153,10 +153,10 @@ TEST_F(SetTest, flag_mesh)
   auto blue = stars_attr_set.getComplement({1});
 
   // we want all the indices that composite the stripes
-  // intersect stars_attr_set = 1 and stripes_attr_set
-  // auto red_white = Intersection(stars_attr_set.values({1}), stripe_attr_set.values({1,2}));
+  // Take the difference of stripes_attr_set - (stars_attr_set = 1)
   auto red_white = stripes_attr_set.getDifference(blue);
 
+  // Recombine the stripes sans top corner with the top corner
   auto flag = blue.getUnion(red_white);
   mfem_ext::AssignMeshElementAttributes(*pmesh, flag.toList());
 
