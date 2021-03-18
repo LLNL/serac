@@ -61,8 +61,6 @@ TEST(serac_profiling, mesh_refinement)
   std::memcpy(double_string.data(), &magic_double, 4);
   std::cout << double_string.data() << std::endl;
 
-  EXPECT_EQ(2112, pmesh->GetNE());
-
   serac::profiling::terminateCaliper();
 
   MPI_Barrier(MPI_COMM_WORLD);

@@ -97,24 +97,25 @@ void terminateCaliper();
 /// detail namespace
 namespace detail {
 /**
- * @fn void serac::profiling::setCaliperMetadata(const std::string & name, double data)
+ * @brief Caliper metadata methods cali_set_global_<double|int|string|uint>_byname()
  *
- * Caliper metadata methods cali_set_global_(double|int|string|uint)_byname(
+ * @param[in] name The tag to associate the following metadata with
+ * @param[in] data The metadata to store in the caliper file
  */
-void setCaliperMetadata(const std::string& name, double data);
+void setCaliperMetadata(const std::string& name, const std::string& data);
 
 /*!
-  @overload void serac::profiling::setCaliperMetadata(const std::string & name, int data)
+  @overload
 */
 void setCaliperMetadata(const std::string& name, int data);
 
 /*!
-  @overload void serac::profiling::setCaliperMetadata(const std::string & name, std::string data)
+  @overload
 */
-void setCaliperMetadata(const std::string& name, std::string data);
+void setCaliperMetadata(const std::string& name, double data);
 
 /*!
-  @overload void serac::profiling::setCaliperMetadata(const std::string & name, unsigned int data)
+  @overload
 */
 void setCaliperMetadata(const std::string& name, unsigned int data);
 }  // namespace detail

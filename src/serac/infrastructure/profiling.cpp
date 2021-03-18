@@ -65,7 +65,7 @@ void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused
 #endif
 }
 
-void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] std::string data)
+void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] const std::string& data)
 {
 #ifdef SERAC_USE_CALIPER
   cali_set_global_string_byname(name.c_str(), data.c_str());
