@@ -68,6 +68,8 @@ TEST_F(SetTest, set)
   // Note a5: is smaller than max_size(a1, a2)
   // a5 = , , , 2, 2, 3, 4
   EXPECT_EQ(a5.values({2, 3, 4}), (std::vector<decltype(a5)::index_type>{3, 4, 5, 6}));
+  Set<int> check5({{2, {3, 4}}, {3, {5}}, {4, {6}}});
+  EXPECT_EQ(a5, Set<int>({{2, {3, 4}}, {3, {5}}, {4, {6}}}));
 
   // Calculate the set operations on a set of attributes
   std::vector<Set<int>::index_type> specific_union = Union(a1.values({2}), a2.values({2, 3}));

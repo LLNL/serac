@@ -62,7 +62,13 @@ public:
     values_index_list[attr] = one_set;
   }
 
-  // convert an attribute list into a Set
+  /**
+   * @brief Convert an attribute list into a Set
+   *
+   * Convert a list of attributes for each index of a set into a Set
+   *
+   * @param[in] attr_list A list of an attribute value corresponding to each index of a set
+   */
   Set(std::vector<T> attr_list) : total_size(attr_list.size())
   {
     for (index_type i = 0; i < attr_list.size(); i++) {
@@ -76,7 +82,6 @@ public:
   }
 
   /// Converts an initializer_list to a set
-  ///
   Set(std::initializer_list<T> l) : total_size(l.size())
   {
     std::vector<T> attr_list(l);
@@ -90,6 +95,9 @@ public:
     std::sort(keys.begin(), keys.end());
   }
 
+  /**
+   * @brief Constructs a set
+   */
   Set(std::unordered_map<T, std::vector<index_type>> m) : total_size(0)
   {
     // set the map accordingly
@@ -98,6 +106,7 @@ public:
       values_index_list[k] = v;
       total_size += v.size();
     }
+    std::sort(keys.begin(), keys.end());
   }
 
   /// move constructor
