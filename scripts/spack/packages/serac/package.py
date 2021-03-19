@@ -158,7 +158,7 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0}+cuda".format(dep), when="+cuda")
 
     for sm_ in CudaPackage.cuda_arch_values:
-        depends_on('mfem-cmake+amgx cuda_arch=sm_{0}'.format(sm_),
+        depends_on('mfem-cmake+amgx cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         depends_on('axom cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
