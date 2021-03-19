@@ -135,8 +135,8 @@ class Axom(CMakePackage, CudaPackage):
         depends_on('umpire cuda_arch={0}'.format(sm_),
                    when='+umpire cuda_arch={0}'.format(sm_))
 
-    depends_on("mfem", when="+mfem")
-    depends_on("mfem~mpi", when="+mfem~mpi")
+    depends_on("mfem-cmake", when="+mfem")
+    depends_on("mfem-cmake~mpi", when="+mfem~mpi")
 
     depends_on("python", when="+python")
 
@@ -287,7 +287,7 @@ class Axom(CMakePackage, CudaPackage):
         # optional tpls
 
         if "+mfem" in spec:
-            mfem_dir = get_spec_path(spec, "mfem", path_replacements)
+            mfem_dir = get_spec_path(spec, "mfem-cmake", path_replacements)
             cfg.write(cmake_cache_entry("MFEM_DIR", mfem_dir))
         else:
             cfg.write("# MFEM not built\n\n")
