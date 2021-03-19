@@ -242,6 +242,33 @@ TEST_F(SetTest, flag_mesh)
   double integrate_right = right(one_gf);
   EXPECT_NEAR(6. / 11., integrate_right, 5.e-2);
 
+  // Reverse attributes: white = 1, red = 2, blue = 3 and integrate on right side
+  std::vector<int> orig_elem_attr = flag.toList();
+  std::vector<int> red_white_swapped(orig_elem_attr.size());
+  std::transform(orig_elem_attr.begin(), orig_elem_attr.end(), red_white_swapped.begin(), [](int c) -> int {
+    switch (c) {
+      case 1:
+        return 2;
+      case 2:
+        return 1;
+      default:
+        return 3;
+    }
+  });
+
+  mfem::ParLinearForm right_swap(&fes);
+  auto                modified_density_coef = mfem_ext::AttributeModifierCoefficient(red_white_swapped, density_coef);
+  auto modified_surface_density_coef        = mfem_ext::SurfaceElementAttrCoefficient(*pmesh, modified_density_coef);
+  right_swap.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(modified_surface_density_coef), right_marker);
+  right_swap.Assemble();
+  double integrate_right_swap = right_swap(one_gf);
+  EXPECT_NEAR(5. / 11., integrate_right_swap, 5.e-2);
+
+  // Let's reassemble the original integration to verify that element attributes were hot-swapped and not changed
+  // permanently
+  right.Assemble();
+  EXPECT_NEAR(6. / 11., right(one_gf), 5.e-2);
+
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
