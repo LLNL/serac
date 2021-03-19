@@ -190,12 +190,12 @@ TEST_F(SetTest, flag_mesh)
                                                                         .name       = "density",
                                                                         .alloc_gf   = true});
 
-  // First define PWConstantCoefficient
-  mfem::Vector densities(3);
-  densities[0]      = 1.;
-  densities[1]      = 0.0;
-  densities[2]      = 0.0;
-  auto density_coef = mfem::PWConstCoefficient(densities);
+  // First define PWConstantCoefficient that corresponds to red=1, white = 2, blue = 3
+  mfem::Vector elem_densities(3);
+  elem_densities[0] = 1.;
+  elem_densities[1] = 0.0;
+  elem_densities[2] = 0.0;
+  auto density_coef = mfem::PWConstCoefficient(elem_densities);
 
   // integrate on the boundary of the bottom
   mfem::ParFiniteElementSpace& fes = *density.gridFunc().ParFESpace();
@@ -207,6 +207,24 @@ TEST_F(SetTest, flag_mesh)
   bottom_marker[1] = 1;
 
   auto surface_density_coef = mfem_ext::SurfaceElementAttrCoefficient(*pmesh, density_coef);
+
+  /*
+    Without SurfaceElementAttrCoefficient, the following integration routine will
+    look at the bottom_marker, which tells mfem to integrate on attr = 2 on the boundary.
+    However, density_coef will evaluate the bdrElementTransformation(attr = 2) which evaluates
+    elem_densities[1], which is 0. This is not what we would expect in integrating the density along a boundary.
+
+    So SurfaceElementAttrCoefficient allows you to specify attr = 2 bdr element integration.
+    However, instead of passing the bdrElementTransformation(attr = 2), it passes the
+    ElementTransformation associated with bdrElementTransformation(attr = 2) which is elem attr=1 "red".
+    Thus, density_coef will evaluate as elem_attr=1 and yield the expected answer.
+  */
+
+  mfem::ParLinearForm bottom_wrong(&fes);
+  bottom_wrong.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(density_coef), bottom_marker);
+  bottom_wrong.Assemble();
+  double integrate_bottom_wrong = bottom_wrong(one_gf);
+  EXPECT_EQ(0, integrate_bottom_wrong);
 
   mfem::ParLinearForm bottom(&fes);
   bottom.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(surface_density_coef), bottom_marker);
