@@ -96,7 +96,7 @@ TEST_F(SetTest, flag_mesh)
   auto   pmesh       = mesh::refineAndDistribute(buildRectangleMesh(100, 100, flag_width, flag_height));
 
   // first we need our 13 stripes
-  // red = 2, white = 1
+  // red = 1, white = 2
   auto stripes_coef = mfem::FunctionCoefficient([=](const mfem::Vector& coords) {
     auto stripe_height = flag_height / 13;
     auto stripe        = static_cast<int>(coords[1] / stripe_height);
@@ -151,6 +151,19 @@ TEST_F(SetTest, flag_mesh)
   auto stars_attr_set =
       Set(mfem_ext::MakeAttributeList<std::vector<int>>(*pmesh, stars_coef, mfem_ext::digitize::floor));
 
+  // Set two additional bdr attributes: 1 = everything, 2 = bottom, 3 = right side
+  auto bdr_assign_coef = mfem::FunctionCoefficient([&](const mfem::Vector& x) {
+    if (fabs(x[1] - 0.) < 1.e-5) {
+      return 2.;
+    } else if (fabs(x[0] - flag_width) < 1.e-5) {
+      return 3.;
+    }
+    return 1.;
+  });
+
+  mfem_ext::AssignMeshBdrAttributes(
+      *pmesh, mfem_ext::MakeBdrAttributeList<std::vector<int>>(*pmesh, bdr_assign_coef, mfem_ext::digitize::floor));
+
   // we'll get the top blue corner
   auto blue = stars_attr_set.getComplement({1});
 
@@ -160,6 +173,7 @@ TEST_F(SetTest, flag_mesh)
 
   // Recombine the stripes sans top corner with the top corner
   auto flag = blue.getUnion(red_white);
+  // Now red = 1, white = 2, blue = 3
   mfem_ext::AssignMeshElementAttributes(*pmesh, flag.toList());
 
   visit.RegisterField("stripes", &stripes.gridFunc());
@@ -167,6 +181,48 @@ TEST_F(SetTest, flag_mesh)
 
   visit.SetCycle(0);
   visit.Save();
+
+  // Integration tests on boundaries
+  serac::FiniteElementState density(*pmesh, FiniteElementState::Options{.order      = 1,
+                                                                        .vector_dim = 1,
+                                                                        .coll       = {},
+                                                                        .ordering   = mfem::Ordering::byVDIM,
+                                                                        .name       = "density",
+                                                                        .alloc_gf   = true});
+
+  // First define PWConstantCoefficient
+  mfem::Vector densities(3);
+  densities[0]      = 1.;
+  densities[1]      = 0.0;
+  densities[2]      = 0.0;
+  auto density_coef = mfem::PWConstCoefficient(densities);
+
+  // integrate on the boundary of the bottom
+  mfem::ParFiniteElementSpace& fes = *density.gridFunc().ParFESpace();
+  mfem::ParGridFunction        one_gf(&fes);
+  one_gf = 1.;
+
+  mfem::Array<int> bottom_marker(3);
+  bottom_marker    = 0;
+  bottom_marker[1] = 1;
+
+  auto surface_density_coef = mfem_ext::SurfaceElementAttrCoefficient(*pmesh, density_coef);
+
+  mfem::ParLinearForm bottom(&fes);
+  bottom.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(surface_density_coef), bottom_marker);
+  bottom.Assemble();
+  double integrate_bottom = bottom(one_gf);
+  EXPECT_NEAR(1.5, integrate_bottom, 5.e-2);
+
+  mfem::Array<int> right_marker(3);
+  right_marker    = 0;
+  right_marker[2] = 1;
+
+  mfem::ParLinearForm right(&fes);
+  right.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(surface_density_coef), right_marker);
+  right.Assemble();
+  double integrate_right = right(one_gf);
+  EXPECT_NEAR(6. / 11., integrate_right, 5.e-2);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

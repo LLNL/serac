@@ -235,14 +235,15 @@ T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(do
   // Need to use H1_fec because boundary elements don't exist in L2
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &h1_fec);
-  T                        attr_list(fes.GetNBE());
+  T                        attr_list(static_cast<typename detail::index_t<T>::type>(fes.GetNBE()));
   mfem::Vector             elem_attr(fes.GetNBE());
 
-  for (int e = 0; e < fes.GetNBE(); e++) {
-    mfem::Vector dofs(fes.GetBE(e)->GetDof());
-    fes.GetBE(e)->Project(c, *fes.GetBdrElementTransformation(e), dofs);
-    elem_attr[e] = dofs.Sum() / (dofs.Size() * 1.);
-    attr_list[e] = digitize(elem_attr[e]);
+  for (auto e = attr_list.begin(); e != attr_list.end(); e++) {
+    int          index = static_cast<int>(e - attr_list.begin());
+    mfem::Vector dofs(fes.GetBE(index)->GetDof());
+    fes.GetBE(index)->Project(c, *fes.GetBdrElementTransformation(index), dofs);
+    elem_attr[index] = dofs.Sum() / (dofs.Size() * 1.);
+    *e               = digitize(elem_attr[index]);
   }
 
   return attr_list;
@@ -256,7 +257,7 @@ T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(do
  */
 
 template <typename T>
-void AssignMeshBdrAttributes(mfem::Mesh& m, T& list)
+void AssignMeshBdrAttributes(mfem::Mesh& m, T&& list)
 {
   // check to make sure the lists are match the number of elements
   SLIC_ERROR_IF(detail::size(list) != m.GetNBE(), "list size does not match the number of mesh elements");
