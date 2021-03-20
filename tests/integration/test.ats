@@ -1,7 +1,11 @@
+import glob
 import os
+import shutil
 import sys
 
 glue(independent=True)
+
+# Keeps the individual test's output
 glue(keep=True)
 
 # Check for required environment variables
@@ -10,10 +14,34 @@ for var in ["ATS_SERAC_BIN_DIR", "ATS_SERAC_REPO_DIR"]:
         print("ERROR: Required environment variable not found: {0}".format(var))
         sys.exit(1)
 
+# Helpful directories
 serac_bin_dir = os.environ.get("ATS_SERAC_BIN_DIR")
 serac_repo_dir = os.environ.get("ATS_SERAC_REPO_DIR")
+serac_integration_test_dir = os.path.join(serac_repo_dir, "tests", "integration")
 
+# Add variables to be used in individually sourced test files with define()
 serac_path = os.path.join(serac_bin_dir, "serac")
-serac_input_files_dir = os.path.join(serac_repo_dir, "data", "input_files")
+define(serac_path=serac_path)
 
-source("default/default.ats")
+serac_input_files_dir = os.path.join(serac_repo_dir, "data", "input_files")
+define(serac_input_files_dir=serac_input_files_dir)
+
+# Add individual tests
+test_files = glob.glob(os.path.join(serac_integration_test_dir, "*", "*.ats"))
+for test_file in test_files:
+    source(test_file)
+
+    # TODO: fix this, logs dont exist at this point
+    # # Copy logs into test directory
+    # test_name = os.path.basename(test_file)
+    # log_glob = glob.glob(os.path.join(log.directory, "*.serac_{0}_.log".format(test_name)))
+    # if len(log_glob) == 0:
+    #     # I don't think this should happen
+    #     print("ERROR: Test had no output logs: {0}".format(test_file))
+    #     sys.exit(1)
+    # src_log = log_glob[0]
+    # log_filename = os.path.basename(src_log)
+    # dst_log = os.path.join(serac_integration_test_dir, test, log_filename)
+    # shutil.copy(src_log, dst_log)
+    # if os.path.exists(src_log+".err"):
+    #     shutil.copy(src_log+".err", dst_log+".err")
