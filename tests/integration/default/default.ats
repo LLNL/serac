@@ -1,18 +1,3 @@
-import os
-import sys
-
-# Check for required environment variables
-for var in ["ATS_SERAC_BIN_DIR", "ATS_SERAC_REPO_DIR"]:
-    if not os.environ.get(var):
-        print("ERROR: Required environment variable not found: {0}".format(var))
-        sys.exit(1)
-
-serac_bin_dir = os.environ.get("ATS_SERAC_BIN_DIR")
-serac_repo_dir = os.environ.get("ATS_SERAC_REPO_DIR")
-
-serac_path = os.path.join(serac_bin_dir, "serac")
-serac_input_files_dir = os.path.join(serac_repo_dir, "data", "input_files")
-
 test(executable=serac_path, 
      clas="-i {0}/default.lua".format(serac_input_files_dir),
      label='default',
