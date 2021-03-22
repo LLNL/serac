@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto x, auto vector_potential) {
+  residual.AddIntegral([&](auto x, auto vector_potential) {
     auto [A, curl_A] = vector_potential;
     auto f0 = a * A - tensor{{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]}};
     auto f1 = b * curl_A;

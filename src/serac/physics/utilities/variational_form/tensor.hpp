@@ -834,7 +834,7 @@ auto get_gradient(dual< std::tuple < T ... > > arg) {
 }
 
 template < typename T, int ... n >
-void get_gradient(tensor< dual< double >, n ... > arg) {
+auto get_gradient(tensor< dual< double >, n ... > arg) {
   tensor< double, n ... > g{};
   for_constexpr< n ... >([&](auto ... i){
     g[{i...}] = arg[{i...}].gradient;
@@ -938,7 +938,7 @@ auto chain_rule_helper(std::tuple < T ... > df_dx, std::tuple < S ... > dx, std:
 template < typename ... T, typename ... S >
 auto chain_rule(std::tuple < T ... > df_dx, std::tuple < S ... > dx) {
   static_assert(sizeof ... (T) == sizeof ... (S));
-  return chain_rule_helper(df_dx, dx, std::make_integer_sequence<int, sizeof ...(T)>());
+  return chain_rule_helper(df_dx, dx, std::make_integer_sequence<int, int(sizeof ...(T))>());
 }
 
 template < int rank, typename ... T, typename S >

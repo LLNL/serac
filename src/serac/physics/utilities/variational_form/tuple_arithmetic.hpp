@@ -15,7 +15,7 @@ constexpr auto plus_impl(const std::tuple< S ... > & A, const std::tuple< T ... 
 template < typename ... S, typename ... T > 
 constexpr auto operator+(const std::tuple< S ... > & A, const std::tuple< T ... > & B) {
   static_assert(sizeof ... (S) == sizeof ... (T), "Error in operator+: tuple sizes must match");
-  return plus_impl(A, B, std::make_integer_sequence<int, sizeof ... (S)>{});
+  return plus_impl(A, B, std::make_integer_sequence<int, int(sizeof ... (S))>{});
 }
 
 template < typename ... S, typename ... T, int ... I >
@@ -26,7 +26,7 @@ constexpr auto minus_impl(const std::tuple< S ... > & A, const std::tuple< T ...
 template < typename ... S, typename ... T > 
 constexpr auto operator-(const std::tuple< S ... > & A, const std::tuple< T ... > & B) {
   static_assert(sizeof ... (S) == sizeof ... (T), "Error in operator+: tuple sizes must match");
-  return minus_impl(A, B, std::make_integer_sequence<int, sizeof ... (S)>{});
+  return minus_impl(A, B, std::make_integer_sequence<int, int(sizeof ... (S))>{});
 }
 
 template < typename ... S, typename T, int ... I >
@@ -36,7 +36,7 @@ constexpr auto mult_impl(const std::tuple< S ... > & A, T scale, std::integer_se
 
 template < typename ... S, typename T > 
 constexpr auto operator*(const std::tuple< S ... > & A, T scale) {
-  return mult_impl(A, scale, std::make_integer_sequence<int, sizeof ... (S)>{});
+  return mult_impl(A, scale, std::make_integer_sequence<int, int(sizeof ... (S))>{});
 }
 
 template < typename S, typename ... T, int ... I >
@@ -46,7 +46,7 @@ constexpr auto mult_impl(S scale, const std::tuple< T ... > & A, std::integer_se
 
 template < typename S, typename ... T > 
 constexpr auto operator*(S scale, const std::tuple< T ... > & A) {
-  return mult_impl(scale, A, std::make_integer_sequence<int, sizeof ... (T)>{});
+  return mult_impl(scale, A, std::make_integer_sequence<int, int(sizeof ... (T))>{});
 }
 
 
@@ -83,10 +83,10 @@ constexpr auto make_dual_helper(std::tuple< T ... > args, std::integer_sequence<
 
 template < typename ... T >
 constexpr auto make_dual(T ... args){
-  return make_dual_helper(std::tuple{args...}, std::make_integer_sequence<int, sizeof...(T)>{});
+  return make_dual_helper(std::tuple{args...}, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
 template < typename ... T >
 constexpr auto make_dual(std::tuple < T ... > args){
-  return make_dual_helper(args, std::make_integer_sequence<int, sizeof...(T)>{});
+  return make_dual_helper(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }

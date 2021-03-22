@@ -57,7 +57,7 @@ constexpr auto remove_helper(std::integer_sequence<int,n...>, std::integer_seque
 
 template < int r, int ... n >
 constexpr auto remove(std::integer_sequence<int,n...> seq) {
-  return remove_helper<r>(seq, std::make_integer_sequence< int, (sizeof ... (n)) - 1 >{});
+  return remove_helper<r>(seq, std::make_integer_sequence< int, int(sizeof ... (n)) - 1 >{});
 }
 
 template < int ... n1, int ... n2 >

@@ -30,7 +30,7 @@ auto remove_first(Dimensions< m, n... >) { return Dimensions<n ... >{}; }
 
 template < int ... n >
 auto remove_last(Dimensions< n... > dim) {
-  return impl::remove_helper<(sizeof...(n)) - 1>(dim, std::make_integer_sequence< int, (sizeof ... (n)) - 1 >{});
+  return impl::remove_helper<(sizeof...(n)) - 1>(dim, std::make_integer_sequence< int, int(sizeof ... (n)) - 1 >{});
 }
 
 template < int ... m, int ... n >

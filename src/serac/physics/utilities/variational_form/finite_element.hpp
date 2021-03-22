@@ -3,9 +3,12 @@
 #include "tensor.hpp"
 #include "polynomials.hpp"
 
-enum class Geometry {Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron};
+enum class Geometry {Point, Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron};
 
-constexpr int dimension(::Geometry g) {
+template < int d >
+struct Dimension{ constexpr operator int(){ return d; } };
+
+constexpr int dimension_of(::Geometry g) {
   if (g == ::Geometry::Segment) {
     return 1;
   }

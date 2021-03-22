@@ -73,10 +73,18 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double,dim,dim> 
   }
 
   if constexpr (element_type::family == Family::HCURL) {
-    return std::tuple{
-      dot(u, dot(element_type::shape_functions(xi), inv(J))),
-      dot(u, element_type::shape_function_curl(xi) / det(J))
-    };
+    if constexpr (dim == 2) {
+      return std::tuple{
+        dot(u, dot(element_type::shape_functions(xi), inv(J))),
+        dot(u, element_type::shape_function_curl(xi) / det(J))
+      };
+    }
+    if constexpr (dim == 3) {
+      return std::tuple{
+        dot(u, dot(element_type::shape_functions(xi), inv(J))),
+        dot(u, element_type::shape_function_curl(xi) / det(J))
+      };
+    }
   }
 }
 
@@ -103,7 +111,7 @@ void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, derivatives_typ
 
   using test_element = finite_element< g, test >;
   using trial_element = finite_element< g, trial >;
-  static constexpr int dim = dimension(g);
+  static constexpr int dim = dimension_of(g);
   static constexpr int test_ndof = test_element::ndof;
   static constexpr int trial_ndof = trial_element::ndof;
   static constexpr auto rule = GaussQuadratureRule< g, Q >();
@@ -143,7 +151,7 @@ void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, derivatives_typ
 
   using test_element = finite_element< g, test >;
   using trial_element = finite_element< g, trial >;
-  static constexpr int dim = dimension(g);
+  static constexpr int dim = dimension_of(g);
   static constexpr int test_ndof = test_element::ndof;
   static constexpr int trial_ndof = trial_element::ndof;
   static constexpr auto rule = GaussQuadratureRule< g, Q >();
@@ -228,15 +236,19 @@ struct lambda_argument< Hcurl<p>, 3 >{
   using type = std::tuple< tensor<double, 3>, tensor<double,3> >;
 };
 
-template < typename spaces >
-struct VolumeIntegral {
+static constexpr ::Geometry supported_geometries[] = {::Geometry::Point, ::Geometry::Segment, ::Geometry::Quadrilateral, ::Geometry::Hexahedron};
 
-  static constexpr int dim = 2;
+template < typename spaces >
+struct Integral {
+
   using test_space = test_space_t< spaces >;
   using trial_space = trial_space_t< spaces >;
 
-  template < typename lambda_type >
-  VolumeIntegral(int num_elements, const mfem::Vector & J, const mfem::Vector & X, lambda_type && qf) : J_(J), X_(X) {
+  template < int dim, typename lambda_type >
+  Integral(int num_elements, const mfem::Vector & J, const mfem::Vector & X, Dimension<dim>, lambda_type && qf) : J_(J), X_(X) {
+
+    constexpr auto geometry = supported_geometries[dim];
+    constexpr auto Q = std::max(test_space::order, trial_space::order) + 1;
 
     // these lines of code figure out the argument types that will be passed
     // into the quadrature function in the finite element kernel.
@@ -253,14 +265,12 @@ struct VolumeIntegral {
 
     auto qf_derivatives_ptr = reinterpret_cast< derivative_type * >(qf_derivatives.data());
 
-    constexpr int Q = std::max(test_space::order, trial_space::order) + 1;
-
     evaluation = [=](const mfem::Vector & U, mfem::Vector & R){ 
-      evaluation_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
+      evaluation_kernel< geometry, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
     };
 
     gradient = [=](const mfem::Vector & dU, mfem::Vector & dR){ 
-      gradient_kernel< ::Geometry::Quadrilateral, test_space, trial_space, Q >(dU, dR, qf_derivatives_ptr, J_, num_elements);
+      gradient_kernel< geometry, test_space, trial_space, Q >(dU, dR, qf_derivatives_ptr, J_, num_elements);
     };
 
   }
@@ -323,8 +333,8 @@ struct WeakForm< test(trial) > : public mfem::Operator {
     dummy.SetSize(trial_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
   }
 
-  template < typename lambda >
-  void AddVolumeIntegral(lambda && integrand, mfem::Mesh & domain) {
+  template < int geometry_dim, int spatial_dim, typename lambda >
+  void AddIntegral(Dimension<geometry_dim>, Dimension<spatial_dim>, lambda && integrand, mfem::Mesh & domain) {
 
     auto num_elements = domain.GetNE();
     if (num_elements == 0) {
@@ -334,20 +344,35 @@ struct WeakForm< test(trial) > : public mfem::Operator {
 
     auto dim = domain.Dimension();
     for (int e = 0; e < num_elements; e++) {
-      if (domain.GetElementType(e) != supported_types[dim]) {          
+      if (domain.GetElementType(e) != supported_types[dim]) {
         std::cout << "error: mesh contains unsupported element types" << std::endl;
       }
     }
 
     const mfem::FiniteElement& el = *test_space->GetFE(0);
 
-    const mfem::IntegrationRule ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+    const mfem::IntegrationRule & ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
     auto geom = domain.GetGeometricFactors(ir, mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS);
 
     // emplace_back rather than push_back to avoid dangling references in std::function
-    volume_integrals.emplace_back(num_elements, geom->J, geom->X, integrand);
+    integrals.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{}, integrand);
 
+  }
+
+  template < typename lambda >
+  void AddAreaIntegral(lambda && integrand, mfem::Mesh & domain) {
+    AddIntegral(Dimension<2>{} /* geometry */, Dimension<2>{} /* spatial */, integrand, domain);
+  }
+
+  template < typename lambda >
+  void AddVolumeIntegral(lambda && integrand, mfem::Mesh & domain) {
+    AddIntegral(Dimension<3>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain);
+  }
+
+  template < int d, typename lambda >
+  void AddDomainIntegral(Dimension<d>, lambda && integrand, mfem::Mesh & domain) {
+    AddIntegral(Dimension<d>{} /* geometry */, Dimension<d>{} /* spatial */, integrand, domain);
   }
 
   template < Operation op = Operation::Mult >
@@ -366,7 +391,7 @@ struct WeakForm< test(trial) > : public mfem::Operator {
     //
     // TODO investigate performance of alternative implementation described above
     output_E = 0.0;
-    for (auto & integral : volume_integrals) {
+    for (auto & integral : integrals) {
       if constexpr (op == Operation::Mult) {
         integral.Mult(input_E, output_E);
       }
@@ -420,11 +445,10 @@ struct WeakForm< test(trial) > : public mfem::Operator {
   mfem::ParFiniteElementSpace * test_space, * trial_space;
   mfem::Array<int> ess_tdof_list;
 
-
   const mfem::Operator * P_test, * G_test;
   const mfem::Operator * P_trial, * G_trial;
 
-  std::vector < VolumeIntegral< test(trial) > > volume_integrals;
+  std::vector < Integral< test(trial) > > integrals;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {

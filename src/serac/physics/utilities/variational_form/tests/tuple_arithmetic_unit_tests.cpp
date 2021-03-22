@@ -13,18 +13,21 @@ static constexpr auto I = Identity<3>();
 static constexpr double rho = 3.0;
 static constexpr double mu = 2.0;
 
-static constexpr double p = 3.14;
-static constexpr tensor v = {{1.0, 2.0, 3.0}};
-static constexpr tensor L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
-
-static constexpr double dp = 1.23;
-static constexpr tensor dv = {{2.0, 1.0, 4.0}};
-static constexpr tensor dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
-
 static constexpr double epsilon = 1.0e-6;
 
 constexpr auto sigma = [](auto p, auto v, auto L) {      
   return rho * outer(v, v) + 2.0 * mu * sym(L) - p * I;
+};
+
+constexpr auto incompressibility = [](auto /*p*/, auto /*v*/, auto L) {      
+  return tr(L);
+};
+
+constexpr auto tuple_func = [](auto p, auto v, auto L) {      
+  return std::tuple{
+    rho * outer(v, v) + 2.0 * mu * sym(L) - p * I,
+    v + dot(v, L)
+  };
 };
 
 constexpr auto dsigma_dp = [](auto /*p*/, auto /*v*/, auto /*L*/) { return -1.0 * I; };
@@ -42,6 +45,14 @@ constexpr auto dsigma_dL = [](auto /*p*/, auto /*v*/, auto /*L*/) {
 };
 
 void chain_rule_tests(){
+
+  static constexpr double p = 3.14;
+  static constexpr tensor v = {{1.0, 2.0, 3.0}};
+  static constexpr tensor L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+
+  static constexpr double dp = 1.23;
+  static constexpr tensor dv = {{2.0, 1.0, 4.0}};
+  static constexpr tensor dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
 
   std::cout << "chain rule tests" << std::endl;
 
@@ -94,13 +105,6 @@ void chain_rule_tests(){
   }
 
   {
-    constexpr auto tuple_func = [](auto p, auto v, auto L) {      
-      return std::tuple{
-        rho * outer(v, v) + 2.0 * mu * sym(L) - p * I,
-        v + dot(v, L)
-      };
-    };
-
     auto tuple_of_values = std::apply(tuple_func, make_dual(p, v, L));
 
     auto grad = get_gradient(tuple_of_values);
@@ -139,12 +143,18 @@ void chain_rule_tests(){
 
     auto df = chain_rule<2>(df_dx, dx);
 
+    std::cout << std::get<0>(df) << std::endl;
+    std::cout << std::get<1>(df) << std::endl;
   }
 
 }
 
 
 int main() {
+
+  static constexpr double p = 3.14;
+  static constexpr tensor v = {{1.0, 2.0, 3.0}};
+  static constexpr tensor L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
 
   constexpr auto exact_dsigma_dp = dsigma_dp(p, v, L);
   constexpr auto exact_dsigma_dv = dsigma_dv(p, v, L);
@@ -159,10 +169,6 @@ int main() {
     std::cout << std::get<2>(grad) - exact_dsigma_dL << std::endl;
   }
 
-  constexpr auto incompressibility = [](auto /*p*/, auto /*v*/, auto L) {      
-    return tr(L);
-  };
-
   auto dilatation = std::apply(incompressibility, make_dual(p, v, L));
 
   {
@@ -172,13 +178,6 @@ int main() {
     std::cout << std::get<1>(grad) << std::endl;
     std::cout << std::get<2>(grad) << std::endl;
   }
-
-  constexpr auto tuple_func = [](auto p, auto v, auto L) {      
-    return std::tuple{
-      rho * outer(v, v) + 2.0 * mu * sym(L) - p * I,
-      v + dot(v, L)
-    };
-  };
 
   auto tuple_of_values = std::apply(tuple_func, make_dual(p, v, L));
 

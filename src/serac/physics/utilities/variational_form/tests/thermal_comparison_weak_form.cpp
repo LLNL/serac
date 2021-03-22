@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto x, auto temperature) {
+  residual.AddIntegral([&](auto x, auto temperature) {
     auto [u, du_dx] = temperature;
     auto f0 = a * u - (100 * x[0] * x[1]);
     auto f1 = b * du_dx;

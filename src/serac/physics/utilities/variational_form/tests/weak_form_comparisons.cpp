@@ -8,20 +8,17 @@
 #include "serac/serac_config.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-
 #include "serac/physics/utilities/variational_form/weak_form.hpp"
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 
 using namespace std;
 using namespace mfem;
 
-static constexpr int dim = 2;
-
 int num_procs, myid;
 int refinements = 0;
 const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
 
-auto parse_arguments(int argc, char* argv[]) {
+auto setup(int argc, char* argv[]) {
 
   OptionsParser args(argc, argv);
   args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.");
@@ -39,14 +36,6 @@ auto parse_arguments(int argc, char* argv[]) {
     args.PrintOptions(cout);
   }
 
-}
-
-
-// for now, each test recreates the mesh from scratch 
-// to work around a bug in mfem::Mesh::GetGeometricFactors()
-//
-// see https://github.com/mfem/mfem/issues/2106
-auto create_mesh() {
   mfem::Mesh mesh(mesh_file, 1, 1);
   for (int l = 0; l < refinements; l++) {
     mesh.UniformRefinement();
@@ -55,13 +44,11 @@ auto create_mesh() {
   return mfem::ParMesh(MPI_COMM_WORLD, mesh);
 }
 
-template < int p >
-void weak_form_test(H1<p> test, H1<p> trial) {
+template < int p, int dim >
+void weak_form_test(mfem::ParMesh & mesh, H1<p> test, H1<p> trial, Dimension<dim>) {
 
   static constexpr double a = 1.7;
   static constexpr double b = 2.1;
-
-  mfem::ParMesh mesh = create_mesh();
 
   auto fec = H1_FECollection(p, dim);
   ParFiniteElementSpace fespace(&mesh, &fec);
@@ -96,12 +83,19 @@ void weak_form_test(H1<p> test, H1<p> trial) {
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto x, auto temperature) {
+  auto constitutive_model = [&](auto x, auto temperature) {
     auto [u, du_dx] = temperature;
     auto f0 = a * u - (100 * x[0] * x[1]);
     auto f1 = b * du_dx;
     return std::tuple{f0, f1};
-  }, mesh);
+  };
+
+  if constexpr (dim == 2) {
+    residual.AddAreaIntegral(constitutive_model, mesh);
+  }
+  if constexpr (dim == 3) {
+    residual.AddVolumeIntegral(constitutive_model, mesh);
+  }
 
   mfem::Vector r1 = A * x - f;
   mfem::Vector r2 = residual * x;
@@ -121,13 +115,11 @@ void weak_form_test(H1<p> test, H1<p> trial) {
 
 }
 
-template < int p >
-void weak_form_test(H1<p, 2> test, H1<p, 2> trial) {
+template < int p, int dim >
+void weak_form_test(mfem::ParMesh & mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>) {
 
   static constexpr double a = 1.7;
   static constexpr double b = 2.1;
-
-  mfem::ParMesh mesh = create_mesh();
 
   auto fec = H1_FECollection(p, dim);
   ParFiniteElementSpace fespace(&mesh, &fec, dim);
@@ -167,13 +159,21 @@ void weak_form_test(H1<p, 2> test, H1<p, 2> trial) {
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto /*x*/, auto displacement) {
+  auto constitutive_model = [&](auto /*x*/, auto displacement) {
     auto [u, du_dx] = displacement;
-    auto f0 = a * u - tensor{{-1.0, 0.0}};
+    auto f0 = a * u + I[0];
     auto strain = 0.5 * (du_dx + transpose(du_dx));
     auto f1 = b * tr(strain) * I + 2.0 * b * strain;
     return std::tuple{f0, f1};
-  }, mesh);
+  };
+
+  if constexpr (dim == 2) {
+    residual.AddAreaIntegral(constitutive_model, mesh);
+  }
+
+  if constexpr (dim == 3) {
+    residual.AddVolumeIntegral(constitutive_model, mesh);
+  }
 
   mfem::Vector r1 = A * x - f;
   mfem::Vector r2 = residual * x;
@@ -193,13 +193,11 @@ void weak_form_test(H1<p, 2> test, H1<p, 2> trial) {
 
 }
 
-template < int p >
-void weak_form_test(Hcurl<p> test, Hcurl<p> trial) {
+template < int p, int dim >
+void weak_form_test(mfem::ParMesh & mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>) {
 
   static constexpr double a = 1.7;
   static constexpr double b = 2.1;
-
-  mfem::ParMesh mesh = create_mesh();
 
   auto fec = ND_FECollection(p, dim);
   ParFiniteElementSpace fespace(&mesh, &fec);
@@ -238,9 +236,9 @@ void weak_form_test(Hcurl<p> test, Hcurl<p> trial) {
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto x, auto vector_potential) {
+  residual.AddDomainIntegral(Dimension<dim>{}, [&](auto x, auto vector_potential) {
     auto [A, curl_A] = vector_potential;
-    auto f0 = a * A - tensor{{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]}};
+    auto f0 = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
     auto f1 = b * curl_A;
     return std::tuple{f0, f1};
   }, mesh);
@@ -263,6 +261,28 @@ void weak_form_test(Hcurl<p> test, Hcurl<p> trial) {
 
 }
 
+template < int dim >
+void run_tests(mfem::ParMesh & mesh) {
+
+  Dimension<dim> d;
+
+  std::cout << "H1/H1 tests" << std::endl;
+  weak_form_test(mesh, H1<1>{}, H1<1>{}, d);
+  weak_form_test(mesh, H1<2>{}, H1<2>{}, d);
+  weak_form_test(mesh, H1<3>{}, H1<3>{}, d);
+
+  std::cout << "H1/H1 tests (elasticity)" << std::endl;
+  weak_form_test(mesh, H1<1, dim>{}, H1<1, dim>{}, d);
+  weak_form_test(mesh, H1<2, dim>{}, H1<2, dim>{}, d);
+  weak_form_test(mesh, H1<3, dim>{}, H1<3, dim>{}, d);
+
+  std::cout << "Hcurl/Hcurl tests" << std::endl;
+  weak_form_test(mesh, Hcurl<1>{}, Hcurl<1>{}, d);
+  weak_form_test(mesh, Hcurl<2>{}, Hcurl<2>{}, d);
+  weak_form_test(mesh, Hcurl<3>{}, Hcurl<3>{}, d);
+
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -272,23 +292,10 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  parse_arguments(argc, argv);
+  auto mesh = setup(argc, argv);
 
-  std::cout << "H1/H1 tests" << std::endl;
-  weak_form_test(H1<1>{}, H1<1>{});
-  weak_form_test(H1<2>{}, H1<2>{});
-  weak_form_test(H1<3>{}, H1<3>{});
-
-  std::cout << "H1/H1 tests (elasticity)" << std::endl;
-  weak_form_test(H1<1, dim>{}, H1<1, dim>{});
-  weak_form_test(H1<2, dim>{}, H1<2, dim>{});
-  weak_form_test(H1<3, dim>{}, H1<3, dim>{});
-
-  std::cout << "Hcurl/Hcurl tests" << std::endl;
-  weak_form_test(Hcurl<1>{}, Hcurl<1>{});
-  weak_form_test(Hcurl<2>{}, Hcurl<2>{});
-  weak_form_test(Hcurl<3>{}, Hcurl<3>{});
-
+  if (mesh.Dimension() == 2) { run_tests<2>(mesh); }
+  if (mesh.Dimension() == 3) { run_tests<3>(mesh); }
 
   MPI_Finalize();
 

@@ -62,7 +62,7 @@ void elasticity_tests() {
 
   constexpr auto epsilon = sym(make_dual(grad_u));
 
-  static constexpr tensor stress = sigma(epsilon);
+  [[maybe_unused]] static constexpr tensor stress = sigma(epsilon);
 
   for_constexpr<3,3>([&](auto i, auto j){
     static_assert(abs(sqnorm(C[i][j] - stress[i][j].gradient)) < 1.0e-16);
@@ -72,7 +72,7 @@ void elasticity_tests() {
 
 void navier_stokes_tests() {
 
-  static constexpr auto abs = [](auto x){ return (x < 0) ? -x : x; };
+  [[maybe_unused]] static constexpr auto abs = [](auto x){ return (x < 0) ? -x : x; };
 
   static constexpr auto I = Identity<3>();
   static constexpr double rho = 3.0;
@@ -100,8 +100,8 @@ void navier_stokes_tests() {
   constexpr tensor L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
 
   {
-    static constexpr auto exact = dsigma_dp(p,v,L);
-    static constexpr auto ad = sigma(make_dual(p), v, L);
+    [[maybe_unused]] static constexpr auto exact = dsigma_dp(p,v,L);
+    [[maybe_unused]] static constexpr auto ad = sigma(make_dual(p), v, L);
 
     for_constexpr<3,3>([&](auto i, auto j){
       static_assert(abs(exact[i][j] - ad[i][j].gradient) < 1.0e-16);
@@ -109,8 +109,8 @@ void navier_stokes_tests() {
   }
 
   {
-    static constexpr auto exact = dsigma_dv(p,v,L);
-    static constexpr auto ad = sigma(p, make_dual(v), L);
+    [[maybe_unused]] static constexpr auto exact = dsigma_dv(p,v,L);
+    [[maybe_unused]] static constexpr auto ad = sigma(p, make_dual(v), L);
 
     for_constexpr<3,3>([&](auto i, auto j){
       static_assert(abs(sqnorm(exact[i][j] - ad[i][j].gradient)) < 1.0e-16);
@@ -118,8 +118,8 @@ void navier_stokes_tests() {
   }
 
   {
-    static constexpr auto exact = dsigma_dL(p,v,L);
-    static constexpr auto ad = sigma(p, v, make_dual(L));
+    [[maybe_unused]] static constexpr auto exact = dsigma_dL(p,v,L);
+    [[maybe_unused]] static constexpr auto ad = sigma(p, v, make_dual(L));
 
     for_constexpr<3,3>([&](auto i, auto j){
       static_assert(abs(sqnorm(exact[i][j] - ad[i][j].gradient)) < 1.0e-16);

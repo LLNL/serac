@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  residual.AddVolumeIntegral([&](auto /*x*/, auto displacement) {
+  residual.AddIntegral([&](auto /*x*/, auto displacement) {
     auto [u, du_dx] = displacement;
     auto f0 = a * u - tensor{{-1.0, 0.0}};
     auto strain = 0.5 * (du_dx + transpose(du_dx));

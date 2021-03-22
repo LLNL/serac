@@ -181,7 +181,7 @@ tensor<T, n> GaussLobattoInterpolation01(T x)
 }
 
 template <int n, typename T>
-tensor<T, n> GaussLobattoInterpolationDerivative01(T x)
+tensor<T, n> GaussLobattoInterpolationDerivative01([[maybe_unused]] T x)
 {
   if constexpr (n == 2) {
     return {-1, 1};
@@ -237,7 +237,7 @@ tensor<T, n> GaussLegendreInterpolationDerivative(T x)
 }
 
 template <int n, typename T>
-tensor<T, n> GaussLegendreInterpolation01(T x)
+tensor<T, n> GaussLegendreInterpolation01([[maybe_unused]] T x)
 {
   if constexpr (n == 1) {
     return {1.0};
