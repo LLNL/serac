@@ -82,7 +82,7 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double,dim,dim> 
     if constexpr (dim == 3) {
       return std::tuple{
         dot(u, dot(element_type::shape_functions(xi), inv(J))),
-        dot(u, element_type::shape_function_curl(xi) / det(J))
+        dot(u, dot(element_type::shape_function_curl(xi), transpose(J) / det(J)))
       };
     }
   }
@@ -97,9 +97,16 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double,dim,dim>
   }
 
   if constexpr (element_type::family == Family::HCURL) {
-    auto W = dot(element_type::shape_functions(xi), inv(J));
-    auto curl_W = element_type::shape_function_curl(xi) / det(J);
-    return (W * std::get<0>(f) + curl_W * std::get<1>(f));
+    if constexpr (dim == 2) {
+      auto W = dot(element_type::shape_functions(xi), inv(J));
+      auto curl_W = element_type::shape_function_curl(xi) / det(J);
+      return (W * std::get<0>(f) + curl_W * std::get<1>(f));
+    }
+    if constexpr (dim == 3) {
+      auto W = dot(element_type::shape_functions(xi), inv(J));
+      auto curl_W = dot(element_type::shape_function_curl(xi), transpose(J)) / det(J);
+      return (W * std::get<0>(f) + curl_W * std::get<1>(f));
+    }
   }
 }
 
