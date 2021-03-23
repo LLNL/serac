@@ -50,10 +50,10 @@ bool initialize(MPI_Comm comm)
     // Only root node writes/opens the file
     auto file_logstream = std::make_unique<std::ofstream>();
     file_logstream->open("serac.out", std::ofstream::out);
-    logger_file_logstream = std::move(file_logstream);
+    logger_ostream = std::move(file_logstream);
   } else {
     // Create a noop stream for non-root nodes since they won't write to them anyways
-    logger_file_logstream = std::make_unique<std::ostream>(nullptr);
+    logger_ostream = std::make_unique<std::ostream>(nullptr);
   }
 
   slic::LogStream* i_file_logstream  = nullptr;  // info
