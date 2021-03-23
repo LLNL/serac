@@ -17,8 +17,8 @@ static int logger_rank = 0;
 
 int rank() { return logger_rank; }
 
-// output file stream for SLIC file logger stream
-static std::unique_ptr<std::ostream> logger_file_stream;
+// output stream for the SLIC LogStreams that write to a file
+static std::unique_ptr<std::ostream> logger_ostream;
 
 bool initialize(MPI_Comm comm)
 {
@@ -41,24 +41,24 @@ bool initialize(MPI_Comm comm)
   }
 
   // Console streams, std::cout for info/debug, std::cerr for warnings/errors
-  slic::LogStream* i_console_stream  = nullptr;  // info
-  slic::LogStream* d_console_stream  = nullptr;  // debug
-  slic::LogStream* we_console_stream = nullptr;  // warnings and errors
+  slic::LogStream* i_console_logstream  = nullptr;  // info
+  slic::LogStream* d_console_logstream  = nullptr;  // debug
+  slic::LogStream* we_console_logstream = nullptr;  // warnings and errors
 
   // File streams, all message levels go to one file
   if (rank == 0) {
     // Only root node writes/opens the file
-    auto file_stream = std::make_unique<std::ofstream>();
-    file_stream->open("serac.out", std::ofstream::out);
-    logger_file_stream = std::move(file_stream);
+    auto file_logstream = std::make_unique<std::ofstream>();
+    file_logstream->open("serac.out", std::ofstream::out);
+    logger_file_logstream = std::move(file_logstream);
   } else {
     // Create a noop stream for non-root nodes since they won't write to them anyways
-    logger_file_stream = std::make_unique<std::ostream>(nullptr);
+    logger_file_logstream = std::make_unique<std::ostream>(nullptr);
   }
 
-  slic::LogStream* i_file_stream  = nullptr;
-  slic::LogStream* d_file_stream  = nullptr;
-  slic::LogStream* we_file_stream = nullptr;
+  slic::LogStream* i_file_logstream  = nullptr;  // info
+  slic::LogStream* d_file_logstream  = nullptr;  // debug
+  slic::LogStream* we_file_logstream = nullptr;  // warnings and errors
 
   // Stream formatting strings
   std::string i_format_string  = "<MESSAGE>\n";
@@ -77,50 +77,50 @@ bool initialize(MPI_Comm comm)
     const int RLIMIT = 8;
 
     // Console streams
-    i_console_stream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, i_format_string);
-    d_console_stream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, d_format_string);
-    we_console_stream = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, we_format_string);
+    i_console_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, i_format_string);
+    d_console_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, d_format_string);
+    we_console_logstream = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, we_format_string);
 
     // File streams
-    i_file_stream  = new slic::LumberjackStream(logger_file_stream.get(), comm, RLIMIT, i_format_string);
-    d_file_stream  = new slic::LumberjackStream(logger_file_stream.get(), comm, RLIMIT, d_format_string);
-    we_file_stream = new slic::LumberjackStream(logger_file_stream.get(), comm, RLIMIT, we_format_string);
+    i_file_logstream  = new slic::LumberjackStream(logger_ostream.get(), comm, RLIMIT, i_format_string);
+    d_file_logstream  = new slic::LumberjackStream(logger_ostream.get(), comm, RLIMIT, d_format_string);
+    we_file_logstream = new slic::LumberjackStream(logger_ostream.get(), comm, RLIMIT, we_format_string);
 #else
     // Console streams
-    i_console_stream  = new slic::SynchronizedStream(&std::cout, comm, i_format_string);
-    d_console_stream  = new slic::SynchronizedStream(&std::cout, comm, d_format_string);
-    we_console_stream = new slic::SynchronizedStream(&std::cerr, comm, we_format_string);
+    i_console_logstream  = new slic::SynchronizedStream(&std::cout, comm, i_format_string);
+    d_console_logstream  = new slic::SynchronizedStream(&std::cout, comm, d_format_string);
+    we_console_logstream = new slic::SynchronizedStream(&std::cerr, comm, we_format_string);
 
     // File streams
-    i_file_stream  = new slic::SynchronizedStream(logger_file_stream.get(), comm, i_format_string);
-    d_file_stream  = new slic::SynchronizedStream(logger_file_stream.get(), comm, d_format_string);
-    we_file_stream = new slic::SynchronizedStream(logger_file_stream.get(), comm, we_format_string);
+    i_file_logstream  = new slic::SynchronizedStream(logger_ostream.get(), comm, i_format_string);
+    d_file_logstream  = new slic::SynchronizedStream(logger_ostream.get(), comm, d_format_string);
+    we_file_logstream = new slic::SynchronizedStream(logger_ostream.get(), comm, we_format_string);
 #endif
   } else {
     // Console streams
-    i_console_stream  = new slic::GenericOutputStream(&std::cout, i_format_string);
-    d_console_stream  = new slic::GenericOutputStream(&std::cout, d_format_string);
-    we_console_stream = new slic::GenericOutputStream(&std::cerr, we_format_string);
+    i_console_logstream  = new slic::GenericOutputStream(&std::cout, i_format_string);
+    d_console_logstream  = new slic::GenericOutputStream(&std::cout, d_format_string);
+    we_console_logstream = new slic::GenericOutputStream(&std::cerr, we_format_string);
 
     // File streams
-    i_file_stream  = new slic::GenericOutputStream(logger_file_stream.get(), i_format_string);
-    d_file_stream  = new slic::GenericOutputStream(logger_file_stream.get(), d_format_string);
-    we_file_stream = new slic::GenericOutputStream(logger_file_stream.get(), we_format_string);
+    i_file_logstream  = new slic::GenericOutputStream(logger_ostream.get(), i_format_string);
+    d_file_logstream  = new slic::GenericOutputStream(logger_ostream.get(), d_format_string);
+    we_file_logstream = new slic::GenericOutputStream(logger_ostream.get(), we_format_string);
   }
 
   slic::setLoggingMsgLevel(slic::message::Debug);
 
   // Add message levels to console streams
-  addStreamToMsgLevel(i_console_stream, slic::message::Info);
-  addStreamToMsgLevel(d_console_stream, slic::message::Debug);
-  addStreamToMsgLevel(we_console_stream, slic::message::Warning);
-  addStreamToMsgLevel(we_console_stream, slic::message::Error);
+  addStreamToMsgLevel(i_console_logstream, slic::message::Info);
+  addStreamToMsgLevel(d_console_logstream, slic::message::Debug);
+  addStreamToMsgLevel(we_console_logstream, slic::message::Warning);
+  addStreamToMsgLevel(we_console_logstream, slic::message::Error);
 
   // Add message levels to file streams
-  addStreamToMsgLevel(i_file_stream, slic::message::Info);
-  addStreamToMsgLevel(d_file_stream, slic::message::Debug);
-  addStreamToMsgLevel(we_file_stream, slic::message::Warning);
-  addStreamToMsgLevel(we_file_stream, slic::message::Error);
+  addStreamToMsgLevel(i_file_logstream, slic::message::Info);
+  addStreamToMsgLevel(d_file_logstream, slic::message::Debug);
+  addStreamToMsgLevel(we_file_logstream, slic::message::Warning);
+  addStreamToMsgLevel(we_file_logstream, slic::message::Error);
 
   // Exit gracefully on error
   slic::setAbortFunction([]() { exitGracefully(true); });
