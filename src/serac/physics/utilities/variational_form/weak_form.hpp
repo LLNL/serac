@@ -73,18 +73,12 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double,dim,dim> 
   }
 
   if constexpr (element_type::family == Family::HCURL) {
-    if constexpr (dim == 2) {
-      return std::tuple{
-        dot(u, dot(element_type::shape_functions(xi), inv(J))),
-        dot(u, element_type::shape_function_curl(xi) / det(J))
-      };
+    auto value = dot(u, dot(element_type::shape_functions(xi), inv(J)));
+    auto curl = dot(u, element_type::shape_function_curl(xi) / det(J));
+    if constexpr (dim == 3) { 
+      curl = dot(curl, transpose(J)); 
     }
-    if constexpr (dim == 3) {
-      return std::tuple{
-        dot(u, dot(element_type::shape_functions(xi), inv(J))),
-        dot(u, dot(element_type::shape_function_curl(xi), transpose(J) / det(J)))
-      };
-    }
+    return std::tuple{value, curl};
   }
 }
 
@@ -97,16 +91,12 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double,dim,dim>
   }
 
   if constexpr (element_type::family == Family::HCURL) {
-    if constexpr (dim == 2) {
-      auto W = dot(element_type::shape_functions(xi), inv(J));
-      auto curl_W = element_type::shape_function_curl(xi) / det(J);
-      return (W * std::get<0>(f) + curl_W * std::get<1>(f));
+    auto W = dot(element_type::shape_functions(xi), inv(J));
+    auto curl_W = element_type::shape_function_curl(xi) / det(J);
+    if constexpr (dim == 3) { 
+      curl_W = dot(curl_W, transpose(J));
     }
-    if constexpr (dim == 3) {
-      auto W = dot(element_type::shape_functions(xi), inv(J));
-      auto curl_W = dot(element_type::shape_function_curl(xi), transpose(J)) / det(J);
-      return (W * std::get<0>(f) + curl_W * std::get<1>(f));
-    }
+    return (W * std::get<0>(f) + curl_W * std::get<1>(f));
   }
 }
 
