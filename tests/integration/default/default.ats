@@ -3,3 +3,5 @@ test(executable=serac_path,
      label='default',
      np=1,
      sandbox=False)
+
+# TODO: Add our own check here
