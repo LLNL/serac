@@ -72,11 +72,11 @@ void weak_form_test(mfem::ParMesh & mesh, H1<p> test, H1<p> trial, Dimension<dim
   f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
   f.Assemble();
 
-  ParGridFunction x(&fespace);
-  x.Randomize();
+  ParGridFunction u_global(&fespace);
+  u_global.Randomize();
 
-  Vector X(fespace.TrueVSize());
-  x.GetTrueDofs(X);
+  Vector U(fespace.TrueVSize());
+  u_global.GetTrueDofs(U);
 
   using test_space = decltype(test);
   using trial_space = decltype(trial);
@@ -97,17 +97,17 @@ void weak_form_test(mfem::ParMesh & mesh, H1<p> test, H1<p> trial, Dimension<dim
     residual.AddVolumeIntegral(constitutive_model, mesh);
   }
 
-  mfem::Vector r1 = A * x - f;
-  mfem::Vector r2 = residual * x;
+  mfem::Vector r1 = A * u_global - f;
+  mfem::Vector r2 = residual * u_global;
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
   std::cout << "||r2||: " << r2.Norml2() << std::endl;
   std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
 
-  mfem::Operator & grad2 = residual.GetGradient(x);
+  mfem::Operator & grad2 = residual.GetGradient(u_global);
 
-  mfem::Vector g1 = (*J) * x;
-  mfem::Vector g2 = grad2 * x;
+  mfem::Vector g1 = (*J) * u_global;
+  mfem::Vector g2 = grad2 * u_global;
 
   std::cout << "||g1||: " << g1.Norml2() << std::endl;
   std::cout << "||g2||: " << g2.Norml2() << std::endl;
@@ -146,13 +146,13 @@ void weak_form_test(mfem::ParMesh & mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   f.AddDomainIntegrator(new VectorDomainLFIntegrator(load_func));
   f.Assemble();
 
-  ParGridFunction x(&fespace);
-  x.Randomize();
+  ParGridFunction u_global(&fespace);
+  u_global.Randomize();
 
-  Vector X(fespace.TrueVSize());
-  x.GetTrueDofs(X);
+  Vector U(fespace.TrueVSize());
+  u_global.GetTrueDofs(U);
 
-  static constexpr auto I = Identity<dim>();
+  [[maybe_unused]] static constexpr auto I = Identity<dim>();
 
   using test_space = decltype(test);
   using trial_space = decltype(trial);
@@ -175,17 +175,17 @@ void weak_form_test(mfem::ParMesh & mesh, H1<p, dim> test, H1<p, dim> trial, Dim
     residual.AddVolumeIntegral(constitutive_model, mesh);
   }
 
-  mfem::Vector r1 = A * x - f;
-  mfem::Vector r2 = residual * x;
+  mfem::Vector r1 = A * u_global - f;
+  mfem::Vector r2 = residual * u_global;
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
   std::cout << "||r2||: " << r2.Norml2() << std::endl;
   std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
 
-  mfem::Operator & grad = residual.GetGradient(x);
+  mfem::Operator & grad = residual.GetGradient(u_global);
 
-  mfem::Vector g1 = (*J) * x;
-  mfem::Vector g2 = grad * x;
+  mfem::Vector g1 = (*J) * u_global;
+  mfem::Vector g2 = grad * u_global;
 
   std::cout << "||g1||: " << g1.Norml2() << std::endl;
   std::cout << "||g2||: " << g2.Norml2() << std::endl;
@@ -202,16 +202,16 @@ void weak_form_test(mfem::ParMesh & mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   auto fec = ND_FECollection(p, dim);
   ParFiniteElementSpace fespace(&mesh, &fec);
 
-  ParBilinearForm A(&fespace);
+  ParBilinearForm B(&fespace);
 
   ConstantCoefficient a_coef(a);
-  A.AddDomainIntegrator(new VectorFEMassIntegrator(a_coef));
+  B.AddDomainIntegrator(new VectorFEMassIntegrator(a_coef));
 
   ConstantCoefficient b_coef(b);
-  A.AddDomainIntegrator(new CurlCurlIntegrator(b_coef));
-  A.Assemble(0);
-  A.Finalize();
-  std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
+  B.AddDomainIntegrator(new CurlCurlIntegrator(b_coef));
+  B.Assemble(0);
+  B.Finalize();
+  std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
 
   LinearForm f(&fespace);
   VectorFunctionCoefficient load_func(dim, [&](const Vector& coords, Vector& output) {
@@ -225,11 +225,11 @@ void weak_form_test(mfem::ParMesh & mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   f.AddDomainIntegrator(new VectorFEDomainLFIntegrator(load_func));
   f.Assemble();
 
-  ParGridFunction x(&fespace);
-  x.Randomize();
+  ParGridFunction u_global(&fespace);
+  u_global.Randomize();
 
-  Vector X(fespace.TrueVSize());
-  x.GetTrueDofs(X);
+  Vector U(fespace.TrueVSize());
+  u_global.GetTrueDofs(U);
 
   using test_space = decltype(test);
   using trial_space = decltype(trial);
@@ -243,17 +243,17 @@ void weak_form_test(mfem::ParMesh & mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
     return std::tuple{f0, f1};
   }, mesh);
 
-  mfem::Vector r1 = A * x - f;
-  mfem::Vector r2 = residual * x;
+  mfem::Vector r1 = B * u_global - f;
+  mfem::Vector r2 = residual * u_global;
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
   std::cout << "||r2||: " << r2.Norml2() << std::endl;
   std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
 
-  mfem::Operator & grad = residual.GetGradient(x);
+  mfem::Operator & grad = residual.GetGradient(u_global);
 
-  mfem::Vector g1 = (*J) * x;
-  mfem::Vector g2 = grad * x;
+  mfem::Vector g1 = (*J) * u_global;
+  mfem::Vector g2 = grad * u_global;
 
   std::cout << "||g1||: " << g1.Norml2() << std::endl;
   std::cout << "||g2||: " << g2.Norml2() << std::endl;
