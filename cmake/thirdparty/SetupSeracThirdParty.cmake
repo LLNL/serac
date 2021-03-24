@@ -50,6 +50,67 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
                  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
                  "${CONDUIT_INSTALL_PREFIX}/include/conduit/")
 
+    #------------------------------------------------------------------------------
+    # PETSC
+    #------------------------------------------------------------------------------
+    if(PETSC_DIR)
+        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
+        message(STATUS "PETSc support is ON")
+        set(PETSC_FOUND TRUE)
+    else()
+        message(STATUS "PETSc support is OFF")
+        set(PETSC_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # MFEM
+    #------------------------------------------------------------------------------
+    if(MFEM_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
+    else()
+        set(AXOM_DIR_SAVE ${AXOM_DIR})
+        set(UMPIRE_DIR_SAVE ${UMPIRE_DIR})
+        set(RAJA_DIR_SAVE ${RAJA_DIR})
+        set(PETSC_DIR_SAVE ${PETSC_DIR})
+        message(STATUS "Using MFEM submodule")
+        # mfem+mpi requires metis
+        set(MFEM_USE_MPI ${ENABLE_MPI} CACHE BOOL "")
+        set(MFEM_USE_METIS ${ENABLE_MPI} CACHE BOOL "")
+        # mfem+mpi also needs parmetis
+        if(ENABLE_MPI)
+            serac_assert_is_directory(VARIABLE_NAME PARMETIS_DIR)
+            # Slightly different naming convention
+            set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
+        endif()
+        # This always gets built
+        set(MFEM_USE_ZLIB ON CACHE BOOL "")
+        if(SUPERLUDIST_DIR)
+            serac_assert_is_directory(VARIABLE_NAME SUPERLUDIST_DIR)
+            # MFEM uses a slightly different naming convention
+            set(SuperLUDist_DIR ${SUPERLUDIST_DIR} CACHE PATH "")
+            set(MFEM_USE_SUPERLU ${ENABLE_MPI} CACHE BOOL "")
+        endif()
+
+        if(NETCDF_DIR)
+            serac_assert_is_directory(VARIABLE_NAME NETCDF_DIR)
+            set(MFEM_USE_NETCDF ON CACHE BOOL "")
+        endif()
+
+        set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
+        # Always true because Axom uses Conduit
+        set(MFEM_USE_CONDUIT ON CACHE BOOL "")
+        set(MFEM_USE_CUDA ${ENABLE_CUDA} CACHE BOOL "")
+        # Assumes that we have AMGX if we have CUDA
+        set(MFEM_USE_AMGX ${ENABLE_CUDA} CACHE BOOL "")
+    
+        add_subdirectory(${PROJECT_SOURCE_DIR}/mfem)
+        target_include_directories(mfem INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
+        set(AXOM_DIR ${AXOM_DIR_SAVE} CACHE PATH "" FORCE)
+        set(UMPIRE_DIR ${UMPIRE_DIR_SAVE} CACHE PATH "" FORCE)
+        set(RAJA_DIR ${RAJA_DIR_SAVE} CACHE PATH "" FORCE)
+        set(PETSC_DIR ${PETSC_DIR_SAVE} CACHE PATH "" FORCE)
+    endif()
 
     #------------------------------------------------------------------------------
     # Axom
@@ -118,18 +179,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
         set(AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION ON CACHE BOOL "")
         add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src)
-        install(EXPORT axom-targets 
-        NAMESPACE serac::axom::
-        DESTINATION lib/cmake
-        )
+        # install(EXPORT axom-targets 
+        # NAMESPACE serac::axom::
+        # DESTINATION lib/cmake
+        # )
     endif()
-
-
-    #------------------------------------------------------------------------------
-    # MFEM
-    #------------------------------------------------------------------------------
-    include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
-
 
     #------------------------------------------------------------------------------
     # Tribol
@@ -177,19 +231,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     else()
         message(STATUS "Caliper support is OFF")
         set(CALIPER_FOUND FALSE)
-    endif()
-
-    #------------------------------------------------------------------------------
-    # PETSC
-    #------------------------------------------------------------------------------
-    if(PETSC_DIR)
-        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
-        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
-        message(STATUS "PETSc support is ON")
-        set(PETSC_FOUND TRUE)
-    else()
-        message(STATUS "PETSc support is OFF")
-        set(PETSC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
