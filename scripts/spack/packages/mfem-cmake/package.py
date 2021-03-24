@@ -697,6 +697,7 @@ class MfemCmake(CMakePackage, CudaPackage):
 
             #TODO (bernede1@llnl.gov): what about NETCDF_REQUIRED_PACKAGES
             # see MFEM config/defaults.cmake
+            cfg.white(cmake_cache_string("NetCDF_REQUIRED_PACKAGES", "hdf5"))
 
         if '+zlib' in spec:
             if "@:3.3.2" in spec:

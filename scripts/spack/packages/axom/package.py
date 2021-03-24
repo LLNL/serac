@@ -149,6 +149,8 @@ class Axom(CMakePackage, CudaPackage):
     depends_on("py-shroud", when="+devtools")
     depends_on("llvm+clang@10.0.0", when="+devtools")
 
+    patch('mfem-cmake.patch', when='@0.4.0serac')
+
     def flag_handler(self, name, flags):
         if name in ('cflags', 'cxxflags', 'fflags'):
             # the package manages these flags in another way
