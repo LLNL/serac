@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -11,6 +11,10 @@
 
 namespace serac::logger {
 
+static int logger_rank = 0;
+
+int rank() { return logger_rank; }
+
 bool initialize(MPI_Comm comm)
 {
   namespace slic = axom::slic;
@@ -20,6 +24,7 @@ bool initialize(MPI_Comm comm)
   }
 
   auto [num_ranks, rank] = getMPIInfo(comm);
+  logger_rank            = rank;
 
   std::string loggerName = num_ranks > 1 ? "serac_parallel_logger" : "serac_serial_logger";
   slic::createLogger(loggerName);
@@ -74,7 +79,7 @@ bool initialize(MPI_Comm comm)
   slic::setAbortOnWarning(false);
 
   std::string msg = fmt::format("Logger activated: {0}", loggerName);
-  SLIC_INFO_ROOT(rank, msg);
+  SLIC_INFO_ROOT(msg);
   serac::logger::flush();
 
   return true;

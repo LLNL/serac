@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -7,7 +7,7 @@
 /**
  * @file serac.cpp
  *
- * @brief Nonlinear implicit proxy app driver
+ * @brief Serac: nonlinear implicit thermal-structural driver
  *
  * The purpose of this code is to act as a proxy app for nonlinear implicit mechanics codes at LLNL.
  */
@@ -20,50 +20,68 @@
 #include "axom/core.hpp"
 #include "mfem.hpp"
 #include "serac/coefficients/loading_functions.hpp"
-#include "serac/coefficients/traction_coefficient.hpp"
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/thermal_solid.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
 
-//------- Input file -------
-
-void defineInputFileSchema(axom::inlet::Inlet& inlet, int rank)
+/**
+ * @brief Define the input file structure for the driver code
+ *
+ * @param[in] inlet The inlet instance
+ */
+void defineInputFileSchema(axom::inlet::Inlet& inlet)
 {
   // Simulation time parameters
   inlet.addDouble("t_final", "Final time for simulation.").defaultValue(1.0);
   inlet.addDouble("dt", "Time step.").defaultValue(0.25);
 
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  // The output type (visit, glvis, paraview, etc)
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
+
+  // The mesh options
+  auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
-  // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
-  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
+  // The solid mechanics options
+  auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
+  serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
 
-  // Verify input file
+  // The thermal conduction options
+  auto& thermal_solver_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
+  serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_solver_table);
+
+  // Verify the input file
   if (!inlet.verify()) {
-    SLIC_ERROR_ROOT(rank, "Input file failed to verify.");
+    SLIC_ERROR_ROOT("Input file failed to verify.");
   }
 }
 
 }  // namespace serac
 
+/**
+ * @brief The main serac driver code
+ *
+ * @param[in] argc Number of input arguments
+ * @param[in] argv The vector of input arguments
+ *
+ * @return The return code
+ */
 int main(int argc, char* argv[])
 {
-  auto [num_procs, rank] = serac::initialize(argc, argv);
+  serac::initialize(argc, argv);
 
   // Handle Command line
   std::unordered_map<std::string, std::string> cli_opts =
-      serac::cli::defineAndParse(argc, argv, rank, "Serac: a high order nonlinear thermomechanical simulation code");
-  serac::cli::printGiven(cli_opts, rank);
+      serac::cli::defineAndParse(argc, argv, "Serac: a high order nonlinear thermomechanical simulation code");
+  serac::cli::printGiven(cli_opts);
 
   // Read input file
   std::string input_file_path = "";
@@ -71,65 +89,108 @@ int main(int argc, char* argv[])
   if (search != cli_opts.end()) {
     input_file_path = search->second;
   }
+
+  // Check if a restart was requested
+  std::optional<int> restart_cycle;
+  if (auto cycle = cli_opts.find("restart_cycle"); cycle != cli_opts.end()) {
+    restart_cycle = std::stoi(cycle->second);
+  }
+
+  // Check for the doc creation command line argument
   bool create_input_file_docs = cli_opts.find("create_input_file_docs") != cli_opts.end();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
 
+  // Intialize MFEMSidreDataCollection
+  // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
+  serac::StateManager::initialize(datastore, restart_cycle);
+
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
-  serac::defineInputFileSchema(inlet, rank);
+  serac::defineInputFileSchema(inlet);
+
+  // Optionally, create input file documentation and quit
   if (create_input_file_docs) {
-    auto writer = std::make_unique<axom::inlet::SphinxDocWriter>("serac_input.rst", inlet.sidreGroup());
-    inlet.registerDocWriter(std::move(writer));
+    auto writer = std::make_unique<axom::inlet::SphinxWriter>("serac_input.rst");
+    inlet.registerWriter(std::move(writer));
     inlet.writeDoc();
     serac::exitGracefully();
   }
 
   // Save input values to file
-  datastore.getRoot()->save("serac_input.json", "json");
+  datastore.getRoot()->getGroup("input_file")->save("serac_input.json", "json");
 
-  // Build the mesh
-  auto mesh_options   = inlet["main_mesh"].get<serac::mesh::InputOptions>();
-  auto full_mesh_path = serac::input::findMeshFilePath(mesh_options.relative_mesh_file_name, input_file_path);
-  auto mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
+  // Not restarting, so we need to create the mesh and register it with the StateManager
+  if (!restart_cycle) {
+    // Build the mesh
+    auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
+    if (const auto file_opts = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
+      file_opts->absolute_mesh_file_name =
+          serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
+    }
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+    serac::StateManager::setMesh(std::move(mesh));
+  }
 
-  // Define the solid solver object
-  auto                  solid_solver_options = inlet["nonlinear_solid"].get<serac::NonlinearSolid::InputOptions>();
-  serac::NonlinearSolid solid_solver(mesh, solid_solver_options);
+  // Create the physics object
+  std::unique_ptr<serac::BasePhysics> main_physics;
 
-  // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-  // auto traction      = inlet["nonlinear_solid/traction"].get<mfem::Vector>();
-  // auto traction_coef = std::make_shared<serac::VectorScaledConstantCoefficient>(traction);
+  // Create nullable contains for the solid and thermal input file options
+  std::optional<serac::Solid::InputOptions>             solid_solver_options;
+  std::optional<serac::ThermalConduction::InputOptions> thermal_solver_options;
+
+  // If the blocks exist, read the appropriate input file options
+  if (inlet.contains("solid")) {
+    solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
+  }
+  if (inlet.contains("thermal_conduction")) {
+    thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
+  }
+
+  // Construct the appropriate physics object using the input file options
+  if (solid_solver_options && thermal_solver_options) {
+    main_physics = std::make_unique<serac::ThermalSolid>(*thermal_solver_options, *solid_solver_options);
+  } else if (solid_solver_options) {
+    main_physics = std::make_unique<serac::Solid>(*solid_solver_options);
+  } else if (thermal_solver_options) {
+    main_physics = std::make_unique<serac::ThermalConduction>(*thermal_solver_options);
+  } else {
+    SLIC_ERROR_ROOT("Neither solid nor thermal_conduction blocks specified in the input file.");
+  }
 
   // Complete the solver setup
-  solid_solver.completeSetup();
+  main_physics->completeSetup();
 
-  // initialize/set the time
+  // Initialize/set the time information
   double t       = 0;
-  double t_final = inlet["t_final"];  // has default value
-  double dt      = inlet["dt"];       // has default value
+  double t_final = inlet["t_final"];
+  double dt      = inlet["dt"];
 
   bool last_step = false;
 
-  solid_solver.initializeOutput(serac::OutputType::VisIt, "serac");
+  // FIXME: This and the FromInlet specialization are hacked together,
+  // should be inlet["output_type"].get<OutputType>()
+  main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac");
 
-  // enter the time step loop. This was modeled after example 10p.
+  // Enter the time step loop.
   for (int ti = 1; !last_step; ti++) {
+    // Compute the real timestep. This may be less than dt for the last timestep.
     double dt_real = std::min(dt, t_final - t);
-    // compute current time
+
+    // Compute current time
     t = t + dt_real;
 
-    SLIC_INFO_ROOT(rank, "step " << ti << ", t = " << t);
+    // Print the timestep information
+    SLIC_INFO_ROOT("step " << ti << ", t = " << t);
 
-    // FIXME: Move time-scaling logic to Lua once arbitrary function signatures are allowed
-    // traction_coef->SetScale(t);
+    // Solve the physics module appropriately
+    main_physics->advanceTimestep(dt_real);
 
-    // Solve the Newton system
-    solid_solver.advanceTimestep(dt_real);
+    // Output a visualization file
+    main_physics->outputState();
 
-    solid_solver.outputState();
-
+    // Determine if this is the last timestep
     last_step = (t >= t_final - 1e-8 * dt);
   }
 

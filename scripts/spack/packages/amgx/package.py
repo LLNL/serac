@@ -22,7 +22,7 @@ class Amgx(CMakePackage, CudaPackage):
 
     maintainers = ['js947']
     # SERAC EDIT BEGIN
-    version('2.1.x', branch='v2.1.x')
+    version('2.1.x', commit='c5405f3f18fbe278292ed0226d970992857e266f')
     # SERAC EDIT END
     version('2.1.0', sha256='6245112b768a1dc3486b2b3c049342e232eb6281a6021fffa8b20c11631f63cc')
     version('2.0.1', sha256='6f9991f1836fbf4ba2114ce9f49febd0edc069a24f533bd94fd9aa9be72435a7')

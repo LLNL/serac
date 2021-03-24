@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -22,10 +22,10 @@ namespace serac {
  */
 enum class OutputType
 {
-  GLVis,
-  ParaView,
-  VisIt,
-  SidreVisIt
+  GLVis,     /**< GLVis output */
+  ParaView,  /**< Paraview output */
+  VisIt,     /**< VisIt output */
+  SidreVisIt /**< Binary VisIt output via Sidre */
 };
 
 /**
@@ -33,27 +33,33 @@ enum class OutputType
  */
 enum class TimestepMethod
 {
-  QuasiStatic,
+  QuasiStatic, /**< Quasistatic */
 
   // options for first order ODEs
-  BackwardEuler,
-  SDIRK33,
-  ForwardEuler,
-  RK2,
-  RK3SSP,
-  RK4,
-  GeneralizedAlpha,
-  ImplicitMidpoint,
-  SDIRK23,
-  SDIRK34,
+  BackwardEuler,    /**< FirstOrderODE option */
+  SDIRK33,          /**< FirstOrderODE option */
+  ForwardEuler,     /**< FirstOrderODE option */
+  RK2,              /**< FirstOrderODE option */
+  RK3SSP,           /**< FirstOrderODE option */
+  RK4,              /**< FirstOrderODE option */
+  GeneralizedAlpha, /**< FirstOrderODE option */
+  ImplicitMidpoint, /**< FirstOrderODE option */
+  SDIRK23,          /**< FirstOrderODE option */
+  SDIRK34,          /**< FirstOrderODE option */
 
   // options for second order ODEs
-  HHTAlpha,
-  WBZAlpha,
-  AverageAcceleration,
-  LinearAcceleration,
-  CentralDifference,
-  FoxGoodwin
+  //
+  // note: we don't have a way to communicate
+  //       parameters to the TimestepMethod,
+  //       right now, so Newmark implies
+  //       (beta = 0.25, gamma = 0.5)
+  Newmark,             /**< SecondOrderODE option */
+  HHTAlpha,            /**< SecondOrderODE option */
+  WBZAlpha,            /**< SecondOrderODE option */
+  AverageAcceleration, /**< SecondOrderODE option */
+  LinearAcceleration,  /**< SecondOrderODE option */
+  CentralDifference,   /**< SecondOrderODE option */
+  FoxGoodwin           /**< SecondOrderODE option */
 };
 
 /**
@@ -62,26 +68,32 @@ enum class TimestepMethod
 
 enum class DirichletEnforcementMethod
 {
-  // satisfies u(t+dt) == U(t+dt)
-  //
-  // this method imposes additional stability criteria
-  // for the case of second order differential equations
+  /**
+   * Satisfies u(t+dt) == U(t+dt)
+   *
+   * This method imposes additional stability criteria
+   * for the case of second order differential equations
+   */
   DirectControl,
 
-  // (default value)
-  // satisfies dudt(t+dt) == dUdt(t+dt)
-  //
-  // this method does not impose any additional stability criteria
-  // for the case of second order differential equations.
+  /**
+   * (default value)
+   * Satisfies dudt(t+dt) == dUdt(t+dt)
+   *
+   * This method does not impose any additional stability criteria
+   * for the case of second order differential equations.
+   */
   RateControl,
 
-  // satisfies u(t+dt) == U(t+dt),
-  //           dudt(t+dt) == dUdt(t+dt),
-  // (and      d2udt2(t+dt) == d2Udt2(t+dt), for a second order ODE)
-  //
-  // Empirically, this method tends to be the most accurate
-  // for small timesteps (by a constant factor),  but is more
-  // expensive to evaluate
+  /**
+   * satisfies u(t+dt) == U(t+dt),
+   *           dudt(t+dt) == dUdt(t+dt),
+   * (and      d2udt2(t+dt) == d2Udt2(t+dt), for a second order ODE)
+   *
+   * Empirically, this method tends to be the most accurate
+   * for small timesteps (by a constant factor),  but is more
+   * expensive to evaluate
+   */
   FullControl
 };
 
@@ -90,10 +102,10 @@ enum class DirichletEnforcementMethod
  */
 enum class LinearSolver
 {
-  CG,
-  GMRES,
-  MINRES,
-  SuperLU
+  CG,     /**< Conjugate Gradient */
+  GMRES,  /**< Generalized minimal residual method */
+  MINRES, /**< Minimal residual method */
+  SuperLU /**< SuperLU Direct Solver */
 };
 
 /**
@@ -101,15 +113,18 @@ enum class LinearSolver
  */
 enum class NonlinearSolver
 {
-  MFEMNewton,
-  KINFullStep,
-  KINBacktrackingLineSearch
+  MFEMNewton,               /**< Newton-Raphson */
+  KINFullStep,              /**< KINFullStep */
+  KINBacktrackingLineSearch /**< KINBacktrackingLineSearch */
 };
 
 /**
  * @brief Stores the information required to configure a HypreSmoother
  */
 struct HypreSmootherPrec {
+  /**
+   * @brief The type of Hypre smoother to apply
+   */
   mfem::HypreSmoother::Type type;
 };
 
@@ -117,6 +132,10 @@ struct HypreSmootherPrec {
  * @brief Stores the information required to configure a HypreBoomerAMG preconditioner
  */
 struct HypreBoomerAMGPrec {
+  /**
+   * @brief The par finite element space for the AMG object
+   * @note This is needed for some of the options specific to solid mechanics solves
+   */
   mfem::ParFiniteElementSpace* pfes = nullptr;
 };
 
@@ -125,20 +144,20 @@ struct HypreBoomerAMGPrec {
  */
 enum class AMGXSolver
 {
-  AMG,
-  PCGF,
-  CG,
-  PCG,
-  PBICGSTAB,
-  BICGSTAB,
-  FGMRES,
-  JACOBI_L1,
-  GS,
-  POLYNOMIAL,
-  KPZ_POLYNOMIAL,
-  BLOCK_JACOBI,
-  MULTICOLOR_GS,
-  MULTICOLOR_DILU
+  AMG,            /**< GPU Algebraic Multigrid */
+  PCGF,           /**< GPU PCGF */
+  CG,             /**< GPU CG */
+  PCG,            /**< GPU PCG */
+  PBICGSTAB,      /**< GPU PBICGSTAB */
+  BICGSTAB,       /**< GPU BICGSTAB */
+  FGMRES,         /**< GPU FGMRES */
+  JACOBI_L1,      /**< GPU JACOBI_L1 */
+  GS,             /**< GPU GS */
+  POLYNOMIAL,     /**< GPU POLYNOMIAL */
+  KPZ_POLYNOMIAL, /**< GPU KPZ_POLYNOMIAL */
+  BLOCK_JACOBI,   /**< GPU BLOCK_JACOBI */
+  MULTICOLOR_GS,  /**< GPU MULTICOLOR_GS */
+  MULTICOLOR_DILU /**< GPU MULTICOLOR_DILU */
 };
 
 /**
@@ -163,6 +182,9 @@ struct AMGXPrec {
  * @brief Stores the information required to configure a BlockILU preconditioner
  */
 struct BlockILUPrec {
+  /**
+   * @brief The block size for the ILU preconditioner
+   */
   int block_size;
 };
 
@@ -176,9 +198,9 @@ using Preconditioner = std::variant<HypreSmootherPrec, HypreBoomerAMGPrec, AMGXP
  */
 enum class CouplingScheme
 {
-  OperatorSplit,
-  FixedPoint,
-  FullyCoupled
+  OperatorSplit, /**< Operator Split */
+  FixedPoint,    /**< Fixed Point */
+  FullyCoupled   /**< FullyCoupled */
 };
 
 /**
@@ -222,6 +244,9 @@ struct IterativeSolverOptions {
  * and destructors are a nightmare in this context
  */
 struct CustomSolverOptions {
+  /**
+   * @brief A non-owning pointer to the custom mfem solver to use
+   */
   mfem::Solver* solver = nullptr;
 };
 

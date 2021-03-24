@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -10,7 +10,8 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies serac_physics serac_coefficients gtest test_utils)
+    set(test_dependencies serac_physics serac_coefficients test_utils)
+    blt_list_append( TO test_dependencies ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
     blt_add_library(
         NAME        test_utils
@@ -20,14 +21,15 @@ if (ENABLE_GTEST)
         )
 
     set(solver_tests
-        serac_nonlinear_solid.cpp
-        serac_linelastic_solver.cpp
+        serac_solid.cpp
+        serac_solid_reuse_mesh.cpp
         serac_thermal_solver.cpp
         serac_thermal_structural_solver.cpp
         serac_dtor.cpp
         serac_boundary_cond.cpp
         serac_mesh.cpp
-        mfem_ex9p_blockilu.cpp)
+        mfem_ex9p_blockilu.cpp
+        serac_newmark_test.cpp)
 
     foreach(filename ${solver_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -66,7 +68,9 @@ if (ENABLE_GTEST)
         mfem_array_std_algo.cpp
         expr_templates.cpp
         serac_error_handling.cpp
-        serac_input.cpp)
+        serac_odes.cpp
+        serac_input.cpp
+        serac_profiling.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)

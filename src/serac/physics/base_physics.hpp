@@ -1,11 +1,11 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file base_solver.hpp
+ * @file base_physics.hpp
  *
  * @brief The base interface class for a generic PDE solver
  */
@@ -30,20 +30,22 @@ class BasePhysics {
 public:
   /**
    * @brief Empty constructor
-   *
-   * @param[in] mesh The primary mesh
    */
-  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh);
+  BasePhysics();
 
   /**
    * @brief Constructor that creates n entries in state_ of order p
    *
-   * @param[in] mesh The primary mesh
    * @param[in] n Number of state variables
    * @param[in] p Order of the solver
    */
-  BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p);
+  BasePhysics(int n, int p);
 
+  /**
+   * @brief Construct a new Base Physics object (copy constructor)
+   *
+   * @param other The other base physics to copy from
+   */
   BasePhysics(BasePhysics&& other) = default;
 
   /**
@@ -57,28 +59,11 @@ public:
                            const int component = -1);
 
   /**
-   * @brief Set the state variables from a vector of coefficients
-   *
-   * @param[in] state_coef A vector of coefficients to project on the state grid functions
-   */
-  virtual void setState(const std::vector<serac::GeneralCoefficient>& state_coef);
-
-  /**
-   * @brief Set the state variables from an existing grid function
-   *
-   * @param[in] state A vector of finite element states to initialze the solver
-   * @note This will move from each element of the vector, so the vector cannot
-   * be used in the calling scope after this function is called (as it has been
-   * moved from)
-   */
-  virtual void setState(std::vector<serac::FiniteElementState>&& state);
-
-  /**
    * @brief Get the list of state variable grid functions
    *
    * @return the current vector of finite element states
    */
-  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState> >& getState() const;
+  virtual const std::vector<std::reference_wrapper<serac::FiniteElementState>>& getState() const;
 
   /**
    * @brief Set the current time
@@ -138,23 +123,23 @@ public:
   /**
    * @brief Returns a reference to the mesh object
    */
-  const mfem::ParMesh& mesh() const { return *mesh_; }
+  const mfem::ParMesh& mesh() const { return mesh_; }
 
 protected:
+  /**
+   * @brief The primary mesh
+   */
+  mfem::ParMesh& mesh_;
+
   /**
    * @brief The MPI communicator
    */
   MPI_Comm comm_;
 
   /**
-   * @brief The primary mesh
-   */
-  std::shared_ptr<mfem::ParMesh> mesh_;
-
-  /**
    * @brief List of finite element data structures
    */
-  std::vector<std::reference_wrapper<serac::FiniteElementState> > state_;
+  std::vector<std::reference_wrapper<serac::FiniteElementState>> state_;
 
   /**
    * @brief Block vector storage of the true state
@@ -221,5 +206,15 @@ protected:
    */
   BoundaryConditionManager bcs_;
 };
+
+namespace detail {
+/**
+ * @brief Prepends a prefix to a target string if @p name is non-empty with an
+ * underscore delimiter
+ * @param[in] addPrefix The string to prepend
+ * @param[in] target The string to prepend to
+ */
+std::string addPrefix(const std::string& prefix, const std::string& target);
+}  // namespace detail
 
 }  // namespace serac

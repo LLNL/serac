@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -37,7 +37,8 @@ public:
    * @param[in] attrs The set of boundary condition attributes in the mesh that the BC applies to
    * @param[in] num_attrs The total number of boundary attributes for the mesh
    */
-  BoundaryCondition(GeneralCoefficient coef, const int component, const std::set<int>& attrs, const int num_attrs = 0);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const std::set<int>& attrs,
+                    const int num_attrs = 0);
 
   /**
    * @brief Minimal constructor for setting the true DOFs directly
@@ -46,28 +47,28 @@ public:
    * should be -1 for all components
    * @param[in] true_dofs The indices of the relevant DOFs
    */
-  BoundaryCondition(GeneralCoefficient coef, const int component, const mfem::Array<int>& true_dofs);
+  BoundaryCondition(GeneralCoefficient coef, const std::optional<int> component, const mfem::Array<int>& true_dofs);
 
   /**
    * @brief Determines whether a boundary condition is associated with a tag
    * @tparam Tag The type of the tag to compare against
-   * @param[in] The tag to compare against
+   * @param[in] tag The tag to compare against
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
   bool tagEquals(const Tag tag) const
   {
     static_assert(std::is_enum_v<Tag>, "Only enumerations can be used to tag a boundary condition.");
-    SLIC_ERROR_IF(!tag_, "No tag has been configured for this boundary condition");
+    SLIC_ERROR_ROOT_IF(!tag_, "No tag has been configured for this boundary condition");
     bool tags_same_type = typeid(tag).hash_code() == tag_->second;
-    SLIC_WARNING_IF(!tags_same_type, "Attempting to compare tags of two different enum types (always false)");
+    SLIC_WARNING_ROOT_IF(!tags_same_type, "Attempting to compare tags of two different enum types (always false)");
     return (static_cast<int>(tag) == tag_->first) && tags_same_type;
   }
 
   /**
    * @brief Sets the tag for the BC
    * @tparam Tag The template type for the tag (label)
-   * @param[in] The new tag
+   * @param[in] tag The new tag
    * @pre Template type "Tag" must be an enumeration
    */
   template <typename Tag>
@@ -148,7 +149,7 @@ public:
    */
   const mfem::Array<int>& getTrueDofs() const
   {
-    SLIC_ERROR_IF(!true_dofs_, "True DOFs only available with essential BC.");
+    SLIC_ERROR_ROOT_IF(!true_dofs_, "True DOFs only available with essential BC.");
     return *true_dofs_;
   }
 
@@ -192,6 +193,7 @@ public:
 
   /**
    * @brief Projects the boundary condition over boundary to a DoF vector
+   * @param[in] dof_values The discrete dof values to project
    * @param[in] time The time for the coefficient, used for time-varying coefficients
    * @param[in] should_be_scalar Whether the boundary condition coefficient should be a scalar coef
    * @pre A corresponding field (FiniteElementState) has been associated
@@ -230,15 +232,24 @@ public:
   void apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
              const double time = 0.0, const bool should_be_scalar = true) const;
 
+  /**
+   * @brief Sets the underlying coefficient's time
+   *
+   * @param[in] time The current simulation time
+   *
+   * Used for time-dependent coefficients
+   */
+  void setTime(const double time);
+
 private:
   /**
    * @brief A coefficient containing either a mfem::Coefficient or an mfem::VectorCoefficient
    */
   GeneralCoefficient coef_;
   /**
-   * @brief The vector component affected by this BC (-1 implies all components)
+   * @brief The vector component affected by this BC (empty implies all components)
    */
-  int component_;
+  std::optional<int> component_;
   /**
    * @brief The attribute marker array where this BC is active
    */

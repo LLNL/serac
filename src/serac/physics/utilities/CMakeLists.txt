@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -9,6 +9,7 @@ set(physics_utilities_headers
     boundary_condition_manager.hpp
     equation_solver.hpp
     finite_element_state.hpp
+    physics_utils.hpp
     solver_config.hpp
     )
 
@@ -17,6 +18,7 @@ set(physics_utilities_sources
     boundary_condition_manager.cpp
     equation_solver.cpp
     finite_element_state.cpp
+    physics_utils.cpp
     )
 
 set(physics_utilities_depends serac_infrastructure)

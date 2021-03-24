@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -19,7 +19,11 @@
 
 #include "serac/numerics/expr_template_ops.hpp"
 
-namespace serac {
+/**
+ * @brief Functionality that extends current MFEM capabilities
+ *
+ */
+namespace serac::mfem_ext {
 
 /**
  * @brief MakeTrueEssList takes in a FESpace, a vector coefficient, and produces a list
@@ -31,7 +35,7 @@ namespace serac {
  * the vdof list.
  * @return The list of true dofs that should be part of the essential boundary conditions
  */
-mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c);
+mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c);
 
 /**
  * @brief MakeEssList takes in a FESpace, a vector coefficient, and produces a list
@@ -44,7 +48,7 @@ mfem::Array<int> makeTrueEssList(mfem::ParFiniteElementSpace& pfes, mfem::Vector
  * @return The list of vector dofs that should be
  * part of the essential boundary conditions
  */
-mfem::Array<int> makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c);
+mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoefficient& c);
 
 /**
  * @brief This method creates an array of size(local_elems), and assigns
@@ -61,7 +65,7 @@ mfem::Array<int> makeEssList(mfem::ParFiniteElementSpace& pfes, mfem::VectorCoef
  * attribute 2, otherwise attribute 1.
  * @return An array holding the attributes that correspond to each element
  */
-mfem::Array<int> makeAttributeList(
+mfem::Array<int> MakeAttributeList(
     mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = [](double v) { return v > 0. ? 2 : 1; });
 
 /**
@@ -81,7 +85,7 @@ mfem::Array<int> makeAttributeList(
  * attribute 2.
  * @return An array holding the attributes that correspond to each element
  */
-mfem::Array<int> makeBdrAttributeList(
+mfem::Array<int> MakeBdrAttributeList(
     mfem::Mesh& m, mfem::Coefficient& c,
     std::function<int(double)> digitize = [](double v) { return v == 1. ? 2 : 1; });
 
@@ -243,4 +247,4 @@ private:
   std::function<double(const double, const double)> bi_function_;
 };
 
-}  // namespace serac
+}  // namespace serac::mfem_ext

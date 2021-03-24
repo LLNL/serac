@@ -1,7 +1,7 @@
 ####################################################################
 # Generated host-config - Edit at own risk!
 ####################################################################
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -41,7 +41,7 @@ set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-clang-10.0.0/bin/m
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2020_12_17_10_48_54/clang-10.0.0" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_03_10_09_36_36/clang-10.0.0" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 

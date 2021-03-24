@@ -9,7 +9,7 @@ Status](https://dev.azure.com/llnl-serac/serac/_apis/build/status/LLNL.serac?bra
 
 Serac is a 3D implicit nonlinear thermal-structural simulation code. Its primary purpose is to investigate multiphysics 
 abstraction strategies and implicit finite element-based algorithm development for emerging computing architectures. 
-It also serves as a proxy-app for LLNL's DIABLO and ALE3D codes.
+It also serves as a proxy-app for LLNL's Smith code.
 
 Documentation
 ------
@@ -28,7 +28,7 @@ For more information, see the [contributing guide](./CONTRIBUTING.md).
 License
 -------
 
-Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC. 
+Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC. 
 Produced at the Lawrence Livermore National Laboratory.
 
 Copyrights and patents in the Serac project are retained by contributors.

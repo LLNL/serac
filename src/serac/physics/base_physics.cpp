@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -16,17 +16,22 @@
 
 namespace serac {
 
-BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh)
-    : comm_(mesh->GetComm()), mesh_(mesh), output_type_(serac::OutputType::VisIt), time_(0.0), cycle_(0), bcs_(*mesh)
+BasePhysics::BasePhysics()
+    : mesh_(StateManager::mesh()),
+      comm_(mesh_.GetComm()),
+      output_type_(serac::OutputType::VisIt),
+      time_(0.0),
+      cycle_(0),
+      bcs_(mesh_)
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
   order_                         = 1;
 }
 
-BasePhysics::BasePhysics(std::shared_ptr<mfem::ParMesh> mesh, int n, int p) : BasePhysics(mesh)
+BasePhysics::BasePhysics(int n, int p) : BasePhysics()
 {
   order_ = p;
-  gf_initialized_.assign(n, false);
+  gf_initialized_.assign(static_cast<std::size_t>(n), false);
 }
 
 void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef, int component)
@@ -34,29 +39,13 @@ void BasePhysics::setTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralC
   bcs_.addEssentialTrueDofs(true_dofs, ess_bdr_coef, component);
 }
 
-void BasePhysics::setState(const std::vector<serac::GeneralCoefficient>& state_coef)
-{
-  SLIC_ASSERT_MSG(state_coef.size() == state_.size(), "State and coefficient bundles not the same size.");
-
-  for (unsigned int i = 0; i < state_coef.size(); ++i) {
-    state_[i].get().project(state_coef[i]);
-  }
-}
-
-void BasePhysics::setState(std::vector<serac::FiniteElementState>&& state)
-{
-  SLIC_ASSERT_MSG(state.size() > 0, "State vector array of size 0.");
-  // To avoid making a shallow copy of the references, we move individually
-  for (std::size_t i = 0; i < state.size(); i++) {
-    // Assigning to the FiniteElementState being referenced,
-    // not the reference itself
-    state_[i].get() = std::move(state[i]);
-  }
-}
-
 const std::vector<std::reference_wrapper<serac::FiniteElementState> >& BasePhysics::getState() const { return state_; }
 
-void BasePhysics::setTime(const double time) { time_ = time; }
+void BasePhysics::setTime(const double time)
+{
+  time_ = time;
+  bcs_.setTime(time_);
+}
 
 double BasePhysics::time() const { return time_; }
 
@@ -64,8 +53,7 @@ int BasePhysics::cycle() const { return cycle_; }
 
 void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
 {
-  root_name_ = root_name;
-
+  root_name_   = root_name;
   output_type_ = output_type;
 
   switch (output_type_) {
@@ -89,20 +77,17 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
       break;
     }
 
-    case serac::OutputType::GLVis: {
-      break;
-    }
-
+    case serac::OutputType::GLVis:
+      [[fallthrough]];
     case OutputType::SidreVisIt: {
-      dc_ = std::make_unique<axom::sidre::MFEMSidreDataCollection>(root_name_, &state_.front().get().mesh());
       break;
     }
 
     default:
-      SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
+      SLIC_ERROR_ROOT("OutputType not recognized!");
   }
 
-  if ((output_type_ == OutputType::VisIt) || (output_type_ == OutputType::SidreVisIt)) {
+  if (output_type_ == OutputType::VisIt) {
     // Implicitly convert from ref_wrapper
     for (FiniteElementState& state : state_) {
       dc_->RegisterField(state.name(), &state.gridFunc());
@@ -116,11 +101,14 @@ void BasePhysics::outputState() const
     case serac::OutputType::VisIt:
       [[fallthrough]];
     case serac::OutputType::ParaView:
-      [[fallthrough]];
-    case serac::OutputType::SidreVisIt: {
       dc_->SetCycle(cycle_);
       dc_->SetTime(time_);
       dc_->Save();
+      break;
+    case serac::OutputType::SidreVisIt: {
+      // Implemented through a helper method as the full interface of the MFEMSidreDataCollection
+      // is restricted from global access
+      StateManager::save(time_, cycle_);
       break;
     }
 
@@ -140,8 +128,18 @@ void BasePhysics::outputState() const
     }
 
     default:
-      SLIC_ERROR_ROOT(mpi_rank_, "OutputType not recognized!");
+      SLIC_ERROR_ROOT("OutputType not recognized!");
   }
 }
+
+namespace detail {
+std::string addPrefix(const std::string& prefix, const std::string& target)
+{
+  if (prefix.empty()) {
+    return target;
+  }
+  return prefix + "_" + target;
+}
+}  // namespace detail
 
 }  // namespace serac

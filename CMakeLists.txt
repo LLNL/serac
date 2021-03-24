@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -98,7 +98,7 @@ set(exported_targets
     serac_numerics
     serac_physics_utilities
     serac_physics_operators
-    serac_integrators)
+    serac_physics_integrators)
 
 add_library(serac INTERFACE)
 target_link_libraries(serac INTERFACE ${exported_targets})

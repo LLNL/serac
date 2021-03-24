@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -21,10 +21,10 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/utilities/solver_config.hpp"
 
-namespace serac {
+namespace serac::mfem_ext {
 
 /**
- * Wraps a (currently iterative) system solver and handles the configuration of linear
+ * @brief Wraps a (currently iterative) system solver and handles the configuration of linear
  * or nonlinear solvers.  This class solves a generic global system of (possibly) nonlinear algebraic equations.
  */
 class EquationSolver : public mfem::Solver {
@@ -53,7 +53,7 @@ public:
    * @brief An overload for "intercepting" HypreParMatrices
    * such that they can be converted to a SuperLURowLocMatrix
    * when running in SuperLU mode
-   * @param[in] op The operator (system matrix) to use, "A" in Ax = b
+   * @param[in] matrix The operator (system matrix) to use, "A" in Ax = b
    */
   void SetOperator(const mfem::HypreParMatrix& matrix);
 
@@ -69,18 +69,26 @@ public:
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::IterativeSolver&       nonlinearSolver() { return *nonlin_solver_; }
-  const mfem::IterativeSolver& nonlinearSolver() const { return *nonlin_solver_; }
+  mfem::IterativeSolver& NonlinearSolver() { return *nonlin_solver_; }
+
+  /**
+   * @overload
+   */
+  const mfem::IterativeSolver& NonlinearSolver() const { return *nonlin_solver_; }
 
   /**
    * Returns the underlying linear solver object
    * @return A non-owning reference to the underlying linear solver
    */
-  mfem::Solver& linearSolver()
+  mfem::Solver& LinearSolver()
   {
     return std::visit([](auto&& solver) -> mfem::Solver& { return *solver; }, lin_solver_);
   }
-  const mfem::Solver& linearSolver() const
+
+  /**
+   * @overload
+   */
+  const mfem::Solver& LinearSolver() const
   {
     return std::visit([](auto&& solver) -> const mfem::Solver& { return *solver; }, lin_solver_);
   }
@@ -88,7 +96,7 @@ public:
   /**
    * Input file parameters specific to this class
    **/
-  static void defineInputFileSchema(axom::inlet::Table& table);
+  static void DefineInputFileSchema(axom::inlet::Container& container);
 
 private:
   /**
@@ -96,7 +104,7 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] lin_options The parameters for the linear solver
    */
-  std::unique_ptr<mfem::IterativeSolver> buildIterativeLinearSolver(MPI_Comm                      comm,
+  std::unique_ptr<mfem::IterativeSolver> BuildIterativeLinearSolver(MPI_Comm                      comm,
                                                                     const IterativeSolverOptions& lin_options);
 
   /**
@@ -104,7 +112,7 @@ private:
    * @param[in] comm The MPI communicator object
    * @param[in] nonlin_options The parameters for the nonlinear solver
    */
-  static std::unique_ptr<mfem::NewtonSolver> buildNewtonSolver(MPI_Comm                      comm,
+  static std::unique_ptr<mfem::NewtonSolver> BuildNewtonSolver(MPI_Comm                      comm,
                                                                const NonlinearSolverOptions& nonlin_options);
 
   /**
@@ -191,7 +199,7 @@ private:
  * @param[in] pfes The FiniteElementSpace to configure the preconditioner with
  * @note A full copy of the object is made, pending C++20 relaxation of "mutable"
  */
-inline LinearSolverOptions augmentAMGForElasticity(const LinearSolverOptions&   init_options,
+inline LinearSolverOptions AugmentAMGForElasticity(const LinearSolverOptions&   init_options,
                                                    mfem::ParFiniteElementSpace& pfes)
 {
   auto augmented_options = init_options;
@@ -207,21 +215,34 @@ inline LinearSolverOptions augmentAMGForElasticity(const LinearSolverOptions&   
   return augmented_options;
 }
 
-}  // namespace serac
+}  // namespace serac::mfem_ext
 
-// Prototype the specialization
-
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::LinearSolverOptions> {
-  serac::LinearSolverOptions operator()(const axom::inlet::Table& base);
+  serac::LinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::NonlinearSolverOptions> {
-  serac::NonlinearSolverOptions operator()(const axom::inlet::Table& base);
+  serac::NonlinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
-struct FromInlet<serac::EquationSolver> {
-  serac::EquationSolver operator()(const axom::inlet::Table& base);
+struct FromInlet<serac::mfem_ext::EquationSolver> {
+  serac::mfem_ext::EquationSolver operator()(const axom::inlet::Container& base);
 };
