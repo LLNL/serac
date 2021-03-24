@@ -69,11 +69,11 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     if(MFEM_DIR)
         include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
     else()
+        message(STATUS "Using MFEM submodule")
         set(AXOM_DIR_SAVE ${AXOM_DIR})
         set(UMPIRE_DIR_SAVE ${UMPIRE_DIR})
         set(RAJA_DIR_SAVE ${RAJA_DIR})
         set(PETSC_DIR_SAVE ${PETSC_DIR})
-        message(STATUS "Using MFEM submodule")
         # mfem+mpi requires metis
         set(MFEM_USE_MPI ${ENABLE_MPI} CACHE BOOL "")
         set(MFEM_USE_METIS ${ENABLE_MPI} CACHE BOOL "")
@@ -103,7 +103,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_USE_CUDA ${ENABLE_CUDA} CACHE BOOL "")
         # Assumes that we have AMGX if we have CUDA
         set(MFEM_USE_AMGX ${ENABLE_CUDA} CACHE BOOL "")
-    
+
+        # Prefix the "check" targets
+        set(MFEM_CUSTOM_TARGET_PREFIX "mfem_")
         add_subdirectory(${PROJECT_SOURCE_DIR}/mfem)
         target_include_directories(mfem INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
         set(AXOM_DIR ${AXOM_DIR_SAVE} CACHE PATH "" FORCE)
