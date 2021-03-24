@@ -19,18 +19,15 @@ endif()
 message(STATUS "Looking for MFEM using MFEM_DIR = ${MFEM_DIR}")
 serac_assert_is_directory(VARIABLE_NAME MFEM_DIR)
 
-set(_mfem_cmake_config "${MFEM_DIR}/MFEMConfig.cmake")
+set(_MFEM_DIR ${MFEM_DIR}) # Save MFEM_DIR as a non-cache variable
+find_package(MFEM CONFIG NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem")
+# find_package will overwrite MFEM_DIR, so restore it here
+set(MFEM_DIR ${_MFEM_DIR} CACHE PATH "" FORCE)
 
-if(EXISTS ${_mfem_cmake_config})
+if(MFEM_FOUND)
     # MFEM was built with CMake so use that config file
-    message(STATUS "Using MFEM's CMake config file: ${_mfem_cmake_config}")
-
-    include(${_mfem_cmake_config})
-
-    set(MFEM_INCLUDE_DIRS  ${MFEM_INCLUDE_DIRS} )
-    set(MFEM_LIBRARIES     ${MFEM_LIBRARIES} )
+    message(STATUS "Using MFEM's CMake config file")
     set(MFEM_BUILT_WITH_CMAKE TRUE)
-
 else()
     set(MFEM_BUILT_WITH_CMAKE FALSE)
     find_path(

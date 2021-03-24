@@ -11,6 +11,7 @@
 if (ENABLE_GTEST)
 
     set(test_dependencies serac_physics serac_coefficients test_utils)
+    blt_list_append( TO test_dependencies ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
     blt_add_library(
         NAME        test_utils
@@ -28,7 +29,7 @@ if (ENABLE_GTEST)
         serac_boundary_cond.cpp
         serac_mesh.cpp
         mfem_ex9p_blockilu.cpp
-	    serac_newmark_test.cpp)
+        serac_newmark_test.cpp)
 
     foreach(filename ${solver_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -68,7 +69,8 @@ if (ENABLE_GTEST)
         expr_templates.cpp
         serac_error_handling.cpp
         serac_odes.cpp
-        serac_input.cpp)
+        serac_input.cpp
+        serac_profiling.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)
