@@ -18,7 +18,7 @@ static int logger_rank = 0;
 int rank() { return logger_rank; }
 
 // output stream for the SLIC LogStreams that write to a file
-static std::unique_ptr<std::ofstream> logger_ofstream;
+static std::ofstream logger_ofstream;
 
 bool initialize(MPI_Comm comm)
 {
@@ -46,10 +46,9 @@ bool initialize(MPI_Comm comm)
   slic::LogStream* we_console_logstream = nullptr;  // warnings and errors
 
   // File streams, all message levels go to one file
-  logger_ofstream = std::make_unique<std::ofstream>();
   if (rank == 0) {
     // Only root node writes/opens the file, other nodes will have a noop stream
-    logger_ofstream->open("serac.out", std::ofstream::out);
+    logger_ofstream.open("serac.out", std::ofstream::out);
   }
 
   slic::LogStream* i_file_logstream  = nullptr;  // info
@@ -78,9 +77,9 @@ bool initialize(MPI_Comm comm)
     we_console_logstream = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, we_format_string);
 
     // File streams
-    i_file_logstream  = new slic::LumberjackStream(logger_ofstream.get(), comm, RLIMIT, i_format_string);
-    d_file_logstream  = new slic::LumberjackStream(logger_ofstream.get(), comm, RLIMIT, d_format_string);
-    we_file_logstream = new slic::LumberjackStream(logger_ofstream.get(), comm, RLIMIT, we_format_string);
+    i_file_logstream  = new slic::LumberjackStream(&logger_ofstream, comm, RLIMIT, i_format_string);
+    d_file_logstream  = new slic::LumberjackStream(&logger_ofstream, comm, RLIMIT, d_format_string);
+    we_file_logstream = new slic::LumberjackStream(&logger_ofstream, comm, RLIMIT, we_format_string);
 #else
     // Console streams
     i_console_logstream  = new slic::SynchronizedStream(&std::cout, comm, i_format_string);
@@ -88,9 +87,9 @@ bool initialize(MPI_Comm comm)
     we_console_logstream = new slic::SynchronizedStream(&std::cerr, comm, we_format_string);
 
     // File streams
-    i_file_logstream  = new slic::SynchronizedStream(logger_ofstream.get(), comm, i_format_string);
-    d_file_logstream  = new slic::SynchronizedStream(logger_ofstream.get(), comm, d_format_string);
-    we_file_logstream = new slic::SynchronizedStream(logger_ofstream.get(), comm, we_format_string);
+    i_file_logstream  = new slic::SynchronizedStream(&logger_ofstream, comm, i_format_string);
+    d_file_logstream  = new slic::SynchronizedStream(&logger_ofstream, comm, d_format_string);
+    we_file_logstream = new slic::SynchronizedStream(&logger_ofstream, comm, we_format_string);
 #endif
   } else {
     // Console streams
@@ -99,9 +98,9 @@ bool initialize(MPI_Comm comm)
     we_console_logstream = new slic::GenericOutputStream(&std::cerr, we_format_string);
 
     // File streams
-    i_file_logstream  = new slic::GenericOutputStream(logger_ofstream.get(), i_format_string);
-    d_file_logstream  = new slic::GenericOutputStream(logger_ofstream.get(), d_format_string);
-    we_file_logstream = new slic::GenericOutputStream(logger_ofstream.get(), we_format_string);
+    i_file_logstream  = new slic::GenericOutputStream(&logger_ofstream, i_format_string);
+    d_file_logstream  = new slic::GenericOutputStream(&logger_ofstream, d_format_string);
+    we_file_logstream = new slic::GenericOutputStream(&logger_ofstream, we_format_string);
   }
 
   slic::setLoggingMsgLevel(slic::message::Debug);
@@ -130,7 +129,13 @@ bool initialize(MPI_Comm comm)
   return true;
 }
 
-void finalize() { axom::slic::finalize(); }
+void finalize()
+{
+  axom::slic::finalize();
+  if (logger_ofstream.is_open()) {
+    logger_ofstream.close();
+  }
+}
 
 void flush() { axom::slic::flushStreams(); }
 
