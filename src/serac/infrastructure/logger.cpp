@@ -49,7 +49,6 @@ bool initialize(MPI_Comm comm)
   logger_ofstream = std::make_unique<std::ofstream>();
   if (rank == 0) {
     // Only root node writes/opens the file, other nodes will have a noop stream
-    logger_ofstream = std::make_unique<std::ofstream>();
     logger_ofstream->open("serac.out", std::ofstream::out);
   }
 
