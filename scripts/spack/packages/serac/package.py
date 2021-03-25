@@ -162,6 +162,7 @@ class Serac(CMakePackage, CudaPackage):
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
 
     # Libraries that have a GPU variant
+    conflicts('cuda_arch=none', when='+cuda', msg='CUDA architecture is required')
     depends_on("amgx@2.1.x", when="+cuda")
     cuda_deps = ["mfem", "axom"]
     for dep in cuda_deps:

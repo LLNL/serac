@@ -50,4 +50,33 @@ void terminateCaliper()
 #endif
 }
 
+namespace detail {
+void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] double data)
+{
+#ifdef SERAC_USE_CALIPER
+  cali_set_global_double_byname(name.c_str(), data);
+#endif
+}
+
+void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] int data)
+{
+#ifdef SERAC_USE_CALIPER
+  cali_set_global_int_byname(name.c_str(), data);
+#endif
+}
+
+void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] const std::string& data)
+{
+#ifdef SERAC_USE_CALIPER
+  cali_set_global_string_byname(name.c_str(), data.c_str());
+#endif
+}
+
+void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] unsigned int data)
+{
+#ifdef SERAC_USE_CALIPER
+  cali_set_global_uint_byname(name.c_str(), data);
+#endif
+}
+}  // namespace detail
 }  // namespace serac::profiling
