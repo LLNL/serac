@@ -499,6 +499,11 @@ auto norm(tensor< T, n ... > A) {
   return sqrt(sqnorm(A));
 }
 
+template < typename T, int ... n >
+auto normalize(tensor< T, n ... > A) {
+  return A / norm(A);
+}
+
 template < typename T, int n >
 constexpr auto tr(tensor< T, n, n > A) {
   T trA{};
@@ -853,11 +858,11 @@ auto get_gradient(tensor< dual< std::tuple < T ... > >, n ... > arg) {
   return g;
 }
 
-template < typename T, int ... n, int ... m >
+template < int ... n, int ... m >
 auto get_gradient(tensor< dual< tensor< double, m ... > >, n ... > arg) {
   tensor< double, n ..., m... > g{};
   for_constexpr< n ... >([&](auto ... i){
-    g[{i...}] = arg[{i...}].gradient;
+    g(i...) = arg(i...).gradient;
   });
   return g;
 }
@@ -869,7 +874,12 @@ auto get_gradient(std::tuple < T ... > tuple_of_values) {
   }, tuple_of_values);
 }
 
-template < typename T, int ... n, int ... m >
+template < typename T>
+auto get_value(const T & arg) {
+  return arg;
+}
+
+template < typename T>
 auto get_value(dual< T > arg) {
   return arg.value;
 }
