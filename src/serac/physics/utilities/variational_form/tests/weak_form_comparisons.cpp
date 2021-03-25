@@ -83,19 +83,12 @@ void weak_form_test(mfem::ParMesh & mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  auto constitutive_model = [&](auto x, auto temperature) {
+  residual.AddDomainIntegral(Dimension<dim>{}, [&](auto x, auto temperature) {
     auto [u, du_dx] = temperature;
     auto f0 = a * u - (100 * x[0] * x[1]);
     auto f1 = b * du_dx;
     return std::tuple{f0, f1};
-  };
-
-  if constexpr (dim == 2) {
-    residual.AddAreaIntegral(constitutive_model, mesh);
-  }
-  if constexpr (dim == 3) {
-    residual.AddVolumeIntegral(constitutive_model, mesh);
-  }
+  }, mesh);
 
   mfem::Vector r1 = A * u_global - f;
   mfem::Vector r2 = residual * u_global;
@@ -159,21 +152,13 @@ void weak_form_test(mfem::ParMesh & mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
 
-  auto constitutive_model = [&](auto /*x*/, auto displacement) {
+  residual.AddDomainIntegral(Dimension<dim>{}, [&](auto /*x*/, auto displacement) {
     auto [u, du_dx] = displacement;
     auto f0 = a * u + I[0];
     auto strain = 0.5 * (du_dx + transpose(du_dx));
     auto f1 = b * tr(strain) * I + 2.0 * b * strain;
     return std::tuple{f0, f1};
-  };
-
-  if constexpr (dim == 2) {
-    residual.AddAreaIntegral(constitutive_model, mesh);
-  }
-
-  if constexpr (dim == 3) {
-    residual.AddVolumeIntegral(constitutive_model, mesh);
-  }
+  }, mesh);
 
   mfem::Vector r1 = A * u_global - f;
   mfem::Vector r2 = residual * u_global;

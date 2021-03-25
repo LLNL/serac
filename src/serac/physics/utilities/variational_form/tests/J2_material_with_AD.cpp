@@ -22,12 +22,6 @@ class timer {
 
 static constexpr auto I = Identity<3>();
 
-auto random_real = [](auto...) {
-  static std::default_random_engine             generator;
-  static std::uniform_real_distribution<double> distribution(-1.0, 1.0);
-  return distribution(generator);
-};
-
 struct J2 {
   double E       = 100;    // Young's modulus
   double nu      = 0.25;   // Poisson's ratio
