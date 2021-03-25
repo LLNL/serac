@@ -66,6 +66,7 @@ struct J2 {
 
     // (ii) admissibility
     if (state.pl_strain_inc > 0.0) {
+
       // (iii) return mapping
       s = s - sqrt(6.0) * G * state.pl_strain_inc * normalize(eta);
 
@@ -73,11 +74,7 @@ struct J2 {
       state.el_strain = (s / (2.0 * G)) + ((p / K) * I);
 
       state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * state.pl_strain_inc * normalize(eta);
-
-      std::cout << "plastic" << std::endl;
-    } else {
-      std::cout << "elastic" << std::endl;
-    }
+    } 
 
     return s + p * I;
   }
@@ -103,6 +100,7 @@ struct J2 {
 
     // (ii) admissibility
     if (phi > 0.0) {
+
       // see (7.207) on pg. 261
       auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
 
@@ -171,7 +169,7 @@ int main() {
   double J2_AD_time = 0.0;
 
   double t  = 0.0;
-  double dt = 0.001;
+  double dt = 0.0001;
 
   J2 material{
       100,   // Young's modulus
@@ -184,17 +182,18 @@ int main() {
   J2::State state{};
 
   while (t < 1.0) {
+
     auto grad_u = displacement_gradient(t);
 
     auto backup = state;
 
     stopwatch.start();
-    auto stress = material.calculate_stress(grad_u, state);
+    tensor<double,3,3> stress = material.calculate_stress(grad_u, state);
     stopwatch.stop();
     J2_evaluation_time += stopwatch.elapsed();
 
     stopwatch.start();
-    auto C = material.calculate_gradient(state);
+    tensor<double,3,3,3,3> C = material.calculate_gradient(state);
     stopwatch.stop();
     J2_gradient_time += stopwatch.elapsed();
 
@@ -203,10 +202,10 @@ int main() {
     stopwatch.stop();
     J2_AD_time += stopwatch.elapsed();
 
-    std::cout << C - get_gradient(stress_and_C) << std::endl;
-    std::cout << stress - get_value(stress_and_C) << std::endl;
-    std::cout << state.beta - backup.beta << std::endl;
-    std::cout << state.pl_strain - backup.pl_strain << std::endl;
+    if (norm(stress - get_value(stress_and_C)) > 1.0e-12) exit(1);
+    if (norm(C - get_gradient(stress_and_C)) > 1.0e-12) exit(1);
+    if (norm(state.beta - backup.beta) > 1.0e-12) exit(1);
+    if (fabs(state.pl_strain - backup.pl_strain) > 1.0e-12) exit(1);
 
     t += dt;
   }
@@ -214,5 +213,11 @@ int main() {
   std::cout << "total J2 evaluation time (no AD): " << J2_evaluation_time << std::endl;
   std::cout << "total J2 gradient time (no AD): " << J2_gradient_time << std::endl;
   std::cout << "total J2 evaluation+gradient time (AD): " << J2_AD_time << std::endl;
+  std::cout << "(AD time) / (manual gradient time): " << J2_AD_time / (J2_evaluation_time + J2_gradient_time) << std::endl;
 
 }
+
+// total J2 evaluation time (no AD):       0.0196884
+// total J2 gradient time (no AD):         0.0439456
+// total J2 evaluation+gradient time (AD): 0.256943
+// (AD time) / (manual gradient time):     4.03782

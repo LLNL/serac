@@ -495,6 +495,13 @@ constexpr auto sqnorm(tensor< T, m, n > A) {
 }
 
 template < typename T, int ... n >
+constexpr auto sqnorm(tensor< T, n... > A) {
+  T total{};
+  for_constexpr<n...>([&](auto ... i){ total += A(i...) * A(i...); });
+  return total;
+}
+
+template < typename T, int ... n >
 auto norm(tensor< T, n ... > A) {
   return sqrt(sqnorm(A));
 }
