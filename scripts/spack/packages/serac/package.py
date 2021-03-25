@@ -140,7 +140,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
     # patch for RAJA#978
-    depends_on("raja@camp_patch~openmp~shared", when="+raja")
+    depends_on("raja@develop~openmp~shared", when="+raja")
     depends_on("umpire~shared", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
