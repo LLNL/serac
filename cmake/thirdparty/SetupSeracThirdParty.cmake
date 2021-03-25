@@ -105,9 +105,13 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_USE_AMGX ${ENABLE_CUDA} CACHE BOOL "")
 
         # Prefix the "check" targets
-        set(MFEM_CUSTOM_TARGET_PREFIX "mfem_")
+        set(MFEM_CUSTOM_TARGET_PREFIX "mfem_" CACHE STRING "" FORCE)
         add_subdirectory(${PROJECT_SOURCE_DIR}/mfem)
-        target_include_directories(mfem INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
+        # Patch the mfem target with the correct include directories
+        get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
+        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${_mfem_includes}>)
+        target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
+        # blt_print_target_properties(TARGET mfem)
         set(AXOM_DIR ${AXOM_DIR_SAVE} CACHE PATH "" FORCE)
         set(UMPIRE_DIR ${UMPIRE_DIR_SAVE} CACHE PATH "" FORCE)
         set(RAJA_DIR ${RAJA_DIR_SAVE} CACHE PATH "" FORCE)
@@ -181,10 +185,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
         set(AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION ON CACHE BOOL "")
         add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src)
-        # install(EXPORT axom-targets 
-        # NAMESPACE serac::axom::
-        # DESTINATION lib/cmake
-        # )
+        set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
+        set(MFEM_BUILT_WITH_CMAKE TRUE)
     endif()
 
     #------------------------------------------------------------------------------
