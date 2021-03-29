@@ -132,6 +132,7 @@ mfem::Mesh buildBallMesh(int approx_number_of_elements)
     mesh.AddBdrTriangle(triangle);
   }
   mesh.FinalizeTetMesh();
+  mesh.ReorientTetMesh();
 
   while (mesh.GetNE() < (0.25 * approx_number_of_elements)) {
     mesh.UniformRefinement();

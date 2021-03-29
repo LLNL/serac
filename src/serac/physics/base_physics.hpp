@@ -205,6 +205,12 @@ protected:
    * @brief Boundary condition manager instance
    */
   BoundaryConditionManager bcs_;
+
+  /**
+   * @brief Flag denoting output initialization
+   *
+   */
+  bool output_is_initialized_ = false;
 };
 
 namespace detail {
