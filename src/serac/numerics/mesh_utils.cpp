@@ -132,13 +132,15 @@ mfem::Mesh buildBallMesh(int approx_number_of_elements)
     mesh.AddBdrTriangle(triangle);
   }
   mesh.FinalizeTetMesh();
-  mesh.ReorientTetMesh();
 
   while (mesh.GetNE() < (0.25 * approx_number_of_elements)) {
     mesh.UniformRefinement();
   }
 
   squish(mesh);
+
+  // Reorient the tet mesh for use with high order Hcurl elements
+  mesh.ReorientTetMesh();
 
   // The copy ctor is marked explicit, but this should qualify for RVO...
   return mfem::Mesh(mesh);
