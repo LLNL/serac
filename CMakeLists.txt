@@ -15,6 +15,10 @@ project(serac LANGUAGES CXX)
 # MPI is required in Serac.
 set(ENABLE_MPI ON CACHE BOOL "")
 
+# Save off "raw" flags before they are modified by serac/BLT
+set(RAW_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS}   CACHE STRING "")
+set(RAW_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} CACHE STRING "")
+
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------
@@ -46,7 +50,7 @@ set(ENABLE_UNCRUSTIFY  OFF CACHE BOOL "")
 set(ENABLE_BENCHMARKS  OFF CACHE BOOL "")
 
 set(ENABLE_ALL_WARNINGS ON CACHE BOOL "")
-# set(ENABLE_WARNINGS_AS_ERRORS ON CACHE BOOL "")
+set(ENABLE_WARNINGS_AS_ERRORS ON CACHE BOOL "")
 
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
@@ -57,7 +61,18 @@ include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracMacros.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracBasics.cmake)
 include(${PROJECT_SOURCE_DIR}/cmake/SeracCompilerFlags.cmake)
+
+# Restore raw compiler flags so subprojects don't end up using Serac's flags
+set(SERAC_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS})
+set(SERAC_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+set(CMAKE_C_FLAGS         ${RAW_CMAKE_C_FLAGS} CACHE STRING "" FORCE)
+set(CMAKE_CXX_FLAGS       ${RAW_CMAKE_CXX_FLAGS} CACHE STRING "" FORCE)
+
 include(${PROJECT_SOURCE_DIR}/cmake/thirdparty/SetupSeracThirdParty.cmake)
+
+set(CMAKE_C_FLAGS   ${SERAC_CMAKE_C_FLAGS})
+set(CMAKE_CXX_FLAGS ${SERAC_CMAKE_CXX_FLAGS})
+
 include(${PROJECT_SOURCE_DIR}/cmake/SeracConfigHeader.cmake)
 
 #------------------------------------------------------------------------------
