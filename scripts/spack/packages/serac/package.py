@@ -152,7 +152,7 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit@0.5.1p1~shared~python")
+    depends_on("conduit@0.7.1~shared~python")
     depends_on("caliper@master~shared+mpi~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
 
