@@ -149,7 +149,7 @@ protected:
   /**
    * @brief Type of state variable output
    */
-  serac::OutputType output_type_;
+  serac::OutputType output_type_ = OutputType::GLVis;
 
   /**
    *@brief Whether the simulation is time-independent
@@ -205,12 +205,6 @@ protected:
    * @brief Boundary condition manager instance
    */
   BoundaryConditionManager bcs_;
-
-  /**
-   * @brief Flag denoting output initialization
-   *
-   */
-  bool output_is_initialized_ = false;
 };
 
 namespace detail {

@@ -94,8 +94,6 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
       dc_->RegisterField(state.name(), &state.gridFunc());
     }
   }
-
-  output_is_initialized_ = true;
 }
 
 void BasePhysics::outputState() const
@@ -104,8 +102,6 @@ void BasePhysics::outputState() const
     case serac::OutputType::VisIt:
       [[fallthrough]];
     case serac::OutputType::ParaView:
-      SLIC_ERROR_ROOT_IF(!output_is_initialized_,
-                         "VisIt and Paraview require call to initializeOutput before outputState.");
       dc_->SetCycle(cycle_);
       dc_->SetTime(time_);
       dc_->Save();
