@@ -106,6 +106,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
 
         # Prefix the "check" targets
         set(MFEM_CUSTOM_TARGET_PREFIX "mfem_" CACHE STRING "" FORCE)
+        # Disable tests + examples
+        set(MFEM_ENABLE_TESTING CACHE BOOL "")
+        set(MFEM_ENABLE_EXAMPLES CACHE BOOL "")
+        set(MFEM_ENABLE_MINIAPPS CACHE BOOL "")
         add_subdirectory(${PROJECT_SOURCE_DIR}/mfem)
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
@@ -116,6 +120,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(UMPIRE_DIR ${UMPIRE_DIR_SAVE} CACHE PATH "" FORCE)
         set(RAJA_DIR ${RAJA_DIR_SAVE} CACHE PATH "" FORCE)
         set(PETSC_DIR ${PETSC_DIR_SAVE} CACHE PATH "" FORCE)
+        set(MFEM_BUILT_WITH_CMAKE TRUE)
     endif()
 
     #------------------------------------------------------------------------------
@@ -188,7 +193,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(AXOM_ENABLE_TESTS    OFF CACHE BOOL "")
         add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src)
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
-        set(MFEM_BUILT_WITH_CMAKE TRUE)
+        # Mark the axom includes as "system"
+        get_target_property(_axom_includes axom INCLUDE_DIRECTORIES)
+        target_include_directories(axom SYSTEM INTERFACE $<BUILD_INTERFACE:${_axom_includes}>)
     endif()
 
     #------------------------------------------------------------------------------
