@@ -11,3 +11,14 @@ index 6210ad287..a1d62dd36 100644
  if(WIN32)
      set(_use_mfem_config TRUE)
  endif()
+--- a/src/cmake/thirdparty/FindMFEM.cmake
++++ b/src/cmake/thirdparty/FindMFEM.cmake
+@@ -29,7 +29,8 @@ if(_use_mfem_config)
+               ${MFEM_DIR}/lib/cmake/mfem
+               ${MFEM_DIR}/share/cmake/mfem
+               ${MFEM_DIR}/share/mfem
+-              ${MFEM_DIR}/mfem)
++              ${MFEM_DIR}/mfem
++        NAMES MFEM)
+ 
+ else()

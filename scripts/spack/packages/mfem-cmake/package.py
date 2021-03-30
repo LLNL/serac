@@ -315,6 +315,7 @@ class MfemCmake(CMakePackage, CudaPackage):
     patch('mfem-3.3-3.4-petsc-3.9.patch',
           when='@3.3.0:3.4.0 +petsc ^petsc@3.9.0:')
     patch('mfem-4.2-umpire.patch', when='@4.2.0+umpire')
+    patch('mfem-netcdf.patch', when='+netcdf')
 
     # Patch to fix MFEM makefile syntax error. See
     # https://github.com/mfem/mfem/issues/1042 for the bug report and
@@ -697,7 +698,7 @@ class MfemCmake(CMakePackage, CudaPackage):
 
             #TODO (bernede1@llnl.gov): what about NETCDF_REQUIRED_PACKAGES
             # see MFEM config/defaults.cmake
-            cfg.white(cmake_cache_string("NetCDF_REQUIRED_PACKAGES", "hdf5"))
+            cfg.write(cmake_cache_string("NetCDF_REQUIRED_PACKAGES", "HDF5"))
 
         if '+zlib' in spec:
             if "@:3.3.2" in spec:
