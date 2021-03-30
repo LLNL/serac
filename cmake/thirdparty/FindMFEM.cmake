@@ -116,6 +116,12 @@ else()
         list(APPEND MFEM_LIBRARIES ${CUDA_LIBRARIES})
         list(APPEND MFEM_LIBRARIES ${CUDA_CUBLAS_LIBRARIES})
     endif()
+
+    blt_import_library(
+        NAME          mfem
+        INCLUDES      ${MFEM_INCLUDE_DIRS}
+        LIBRARIES     ${MFEM_LIBRARIES}
+        TREAT_INCLUDES_AS_SYSTEM ON)
 endif()
 
 include(FindPackageHandleStandardArgs)
@@ -131,9 +137,3 @@ endif()
 
 message(STATUS "MFEM Includes: ${MFEM_INCLUDE_DIRS}")
 message(STATUS "MFEM Libraries: ${MFEM_LIBRARIES}")
-
-blt_register_library(
-    NAME          mfem
-    INCLUDES      ${MFEM_INCLUDE_DIRS}
-    LIBRARIES     ${MFEM_LIBRARIES}
-    TREAT_INCLUDES_AS_SYSTEM ON)
