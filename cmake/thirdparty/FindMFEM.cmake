@@ -121,7 +121,13 @@ else()
         NAME          mfem
         INCLUDES      ${MFEM_INCLUDE_DIRS}
         LIBRARIES     ${MFEM_LIBRARIES}
-        TREAT_INCLUDES_AS_SYSTEM ON)
+        TREAT_INCLUDES_AS_SYSTEM ON
+        EXPORTABLE    ON)
+
+    install(TARGETS          mfem
+        EXPORT               serac-targets
+        DESTINATION          lib
+        )
 endif()
 
 include(FindPackageHandleStandardArgs)
