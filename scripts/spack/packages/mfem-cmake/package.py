@@ -316,6 +316,9 @@ class MfemCmake(CMakePackage, CudaPackage):
           when='@3.3.0:3.4.0 +petsc ^petsc@3.9.0:')
     patch('mfem-4.2-umpire.patch', when='@4.2.0+umpire')
     patch('mfem-netcdf.patch', when='+netcdf')
+    # JBE: This is the minimum needed for Serac but probably not sufficient
+    # in the general case
+    patch('mfem-4.2-static.patch', when='@4.2.0~shared')
 
     # Patch to fix MFEM makefile syntax error. See
     # https://github.com/mfem/mfem/issues/1042 for the bug report and
@@ -622,13 +625,13 @@ class MfemCmake(CMakePackage, CudaPackage):
 
         if '+lapack' in spec:
             lapack = spec['lapack'].libs
-            lapack_inc = spec['lapack'].prefix.includes
+            lapack_inc = spec['lapack'].prefix.include
             lapack_lib = ld_flags_from_library_list(lapack)
             cfg.write(cmake_cache_string("LAPACK_LIBRARIES",lapack_lib))
             cfg.write(cmake_cache_string("LAPACK_INCLUDE_DIRS",lapack_inc))
 
             blas = spec['blas'].libs
-            blas_inc = spec['blas'].prefix.includes
+            blas_inc = spec['blas'].prefix.include
             blas_lib = ld_flags_from_library_list(blas)
             cfg.write(cmake_cache_string("BLAS_LIBRARIES",blas_lib))
             cfg.write(cmake_cache_string("BLAS_INCLUDE_DIRS",blas_inc))
@@ -699,6 +702,11 @@ class MfemCmake(CMakePackage, CudaPackage):
             #TODO (bernede1@llnl.gov): what about NETCDF_REQUIRED_PACKAGES
             # see MFEM config/defaults.cmake
             cfg.write(cmake_cache_string("NetCDF_REQUIRED_PACKAGES", "HDF5"))
+            # FindHDF5 (builtin) uses HDF5_ROOT and not HDF5_DIR
+            hdf5_dir = get_spec_path(spec, "hdf5")
+            cfg.write(cmake_cache_entry("HDF5_ROOT", hdf5_dir))
+            # NetCDF uses hdf5+hl
+            cfg.write(cmake_cache_option("HDF5_FIND_HL", True))
 
         if '+zlib' in spec:
             if "@:3.3.2" in spec:
