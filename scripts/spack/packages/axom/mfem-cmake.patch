@@ -1,0 +1,13 @@
+diff --git a/src/cmake/thirdparty/FindMFEM.cmake b/src/cmake/thirdparty/FindMFEM.cmake
+index 6210ad287..a1d62dd36 100644
+--- a/src/cmake/thirdparty/FindMFEM.cmake
++++ b/src/cmake/thirdparty/FindMFEM.cmake
+@@ -16,7 +16,7 @@ if (NOT MFEM_DIR)
+ endif()
+ 
+ # Using the CMake build system on Windows, and make-based system otherwise
+-set(_use_mfem_config FALSE)
++set(_use_mfem_config TRUE)
+ if(WIN32)
+     set(_use_mfem_config TRUE)
+ endif()

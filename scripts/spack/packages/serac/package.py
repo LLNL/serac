@@ -76,7 +76,7 @@ class Serac(CMakePackage, CudaPackage):
     """FIXME: Put a proper description of your package here."""
 
     homepage = "https://www.github.com/LLNL/serac"
-    git      = "ssh://git@github.com:LLNL/serac.git"
+    git      = "git@github.com:LLNL/serac.git"
 
     version('develop', branch='develop', submodules=True, preferred=True)
 
@@ -115,7 +115,7 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("sundials~shared+hypre+monitoring")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials",
+    debug_deps = ["mfem-cmake@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials",
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -125,7 +125,7 @@ class Serac(CMakePackage, CudaPackage):
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
     #depends_on("mfem+netcdf", when="+netcdf")
-    depends_on("mfem+petsc", when="+petsc")
+    depends_on("mfem-cmake+petsc", when="+petsc")
 
     # Needs to be first due to a bug with the Spack concretizer
     depends_on("hdf5+hl@1.8.21~shared")
@@ -153,12 +153,12 @@ class Serac(CMakePackage, CudaPackage):
     # Libraries that have a GPU variant
     conflicts('cuda_arch=none', when='+cuda', msg='CUDA architecture is required')
     depends_on("amgx@2.1.x", when="+cuda")
-    cuda_deps = ["mfem", "axom"]
+    cuda_deps = ["mfem-cmake", "axom"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
 
     for sm_ in CudaPackage.cuda_arch_values:
-        depends_on('mfem+amgx cuda_arch=sm_{0}'.format(sm_),
+        depends_on('mfem-cmake+amgx cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         depends_on('axom cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
@@ -399,7 +399,7 @@ class Serac(CMakePackage, CudaPackage):
         superludist_dir = get_spec_path(spec, "superlu-dist", path_replacements)
         cfg.write(cmake_cache_entry("SUPERLUDIST_DIR", superludist_dir))
 
-        mfem_dir = get_spec_path(spec, "mfem", path_replacements)
+        mfem_dir = get_spec_path(spec, "mfem-cmake", path_replacements)
         cfg.write(cmake_cache_entry("MFEM_DIR", mfem_dir))
 
         if "+caliper" in spec:
