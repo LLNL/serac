@@ -1,13 +1,3 @@
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -87,6 +87,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/config/XSDKDefaults.cmake")
-
- # Enable languages.
- enable_language(CXX)
-+enable_language(C)
- if (MFEM_USE_CUDA)
-     if (MFEM_USE_HIP)
-         message(FATAL_ERROR " *** MFEM_USE_HIP cannot be combined with MFEM_USE_CUDA.")  
 --- /dev/null
 +++ b/config/cmake/modules/FindHDF5.cmake
 @@ -0,0 +1,17 @@
@@ -25,6 +15,7 @@
 +# Save + restore the module path so we can use the CMake-provided FindHDF5.cmake
 +set(_module_path ${CMAKE_MODULE_PATH})
 +set(CMAKE_MODULE_PATH)
++enable_language(C) # FindHDF5.cmake uses the C compiler
 +find_package(HDF5 COMPONENTS HL C) # netcdf requires HL - this matches defaults.mk
 +list(INSERT HDF5_LIBRARIES 0 ${HDF5_HL_LIBRARIES})
 +set(CMAKE_MODULE_PATH ${_module_path})
