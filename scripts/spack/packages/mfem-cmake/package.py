@@ -308,7 +308,7 @@ class MfemCmake(CMakePackage, CudaPackage):
     depends_on('amgx~mpi', when='+amgx~mpi')
     for sm_ in CudaPackage.cuda_arch_values:
         depends_on('amgx cuda_arch={0}'.format(sm_),
-                   when='+amgx cuda_arch=sm_{0}'.format(sm_))
+                   when='+amgx cuda_arch={0}'.format(sm_))
 
     patch('mfem_ppc_build.patch', when='@3.2:3.3.0 arch=ppc64le')
     patch('mfem-3.4.patch', when='@3.4.0')
@@ -750,7 +750,7 @@ class MfemCmake(CMakePackage, CudaPackage):
 
         if '+amgx' in spec:
             amgx_dir = get_spec_path(spec, "amgx")
-            cfg.write(cmake_cache_string("AMGX_DIR", amgx.prefix))
+            cfg.write(cmake_cache_string("AMGX_DIR", amgx_dir))
 
         if '+libceed' in spec:
             ceed_dir = get_spec_path(spec, "libceed")
