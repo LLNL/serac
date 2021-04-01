@@ -98,7 +98,7 @@ void chain_rule_tests(){
     std::tuple < 
       tensor< double, 3, 3 >,
       tensor< double, 3 >
-    > df = chain_rule<2>(std::tuple{df1_dx, df2_dx}, dx);
+    > df = chain_rule(std::tuple{df1_dx, df2_dx}, dx);
 
     std::cout << std::get<0>(df) << std::endl;
     std::cout << std::get<1>(df) << std::endl;
@@ -121,7 +121,7 @@ void chain_rule_tests(){
               dot(std::get<1>(std::get<1>(grad)), dv) +
               ddot(std::get<2>(std::get<1>(grad)), dL);  
 
-    auto df_ad = chain_rule<2>(grad, std::tuple{dp, dv, dL});
+    auto df_ad = chain_rule(grad, std::tuple{dp, dv, dL});
 
     std::cout << "comparison with finite difference: ";
     std::cout << df0 - df0_fd << std::endl;
@@ -141,7 +141,7 @@ void chain_rule_tests(){
       double, tensor<double, 2>
     > dx;
 
-    auto df = chain_rule<2>(df_dx, dx);
+    auto df = chain_rule(df_dx, dx);
 
     std::cout << std::get<0>(df) << std::endl;
     std::cout << std::get<1>(df) << std::endl;

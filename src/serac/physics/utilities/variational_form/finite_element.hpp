@@ -36,9 +36,10 @@ struct Hcurl{
   static constexpr int components = c;
 };
 
-template < int p >
+template < int p, int c = 1 >
 struct L2{
   static constexpr int order = p;
+  static constexpr int components = c;
 };
 
 enum class Family {H1, HCURL, HDIV, L2};

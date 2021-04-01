@@ -6,6 +6,11 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   static constexpr int  dim        = 2;
   static constexpr int  ndof       = (p + 1) * (p + 1);
 
+  using residual_type = typename std::conditional< components == 1, 
+    tensor< double, ndof >,
+    tensor< double, ndof, components >
+  >::type;
+
   static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
     auto N_xi  = GaussLobattoInterpolation01<p + 1>(xi[0]);

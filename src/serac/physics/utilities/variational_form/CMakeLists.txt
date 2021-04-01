@@ -17,6 +17,10 @@ set(weakform_headers
     quadrature.hpp
     )
 
+set(weakform_sources
+    detail/hexahedron_h1.cpp
+    detail/quadrilateral_h1.cpp)
+
 blt_add_library(
       NAME        serac_weakform
       HEADERS     ${weakform_headers}
@@ -56,7 +60,7 @@ endforeach()
 
 # Then add the examples/tests
 set(weakform_tests_mpi
-    tests/integration_rule_problem.cpp
+    tests/weak_form_boundary_test.cpp
     tests/weak_form_comparisons.cpp)
     
 foreach(filename ${weakform_tests_mpi})

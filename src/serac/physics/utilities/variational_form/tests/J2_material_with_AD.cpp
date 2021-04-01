@@ -5,29 +5,27 @@
 
 class timer {
   typedef std::chrono::high_resolution_clock::time_point time_point;
-  typedef std::chrono::duration<double> duration_type;
+  typedef std::chrono::duration<double>                  duration_type;
 
- public:
+public:
   void start() { then = std::chrono::high_resolution_clock::now(); }
 
   void stop() { now = std::chrono::high_resolution_clock::now(); }
 
-  double elapsed() {
-    return std::chrono::duration_cast<duration_type>(now - then).count();
-  }
+  double elapsed() { return std::chrono::duration_cast<duration_type>(now - then).count(); }
 
- private:
+private:
   time_point then, now;
 };
 
 static constexpr auto I = Identity<3>();
 
 struct J2 {
-  double E       = 100;    // Young's modulus
-  double nu      = 0.25;   // Poisson's ratio
-  double Hi      = 1.0;    // isotropic hardening constant
-  double Hk      = 2.3;    // kinematic hardening constant
-  double sigma_y = 300.0;  // yield stress
+  double E;        // Young's modulus
+  double nu;       // Poisson's ratio
+  double Hi;       // isotropic hardening constant
+  double Hk;       // kinematic hardening constant
+  double sigma_y;  // yield stress
 
   struct State {
     tensor<double, 3, 3> beta;           // back-stress tensor
@@ -60,7 +58,6 @@ struct J2 {
 
     // (ii) admissibility
     if (state.pl_strain_inc > 0.0) {
-
       // (iii) return mapping
       s = s - sqrt(6.0) * G * state.pl_strain_inc * normalize(eta);
 
@@ -68,7 +65,7 @@ struct J2 {
       state.el_strain = (s / (2.0 * G)) + ((p / K) * I);
 
       state.beta = state.beta + sqrt(2.0 / 3.0) * Hk * state.pl_strain_inc * normalize(eta);
-    } 
+    }
 
     return s + p * I;
   }
@@ -94,7 +91,6 @@ struct J2 {
 
     // (ii) admissibility
     if (phi > 0.0) {
-
       // see (7.207) on pg. 261
       auto plastic_strain_inc = phi / (3 * G + Hk + Hi);
 
@@ -155,12 +151,12 @@ auto displacement_gradient(double t)
               }};
 }
 
-int main() {
-
-  timer stopwatch;
+int main()
+{
+  timer  stopwatch;
   double J2_evaluation_time = 0.0;
-  double J2_gradient_time = 0.0;
-  double J2_AD_time = 0.0;
+  double J2_gradient_time   = 0.0;
+  double J2_AD_time         = 0.0;
 
   double t  = 0.0;
   double dt = 0.0001;
@@ -176,18 +172,17 @@ int main() {
   J2::State state{};
 
   while (t < 1.0) {
-
     auto grad_u = displacement_gradient(t);
 
     auto backup = state;
 
     stopwatch.start();
-    tensor<double,3,3> stress = material.calculate_stress(grad_u, state);
+    tensor<double, 3, 3> stress = material.calculate_stress(grad_u, state);
     stopwatch.stop();
     J2_evaluation_time += stopwatch.elapsed();
 
     stopwatch.start();
-    tensor<double,3,3,3,3> C = material.calculate_gradient(state);
+    tensor<double, 3, 3, 3, 3> C = material.calculate_gradient(state);
     stopwatch.stop();
     J2_gradient_time += stopwatch.elapsed();
 
@@ -207,8 +202,8 @@ int main() {
   std::cout << "total J2 evaluation time (no AD): " << J2_evaluation_time << std::endl;
   std::cout << "total J2 gradient time (no AD): " << J2_gradient_time << std::endl;
   std::cout << "total J2 evaluation+gradient time (AD): " << J2_AD_time << std::endl;
-  std::cout << "(AD time) / (manual gradient time): " << J2_AD_time / (J2_evaluation_time + J2_gradient_time) << std::endl;
-
+  std::cout << "(AD time) / (manual gradient time): " << J2_AD_time / (J2_evaluation_time + J2_gradient_time)
+            << std::endl;
 }
 
 // total J2 evaluation time (no AD):       0.0196884

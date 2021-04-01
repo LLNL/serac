@@ -241,6 +241,9 @@ constexpr auto & operator+=(tensor< S, n ... > & A, const tensor < T, n ... > & 
   return A;
 }
 
+template < typename T, int ... n >
+constexpr auto & operator+=(tensor< T, n ... > & A, zero) { return A; }
+
 template < typename S, typename T, int ... n >
 constexpr auto & operator-=(tensor< S, n ... > & A, const tensor < T, n ... > & B) {
   for (int i = 0; i < tensor < S, n ... >::shape[0]; i++) {
@@ -248,6 +251,9 @@ constexpr auto & operator-=(tensor< S, n ... > & A, const tensor < T, n ... > & 
   }
   return A;
 }
+
+template < typename T, int ... n >
+constexpr auto & operator-=(tensor< T, n ... > & A, zero) { return A; }
 
 template < typename S, typename T >
 constexpr auto outer(S A, T B) {
@@ -270,6 +276,12 @@ constexpr auto outer(tensor< S, m > A, T B) {
   for (int i = 0; i < m; i++) { AB[i] = A[i] * B; }
   return AB;
 }
+
+template < typename T, int n >
+constexpr auto outer(zero, tensor< T, n >) { return zero{}; }
+
+template < typename T, int n >
+constexpr auto outer(tensor< T, n >, zero) { return zero{}; }
 
 template < typename S, typename T, int m, int n >
 constexpr auto outer(S A, tensor< T, m, n > B) {
@@ -838,29 +850,22 @@ namespace impl {
 template < typename T1, typename T2 >
 using outer_product_t = typename impl::outer_prod<T1, T2>::type;
 
-template < typename ... T >
-auto get_gradient(dual< std::tuple < T ... > > arg) {
-  return std::apply([](auto ... each_value){
-    return std::tuple{each_value ...};
-  }, arg.gradient);
+template < typename T, int ... n, int ... m >
+auto get_value(tensor< dual< T >, n ... > arg) {
+  tensor< double, n ...> value{};
+  for_constexpr< n ... >([&](auto ... i){
+    value(i...) = arg(i...).value;
+  });
+  return value;
 }
+
+auto get_gradient(double /* arg */) { return zero{}; }
 
 template < typename T, int ... n >
 auto get_gradient(tensor< dual< double >, n ... > arg) {
   tensor< double, n ... > g{};
   for_constexpr< n ... >([&](auto ... i){
     g[{i...}] = arg[{i...}].gradient;
-  });
-  return g;
-}
-
-template < typename ... T, int ... n >
-auto get_gradient(tensor< dual< std::tuple < T ... > >, n ... > arg) {
-  std::tuple < outer_product_t< tensor< double, n... >, T > ... > g{};
-  for_constexpr< n ... >([&](auto ... i){
-    for_constexpr< sizeof ... (T) >([&](auto j){
-      std::get<j>(g)(i...) = std::get<j>(arg(i...).gradient);
-    });
   });
   return g;
 }
@@ -872,39 +877,6 @@ auto get_gradient(tensor< dual< tensor< double, m ... > >, n ... > arg) {
     g(i...) = arg(i...).gradient;
   });
   return g;
-}
-
-template < typename ... T >
-auto get_gradient(std::tuple < T ... > tuple_of_values) {
-  return std::apply([](auto ... each_value){
-    return std::tuple{get_gradient(each_value) ...};
-  }, tuple_of_values);
-}
-
-template < typename T>
-auto get_value(const T & arg) {
-  return arg;
-}
-
-template < typename T>
-auto get_value(dual< T > arg) {
-  return arg.value;
-}
-
-template < typename T, int ... n, int ... m >
-auto get_value(tensor< dual< T >, n ... > arg) {
-  tensor< double, n ...> value{};
-  for_constexpr< n ... >([&](auto ... i){
-    value(i...) = arg(i...).value;
-  });
-  return value;
-}
-
-template < typename ... T >
-auto get_value(std::tuple < T ... > tuple_of_values) {
-  return std::apply([](auto ... each_value){
-    return std::tuple{get_value(each_value) ...};
-  }, tuple_of_values);
 }
 
 constexpr auto chain_rule(const zero /* df_dx */, const zero /* dx */) { return zero{}; }
@@ -947,26 +919,26 @@ auto chain_rule(tensor < double, m, n, p ... > df_dx, tensor< double, p... > dx)
   return total;
 }
 
-template < typename ... T, typename ... S, int ... I >
-auto chain_rule_helper(std::tuple < T ... > df_dx, std::tuple < S ... > dx, std::integer_sequence<int, I...>) {
-  return (chain_rule(std::get<I>(df_dx), std::get<I>(dx)) + ...);
-}
+/*
+tuple<double, double, double> output = chain_rule(
+  tuple<
+    tuple<double,double>, 
+    tuple<double,double>
+  >, 
+  tuple<double, double>
+);
 
-template < typename ... T, typename ... S >
-auto chain_rule(std::tuple < T ... > df_dx, std::tuple < S ... > dx) {
-  static_assert(sizeof ... (T) == sizeof ... (S));
-  return chain_rule_helper(df_dx, dx, std::make_integer_sequence<int, int(sizeof ...(T))>());
-}
+tuple<double, double, double> output = chain_rule(
+  tuple<
+    tuple<double,double>, 
+    tuple<double,double>,
+    tuple<double,double>
+  >, 
+  tuple<double, double>
+);
 
-template < int rank, typename ... T, typename S >
-auto chain_rule(std::tuple < T ... > df_dx, S dx) {
-  if constexpr (rank == 1) {
-    return std::apply([&](auto ... each_component_of_df_dx){
-      return (chain_rule(each_component_of_df_dx, dx) + ...);
-    }, df_dx);
-  } else {
-    return std::apply([&](auto ... each_component_of_df_dx){
-      return std::tuple{chain_rule(each_component_of_df_dx, dx) ... };
-    }, df_dx);
-  }
-}
+double output = chain_rule(
+  tuple< double, double >,
+  tuple< double, double >
+);
+*/

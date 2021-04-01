@@ -194,6 +194,16 @@ auto& operator<<(std::ostream& out, dual<T> A)
 
 constexpr auto make_dual(double x) { return dual{x, 1.0}; }
 
+template < typename T >
+auto get_value(const T & arg) {
+  return arg;
+}
+
+template < typename T >
+auto get_value(dual< T > arg) {
+  return arg.value;
+}
+
 template <typename T>
 struct is_dual_number {
   static constexpr bool value = false;

@@ -6,6 +6,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr int  ndof       = 2 * p * (p + 1);
   static constexpr int  components = 1;
 
+  using residual_type = typename std::conditional< components == 1, 
+    tensor< double, ndof >,
+    tensor< double, ndof, components >
+  >::type;
+
   static constexpr auto directions = []{
     int dof_per_direction = p * (p + 1);
 
@@ -17,7 +22,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return directions;
   }();
 
-  static constexpr auto nodes = [](){
+  static constexpr auto nodes = []{
 
     auto legendre_nodes = GaussLegendreNodes<p>();
     auto lobatto_nodes = GaussLobattoNodes<p+1>();
@@ -142,3 +147,7 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     }
   }
 };
+
+//extern template struct finite_element<Geometry::Quadrilateral, Hcurl<1> >;
+//extern template struct finite_element<Geometry::Quadrilateral, Hcurl<2> >;
+//extern template struct finite_element<Geometry::Quadrilateral, Hcurl<3> >;

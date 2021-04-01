@@ -52,6 +52,11 @@ struct finite_element<::Geometry::Hexahedron, Hcurl<p>> {
     return nodes;
   }();
 
+  using residual_type = typename std::conditional< components == 1, 
+    tensor< double, ndof >,
+    tensor< double, ndof, components >
+  >::type;
+
   static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
   {
     tensor<double, ndof, dim> N{};

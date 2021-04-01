@@ -63,7 +63,7 @@ void Add(const mfem::DeviceTensor<3, double> & r_global, tensor< double, ndof, c
   }
 }
 
-template < typename element_type, typename T, int dim = element_type::dim >
+template < typename element_type, typename T, int dim >
 auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double,dim,dim> J) {
   if constexpr (element_type::family == Family::H1) {
     return std::tuple{
@@ -82,7 +82,18 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double,dim,dim> 
   }
 }
 
-template < typename element_type, typename T, int dim = element_type::dim >
+template < typename element_type, typename T, int geometry_dim, int spatial_dim >
+auto Preprocess(T u, const tensor<double, geometry_dim> xi, const tensor<double,spatial_dim,geometry_dim> J) {
+  if constexpr (element_type::family == Family::H1) {
+    return dot(u, element_type::shape_functions(xi));
+  }
+
+  if constexpr (element_type::family == Family::HCURL) {
+    return dot(u, dot(element_type::shape_functions(xi), inv(J)));
+  }
+}
+
+template < typename element_type, typename T, int dim >
 auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double,dim,dim> J) {
   if constexpr (element_type::family == Family::H1) {
     auto W = element_type::shape_functions(xi);
@@ -100,83 +111,102 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double,dim,dim>
   }
 }
 
+template < typename element_type, typename T, int geometry_dim, int spatial_dim  >
+auto Postprocess(T f, const tensor<double, geometry_dim> xi, const tensor<double,spatial_dim,geometry_dim> J) {
+  if constexpr (element_type::family == Family::H1) {
+    return outer(element_type::shape_functions(xi), f);
+  }
+
+  if constexpr (element_type::family == Family::HCURL) {
+    return outer(element_type::shape_functions(xi), dot(inv(J), f));
+  }
+}
+
+template < int m, int n >
+auto Measure(tensor< double, m, n > A) {
+  if constexpr (m == n) {
+    return det(A);
+  } else {
+    return sqrt(det(transpose(A) * A));
+  }
+}
+
 } // namespace impl
 
-
-template < ::Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda > 
+template < ::Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q, typename derivatives_type, typename lambda > 
 void evaluation_kernel(const mfem::Vector & U, mfem::Vector & R, derivatives_type * derivatives_ptr, const mfem::Vector & J_, const mfem::Vector & X_, int num_elements, lambda qf) {
 
   using test_element = finite_element< g, test >;
   using trial_element = finite_element< g, trial >;
-  static constexpr int dim = dimension_of(g);
+  using element_residual_type = typename trial_element::residual_type;
   static constexpr int test_ndof = test_element::ndof;
   static constexpr int trial_ndof = trial_element::ndof;
   static constexpr auto rule = GaussQuadratureRule< g, Q >();
 
-  auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements);
-  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
+  auto X = mfem::Reshape(X_.Read(), rule.size(), spatial_dim, num_elements);
+  auto J = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
   auto u = impl::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = impl::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
   for (int e = 0; e < num_elements; e++) {
-    tensor u_local = impl::Load<trial_element>(u, e);
+    tensor u_elem = impl::Load<trial_element>(u, e);
 
-    reduced_tensor <double, test_element::ndof, test_element::components> r_local{};
+    element_residual_type r_elem{};
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       auto xi = rule.points[q];
       auto dxi = rule.weights[q];
-      auto x_q = make_tensor< dim >([&](int i){ return X(q, i, e); });
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
-      double dx = det(J_q) * dxi;
+      auto x_q = make_tensor< spatial_dim >([&](int i){ return X(q, i, e); });
+      auto J_q = make_tensor< spatial_dim, geometry_dim >([&](int i, int j){ return J(q, i, j, e); });
+      double dx = impl::Measure(J_q) * dxi;
 
-      auto arg = impl::Preprocess<trial_element>(u_local, xi, J_q);
+      auto arg = impl::Preprocess<trial_element>(u_elem, xi, J_q);
 
       auto qf_output = qf(x_q, make_dual(arg));
 
-      r_local += impl::Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+      r_elem += impl::Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
 
       derivatives_ptr[e * int(rule.size()) + q] = get_gradient(qf_output);
     }
 
-    impl::Add(r, r_local, e);
+    impl::Add(r, r_elem, e);
   }
 
 }
 
-template < ::Geometry g, typename test, typename trial, int Q, typename derivatives_type > 
+template < ::Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q, typename derivatives_type > 
 void gradient_kernel(const mfem::Vector & dU, mfem::Vector & dR, derivatives_type * derivatives_ptr, const mfem::Vector & J_, int num_elements) {
 
   using test_element = finite_element< g, test >;
   using trial_element = finite_element< g, trial >;
-  static constexpr int dim = dimension_of(g);
+  using element_residual_type = typename trial_element::residual_type;
   static constexpr int test_ndof = test_element::ndof;
   static constexpr int trial_ndof = trial_element::ndof;
   static constexpr auto rule = GaussQuadratureRule< g, Q >();
 
-  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
+  auto J = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
   auto du = impl::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
   auto dr = impl::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
 
   for (int e = 0; e < num_elements; e++) {
-    tensor du_local = impl::Load<trial_element>(du, e);
+    tensor du_elem = impl::Load<trial_element>(du, e);
 
-    reduced_tensor <double, test_element::ndof, test_element::components> dr_local{};
+    element_residual_type dr_elem{};
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       auto xi = rule.points[q];
       auto dxi = rule.weights[q];
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
-      double dx = det(J_q) * dxi;
+      auto J_q = make_tensor< spatial_dim, geometry_dim >([&](int i, int j){ return J(q, i, j, e); });
+      double dx = impl::Measure(J_q) * dxi;
 
-      auto darg = impl::Preprocess<trial_element>(du_local, xi, J_q);
+      auto darg = impl::Preprocess<trial_element>(du_elem, xi, J_q);
 
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
 
-      auto dq = chain_rule<2>(dq_darg, darg);
+      auto dq = chain_rule(dq_darg, darg);
 
-      dr_local += impl::Postprocess<test_element>(dq, xi, J_q) * dx;
+      dr_elem += impl::Postprocess<test_element>(dq, xi, J_q) * dx;
     }
 
-    impl::Add(dr, dr_local, e);
+    impl::Add(dr, dr_elem, e);
   }
 
 }
@@ -215,21 +245,27 @@ using test_space_t = typename impl::get_test_space< T >::type;
 template < typename T >
 using trial_space_t = typename impl::get_trial_space< T >::type;
 
-template < typename space, int dim >
+template < typename space, int geometry_dim, int spatial_dim >
 struct lambda_argument;
 
 template < int p, int c, int dim >
-struct lambda_argument< H1<p, c>, dim >{
+struct lambda_argument< H1<p, c>, dim, dim >{
   using type = std::tuple< reduced_tensor<double, c >, reduced_tensor<double, c, dim> >;
 };
 
+// for now, we only provide the interpolated values for surface integrals
+template < int p, int c, int geometry_dim, int spatial_dim >
+struct lambda_argument< H1<p, c>, geometry_dim, spatial_dim >{
+  using type = reduced_tensor<double, c >;
+};
+
 template < int p >
-struct lambda_argument< Hcurl<p>, 2 >{
+struct lambda_argument< Hcurl<p>, 2, 2 >{
   using type = std::tuple< tensor<double, 2>, double >;
 };
 
 template < int p >
-struct lambda_argument< Hcurl<p>, 3 >{
+struct lambda_argument< Hcurl<p>, 3, 3 >{
   using type = std::tuple< tensor<double, 3>, tensor<double,3> >;
 };
 
@@ -241,10 +277,10 @@ struct Integral {
   using test_space = test_space_t< spaces >;
   using trial_space = trial_space_t< spaces >;
 
-  template < int dim, typename lambda_type >
-  Integral(int num_elements, const mfem::Vector & J, const mfem::Vector & X, Dimension<dim>, lambda_type && qf) : J_(J), X_(X) {
+  template < int geometry_dim, int spatial_dim, typename lambda_type >
+  Integral(int num_elements, const mfem::Vector & J, const mfem::Vector & X, Dimension<geometry_dim>, Dimension<spatial_dim>, lambda_type && qf) : J_(J), X_(X) {
 
-    constexpr auto geometry = supported_geometries[dim];
+    constexpr auto geometry = supported_geometries[geometry_dim];
     constexpr auto Q = std::max(test_space::order, trial_space::order) + 1;
 
     // these lines of code figure out the argument types that will be passed
@@ -252,22 +288,23 @@ struct Integral {
     //
     // we use them to observe the output type and allocate memory to store 
     // the derivative information at each quadrature point
-    using x_t = tensor< double, dim >;
-    using u_du_t = typename lambda_argument< trial_space, dim >::type;
+
+    using x_t = tensor< double, spatial_dim >;
+    using u_du_t = typename lambda_argument< trial_space, geometry_dim, spatial_dim >::type;
     using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
     // derivatives of integrand w.r.t. {u, du_dx}
-    auto num_quadrature_points = static_cast<uint32_t>(X.Size() / dim);
+    auto num_quadrature_points = static_cast<uint32_t>(X.Size() / spatial_dim);
     qf_derivatives.resize(sizeof(derivative_type) * num_quadrature_points);
 
     auto qf_derivatives_ptr = reinterpret_cast< derivative_type * >(qf_derivatives.data());
 
     evaluation = [=](const mfem::Vector & U, mfem::Vector & R){ 
-      evaluation_kernel< geometry, test_space, trial_space, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
+      evaluation_kernel< geometry, test_space, trial_space, geometry_dim, spatial_dim, Q >(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
     };
 
     gradient = [=](const mfem::Vector & dU, mfem::Vector & dR){ 
-      gradient_kernel< geometry, test_space, trial_space, Q >(dU, dR, qf_derivatives_ptr, J_, num_elements);
+      gradient_kernel< geometry, test_space, trial_space, geometry_dim, spatial_dim, Q >(dU, dR, qf_derivatives_ptr, J_, num_elements);
     };
 
   }
@@ -346,14 +383,27 @@ struct WeakForm< test(trial) > : public mfem::Operator {
       }
     }
 
-    const mfem::FiniteElement& el = *test_space->GetFE(0);
-
-    const mfem::IntegrationRule & ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-
-    auto geom = domain.GetGeometricFactors(ir, mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS);
-
-    // emplace_back rather than push_back to avoid dangling references in std::function
-    integrals.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{}, integrand);
+    if constexpr (geometry_dim == spatial_dim) {
+      const mfem::FiniteElement& el = *test_space->GetFE(0);
+      const mfem::IntegrationRule & ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+      auto geom = domain.GetGeometricFactors(ir, mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS);
+      domain_integrals.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{}, Dimension<spatial_dim>{}, integrand);
+      return;
+    } else if constexpr ((geometry_dim + 1) == spatial_dim) {
+      const mfem::FiniteElement& el = *test_space->GetBE(0);
+      const mfem::IntegrationRule & ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+      constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::JACOBIANS | mfem::FaceGeometricFactors::NORMALS;
+      auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
+      boundary_integrals.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{}, Dimension<spatial_dim>{}, integrand);
+      return;
+    } else if constexpr (true) {
+      // if static_assert has a literal 'false' for its first arg,
+      // it will trigger even when this branch isn't selected. So,
+      // we define an expression that is always false (see first
+      // if constexpr expression) to work around this limitation
+      constexpr bool always_false = (geometry_dim == spatial_dim); 
+      static_assert(always_false, "unsupported integral dimensionality");
+    }
 
   }
 
@@ -372,6 +422,11 @@ struct WeakForm< test(trial) > : public mfem::Operator {
     AddIntegral(Dimension<d>{} /* geometry */, Dimension<d>{} /* spatial */, integrand, domain);
   }
 
+  template < typename lambda >
+  void AddSurfaceIntegral(lambda && integrand, mfem::Mesh & domain) {
+    AddIntegral(Dimension<2>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain);
+  }
+
   template < Operation op = Operation::Mult >
   void Evaluation(const mfem::Vector & input_T, mfem::Vector & output_T) const {
 
@@ -388,7 +443,7 @@ struct WeakForm< test(trial) > : public mfem::Operator {
     //
     // TODO investigate performance of alternative implementation described above
     output_E = 0.0;
-    for (auto & integral : integrals) {
+    for (auto & integral : domain_integrals) {
       if constexpr (op == Operation::Mult) {
         integral.Mult(input_E, output_E);
       }
@@ -445,7 +500,8 @@ struct WeakForm< test(trial) > : public mfem::Operator {
   const mfem::Operator * P_test, * G_test;
   const mfem::Operator * P_trial, * G_trial;
 
-  std::vector < Integral< test(trial) > > integrals;
+  std::vector < Integral< test(trial) > > domain_integrals;
+  std::vector < Integral< test(trial) > > boundary_integrals;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {
