@@ -91,7 +91,7 @@ void weak_form_test(mfem::ParMesh & mesh, H1<p> test, H1<p> trial, Dimension<dim
   }, mesh);
 
   mfem::Vector r1 = A * u_global - f;
-  mfem::Vector r2 = residual * u_global;
+  mfem::Vector r2 = residual(u_global);
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
   std::cout << "||r2||: " << r2.Norml2() << std::endl;
@@ -161,7 +161,7 @@ void weak_form_test(mfem::ParMesh & mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   }, mesh);
 
   mfem::Vector r1 = A * u_global - f;
-  mfem::Vector r2 = residual * u_global;
+  mfem::Vector r2 = residual(u_global);
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
   std::cout << "||r2||: " << r2.Norml2() << std::endl;
@@ -229,7 +229,7 @@ void weak_form_test(mfem::ParMesh & mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   }, mesh);
 
   mfem::Vector r1 = B * u_global - f;
-  mfem::Vector r2 = residual * u_global;
+  mfem::Vector r2 = residual(u_global);
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
   std::cout << "||r2||: " << r2.Norml2() << std::endl;
