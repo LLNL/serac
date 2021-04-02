@@ -138,6 +138,15 @@ struct J2 {
       }
     }
     return C;
+
+    /*
+    return make_tensor<3,3,3,3>([&](auto i, auto j, auto k, auto l){
+      double I4    = (i == j) * (k == l);
+      double I4sym = 0.5 * ((i == k) * (j == l) + (i == l) * (j == k));
+      double I4dev = I4sym - (i == j) * (k == l) / 3.0;
+      return K * I4 + A1 * I4dev + A2 * N(i, j) * N(k, l);
+    });
+    */
   }
 };
 
