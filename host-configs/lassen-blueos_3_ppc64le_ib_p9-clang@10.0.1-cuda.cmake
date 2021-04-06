@@ -53,7 +53,7 @@ set(MPIEXEC_EXECUTABLE "/usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-rele
 #---------------------------------------
 # Library Dependencies
 #---------------------------------------
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2021_03_29_07_27_29/clang-10.0.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/blueos_3_ppc64le_ib_p9/2021_04_06_05_50_23/clang-10.0.1" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 
@@ -77,7 +77,7 @@ set(CALIPER_DIR "${TPL_ROOT}/caliper-master" CACHE PATH "")
 
 set(RAJA_DIR "${TPL_ROOT}/raja-develop" CACHE PATH "")
 
-set(UMPIRE_DIR "${TPL_ROOT}/umpire-4.1.2" CACHE PATH "")
+set(UMPIRE_DIR "${TPL_ROOT}/umpire-develop" CACHE PATH "")
 
 #------------------------------------------------------------------------------
 # Devtools

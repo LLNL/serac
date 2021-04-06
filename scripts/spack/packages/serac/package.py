@@ -141,7 +141,8 @@ class Serac(CMakePackage, CudaPackage):
     depends_on("axom~umpire", when="~umpire")
     # patch for RAJA#978
     depends_on("raja@develop~openmp~shared", when="+raja")
-    depends_on("umpire~shared", when="+umpire")
+    # Need fix Umpire#541
+    depends_on("umpire@develop~shared", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran+mfem~shared",
