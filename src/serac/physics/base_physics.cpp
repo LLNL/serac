@@ -26,6 +26,7 @@ BasePhysics::BasePhysics()
 {
   std::tie(mpi_size_, mpi_rank_) = getMPIInfo(comm_);
   order_                         = 1;
+  root_name_                     = "serac";
 }
 
 BasePhysics::BasePhysics(int n, int p) : BasePhysics()
