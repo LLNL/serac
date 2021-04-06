@@ -40,13 +40,13 @@ struct index_t<mfem::Array<T>> {
 
 // methods for determining the size of a container
 template <typename T>
-int size(T container)
+auto size(T container)
 {
-  return static_cast<int>(container.size());
+  return container.size();
 }
 
 template <typename T>
-int size(mfem::Array<T> container)
+std::size_t size(mfem::Array<T> container)
 {
   return container.Size();
 }
@@ -204,7 +204,7 @@ template <typename T>
 void AssignMeshElementAttributes(mfem::Mesh& m, T&& list)
 {
   // check to make sure the lists are match the number of elements
-  SLIC_ERROR_IF(detail::size(list) != m.GetNE(), "list size does not match the number of mesh elements");
+  SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNE()), "list size does not match the number of mesh elements");
 
   for (int e = 0; e < m.GetNE(); e++) {
     m.GetElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
@@ -260,7 +260,7 @@ template <typename T>
 void AssignMeshBdrAttributes(mfem::Mesh& m, T&& list)
 {
   // check to make sure the lists are match the number of elements
-  SLIC_ERROR_IF(detail::size(list) != m.GetNBE(), "list size does not match the number of mesh elements");
+  SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNBE()), "list size does not match the number of mesh elements");
 
   for (int e = 0; e < m.GetNBE(); e++) {
     m.GetBdrElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
