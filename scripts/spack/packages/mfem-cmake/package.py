@@ -512,6 +512,11 @@ class MfemCmake(CMakePackage, CudaPackage):
             cfg.write(cmake_cache_entry("CMAKE_CUDA_COMPILER",
                                         cudacompiler))
 
+            # JBE: CudaPackage will set this in the environment which overrides
+            # anything else - is this related to https://github.com/spack/spack/issues/17823 ??
+            if '+mpi' in spec:
+                env['CUDAHOSTCXX'] = spec['mpi'].mpicxx
+
             if spec.satisfies('cuda_arch=none'):
                 cfg.write("# No cuda_arch specified in Spack spec, this is likely to fail\n\n")
             else:
@@ -577,13 +582,16 @@ class MfemCmake(CMakePackage, CudaPackage):
         #else:
         #    cfg.write(cmake_cache_option("MFEM_USE_MPI", False))
 
+        # JBE: PREFIX interferes with generation of CUDA link command
+        if '+cuda' not in spec:
+            cfg.write(cmake_cache_entry("PREFIX", prefix))
 
-        cfg.write(cmake_cache_entry("PREFIX", prefix)),
         cfg.write(cmake_cache_option("MFEM_USE_MEMALLOC", True))
         cfg.write(cmake_cache_option("MFEM_DEBUG", on_off('+debug')))
         # NOTE: env['CXX'] is the spack c++ compiler wrapper. The real
         # compiler is defined by env['SPACK_CXX'].
-        cfg.write(cmake_cache_string("CXX", env['SPACK_CXX'])),
+        cfg.write(cmake_cache_string("CXX", env['SPACK_CXX']))
+
         cfg.write(cmake_cache_option("MFEM_USE_LIBUNWIND", on_off('+libunwind')))
         cfg.write(cmake_cache_option(zlib_var, on_off('+zlib')))
         cfg.write(cmake_cache_option("MFEM_USE_METIS", on_off('+metis')))
@@ -738,7 +746,7 @@ class MfemCmake(CMakePackage, CudaPackage):
             cuda_cxx = join_path(spec['cuda'].prefix, 'bin', 'nvcc')
 
             cfg.write(cmake_cache_string("CUDA_CXX", cuda_cxx))
-            cfg.write(cmake_cache_string("CUDA_ARCH", cuda_arch))
+            cfg.write(cmake_cache_string("CUDA_ARCH", 'sm_{0}'.format(cuda_arch[0])))
 
         if '+occa' in spec:
             occa_dir = get_spec_path(spec, "occa")

@@ -109,7 +109,7 @@ packages:
     externals:
       # This is the one that has the trailing underscores in name mangling, needed for MFEM compat
       - spec: netlib-lapack@3.9.0
-        prefix: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/lib/
+        prefix: /usr/tcetmp/packages/lapack/lapack-3.9.0-gcc-7.3.1/
     buildable: false
 
   # Lock in versions of Devtools
