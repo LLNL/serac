@@ -163,7 +163,7 @@ tensor<T, n> GaussLobattoInterpolationDerivative(T x)
 }
 
 template <int n, typename T>
-tensor<T, n> GaussLobattoInterpolation01(T x)
+constexpr tensor<T, n> GaussLobattoInterpolation01(T x)
 {
   if constexpr (n == 2) {
     return {1.0 - x, x};
@@ -172,7 +172,7 @@ tensor<T, n> GaussLobattoInterpolation01(T x)
     return {(-1.0 + x) * (-1.0 + 2.0 * x), -4.0 * (-1.0 + x) * x, x * (-1.0 + 2.0 * x)};
   }
   if constexpr (n == 4) {
-    static constexpr double sqrt5 = 2.23606797749978981;  // sqrt5
+    constexpr double sqrt5 = 2.23606797749978981;
     return {-(-1.0 + x) * (1.0 + 5.0 * (-1.0 + x) * x), -0.5 * sqrt5 * (5.0 + sqrt5 - 10.0 * x) * (-1.0 + x) * x,
             -0.5 * sqrt5 * (-1.0 + x) * x * (-5.0 + sqrt5 + 10.0 * x), x * (1.0 + 5.0 * (-1.0 + x) * x)};
   }
@@ -181,7 +181,7 @@ tensor<T, n> GaussLobattoInterpolation01(T x)
 }
 
 template <int n, typename T>
-tensor<T, n> GaussLobattoInterpolationDerivative01([[maybe_unused]] T x)
+constexpr tensor<T, n> GaussLobattoInterpolationDerivative01([[maybe_unused]] T x)
 {
   if constexpr (n == 2) {
     return {-1, 1};
@@ -190,7 +190,7 @@ tensor<T, n> GaussLobattoInterpolationDerivative01([[maybe_unused]] T x)
     return {-3.0 + 4.0 * x, 4.0 - 8.0 * x, -1.0 + 4.0 * x};
   }
   if constexpr (n == 4) {
-    static constexpr double sqrt5 = 2.23606797749978981;
+    constexpr double sqrt5 = 2.23606797749978981;
     return {-6.0 + 5.0 * (4.0 - 3.0 * x) * x, 2.5 * (1.0 + sqrt5 + 2.0 * x * (-1.0 - 3.0 * sqrt5 + 3.0 * sqrt5 * x)),
             -2.5 * (-1.0 + sqrt5 + 2.0 * x * (1.0 - 3.0 * sqrt5 + 3.0 * sqrt5 * x)), 1.0 + 5.0 * x * (-2.0 + 3.0 * x)};
   }

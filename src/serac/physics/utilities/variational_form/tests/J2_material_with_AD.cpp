@@ -123,30 +123,12 @@ struct J2 {
       A2 = 6 * G * G * ((state.pl_strain_inc / state.q) - (1.0 / (3.0 * G + Hi + Hk)));
     }
 
-    tensor<double, 3, 3, 3, 3> C{};
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        for (int k = 0; k < 3; k++) {
-          for (int l = 0; l < 3; l++) {
-            double I4    = (i == j) * (k == l);
-            double I4sym = 0.5 * ((i == k) * (j == l) + (i == l) * (j == k));
-            double I4dev = I4sym - (i == j) * (k == l) / 3.0;
-
-            C(i, j, k, l) = K * I4 + A1 * I4dev + A2 * N(i, j) * N(k, l);
-          }
-        }
-      }
-    }
-    return C;
-
-    /*
     return make_tensor<3,3,3,3>([&](auto i, auto j, auto k, auto l){
       double I4    = (i == j) * (k == l);
       double I4sym = 0.5 * ((i == k) * (j == l) + (i == l) * (j == k));
       double I4dev = I4sym - (i == j) * (k == l) / 3.0;
       return K * I4 + A1 * I4dev + A2 * N(i, j) * N(k, l);
     });
-    */
   }
 };
 
