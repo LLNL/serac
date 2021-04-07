@@ -9,3 +9,5 @@
 /src/docs/_build
 /*.cmake
 .vscode/
+serac_input.json
+/tests/integration/*/*_0000*

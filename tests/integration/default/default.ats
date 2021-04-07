@@ -1,0 +1,7 @@
+test(executable=serac_path, 
+     clas="-i {0}/default.lua".format(serac_input_files_dir),
+     label='default',
+     np=1,
+     sandbox=False)
+
+# TODO: Add our own check here
