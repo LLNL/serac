@@ -6,40 +6,145 @@
 #include "serac/serac_config.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 
+#include "serac/physics/utilities/variational_form/detail/timer.hpp"
+
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 #include "serac/physics/utilities/variational_form/integral.hpp"
 #include "serac/physics/utilities/variational_form/quadrature.hpp"
 #include "serac/physics/utilities/variational_form/finite_element.hpp"
 #include "serac/physics/utilities/variational_form/tuple_arithmetic.hpp"
 
-class timer {
-  typedef std::chrono::high_resolution_clock::time_point time_point;
-  typedef std::chrono::duration<double>                  duration_type;
-
-public:
-  void start() { then = std::chrono::high_resolution_clock::now(); }
-
-  void stop() { now = std::chrono::high_resolution_clock::now(); }
-
-  double elapsed() { return std::chrono::duration_cast<duration_type>(now - then).count(); }
-
-private:
-  time_point then, now;
-};
-
 namespace mfem {
 
+// PA Diffusion Assemble 3D kernel
+void PADiffusionSetup3D_(const int Q1D,
+                        const int coeffDim,
+                        const int NE,
+                        const Array<double> &w,
+                        const Vector &j,
+                        const Vector &c,
+                        Vector &d)
+{
+   const bool symmetric = (coeffDim != 9);
+   const bool const_c = c.Size() == 1;
+   MFEM_VERIFY(coeffDim < 6 ||
+               !const_c, "Constant matrix coefficient not supported");
+   const auto W = Reshape(w.Read(), Q1D,Q1D,Q1D);
+   const auto J = Reshape(j.Read(), Q1D,Q1D,Q1D,3,3,NE);
+   const auto C = const_c ? Reshape(c.Read(), 1,1,1,1,1) :
+                  Reshape(c.Read(), coeffDim,Q1D,Q1D,Q1D,NE);
+   auto D = Reshape(d.Write(), Q1D,Q1D,Q1D, symmetric ? 6 : 9, NE);
+   MFEM_FORALL_3D(e, NE, Q1D, Q1D, Q1D,
+   {
+      MFEM_FOREACH_THREAD(qx,x,Q1D)
+      {
+         MFEM_FOREACH_THREAD(qy,y,Q1D)
+         {
+            MFEM_FOREACH_THREAD(qz,z,Q1D)
+            {
+               const double J11 = J(qx,qy,qz,0,0,e);
+               const double J21 = J(qx,qy,qz,1,0,e);
+               const double J31 = J(qx,qy,qz,2,0,e);
+               const double J12 = J(qx,qy,qz,0,1,e);
+               const double J22 = J(qx,qy,qz,1,1,e);
+               const double J32 = J(qx,qy,qz,2,1,e);
+               const double J13 = J(qx,qy,qz,0,2,e);
+               const double J23 = J(qx,qy,qz,1,2,e);
+               const double J33 = J(qx,qy,qz,2,2,e);
+               const double detJ = J11 * (J22 * J33 - J32 * J23) -
+               /* */               J21 * (J12 * J33 - J32 * J13) +
+               /* */               J31 * (J12 * J23 - J22 * J13);
+               const double w_detJ = W(qx,qy,qz) / detJ;
+               // adj(J)
+               const double A11 = (J22 * J33) - (J23 * J32);
+               const double A12 = (J32 * J13) - (J12 * J33);
+               const double A13 = (J12 * J23) - (J22 * J13);
+               const double A21 = (J31 * J23) - (J21 * J33);
+               const double A22 = (J11 * J33) - (J13 * J31);
+               const double A23 = (J21 * J13) - (J11 * J23);
+               const double A31 = (J21 * J32) - (J31 * J22);
+               const double A32 = (J31 * J12) - (J11 * J32);
+               const double A33 = (J11 * J22) - (J12 * J21);
+
+               if (coeffDim == 6 || coeffDim == 9) // Matrix coefficient version
+               {
+                  // Compute entries of R = MJ^{-T} = M adj(J)^T, without det J.
+                  const double M11 = C(0, qx,qy,qz, e);
+                  const double M12 = C(1, qx,qy,qz, e);
+                  const double M13 = C(2, qx,qy,qz, e);
+                  const double M21 = (!symmetric) ? C(3, qx,qy,qz, e) : M12;
+                  const double M22 = (!symmetric) ? C(4, qx,qy,qz, e) : C(3, qx,qy,qz, e);
+                  const double M23 = (!symmetric) ? C(5, qx,qy,qz, e) : C(4, qx,qy,qz, e);
+                  const double M31 = (!symmetric) ? C(6, qx,qy,qz, e) : M13;
+                  const double M32 = (!symmetric) ? C(7, qx,qy,qz, e) : M23;
+                  const double M33 = (!symmetric) ? C(8, qx,qy,qz, e) : C(5, qx,qy,qz, e);
+
+                  const double R11 = M11*A11 + M12*A12 + M13*A13;
+                  const double R12 = M11*A21 + M12*A22 + M13*A23;
+                  const double R13 = M11*A31 + M12*A32 + M13*A33;
+                  const double R21 = M21*A11 + M22*A12 + M23*A13;
+                  const double R22 = M21*A21 + M22*A22 + M23*A23;
+                  const double R23 = M21*A31 + M22*A32 + M23*A33;
+                  const double R31 = M31*A11 + M32*A12 + M33*A13;
+                  const double R32 = M31*A21 + M32*A22 + M33*A23;
+                  const double R33 = M31*A31 + M32*A32 + M33*A33;
+
+                  // Now set D to J^{-1} R = adj(J) R
+                  D(qx,qy,qz,0,e) = w_detJ * (A11*R11 + A12*R21 + A13*R31); // 1,1
+                  const double D12 = w_detJ * (A11*R12 + A12*R22 + A13*R32);
+                  D(qx,qy,qz,1,e) = D12; // 1,2
+                  D(qx,qy,qz,2,e) = w_detJ * (A11*R13 + A12*R23 + A13*R33); // 1,3
+
+                  const double D21 = w_detJ * (A21*R11 + A22*R21 + A23*R31);
+                  const double D22 = w_detJ * (A21*R12 + A22*R22 + A23*R32);
+                  const double D23 = w_detJ * (A21*R13 + A22*R23 + A23*R33);
+
+                  const double D33 = w_detJ * (A31*R13 + A32*R23 + A33*R33);
+
+                  D(qx,qy,qz,3,e) = symmetric ? D22 : D21; // 2,2 or 2,1
+                  D(qx,qy,qz,4,e) = symmetric ? D23 : D22; // 2,3 or 2,2
+                  D(qx,qy,qz,5,e) = symmetric ? D33 : D23; // 3,3 or 2,3
+
+                  if (!symmetric)
+                  {
+                     D(qx,qy,qz,6,e) = w_detJ * (A31*R11 + A32*R21 + A33*R31); // 3,1
+                     D(qx,qy,qz,7,e) = w_detJ * (A31*R12 + A32*R22 + A33*R32); // 3,2
+                     D(qx,qy,qz,8,e) = D33; // 3,3
+                  }
+               }
+               else  // Vector or scalar coefficient version
+               {
+                  const double C1 = const_c ? C(0,0,0,0,0) : C(0,qx,qy,qz,e);
+                  const double C2 = const_c ? C(0,0,0,0,0) :
+                                    (coeffDim == 3 ? C(1,qx,qy,qz,e) : C(0,qx,qy,qz,e));
+                  const double C3 = const_c ? C(0,0,0,0,0) :
+                                    (coeffDim == 3 ? C(2,qx,qy,qz,e) : C(0,qx,qy,qz,e));
+
+                  // detJ J^{-1} J^{-T} = (1/detJ) adj(J) adj(J)^T
+                  D(qx,qy,qz,0,e) = w_detJ * (C1*A11*A11 + C2*A12*A12 + C3*A13*A13); // 1,1
+                  D(qx,qy,qz,1,e) = w_detJ * (C1*A11*A21 + C2*A12*A22 + C3*A13*A23); // 2,1
+                  D(qx,qy,qz,2,e) = w_detJ * (C1*A11*A31 + C2*A12*A32 + C3*A13*A33); // 3,1
+                  D(qx,qy,qz,3,e) = w_detJ * (C1*A21*A21 + C2*A22*A22 + C3*A23*A23); // 2,2
+                  D(qx,qy,qz,4,e) = w_detJ * (C1*A21*A31 + C2*A22*A32 + C3*A23*A33); // 3,2
+                  D(qx,qy,qz,5,e) = w_detJ * (C1*A31*A31 + C2*A32*A32 + C3*A33*A33); // 3,3
+               }
+            }
+         }
+      }
+   });
+}
+
 template<int T_D1D = 0, int T_Q1D = 0>
-static void PADiffusionApply3D(const int NE,
-                               const bool symmetric,
-                               const Array<double> &b,
-                               const Array<double> &g,
-                               const Array<double> &bt,
-                               const Array<double> &gt,
-                               const Vector &d_,
-                               const Vector &x_,
-                               Vector &y_,
-                               int d1d = 0, int q1d = 0)
+static void PADiffusionApply3D_(const int NE,
+                                const bool symmetric,
+                                const Array<double> &b,
+                                const Array<double> &g,
+                                const Array<double> &bt,
+                                const Array<double> &gt,
+                                const Vector &d_,
+                                const Vector &x_,
+                                Vector &y_,
+                                int d1d = 0, int q1d = 0)
 {
    const int D1D = T_D1D ? T_D1D : d1d;
    const int Q1D = T_Q1D ? T_Q1D : q1d;
@@ -307,6 +412,7 @@ void H1_kernel_constexpr(const mfem::Vector & U, mfem::Vector & R, const mfem::V
 }
 
 
+
 int main(int argc, char* argv[]) {
 
   int p = 1;
@@ -372,7 +478,7 @@ int main(int argc, char* argv[]) {
   bool symmetric = false;
   if (p == 1) {
     stopwatch[0].start();
-    mfem::PADiffusionApply3D< 2, 2 >(num_elements, symmetric, maps->B, maps->G, maps->Bt, maps->Gt, J_Q, U_E, R_E);
+    mfem::PADiffusionApply3D_< 2, 2 >(num_elements, symmetric, maps->B, maps->G, maps->Bt, maps->Gt, J_Q, U_E, R_E);
     stopwatch[0].stop();
 
     stopwatch[1].start();
@@ -387,7 +493,7 @@ int main(int argc, char* argv[]) {
 
   if (p == 2) {
     stopwatch[0].start();
-    mfem::PADiffusionApply3D< 3, 3 >(num_elements, symmetric, maps->B, maps->G, maps->Bt, maps->Gt, J_Q, U_E, R_E);
+    mfem::PADiffusionApply3D_< 3, 3 >(num_elements, symmetric, maps->B, maps->G, maps->Bt, maps->Gt, J_Q, U_E, R_E);
     stopwatch[0].stop();
     stopwatch[1].start();
     H1_kernel<Geometry::Hexahedron, 2, 3 >(U_E, R_E2, J_Q, num_elements, diffusion_qfunc);
@@ -399,7 +505,7 @@ int main(int argc, char* argv[]) {
 
   if (p == 3) {
     stopwatch[0].start();
-    mfem::PADiffusionApply3D< 4, 4 >(num_elements, symmetric, maps->B, maps->G, maps->Bt, maps->Gt, J_Q, U_E, R_E);
+    mfem::PADiffusionApply3D_< 4, 4 >(num_elements, symmetric, maps->B, maps->G, maps->Bt, maps->Gt, J_Q, U_E, R_E);
     stopwatch[0].stop();
     stopwatch[1].start();
     H1_kernel<Geometry::Hexahedron, 3, 4 >(U_E, R_E2, J_Q, num_elements, diffusion_qfunc);

@@ -44,6 +44,7 @@ set(weakform_tests_serial
     tests/tuple_arithmetic_unit_tests.cpp
     tests/J2_material_with_AD.cpp
     tests/kernel_microbenchmark.cpp
+    tests/diffusion_performance_test.cpp
     tests/tensor_unit_tests.cpp)
     
 foreach(filename ${weakform_tests_serial})
