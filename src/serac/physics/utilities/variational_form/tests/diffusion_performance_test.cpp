@@ -231,7 +231,7 @@ auto compute_all_gradients3(const tensor< double, D1D * D1D * D1D > & x) {
 
     using element_type = finite_element< ::Geometry::Hexahedron, H1< D1D - 1 > >;
 
-    static constexpr auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
+    [[maybe_unused]] static constexpr auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
 
     tensor< double, Q1D, Q1D, Q1D, 3 > grad{};
 
@@ -344,55 +344,77 @@ void run_tests(int n) {
   std::cout << "ops (compute all quadrature point values together): " << count_ops0<Q1D, D1D>(y) << std::endl;
   std::cout << "ops (compute all quadrature point values individually): " << count_ops1<Q1D, D1D>(y2) << std::endl;
 
-  std::cout << "tensor creation time: " << time([&](){
+  std::cout << "average tensor creation time: " << time([&](){
       for (int i = 0; i < n; i++) {
-          auto x = make_tensor<D1D * D1D * D1D, 3>([=](int i, int j){ return n / (i + j + 1.0); });
+          auto x = make_tensor<D1D * D1D * D1D, 3>([=](int I, int J){ return n / (I + J + 1.0); });
           escape(&x);
       }
-  }) << std::endl;
+  }) / n << std::endl;
 
-  std::cout << "gradient 0 time: " << time([&](){
+  double baseline = time([&](){
       for (int i = 0; i < n; i++) {
           auto x = compute_all_gradients0<Q1D,D1D>(y);
           escape(&x);
       }
-  }) << std::endl;
+  }) / n;
+
+  std::cout << "average gradient 0 time: " << baseline << std::endl;
+
+  {
+    double runtime = time([&](){
+        for (int i = 0; i < n; i++) {
+            auto x = compute_all_gradients1<Q1D,D1D>(y);
+            escape(&x);
+        }
+    }) / n;
+
+    std::cout << "average gradient 1 time: " << runtime << " (relative speedup vs. gradient 0): " << baseline / runtime << std::endl;
+  }
+
+  {
+    double runtime = time([&](){
+        for (int i = 0; i < n; i++) {
+            auto x = compute_all_gradients2<Q1D,D1D>(y2);
+            escape(&x);
+        }
+    }) / n;
+
+    std::cout << "average gradient 2 time: " << runtime << " (relative speedup vs. gradient 0): " << baseline / runtime << std::endl;
+  }
 
 
-  std::cout << "gradient 1 time: " << time([&](){
-      for (int i = 0; i < n; i++) {
-          auto x = compute_all_gradients1<Q1D,D1D>(y);
-          escape(&x);
-      }
-  }) << std::endl;
+  {
+    double runtime = time([&](){
+        for (int i = 0; i < n; i++) {
+            auto x = compute_all_gradients3<Q1D,D1D>(y2);
+            escape(&x);
+        }
+    }) / n;
 
-  std::cout << "gradient 2 time: " << time([&](){
-      for (int i = 0; i < n; i++) {
-          auto x = compute_all_gradients2<Q1D,D1D>(y2);
-          escape(&x);
-      }
-  }) << std::endl;
+    std::cout << "average gradient 3 time: " << runtime << " (relative speedup vs. gradient 0): " << baseline / runtime << std::endl;
+  }
 
-  std::cout << "gradient 3 time: " << time([&](){
-      for (int i = 0; i < n; i++) {
-          auto x = compute_all_gradients3<Q1D,D1D>(y2);
-          escape(&x);
-      }
-  }) << std::endl;
+  {
+    double runtime = time([&](){
+        for (int i = 0; i < n; i++) {
+            auto x = compute_all_gradients4<Q1D,D1D>(y2);
+            escape(&x);
+        }
+    }) / n;
 
-  std::cout << "gradient 4 time: " << time([&](){
-      for (int i = 0; i < n; i++) {
-          auto x = compute_all_gradients4<Q1D,D1D>(y2);
-          escape(&x);
-      }
-  }) << std::endl;
+    std::cout << "average gradient 4 time: " << runtime << " (relative speedup vs. gradient 0): " << baseline / runtime << std::endl;
+  }
 
-  std::cout << "gradient 5 time: " << time([&](){
-      for (int i = 0; i < n; i++) {
-          auto x = compute_all_gradients5<Q1D,D1D>(y2);
-          escape(&x);
-      }
-  }) << std::endl;
+  {
+    double runtime = time([&](){
+        for (int i = 0; i < n; i++) {
+            auto x = compute_all_gradients5<Q1D,D1D>(y2);
+            escape(&x);
+        }
+    }) / n;
+
+    std::cout << "average gradient 5 time: " << runtime << " (relative speedup vs. gradient 0): " << baseline / runtime << std::endl;
+  }
 
   std::cout << std::endl;
   std::cout << std::endl;

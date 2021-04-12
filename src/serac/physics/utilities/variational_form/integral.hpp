@@ -105,7 +105,7 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double,dim,dim> 
 // in this case, only the function values are calculated
 // (Question: are gradients useful in these cases or not?)
 template < typename element_type, typename T, int geometry_dim, int spatial_dim >
-auto Preprocess(T u, const tensor<double, geometry_dim> xi, const tensor<double,spatial_dim,geometry_dim> J) {
+auto Preprocess(T u, const tensor<double, geometry_dim> xi, [[maybe_unused]] const tensor<double,spatial_dim,geometry_dim> J) {
   if constexpr (element_type::family == Family::H1) {
     return dot(u, element_type::shape_functions(xi));
   }
@@ -161,7 +161,7 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double,dim,dim>
 // in this case, q-function outputs are only integrated against test space shape functions
 // (Question: should test function gradients be supported here or not?)
 template < typename element_type, typename T, int geometry_dim, int spatial_dim  >
-auto Postprocess(T f, const tensor<double, geometry_dim> xi, const tensor<double,spatial_dim,geometry_dim> J) {
+auto Postprocess(T f, const tensor<double, geometry_dim> xi, [[maybe_unused]] const tensor<double,spatial_dim,geometry_dim> J) {
   if constexpr (element_type::family == Family::H1) {
     return outer(element_type::shape_functions(xi), f);
   }

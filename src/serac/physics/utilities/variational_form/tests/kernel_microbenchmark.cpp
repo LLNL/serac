@@ -470,7 +470,7 @@ int main(int argc, char* argv[]) {
   stopwatch[0].stop();
   std::cout << "U_L -> U_E time: " << stopwatch[0].elapsed() << std::endl;
 
-  static constexpr double k = 1.0;
+  [[maybe_unused]] static constexpr double k = 1.0;
   constexpr auto diffusion_qfunc = [](auto grad_u){
     return k * grad_u; // heat_flux
   };
