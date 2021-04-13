@@ -17,19 +17,30 @@
 
 namespace serac::input {
 
-axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path)
+axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path,
+                              const Language language, const std::string& sidre_path)
 {
   // Initialize Inlet
-  auto luareader = std::make_unique<axom::inlet::LuaReader>();
-  luareader->parseFile(input_file_path);
+  std::unique_ptr<axom::inlet::Reader> reader;
+  if (language == Language::Lua) {
+    reader = std::make_unique<axom::inlet::LuaReader>();
+  } else if (language == Language::JSON) {
+    reader = std::make_unique<axom::inlet::JSONReader>();
+  } else if (language == Language::YAML) {
+    reader = std::make_unique<axom::inlet::YAMLReader>();
+  }
+
+  if (axom::utilities::filesystem::pathExists(input_file_path)) {
+    reader->parseFile(input_file_path);
+  }
 
   // Store inlet data under its own group
-  if (datastore.getRoot()->hasGroup("input_file")) {
+  if (datastore.getRoot()->hasGroup(sidre_path)) {
     // If this is a restart, wipe out the previous input file
-    datastore.getRoot()->destroyGroup("input_file");
+    datastore.getRoot()->destroyGroup(sidre_path);
   }
-  axom::sidre::Group* inlet_root = datastore.getRoot()->createGroup("input_file");
-  return axom::inlet::Inlet(std::move(luareader), inlet_root);
+  axom::sidre::Group* inlet_root = datastore.getRoot()->createGroup(sidre_path);
+  return axom::inlet::Inlet(std::move(reader), inlet_root);
 }
 
 std::string findMeshFilePath(const std::string& mesh_path, const std::string& input_file_path)
