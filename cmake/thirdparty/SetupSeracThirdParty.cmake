@@ -83,6 +83,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             # Slightly different naming convention
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
+        # CUDA
+        set(MFEM_USE_CUDA ${ENABLE_CUDA} CACHE BOOL "")
+
         # This always gets built
         set(MFEM_USE_ZLIB ON CACHE BOOL "")
         if(SUPERLUDIST_DIR)
@@ -107,9 +110,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Prefix the "check" targets
         set(MFEM_CUSTOM_TARGET_PREFIX "mfem_" CACHE STRING "" FORCE)
         # Disable tests + examples
-        set(MFEM_ENABLE_TESTING CACHE BOOL "")
-        set(MFEM_ENABLE_EXAMPLES CACHE BOOL "")
-        set(MFEM_ENABLE_MINIAPPS CACHE BOOL "")
+        set(MFEM_ENABLE_TESTING OFF CACHE BOOL "")
+        set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
+        set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
         add_subdirectory(${PROJECT_SOURCE_DIR}/mfem)
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
@@ -191,6 +194,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION ON CACHE BOOL "")
         set(AXOM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(AXOM_ENABLE_TESTS    OFF CACHE BOOL "")
+        # Used for the doxygen target
+        set(AXOM_CUSTOM_TARGET_PREFIX "axom_" CACHE STRING "" FORCE)
+        if(ENABLE_CUDA)
+            # This appears to be unconditionally needed for Axom, why isn't it part of the build system?
+            set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+        endif()
         add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src)
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
         # Mark the axom includes as "system"
