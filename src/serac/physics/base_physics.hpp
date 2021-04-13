@@ -149,7 +149,7 @@ protected:
   /**
    * @brief Type of state variable output
    */
-  serac::OutputType output_type_;
+  serac::OutputType output_type_ = OutputType::GLVis;
 
   /**
    *@brief Whether the simulation is time-independent
