@@ -16,11 +16,11 @@ using namespace mfem;
 
 // solve an equation of the form
 // (a * M + b * K) x == f
-// 
+//
 // where M is the H1 mass matrix
 //       K is the H1 stiffness matrix
 //       f is some load term
-// 
+//
 int main(int argc, char* argv[])
 {
   int num_procs, myid;
@@ -30,12 +30,12 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
+  const char* mesh_file = SERAC_REPO_DIR "/data/meshes/star.mesh";
 
-  int         order       = 1;
-  int         refinements = 0;
-  double a = 1.0;
-  double b = 1.0;
+  int    order       = 1;
+  int    refinements = 0;
+  double a           = 1.0;
+  double b           = 1.0;
   // SERAC EDIT BEGIN
   // double p = 5.0;
   // SERAC EDIT END
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
   ParMesh pmesh(MPI_COMM_WORLD, mesh);
 
-  auto fec = H1_FECollection(order, pmesh.Dimension());
+  auto                  fec = H1_FECollection(order, pmesh.Dimension());
   ParFiniteElementSpace fespace(&pmesh, &fec);
 
   ParBilinearForm A(&fespace);
@@ -78,10 +78,8 @@ int main(int argc, char* argv[])
   A.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
-  LinearForm f(&fespace);
-  FunctionCoefficient load_func([&](const Vector& coords) {
-    return 100 * coords(0) * coords(1);
-  });
+  LinearForm          f(&fespace);
+  FunctionCoefficient load_func([&](const Vector& coords) { return 100 * coords(0) * coords(1); });
 
   f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
   f.Assemble();
@@ -102,19 +100,16 @@ int main(int argc, char* argv[])
   J->EliminateRowsCols(ess_tdof_list);
 
   auto residual = serac::mfem_ext::StdFunctionOperator(
-    fespace.TrueVSize(),
+      fespace.TrueVSize(),
 
-    [&](const mfem::Vector& u, mfem::Vector& r) {
-      r = A * u - f;
-      for (int i = 0; i < ess_tdof_list.Size(); i++) {
-        r(ess_tdof_list[i]) = 0.0;
-      }
-    },
+      [&](const mfem::Vector& u, mfem::Vector& r) {
+        r = A * u - f;
+        for (int i = 0; i < ess_tdof_list.Size(); i++) {
+          r(ess_tdof_list[i]) = 0.0;
+        }
+      },
 
-    [&](const mfem::Vector & /*du_dt*/) -> mfem::Operator& {
-      return *J;
-    }
-  );
+      [&](const mfem::Vector & /*du_dt*/) -> mfem::Operator& { return *J; });
 
   CGSolver cg(MPI_COMM_WORLD);
   cg.SetRelTol(1e-10);
@@ -145,14 +140,15 @@ int main(int argc, char* argv[])
         auto f0 = a * u - (100 * x[0] * x[1]);
         auto f1 = b * du;
         return std::tuple{f0, f1};
-      }, pmesh);
+      },
+      pmesh);
 
   form.AddDomainIntegrator(tmp);
 
   form.SetEssentialBC(ess_bdr);
 
   ParGridFunction x2(&fespace);
-  Vector X2(fespace.TrueVSize());
+  Vector          X2(fespace.TrueVSize());
   x2 = 0.0;
   x2.ProjectBdrCoefficient(boundary_func, ess_bdr);
 

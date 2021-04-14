@@ -3,12 +3,23 @@
 #include "tensor.hpp"
 #include "polynomials.hpp"
 
-enum class Geometry {Point, Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron};
+enum class Geometry
+{
+  Point,
+  Segment,
+  Triangle,
+  Quadrilateral,
+  Tetrahedron,
+  Hexahedron
+};
 
-template < int d >
-struct Dimension{ constexpr operator int(){ return d; } };
+template <int d>
+struct Dimension {
+  constexpr operator int() { return d; }
+};
 
-constexpr int dimension_of(::Geometry g) {
+constexpr int dimension_of(::Geometry g)
+{
   if (g == ::Geometry::Segment) {
     return 1;
   }
@@ -24,58 +35,70 @@ constexpr int dimension_of(::Geometry g) {
   return -1;
 }
 
-template < int p, int c = 1 >
-struct H1{
-  static constexpr int order = p;
+template <int p, int c = 1>
+struct H1 {
+  static constexpr int order      = p;
   static constexpr int components = c;
 };
 
-template < int p, int c = 1 >
-struct Hcurl{
-  static constexpr int order = p;
+template <int p, int c = 1>
+struct Hcurl {
+  static constexpr int order      = p;
   static constexpr int components = c;
 };
 
-template < int p, int c = 1 >
-struct L2{
-  static constexpr int order = p;
+template <int p, int c = 1>
+struct L2 {
+  static constexpr int order      = p;
   static constexpr int components = c;
 };
 
-enum class Family {H1, HCURL, HDIV, L2};
+enum class Family
+{
+  H1,
+  HCURL,
+  HDIV,
+  L2
+};
 
-enum class Evaluation {Interpolate, Divergence, Gradient, Curl};
+enum class Evaluation
+{
+  Interpolate,
+  Divergence,
+  Gradient,
+  Curl
+};
 
-template < ::Geometry g, typename family >
+template < ::Geometry g, typename family>
 struct finite_element;
 
-template < typename T >
+template <typename T>
 struct is_finite_element {
   static constexpr bool value = false;
 };
 
-template < ::Geometry g, int p, int c >
-struct is_finite_element< finite_element< g, H1<p, c> > >{
+template < ::Geometry g, int p, int c>
+struct is_finite_element<finite_element<g, H1<p, c> > > {
   static constexpr bool value = true;
 };
 
-template < ::Geometry g, int p >
-struct is_finite_element< finite_element< g, Hcurl<p> > >{
+template < ::Geometry g, int p>
+struct is_finite_element<finite_element<g, Hcurl<p> > > {
   static constexpr bool value = true;
 };
 
-template < typename T >
+template <typename T>
 struct quadrature_data {
   using type = T;
 };
 
-template < typename T >
+template <typename T>
 struct is_quadrature_data {
   static constexpr bool value = false;
 };
 
-template < typename T >
-struct is_quadrature_data< quadrature_data < T > >{
+template <typename T>
+struct is_quadrature_data<quadrature_data<T> > {
   static constexpr bool value = true;
 };
 

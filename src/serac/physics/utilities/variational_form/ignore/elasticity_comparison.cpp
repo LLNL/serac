@@ -16,11 +16,11 @@ using namespace mfem;
 
 // solve an equation of the form (with `dim` dofs per node)
 // (a * M + b * K) x == f
-// 
-// where M is the H1 mass matrix 
-//       K is the H1 stiffness matrix 
+//
+// where M is the H1 mass matrix
+//       K is the H1 stiffness matrix
 //       f is some load term
-// 
+//
 int main(int argc, char* argv[])
 {
   int num_procs, myid;
@@ -30,12 +30,12 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
+  const char* mesh_file = SERAC_REPO_DIR "/data/meshes/star.mesh";
 
-  int         order       = 1;
-  int         refinements = 0;
-  double a = 1.0;
-  double b = 1.0;
+  int    order       = 1;
+  int    refinements = 0;
+  double a           = 1.0;
+  double b           = 1.0;
   // SERAC EDIT BEGIN
   // double p = 5.0;
   // SERAC EDIT END
@@ -58,17 +58,17 @@ int main(int argc, char* argv[])
   }
 
   Mesh mesh(mesh_file, 1, 1);
-  int dim = mesh.Dimension();
+  int  dim = mesh.Dimension();
   for (int l = 0; l < refinements; l++) {
     mesh.UniformRefinement();
   }
 
   ParMesh pmesh(MPI_COMM_WORLD, mesh);
 
-  auto fec = H1_FECollection(order, dim);
+  auto                  fec = H1_FECollection(order, dim);
   ParFiniteElementSpace fespace(&pmesh, &fec, dim);
 
-  //ParNonlinearForm A(&fespace);
+  // ParNonlinearForm A(&fespace);
   ParBilinearForm A(&fespace);
 
   ConstantCoefficient a_coef(a);
@@ -81,26 +81,26 @@ int main(int argc, char* argv[])
   A.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
-  LinearForm f(&fespace);
-  VectorFunctionCoefficient load_func(dim, [&](const Vector& /*coords*/, Vector & force) {
-    force = 0.0;
+  LinearForm                f(&fespace);
+  VectorFunctionCoefficient load_func(dim, [&](const Vector& /*coords*/, Vector& force) {
+    force    = 0.0;
     force(0) = -1.0;
   });
 
   f.AddDomainIntegrator(new VectorDomainLFIntegrator(load_func));
   f.Assemble();
 
-  VectorFunctionCoefficient boundary_func(dim, [&](const Vector& /*coords*/, Vector & u) {
-    //double x = coords(0);
-    //double y = coords(1);
+  VectorFunctionCoefficient boundary_func(dim, [&](const Vector& /*coords*/, Vector& u) {
+    // double x = coords(0);
+    // double y = coords(1);
     u = 0.0;
   });
 
-  VectorFunctionCoefficient initial_displacement(dim, [&](const Vector& coords, Vector & u) {
+  VectorFunctionCoefficient initial_displacement(dim, [&](const Vector& coords, Vector& u) {
     double x = coords(0);
     double y = coords(1);
-    u(0) = x + 3 * y * y;
-    u(1) = 2 * x - y;
+    u(0)     = x + 3 * y * y;
+    u(1)     = 2 * x - y;
   });
 
   Array<int> ess_bdr(pmesh.bdr_attributes.Max());
@@ -111,23 +111,20 @@ int main(int argc, char* argv[])
   x = 0.0;
   x.ProjectBdrCoefficient(boundary_func, ess_bdr);
 
-  x.ProjectCoefficient(initial_displacement); // DEBUG
+  x.ProjectCoefficient(initial_displacement);  // DEBUG
   J->EliminateRowsCols(ess_tdof_list);
 
   auto residual = serac::mfem_ext::StdFunctionOperator(
-    fespace.TrueVSize(),
+      fespace.TrueVSize(),
 
-    [&](const mfem::Vector& u, mfem::Vector& r) {
-      r = A * u - f;
-      for (int i = 0; i < ess_tdof_list.Size(); i++) {
-        r(ess_tdof_list[i]) = 0.0;
-      }
-    },
+      [&](const mfem::Vector& u, mfem::Vector& r) {
+        r = A * u - f;
+        for (int i = 0; i < ess_tdof_list.Size(); i++) {
+          r(ess_tdof_list[i]) = 0.0;
+        }
+      },
 
-    [&](const mfem::Vector & /*u*/) -> mfem::Operator& {
-      return *J;
-    }
-  );
+      [&](const mfem::Vector & /*u*/) -> mfem::Operator& { return *J; });
 
   CGSolver cg(MPI_COMM_WORLD);
   cg.SetRelTol(1e-10);
@@ -156,23 +153,24 @@ int main(int argc, char* argv[])
   static constexpr auto I = Identity<2>();
 
   auto tmp = new VectorH1QFunctionIntegrator(
-    [&](auto /*x*/, auto u, auto grad_u) {
-      auto f0 = a * u - tensor{{-1.0, 0.0}};
-      auto strain = 0.5 * (grad_u + transpose(grad_u));
-      auto f1 = b * tr(strain) * I + 2.0 * b * strain;
-      return std::tuple{f0, f1};
-    }, pmesh);
+      [&](auto /*x*/, auto u, auto grad_u) {
+        auto f0     = a * u - tensor{{-1.0, 0.0}};
+        auto strain = 0.5 * (grad_u + transpose(grad_u));
+        auto f1     = b * tr(strain) * I + 2.0 * b * strain;
+        return std::tuple{f0, f1};
+      },
+      pmesh);
 
   form.AddDomainIntegrator(tmp);
 
   form.SetEssentialBC(ess_bdr);
 
   ParGridFunction x2(&fespace);
-  Vector X2(fespace.TrueVSize());
+  Vector          X2(fespace.TrueVSize());
   x2 = 0.0;
   x2.ProjectBdrCoefficient(boundary_func, ess_bdr);
 
-  x2.ProjectCoefficient(initial_displacement); // DEBUG
+  x2.ProjectCoefficient(initial_displacement);  // DEBUG
 
   newton.SetOperator(form);
 

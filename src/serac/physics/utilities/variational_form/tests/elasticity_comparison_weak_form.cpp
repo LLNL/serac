@@ -16,11 +16,11 @@ using namespace mfem;
 
 // solve an equation of the form
 // (a * M + b * K) x == f
-// 
+//
 // where M is the H1 mass matrix
 //       K is the H1 stiffness matrix
 //       f is some load term
-// 
+//
 int main(int argc, char* argv[])
 {
   int num_procs, myid;
@@ -30,13 +30,13 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
+  const char* mesh_file = SERAC_REPO_DIR "/data/meshes/star.mesh";
 
-  constexpr int p = 1;
-  constexpr int dim = 2;
-  int         refinements = 0;
-  double a = 1.0;
-  double b = 1.0;
+  constexpr int p           = 1;
+  constexpr int dim         = 2;
+  int           refinements = 0;
+  double        a           = 1.0;
+  double        b           = 1.0;
   // SERAC EDIT BEGIN
   // double p = 5.0;
   // SERAC EDIT END
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
 
   ParMesh pmesh(MPI_COMM_WORLD, mesh);
 
-  auto fec = H1_FECollection(p, dim);
+  auto                  fec = H1_FECollection(p, dim);
   ParFiniteElementSpace fespace(&pmesh, &fec, dim);
 
   ParBilinearForm A(&fespace);
@@ -85,9 +85,9 @@ int main(int argc, char* argv[])
 
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
-  LinearForm f(&fespace);
-  VectorFunctionCoefficient load_func(dim, [&](const Vector& /*coords*/, Vector & force) {
-    force = 0.0;
+  LinearForm                f(&fespace);
+  VectorFunctionCoefficient load_func(dim, [&](const Vector& /*coords*/, Vector& force) {
+    force    = 0.0;
     force(0) = -1.0;
   });
 
@@ -102,18 +102,20 @@ int main(int argc, char* argv[])
 
   static constexpr auto I = Identity<2>();
 
-  using test_space = H1<p, dim>;
+  using test_space  = H1<p, dim>;
   using trial_space = H1<p, dim>;
 
-  WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
+  WeakForm<test_space(trial_space)> residual(&fespace, &fespace);
 
-  residual.AddIntegral([&](auto /*x*/, auto displacement) {
-    auto [u, du_dx] = displacement;
-    auto f0 = a * u - tensor{{-1.0, 0.0}};
-    auto strain = 0.5 * (du_dx + transpose(du_dx));
-    auto f1 = b * tr(strain) * I + 2.0 * b * strain;
-    return std::tuple{f0, f1};
-  }, pmesh);
+  residual.AddIntegral(
+      [&](auto /*x*/, auto displacement) {
+        auto [u, du_dx] = displacement;
+        auto f0         = a * u - tensor{{-1.0, 0.0}};
+        auto strain     = 0.5 * (du_dx + transpose(du_dx));
+        auto f1         = b * tr(strain) * I + 2.0 * b * strain;
+        return std::tuple{f0, f1};
+      },
+      pmesh);
 
   mfem::Vector r1 = A * x - f;
   mfem::Vector r2 = residual * x;

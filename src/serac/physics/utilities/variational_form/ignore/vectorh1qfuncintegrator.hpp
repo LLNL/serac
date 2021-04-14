@@ -13,14 +13,17 @@ namespace mfem {
 template <typename qfunc_type>
 class VectorH1QFunctionIntegrator : public GenericIntegrator {
 public:
-
   static constexpr int dim = 2;
 
-  VectorH1QFunctionIntegrator(qfunc_type f, Mesh & m) : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), mesh(m) {}
+  VectorH1QFunctionIntegrator(qfunc_type f, Mesh& m)
+      : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), mesh(m)
+  {
+  }
 
-  void Setup(const FiniteElementSpace& fes) override {
+  void Setup(const FiniteElementSpace& fes) override
+  {
     // Assuming the same element type
-    fespace    = &fes;
+    fespace      = &fes;
     Mesh* f_mesh = fes.GetMesh();
     if (f_mesh->GetNE() == 0) {
       return;
@@ -72,7 +75,7 @@ protected:
   Vector X_;
 
   qfunc_type qf;
-  Mesh & mesh;
+  Mesh&      mesh;
 };
 
 template <typename qfunc_type>
@@ -92,13 +95,15 @@ void VectorH1QFunctionIntegrator<qfunc_type>::Apply(const Vector& x, Vector& y) 
   }
 }
 
-template < int ndof, int components >
-inline auto Load(const mfem::DeviceTensor<3, const double> & u, int e) {
-  return make_tensor<components, ndof>([&u, e](int j, int i){ return u(i, j, e); });
+template <int ndof, int components>
+inline auto Load(const mfem::DeviceTensor<3, const double>& u, int e)
+{
+  return make_tensor<components, ndof>([&u, e](int j, int i) { return u(i, j, e); });
 }
 
-template < int ndof, int components >
-void Add(const mfem::DeviceTensor<3, double> & r_global, tensor< double, ndof, components > r_local, int e) {
+template <int ndof, int components>
+void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, components> r_local, int e)
+{
   for (int i = 0; i < ndof; i++) {
     for (int j = 0; j < components; j++) {
       r_global(i, j, e) += r_local[i][j];
@@ -112,7 +117,7 @@ void VectorH1QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vecto
 {
   int NE = ne;
 
-  using element_type = finite_element<::Geometry::Quadrilateral, H1< D1D - 1, dim > >;
+  using element_type        = finite_element<::Geometry::Quadrilateral, H1<D1D - 1, dim>>;
   static constexpr int ndof = element_type::ndof;
 
   static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
@@ -125,20 +130,20 @@ void VectorH1QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vecto
   for (int e = 0; e < NE; e++) {
     tensor u_local = Load<ndof, dim>(u, e);
 
-    tensor <double, ndof, dim> y_local{};
+    tensor<double, ndof, dim> y_local{};
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
-      double dx = det(J_q) * dxi;
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
 
-      auto N = element_type::shape_functions(xi);
+      auto N     = element_type::shape_functions(xi);
       auto dN_dx = dot(element_type::shape_function_gradients(xi), inv(J_q));
 
-      auto u_q = dot(u_local, N);
+      auto u_q     = dot(u_local, N);
       auto du_dx_q = dot(u_local, dN_dx);
 
-      tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
+      tensor<double, 2> x = {X(q, 0, e), X(q, 1, e)};
 
       auto args = std::tuple{x, u_q, du_dx_q};
 
@@ -148,10 +153,8 @@ void VectorH1QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vecto
     }
 
     Add(y, y_local, e);
-
   }
 }
-
 
 template <typename qfunc_type>
 void VectorH1QFunctionIntegrator<qfunc_type>::ApplyGradient(const Vector& x, const Vector& v, Vector& y) const
@@ -172,11 +175,12 @@ void VectorH1QFunctionIntegrator<qfunc_type>::ApplyGradient(const Vector& x, con
 
 template <typename qfunc_type>
 template <int D1D, int Q1D>
-void VectorH1QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const Vector& v_in_, Vector& y_) const
+void VectorH1QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const Vector& v_in_,
+                                                              Vector& y_) const
 {
-  int NE             = ne;
-  using element_type = finite_element<::Geometry::Quadrilateral, H1< D1D - 1, dim > >;
-  static constexpr int dim = element_type::dim;
+  int NE                    = ne;
+  using element_type        = finite_element<::Geometry::Quadrilateral, H1<D1D - 1, dim>>;
+  static constexpr int dim  = element_type::dim;
   static constexpr int ndof = element_type::ndof;
 
   static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
@@ -188,35 +192,35 @@ void VectorH1QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in
   auto y = Reshape(y_.ReadWrite(), ndof, dim, NE);
 
   for (int e = 0; e < NE; e++) {
-    tensor u_local = make_tensor<dim, ndof>([&u, e](int j, int i){ return u(i, j, e); });
-    tensor v_local = make_tensor<dim, ndof>([&v, e](int j, int i){ return v(i, j, e); });
+    tensor u_local = make_tensor<dim, ndof>([&u, e](int j, int i) { return u(i, j, e); });
+    tensor v_local = make_tensor<dim, ndof>([&v, e](int j, int i) { return v(i, j, e); });
 
-    tensor <double, ndof, dim> y_local{};
+    tensor<double, ndof, dim> y_local{};
 
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
-      double dx = det(J_q) * dxi;
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
 
-      tensor N = element_type::shape_functions(xi);
+      tensor N     = element_type::shape_functions(xi);
       tensor dN_dx = dot(element_type::shape_function_gradients(xi), inv(J_q));
 
-      tensor u_q = dot(u_local, N);
+      tensor u_q     = dot(u_local, N);
       tensor du_dx_q = dot(u_local, dN_dx);
 
-      tensor v_q = dot(v_local, N);
+      tensor v_q     = dot(v_local, N);
       tensor dv_dx_q = dot(v_local, dN_dx);
 
-      tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
+      tensor<double, 2> x = {X(q, 0, e), X(q, 1, e)};
 
       auto args = std::tuple_cat(std::tuple{x}, make_dual(u_q, du_dx_q));
 
       auto [f0, f1] = std::apply(qf, args);
 
       if constexpr (!std::is_same_v<typename underlying<decltype(f0)>::type, double>) {
-        tensor< double, dim, dim > f00;
-        tensor< double, dim, dim, dim > f01;
+        tensor<double, dim, dim>      f00;
+        tensor<double, dim, dim, dim> f01;
         for (int i = 0; i < dim; i++) {
           f00[i] = std::get<0>(f0[i].gradient);
           f01[i] = std::get<1>(f0[i].gradient);
@@ -225,8 +229,8 @@ void VectorH1QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in
       }
 
       if constexpr (!std::is_same_v<typename underlying<decltype(f1)>::type, double>) {
-        tensor< double, dim, dim, dim > f10;
-        tensor< double, dim, dim, dim, dim > f11;
+        tensor<double, dim, dim, dim>      f10;
+        tensor<double, dim, dim, dim, dim> f11;
         for (int i = 0; i < dim; i++) {
           for (int j = 0; j < dim; j++) {
             f10[i][j] = std::get<0>(f1[i][j].gradient);
@@ -235,11 +239,9 @@ void VectorH1QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in
         }
         y_local += dot(dN_dx, dot(f10, v_q) + ddot(f11, dv_dx_q)) * dx;
       }
-      
     }
 
     Add(y, y_local, e);
-
   }
 }
 

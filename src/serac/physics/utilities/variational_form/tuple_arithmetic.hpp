@@ -148,9 +148,7 @@ template <typename... T, typename S, int... i>
 auto chain_rule_tuple_scale(std::tuple<T...> df_dx, S dx)
 {
   return std::apply(
-      [&](auto... each_component_of_df_dx) {
-        return std::tuple{chain_rule(each_component_of_df_dx, dx)...};
-      }, df_dx);
+      [&](auto... each_component_of_df_dx) { return std::tuple{chain_rule(each_component_of_df_dx, dx)...}; }, df_dx);
 }
 
 template <typename... T, typename... S, int... i>
