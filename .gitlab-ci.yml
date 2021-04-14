@@ -20,11 +20,11 @@ stages:
 
 .src_workflow:
   rules:
-    - if: '$CI_COMMIT_BRANCH != "main" && $CI_COMMIT_BRANCH != "develop" && $BUILD_DEPS != "ON"' #run only if ...
+    - if: '"$FULL_BUILD" != "ON"'
 
 .full_workflow:
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop" || $BUILD_DEPS == "ON"' #run only if ...
+    - if: '"$FULL_BUILD" == "ON"'
 
 ####
 # Template
