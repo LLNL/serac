@@ -24,10 +24,9 @@ The following instructions apply to the creation of a new compiler image.
        name of the compiler/generated ``Dockerfile``.  For example, a build for ``dockerfile_clang-10`` must set ``TAG``
        to ``clang-10``.  For clarity, the ``name`` field for the job should also be updated.
     #. Commit and push the modified YML file and new Dockerfile, then go to the Actions tab on GitHub, select the "Docker TPL Build"
-       action, and run the workflow on the branch to which the above changes were pushed.  
-       **This will push new images to Dockerhub, overwriting existing images**.
+       action, and run the workflow on the branch to which the above changes were pushed.
     #. Once the "Docker TPL Build" action completes, it will produce artifacts for each of the generated host-configs.  Download these 
        artifacts and commit them to the active branch, replacing any part of the filename preceding ``linux`` with ``docker``.  
        Currently the part that needs to be replaced is ``buildkitsandbox``.
     #. To include the new image in CI jobs, add a new ``matrix`` entry to ``azure-pipelines.yml``, modifying its 
-       attributes with the appropriate new image name and new host-config file.
+       attributes with the appropriate new image name (which is timestamped) and new host-config file.

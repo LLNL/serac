@@ -6,5 +6,6 @@
 /src/docs/doxygen/html/
 /src/docs/doxygen/xml/
 /src/docs/sphinx/_build/
+/src/docs/_build
 /*.cmake
 .vscode/

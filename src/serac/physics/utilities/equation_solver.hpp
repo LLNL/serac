@@ -24,7 +24,7 @@
 namespace serac::mfem_ext {
 
 /**
- * Wraps a (currently iterative) system solver and handles the configuration of linear
+ * @brief Wraps a (currently iterative) system solver and handles the configuration of linear
  * or nonlinear solvers.  This class solves a generic global system of (possibly) nonlinear algebraic equations.
  */
 class EquationSolver : public mfem::Solver {
@@ -53,7 +53,7 @@ public:
    * @brief An overload for "intercepting" HypreParMatrices
    * such that they can be converted to a SuperLURowLocMatrix
    * when running in SuperLU mode
-   * @param[in] op The operator (system matrix) to use, "A" in Ax = b
+   * @param[in] matrix The operator (system matrix) to use, "A" in Ax = b
    */
   void SetOperator(const mfem::HypreParMatrix& matrix);
 
@@ -69,7 +69,11 @@ public:
    * Returns the underlying solver object
    * @return A non-owning reference to the underlying nonlinear solver
    */
-  mfem::IterativeSolver&       NonlinearSolver() { return *nonlin_solver_; }
+  mfem::IterativeSolver& NonlinearSolver() { return *nonlin_solver_; }
+
+  /**
+   * @overload
+   */
   const mfem::IterativeSolver& NonlinearSolver() const { return *nonlin_solver_; }
 
   /**
@@ -80,6 +84,10 @@ public:
   {
     return std::visit([](auto&& solver) -> mfem::Solver& { return *solver; }, lin_solver_);
   }
+
+  /**
+   * @overload
+   */
   const mfem::Solver& LinearSolver() const
   {
     return std::visit([](auto&& solver) -> const mfem::Solver& { return *solver; }, lin_solver_);
@@ -88,7 +96,7 @@ public:
   /**
    * Input file parameters specific to this class
    **/
-  static void DefineInputFileSchema(axom::inlet::Table& table);
+  static void DefineInputFileSchema(axom::inlet::Container& container);
 
 private:
   /**
@@ -209,19 +217,32 @@ inline LinearSolverOptions AugmentAMGForElasticity(const LinearSolverOptions&   
 
 }  // namespace serac::mfem_ext
 
-// Prototype the specialization
-
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::LinearSolverOptions> {
-  serac::LinearSolverOptions operator()(const axom::inlet::Table& base);
+  serac::LinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::NonlinearSolverOptions> {
-  serac::NonlinearSolverOptions operator()(const axom::inlet::Table& base);
+  serac::NonlinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::mfem_ext::EquationSolver> {
-  serac::mfem_ext::EquationSolver operator()(const axom::inlet::Table& base);
+  serac::mfem_ext::EquationSolver operator()(const axom::inlet::Container& base);
 };

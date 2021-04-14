@@ -3,6 +3,8 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
+.. _logging-label:
+
 =======
 Logging
 =======
@@ -65,16 +67,16 @@ can be found `here <https://axom.readthedocs.io/en/develop/axom/slic/docs/sphinx
 
  * ``SLIC_INFO(msg)`` - Logs info message
  * ``SLIC_INFO_IF(expression, msg)`` - Logs info message if expression is true
- * ``SLIC_INFO_ROOT(rank, msg)`` - Logs info message if given rank is 0
- * ``SLIC_INFO_ROOT_IF(expression, rank, msg)`` - Logs info message if given rank is 0 and expression is true
+ * ``SLIC_INFO_ROOT(msg)`` - Logs info message if on rank 0
+ * ``SLIC_INFO_ROOT_IF(expression, msg)`` - Logs info message if on rank 0 and expression is true
  * ``SLIC_WARNING(msg)`` - Logs warning message
  * ``SLIC_WARNING_IF(expression, msg)`` - Logs warning message if expression is true
- * ``SLIC_WARNING_ROOT(rank, msg)`` - Logs warning message if given rank is 0
- * ``SLIC_WARNING_ROOT_IF(expression, rank, msg)`` - Logs warning message if given rank is 0 and expression is true
+ * ``SLIC_WARNING_ROOT(msg)`` - Logs warning message if on rank 0
+ * ``SLIC_WARNING_ROOT_IF(expression, msg)`` - Logs warning message if on rank 0 and expression is true
  * ``SLIC_ERROR(msg)`` - Logs error message
  * ``SLIC_ERROR_IF(expression, msg)`` - Logs error message if expression is true
- * ``SLIC_ERROR_ROOT(rank, msg)`` - Logs error message if given rank is 0
- * ``SLIC_ERROR_ROOT_IF(expression, rank, msg)`` - Logs error message if given rank is 0 and expression is true
+ * ``SLIC_ERROR_ROOT(msg)`` - Logs error message if on rank 0
+ * ``SLIC_ERROR_ROOT_IF(expression, msg)`` - Logs error message if on rank 0 and expression is true
 
 The following macros are compiled out if not in a debug build:
 
@@ -82,10 +84,10 @@ The following macros are compiled out if not in a debug build:
  * ``SLIC_ASSERT_MSG(expression, msg)``  - Logs an error with a custom message if expression is not true
  * ``SLIC_CHECK(expression)`` - Logs an warning if expression is not true
  * ``SLIC_CHECK_MSG(expression, msg)`` - Logs an warning with a custom message if expression is not true
- * ``SLIC_DEBUG(msg)`` - Logs debug message given rank is 0
+ * ``SLIC_DEBUG(msg)`` - Logs debug message on rank 0
  * ``SLIC_DEBUG_IF(expression, msg)`` - Logs debug message if expression is true
- * ``SLIC_DEBUG_ROOT(rank, msg)`` - Logs debug message if given rank is 0
- * ``SLIC_DEBUG_ROOT_IF(expression, rank, msg)`` - Logs debug message if given rank is 0 and expression is true
+ * ``SLIC_DEBUG_ROOT(msg)`` - Logs debug message if on rank 0
+ * ``SLIC_DEBUG_ROOT_IF(expression, msg)`` - Logs debug message if on rank 0 and expression is true
 
 .. note::
   Macros with ROOT in the name are not true SLIC macros but are defined by Serac.

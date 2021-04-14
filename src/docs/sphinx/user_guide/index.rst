@@ -8,17 +8,22 @@ User Guide
 ==========
 
 .. toctree::
-   :maxdepth: 2
+  :hidden:
+  :maxdepth: 2
 
-   input_schema
+  simple_conduction_tutorial
+  input_schema
 
-Physics Module User Guide
--------------------------
+Serac can be used either by providing input files to the main executable or through a C++ API. Example lua input files are located in the `data 
+directory <https://github.com/LLNL/serac/tree/develop/data/input_files>`_ and examples of how to use the C++ API are located in the `tests directory 
+<https://github.com/LLNL/serac/tree/develop/tests>`_.
+
+Physics Module C++ Interface
+----------------------------
 
 A fundamental data structure in Serac is `BasePhysics <../../doxygen/html/classserac_1_1BasePhysics.html>`_. Classes derived from ``BasePhysics`` are expected to encapsulate a specific partial differential equation and all of the state data and parameters associated with it. Currently, Serac contains the following physics modules:
 
-* `Elasticity <../../doxygen/html/classserac_1_1Elasticity.html>`_
-* `Nonlinear solid mechanics <../../doxygen/html/classserac_1_1NonlinearSolid.html>`_
+* `Solid mechanics <../../doxygen/html/classserac_1_1Solid.html>`_
 * `Thermal conduction <../../doxygen/html/classserac_1_1ThermalConduction.html>`_
 * `Thermal solid mechanics <../../doxygen/html/classserac_1_1ThermalSolid.html>`_
 
@@ -33,5 +38,3 @@ If you would like to include Serac's simulation capabilities in your software pr
 #. Complete the setup of the physics module by calling ``completeSetup()``. This allocates and builds all of the underlying linear algebra data structures.
 #. Advance the timestep by calling ``advanceTimestep(double dt)``. 
 #. Output the state variables in GLVis, VisIt, or ParaView format by calling ``outputState()``. You can also access the underlying `state data <../../doxygen/html/classserac_1_1FiniteElementState.html>`_ via the generic ``getState()`` or physics-specific calls (e.g. ``temperature()``).
-
-Examples of how to use each of the physics modules can be found in the `tests directory <https://github.com/LLNL/serac/tree/develop/tests>`_.

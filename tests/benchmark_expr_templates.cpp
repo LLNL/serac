@@ -62,7 +62,7 @@ static void BM_mixed_expr_MFEM(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   // Arbitrary
@@ -92,7 +92,7 @@ static void BM_mixed_expr_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   // Arbitrary
@@ -115,7 +115,7 @@ static void BM_mixed_expr_single_alloc_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   // Arbitrary
@@ -138,7 +138,7 @@ static void BM_large_expr_MFEM(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   for (auto _ : state) {
@@ -167,7 +167,7 @@ static void BM_large_expr_single_alloc_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   mfem::Vector expr_result(rows);
@@ -185,7 +185,7 @@ static void BM_large_expr_single_alloc_hypre_par_EXPR(benchmark::State& state)
   MPI_Barrier(MPI_COMM_WORLD);
 
   // Number of rows is the argument that varies
-  const int rows  = state.range(0);
+  const int rows  = static_cast<int>(state.range(0));
   auto [lhs, rhs] = sample_vectors(rows);
 
   auto [partitioning, start] = build_partitioning(MPI_COMM_WORLD, rows);
@@ -213,20 +213,22 @@ BENCHMARK(BM_large_expr_single_alloc_EXPR)->RangeMultiplier(2)->Range(10, 10 << 
 BENCHMARK(BM_large_expr_single_alloc_hypre_par_EXPR)->RangeMultiplier(2)->Range(10, 10 << 10);
 
 //------------------------------------------------------------------------------
-#include "axom/slic/core/UnitTestLogger.hpp"
-using axom::slic::UnitTestLogger;
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
+  int result = 0;
+
   ::benchmark::Initialize(&argc, argv);
 
   MPI_Init(&argc, &argv);
 
-  UnitTestLogger logger;  // create & initialize test logger, finalized when exiting main scope
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
 
   ::benchmark::RunSpecifiedBenchmarks();
 
   MPI_Finalize();
 
-  return 0;
+  return result;
 }

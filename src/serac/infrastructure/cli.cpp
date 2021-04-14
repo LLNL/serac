@@ -15,13 +15,15 @@ namespace serac::cli {
 
 //------- Command Line Interface -------
 
-std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], int rank,
-                                                            std::string app_description)
+std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], std::string app_description)
 {
   // specify all input arguments
   CLI::App    app{app_description};
   std::string input_file_path;
   app.add_option("-i, --input_file", input_file_path, "Input file to use.")->required()->check(CLI::ExistingFile);
+  int  restart_cycle;
+  auto restart_opt =
+      app.add_option("-c, --restart_cycle", restart_cycle, "Cycle to restart from.")->check(CLI::PositiveNumber);
   bool create_input_file_docs{false};
   app.add_flag("-d, --create-input-file-docs", create_input_file_docs,
                "Writes Sphinx documentation for input file, then exits");
@@ -33,17 +35,21 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
     serac::logger::flush();
     if (e.get_name() == "CallForHelp") {
       auto msg = app.help();
-      SLIC_INFO_ROOT(rank, msg);
+      SLIC_INFO_ROOT(msg);
       serac::exitGracefully();
     } else {
       auto err_msg = CLI::FailureMessage::simple(&app, e);
-      SLIC_ERROR_ROOT(rank, err_msg);
+      SLIC_ERROR_ROOT(err_msg);
     }
   }
 
   // Store found values
   std::unordered_map<std::string, std::string> cli_opts;
   cli_opts.insert({std::string("input_file"), input_file_path});
+  // If a restart cycle was specified
+  if (restart_opt->count() > 0) {
+    cli_opts["restart_cycle"] = std::to_string(restart_cycle);
+  }
   if (create_input_file_docs) {
     cli_opts.insert({"create_input_file_docs", {}});
   }
@@ -51,7 +57,7 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   return cli_opts;
 }
 
-void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank)
+void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
 {
   // Add header
   std::string optsMsg = fmt::format("\n{:*^80}\n", "Command Line Options");
@@ -63,7 +69,7 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts, int rank
   // Add footer
   optsMsg += fmt::format("{:*^80}\n", "*");
 
-  SLIC_INFO_ROOT(rank, optsMsg);
+  SLIC_INFO_ROOT(optsMsg);
   serac::logger::flush();
 }
 

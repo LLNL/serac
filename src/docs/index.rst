@@ -12,8 +12,7 @@ strategies and implicit finite element-based alogrithm development for emerging 
 
 
   *  :ref:`Quickstart/Build Instructions <quickstart-label>`
-  *  `Source documentation <doxygen/html/index.html>`_
-
+  *  `Source Documentation <doxygen/html/index.html>`_
 
 
 ======================================================

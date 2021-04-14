@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file thermal_solver.hpp
+ * @file thermal_conduction.hpp
  *
  * @brief An object containing the solver for a thermal conduction PDE
  */
@@ -36,7 +36,16 @@ public:
    * @brief A timestep method and config for the M solver
    */
   struct TimesteppingOptions {
-    TimestepMethod             timestepper;
+    /**
+     * @brief The timestepping method to be applied
+     *
+     */
+    TimestepMethod timestepper;
+
+    /**
+     * @brief The essential boundary enforcement method to use
+     *
+     */
     DirichletEnforcementMethod enforcement_method;
   };
 
@@ -45,8 +54,23 @@ public:
    * Either quasistatic, or time-dependent with timestep and M options
    */
   struct SolverOptions {
-    LinearSolverOptions                T_lin_options;
-    NonlinearSolverOptions             T_nonlin_options;
+    /**
+     * @brief The linear solver options
+     *
+     */
+    LinearSolverOptions T_lin_options;
+
+    /**
+     * @brief The nonlinear solver options
+     *
+     */
+    NonlinearSolverOptions T_nonlin_options;
+
+    /**
+     * @brief The optional ODE solver parameters
+     * @note If this is not defined, a quasi-static solve is performed
+     *
+     */
     std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
 
@@ -58,25 +82,83 @@ public:
     /**
      * @brief Input file parameters specific to this class
      *
-     * @param[in] table Inlet's Table that input files will be added to
+     * @param[in] container Inlet's Container that input files will be added to
      **/
-    static void defineInputFileSchema(axom::inlet::Table& table);
+    static void defineInputFileSchema(axom::inlet::Container& container);
 
-    // The order of the field
-    int           order;
+    /**
+     * @brief The order of the discretized field
+     *
+     */
+    int order;
+
+    /**
+     * @brief The linear, nonlinear, and ODE solver options
+     *
+     */
     SolverOptions solver_options;
-    // Conductivity
+
+    /**
+     * @brief The conductivity parameter
+     *
+     */
     double kappa;
+
+    /**
+     * @brief The specific heat capacity
+     *
+     */
     double cp;
+
+    /**
+     * @brief The mass density
+     *
+     */
     double rho;
 
-    // Boundary condition information
+    /**
+     * @brief Reaction function r(T)
+     *
+     */
+    std::function<double(double)> reaction_func;
+
+    /**
+     * @brief Derivative of the reaction function dR(T)/dT
+     *
+     */
+    std::function<double(double)> d_reaction_func;
+
+    /**
+     * @brief The coefficient options for the scaling factor
+     *
+     */
+    std::optional<input::CoefficientInputOptions> reaction_scale_coef;
+
+    /**
+     * @brief Source function coefficient
+     *
+     */
+    std::optional<input::CoefficientInputOptions> source_coef;
+
+    /**
+     * @brief The boundary condition information
+     */
     std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
 
-    // Initial conditions for temperature
+    /**
+     * @brief The initial temperature field
+     * @note This can be used as either an intialization for dynamic simulations or an
+     *       initial guess for quasi-static ones
+     *
+     */
     std::optional<input::CoefficientInputOptions> initial_temperature;
   };
 
+  /**
+   * @brief Reasonable defaults for most thermal linear solver options
+   *
+   * @return The default thermal linear options
+   */
   static IterativeSolverOptions defaultLinearOptions()
   {
     return {.rel_tol     = 1.0e-6,
@@ -87,16 +169,31 @@ public:
             .prec        = HypreSmootherPrec{mfem::HypreSmoother::Jacobi}};
   }
 
+  /**
+   * @brief Reasonable defaults for most thermal nonlinear solver options
+   *
+   * @return The default thermal nonlinear options
+   */
   static NonlinearSolverOptions defaultNonlinearOptions()
   {
     return {.rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
   }
 
+  /**
+   * @brief Reasonable defaults for quasi-static thermal conduction simulations
+   *
+   * @return The default quasi-static solver options
+   */
   static SolverOptions defaultQuasistaticOptions()
   {
     return {defaultLinearOptions(), defaultNonlinearOptions(), std::nullopt};
   }
 
+  /**
+   * @brief Reasonable defaults for dynamic thermal conduction simulations
+   *
+   * @return The default dynamic solver options
+   */
   static SolverOptions defaultDynamicOptions()
   {
     return {defaultLinearOptions(), defaultNonlinearOptions(),
@@ -107,18 +204,17 @@ public:
    * @brief Construct a new Thermal Solver object
    *
    * @param[in] order The order of the thermal field discretization
-   * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    * @param[in] options The system solver parameters
+   * @param[in] name An optional name for the physics module instance
    */
-  ThermalConduction(int order, std::shared_ptr<mfem::ParMesh> mesh, const SolverOptions& options);
+  ThermalConduction(int order, const SolverOptions& options, const std::string& name = "");
 
   /**
    * @brief Construct a new Thermal Solver object
    *
-   * @param[in] mesh The MFEM parallel mesh to solve the PDE on
    * @param[in] options The solver information parsed from the input file
    */
-  ThermalConduction(std::shared_ptr<mfem::ParMesh> mesh, const InputOptions& options);
+  ThermalConduction(const InputOptions& options);
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -165,11 +261,21 @@ public:
   void setSource(std::unique_ptr<mfem::Coefficient>&& source);
 
   /**
+   * @brief Set a nonlinear temperature dependent reaction term
+   *
+   * @param[in] reaction A function describing the temperature dependent reaction q=q(T)
+   * @param[in] d_reaction A function describing the derivative of the reaction dq = dq(T)/dT
+   * @param[in] scale A scaling coefficient for the reaction term
+   */
+  void setNonlinearReaction(std::function<double(double)> reaction, std::function<double(double)> d_reaction,
+                            std::unique_ptr<mfem::Coefficient>&& scale);
+
+  /**
    * @brief Set the density field. Defaults to 1.0 if not set.
    *
    * @param[in] rho The density field coefficient
    */
-  void setDensity(std::unique_ptr<mfem::Coefficient>&& rho);
+  void setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho);
 
   /**
    * @brief Set the specific heat capacity. Defaults to 1.0 if not set.
@@ -184,7 +290,11 @@ public:
    * @return A reference to the current temperature finite element state
    */
   const serac::FiniteElementState& temperature() const { return temperature_; };
-  serac::FiniteElementState&       temperature() { return temperature_; };
+
+  /**
+   * @overload
+   */
+  serac::FiniteElementState& temperature() { return temperature_; };
 
   /**
    * @brief Complete the initialization and allocation of the data structures.
@@ -211,34 +321,14 @@ protected:
   std::unique_ptr<mfem::ParBilinearForm> M_form_;
 
   /**
-   * @brief Stiffness bilinear form object
+   * @brief Stiffness nonlinear form object
    */
-  std::unique_ptr<mfem::ParBilinearForm> K_form_;
+  std::unique_ptr<mfem::ParNonlinearForm> K_form_;
 
   /**
    * @brief Assembled mass matrix
    */
   std::unique_ptr<mfem::HypreParMatrix> M_;
-
-  /**
-   * @brief Assembled stiffness matrix
-   */
-  std::unique_ptr<mfem::HypreParMatrix> K_;
-
-  /**
-   * @brief Thermal load linear form
-   */
-  std::unique_ptr<mfem::ParLinearForm> l_form_;
-
-  /**
-   * @brief Assembled BC load vector
-   */
-  std::unique_ptr<mfem::HypreParVector> bc_rhs_;
-
-  /**
-   * @brief Assembled RHS vector
-   */
-  std::unique_ptr<mfem::HypreParVector> rhs_;
 
   /**
    * @brief Conduction coefficient
@@ -293,7 +383,19 @@ protected:
    */
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-  double       dt_, previous_dt_;
+  /**
+   * @brief The current timestep
+   */
+  double dt_;
+
+  /**
+   * @brief The previous timestep
+   */
+  double previous_dt_;
+
+  /**
+   * @brief A zero vector
+   */
   mfem::Vector zero_;
 
   /**
@@ -306,11 +408,34 @@ protected:
    * nonlinear solver
    */
   mfem::Vector previous_;
+
+  /**
+   * @brief the nonlinear reaction function
+   *
+   */
+  std::function<double(double)> reaction_;
+
+  /**
+   * @brief the derivative of the nonlinear reaction function
+   *
+   */
+  std::function<double(double)> d_reaction_;
+
+  /**
+   * @brief a scaling factor for the reaction
+   *
+   */
+  std::unique_ptr<mfem::Coefficient> reaction_scale_;
 };
 
 }  // namespace serac
 
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
 template <>
 struct FromInlet<serac::ThermalConduction::InputOptions> {
-  serac::ThermalConduction::InputOptions operator()(const axom::inlet::Table& base);
+  serac::ThermalConduction::InputOptions operator()(const axom::inlet::Container& base);
 };
