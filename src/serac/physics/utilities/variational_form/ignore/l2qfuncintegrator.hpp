@@ -13,11 +13,15 @@ namespace mfem {
 template <typename qfunc_type>
 class L2QFunctionIntegrator : public GenericIntegrator {
 public:
-  L2QFunctionIntegrator(qfunc_type f, Mesh & m) : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), mesh(m) {}
+  L2QFunctionIntegrator(qfunc_type f, Mesh& m)
+      : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), mesh(m)
+  {
+  }
 
-  void Setup(const FiniteElementSpace& fes) override {
+  void Setup(const FiniteElementSpace& fes) override
+  {
     // Assuming the same element type
-    fespace    = &fes;
+    fespace      = &fes;
     Mesh* f_mesh = fes.GetMesh();
     if (f_mesh->GetNE() == 0) {
       return;
@@ -65,7 +69,7 @@ protected:
   Vector X_;
 
   qfunc_type qf;
-  Mesh & mesh;
+  Mesh&      mesh;
 };
 
 template <typename qfunc_type>
@@ -91,8 +95,8 @@ void L2QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_)
 {
   int NE = ne;
 
-  using element_type = finite_element<::Geometry::Quadrilateral, L2<D1D-1> >;
-  static constexpr int dim = element_type::dim;
+  using element_type        = finite_element<::Geometry::Quadrilateral, L2<D1D - 1>>;
+  static constexpr int dim  = element_type::dim;
   static constexpr int ndof = element_type::ndof;
 
   static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
@@ -104,20 +108,20 @@ void L2QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_)
 
   // MFEM_FORALL(e, NE, {
   for (int e = 0; e < NE; e++) {
-    tensor u_local = make_tensor<ndof>([&u, e](int i){ return u(i, e); });
+    tensor u_local = make_tensor<ndof>([&u, e](int i) { return u(i, e); });
 
-    tensor <double, ndof > y_local{};
+    tensor<double, ndof> y_local{};
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
-      double dx = det(J_q) * dxi;
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
 
       auto N = element_type::shape_functions(xi);
 
       auto u_q = dot(u_local, N);
 
-      tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
+      tensor<double, 2> x = {X(q, 0, e), X(q, 1, e)};
 
       auto f0 = qf(x, u_q);
 
@@ -127,10 +131,8 @@ void L2QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_)
     for (int i = 0; i < ndof; i++) {
       y(i, e) += y_local[i];
     }
-
   }
 }
-
 
 template <typename qfunc_type>
 void L2QFunctionIntegrator<qfunc_type>::ApplyGradient(const Vector& x, const Vector& v, Vector& y) const
@@ -153,9 +155,9 @@ template <typename qfunc_type>
 template <int D1D, int Q1D>
 void L2QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const Vector& v_in_, Vector& y_) const
 {
-  int NE             = ne;
-  using element_type = finite_element<::Geometry::Quadrilateral, L2<D1D-1> >;
-  static constexpr int dim = element_type::dim;
+  int NE                    = ne;
+  using element_type        = finite_element<::Geometry::Quadrilateral, L2<D1D - 1>>;
+  static constexpr int dim  = element_type::dim;
   static constexpr int ndof = element_type::ndof;
 
   static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
@@ -167,23 +169,23 @@ void L2QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, con
   auto y = Reshape(y_.ReadWrite(), ndof, NE);
 
   for (int e = 0; e < NE; e++) {
-    tensor u_local = make_tensor<ndof>([&u, e](int i){ return u(i, e); });
-    tensor v_local = make_tensor<ndof>([&v, e](int i){ return v(i, e); });
+    tensor u_local = make_tensor<ndof>([&u, e](int i) { return u(i, e); });
+    tensor v_local = make_tensor<ndof>([&v, e](int i) { return v(i, e); });
 
-    tensor< double, ndof > y_local{};
+    tensor<double, ndof> y_local{};
 
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
-      double dx = det(J_q) * dxi;
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
 
       auto N = element_type::shape_functions(xi);
 
       auto u_q = dot(u_local, N);
       auto v_q = dot(v_local, N);
 
-      tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
+      tensor<double, 2> x = {X(q, 0, e), X(q, 1, e)};
 
       auto f0 = qf(x, make_dual(u_q));
 
@@ -191,7 +193,6 @@ void L2QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, con
         double f00 = f0.gradient;
         y_local += (N * (f00 * v_q)) * dx;
       }
-
     }
 
     for (int i = 0; i < ndof; i++) {

@@ -123,7 +123,7 @@ struct J2 {
       A2 = 6 * G * G * ((state.pl_strain_inc / state.q) - (1.0 / (3.0 * G + Hi + Hk)));
     }
 
-    return make_tensor<3,3,3,3>([&](auto i, auto j, auto k, auto l){
+    return make_tensor<3, 3, 3, 3>([&](auto i, auto j, auto k, auto l) {
       double I4    = (i == j) * (k == l);
       double I4sym = 0.5 * ((i == k) * (j == l) + (i == l) * (j == k));
       double I4dev = I4sym - (i == j) * (k == l) / 3.0;

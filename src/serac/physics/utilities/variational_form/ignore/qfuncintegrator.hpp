@@ -13,11 +13,14 @@ namespace mfem {
 template <typename qfunc_type>
 class QFunctionIntegrator : public GenericIntegrator {
 public:
-  QFunctionIntegrator(qfunc_type f, Mesh & m) : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), mesh(m) {}
+  QFunctionIntegrator(qfunc_type f, Mesh& m) : GenericIntegrator(nullptr), maps(nullptr), geom(nullptr), qf(f), mesh(m)
+  {
+  }
 
-  void Setup(const FiniteElementSpace& fes) override {
+  void Setup(const FiniteElementSpace& fes) override
+  {
     // Assuming the same element type
-    fespace    = &fes;
+    fespace      = &fes;
     Mesh* f_mesh = fes.GetMesh();
     if (f_mesh->GetNE() == 0) {
       return;
@@ -65,7 +68,7 @@ protected:
   Vector X_;
 
   qfunc_type qf;
-  Mesh & mesh;
+  Mesh&      mesh;
 };
 
 template <typename qfunc_type>
@@ -91,8 +94,8 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
 {
   int NE = ne;
 
-  using element_type = finite_element<::Geometry::Quadrilateral, H1<D1D-1> >;
-  static constexpr int dim = element_type::dim;
+  using element_type        = finite_element<::Geometry::Quadrilateral, H1<D1D - 1>>;
+  static constexpr int dim  = element_type::dim;
   static constexpr int ndof = element_type::ndof;
 
   static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
@@ -104,22 +107,22 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
 
   // MFEM_FORALL(e, NE, {
   for (int e = 0; e < NE; e++) {
-    tensor u_local = make_tensor<ndof>([&u, e](int i){ return u(i, e); });
+    tensor u_local = make_tensor<ndof>([&u, e](int i) { return u(i, e); });
 
-    tensor <double, ndof > y_local{};
+    tensor<double, ndof> y_local{};
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
-      double dx = det(J_q) * dxi;
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
 
-      auto N = element_type::shape_functions(xi);
+      auto N     = element_type::shape_functions(xi);
       auto dN_dx = dot(element_type::shape_function_gradients(xi), inv(J_q));
 
-      auto u_q = dot(u_local, N);
+      auto u_q     = dot(u_local, N);
       auto du_dx_q = dot(u_local, dN_dx);
 
-      tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
+      tensor<double, 2> x = {X(q, 0, e), X(q, 1, e)};
 
       auto args = std::tuple{x, u_q, du_dx_q};
 
@@ -131,10 +134,8 @@ void QFunctionIntegrator<qfunc_type>::Apply2D(const Vector& u_in_, Vector& y_) c
     for (int i = 0; i < ndof; i++) {
       y(i, e) += y_local[i];
     }
-
   }
 }
-
 
 template <typename qfunc_type>
 void QFunctionIntegrator<qfunc_type>::ApplyGradient(const Vector& x, const Vector& v, Vector& y) const
@@ -157,9 +158,9 @@ template <typename qfunc_type>
 template <int D1D, int Q1D>
 void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const Vector& v_in_, Vector& y_) const
 {
-  int NE             = ne;
-  using element_type = finite_element<::Geometry::Quadrilateral, H1<D1D-1> >;
-  static constexpr int dim = element_type::dim;
+  int NE                    = ne;
+  using element_type        = finite_element<::Geometry::Quadrilateral, H1<D1D - 1>>;
+  static constexpr int dim  = element_type::dim;
   static constexpr int ndof = element_type::ndof;
 
   static constexpr auto rule = GaussQuadratureRule<::Geometry::Quadrilateral, Q1D>();
@@ -171,59 +172,56 @@ void QFunctionIntegrator<qfunc_type>::ApplyGradient2D(const Vector& u_in_, const
   auto y = Reshape(y_.ReadWrite(), ndof, NE);
 
   for (int e = 0; e < NE; e++) {
-    tensor u_local = make_tensor<ndof>([&u, e](int i){ return u(i, e); });
-    tensor v_local = make_tensor<ndof>([&v, e](int i){ return v(i, e); });
+    tensor u_local = make_tensor<ndof>([&u, e](int i) { return u(i, e); });
+    tensor v_local = make_tensor<ndof>([&v, e](int i) { return v(i, e); });
 
-    tensor< double, ndof > y_local{};
+    tensor<double, ndof> y_local{};
 
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      auto xi = rule.points[q];
-      auto dxi = rule.weights[q];
-      auto J_q = make_tensor< dim, dim >([&](int i, int j){ return J(q, i, j, e); });
-      double dx = det(J_q) * dxi;
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
 
-      auto N = element_type::shape_functions(xi);
+      auto N     = element_type::shape_functions(xi);
       auto dN_dx = dot(element_type::shape_function_gradients(xi), inv(J_q));
 
-      auto u_q = dot(u_local, N);
+      auto u_q     = dot(u_local, N);
       auto du_dx_q = dot(u_local, dN_dx);
 
-      auto v_q = dot(v_local, N);
+      auto v_q     = dot(v_local, N);
       auto dv_dx_q = dot(v_local, dN_dx);
 
-      tensor<double,2> x = {X(q, 0, e), X(q, 1, e)};
+      tensor<double, 2> x = {X(q, 0, e), X(q, 1, e)};
 
       auto args = std::tuple_cat(std::tuple{x}, make_dual(u_q, du_dx_q));
 
       auto [f0, f1] = std::apply(qf, args);
 
       // the following conditional blocks are to catch the cases where f0 or f1 do not actually
-      // depend on the arguments to the q-function. 
-      // 
-      // In that case, the dual number types will not propagate through to the return statement, 
+      // depend on the arguments to the q-function.
+      //
+      // In that case, the dual number types will not propagate through to the return statement,
       // so the output will be a double or a tensor of doubles, rather than dual < ... >
-      // or tensor< dual < ... >, n ... >. 
+      // or tensor< dual < ... >, n ... >.
       //
       // underlying< ... >::type lets us do some metaprogramming to detect this, and
       // issue a no-op in the event that f0 or f1 does not depend on the input arguments
-      // 
+      //
       // in summary: if the user gives us a function where some of the outputs do not depend on
       // inputs, we can detect this at compile time and skip unnecessary calculation/storage
       if constexpr (!std::is_same_v<typename underlying<decltype(f0)>::type, double>) {
-        double f00 = std::get<0>(f0.gradient);
+        double            f00 = std::get<0>(f0.gradient);
         tensor<double, 2> f01 = std::get<1>(f0.gradient);
         y_local += (N * (f00 * v_q + dot(f01, dv_dx_q))) * dx;
       }
 
       if constexpr (!std::is_same_v<typename underlying<decltype(f1)>::type, double>) {
-        tensor<double, 2> f10 = {std::get<0>(f1[0].gradient), std::get<0>(f1[1].gradient)};
-        tensor<double, 2, 2> f11{{
-          {std::get<1>(f1[0].gradient)[0], std::get<1>(f1[0].gradient)[1]}, 
-          {std::get<1>(f1[1].gradient)[0], std::get<1>(f1[1].gradient)[1]}
-        }};
+        tensor<double, 2>    f10 = {std::get<0>(f1[0].gradient), std::get<0>(f1[1].gradient)};
+        tensor<double, 2, 2> f11{{{std::get<1>(f1[0].gradient)[0], std::get<1>(f1[0].gradient)[1]},
+                                  {std::get<1>(f1[1].gradient)[0], std::get<1>(f1[1].gradient)[1]}}};
         y_local += dot(dN_dx, outer(f10, v_q) + dot(f11, dv_dx_q)) * dx;
       }
-      
     }
 
     for (int i = 0; i < ndof; i++) {

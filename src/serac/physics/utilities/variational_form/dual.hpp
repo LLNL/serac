@@ -104,14 +104,11 @@ constexpr auto operator/(dual<gradient_type_a> a, dual<gradient_type_b> b)
     return a.value x b.value;                                   \
   };
 
-binary_comparator_overload(<)
-binary_comparator_overload(<=)
-binary_comparator_overload(==)
-binary_comparator_overload(>=)
-binary_comparator_overload(>)
+binary_comparator_overload(<) binary_comparator_overload(<=) binary_comparator_overload(==)
+    binary_comparator_overload(>=) binary_comparator_overload(>)
 
-template <typename gradient_type>
-constexpr auto& operator+=(dual<gradient_type>& a, const dual<gradient_type>& b)
+        template <typename gradient_type>
+        constexpr auto& operator+=(dual<gradient_type>& a, const dual<gradient_type>& b)
 {
   a.value += b.value;
   a.gradient += b.gradient;
@@ -194,13 +191,15 @@ auto& operator<<(std::ostream& out, dual<T> A)
 
 constexpr auto make_dual(double x) { return dual{x, 1.0}; }
 
-template < typename T >
-auto get_value(const T & arg) {
+template <typename T>
+auto get_value(const T& arg)
+{
   return arg;
 }
 
-template < typename T >
-auto get_value(dual< T > arg) {
+template <typename T>
+auto get_value(dual<T> arg)
+{
   return arg.value;
 }
 

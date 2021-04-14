@@ -16,11 +16,11 @@ using namespace mfem;
 
 // solve an equation of the form
 // (a * M + b * K) x == f
-// 
+//
 // where M is the H1 mass matrix
 //       K is the H1 stiffness matrix
 //       f is some load term
-// 
+//
 int main(int argc, char* argv[])
 {
   int num_procs, myid;
@@ -30,13 +30,13 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
+  const char* mesh_file = SERAC_REPO_DIR "/data/meshes/star.mesh";
 
-  constexpr int p = 2;
-  constexpr int dim = 2;
-  int         refinements = 0;
-  double a = 1.0;
-  double b = 1.0;
+  constexpr int p           = 2;
+  constexpr int dim         = 2;
+  int           refinements = 0;
+  double        a           = 1.0;
+  double        b           = 1.0;
 
   OptionsParser args(argc, argv);
   args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.");
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
 
   ParMesh pmesh(MPI_COMM_WORLD, mesh);
 
-  auto fec = H1_FECollection(p, dim);
+  auto                  fec = H1_FECollection(p, dim);
   ParFiniteElementSpace fespace(&pmesh, &fec);
 
   ParBilinearForm A(&fespace);
@@ -75,10 +75,8 @@ int main(int argc, char* argv[])
   A.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
-  LinearForm f(&fespace);
-  FunctionCoefficient load_func([&](const Vector& coords) {
-    return 100 * coords(0) * coords(1);
-  });
+  LinearForm          f(&fespace);
+  FunctionCoefficient load_func([&](const Vector& coords) { return 100 * coords(0) * coords(1); });
 
   f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
   f.Assemble();
@@ -89,17 +87,19 @@ int main(int argc, char* argv[])
   Vector X(fespace.TrueVSize());
   x.GetTrueDofs(X);
 
-  using test_space = H1<p>;
+  using test_space  = H1<p>;
   using trial_space = H1<p>;
 
-  WeakForm< test_space(trial_space) > residual(&fespace, &fespace);
+  WeakForm<test_space(trial_space)> residual(&fespace, &fespace);
 
-  residual.AddIntegral([&](auto x, auto temperature) {
-    auto [u, du_dx] = temperature;
-    auto f0 = a * u - (100 * x[0] * x[1]);
-    auto f1 = b * du_dx;
-    return std::tuple{f0, f1};
-  }, pmesh);
+  residual.AddIntegral(
+      [&](auto x, auto temperature) {
+        auto [u, du_dx] = temperature;
+        auto f0         = a * u - (100 * x[0] * x[1]);
+        auto f1         = b * du_dx;
+        return std::tuple{f0, f1};
+      },
+      pmesh);
 
   mfem::Vector r1 = A * x - f;
   mfem::Vector r2 = residual * x;
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
   std::cout << "||r2||: " << r2.Norml2() << std::endl;
   std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
 
-  mfem::Operator & grad2 = residual.GetGradient(x);
+  mfem::Operator& grad2 = residual.GetGradient(x);
 
   mfem::Vector g1 = (*J) * x;
   mfem::Vector g2 = grad2 * x;

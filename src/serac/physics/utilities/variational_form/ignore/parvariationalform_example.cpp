@@ -17,12 +17,12 @@ int main(int argc, char* argv[])
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
-  const char * mesh_file = SERAC_REPO_DIR"/data/meshes/star.mesh";
+  const char* mesh_file = SERAC_REPO_DIR "/data/meshes/star.mesh";
 
-  int         order       = 1;
-  int         refinements = 0;
-  double a = 1.0;
-  double b = 1.0;
+  int    order       = 1;
+  int    refinements = 0;
+  double a           = 1.0;
+  double b           = 1.0;
   // SERAC EDIT BEGIN
   // double p = 5.0;
   // SERAC EDIT END
@@ -79,7 +79,8 @@ int main(int argc, char* argv[])
         auto f0 = a * u - (100 * x[0] * x[1]);
         auto f1 = b * du;
         return std::tuple{f0, f1};
-      }, pmesh);
+      },
+      pmesh);
 
   form.AddDomainIntegrator(tmp);
 
