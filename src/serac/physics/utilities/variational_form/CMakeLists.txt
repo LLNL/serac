@@ -15,6 +15,7 @@ set(weakform_headers
     tuple_arithmetic.hpp
     polynomials.hpp
     quadrature.hpp
+    quadrature_data.hpp
     finite_element.hpp
     detail/hexahedron_h1.inl
     detail/hexahedron_hcurl.inl
@@ -52,7 +53,8 @@ set(weakform_tests_serial
     tests/J2_material_with_AD.cpp
     tests/kernel_microbenchmark.cpp
     tests/diffusion_performance_test.cpp
-    tests/tensor_unit_tests.cpp)
+    tests/tensor_unit_tests.cpp
+    tests/weak_form_material_state_test.cpp)
     
 foreach(filename ${weakform_tests_serial})
     get_filename_component(test_name ${filename} NAME_WE)
