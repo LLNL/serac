@@ -161,8 +161,8 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
     return 0.;
   });
 
-  Array<int> bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList(*pmesh_, x_zero);
-  Array<int> bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList(*pmesh_, x_one);
+  auto bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList<mfem::Array<int>>(*pmesh_, x_zero);
+  auto bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList<mfem::Array<int>>(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   Array<int> bdr_attr_list(pfes_->GetNBE());
@@ -237,8 +237,8 @@ TEST_F(WrapperTests, Transformed)
     return 0.;
   });
 
-  Array<int> bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList(*pmesh_, x_zero);
-  Array<int> bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList(*pmesh_, x_one);
+  auto bdr_attr_list_zero = mfem_ext::MakeBdrAttributeList<mfem::Array<int>>(*pmesh_, x_zero);
+  auto bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList<mfem::Array<int>>(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   Array<int> bdr_attr_list(pfes_->GetNBE());
@@ -368,16 +368,18 @@ TEST_F(WrapperTests, attribute_modifier_coef)
 TEST_F(WrapperTests, vector_transform_coef)
 {
   mfem::Vector one_two_three(dim_);
-  one_two_three[0]    = 1;
-  one_two_three[1]    = 2;
-  one_two_three[2]    = 3;
-  auto first_vec_coef = std::make_shared<mfem::VectorConstantCoefficient>(one_two_three);
+  one_two_three[0] = 1;
+  one_two_three[1] = 2;
+  one_two_three[2] = 3;
+  std::shared_ptr<mfem::VectorCoefficient> first_vec_coef =
+      std::make_shared<mfem::VectorConstantCoefficient>(one_two_three);
 
   mfem::Vector four_five_six(dim_);
-  four_five_six[0]     = 4;
-  four_five_six[1]     = 5;
-  four_five_six[2]     = 6;
-  auto second_vec_coef = std::make_shared<mfem::VectorConstantCoefficient>(four_five_six);
+  four_five_six[0] = 4;
+  four_five_six[1] = 5;
+  four_five_six[2] = 6;
+  std::shared_ptr<mfem::VectorCoefficient> second_vec_coef =
+      std::make_shared<mfem::VectorConstantCoefficient>(four_five_six);
 
   // Verify the answer using an MFEM VectorSumCoefficient since the transformation is
   // just an addition
@@ -386,20 +388,14 @@ TEST_F(WrapperTests, vector_transform_coef)
   // Both of these do the same thing, but we can test both the single- and dual-vector transformations
   // by capturing the operand
   mfem_ext::TransformedVectorCoefficient mono_tv_coef(
-      first_vec_coef, [&four_five_six](const mfem::Vector& in_vec, mfem::Vector& out_vec) {
-        out_vec = in_vec;
-        out_vec += four_five_six;
-      });
+      dim_, [&](mfem::Vector& in_vec) { return in_vec + four_five_six; }, *first_vec_coef);
   ParGridFunction mono_gf(pfes_v_.get());
   mono_gf.ProjectCoefficient(mono_tv_coef);
   EXPECT_NEAR(mono_gf.ComputeL2Error(sum_coef), 0.0, 1.e-8);
 
   mfem_ext::TransformedVectorCoefficient dual_tv_coef(
-      first_vec_coef, second_vec_coef,
-      [](const mfem::Vector& first_vec, const mfem::Vector& second_vec, mfem::Vector& out_vec) {
-        out_vec = first_vec;
-        out_vec += second_vec;
-      });
+      dim_, [](mfem::Vector& first_vec, mfem::Vector& second_vec) { return first_vec + second_vec; }, *first_vec_coef,
+      *second_vec_coef);
   ParGridFunction dual_gf(pfes_v_.get());
   dual_gf.ProjectCoefficient(dual_tv_coef);
   EXPECT_NEAR(dual_gf.ComputeL2Error(sum_coef), 0.0, 1.e-8);
