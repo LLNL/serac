@@ -49,14 +49,14 @@ stages:
     - *run_update_uberenv
     - echo -e "section_start:$(date +%s):full_build_and_test\r\e[0K
       Full Build and Test ${CI_PROJECT_NAME}"
-    - ${ALLOC_COMMAND} python3 scripts/llnl/build_tpls.py -v --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID} --mirror=${CI_BUILDS_DIR}/serac_tpls
+    - ${ALLOC_COMMAND} python3 scripts/llnl/build_tpls.py -v --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID}/${CI_JOB_NAME} --mirror=${CI_BUILDS_DIR}/serac_tpls
     - echo -e "section_end:$(date +%s):full_build_and_test\r\e[0K"
   artifacts:
     paths:
-      - _serac_build_and_test_*/output.log*.txt
-      - _serac_build_and_test_*/build-*/output.log*.txt
+      - ${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID}/${CI_JOB_NAME}/_serac_build_and_test_*/output.log*.txt
+      - ${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID}/${CI_JOB_NAME}/_serac_build_and_test_*/build-*/output.log*.txt
     reports:
-      junit: _serac_build_and_test_*/build-*/junit.xml
+      junit: ${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID}/${CI_JOB_NAME}/_serac_build_and_test_*/build-*/junit.xml
 
 # This is where jobs are included
 include:
