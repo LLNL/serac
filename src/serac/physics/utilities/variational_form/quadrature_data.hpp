@@ -15,6 +15,34 @@
 #include "mfem.hpp"
 
 // namespace serac {
+
+/**
+ * @brief Lightweight span, replace with std::span when C++20 available
+ */
+template <typename T>
+class Span {
+public:
+  /**
+   * @brief Constructs a new Span
+   * @param[in] ptr The pointer to the data
+   * @param[in] size The length of the data (number of elements in the array)
+   */
+  Span(T* ptr, const std::size_t size) : ptr_(ptr), size_(size) {}
+
+  /**
+   * @brief Begin iterator (pointer to first element)
+   */
+  auto begin() { return ptr_; }
+  /**
+   * @brief Begin iterator (pointer to first element)
+   */
+  auto end() { return ptr_ + size_; }
+
+private:
+  T*          ptr_;
+  std::size_t size_;
+};
+
 /**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
@@ -41,6 +69,11 @@ public:
    * @param[in] item The item to assign
    */
   QuadratureData& operator=(const T& item);
+
+  /**
+   * @brief Returns a view over the data
+   */
+  Span<T> data();
 
 private:
   // FIXME: These will probably need to be MaybeOwningPointers
@@ -70,7 +103,7 @@ QuadratureData<void> dummy_qdata;
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
 template <typename T>
 QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p)
-    : qspace_(&mesh, p), qfunc_(&qspace_, sizeof(T) / sizeof(double))
+    : qspace_(&mesh, p + 1), qfunc_(&qspace_, sizeof(T) / sizeof(double))
 {
 }
 
@@ -86,11 +119,19 @@ T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
 template <typename T>
 QuadratureData<T>& QuadratureData<T>::operator=(const T& item)
 {
-  // Number of doubles divided by number of doubles per T
-  const auto n_qpts = qfunc_.Size() / (sizeof(T) / sizeof(double));
-  T*         ptr    = reinterpret_cast<T*>(qfunc_.GetData());
-  std::fill(ptr, ptr + n_qpts, item);
+  auto span = data();
+  std::fill(span.begin(), span.end(), item);
   return *this;
+}
+
+template <typename T>
+Span<T> QuadratureData<T>::data()
+{
+  // Number of doubles divided by number of doubles per T
+  // FIXME: should this just be a member??
+  const auto size = qfunc_.Size() / (sizeof(T) / sizeof(double));
+  T*         ptr  = reinterpret_cast<T*>(qfunc_.GetData());
+  return Span{ptr, size};
 }
 
 // }  // namespace serac
