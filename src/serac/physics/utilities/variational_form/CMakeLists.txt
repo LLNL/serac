@@ -15,16 +15,23 @@ set(weakform_headers
     tuple_arithmetic.hpp
     polynomials.hpp
     quadrature.hpp
+    finite_element.hpp
+    detail/hexahedron_h1.inl
+    detail/hexahedron_hcurl.inl
+    detail/quadrilateral_h1.inl
+    detail/quadrilateral_hcurl.inl
+    detail/quadrilateral_L2.inl
+    detail/segment_h1.inl
     )
 
-set(weakform_sources
-    detail/hexahedron_h1.cpp
-    detail/quadrilateral_h1.cpp)
+# set(weakform_sources
+#     detail/hexahedron_h1.cpp
+#     detail/quadrilateral_h1.cpp)
 
 blt_add_library(
       NAME        serac_weakform
       HEADERS     ${weakform_headers}
-      SOURCES     ${weakform_sources}
+    #   SOURCES     ${weakform_sources}
       DEPENDS_ON  ${weakform_depends}
       )
 
@@ -77,4 +84,3 @@ foreach(filename ${weakform_tests_mpi})
                  COMMAND       ${test_name}
                  NUM_MPI_TASKS 4)
 endforeach()
-    
