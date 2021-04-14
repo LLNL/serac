@@ -17,10 +17,6 @@ set(weakform_headers
     quadrature.hpp
     )
 
-set(weakform_sources
-    detail/hexahedron_h1.cpp
-    detail/quadrilateral_h1.cpp)
-
 blt_add_library(
       NAME        serac_weakform
       HEADERS     ${weakform_headers}
