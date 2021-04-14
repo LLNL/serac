@@ -6,17 +6,17 @@ epsilon = 0.00001
 dt      = 1.0
 
 main_mesh = {
-    type = "file",
-    -- mesh file
-    mesh = "../../../meshes/star_with_2_bdr_attributes.mesh",
+    type = "ball",
+    -- number of elements in the mesh
+    approx_elements = 10000,
     -- serial and parallel refinement levels
-    ser_ref_levels = 1,
-    par_ref_levels = 1,
+    ser_ref_levels = 0,
+    par_ref_levels = 0,
 }
 
 -- Solver parameters
 thermal_conduction = {
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
@@ -47,9 +47,7 @@ thermal_conduction = {
     boundary_conds = {
         ['temperature'] = {
             attrs = {1},
-            coef = function (v)
-                return 1.0
-            end
+            constant = 1.0
         },
     },
 }

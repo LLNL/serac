@@ -42,7 +42,7 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
       // TODO: do a more thorough stability analysis for mfem::GeneralizedAlpha2Solver
       // to characterize which parameter combinations work with time-varying
       // dirichlet constraints
-      SLIC_WARNING(
+      SLIC_WARNING_ROOT(
           "Cannot guarantee stability for AverageAccerlation with time-dependent Dirichlet Boundary Conditions");
       second_order_ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
       break;
@@ -59,7 +59,7 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
       first_order_system_ode_solver_ = std::make_unique<mfem::BackwardEulerSolver>();
       break;
     default:
-      SLIC_ERROR("Timestep method was not a supported second-order ODE method");
+      SLIC_ERROR_ROOT("Timestep method was not a supported second-order ODE method");
   }
 
   if (second_order_ode_solver_) {
@@ -113,7 +113,7 @@ void SecondOrderODE::Step(mfem::Vector& x, mfem::Vector& dxdt, double& time, dou
     x    = bx.GetBlock(0);
     dxdt = bx.GetBlock(1);
   } else {
-    SLIC_ERROR("Neither second_order_ode_solver_ nor first_order_system_ode_solver_ specified");
+    SLIC_ERROR_ROOT("Neither second_order_ode_solver_ nor first_order_system_ode_solver_ specified");
   }
 }
 
@@ -208,7 +208,7 @@ void SecondOrderODE::Solve(const double time, const double c0, const double c1, 
   d2u_dt2 += d2U_dt2_;
 
   solver_.Mult(zero_, d2u_dt2);
-  SLIC_WARNING_IF(!solver_.NonlinearSolver().GetConverged(), "Newton Solver did not converge.");
+  SLIC_WARNING_ROOT_IF(!solver_.NonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
   state_.d2u_dt2 = d2u_dt2;
 }
@@ -258,7 +258,7 @@ void FirstOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
       ode_solver_ = std::make_unique<mfem::SDIRK34Solver>();
       break;
     default:
-      SLIC_ERROR("Timestep method was not a supported first-order ODE method");
+      SLIC_ERROR_ROOT("Timestep method was not a supported first-order ODE method");
   }
   ode_solver_->Init(*this);
 }
@@ -314,7 +314,7 @@ void FirstOrderODE::Solve(const double dt, const mfem::Vector& u, mfem::Vector& 
   du_dt += dU_dt_;
 
   solver_.Mult(zero_, du_dt);
-  SLIC_WARNING_IF(!solver_.NonlinearSolver().GetConverged(), "Newton Solver did not converge.");
+  SLIC_WARNING_ROOT_IF(!solver_.NonlinearSolver().GetConverged(), "Newton Solver did not converge.");
 
   state_.du_dt       = du_dt;
   state_.previous_dt = dt;

@@ -20,7 +20,7 @@ TEST(mesh, load_exodus)
   MPI_Barrier(MPI_COMM_WORLD);
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/bortel_echem.e";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 1);
+  auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 1, 1);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

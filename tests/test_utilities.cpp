@@ -10,7 +10,7 @@
 
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/nonlinear_solid.hpp"
+#include "serac/physics/solid.hpp"
 #include "serac/physics/thermal_conduction.hpp"
 
 namespace serac {
@@ -30,14 +30,12 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
   inlet.addDouble("dt", "Time step.");
   inlet.addDouble("t_final", "Stopping point");
 
-  inlet.addString("output_type", "Desired output format")
-      .validValues({"GLVis", "ParaView", "VisIt", "SidreVisIt"})
-      .defaultValue("VisIt");
+  serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
 
   // Comparison parameter
   inlet.addDouble("epsilon", "Threshold to be used in the comparison");
 
-  auto& mesh_table = inlet.addTable("main_mesh", "The main mesh for the problem");
+  auto& mesh_table = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_table);
 
   // Verify input file
@@ -47,16 +45,16 @@ void defineCommonTestSchema(axom::inlet::Inlet& inlet)
 }
 
 template <>
-void defineTestSchema<NonlinearSolid>(axom::inlet::Inlet& inlet)
+void defineTestSchema<Solid>(axom::inlet::Inlet& inlet)
 {
   // Integration test parameters
-  inlet.addDouble("expected_x_l2norm", "Correct L2 norm of the displacement field");
+  inlet.addDouble("expected_u_l2norm", "Correct L2 norm of the displacement field");
   inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
 
   // Physics
-  auto& solid_solver_table = inlet.addTable("nonlinear_solid", "Finite deformation solid mechanics module");
+  auto& solid_solver_table = inlet.addStruct("solid", "Finite deformation solid mechanics module");
   // This is the "standard" schema for the actual physics module
-  serac::NonlinearSolid::InputOptions::defineInputFileSchema(solid_solver_table);
+  serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
 
   defineCommonTestSchema(inlet);
 }
@@ -67,8 +65,11 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
   // Integration test parameters
   inlet.addDouble("expected_t_l2norm", "Correct L2 norm of the temperature field");
 
+  auto& exact = inlet.addStruct("exact_solution", "Exact solution for the temperature field");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(exact);
+
   // Physics
-  auto& conduction_table = inlet.addTable("thermal_conduction", "Thermal conduction module");
+  auto& conduction_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   // This is the "standard" schema for the actual physics module
   serac::ThermalConduction::InputOptions::defineInputFileSchema(conduction_table);
 
@@ -94,9 +95,9 @@ std::string moduleName()
 }
 
 template <>
-std::string moduleName<NonlinearSolid>()
+std::string moduleName<Solid>()
 {
-  return "nonlinear_solid";
+  return "solid";
 }
 
 template <>
@@ -107,7 +108,7 @@ std::string moduleName<ThermalConduction>()
 
 /**
  * @brief Verifies the solution fields against the input file
- * @param[in] module The module whose fields should be verified
+ * @param[in] phys_module The module whose fields should be verified
  * @param[in] inlet The Inlet object from which expected solution values will be obtained
  * @param[in] dim The mesh dimension
  */
@@ -118,38 +119,55 @@ void verifyFields(const PhysicsModule&, const axom::inlet::Inlet&, const int)
 }
 
 template <>
-void verifyFields(const NonlinearSolid& module, const axom::inlet::Inlet& inlet, const int dim)
+void verifyFields(const Solid& phys_module, const axom::inlet::Inlet& inlet, const int dim)
 {
   mfem::Vector zero(dim);
   zero = 0.0;
   mfem::VectorConstantCoefficient zerovec(zero);
 
-  if (inlet.contains("expected_x_l2norm")) {
-    double x_norm = module.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-    EXPECT_NEAR(inlet["expected_x_l2norm"], x_norm, inlet["epsilon"]);
+  if (inlet.contains("expected_u_l2norm")) {
+    double x_norm = phys_module.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+    EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_v_l2norm")) {
-    double v_norm = module.velocity().gridFunc().ComputeLpError(2.0, zerovec);
+    double v_norm = phys_module.velocity().gridFunc().ComputeLpError(2.0, zerovec);
     EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
   }
 }
 
 template <>
-void verifyFields(const ThermalConduction& module, const axom::inlet::Inlet& inlet, const int)
+void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet, const int)
 {
   mfem::ConstantCoefficient zero(0.0);
   if (inlet.contains("expected_t_l2norm")) {
-    double t_norm = module.temperature().gridFunc().ComputeLpError(2.0, zero);
+    double t_norm = phys_module.temperature().gridFunc().ComputeLpError(2.0, zero);
     EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
+  }
+
+  if (inlet.contains("exact_solution")) {
+    auto coef_options = inlet["exact_solution"].get<serac::input::CoefficientInputOptions>();
+    auto exact        = coef_options.constructScalar();
+    exact->SetTime(phys_module.time());
+    double error = phys_module.temperature().gridFunc().ComputeLpError(2.0, *exact);
+    EXPECT_NEAR(error, 0.0, inlet["epsilon"]);
   }
 }
 }  // namespace detail
 
 template <typename PhysicsModule>
-void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh)
+void runModuleTest(const std::string& input_file, const std::string& test_name, std::optional<int> restart_cycle)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
+
+  // Initialize the DataCollection
+  // WARNING: This must happen before serac::input::initialize, as the loading
+  // process will wipe out the datastore
+  if (restart_cycle) {
+    serac::StateManager::initialize(datastore, *restart_cycle);
+  } else {
+    serac::StateManager::initialize(datastore);
+  }
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file);
@@ -157,43 +175,36 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
   defineTestSchema<PhysicsModule>(inlet);
 
   // Build the mesh
-  std::shared_ptr<mfem::ParMesh> mesh;
-  if (custom_mesh) {
-    mesh = custom_mesh;
-  } else {
+  if (!restart_cycle) {
     auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
     if (const auto file_options = std::get_if<serac::mesh::FileInputOptions>(&mesh_options.extra_options)) {
-      auto full_mesh_path = serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
-      mesh = serac::buildMeshFromFile(full_mesh_path, mesh_options.ser_ref_levels, mesh_options.par_ref_levels);
-    } else {
-      SLIC_ERROR("Physics module test is attempting to run without a file path or a custom mesh!");
+      file_options->absolute_mesh_file_name =
+          serac::input::findMeshFilePath(file_options->relative_mesh_file_name, input_file);
     }
+    auto mesh = serac::mesh::buildParallelMesh(mesh_options);
+    serac::StateManager::setMesh(std::move(mesh));
   }
+
+  const int dim = serac::StateManager::mesh().Dimension();
 
   const std::string module_name = detail::moduleName<PhysicsModule>();
 
   // Define the solid solver object
   auto          module_options = inlet[module_name].get<typename PhysicsModule::InputOptions>();
-  PhysicsModule module(mesh, module_options);
+  PhysicsModule phys_module(module_options);
 
   const bool is_dynamic = inlet[module_name].contains("dynamics");
 
   // Initialize the output
-  const static auto output_names = []() {
-    std::unordered_map<std::string, serac::OutputType> result;
-    result["GLVis"]      = serac::OutputType::GLVis;
-    result["ParaView"]   = serac::OutputType::ParaView;
-    result["VisIt"]      = serac::OutputType::VisIt;
-    result["SidreVisIt"] = serac::OutputType::SidreVisIt;
-    return result;
-  }();
-
-  module.initializeOutput(output_names.at(inlet["output_type"]), module_name);
+  // FIXME: This and the FromInlet specialization are hacked together,
+  // should be inlet["output_type"].get<OutputType>() - Inlet obj
+  // needs to allow for top-level scalar retrieval as well
+  phys_module.initializeOutput(inlet.getGlobalContainer().get<OutputType>(), test_name);
 
   // Complete the solver setup
-  module.completeSetup();
+  phys_module.completeSetup();
   // Output the initial state
-  module.outputState();
+  phys_module.outputState();
 
   double dt = inlet["dt"];
 
@@ -210,21 +221,23 @@ void runModuleTest(const std::string& input_file, std::shared_ptr<mfem::ParMesh>
       t += dt_real;
       last_step = (t >= t_final - 1e-8 * dt);
 
-      module.advanceTimestep(dt_real);
+      phys_module.advanceTimestep(dt_real);
     }
+    phys_module.setTime(t);
   } else {
-    module.advanceTimestep(dt);
+    phys_module.advanceTimestep(dt);
   }
 
   // Output the final state
-  module.outputState();
+  phys_module.outputState();
 
-  detail::verifyFields(module, inlet, mesh->Dimension());
+  detail::verifyFields(phys_module, inlet, dim);
+  // WARNING: This will destroy the mesh before the Solid module destructor gets called
+  // serac::StateManager::reset();
 }
 
-template void runModuleTest<NonlinearSolid>(const std::string& input_file, std::shared_ptr<mfem::ParMesh> custom_mesh);
-template void runModuleTest<ThermalConduction>(const std::string&             input_file,
-                                               std::shared_ptr<mfem::ParMesh> custom_mesh);
+template void runModuleTest<Solid>(const std::string&, const std::string&, std::optional<int>);
+template void runModuleTest<ThermalConduction>(const std::string&, const std::string&, std::optional<int>);
 
 }  // end namespace test_utils
 

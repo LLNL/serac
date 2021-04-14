@@ -7,7 +7,7 @@ dt      = 1.0
 t_final = 5.0
 
 -- Simulation output format
-output_type = "VisIt"
+output_type = "SidreVisIt"
 
 main_mesh = {
     type = "file",
@@ -24,7 +24,7 @@ end
 
 -- Solver parameters
 thermal_conduction = {
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
@@ -60,14 +60,14 @@ thermal_conduction = {
 
     -- initial conditions
     initial_temperature = {
-        coef = temp_func
+        scalar_function = temp_func
     },
 
     -- boundary condition parameters
     boundary_conds = {
         ['temperature'] = {
             attrs = {1},
-            coef = temp_func
+            scalar_function = temp_func
         },
     },
 }

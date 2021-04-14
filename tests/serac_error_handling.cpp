@@ -54,7 +54,7 @@ TEST(serac_error_handling, equationsolver_kinsol_not_available)
 
 TEST(serac_error_handling, bc_project_requires_state)
 {
-  auto mesh      = buildDiskMesh(10);
+  auto mesh      = mesh::refineAndDistribute(buildDiskMesh(10));
   int  num_attrs = mesh->bdr_attributes.Max();
 
   auto              coef = std::make_shared<mfem::ConstantCoefficient>();
@@ -105,7 +105,7 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
 {
   mfem::Vector      vec;
   auto              coef = std::make_shared<mfem::VectorConstantCoefficient>(vec);
-  BoundaryCondition bc(coef, -1, std::set<int>{});
+  BoundaryCondition bc(coef, {}, std::set<int>{});
   EXPECT_NO_THROW(bc.vectorCoefficient());
   EXPECT_THROW(bc.scalarCoefficient(), SlicErrorException);
 
@@ -116,7 +116,11 @@ TEST(serac_error_handling, bc_retrieve_vec_coef)
 
 TEST(serac_error_handling, invalid_output_type)
 {
-  ThermalConduction physics(1, buildDiskMesh(100), ThermalConduction::defaultQuasistaticOptions());
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore);
+  serac::StateManager::setMesh(mesh::refineAndDistribute(buildDiskMesh(1000)));
+  ThermalConduction physics(1, ThermalConduction::defaultQuasistaticOptions());
   // Try a definitely wrong number to ensure that an invalid output type is detected
   EXPECT_THROW(physics.initializeOutput(static_cast<OutputType>(-7), ""), SlicErrorException);
 }
@@ -126,9 +130,7 @@ TEST(serac_error_handling, invalid_cmdline_arg)
   // The command is actually --input-file
   char const* fake_argv[] = {"serac", "--file", "input.lua"};
   const int   fake_argc   = 3;
-  int         rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  EXPECT_THROW(cli::defineAndParse(fake_argc, const_cast<char**>(fake_argv), rank, ""), SlicErrorException);
+  EXPECT_THROW(cli::defineAndParse(fake_argc, const_cast<char**>(fake_argv), ""), SlicErrorException);
 }
 
 TEST(serac_error_handling, nonexistent_mesh_path)

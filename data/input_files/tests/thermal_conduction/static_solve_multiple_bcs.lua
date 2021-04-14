@@ -23,7 +23,7 @@ end
 
 -- Solver parameters
 thermal_conduction = {
-    stiffness_solver = {
+    equation_solver = {
         linear = {
             type = "iterative",
             iterative_options = {
@@ -54,11 +54,11 @@ thermal_conduction = {
     boundary_conds = {
         ['temperature_1'] = {
             attrs = {1},
-            coef = temp_func
+            scalar_function = temp_func
         },
         ['temperature_2'] = {
             attrs = {2},
-            coef = temp_func
+            scalar_function = temp_func
         },
     },
 }
