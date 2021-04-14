@@ -2,7 +2,6 @@
 
 #include "dual.hpp"
 #include "array.hpp"
-#include "dimensions.hpp"
 
 #include "detail/meta.h"
 #include "detail/for_constexpr.h"
@@ -137,12 +136,6 @@ tensor(const T (&data)[n1]) -> tensor<T, n1>;
 
 template <typename T, int n1, int n2>
 tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
-
-template <typename T, int... n>
-constexpr auto dimensions_of(tensor<T, n...>)
-{
-  return Dimensions<n...>{};
-}
 
 struct zero {
   operator double() { return 0.0; }

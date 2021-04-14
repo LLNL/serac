@@ -25,14 +25,9 @@ set(weakform_headers
     detail/segment_h1.inl
     )
 
-# set(weakform_sources
-#     detail/hexahedron_h1.cpp
-#     detail/quadrilateral_h1.cpp)
-
 blt_add_library(
       NAME        serac_weakform
       HEADERS     ${weakform_headers}
-    #   SOURCES     ${weakform_sources}
       DEPENDS_ON  ${weakform_depends}
       )
 
