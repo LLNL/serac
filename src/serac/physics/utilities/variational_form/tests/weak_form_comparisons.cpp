@@ -94,7 +94,7 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>
       },
       mesh);
 
-  mfem::Vector r1 = A * U - (*F);
+  mfem::Vector r1 = (*J) * U - (*F);
   mfem::Vector r2 = residual(U);
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
@@ -102,7 +102,7 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>
   std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
-  mfem::Operator& grad2 = residual.GetGradient(u_global);
+  mfem::Operator& grad2 = residual.GetGradient(U);
 
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad2 * U;
@@ -169,7 +169,7 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dime
       },
       mesh);
 
-  mfem::Vector r1 = A * U - (*F);
+  mfem::Vector r1 = (*J) * U - (*F);
   mfem::Vector r2 = residual(U);
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
@@ -242,13 +242,13 @@ void weak_form_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensio
       },
       mesh);
 
-  mfem::Vector r1 = B * U - f;
+  mfem::Vector r1 = (*J) * U - (*F);
   mfem::Vector r2 = residual(U);
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
   std::cout << "||r2||: " << r2.Norml2() << std::endl;
   std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-13);
 
   mfem::Operator& grad = residual.GetGradient(U);
 
@@ -258,7 +258,7 @@ void weak_form_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensio
   std::cout << "||g1||: " << g1.Norml2() << std::endl;
   std::cout << "||g2||: " << g2.Norml2() << std::endl;
   std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
-  EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-13);
 }
 
 template <int dim>
