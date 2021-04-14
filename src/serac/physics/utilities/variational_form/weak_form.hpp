@@ -84,8 +84,9 @@ struct WeakForm<test(trial)> : public mfem::Operator {
     dummy.SetSize(trial_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
   }
 
-  template <int geometry_dim, int spatial_dim, typename lambda>
-  void AddIntegral(Dimension<geometry_dim>, Dimension<spatial_dim>, lambda&& integrand, mfem::Mesh& domain)
+  template <int geometry_dim, int spatial_dim, typename lambda, typename PointData = void>
+  void AddIntegral(Dimension<geometry_dim>, Dimension<spatial_dim>, lambda&& integrand, mfem::Mesh& domain,
+                   QuadratureData<PointData>& data = dummy_qdata)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) {
@@ -106,7 +107,7 @@ struct WeakForm<test(trial)> : public mfem::Operator {
       auto                         geom =
           domain.GetGeometricFactors(ir, mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS);
       domain_integrals.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{}, Dimension<spatial_dim>{},
-                                    integrand);
+                                    integrand, data);
       return;
     } else if constexpr ((geometry_dim + 1) == spatial_dim) {
       const mfem::FiniteElement&   el = *test_space->GetBE(0);
@@ -115,7 +116,7 @@ struct WeakForm<test(trial)> : public mfem::Operator {
                              mfem::FaceGeometricFactors::NORMALS;
       auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
       boundary_integrals.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{},
-                                      Dimension<spatial_dim>{}, integrand);
+                                      Dimension<spatial_dim>{}, integrand, data);
       return;
     } else if constexpr (true) {
       // if static_assert has a literal 'false' for its first arg,
@@ -127,28 +128,29 @@ struct WeakForm<test(trial)> : public mfem::Operator {
     }
   }
 
-  template <typename lambda>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain)
+  template <typename lambda, typename PointData = void>
+  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<PointData>& data = dummy_qdata)
   {
-    AddIntegral(Dimension<2>{} /* geometry */, Dimension<2>{} /* spatial */, integrand, domain);
+    AddIntegral(Dimension<2>{} /* geometry */, Dimension<2>{} /* spatial */, integrand, domain, data);
   }
 
-  template <typename lambda>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain)
+  template <typename lambda, typename PointData = void>
+  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<PointData>& data = dummy_qdata)
   {
-    AddIntegral(Dimension<3>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain);
+    AddIntegral(Dimension<3>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain, data);
   }
 
-  template <int d, typename lambda>
-  void AddDomainIntegral(Dimension<d>, lambda&& integrand, mfem::Mesh& domain)
+  template <int d, typename lambda, typename PointData = void>
+  void AddDomainIntegral(Dimension<d>, lambda&& integrand, mfem::Mesh& domain,
+                         QuadratureData<PointData>& data = dummy_qdata)
   {
-    AddIntegral(Dimension<d>{} /* geometry */, Dimension<d>{} /* spatial */, integrand, domain);
+    AddIntegral(Dimension<d>{} /* geometry */, Dimension<d>{} /* spatial */, integrand, domain, data);
   }
 
-  template <typename lambda>
-  void AddSurfaceIntegral(lambda&& integrand, mfem::Mesh& domain)
+  template <typename lambda, typename PointData = void>
+  void AddSurfaceIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<PointData>& data = dummy_qdata)
   {
-    AddIntegral(Dimension<2>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain);
+    AddIntegral(Dimension<2>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain, data);
   }
 
   template <Operation op = Operation::Mult>

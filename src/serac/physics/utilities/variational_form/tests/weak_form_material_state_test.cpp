@@ -45,6 +45,12 @@ int main(int argc, char** argv)
   QuadratureData<State> qdata(*mesh, p);
   State                 init{0};
   qdata = init;
+  residual.AddSurfaceIntegral(
+      [&](auto x, auto /* u */, auto& state) {
+        state.x += 0.1;
+        return x[0] + state.x;
+      },
+      *mesh, qdata);
   residual.AddSurfaceIntegral([&](auto x, auto /* u */) { return x[0]; }, *mesh);
 
   serac::exitGracefully();

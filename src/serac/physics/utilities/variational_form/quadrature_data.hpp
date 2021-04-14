@@ -14,7 +14,7 @@
 
 #include "mfem.hpp"
 
-namespace serac {
+// namespace serac {
 /**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
@@ -55,6 +55,18 @@ private:
   mfem::QuadratureFunction qfunc_;
 };
 
+/**
+ * @brief "Dummy" specialization, intended to be used as sentinel
+ */
+template <>
+class QuadratureData<void> {
+};
+
+// A dummy global so that lvalue references can be bound to something of type QData<void>
+// FIXME: There's probably a cleaner way to do this, it's technically a non-const global
+// but it's not really mutable because no operations are defined for it
+QuadratureData<void> dummy_qdata;
+
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
 template <typename T>
 QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p)
@@ -81,4 +93,4 @@ QuadratureData<T>& QuadratureData<T>::operator=(const T& item)
   return *this;
 }
 
-}  // namespace serac
+// }  // namespace serac

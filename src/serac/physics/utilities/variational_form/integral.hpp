@@ -5,6 +5,7 @@
 
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 #include "serac/physics/utilities/variational_form/quadrature.hpp"
+#include "serac/physics/utilities/variational_form/quadrature_data.hpp"
 #include "serac/physics/utilities/variational_form/finite_element.hpp"
 #include "serac/physics/utilities/variational_form/tuple_arithmetic.hpp"
 
@@ -209,10 +210,12 @@ auto Measure(tensor<double, m, n> A)
 //             be evaluated at each quadrature point.
 //             See https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework
 //             for additional information on the idea behind a quadrature function and its inputs/outputs
-template < ::Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
-           typename derivatives_type, typename lambda>
+//   - data: The per-quadrature point state data, e.g., for material history
+template <::Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+          typename derivatives_type, typename lambda, typename PointData = void>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
-                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
+                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf,
+                       QuadratureData<PointData>& data = dummy_qdata)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -253,7 +256,13 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
-      auto qf_output = qf(x_q, make_dual(arg));
+      auto qf_output = [&qf, &x_q, &arg, &data, e, q]() {
+        if constexpr (std::is_same_v<PointData, void>) {
+          return qf(x_q, make_dual(arg));
+        } else {
+          return qf(x_q, make_dual(arg), data(e, q));
+        }
+      }();
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
@@ -282,8 +291,8 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 //
 // note: lambda does not appear as a template argument, as the directional derivative is
 //       inherently just a linear transformation
-template < ::Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
-           typename derivatives_type>
+template <::Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+          typename derivatives_type>
 void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
                      const mfem::Vector& J_, int num_elements)
 {
@@ -366,7 +375,7 @@ struct lambda_argument;
 
 template <int p, int c, int dim>
 struct lambda_argument<H1<p, c>, dim, dim> {
-  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
+  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
 // for now, we only provide the interpolated values for surface integrals
@@ -382,7 +391,26 @@ struct lambda_argument<Hcurl<p>, 2, 2> {
 
 template <int p>
 struct lambda_argument<Hcurl<p>, 3, 3> {
-  using type = std::tuple<tensor<double, 3>, tensor<double, 3> >;
+  using type = std::tuple<tensor<double, 3>, tensor<double, 3>>;
+};
+
+/**
+ * @brief Determines the return type of a qfunction lambda
+ * @tparam lambda_type The type of the lambda itself
+ * @tparam x_t The type of the "value" itself
+ * @tparam u_du_t The type of the derivative
+ * @tparam PointData The type of the per-quadrature state data, @p void when not applicable
+ */
+template <typename lambda_type, typename x_t, typename u_du_t, typename PointData, typename SFINAE = void>
+struct qf_result {
+  using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>()))>;
+};
+
+template <typename lambda_type, typename x_t, typename u_du_t, typename PointData>
+struct qf_result<lambda_type, x_t, u_du_t, PointData, std::enable_if_t<!std::is_same_v<PointData, void>>> {
+  // Expecting that qf lambdas take an lvalue reference to a state
+  using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>())),
+                                    std::add_lvalue_reference_t<PointData>>;
 };
 
 static constexpr ::Geometry supported_geometries[] = {::Geometry::Point, ::Geometry::Segment, ::Geometry::Quadrilateral,
@@ -393,9 +421,9 @@ struct Integral {
   using test_space  = test_space_t<spaces>;
   using trial_space = trial_space_t<spaces>;
 
-  template <int geometry_dim, int spatial_dim, typename lambda_type>
+  template <int geometry_dim, int spatial_dim, typename lambda_type, typename PointData = void>
   Integral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<geometry_dim>,
-           Dimension<spatial_dim>, lambda_type&& qf)
+           Dimension<spatial_dim>, lambda_type&& qf, QuadratureData<PointData>& data = dummy_qdata)
       : J_(J), X_(X)
   {
     constexpr auto geometry = supported_geometries[geometry_dim];
@@ -408,7 +436,8 @@ struct Integral {
     // the derivative information at each quadrature point
     using x_t             = tensor<double, spatial_dim>;
     using u_du_t          = typename lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
-    using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
+    using qf_result_type  = typename qf_result<lambda_type, x_t, u_du_t, PointData>::type;
+    using derivative_type = decltype(get_gradient(std::declval<qf_result_type>()));
 
     auto num_quadrature_points = static_cast<uint32_t>(X.Size() / spatial_dim);
     qf_derivatives.resize(sizeof(derivative_type) * num_quadrature_points);
@@ -422,9 +451,9 @@ struct Integral {
     //
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
-    evaluation = [=](const mfem::Vector& U, mfem::Vector& R) {
+    evaluation = [=, &data](const mfem::Vector& U, mfem::Vector& R) {
       evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives_ptr, J_,
-                                                                                         X_, num_elements, qf);
+                                                                                         X_, num_elements, qf, data);
     };
 
     gradient = [=](const mfem::Vector& dU, mfem::Vector& dR) {
