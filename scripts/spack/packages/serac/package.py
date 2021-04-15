@@ -164,7 +164,7 @@ class Serac(CMakePackage, CudaPackage):
                 when='cuda_arch={0}'.format(sm_))
         
 
-    phases = ['hostconfig', 'cmake', 'build',' install']
+    phases = ['hostconfig', 'cmake', 'build', 'install']
 
     def _get_sys_type(self, spec):
         sys_type = spec.architecture
