@@ -67,21 +67,22 @@ struct eval_t<T, std::enable_if_t<std::is_base_of_v<mfem::VectorCoefficient, T>>
   using type = mfem::Vector;
 };
 
-// methods for evaluating coefficient stuff
-template <typename T>
-typename eval_t<T>::type eval(T& t, mfem::ElementTransformation&, const mfem::IntegrationPoint&)
+/// methods for evaluating coefficient stuff with the same prototype
+double eval(double& d, mfem::ElementTransformation&, const mfem::IntegrationPoint&) { return d; }
+
+/// evaluates an mfem::Coefficient
+double eval(mfem::Coefficient& c, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
-  return t;
+  return c.Eval(Tr, ip);
 }
 
-template <>
-typename eval_t<mfem::Coefficient>::type eval<mfem::Coefficient>(mfem::Coefficient& c, mfem::ElementTransformation& Tr,
-                                                                 const mfem::IntegrationPoint& ip);
-
-template <>
-typename eval_t<mfem::VectorCoefficient>::type eval<mfem::VectorCoefficient>(mfem::VectorCoefficient&      v,
-                                                                             mfem::ElementTransformation&  Tr,
-                                                                             const mfem::IntegrationPoint& ip);
+/// evaluates a mfem::VectorCoefficient
+mfem::Vector eval(mfem::VectorCoefficient& v, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
+{
+  mfem::Vector temp(v.GetVDim());
+  v.Eval(temp, Tr, ip);
+  return temp;
+}
 
 }  // namespace detail
 
@@ -204,7 +205,8 @@ template <typename T>
 void AssignMeshElementAttributes(mfem::Mesh& m, T&& list)
 {
   // check to make sure the lists are match the number of elements
-  SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNE()), "list size does not match the number of mesh elements");
+  SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNE()),
+                "list size does not match the number of mesh elements");
 
   for (int e = 0; e < m.GetNE(); e++) {
     m.GetElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
@@ -260,7 +262,8 @@ template <typename T>
 void AssignMeshBdrAttributes(mfem::Mesh& m, T&& list)
 {
   // check to make sure the lists are match the number of elements
-  SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNBE()), "list size does not match the number of mesh elements");
+  SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNBE()),
+                "list size does not match the number of mesh elements");
 
   for (int e = 0; e < m.GetNBE(); e++) {
     m.GetBdrElement(e)->SetAttribute(list[static_cast<typename detail::index_t<T>::type>(e)]);
