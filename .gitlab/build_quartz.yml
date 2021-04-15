@@ -67,11 +67,11 @@ quartz-gcc_8_3_1-src:
 quartz-clang_10_0_0-full:
   variables:
     COMPILER: "clang@10.0.0"
-    SPEC: "@develop%${COMPILER}"
+    SPEC: "%${COMPILER}"
   extends: .full_build_on_quartz
 
 quartz-gcc_8_3_1-full:
   variables:
     COMPILER: "gcc@8.3.1"
-    SPEC: "@develop%${COMPILER}"
+    SPEC: "%${COMPILER}"
   extends: .full_build_on_quartz
