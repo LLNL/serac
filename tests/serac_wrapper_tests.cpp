@@ -164,8 +164,8 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
   auto bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList<std::vector<int>>(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
-  std::vector<int> bdr_attr_list(pfes_->GetNBE());
-  for (int be = 0; be < pfes_->GetNBE(); be++) {
+  std::vector<int> bdr_attr_list(static_cast<std::size_t>(pfes_->GetNBE()));
+  for (std::size_t be = 0; be < bdr_attr_list.size() ; be++) {
     bdr_attr_list[be] = (bdr_attr_list_zero[be] - 1) + (bdr_attr_list_one[be] - 1) * 2 + 1;
   }
 
@@ -236,8 +236,8 @@ TEST_F(WrapperTests, Transformed)
   auto bdr_attr_list_one  = mfem_ext::MakeBdrAttributeList<std::vector<int>>(*pmesh_, x_one);
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
-  std::vector<int> bdr_attr_list(pfes_->GetNBE());
-  for (int be = 0; be < pfes_->GetNBE(); be++) {
+  std::vector<int> bdr_attr_list(static_cast<std::size_t>(pfes_->GetNBE()));
+  for (std::size_t be = 0; be < bdr_attr_list.size(); be++) {
     bdr_attr_list[be] = (bdr_attr_list_zero[be] - 1) + (bdr_attr_list_one[be] - 1) * 2 + 1;
   }
 
@@ -347,7 +347,7 @@ TEST_F(WrapperTests, attribute_modifier_coef)
   mfem::RestrictedCoefficient restrict_coef(three_and_a_half, restrict_to);
 
   // Everything gets converted to 2
-  std::vector<int> modified_attrs(pmesh_->GetNE(), 2);
+  std::vector<int> modified_attrs(static_cast<std::size_t>(pmesh_->GetNE()), 2);
   mfem_ext::AttributeModifierCoefficient am_coef(modified_attrs, restrict_coef);
 
   mfem::ParGridFunction gf(pfes_.get());
