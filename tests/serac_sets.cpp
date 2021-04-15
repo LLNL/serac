@@ -117,9 +117,9 @@ TEST_F(SetTest, flag_mesh)
       auto checker_x      = static_cast<int>(coords[0] / checker_width);
       auto checker_y      = static_cast<int>((coords[1] - blue_height) / checker_height);
       if ((checker_x + checker_y * 11) % 2 == 0) {
-        color = 3;
-      } else {
         color = 2;
+      } else {
+        color = 3;
       }
     }
     return color;

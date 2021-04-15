@@ -288,14 +288,14 @@ public:
    */
   friend bool operator==(const Set<T>& s1, const Set<T>& s2)
   {
-    bool is_same = (s1.keys == s2.keys);
-    if (is_same) {
+
+    if (s1.keys == s2.keys) {
       for (auto k : s1.keys) {
-        is_same = is_same && (s1.values_index_list.at(k) == s2.values_index_list.at(k));
-        if (!is_same) break;
+        if (s1.values_index_list.at(k) != s2.values_index_list.at(k)) break;
       }
+      return true;
     }
-    return is_same;
+    return false;
   }
 
   /// Converts a "complete" Set<T> to a std::vector<T> of the same size
