@@ -17,35 +17,84 @@
 // namespace serac {
 
 /**
- * @brief Lightweight span, replace with std::span when C++20 available
+ * @brief Type-punning iterator using same method as std::bit_cast
+ * @tparam T The type to pun
+ * @note This class should be used carefully as changes to the object are
+ * not propagated back to the underlying pointer until the destructor is called
  */
 template <typename T>
-class Span {
+class PunIterator {
+  // Semantics get too confusing
+  static_assert(!std::is_pointer_v<T>, "Raw pointer types not supported");
+
 public:
   /**
-   * @brief Constructs a new Span
-   * @param[in] ptr The pointer to the data
-   * @param[in] size The length of the data (number of elements in the array)
+   * @brief Constructs an "empty" iterator
    */
-  Span(T* ptr, const std::size_t size) : ptr_(ptr), size_(size) {}
+  PunIterator() = default;
+  /**
+   * @brief Constructs an iterator
+   * @param[in] ptr A pointer to an element
+   * @param[in] end_ptr A pointer to one-past-the-end of the container
+   */
+  PunIterator(void* ptr, void* end_ptr) : ptr_(ptr), end_ptr_(end_ptr) {}
 
   /**
-   * @brief Begin iterator (pointer to first element)
+   * @brief Cleans up by storing @p obj_ back into @p ptr_ to maintain coherency
    */
-  auto begin() { return ptr_; }
+  ~PunIterator()
+  {
+    if (ptr_ && (ptr_ != end_ptr_)) {
+      std::memcpy(ptr_, &obj_, sizeof(T));
+    }
+  }
+
   /**
-   * @brief Begin iterator (pointer to first element)
+   * @brief Returns the stored object
+   * @note Changes to the object will not be propagated until the destructor is called
    */
-  auto end() { return ptr_ + size_; }
+  T& operator*()
+  {
+    std::memcpy(&obj_, ptr_, sizeof(T));
+    return obj_;
+  }
+
+  /**
+   * @brief Advances the iterator
+   */
+  PunIterator& operator++()
+  {
+    // This is permissible because we're not actually dereferencing ptr_
+    // as a T*, just using it for arithmetic
+    ptr_ = static_cast<T*>(ptr_) + 1;
+    return *this;
+  }
+
+  /**
+   * @brief Compares two iterators for equality
+   */
+  bool operator!=(const PunIterator& other) { return ptr_ != other.ptr_; }
 
 private:
-  T*          ptr_;
-  std::size_t size_;
+  /**
+   * @brief Pointer to the current element
+   */
+  void* ptr_ = nullptr;
+  /**
+   * @brief Pointer to one-past-the-end of the container
+   */
+  void* end_ptr_ = nullptr;
+  /**
+   * @brief A mirror of the data in ptr_
+   */
+  T obj_;
 };
 
 /**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
+ * @pre T must be default-constructible (TODO: Do we want to allow non-default constructible types?)
+ * @pre T must be trivially copyable (due to the use of memcpy for type punning)
  */
 template <typename T>
 class QuadratureData {
@@ -71,9 +120,18 @@ public:
   QuadratureData& operator=(const T& item);
 
   /**
-   * @brief Returns a view over the data
+   * @brief Iterator to the data for the first quadrature point
    */
-  Span<T> data();
+  PunIterator<T> begin()
+  {
+    // WARNING: THIS IS REQUIRED BEFORE ANY ACCESSES AND MUST BE PROPAGATED TO OTHER ACCESSORS
+    proxy_.reset();
+    return {qfunc_.GetData(), qfunc_.GetData() + qfunc_.Size()};
+  }
+  /**
+   * @brief Iterator to one element past the data for the last quadrature point
+   */
+  PunIterator<T> end() { return {qfunc_.GetData() + qfunc_.Size(), qfunc_.GetData() + qfunc_.Size()}; }
 
 private:
   // FIXME: These will probably need to be MaybeOwningPointers
@@ -86,6 +144,14 @@ private:
    * @brief Per-quadrature point data, stored as array of doubles for compatibility with Sidre
    */
   mfem::QuadratureFunction qfunc_;
+  /**
+   * @brief Provides reference-like semantics through a standard-compliant type pun
+   */
+  std::optional<PunIterator<T>> proxy_;
+  /**
+   * @brief The stride of the array
+   */
+  constexpr static int stride_ = sizeof(T) / sizeof(double);
 };
 
 /**
@@ -102,9 +168,21 @@ QuadratureData<void> dummy_qdata;
 
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
 template <typename T>
-QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p)
-    : qspace_(&mesh, p + 1), qfunc_(&qspace_, sizeof(T) / sizeof(double))
+QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p) : qspace_(&mesh, p + 1), qfunc_(&qspace_, stride_)
 {
+  // To avoid violating C++'s strict aliasing rule we need to std::memcpy a default-constructed object
+  // See e.g. https://gist.github.com/shafik/848ae25ee209f698763cffee272a58f8
+  // also https://en.cppreference.com/w/cpp/numeric/bit_cast
+  // also https://chromium.googlesource.com/chromium/src/base/+/refs/heads/master/bit_cast.h
+  static_assert(std::is_default_constructible_v<T>, "Must be able to default-construct the stored type");
+  static_assert(std::is_trivially_copyable_v<T>, "Uses memcpy - requires trivial copies");
+  T       default_constructed;  // Will be memcpy'd into each element
+  double* ptr = qfunc_.GetData();
+  for (int i = 0; i < qfunc_.Size(); i += stride_) {
+    // The only legal (portable, defined) way to do type punning in C++
+    // Would be illegal to just placement-new construct a T here
+    std::memcpy(ptr + i, &default_constructed, sizeof(T));
+  }
 }
 
 template <typename T>
@@ -113,25 +191,17 @@ T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
   // A view into the quadrature point data
   mfem::Vector view;
   qfunc_.GetElementValues(element_idx, q_idx, view);
-  return *(reinterpret_cast<T*>(view.GetData()));
+  proxy_.emplace(view.GetData(), qfunc_.GetData() + qfunc_.Size());
+  return *proxy_.value();
 }
 
 template <typename T>
 QuadratureData<T>& QuadratureData<T>::operator=(const T& item)
 {
-  auto span = data();
-  std::fill(span.begin(), span.end(), item);
+  double* ptr = qfunc_.GetData();
+  for (int i = 0; i < qfunc_.Size(); i += stride_) {
+    std::memcpy(ptr + i, &item, sizeof(T));
+  }
   return *this;
 }
-
-template <typename T>
-Span<T> QuadratureData<T>::data()
-{
-  // Number of doubles divided by number of doubles per T
-  // FIXME: should this just be a member??
-  const auto size = qfunc_.Size() / (sizeof(T) / sizeof(double));
-  T*         ptr  = reinterpret_cast<T*>(qfunc_.GetData());
-  return Span{ptr, size};
-}
-
 // }  // namespace serac

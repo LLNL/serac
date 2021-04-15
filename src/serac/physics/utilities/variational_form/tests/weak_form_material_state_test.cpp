@@ -47,28 +47,47 @@ protected:
   std::unique_ptr<WeakForm<test_space(trial_space)>> residual;
 };
 
+// template <std::size_t spatial_dim>
+// struct QuadraturePointData
+// {
+//   // field data at quadpoint
+//   tensor<spatial_dim> x_q;
+//   // index of the element within the mesh
+//   int element_number;
+//   // index of the integration point within the integration rule for the element
+//   int point_number;
+// };
+
 TEST_F(QuadratureDataTest, basic_integrals)
 {
   QuadratureData<State> qdata(*mesh, p);
-  State                 init{0};
+  State                 init{0.1};
   qdata = init;
   residual->AddDomainIntegral(
       Dimension<dim>{},
       [&](auto /* x */, auto u, auto& state) {
-        // std::cout << "a\n";
         state.x += 0.1;
         return u;
       },
       *mesh, qdata);
+  // residual->AddDomainIntegral(
+  //     Dimension<dim>{},
+  //     [&](QuadraturePointData pt_data, auto u) {
+  //       auto& state = qdata(pt_data.element_number, pt_data.point_number);
+  //       state.x += 0.1;
+  //       return u;
+  //     },
+  //     *mesh);
   // If we run through it one time...
   (*residual)(festate->gridFunc());
   // Then each element of the state should have been incremented accordingly...
-  State correct{0.1};
-  for (const auto& s : qdata.data()) {
+  State correct{0.2};
+  for (const auto& s : qdata) {
     EXPECT_EQ(s, correct);
   }
   // Just to make sure I didn't break the stateless version
-  residual->AddSurfaceIntegral([&](auto x, auto /* u */) { return x[0]; }, *mesh);
+  residual->AddDomainIntegral(
+      Dimension<dim>{}, [&](auto /* x */, auto u) { return u; }, *mesh);
 }
 
 //------------------------------------------------------------------------------
