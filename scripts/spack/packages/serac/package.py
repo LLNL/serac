@@ -76,7 +76,7 @@ class Serac(CMakePackage, CudaPackage):
     """FIXME: Put a proper description of your package here."""
 
     homepage = "https://www.github.com/LLNL/serac"
-    git      = "ssh://git@github.com:LLNL/serac.git"
+    git      = "https://github.com/LLNL/serac.git"
 
     version('develop', branch='develop', submodules=True, preferred=True)
 
