@@ -291,7 +291,9 @@ public:
 
     if (s1.keys == s2.keys) {
       for (auto k : s1.keys) {
-        if (s1.values_index_list.at(k) != s2.values_index_list.at(k)) break;
+        if (s1.values_index_list.at(k) != s2.values_index_list.at(k)) {
+	  return false;
+	}
       }
       return true;
     }
