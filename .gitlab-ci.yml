@@ -20,11 +20,11 @@ stages:
 
 .src_workflow:
   rules:
-    - if: '"$FULL_BUILD" != "ON"'
+    - if: '$FULL_BUILD != "ON"'
 
 .full_workflow:
   rules:
-    - if: '"$FULL_BUILD" == "ON"'
+    - if: '$FULL_BUILD == "ON"'
 
 ####
 # Template
