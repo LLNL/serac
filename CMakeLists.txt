@@ -10,7 +10,7 @@
 
 cmake_minimum_required(VERSION 3.8)
 
-project(serac LANGUAGES CXX)
+project(serac LANGUAGES CXX C)
 
 # MPI is required in Serac.
 set(ENABLE_MPI ON CACHE BOOL "")
