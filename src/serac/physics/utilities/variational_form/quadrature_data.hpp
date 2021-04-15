@@ -17,80 +17,6 @@
 // namespace serac {
 
 /**
- * @brief Type-punning iterator using same method as std::bit_cast
- * @tparam T The type to pun
- * @note This class should be used carefully as changes to the object are
- * not propagated back to the underlying pointer until the destructor is called
- */
-template <typename T>
-class PunIterator {
-  // Semantics get too confusing
-  static_assert(!std::is_pointer_v<T>, "Raw pointer types not supported");
-
-public:
-  /**
-   * @brief Constructs an "empty" iterator
-   */
-  PunIterator() = default;
-  /**
-   * @brief Constructs an iterator
-   * @param[in] ptr A pointer to an element
-   * @param[in] end_ptr A pointer to one-past-the-end of the container
-   */
-  PunIterator(void* ptr, void* end_ptr) : ptr_(ptr), end_ptr_(end_ptr) {}
-
-  /**
-   * @brief Cleans up by storing @p obj_ back into @p ptr_ to maintain coherency
-   */
-  ~PunIterator()
-  {
-    if (ptr_ && (ptr_ != end_ptr_)) {
-      std::memcpy(ptr_, &obj_, sizeof(T));
-    }
-  }
-
-  /**
-   * @brief Returns the stored object
-   * @note Changes to the object will not be propagated until the destructor is called
-   */
-  T& operator*()
-  {
-    std::memcpy(&obj_, ptr_, sizeof(T));
-    return obj_;
-  }
-
-  /**
-   * @brief Advances the iterator
-   */
-  PunIterator& operator++()
-  {
-    // This is permissible because we're not actually dereferencing ptr_
-    // as a T*, just using it for arithmetic
-    ptr_ = static_cast<T*>(ptr_) + 1;
-    return *this;
-  }
-
-  /**
-   * @brief Compares two iterators for equality
-   */
-  bool operator!=(const PunIterator& other) { return ptr_ != other.ptr_; }
-
-private:
-  /**
-   * @brief Pointer to the current element
-   */
-  void* ptr_ = nullptr;
-  /**
-   * @brief Pointer to one-past-the-end of the container
-   */
-  void* end_ptr_ = nullptr;
-  /**
-   * @brief A mirror of the data in ptr_
-   */
-  T obj_;
-};
-
-/**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
  * @pre T must be default-constructible (TODO: Do we want to allow non-default constructible types?)
@@ -99,6 +25,69 @@ private:
 template <typename T>
 class QuadratureData {
 public:
+  /**
+   * @brief Type-punning iterator using same method as std::bit_cast
+   * @tparam U The type to pun (separate from T to allow for const/non-const iterator instantiations)
+   * @note This class should be used carefully as changes to the object are
+   * not propagated back to the underlying pointer until the destructor is called
+   */
+  template <typename U>
+  class PunIterator {
+    // Semantics get too confusing
+    static_assert(!std::is_pointer_v<U>, "Raw pointer types not supported");
+
+  public:
+    /**
+     * @brief Constructs an "empty" iterator
+     */
+    PunIterator() = default;
+    /**
+     * @brief Constructs an iterator
+     * @param[in] ptr A pointer to an element
+     * @param[in] end_ptr A pointer to one-past-the-end of the container
+     */
+    PunIterator(void* ptr, void* end_ptr) : ptr_(ptr), end_ptr_(end_ptr) {}
+
+    /**
+     * @brief Cleans up by storing @p obj_ back into @p ptr_ to maintain coherency
+     */
+    ~PunIterator();
+
+    /**
+     * @brief Returns the stored object
+     * @note Changes to the object will not be propagated until the destructor is called
+     */
+    U& operator*()
+    {
+      std::memcpy(&obj_, ptr_, sizeof(U));
+      return obj_;
+    }
+
+    /**
+     * @brief Advances the iterator
+     */
+    PunIterator& operator++();
+
+    /**
+     * @brief Compares two iterators for equality
+     */
+    bool operator!=(const PunIterator& other) { return ptr_ != other.ptr_; }
+
+  private:
+    /**
+     * @brief Pointer to the current element
+     */
+    void* ptr_ = nullptr;
+    /**
+     * @brief Pointer to one-past-the-end of the container
+     */
+    void* end_ptr_ = nullptr;
+    /**
+     * @brief A mirror of the data in ptr_
+     */
+    std::remove_const_t<U> obj_;
+  };
+
   /**
    * @brief Constructs using a mesh and polynomial order
    * @param[in] mesh The mesh for which quadrature-point data should be stored
@@ -128,10 +117,19 @@ public:
     proxy_.reset();
     return {qfunc_.GetData(), qfunc_.GetData() + qfunc_.Size()};
   }
+  /// @overload
+  PunIterator<const T> begin() const
+  {
+    // WARNING: THIS IS REQUIRED BEFORE ANY ACCESSES AND MUST BE PROPAGATED TO OTHER ACCESSORS
+    proxy_.reset();
+    return {qfunc_.GetData(), qfunc_.GetData() + qfunc_.Size()};
+  }
   /**
    * @brief Iterator to one element past the data for the last quadrature point
    */
   PunIterator<T> end() { return {qfunc_.GetData() + qfunc_.Size(), qfunc_.GetData() + qfunc_.Size()}; }
+  /// @overload
+  PunIterator<const T> end() const { return {qfunc_.GetData() + qfunc_.Size(), qfunc_.GetData() + qfunc_.Size()}; }
 
 private:
   // FIXME: These will probably need to be MaybeOwningPointers
@@ -147,11 +145,11 @@ private:
   /**
    * @brief Provides reference-like semantics through a standard-compliant type pun
    */
-  std::optional<PunIterator<T>> proxy_;
+  mutable std::optional<PunIterator<T>> proxy_;
   /**
    * @brief The stride of the array
    */
-  constexpr static int stride_ = sizeof(T) / sizeof(double);
+  static constexpr int stride_ = sizeof(T) / sizeof(double);
 };
 
 /**
@@ -165,6 +163,25 @@ class QuadratureData<void> {
 // FIXME: There's probably a cleaner way to do this, it's technically a non-const global
 // but it's not really mutable because no operations are defined for it
 QuadratureData<void> dummy_qdata;
+
+template <typename T>
+template <typename U>
+QuadratureData<T>::PunIterator<U>::~PunIterator()
+{
+  if (ptr_ && (ptr_ != end_ptr_)) {
+    std::memcpy(ptr_, &obj_, sizeof(U));
+  }
+}
+
+template <typename T>
+template <typename U>
+QuadratureData<T>::PunIterator<U>& QuadratureData<T>::PunIterator<U>::operator++()
+{
+  // This is permissible because we're not actually dereferencing ptr_
+  // as a T*, just using it for arithmetic
+  ptr_ = static_cast<decltype(obj_)*>(ptr_) + 1;
+  return *this;
+}
 
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
 template <typename T>

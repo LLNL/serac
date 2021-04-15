@@ -90,6 +90,62 @@ TEST_F(QuadratureDataTest, basic_integrals)
       Dimension<dim>{}, [&](auto /* x */, auto u) { return u; }, *mesh);
 }
 
+struct StateWithDefault {
+  double x = 0.5;
+};
+
+bool operator==(const StateWithDefault& lhs, const StateWithDefault& rhs) { return lhs.x == rhs.x; }
+
+TEST_F(QuadratureDataTest, basic_integrals_default)
+{
+  QuadratureData<StateWithDefault> qdata(*mesh, p);
+  residual->AddDomainIntegral(
+      Dimension<dim>{},
+      [&](auto /* x */, auto u, auto& state) {
+        state.x += 0.1;
+        return u;
+      },
+      *mesh, qdata);
+  // If we run through it one time...
+  (*residual)(festate->gridFunc());
+  // Then each element of the state should have been incremented accordingly...
+  StateWithDefault correct{0.6};
+  const auto&      const_qdata = qdata;
+  for (auto& s : const_qdata) {
+    EXPECT_EQ(s, correct);
+  }
+}
+
+struct StateWithMultiFields {
+  double x = 0.5;
+  double y = 0.3;
+};
+
+bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs)
+{
+  return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
+TEST_F(QuadratureDataTest, basic_integrals_multi_fields)
+{
+  QuadratureData<StateWithMultiFields> qdata(*mesh, p);
+  residual->AddDomainIntegral(
+      Dimension<dim>{},
+      [&](auto /* x */, auto u, auto& state) {
+        state.x += 0.1;
+        state.y += 0.7;
+        return u;
+      },
+      *mesh, qdata);
+  // If we run through it one time...
+  (*residual)(festate->gridFunc());
+  // Then each element of the state should have been incremented accordingly...
+  StateWithMultiFields correct{0.6, 1.0};
+  for (const auto& s : qdata) {
+    EXPECT_EQ(s, correct);
+  }
+}
+
 //------------------------------------------------------------------------------
 #include "axom/slic/core/SimpleLogger.hpp"
 
