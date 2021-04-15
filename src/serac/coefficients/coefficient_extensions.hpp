@@ -84,6 +84,22 @@ mfem::Vector eval(mfem::VectorCoefficient& v, mfem::ElementTransformation& Tr, c
   return temp;
 }
 
+
+template <typename T, typename = void>
+struct is_iterable : std::false_type {};
+  
+template <typename T>
+struct is_iterable<T, std::void_t<decltype(std::declval<T>().begin()),
+                                  decltype(std::declval<T>().end())>>
+    : std::true_type {};
+
+template <typename T, typename = void>
+struct has_brackets : std::false_type {};
+  
+template <typename T>
+struct has_brackets<T, std::void_t<decltype(std::declval<T>()[0])>>
+    : std::true_type {};
+  
 }  // namespace detail
 
 namespace digitize {
@@ -117,7 +133,8 @@ namespace digitize {
  * @return The list of vector dofs that should be
  * part of the essential boundary conditions
  */
-template <typename T>
+  template <typename T, typename SFINAE = std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T> ||
+							   std::is_base_of_v<mfem::VectorCoefficient, T>>>
 mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, T& c)
 {
   mfem::Array<int> ess_vdof_list(0);
@@ -144,7 +161,8 @@ mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, T& c)
  * the vdof list.
  * @return The list of true dofs that should be part of the essential boundary conditions
  */
-template <typename T>
+  template <typename T, typename SFINAE = std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T> ||
+							   std::is_base_of_v<mfem::VectorCoefficient, T>>>
 mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, T& c)
 {
   mfem::Array<int> ess_tdof_list(0);
@@ -168,6 +186,9 @@ mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, T& c)
  * This method is useful for creating lists of attributes that correspond to
  * elements in the mesh
  *
+ * The template type, T, should have a constructor that takes in the size, and 
+ * should have begin() and end() methods.
+ *
  * @param[in] m The mesh
  * @param[in] c The coefficient provided that will be evaluated on the mesh
  * @param[in] digitize An optional function that can be
@@ -180,6 +201,10 @@ mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, T& c)
 template <typename T>
 T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::threshold)
 {
+
+  static_assert( std::is_constructible<T, typename detail::index_t<T>::type>::value, "T does not have a constructor of type detail::index_t<T>");
+  static_assert( detail::is_iterable<T>::value , "T does not implement begin() and end()");
+  
   mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &l2_fec);
   T                        attr_list(static_cast<typename detail::index_t<T>::type>(fes.GetNE()));
@@ -204,6 +229,8 @@ T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(doubl
 template <typename T>
 void AssignMeshElementAttributes(mfem::Mesh& m, T&& list)
 {
+  static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");  
+  
   // check to make sure the lists are match the number of elements
   SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNE()),
                 "list size does not match the number of mesh elements");
@@ -221,6 +248,9 @@ void AssignMeshElementAttributes(mfem::Mesh& m, T&& list)
  * This method is useful for creating lists of attributes that correspond to bdr
  * elements in the mesh
  *
+ * The template type, T, should have a constructor that takes in the size, and 
+ * should have begin() and end() methods.
+ *
  * @param[in] m The mesh
  * @param[in] c The coefficient provided that will be evaluated on the mesh
  * @param[in] digitize An optional function that can be
@@ -234,6 +264,10 @@ void AssignMeshElementAttributes(mfem::Mesh& m, T&& list)
 template <typename T>
 T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::equals1)
 {
+  static_assert( std::is_constructible<T, typename detail::index_t<T>::type>::value, "T does not have a constructor of type detail::index_t<T>");
+ 
+  static_assert( detail::is_iterable<T>::value , "T does not implement begin() and end()");   
+  
   // Need to use H1_fec because boundary elements don't exist in L2
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &h1_fec);
@@ -254,6 +288,8 @@ T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(do
 /**
  * @brief Assign bdr element attributes to mesh
  *
+ * T must implement operator[]
+ *
  * @param[in] m the mesh
  * @param[in] attr_list a list of attributes to assign to the given mesh
  */
@@ -261,6 +297,8 @@ T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(do
 template <typename T>
 void AssignMeshBdrAttributes(mfem::Mesh& m, T&& list)
 {
+  static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");  
+  
   // check to make sure the lists are match the number of elements
   SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNBE()),
                 "list size does not match the number of mesh elements");
@@ -283,12 +321,14 @@ public:
   /**
    * @brief This class temporarily changes the attribute during coefficient
    * evaluation based on a given list.
+   * 
+   * T must implement operator[]
    *
    * @param[in] attr_list A list of attributes values corresponding to the type
    * of coefficient at each element.
    * @param[in] c The coefficient to "modify" the element attributes
    */
-  AttributeModifierCoefficient(const T& attr_list, mfem::Coefficient& c) : attr_list_(attr_list), coef_(c) {}
+  AttributeModifierCoefficient(const T& attr_list, mfem::Coefficient& c) : attr_list_(attr_list), coef_(c) { static_assert(detail::has_brackets<T>::value, "T does not contain operator[]"); }
 
   /**
    * @brief Evaluate the coefficient at a quadrature point
@@ -299,6 +339,7 @@ public:
    */
   double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
   {
+    
     // Store old attribute and change to new attribute
     const int attr = Tr.Attribute;
     Tr.Attribute   = attr_list_[static_cast<typename detail::index_t<T>::type>(Tr.ElementNo)];
@@ -339,6 +380,8 @@ public:
    * @brief This class temporarily changes the attribute during coefficient
    * evaluation based on a given list.
    *
+   * T must implement operator[]
+   *
    * @param[in] dim Vector dimensions
    * @param[in] attr_list A list of attributes values corresponding to the type
    * of coefficient at each element.
@@ -347,6 +390,7 @@ public:
   AttributeModifierVectorCoefficient(int dim, const T& attr_list, mfem::VectorCoefficient& c)
       : attr_list_(attr_list), coef_(c), mfem::VectorCoefficient(dim)
   {
+        static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");  
   }
 
   /**
