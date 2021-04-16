@@ -18,29 +18,33 @@
 
 ####
 # Template
-.pr_build_on_lassen:
-  stage: l_build
-  extends: [.build_blueos_3_ppc64le_ib_p9_script, .on_lassen, .pr_workflow]
+.src_build_on_lassen:
+  stage: build
+  variables: 
+    ALLOC_COMMAND: lalloc 1 -W 10 -q pdebug -G eng
+  extends: [.src_build_script, .on_lassen, .src_workflow]
   needs: []
 
-.main_build_with_deps_on_lassen:
-  stage: l_build_with_deps
-  extends: [.build_with_deps_blueos_3_ppc64le_ib_p9_script, .on_lassen, .main_workflow]
+.full_build_on_lassen:
+  stage: build
+  variables:
+    ALLOC_COMMAND: lalloc 1 -W 45 -q pdebug -G eng
+  extends: [.full_build_script, .on_lassen, .full_workflow]
   needs: []
 
 ####
 # Build jobs
-clang_10_0_1 (PR build_on_lassen):
+lassen-clang_10_0_1-src:
   variables:
     COMPILER: "clang@10.0.1"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}-cuda.cmake"
-  extends: [.pr_build_on_lassen, .with_cuda]
+  extends: [.src_build_on_lassen, .with_cuda]
 
-clang_10_0_1 (Main build_with_deps_on_lassen):
+lassen-clang_10_0_1-full:
   variables:
     COMPILER: "clang@10.0.1"
-    SPEC: "@develop+cuda%${COMPILER}"
+    SPEC: "%${COMPILER}+cuda"
     EXTRA_SPEC: "cuda_arch=70"
     # The "-cuda" at the end of the host-config needs to be hardcoded for now
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}-cuda.cmake"
-  extends: [.main_build_with_deps_on_lassen, .with_cuda]
+  extends: [.full_build_on_lassen, .with_cuda]
