@@ -26,13 +26,26 @@
 namespace serac::input {
 
 /**
+ * @brief The input file languages supported by Inlet
+ */
+enum class Language
+{
+  Lua,
+  JSON,
+  YAML
+};
+
+/**
  * @brief Initializes Inlet with the given datastore and input file.
  *
  * @param[in] datastore Root of the Sidre datastore
  * @param[in] input_file_path Path to user given input file
+ * @param[in] language The language of the file at @a input_file_path
+ * @param[in] sidre_path The path within the datastore to use as the root of the Inlet hierarchy
  * @return initialized Inlet instance
  */
-axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path);
+axom::inlet::Inlet initialize(axom::sidre::DataStore& datastore, const std::string& input_file_path,
+                              const Language language = Language::Lua, const std::string& sidre_path = "input_file");
 
 /**
  * @brief Returns the absolute path of the given mesh either relative
