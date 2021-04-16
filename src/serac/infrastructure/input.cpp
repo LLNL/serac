@@ -149,23 +149,27 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
     auto max_attr_elem = std::max_element(scalar_pw_const.begin(), scalar_pw_const.end(),
                                           [](auto a, auto b) { return a.first < b.first; });
 
-    // Create an mfem vector for the attributes
-    // Note that this vector expects zero indexing
-    mfem::Vector pw_constants(max_attr_elem->first);
-    pw_constants = 0.0;
+    // NOTE(oxberry1@llnl.gov): gcc 8.3.1 Release builds emit
+    // "potential null pointer dereference [-Werror=null-dereference]"
+    // for max_attr_elem->first if not guarded by an if statement
+    if (max_attr_elem != scalar_pw_const.end()) {
+      // Create an mfem vector for the attributes
+      // Note that this vector expects zero indexing
+      mfem::Vector pw_constants(max_attr_elem->first);
+      pw_constants = 0.0;
 
-    for (auto& entry : scalar_pw_const) {
-      pw_constants(entry.first - 1) = entry.second;
-    }
+      for (auto& entry : scalar_pw_const) {
+        pw_constants(entry.first - 1) = entry.second;
+      }
 
-    // Create the MFEM coefficient
-    return std::make_unique<mfem::PWConstCoefficient>(pw_constants);
-
-  } else {
-    SLIC_ERROR_ROOT(
+      // Create the MFEM coefficient
+      return std::make_unique<mfem::PWConstCoefficient>(pw_constants);
+    } // Control falls through to error if max_attr_elem is scalar_pw_const.end()
+  } // Control falls through to error if none of the if-else conditions is true
+  
+  SLIC_ERROR_ROOT(
         "Trying to build a scalar coefficient without specifying a scalar_function, constant, or piecewise_constant.");
-    return nullptr;
-  }
+  return nullptr;
 }
 
 void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& container)
