@@ -160,23 +160,25 @@ std::unique_ptr<mfem::Coefficient> CoefficientInputOptions::constructScalar() co
     auto max_attr_elem = std::max_element(scalar_pw_const.begin(), scalar_pw_const.end(),
                                           [](auto a, auto b) { return a.first < b.first; });
 
-    // Create an mfem vector for the attributes
-    // Note that this vector expects zero indexing
-    mfem::Vector pw_constants(max_attr_elem->first);
-    pw_constants = 0.0;
+    // Check for a valid iterator to avoid compiler warnings
+    if (max_attr_elem != scalar_pw_const.end()) {
+      // Create an mfem vector for the attributes
+      // Note that this vector expects zero indexing
+      mfem::Vector pw_constants(max_attr_elem->first);
+      pw_constants = 0.0;
 
-    for (auto& entry : scalar_pw_const) {
-      pw_constants(entry.first - 1) = entry.second;
+      for (auto& entry : scalar_pw_const) {
+        pw_constants(entry.first - 1) = entry.second;
+      }
+
+      // Create the MFEM coefficient
+      return std::make_unique<mfem::PWConstCoefficient>(pw_constants);
     }
-
-    // Create the MFEM coefficient
-    return std::make_unique<mfem::PWConstCoefficient>(pw_constants);
-
-  } else {
-    SLIC_ERROR_ROOT(
-        "Trying to build a scalar coefficient without specifying a scalar_function, constant, or piecewise_constant.");
-    return nullptr;
   }
+
+  SLIC_ERROR_ROOT(
+      "Trying to build a scalar coefficient without specifying a scalar_function, constant, or piecewise_constant.");
+  return nullptr;
 }
 
 void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& container)
