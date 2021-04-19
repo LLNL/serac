@@ -4,6 +4,8 @@
 #include "polynomials.hpp"
 #include "finite_element.hpp"
 
+namespace serac {
+
 template <int n, int dim>
 struct QuadratureRule {
   array<double, n>              weights;
@@ -11,7 +13,7 @@ struct QuadratureRule {
   constexpr size_t              size() const { return n; }
 };
 
-template <::Geometry g, int Q>
+template <Geometry g, int Q>
 constexpr auto GaussQuadratureRule()
 {
   auto x = GaussLegendreNodes<Q>(0.0, 1.0);
@@ -42,3 +44,5 @@ constexpr auto GaussQuadratureRule()
     return rule;
   }
 }
+
+}  // namespace serac

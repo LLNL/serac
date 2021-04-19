@@ -15,6 +15,7 @@
 
 using namespace std;
 using namespace mfem;
+using namespace serac;
 
 int         num_procs, myid;
 int         refinements = 0;

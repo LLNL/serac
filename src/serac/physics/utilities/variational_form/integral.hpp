@@ -1,3 +1,14 @@
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+/**
+ * @file integral.hpp
+ *
+ * @brief This file contains the Integral core of the weak form
+ */
 #pragma once
 
 #include "mfem.hpp"
@@ -8,21 +19,33 @@
 #include "serac/physics/utilities/variational_form/finite_element.hpp"
 #include "serac/physics/utilities/variational_form/tuple_arithmetic.hpp"
 
+namespace serac {
+
 namespace impl {
 
+/**
+ * @brief Wrapper for mfem::Reshape that works with finite element spaces
+ * @tparam space A test or trial space
+ * @param[in] u The raw data to reshape into an mfem::DeviceTensor
+ * @param[in] n1 The first dimension to reshape into
+ * @param[in] n2 The second dimension to reshape into
+ * @see mfem::Reshape
+ */
 template <typename space>
 auto Reshape(double* u, int n1, int n2)
 {
+  // TODO: Helpful static_assert
   if constexpr (space::components == 1) {
     return mfem::Reshape(u, n1, n2);
   } else {
     return mfem::Reshape(u, n1, space::components, n2);
   }
 };
-
+/// @overload
 template <typename space>
 auto Reshape(const double* u, int n1, int n2)
 {
+  // TODO: Helpful static_assert
   if constexpr (space::components == 1) {
     return mfem::Reshape(u, n1, n2);
   } else {
@@ -145,6 +168,7 @@ auto Preprocess(T u, const tensor<double, geometry_dim> xi,
 template <typename element_type, typename T, int dim>
 auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
 {
+  // TODO: Helpful static_assert about f being tuple or tuple-like
   if constexpr (element_type::family == Family::H1) {
     auto W     = element_type::shape_functions(xi);
     auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
@@ -191,7 +215,7 @@ auto Measure(tensor<double, m, n> A)
   if constexpr (m == n) {
     return det(A);
   } else {
-    return sqrt(det(transpose(A) * A));
+    return ::sqrt(det(transpose(A) * A));
   }
 }
 
@@ -209,8 +233,8 @@ auto Measure(tensor<double, m, n> A)
 //             be evaluated at each quadrature point.
 //             See https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework
 //             for additional information on the idea behind a quadrature function and its inputs/outputs
-template < ::Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
-           typename derivatives_type, typename lambda>
+template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+          typename derivatives_type, typename lambda>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
 {
@@ -282,8 +306,8 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 //
 // note: lambda does not appear as a template argument, as the directional derivative is
 //       inherently just a linear transformation
-template < ::Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
-           typename derivatives_type>
+template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+          typename derivatives_type>
 void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
                      const mfem::Vector& J_, int num_elements)
 {
@@ -385,8 +409,8 @@ struct lambda_argument<Hcurl<p>, 3, 3> {
   using type = std::tuple<tensor<double, 3>, tensor<double, 3> >;
 };
 
-static constexpr ::Geometry supported_geometries[] = {::Geometry::Point, ::Geometry::Segment, ::Geometry::Quadrilateral,
-                                                      ::Geometry::Hexahedron};
+static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
+                                                    Geometry::Hexahedron};
 
 template <typename spaces>
 struct Integral {
@@ -445,3 +469,5 @@ struct Integral {
   std::function<void(const mfem::Vector&, mfem::Vector&)> evaluation;
   std::function<void(const mfem::Vector&, mfem::Vector&)> gradient;
 };
+
+}  // namespace serac

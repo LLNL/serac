@@ -1,9 +1,27 @@
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+/**
+ * @file dual.hpp
+ *
+ * @brief This file contains the declaration of a dual number class
+ */
+
 #pragma once
 
 #include <iostream>
 
 #include <cmath>
 
+namespace serac {
+
+/**
+ * @brief Dual number struct (value plus gradient)
+ * @tparam gradient_type The type of the gradient
+ */
 template <typename gradient_type>
 struct dual {
   double        value;
@@ -85,6 +103,11 @@ constexpr auto operator/(dual<gradient_type_a> a, dual<gradient_type_b> b)
   return dual{a.value / b.value, (a.gradient / b.value) - (a.value * b.gradient) / (b.value * b.value)};
 }
 
+/**
+ * @brief Generates const + non-const overloads for a binary comparison operator
+ * Comparisons are conducted against the "value" part of the dual number
+ * @param[in] x The comparison operator to overload
+ */
 #define binary_comparator_overload(x)                           \
   template <typename T>                                         \
   constexpr bool operator x(const dual<T>& a, double b)         \
@@ -104,11 +127,16 @@ constexpr auto operator/(dual<gradient_type_a> a, dual<gradient_type_b> b)
     return a.value x b.value;                                   \
   };
 
-binary_comparator_overload(<) binary_comparator_overload(<=) binary_comparator_overload(==)
-    binary_comparator_overload(>=) binary_comparator_overload(>)
+binary_comparator_overload(<);
+binary_comparator_overload(<=);
+binary_comparator_overload(==);
+binary_comparator_overload(>=);
+binary_comparator_overload(>);
 
-        template <typename gradient_type>
-        constexpr auto& operator+=(dual<gradient_type>& a, const dual<gradient_type>& b)
+#undef binary_comparator_overload
+
+template <typename gradient_type>
+constexpr auto& operator+=(dual<gradient_type>& a, const dual<gradient_type>& b)
 {
   a.value += b.value;
   a.gradient += b.gradient;
@@ -172,7 +200,7 @@ template <typename gradient_type>
 auto pow(double a, dual<gradient_type> b)
 {
   double value = pow(a, b.value);
-  return dual<gradient_type>{value, value * b.gradient * log(a)};
+  return dual<gradient_type>{value, value * b.gradient * ::log(a)};
 }
 
 template <typename gradient_type>
@@ -212,3 +240,5 @@ template <typename T>
 struct is_dual_number<dual<T> > {
   static constexpr bool value = true;
 };
+
+}  // namespace serac

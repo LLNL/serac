@@ -6,6 +6,8 @@
 #include "detail/meta.h"
 #include "detail/for_constexpr.h"
 
+namespace serac {
+
 namespace impl {
 template <typename T, typename i0_t>
 constexpr auto get(const T& values, i0_t i0)
@@ -1091,3 +1093,5 @@ double output = chain_rule(
   tuple< double, double >
 );
 */
+
+}  // namespace serac

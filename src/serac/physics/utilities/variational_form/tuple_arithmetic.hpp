@@ -4,6 +4,8 @@
 
 #include "tensor.hpp"
 
+namespace serac {
+
 template <typename T>
 struct is_tuple {
   static constexpr bool value = false;
@@ -183,3 +185,5 @@ auto chain_rule(S df_dx, T dx)
     return chain_rule(df_dx, dx);
   }
 }
+
+}  // namespace serac

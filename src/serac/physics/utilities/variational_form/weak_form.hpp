@@ -9,6 +9,8 @@
 #include "serac/physics/utilities/variational_form/tuple_arithmetic.hpp"
 #include "serac/physics/utilities/variational_form/integral.hpp"
 
+namespace serac {
+
 template <typename T>
 struct WeakForm;
 
@@ -241,3 +243,5 @@ struct WeakForm<test(trial)> : public mfem::Operator {
 
   mutable Gradient grad;
 };
+
+}  // namespace serac

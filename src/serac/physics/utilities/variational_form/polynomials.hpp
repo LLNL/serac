@@ -2,6 +2,8 @@
 
 #include "tensor.hpp"
 
+namespace serac {
+
 // clang-format off
 template <int n, typename T = double >
 constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1)) {
@@ -274,3 +276,5 @@ tensor<T, n> GaussLegendreInterpolationDerivative01(T x)
 
   return tensor<T, n>{};
 }
+
+}  // namespace serac
