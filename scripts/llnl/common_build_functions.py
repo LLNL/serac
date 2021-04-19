@@ -124,41 +124,6 @@ def log_failure(prefix, msg, timestamp=""):
         info["timestamp"] = timestamp
     json.dump(info,open(pjoin(prefix,"failed.json"),"w"),indent=2)
 
-
-def setup_clingo():
-    """
-    Attempts to install the clingo answer set programming library
-    if it is not already available as a Python module
-    """
-    try:
-        import clingo
-    except ModuleNotFoundError:
-        import pip
-        pip_ver = pip.__version__
-        # https://github.com/pypa/manylinux
-        # JBE: I think the string comparison is somewhat correct here, if not we'll
-        # need to install setuptools for 'packaging.version'
-        if pip_ver < "19.3":
-            print("[ERROR: pip version {0} is too old to install clingo".format(pip_ver))
-            print("  pip 19.3 is required for PEP 599 support")
-            print("]")
-            sys.exit(1)
-        py_interp = sys.executable
-        clingo_pkg = "clingo-cffi-wheel"
-        uninstall_cmd = "{0} -m pip uninstall {1}".format(py_interp, clingo_pkg)
-        # Uninstall it first in case the available version failed due to differing arch
-        # pip will still return 0 even if the package is not installed
-        res = sexe(uninstall_cmd, echo=True)
-        if res != 0:
-            print("[ERROR: clingo uninstall failed with returncode {0}]".format(res))
-            sys.exit(1)
-
-        install_cmd = "{0} -m pip install --user -i https://test.pypi.org/simple/ {1}".format(py_interp, clingo_pkg)
-        res = sexe(install_cmd, echo=True)
-        if res != 0:
-            print("[ERROR: clingo install failed with returncode {0}]".format(res))
-            sys.exit(1)
-
 def assertUberenvExists():
     if not os.path.exists(get_uberenv_path()):
         print("[ERROR: {0} does not exist".format(get_uberenv_path()))
@@ -172,7 +137,6 @@ def uberenv_create_mirror(prefix, spec, project_file, mirror_path):
     Calls uberenv to create a spack mirror.
     """
     assertUberenvExists()
-    setup_clingo()
     cmd  = "python {0} --create-mirror -k ".format(get_uberenv_path())
     cmd += "--prefix=\"{0}\" --mirror=\"{1}\" ".format(prefix, mirror_path)
     cmd += "--spec=\"{0}\" ".format(spec)
@@ -195,7 +159,6 @@ def uberenv_build(prefix, spec, project_file, mirror_path):
     Calls uberenv to install tpls for a given spec to given prefix.
     """
     assertUberenvExists()
-    setup_clingo()
     cmd  = "python {0} -k ".format(get_uberenv_path())
     cmd += "--prefix=\"{0}\" --spec=\"{1}\" ".format(prefix, spec)
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
