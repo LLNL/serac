@@ -48,8 +48,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     variant('shared',   default=False,
             description='Enable build of shared libraries')
 
-    variant("devtools",  default=False,
-            description="Build development tools (such as Sphinx, AStyle, etc...)")
+    varmsg = "Build development tools (such as Sphinx, AStyle, etc...)"
+    variant("devtools", default=False, description=varmsg)
 
     variant('caliper', default=False, 
             description='Build with hooks for Caliper performance analysis')
@@ -57,11 +57,12 @@ class Serac(CachedCMakePackage, CudaPackage):
             description='Build the glvis visualization executable')
     variant('petsc', default=False,
             description='Enable PETSC')
-    # netcdf and sundials variants commented out until a bug in the spack concretizer is fixed
+    # netcdf and sundials variants commented out until a bug in the spack
+    # concretizer is fixed
     #variant('netcdf', default=True,
     #        description='Enable Cubit/Genesis reader')
     #variant('sundials', default=True,
-    #        description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
+    #        description='Build MFEM with SUNDIALS nonlinear/ODE solver')
 
     # -----------------------------------------------------------------------
     # Dependencies
@@ -98,8 +99,10 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Needs to be first due to a bug with the Spack concretizer
     depends_on("hdf5+hl@1.8.21~shared")
 
-    # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    cmake_debug_deps = ["axom@0.4.0serac~openmp~fortran~raja~umpire+mfem~shared",
+    # Libraries that support
+    # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
+    axom_spec = "axom@0.4.0serac~openmp~fortran~raja~umpire+mfem~shared"
+    cmake_debug_deps = [axom_spec,
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
     for dep in cmake_debug_deps:
@@ -119,7 +122,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
 
     # Libraries that have a GPU variant
-    conflicts('cuda_arch=none', when='+cuda', msg='CUDA architecture is required')
+    conflicts('cuda_arch=none', when='+cuda',
+              msg='CUDA architecture is required')
     depends_on("amgx@2.1.x", when="+cuda")
     cuda_deps = ["mfem", "axom"]
     for dep in cuda_deps:
@@ -242,18 +246,19 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         path_replacements = {}
 
-        # Try to find the common prefix of the TPL directory, including the compiler
-        # If found, we will use this in the TPL paths
+        # Try to find the common prefix of the TPL directory, including the
+        # compiler. If found, we will use this in the TPL paths
         compiler_str = str(spec.compiler).replace('@','-')
         prefix_paths = prefix.split(compiler_str)
         tpl_root = ""
         if len(prefix_paths) == 2:
             tpl_root = os.path.join( prefix_paths[0], compiler_str )
             path_replacements[tpl_root] = "${TPL_ROOT}"
-            entries.append(cmake_cache_entry("TPL_ROOT", tpl_root))
+            entries.append(cmake_cache_path("TPL_ROOT", tpl_root))
 
         # required tpls
-        for dep in ('axom', 'conduit', 'mfem', 'hdf5', 'hypre', 'metis', 'parmetis'):
+        for dep in ('axom', 'conduit', 'mfem', 'hdf5',
+                    'hypre', 'metis', 'parmetis'):
             dep_dir = get_spec_path(spec, dep, path_replacements)
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
                                             dep_dir))
@@ -276,8 +281,10 @@ class Serac(CachedCMakePackage, CudaPackage):
                 entries.append('# %s not build\n' % dep.upper())
 
         if "+glvis" in spec:
-            glvis_bin_dir = get_spec_path(spec, "glvis", path_replacements, use_bin=True)
-            entries.append(cmake_cache_entry("GLVIS_EXECUTABLE", pjoin(glvis_bin_dir, "glvis")))
+            glvis_bin_dir = get_spec_path(spec, "glvis",
+                                          path_replacements, use_bin=True)
+            entries.append(cmake_cache_path("GLVIS_EXECUTABLE",
+                                            pjoin(glvis_bin_dir, "glvis")))
 
         ##################################
         # Devtools
@@ -304,8 +311,8 @@ class Serac(CachedCMakePackage, CudaPackage):
                 "CLANGFORMAT_EXECUTABLE", clang_fmt_path))
 
             clang_tidy_path = spec['llvm'].prefix.bin.join('clang-tidy')
-            entries.append(cmake_cache_entry("CLANGTIDY_EXECUTABLE",
-                                        clang_tidy_path))
+            entries.append(cmake_cache_path("CLANGTIDY_EXECUTABLE",
+                                            clang_tidy_path))
         else:
             entries.append("# Clang tools disabled due to disabled devtools\n")
             entries.append(cmake_cache_option("ENABLE_CLANGFORMAT", False))
