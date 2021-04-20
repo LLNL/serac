@@ -6,8 +6,9 @@
 #include "axom/slic/core/SimpleLogger.hpp"
 
 #include "serac/serac_config.hpp"
-#include "serac/physics/operators/stdfunction_operator.hpp"
+#include "serac/numerics/mesh_utils.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
+#include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/physics/utilities/variational_form/weak_form.hpp"
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 
@@ -15,36 +16,13 @@
 
 using namespace std;
 using namespace mfem;
+using namespace serac;
 
-int         num_procs, myid;
-int         refinements = 0;
-const char* mesh_file   = SERAC_REPO_DIR "/data/meshes/star.mesh";
+int num_procs, myid;
 
-auto setup(int argc, char* argv[])
-{
-  OptionsParser args(argc, argv);
-  args.AddOption(&mesh_file, "-m", "--mesh", "Mesh file to use.");
-  args.AddOption(&refinements, "-r", "--ref", "");
-
-  args.Parse();
-  if (!args.Good()) {
-    if (myid == 0) {
-      args.PrintUsage(cout);
-    }
-    MPI_Finalize();
-    exit(1);
-  }
-  if (myid == 0) {
-    args.PrintOptions(cout);
-  }
-
-  mfem::Mesh mesh(mesh_file, 1, 1);
-  for (int l = 0; l < refinements; l++) {
-    mesh.UniformRefinement();
-  }
-
-  return mfem::ParMesh(MPI_COMM_WORLD, mesh);
-}
+constexpr bool verbose = false;
+std::unique_ptr< mfem::ParMesh > mesh2D;
+std::unique_ptr< mfem::ParMesh > mesh3D;
 
 template <int p, int dim>
 void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
@@ -97,9 +75,11 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>
   mfem::Vector r1 = (*J) * U - (*F);
   mfem::Vector r2 = residual(U);
 
-  std::cout << "||r1||: " << r1.Norml2() << std::endl;
-  std::cout << "||r2||: " << r2.Norml2() << std::endl;
-  std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+  if (verbose) {
+    std::cout << "||r1||: " << r1.Norml2() << std::endl;
+    std::cout << "||r2||: " << r2.Norml2() << std::endl;
+    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+  }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
   mfem::Operator& grad2 = residual.GetGradient(U);
@@ -107,9 +87,11 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad2 * U;
 
-  std::cout << "||g1||: " << g1.Norml2() << std::endl;
-  std::cout << "||g2||: " << g2.Norml2() << std::endl;
-  std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+  if (verbose) {
+    std::cout << "||g1||: " << g1.Norml2() << std::endl;
+    std::cout << "||g2||: " << g2.Norml2() << std::endl;
+    std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+  }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 }
 
@@ -172,9 +154,11 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dime
   mfem::Vector r1 = (*J) * U - (*F);
   mfem::Vector r2 = residual(U);
 
-  std::cout << "||r1||: " << r1.Norml2() << std::endl;
-  std::cout << "||r2||: " << r2.Norml2() << std::endl;
-  std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+  if (verbose) {
+    std::cout << "||r1||: " << r1.Norml2() << std::endl;
+    std::cout << "||r2||: " << r2.Norml2() << std::endl;
+    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+  }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
   mfem::Operator& grad = residual.GetGradient(U);
@@ -182,9 +166,11 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dime
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad * U;
 
-  std::cout << "||g1||: " << g1.Norml2() << std::endl;
-  std::cout << "||g2||: " << g2.Norml2() << std::endl;
-  std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+  if (verbose) {
+    std::cout << "||g1||: " << g1.Norml2() << std::endl;
+    std::cout << "||g2||: " << g2.Norml2() << std::endl;
+    std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+  }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 }
 
@@ -245,9 +231,11 @@ void weak_form_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensio
   mfem::Vector r1 = (*J) * U - (*F);
   mfem::Vector r2 = residual(U);
 
-  std::cout << "||r1||: " << r1.Norml2() << std::endl;
-  std::cout << "||r2||: " << r2.Norml2() << std::endl;
-  std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+  if (verbose) {
+    std::cout << "||r1||: " << r1.Norml2() << std::endl;
+    std::cout << "||r2||: " << r2.Norml2() << std::endl;
+    std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+  }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-13);
 
   mfem::Operator& grad = residual.GetGradient(U);
@@ -255,51 +243,59 @@ void weak_form_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensio
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad * U;
 
-  std::cout << "||g1||: " << g1.Norml2() << std::endl;
-  std::cout << "||g2||: " << g2.Norml2() << std::endl;
-  std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+  if (verbose) {
+    std::cout << "||g1||: " << g1.Norml2() << std::endl;
+    std::cout << "||g2||: " << g2.Norml2() << std::endl;
+    std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+  }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-13);
 }
 
-template <int dim>
-void run_tests(mfem::ParMesh& mesh)
-{
-  Dimension<dim> d;
+TEST(thermal, 2D_linear) { weak_form_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+TEST(thermal, 2D_quadratic) { weak_form_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(thermal, 2D_cubic) { weak_form_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
 
-  std::cout << "H1/H1 tests" << std::endl;
-  weak_form_test(mesh, H1<1>{}, H1<1>{}, d);
-  weak_form_test(mesh, H1<2>{}, H1<2>{}, d);
-  weak_form_test(mesh, H1<3>{}, H1<3>{}, d);
+TEST(thermal, 3D_linear) { weak_form_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(thermal, 3D_quadratic) { weak_form_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(thermal, 3D_cubic) { weak_form_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
 
-  std::cout << "H1/H1 tests (elasticity)" << std::endl;
-  weak_form_test(mesh, H1<1, dim>{}, H1<1, dim>{}, d);
-  weak_form_test(mesh, H1<2, dim>{}, H1<2, dim>{}, d);
-  weak_form_test(mesh, H1<3, dim>{}, H1<3, dim>{}, d);
+TEST(hcurl, 2D_linear) { weak_form_test(*mesh2D, Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }
+TEST(hcurl, 2D_quadratic) { weak_form_test(*mesh2D, Hcurl<2>{}, Hcurl<2>{}, Dimension<2>{}); }
+TEST(hcurl, 2D_cubic) { weak_form_test(*mesh2D, Hcurl<3>{}, Hcurl<3>{}, Dimension<2>{}); }
 
-  std::cout << "Hcurl/Hcurl tests" << std::endl;
-  weak_form_test(mesh, Hcurl<1>{}, Hcurl<1>{}, d);
-  weak_form_test(mesh, Hcurl<2>{}, Hcurl<2>{}, d);
-  weak_form_test(mesh, Hcurl<3>{}, Hcurl<3>{}, d);
-}
+TEST(hcurl, 3D_linear) { weak_form_test(*mesh3D, Hcurl<1>{}, Hcurl<1>{}, Dimension<3>{}); }
+TEST(hcurl, 3D_quadratic) { weak_form_test(*mesh3D, Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
+TEST(hcurl, 3D_cubic) { weak_form_test(*mesh3D, Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
 
-int main(int argc, char* argv[])
-{
+TEST(elasticity, 2D_linear) { weak_form_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_quadratic) { weak_form_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_cubic) { weak_form_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
+
+TEST(elasticity, 3D_linear) { weak_form_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_quadratic) { weak_form_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_cubic) { weak_form_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
+
+int main(int argc, char* argv[]) {
+
+  ::testing::InitGoogleTest(&argc, argv);
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
   axom::slic::SimpleLogger logger;
 
-  auto mesh = setup(argc, argv);
+  int serial_refinement = 1;
+  int parallel_refinement = 0;
 
-  if (mesh.Dimension() == 2) {
-    run_tests<2>(mesh);
-  }
-  if (mesh.Dimension() == 3) {
-    run_tests<3>(mesh);
-  }
+  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+
+  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+
+  int result = RUN_ALL_TESTS();
 
   MPI_Finalize();
 
-  return 0;
+  return result;
 }
