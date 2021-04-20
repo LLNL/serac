@@ -20,9 +20,9 @@ using namespace serac;
 
 int num_procs, myid;
 
-constexpr bool verbose = false;
-std::unique_ptr< mfem::ParMesh > mesh2D;
-std::unique_ptr< mfem::ParMesh > mesh3D;
+constexpr bool                 verbose = false;
+std::unique_ptr<mfem::ParMesh> mesh2D;
+std::unique_ptr<mfem::ParMesh> mesh3D;
 
 template <int p, int dim>
 void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
@@ -275,8 +275,8 @@ TEST(elasticity, 3D_linear) { weak_form_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Di
 TEST(elasticity, 3D_quadratic) { weak_form_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
 TEST(elasticity, 3D_cubic) { weak_form_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
 
-int main(int argc, char* argv[]) {
-
+int main(int argc, char* argv[])
+{
   ::testing::InitGoogleTest(&argc, argv);
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -284,7 +284,7 @@ int main(int argc, char* argv[]) {
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement = 1;
+  int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
