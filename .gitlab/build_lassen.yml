@@ -37,7 +37,7 @@
 lassen-clang_10_0_1-src:
   variables:
     COMPILER: "clang@10.0.1"
-    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}-cuda.cmake"
+    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
   extends: [.src_build_on_lassen, .with_cuda]
 
 lassen-clang_10_0_1-full:
@@ -45,6 +45,5 @@ lassen-clang_10_0_1-full:
     COMPILER: "clang@10.0.1"
     SPEC: "%${COMPILER}+cuda"
     EXTRA_SPEC: "cuda_arch=70"
-    # The "-cuda" at the end of the host-config needs to be hardcoded for now
-    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}-cuda.cmake"
+    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
   extends: [.full_build_on_lassen, .with_cuda]
