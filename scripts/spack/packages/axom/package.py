@@ -185,7 +185,7 @@ class Axom(CachedCMakePackage, CudaPackage):
         entries = super(Axom, self).initconfig_hardware_entries()
 
         if spec.satisfies('target=ppc64le:'):
-            if "+cuda" in spec:
+            if spec.satisfies('^cuda'):
                 entries.append(cmake_cache_option("ENABLE_CUDA", True))
                 # SERAC EDIT BEGIN - this requires NVCC linking which is problematic
                 # entries.append(cmake_cache_option("CUDA_SEPARABLE_COMPILATION",
@@ -276,7 +276,7 @@ class Axom(CachedCMakePackage, CudaPackage):
         spec = self.spec
         entries = super(Axom, self).initconfig_mpi_entries()
 
-        if "+mpi" in spec:
+        if spec.satisfies('^mpi'):
             entries.append(cmake_cache_option("ENABLE_MPI", True))
             if spec['mpi'].name == 'spectrum-mpi':
                 entries.append(cmake_cache_string("BLT_MPI_COMMAND_APPEND",
@@ -346,16 +346,16 @@ class Axom(CachedCMakePackage, CudaPackage):
             entries.append("# ClangFormat disabled due to disabled devtools\n")
             entries.append(cmake_cache_option("ENABLE_CLANGFORMAT", False))
 
-        if "+python" in spec or "+devtools" in spec:
+        if spec.satisfies('^python') or "+devtools" in spec:
             python_path = os.path.realpath(spec['python'].command.path)
             for key in path_replacements:
                 python_path = python_path.replace(key, path_replacements[key])
             entries.append(cmake_cache_path("PYTHON_EXECUTABLE", python_path))
 
-        enable_docs = "+doxygen" in spec or "+py-sphinx" in spec
+        enable_docs = spec.satisfies('^doxygen') or spec.satisfies('^py-sphinx')
         entries.append(cmake_cache_option("ENABLE_DOCS", enable_docs))
 
-        if "+py-sphinx" in spec:
+        if spec.satisfies('^py-sphinx'):
             python_bin_dir = get_spec_path(spec, "python",
                                            path_replacements,
                                            use_bin=True)
@@ -363,14 +363,14 @@ class Axom(CachedCMakePackage, CudaPackage):
                                             pjoin(python_bin_dir,
                                                   "sphinx-build")))
 
-        if "+py-shroud" in spec:
+        if spec.satisfies('^py-shroud'):
             shroud_bin_dir = get_spec_path(spec, "py-shroud",
                                            path_replacements, use_bin=True)
             entries.append(cmake_cache_path("SHROUD_EXECUTABLE",
                                             pjoin(shroud_bin_dir, "shroud")))
 
         for dep in ('cppcheck', 'doxygen'):
-            if '+%s' % dep in spec:
+            if spec.satisfies('^%s' % dep):
                 dep_bin_dir = get_spec_path(spec, dep, path_replacements,
                                             use_bin=True)
                 entries.append(cmake_cache_path('%s_EXECUTABLE' % dep.upper(),
