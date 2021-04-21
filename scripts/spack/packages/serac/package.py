@@ -84,7 +84,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("sundials~shared+hypre+monitoring")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.2.0~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials",
+    mfem_variants = "~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials"
+    debug_deps = ["mfem@4.2.0{0}".format(mfem_variants),
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -167,28 +168,22 @@ class Serac(CachedCMakePackage, CudaPackage):
         spec = self.spec
         entries = super(Serac, self).initconfig_hardware_entries()
 
-        if spec.satisfies('target=ppc64le:'):
-            if "+cuda" in spec:
-                entries.append(cmake_cache_option("ENABLE_CUDA", True))
-                # CUDA_FLAGS
-                cudaflags  = "-restrict --expt-extended-lambda "
+        if spec.satisfies('^cuda'):
+            entries.append(cmake_cache_option("ENABLE_CUDA", True))
 
-                if not spec.satisfies('cuda_arch=none'):
-                    cuda_arch = spec.variants['cuda_arch'].value[0]
-                    entries.append(cmake_cache_string(
-                        "CMAKE_CUDA_ARCHITECTURES",
-                        cuda_arch))
-                    cudaflags += '-arch sm_${CMAKE_CUDA_ARCHITECTURES} '
-                else:
-                    entries.append(
-                        "# cuda_arch could not be determined\n\n")
-
-                if "+cpp14" in spec:
-                    cudaflags += " -std=c++14"
-                else:
-                    cudaflags += " -std=c++11"
-                entries.append(
-                    cmake_cache_string("CMAKE_CUDA_FLAGS", cudaflags))
+            if spec.satisfies('cuda_arch=none'):
+                msg = ("# No cuda_arch specified in Spack spec, "
+                       "this is likely to fail\n\n")
+                entries.append(msg)
+            else:
+                cuda_arch = spec.variants['cuda_arch'].value
+                flag = '-arch sm_{0}'.format(cuda_arch[0])
+                # CXX flags will be propagated to the host compiler
+                cuda_flags = ' '.join([flag, cxxflags])
+                entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
+                                                  cuda_flags))
+                entries.append(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES",
+                                                  ' '.join(cuda_arch)))
 
                 entries.append(
                     "# nvcc does not like gtest's 'pthreads' flag\n")
@@ -225,13 +220,10 @@ class Serac(CachedCMakePackage, CudaPackage):
         spec = self.spec
         entries = super(Serac, self).initconfig_mpi_entries()
 
-        if "+mpi" in spec:
-            entries.append(cmake_cache_option("ENABLE_MPI", True))
-            if spec['mpi'].name == 'spectrum-mpi':
-                entries.append(cmake_cache_string("BLT_MPI_COMMAND_APPEND",
-                                                  "mpibind"))
-        else:
-            entries.append(cmake_cache_option("ENABLE_MPI", False))
+        entries.append(cmake_cache_option("ENABLE_MPI", True))
+        if spec['mpi'].name == 'spectrum-mpi':
+            entries.append(cmake_cache_string("BLT_MPI_COMMAND_APPEND",
+                                              "mpibind"))
 
         return entries
 
