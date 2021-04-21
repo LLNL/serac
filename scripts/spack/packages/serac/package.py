@@ -177,9 +177,10 @@ class Serac(CachedCMakePackage, CudaPackage):
                 entries.append(msg)
             else:
                 cuda_arch = spec.variants['cuda_arch'].value
-                flag = '-arch sm_{0}'.format(cuda_arch[0])
+                arch_flag = '-arch sm_{0} '.format(cuda_arch[0])
                 # CXX flags will be propagated to the host compiler
-                cuda_flags = ' '.join([flag, cxxflags])
+                cxxflags = ' '.join(spec.compiler_flags['cxxflags'])
+                cuda_flags = arch_flag + cxxflags
                 entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
                                                   cuda_flags))
                 entries.append(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES",
