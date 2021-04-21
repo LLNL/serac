@@ -85,7 +85,7 @@ TEST(dynamic_solver, dyn_solve)
       Solid::TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
-  ThermalSolid ts_solver(1, therm_options, default_dynamic);
+  ThermalSolid ts_solver(1, therm_options, default_dynamic, "coupled");
   ts_solver.setDisplacementBCs(ess_bdr, deform);
   ts_solver.setTractionBCs(trac_bdr, traction_coef, false);
   ts_solver.setSolidMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),

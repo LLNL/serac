@@ -31,17 +31,20 @@ public:
    * @param[in] order The order of the temperature and displacement discretizations
    * @param[in] therm_options The equation solver options for the conduction physics
    * @param[in] solid_options The equation solver options for the solid physics
+   * @param[in] name A name for the physics module
    */
   ThermalSolid(int order, const ThermalConduction::SolverOptions& therm_options,
-               const Solid::SolverOptions& solid_options);
+               const Solid::SolverOptions& solid_options, const std::string& name = "");
 
   /**
    * @brief Construct a new Thermal Solid object from input file options
    *
-   * @param thermal_input The thermal physics module input file option struct
-   * @param solid_input The solid mechanics module input file option struct
+   * @param[in] thermal_input The thermal physics module input file option struct
+   * @param[in] solid_input The solid mechanics module input file option struct
+   * @param[in] name A name for the physics module
    */
-  ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const Solid::InputOptions& solid_input);
+  ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const Solid::InputOptions& solid_input,
+               const std::string& name = "");
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
