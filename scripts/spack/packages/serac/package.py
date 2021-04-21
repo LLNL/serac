@@ -195,12 +195,6 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append("# Hardware Specifics")
         entries.append("#------------------{0}\n".format("-" * 30))
 
-        # Enable death tests
-        entries.append(cmake_cache_option(
-            "ENABLE_GTEST_DEATH_TESTS",
-            not spec.satisfies('+cuda target=ppc64le:')
-        ))
-
         if spec.satisfies('target=ppc64le:'):
             # Fix for working around CMake adding implicit link directories
             # returned by the BlueOS compilers to link executables with
@@ -256,7 +250,7 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
                                             dep_dir))
 
-        #if "+netcdf" in spec:
+        #if spec.satisfies('^netcdf'):
         # The actual package name is netcdf-c
         dep_dir = get_spec_path(spec, "netcdf-c", path_replacements)
         entries.append(cmake_cache_path("NETCDF_DIR", dep_dir))
@@ -266,14 +260,14 @@ class Serac(CachedCMakePackage, CudaPackage):
 
         # optional tpls
         for dep in ('petsc', 'caliper'):
-            if '+%s' % dep in spec:
+            if spec.satisfies('^{0}'.format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
                                                 dep_dir))
             else:
                 entries.append('# %s not build\n' % dep.upper())
 
-        if "+glvis" in spec:
+        if spec.satisfies('^glvis'):
             glvis_bin_dir = get_spec_path(spec, "glvis",
                                           path_replacements, use_bin=True)
             entries.append(cmake_cache_path("GLVIS_EXECUTABLE",
@@ -311,10 +305,10 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_option("ENABLE_CLANGFORMAT", False))
             entries.append(cmake_cache_option("ENABLE_CLANGTIDY", False))
 
-        enable_docs = "+doxygen" in spec or "+py-sphinx" in spec
+        enable_docs = spec.satisfies('^doxygen') or spec.satisfies('^py-sphinx')
         entries.append(cmake_cache_option("ENABLE_DOCS", enable_docs))
 
-        if "+py-sphinx" in spec:
+        if spec.satisfies('^py-sphinx'):
             python_bin_dir = get_spec_path(spec, "python",
                                            path_replacements,
                                            use_bin=True)
@@ -323,7 +317,7 @@ class Serac(CachedCMakePackage, CudaPackage):
                                                   "sphinx-build")))
 
         for dep in ('cppcheck', 'doxygen'):
-            if '+%s' % dep in spec:
+            if spec.satisfies('^{0}'.format(dep)):
                 dep_bin_dir = get_spec_path(spec, dep, path_replacements,
                                             use_bin=True)
                 entries.append(cmake_cache_path('%s_EXECUTABLE' % dep.upper(),
