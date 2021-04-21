@@ -164,7 +164,7 @@ constexpr auto orientation(const array<int, n>& a, const array<int, n>& b)
 }
 
 /**
- * @brief Computes the successive sum of a one-dimensional array
+ * @brief Computes the sum of all entries in the array
  * @param[in] a The array to sum
  */
 template <typename T, int n>
@@ -178,7 +178,7 @@ constexpr auto total(const array<T, n>& a)
 }
 
 /**
- * @brief Computes the successive product of a one-dimensional array
+ * @brief Computes the product of all entries in the array
  * @param[in] a The array to compute on
  */
 template <typename T, int n>
