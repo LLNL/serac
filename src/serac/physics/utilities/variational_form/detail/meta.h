@@ -4,20 +4,6 @@
 #include <utility>
 #include <type_traits>
 
-//namespace
-//{
-//    template <typename, template <int...> typename>
-//    struct is_instance_impl : public std::false_type {};
-//
-//    template <template <int...> typename T, int...n>
-//    struct is_instance_impl<T<n...>, T> : public std::true_type {};
-//}
-//
-//// see https://stackoverflow.com/a/61040973
-//template <typename T, template <int ...> typename U>
-//using is_instance = is_instance_impl<std::decay_t<T>, U>;
-
-
 namespace
 {
     template <typename, template <typename...> typename>
@@ -63,4 +49,21 @@ constexpr auto remove(std::integer_sequence<int,n...> seq) {
 template < int ... n1, int ... n2 >
 constexpr auto join(std::integer_sequence<int,n1...>, std::integer_sequence<int,n2...>) {
   return std::integer_sequence<int,n1...,n2...>{};
+}
+
+namespace impl {
+  template < typename lambda, int ... i >
+  inline constexpr void for_constexpr(lambda && f, std::integral_constant< int, i > ... args) {
+    f(args ...);
+  }
+
+  template < int ... n, typename lambda, typename ... arg_types >
+  inline constexpr void for_constexpr(lambda && f, std::integer_sequence< int, n ... >, arg_types ... args) {
+    (impl::for_constexpr(f, args ..., std::integral_constant< int, n >{}), ...);
+  }
+}
+
+template < int ... n, typename lambda >
+inline constexpr void for_constexpr(lambda && f) {
+  impl::for_constexpr(f, std::make_integer_sequence<int, n>{} ...);
 }

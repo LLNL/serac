@@ -4,7 +4,6 @@
 #include "array.hpp"
 
 #include "detail/meta.h"
-#include "detail/for_constexpr.h"
 
 namespace serac {
 
