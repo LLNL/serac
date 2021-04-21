@@ -81,9 +81,9 @@ set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
-# PETSC not build
+# PETSC not built
 
-# CALIPER not build
+# CALIPER not built
 
 #------------------------------------------------------------------------------
 # Devtools
