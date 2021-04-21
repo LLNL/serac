@@ -137,7 +137,7 @@ def uberenv_create_mirror(prefix, spec, project_file, mirror_path):
     Calls uberenv to create a spack mirror.
     """
     assertUberenvExists()
-    cmd  = "python {0} --create-mirror -k ".format(get_uberenv_path())
+    cmd  = "{0} {1} --create-mirror -k ".format(sys.executable, get_uberenv_path())
     cmd += "--prefix=\"{0}\" --mirror=\"{1}\" ".format(prefix, mirror_path)
     cmd += "--spec=\"{0}\" ".format(spec)
     if project_file:
@@ -159,7 +159,7 @@ def uberenv_build(prefix, spec, project_file, mirror_path):
     Calls uberenv to install tpls for a given spec to given prefix.
     """
     assertUberenvExists()
-    cmd  = "python {0} -k ".format(get_uberenv_path())
+    cmd  = "{0} {1} -k ".format(sys.executable, get_uberenv_path())
     cmd += "--prefix=\"{0}\" --spec=\"{1}\" ".format(prefix, spec)
     cmd += "--mirror=\"{0}\" ".format(mirror_path)
     if project_file:
@@ -252,7 +252,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
     print("[starting configure of %s]" % host_config)
     print("[log file: %s]" % cfg_output_file)
     # Disable docs until we build our own doxygen/sphinx to stop the random failures on LC
-    res = sexe("python config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s %s" % (build_dir, host_config, install_dir, extra_cmake_options),
+    res = sexe("%s config-build.py -DENABLE_DOCS=OFF -bp %s -hc %s -ip %s %s" % (sys.executable, build_dir, host_config, install_dir, extra_cmake_options),
                output_file = cfg_output_file,
                echo=True)
     
