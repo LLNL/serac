@@ -35,10 +35,10 @@ RUN cd serac && python3.6 ./scripts/uberenv/uberenv.py --spack-config-dir=./scri
                                                      --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
 
 # Make sure the new hostconfig worked
-RUN cd serac && python3.6 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
+RUN cd serac && python3.6 config-build.py -hc /home/serac/serac_tpls/*.cmake -bp build && cd build && make -j && make -j test
 
 RUN mkdir -p /home/serac/export_hostconfig
-RUN cp ./serac/*.cmake /home/serac/export_hostconfig
+RUN cp /home/serac/serac_tpls/*.cmake /home/serac/export_hostconfig
 
 RUN rm -rf serac
 RUN rm -rf serac_tpls/builds
