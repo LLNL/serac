@@ -58,6 +58,7 @@ constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
 }
 }  // namespace impl
 
+/// @cond
 template <typename T, int... n>
 struct tensor;
 
@@ -109,27 +110,58 @@ struct tensor<T, n> {
   constexpr auto  operator[](int i) const { return value[i]; };
   T               value[n];
 };
+/// @endcond
 
+/**
+ * @brief Arbitrary-rank tensor class
+ * @tparam T The scalar type of the tensor
+ * @tparam first The leading dimension of the tensor
+ * @tparam last The parameter pack of the remaining dimensions
+ */
 template <typename T, int first, int... rest>
 struct tensor<T, first, rest...> {
-  using type                       = T;
-  static constexpr int ndim        = 1 + sizeof...(rest);
+  /**
+   * @brief The scalar type
+   */
+  using type = T;
+  /**
+   * @brief The rank of the tensor
+   */
+  static constexpr int ndim = 1 + sizeof...(rest);
+  /**
+   * @brief The array of dimensions containing the shape (not the data itself)
+   * Similar to numpy.ndarray.shape
+   */
   static constexpr int shape[ndim] = {first, rest...};
 
+  /**
+   * @brief Retrieves the sub-tensor corresponding to the indices provided in the pack @a i
+   * @param[in] i The pack of indices
+   */
   template <typename... S>
   constexpr auto& operator()(S... i)
   {
+    // FIXME: Compile-time check for <= 4 indices??
     return impl::get(value, i...);
   };
-
+  /// @overload
   template <typename... S>
   constexpr auto operator()(S... i) const
   {
     return impl::get(value, i...);
   };
 
-  constexpr auto&    operator[](int i) { return value[i]; };
-  constexpr auto     operator[](int i) const { return value[i]; };
+  /**
+   * @brief Retrieves the "row" of the tensor corresponding to index @a i
+   * @param[in] i The index to retrieve a rank - 1 tensor from
+   */
+  constexpr auto& operator[](int i) { return value[i]; };
+  /// @overload
+  constexpr auto operator[](int i) const { return value[i]; };
+
+  /**
+   * @brief The actual tensor data
+   */
   tensor<T, rest...> value[first];
 };
 
@@ -139,6 +171,9 @@ tensor(const T (&data)[n1]) -> tensor<T, n1>;
 template <typename T, int n1, int n2>
 tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
 
+/**
+ * @brief A sentinel struct for eliding no-op tensor operations
+ */
 struct zero {
   operator double() { return 0.0; }
 

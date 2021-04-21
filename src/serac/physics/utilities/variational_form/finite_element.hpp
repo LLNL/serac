@@ -36,6 +36,9 @@ enum class Geometry
  */
 template <int d>
 struct Dimension {
+  /**
+   * @brief Returns the dimension
+   */
   constexpr operator int() { return d; }
 };
 
@@ -90,7 +93,7 @@ enum class Family
 };
 
 /**
- * @brief
+ * @brief FIXME: This doesn't appear to be used anywhere
  */
 enum class Evaluation
 {

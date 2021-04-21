@@ -178,11 +178,20 @@ public:
     AddIntegral(Dimension<2>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain);
   }
 
+  /**
+   * @brief Implements mfem::Operator::Mult
+   * @param[in] input_T The input vector
+   * @param[out] output_T The output vector
+   */
   void Mult(const mfem::Vector& input_T, mfem::Vector& output_T) const override
   {
     Evaluation<Operation::Mult>(input_T, output_T);
   }
 
+  /**
+   * @brief Implements mfem::Operator::GetGradient
+   * @param[in] x The input vector
+   */
   mfem::Operator& GetGradient(const mfem::Vector& x) const override
   {
     Mult(x, dummy_);  // this is ugly

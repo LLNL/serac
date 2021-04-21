@@ -28,10 +28,19 @@ struct array;
  */
 template <typename T, int first, int... rest>
 struct array<T, first, rest...> {
+  /**
+   * @brief The tensor rank of the array (number of indexing dimensions)
+   */
   static constexpr int rank              = 1 + sizeof...(rest);
   static constexpr int leading_dimension = first;
-  using type                             = typename array<T, rest...>::type[first];
-  using slice_type                       = array<T, rest...>;
+  /**
+   * @brief The raw array type, e.g., @p T[first][second][third]
+   */
+  using type = typename array<T, rest...>::type[first];
+  /**
+   * @brief The type of each "row" of the array
+   */
+  using slice_type = array<T, rest...>;
   /**
    * @brief Returns the @a i th element of the array
    * @tparam i The index to retrieve
