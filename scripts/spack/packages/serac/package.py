@@ -158,12 +158,6 @@ class Serac(CachedCMakePackage, CudaPackage):
         )
 
 
-    # def initconfig_compiler_entries(self):
-    #     spec = self.spec
-    #     entries = super(Serac, self).initconfig_compiler_entries()
-    #     return entries
-
-
     def initconfig_hardware_entries(self):
         spec = self.spec
         entries = super(Serac, self).initconfig_hardware_entries()
@@ -265,7 +259,7 @@ class Serac(CachedCMakePackage, CudaPackage):
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
                                                 dep_dir))
             else:
-                entries.append('# %s not build\n' % dep.upper())
+                entries.append('# %s not built\n' % dep.upper())
 
         if spec.satisfies('^glvis'):
             glvis_bin_dir = get_spec_path(spec, "glvis",
