@@ -664,6 +664,10 @@ constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n>& B)
   return dot(A, B);
 }
 
+/**
+ * @brief Returns the squared Frobenius norm of the tensor
+ * @param[in] A The tensor to obtain the squared norm from
+ */
 template <typename T, int m>
 constexpr auto sqnorm(const tensor<T, m>& A)
 {
@@ -673,7 +677,7 @@ constexpr auto sqnorm(const tensor<T, m>& A)
   }
   return total;
 }
-
+/// @overload
 template <typename T, int m, int n>
 constexpr auto sqnorm(const tensor<T, m, n>& A)
 {
@@ -685,7 +689,7 @@ constexpr auto sqnorm(const tensor<T, m, n>& A)
   }
   return total;
 }
-
+/// @overload
 template <typename T, int... n>
 constexpr auto sqnorm(const tensor<T, n...>& A)
 {
@@ -694,18 +698,32 @@ constexpr auto sqnorm(const tensor<T, n...>& A)
   return total;
 }
 
+/**
+ * @brief Returns the Frobenius norm of the tensor
+ * @param[in] A The tensor to obtain the norm from
+ */
 template <typename T, int... n>
 auto norm(const tensor<T, n...>& A)
 {
   return sqrt(sqnorm(A));
 }
 
+/**
+ * @brief Normalizes the tensor
+ * Each element is divided by the Frobenius norm of the tensor, @see norm
+ * @param[in] A The tensor to normalize
+ */
 template <typename T, int... n>
 auto normalize(const tensor<T, n...>& A)
 {
   return A / norm(A);
 }
 
+/**
+ * @brief Returns the trace of a square matrix
+ * @param[in] A The matrix to compute the trace of
+ * @return The sum of the elements on the main diagonal
+ */
 template <typename T, int n>
 constexpr auto tr(const tensor<T, n, n>& A)
 {
@@ -716,6 +734,11 @@ constexpr auto tr(const tensor<T, n, n>& A)
   return trA;
 }
 
+/**
+ * @brief Returns the symmetric part of a square matrix
+ * @param[in] A The matrix to obtain the symmetric part of
+ * @return (1/2) * (A + A^T)
+ */
 template <typename T, int n>
 constexpr auto sym(const tensor<T, n, n>& A)
 {
@@ -728,6 +751,13 @@ constexpr auto sym(const tensor<T, n, n>& A)
   return symA;
 }
 
+/**
+ * @brief Calculates the deviator of a matrix (rank-2 tensor)
+ * @param[in] A The matrix to calculate the deviator of
+ * In the context of stress tensors, the deviator is obtained by
+ * subtracting the mean stress (average of main diagonal elements)
+ * from each element on the main diagonal
+ */
 template <typename T, int n>
 constexpr auto dev(const tensor<T, n, n>& A)
 {
@@ -739,6 +769,10 @@ constexpr auto dev(const tensor<T, n, n>& A)
   return devA;
 }
 
+/**
+ * @brief Obtains the identity matrix of the specified dimension
+ * @return I_dim
+ */
 template <int dim>
 constexpr tensor<double, dim, dim> Identity()
 {
@@ -751,6 +785,10 @@ constexpr tensor<double, dim, dim> Identity()
   return I;
 }
 
+/**
+ * @brief Returns the transpose of the matrix
+ * @param[in] A The matrix to obtain the transpose of
+ */
 template <typename T, int m, int n>
 constexpr auto transpose(const tensor<T, m, n>& A)
 {
@@ -763,12 +801,16 @@ constexpr auto transpose(const tensor<T, m, n>& A)
   return AT;
 }
 
+/**
+ * @brief Returns the determinant of a matrix
+ * @param[in] A The matrix to obtain the determinant of
+ */
 template <typename T>
 constexpr double det(const tensor<T, 2, 2>& A)
 {
   return A[0][0] * A[1][1] - A[0][1] * A[1][0];
 }
-
+/// @overload
 template <typename T>
 constexpr double det(const tensor<T, 3, 3>& A)
 {
@@ -776,8 +818,14 @@ constexpr double det(const tensor<T, 3, 3>& A)
          A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2] - A[0][2] * A[1][1] * A[2][0];
 }
 
+/**
+ * @brief Solves Ax = b for x using Gaussian elimination with partial pivoting
+ * @param[in] A The matrix A in Ax = b
+ * @param[in] b The vector b in Ax = b
+ * @note @a A and @a b are by-value as they are mutated as part of the elimination
+ */
 template <typename T, int n>
-constexpr tensor<T, n> linear_solve(const tensor<T, n, n>& A_, const tensor<T, n>& b_)
+constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const tensor<T, n> b)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -786,9 +834,7 @@ constexpr tensor<T, n> linear_solve(const tensor<T, n, n>& A_, const tensor<T, n
     y        = tmp;
   };
 
-  tensor<double, n, n> A = A_;
-  tensor<double, n>    b = b_;
-  tensor<double, n>    x{};
+  tensor<double, n> x{};
 
   for (int i = 0; i < n; i++) {
     // Search for maximum in this column
@@ -825,6 +871,11 @@ constexpr tensor<T, n> linear_solve(const tensor<T, n, n>& A_, const tensor<T, n
   return x;
 }
 
+/**
+ * @brief Inverts a matrix
+ * @param[in] A The matrix to invert
+ * @note Uses a shortcut for inverting a 2-by-2 matrix
+ */
 constexpr tensor<double, 2, 2> inv(const tensor<double, 2, 2>& A)
 {
   double inv_detA(1.0 / det(A));
@@ -838,7 +889,10 @@ constexpr tensor<double, 2, 2> inv(const tensor<double, 2, 2>& A)
 
   return invA;
 }
-
+/**
+ * @overload
+ * @note Uses a shortcut for inverting a 3-by-3 matrix
+ */
 constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>& A)
 {
   double inv_detA(1.0 / det(A));
@@ -857,9 +911,13 @@ constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>& A)
 
   return invA;
 }
-
+/**
+ * @overload
+ * @note For N-by-N matrices with N > 3, requires Gaussian elimination
+ * with partial pivoting
+ */
 template <typename T, int n>
-constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A_)
+constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -868,7 +926,6 @@ constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A_)
     y        = tmp;
   };
 
-  tensor<double, n, n> A = A_;
   tensor<double, n, n> B = Identity<n>();
 
   for (int i = 0; i < n; i++) {

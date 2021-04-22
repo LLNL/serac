@@ -150,7 +150,10 @@ constexpr int orientation(const array<int, 2> a, const array<int, 2> b) { return
 
 // NOTE: Currently not used anywhere
 /**
- * @brief
+ * @brief Determines the what rotation was applied to @a a to obtain @a b
+ * @param[in] a The first array to compare
+ * @param[in] b The second array to compare
+ * @return A tuple containing {direction, num_positions}
  */
 template <int n>
 constexpr auto orientation(const array<int, n>& a, const array<int, n>& b)
