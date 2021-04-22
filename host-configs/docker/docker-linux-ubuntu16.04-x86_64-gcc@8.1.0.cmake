@@ -55,8 +55,6 @@ set(ENABLE_MPI ON CACHE BOOL "")
 # Hardware Specifics
 #------------------------------------------------
 
-set(ENABLE_GTEST_DEATH_TESTS ON CACHE BOOL "")
-
 #------------------------------------------------------------------------------
 # TPLs
 #------------------------------------------------------------------------------
@@ -85,6 +83,10 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
 # CALIPER not built
 
+# RAJA not built
+
+# UMPIRE not built
+
 #------------------------------------------------------------------------------
 # Devtools
 #------------------------------------------------------------------------------
@@ -96,5 +98,3 @@ set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
 set(ENABLE_CLANGTIDY OFF CACHE BOOL "")
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
-
-

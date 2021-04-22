@@ -228,7 +228,7 @@ class Axom(CachedCMakePackage, CudaPackage):
                 else:
                     cudaflags += " -std=c++11"
 
-                # SERAC EDIT BEGIN - debug flag causes the NVIDIA assembler to fail
+                # SERAC EDIT BEGIN
                 # NVCC ignores the host compiler when linking??
                 # and some MPI -Wl,-rpath, flags are added from somewhere
                 cudaflags += " -ccbin ${CMAKE_CXX_COMPILER} -forward-unknown-to-host-compiler "
