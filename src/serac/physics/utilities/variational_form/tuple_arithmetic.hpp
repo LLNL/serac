@@ -72,7 +72,7 @@ constexpr auto make_dual_helper(double arg, std::integer_sequence<int, i...>)
 }
 
 template <int I, typename T, int... n, int... i>
-constexpr auto make_dual_helper(tensor<T, n...> arg, std::integer_sequence<int, i...>)
+constexpr auto make_dual_helper(const tensor<T, n...>& arg, std::integer_sequence<int, i...>)
 {
   using gradient_type = std::tuple<typename std::conditional<i == I, tensor<T, n...>, zero>::type...>;
   tensor<dual<gradient_type>, n...> arg_dual{};
@@ -181,7 +181,7 @@ auto get_gradient(dual<std::tuple<T...> > arg)
 }
 /// @overload
 template <typename... T, int... n>
-auto get_gradient(tensor<dual<std::tuple<T...> >, n...> arg)
+auto get_gradient(const tensor<dual<std::tuple<T...> >, n...>& arg)
 {
   std::tuple<outer_product_t<tensor<double, n...>, T>...> g{};
   for_constexpr<n...>([&](auto... i) {

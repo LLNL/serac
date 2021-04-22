@@ -245,7 +245,7 @@ auto Postprocess(T f, const tensor<double, geometry_dim> xi,
  * @param[in] A The Jacobian to compute the ratio on
  */
 template <int m, int n>
-auto Measure(tensor<double, m, n> A)
+auto Measure(const tensor<double, m, n>& A)
 {
   if constexpr (m == n) {
     return det(A);
