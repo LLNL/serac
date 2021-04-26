@@ -22,6 +22,8 @@ set(weakform_headers
     detail/quadrilateral_hcurl.inl
     detail/quadrilateral_L2.inl
     detail/segment_h1.inl
+    detail/meta.h
+    detail/timer.hpp
     )
 
 blt_add_library(
@@ -89,4 +91,3 @@ set(weakform_performance_tests
     tests/J2_material_with_AD.cpp
     tests/kernel_microbenchmark.cpp
     tests/diffusion_performance_test.cpp)
-    
