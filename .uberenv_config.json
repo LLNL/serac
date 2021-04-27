@@ -9,5 +9,5 @@
 "spack_configs_path": "scripts/spack/configs",
 "spack_packages_path": "scripts/spack/packages",
 "spack_activate" : {},
-"spack_use_new_concretizer": true
+"spack_concretizer": "clingo"
 }
