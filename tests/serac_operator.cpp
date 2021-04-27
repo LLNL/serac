@@ -55,7 +55,7 @@ TEST(serac_operators, rectangular_operator)
 
   // Compare the results
   for (int i = 0; i < out_1.Size(); ++i) {
-    EXPECT_NEAR(out_1(i), out_2(i), 1.0e-10);
+    EXPECT_DOUBLE_EQ(out_1(i), out_2(i));
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
