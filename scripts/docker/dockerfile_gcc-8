@@ -12,8 +12,7 @@ RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo updat
 RUN sudo ln -f -s python3.6 /usr/bin/python # Compatibility with legacy Python
 RUN sudo ln -f -s python3.6 /usr/bin/python3 # Override the default python3 (3.5) for spack
 RUN sudo python3.6 -m pip install --upgrade pip
-RUN sudo python3.6 -m pip install cffi pyyaml
-RUN sudo python3.6 -m pip install -i https://test.pypi.org/simple/ clingo-cffi-wheel
+RUN sudo python3.6 -m pip install clingo
 
 # Avoid building CMake from scratch
 RUN wget https://cmake.org/files/v3.18/cmake-3.18.5-Linux-x86_64.sh
