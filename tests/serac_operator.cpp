@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "serac/physics/operators/stdfunction_operator.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
 
 #include "mfem.hpp"
 
@@ -49,8 +50,8 @@ TEST(serac_operators, rectangular_operator)
       [&mat](const mfem::Vector&) -> mfem::Operator& { return mat; });
 
   // Compute the action of the equivalent rectangular operators
-  mat.Mult(in, out_1);
-  c.Mult(in, out_2);
+  out_1 = mat * in;
+  out_2 = c * in;
 
   // Compare the results
   for (int i = 0; i < out_1.Size(); ++i) {
