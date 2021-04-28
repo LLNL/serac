@@ -246,8 +246,34 @@ must be specified using either:
 
 **Ubuntu 20.04**
 
-``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_20``
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install``
 
 **Ubuntu 18.04**
 
-``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_18``
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_18 --prefix=../path/to/install``
+
+Preparing OSX for Serac Installation
+------------------------------------
+
+.. warning::
+   These instructions are in development and are only one example of how to handle this.
+
+.. warning::
+   OSX MPI may throw a popup that causes all MPI runs to fail.
+
+Install required compilers and MPI:
+
+.. code-block:: bash
+
+  $ brew install gcc@8
+  $ brew install llvm@11
+  $ brew install mpich
+
+Build third-party libraries via Uberenv:
+
+``python scripts/uberenv/uberenv.py --spec=%apple-clang@11.0.1 --prefix=../path/to/install``
+
+.. note::
+   You may need to alter the compiler spec inside ``scripts/spack/configs/darwin/compilers.yaml``.
+   The checked-in version worked for on developer but often needs to be changed for installed compiler
+   paths as well as `operating_system` to match your machine.
