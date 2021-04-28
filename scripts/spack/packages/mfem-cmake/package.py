@@ -762,9 +762,6 @@ class MfemCmake(CMakePackage, CudaPackage):
         if '+amgx' in spec:
             amgx_dir = get_spec_path(spec, "amgx")
             cfg.write(cmake_cache_string("AMGX_DIR", amgx_dir))
-            cublas_lib = '-L${CUDA_TOOLKIT_ROOT_DIR}/lib64'
-            cfg.write(cmake_cache_option("CUBLAS_FOUND", True))
-            cfg.write(cmake_cache_string("CUBLAS_LIBRARIES", cublas_lib))
 
         if '+libceed' in spec:
             ceed_dir = get_spec_path(spec, "libceed")
