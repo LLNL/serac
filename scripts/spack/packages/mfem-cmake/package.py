@@ -320,7 +320,7 @@ class MfemCmake(CMakePackage, CudaPackage):
     # in the general case
     patch('mfem-4.2-static.patch', when='@4.2.0~shared')
 
-    # JBE: Need cublasLt to be resolved explicitly
+    # JBE: Need cuda math libraries to be resolved explicitly
     patch('mfem-4.2-amgx.patch', when='@4.2.0+amgx')
 
     # Patch to fix MFEM makefile syntax error. See
