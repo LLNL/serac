@@ -261,7 +261,7 @@ Preparing OSX for Serac Installation
 .. warning::
    OSX MPI may throw a popup that causes all MPI runs to fail.
 
-Install required compilers and MPI:
+Install required compilers and MPI via `homebrew <https://brew.sh/>`_:
 
 .. code-block:: bash
 
@@ -275,5 +275,5 @@ Build third-party libraries via Uberenv:
 
 .. note::
    You may need to alter the compiler spec inside ``scripts/spack/configs/darwin/compilers.yaml``.
-   The checked-in version worked for on developer but often needs to be changed for installed compiler
+   The checked-in version worked for one developer but often needs to be changed for installed compiler
    paths as well as `operating_system` to match your machine.
