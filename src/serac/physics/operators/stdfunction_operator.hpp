@@ -31,14 +31,22 @@ namespace serac::mfem_ext {
 class StdFunctionOperator : public mfem::Operator {
 public:
   /**
-   * @brief Default constructor for creating an uninitialized StdFunctionOperator
+   * @brief Default constructor for creating a square uninitialized StdFunctionOperator
    *
-   * @param[in] n The size of the operator
+   * @param[in] n The size of the square operator
    */
   StdFunctionOperator(int n) : mfem::Operator(n) {}
 
   /**
-   * @brief Constructor for a StdFunctionOperator that only defines mfem::Operator::Mult
+   * @brief Default constructor for creating a rectangular uninitialized StdFunctionOperator
+   *
+   * @param[in] h The height of the operator
+   * @param[in] w The width of the operator
+   */
+  StdFunctionOperator(int h, int w) : mfem::Operator(h, w) {}
+
+  /**
+   * @brief Constructor for a square StdFunctionOperator that only defines mfem::Operator::Mult
    *
    * @param[in] n The size fo the operator
    * @param[in] function The function that defines the mult (typically residual evaluation) method
@@ -49,7 +57,20 @@ public:
   }
 
   /**
-   * @brief Constructor for a StdFunctionOperator that defines mfem::Operator::Mult and mfem::Operator::GetGradient
+   * @brief Constructor for a rectangular StdFunctionOperator that only defines mfem::Operator::Mult
+   *
+   * @param[in] h The height of the operator
+   * @param[in] w The width of the operator
+   * @param[in] function The function that defines the mult (typically residual evaluation) method
+   */
+  StdFunctionOperator(int h, int w, std::function<void(const mfem::Vector&, mfem::Vector&)> function)
+      : mfem::Operator(h, w), function_(function)
+  {
+  }
+
+  /**
+   * @brief Constructor for a square StdFunctionOperator that defines mfem::Operator::Mult and
+   * mfem::Operator::GetGradient
    *
    * @param[in] n The size of the operator
    * @param[in] function The function that defines the mult (typically residual evaluation) method
@@ -58,6 +79,21 @@ public:
   StdFunctionOperator(int n, std::function<void(const mfem::Vector&, mfem::Vector&)> function,
                       std::function<mfem::Operator&(const mfem::Vector&)> jacobian)
       : mfem::Operator(n), function_(function), jacobian_(jacobian)
+  {
+  }
+
+  /**
+   * @brief Constructor for a rectangular StdFunctionOperator that defines mfem::Operator::Mult and
+   * mfem::Operator::GetGradient
+   *
+   * @param[in] h The height of the operator
+   * @param[in] w The width of the operator
+   * @param[in] function The function that defines the mult (typically residual evaluation) method
+   * @param[in] jacobian The function that defines the GetGradient (typically residual jacobian evaluation) method
+   */
+  StdFunctionOperator(int h, int w, std::function<void(const mfem::Vector&, mfem::Vector&)> function,
+                      std::function<mfem::Operator&(const mfem::Vector&)> jacobian)
+      : mfem::Operator(h, w), function_(function), jacobian_(jacobian)
   {
   }
 

@@ -1,5 +1,4 @@
-Serac
-====
+# <img src="/share/serac/logo/serac-logo-blue.png?raw=true" width="150" alt="Serac"/>
 
 [![Build
 Status](https://dev.azure.com/llnl-serac/serac/_apis/build/status/LLNL.serac?branchName=develop)](https://dev.azure.com/llnl-serac/serac/_build/latest?definitionId=1&branchName=develop)

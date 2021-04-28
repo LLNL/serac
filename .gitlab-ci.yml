@@ -7,45 +7,37 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
   PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
-  SLURM_ACCOUNT: -p pdebug -A eng
-  LSF_ACCOUNT: -q pdebug -G eng
+  FULL_BUILD_ROOT: ${CI_BUILDS_DIR}/serac/${CI_JOB_NAME}
 
-# There are no tests for now
 stages:
-  - l_build
-  - l_build_with_deps
-  - q_allocate_resources
-  - q_build
-  - q_build_with_deps
-  - q_build_devtools
-  - q_release_resources
+  - allocate
+  - build
+  - release
 
 # Whether and how to update uberenv
 .run_update_uberenv: &run_update_uberenv |
   [[ -n "${UPDATE_UBERENV}" ]] && ./scripts/gitlab/update-uberenv.sh "${UPDATE_UBERENV}"
 
-.pr_workflow:
+.src_workflow:
   rules:
-    - if: '$CI_COMMIT_BRANCH != "main" && $CI_COMMIT_BRANCH != "develop" && $BUILD_DEPS != "ON"' #run only if ...
+    - if: '$FULL_BUILD != "ON"'
 
-.main_workflow:
+.full_workflow:
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop" || $BUILD_DEPS == "ON"' #run only if ...
+    - if: '$FULL_BUILD == "ON"'
 
 ####
 # Template
-.srun_build_script:
+.src_build_script:
   script:
-    #Use pre-existing allocation if any
-    - JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
+    # Use pre-existing allocation if any
+    - JOBID=$(if [[ "$SYS_TYPE" == "toss_3_x86_64_ib" ]]; then squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A; fi)
     - ASSIGN_ID=$(if [[ -n "${JOBID}" ]]; then echo "--jobid=${JOBID}"; fi)
-    - EXEC_PREFIX="srun ${SLURM_ACCOUNT} ${ASSIGN_ID}"
-   #BUILD + TEST
-    - RESOURCES="-t 10 -N 1"
-    - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
-      Build and test ${CI_PROJECT_NAME}"
-    - ${EXEC_PREFIX} ${RESOURCES} python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
-    - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
+    # BUILD + TEST
+    - echo -e "section_start:$(date +%s):src_build_and_test\r\e[0K
+      Source Build and Test ${CI_PROJECT_NAME}"
+    - ${ALLOC_COMMAND} python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
+    - echo -e "section_end:$(date +%s):src_build_and_test\r\e[0K"
   artifacts:
     paths:
       - _serac_build_and_test_*/output.log*.txt
@@ -53,74 +45,19 @@ stages:
     reports:
       junit: _serac_build_and_test_*/build-*/junit.xml
 
-.srun_build_with_deps_script:
+.full_build_script:
   script:
     - *run_update_uberenv
-    - EXEC_PREFIX="srun ${SLURM_ACCOUNT}"
-    #DEPENDENCIES
-    - RESOURCES="-t 45 -N 1"
-    - echo -e "section_start:$(date +%s):dependencies\r\e[0K
-      Build dependencies and generate host-config file (uberenv)"
-    - ${EXEC_PREFIX} ${RESOURCES} python3 scripts/llnl/build_tpls.py -v --spec=${SPEC} --directory=${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID} --mirror=${CI_BUILDS_DIR}/serac_tpls
-    - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
-    #BUILD + TEST
-    - RESOURCES="-t 10 -N 1"
-    - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
-      Build and test ${CI_PROJECT_NAME}"
-    # Autodetects hostconfig created by build_tpls
-    - ${EXEC_PREFIX} ${RESOURCES} python3 scripts/llnl/build_src.py -v --automation
-    - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
+    - echo -e "section_start:$(date +%s):full_build_and_test\r\e[0K
+      Full Build and Test ${CI_PROJECT_NAME}"
+    - ${ALLOC_COMMAND} python3 scripts/llnl/build_tpls.py -v --spec="${SPEC} ${EXTRA_SPEC}" --directory=${FULL_BUILD_ROOT}
+    - echo -e "section_end:$(date +%s):full_build_and_test\r\e[0K"
   artifacts:
     paths:
-      - _serac_build_and_test_*/output.log*.txt
-      - _serac_build_and_test_*/build-*/output.log*.txt
+      - ${FULL_BUILD_ROOT}/${SYS_TYPE}/*/_serac_build_and_test_*/output.log*.txt
+      - ${FULL_BUILD_ROOT}/${SYS_TYPE}/*/_serac_build_and_test_*/build-*/output.log*.txt
     reports:
-      junit: _serac_build_and_test_*/build-*/junit.xml
-
-.srun_build_devtools_script:
-  script:
-    - *run_update_uberenv
-    - EXEC_PREFIX="srun ${SLURM_ACCOUNT}"
-    - RESOURCES="-t 30 -N 1"
-    - echo -e "section_start:$(date +%s):devtools\r\e[0K
-      Build devtools"
-    - ${EXEC_PREFIX} ${RESOURCES} python3 scripts/llnl/build_devtools.py --directory=${CI_PROJECT_NAME}
-    - echo -e "section_end:$(date +%s):devtools\r\e[0K"
-
-
-.build_blueos_3_ppc64le_ib_p9_script:
-  script:
-    #BUILD + TEST
-    - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
-      Build and test ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 10 ${LSF_ACCOUNT} python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
-    - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
-  artifacts:
-    paths:
-      - _serac_build_and_test_*/output.log*.txt
-      - _serac_build_and_test_*/build-*/output.log*.txt
-    reports:
-      junit: _serac_build_and_test_*/build-*/junit.xml
-
-.build_with_deps_blueos_3_ppc64le_ib_p9_script:
-  script:
-    - *run_update_uberenv
-    #DEPENDENCIES
-    - echo -e "section_start:$(date +%s):dependencies\r\e[0K
-      Build dependencies and generate host-config file (uberenv)"
-    - lalloc 1 -W 45 ${LSF_ACCOUNT} python3 scripts/llnl/build_tpls.py -v --spec="${SPEC} ${EXTRA_SPEC}" --directory=${CI_BUILDS_DIR}/serac_tpls/${CI_RUNNER_ID} --mirror=${CI_BUILDS_DIR}/serac_tpls
-    - echo -e "section_end:$(date +%s):dependencies\r\e[0K"
-    #BUILD + TEST
-    - echo -e "section_start:$(date +%s):build_and_test\r\e[0K
-      Build and test ${CI_PROJECT_NAME}"
-    - lalloc 1 -W 10 ${LSF_ACCOUNT} python3 scripts/llnl/build_src.py -v --host-config ${HOST_CONFIG}
-    - echo -e "section_end:$(date +%s):build_and_test\r\e[0K"
-  artifacts:
-    paths:
-      - _serac_build_and_test_*/output.log*.txt
-      - _serac_build_and_test_*/build-*/output.log*.txt
-    reports:
-      junit: _serac_build_and_test_*/build-*/junit.xml
+      junit: ${FULL_BUILD_ROOT}/${SYS_TYPE}/*/_serac_build_and_test_*/build-*/junit.xml
 
 # This is where jobs are included
 include:
