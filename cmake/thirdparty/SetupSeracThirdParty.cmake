@@ -190,8 +190,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
     list(APPEND _props INTERFACE_COMPILE_OPTIONS)
 
-    # This flag is empty due to us not enabling fortran but we need to strip it so it doesnt propagate
-    # in our project
+    # This flag is empty due to us not enabling fortran but we need to strip it
+    # so it doesn't propagate in our project
     if("${OpenMP_Fortran_FLAGS}" STREQUAL "")
         set(OpenMP_Fortran_FLAGS "$<$<NOT:$<COMPILE_LANGUAGE:Fortran>>:-fopenmp=libomp>;$<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>")
     endif()
@@ -214,4 +214,20 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
     endforeach()
 
+    #---------------------------------------------------------------------------
+    # Remove /usr/include in INTERFACE_INCLUDE_DIRECTORIES if it doesn't exist
+    #---------------------------------------------------------------------------
+    if(NOT EXISTS "/usr/include")
+        foreach(_target axom conduit)
+            if(TARGET ${_target})
+                message(STATUS "Removing non-existant /usr/include from target[${_target}]")
+
+                get_target_property(_dirs ${_target} INTERFACE_INCLUDE_DIRECTORIES)
+                if ( _dirs )
+                    list(REMOVE_ITEM _dirs "/usr/include")
+                    set_target_properties(${_target} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${_dirs}" )
+                endif()
+            endif()
+        endforeach()
+    endif()
 endif()
