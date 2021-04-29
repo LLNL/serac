@@ -144,22 +144,6 @@ struct is_finite_element<finite_element<g, Hcurl<p> > > {
   static constexpr bool value = true;
 };
 
-// TODO: Implemented in separate branch
-// template <typename T>
-// struct quadrature_data {
-//   using type = T;
-// };
-
-// template <typename T>
-// struct is_quadrature_data {
-//   static constexpr bool value = false;
-// };
-
-// template <typename T>
-// struct is_quadrature_data<quadrature_data<T> > {
-//   static constexpr bool value = true;
-// };
-
 #include "detail/segment_h1.inl"
 //#include "detail/segment_hcurl.inl"
 

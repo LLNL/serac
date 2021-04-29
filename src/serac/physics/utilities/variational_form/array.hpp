@@ -25,6 +25,8 @@ struct array;
 /**
  * @brief Multidimensional array class
  * @tparam T The scalar type of the array element
+ * @tparam first The leading dimension of the array
+ * @tparam rest The parameter pack containing the remaining dimensions
  */
 template <typename T, int first, int... rest>
 struct array<T, first, rest...> {
