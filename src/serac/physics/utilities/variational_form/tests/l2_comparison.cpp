@@ -1,7 +1,6 @@
 #include "mfem.hpp"
 #include "parvariationalform.hpp"
 #include "l2qfuncintegrator.hpp"
-#include "tensor.hpp"
 #include <fstream>
 #include <iostream>
 

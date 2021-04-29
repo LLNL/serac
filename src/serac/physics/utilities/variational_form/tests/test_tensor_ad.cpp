@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 using namespace mfem;
+using namespace serac;
 
 TEST(tensor, norm)
 {

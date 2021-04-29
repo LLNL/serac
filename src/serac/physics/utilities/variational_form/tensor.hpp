@@ -705,6 +705,7 @@ constexpr auto sqnorm(const tensor<T, n...>& A)
 template <typename T, int... n>
 auto norm(const tensor<T, n...>& A)
 {
+  using std::sqrt;
   return sqrt(sqnorm(A));
 }
 

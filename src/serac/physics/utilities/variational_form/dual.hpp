@@ -168,30 +168,35 @@ constexpr auto& operator-=(dual<gradient_type>& a, double b)
 template <typename gradient_type>
 auto sqrt(dual<gradient_type> x)
 {
+  using std::sqrt;
   return dual<gradient_type>{sqrt(x.value), x.gradient / (2.0 * sqrt(x.value))};
 }
 
 template <typename gradient_type>
 auto cos(dual<gradient_type> a)
 {
+  using std::cos, std::sin;
   return dual<gradient_type>{cos(a.value), -a.gradient * sin(a.value)};
 }
 
 template <typename gradient_type>
 auto exp(dual<gradient_type> a)
 {
+  using std::exp;
   return dual<gradient_type>{exp(a.value), exp(a.value)};
 }
 
 template <typename gradient_type>
 auto log(dual<gradient_type> a)
 {
+  using std::log;
   return dual<gradient_type>{log(a.value), a.gradient / a.value};
 }
 
 template <typename gradient_type>
 auto pow(dual<gradient_type> a, dual<gradient_type> b)
 {
+  using std::pow, std::log;
   double value = pow(a.value, b.value);
   return dual<gradient_type>{value, value * (a.gradient * (b.value / a.value) + b.gradient * log(a.value))};
 }
@@ -199,13 +204,15 @@ auto pow(dual<gradient_type> a, dual<gradient_type> b)
 template <typename gradient_type>
 auto pow(double a, dual<gradient_type> b)
 {
+  using std::pow, std::log;
   double value = pow(a, b.value);
-  return dual<gradient_type>{value, value * b.gradient * ::log(a)};
+  return dual<gradient_type>{value, value * b.gradient * log(a)};
 }
 
 template <typename gradient_type>
 auto pow(dual<gradient_type> a, double b)
 {
+  using std::pow;
   double value = pow(a.value, b);
   return dual<gradient_type>{value, value * a.gradient * b / a.value};
 }

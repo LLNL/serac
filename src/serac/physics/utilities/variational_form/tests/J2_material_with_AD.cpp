@@ -3,6 +3,8 @@
 
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 
+using namespace serac;
+
 class timer {
   typedef std::chrono::high_resolution_clock::time_point time_point;
   typedef std::chrono::duration<double>                  duration_type;
