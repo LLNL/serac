@@ -89,7 +89,7 @@ constexpr auto make_dual_helper(std::tuple<T...> args, std::integer_sequence<int
   return std::make_tuple((make_dual_helper<i>(std::get<i>(args), seq))...);
 }
 
-template <typename... T, typename S, int... i>
+template <typename... T, typename S>
 auto chain_rule_tuple_scale(std::tuple<T...> df_dx, S dx)
 {
   return std::apply(

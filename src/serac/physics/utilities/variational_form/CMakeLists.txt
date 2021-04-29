@@ -6,6 +6,10 @@
 
 set(weakform_depends serac_physics mfem mpi)
 
+if(ENABLE_CUDA)
+    list(APPEND weakform_depends cuda)
+endif()
+
 # Add the library first
 set(weakform_headers
     weak_form.hpp

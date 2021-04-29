@@ -290,7 +290,7 @@ using always_int = int;
 template <int... n, typename lambda_type>
 constexpr auto make_tensor(lambda_type f)
 {
-  using T = typename std::invoke_result_t<lambda_type, impl::always_int<n>...>;
+  using T = decltype(f(n...));
   tensor<T, n...> A{};
   if constexpr (sizeof...(n) == 0) {
     A.value = f();
@@ -1120,7 +1120,7 @@ using outer_product_t = typename impl::outer_prod<T1, T2>::type;
  * @brief Retrieves a value tensor from a tensor of dual numbers
  * @param[in] arg The tensor of dual numbers
  */
-template <typename T, int... n, int... m>
+template <typename T, int... n>
 auto get_value(const tensor<dual<T>, n...>& arg)
 {
   tensor<double, n...> value{};
