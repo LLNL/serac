@@ -82,16 +82,16 @@ constexpr auto rotate(const array<T, n>& original, int rotation)
 
 constexpr int orientation(const array<int, 2> a, const array<int, 2> b) { return (a[0] == b[0]) ? 1 : -1; }
 
-template <int n>
-constexpr auto orientation(const array<int, n> a, const array<int, n> b)
-{
-  for (int i = 0; i < n; i++) {
-    if (a[0] == b[i]) {
-      return (a[1] == b[(i + 1) % n]) ? std::tuple{1, i} : std::tuple{-1, n - 1 - i};
-    }
-  }
-  return std::tuple{0, 0};
-}
+//template <int n>
+//constexpr auto orientation(const array<int, n> a, const array<int, n> b)
+//{
+//  for (int i = 0; i < n; i++) {
+//    if (a[0] == b[i]) {
+//      return (a[1] == b[(i + 1) % n]) ? std::tuple{1, i} : std::tuple{-1, n - 1 - i};
+//    }
+//  }
+//  return std::tuple{0, 0};
+//}
 
 template <typename T, int n>
 constexpr auto total(const array<T, n> a)

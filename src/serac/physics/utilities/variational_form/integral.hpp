@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mfem.hpp"
-#include "mfem/general/forall.hpp"
+#include "mfem/linalg/dtensor.hpp"
 
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 #include "serac/physics/utilities/variational_form/quadrature.hpp"

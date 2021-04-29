@@ -90,3 +90,25 @@ set(weakform_performance_tests
     tests/kernel_microbenchmark.cpp
     tests/diffusion_performance_test.cpp)
     
+
+if(ENABLE_CUDA)
+
+    set(weakform_tests_cuda
+        tests/internal_error_reproducer.cu
+        tests/internal_error_reproducer2.cu
+        tests/tensor_unit_tests_cuda.cu)
+ 
+    foreach(filename ${weakform_tests_cuda})
+        get_filename_component(test_name ${filename} NAME_WE)
+        
+        blt_add_executable(NAME        ${test_name}
+                           SOURCES     ${filename}
+                           OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                           DEPENDS_ON  gtest serac_weakform ${weakform_depends} cuda
+                           FOLDER      serac/tests)
+        blt_add_test(NAME          ${test_name}
+                     COMMAND       ${test_name}
+                     NUM_MPI_TASKS 1)
+    endforeach()
+
+endif()

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "host_device_annotations.hpp"
+
 #include "dual.hpp"
 #include "array.hpp"
 
@@ -7,49 +9,49 @@
 
 namespace impl {
 template <typename T, typename i0_t>
-constexpr auto get(const T& values, i0_t i0)
+SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0)
 {
   return values[i0];
 }
 
 template <typename T, typename i0_t, typename i1_t>
-constexpr auto get(const T& values, i0_t i0, i1_t i1)
+SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0, i1_t i1)
 {
   return values[i0][i1];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t>
-constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2)
+SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2)
 {
   return values[i0][i1][i2];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t>
-constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
+SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
 {
   return values[i0][i1][i2][i3];
 }
 
 template <typename T, typename i0_t>
-constexpr auto& get(T& values, i0_t i0)
+SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0)
 {
   return values[i0];
 }
 
 template <typename T, typename i0_t, typename i1_t>
-constexpr auto& get(T& values, i0_t i0, i1_t i1)
+SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1)
 {
   return values[i0][i1];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t>
-constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2)
+SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2)
 {
   return values[i0][i1][i2];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t>
-constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
+SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
 {
   return values[i0][i1][i2][i3];
 }
@@ -63,24 +65,25 @@ struct tensor<T> {
   using type                    = T;
   static constexpr int ndim     = 0;
   static constexpr int shape[1] = {0};
-  constexpr auto&      operator()(array<int, ndim>) { return value; }
-  constexpr auto       operator()(array<int, ndim>) const { return value; }
+
+  SERAC_HOST_DEVICE constexpr auto&      operator()(array<int, ndim>) { return value; }
+  SERAC_HOST_DEVICE constexpr auto       operator()(array<int, ndim>) const { return value; }
 
   template <typename... S>
-  constexpr auto& operator()(S...)
+  SERAC_HOST_DEVICE constexpr auto& operator()(S...)
   {
     return value;
   }
 
   template <typename... S>
-  constexpr auto operator()(S...) const
+  SERAC_HOST_DEVICE constexpr auto operator()(S...) const
   {
     return value;
   }
 
-  tensor() : value{} {}
-  tensor(T v) : value(v) {}
-    operator T() { return value; }
+  SERAC_HOST_DEVICE tensor() : value{} {}
+  SERAC_HOST_DEVICE tensor(T v) : value(v) {}
+  SERAC_HOST_DEVICE   operator T() { return value; }
   T value;
 };
 
@@ -91,19 +94,19 @@ struct tensor<T, n> {
   static constexpr int shape[ndim] = {n};
 
   template <typename S>
-  constexpr auto& operator()(S i)
+  SERAC_HOST_DEVICE constexpr auto& operator()(S i)
   {
     return impl::get(value, i);
   }
 
   template <typename S>
-  constexpr auto operator()(S i) const
+  SERAC_HOST_DEVICE constexpr auto operator()(S i) const
   {
     return impl::get(value, i);
   }
 
-  constexpr auto& operator[](int i) { return value[i]; };
-  constexpr auto  operator[](int i) const { return value[i]; };
+  SERAC_HOST_DEVICE constexpr auto& operator[](int i) { return value[i]; };
+  SERAC_HOST_DEVICE constexpr auto  operator[](int i) const { return value[i]; };
   T               value[n];
 };
 
@@ -114,19 +117,19 @@ struct tensor<T, first, rest...> {
   static constexpr int shape[ndim] = {first, rest...};
 
   template <typename... S>
-  constexpr auto& operator()(S... i)
+  SERAC_HOST_DEVICE constexpr auto& operator()(S... i)
   {
     return impl::get(value, i...);
   };
 
   template <typename... S>
-  constexpr auto operator()(S... i) const
+  SERAC_HOST_DEVICE constexpr auto operator()(S... i) const
   {
     return impl::get(value, i...);
   };
 
-  constexpr auto&    operator[](int i) { return value[i]; };
-  constexpr auto     operator[](int i) const { return value[i]; };
+  SERAC_HOST_DEVICE constexpr auto&    operator[](int i) { return value[i]; };
+  SERAC_HOST_DEVICE constexpr auto     operator[](int i) const { return value[i]; };
   tensor<T, rest...> value[first];
 };
 
@@ -137,69 +140,69 @@ template <typename T, int n1, int n2>
 tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
 
 struct zero {
-  operator double() { return 0.0; }
+  SERAC_HOST_DEVICE operator double() { return 0.0; }
 
   template <typename T, int... n>
-  operator tensor<T, n...>()
+  SERAC_HOST_DEVICE operator tensor<T, n...>()
   {
     return tensor<T, n...>{};
   }
 
   template <typename... T>
-  auto operator()(T...)
+  SERAC_HOST_DEVICE auto operator()(T...)
   {
     return zero{};
   }
 
   template <typename T>
-  auto operator=(T)
+  SERAC_HOST_DEVICE auto operator=(T)
   {
     return zero{};
   }
 };
 
-constexpr auto operator+(zero, zero) { return zero{}; }
+SERAC_HOST_DEVICE constexpr auto operator+(zero, zero) { return zero{}; }
 
 template <typename T>
-constexpr auto operator+(zero, T other)
+SERAC_HOST_DEVICE constexpr auto operator+(zero, T other)
 {
   return other;
 }
 
 template <typename T>
-constexpr auto operator+(T other, zero)
+SERAC_HOST_DEVICE constexpr auto operator+(T other, zero)
 {
   return other;
 }
 
 /////////////////////////////////////////////////
 
-constexpr auto operator-(zero, zero) { return zero{}; }
+SERAC_HOST_DEVICE constexpr auto operator-(zero, zero) { return zero{}; }
 
 template <typename T>
-constexpr auto operator-(zero, T other)
+SERAC_HOST_DEVICE constexpr auto operator-(zero, T other)
 {
   return -other;
 }
 
 template <typename T>
-constexpr auto operator-(T other, zero)
+SERAC_HOST_DEVICE constexpr auto operator-(T other, zero)
 {
   return other;
 }
 
 /////////////////////////////////////////////////
 
-constexpr auto operator*(zero, zero) { return zero{}; }
+SERAC_HOST_DEVICE constexpr auto operator*(zero, zero) { return zero{}; }
 
 template <typename T>
-constexpr auto operator*(zero, T /*other*/)
+SERAC_HOST_DEVICE constexpr auto operator*(zero, T /*other*/)
 {
   return zero{};
 }
 
 template <typename T>
-constexpr auto operator*(T /*other*/, zero)
+SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
 {
   return zero{};
 }
@@ -211,13 +214,13 @@ using reduced_tensor = std::conditional_t<
     std::conditional_t<n1 == 1, tensor<T, n2>, std::conditional_t<n2 == 1, tensor<T, n1>, tensor<T, n1, n2>>>>;
 
 template <typename T, int... n>
-constexpr auto indices(tensor<T, n...>)
+SERAC_HOST_DEVICE constexpr auto indices(tensor<T, n...>)
 {
   return IndexSpace<n...>{};
 }
 
 template <typename T, int... n>
-constexpr auto tensor_with_shape(std::integer_sequence<int, n...>)
+SERAC_HOST_DEVICE constexpr auto tensor_with_shape(std::integer_sequence<int, n...>)
 {
   return tensor<T, n...>{};
 }
@@ -228,9 +231,10 @@ using always_int = int;
 }
 
 template <int... n, typename lambda_type>
-constexpr auto make_tensor(lambda_type f)
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
 {
-  using T = typename std::invoke_result_t<lambda_type, impl::always_int<n>...>;
+  //using T = typename std::invoke_result_t<lambda_type, fimpl::always_int<n>...>;
+  using T = decltype(f(n...));
   tensor<T, n...> A{};
   if constexpr (sizeof...(n) == 0) {
     A.value = f();
@@ -241,7 +245,7 @@ constexpr auto make_tensor(lambda_type f)
 }
 
 template <typename S, typename T, int... n>
-constexpr auto operator+(tensor<S, n...> A, tensor<T, n...> B)
+SERAC_HOST_DEVICE constexpr auto operator+(tensor<S, n...> A, tensor<T, n...> B)
 {
   tensor<decltype(S{} + T{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -251,7 +255,7 @@ constexpr auto operator+(tensor<S, n...> A, tensor<T, n...> B)
 }
 
 template <typename S, typename T, int... n>
-constexpr auto operator-(tensor<S, n...> A, tensor<T, n...> B)
+SERAC_HOST_DEVICE constexpr auto operator-(tensor<S, n...> A, tensor<T, n...> B)
 {
   tensor<decltype(S{} + T{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -262,7 +266,7 @@ constexpr auto operator-(tensor<S, n...> A, tensor<T, n...> B)
 
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-constexpr auto operator*(S scale, tensor<T, n...> A)
+SERAC_HOST_DEVICE constexpr auto operator*(S scale, tensor<T, n...> A)
 {
   tensor<decltype(S{} * T{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -273,7 +277,7 @@ constexpr auto operator*(S scale, tensor<T, n...> A)
 
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-constexpr auto operator*(tensor<T, n...> A, S scale)
+SERAC_HOST_DEVICE constexpr auto operator*(tensor<T, n...> A, S scale)
 {
   tensor<decltype(T{} * S{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -989,7 +993,7 @@ struct outer_prod<T, zero> {
 template <typename T1, typename T2>
 using outer_product_t = typename impl::outer_prod<T1, T2>::type;
 
-template <typename T, int... n, int... m>
+template <typename T, int... n>
 auto get_value(tensor<dual<T>, n...> arg)
 {
   tensor<double, n...> value{};
