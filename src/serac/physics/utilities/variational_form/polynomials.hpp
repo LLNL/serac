@@ -2,7 +2,15 @@
 
 #include "tensor.hpp"
 
+namespace serac {
+
 // clang-format off
+/**
+ * @brief The positions (in 1D space) of Gauss-Lobatto points
+ * @tparam n The number of points
+ * @param[in] a The left endpoint of the interval
+ * @param[in] b The right endpoint of the interval
+ */
 template <int n, typename T = double >
 constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1)) {
   if constexpr (n == 2) return {a, b}; 
@@ -11,6 +19,12 @@ constexpr tensor<T, n> GaussLobattoNodes(T a = T(0), T b = T(1)) {
   return tensor<double, n>{};
 };
 
+/**
+ * @brief The positions (in 1D space) of Gauss-Legendre points
+ * @tparam n The number of points
+ * @param[in] a The left endpoint of the interval
+ * @param[in] b The right endpoint of the interval
+ */
 template <int n, typename T = double >
 constexpr tensor<T, n> GaussLegendreNodes(T a = T(0), T b = T(1)) {
   if constexpr (n == 1) return {a + 0.5000000000000000 * (b-a)};
@@ -20,6 +34,10 @@ constexpr tensor<T, n> GaussLegendreNodes(T a = T(0), T b = T(1)) {
   return tensor<double, n>{};
 };
 
+/**
+ * @brief The weights associated with each Gauss-Legendre point
+ * @tparam n The number of points
+ */
 template <int n, typename T = double >
 constexpr tensor<T, n> GaussLegendreWeights() {
   if constexpr (n == 1) return {1.000000000000000};
@@ -51,7 +69,8 @@ constexpr tensor<T, n> powers(T x)
 }
 
 /**
- * Chebyshev polynomials of the first kind, satisfying:
+ * @brief Chebyshev polynomials of the first kind
+ * Satisfying:
  * T_n(cos(t)) == cos(n*t)
  */
 template <int n, typename S>
@@ -69,7 +88,8 @@ constexpr tensor<S, n> ChebyshevT(S x)
 }
 
 /**
- * Chebyshev polynomials of the second kind, satisfying:
+ * @brief Chebyshev polynomials of the second kind
+ * Satisfying:
  * sin(t) U_n(cos(t)) == sin((n+1)*t)
  */
 template <int n, typename T>
@@ -274,3 +294,5 @@ tensor<T, n> GaussLegendreInterpolationDerivative01(T x)
 
   return tensor<T, n>{};
 }
+
+}  // namespace serac

@@ -20,6 +20,8 @@ static void escape([[maybe_unused]] void* p) { asm volatile("" : : "g"(p) : "mem
 //  asm volatile("" : : : "memory");
 //}
 
+using namespace serac;
+
 template <int Q1D, int D1D>
 auto count_ops0(tensor<double, D1D, D1D, D1D> x)
 {

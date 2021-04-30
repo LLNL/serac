@@ -6,6 +6,10 @@
 
 set(weakform_depends serac_physics mfem mpi)
 
+if(ENABLE_CUDA)
+    list(APPEND weakform_depends cuda)
+endif()
+
 # Add the library first
 set(weakform_headers
     weak_form.hpp
@@ -22,6 +26,8 @@ set(weakform_headers
     detail/quadrilateral_hcurl.inl
     detail/quadrilateral_L2.inl
     detail/segment_h1.inl
+    detail/meta.h
+    detail/timer.hpp
     )
 
 blt_add_library(
