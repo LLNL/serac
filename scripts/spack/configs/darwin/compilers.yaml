@@ -2,8 +2,7 @@ compilers:
 - compiler:
     environment: {}
     extra_rpaths: []
-    flags:
-      cflags: -Wno-implicit-function-declaration
+    flags: {}
     modules: []
     operating_system: catalina
     paths:
