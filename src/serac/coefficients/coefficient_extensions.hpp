@@ -47,7 +47,7 @@ auto size(T&& container)
 
 /// mfem:Array size call
 template <typename T>
-std::size_t size(mfem::Array<T> container)
+std::size_t size(const mfem::Array<T>& container)
 {
   return container.Size();
 }
