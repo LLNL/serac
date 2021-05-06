@@ -37,7 +37,7 @@ the snippet above is saying that ``residual`` is going to represent a
 calculation that takes in an H1 field (displacements), and returns a
 vector of weighted residuals, using H1 test functions.
 
-Now that we have this ``WeakForm`` object created, we can use the
+Now that the ``WeakForm`` object is created, we can use the
 following functions to define integral terms (depending on their
 dimensionality):
 
