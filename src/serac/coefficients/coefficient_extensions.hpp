@@ -47,7 +47,7 @@ auto size(T&& container)
 
 /// mfem:Array size call
 template <typename T>
-std::size_t size(mfem::Array<T> container)
+std::size_t size(const mfem::Array<T>& container)
 {
   return container.Size();
 }
@@ -110,7 +110,7 @@ struct has_brackets<T, std::void_t<decltype(std::declval<T>()[0])>> : std::true_
 /**
  * @brief This namespace provides a set of commonly used "digitizing" functions for convenience.
  *
- * The goal of a "digizitizing" function is to convert a floating-point number to an integer to be used as an mfem
+ * The goal of a "digitizing" function is to convert a floating-point number to an integer to be used as an mfem
  * attribute. Mfem attributes must be integers > 0 (1,2,... etc).
  */
 namespace digitize {
