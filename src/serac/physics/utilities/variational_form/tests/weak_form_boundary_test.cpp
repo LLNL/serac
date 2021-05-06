@@ -17,7 +17,8 @@ using namespace serac;
 
 int         num_procs, myid;
 int         refinements = 0;
-const char* mesh_file   = SERAC_REPO_DIR "/data/meshes/star.mesh";
+const char* mesh_file   = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+//const char* mesh_file   = SERAC_REPO_DIR "/data/meshes/star.mesh";
 
 auto setup(int argc, char* argv[])
 {
@@ -82,20 +83,12 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   WeakForm<test_space(trial_space)> residual(&fespace, &fespace);
 
-  residual.AddDomainIntegral(
-      Dimension<dim>{},
-      [&](auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto f0         = a * u - (100 * x[0] * x[1]);
-        auto f1         = b * du_dx;
-        return std::tuple{f0, f1};
-      },
-      mesh);
-
-  residual.AddSurfaceIntegral([&](auto x, auto /* u */) { return x[0]; }, mesh);
+  residual.AddSurfaceIntegral([&](auto x, auto /* u */) { return 1.0; }, mesh);
 
   mfem::Vector r1 = A * u_global - f;
   mfem::Vector r2 = residual * u_global;
+
+  std::cout << r2.Sum() << std::endl;
 
   std::cout << "||r1||: " << r1.Norml2() << std::endl;
   std::cout << "||r2||: " << r2.Norml2() << std::endl;
@@ -130,7 +123,7 @@ int main(int argc, char* argv[])
 
   auto mesh = setup(argc, argv);
 
-  // if (mesh.Dimension() == 2) { run_tests<2>(mesh); }
+  if (mesh.Dimension() == 2) { run_tests<2>(mesh); }
   if (mesh.Dimension() == 3) {
     run_tests<3>(mesh);
   }
