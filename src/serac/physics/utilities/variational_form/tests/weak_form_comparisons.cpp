@@ -24,6 +24,11 @@ constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+// this test sets up a toy "thermal" problem where the residual includes contributions
+// from a temperature-dependent source term and a temperature-gradient-dependent flux
+// 
+// the same problem is expressed with mfem and weak_form, and their residuals and gradient action
+// are compared to ensure the implementations are in agreement.
 template <int p, int dim>
 void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
@@ -66,9 +71,9 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>
       Dimension<dim>{},
       [&](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
-        auto f0         = a * u - (100 * x[0] * x[1]);
-        auto f1         = b * du_dx;
-        return std::tuple{f0, f1};
+        auto source = a * u - (100 * x[0] * x[1]);
+        auto flux = b * du_dx;
+        return std::tuple{source, flux};
       },
       mesh);
 
@@ -95,6 +100,11 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 }
 
+// this test sets up a toy "elasticity" problem where the residual includes contributions
+// from a displacement-dependent body force term and an isotropically linear elastic stress response
+// 
+// the same problem is expressed with mfem and weak_form, and their residuals and gradient action
+// are compared to ensure the implementations are in agreement.
 template <int p, int dim>
 void weak_form_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
@@ -144,10 +154,10 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dime
       Dimension<dim>{},
       [&](auto /*x*/, auto displacement) {
         auto [u, du_dx] = displacement;
-        auto f0         = a * u + I[0];
-        auto strain     = 0.5 * (du_dx + transpose(du_dx));
-        auto f1         = b * tr(strain) * I + 2.0 * b * strain;
-        return std::tuple{f0, f1};
+        auto body_force = a * u + I[0];
+        auto strain = 0.5 * (du_dx + transpose(du_dx));
+        auto stress = b * tr(strain) * I + 2.0 * b * strain;
+        return std::tuple{body_force, stress};
       },
       mesh);
 
@@ -174,6 +184,11 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dime
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 }
 
+// this test sets up part of a toy "magnetic diffusion" problem where the residual includes contributions
+// from a vector-potential-proportional J and an isotropically linear H
+// 
+// the same problem is expressed with mfem and weak_form, and their residuals and gradient action
+// are compared to ensure the implementations are in agreement.
 template <int p, int dim>
 void weak_form_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 {
@@ -222,9 +237,9 @@ void weak_form_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensio
       Dimension<dim>{},
       [&](auto x, auto vector_potential) {
         auto [A, curl_A] = vector_potential;
-        auto f0          = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
-        auto f1          = b * curl_A;
-        return std::tuple{f0, f1};
+        auto J = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
+        auto H = b * curl_A;
+        return std::tuple{J, H};
       },
       mesh);
 
