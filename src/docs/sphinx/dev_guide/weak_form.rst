@@ -17,7 +17,7 @@ a solid mechanics simulation may look something like:
    \underbrace{\int_{\partial\Omega} \psi \cdot \mathbf{t}(\mathbf{x}) \; \text{d}a}_{\text{surface loads}},
 
 where :math:`\psi` are the test basis functions. To describe this
-residual using WeakForm, we first create the object itself, providing a
+residual using ``WeakForm``, we first create the object itself, providing a
 template parameter that expresses the test and trial spaces (i.e. the
 "inputs" and "outputs" of the residual function, :math:`r`). In this
 case, solid mechanics uses H1 test and trial spaces, so we write:
