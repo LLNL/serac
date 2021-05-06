@@ -67,18 +67,23 @@ public:
         trial_space_(trial_fes),
         P_test_(test_space_->GetProlongationMatrix()),
         G_test_(test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
+        G_test_boundary_(test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary)),
         P_trial_(trial_space_->GetProlongationMatrix()),
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
+        G_trial_boundary_(trial_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary)),
         grad_(*this)
   {
     SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
     SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
 
-    input_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-    input_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
+    input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
+    input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
+    input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
 
-    output_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
-    output_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
+    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
+    output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
+    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+    output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
 
     my_output_T.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
@@ -97,29 +102,46 @@ public:
   template <int geometry_dim, int spatial_dim, typename lambda>
   void AddIntegral(Dimension<geometry_dim>, Dimension<spatial_dim>, lambda&& integrand, mfem::Mesh& domain)
   {
-    auto num_elements = domain.GetNE();
-    SLIC_ERROR_IF(num_elements == 0, "Mesh has no elements");
-
-    auto dim = domain.Dimension();
-    for (int e = 0; e < num_elements; e++) {
-      SLIC_ERROR_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
-    }
-
     if constexpr (geometry_dim == spatial_dim) {
+      auto num_elements = domain.GetNE();
+      SLIC_ERROR_IF(num_elements == 0, "Mesh has no elements");
+
+      auto dim = domain.Dimension();
+      for (int e = 0; e < num_elements; e++) {
+        SLIC_ERROR_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
+      }
+
       const mfem::FiniteElement&   el = *test_space_->GetFE(0);
       const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-      auto                         geom =
-          domain.GetGeometricFactors(ir, mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS);
+      
+      constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
+      auto geom = domain.GetGeometricFactors(ir, flags);
       domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{},
                                      Dimension<spatial_dim>{}, integrand);
       return;
     } else if constexpr ((geometry_dim + 1) == spatial_dim) {
+
+      // TODO: fix mfem::FaceGeometricFactors
+      constexpr bool always_false = (geometry_dim == spatial_dim);
+      static_assert(always_false, "unsupported integral dimensionality due to unimplemented features in mfem::FaceGeometricFactors");
+
+      auto num_boundary_elements = domain.GetNBE();
+      SLIC_ERROR_IF(num_boundary_elements == 0, "Mesh has no boundary elements");
+
+      auto dim = domain.Dimension();
+      SLIC_ERROR_IF(dim != spatial_dim, "Error: invalid mesh dimension for integral");
+      for (int e = 0; e < num_boundary_elements; e++) {
+        SLIC_ERROR_IF(domain.GetBdrElementType(e) != supported_types[dim - 1], "Mesh contains unsupported element type");
+      }
+
       const mfem::FiniteElement&   el = *test_space_->GetBE(0);
       const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-      constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::JACOBIANS |
-                             mfem::FaceGeometricFactors::NORMALS;
+      constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::JACOBIANS;
+
+      // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag. 
+      // this is currently a dealbreaker, as we need this information to do any calculations
       auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-      boundary_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{},
+      boundary_integrals_.emplace_back(num_boundary_elements, geom->J, geom->X, Dimension<geometry_dim>{},
                                        Dimension<spatial_dim>{}, integrand);
       return;
     } else if constexpr (true) {
@@ -274,6 +296,7 @@ private:
 
     // get the values for each element on the local processor
     G_trial_->Mult(input_L_, input_E_);
+    G_trial_->Mult(input_L_, input_E_);
 
     // compute residual contributions at the element level and sum them
     //
@@ -295,6 +318,24 @@ private:
     // scatter-add to compute residuals on the local processor
     G_test_->MultTranspose(output_E_, output_L_);
 
+    if (boundary_integrals_.size() > 0) {
+      output_E_boundary_ = 0.0;
+      for (auto& integral : boundary_integrals_) {
+        if constexpr (op == Operation::Mult) {
+          integral.Mult(input_E_boundary_, output_E_boundary_);
+        }
+
+        if constexpr (op == Operation::GradientMult) {
+          integral.GradientMult(input_E_boundary_, output_E_boundary_);
+        }
+      }
+
+      // scatter-add to compute residuals on the local processor
+      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+
+      output_L_ += output_L_boundary_;
+    }
+
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T);
 
@@ -314,19 +355,37 @@ private:
    * @brief The input set of local DOF values (i.e., on the current rank)
    */
   mutable mfem::Vector input_L_;
+
   /**
    * @brief The output set of local DOF values (i.e., on the current rank)
    */
   mutable mfem::Vector output_L_;
-  // ^ FIXME: Do we need separate input/output vectors for L?
+
+  /**
+   * @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
+   */
+  mutable mfem::Vector output_L_boundary_;
+
   /**
    * @brief The input set of per-element DOF values
    */
   mutable mfem::Vector input_E_;
+
+  /**
+   * @brief The input set of per-boundaryelement DOF values
+   */
+  mutable mfem::Vector input_E_boundary_;
+
   /**
    * @brief The output set of per-element DOF values
    */
   mutable mfem::Vector output_E_;
+
+  /**
+   * @brief The output set of per-boundary-element DOF values
+   */
+  mutable mfem::Vector output_E_boundary_;
+ 
   /**
    * @brief The set of true DOF values, used as a scratchpad for @p operator()
    */
@@ -340,6 +399,7 @@ private:
    * @brief Manages DOFs for the test space
    */
   mfem::ParFiniteElementSpace* test_space_;
+
   /**
    * @brief Manages DOFs for the trial space
    */
@@ -355,16 +415,25 @@ private:
    * for the test space
    */
   const mfem::Operator* P_test_;
+
   /**
    * @brief Operator that converts local (current rank) DOF values to per-element DOF values
    * for the test space
    */
   const mfem::Operator* G_test_;
+
+  /**
+   * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
+   * for the test space
+   */
+  const mfem::Operator* G_test_boundary_;
+
   /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
    * for the trial space
    */
   const mfem::Operator* P_trial_;
+
   /**
    * @brief Operator that converts local (current rank) DOF values to per-element DOF values
    * for the trial space
@@ -372,9 +441,16 @@ private:
   const mfem::Operator* G_trial_;
 
   /**
+   * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
+   * for the trial space
+   */
+  const mfem::Operator* G_trial_boundary_;
+
+  /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
   std::vector<Integral<test(trial)> > domain_integrals_;
+
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
@@ -390,4 +466,4 @@ private:
   mutable Gradient grad_;
 };
 
-}  // namespace serac
+}

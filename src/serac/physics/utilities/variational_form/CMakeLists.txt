@@ -54,6 +54,7 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(weakform_tests_serial
+    #tests/prototyping_stiffness.cpp
     tests/hcurl_unit_tests.cpp
     tests/test_tensor_ad.cpp
     tests/tuple_arithmetic_unit_tests.cpp)
@@ -73,8 +74,9 @@ endforeach()
 
 # Then add the examples/tests
 set(weakform_tests_mpi
-    tests/weak_form_boundary_test.cpp
-    tests/weak_form_comparisons.cpp)
+    #tests/weak_form_boundary_test.cpp
+    tests/weak_form_comparisons.cpp
+    )
     
 foreach(filename ${weakform_tests_mpi})
     get_filename_component(test_name ${filename} NAME_WE)
