@@ -25,6 +25,11 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
       true_vec_(&retrieve(space_)),
       name_(options.name)
 {
+  // Add check to make sure order and space match, if a collection is provided the order is not used
+  // It seems mfem allows each element to be of a different order, but most input to FiniteElementState probably has the
+  // same order; thus we'll sue a soft warning here.
+  SLIC_WARNING_IF(options.order != (&retrieve(space_))->GetOrder(0),
+                  "The order specified in options may not match the space");
   true_vec_ = 0.0;
 }
 
