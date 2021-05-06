@@ -24,50 +24,76 @@ constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+// Compare the residual evaluation
+//
+// R = \int (1.7 * u * dv + 2.1 * grad(u) * grad(dv) - (100 * x * y) * dv )
+//
+// between traditional MFEM methods and weak_form
+
 template <int p, int dim>
 void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
   static constexpr double a = 1.7;
   static constexpr double b = 2.1;
 
+  // Create standard MFEM bilinear and linear forms on H1
   auto                  fec = H1_FECollection(p, dim);
   ParFiniteElementSpace fespace(&mesh, &fec);
 
   ParBilinearForm A(&fespace);
 
+  // Add the mass term using the standard MFEM method
   ConstantCoefficient a_coef(a);
   A.AddDomainIntegrator(new MassIntegrator(a_coef));
 
+  // Add the diffusion term using the standard MFEM method
   ConstantCoefficient b_coef(b);
   A.AddDomainIntegrator(new DiffusionIntegrator(b_coef));
+
+  // Assemble the bilinear form into a matrix
   A.Assemble(0);
   A.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
+  // Create a linear form for the load term using the standard MFEM method
   ParLinearForm       f(&fespace);
   FunctionCoefficient load_func([&](const Vector& coords) { return 100 * coords(0) * coords(1); });
 
+  // Create and assemble the linear load term into a vector
   f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
+  // Set a random state to evaluate the residual
   ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
   Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
+  // Set up the same problem using weak form
+
+  // Define the types for the test and trial spaces using the function arguments
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
+  // Construct the new weak form object using the known test and trial spaces
   WeakForm<test_space(trial_space)> residual(&fespace, &fespace);
 
+  // Add the total domain residual term to the weak form
   residual.AddDomainIntegral(
       Dimension<dim>{},
       [&](auto x, auto temperature) {
+        // get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
+
+        // define the load component of the weak form
         auto f0         = a * u - (100 * x[0] * x[1]);
+
+        // define the flux component of the weak form
         auto f1         = b * du_dx;
+
+        // return these terms in a tuple
         return std::tuple{f0, f1};
       },
       mesh);
