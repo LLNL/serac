@@ -119,7 +119,7 @@ namespace digitize {
  * @param[in] v floating point value
  */
 
-[[maybe_unused]] int floor(double v) { return static_cast<int>(v); }
+[[maybe_unused]] int floor(double v) { return static_cast<int>(std::floor(v)); }
 
 /**
  * @brief Returns 2 if v > 0 and 1 otherwise.
