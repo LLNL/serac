@@ -150,7 +150,7 @@ template <typename T, typename SFINAE = std::enable_if_t<std::is_base_of_v<mfem:
                                                          std::is_base_of_v<mfem::VectorCoefficient, T>>>
 mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, T& c)
 {
-  mfem::Array<int> ess_vdof_list(0);
+  mfem::Array<int> ess_vdof_list;
 
   mfem::ParGridFunction v_attr(&pfes);
   v_attr.ProjectCoefficient(c);
@@ -179,7 +179,7 @@ template <typename T, typename SFINAE = std::enable_if_t<std::is_base_of_v<mfem:
                                                          std::is_base_of_v<mfem::VectorCoefficient, T>>>
 mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, T& c)
 {
-  mfem::Array<int> ess_tdof_list(0);
+  mfem::Array<int> ess_tdof_list;
 
   mfem::Array<int> ess_vdof_list = MakeEssList(pfes, c);
 
