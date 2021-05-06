@@ -119,19 +119,19 @@ namespace digitize {
  * @param[in] v floating point value
  */
 
-[[maybe_unused]] static int floor(double v) { return static_cast<int>(v); }
+[[maybe_unused]] int floor(double v) { return static_cast<int>(v); }
 
 /**
  * @brief Returns 2 if v > 0 and 1 otherwise.
  * @param[in] v floating point value
  */
-[[maybe_unused]] static int greater_than_zero(double v) { return v > 0. ? 2 : 1; }
+[[maybe_unused]] int greater_than_zero(double v) { return v > 0. ? 2 : 1; }
 
 /**
  * @brief Checks if floating point value is equal to 1, if return 2 otherwise return 1.
  * @param[in] v floating point value
  */
-[[maybe_unused]] static int equals1(double v) { return v == 1. ? 2 : 1; }
+[[maybe_unused]] int equals1(double v) { return v == 1. ? 2 : 1; }
 }  // namespace digitize
 
 /**
@@ -208,9 +208,8 @@ mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, T& c)
  * @tparam T Return type is either a suitable std collection or mfem::Array
  * @param[in] m The mesh
  * @param[in] c The coefficient provided that will be evaluated on the mesh
- * @param[in] digitize An optional function that can be
- * called to assign attributes based on the value of c at a given projection
- * point. By default, values of c at a given d.o.f that are > 0. are assigned
+ * @param[in] digitize A function mapping coefficient values onto integer attribute values.
+ * By default, values of c at a given point that are greater than zero ( > 0) are assigned
  * attribute 2, otherwise attribute 1.
  * @return An array holding the attributes that correspond to each element
  */
