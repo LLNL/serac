@@ -6,7 +6,6 @@
 
 set(coefficients_sources
     loading_functions.cpp
-    coefficient_extensions.cpp
     )
 
 set(coefficients_headers
