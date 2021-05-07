@@ -98,7 +98,10 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>
       },
       mesh);
 
+  // Compute the residual using standard MFEM methods
   mfem::Vector r1 = (*J) * U - (*F);
+
+  // Compute the residual using weak form
   mfem::Vector r2 = residual(U);
 
   if (verbose) {
@@ -106,10 +109,14 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>
     std::cout << "||r2||: " << r2.Norml2() << std::endl;
     std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
   }
+
+  // Test that the two residuals are equivalent
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
+  // Compute the gradient using weak form
   mfem::Operator& grad2 = residual.GetGradient(U);
 
+  // Compute the gradient action using standard MFEM and weakform
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad2 * U;
 
@@ -118,8 +125,13 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
     std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
   }
+
+  // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 }
+
+// Compare the residual evaluation for linear elasticity between
+// standard MFEM methods and the new weak form class
 
 template <int p, int dim>
 void weak_form_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
@@ -199,6 +211,13 @@ void weak_form_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dime
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 }
+
+
+// Compare the residual evaluation
+//
+// R = \int (1.7 * u * dv + 2.1 * curl(u) * curl(dv) - (10 * x * y, -5 * (x - y) * y) * dv )
+//
+// between traditional MFEM methods and weak_form
 
 template <int p, int dim>
 void weak_form_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
