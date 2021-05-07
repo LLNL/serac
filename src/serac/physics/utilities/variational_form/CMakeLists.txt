@@ -92,10 +92,10 @@ endforeach()
 
 # not sure how we want to handle performance-related tests
 set(weakform_performance_tests
-    tests/J2_material_with_AD.cpp
-    tests/kernel_microbenchmark.cpp
-    tests/diffusion_performance_test.cpp)
-    
+    tests/performance/J2_material_with_AD.cpp
+    tests/performance/kernel_microbenchmark.cpp
+    tests/performance/diffusion_performance_test.cpp)
+ 
 
 if(ENABLE_CUDA)
 
