@@ -1,5 +1,7 @@
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 
+using namespace serac;
+
 template < int n >
 void custom_assert(bool condition, const char (&message)[n]) {
   if (condition == false) { printf("error: %s", message); }
@@ -7,7 +9,6 @@ void custom_assert(bool condition, const char (&message)[n]) {
 
 __global__ void basic_tensor_tests() {
 
-#if 1
   constexpr auto abs = [](auto x) { return (x < 0) ? -x : x; };
 
   constexpr tensor<double, 3> u = {1, 2, 3};
@@ -40,7 +41,6 @@ __global__ void basic_tensor_tests() {
 
   constexpr double uBv = 300;
   static_assert(abs(dot(u, B, v) - uBv) < 1.0e-16);
-#endif
 
 }
 

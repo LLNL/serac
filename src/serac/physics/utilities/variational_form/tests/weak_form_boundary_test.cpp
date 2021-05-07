@@ -23,6 +23,7 @@ int         refinements = 0;
 constexpr bool verbose     = false;
 
 std::unique_ptr<mfem::ParMesh> mesh2D;
+std::unique_ptr<mfem::ParMesh> mesh3D;
 
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
@@ -61,17 +62,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   WeakForm<test_space(trial_space)> residual(&fespace, &fespace);
 
-  residual.AddDomainIntegral(
-      Dimension<dim>{},
-      [&](auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto f0         = a * u - (100 * x[0] * x[1]);
-        auto f1         = b * du_dx;
-        return std::tuple{f0, f1};
-      },
-      mesh);
-
-  residual.AddSurfaceIntegral([&](auto x, auto /* u */) { return x[0]; }, mesh);
+  residual.AddSurfaceIntegral([&](auto x, auto /* u */) { return 1.0; }, mesh);
 
   mfem::Vector r1 = A * u_global - f;
   mfem::Vector r2 = residual * u_global;
@@ -99,7 +90,8 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
 }
 
-TEST(boundary, 3D_linear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(boundary, 3D_linear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(boundary, 2D_linear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
 
 int main(int argc, char* argv[])
 {
@@ -113,7 +105,9 @@ int main(int argc, char* argv[])
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
+  std::string mesh_file3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
   int result = RUN_ALL_TESTS();

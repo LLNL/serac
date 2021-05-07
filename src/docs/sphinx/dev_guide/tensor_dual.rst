@@ -138,8 +138,8 @@ derivative information were
       static constexpr double epsilon = 1.0e-9;
       auto dfdx = [](double x) { return (f(x + epsilon) - f(x + epsilon)) / (2.0 * epsilon); }
 
-   This approach is simple, but requires multiple function invokations
-   and limitations of floating point arithmetic.
+   This approach is simple, but requires multiple function invocations
+   and the accuracy suffers due to catastrophic cancellation in floating point arithmetic.
 
 2. Derive the expression for :math:`f\;'(x)`, either by hand or with a
    computer algebra system, and manually implement the result. For

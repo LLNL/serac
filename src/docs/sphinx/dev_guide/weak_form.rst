@@ -17,7 +17,7 @@ a solid mechanics simulation may look something like:
    \underbrace{\int_{\partial\Omega} \psi \cdot \mathbf{t}(\mathbf{x}) \; \text{d}a}_{\text{surface loads}},
 
 where :math:`\psi` are the test basis functions. To describe this
-residual using WeakForm, we first create the object itself, providing a
+residual using ``WeakForm``, we first create the object itself, providing a
 template parameter that expresses the test and trial spaces (i.e. the
 "inputs" and "outputs" of the residual function, :math:`r`). In this
 case, solid mechanics uses H1 test and trial spaces, so we write:
@@ -37,46 +37,48 @@ the snippet above is saying that ``residual`` is going to represent a
 calculation that takes in an H1 field (displacements), and returns a
 vector of weighted residuals, using H1 test functions.
 
-Now that we have this ``WeakForm`` object created, we can use the
+Now that the ``WeakForm`` object is created, we can use the
 following functions to define integral terms (depending on their
-dimensionality):
+dimensionality). Here, we use :math:`s` to denote the "source" term
+(integrated against test functions), and :math:`f` to denote the 
+"flux" term (integrated against test function gradients).
 
 1. Integrals of the form:
-   :math:`\displaystyle \iint_\Omega \psi \cdot f_0 + \nabla \psi : f_1 \; da`
+   :math:`\displaystyle \iint_\Omega \psi \cdot s + \nabla \psi : f \; da`
 
    .. code-block:: cpp
 
       WeakForm::AddAreaIntegral([](auto ... args){
-      	auto f0 = ...;
-      	auto f1 = ...;
-      	return std::tuple{f0, f1};
+      	auto s = ...;
+      	auto f = ...;
+      	return std::tuple{s, f};
       }, domain_of_integration);
 
 2. Integrals of the form:
-   :math:`\displaystyle \iiint_\Omega \psi \cdot f_0 + \nabla \psi : f_1 \; dv`
+   :math:`\displaystyle \iiint_\Omega \psi \cdot s + \nabla \psi : f \; dv`
 
    .. code-block:: cpp
 
       WeakForm::AddVolumeIntegral([](auto ... args){
-      	auto f0 = ...;
-      	auto f1 = ...;
-      	return std::tuple{f0, f1};
+      	auto s = ...;
+      	auto f = ...;
+      	return std::tuple{s, f};
       }, domain_of_integration);
 
 3. Integrals of the form:
-   :math:`\displaystyle \iint_{\partial \Omega} \psi \cdot f \; da`
+   :math:`\displaystyle \iint_{\partial \Omega} \psi \cdot s \; da`
 
    .. code-block:: cpp
 
       WeakForm::AddSurfaceIntegral([](auto ... args){
-      	auto f0 = ...;
-      	return f0;
+      	auto s = ...;
+      	return s;
       }, domain_of_integration);	
 
 So, for our problem (since we assumed 3D earlier) we can make an
 ``Add****Integral()`` call for each of the integral terms in the
 original residual. In each of these functions, the first argument is the
-integrand (a lambda function or functor returning :math:`\{f_0, f_1\}`),
+integrand (a lambda function or functor returning :math:`\{s, f\}`),
 and the second argument is the domain of integration. Let's start with
 the stress response term:
 
@@ -89,11 +91,11 @@ the stress response term:
      // Here, we unpack the {value, derivative} tuple into separate variables
      auto [u, grad_u] = disp;
      
-     // WeakForm expects us to return a tuple of the form {f_0, f_1} (see table above)
-     auto f0 = zero{}; // for this term, the f_0 term is identically zero.
-     auto f1 = stress(grad_u); // call some constitutive model for the material in this domain
+     // WeakForm expects us to return a tuple of the form {s, f} (see table above)
+     auto body_force = zero{}; // for this case, the source term is identically zero.
+     auto stress = material_model(grad_u); // call some constitutive model for the material in this domain
      
-     return std::tuple{f0, f1};
+     return std::tuple{body_force, stress};
      
    }, mesh);
 
@@ -103,11 +105,11 @@ The other terms follow a similar pattern. For the body force:
 
    residual.AddVolumeIntegral([](auto x, auto disp /* unused */){
      
-     // WeakForm::AddVolumeIntegral() expects us to return a tuple of the form {f_0, f_1}
-     auto f0 = b(x); // evaluate the body-force at the location of the quadrature point
-     auto f1 = zero{}; // for this term, the f_1 term is identically zero
+     // WeakForm::AddVolumeIntegral() expects us to return a tuple of the form {s, f}
+     auto body_force = b(x); // evaluate the body-force at the location of the quadrature point
+     auto stress = zero{}; // for this term, the stress term is identically zero
      
-     return std::tuple{f0, f1};
+     return std::tuple{body_force, stress};
      
    }, mesh);
 
@@ -115,7 +117,7 @@ And finally, for the surface tractions:
 
 .. code-block:: cpp
 
-   // WeakForm::AddSurfaceIntegral() only expects us to return f, so we don't need a tuple
+   // WeakForm::AddSurfaceIntegral() only expects us to return s, so we don't need a tuple
    residual.AddSurfaceIntegral([](auto x, auto disp /* unused */){
      return traction(x); // evaluate the traction at the location of the quadrature point
    }, surface_mesh);
@@ -139,7 +141,8 @@ Putting these snippets together without the verbose comments, we have (note: the
    // note: the first two AddVolumeIntegral calls can be fused
    // into one, provided they share the same domain of integration
    residual.AddVolumeIntegral([](auto x, auto disp){
-     return std::tuple{b(x), stress(std::get<1>(disp))};
+     auto [u, grad_u] = disp;
+     return std::tuple{b(x), material_model(grad_u))};
    }, mesh);
 
    residual.AddSurfaceIntegral([](auto x, auto disp /* unused */){ return traction(x); }, surface_mesh);
