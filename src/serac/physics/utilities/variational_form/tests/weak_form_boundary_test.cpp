@@ -18,8 +18,8 @@ using namespace std;
 using namespace mfem;
 using namespace serac;
 
-int         num_procs, myid;
-int         refinements = 0;
+int            num_procs, myid;
+int            refinements = 0;
 constexpr bool verbose     = false;
 
 std::unique_ptr<mfem::ParMesh> mesh2D;
@@ -87,7 +87,6 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   }
 
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
-
 }
 
 TEST(boundary, 3D_linear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
@@ -106,7 +105,7 @@ int main(int argc, char* argv[])
   int parallel_refinement = 0;
 
   std::string mesh_file3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  std::string meshfile2D  = SERAC_REPO_DIR "/data/meshes/star.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 

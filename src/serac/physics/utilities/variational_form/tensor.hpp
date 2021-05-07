@@ -69,8 +69,8 @@ struct tensor<T> {
   static constexpr int ndim     = 0;
   static constexpr int shape[1] = {0};
 
-  SERAC_HOST_DEVICE constexpr auto&      operator()(array<int, ndim>) { return value; }
-  SERAC_HOST_DEVICE constexpr auto       operator()(array<int, ndim>) const { return value; }
+  SERAC_HOST_DEVICE constexpr auto& operator()(array<int, ndim>) { return value; }
+  SERAC_HOST_DEVICE constexpr auto  operator()(array<int, ndim>) const { return value; }
 
   template <typename... S>
   SERAC_HOST_DEVICE constexpr auto& operator()(S...)
@@ -86,8 +86,8 @@ struct tensor<T> {
 
   SERAC_HOST_DEVICE tensor() : value{} {}
   SERAC_HOST_DEVICE tensor(T v) : value(v) {}
-  SERAC_HOST_DEVICE   operator T() { return value; }
-  T value;
+  SERAC_HOST_DEVICE operator T() { return value; }
+  T                 value;
 };
 
 template <typename T, int n>
@@ -110,7 +110,7 @@ struct tensor<T, n> {
 
   SERAC_HOST_DEVICE constexpr auto& operator[](int i) { return value[i]; };
   SERAC_HOST_DEVICE constexpr auto  operator[](int i) const { return value[i]; };
-  T               value[n];
+  T                                 value[n];
 };
 /// @endcond
 

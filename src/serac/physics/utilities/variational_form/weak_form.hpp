@@ -67,10 +67,12 @@ public:
         trial_space_(trial_fes),
         P_test_(test_space_->GetProlongationMatrix()),
         G_test_(test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-        G_test_boundary_(test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary)),
+        G_test_boundary_(
+            test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary)),
         P_trial_(trial_space_->GetProlongationMatrix()),
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-        G_trial_boundary_(trial_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary)),
+        G_trial_boundary_(
+            trial_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary)),
         grad_(*this)
   {
     SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
@@ -113,17 +115,17 @@ public:
 
       const mfem::FiniteElement&   el = *test_space_->GetFE(0);
       const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-      
+
       constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
-      auto geom = domain.GetGeometricFactors(ir, flags);
+      auto           geom  = domain.GetGeometricFactors(ir, flags);
       domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{},
                                      Dimension<spatial_dim>{}, integrand);
       return;
     } else if constexpr ((geometry_dim + 1) == spatial_dim) {
-
       // TODO: fix mfem::FaceGeometricFactors
       constexpr bool always_false = (geometry_dim == spatial_dim);
-      static_assert(always_false, "unsupported integral dimensionality due to unimplemented features in mfem::FaceGeometricFactors");
+      static_assert(always_false,
+                    "unsupported integral dimensionality due to unimplemented features in mfem::FaceGeometricFactors");
 
       auto num_boundary_elements = domain.GetNBE();
       SLIC_ERROR_IF(num_boundary_elements == 0, "Mesh has no boundary elements");
@@ -131,14 +133,15 @@ public:
       auto dim = domain.Dimension();
       SLIC_ERROR_IF(dim != spatial_dim, "Error: invalid mesh dimension for integral");
       for (int e = 0; e < num_boundary_elements; e++) {
-        SLIC_ERROR_IF(domain.GetBdrElementType(e) != supported_types[dim - 1], "Mesh contains unsupported element type");
+        SLIC_ERROR_IF(domain.GetBdrElementType(e) != supported_types[dim - 1],
+                      "Mesh contains unsupported element type");
       }
 
       const mfem::FiniteElement&   el = *test_space_->GetBE(0);
       const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-      constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::JACOBIANS;
+      constexpr auto flags            = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::JACOBIANS;
 
-      // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag. 
+      // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
       // this is currently a dealbreaker, as we need this information to do any calculations
       auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
       boundary_integrals_.emplace_back(num_boundary_elements, geom->J, geom->X, Dimension<geometry_dim>{},
@@ -385,7 +388,7 @@ private:
    * @brief The output set of per-boundary-element DOF values
    */
   mutable mfem::Vector output_E_boundary_;
- 
+
   /**
    * @brief The set of true DOF values, used as a scratchpad for @p operator()
    */
@@ -466,4 +469,4 @@ private:
   mutable Gradient grad_;
 };
 
-}
+}  // namespace serac

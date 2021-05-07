@@ -36,7 +36,7 @@ auto Reshape(double* u, int n1, int n2)
 {
   if constexpr (space::components == 1) {
     return mfem::Reshape(u, n1, n2);
-  } 
+  }
   if constexpr (space::components > 1) {
     return mfem::Reshape(u, n1, space::components, n2);
   }
@@ -47,7 +47,7 @@ auto Reshape(const double* u, int n1, int n2)
 {
   if constexpr (space::components == 1) {
     return mfem::Reshape(u, n1, n2);
-  } 
+  }
   if constexpr (space::components > 1) {
     return mfem::Reshape(u, n1, space::components, n2);
   }
@@ -82,7 +82,7 @@ auto Load(const T& u, int e)
 {
   if constexpr (space::components == 1) {
     return impl::Load<space::ndof>(u, e);
-  } 
+  }
   if constexpr (space::components > 1) {
     return impl::Load<space::ndof, space::components>(u, e);
   }
@@ -247,10 +247,16 @@ auto Postprocess(T f, const tensor<double, geometry_dim> xi,
  */
 
 template <int n>
-auto Measure(const tensor<double, n, n>& A) { return det(A); }
+auto Measure(const tensor<double, n, n>& A)
+{
+  return det(A);
+}
 
 template <int m, int n>
-auto Measure(const tensor<double, m, n>& A) { return ::sqrt(det(transpose(A) * A)); }
+auto Measure(const tensor<double, m, n>& A)
+{
+  return ::sqrt(det(transpose(A) * A));
+}
 
 }  // namespace impl
 
@@ -320,7 +326,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       auto   J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
       double dx  = impl::Measure(J_q) * dxi;
 
-      std::cout << e << " " << q << " " << J_q << " " << dx << std::endl; 
+      std::cout << e << " " << q << " " << J_q << " " << dx << std::endl;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
       auto arg = impl::Preprocess<trial_element>(u_elem, xi, J_q);
