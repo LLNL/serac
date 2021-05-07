@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
-  std::string mesh_file3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
   std::string meshfile2D  = SERAC_REPO_DIR "/data/meshes/star.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
@@ -113,5 +113,5 @@ int main(int argc, char* argv[])
 
   MPI_Finalize();
 
-  return 0;
+  return result;
 }

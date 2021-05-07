@@ -74,7 +74,7 @@ endforeach()
 
 # Then add the examples/tests
 set(weakform_tests_mpi
-    #tests/weak_form_boundary_test.cpp
+    # tests/weak_form_boundary_test.cpp
     tests/weak_form_comparisons.cpp
     )
     
