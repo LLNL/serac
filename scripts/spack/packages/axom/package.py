@@ -38,7 +38,7 @@ class Axom(CachedCMakePackage, CudaPackage):
     git      = "https://github.com/LLNL/axom.git"
 
     # SERAC EDIT START
-    version('0.4.0serac', commit='31c3d71bba8844cbcfff60a9d17ae0df5d9682d6', submodules="True")
+    version('0.4.0serac', commit='47760d803313dee2e3a79bc3979f8300efe87ef0', submodules="True")
     # SERAC EDIT END
 
     version('main', branch='main', submodules=True)
@@ -165,7 +165,13 @@ class Axom(CachedCMakePackage, CudaPackage):
             flags = ""
             for _libpath in [libdir, libdir + "64"]:
                 if os.path.exists(_libpath):
-                    flags += " -Wl,-rpath,{0}".format(_libpath)
+                    # SERAC EDIT BEGIN - BLT_EXE_LINKER_FLAGS aren't filtered
+                    # for the Wl/Xlinker incompability
+                    if spec.satisfies('^cuda'):
+                        flags += " -Xlinker -rpath -Xlinker {0}".format(_libpath)
+                    else:
+                        flags += " -Wl,-rpath,{0}".format(_libpath)
+                    # SERAC EDIT END
             description = ("Adds a missing libstdc++ rpath")
             if flags:
                 entries.append(cmake_cache_string("BLT_EXE_LINKER_FLAGS", flags,
@@ -187,9 +193,18 @@ class Axom(CachedCMakePackage, CudaPackage):
         if spec.satisfies('target=ppc64le:'):
             if spec.satisfies('^cuda'):
                 entries.append(cmake_cache_option("ENABLE_CUDA", True))
-                # SERAC EDIT BEGIN - this requires NVCC linking which is problematic
-                # entries.append(cmake_cache_option("CUDA_SEPARABLE_COMPILATION",
-                #                                   True))
+                entries.append(cmake_cache_option("CUDA_SEPARABLE_COMPILATION",
+                                                  True))
+                # SERAC EDIT BEGIN - NVCC doesn't allow -Wl, --rdynamic
+                entries.append(cmake_cache_option("CUDA_LINK_WITH_NVCC",
+                                             True))
+                entries.append(cmake_cache_option("AXOM_ENABLE_EXPORTS",
+                                             False))
+                # The mesh_tester appears to require relocatable device code
+                # which is not present if BLT introduces a device link stage
+                # for libaxom.a, so it needs to be disabled
+                entries.append(cmake_cache_option("AXOM_ENABLE_QUEST",
+                                             False))
                 # SERAC EDIT END
 
                 entries.append(
@@ -212,6 +227,13 @@ class Axom(CachedCMakePackage, CudaPackage):
                     cudaflags += " -std=c++14"
                 else:
                     cudaflags += " -std=c++11"
+
+                # SERAC EDIT BEGIN
+                # NVCC ignores the host compiler when linking??
+                # and some MPI -Wl,-rpath, flags are added from somewhere
+                cudaflags += " -ccbin ${CMAKE_CXX_COMPILER} -forward-unknown-to-host-compiler "
+                # SERAC EDIT END
+
                 entries.append(
                     cmake_cache_string("CMAKE_CUDA_FLAGS", cudaflags))
 
@@ -248,7 +270,13 @@ class Axom(CachedCMakePackage, CudaPackage):
                                "lib")
                 description = ("Adds a missing rpath for libraries "
                                "associated with the fortran compiler")
-                linker_flags = "${BLT_EXE_LINKER_FLAGS} -Wl,-rpath," + libdir
+                # SERAC EDIT BEGIN - BLT_EXE_LINKER_FLAGS aren't filtered
+                # for the Wl/Xlinker incompability
+                if "+cuda" in spec:
+                    linker_flags = "${BLT_EXE_LINKER_FLAGS} -Xlinker -rpath -Xlinker " + libdir
+                else:
+                    linker_flags = "${BLT_EXE_LINKER_FLAGS} -Wl,-rpath," + libdir
+                # SERAC EDIT END
                 entries.append(cmake_cache_string("BLT_EXE_LINKER_FLAGS",
                                                   linker_flags, description))
                 if "+shared" in spec:

@@ -99,8 +99,10 @@ class Mfem(Package):
     variant('openmp', default=False,
             description='Enable OpenMP parallelism')
     variant('cuda', default=False, description='Enable CUDA support')
+    # SERAC EDIT BEGIN - need to explicitly enumerate values
     variant('cuda_arch', default='sm_60',
-            description='CUDA architecture to compile for')
+            description='CUDA architecture to compile for', values=['sm_' + val for val in CudaPackage.cuda_arch_values])
+    # SERAC EDIT END
     variant('occa', default=False, description='Enable OCCA backend')
     variant('raja', default=False, description='Enable RAJA backend')
     variant('libceed', default=False, description='Enable libCEED backend')
@@ -198,6 +200,9 @@ class Mfem(Package):
     depends_on('sundials@2.7.0+mpi+hypre', when='@:3.3.0+sundials+mpi')
     depends_on('sundials@2.7.0:', when='@3.3.2:+sundials~mpi')
     depends_on('sundials@2.7.0:+mpi+hypre', when='@3.3.2:+sundials+mpi')
+    # SERAC EDIT BEGIN
+    depends_on('sundials@2.7.0:+cuda', when='+sundials+cuda')
+    # SERAC EDIT END
     depends_on('sundials@5.0.0:', when='@4.0.1-xsdk:+sundials~mpi')
     depends_on('sundials@5.0.0:+mpi+hypre', when='@4.0.1-xsdk:+sundials+mpi')
     depends_on('sundials@5.4.0:+cuda', when='@4.2.0:+sundials+cuda')

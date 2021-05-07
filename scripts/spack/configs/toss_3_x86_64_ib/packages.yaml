@@ -43,72 +43,72 @@ packages:
   autoconf:
     buildable: false
     externals:
-    - spec: autoconf
+    - spec: autoconf@2.69
       prefix: /usr
   automake:
     buildable: false
     externals:
-    - spec: automake
+    - spec: automake@1.13.4
       prefix: /usr
   bzip2:
     buildable: false
     externals:
-    - spec: bzip2
+    - spec: bzip2@1.0.6
       prefix: /usr
   gettext:
     buildable: false
     externals:
-    - spec: gettext
+    - spec: gettext@0.19.8.1
       prefix: /usr
   graphviz:
     buildable: false
     externals:
-    - spec: graphviz
+    - spec: graphviz@2.30.1
       prefix: /usr
   libtool:
     buildable: false
     externals:
-    - spec: libtool
+    - spec: libtool@2.4.2
       prefix: /usr
   libx11:
     buildable: false
     externals:
-    - spec: libx11
+    - spec: libx11@1.20.4
       prefix: /usr
   m4:
     buildable: false
     externals:
-    - spec: m4
+    - spec: m4@1.4.16
       prefix: /usr
   perl:
     buildable: false
     externals:
-    - spec: perl
+    - spec: perl@5.16.3
       prefix: /usr
   pkg-config:
     buildable: false
     externals:
-    - spec: pkg-config
+    - spec: pkg-config@0.27.1
       prefix: /usr
   tar:
     buildable: false
     externals:
-    - spec: tar
+    - spec: tar@1.26
       prefix: /usr
   readline:
     buildable: false
     externals:
-    - spec: readline
+    - spec: readline@6.2
       prefix: /usr
   unzip:
     buildable: false
     externals:
-    - spec: unzip
+    - spec: unzip@6.0
       prefix: /usr
   zlib:
     buildable: false
     externals:
-    - spec: zlib
+    - spec: zlib@1.2.7
       prefix: /usr
 
 # Lock in versions of Devtools
@@ -116,25 +116,25 @@ packages:
     version: [3.14.5]
     buildable: false
     externals:
-    - spec: cmake
+    - spec: cmake@3.14.5
       prefix: /usr/tce/packages/cmake/cmake-3.14.5
   cppcheck:
     version: [1.87]
     buildable: false
     externals:
-    - spec: cppcheck
+    - spec: cppcheck@1.87
       prefix: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/cppcheck-1.87
   doxygen:
     version: [1.8.17]
     buildable: false
     externals:
-    - spec: doxygen
+    - spec: doxygen@1.8.17
       prefix: /usr/WS2/smithdev/devtools/toss_3_x86_64_ib/latest/doxygen-1.8.17
   llvm:
     version: [10.0.0]
     buildable: false
     externals:
-    - spec: llvm+clang
+    - spec: llvm+clang@10.0.0
       prefix: /usr/tce/packages/clang/clang-10.0.0
   python:
     buildable: false

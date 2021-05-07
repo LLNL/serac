@@ -128,7 +128,7 @@ packages:
   unzip:
     buildable: false
     externals:
-    - spec: unzip
+    - spec: unzip@6.0
       prefix: /usr
   zlib:
     buildable: false

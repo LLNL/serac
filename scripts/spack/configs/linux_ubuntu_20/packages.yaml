@@ -30,46 +30,51 @@ packages:
   bzip2:
     buildable: false
     externals:
-    - spec: bzip2
+    - spec: bzip2@1.0.8
       prefix: /
   gettext:
     buildable: false
     externals:
-    - spec: gettext
+    - spec: gettext@0.19.8.1
       prefix: /usr
   perl:
     buildable: false
     externals:
-    - spec: perl
+    - spec: perl@5.30.0
       prefix: /usr
   tar:
     buildable: false
     externals:
-    - spec: tar
+    - spec: tar@1.30
       prefix: /
   libx11:
     buildable: false
     externals:
-    - spec: libx11
+    - spec: libx11@6.3.0
       prefix: /usr
   autoconf:
     buildable: false
     externals:
-    - spec: autoconf
+    - spec: autoconf@2.69
       prefix: /usr
   openssl:
     externals:
-    - spec: openssl
+    - spec: openssl@1.1.1
       prefix: /usr/lib/x86_64-linux-gnu/
   openblas:
     buildable: false
     externals:
-    - spec: openblas
+    - spec: openblas@0.3.8
       prefix: /usr/lib/x86_64-linux-gnu/
+  unzip:
+    buildable: false
+    externals:
+    - spec: unzip@6.0
+      prefix: /usr
   zlib:
     buildable: false
     externals:
-    - spec: zlib
+    - spec: zlib@1.2.11
       prefix: /usr
 
   # Lock in versions of Devtools
@@ -79,32 +84,32 @@ packages:
     - spec: cmake@3.16.3
       prefix: /usr
   cppcheck:
-    version: [1.9]
+    version: [1.90]
     buildable: false
     externals:
-    - spec: cppcheck
+    - spec: cppcheck@1.90
       prefix: /usr
   doxygen:
     version: [1.8.17]
     buildable: false
     externals:
-    - spec: doxygen
+    - spec: doxygen@1.8.17
       prefix: /usr
   llvm:
     version: [10.0.0]
     buildable: false
     externals:
-    - spec: llvm+clang
+    - spec: llvm@10.0.0+clang
       prefix: /usr
   python:
-    version: [3.8.2]
+    version: [3.8.5]
     buildable: false
     externals:
-    - spec: python
+    - spec: python@3.8.5
       prefix: /usr
   py-sphinx:
-    version: [1.8.5]
+    version: [3.2.1]
     buildable: false
     externals:
-    - spec: py-sphinx
+    - spec: py-sphinx@3.2.1
       prefix: /usr
