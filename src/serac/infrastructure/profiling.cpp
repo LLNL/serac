@@ -78,5 +78,34 @@ void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused
   cali_set_global_uint_byname(name.c_str(), data);
 #endif
 }
+
+void startCaliperRegion([[maybe_unused]] const char* name)
+{
+#ifdef SERAC_USE_CALIPER
+  CALI_MARK_BEGIN(name);
+#endif
+}
+
+void startCaliperRegion([[maybe_unused]] const std::string& name)
+{
+#ifdef SERAC_USE_CALIPER
+  CALI_MARK_BEGIN(name.c_str());
+#endif
+}
+
+void endCaliperRegion([[maybe_unused]] const char* name)
+{
+#ifdef SERAC_USE_CALIPER
+  CALI_MARK_END(name);
+#endif
+}
+
+void endCaliperRegion([[maybe_unused]] const std::string& name)
+{
+#ifdef SERAC_USE_CALIPER
+  CALI_MARK_END(name.c_str());
+#endif
+}
 }  // namespace detail
+
 }  // namespace serac::profiling
