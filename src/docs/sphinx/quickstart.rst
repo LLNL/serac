@@ -65,7 +65,9 @@ For other machines:
 
 For example on **Ubuntu 20.04**:
 
-``python scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install``
+.. code-block:: bash
+
+   python scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install
 
 Unlike Serac's library dependencies, our developer tools can be built with any compiler because
 they are not linked into the serac executable.  We recommend GCC 8 because we have tested that they all
