@@ -6,9 +6,9 @@
 
 set(weakform_depends serac_physics mfem mpi)
 
-if(ENABLE_CUDA)
-    list(APPEND weakform_depends cuda)
-endif()
+#if(ENABLE_CUDA)
+#    list(APPEND weakform_depends cuda)
+#endif()
 
 # Add the library first
 set(weakform_headers
@@ -75,6 +75,7 @@ endforeach()
 # Then add the examples/tests
 set(weakform_tests_mpi
     #tests/weak_form_boundary_test.cpp
+    examples/thermal_conduction.cpp
     tests/weak_form_comparisons.cpp
     )
     

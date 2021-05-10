@@ -1,7 +1,7 @@
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 
 template < int dim, typename T >
-auto linear_isotropic_thermal(T displacement) {
+auto linear_isotropic_thermal(T temperature) {
   auto [u, du_dx] = temperature;
   auto source = 2.0 * u;
   auto flux = 4.0 * du_dx;

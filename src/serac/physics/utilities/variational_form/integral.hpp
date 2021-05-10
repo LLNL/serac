@@ -320,8 +320,6 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       auto   J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
       double dx  = impl::Measure(J_q) * dxi;
 
-      std::cout << e << " " << q << " " << J_q << " " << dx << std::endl; 
-
       // evaluate the value/derivatives needed for the q-function at this quadrature point
       auto arg = impl::Preprocess<trial_element>(u_elem, xi, J_q);
 
