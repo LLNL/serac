@@ -474,6 +474,8 @@ public:
                                Types&... args)
       : mfem::VectorCoefficient(dim), references_(std::make_tuple(std::ref(args)...)), function_(func)
   {
+    static_assert(std::is_invocable_v<mfem::Vector(typename detail::eval_result_t<Types>::type & ...),
+                                      typename detail::eval_result_t<Types>::type&...>);
   }
 
   /**
@@ -525,6 +527,8 @@ public:
                                Types&... args)
       : mfem::Coefficient(), references_(std::make_tuple(std::ref(args)...)), function_(func)
   {
+    static_assert(std::is_invocable_v<double(typename detail::eval_result_t<Types>::type & ...),
+                                      typename detail::eval_result_t<Types>::type&...>);
   }
 
   /**
