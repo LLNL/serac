@@ -78,7 +78,7 @@ auto index(vec&& v, const int idx)
 {
   if constexpr (std::is_same_v<std::decay_t<vec>, mfem::HypreParVector>) {
     return static_cast<const double*>(v)[idx];
-  } 
+  }
 
   if constexpr (!std::is_same_v<std::decay_t<vec>, mfem::HypreParVector>) {
     return v[idx];
