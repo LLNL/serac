@@ -9,7 +9,7 @@
 
 namespace serac {
 
-namespace impl {
+namespace detail {
 template <typename T, typename i0_t>
 SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0)
 {
@@ -57,7 +57,7 @@ SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t
 {
   return values[i0][i1][i2][i3];
 }
-}  // namespace impl
+}  // namespace detail
 
 /// @cond
 template <typename T, int... n>
@@ -99,13 +99,13 @@ struct tensor<T, n> {
   template <typename S>
   SERAC_HOST_DEVICE constexpr auto& operator()(S i)
   {
-    return impl::get(value, i);
+    return detail::get(value, i);
   }
 
   template <typename S>
   SERAC_HOST_DEVICE constexpr auto operator()(S i) const
   {
-    return impl::get(value, i);
+    return detail::get(value, i);
   }
 
   SERAC_HOST_DEVICE constexpr auto& operator[](int i) { return value[i]; };
@@ -144,13 +144,13 @@ struct tensor<T, first, rest...> {
   SERAC_HOST_DEVICE constexpr auto& operator()(S... i)
   {
     // FIXME: Compile-time check for <= 4 indices??
-    return impl::get(value, i...);
+    return detail::get(value, i...);
   };
   /// @overload
   template <typename... S>
   SERAC_HOST_DEVICE constexpr auto operator()(S... i) const
   {
-    return impl::get(value, i...);
+    return detail::get(value, i...);
   };
 
   /**
@@ -277,10 +277,10 @@ SERAC_HOST_DEVICE constexpr auto tensor_with_shape(std::integer_sequence<int, n.
   return tensor<T, n...>{};
 }
 
-namespace impl {
+namespace detail {
 template <int n>
 using always_int = int;
-}  // namespace impl
+}  // namespace detail
 
 /**
  * @brief Creates a tensor of requested dimension by subsequent calls to a functor
@@ -1079,7 +1079,7 @@ struct underlying<double> {
   using type = double;
 };
 
-namespace impl {
+namespace detail {
 
 template <typename T1, typename T2>
 struct outer_prod;
@@ -1114,10 +1114,10 @@ struct outer_prod<T, zero> {
   using type = zero;
 };
 
-}  // namespace impl
+}  // namespace detail
 
 template <typename T1, typename T2>
-using outer_product_t = typename impl::outer_prod<T1, T2>::type;
+using outer_product_t = typename detail::outer_prod<T1, T2>::type;
 
 /**
  * @brief Retrieves a value tensor from a tensor of dual numbers

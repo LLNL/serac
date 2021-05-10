@@ -21,7 +21,7 @@
 
 namespace serac {
 
-namespace impl {
+namespace detail {
 
 /**
  * @brief Wrapper for mfem::Reshape compatible with Serac's finite element space types
@@ -57,7 +57,7 @@ auto Reshape(const double* u, int n1, int n2)
  * @brief Extracts the dof values for a particular element
  * @param[in] u The decomposed per-element DOFs, libCEED's E-vector
  * @param[in] e The index of the element to retrieve DOFs for
- * @note For the case of only 1 dof per node, impl::Load returns a tensor<double, ndof>
+ * @note For the case of only 1 dof per node, detail::Load returns a tensor<double, ndof>
  */
 template <int ndof>
 inline auto Load(const mfem::DeviceTensor<2, const double>& u, int e)
@@ -66,7 +66,7 @@ inline auto Load(const mfem::DeviceTensor<2, const double>& u, int e)
 }
 /**
  * @overload
- * @note For the case of multiple dofs per node, impl::Load returns a tensor<double, components, ndof>
+ * @note For the case of multiple dofs per node, detail::Load returns a tensor<double, components, ndof>
  */
 template <int ndof, int components>
 inline auto Load(const mfem::DeviceTensor<3, const double>& u, int e)
@@ -81,10 +81,10 @@ template <typename space, typename T>
 auto Load(const T& u, int e)
 {
   if constexpr (space::components == 1) {
-    return impl::Load<space::ndof>(u, e);
+    return detail::Load<space::ndof>(u, e);
   }
   if constexpr (space::components > 1) {
-    return impl::Load<space::ndof, space::components>(u, e);
+    return detail::Load<space::ndof, space::components>(u, e);
   }
 };
 
@@ -141,6 +141,8 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim
   }
 
   if constexpr (element_type::family == Family::HCURL) {
+    // HCURL shape functions undergo a covariant Piola transformation when going
+    // from parent element to physical element
     auto value = dot(u, dot(element_type::shape_functions(xi), inv(J)));
     auto curl  = dot(u, element_type::shape_function_curl(xi) / det(J));
     if constexpr (dim == 3) {
@@ -152,7 +154,7 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim
 
 /**
  * @overload
- * @note This specialization of impl::Preprocess is called when doing integrals
+ * @note This specialization of detail::Preprocess is called when doing integrals
  * where the spatial dimension is different from the dimension of the element geometry
  * (i.e. surface integrals in 3D space, line integrals in 2D space, etc)
  *
@@ -216,7 +218,7 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
 
 /**
  * @overload
- * @note This specialization of impl::Postprocess is called when doing integrals
+ * @note This specialization of detail::Postprocess is called when doing integrals
  * where the spatial dimension is different from the dimension of the element geometry
  * (i.e. surface integrals in 3D space, line integrals in 2D space, etc)
  *
@@ -258,7 +260,7 @@ auto Measure(const tensor<double, m, n>& A)
   return ::sqrt(det(transpose(A) * A));
 }
 
-}  // namespace impl
+}  // namespace detail
 
 /**
  * @brief The base kernel template used to create different finite element calculation routines
@@ -305,13 +307,13 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
   // into strided multidimensional arrays before using
   auto X = mfem::Reshape(X_.Read(), rule.size(), spatial_dim, num_elements);
   auto J = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
-  auto u = impl::Reshape<trial>(U.Read(), trial_ndof, num_elements);
-  auto r = impl::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
+  auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
+  auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
     // get the DOF values for this particular element
-    tensor u_elem = impl::Load<trial_element>(u, e);
+    tensor u_elem = detail::Load<trial_element>(u, e);
 
     // this is where we will accumulate the element residual tensor
     element_residual_type r_elem{};
@@ -324,10 +326,10 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       auto   dxi = rule.weights[q];
       auto   x_q = make_tensor<spatial_dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
       auto   J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = impl::Measure(J_q) * dxi;
+      double dx  = detail::Measure(J_q) * dxi;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
-      auto arg = impl::Preprocess<trial_element>(u_elem, xi, J_q);
+      auto arg = detail::Preprocess<trial_element>(u_elem, xi, J_q);
 
       // evaluate the user-specified constitutive model
       //
@@ -337,7 +339,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
-      r_elem += impl::Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+      r_elem += detail::Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
 
       // here, we store the derivative of the q-function w.r.t. its input arguments
       //
@@ -347,7 +349,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
-    impl::Add(r, r_elem, e);
+    detail::Add(r, r_elem, e);
   }
 }
 
@@ -393,13 +395,13 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto J  = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
-  auto du = impl::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
-  auto dr = impl::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
+  auto du = detail::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
+  auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
     // get the (change in) values for this particular element
-    tensor du_elem = impl::Load<trial_element>(du, e);
+    tensor du_elem = detail::Load<trial_element>(du, e);
 
     // this is where we will accumulate the (change in) element residual tensor
     element_residual_type dr_elem{};
@@ -411,10 +413,10 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
       auto   xi  = rule.points[q];
       auto   dxi = rule.weights[q];
       auto   J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = impl::Measure(J_q) * dxi;
+      double dx  = detail::Measure(J_q) * dxi;
 
       // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = impl::Preprocess<trial_element>(du_elem, xi, J_q);
+      auto darg = detail::Preprocess<trial_element>(du_elem, xi, J_q);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
@@ -424,16 +426,16 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
 
       // integrate dq against test space shape functions / gradients
       // to get the (change in) element residual contributions
-      dr_elem += impl::Postprocess<test_element>(dq, xi, J_q) * dx;
+      dr_elem += detail::Postprocess<test_element>(dq, xi, J_q) * dx;
     }
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
-    impl::Add(dr, dr_elem, e);
+    detail::Add(dr, dr_elem, e);
   }
 }
 
-namespace impl {
+namespace detail {
 template <typename spaces>
 struct get_trial_space;  // undefined
 
@@ -449,13 +451,13 @@ template <typename test_space, typename trial_space>
 struct get_test_space<test_space(trial_space)> {
   using type = test_space;
 };
-}  // namespace impl
+}  // namespace detail
 
 template <typename T>
-using test_space_t = typename impl::get_test_space<T>::type;
+using test_space_t = typename detail::get_test_space<T>::type;
 
 template <typename T>
-using trial_space_t = typename impl::get_trial_space<T>::type;
+using trial_space_t = typename detail::get_trial_space<T>::type;
 
 template <typename space, int geometry_dim, int spatial_dim>
 struct lambda_argument;

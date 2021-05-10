@@ -95,9 +95,16 @@ endforeach()
 # not sure how we want to handle performance-related tests
 set(weakform_performance_tests
     tests/performance/J2_material_with_AD.cpp
-    tests/performance/kernel_microbenchmark.cpp
     tests/performance/diffusion_performance_test.cpp)
  
+foreach(filename ${weakform_performance_tests})
+    get_filename_component(test_name ${filename} NAME_WE)
+    blt_add_executable(NAME        ${test_name}
+                       SOURCES     ${filename}
+                       OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                       DEPENDS_ON  gtest serac_weakform ${weakform_depends}
+                       FOLDER      serac/tests )
+endforeach()
 
 if(ENABLE_CUDA)
 

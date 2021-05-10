@@ -211,7 +211,7 @@ encoded in the corresponding operator overloads:
    template <typename gradient_type_a, typename gradient_type_b>
    constexpr auto operator*(dual<gradient_type_a> a, dual<gradient_type_b> b)
    {
-     return dual{a.value * b.value, a.gradient * b + a.value * b.gradient};
+     return dual{a.value * b.value, a.gradient * b.value + a.value * b.gradient};
    }
 
 and so on. In this way, when a dual number is passed in to a function,
@@ -225,6 +225,13 @@ numbers, users can choose to calculate derivatives in whatever manner is
 appropriate for their problem: manually-written gradients for
 performance-critical codepaths, and automatic differentiation for
 iterating quickly on prototypes and research.
+
+Some additional resources on the theory and implementation of automatic differentiation
+are given below:
+
+`Slides on AD Theory <https://www.cs.toronto.edu/~rgrosse/courses/csc321_2018/slides/lec10.pdf>`_
+`Article demonstrating how AD applies to a computational graph <https://towardsdatascience.com/automatic-differentiation-explained-b4ba8e60c2ad>`_
+`C++ tools and libraries for AD <http://www.autodiff.org/?module=Tools&language=C%2FC%2B%2B>`_
 
 .. _header-n276:
 

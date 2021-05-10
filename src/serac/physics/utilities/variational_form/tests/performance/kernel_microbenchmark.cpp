@@ -288,11 +288,11 @@ void H1_kernel(const mfem::Vector& U, mfem::Vector& R, const mfem::Vector& J_, i
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-  auto u = impl::Reshape<trial>(U.Read(), trial_ndof, num_elements);
-  auto r = impl::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
+  auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
+  auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
   for (int e = 0; e < num_elements; e++) {
-    tensor u_elem = impl::Load<trial_element>(u, e);
+    tensor u_elem = detail::Load<trial_element>(u, e);
 
     element_residual_type r_elem{};
 
@@ -300,7 +300,7 @@ void H1_kernel(const mfem::Vector& U, mfem::Vector& R, const mfem::Vector& J_, i
       auto   xi  = rule.points[q];
       auto   dxi = rule.weights[q];
       auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = impl::Measure(J_q) * dxi;
+      double dx  = detail::Measure(J_q) * dxi;
 
       auto dN    = trial_element::shape_function_gradients(xi);
       auto inv_J = inv(J_q);
@@ -312,7 +312,7 @@ void H1_kernel(const mfem::Vector& U, mfem::Vector& R, const mfem::Vector& J_, i
       r_elem += dot(dN, dot(inv_J, qf_output)) * dx;
     }
 
-    impl::Add(r, r_elem, e);
+    detail::Add(r, r_elem, e);
   }
 }
 
@@ -330,11 +330,11 @@ void H1_kernel_constexpr(const mfem::Vector& U, mfem::Vector& R, const mfem::Vec
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-  auto u = impl::Reshape<trial>(U.Read(), trial_ndof, num_elements);
-  auto r = impl::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
+  auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
+  auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
   for (int e = 0; e < num_elements; e++) {
-    tensor u_elem = impl::Load<trial_element>(u, e);
+    tensor u_elem = detail::Load<trial_element>(u, e);
 
     element_residual_type r_elem{};
 
@@ -342,7 +342,7 @@ void H1_kernel_constexpr(const mfem::Vector& U, mfem::Vector& R, const mfem::Vec
       static constexpr auto xi  = rule.points[q];
       static constexpr auto dxi = rule.weights[q];
       auto                  J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double                dx  = impl::Measure(J_q) * dxi;
+      double                dx  = detail::Measure(J_q) * dxi;
 
       static constexpr auto dN    = trial_element::shape_function_gradients(xi);
       auto                  inv_J = inv(J_q);
@@ -354,7 +354,7 @@ void H1_kernel_constexpr(const mfem::Vector& U, mfem::Vector& R, const mfem::Vec
       r_elem += dot(dN, dot(inv_J, qf_output)) * dx;
     });
 
-    impl::Add(r, r_elem, e);
+    detail::Add(r, r_elem, e);
   }
 }
 

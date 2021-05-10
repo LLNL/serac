@@ -51,7 +51,7 @@ constexpr auto join(std::integer_sequence<int,n1...>, std::integer_sequence<int,
   return std::integer_sequence<int,n1...,n2...>{};
 }
 
-namespace impl {
+namespace detail {
   template < typename lambda, int ... i >
   inline constexpr void for_constexpr(lambda && f, std::integral_constant< int, i > ... args) {
     f(args ...);
@@ -59,11 +59,11 @@ namespace impl {
 
   template < int ... n, typename lambda, typename ... arg_types >
   inline constexpr void for_constexpr(lambda && f, std::integer_sequence< int, n ... >, arg_types ... args) {
-    (impl::for_constexpr(f, args ..., std::integral_constant< int, n >{}), ...);
+    (detail::for_constexpr(f, args ..., std::integral_constant< int, n >{}), ...);
   }
 }
 
 template < int ... n, typename lambda >
 inline constexpr void for_constexpr(lambda && f) {
-  impl::for_constexpr(f, std::make_integer_sequence<int, n>{} ...);
+  detail::for_constexpr(f, std::make_integer_sequence<int, n>{} ...);
 }

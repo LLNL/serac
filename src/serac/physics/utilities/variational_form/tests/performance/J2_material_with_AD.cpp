@@ -1,24 +1,11 @@
 #include <random>
 #include <chrono>
 
+#include "axom/core/utilities/Timer.hpp"
+
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 
 using namespace serac;
-
-class timer {
-  typedef std::chrono::high_resolution_clock::time_point time_point;
-  typedef std::chrono::duration<double>                  duration_type;
-
-public:
-  void start() { then = std::chrono::high_resolution_clock::now(); }
-
-  void stop() { now = std::chrono::high_resolution_clock::now(); }
-
-  double elapsed() { return std::chrono::duration_cast<duration_type>(now - then).count(); }
-
-private:
-  time_point then, now;
-};
 
 static constexpr auto I = Identity<3>();
 
@@ -146,10 +133,10 @@ auto displacement_gradient(double t)
 
 int main()
 {
-  timer  stopwatch;
-  double J2_evaluation_time = 0.0;
-  double J2_gradient_time   = 0.0;
-  double J2_AD_time         = 0.0;
+  axom::utilities::Timer stopwatch;
+  double                 J2_evaluation_time = 0.0;
+  double                 J2_gradient_time   = 0.0;
+  double                 J2_AD_time         = 0.0;
 
   double t  = 0.0;
   double dt = 0.0001;

@@ -30,6 +30,7 @@ case, solid mechanics uses H1 test and trial spaces, so we write:
    using trial = H1<order, dim>;
    WeakForm< test(trial) > residual(test_fes, trial_fes);
 
+where ``test_fes``, ``trial_fes`` are the ``mfem`` finite element spaces for the problem. 
 The template argument follows the same convention of ``std::function``:
 the output-type appears outside the parentheses, and the input-type(s)
 appear, inside the parentheses (in order). So, the last line of code in
@@ -193,7 +194,7 @@ implementation given below).
      for (int e = 0; e < num_elements; e++) {
      
        // get the values for this particular element
-       tensor u_elem = impl::Load<trial_element>(u, e);
+       tensor u_elem = detail::Load<trial_element>(u, e);
 
        // this is where we will accumulate the element residual tensor
        element_residual_type r_elem{};
@@ -206,10 +207,10 @@ implementation given below).
          auto   dxi = rule.weights[q];
          auto   x_q = make_tensor<spatial_dim>([&](int i) { return X(q, i, e); });
          auto   J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
-         double dx  = impl::Measure(J_q) * dxi;
+         double dx  = detail::Measure(J_q) * dxi;
 
          // evaluate the value/derivatives needed for the q-function at this quadrature point
-         auto arg = impl::Preprocess<trial_element>(u_elem, xi, J_q);
+         auto arg = detail::Preprocess<trial_element>(u_elem, xi, J_q);
 
          // evaluate the user-specified constitutive model
          //
@@ -219,13 +220,13 @@ implementation given below).
 
          // integrate qf_output against test space shape functions / gradients
          // to get element residual contributions
-         r_elem += impl::Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+         r_elem += detail::Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
          
        }
 
        // once we've finished the element integration loop, write our element residuals
        // out to memory, to be later assembled into global residuals by mfem
-       impl::Add(r, r_elem, e);
+       detail::Add(r, r_elem, e);
      }
    }
 

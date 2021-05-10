@@ -6,7 +6,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 
-#include "serac/physics/utilities/variational_form/detail/timer.hpp"
+#include "axom/core/utilities/Timer.hpp"
 
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 #include "serac/physics/utilities/variational_form/integral.hpp"
@@ -303,7 +303,7 @@ auto compute_all_gradients5(const tensor<double, D1D * D1D * D1D>& u)
 template <typename lambda>
 auto time(lambda&& f)
 {
-  timer stopwatch;
+  axom::utilities::Timer stopwatch;
   stopwatch.start();
   f();
   stopwatch.stop();

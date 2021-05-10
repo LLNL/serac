@@ -96,6 +96,7 @@ public:
    * @brief Adds an integral term to the weak formulation of the PDE
    * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
    * @tparam spatial_dim The full dimension of the mesh
+   * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
@@ -147,7 +148,7 @@ public:
       boundary_integrals_.emplace_back(num_boundary_elements, geom->J, geom->X, Dimension<geometry_dim>{},
                                        Dimension<spatial_dim>{}, integrand);
       return;
-    } else if constexpr (true) {
+    } else {
       // if static_assert has a literal 'false' for its first arg,
       // it will trigger even when this branch isn't selected. So,
       // we define an expression that is always false (see first
@@ -159,6 +160,7 @@ public:
 
   /**
    * @brief Adds an area integral, i.e., over 2D elements in R^2 space
+   * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    */
@@ -170,6 +172,7 @@ public:
 
   /**
    * @brief Adds a volume integral, i.e., over 3D elements in R^3 space
+   * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    */
@@ -182,6 +185,7 @@ public:
   /**
    * @brief Adds a domain integral
    * @tparam d The dimension of the elements *and* the space they're embedded in
+   * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    */
@@ -193,6 +197,7 @@ public:
 
   /**
    * @brief Adds a surface integral, i.e., over 2D elements in R^3 space
+   * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    */
@@ -214,7 +219,11 @@ public:
 
   /**
    * @brief Implements mfem::Operator::GetGradient
-   * @param[in] x The input vector
+   * @param[in] x The input vector where the gradient is evaluated
+   *
+   * Note: at present, this WeakForm::Gradient object only supports the action of the gradient (i.e. directional
+   * derivative) We are looking into making that WeakForm::Gradient also be convertible to a sparse matrix format as
+   * well.
    */
   mfem::Operator& GetGradient(const mfem::Vector& x) const override
   {
