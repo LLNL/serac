@@ -15,6 +15,14 @@ project(serac LANGUAGES CXX C)
 # MPI is required in Serac.
 set(ENABLE_MPI ON CACHE BOOL "")
 
+if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
+    message(FATAL_ERROR 
+            "Serac requires MPI.  It is required to provide the MPI C/C++ "
+            "compiler wrappers via the CMake variables, "
+            "MPI_C_COMPILER and MPI_CXX_COMPILER."
+            )
+endif()
+
 #------------------------------------------------------------------------------
 # Setup BLT
 #------------------------------------------------------------------------------
