@@ -2,6 +2,8 @@
 #include "../tensor.hpp"
 #include "../finite_element.hpp"
 
+using namespace serac;
+
 static constexpr double kronecker_tolerance = 1.0e-13;
 static constexpr double curl_tolerance      = 1.0e-10;  // coarser, since comparing to a finite difference approximation
 static constexpr int    num_points          = 10;
@@ -17,9 +19,9 @@ contributions from other shape functions in the element are orthogonal
 template <typename element_type>
 void verify_kronecker_delta_property()
 {
-  static constexpr tensor nodes      = element_type::nodes;
-  static constexpr tensor directions = element_type::directions;
-  static constexpr tensor I          = Identity<element_type::ndof>();
+  static constexpr auto nodes      = element_type::nodes;
+  static constexpr auto directions = element_type::directions;
+  static constexpr auto I          = Identity<element_type::ndof>();
 
   for (int i = 0; i < element_type::ndof; i++) {
     if (norm(I[i] - dot(element_type::shape_functions(nodes[i]), directions[i])) > kronecker_tolerance) {
@@ -36,8 +38,8 @@ void verify_curl_calculation()
 {
   static constexpr double eps = 1.0e-6;
   static constexpr int    dim = element_type::dim;
-  static constexpr tensor I   = Identity<dim>();
-  static constexpr tensor random_points =
+  static constexpr auto   I   = Identity<dim>();
+  static constexpr auto   random_points =
       make_tensor<num_points, dim>([](int i, int j) { return random_numbers[i * dim + j]; });
 
   constexpr auto N     = element_type::shape_functions;

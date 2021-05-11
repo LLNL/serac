@@ -1,12 +1,14 @@
-#include "serac/physics/utilities/variational_form/detail/meta.h"
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 
 using namespace serac;
 
-// note: these tests are actually all static_assert-ions,
-// so if this compiles without error, the tests have already passed
-void basic_tensor_tests()
-{
+template < int n >
+void custom_assert(bool condition, const char (&message)[n]) {
+  if (condition == false) { printf("error: %s", message); }
+}
+
+__global__ void basic_tensor_tests() {
+
   constexpr auto abs = [](auto x) { return (x < 0) ? -x : x; };
 
   constexpr tensor<double, 3> u = {1, 2, 3};
@@ -39,10 +41,11 @@ void basic_tensor_tests()
 
   constexpr double uBv = 300;
   static_assert(abs(dot(u, B, v) - uBv) < 1.0e-16);
+
 }
 
-void elasticity_tests()
-{
+#if 0
+void elasticity_tests() {
   static constexpr auto abs = [](auto x) { return (x < 0) ? -x : x; };
 
   static constexpr double lambda = 5.0;
@@ -110,10 +113,11 @@ void navier_stokes_tests()
     for_constexpr<3, 3>([&](auto i, auto j) { static_assert(abs(sqnorm(exact[i][j] - ad[i][j].gradient)) < 1.0e-16); });
   }
 }
+#endif
 
 int main()
 {
-  basic_tensor_tests();
-  elasticity_tests();
-  navier_stokes_tests();
+  basic_tensor_tests<<<1,1>>>();
+  //elasticity_tests();
+  //navier_stokes_tests();
 }

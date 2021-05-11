@@ -1,61 +1,65 @@
 #pragma once
 
+#include "host_device_annotations.hpp"
+
 #include "dual.hpp"
 #include "array.hpp"
 
 #include "detail/meta.h"
-#include "detail/for_constexpr.h"
 
-namespace impl {
+namespace serac {
+
+namespace detail {
 template <typename T, typename i0_t>
-constexpr auto get(const T& values, i0_t i0)
+SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0)
 {
   return values[i0];
 }
 
 template <typename T, typename i0_t, typename i1_t>
-constexpr auto get(const T& values, i0_t i0, i1_t i1)
+SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0, i1_t i1)
 {
   return values[i0][i1];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t>
-constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2)
+SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2)
 {
   return values[i0][i1][i2];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t>
-constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
+SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
 {
   return values[i0][i1][i2][i3];
 }
 
 template <typename T, typename i0_t>
-constexpr auto& get(T& values, i0_t i0)
+SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0)
 {
   return values[i0];
 }
 
 template <typename T, typename i0_t, typename i1_t>
-constexpr auto& get(T& values, i0_t i0, i1_t i1)
+SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1)
 {
   return values[i0][i1];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t>
-constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2)
+SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2)
 {
   return values[i0][i1][i2];
 }
 
 template <typename T, typename i0_t, typename i1_t, typename i2_t, typename i3_t>
-constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
+SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t i3)
 {
   return values[i0][i1][i2][i3];
 }
-}  // namespace impl
+}  // namespace detail
 
+/// @cond
 template <typename T, int... n>
 struct tensor;
 
@@ -64,25 +68,26 @@ struct tensor<T> {
   using type                    = T;
   static constexpr int ndim     = 0;
   static constexpr int shape[1] = {0};
-  constexpr auto&      operator()(array<int, ndim>) { return value; }
-  constexpr auto       operator()(array<int, ndim>) const { return value; }
+
+  SERAC_HOST_DEVICE constexpr auto& operator()(array<int, ndim>) { return value; }
+  SERAC_HOST_DEVICE constexpr auto  operator()(array<int, ndim>) const { return value; }
 
   template <typename... S>
-  constexpr auto& operator()(S...)
+  SERAC_HOST_DEVICE constexpr auto& operator()(S...)
   {
     return value;
   }
 
   template <typename... S>
-  constexpr auto operator()(S...) const
+  SERAC_HOST_DEVICE constexpr auto operator()(S...) const
   {
     return value;
   }
 
-  tensor() : value{} {}
-  tensor(T v) : value(v) {}
-    operator T() { return value; }
-  T value;
+  SERAC_HOST_DEVICE tensor() : value{} {}
+  SERAC_HOST_DEVICE tensor(T v) : value(v) {}
+  SERAC_HOST_DEVICE operator T() { return value; }
+  T                 value;
 };
 
 template <typename T, int n>
@@ -92,42 +97,73 @@ struct tensor<T, n> {
   static constexpr int shape[ndim] = {n};
 
   template <typename S>
-  constexpr auto& operator()(S i)
+  SERAC_HOST_DEVICE constexpr auto& operator()(S i)
   {
-    return impl::get(value, i);
+    return detail::get(value, i);
   }
 
   template <typename S>
-  constexpr auto operator()(S i) const
+  SERAC_HOST_DEVICE constexpr auto operator()(S i) const
   {
-    return impl::get(value, i);
+    return detail::get(value, i);
   }
 
-  constexpr auto& operator[](int i) { return value[i]; };
-  constexpr auto  operator[](int i) const { return value[i]; };
-  T               value[n];
+  SERAC_HOST_DEVICE constexpr auto& operator[](int i) { return value[i]; };
+  SERAC_HOST_DEVICE constexpr auto  operator[](int i) const { return value[i]; };
+  T                                 value[n];
 };
+/// @endcond
 
+/**
+ * @brief Arbitrary-rank tensor class
+ * @tparam T The scalar type of the tensor
+ * @tparam first The leading dimension of the tensor
+ * @tparam last The parameter pack of the remaining dimensions
+ */
 template <typename T, int first, int... rest>
 struct tensor<T, first, rest...> {
-  using type                       = T;
-  static constexpr int ndim        = 1 + sizeof...(rest);
+  /**
+   * @brief The scalar type
+   */
+  using type = T;
+  /**
+   * @brief The rank of the tensor
+   */
+  static constexpr int ndim = 1 + sizeof...(rest);
+  /**
+   * @brief The array of dimensions containing the shape (not the data itself)
+   * Similar to numpy.ndarray.shape
+   */
   static constexpr int shape[ndim] = {first, rest...};
 
+  /**
+   * @brief Retrieves the sub-tensor corresponding to the indices provided in the pack @a i
+   * @param[in] i The pack of indices
+   */
   template <typename... S>
-  constexpr auto& operator()(S... i)
+  SERAC_HOST_DEVICE constexpr auto& operator()(S... i)
   {
-    return impl::get(value, i...);
+    // FIXME: Compile-time check for <= 4 indices??
+    return detail::get(value, i...);
+  };
+  /// @overload
+  template <typename... S>
+  SERAC_HOST_DEVICE constexpr auto operator()(S... i) const
+  {
+    return detail::get(value, i...);
   };
 
-  template <typename... S>
-  constexpr auto operator()(S... i) const
-  {
-    return impl::get(value, i...);
-  };
+  /**
+   * @brief Retrieves the "row" of the tensor corresponding to index @a i
+   * @param[in] i The index to retrieve a rank - 1 tensor from
+   */
+  SERAC_HOST_DEVICE constexpr auto& operator[](int i) { return value[i]; };
+  /// @overload
+  SERAC_HOST_DEVICE constexpr auto operator[](int i) const { return value[i]; };
 
-  constexpr auto&    operator[](int i) { return value[i]; };
-  constexpr auto     operator[](int i) const { return value[i]; };
+  /**
+   * @brief The actual tensor data
+   */
   tensor<T, rest...> value[first];
 };
 
@@ -137,101 +173,127 @@ tensor(const T (&data)[n1]) -> tensor<T, n1>;
 template <typename T, int n1, int n2>
 tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
 
+/**
+ * @brief A sentinel struct for eliding no-op tensor operations
+ */
 struct zero {
-  operator double() { return 0.0; }
+  SERAC_HOST_DEVICE operator double() { return 0.0; }
 
   template <typename T, int... n>
-  operator tensor<T, n...>()
+  SERAC_HOST_DEVICE operator tensor<T, n...>()
   {
     return tensor<T, n...>{};
   }
 
   template <typename... T>
-  auto operator()(T...)
+  SERAC_HOST_DEVICE auto operator()(T...)
   {
     return zero{};
   }
 
   template <typename T>
-  auto operator=(T)
+  SERAC_HOST_DEVICE auto operator=(T)
   {
     return zero{};
   }
 };
 
-constexpr auto operator+(zero, zero) { return zero{}; }
+SERAC_HOST_DEVICE constexpr auto operator+(zero, zero) { return zero{}; }
 
 template <typename T>
-constexpr auto operator+(zero, T other)
+SERAC_HOST_DEVICE constexpr auto operator+(zero, T other)
 {
   return other;
 }
 
 template <typename T>
-constexpr auto operator+(T other, zero)
+SERAC_HOST_DEVICE constexpr auto operator+(T other, zero)
 {
   return other;
 }
 
 /////////////////////////////////////////////////
 
-constexpr auto operator-(zero, zero) { return zero{}; }
+SERAC_HOST_DEVICE constexpr auto operator-(zero, zero) { return zero{}; }
 
 template <typename T>
-constexpr auto operator-(zero, T other)
+SERAC_HOST_DEVICE constexpr auto operator-(zero, T other)
 {
   return -other;
 }
 
 template <typename T>
-constexpr auto operator-(T other, zero)
+SERAC_HOST_DEVICE constexpr auto operator-(T other, zero)
 {
   return other;
 }
 
 /////////////////////////////////////////////////
 
-constexpr auto operator*(zero, zero) { return zero{}; }
+SERAC_HOST_DEVICE constexpr auto operator*(zero, zero) { return zero{}; }
 
 template <typename T>
-constexpr auto operator*(zero, T /*other*/)
+SERAC_HOST_DEVICE constexpr auto operator*(zero, T /*other*/)
 {
   return zero{};
 }
 
 template <typename T>
-constexpr auto operator*(T /*other*/, zero)
+SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
 {
   return zero{};
 }
 
-// reduced_tensor removes 1s from tensor dimensions
+/**
+ * @brief Removes 1s from tensor dimensions
+ * For example, a tensor<T, 1, 10> is equivalent to a tensor<T, 10>
+ * @tparam T The scalar type of the tensor
+ * @tparam n1 The first dimension
+ * @tparam n2 The second dimension
+ */
 template <typename T, int n1, int n2 = 1>
 using reduced_tensor = std::conditional_t<
     (n1 == 1 && n2 == 1), double,
     std::conditional_t<n1 == 1, tensor<T, n2>, std::conditional_t<n2 == 1, tensor<T, n1>, tensor<T, n1, n2>>>>;
 
+/**
+ * @brief Returns a @p IndexSpace object that can be used
+ * to iterate over a tensor of arbitary dimension
+ */
 template <typename T, int... n>
-constexpr auto indices(tensor<T, n...>)
+SERAC_HOST_DEVICE constexpr auto indices(tensor<T, n...>)
 {
   return IndexSpace<n...>{};
 }
 
+/**
+ * @brief Creates a tensor given the dimensions in a @p std::integer_sequence
+ * @see std::integer_sequence
+ * @tparam n The parameter pack of integer dimensions
+ */
 template <typename T, int... n>
-constexpr auto tensor_with_shape(std::integer_sequence<int, n...>)
+SERAC_HOST_DEVICE constexpr auto tensor_with_shape(std::integer_sequence<int, n...>)
 {
   return tensor<T, n...>{};
 }
 
-namespace impl {
+namespace detail {
 template <int n>
 using always_int = int;
-}
+}  // namespace detail
 
+/**
+ * @brief Creates a tensor of requested dimension by subsequent calls to a functor
+ * Can be thought of as analogous to @p std::transform in that the set of possible
+ * indices for dimensions @p n are transformed into the values of the tensor by @a f
+ * @tparam n The parameter pack of integer dimensions
+ * @param[in] f The functor to generate the tensor values from
+ * @pre @a f must accept @p sizeof...(n) arguments of type @p int
+ */
 template <int... n, typename lambda_type>
-constexpr auto make_tensor(lambda_type f)
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
 {
-  using T = typename std::invoke_result_t<lambda_type, impl::always_int<n>...>;
+  using T = decltype(f(n...));
   tensor<T, n...> A{};
   if constexpr (sizeof...(n) == 0) {
     A.value = f();
@@ -242,7 +304,7 @@ constexpr auto make_tensor(lambda_type f)
 }
 
 template <typename S, typename T, int... n>
-constexpr auto operator+(tensor<S, n...> A, tensor<T, n...> B)
+SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, n...>& A, const tensor<T, n...>& B)
 {
   tensor<decltype(S{} + T{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -252,7 +314,7 @@ constexpr auto operator+(tensor<S, n...> A, tensor<T, n...> B)
 }
 
 template <typename S, typename T, int... n>
-constexpr auto operator-(tensor<S, n...> A, tensor<T, n...> B)
+SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, n...>& A, const tensor<T, n...>& B)
 {
   tensor<decltype(S{} + T{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -263,7 +325,7 @@ constexpr auto operator-(tensor<S, n...> A, tensor<T, n...> B)
 
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-constexpr auto operator*(S scale, tensor<T, n...> A)
+SERAC_HOST_DEVICE constexpr auto operator*(S scale, const tensor<T, n...>& A)
 {
   tensor<decltype(S{} * T{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -274,7 +336,7 @@ constexpr auto operator*(S scale, tensor<T, n...> A)
 
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-constexpr auto operator*(tensor<T, n...> A, S scale)
+SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, n...>& A, S scale)
 {
   tensor<decltype(T{} * S{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -285,7 +347,7 @@ constexpr auto operator*(tensor<T, n...> A, S scale)
 
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-constexpr auto operator/(S scale, tensor<T, n...> A)
+constexpr auto operator/(S scale, const tensor<T, n...>& A)
 {
   tensor<decltype(S{} * T{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -296,7 +358,7 @@ constexpr auto operator/(S scale, tensor<T, n...> A)
 
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
-constexpr auto operator/(tensor<T, n...> A, S scale)
+constexpr auto operator/(const tensor<T, n...>& A, S scale)
 {
   tensor<decltype(T{} * S{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
@@ -355,7 +417,7 @@ constexpr auto outer(S A, tensor<T, n> B)
 }
 
 template <typename S, typename T, int m>
-constexpr auto outer(tensor<S, m> A, T B)
+constexpr auto outer(const tensor<S, m>& A, T B)
 {
   static_assert(std::is_arithmetic_v<T>, "outer product types must be tensor or arithmetic_type");
   tensor<decltype(S{} * T{}), m> AB{};
@@ -366,19 +428,19 @@ constexpr auto outer(tensor<S, m> A, T B)
 }
 
 template <typename T, int n>
-constexpr auto outer(zero, tensor<T, n>)
+constexpr auto outer(zero, const tensor<T, n>&)
 {
   return zero{};
 }
 
 template <typename T, int n>
-constexpr auto outer(tensor<T, n>, zero)
+constexpr auto outer(const tensor<T, n>&, zero)
 {
   return zero{};
 }
 
 template <typename S, typename T, int m, int n>
-constexpr auto outer(S A, tensor<T, m, n> B)
+constexpr auto outer(S A, const tensor<T, m, n>& B)
 {
   static_assert(std::is_arithmetic_v<S>, "outer product types must be tensor or arithmetic_type");
   tensor<decltype(S{} * T{}), m, n> AB{};
@@ -391,7 +453,7 @@ constexpr auto outer(S A, tensor<T, m, n> B)
 }
 
 template <typename S, typename T, int m, int n>
-constexpr auto outer(tensor<S, m> A, tensor<T, n> B)
+constexpr auto outer(const tensor<S, m>& A, const tensor<T, n>& B)
 {
   tensor<decltype(S{} * T{}), m, n> AB{};
   for (int i = 0; i < m; i++) {
@@ -403,7 +465,7 @@ constexpr auto outer(tensor<S, m> A, tensor<T, n> B)
 }
 
 template <typename S, typename T, int m, int n>
-constexpr auto outer(tensor<S, m, n> A, T B)
+constexpr auto outer(const tensor<S, m, n>& A, T B)
 {
   static_assert(std::is_arithmetic_v<T>, "outer product types must be tensor or arithmetic_type");
   tensor<decltype(S{} * T{}), m, n> AB{};
@@ -416,7 +478,7 @@ constexpr auto outer(tensor<S, m, n> A, T B)
 }
 
 template <typename S, typename T, int m, int n, int p>
-constexpr auto outer(tensor<S, m, n> A, tensor<T, p> B)
+constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p>& B)
 {
   tensor<decltype(S{} * T{}), m, n, p> AB{};
   for (int i = 0; i < m; i++) {
@@ -430,7 +492,7 @@ constexpr auto outer(tensor<S, m, n> A, tensor<T, p> B)
 }
 
 template <typename S, typename T, int m, int n, int p>
-constexpr auto outer(tensor<S, m> A, tensor<T, n, p> B)
+constexpr auto outer(const tensor<S, m>& A, const tensor<T, n, p>& B)
 {
   tensor<decltype(S{} * T{}), m, n, p> AB{};
   for (int i = 0; i < m; i++) {
@@ -444,7 +506,7 @@ constexpr auto outer(tensor<S, m> A, tensor<T, n, p> B)
 }
 
 template <typename S, typename T, int m, int n, int p, int q>
-constexpr auto outer(tensor<S, m, n> A, tensor<T, p, q> B)
+constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p, q>& B)
 {
   tensor<decltype(S{} * T{}), m, n, p, q> AB{};
   for (int i = 0; i < m; i++) {
@@ -460,7 +522,7 @@ constexpr auto outer(tensor<S, m, n> A, tensor<T, p, q> B)
 }
 
 template <typename S, typename T, int m, int n>
-constexpr auto inner(tensor<S, m, n> A, tensor<T, m, n> B)
+constexpr auto inner(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
 {
   decltype(S{} * T{}) sum{};
   for (int i = 0; i < m; i++) {
@@ -472,7 +534,7 @@ constexpr auto inner(tensor<S, m, n> A, tensor<T, m, n> B)
 }
 
 template <typename S, typename T, int m, int n, int p>
-constexpr auto dot(tensor<S, m, n> A, tensor<T, n, p> B)
+constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
 {
   tensor<decltype(S{} * T{}), m, p> AB{};
   for (int i = 0; i < m; i++) {
@@ -486,7 +548,7 @@ constexpr auto dot(tensor<S, m, n> A, tensor<T, n, p> B)
 }
 
 template <typename S, typename T, int m, int n>
-constexpr auto dot(tensor<S, m> A, tensor<T, m, n> B)
+constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n>& B)
 {
   tensor<decltype(S{} * T{}), n> AB{};
   for (int i = 0; i < n; i++) {
@@ -498,7 +560,7 @@ constexpr auto dot(tensor<S, m> A, tensor<T, m, n> B)
 }
 
 template <typename S, typename T, int m, int n>
-constexpr auto dot(tensor<S, m, n> A, tensor<T, n> B)
+constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n>& B)
 {
   tensor<decltype(S{} * T{}), m> AB{};
   for (int i = 0; i < m; i++) {
@@ -510,7 +572,7 @@ constexpr auto dot(tensor<S, m, n> A, tensor<T, n> B)
 }
 
 template <typename S, typename T, int n>
-constexpr auto dot(tensor<S, n> A, tensor<T, n> B)
+constexpr auto dot(const tensor<S, n>& A, const tensor<T, n>& B)
 {
   decltype(S{} * T{}) AB{};
   for (int i = 0; i < n; i++) {
@@ -520,7 +582,7 @@ constexpr auto dot(tensor<S, n> A, tensor<T, n> B)
 }
 
 template <typename S, typename T, int m, int n, int p>
-constexpr auto dot(tensor<S, m, n, p> A, tensor<T, p> B)
+constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
 {
   tensor<decltype(S{} * T{}), m, n> AB{};
   for (int i = 0; i < m; i++) {
@@ -534,7 +596,7 @@ constexpr auto dot(tensor<S, m, n, p> A, tensor<T, p> B)
 }
 
 template <typename S, typename T, typename U, int m, int n>
-constexpr auto dot(tensor<S, m> u, tensor<T, m, n> A, tensor<U, n> v)
+constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n>& A, const tensor<U, n>& v)
 {
   decltype(S{} * T{} * U{}) uAv{};
   for (int i = 0; i < m; i++) {
@@ -546,7 +608,7 @@ constexpr auto dot(tensor<S, m> u, tensor<T, m, n> A, tensor<U, n> v)
 }
 
 template <typename S, typename T, int m, int n, int p, int q>
-constexpr auto ddot(tensor<S, m, n, p, q> A, tensor<T, p, q> B)
+constexpr auto ddot(const tensor<S, m, n, p, q>& A, const tensor<T, p, q>& B)
 {
   tensor<decltype(S{} * T{}), m, n> AB{};
   for (int i = 0; i < m; i++) {
@@ -562,7 +624,7 @@ constexpr auto ddot(tensor<S, m, n, p, q> A, tensor<T, p, q> B)
 }
 
 template <typename S, typename T, int m, int n, int p>
-constexpr auto ddot(tensor<S, m, n, p> A, tensor<T, n, p> B)
+constexpr auto ddot(const tensor<S, m, n, p>& A, const tensor<T, n, p>& B)
 {
   tensor<decltype(S{} * T{}), m> AB{};
   for (int i = 0; i < m; i++) {
@@ -576,7 +638,7 @@ constexpr auto ddot(tensor<S, m, n, p> A, tensor<T, n, p> B)
 }
 
 template <typename S, typename T, int m, int n>
-constexpr auto ddot(tensor<S, m, n> A, tensor<T, m, n> B)
+constexpr auto ddot(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
 {
   decltype(S{} * T{}) AB{};
   for (int i = 0; i < m; i++) {
@@ -588,25 +650,29 @@ constexpr auto ddot(tensor<S, m, n> A, tensor<T, m, n> B)
 }
 
 template <typename S, typename T, int m, int n, int p>
-constexpr auto operator*(tensor<S, m, n> A, tensor<T, n, p> B)
+constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
 {
   return dot(A, B);
 }
 
 template <typename S, typename T, int m, int n>
-constexpr auto operator*(tensor<S, m> A, tensor<T, m, n> B)
+constexpr auto operator*(const tensor<S, m>& A, const tensor<T, m, n>& B)
 {
   return dot(A, B);
 }
 
 template <typename S, typename T, int m, int n>
-constexpr auto operator*(tensor<S, m, n> A, tensor<T, n> B)
+constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n>& B)
 {
   return dot(A, B);
 }
 
+/**
+ * @brief Returns the squared Frobenius norm of the tensor
+ * @param[in] A The tensor to obtain the squared norm from
+ */
 template <typename T, int m>
-constexpr auto sqnorm(tensor<T, m> A)
+constexpr auto sqnorm(const tensor<T, m>& A)
 {
   T total{};
   for (int i = 0; i < m; i++) {
@@ -614,9 +680,9 @@ constexpr auto sqnorm(tensor<T, m> A)
   }
   return total;
 }
-
+/// @overload
 template <typename T, int m, int n>
-constexpr auto sqnorm(tensor<T, m, n> A)
+constexpr auto sqnorm(const tensor<T, m, n>& A)
 {
   T total{};
   for (int i = 0; i < m; i++) {
@@ -626,29 +692,44 @@ constexpr auto sqnorm(tensor<T, m, n> A)
   }
   return total;
 }
-
+/// @overload
 template <typename T, int... n>
-constexpr auto sqnorm(tensor<T, n...> A)
+constexpr auto sqnorm(const tensor<T, n...>& A)
 {
   T total{};
   for_constexpr<n...>([&](auto... i) { total += A(i...) * A(i...); });
   return total;
 }
 
+/**
+ * @brief Returns the Frobenius norm of the tensor
+ * @param[in] A The tensor to obtain the norm from
+ */
 template <typename T, int... n>
-auto norm(tensor<T, n...> A)
+auto norm(const tensor<T, n...>& A)
 {
+  using std::sqrt;
   return sqrt(sqnorm(A));
 }
 
+/**
+ * @brief Normalizes the tensor
+ * Each element is divided by the Frobenius norm of the tensor, @see norm
+ * @param[in] A The tensor to normalize
+ */
 template <typename T, int... n>
-auto normalize(tensor<T, n...> A)
+auto normalize(const tensor<T, n...>& A)
 {
   return A / norm(A);
 }
 
+/**
+ * @brief Returns the trace of a square matrix
+ * @param[in] A The matrix to compute the trace of
+ * @return The sum of the elements on the main diagonal
+ */
 template <typename T, int n>
-constexpr auto tr(tensor<T, n, n> A)
+constexpr auto tr(const tensor<T, n, n>& A)
 {
   T trA{};
   for (int i = 0; i < n; i++) {
@@ -657,8 +738,13 @@ constexpr auto tr(tensor<T, n, n> A)
   return trA;
 }
 
+/**
+ * @brief Returns the symmetric part of a square matrix
+ * @param[in] A The matrix to obtain the symmetric part of
+ * @return (1/2) * (A + A^T)
+ */
 template <typename T, int n>
-constexpr auto sym(tensor<T, n, n> A)
+constexpr auto sym(const tensor<T, n, n>& A)
 {
   tensor<T, n, n> symA{};
   for (int i = 0; i < n; i++) {
@@ -669,8 +755,15 @@ constexpr auto sym(tensor<T, n, n> A)
   return symA;
 }
 
+/**
+ * @brief Calculates the deviator of a matrix (rank-2 tensor)
+ * @param[in] A The matrix to calculate the deviator of
+ * In the context of stress tensors, the deviator is obtained by
+ * subtracting the mean stress (average of main diagonal elements)
+ * from each element on the main diagonal
+ */
 template <typename T, int n>
-constexpr auto dev(tensor<T, n, n> A)
+constexpr auto dev(const tensor<T, n, n>& A)
 {
   auto devA = A;
   auto trA  = tr(A);
@@ -680,6 +773,10 @@ constexpr auto dev(tensor<T, n, n> A)
   return devA;
 }
 
+/**
+ * @brief Obtains the identity matrix of the specified dimension
+ * @return I_dim
+ */
 template <int dim>
 constexpr tensor<double, dim, dim> Identity()
 {
@@ -692,6 +789,10 @@ constexpr tensor<double, dim, dim> Identity()
   return I;
 }
 
+/**
+ * @brief Returns the transpose of the matrix
+ * @param[in] A The matrix to obtain the transpose of
+ */
 template <typename T, int m, int n>
 constexpr auto transpose(const tensor<T, m, n>& A)
 {
@@ -704,12 +805,16 @@ constexpr auto transpose(const tensor<T, m, n>& A)
   return AT;
 }
 
+/**
+ * @brief Returns the determinant of a matrix
+ * @param[in] A The matrix to obtain the determinant of
+ */
 template <typename T>
-constexpr double det(const tensor<T, 2, 2> A)
+constexpr double det(const tensor<T, 2, 2>& A)
 {
   return A[0][0] * A[1][1] - A[0][1] * A[1][0];
 }
-
+/// @overload
 template <typename T>
 constexpr double det(const tensor<T, 3, 3>& A)
 {
@@ -717,8 +822,14 @@ constexpr double det(const tensor<T, 3, 3>& A)
          A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2] - A[0][2] * A[1][1] * A[2][0];
 }
 
+/**
+ * @brief Solves Ax = b for x using Gaussian elimination with partial pivoting
+ * @param[in] A The matrix A in Ax = b
+ * @param[in] b The vector b in Ax = b
+ * @note @a A and @a b are by-value as they are mutated as part of the elimination
+ */
 template <typename T, int n>
-constexpr tensor<T, n> linear_solve(const tensor<T, n, n>& A_, const tensor<T, n>& b_)
+constexpr tensor<T, n> linear_solve(tensor<T, n, n> A, const tensor<T, n> b)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -727,9 +838,7 @@ constexpr tensor<T, n> linear_solve(const tensor<T, n, n>& A_, const tensor<T, n
     y        = tmp;
   };
 
-  tensor<double, n, n> A = A_;
-  tensor<double, n>    b = b_;
-  tensor<double, n>    x{};
+  tensor<double, n> x{};
 
   for (int i = 0; i < n; i++) {
     // Search for maximum in this column
@@ -766,6 +875,11 @@ constexpr tensor<T, n> linear_solve(const tensor<T, n, n>& A_, const tensor<T, n
   return x;
 }
 
+/**
+ * @brief Inverts a matrix
+ * @param[in] A The matrix to invert
+ * @note Uses a shortcut for inverting a 2-by-2 matrix
+ */
 constexpr tensor<double, 2, 2> inv(const tensor<double, 2, 2>& A)
 {
   double inv_detA(1.0 / det(A));
@@ -779,7 +893,10 @@ constexpr tensor<double, 2, 2> inv(const tensor<double, 2, 2>& A)
 
   return invA;
 }
-
+/**
+ * @overload
+ * @note Uses a shortcut for inverting a 3-by-3 matrix
+ */
 constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>& A)
 {
   double inv_detA(1.0 / det(A));
@@ -798,9 +915,13 @@ constexpr tensor<double, 3, 3> inv(const tensor<double, 3, 3>& A)
 
   return invA;
 }
-
+/**
+ * @overload
+ * @note For N-by-N matrices with N > 3, requires Gaussian elimination
+ * with partial pivoting
+ */
 template <typename T, int n>
-constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A_)
+constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
 {
   constexpr auto abs  = [](double x) { return (x < 0) ? -x : x; };
   constexpr auto swap = [](auto& x, auto& y) {
@@ -809,7 +930,6 @@ constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A_)
     y        = tmp;
   };
 
-  tensor<double, n, n> A = A_;
   tensor<double, n, n> B = Identity<n>();
 
   for (int i = 0; i < n; i++) {
@@ -854,7 +974,7 @@ constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A_)
 }
 
 template <typename T1, int... n1, typename T2, int... n2>
-constexpr auto outer_product(tensor<T1, n1...> A, tensor<T2, n2...> B)
+constexpr auto outer_product(const tensor<T1, n1...>& A, const tensor<T2, n2...>& B)
 {
   tensor<decltype(T1{} * T2{}), n1..., n2...> AB{};
   for_constexpr<n1...>([&](auto... i1) {
@@ -864,8 +984,8 @@ constexpr auto outer_product(tensor<T1, n1...> A, tensor<T2, n2...> B)
 }
 
 template <int J, typename T1, int... I1, typename T2, int... I2, int... I1H, int... I2T>
-constexpr auto dot_product_helper(tensor<T1, I1...> A, tensor<T2, I2...> B, std::integer_sequence<int, I1H...>,
-                                  std::integer_sequence<int, I2T...>)
+constexpr auto dot_product_helper(const tensor<T1, I1...>& A, const tensor<T2, I2...>& B,
+                                  std::integer_sequence<int, I1H...>, std::integer_sequence<int, I2T...>)
 {
   tensor<decltype(T1{} * T2{}), I1H..., I2T...> AB{};
   for_constexpr<I1H...>([&](auto... i1) {
@@ -879,7 +999,7 @@ constexpr auto dot_product_helper(tensor<T1, I1...> A, tensor<T2, I2...> B, std:
 }
 
 template <typename T1, int... I1, typename T2, int... I2>
-constexpr auto dot_product(tensor<T1, I1...> A, tensor<T2, I2...> B)
+constexpr auto dot_product(const tensor<T1, I1...>& A, const tensor<T2, I2...>& B)
 {
   static_assert(last(I1...) == first(I2...), "error: dimension mismatch");
   constexpr auto I1H = remove<sizeof...(I1) - 1>(std::integer_sequence<int, I1...>{});
@@ -888,7 +1008,7 @@ constexpr auto dot_product(tensor<T1, I1...> A, tensor<T2, I2...> B)
 }
 
 template <typename T, int... n>
-auto& operator<<(std::ostream& out, tensor<T, n...> A)
+auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
 {
   out << '{' << A[0];
   for (int i = 1; i < tensor<T, n...>::shape[0]; i++) {
@@ -898,8 +1018,12 @@ auto& operator<<(std::ostream& out, tensor<T, n...> A)
   return out;
 }
 
+/**
+ * @brief Zeroes out trivially small tensor values
+ * @param[in] A The tensor to "chop"
+ */
 template <int n>
-constexpr auto chop(tensor<double, n> A)
+constexpr auto chop(const tensor<double, n>& A)
 {
   auto copy = A;
   for (int i = 0; i < n; i++) {
@@ -909,9 +1033,9 @@ constexpr auto chop(tensor<double, n> A)
   }
   return copy;
 }
-
+/// @overload
 template <int m, int n>
-constexpr auto chop(tensor<double, m, n> A)
+constexpr auto chop(const tensor<double, m, n>& A)
 {
   auto copy = A;
   for (int i = 0; i < m; i++) {
@@ -924,8 +1048,13 @@ constexpr auto chop(tensor<double, m, n> A)
   return copy;
 }
 
+/**
+ * @brief Constructs a tensor of dual numbers from a tensor of values
+ * @param[in] A The tensor of values
+ * The gradients for each value will be set to 1
+ */
 template <int... n>
-constexpr auto make_dual(tensor<double, n...> A)
+constexpr auto make_dual(const tensor<double, n...>& A)
 {
   tensor<dual<tensor<double, n...>>, n...> A_dual{};
   for_constexpr<n...>([&](auto... i) {
@@ -950,7 +1079,7 @@ struct underlying<double> {
   using type = double;
 };
 
-namespace impl {
+namespace detail {
 
 template <typename T1, typename T2>
 struct outer_prod;
@@ -985,31 +1114,43 @@ struct outer_prod<T, zero> {
   using type = zero;
 };
 
-}  // namespace impl
+}  // namespace detail
 
 template <typename T1, typename T2>
-using outer_product_t = typename impl::outer_prod<T1, T2>::type;
+using outer_product_t = typename detail::outer_prod<T1, T2>::type;
 
-template <typename T, int... n, int... m>
-auto get_value(tensor<dual<T>, n...> arg)
+/**
+ * @brief Retrieves a value tensor from a tensor of dual numbers
+ * @param[in] arg The tensor of dual numbers
+ */
+template <typename T, int... n>
+auto get_value(const tensor<dual<T>, n...>& arg)
 {
   tensor<double, n...> value{};
   for_constexpr<n...>([&](auto... i) { value(i...) = arg(i...).value; });
   return value;
 }
 
+/**
+ * @brief Retrieves the gradient component of a double (which is nothing)
+ * @return The sentinel, @see zero
+ */
 auto get_gradient(double /* arg */) { return zero{}; }
 
+/**
+ * @brief Retrieves a gradient tensor from a tensor of dual numbers
+ * @param[in] arg The tensor of dual numbers
+ */
 template <typename T, int... n>
-auto get_gradient(tensor<dual<double>, n...> arg)
+auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
   for_constexpr<n...>([&](auto... i) { g[{i...}] = arg[{i...}].gradient; });
   return g;
 }
-
+/// @overload
 template <int... n, int... m>
-auto get_gradient(tensor<dual<tensor<double, m...>>, n...> arg)
+auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 {
   tensor<double, n..., m...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
@@ -1033,13 +1174,13 @@ constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */)
 constexpr auto chain_rule(const double df_dx, const double dx) { return df_dx * dx; }
 
 template <int... n>
-constexpr auto chain_rule(const tensor<double, n...> df_dx, const double dx)
+constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
 {
   return df_dx * dx;
 }
 
 template <int... n>
-constexpr auto chain_rule(const tensor<double, n...> df_dx, const tensor<double, n...> dx)
+constexpr auto chain_rule(const tensor<double, n...>& df_dx, const tensor<double, n...>& dx)
 {
   double total{};
   for_constexpr<n...>([&](auto... i) { total += df_dx(i...) * dx(i...); });
@@ -1047,7 +1188,7 @@ constexpr auto chain_rule(const tensor<double, n...> df_dx, const tensor<double,
 }
 
 template <int m, int... n>
-constexpr auto chain_rule(tensor<double, m, n...> df_dx, tensor<double, n...> dx)
+constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<double, n...>& dx)
 {
   tensor<double, m> total{};
   for (int i = 0; i < m; i++) {
@@ -1057,7 +1198,7 @@ constexpr auto chain_rule(tensor<double, m, n...> df_dx, tensor<double, n...> dx
 }
 
 template <int m, int n, int... p>
-auto chain_rule(tensor<double, m, n, p...> df_dx, tensor<double, p...> dx)
+auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p...>& dx)
 {
   tensor<double, m, n> total{};
   for (int i = 0; i < m; i++) {
@@ -1091,3 +1232,5 @@ double output = chain_rule(
   tuple< double, double >
 );
 */
+
+}  // namespace serac

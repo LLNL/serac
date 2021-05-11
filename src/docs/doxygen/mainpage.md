@@ -20,3 +20,7 @@
 * [Solver configuration](@ref solver_config.hpp)
 * [First order ODE solver](@ref serac::mfem_ext::FirstOrderODE)
 * [Second order ODE solver](@ref serac::mfem_ext::SecondOrderODE)
+
+#### Weak Form Interface ####
+
+* [Integral](@ref serac::Integral)

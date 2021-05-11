@@ -3,6 +3,8 @@
 #include <random>
 #include <iostream>
 
+using namespace serac;
+
 auto random_real = [](auto...) {
   static std::default_random_engine             generator;
   static std::uniform_real_distribution<double> distribution(-1.0, 1.0);

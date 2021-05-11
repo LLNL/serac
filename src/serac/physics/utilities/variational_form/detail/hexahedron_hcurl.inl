@@ -1,7 +1,7 @@
 template <int p>
-struct finite_element<::Geometry::Hexahedron, Hcurl<p>> {
-  static constexpr auto geometry   = ::Geometry::Hexahedron;
-  static constexpr auto family     = ::Family::HCURL;
+struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
+  static constexpr auto geometry   = Geometry::Hexahedron;
+  static constexpr auto family     = Family::HCURL;
   static constexpr int  dim        = 3;
   static constexpr int  ndof       = 3 * p * (p + 1) * (p + 1);
   static constexpr int  components = 1;
