@@ -7,15 +7,15 @@
 namespace
 {
     template <typename, template <typename...> typename>
-    struct is_instance_impl : public std::false_type {};
+    struct is_instance_helper : public std::false_type {};
 
     template <template <typename...> typename T, typename...args>
-    struct is_instance_impl<T<args...>, T> : public std::true_type {};
+    struct is_instance_helper<T<args...>, T> : public std::true_type {};
 }
 
 // see https://stackoverflow.com/a/61040973
 template <typename T, template <typename ...> typename U>
-using is_instance = is_instance_impl<std::decay_t<T>, U>;
+using is_instance = is_instance_helper<std::decay_t<T>, U>;
 
 template <class... T>
 constexpr bool always_false = false;
