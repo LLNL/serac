@@ -230,7 +230,9 @@ Some additional resources on the theory and implementation of automatic differen
 are given below:
 
 `Slides on AD Theory <https://www.cs.toronto.edu/~rgrosse/courses/csc321_2018/slides/lec10.pdf>`_
+
 `Article demonstrating how AD applies to a computational graph <https://towardsdatascience.com/automatic-differentiation-explained-b4ba8e60c2ad>`_
+
 `C++ tools and libraries for AD <http://www.autodiff.org/?module=Tools&language=C%2FC%2B%2B>`_
 
 .. _header-n276:
@@ -294,3 +296,109 @@ gradient terms into their own tensors of the appropriate shape:
 
    // extract the gradient
    tensor< double, 3, 3, 3, 3 > sigma_gradients = get_gradient(sigma);
+
+
+.. _header-n276:
+
+Differentiating Functions with Multiple Inputs and Outputs
+===========================================================
+
+Now let's consider a function that has multiple inputs and multiple outputs:
+
+.. code-block:: cpp
+
+   double mu = 1.0;
+   double rho = 2.0;
+   static constexpr auto I = Identity<3>();
+   auto f = [=](auto p, auto v, auto L){ 
+      auto strain_rate = 0.5 * (L + transpose(L));
+      auto stress = - p * I + 2 * mu * strain_rate;
+      auto kinetic_energy_density = 0.5 * p * dot(v, v);
+      return std::tuple{stress, kinetic_energy_density};
+   };
+
+Here, ``f`` calculates the stress, :math:`\sigma`, and local kinetic energy density, :math:`q`, of a fluid in terms of
+the pressure ``p`` (scalar), velocity ``v`` (3-vector), and velocity gradient ``L`` (3x3 matrix).
+So, there are 2 outputs and 3 inputs, resulting in potentially 6 derivatives with different order tensors:
+
+.. math:: 
+
+   \frac{\partial \sigma}{\partial p}, \frac{\partial \sigma}{\partial v}, \frac{\partial \sigma}{\partial L},
+   \frac{\partial q}{\partial p}, \frac{\partial q}{\partial v}, \frac{\partial q}{\partial L}
+
+All of these derivatives can be calculated in a single function invocation by following the same
+pattern as before:
+
+.. code-block:: cpp
+
+   double p = ...;
+   tensor<double,3> v = ...;
+   tensor<double,3,3> L = ...;
+
+   // promote the arguments to dual numbers with make_dual()
+   std::tuple dual_args = make_dual(p, v, L);
+
+   // then call the function with the dual arguments
+   auto outputs = std::apply(f, dual_args);
+
+   // note: std::apply is a way to pass an n-tuple to a function that expects n arguments 
+   // 
+   // i.e. the two following lines have the same effect
+   // f(p, v, L);
+   // std::apply(f, std::tuple{p, v, L});
+
+Like before, ``outputs`` will now contain the actual output values, but also all gradient terms (6, in this case).
+To get the gradient tensors, we call the same ``get_gradient()`` function:
+
+.. code-block:: cpp
+
+   auto gradients = get_gradient(outputs);
+
+The 6 gradient terms for this example can be thought of in a "matrix" where the :math:`i,j` entry is
+the derivative of the :math:`i^{th}` output with respect to the :math:`j^{th}` input:
+
+.. math::
+
+   \bigg[\frac{\partial f_i}{\partial x_j}\bigg]
+   =
+   \begin{bmatrix}
+   \frac{\partial \sigma}{\partial p} & 
+   \frac{\partial \sigma}{\partial v} & 
+   \frac{\partial \sigma}{\partial L}
+   \\
+   \frac{\partial q}{\partial p} & 
+   \frac{\partial q}{\partial v} & 
+   \frac{\partial q}{\partial L}
+   \end{bmatrix}
+
+The type returned by ``get_gradient()`` reflects this structure: returning a ``std::tuple`` of ``std::tuple``.
+So for this example, the return type will be of the form:
+
+.. code-block:: cpp
+
+  std::tuple<
+    std::tuple< df1_dx1_type, df1_dx2_type, df1_dx2_type >, 
+    std::tuple< df2_dx1_type, df2_dx2_type, df2_dx2_type >
+  >;
+
+The individual blocks can be accessed by using ``std::get()``.
+
+One final note: if we look at the actual types contained in ``get_gradient(output)`` we see a few interesting details:
+
+.. code-block:: cpp
+
+   std::tuple<
+     std::tuple<tensor<double, 3, 3>, zero,              tensor<double, 3, 3, 3, 3> >, 
+     std::tuple<zero,                 tensor<double, 3>, zero                       > 
+   > gradients = get_gradient(outputs);
+
+First, the tensor shapes of the individual blocks are are in agreement with what we expect (e.g. 
+:math:`\frac{\partial \sigma}{\partial p}` is 3x3, :math:`\frac{\partial \sigma}{\partial L}` is 3x3x3x3, etc).
+
+And second: some of the derivative blocks seem to be missing! 
+Instead of actual tensors, a mysterious type ``zero`` appears in three of the blocks
+of our derivative. What does that mean?
+
+It means that if we look back at the original definition of our function, we see that the stress tensor does not depend on ``v`` at all.
+Similarly, the kinetic energy density only depends on ``v``, while having no dependence on ``p`` or ``L``. The implementation of the
+``tensor`` and ``dual`` class templates automatically detects and optimizes away unnecessary storage and calculations.

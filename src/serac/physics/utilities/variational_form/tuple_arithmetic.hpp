@@ -153,6 +153,12 @@ constexpr auto operator+(const std::tuple<S...>& A, const std::tuple<T...>& B)
   return detail::plus_helper(A, B, std::make_integer_sequence<int, int(sizeof...(S))>{});
 }
 
+template <typename... S>
+constexpr auto operator+=(std::tuple<S...>& A, const std::tuple<S...>& B)
+{
+  return A = A + B;
+}
+
 template <typename... S, typename... T>
 constexpr auto operator-(const std::tuple<S...>& A, const std::tuple<T...>& B)
 {

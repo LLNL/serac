@@ -87,7 +87,7 @@ public:
     output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
     output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
 
-    my_output_T.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
+    my_output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
     dummy_.SetSize(trial_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
   }
@@ -237,8 +237,8 @@ public:
    */
   mfem::Vector& operator()(const mfem::Vector& input_T) const
   {
-    Evaluation<Operation::Mult>(input_T, my_output_T);
-    return my_output_T;
+    Evaluation<Operation::Mult>(input_T, my_output_T_);
+    return my_output_T_;
   }
 
   /**
@@ -303,34 +303,36 @@ private:
   template <Operation op = Operation::Mult>
   void Evaluation(const mfem::Vector& input_T, mfem::Vector& output_T) const
   {
+
     // get the values for each local processor
     P_trial_->Mult(input_T, input_L_);
 
-    // get the values for each element on the local processor
-    G_trial_->Mult(input_L_, input_E_);
-    G_trial_->Mult(input_L_, input_E_);
+    if (domain_integrals_.size() > 0) {
 
-    // compute residual contributions at the element level and sum them
-    //
-    // note: why should we serialize these integral evaluations?
-    //       these could be performed in parallel and merged in the reduction process
-    //
-    // TODO investigate performance of alternative implementation described above
-    output_E_ = 0.0;
-    for (auto& integral : domain_integrals_) {
-      if constexpr (op == Operation::Mult) {
-        integral.Mult(input_E_, output_E_);
+      // get the values for each element on the local processor
+      G_trial_->Mult(input_L_, input_E_);
+
+      // compute residual contributions at the element level and sum them
+      output_E_ = 0.0;
+      for (auto& integral : domain_integrals_) {
+        if constexpr (op == Operation::Mult) {
+          integral.Mult(input_E_, output_E_);
+        }
+
+        if constexpr (op == Operation::GradientMult) {
+          integral.GradientMult(input_E_, output_E_);
+        }
       }
 
-      if constexpr (op == Operation::GradientMult) {
-        integral.GradientMult(input_E_, output_E_);
-      }
+      // scatter-add to compute residuals on the local processor
+      G_test_->MultTranspose(output_E_, output_L_);
+
     }
 
-    // scatter-add to compute residuals on the local processor
-    G_test_->MultTranspose(output_E_, output_L_);
-
     if (boundary_integrals_.size() > 0) {
+
+      G_trial_boundary_->Mult(input_L_, input_E_boundary_);
+
       output_E_boundary_ = 0.0;
       for (auto& integral : boundary_integrals_) {
         if constexpr (op == Operation::Mult) {
@@ -401,7 +403,7 @@ private:
   /**
    * @brief The set of true DOF values, used as a scratchpad for @p operator()
    */
-  mutable mfem::Vector my_output_T;
+  mutable mfem::Vector my_output_T_;
   /**
    * @brief A working vector for @p GetGradient
    */
