@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
   if (create_input_file_docs) {
     auto writer = std::make_unique<axom::inlet::SphinxWriter>("serac_input.rst");
     inlet.registerWriter(std::move(writer));
-    inlet.writeDoc();
+    inlet.write();
     serac::exitGracefully();
   }
 
