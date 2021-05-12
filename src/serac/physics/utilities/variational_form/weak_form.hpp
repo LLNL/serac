@@ -10,6 +10,21 @@
 
 namespace serac {
 
+#if 1
+// for some reason, mfem doesn't support lexicographic ordering for Nedelec segment elements,
+// so we have to specifically detect this case, and use a different ordering (?)
+auto get_boundary_dof_ordering(mfem::ParFiniteElementSpace* pfes) {
+  const mfem::FiniteElement *fe = pfes->GetFaceElement(0);
+  const bool is_segment = fe->GetGeomType() == mfem::Geometry::SEGMENT;
+  const bool is_hcurl = fe->GetMapType() == mfem::FiniteElement::MapType::H_CURL;
+  if (is_segment && is_hcurl) {
+    return mfem::ElementDofOrdering::NATIVE; 
+  } else {
+    return mfem::ElementDofOrdering::LEXICOGRAPHIC; 
+  }
+}
+#endif
+
 /// @cond
 template <typename T>
 class WeakForm;
@@ -55,6 +70,7 @@ class WeakForm;
  */
 template <typename test, typename trial>
 class WeakForm<test(trial)> : public mfem::Operator {
+
 public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
@@ -67,12 +83,10 @@ public:
         trial_space_(trial_fes),
         P_test_(test_space_->GetProlongationMatrix()),
         G_test_(test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-        G_test_boundary_(
-            test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary)),
+        //G_test_boundary_(test_space_->GetFaceRestriction(get_boundary_dof_ordering(test_fes), mfem::FaceType::Boundary)),
         P_trial_(trial_space_->GetProlongationMatrix()),
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-        G_trial_boundary_(
-            trial_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary)),
+        //G_trial_boundary_(trial_space_->GetFaceRestriction(get_boundary_dof_ordering(trial_fes), mfem::FaceType::Boundary)),
         grad_(*this)
   {
     SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
@@ -80,12 +94,12 @@ public:
 
     input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
     input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
-    input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
+    //input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
 
     output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
-    output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
+    //output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
     output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-    output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+    //output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
 
     my_output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
@@ -329,6 +343,9 @@ private:
 
     }
 
+    #if 0
+    // it seems mfem's limited support in GetFaceRestriction
+    // is preventing us from making progress on the surface integral interface
     if (boundary_integrals_.size() > 0) {
 
       G_trial_boundary_->Mult(input_L_, input_E_boundary_);
@@ -349,6 +366,7 @@ private:
 
       output_L_ += output_L_boundary_;
     }
+    #endif
 
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T);
