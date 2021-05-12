@@ -28,10 +28,12 @@
 .full_build_on_lassen:
   stage: build
   variables:
-    # python3.8 is needed on lassen to avoid trampling on the x86 clingo wheel
-    ALLOC_COMMAND: ml python/3.8 && lalloc 1 -W 45 -q pdebug -G eng
+    ALLOC_COMMAND: lalloc 1 -W 45 -q pdebug -G eng
   extends: [.full_build_script, .on_lassen, .full_workflow]
   needs: []
+  # python3.8 is needed on lassen to avoid trampling on the x86 clingo wheel
+  before_script:
+     - module load python/3.8
 
 ####
 # Build jobs
