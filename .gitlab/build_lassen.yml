@@ -9,38 +9,47 @@
     - if: '$CI_COMMIT_BRANCH =~ /_lnone/ || $ON_LASSEN == "OFF"' #run except if ...
       when: never
     - when: on_success
+  before_script:
+    # python3.8 is needed on lassen to avoid trampling on the x86 clingo wheel
+    - module load python/3.8
+    # Workaround for multiple before_scripts - see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2301
+    # See also https://github.com/LLNL/serac/pull/417#discussion_r631194968
+    - if [[ $CUDA_BUILD == "ON" ]]; then module load cuda/11.1.1; fi
 
 ####
 # Load required CUDA module
 .with_cuda:
-  before_script:
-    - module load cuda/11.1.1
+  variables:
+    CUDA_BUILD: "ON"
 
 ####
 # Template
-.pr_build_on_lassen:
-  stage: l_build
-  extends: [.build_blueos_3_ppc64le_ib_p9_script, .on_lassen, .pr_workflow]
+.src_build_on_lassen:
+  stage: build
+  variables: 
+    ALLOC_COMMAND: lalloc 1 -W 10 -q pdebug -G eng
+  extends: [.src_build_script, .on_lassen, .src_workflow]
   needs: []
 
-.main_build_with_deps_on_lassen:
-  stage: l_build_with_deps
-  extends: [.build_with_deps_blueos_3_ppc64le_ib_p9_script, .on_lassen, .main_workflow]
+.full_build_on_lassen:
+  stage: build
+  variables:
+    ALLOC_COMMAND: lalloc 1 -W 45 -q pdebug -G eng
+  extends: [.full_build_script, .on_lassen, .full_workflow]
   needs: []
 
 ####
 # Build jobs
-clang_10_0_1 (PR build_on_lassen):
+lassen-clang_10_0_1-src:
   variables:
     COMPILER: "clang@10.0.1"
-    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}-cuda.cmake"
-  extends: [.pr_build_on_lassen, .with_cuda]
+    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
+  extends: [.src_build_on_lassen, .with_cuda]
 
-clang_10_0_1 (Main build_with_deps_on_lassen):
+lassen-clang_10_0_1-full:
   variables:
     COMPILER: "clang@10.0.1"
-    SPEC: "@develop+cuda%${COMPILER}"
+    SPEC: "%${COMPILER}+cuda"
     EXTRA_SPEC: "cuda_arch=70"
-    # The "-cuda" at the end of the host-config needs to be hardcoded for now
-    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}-cuda.cmake"
-  extends: [.main_build_with_deps_on_lassen, .with_cuda]
+    HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
+  extends: [.full_build_on_lassen, .with_cuda]

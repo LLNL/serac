@@ -12,3 +12,7 @@
 .wy-nav-content {
   max-width: 1000px !important;
 }
+
+a img.logo {
+    transform: scale(.75)
+}

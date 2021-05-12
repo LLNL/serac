@@ -194,8 +194,9 @@ public:
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] options The solver information parsed from the input file
+   * @param[in] name An optional name for the physics module instance
    */
-  Solid(const InputOptions& options);
+  Solid(const InputOptions& options, const std::string& name = "");
 
   /**
    * @brief Set displacement boundary conditions
