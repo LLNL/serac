@@ -313,6 +313,16 @@ SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, n...>& A, const tenso
   return C;
 }
 
+template <typename T, int... n>
+SERAC_HOST_DEVICE constexpr auto operator-(const tensor<T, n...>& A)
+{
+  tensor<T, n...> B{};
+  for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
+    B[i] = -A[i];
+  }
+  return B;
+}
+
 template <typename S, typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, n...>& A, const tensor<T, n...>& B)
 {
@@ -810,13 +820,13 @@ constexpr auto transpose(const tensor<T, m, n>& A)
  * @param[in] A The matrix to obtain the determinant of
  */
 template <typename T>
-constexpr double det(const tensor<T, 2, 2>& A)
+constexpr auto det(const tensor<T, 2, 2>& A)
 {
   return A[0][0] * A[1][1] - A[0][1] * A[1][0];
 }
 /// @overload
 template <typename T>
-constexpr double det(const tensor<T, 3, 3>& A)
+constexpr auto det(const tensor<T, 3, 3>& A)
 {
   return A[0][0] * A[1][1] * A[2][2] + A[0][1] * A[1][2] * A[2][0] + A[0][2] * A[1][0] * A[2][1] -
          A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2] - A[0][2] * A[1][1] * A[2][0];
@@ -824,8 +834,8 @@ constexpr double det(const tensor<T, 3, 3>& A)
 
 /**
  * @brief Solves Ax = b for x using Gaussian elimination with partial pivoting
- * @param[in] A The matrix A in Ax = b
- * @param[in] b The vector b in Ax = b
+ * @param[in] A The coefficient matrix A
+ * @param[in] b The righthand side vector b
  * @note @a A and @a b are by-value as they are mutated as part of the elimination
  */
 template <typename T, int n>
@@ -893,6 +903,7 @@ constexpr tensor<double, 2, 2> inv(const tensor<double, 2, 2>& A)
 
   return invA;
 }
+
 /**
  * @overload
  * @note Uses a shortcut for inverting a 3-by-3 matrix
@@ -971,6 +982,25 @@ constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
   }
 
   return B;
+}
+
+// hardcode the analytic derivative of the
+// inverse of a square matrix, rather than
+// apply gauss elimination directly on the dual number types
+template <typename gradient_type, int n>
+auto inv(tensor<dual<gradient_type>, n, n> A)
+{
+  auto invA = inv(get_value(A));
+  return make_tensor<n, n>([&](int i, int j) {
+    auto          value = invA[i][j];
+    gradient_type gradient{};
+    for (int k = 0; k < n; k++) {
+      for (int l = 0; l < n; l++) {
+        gradient -= invA[i][k] * A[k][l].gradient * invA[l][j];
+      }
+    }
+    return dual<gradient_type>{value, gradient};
+  });
 }
 
 template <typename T1, int... n1, typename T2, int... n2>
@@ -1148,6 +1178,7 @@ auto get_gradient(const tensor<dual<double>, n...>& arg)
   for_constexpr<n...>([&](auto... i) { g[{i...}] = arg[{i...}].gradient; });
   return g;
 }
+
 /// @overload
 template <int... n, int... m>
 auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)

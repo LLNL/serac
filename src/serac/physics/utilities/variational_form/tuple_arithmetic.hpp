@@ -4,7 +4,7 @@
 // std::tuple< foo, bar > a;
 // std::tuple< baz, qux > b;
 //
-// std::tuple sum1 = a + b; 
+// std::tuple sum1 = a + b;
 // std::tuple sum2{std::get<0>(a) + std::get<0>(b), std::get<1>(a) + std::get<1>(b)};
 
 #pragma once
@@ -60,18 +60,32 @@ constexpr auto minus_helper(const std::tuple<S...>& A, const std::tuple<T...>& B
   return std::make_tuple((std::get<I>(A) - std::get<I>(B))...);
 }
 
-// apply operator* elementwise to entries in two equally-sized tuples
+// apply (entry * scale) to each entry in a tuple
 template <typename... S, typename T, int... I>
 constexpr auto mult_helper(const std::tuple<S...>& A, T scale, std::integer_sequence<int, I...>)
 {
   return std::make_tuple(std::get<I>(A) * scale...);
 }
 
-// apply (scale *) to each entry in a tuple
+// apply (scale * entry) to each entry in a tuple
 template <typename S, typename... T, int... I>
 constexpr auto mult_helper(S scale, const std::tuple<T...>& A, std::integer_sequence<int, I...>)
 {
   return std::make_tuple((scale * std::get<I>(A))...);
+}
+
+// apply (entry / denominator) to each entry in a tuple
+template <typename... S, typename T, int... I>
+constexpr auto div_helper(const std::tuple<S...>& numerators, T denominator, std::integer_sequence<int, I...>)
+{
+  return std::make_tuple(std::get<I>(numerators) / denominator...);
+}
+
+// apply (numerator / entry) to each entry in a tuple
+template <typename S, typename... T, int... I>
+constexpr auto div_helper(S numerator, const std::tuple<T...>& denominators, std::integer_sequence<int, I...>)
+{
+  return std::make_tuple((numerator / std::get<I>(denominators))...);
 }
 
 // promote a double-precision value to a dual number representation that keeps track of
@@ -114,9 +128,9 @@ constexpr auto make_dual_helper(std::tuple<T...> args, std::integer_sequence<int
 // effectively equivalent to
 //
 // std::tuple df{
-//   chain_rule(std::get<0>(df_dx), dx), 
-//   chain_rule(std::get<1>(df_dx), dx), 
-//   chain_rule(std::get<2>(df_dx), dx), 
+//   chain_rule(std::get<0>(df_dx), dx),
+//   chain_rule(std::get<1>(df_dx), dx),
+//   chain_rule(std::get<2>(df_dx), dx),
 //   ...
 // }
 template <typename... T, typename S>
@@ -176,6 +190,18 @@ template <typename S, typename... T>
 constexpr auto operator*(S scale, const std::tuple<T...>& A)
 {
   return detail::mult_helper(scale, A, std::make_integer_sequence<int, int(sizeof...(T))>{});
+}
+
+template <typename... S, typename T>
+constexpr auto operator/(const std::tuple<S...>& numerators, T denominator)
+{
+  return detail::div_helper(numerators, denominator, std::make_integer_sequence<int, int(sizeof...(S))>{});
+}
+
+template <typename S, typename... T>
+constexpr auto operator/(S numerator, const std::tuple<T...>& denominators)
+{
+  return detail::div_helper(numerator, denominators, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 
 /**

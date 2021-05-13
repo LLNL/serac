@@ -50,6 +50,12 @@ constexpr auto operator+(dual<gradient_type_a> a, dual<gradient_type_b> b)
 }
 
 template <typename gradient_type>
+constexpr auto operator-(dual<gradient_type> x)
+{
+  return dual{-x.value, -x.gradient};
+}
+
+template <typename gradient_type>
 constexpr auto operator-(dual<gradient_type> a, double b)
 {
   return dual{a.value - b, a.gradient};
@@ -166,6 +172,12 @@ constexpr auto& operator-=(dual<gradient_type>& a, double b)
 }
 
 template <typename gradient_type>
+auto abs(dual<gradient_type> x)
+{
+  return (x.value > 0) ? x : -x;
+}
+
+template <typename gradient_type>
 auto sqrt(dual<gradient_type> x)
 {
   using std::sqrt;
@@ -236,6 +248,12 @@ template <typename T>
 auto get_value(dual<T> arg)
 {
   return arg.value;
+}
+
+template <typename gradient_type>
+auto get_gradient(dual<gradient_type> arg)
+{
+  return arg.gradient;
 }
 
 template <typename T>

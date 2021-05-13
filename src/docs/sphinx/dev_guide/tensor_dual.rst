@@ -298,7 +298,6 @@ gradient terms into their own tensors of the appropriate shape:
    tensor< double, 3, 3, 3, 3 > sigma_gradients = get_gradient(sigma);
 
 
-.. _header-n276:
 
 Differentiating Functions with Multiple Inputs and Outputs
 ===========================================================
