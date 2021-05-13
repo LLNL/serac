@@ -55,8 +55,6 @@ set(ENABLE_MPI ON CACHE BOOL "")
 # Hardware Specifics
 #------------------------------------------------
 
-set(ENABLE_GTEST_DEATH_TESTS ON CACHE BOOL "")
-
 #------------------------------------------------------------------------------
 # TPLs
 #------------------------------------------------------------------------------
@@ -65,7 +63,7 @@ set(TPL_ROOT "/home/serac/serac_tpls/clang-10.0.0" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.5.1p1" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.1" CACHE PATH "")
 
 set(MFEM_DIR "${TPL_ROOT}/mfem-4.2.0" CACHE PATH "")
 
@@ -85,6 +83,10 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
 # CALIPER not built
 
+# RAJA not built
+
+# UMPIRE not built
+
 #------------------------------------------------------------------------------
 # Devtools
 #------------------------------------------------------------------------------
@@ -96,5 +98,3 @@ set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
 set(ENABLE_CLANGTIDY OFF CACHE BOOL "")
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
-
-
