@@ -19,7 +19,7 @@
 #include "mfem.hpp"
 
 #include "serac/numerics/expr_template_ops.hpp"
-#include "serac/physics/utilities/finite_element_state.hpp"
+
 /**
  * @brief Functionality that extends current MFEM capabilities
  *
@@ -38,32 +38,36 @@ struct index_t<mfem::Array<T>> {
   using type = int;
 };
 
-// methods for determining the size of a container
+// Methods for determining the size of a container
 template <typename T>
-auto size(T container)
+auto size(T&& container)
 {
   return container.size();
 }
 
+/// mfem:Array size call
 template <typename T>
-std::size_t size(mfem::Array<T> container)
+std::size_t size(const mfem::Array<T>& container)
 {
   return container.Size();
 }
 
-// methods for determining type of coefficient evaluations
+// Methods for determining type of coefficient evaluations
+// Returns default POD-type
 template <typename T, typename = void>
-struct eval_t {
+struct eval_result_t {
   using type = T;
 };
 
+// returns return type for mfem::Coefficient
 template <typename T>
-struct eval_t<T, std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T>>> {
+struct eval_result_t<T, std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T>>> {
   using type = double;
 };
 
+// returns return type for mfem::VectorCefficient
 template <typename T>
-struct eval_t<T, std::enable_if_t<std::is_base_of_v<mfem::VectorCoefficient, T>>> {
+struct eval_result_t<T, std::enable_if_t<std::is_base_of_v<mfem::VectorCoefficient, T>>> {
   using type = mfem::Vector;
 };
 
@@ -84,48 +88,57 @@ mfem::Vector eval(mfem::VectorCoefficient& v, mfem::ElementTransformation& Tr, c
   return temp;
 }
 
+template <typename T, typename = void>
+struct is_iterable : std::false_type {
+};
+
+template <typename T>
+struct is_iterable<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>>
+    : std::true_type {
+};
 
 template <typename T, typename = void>
-struct is_iterable : std::false_type {};
-  
-template <typename T>
-struct is_iterable<T, std::void_t<decltype(std::declval<T>().begin()),
-                                  decltype(std::declval<T>().end())>>
-    : std::true_type {};
+struct has_brackets : std::false_type {
+};
 
-template <typename T, typename = void>
-struct has_brackets : std::false_type {};
-  
 template <typename T>
-struct has_brackets<T, std::void_t<decltype(std::declval<T>()[0])>>
-    : std::true_type {};
-  
+struct has_brackets<T, std::void_t<decltype(std::declval<T>()[0])>> : std::true_type {
+};
+
 }  // namespace detail
 
+/**
+ * @brief This namespace provides a set of commonly used "digitizing" functions for convenience.
+ *
+ * The goal of a "digitizing" function is to convert a floating-point number to an integer to be used as an mfem
+ * attribute. Mfem attributes must be integers > 0 (1,2,... etc).
+ */
 namespace digitize {
 /**
  * @brief takes floating point value and rounds down to the nearest integer
  * @param[in] v floating point value
  */
 
-[[maybe_unused]] static int floor(double v) { return static_cast<int>(v); }
+[[maybe_unused]] int floor(double v) { return static_cast<int>(std::floor(v)); }
 
 /**
- * @brief Thresholds a real function so that it is 2 if greater than 0.
+ * @brief Returns 2 if v > 0 and 1 otherwise.
  * @param[in] v floating point value
  */
-[[maybe_unused]] static int threshold(double v) { return v > 0. ? 2 : 1; }
+[[maybe_unused]] int greater_than_zero(double v) { return v > 0. ? 2 : 1; }
 
 /**
  * @brief Checks if floating point value is equal to 1, if return 2 otherwise return 1.
+ * @param[in] v floating point value
  */
-[[maybe_unused]] static int equals1(double v) { return v == 1. ? 2 : 1; }
+[[maybe_unused]] int equals1(double v) { return v == 1. ? 2 : 1; }
 }  // namespace digitize
 
 /**
  * @brief MakeEssList takes in a FESpace, a vector coefficient, and produces a list
  * of essential boundary conditions
  *
+ * @tparam T A mfem::Coefficient or a mfem::VectorCoefficient
  * @param[in] pfes A finite element space for the constrained grid function
  * @param[in] c A coefficient that is projected on to the mesh. All
  * d.o.f's are examined and those that are the condition (> 0.) are appended to
@@ -133,11 +146,11 @@ namespace digitize {
  * @return The list of vector dofs that should be
  * part of the essential boundary conditions
  */
-  template <typename T, typename SFINAE = std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T> ||
-							   std::is_base_of_v<mfem::VectorCoefficient, T>>>
+template <typename T, typename SFINAE = std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T> ||
+                                                         std::is_base_of_v<mfem::VectorCoefficient, T>>>
 mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, T& c)
 {
-  mfem::Array<int> ess_vdof_list(0);
+  mfem::Array<int> ess_vdof_list;
 
   mfem::ParGridFunction v_attr(&pfes);
   v_attr.ProjectCoefficient(c);
@@ -155,17 +168,18 @@ mfem::Array<int> MakeEssList(mfem::ParFiniteElementSpace& pfes, T& c)
  * @brief MakeTrueEssList takes in a FESpace, a vector coefficient, and produces a list
  *  of essential boundary conditions
  *
+ * @tparam T A mfem::Coefficient or a mfem::VectorCoefficient
  * @param[in] pfes A finite element space for the constrained grid function
  * @param[in] c A VectorCoefficient that is projected on to the mesh. All
  * d.o.f's are examined and those that are the condition (> 0.) are appended to
  * the vdof list.
  * @return The list of true dofs that should be part of the essential boundary conditions
  */
-  template <typename T, typename SFINAE = std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T> ||
-							   std::is_base_of_v<mfem::VectorCoefficient, T>>>
+template <typename T, typename SFINAE = std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T> ||
+                                                         std::is_base_of_v<mfem::VectorCoefficient, T>>>
 mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, T& c)
 {
-  mfem::Array<int> ess_tdof_list(0);
+  mfem::Array<int> ess_tdof_list;
 
   mfem::Array<int> ess_vdof_list = MakeEssList(pfes, c);
 
@@ -186,25 +200,28 @@ mfem::Array<int> MakeTrueEssList(mfem::ParFiniteElementSpace& pfes, T& c)
  * This method is useful for creating lists of attributes that correspond to
  * elements in the mesh
  *
- * The template type, T, should have a constructor that takes in the size, and 
+ * @pre The template type, T, should have a constructor that takes in the size, and
  * should have begin() and end() methods.
  *
+ * @pre T must be constructible with an instance of detail::index_t
+ *
+ * @tparam T Return type is either a suitable std collection or mfem::Array
  * @param[in] m The mesh
  * @param[in] c The coefficient provided that will be evaluated on the mesh
- * @param[in] digitize An optional function that can be
- * called to assign attributes based on the value of c at a given projection
- * point. By default, values of c at a given d.o.f that are > 0. are assigned
+ * @param[in] digitize A function mapping coefficient values onto integer attribute values.
+ * By default, values of c at a given point that are greater than zero ( > 0) are assigned
  * attribute 2, otherwise attribute 1.
  * @return An array holding the attributes that correspond to each element
  */
 
 template <typename T>
-T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::threshold)
+T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c,
+                    std::function<int(double)> digitize = digitize::greater_than_zero)
 {
+  static_assert(std::is_constructible<T, typename detail::index_t<T>::type>::value,
+                "T does not have a constructor of type detail::index_t<T>");
+  static_assert(detail::is_iterable<T>::value, "T does not implement begin() and end()");
 
-  static_assert( std::is_constructible<T, typename detail::index_t<T>::type>::value, "T does not have a constructor of type detail::index_t<T>");
-  static_assert( detail::is_iterable<T>::value , "T does not implement begin() and end()");
-  
   mfem::L2_FECollection    l2_fec(0, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &l2_fec);
   T                        attr_list(static_cast<typename detail::index_t<T>::type>(fes.GetNE()));
@@ -222,6 +239,7 @@ T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(doubl
 /**
  * @brief Assign element attributes to mesh
  *
+ * @tparam T a container that implements operator[] and size() or mfem::Array
  * @param[in] m the mesh
  * @param[in] attr_list a list of attributes to assign to the given mesh
  */
@@ -229,8 +247,8 @@ T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(doubl
 template <typename T>
 void AssignMeshElementAttributes(mfem::Mesh& m, T&& list)
 {
-  static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");  
-  
+  static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");
+
   // check to make sure the lists are match the number of elements
   SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNE()),
                 "list size does not match the number of mesh elements");
@@ -248,9 +266,10 @@ void AssignMeshElementAttributes(mfem::Mesh& m, T&& list)
  * This method is useful for creating lists of attributes that correspond to bdr
  * elements in the mesh
  *
- * The template type, T, should have a constructor that takes in the size, and 
+ * @pre The template type, T, should have a constructor that takes in the size, and
  * should have begin() and end() methods.
  *
+ * @tparam T Return type is either a suitable std collection or mfem::Array
  * @param[in] m The mesh
  * @param[in] c The coefficient provided that will be evaluated on the mesh
  * @param[in] digitize An optional function that can be
@@ -264,10 +283,11 @@ void AssignMeshElementAttributes(mfem::Mesh& m, T&& list)
 template <typename T>
 T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(double)> digitize = digitize::equals1)
 {
-  static_assert( std::is_constructible<T, typename detail::index_t<T>::type>::value, "T does not have a constructor of type detail::index_t<T>");
- 
-  static_assert( detail::is_iterable<T>::value , "T does not implement begin() and end()");   
-  
+  static_assert(std::is_constructible<T, typename detail::index_t<T>::type>::value,
+                "T does not have a constructor of type detail::index_t<T>");
+
+  static_assert(detail::is_iterable<T>::value, "T does not implement begin() and end()");
+
   // Need to use H1_fec because boundary elements don't exist in L2
   mfem::H1_FECollection    h1_fec(1, m.SpaceDimension());
   mfem::FiniteElementSpace fes(&m, &h1_fec);
@@ -288,7 +308,7 @@ T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(do
 /**
  * @brief Assign bdr element attributes to mesh
  *
- * T must implement operator[]
+ * @pre T must implement operator[]
  *
  * @param[in] m the mesh
  * @param[in] attr_list a list of attributes to assign to the given mesh
@@ -297,8 +317,8 @@ T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(do
 template <typename T>
 void AssignMeshBdrAttributes(mfem::Mesh& m, T&& list)
 {
-  static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");  
-  
+  static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");
+
   // check to make sure the lists are match the number of elements
   SLIC_ERROR_IF(detail::size(list) != static_cast<std::size_t>(m.GetNBE()),
                 "list size does not match the number of mesh elements");
@@ -321,14 +341,18 @@ public:
   /**
    * @brief This class temporarily changes the attribute during coefficient
    * evaluation based on a given list.
-   * 
-   * T must implement operator[]
    *
+   * @pre T must implement operator[]
+   *
+   * @tparam T A suitable list std collection or mfem::Array
    * @param[in] attr_list A list of attributes values corresponding to the type
    * of coefficient at each element.
    * @param[in] c The coefficient to "modify" the element attributes
    */
-  AttributeModifierCoefficient(const T& attr_list, mfem::Coefficient& c) : attr_list_(attr_list), coef_(c) { static_assert(detail::has_brackets<T>::value, "T does not contain operator[]"); }
+  AttributeModifierCoefficient(const T& attr_list, mfem::Coefficient& c) : attr_list_(attr_list), coef_(c)
+  {
+    static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");
+  }
 
   /**
    * @brief Evaluate the coefficient at a quadrature point
@@ -339,7 +363,6 @@ public:
    */
   double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
   {
-    
     // Store old attribute and change to new attribute
     const int attr = Tr.Attribute;
     Tr.Attribute   = attr_list_[static_cast<typename detail::index_t<T>::type>(Tr.ElementNo)];
@@ -380,8 +403,9 @@ public:
    * @brief This class temporarily changes the attribute during coefficient
    * evaluation based on a given list.
    *
-   * T must implement operator[]
+   * @pre T must implement operator[]
    *
+   * @tparam T A suitable list std collection or mfem::Array
    * @param[in] dim Vector dimensions
    * @param[in] attr_list A list of attributes values corresponding to the type
    * of coefficient at each element.
@@ -390,7 +414,7 @@ public:
   AttributeModifierVectorCoefficient(int dim, const T& attr_list, mfem::VectorCoefficient& c)
       : attr_list_(attr_list), coef_(c), mfem::VectorCoefficient(dim)
   {
-        static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");  
+    static_assert(detail::has_brackets<T>::value, "T does not contain operator[]");
   }
 
   /**
@@ -436,7 +460,7 @@ public:
   /**
    * @brief Apply a vector function, Func, to args_1.... args_n
    *
-   * The arguments must correspond to the function signature of the supplied function:
+   * @pre The arguments must correspond to the function signature of the supplied function:
    * e.g. (mfem::Coefficient -> double), (mfem::VectorCoefficient -> mfem::Vector), or POD-numeric types which return
    * POD-numeric types
    *
@@ -445,10 +469,13 @@ public:
    * @param[in] func A function to apply to the evaluations of all args and return mfem::Vector
    * @param[in[ args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
    */
-  TransformedVectorCoefficient(int dim, std::function<mfem::Vector(typename detail::eval_t<Types>::type&...)> func,
+  TransformedVectorCoefficient(int                                                                          dim,
+                               std::function<mfem::Vector(typename detail::eval_result_t<Types>::type&...)> func,
                                Types&... args)
       : mfem::VectorCoefficient(dim), references_(std::make_tuple(std::ref(args)...)), function_(func)
   {
+    static_assert(std::is_invocable_v<mfem::Vector(typename detail::eval_result_t<Types>::type & ...),
+                                      typename detail::eval_result_t<Types>::type&...>);
   }
 
   /**
@@ -476,7 +503,7 @@ private:
   /**
    * @brief function to return a vector on evaluated arguments
    */
-  std::function<mfem::Vector(typename detail::eval_t<Types>::type&...)> function_;
+  std::function<mfem::Vector(typename detail::eval_result_t<Types>::type&...)> function_;
 };
 
 /**
@@ -488,7 +515,7 @@ public:
   /**
    * @brief Apply a scalar function, Func, to args_1.... args_n
    *
-   * The arguments must correspond to the function signature of the supplied function:
+   * @pre The arguments must correspond to the function signature of the supplied function:
    * e.g. (mfem::Coefficient -> double), (mfem::VectorCoefficient -> mfem::Vector), or POD-numeric types which return
    * POD-numeric types
    *
@@ -496,9 +523,12 @@ public:
    * @param[in] func A function to apply to the evaluations of all args and return double
    * @param[in[ args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
    */
-  TransformedScalarCoefficient(std::function<double(typename detail::eval_t<Types>::type&...)> func, Types&... args)
+  TransformedScalarCoefficient(std::function<double(typename detail::eval_result_t<Types>::type&...)> func,
+                               Types&... args)
       : mfem::Coefficient(), references_(std::make_tuple(std::ref(args)...)), function_(func)
   {
+    static_assert(std::is_invocable_v<double(typename detail::eval_result_t<Types>::type & ...),
+                                      typename detail::eval_result_t<Types>::type&...>);
   }
 
   /**
@@ -524,7 +554,7 @@ private:
   /**
    * @brief function to return a vector on evaluated arguments
    */
-  std::function<double(typename detail::eval_t<Types>::type&...)> function_;
+  std::function<double(typename detail::eval_result_t<Types>::type&...)> function_;
 };
 
 /**

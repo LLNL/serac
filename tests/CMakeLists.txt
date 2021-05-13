@@ -46,11 +46,12 @@ if (ENABLE_GTEST)
     endforeach()
 
 
-    set(coefficent_tests
+    set(utility_tests
+        serac_operator.cpp
         serac_component_bc.cpp
         serac_wrapper_tests.cpp)
 
-    foreach(filename ${coefficent_tests})
+    foreach(filename ${utility_tests})
         get_filename_component(test_name ${filename} NAME_WE)
 
         blt_add_executable(NAME        ${test_name}

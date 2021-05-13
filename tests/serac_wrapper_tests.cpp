@@ -40,7 +40,7 @@ protected:
 
   void TearDown() override {}
 
-  int                                    dim_;
+  int                                          dim_;
   std::shared_ptr<mfem::ParMesh>               pmesh_;
   std::shared_ptr<mfem::ParFiniteElementSpace> pfes_;
   std::shared_ptr<mfem::ParFiniteElementSpace> pfes_v_;
@@ -52,7 +52,8 @@ private:
   std::unique_ptr<mfem::FiniteElementCollection> fec_l2_;
 };
 
-void SolveLinear(std::shared_ptr<mfem::ParFiniteElementSpace> pfes_, mfem::Array<int>& ess_tdof_list, mfem::ParGridFunction& temp)
+void SolveLinear(std::shared_ptr<mfem::ParFiniteElementSpace> pfes_, mfem::Array<int>& ess_tdof_list,
+                 mfem::ParGridFunction& temp)
 {
   mfem::ConstantCoefficient one(1.);
 
@@ -83,7 +84,8 @@ void SolveLinear(std::shared_ptr<mfem::ParFiniteElementSpace> pfes_, mfem::Array
 }
 
 // Solve the same linear system using a newton solver
-void SolveNonlinear(std::shared_ptr<mfem::ParFiniteElementSpace> pfes_, mfem::Array<int>& ess_tdof_list, mfem::ParGridFunction& temp)
+void SolveNonlinear(std::shared_ptr<mfem::ParFiniteElementSpace> pfes_, mfem::Array<int>& ess_tdof_list,
+                    mfem::ParGridFunction& temp)
 {
   mfem::ConstantCoefficient one(1.);
 
@@ -115,7 +117,8 @@ void SolveNonlinear(std::shared_ptr<mfem::ParFiniteElementSpace> pfes_, mfem::Ar
 }
 
 // Solve the same linear system using a newton solver but by using the MixedIntegrator calls
-void SolveMixedNonlinear(std::shared_ptr<mfem::ParFiniteElementSpace> pfes_, mfem::Array<int>& ess_tdof_list, mfem::ParGridFunction& temp)
+void SolveMixedNonlinear(std::shared_ptr<mfem::ParFiniteElementSpace> pfes_, mfem::Array<int>& ess_tdof_list,
+                         mfem::ParGridFunction& temp)
 {
   mfem::ConstantCoefficient one(1.);
 
@@ -165,11 +168,11 @@ TEST_F(WrapperTests, nonlinear_linear_thermal)
 
   // Set x_zero to be attribute 2 and x_one to be attribute 3
   std::vector<int> bdr_attr_list(static_cast<std::size_t>(pfes_->GetNBE()));
-  for (std::size_t be = 0; be < bdr_attr_list.size() ; be++) {
+  for (std::size_t be = 0; be < bdr_attr_list.size(); be++) {
     bdr_attr_list[be] = (bdr_attr_list_zero[be] - 1) + (bdr_attr_list_one[be] - 1) * 2 + 1;
   }
 
-  // Assign attributes 
+  // Assign attributes
   mfem_ext::AssignMeshBdrAttributes(*pmesh_, bdr_attr_list);
 
   mfem::Array<int> bdr_attr_is_ess(3);
@@ -347,7 +350,7 @@ TEST_F(WrapperTests, attribute_modifier_coef)
   mfem::RestrictedCoefficient restrict_coef(three_and_a_half, restrict_to);
 
   // Everything gets converted to 2
-  std::vector<int> modified_attrs(static_cast<std::size_t>(pmesh_->GetNE()), 2);
+  std::vector<int>                       modified_attrs(static_cast<std::size_t>(pmesh_->GetNE()), 2);
   mfem_ext::AttributeModifierCoefficient am_coef(modified_attrs, restrict_coef);
 
   mfem::ParGridFunction gf(pfes_.get());
