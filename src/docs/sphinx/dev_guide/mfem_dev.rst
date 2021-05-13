@@ -4,7 +4,7 @@
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
 ======================
-MFEM development build
+MFEM Development Build
 ======================
 
 Streamlining back-porting features to MFEM
