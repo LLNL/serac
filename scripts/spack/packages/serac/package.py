@@ -57,12 +57,14 @@ class Serac(CachedCMakePackage, CudaPackage):
             description='Build the glvis visualization executable')
     variant('petsc', default=False,
             description='Enable PETSC')
-    # netcdf and sundials variants commented out until a bug in the spack
-    # concretizer is fixed
-    #variant('netcdf', default=True,
-    #        description='Enable Cubit/Genesis reader')
-    #variant('sundials', default=True,
-    #        description='Build MFEM with SUNDIALS nonlinear/ODE solver')
+    variant('netcdf', default=True,
+           description='Enable Cubit/Genesis reader')
+    variant('sundials', default=True,
+            description='Build MFEM TPL with SUNDIALS nonlinear/ODE solver support')
+    variant('umpire',   default=False,
+            description="Build with portable memory access support")
+    variant('raja',     default=False,
+            description="Build with portable kernel execution support")
 
     # -----------------------------------------------------------------------
     # Dependencies
@@ -84,7 +86,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("sundials~shared+hypre+monitoring")
 
     # Libraries that support +debug
-    mfem_variants = "~shared+metis+superlu-dist+lapack+mpi+netcdf+sundials"
+    mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
     debug_deps = ["mfem@4.2.0{0}".format(mfem_variants),
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
@@ -94,15 +96,26 @@ class Serac(CachedCMakePackage, CudaPackage):
     for dep in debug_deps:
         depends_on("{0}".format(dep))
         depends_on("{0}+debug".format(dep), when="+debug")
-    #depends_on("mfem+netcdf", when="+netcdf")
+    depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
+    depends_on("mfem+sundials", when="+sundials")
+    depends_on("sundials~shared", when="+sundials")
+    depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
 
     # Needs to be first due to a bug with the Spack concretizer
     depends_on("hdf5+hl@1.8.21~shared")
 
-    # Libraries that support
+    # Axom enables RAJA/Umpire by default
+    depends_on("axom~raja", when="~raja")
+    depends_on("axom~umpire", when="~umpire")
+    # patch for RAJA#978
+    depends_on("raja@develop~openmp~shared", when="+raja")
+    # Need fix Umpire#541
+    depends_on("umpire@develop~shared", when="+umpire")
+
+    # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom@0.4.0serac~openmp~fortran~raja~umpire+mfem~shared"
+    axom_spec = "axom@0.4.0serac~openmp~fortran+mfem~shared"
     cmake_debug_deps = [axom_spec,
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
@@ -111,11 +124,9 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit@0.5.1p1~shared~python")
-    depends_on("caliper@master~shared+mpi~callpath~adiak~papi", when="+caliper")
+    depends_on("conduit@0.7.1~shared~python")
+    depends_on("caliper@master~shared+mpi~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
-    # Unconditional for now until concretizer fixed
-    depends_on("netcdf-c@4.7.4~shared")
 
     # Libraries that we do not build debug
     depends_on("glvis@3.4~fonts", when='+glvis')
@@ -253,7 +264,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path('SUPERLUDIST_DIR', dep_dir))
 
         # optional tpls
-        for dep in ('petsc', 'caliper'):
+        for dep in ('petsc', 'caliper', 'raja', 'umpire'):
             if spec.satisfies('^{0}'.format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
