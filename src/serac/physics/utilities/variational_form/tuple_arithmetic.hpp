@@ -148,7 +148,7 @@ auto chain_rule_tuple_scale(std::tuple<T...> df_dx, S dx)
 //   chain_rule(std::get<1>(df_dx), std::get<1>(dx)),
 //   chain_rule(std::get<2>(df_dx), std::get<2>(dx)),
 //   ...
-// }  
+// }
 template <typename... T, typename... S, int... i>
 auto chain_rule_tuple_vecvec(std::tuple<T...> df_dx, std::tuple<S...> dx, std::integer_sequence<int, i...>)
 {
@@ -158,12 +158,14 @@ auto chain_rule_tuple_vecvec(std::tuple<T...> df_dx, std::tuple<S...> dx, std::i
 // chain rule between a tuple-of-tuples, and another tuple, kind of like a "matrix vector product"
 // effectively equivalent to
 //
+// clang-format off
 // std::tuple df{
-//   chain_rule(std::get<0>(std::get<0>(df_dx)), std::get<0>(dx)) + chain_rule(std::get<1>(std::get<0>(df_dx)), std::get<1>(dx)) + ... ,
-//   chain_rule(std::get<0>(std::get<1>(df_dx)), std::get<0>(dx)) + chain_rule(std::get<1>(std::get<1>(df_dx)), std::get<1>(dx)) + ... ,
+//   chain_rule(std::get<0>(std::get<0>(df_dx)), std::get<0>(dx)) + chain_rule(std::get<1>(std::get<0>(df_dx)), std::get<1>(dx)) + ... , 
+//   chain_rule(std::get<0>(std::get<1>(df_dx)), std::get<0>(dx)) + chain_rule(std::get<1>(std::get<1>(df_dx)), std::get<1>(dx)) + ... , 
 //   chain_rule(std::get<0>(std::get<2>(df_dx)), std::get<0>(dx)) + chain_rule(std::get<1>(std::get<2>(df_dx)), std::get<1>(dx)) + ... ,
 //   ...
-// } 
+// }
+// clang-format on
 template <typename... T, typename... S>
 auto chain_rule_tuple_matvec(std::tuple<T...> df_dx, std::tuple<S...> dx)
 {
@@ -328,7 +330,7 @@ auto get_gradient(std::tuple<T...> tuple_of_values)
  * @brief entry point for combining derivatives from get_gradient(***) with the chain rule
  * calculates df = df_dx * dx for different possible combinations of tuples-of-tuples, tuples, tensors, and scalars
  * @param[in] df_dx the derivative of some transformation f
- * @param[in] dx a small change in the inputs to the transformation f 
+ * @param[in] dx a small change in the inputs to the transformation f
  */
 template <typename S, typename T>
 auto chain_rule(S df_dx, T dx)
