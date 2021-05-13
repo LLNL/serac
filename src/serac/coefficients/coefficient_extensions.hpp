@@ -115,10 +115,9 @@ struct has_brackets<T, std::void_t<decltype(std::declval<T>()[0])>> : std::true_
  */
 namespace digitize {
 /**
- * @brief takes floating point value and rounds down to the nearest integer
+ * @brief Takes floating point value and rounds down to the nearest integer
  * @param[in] v floating point value
  */
-
 [[maybe_unused]] int floor(double v) { return static_cast<int>(std::floor(v)); }
 
 /**
