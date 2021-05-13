@@ -462,22 +462,26 @@ using trial_space_t = typename detail::get_trial_space<T>::type;
 template <typename space, int geometry_dim, int spatial_dim>
 struct lambda_argument;
 
+// specialization for an H1 space with polynomial order p, and c components
 template <int p, int c, int dim>
 struct lambda_argument<H1<p, c>, dim, dim> {
   using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
 };
 
-// for now, we only provide the interpolated values for surface integrals
+// specialization for an H1 space with polynomial order p, and c components
+// evaluated in a line integral or surface integral. Note: only values are provided in this case
 template <int p, int c, int geometry_dim, int spatial_dim>
 struct lambda_argument<H1<p, c>, geometry_dim, spatial_dim> {
   using type = reduced_tensor<double, c>;
 };
 
+// specialization for an Hcurl space with polynomial order p in 2D
 template <int p>
 struct lambda_argument<Hcurl<p>, 2, 2> {
   using type = std::tuple<tensor<double, 2>, double>;
 };
 
+// specialization for an Hcurl space with polynomial order p in 3D
 template <int p>
 struct lambda_argument<Hcurl<p>, 3, 3> {
   using type = std::tuple<tensor<double, 3>, tensor<double, 3> >;
