@@ -3,6 +3,8 @@
 #include <random>
 #include <iostream>
 
+#include <gtest/gtest.h>
+
 using namespace serac;
 
 auto random_real = [](auto...) {
@@ -17,187 +19,156 @@ static constexpr double mu  = 2.0;
 
 static constexpr double epsilon = 1.0e-6;
 
-constexpr auto sigma = [](auto p, auto v, auto L) { return rho * outer(v, v) + 2.0 * mu * sym(L) - p * I; };
-
-constexpr auto incompressibility = [](auto /*p*/, auto /*v*/, auto L) { return tr(L); };
-
-constexpr auto tuple_func = [](auto p, auto v, auto L) {
-  return std::tuple{rho * outer(v, v) + 2.0 * mu * sym(L) - p * I, v + dot(v, L)};
-};
-
-constexpr auto dsigma_dp = [](auto /*p*/, auto /*v*/, auto /*L*/) { return -1.0 * I; };
-
-constexpr auto dsigma_dv = [](auto /*p*/, auto v, auto /*L*/) {
-  return make_tensor<3, 3, 3>([&](int i, int j, int k) { return rho * ((i == k) * v[j] + (j == k) * v[i]); });
-};
-
-constexpr auto dsigma_dL = [](auto /*p*/, auto /*v*/, auto /*L*/) {
-  return make_tensor<3, 3, 3, 3>(
-      [&](int i, int j, int k, int l) { return mu * ((i == k) * (j == l) + (i == l) * (j == k)); });
-};
-
-void chain_rule_tests()
+TEST(TupleTests, add)
 {
-  static constexpr double p = 3.14;
-  static constexpr tensor v = {{1.0, 2.0, 3.0}};
-  static constexpr tensor L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
-
-  static constexpr double dp = 1.23;
-  static constexpr tensor dv = {{2.0, 1.0, 4.0}};
-  static constexpr tensor dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
-
-  std::cout << "chain rule tests" << std::endl;
-
-  {
-    auto df_dx = make_tensor<>(random_real);
-    auto dx    = make_tensor<>(random_real);
-    auto df    = chain_rule(df_dx, dx);
-    std::cout << df << std::endl;
-  }
-
-  {
-    auto              df_dx = make_tensor<3, 3>(random_real);
-    auto              dx    = make_tensor<3>(random_real);
-    tensor<double, 3> df    = chain_rule(df_dx, dx);
-    std::cout << df << std::endl;
-  }
-
-  {
-    auto   df_dx = make_tensor<3, 3>(random_real);
-    auto   dx    = make_tensor<3, 3>(random_real);
-    double df    = chain_rule(df_dx, dx);
-    std::cout << df << std::endl;
-  }
-
-  {
-    auto                 df_dx = make_tensor<3, 3, 3>(random_real);
-    auto                 dx    = make_tensor<3>(random_real);
-    tensor<double, 3, 3> df    = chain_rule(df_dx, dx);
-    std::cout << df << std::endl;
-  }
-
-  {
-    auto                 df_dx = make_tensor<3, 3, 3, 3>(random_real);
-    auto                 dx    = make_tensor<3, 3>(random_real);
-    tensor<double, 3, 3> df    = chain_rule(df_dx, dx);
-    std::cout << df << std::endl;
-  }
-
-  {
-    auto                                                 df1_dx = make_tensor<3, 3, 3, 3>(random_real);
-    auto                                                 df2_dx = make_tensor<3, 3, 3>(random_real);
-    auto                                                 dx     = make_tensor<3, 3>(random_real);
-    std::tuple<tensor<double, 3, 3>, tensor<double, 3> > df     = chain_rule(std::tuple{df1_dx, df2_dx}, dx);
-
-    std::cout << std::get<0>(df) << std::endl;
-    std::cout << std::get<1>(df) << std::endl;
-  }
-
-  {
-    auto tuple_of_values = std::apply(tuple_func, make_dual(p, v, L));
-
-    auto grad = get_gradient(tuple_of_values);
-
-    auto df0_fd = (sigma(p + epsilon * dp, v + epsilon * dv, L + epsilon * dL) -
-                   sigma(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) /
-                  (2 * epsilon);
-
-    auto df0 = (std::get<0>(std::get<0>(grad)) * dp) + dot(std::get<1>(std::get<0>(grad)), dv) +
-               ddot(std::get<2>(std::get<0>(grad)), dL);
-
-    auto df1 = (std::get<0>(std::get<1>(grad)) * dp) + dot(std::get<1>(std::get<1>(grad)), dv) +
-               ddot(std::get<2>(std::get<1>(grad)), dL);
-
-    auto df_ad = chain_rule(grad, std::tuple{dp, dv, dL});
-
-    std::cout << "comparison with finite difference: ";
-    std::cout << df0 - df0_fd << std::endl;
-
-    std::cout << "comparison with chain_rule: ";
-    std::cout << std::get<0>(df_ad) - df0 << std::endl;
-    std::cout << std::get<1>(df_ad) - df1 << std::endl;
-  }
-
-  {
-    std::tuple<std::tuple<double, zero>, std::tuple<zero, tensor<double, 2, 2> > > df_dx{};
-
-    std::tuple<double, tensor<double, 2> > dx;
-
-    auto df = chain_rule(df_dx, dx);
-
-    std::cout << std::get<0>(df) << std::endl;
-    std::cout << std::get<1>(df) << std::endl;
-  }
+  std::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  std::tuple b = a + a;
+  EXPECT_NEAR(std::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(std::get<1>(b)), 10.39230484541326, 1.0e-10);
+  EXPECT_NEAR(norm(std::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
-int main()
+TEST(TupleTests, subtract)
 {
-  static constexpr double p = 3.14;
-  static constexpr tensor v = {{1.0, 2.0, 3.0}};
-  static constexpr tensor L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+  std::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  std::tuple b = a - a;
+  EXPECT_NEAR(std::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(std::get<1>(b)), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(std::get<2>(b)), 0.0, 1.0e-10);
+}
 
-  constexpr auto exact_dsigma_dp = dsigma_dp(p, v, L);
-  constexpr auto exact_dsigma_dv = dsigma_dv(p, v, L);
-  constexpr auto exact_dsigma_dL = dsigma_dL(p, v, L);
+TEST(TupleTests, multiply)
+{
+  std::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  std::tuple b = 2.0 * a;
+  EXPECT_NEAR(std::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(std::get<1>(b)), 10.39230484541326, 1.0e-10);
+  EXPECT_NEAR(norm(std::get<2>(b)), 2.977782431376876, 1.0e-10);
+}
 
-  auto stress = std::apply(sigma, make_dual(p, v, L));
+TEST(TupleTests, divide)
+{
+  std::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  std::tuple b = a / 0.5;
+  EXPECT_NEAR(std::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(std::get<1>(b)), 10.39230484541326, 1.0e-10);
+  EXPECT_NEAR(norm(std::get<2>(b)), 2.977782431376876, 1.0e-10);
+}
 
-  {
-    auto grad = get_gradient(stress);
-    std::cout << std::get<0>(grad) - exact_dsigma_dp << std::endl;
-    std::cout << std::get<1>(grad) - exact_dsigma_dv << std::endl;
-    std::cout << std::get<2>(grad) - exact_dsigma_dL << std::endl;
-  }
+TEST(ChainRuleTests, scalar_output_with_scalar_input)
+{
+  auto f = [](auto x) { return x * x + 4.0; };
 
-  auto dilatation = std::apply(incompressibility, make_dual(p, v, L));
+  double x  = 1.36;
+  double dx = 1.0;
 
-  {
-    std::cout << "dilatation derivatives:" << std::endl;
-    auto grad = get_gradient(dilatation);
-    std::cout << std::get<0>(grad) << std::endl;
-    std::cout << std::get<1>(grad) << std::endl;
-    std::cout << std::get<2>(grad) << std::endl;
-  }
+  auto output = f(make_dual(x));
 
-  auto tuple_of_values = std::apply(tuple_func, make_dual(p, v, L));
+  auto fx   = get_value(output);
+  auto dfdx = get_gradient(output);
 
-  {
-    // std::tuple<
-    //  tensor<double, 3, 3>,
-    //  tensor<double, 3>
-    //>
-    auto value = get_value(tuple_of_values);
+  EXPECT_NEAR(f(x), fx, 1.e-13);
+  EXPECT_NEAR((f(x + epsilon * dx) - f(x)) / epsilon, chain_rule(dfdx, dx), 1.e-6);
+}
 
-    std::cout << "matrix:" << std::endl;
-    std::cout << std::get<0>(value) << std::endl;
+TEST(ChainRuleTests, vector_output_with_vector_input)
+{
+  auto f = [](auto x) {
+    auto tmp = norm(x) * x;
+    tmp[0] -= 3.0;
+    return tmp;
+  };
 
-    std::cout << "matrix errors:" << std::endl;
-    std::cout << std::get<0>(value) - sigma(p, v, L) << std::endl;
+  auto x  = make_tensor<3>(random_real);
+  auto dx = make_tensor<3>(random_real);
 
-    std::cout << "vector:" << std::endl;
-    std::cout << std::get<1>(value) << std::endl;
+  auto output = f(make_dual(x));
 
-    // std::tuple<
-    //  std::tuple<tensor<double, 3, 3>, tensor<double, 3, 3, 3>, tensor<double, 3, 3, 3, 3> >,
-    //  std::tuple<zero, zero, tensor<double, 3, 3> >
-    //>
-    auto grad = get_gradient(tuple_of_values);
+  auto value = get_value(output);
+  auto dfdx  = get_gradient(output);
 
-    std::cout << "matrix derivatives:" << std::endl;
-    std::cout << std::get<0>(std::get<0>(grad)) << std::endl;
-    std::cout << std::get<1>(std::get<0>(grad)) << std::endl;
-    std::cout << std::get<2>(std::get<0>(grad)) << std::endl;
+  EXPECT_NEAR(norm(f(x) - value), 0.0, 1.e-13);
+  EXPECT_NEAR(norm(((f(x + epsilon * dx) - f(x)) / epsilon) - chain_rule(dfdx, dx)), 0.0, 1.e-6);
+}
 
-    std::cout << "matrix derivative errors:" << std::endl;
-    std::cout << std::get<0>(std::get<0>(grad)) - exact_dsigma_dp << std::endl;
-    std::cout << std::get<1>(std::get<0>(grad)) - exact_dsigma_dv << std::endl;
-    std::cout << std::get<2>(std::get<0>(grad)) - exact_dsigma_dL << std::endl;
+TEST(ChainRuleTests, matrix_output_with_matrix_input)
+{
+  auto f = [](auto x) { return inv(x + I) - x; };
 
-    std::cout << "vector derivatives:" << std::endl;
-    std::cout << std::get<0>(std::get<1>(grad)) << std::endl;
-    std::cout << std::get<1>(std::get<1>(grad)) << std::endl;
-    std::cout << std::get<2>(std::get<1>(grad)) << std::endl;
-  }
+  auto x  = make_tensor<3, 3>(random_real);
+  auto dx = make_tensor<3, 3>(random_real);
 
-  chain_rule_tests();
+  auto output = f(make_dual(x));
+
+  auto value = get_value(output);
+  auto dfdx  = get_gradient(output);
+
+  EXPECT_NEAR(norm(f(x) - value), 0.0, 1.e-13);
+  EXPECT_NEAR(norm(((f(x + epsilon * dx) - f(x - epsilon * dx)) / (2 * epsilon)) - chain_rule(dfdx, dx)), 0.0, 1.e-8);
+}
+
+TEST(ChainRuleTests, scalar_output_with_matrix_input)
+{
+  auto f = [](auto x) { return tr(x) * det(x); };
+
+  auto x  = make_tensor<3, 3>(random_real);
+  auto dx = make_tensor<3, 3>(random_real);
+
+  auto output = f(make_dual(x));
+
+  auto value = get_value(output);
+  auto dfdx  = get_gradient(output);
+
+  EXPECT_NEAR(f(x) - value, 0.0, 1.e-13);
+  EXPECT_NEAR(((f(x + epsilon * dx) - f(x)) / epsilon) - chain_rule(dfdx, dx), 0.0, 1.e-6);
+}
+
+TEST(ChainRuleTests, tuple_output_with_tuple_input)
+{
+  constexpr auto f = [](auto p, auto v, auto L) {
+    return std::tuple{rho * outer(v, v) + 2.0 * mu * sym(L) - p * I, v + dot(v, L)};
+  };
+
+  constexpr double p = 3.14;
+  constexpr tensor v = {{1.0, 2.0, 3.0}};
+  constexpr tensor L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+
+  constexpr double dp = 1.23;
+  constexpr tensor dv = {{2.0, 1.0, 4.0}};
+  constexpr tensor dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
+
+  auto output = std::apply(f, make_dual(p, v, L));
+
+  auto value = get_value(output);
+  auto grad  = get_gradient(output);
+
+  auto df_fd = (f(p + epsilon * dp, v + epsilon * dv, L + epsilon * dL) -
+                f(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) /
+               (2 * epsilon);
+
+  auto df0 = (std::get<0>(std::get<0>(grad)) * dp) + dot(std::get<1>(std::get<0>(grad)), dv) +
+             ddot(std::get<2>(std::get<0>(grad)), dL);
+
+  auto df1 = (std::get<0>(std::get<1>(grad)) * dp) + dot(std::get<1>(std::get<1>(grad)), dv) +
+             ddot(std::get<2>(std::get<1>(grad)), dL);
+
+  auto df_ad = chain_rule(grad, std::tuple{dp, dv, dL});
+
+  EXPECT_NEAR(norm(std::get<0>(f(p, v, L)) - std::get<0>(value)), 0.0, 1.e-13);
+  EXPECT_NEAR(norm(std::get<1>(f(p, v, L)) - std::get<1>(value)), 0.0, 1.e-13);
+
+  EXPECT_NEAR(norm(std::get<0>(df_ad) - df0), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(std::get<1>(df_ad) - df1), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(std::get<0>(df_ad) - std::get<0>(df_fd)), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(std::get<1>(df_ad) - std::get<1>(df_fd)), 0.0, 1.e-8);
+}
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
