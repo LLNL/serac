@@ -56,6 +56,16 @@
  * Sets metadata in caliper file. Calls serac::profiling::detail::setCaliperMetadata
  */
 
+/**
+ * @def SERAC_PROFILE_SCOPE(name)
+ * Uses cali::ScopeAnnotation to profile a particular scope
+ */
+
+/**
+ * @def SERAC_PROFILE_EXPR(name)
+ * Profiles a single expression using a cali::ScopeAnnotation internally.
+ */
+
 #ifdef SERAC_USE_CALIPER
 
 #define SERAC_MARK_FUNCTION CALI_CXX_MARK_FUNCTION
