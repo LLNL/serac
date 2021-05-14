@@ -400,4 +400,5 @@ of our derivative. What does that mean?
 
 It means that if we look back at the original definition of our function, we see that the stress tensor does not depend on ``v`` at all.
 Similarly, the kinetic energy density only depends on ``v``, while having no dependence on ``p`` or ``L``. The implementation of the
-``tensor`` and ``dual`` class templates automatically detects and optimizes away unnecessary storage and calculations.
+``tensor`` and ``dual`` class templates automatically detects and optimizes away unnecessary storage and calculations associated with
+these derivative blocks that are identically zero.

@@ -19,6 +19,11 @@
 #include "serac/physics/utilities/variational_form/finite_element.hpp"
 #include "serac/physics/utilities/variational_form/tuple_arithmetic.hpp"
 
+// For now, mfem's support for getting surface element information (dof values, jacobians, etc)
+// is lacking, making it difficult to actually implement surface integrals on our end
+//
+// #define ENABLE_BOUNDARY_INTEGRALS
+
 namespace serac {
 
 namespace detail {

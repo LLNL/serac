@@ -10,7 +10,7 @@
 
 namespace serac {
 
-#if 1
+#ifdef ENABLE_BOUNDARY_INTEGRALS
 // for some reason, mfem doesn't support lexicographic ordering for Nedelec segment elements,
 // so we have to specifically detect this case, and use a different ordering (?)
 auto get_boundary_dof_ordering(mfem::ParFiniteElementSpace* pfes)
@@ -83,12 +83,12 @@ public:
         trial_space_(trial_fes),
         P_test_(test_space_->GetProlongationMatrix()),
         G_test_(test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-        // G_test_boundary_(test_space_->GetFaceRestriction(get_boundary_dof_ordering(test_fes),
-        // mfem::FaceType::Boundary)),
+        #ifdef ENABLE_BOUNDARY_INTEGRALS
+        G_test_boundary_(test_space_->GetFaceRestriction(get_boundary_dof_ordering(test_fes), mfem::FaceType::Boundary)),
+        G_trial_boundary_(trial_space_->GetFaceRestriction(get_boundary_dof_ordering(trial_fes), mfem::FaceType::Boundary)),
+        #endif
         P_trial_(trial_space_->GetProlongationMatrix()),
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-        // G_trial_boundary_(trial_space_->GetFaceRestriction(get_boundary_dof_ordering(trial_fes),
-        // mfem::FaceType::Boundary)),
         grad_(*this)
   {
     SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
@@ -96,12 +96,15 @@ public:
 
     input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
     input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
-    // input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
 
     output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
-    // output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
     output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-    // output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+
+    #ifdef ENABLE_BOUNDARY_INTEGRALS
+    input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
+    output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
+    output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+    #endif
 
     my_output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
@@ -138,7 +141,9 @@ public:
       domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{},
                                      Dimension<spatial_dim>{}, integrand);
       return;
-    } else if constexpr ((geometry_dim + 1) == spatial_dim) {
+    } 
+    #ifdef ENABLE_BOUNDARY_INTEGRALS 
+    else if constexpr ((geometry_dim + 1) == spatial_dim) {
       // TODO: fix mfem::FaceGeometricFactors
       constexpr bool always_false = (geometry_dim == spatial_dim);
       static_assert(always_false,
@@ -164,7 +169,10 @@ public:
       boundary_integrals_.emplace_back(num_boundary_elements, geom->J, geom->X, Dimension<geometry_dim>{},
                                        Dimension<spatial_dim>{}, integrand);
       return;
-    } else {
+    } 
+    #endif
+    
+    else {
       // if static_assert has a literal 'false' for its first arg,
       // it will trigger even when this branch isn't selected. So,
       // we define an expression that is always false (see first
@@ -211,6 +219,7 @@ public:
     AddIntegral(Dimension<d>{} /* geometry */, Dimension<d>{} /* spatial */, integrand, domain);
   }
 
+  #ifdef ENABLE_BOUNDARY_INTEGRALS
   /**
    * @brief Adds a surface integral, i.e., over 2D elements in R^3 space
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
@@ -222,6 +231,7 @@ public:
   {
     AddIntegral(Dimension<2>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain);
   }
+  #endif
 
   /**
    * @brief Implements mfem::Operator::Mult
@@ -342,9 +352,7 @@ private:
       G_test_->MultTranspose(output_E_, output_L_);
     }
 
-#if 0
-    // it seems mfem's limited support in GetFaceRestriction
-    // is preventing us from making progress on the surface integral interface
+    #ifdef ENABLE_BOUNDARY_INTEGRALS
     if (boundary_integrals_.size() > 0) {
 
       G_trial_boundary_->Mult(input_L_, input_E_boundary_);
@@ -365,7 +373,7 @@ private:
 
       output_L_ += output_L_boundary_;
     }
-#endif
+    #endif
 
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T);
@@ -393,29 +401,31 @@ private:
   mutable mfem::Vector output_L_;
 
   /**
-   * @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
-   */
-  mutable mfem::Vector output_L_boundary_;
-
-  /**
    * @brief The input set of per-element DOF values
    */
   mutable mfem::Vector input_E_;
-
-  /**
-   * @brief The input set of per-boundaryelement DOF values
-   */
-  mutable mfem::Vector input_E_boundary_;
 
   /**
    * @brief The output set of per-element DOF values
    */
   mutable mfem::Vector output_E_;
 
+  #ifdef ENABLE_BOUNDARY_INTEGRALS
+  /**
+   * @brief The input set of per-boundaryelement DOF values
+   */
+  mutable mfem::Vector input_E_boundary_;
+
   /**
    * @brief The output set of per-boundary-element DOF values
    */
   mutable mfem::Vector output_E_boundary_;
+
+  /**
+   * @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
+   */
+  mutable mfem::Vector output_L_boundary_
+  #endif
 
   /**
    * @brief The set of true DOF values, used as a scratchpad for @p operator()
@@ -454,12 +464,6 @@ private:
   const mfem::Operator* G_test_;
 
   /**
-   * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
-   * for the test space
-   */
-  const mfem::Operator* G_test_boundary_;
-
-  /**
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
    * for the trial space
    */
@@ -471,21 +475,31 @@ private:
    */
   const mfem::Operator* G_trial_;
 
+  #ifdef ENABLE_BOUNDARY_INTEGRALS
+  /**
+   * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
+   * for the test space
+   */
+  const mfem::Operator* G_test_boundary_;
+
   /**
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
    * for the trial space
    */
   const mfem::Operator* G_trial_boundary_;
+  #endif
 
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
   std::vector<Integral<test(trial)> > domain_integrals_;
 
+  #ifdef ENABLE_BOUNDARY_INTEGRALS
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
   std::vector<Integral<test(trial)> > boundary_integrals_;
+  #endif
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
