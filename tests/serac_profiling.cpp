@@ -70,6 +70,27 @@ TEST(serac_profiling, mesh_refinement)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+TEST(serac_profiling, exception)
+{
+  // profile mesh refinement
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initializeCaliper();
+
+  {
+    SERAC_PROFILE_SCOPE("Non-exceptionScope");
+    try {
+      SERAC_PROFILE_SCOPE("Exception scope");
+      throw std::runtime_error("Caliper to verify RAII");
+    } catch (std::exception& e) {
+      std::cout << e.what() << "\n";
+    }
+  }
+
+  serac::profiling::terminateCaliper();
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
 }  // namespace serac
 
 //------------------------------------------------------------------------------
