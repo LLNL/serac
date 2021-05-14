@@ -68,23 +68,12 @@
 
 #define SERAC_CONCAT_(a, b) a##b
 #define SERAC_CONCAT(a, b) SERAC_CONCAT_(a, b)
-#define SERAC_PROFILE_REGION2(name)         \
-  if (1) {                                  \
-    SERAC_MARK_START(name);                 \
-    goto SERAC_CONCAT(generated, __LINE__); \
-  } else                                    \
-    while (1)                               \
-      if (1) {                              \
-        SERAC_MARK_END(name);               \
-        break;                              \
-      } else                                \
-        SERAC_CONCAT(generated, __LINE__) :
 
-#define SERAC_PROFILE_REGION(name) serac::profiling::detail::Region SERAC_CONCAT(region, __LINE__)(name)
+#define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name)
 
 #define SERAC_PROFILE_EXPR(name, expr)                                            \
   [&]() -> typename serac::profiling::detail::expr_t<decltype(expr)>::expr_type { \
-    const serac::profiling::detail::Region SERAC_CONCAT(region, __LINE__)(name);  \
+    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name);             \
     return expr;                                                                  \
   }()
 
@@ -98,8 +87,7 @@
 #define SERAC_MARK_START(name)
 #define SERAC_MARK_END(name)
 #define SERAC_SET_METADATA(name, data)
-#define SERAC_PROFILE_REGION(name)
-#define SERAC_PROFILE_REGION2(name)
+#define SERAC_PROFILE_SCOPE(name)
 #define SERAC_PROFILE_EXPR(name, expr) expr
 
 #endif
@@ -167,25 +155,6 @@ void endCaliperRegion(const char* name);
   @overload
 */
 void endCaliperRegion(const std::string& name);
-
-// Profile a region of code
-class Region {
-public:
-  /**
-   * @brief Profile a region of code using a specific tag name with caliper
-   *
-   * When the object is instantiated it calls SERAC_MARK_START(name)
-   * When this region goes out of scope, it will call SERAC_MARK_END(name)
-   *
-   * @param[in] name tag name for this region
-   */
-  Region(const std::string& name) : name_(name) { SERAC_MARK_START(name_); }
-
-  ~Region() { SERAC_MARK_END(name_); }
-
-protected:
-  std::string name_;
-};
 
 template <typename T>
 struct expr_t {

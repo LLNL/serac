@@ -22,13 +22,11 @@ TEST(serac_profiling, mesh_refinement)
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initializeCaliper();
 
-  SERAC_MARK_START("LOAD_MESH");
-
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/bortel_echem.e";
 
-  SERAC_MARK_END("LOAD_MESH");
-
-  auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 0, 0);
+  SERAC_MARK_START("RefineAndLoadMesh");
+  auto pmesh = mesh::refineAndDistribute(SERAC_PROFILE_EXPR("LOAD_MESH", buildMeshFromFile(mesh_file)), 0, 0);
+  SERAC_MARK_END("RefineAndLoadMesh");
 
   SERAC_MARK_LOOP_START(refinement_loop, "refinement_loop");
   for (int i = 0; i < 2; i++) {
@@ -36,6 +34,12 @@ TEST(serac_profiling, mesh_refinement)
     pmesh->UniformRefinement();
   }
   SERAC_MARK_LOOP_END(refinement_loop);
+
+  // Refine once more and utilize SERAC_PROFILE_SCOPE
+  {
+    SERAC_PROFILE_SCOPE("RefineOnceMore");
+    pmesh->UniformRefinement();
+  }
 
   SERAC_SET_METADATA("mesh_file", mesh_file.c_str());
   SERAC_SET_METADATA("number_mesh_elements", pmesh->GetNE());
