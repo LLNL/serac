@@ -21,7 +21,7 @@ where :math:`\psi` are the test basis functions. To describe this
 residual using ``WeakForm``, we first create the object itself, providing a
 template parameter that expresses the test and trial spaces (i.e. the
 "inputs" and "outputs" of the residual function, :math:`r`). In this
-case, solid mechanics uses H1 test and trial spaces, so we write:
+case, solid mechanics uses nodal displacements and residuals (i.e. H1 test and trial spaces), so we write:
 
 .. code-block:: cpp
 
