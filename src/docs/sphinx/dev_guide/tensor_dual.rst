@@ -395,7 +395,7 @@ One final note: if we look at the actual types contained in ``get_gradient(outpu
 First, the tensor shapes of the individual blocks are are in agreement with what we expect (e.g. 
 :math:`\frac{\partial \sigma}{\partial p}` is 3x3, :math:`\frac{\partial \sigma}{\partial L}` is 3x3x3x3, etc).
 
-And second: some of the derivative blocks seem to be missing! 
+Second, some of the derivative blocks seem to be missing! 
 Instead of actual tensors, a mysterious type ``zero`` appears in three of the blocks
 of our derivative. What does that mean?
 
