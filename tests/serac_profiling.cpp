@@ -24,9 +24,12 @@ TEST(serac_profiling, mesh_refinement)
 
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/bortel_echem.e";
 
-  SERAC_MARK_START("RefineAndLoadMesh");
+  // the following string is a proxy for templated test names
+  std::string test_name = "_profiling";
+
+  SERAC_MARK_START(profiling::concat("RefineAndLoadMesh", test_name).c_str());
   auto pmesh = mesh::refineAndDistribute(SERAC_PROFILE_EXPR("LOAD_MESH", buildMeshFromFile(mesh_file)), 0, 0);
-  SERAC_MARK_END("RefineAndLoadMesh");
+  SERAC_MARK_END(profiling::concat("RefineAndLoadMesh", test_name).c_str());
 
   SERAC_MARK_LOOP_START(refinement_loop, "refinement_loop");
   for (int i = 0; i < 2; i++) {

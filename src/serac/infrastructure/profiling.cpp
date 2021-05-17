@@ -86,13 +86,6 @@ void startCaliperRegion([[maybe_unused]] const char* name)
 #endif
 }
 
-// void startCaliperRegion([[maybe_unused]] const std::string& name)
-// {
-// #ifdef SERAC_USE_CALIPER
-//   CALI_MARK_BEGIN(name.c_str());
-// #endif
-// }
-
 void endCaliperRegion([[maybe_unused]] const char* name)
 {
 #ifdef SERAC_USE_CALIPER
@@ -100,12 +93,6 @@ void endCaliperRegion([[maybe_unused]] const char* name)
 #endif
 }
 
-// void endCaliperRegion([[maybe_unused]] const std::string& name)
-// {
-// #ifdef SERAC_USE_CALIPER
-//   CALI_MARK_END(name.c_str());
-// #endif
-// }
 }  // namespace detail
 
 }  // namespace serac::profiling

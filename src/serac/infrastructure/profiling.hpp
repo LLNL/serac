@@ -13,6 +13,7 @@
 #pragma once
 
 #include <string>
+#include <sstream>
 
 #include "serac/serac_config.hpp"
 
@@ -81,10 +82,10 @@
 
 #define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name)
 
-#define SERAC_PROFILE_EXPR(name, expr)                                            \
-  [&]() -> std::type_identity_t<decltype(expr)> {			\
-    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name);             \
-    return expr;                                                                  \
+#define SERAC_PROFILE_EXPR(name, expr)                                 \
+  [&]() -> serac::profiling::detail::type_identity_t<decltype(expr)> { \
+    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name);  \
+    return expr;                                                       \
   }()
 
 #else  // SERAC_USE_CALIPER not defined
@@ -149,11 +150,6 @@ void setCaliperMetadata(const std::string& name, unsigned int data);
  */
 void startCaliperRegion(const char* name);
 
-// /*!
-//   @overload
-// */
-// void startCaliperRegion(const std::string& name);
-
 /**
  * @brief Caliper methods for marking the end of a region
  *
@@ -161,11 +157,23 @@ void startCaliperRegion(const char* name);
  */
 void endCaliperRegion(const char* name);
 
-// /*!
-//   @overload
-// */
-// void endCaliperRegion(const std::string& name);
+template <class T>
+struct type_identity {
+  using type = T;
+};
+
+template <class T>
+using type_identity_t = typename type_identity<T>::type;
 
 }  // namespace detail
+
+/// Produces a string by applying << to all arguments
+template <typename... T>
+std::string concat(T... args)
+{
+  std::stringstream ss;
+  (ss << ... << args);
+  return ss.str();
+}
 
 }  // namespace serac::profiling
