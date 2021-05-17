@@ -5,7 +5,7 @@ Tensor Class
 ============
 
 ``tensor`` is a class template for doing arithmetic on small,
-statically-sized vectors, matrices and tensors. To create one, specify
+statically-sized vectors, matrices, and tensors. To create one, specify
 the underlying type in the first template argument, followed by a list
 of integers for the shape. For example, ``tensor<float,3,2,4>`` is
 conceptually similar to the type ``float[3][2][4]``.
