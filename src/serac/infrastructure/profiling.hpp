@@ -82,7 +82,7 @@
 #define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name)
 
 #define SERAC_PROFILE_EXPR(name, expr)                                            \
-  [&]() -> typename serac::profiling::detail::expr_t<decltype(expr)>::expr_type { \
+  [&]() -> std::type_identity_t<decltype(expr)> {			\
     const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name);             \
     return expr;                                                                  \
   }()
@@ -149,10 +149,10 @@ void setCaliperMetadata(const std::string& name, unsigned int data);
  */
 void startCaliperRegion(const char* name);
 
-/*!
-  @overload
-*/
-void startCaliperRegion(const std::string& name);
+// /*!
+//   @overload
+// */
+// void startCaliperRegion(const std::string& name);
 
 /**
  * @brief Caliper methods for marking the end of a region
@@ -161,15 +161,10 @@ void startCaliperRegion(const std::string& name);
  */
 void endCaliperRegion(const char* name);
 
-/*!
-  @overload
-*/
-void endCaliperRegion(const std::string& name);
-
-template <typename T>
-struct expr_t {
-  using expr_type = T;
-};
+// /*!
+//   @overload
+// */
+// void endCaliperRegion(const std::string& name);
 
 }  // namespace detail
 
