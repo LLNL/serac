@@ -280,7 +280,7 @@ compute these derivatives automatically:
    tensor< dual< tensor< double, 3, 3 > >, 3, 3 > sigma = stress(make_dual(epsilon));
 
 Now, ``sigma`` contains value and gradient information that can be
-understood in the following way
+understood in the following way:
 
 .. math:: \texttt{sigma[i][j].value} = \sigma_{ij} \qquad \texttt{sigma[i][j].gradient[k][l]} = \frac{\partial \sigma_{ij}}{\partial \epsilon_{kl}}
 
