@@ -51,7 +51,7 @@ quartz_release:
   needs: []
   before_script:
     # LC version of pip is ancient
-    - python3 -m pip install --user --upgrade pip
+    - if [[ $(python3 -c 'import pip; print(pip.__version__ < "19.3")') == "True" ]]; then python3 -m pip install --user --upgrade pip; fi
 
 ####
 # Build jobs
