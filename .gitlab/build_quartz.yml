@@ -49,6 +49,9 @@ quartz_release:
     ALLOC_COMMAND: "srun -p pdebug -A eng -t 45 -N 1"
   extends: [.full_build_script, .on_quartz, .full_workflow]
   needs: []
+  before_script:
+    # LC version of pip is ancient
+    - python3 -m pip install --user --upgrade pip
 
 ####
 # Build jobs
