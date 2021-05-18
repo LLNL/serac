@@ -82,10 +82,16 @@
 
 #define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name)
 
-#define SERAC_PROFILE_EXPR(name, expr)                                 \
-  [&]() -> serac::profiling::detail::type_identity_t<decltype(expr)> { \
-    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name);  \
-    return expr;                                                       \
+template <typename T>
+auto&& forwarder(T&& thing)
+{
+  return std::forward<T>(thing);
+}
+
+#define SERAC_PROFILE_EXPR(name, expr)                                \
+  [&]() -> decltype(forwarder(expr)) {                                \
+    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name); \
+    return forwarder(expr);                                           \
   }()
 
 #else  // SERAC_USE_CALIPER not defined

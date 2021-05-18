@@ -94,6 +94,22 @@ TEST(serac_profiling, exception)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+struct MoveOnly {
+  MoveOnly()                = default;
+  MoveOnly(const MoveOnly&) = delete;
+  MoveOnly(MoveOnly&&)      = delete;
+};
+
+TEST(serac_profiling, expr_reference)
+{
+  MoveOnly m;
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initializeCaliper();
+  MoveOnly& m2 = SERAC_PROFILE_EXPR("reference_assign", m);
+  serac::profiling::terminateCaliper();
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
 }  // namespace serac
 
 //------------------------------------------------------------------------------
