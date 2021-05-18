@@ -1,5 +1,6 @@
 .. _header-n0:
 
+============
 Tensor Class
 ============
 
@@ -115,7 +116,7 @@ Here are some examples and features:
 .. _header-n157:
 
 Dual Number Class
-=================
+-----------------
 
 ``dual`` is a class template that behaves like a floating point value,
 but also stores information about derivatives. For example, say we have
@@ -238,7 +239,7 @@ are given below:
 .. _header-n276:
 
 Using ``tensor`` and ``dual`` together
-======================================
+--------------------------------------
 
 In the previous example, :math:`f` was a function with a scalar input
 and scalar output. In practice, most of the functions we care about are
@@ -300,7 +301,7 @@ gradient terms into their own tensors of the appropriate shape:
 
 
 Differentiating Functions with Multiple Inputs and Outputs
-===========================================================
+-----------------------------------------------------------
 
 Now let's consider a function that has multiple inputs and multiple outputs:
 

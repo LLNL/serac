@@ -1,5 +1,6 @@
 .. _header-n2:
 
+=========
 Weak Form
 =========
 
@@ -156,7 +157,7 @@ element kernels!
 .. _header-n34:
 
 Implementation
-==============
+--------------
 
 For the most part, the ``WeakForm`` class is just a container of
 ``Integral`` objects, and some prolongation and restriction operators to
