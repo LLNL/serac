@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -17,3 +17,6 @@ install(
     DESTINATION
         examples/using-with-cmake
 )
+
+# Add the simple conduction examples
+add_subdirectory(simple_conduction)

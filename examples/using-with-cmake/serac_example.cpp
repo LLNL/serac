@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -20,13 +20,13 @@
 
 int main(int argc, char* argv[])
 {
-  auto [num_procs, rank] = serac::initialize(argc, argv);
+  serac::initialize(argc, argv);
 
-  SLIC_INFO_ROOT(rank, "MFEM version: " << mfem::GetVersionStr());
+  SLIC_INFO_ROOT("MFEM version: " << mfem::GetVersionStr());
 
   axom::about();
 
-  SLIC_INFO_ROOT(rank, "Serac loaded successfully.");
+  SLIC_INFO_ROOT("Serac loaded successfully.");
 
   serac::exitGracefully();
 }

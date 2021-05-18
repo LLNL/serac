@@ -1,5 +1,5 @@
-# Copyright (c) 2017-2020, Lawrence Livermore National Security, LLC and
-# other serac Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+# other Serac Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 #------------------------------------------------------------------------------
@@ -83,8 +83,8 @@ if(NOT SERAC_FOUND)
     # Needed for dynamic MFEM library
     # TODO: Construct CMake target from GNU Make-build MFEM
     if(SERAC_MFEM_BUILT_WITH_CMAKE AND NOT MFEM_DIR)
-      set(MFEM_DIR ${SERAC_MFEM_DIR}) 
-      find_dependency(mfem REQUIRED NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem" NAMES MFEM)
+      set(MFEM_DIR ${SERAC_MFEM_DIR})
+      find_dependency(MFEM REQUIRED NO_DEFAULT_PATH PATHS "${MFEM_DIR}/lib/cmake/mfem")
     endif()
   endif()
 

@@ -1,17 +1,18 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include <gtest/gtest.h>
+#include "serac/physics/thermal_solid.hpp"
 
 #include <fstream>
 
+#include <gtest/gtest.h>
 #include "mfem.hpp"
+
 #include "serac/coefficients/coefficient_extensions.hpp"
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/thermal_solid.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -20,12 +21,16 @@ TEST(dynamic_solver, dyn_solve)
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore);
+
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
 
-  auto pmesh = buildMeshFromFile(mesh_file, 1, 0);
-
-  int dim = pmesh->Dimension();
+  auto      pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 1, 0);
+  const int dim   = pmesh->Dimension();
+  serac::StateManager::setMesh(std::move(pmesh));
 
   // define a boundary attribute set
   std::set<int> ess_bdr = {1};
@@ -39,11 +44,11 @@ TEST(dynamic_solver, dyn_solve)
       std::make_shared<mfem::VectorFunctionCoefficient>(dim, [](const mfem::Vector&, mfem::Vector& v) { v = 0.0; });
 
   auto temp = std::make_shared<mfem::FunctionCoefficient>([](const mfem::Vector& x) {
-    double temp = 2.0;
+    double t = 2.0;
     if (x(0) < 1.0) {
-      temp = 5.0;
+      t = 5.0;
     }
-    return temp;
+    return t;
   });
 
   auto kappa = std::make_unique<mfem::ConstantCoefficient>(0.5);
@@ -75,30 +80,30 @@ TEST(dynamic_solver, dyn_solve)
   const NonlinearSolverOptions default_dyn_nonlinear_options = {
       .rel_tol = 1.0e-4, .abs_tol = 1.0e-8, .max_iter = 500, .print_level = 1};
 
-  const NonlinearSolid::SolverOptions default_dynamic = {
+  const Solid::SolverOptions default_dynamic = {
       default_dyn_linear_options, default_dyn_nonlinear_options,
-      NonlinearSolid::TimesteppingOptions{TimestepMethod::AverageAcceleration,
-                                          DirichletEnforcementMethod::RateControl}};
+      Solid::TimesteppingOptions{TimestepMethod::AverageAcceleration, DirichletEnforcementMethod::RateControl}};
 
   // initialize the dynamic solver object
-  ThermalSolid ts_solver(1, pmesh, therm_options, default_dynamic);
-  ts_solver.SetDisplacementBCs(ess_bdr, deform);
-  ts_solver.SetTractionBCs(trac_bdr, traction_coef);
-  ts_solver.SetHyperelasticMaterialParameters(0.25, 5.0);
-  ts_solver.SetConductivity(std::move(kappa));
-  ts_solver.SetDisplacement(*deform);
-  ts_solver.SetVelocity(*velo);
-  ts_solver.SetTemperature(*temp);
-  ts_solver.SetCouplingScheme(serac::CouplingScheme::OperatorSplit);
+  ThermalSolid ts_solver(1, therm_options, default_dynamic, "coupled");
+  ts_solver.setDisplacementBCs(ess_bdr, deform);
+  ts_solver.setTractionBCs(trac_bdr, traction_coef, false);
+  ts_solver.setSolidMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
+                                       std::make_unique<mfem::ConstantCoefficient>(5.0));
+  ts_solver.setConductivity(std::move(kappa));
+  ts_solver.setDisplacement(*deform);
+  ts_solver.setVelocity(*velo);
+  ts_solver.setTemperature(*temp);
+  ts_solver.setCouplingScheme(serac::CouplingScheme::OperatorSplit);
 
   // Make a temperature-dependent viscosity
   double offset = 0.1;
   double scale  = 1.0;
 
   auto temp_gf_coef = std::make_shared<mfem::GridFunctionCoefficient>(&ts_solver.temperature().gridFunc());
-  auto visc_coef    = std::make_unique<TransformedScalarCoefficient>(
-      temp_gf_coef, [offset, scale](const double x) { return scale * x + offset; });
-  ts_solver.SetViscosity(std::move(visc_coef));
+  auto visc_coef    = std::make_unique<mfem_ext::TransformedScalarCoefficient<mfem::Coefficient>>(
+      [offset, scale](double& x) -> double { return scale * x + offset; }, *temp_gf_coef);
+  ts_solver.setViscosity(std::move(visc_coef));
 
   // Initialize the VisIt output
   ts_solver.initializeOutput(serac::OutputType::VisIt, "dynamic_thermal_solid");
@@ -136,14 +141,17 @@ TEST(dynamic_solver, dyn_solve)
   double x_norm    = ts_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
   double temp_norm = ts_solver.temperature().gridFunc().ComputeLpError(2.0, zerovec);
 
-  EXPECT_NEAR(0.146228, x_norm, 0.001);
-  EXPECT_NEAR(0.005227, v_norm, 0.001);
+  EXPECT_NEAR(0.122796, x_norm, 0.001);
+  EXPECT_NEAR(0.001791, v_norm, 0.001);
   EXPECT_NEAR(6.494477, temp_norm, 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
 }  // namespace serac
+
+//------------------------------------------------------------------------------
+#include "axom/slic/core/SimpleLogger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -152,6 +160,9 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   MPI_Init(&argc, &argv);
+
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
 
   result = RUN_ALL_TESTS();
 

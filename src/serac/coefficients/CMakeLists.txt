@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -6,12 +6,10 @@
 
 set(coefficients_sources
     loading_functions.cpp
-    coefficient_extensions.cpp
     )
 
 set(coefficients_headers
     loading_functions.hpp
-    traction_coefficient.hpp
     coefficient_extensions.hpp
     )
 

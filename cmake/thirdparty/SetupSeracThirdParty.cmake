@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -190,8 +190,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
     list(APPEND _props INTERFACE_COMPILE_OPTIONS)
 
-    # This flag is empty due to us not enabling fortran but we need to strip it so it doesnt propagate
-    # in our project
+    # This flag is empty due to us not enabling fortran but we need to strip it
+    # so it doesn't propagate in our project
     if("${OpenMP_Fortran_FLAGS}" STREQUAL "")
         set(OpenMP_Fortran_FLAGS "$<$<NOT:$<COMPILE_LANGUAGE:Fortran>>:-fopenmp=libomp>;$<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>")
     endif()
@@ -214,4 +214,35 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
     endforeach()
 
+    #---------------------------------------------------------------------------
+    # Remove non-existant INTERFACE_INCLUDE_DIRECTORIES from imported targets
+    # to work around CMake error
+    #---------------------------------------------------------------------------
+    set(_imported_targets
+        axom
+        conduit
+        conduit::conduit_mpi
+        conduit::conduit
+        conduit_relay_mpi
+        conduit_relay_mpi_io
+        conduit_blueprint
+        conduit_blueprint_mpi)
+
+    foreach(_target ${_imported_targets})
+        if(TARGET ${_target})
+            message(STATUS "Removing non-existant include directories from target[${_target}]")
+
+            get_target_property(_dirs ${_target} INTERFACE_INCLUDE_DIRECTORIES)
+            set(_existing_dirs)
+            foreach(_dir ${_dirs})
+                if (EXISTS "${_dir}")
+                    list(APPEND _existing_dirs "${_dir}")
+                endif()
+            endforeach()
+            if (_existing_dirs)
+                set_target_properties(${_target} PROPERTIES
+                                      INTERFACE_INCLUDE_DIRECTORIES "${_existing_dirs}" )
+            endif()
+        endif()
+    endforeach()
 endif()

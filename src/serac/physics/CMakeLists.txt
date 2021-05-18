@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -6,26 +6,27 @@
 
 add_subdirectory(utilities)
 add_subdirectory(operators)
+add_subdirectory(integrators)
+add_subdirectory(materials)
 
 set(physics_sources
     base_physics.cpp
-    nonlinear_solid.cpp
+    solid.cpp
     thermal_conduction.cpp
     thermal_solid.cpp
-    elasticity.cpp
     )
 
 set(physics_headers
     base_physics.hpp
-    nonlinear_solid.hpp
+    solid.hpp
     thermal_conduction.hpp
     thermal_solid.hpp
-    elasticity.hpp
     )
 
 set(physics_dependencies
     serac_infrastructure
-    serac_integrators
+    serac_physics_integrators
+    serac_physics_materials
     serac_numerics
     serac_physics_utilities
     serac_physics_operators

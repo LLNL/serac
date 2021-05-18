@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -10,8 +10,7 @@
  * @brief Some simple default loading functions for the Serac driver
  */
 
-#ifndef LOADING_FUNCTIONS
-#define LOADING_FUNCTIONS
+#pragma once
 
 #include "mfem.hpp"
 
@@ -34,5 +33,3 @@ void referenceConfiguration(const mfem::Vector& x, mfem::Vector& y);
 void initialDeformation(const mfem::Vector& x, mfem::Vector& y);
 
 }  // namespace serac
-
-#endif

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -10,8 +10,7 @@
  * @brief This file contains the declaration of the boundary condition manager class
  */
 
-#ifndef BOUNDARY_CONDITION_MANAGER
-#define BOUNDARY_CONDITION_MANAGER
+#pragma once
 
 #include <memory>
 #include <set>
@@ -62,7 +61,11 @@ public:
      * @return A non-owning reference to the pointed-to element
      */
     const auto& operator*() const { return *curr_; }
-    auto&       operator*() { return *curr_; }
+
+    /**
+     * @overload
+     */
+    auto& operator*() { return *curr_; }
 
     /**
      * @brief Comparison operation, checks for iterator inequality
@@ -104,13 +107,21 @@ public:
    * @brief Returns the first filtered element, i.e., the first element in the
    * underlying container that satisfies the predicate
    */
-  FilterViewIterator       begin() { return FilterViewIterator(begin_, end_, pred_); }
+  FilterViewIterator begin() { return FilterViewIterator(begin_, end_, pred_); }
+
+  /**
+   * @overload
+   */
   const FilterViewIterator begin() const { return FilterViewIterator(begin_, end_, pred_); }
 
   /**
    * @brief Returns one past the end of the container, primarily for bounds-checking
    */
-  FilterViewIterator       end() { return FilterViewIterator(end_, end_, pred_); }
+  FilterViewIterator end() { return FilterViewIterator(end_, end_, pred_); }
+
+  /**
+   * @overload
+   */
   const FilterViewIterator end() const { return FilterViewIterator(end_, end_, pred_); }
 
 private:
@@ -130,14 +141,27 @@ private:
   Pred pred_;
 };
 
-// Deduction guide - iterator and lambda types must be deduced, so
-// this mitigates a "builder" function
+/**
+ * @brief Deduction guide - iterator and lambda types must be deduced, so this mitigates a "builder" function
+ *
+ * @tparam Iter Iterator for the view
+ * @tparam Pred Predicate for the view
+ */
 template <class Iter, class Pred>
 FilterView(Iter, Iter, Pred &&) -> FilterView<Iter, Pred>;
 
+/**
+ * @brief A container for the boundary condition information relating to a specific physics module
+ */
 class BoundaryConditionManager {
 public:
+  /**
+   * @brief Construct a new Boundary Condition Manager object
+   *
+   * @param mesh The mesh for the underlying physics module
+   */
   BoundaryConditionManager(const mfem::ParMesh& mesh) : num_attrs_(mesh.bdr_attributes.Max()) {}
+
   /**
    * @brief Set the essential boundary conditions from a list of boundary markers and a coefficient
    *
@@ -147,7 +171,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   void addEssential(const std::set<int>& ess_bdr, serac::GeneralCoefficient ess_bdr_coef, FiniteElementState& state,
-                    const int component = -1);
+                    const std::optional<int> component = {});
 
   /**
    * @brief Set the natural boundary conditions from a list of boundary markers and a coefficient
@@ -156,7 +180,8 @@ public:
    * @param[in] nat_bdr_coef The coefficient defining the natural boundary function
    * @param[in] component The component to set (-1 implies all components are set)
    */
-  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef, const int component = -1);
+  void addNatural(const std::set<int>& nat_bdr, serac::GeneralCoefficient nat_bdr_coef,
+                  const std::optional<int> component = {});
 
   /**
    * @brief Set a generic boundary condition from a list of boundary markers and a coefficient
@@ -170,7 +195,7 @@ public:
    */
   template <typename Tag>
   void addGeneric(const std::set<int>& bdr_attr, serac::GeneralCoefficient bdr_coef, const Tag tag,
-                  const int component = -1)
+                  const std::optional<int> component = {})
   {
     other_bdr_.emplace_back(bdr_coef, component, bdr_attr, num_attrs_);
     other_bdr_.back().setTag(tag);
@@ -185,7 +210,7 @@ public:
    * @param[in] component The component to set (-1 implies all components are set)
    */
   void addEssentialTrueDofs(const mfem::Array<int>& true_dofs, serac::GeneralCoefficient ess_bdr_coef,
-                            int component = -1);
+                            std::optional<int> component = {});
 
   /**
    * @brief Returns all the degrees of freedom associated with all the essential BCs
@@ -210,6 +235,15 @@ public:
   {
     return std::unique_ptr<mfem::HypreParMatrix>(matrix.EliminateRowsCols(allEssentialDofs()));
   }
+
+  /**
+   * @brief Sets the time for all stored boundary conditions
+   *
+   * @param[in] time The current simulation time
+   *
+   * Used for time-dependent boundary conditions
+   */
+  void setTime(const double time);
 
   /**
    * @brief Accessor for the essential BC objects
@@ -296,5 +330,3 @@ private:
 };
 
 }  // namespace serac
-
-#endif

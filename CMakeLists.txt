@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+# Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 # other Serac Project Developers. See the top-level LICENSE file for
 # details.
 #
@@ -10,10 +10,18 @@
 
 cmake_minimum_required(VERSION 3.8)
 
-project(serac LANGUAGES CXX)
+project(serac LANGUAGES CXX C)
 
 # MPI is required in Serac.
 set(ENABLE_MPI ON CACHE BOOL "")
+
+if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
+    message(FATAL_ERROR 
+            "Serac requires MPI.  It is required to provide the MPI C/C++ "
+            "compiler wrappers via the CMake variables, "
+            "MPI_C_COMPILER and MPI_CXX_COMPILER."
+            )
+endif()
 
 #------------------------------------------------------------------------------
 # Setup BLT
@@ -98,7 +106,7 @@ set(exported_targets
     serac_numerics
     serac_physics_utilities
     serac_physics_operators
-    serac_integrators)
+    serac_physics_integrators)
 
 add_library(serac INTERFACE)
 target_link_libraries(serac INTERFACE ${exported_targets})

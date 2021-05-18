@@ -4,9 +4,15 @@ ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install curl ssh pkg-config build-essential libopenblas-dev mpich cmake lcov python3 -fy
+RUN sudo apt-get install curl ssh pkg-config build-essential libopenblas-dev mpich lcov xsltproc python3 python3-pip -fy
 RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-7 100
 RUN sudo ln -f -s python3 /usr/bin/python # Compatibility with legacy Python
+RUN sudo python3 -m pip install --upgrade pip
+RUN sudo python3 -m pip install clingo
+
+# Avoid building CMake from scratch
+RUN wget https://cmake.org/files/v3.18/cmake-3.18.5-Linux-x86_64.sh
+RUN sudo sh cmake-3.18.5-Linux-x86_64.sh --prefix=/usr --exclude-subdir
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
@@ -16,9 +22,9 @@ USER serac
 RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git
 
 # New containers will use Python3
-RUN python3 ./serac/scripts/uberenv/uberenv.py --spack-config-dir=./serac/scripts/uberenv/spack_configs/docker/<DISTRO>/ \
-                                               --project-json=./serac/scripts/uberenv/project.json \
-                                               --spec=%<NAME>@<VER>.0 --prefix=/home/serac/serac_tpls -k
+RUN cd serac && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/<DISTRO>/ \
+                                                     --project-json=.uberenv_config.json \
+                                                     --spec=%<NAME>@<VER>.0 --prefix=/home/serac/serac_tpls -k
 
 # Make sure the new hostconfig worked
 RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test

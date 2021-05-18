@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020, Lawrence Livermore National Security, LLC and
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
 // other Serac Project Developers. See the top-level LICENSE file for
 // details.
 //
@@ -11,17 +11,14 @@
  *        for logging as well as a helper function to exit the program gracefully.
  */
 
-#ifndef SERAC_LOGGER
-#define SERAC_LOGGER
+#pragma once
 
 #include "axom/slic.hpp"
 #include "fmt/fmt.hpp"
 #include "mpi.h"
 
-namespace serac {
-
 // Logger functionality
-namespace logger {
+namespace serac::logger {
 /**
  * @brief Initializes and setups the logger.
  *
@@ -50,49 +47,52 @@ void finalize();
  */
 void flush();
 
-}  // namespace logger
-}  // namespace serac
+/**
+ * @brief Returns the rank of the current process obtained when the logger
+ * was initialized, will be 0 if the logger was not initialized
+ */
+int rank();
+
+}  // namespace serac::logger
 
 // Utility SLIC macros
 
 /**
  * @brief Macro that logs given error message only on rank 0.
  */
-#define SLIC_ERROR_ROOT(rank, msg) SLIC_ERROR_IF(rank == 0, msg)
+#define SLIC_ERROR_ROOT(msg) SLIC_ERROR_IF(serac::logger::rank() == 0, msg)
 
 /**
  * @brief Macro that logs given warning message only on rank 0.
  */
-#define SLIC_WARNING_ROOT(rank, msg) SLIC_WARNING_IF(rank == 0, msg)
+#define SLIC_WARNING_ROOT(msg) SLIC_WARNING_IF(serac::logger::rank() == 0, msg)
 
 /**
  * @brief Macro that logs given info message only on rank 0.
  */
-#define SLIC_INFO_ROOT(rank, msg) SLIC_INFO_IF(rank == 0, msg)
+#define SLIC_INFO_ROOT(msg) SLIC_INFO_IF(serac::logger::rank() == 0, msg)
 
 /**
  * @brief Macro that logs given debug message only on rank 0.
  */
-#define SLIC_DEBUG_ROOT(rank, msg) SLIC_DEBUG_IF(rank == 0, msg)
+#define SLIC_DEBUG_ROOT(msg) SLIC_DEBUG_IF(serac::logger::rank() == 0, msg)
 
 /**
  * @brief Macro that logs given error message only on rank 0 if EXP is true.
  */
-#define SLIC_ERROR_ROOT_IF(EXP, rank, msg) SLIC_ERROR_IF((EXP) && (rank == 0), msg)
+#define SLIC_ERROR_ROOT_IF(EXP, msg) SLIC_ERROR_IF((EXP) && (serac::logger::rank() == 0), msg)
 
 /**
  * @brief Macro that logs given warning message only on rank 0 if EXP is true.
  */
-#define SLIC_WARNING_ROOT_IF(EXP, rank, msg) SLIC_WARNING_IF((EXP) && (rank == 0), msg)
+#define SLIC_WARNING_ROOT_IF(EXP, msg) SLIC_WARNING_IF((EXP) && (serac::logger::rank() == 0), msg)
 
 /**
  * @brief Macro that logs given info message only on rank 0 if EXP is true.
  */
-#define SLIC_INFO_ROOT_IF(EXP, rank, msg) SLIC_INFO_IF((EXP) && (rank == 0), msg)
+#define SLIC_INFO_ROOT_IF(EXP, msg) SLIC_INFO_IF((EXP) && (serac::logger::rank() == 0), msg)
 
 /**
  * @brief Macro that logs given debug message only on rank 0 if EXP is true.
  */
-#define SLIC_DEBUG_ROOT_IF(EXP, rank, msg) SLIC_DEBUG_IF((EXP) && (rank == 0), msg)
-
-#endif
+#define SLIC_DEBUG_ROOT_IF(EXP, msg) SLIC_DEBUG_IF((EXP) && (serac::logger::rank() == 0), msg)
