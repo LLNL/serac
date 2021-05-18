@@ -26,8 +26,7 @@ set(weakform_headers
     detail/quadrilateral_hcurl.inl
     detail/quadrilateral_L2.inl
     detail/segment_h1.inl
-    detail/meta.h
-    detail/timer.hpp
+    detail/metaprogramming.hpp
     )
 
 blt_add_library(

@@ -1,3 +1,10 @@
+// specialization of finite_element for L2 on quadrilateral geometry
+//
+// this specialization defines shape functions that interpolate 
+// at Gauss-Lobatto nodes for the appropriate polynomial order
+// 
+// note 1: mfem assumes the parent element domain is [0,1]x[0,1]
+// note 2: mfem doesn't define "diffusion" integrators on L2, so we don't define the shape function gradients
 template <int p>
 struct finite_element<Geometry::Quadrilateral, L2<p> > {
   static constexpr auto geometry   = Geometry::Quadrilateral;

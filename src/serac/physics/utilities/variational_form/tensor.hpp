@@ -5,7 +5,7 @@
 #include "dual.hpp"
 #include "array.hpp"
 
-#include "detail/meta.h"
+#include "detail/metaprogramming.hpp"
 
 namespace serac {
 

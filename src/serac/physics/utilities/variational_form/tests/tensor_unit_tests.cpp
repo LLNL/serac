@@ -1,4 +1,4 @@
-#include "serac/physics/utilities/variational_form/detail/meta.h"
+#include "serac/physics/utilities/variational_form/detail/metaprogramming.hpp"
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 
 using namespace serac;

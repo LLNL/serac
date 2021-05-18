@@ -107,7 +107,7 @@ tensor<T, n> ChebyshevU(T x)
 }
 
 /**
- * Legendre Polynomials, orthogonal on the domain (-1, 1)
+ * @brief Legendre Polynomials, orthogonal on the domain (-1, 1)
  * with unit weight function.
  */
 template <int n, typename T>
@@ -124,6 +124,9 @@ tensor<T, n> Legendre(T x)
   return P;
 }
 
+/**
+ * @brief Bernstein Polynomials on the domain [0, 1]
+ */
 template <int n, typename T>
 tensor<T, n> Bernstein(T s)
 {
@@ -146,6 +149,9 @@ tensor<T, n> Bernstein(T s)
   return B;
 }
 
+/**
+ * @brief Lagrange Interpolating polynomials for nodes at Gauss-Lobatto points on the interval [-1, 1]
+ */
 template <int n, typename T>
 tensor<T, n> GaussLobattoInterpolation(T x)
 {
@@ -164,6 +170,9 @@ tensor<T, n> GaussLobattoInterpolation(T x)
   return tensor<T, n>{};
 }
 
+/**
+ * @brief Derivatives of Lagrange Interpolating polynomials for nodes at Gauss-Lobatto points on the interval [-1, 1]
+ */
 template <int n, typename T>
 tensor<T, n> GaussLobattoInterpolationDerivative(T x)
 {
@@ -182,6 +191,9 @@ tensor<T, n> GaussLobattoInterpolationDerivative(T x)
   return tensor<T, n>{};
 }
 
+/**
+ * @brief Lagrange Interpolating polynomials for nodes at Gauss-Lobatto points on the interval [0, 1]
+ */
 template <int n, typename T>
 constexpr tensor<T, n> GaussLobattoInterpolation01(T x)
 {
@@ -200,6 +212,9 @@ constexpr tensor<T, n> GaussLobattoInterpolation01(T x)
   return tensor<T, n>{};
 }
 
+/**
+ * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Lobatto points on the interval [0, 1]
+ */
 template <int n, typename T>
 constexpr tensor<T, n> GaussLobattoInterpolationDerivative01([[maybe_unused]] T x)
 {
@@ -218,6 +233,9 @@ constexpr tensor<T, n> GaussLobattoInterpolationDerivative01([[maybe_unused]] T 
   return tensor<T, n>{};
 }
 
+/**
+ * @brief Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [-1, 1]
+ */
 template <int n, typename T>
 tensor<T, n> GaussLegendreInterpolation(T x)
 {
@@ -237,6 +255,9 @@ tensor<T, n> GaussLegendreInterpolation(T x)
   return tensor<T, n>{};
 }
 
+/**
+ * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [-1, 1]
+ */
 template <int n, typename T>
 tensor<T, n> GaussLegendreInterpolationDerivative(T x)
 {
@@ -256,6 +277,9 @@ tensor<T, n> GaussLegendreInterpolationDerivative(T x)
   return tensor<T, n>{};
 }
 
+/**
+ * @brief Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [0, 1]
+ */
 template <int n, typename T>
 tensor<T, n> GaussLegendreInterpolation01([[maybe_unused]] T x)
 {
@@ -276,6 +300,9 @@ tensor<T, n> GaussLegendreInterpolation01([[maybe_unused]] T x)
   return tensor<T, n>{};
 }
 
+/**
+ * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [-1, 1]
+ */
 template <int n, typename T>
 tensor<T, n> GaussLegendreInterpolationDerivative01(T x)
 {

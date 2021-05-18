@@ -1,3 +1,9 @@
+// specialization of finite_element for H1 on hexahedron geometry
+//
+// this specialization defines shape functions (and their gradients) that
+// interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
+// 
+// note: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 template <int p, int c>
 struct finite_element<Geometry::Hexahedron, H1<p, c> > {
   static constexpr auto geometry   = Geometry::Hexahedron;
@@ -58,15 +64,4 @@ struct finite_element<Geometry::Hexahedron, H1<p, c> > {
     // clang-format on
   }
 
-  template <Evaluation op = Evaluation::Interpolate>
-  static auto evaluate(tensor<double, ndof> /*values*/, double /*xi*/, int /*i*/)
-  {
-    if constexpr (op == Evaluation::Interpolate) {
-      return double{};
-    }
-
-    if constexpr (op == Evaluation::Gradient) {
-      return double{};
-    }
-  }
 };

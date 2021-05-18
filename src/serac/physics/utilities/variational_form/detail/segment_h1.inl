@@ -1,3 +1,9 @@
+// specialization of finite_element for H1 on segment geometry
+//
+// this specialization defines shape functions (and their gradients) that
+// interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
+// 
+// note: mfem assumes the parent element domain is [0,1]
 template <int p, int c>
 struct finite_element<Geometry::Segment, H1< p, c > > {
 
@@ -13,16 +19,5 @@ struct finite_element<Geometry::Segment, H1< p, c > > {
 
   static constexpr tensor<double, ndof> shape_function_gradients(double xi) {
     return GaussLobattoInterpolationDerivative01<ndof>(xi);
-  }
-
-  template <Evaluation op = Evaluation::Interpolate>
-  static auto evaluate(tensor<double, ndof> /*values*/, double /*xi*/, int /*i*/) {
-    if constexpr (op == Evaluation::Interpolate) {
-      return double{};
-    }
-
-    if constexpr (op == Evaluation::Gradient) {
-      return double{};
-    }
   }
 };

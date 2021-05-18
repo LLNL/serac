@@ -1,4 +1,4 @@
-#include "../detail/meta.h"
+#include "../detail/metaprogramming.hpp"
 #include "../tensor.hpp"
 #include "../finite_element.hpp"
 

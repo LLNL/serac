@@ -1,3 +1,12 @@
+// specialization of finite_element for Hcurl on hexahedron geometry
+//
+// this specialization defines shape functions (and their curls) that
+// interpolate at Gauss-Lobatto nodes for closed intervals, and Gauss-Legendre
+// nodes for open intervals.
+// 
+// note 1: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
+// note 2: dofs are numbered by direction and then lexicographically in space.
+//         quadrilateral_hcurl.inl for more information
 template <int p>
 struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   static constexpr auto geometry   = Geometry::Hexahedron;

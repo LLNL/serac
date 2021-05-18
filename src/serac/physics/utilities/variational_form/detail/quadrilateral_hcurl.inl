@@ -1,3 +1,14 @@
+// specialization of finite_element for Hcurl on quadrilateral geometry
+//
+// this specialization defines shape functions (and their curls) that
+// interpolate at Gauss-Lobatto nodes for closed intervals, and Gauss-Legendre
+// nodes for open intervals.
+// 
+// note 1: mfem assumes the parent element domain is [0,1]x[0,1]
+// note 2: dofs are numbered by direction and then lexicographically in space.
+//         see below
+// note 3: since this is a 2D element type, the "curl" returned is just the out-of-plane component,
+//         rather than 3D vector along the z-direction.
 template <int p>
 struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr auto geometry   = Geometry::Quadrilateral;
@@ -134,20 +145,4 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
 
     return curl_z;
   }
-
-  template <Evaluation op = Evaluation::Interpolate>
-  static auto evaluate(tensor<double, ndof> /*values*/, double /*xi*/, int /*i*/)
-  {
-    if constexpr (op == Evaluation::Interpolate) {
-      return double{};
-    }
-
-    if constexpr (op == Evaluation::Gradient) {
-      return double{};
-    }
-  }
 };
-
-//extern template struct finite_element<Geometry::Quadrilateral, Hcurl<1> >;
-//extern template struct finite_element<Geometry::Quadrilateral, Hcurl<2> >;
-//extern template struct finite_element<Geometry::Quadrilateral, Hcurl<3> >;

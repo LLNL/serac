@@ -1,3 +1,9 @@
+// specialization of finite_element for H1 on quadrilateral geometry
+//
+// this specialization defines shape functions (and their gradients) that
+// interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
+// 
+// note: mfem assumes the parent element domain is [0,1]x[0,1]
 template <int p, int c>
 struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
   static constexpr auto geometry   = Geometry::Quadrilateral;
@@ -10,6 +16,41 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     tensor< double, ndof >,
     tensor< double, ndof, components >
   >::type;
+
+  /*
+
+    interpolation nodes and their associated numbering:
+
+        linear
+    2-----------3
+    |           |
+    |           |
+    |           |
+    |           |
+    |           |
+    0-----------1
+
+
+      quadratic
+    6-----7-----8
+    |           |
+    |           |
+    3     4     5
+    |           |
+    |           |
+    0-----1-----2
+
+
+        cubic
+    12-13--14--15
+    |           |
+    8   9  10  11
+    |           |
+    4   5   6   7
+    |           |
+    0---1---2---3
+
+  */
 
   static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
@@ -45,11 +86,4 @@ struct finite_element<Geometry::Quadrilateral, H1<p, c> > {
     return dN;
   }
 
-  static auto evaluate(tensor<double, c, ndof> values, tensor<double, dim> xi)
-  {
-    return std::tuple {
-      dot(values, shape_functions(xi)),
-      dot(values, shape_function_gradients(xi))
-    };
-  }
 };
