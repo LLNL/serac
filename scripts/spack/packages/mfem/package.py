@@ -45,6 +45,11 @@ class Mfem(Package):
     # other version.
     version('develop', branch='master')
 
+    # SERAC EDIT START
+    # Fix from https://github.com/mfem/mfem/pull/1950
+    version('4.2.0serac', commit='928d66caba288387b159e78ed671814d12c2da4b')
+    # SERAC EDIT END
+
     version('4.2.0',
             '4352a225b55948d2e73a5ee88cece0e88bdbe7ba6726a23d68b2736d3221a86d',
             url='https://bit.ly/mfem-4-2', extension='tar.gz',
@@ -423,7 +428,7 @@ class Mfem(Package):
             options += ['STATIC=NO']
         if '+shared' in spec:
             options += [
-                'SHARED=YES', 'PICFLAG=%s' % self.compiler.cxx_pic_flag
+                'SHARED=YES', 'PICFLAG=%s%s' % (xcompiler, self.compiler.cxx_pic_flag)
             ]
 
         if '+mpi' in spec:

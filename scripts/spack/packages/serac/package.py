@@ -88,20 +88,20 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0}+shared".format(dep), when="+shared")
         depends_on("{0}~shared".format(dep), when="~shared")
 
-    depends_on("petsc~shared", when="+petsc~shared")
-    depends_on("sundials~shared", when="+sundials~shared")
-    depends_on("netcdf-c@4.7.4~shared", when="+netcdf~shared")
-    depends_on("caliper~shared", when="+caliper~shared")
+    shared_optional_deps = ["petsc", "sundials", "caliper", "umpire", "raja"]
+    for dep in shared_optional_deps:
+        depends_on("{0}+shared".format(dep), when="+{0}+shared".format(dep))
+        depends_on("{0}~shared".format(dep), when="+{0}~shared".format(dep))
+
+
+    depends_on("netcdf-c@4.7.4", when="+netcdf")
+    depends_on("netcdf-c+shared", when="+netcdf+shared")
+    depends_on("netcdf-c~shared", when="+netcdf~shared")
 
     # Libraries that support +debug
-    debug_deps = ["mfem@4.2.0+metis+superlu-dist+lapack+mpi",
+    mfem_variants = "+metis+superlu-dist+lapack+mpi"
+    debug_deps = ["mfem@4.2.0serac{0}".format(mfem_variants),
                   "hypre@2.18.2~superlu-dist+mpi"]
-    # depends_on("sundials+hypre+monitoring")
-
-    # Libraries that support +debug
-    mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
-    debug_deps = ["mfem@4.2.0{0}".format(mfem_variants),
-                  "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc", when="+petsc")
     depends_on("petsc+debug", when="+petsc+debug")
@@ -117,16 +117,18 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("hdf5+hl@1.8.21")
 
     # Axom enables RAJA/Umpire by default
+    depends_on("axom+raja", when="+raja")
+    depends_on("axom+umpire", when="+umpire")
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
     # patch for RAJA#978
-    depends_on("raja@develop~openmp~shared", when="+raja")
+    depends_on("raja@develop~openmp", when="+raja")
     # Need fix Umpire#541
-    depends_on("umpire@develop~shared", when="+umpire")
+    depends_on("umpire@develop~openmp", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom@0.4.0serac~openmp~fortran+mfem"
+    axom_spec = "axom@0.4.0serac~openmp~fortran+mfem+hdf5~python"
     cmake_debug_deps = [axom_spec,
                         "metis@5.1.0",
                         "parmetis@4.0.3"]
