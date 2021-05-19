@@ -94,19 +94,46 @@ TEST(serac_profiling, exception)
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-struct MoveOnly {
-  MoveOnly()                = default;
-  MoveOnly(const MoveOnly&) = delete;
-  MoveOnly(MoveOnly&&)      = delete;
+struct NonCopyableOrMovable {
+  int value                                         = 0;
+  NonCopyableOrMovable()                            = default;
+  NonCopyableOrMovable(const NonCopyableOrMovable&) = delete;
+  NonCopyableOrMovable(NonCopyableOrMovable&&)      = delete;
 };
 
-TEST(serac_profiling, expr_reference)
+TEST(serac_profiling, lvalue_reference_expr)
 {
-  MoveOnly m;
+  NonCopyableOrMovable foo;
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initializeCaliper();
-  MoveOnly& m2 = SERAC_PROFILE_EXPR("reference_assign", m);
+  // This statement requires that the RHS be *exactly* a non-const lvalue
+  // reference - of course a const lvalue reference cannot be bound here,
+  // but also an rvalue reference would also cause compilation to fail
+  NonCopyableOrMovable& bar = SERAC_PROFILE_EXPR("lvalue_reference_assign", foo);
   serac::profiling::terminateCaliper();
+  bar.value = 6;
+  EXPECT_EQ(foo.value, 6);
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+struct MovableOnly {
+  int value                       = 0;
+  MovableOnly()                   = default;
+  MovableOnly(const MovableOnly&) = delete;
+  MovableOnly(MovableOnly&&)      = default;
+};
+
+TEST(serac_profiling, rvalue_reference_expr)
+{
+  MovableOnly foo;
+  foo.value = 6;
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initializeCaliper();
+  // This statement requires that the RHS be *exactly* an rvalue reference
+  // An lvalue reference cannot be used to construct here (copy ctor deleted)
+  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", std::move(foo));
+  serac::profiling::terminateCaliper();
+  EXPECT_EQ(bar.value, 6);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
