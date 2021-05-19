@@ -31,7 +31,7 @@ struct QuadratureRule {
 /**
  * @brief Returns the quadrature rule for an element and order
  * @tparam The shape of the element to produce a quadrature rule for
- * @tparam Q The "order" of integration
+ * @tparam Q the number of quadrature points per dimension
  */
 template <Geometry g, int Q>
 constexpr auto GaussQuadratureRule()
