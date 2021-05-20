@@ -1,3 +1,9 @@
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
 // specialization of finite_element for Hcurl on hexahedron geometry
 //
 // this specialization defines shape functions (and their curls) that
