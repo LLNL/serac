@@ -82,16 +82,48 @@
 
 #define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name)
 
+namespace detail {
+
+/**
+ * @brief Removes an rvalue reference from a type, if applicable
+ * @see std::remove_reference
+ * @tparam T The type to remove an rvalue reference from
+ */
+template <typename T>
+struct remove_rvalue_reference {
+  using type = T;
+};
+
+template <typename T>
+struct remove_rvalue_reference<T&&> {
+  using type = T;
+};
+
+/**
+ * @brief Wrapper over std::forward for type deduction purposes
+ * The return type participates in reference collapsing so the return type will indicate
+ * the true value category of @a thing
+ * @param[in] thing The object whose value category is to be deduced
+ */
 template <typename T>
 auto&& forwarder(T&& thing)
 {
   return std::forward<T>(thing);
 }
 
+}  // namespace detail
+
+/**
+ * @brief The type that should be returned from the profiling wrapper lambda
+ * It converts rvalue reference arguments of type T&& to T to avoid returning
+ * a reference to a temporary and leaves all other types intact.
+ */
+#define SERAC_PROFILE_EXPR_RETURN_TYPE(expr) detail::remove_rvalue_reference<decltype(detail::forwarder(expr))>::type
+
 #define SERAC_PROFILE_EXPR(name, expr)                                \
-  [&]() -> decltype(forwarder(expr)) {                                \
+  [&]() -> SERAC_PROFILE_EXPR_RETURN_TYPE(expr) {                     \
     const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name); \
-    return forwarder(expr);                                           \
+    return static_cast<SERAC_PROFILE_EXPR_RETURN_TYPE(expr)>(expr);   \
   }()
 
 #else  // SERAC_USE_CALIPER not defined

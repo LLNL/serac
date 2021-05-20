@@ -103,9 +103,9 @@ struct NonCopyableOrMovable {
 
 TEST(serac_profiling, lvalue_reference_expr)
 {
-  NonCopyableOrMovable foo;
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initializeCaliper();
+  NonCopyableOrMovable foo;
   // This statement requires that the RHS be *exactly* a non-const lvalue
   // reference - of course a const lvalue reference cannot be bound here,
   // but also an rvalue reference would also cause compilation to fail
@@ -125,13 +125,25 @@ struct MovableOnly {
 
 TEST(serac_profiling, rvalue_reference_expr)
 {
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initializeCaliper();
   MovableOnly foo;
   foo.value = 6;
+  // This statement requires that the RHS be *exactly* an rvalue reference
+  // An lvalue reference cannot be used to construct here (copy ctor deleted)
+  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", std::move(foo));
+  serac::profiling::terminateCaliper();
+  EXPECT_EQ(bar.value, 6);
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(serac_profiling, temp_rvalue_reference_expr)
+{
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initializeCaliper();
   // This statement requires that the RHS be *exactly* an rvalue reference
   // An lvalue reference cannot be used to construct here (copy ctor deleted)
-  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", std::move(foo));
+  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", MovableOnly{6});
   serac::profiling::terminateCaliper();
   EXPECT_EQ(bar.value, 6);
   MPI_Barrier(MPI_COMM_WORLD);
