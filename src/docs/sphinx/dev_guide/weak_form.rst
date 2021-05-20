@@ -3,7 +3,7 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-.. _header-n2:
+.. _weak-form-label:
 
 =========
 Weak Form
@@ -159,7 +159,6 @@ Putting these snippets together without the verbose comments, we have (note: the
 So, in only a few lines of code, we can create optimized, custom finite
 element kernels!
 
-.. _header-n34:
 
 Implementation
 --------------

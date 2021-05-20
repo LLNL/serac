@@ -3,7 +3,7 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-.. _header-n0:
+.. _tensor-label:
 
 ============
 Tensor Class
@@ -118,7 +118,7 @@ Here are some examples and features:
       A[0] = v; // works, assign a new value to the first row of A
       A[1] = u; // compile error: can't assign a vector with 3 components to a vector of 2 components
 
-.. _header-n157:
+.. _dual-label:
 
 Dual Number Class
 -----------------
@@ -241,7 +241,6 @@ are given below:
 
 `C++ tools and libraries for AD <http://www.autodiff.org/?module=Tools&language=C%2FC%2B%2B>`_
 
-.. _header-n276:
 
 Using ``tensor`` and ``dual`` together
 --------------------------------------
