@@ -4,8 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-// specialization of finite_element for Hcurl on quadrilateral geometry
-//
+/**
+ * @file quadrilateral_hcurl.inl
+ *
+ * @brief Specialization of finite_element for Hcurl on quadrilateral geometry
+ */
+
 // this specialization defines shape functions (and their curls) that
 // interpolate at Gauss-Lobatto nodes for closed intervals, and Gauss-Legendre
 // nodes for open intervals.

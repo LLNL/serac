@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file metaprogramming.hpp
+ *
+ * @brief Utilities for C++ metaprogramming
+ */
+
 #pragma once
 
 #include <tuple>

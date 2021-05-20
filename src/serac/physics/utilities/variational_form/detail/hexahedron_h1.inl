@@ -4,8 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-// specialization of finite_element for H1 on hexahedron geometry
-//
+/**
+ * @file hexahedron_h1.inl
+ *
+ * @brief Specialization of finite_element for H1 on hexahedron geometry
+ */
+
 // this specialization defines shape functions (and their gradients) that
 // interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
 // 

@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file quadrilateral_L2.inl
+ *
+ * @brief Specialization of finite_element for L2 on quadrilateral geometry
+ */
+
 // specialization of finite_element for L2 on quadrilateral geometry
 //
 // this specialization defines shape functions that interpolate 
