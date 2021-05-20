@@ -54,7 +54,6 @@ can be passed to configure Caliper.
 Additionally, you can use ``SERAC_SET_METADATA(name, data)`` to add extra metadata into the ``.cali`` file. Supported metadata are ``string, int, unsigned int, double``.
 
 ::
-   
    SERAC_SET_METADATA("mesh", "../data/star.mesh");
    
 
