@@ -19,6 +19,7 @@ Developer Guide
    profiling
    memory_checking
    new_docker_image
+   mfem_dev
 
 Developing a New Physics Module
 -------------------------------
