@@ -26,7 +26,7 @@ Serac is hosted on `GitHub <https://github.com/LLNL/serac>`_. Serac uses git sub
 Overview of the Serac build process
 ------------------------------------
 
-The serac build process has been broken into three phases with various related options:
+The Serac build process has been broken into three phases with various related options:
 
 1. (Optional) Build the developer tools
 2. Build the third party libraries
@@ -37,6 +37,12 @@ third party libraries that are required by Serac. Two options exist for this pro
 via the `uberenv wrapper script <https://github.com/LLNL/uberenv>`_ or building the required dependencies on your own. We recommend the first
 option as building HPC libraries by hand can be a tedious process. Once the third party libraries are built, Serac can be built using the
 cmake-based `BLT HPC build system <https://github.com/LLNL/blt>`_.
+
+.. note::
+  If you get the following error ``ERROR: pip version 19.0.3 is too old to install clingo``, run the
+  following command to upgrade your pip: ``python3 -m pip install --user --upgrade pip``.  This error
+  will not necessarily be the last error on the screen.
+
 
 Building Serac's Developer Tools
 --------------------------------
@@ -89,7 +95,7 @@ This has been encapsulated using `Uberenv <https://github.com/LLNL/uberenv>`_. U
 doing the following:
 
 * Pulls a blessed version of Spack locally
-* If you are on a known operating system (like TOSS3), we have defined spack configuration files
+* If you are on a known operating system (like TOSS3), we have defined Spack configuration files
   to keep Spack from building the world
 * Installs our Spack packages into the local Spack
 * Simplifies whole dependency build into one command
