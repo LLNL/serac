@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file quadrature.hpp
+ *
+ * @brief Definitions of quadrature rules for quads and hexes
+ */
+
 #pragma once
 
 #include "tensor.hpp"

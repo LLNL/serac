@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file polynomials.hpp
+ *
+ * @brief Definitions of 1D quadrature weights and node locations and polynomial basis functions
+ */
+
 #pragma once
 
 #include "tensor.hpp"
@@ -262,7 +268,8 @@ tensor<T, n> GaussLegendreInterpolation(T x)
 }
 
 /**
- * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [-1, 1]
+ * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [-1,
+ * 1]
  */
 template <int n, typename T>
 tensor<T, n> GaussLegendreInterpolationDerivative(T x)
@@ -307,7 +314,8 @@ tensor<T, n> GaussLegendreInterpolation01([[maybe_unused]] T x)
 }
 
 /**
- * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [-1, 1]
+ * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [-1,
+ * 1]
  */
 template <int n, typename T>
 tensor<T, n> GaussLegendreInterpolationDerivative01(T x)

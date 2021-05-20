@@ -122,23 +122,23 @@ enum class Evaluation
  * @tparam g The geometry of the element
  * @tparam family The continuity of the element
  * the implementations of the different finite element specializations
- * are in .inl files in the detail/ directory. 
- * 
+ * are in .inl files in the detail/ directory.
+ *
  * In each of these files, the finite_element specialization
  * should implement the following concept:
- * 
+ *
  * struct finite_element< some_geometry, some_space > > {
  *   static constexpr Geometry geometry = ...;
  *   static constexpr Family family     = ...;
  *   static constexpr int  components   = ...;
  *   static constexpr int  dim          = ...;
  *   static constexpr int  ndof         = ...;
- * 
+ *
  *   static constexpr auto shape_functions(tensor<double, dim> xi) { ... }
- * 
+ *
  *   static constexpr auto shape_function_derivatives(tensor<double, dim> xi) { ... }
  * };
- *  
+ *
  */
 template <Geometry g, typename family>
 struct finite_element;

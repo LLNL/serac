@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file tensor.hpp
+ *
+ * @brief Implementation of the AD-enabled tensor class used by WeakForm
+ */
+
 #pragma once
 
 #include "host_device_annotations.hpp"

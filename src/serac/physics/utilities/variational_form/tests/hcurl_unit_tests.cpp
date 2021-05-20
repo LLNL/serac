@@ -76,53 +76,56 @@ void verify_curl_calculation()
   }
 }
 
-TEST(verify_kronecker_delta, Quadrilateral_Linear) {
+TEST(verify_kronecker_delta, Quadrilateral_Linear)
+{
   verify_kronecker_delta_property<finite_element<::Geometry::Quadrilateral, Hcurl<1>>>();
 }
 
-TEST(verify_kronecker_delta, Quadrilateral_Quadratic) {
+TEST(verify_kronecker_delta, Quadrilateral_Quadratic)
+{
   verify_kronecker_delta_property<finite_element<::Geometry::Quadrilateral, Hcurl<2>>>();
 }
 
-TEST(verify_kronecker_delta, Quadrilateral_Cubic) {
+TEST(verify_kronecker_delta, Quadrilateral_Cubic)
+{
   verify_kronecker_delta_property<finite_element<::Geometry::Quadrilateral, Hcurl<3>>>();
 }
 
-TEST(verify_kronecker_delta, Hexahedron_Linear) {
+TEST(verify_kronecker_delta, Hexahedron_Linear)
+{
   verify_kronecker_delta_property<finite_element<::Geometry::Hexahedron, Hcurl<1>>>();
 }
 
-TEST(verify_kronecker_delta, Hexahedron_Quadratic) {
+TEST(verify_kronecker_delta, Hexahedron_Quadratic)
+{
   verify_kronecker_delta_property<finite_element<::Geometry::Hexahedron, Hcurl<2>>>();
 }
 
-TEST(verify_kronecker_delta, Hexahedron_Cubic) {
+TEST(verify_kronecker_delta, Hexahedron_Cubic)
+{
   verify_kronecker_delta_property<finite_element<::Geometry::Hexahedron, Hcurl<3>>>();
 }
 
-TEST(verify_curl, Quadrilateral_Linear) {
+TEST(verify_curl, Quadrilateral_Linear)
+{
   verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<1>>>();
 }
 
-TEST(verify_curl, Quadrilateral_Quadratic) {
+TEST(verify_curl, Quadrilateral_Quadratic)
+{
   verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<2>>>();
 }
 
-TEST(verify_curl, Quadrilateral_Cubic) {
+TEST(verify_curl, Quadrilateral_Cubic)
+{
   verify_curl_calculation<finite_element<::Geometry::Quadrilateral, Hcurl<3>>>();
 }
 
-TEST(verify_curl, Hexahedron_Linear) {
-  verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<1>>>();
-}
+TEST(verify_curl, Hexahedron_Linear) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<1>>>(); }
 
-TEST(verify_curl, Hexahedron_Quadratic) {
-  verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<2>>>();
-}
+TEST(verify_curl, Hexahedron_Quadratic) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<2>>>(); }
 
-TEST(verify_curl, Hexahedron_Cubic) {
-  verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<3>>>();
-}
+TEST(verify_curl, Hexahedron_Cubic) { verify_curl_calculation<finite_element<::Geometry::Hexahedron, Hcurl<3>>>(); }
 
 int main(int argc, char* argv[])
 {

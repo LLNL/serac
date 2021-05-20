@@ -4,6 +4,12 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+/**
+ * @file tuple_arithmetic.hpp
+ *
+ * @brief Definitions of arithmetic operations on tuples of values
+ */
+
 // this file defines basic arithmetic operations on tuples of values
 // so that expressions like sum1 and sum2 below are equivalent
 //
