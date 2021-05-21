@@ -73,6 +73,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mpi")
     depends_on("cmake@3.8:")
 
+    depends_on("ascent~vtkh~fortran~shared~openmp")
+
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")
     depends_on('doxygen', when="+devtools")
@@ -255,7 +257,7 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_path("TPL_ROOT", tpl_root))
 
         # required tpls
-        for dep in ('axom', 'conduit', 'mfem', 'hdf5',
+        for dep in ('ascent', 'axom', 'conduit', 'mfem', 'hdf5',
                     'hypre', 'metis', 'parmetis'):
             dep_dir = get_spec_path(spec, dep, path_replacements)
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
