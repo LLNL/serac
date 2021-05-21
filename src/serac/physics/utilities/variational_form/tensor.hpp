@@ -7,7 +7,7 @@
 /**
  * @file tensor.hpp
  *
- * @brief Implementation of the AD-enabled tensor class used by WeakForm
+ * @brief Implementation of the tensor class used by WeakForm
  */
 
 #pragma once
@@ -15,7 +15,6 @@
 #include "host_device_annotations.hpp"
 
 #include "dual.hpp"
-#include "array.hpp"
 
 #include "detail/metaprogramming.hpp"
 
@@ -80,9 +79,6 @@ struct tensor<T> {
   using type                    = T;
   static constexpr int ndim     = 0;
   static constexpr int shape[1] = {0};
-
-  SERAC_HOST_DEVICE constexpr auto& operator()(array<int, ndim>) { return value; }
-  SERAC_HOST_DEVICE constexpr auto  operator()(array<int, ndim>) const { return value; }
 
   template <typename... S>
   SERAC_HOST_DEVICE constexpr auto& operator()(S...)
@@ -267,16 +263,6 @@ template <typename T, int n1, int n2 = 1>
 using reduced_tensor = std::conditional_t<
     (n1 == 1 && n2 == 1), double,
     std::conditional_t<n1 == 1, tensor<T, n2>, std::conditional_t<n2 == 1, tensor<T, n1>, tensor<T, n1, n2>>>>;
-
-/**
- * @brief Returns a @p IndexSpace object that can be used
- * to iterate over a tensor of arbitary dimension
- */
-template <typename T, int... n>
-SERAC_HOST_DEVICE constexpr auto indices(tensor<T, n...>)
-{
-  return IndexSpace<n...>{};
-}
 
 /**
  * @brief Creates a tensor given the dimensions in a @p std::integer_sequence
@@ -996,9 +982,15 @@ constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
   return B;
 }
 
-// hardcode the analytic derivative of the
-// inverse of a square matrix, rather than
-// apply gauss elimination directly on the dual number types
+/**
+ * @overload
+ * @note when inverting a tensor of dual numbers,
+ * hardcode the analytic derivative of the
+ * inverse of a square matrix, rather than
+ * apply gauss elimination directly on the dual number types
+ * 
+ * TODO: compare performance of this hardcoded implementation to just using inv() directly
+ */
 template <typename gradient_type, int n>
 auto inv(tensor<dual<gradient_type>, n, n> A)
 {
@@ -1015,6 +1007,16 @@ auto inv(tensor<dual<gradient_type>, n, n> A)
   });
 }
 
+/**
+ * @brief compute the outer product of two tensors
+ * 
+ * @tparam T1 the underlying type of the left tensor argument
+ * @tparam n1 the shape of the left tensor argument
+ * @tparam T2 the underlying type of the right tensor argument
+ * @tparam n2 the shape of the right tensor argument
+ * @param[in] A The lefthand argument of the outer product
+ * @param[in] B The righthand argument of the outer product
+ */
 template <typename T1, int... n1, typename T2, int... n2>
 constexpr auto outer_product(const tensor<T1, n1...>& A, const tensor<T2, n2...>& B)
 {
@@ -1049,6 +1051,13 @@ constexpr auto dot_product(const tensor<T1, I1...>& A, const tensor<T2, I2...>& 
   return dot_product_helper<last(I1...)>(A, B, I1H, I2T);
 }
 
+/**
+ * @brief recursively serialize the entries in a tensor to an ostream. 
+ * Output format uses braces and comma separators to mimic C syntax for multidimensional array
+ * initialization.
+ * 
+ * @param[in] A The tensor to write out
+ */
 template <typename T, int... n>
 auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
 {
@@ -1061,7 +1070,7 @@ auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
 }
 
 /**
- * @brief Zeroes out trivially small tensor values
+ * @brief replace all entries in a tensor satisfying |x| < 1.0e-10 by literal zero
  * @param[in] A The tensor to "chop"
  */
 template <int n>
@@ -1075,6 +1084,7 @@ constexpr auto chop(const tensor<double, n>& A)
   }
   return copy;
 }
+
 /// @overload
 template <int m, int n>
 constexpr auto chop(const tensor<double, m, n>& A)
@@ -1190,22 +1200,57 @@ auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
   return g;
 }
 
+/**
+ * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
+ * @param[in] df_dx the gradient of f(x) 
+ * @param[in] dx    the small change in x
+ */
 constexpr auto chain_rule(const zero /* df_dx */, const zero /* dx */) { return zero{}; }
 
+/**
+ * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
+ * @tparam T the type of the input argument x
+ * @param[in] df_dx the gradient of f(x) 
+ * @param[in] dx    the small change in x
+ * 
+ * @note this overload implements a no-op for the case where the gradient w.r.t. an input argument is identically zero
+ */
 template <typename T>
 constexpr auto chain_rule(const zero /* df_dx */, const T /* dx */)
 {
   return zero{};
 }
 
+/**
+ * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
+ * @tparam T the type of the gradient argument df_dx
+ * @param[in] df_dx the gradient of f(x) 
+ * @param[in] dx    the small change in x
+ * 
+ * @note this overload implements a no-op for the case where the small change is indentically zero
+ */
 template <typename T>
 constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */)
 {
   return zero{};
 }
 
+/**
+ * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
+ * @param[in] df_dx the gradient of f(x) 
+ * @param[in] dx    the small change in x
+ * 
+ * @note for a scalar-valued function of a scalar, the chain rule is just multiplication
+ */
 constexpr auto chain_rule(const double df_dx, const double dx) { return df_dx * dx; }
 
+/**
+ * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
+ * @param[in] df_dx the gradient of f(x) 
+ * @param[in] dx    the small change in x
+ * 
+ * @note for a scalar-valued function of a scalar, the chain rule is just multiplication
+ */
 template <int... n>
 constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
 {

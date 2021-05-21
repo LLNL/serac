@@ -14,7 +14,6 @@ set(weakform_depends serac_physics mfem mpi)
 set(weakform_headers
     weak_form.hpp
     tensor.hpp
-    array.hpp
     dual.hpp
     tuple_arithmetic.hpp
     polynomials.hpp

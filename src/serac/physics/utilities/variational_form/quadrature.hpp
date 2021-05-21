@@ -29,11 +29,11 @@ struct QuadratureRule {
   /**
    * @brief The scalar weights of each point
    */
-  array<double, n> weights;
+  tensor<double, n> weights;
   /**
    * @brief The coordinates in reference space for each quadrature point
    */
-  array<tensor<double, dim>, n> points;
+  tensor<double, n, dim> points;
   /**
    * @brief Returns the number of points in the rule
    */
