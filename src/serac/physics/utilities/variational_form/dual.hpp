@@ -20,7 +20,8 @@ namespace serac {
 
 /**
  * @brief Dual number struct (value plus gradient)
- * @tparam gradient_type The type of the gradient
+ * @tparam gradient_type The type of the gradient (should support addition, scalar multiplication/division, and unary negation operators)
+ *  
  */
 template <typename gradient_type>
 struct dual {
