@@ -17,20 +17,23 @@ conceptually similar to the type ``float[3][2][4]``.
 
 Here are some examples and features:
 
--  ``tensor`` has value semantics (in contrast to C++ multidimensional
+-  ``tensor`` has `value semantics <https://akrzemi1.wordpress.com/2012/02/03/value-semantics/>`_ (in contrast to C++ multidimensional
    arrays):
 
    .. code-block:: c++
 
-      {
-        tensor < double, 3 > u = {1.0, 2.0, 3.0};
-        tensor < double, 3 > v = u; // make a copy of u
-      }
-
+      // c-style arrays are okay for storage, but can't do much else
       {
         double u[3] = {1.0, 2.0, 3.0};
         double v[3] = u; // does not compile 
         double * w  = u; // does compile, but size information is lost and w is a shallow copy
+      }
+
+      // tensors store their own data and can be copied, assigned, referenced, and transformed
+      {
+        tensor < double, 3 > u = {1.0, 2.0, 3.0};
+        tensor < double, 3 > v = u; // make a copy of u
+        tensor < double, 3 > & w = u; // make a reference to u
       }
 
 -  ``tensor`` supports operator overloading:
@@ -57,7 +60,7 @@ Here are some examples and features:
       double dA = sqrt(det(dot(J, transpose(J))));
       tensor < double, 3 > force = traction * dA;
 
--  ``tensor`` supports useful shortcuts:
+-  ``tensor`` supports useful shortcuts (like `class template argument deduction <https://devblogs.microsoft.com/cppblog/how-to-use-class-template-argument-deduction/>`_):
 
    .. code-block:: cpp
 
@@ -387,7 +390,7 @@ So for this example, the return type will be of the form:
 
 The individual blocks can be accessed by using ``std::get()``.
 
-One final note: if we look at the actual types contained in ``get_gradient(output)`` we see a few interesting details:
+Finally, if we look at the actual types contained in ``get_gradient(output)`` we see a few interesting details:
 
 .. code-block:: cpp
 
