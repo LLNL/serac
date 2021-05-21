@@ -1106,21 +1106,6 @@ constexpr auto make_dual(const tensor<double, n...>& A)
   return A_dual;
 }
 
-template <typename T>
-struct underlying {
-  using type = void;
-};
-
-template <typename T, int... n>
-struct underlying<tensor<T, n...>> {
-  using type = T;
-};
-
-template <>
-struct underlying<double> {
-  using type = double;
-};
-
 namespace detail {
 
 template <typename T1, typename T2>
@@ -1158,6 +1143,11 @@ struct outer_prod<T, zero> {
 
 }  // namespace detail
 
+/**
+ * @brief a type function that returns the tensor type of an outer product of two tensors
+ * @tparam T1 the first argument to the outer product
+ * @tparam T2 the second argument to the outer product
+ */
 template <typename T1, typename T2>
 using outer_product_t = typename detail::outer_prod<T1, T2>::type;
 
@@ -1251,29 +1241,5 @@ auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p.
   }
   return total;
 }
-
-/*
-tuple<double, double, double> output = chain_rule(
-  tuple<
-    tuple<double,double>,
-    tuple<double,double>
-  >,
-  tuple<double, double>
-);
-
-tuple<double, double, double> output = chain_rule(
-  tuple<
-    tuple<double,double>,
-    tuple<double,double>,
-    tuple<double,double>
-  >,
-  tuple<double, double>
-);
-
-double output = chain_rule(
-  tuple< double, double >,
-  tuple< double, double >
-);
-*/
 
 }  // namespace serac
