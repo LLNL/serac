@@ -60,6 +60,7 @@ constexpr tensor<T, n> GaussLegendreWeights() {
 };
 // clang-format on
 
+/** @brief calculate n! */
 constexpr int factorial(int n)
 {
   int nfactorial = 1;
@@ -68,7 +69,8 @@ constexpr int factorial(int n)
   }
   return nfactorial;
 }
-
+ 
+/** @brief return a tensor of n entries {1, x, x*x, ... } */
 template <int n, typename T>
 constexpr tensor<T, n> powers(T x)
 {

@@ -20,6 +20,7 @@
 
 namespace serac {
 
+/// @cond
 namespace detail {
 template <typename T, typename i0_t>
 SERAC_HOST_DEVICE constexpr auto get(const T& values, i0_t i0)
@@ -68,7 +69,12 @@ SERAC_HOST_DEVICE constexpr auto& get(T& values, i0_t i0, i1_t i1, i2_t i2, i3_t
 {
   return values[i0][i1][i2][i3];
 }
+
+template <int n>
+using always_int = int;
+
 }  // namespace detail
+/// @endcond
 
 /// @cond
 template <typename T, int... n>
@@ -175,9 +181,25 @@ struct tensor<T, first, rest...> {
   tensor<T, rest...> value[first];
 };
 
+/**
+ * @brief class template argument deduction guide for type `tensor`.
+ * 
+ * @note this lets users write 
+ * \code{.cpp} tensor A = {{0.0, 1.0, 2.0}}; \endcode
+ * instead of explicitly writing the template parameters
+ * \code{.cpp} tensor< double, 3 > A = {{1.0, 2.0, 3.0}}; \endcode
+ */
 template <typename T, int n1>
 tensor(const T (&data)[n1]) -> tensor<T, n1>;
 
+/**
+ * @brief class template argument deduction guide for type `tensor`.
+ * 
+ * @note this lets users write 
+ * \code{.cpp} tensor A = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}}; \endcode
+ * instead of explicitly writing the template parameters
+ * \code{.cpp} tensor< double, 3, 3 > A = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}}; \endcode
+ */
 template <typename T, int n1, int n2>
 tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
 
@@ -185,20 +207,24 @@ tensor(const T (&data)[n1][n2]) -> tensor<T, n1, n2>;
  * @brief A sentinel struct for eliding no-op tensor operations
  */
 struct zero {
+  /** @brief `zero` is implicitly convertible to double with value 0.0 */
   SERAC_HOST_DEVICE operator double() { return 0.0; }
 
+  /** @brief `zero` is implicitly convertible to a tensor of any shape */
   template <typename T, int... n>
   SERAC_HOST_DEVICE operator tensor<T, n...>()
   {
     return tensor<T, n...>{};
   }
 
+  /** @brief `zero` can be accessed like a multidimensional array */
   template <typename... T>
   SERAC_HOST_DEVICE auto operator()(T...)
   {
     return zero{};
   }
 
+  /** @brief anything assigned to `zero` does not change its value and returns `zero` */
   template <typename T>
   SERAC_HOST_DEVICE auto operator=(T)
   {
@@ -206,14 +232,17 @@ struct zero {
   }
 };
 
+/** @brief the sum of two `zero`s is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator+(zero, zero) { return zero{}; }
 
+/** @brief the sum of `zero` with something non-`zero` just returns the other value */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto operator+(zero, T other)
 {
   return other;
 }
 
+/** @brief the sum of `zero` with something non-`zero` just returns the other value */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto operator+(T other, zero)
 {
@@ -222,14 +251,17 @@ SERAC_HOST_DEVICE constexpr auto operator+(T other, zero)
 
 /////////////////////////////////////////////////
 
+/** @brief the difference of two `zero`s is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator-(zero, zero) { return zero{}; }
 
+/** @brief the difference of `zero` with something else is the unary negation of the other thing */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto operator-(zero, T other)
 {
   return -other;
 }
 
+/** @brief the difference of something else with `zero` is the other thing itself */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto operator-(T other, zero)
 {
@@ -238,14 +270,17 @@ SERAC_HOST_DEVICE constexpr auto operator-(T other, zero)
 
 /////////////////////////////////////////////////
 
+/** @brief the product of two `zero`s is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator*(zero, zero) { return zero{}; }
 
+/** @brief the product `zero` with something else is also `zero` */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto operator*(zero, T /*other*/)
 {
   return zero{};
 }
 
+/** @brief the product `zero` with something else is also `zero` */
 template <typename T>
 SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
 {
@@ -275,11 +310,6 @@ SERAC_HOST_DEVICE constexpr auto tensor_with_shape(std::integer_sequence<int, n.
   return tensor<T, n...>{};
 }
 
-namespace detail {
-template <int n>
-using always_int = int;
-}  // namespace detail
-
 /**
  * @brief Creates a tensor of requested dimension by subsequent calls to a functor
  * Can be thought of as analogous to @p std::transform in that the set of possible
@@ -301,6 +331,14 @@ SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
   return A;
 }
 
+/**
+ * @brief return the sum of two tensors
+ * @tparam S the underlying type of the lefthand argument
+ * @tparam T the underlying type of the righthand argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The lefthand operand
+ * @param[in] B The righthand operand
+ */
 template <typename S, typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, n...>& A, const tensor<T, n...>& B)
 {
@@ -311,6 +349,12 @@ SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, n...>& A, const tenso
   return C;
 }
 
+/**
+ * @brief return the unary negation of a tensor
+ * @tparam T the underlying type of the righthand argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The tensor to negate
+ */
 template <typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto operator-(const tensor<T, n...>& A)
 {
@@ -321,6 +365,14 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<T, n...>& A)
   return B;
 }
 
+/**
+ * @brief return the difference of two tensors
+ * @tparam S the underlying type of the lefthand argument
+ * @tparam T the underlying type of the righthand argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The lefthand operand
+ * @param[in] B The righthand operand
+ */
 template <typename S, typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, n...>& A, const tensor<T, n...>& B)
 {
@@ -331,6 +383,14 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, n...>& A, const tenso
   return C;
 }
 
+/**
+ * @brief multiply a tensor by a scalar value
+ * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] scale The scaling factor
+ * @param[in] A The tensor to be scaled
+ */
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
 SERAC_HOST_DEVICE constexpr auto operator*(S scale, const tensor<T, n...>& A)
@@ -342,6 +402,14 @@ SERAC_HOST_DEVICE constexpr auto operator*(S scale, const tensor<T, n...>& A)
   return C;
 }
 
+/**
+ * @brief multiply a tensor by a scalar value
+ * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The tensor to be scaled
+ * @param[in] scale The scaling factor
+ */
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
 SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, n...>& A, S scale)
@@ -353,6 +421,14 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, n...>& A, S scale)
   return C;
 }
 
+/**
+ * @brief divide a scalar by each element in a tensor
+ * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] scale The numerator 
+ * @param[in] A The tensor of denominators
+ */
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
 constexpr auto operator/(S scale, const tensor<T, n...>& A)
@@ -364,6 +440,14 @@ constexpr auto operator/(S scale, const tensor<T, n...>& A)
   return C;
 }
 
+/**
+ * @brief divide a tensor by a scalar
+ * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The tensor of numerators
+ * @param[in] scale The denominator 
+ */
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
 constexpr auto operator/(const tensor<T, n...>& A, S scale)
@@ -375,6 +459,14 @@ constexpr auto operator/(const tensor<T, n...>& A, S scale)
   return C;
 }
 
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam S the underlying type of the tensor (lefthand) argument
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename S, typename T, int... n>
 constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
 {
@@ -384,12 +476,26 @@ constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
   return A;
 }
 
+/**
+ * @brief compound assignment (+) between a tensor and zero (no-op)
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The lefthand tensor
+ */
 template <typename T, int... n>
 constexpr auto& operator+=(tensor<T, n...>& A, zero)
 {
   return A;
 }
 
+/**
+ * @brief compound assignment (-) on tensors
+ * @tparam S the underlying type of the tensor (lefthand) argument
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename S, typename T, int... n>
 constexpr auto& operator-=(tensor<S, n...>& A, const tensor<T, n...>& B)
 {
@@ -399,12 +505,27 @@ constexpr auto& operator-=(tensor<S, n...>& A, const tensor<T, n...>& B)
   return A;
 }
 
+/**
+ * @brief compound assignment (-) between a tensor and zero (no-op)
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The lefthand tensor
+ */
 template <typename T, int... n>
 constexpr auto& operator-=(tensor<T, n...>& A, zero)
 {
   return A;
 }
 
+/**
+ * @brief compute the outer product of two tensors
+ * @tparam S the type of the lefthand argument
+ * @tparam T the type of the righthand argument
+ * @param[in] A The lefthand argument
+ * @param[in] B The righthand argument
+ * 
+ * @note this overload implements the special case where both arguments are scalars
+ */
 template <typename S, typename T>
 constexpr auto outer(S A, T B)
 {
@@ -413,6 +534,10 @@ constexpr auto outer(S A, T B)
   return A * B;
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where the left argument is a scalar, and the right argument is a tensor
+ */
 template <typename S, typename T, int n>
 constexpr auto outer(S A, tensor<T, n> B)
 {
@@ -1116,6 +1241,7 @@ constexpr auto make_dual(const tensor<double, n...>& A)
   return A_dual;
 }
 
+/// @cond
 namespace detail {
 
 template <typename T1, typename T2>
@@ -1152,6 +1278,7 @@ struct outer_prod<T, zero> {
 };
 
 }  // namespace detail
+/// @endcond
 
 /**
  * @brief a type function that returns the tensor type of an outer product of two tensors
