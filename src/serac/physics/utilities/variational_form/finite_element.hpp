@@ -69,8 +69,8 @@ constexpr int dimension_of(Geometry g)
  */
 template <int p, int c = 1>
 struct H1 {
-  static constexpr int order      = p;
-  static constexpr int components = c;
+  static constexpr int order      = p; ///< the polynomial order of the elements
+  static constexpr int components = c; ///< the number of components at each node
 };
 
 /**
@@ -80,8 +80,8 @@ struct H1 {
  */
 template <int p, int c = 1>
 struct Hcurl {
-  static constexpr int order      = p;
-  static constexpr int components = c;
+  static constexpr int order      = p; ///< the polynomial order of the elements
+  static constexpr int components = c; ///< the number of components at each node
 };
 
 /**
@@ -91,8 +91,8 @@ struct Hcurl {
  */
 template <int p, int c = 1>
 struct L2 {
-  static constexpr int order      = p;
-  static constexpr int components = c;
+  static constexpr int order      = p; ///< the polynomial order of the elements
+  static constexpr int components = c; ///< the number of components at each node
 };
 
 /**
@@ -104,17 +104,6 @@ enum class Family
   HCURL,
   HDIV,
   L2
-};
-
-/**
- * @brief FIXME: This doesn't appear to be used anywhere
- */
-enum class Evaluation
-{
-  Interpolate,
-  Divergence,
-  Gradient,
-  Curl
 };
 
 /**
@@ -148,17 +137,17 @@ struct finite_element;
  */
 template <typename T>
 struct is_finite_element {
-  static constexpr bool value = false;
+  static constexpr bool value = false; ///< whether or not type T is a finite_element
 };
 /// @overload
 template <Geometry g, int p, int c>
 struct is_finite_element<finite_element<g, H1<p, c> > > {
-  static constexpr bool value = true;
+  static constexpr bool value = true; ///< whether or not type T is a finite_element
 };
 /// @overload
 template <Geometry g, int p>
 struct is_finite_element<finite_element<g, Hcurl<p> > > {
-  static constexpr bool value = true;
+  static constexpr bool value = true; ///< whether or not type T is a finite_element
 };
 
 #include "detail/segment_h1.inl"
