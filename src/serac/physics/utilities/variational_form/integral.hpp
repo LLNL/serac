@@ -252,13 +252,13 @@ auto Postprocess(T f, const tensor<double, geometry_dim> xi,
  *
  * @param[in] A The Jacobian to compute the ratio on
  */
-
 template <int n>
 auto Measure(const tensor<double, n, n>& A)
 {
   return det(A);
 }
 
+/// @overload
 template <int m, int n>
 auto Measure(const tensor<double, m, n>& A)
 {
@@ -291,7 +291,7 @@ auto Measure(const tensor<double, m, n>& A)
  * @param[out] derivatives_ptr The address at which derivatives of @a lambda with
  * respect to its arguments will be stored
  * @param[in] J_ The Jacobians of the element transformations at all quadrature points
- * @param[in] X The actual (not reference) coordinates of all quadrature points
+ * @param[in] X_ The actual (not reference) coordinates of all quadrature points
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
@@ -440,30 +440,47 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
+/// @cond
 namespace detail {
-template <typename spaces>
-struct get_trial_space;  // undefined
 
-template <typename test_space, typename trial_space>
-struct get_trial_space<test_space(trial_space)> {
-  using type = trial_space;
-};
-
+/**
+ * @brief a class that helps to extract the test space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
 template <typename spaces>
 struct get_test_space;  // undefined
 
+/**
+ * @brief a class that helps to extract the test space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
 template <typename test_space, typename trial_space>
 struct get_test_space<test_space(trial_space)> {
-  using type = test_space;
+  using type = test_space; ///< the test space
 };
-}  // namespace detail
 
-template <typename T>
-using test_space_t = typename detail::get_test_space<T>::type;
+/**
+ * @brief a class that helps to extract the trial space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename spaces>
+struct get_trial_space;  // undefined
 
-template <typename T>
-using trial_space_t = typename detail::get_trial_space<T>::type;
+/**
+ * @brief a class that helps to extract the trial space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename test_space, typename trial_space>
+struct get_trial_space<test_space(trial_space)> {
+  using type = trial_space; ///< the trial space
+};
 
+/**
+ * @brief a class that provides the lambda argument types for a given integral
+ * @tparam trial_space the trial space associated with the integral
+ * @tparam geometry_dim the dimensionality of the element type
+ * @tparam spatial_dim the dimensionality of the space the mesh lives in
+ */
 template <typename space, int geometry_dim, int spatial_dim>
 struct lambda_argument;
 
@@ -492,6 +509,25 @@ struct lambda_argument<Hcurl<p>, 3, 3> {
   using type = std::tuple<tensor<double, 3>, tensor<double, 3> >;
 };
 
+}  // namespace detail
+/// @endcond
+
+/**
+ * @brief a type function that extracts the test space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename spaces>
+using test_space_t = typename detail::get_test_space<spaces>::type;
+
+/**
+ * @brief a type function that extracts the trial space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename spaces>
+using trial_space_t = typename detail::get_trial_space<spaces>::type;
+
+
+
 static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
                                                     Geometry::Hexahedron};
 
@@ -503,8 +539,8 @@ static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::S
 template <typename spaces>
 class Integral {
 public:
-  using test_space  = test_space_t<spaces>;
-  using trial_space = trial_space_t<spaces>;
+  using test_space  = test_space_t<spaces>;  ///< the test function space
+  using trial_space = trial_space_t<spaces>; ///< the trial function space
 
   /**
    * @brief Constructs an @p Integral from a user-provided quadrature function
@@ -532,7 +568,7 @@ public:
     // we use them to observe the output type and allocate memory to store
     // the derivative information at each quadrature point
     using x_t             = tensor<double, spatial_dim>;
-    using u_du_t          = typename lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
+    using u_du_t          = typename detail::lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
     using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
     auto num_quadrature_points = static_cast<uint32_t>(X.Size() / spatial_dim);
