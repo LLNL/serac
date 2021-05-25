@@ -14,10 +14,15 @@
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
 
-#include "serac/physics/utilities/variational_form/tensor.hpp"
-#include "serac/physics/utilities/variational_form/quadrature.hpp"
-#include "serac/physics/utilities/variational_form/finite_element.hpp"
-#include "serac/physics/utilities/variational_form/tuple_arithmetic.hpp"
+#include "serac/physics/utilities/weak_form/tensor.hpp"
+#include "serac/physics/utilities/weak_form/quadrature.hpp"
+#include "serac/physics/utilities/weak_form/finite_element.hpp"
+#include "serac/physics/utilities/weak_form/tuple_arithmetic.hpp"
+
+// For now, mfem's support for getting surface element information (dof values, jacobians, etc)
+// is lacking, making it difficult to actually implement surface integrals on our end
+//
+// #define ENABLE_BOUNDARY_INTEGRALS
 
 namespace serac {
 
@@ -530,23 +535,25 @@ static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::S
  * function spaces, i.e., @p test(trial)
  */
 template <typename spaces>
-class BoundaryIntegral {
+class Integral {
 public:
   using test_space  = test_space_t<spaces>;   ///< the test function space
   using trial_space = trial_space_t<spaces>;  ///< the trial function space
 
   /**
    * @brief Constructs an @p Integral from a user-provided quadrature function
-   * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
+   * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
+   * @tparam spatial_dim The full dimension of the mesh
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
-   * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
+   * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
+   * and @a spatial_dim template parameters
    */
-  template <int dim, typename lambda_type>
-  BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>,
+  template <int geometry_dim, int spatial_dim, typename lambda_type>
+  Integral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<geometry_dim>,
            Dimension<spatial_dim>, lambda_type&& qf)
       : J_(J), X_(X)
   {

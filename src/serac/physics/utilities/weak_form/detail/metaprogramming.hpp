@@ -66,7 +66,6 @@ constexpr auto last(T... args)
   return std::get<sizeof...(T) - 1>(std::tuple{args...});
 }
 
-
 /**
  * @brief return a new std::integer_sequence, after removing the rth entry from another std::integer_sequence
  */

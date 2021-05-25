@@ -13,7 +13,7 @@
 // this specialization defines shape functions (and their curls) that
 // interpolate at Gauss-Lobatto nodes for closed intervals, and Gauss-Legendre
 // nodes for open intervals.
-// 
+//
 // note 1: mfem assumes the parent element domain is [0,1]x[0,1]
 // note 2: dofs are numbered by direction and then lexicographically in space.
 //         see below
@@ -29,15 +29,13 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr int  ndof       = 2 * p * (p + 1);
   static constexpr int  components = 1;
 
-  using residual_type = typename std::conditional< components == 1, 
-    tensor< double, ndof >,
-    tensor< double, ndof, components >
-  >::type;
+  using residual_type =
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
-  static constexpr auto directions = []{
+  static constexpr auto directions = [] {
     int dof_per_direction = p * (p + 1);
 
-    tensor < double, ndof, dim > directions{};
+    tensor<double, ndof, dim> directions{};
     for (int i = 0; i < dof_per_direction; i++) {
       directions[i + 0 * dof_per_direction] = {1.0, 0.0};
       directions[i + 1 * dof_per_direction] = {0.0, 1.0};
@@ -45,12 +43,11 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return directions;
   }();
 
-  static constexpr auto nodes = []{
-
+  static constexpr auto nodes = [] {
     auto legendre_nodes = GaussLegendreNodes<p>();
-    auto lobatto_nodes = GaussLobattoNodes<p+1>();
+    auto lobatto_nodes  = GaussLobattoNodes<p + 1>();
 
-    tensor < double, ndof, dim > nodes{};
+    tensor<double, ndof, dim> nodes{};
 
     int count = 0;
     for (int j = 0; j < p + 1; j++) {

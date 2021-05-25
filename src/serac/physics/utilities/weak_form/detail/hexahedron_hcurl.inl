@@ -13,7 +13,7 @@
 // this specialization defines shape functions (and their curls) that
 // interpolate at Gauss-Lobatto nodes for closed intervals, and Gauss-Legendre
 // nodes for open intervals.
-// 
+//
 // note 1: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 // note 2: dofs are numbered by direction and then lexicographically in space.
 //         quadrilateral_hcurl.inl for more information
@@ -73,26 +73,18 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     return nodes;
   }();
 
-  using residual_type = typename std::conditional< components == 1, 
-    tensor< double, ndof >,
-    tensor< double, ndof, components >
-  >::type;
+  using residual_type =
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
   static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
   {
     tensor<double, ndof, dim> N{};
 
-    tensor< double, p > f[3] = {
-      GaussLegendreInterpolation01<p>(xi[0]),
-      GaussLegendreInterpolation01<p>(xi[1]),
-      GaussLegendreInterpolation01<p>(xi[2])
-    };
+    tensor<double, p> f[3] = {GaussLegendreInterpolation01<p>(xi[0]), GaussLegendreInterpolation01<p>(xi[1]),
+                              GaussLegendreInterpolation01<p>(xi[2])};
 
-    tensor< double, p + 1 > g[3] = {
-      GaussLobattoInterpolation01<p + 1>(xi[0]),
-      GaussLobattoInterpolation01<p + 1>(xi[1]),
-      GaussLobattoInterpolation01<p + 1>(xi[2])
-    };
+    tensor<double, p + 1> g[3] = {GaussLobattoInterpolation01<p + 1>(xi[0]), GaussLobattoInterpolation01<p + 1>(xi[1]),
+                                  GaussLobattoInterpolation01<p + 1>(xi[2])};
 
     int count = 0;
 
@@ -130,23 +122,15 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   {
     tensor<double, ndof, dim> curl{};
 
-    tensor< double, p > f[3] = {
-      GaussLegendreInterpolation01<p>(xi[0]),
-      GaussLegendreInterpolation01<p>(xi[1]),
-      GaussLegendreInterpolation01<p>(xi[2])
-    };
+    tensor<double, p> f[3] = {GaussLegendreInterpolation01<p>(xi[0]), GaussLegendreInterpolation01<p>(xi[1]),
+                              GaussLegendreInterpolation01<p>(xi[2])};
 
-    tensor< double, p + 1 > g[3] = {
-      GaussLobattoInterpolation01<p + 1>(xi[0]),
-      GaussLobattoInterpolation01<p + 1>(xi[1]),
-      GaussLobattoInterpolation01<p + 1>(xi[2])
-    };
+    tensor<double, p + 1> g[3] = {GaussLobattoInterpolation01<p + 1>(xi[0]), GaussLobattoInterpolation01<p + 1>(xi[1]),
+                                  GaussLobattoInterpolation01<p + 1>(xi[2])};
 
-    tensor< double, p + 1 > dg[3] = {
-      GaussLobattoInterpolationDerivative01<p + 1>(xi[0]),
-      GaussLobattoInterpolationDerivative01<p + 1>(xi[1]),
-      GaussLobattoInterpolationDerivative01<p + 1>(xi[2])
-    };
+    tensor<double, p + 1> dg[3] = {GaussLobattoInterpolationDerivative01<p + 1>(xi[0]),
+                                   GaussLobattoInterpolationDerivative01<p + 1>(xi[1]),
+                                   GaussLobattoInterpolationDerivative01<p + 1>(xi[2])};
 
     int count = 0;
 

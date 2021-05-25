@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "mfem.hpp"
-#include "serac/physics/utilities/variational_form/tensor.hpp"
+#include "serac/physics/utilities/weak_form/tensor.hpp"
 
 #include <gtest/gtest.h>
 

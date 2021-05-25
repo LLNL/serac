@@ -9,7 +9,7 @@
 
 #include "axom/core/utilities/Timer.hpp"
 
-#include "serac/physics/utilities/variational_form/tensor.hpp"
+#include "serac/physics/utilities/weak_form/tensor.hpp"
 
 using namespace serac;
 

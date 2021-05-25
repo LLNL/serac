@@ -14,11 +14,11 @@
 
 #include "axom/core/utilities/Timer.hpp"
 
-#include "serac/physics/utilities/variational_form/tensor.hpp"
-#include "serac/physics/utilities/variational_form/integral.hpp"
-#include "serac/physics/utilities/variational_form/quadrature.hpp"
-#include "serac/physics/utilities/variational_form/finite_element.hpp"
-#include "serac/physics/utilities/variational_form/tuple_arithmetic.hpp"
+#include "serac/physics/utilities/weak_form/tensor.hpp"
+#include "serac/physics/utilities/weak_form/integral.hpp"
+#include "serac/physics/utilities/weak_form/quadrature.hpp"
+#include "serac/physics/utilities/weak_form/finite_element.hpp"
+#include "serac/physics/utilities/weak_form/tuple_arithmetic.hpp"
 
 namespace mfem {
 
