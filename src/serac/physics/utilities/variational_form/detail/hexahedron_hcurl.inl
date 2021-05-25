@@ -17,6 +17,8 @@
 // note 1: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 // note 2: dofs are numbered by direction and then lexicographically in space.
 //         quadrilateral_hcurl.inl for more information
+// for additional information on the finite_element concept requirements, see finite_element.hpp
+/// @cond
 template <int p>
 struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   static constexpr auto geometry   = Geometry::Hexahedron;
@@ -181,3 +183,4 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
     return curl;
   }
 };
+/// @endcond

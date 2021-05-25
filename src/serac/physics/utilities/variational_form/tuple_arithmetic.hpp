@@ -27,6 +27,7 @@
 
 namespace serac {
 
+/// @cond
 namespace detail {
 
 /**
@@ -191,6 +192,7 @@ auto chain_rule_tuple_matvec(std::tuple<T...> df_dx, std::tuple<S...> dx)
 }
 
 }  // namespace detail
+/// @endcond
 
 /**
  * @brief apply operator+ to each pair of entries in two similarly-sized tuples

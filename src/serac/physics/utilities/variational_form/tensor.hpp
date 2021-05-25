@@ -549,6 +549,10 @@ constexpr auto outer(S A, tensor<T, n> B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where the left argument is a tensor, and the right argument is a scalar
+ */
 template <typename S, typename T, int m>
 constexpr auto outer(const tensor<S, m>& A, T B)
 {
@@ -560,18 +564,30 @@ constexpr auto outer(const tensor<S, m>& A, T B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where the left argument is `zero`, and the right argument is a tensor
+ */
 template <typename T, int n>
 constexpr auto outer(zero, const tensor<T, n>&)
 {
   return zero{};
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where the left argument is a tensor, and the right argument is `zero`
+ */
 template <typename T, int n>
 constexpr auto outer(const tensor<T, n>&, zero)
 {
   return zero{};
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where the left argument is a tensor, and the right argument is `zero`
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto outer(S A, const tensor<T, m, n>& B)
 {
@@ -585,6 +601,10 @@ constexpr auto outer(S A, const tensor<T, m, n>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where both arguments are vectors
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto outer(const tensor<S, m>& A, const tensor<T, n>& B)
 {
@@ -597,6 +617,10 @@ constexpr auto outer(const tensor<S, m>& A, const tensor<T, n>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where the left argument is a 2nd order tensor, and the right argument is a scalar
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto outer(const tensor<S, m, n>& A, T B)
 {
@@ -610,6 +634,10 @@ constexpr auto outer(const tensor<S, m, n>& A, T B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where the left argument is a 2nd order tensor, and the right argument is a first order tensor
+ */
 template <typename S, typename T, int m, int n, int p>
 constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p>& B)
 {
@@ -624,6 +652,10 @@ constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where the left argument is a 1st order tensor, and the right argument is a 2nd order tensor
+ */
 template <typename S, typename T, int m, int n, int p>
 constexpr auto outer(const tensor<S, m>& A, const tensor<T, n, p>& B)
 {
@@ -638,6 +670,10 @@ constexpr auto outer(const tensor<S, m>& A, const tensor<T, n, p>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note this overload implements the case where both arguments are second order tensors
+ */
 template <typename S, typename T, int m, int n, int p, int q>
 constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p, q>& B)
 {
@@ -654,6 +690,15 @@ constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p, q>& B)
   return AB;
 }
 
+/**
+ * @brief this function contracts over all indices of the two tensor arguments
+ * @tparam S the underlying type of the tensor (lefthand) argument
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam m the number of rows
+ * @tparam n the number of columns
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto inner(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
 {
@@ -666,6 +711,14 @@ constexpr auto inner(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
   return sum;
 }
 
+/**
+ * @brief this function contracts over the "middle" index of the two tensor arguments
+ * @tparam S the underlying type of the tensor (lefthand) argument
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam n integers describing the tensor shape
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename S, typename T, int m, int n, int p>
 constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
 {
@@ -680,6 +733,10 @@ constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note vector . matrix
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n>& B)
 {
@@ -692,6 +749,10 @@ constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note matrix . vector
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n>& B)
 {
@@ -704,6 +765,10 @@ constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note vector . vector
+ */
 template <typename S, typename T, int n>
 constexpr auto dot(const tensor<S, n>& A, const tensor<T, n>& B)
 {
@@ -714,6 +779,10 @@ constexpr auto dot(const tensor<S, n>& A, const tensor<T, n>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note 3rd-order-tensor . vector
+ */
 template <typename S, typename T, int m, int n, int p>
 constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
 {
@@ -728,6 +797,10 @@ constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note vector . matrix . vector
+ */
 template <typename S, typename T, typename U, int m, int n>
 constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n>& A, const tensor<U, n>& v)
 {
@@ -740,6 +813,17 @@ constexpr auto dot(const tensor<S, m>& u, const tensor<T, m, n>& A, const tensor
   return uAv;
 }
 
+/**
+ * @brief double dot product, contracting over the two "middle" indices
+ * @tparam S the underlying type of the tensor (lefthand) argument
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam m first dimension of A
+ * @tparam n second dimension of A
+ * @tparam p third dimension of A, first dimensions of B
+ * @tparam q fourth dimension of A, second dimensions of B
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename S, typename T, int m, int n, int p, int q>
 constexpr auto ddot(const tensor<S, m, n, p, q>& A, const tensor<T, p, q>& B)
 {
@@ -756,6 +840,10 @@ constexpr auto ddot(const tensor<S, m, n, p, q>& A, const tensor<T, p, q>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note 3rd-order-tensor : 2nd-order-tensor
+ */
 template <typename S, typename T, int m, int n, int p>
 constexpr auto ddot(const tensor<S, m, n, p>& A, const tensor<T, n, p>& B)
 {
@@ -770,6 +858,10 @@ constexpr auto ddot(const tensor<S, m, n, p>& A, const tensor<T, n, p>& B)
   return AB;
 }
 
+/**
+ * @overload
+ * @note 2nd-order-tensor : 2nd-order-tensor, like inner()
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto ddot(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
 {
@@ -782,18 +874,27 @@ constexpr auto ddot(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
   return AB;
 }
 
+/** 
+ * @brief this is a shorthand for dot(A, B)
+ */
 template <typename S, typename T, int m, int n, int p>
 constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
 {
   return dot(A, B);
 }
 
+/** 
+ * @brief this is a shorthand for dot(A, B)
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto operator*(const tensor<S, m>& A, const tensor<T, m, n>& B)
 {
   return dot(A, B);
 }
 
+/** 
+ * @brief this is a shorthand for dot(A, B)
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n>& B)
 {
@@ -813,6 +914,7 @@ constexpr auto sqnorm(const tensor<T, m>& A)
   }
   return total;
 }
+
 /// @overload
 template <typename T, int m, int n>
 constexpr auto sqnorm(const tensor<T, m, n>& A)
@@ -825,6 +927,7 @@ constexpr auto sqnorm(const tensor<T, m, n>& A)
   }
   return total;
 }
+
 /// @overload
 template <typename T, int... n>
 constexpr auto sqnorm(const tensor<T, n...>& A)
@@ -1132,55 +1235,13 @@ auto inv(tensor<dual<gradient_type>, n, n> A)
   });
 }
 
-/**
- * @brief compute the outer product of two tensors
- * 
- * @tparam T1 the underlying type of the left tensor argument
- * @tparam n1 the shape of the left tensor argument
- * @tparam T2 the underlying type of the right tensor argument
- * @tparam n2 the shape of the right tensor argument
- * @param[in] A The lefthand argument of the outer product
- * @param[in] B The righthand argument of the outer product
- */
-template <typename T1, int... n1, typename T2, int... n2>
-constexpr auto outer_product(const tensor<T1, n1...>& A, const tensor<T2, n2...>& B)
-{
-  tensor<decltype(T1{} * T2{}), n1..., n2...> AB{};
-  for_constexpr<n1...>([&](auto... i1) {
-    for_constexpr<n2...>([&](auto... i2) { AB({i1..., i2...}) = A({i1...}) * B({i2...}); });
-  });
-  return AB;
-}
-
-template <int J, typename T1, int... I1, typename T2, int... I2, int... I1H, int... I2T>
-constexpr auto dot_product_helper(const tensor<T1, I1...>& A, const tensor<T2, I2...>& B,
-                                  std::integer_sequence<int, I1H...>, std::integer_sequence<int, I2T...>)
-{
-  tensor<decltype(T1{} * T2{}), I1H..., I2T...> AB{};
-  for_constexpr<I1H...>([&](auto... i1) {
-    for_constexpr<I2T...>([&, i1...](auto... i2) {
-      for (int j = 0; j < J; j++) {
-        AB({i1..., i2...}) += A({i1..., j}) * B({j, i2...});
-      }
-    });
-  });
-  return AB;
-}
-
-template <typename T1, int... I1, typename T2, int... I2>
-constexpr auto dot_product(const tensor<T1, I1...>& A, const tensor<T2, I2...>& B)
-{
-  static_assert(last(I1...) == first(I2...), "error: dimension mismatch");
-  constexpr auto I1H = remove<sizeof...(I1) - 1>(std::integer_sequence<int, I1...>{});
-  constexpr auto I2T = remove<0>(std::integer_sequence<int, I2...>{});
-  return dot_product_helper<last(I1...)>(A, B, I1H, I2T);
-}
 
 /**
  * @brief recursively serialize the entries in a tensor to an ostream. 
  * Output format uses braces and comma separators to mimic C syntax for multidimensional array
  * initialization.
  * 
+ * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
  * @param[in] A The tensor to write out
  */
 template <typename T, int... n>
@@ -1228,7 +1289,7 @@ constexpr auto chop(const tensor<double, m, n>& A)
 /**
  * @brief Constructs a tensor of dual numbers from a tensor of values
  * @param[in] A The tensor of values
- * The gradients for each value will be set to 1
+ * @note a d-order tensor's gradient will be initialized to the (2*d)-order identity tensor
  */
 template <int... n>
 constexpr auto make_dual(const tensor<double, n...>& A)
@@ -1329,17 +1390,11 @@ auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 
 /**
  * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
- * @param[in] df_dx the gradient of f(x) 
- * @param[in] dx    the small change in x
  */
 constexpr auto chain_rule(const zero /* df_dx */, const zero /* dx */) { return zero{}; }
 
 /**
- * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
- * @tparam T the type of the input argument x
- * @param[in] df_dx the gradient of f(x) 
- * @param[in] dx    the small change in x
- * 
+ * @overload
  * @note this overload implements a no-op for the case where the gradient w.r.t. an input argument is identically zero
  */
 template <typename T>
@@ -1349,11 +1404,7 @@ constexpr auto chain_rule(const zero /* df_dx */, const T /* dx */)
 }
 
 /**
- * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
- * @tparam T the type of the gradient argument df_dx
- * @param[in] df_dx the gradient of f(x) 
- * @param[in] dx    the small change in x
- * 
+ * @overload
  * @note this overload implements a no-op for the case where the small change is indentically zero
  */
 template <typename T>
@@ -1363,20 +1414,14 @@ constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */)
 }
 
 /**
- * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
- * @param[in] df_dx the gradient of f(x) 
- * @param[in] dx    the small change in x
- * 
+ * @overload
  * @note for a scalar-valued function of a scalar, the chain rule is just multiplication
  */
 constexpr auto chain_rule(const double df_dx, const double dx) { return df_dx * dx; }
 
 /**
- * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
- * @param[in] df_dx the gradient of f(x) 
- * @param[in] dx    the small change in x
- * 
- * @note for a scalar-valued function of a scalar, the chain rule is just multiplication
+ * @overload
+ * @note for a tensor-valued function of a scalar, the chain rule is just scalar multiplication
  */
 template <int... n>
 constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
@@ -1384,6 +1429,10 @@ constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
   return df_dx * dx;
 }
 
+/**
+ * @overload
+ * @note for a scalar-valued function of a tensor, the chain rule is the inner product
+ */
 template <int... n>
 constexpr auto chain_rule(const tensor<double, n...>& df_dx, const tensor<double, n...>& dx)
 {
@@ -1392,6 +1441,10 @@ constexpr auto chain_rule(const tensor<double, n...>& df_dx, const tensor<double
   return total;
 }
 
+/**
+ * @overload
+ * @note for a vector-valued function of a tensor, the chain rule contracts over all indices of dx
+ */
 template <int m, int... n>
 constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<double, n...>& dx)
 {
@@ -1402,6 +1455,10 @@ constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<dou
   return total;
 }
 
+/**
+ * @overload
+ * @note for a matrix-valued function of a tensor, the chain rule contracts over all indices of dx
+ */
 template <int m, int n, int... p>
 auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p...>& dx)
 {

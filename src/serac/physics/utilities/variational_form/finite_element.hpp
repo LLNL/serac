@@ -117,14 +117,16 @@ enum class Family
  * should implement the following concept:
  *
  * struct finite_element< some_geometry, some_space > > {
- *   static constexpr Geometry geometry = ...;
- *   static constexpr Family family     = ...;
- *   static constexpr int  components   = ...;
- *   static constexpr int  dim          = ...;
- *   static constexpr int  ndof         = ...;
+ *   static constexpr Geometry geometry = ...; ///< one of Triangle, Quadrilateral, etc
+ *   static constexpr Family family     = ...; ///< one of H1, HCURL, HDIV, etc
+ *   static constexpr int  components   = ...; ///< how many components per node
+ *   static constexpr int  dim          = ...; ///< number of parent element coordinates
+ *   static constexpr int  ndof         = ...; ///< how many degrees of freedom for an element with 1 component per node
  *
+ *   /// implement the way this element type interpolates the solution on the interior of the element
  *   static constexpr auto shape_functions(tensor<double, dim> xi) { ... }
  *
+ *   /// implement the derivatives of this element's shape functions w.r.t. parent element coordinates
  *   static constexpr auto shape_function_derivatives(tensor<double, dim> xi) { ... }
  * };
  *

@@ -19,6 +19,8 @@
 //         see below
 // note 3: since this is a 2D element type, the "curl" returned is just the out-of-plane component,
 //         rather than 3D vector along the z-direction.
+// for additional information on the finite_element concept requirements, see finite_element.hpp
+/// @cond
 template <int p>
 struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
   static constexpr auto geometry   = Geometry::Quadrilateral;
@@ -156,3 +158,4 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     return curl_z;
   }
 };
+/// @endcond

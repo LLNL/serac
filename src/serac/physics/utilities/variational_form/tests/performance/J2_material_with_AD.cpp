@@ -15,21 +15,26 @@ using namespace serac;
 
 static constexpr auto I = Identity<3>();
 
+/** 
+ * @brief a 3D constitutive model for a J2 material with linear isotropic and kinematic hardening.
+ */
 struct J2 {
-  double E;        // Young's modulus
-  double nu;       // Poisson's ratio
-  double Hi;       // isotropic hardening constant
-  double Hk;       // kinematic hardening constant
-  double sigma_y;  // yield stress
+  double E;        ///< Young's modulus
+  double nu;       ///< Poisson's ratio
+  double Hi;       ///< isotropic hardening constant
+  double Hk;       ///< kinematic hardening constant
+  double sigma_y;  ///< yield stress
 
+  /** @brief variables describing the stress state, yield surface, and some information about the most recent stress increment */
   struct State {
-    tensor<double, 3, 3> beta;           // back-stress tensor
-    tensor<double, 3, 3> el_strain;      // elastic strain
-    double               pl_strain;      // plastic strain
-    double               pl_strain_inc;  // incremental plastic strain
-    double               q;              // (trial) J2 stress
+    tensor<double, 3, 3> beta;           ///< back-stress tensor
+    tensor<double, 3, 3> el_strain;      ///< elastic strain
+    double               pl_strain;      ///< plastic strain
+    double               pl_strain_inc;  ///< incremental plastic strain
+    double               q;              ///< (trial) J2 stress
   };
 
+  /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
   auto calculate_stress(const tensor<double, 3, 3> grad_u, State& state) const
   {
     const double K = E / (3.0 * (1.0 - 2.0 * nu));
@@ -65,6 +70,7 @@ struct J2 {
     return s + p * I;
   }
 
+  /** @brief calculate the Cauchy stress, given the displacement gradient and previous material state */
   template <typename T>
   auto calculate_stress_AD(const T grad_u, State& state) const
   {
@@ -100,6 +106,7 @@ struct J2 {
     return s + p * I;
   }
 
+  /** @brief calculate the gradient of Cauchy stress w.r.t. grad_u */
   auto calculate_gradient(const State& state) const
   {
     double K = E / (3.0 * (1.0 - 2.0 * nu));
@@ -192,7 +199,11 @@ int main()
             << std::endl;
 }
 
+// timings on my local machine:
+//
 // total J2 evaluation time (no AD):       0.0196884
 // total J2 gradient time (no AD):         0.0439456
 // total J2 evaluation+gradient time (AD): 0.256943
 // (AD time) / (manual gradient time):     4.03782
+//
+// so, manually implementing derivatives is faster (as expected)
