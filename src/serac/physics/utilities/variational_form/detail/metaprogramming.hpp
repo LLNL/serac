@@ -16,6 +16,16 @@
 #include <utility>
 #include <type_traits>
 
+/**
+ * @brief return the Ith integer in `{n...}`
+ */
+template <int I, int... n>
+constexpr auto get(std::integer_sequence<int, n...>)
+{
+  constexpr int values[sizeof...(n)] = {n...};
+  return values[I];
+}
+
 /// @cond
 namespace detail {
 template <typename lambda, int... i>
@@ -56,15 +66,6 @@ constexpr auto last(T... args)
   return std::get<sizeof...(T) - 1>(std::tuple{args...});
 }
 
-/**
- * @brief return the Ith integer in `{n...}`
- */
-template <int I, int... n>
-constexpr auto get(std::integer_sequence<int, n...>)
-{
-  constexpr int values[sizeof...(n)] = {n...};
-  return values[I];
-}
 
 /**
  * @brief return a new std::integer_sequence, after removing the rth entry from another std::integer_sequence
