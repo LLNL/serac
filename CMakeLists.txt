@@ -48,9 +48,37 @@ endif()
 if (NOT BLT_CXX_STD)
     set(BLT_CXX_STD "c++17" CACHE STRING "")
 endif()
-set(ENABLE_ASTYLE      OFF CACHE BOOL "")
-set(ENABLE_CLANGQUERY  OFF CACHE BOOL "")
-set(ENABLE_UNCRUSTIFY  OFF CACHE BOOL "")
+
+# These BLT tools are not used in Serac, turn them off
+set(_unused_blt_tools
+    CLANGQUERY
+    VALGRIND
+    ASTYLE
+    CMAKEFORMAT
+    UNCRUSTIFY
+    YAPF)
+foreach(_tool ${_unused_blt_tools})
+    set(ENABLE_${_tool} OFF CACHE BOOL "")
+endforeach()
+
+# These BLT tools are only used by Serac developers, so turn them off
+# unless an explicit executable path is given
+set(_used_blt_tools
+    CLANGFORMAT
+    CLANGTIDY
+    CPPCHECK
+    DOXYGEN
+    SPHINX)
+foreach(_tool ${_used_blt_tools})
+    if(NOT ${_tool}_EXECUTABLE)
+        set(ENABLE_${_tool} OFF CACHE BOOL "")
+    else()
+        set(ENABLE_${_tool} ON CACHE BOOL "")
+    endif()
+endforeach()
+
+set(BLT_REQUIRED_CLANGFORMAT_VERSION  "10" CACHE STRING "")
+
 set(ENABLE_BENCHMARKS  OFF CACHE BOOL "")
 
 set(ENABLE_ALL_WARNINGS ON CACHE BOOL "")
