@@ -7,6 +7,7 @@
 #include <random>
 #include <chrono>
 
+#include "axom/slic.hpp"
 #include "axom/core/utilities/Timer.hpp"
 
 #include "serac/physics/utilities/weak_form/tensor.hpp"
@@ -185,10 +186,16 @@ int main()
     stopwatch.stop();
     J2_AD_time += stopwatch.elapsed();
 
-    if (norm(stress - get_value(stress_and_C)) > 1.0e-12) exit(1);
-    if (norm(C - get_gradient(stress_and_C)) > 1.0e-12) exit(1);
-    if (norm(state.beta - backup.beta) > 1.0e-12) exit(1);
-    if (fabs(state.pl_strain - backup.pl_strain) > 1.0e-12) exit(1);
+    bool error_too_big = 
+       (norm(stress - get_value(stress_and_C)) > 1.0e-12) || 
+       (norm(C - get_gradient(stress_and_C)) > 1.0e-12) || 
+       (norm(state.beta - backup.beta) > 1.0e-12) || 
+       (fabs(state.pl_strain - backup.pl_strain) > 1.0e-12);
+
+    if (error_too_big) {
+      SLIC_ERROR("Significant difference between expected and actual results. Exiting...");
+      exit(1);
+    }
 
     t += dt;
   }
