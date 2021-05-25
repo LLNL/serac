@@ -38,7 +38,7 @@ constexpr auto remove_helper(std::integer_sequence<int, n...>, std::integer_sequ
 }  // namespace detail
 /// @endcond
 
-/** 
+/**
  * @brief return the `first` argument in a variadic list
  */
 template <typename... T>
@@ -47,7 +47,7 @@ constexpr auto first(T... args)
   return std::get<0>(std::tuple{args...});
 }
 
-/** 
+/**
  * @brief return the `last` argument in a variadic list
  */
 template <typename... T>
@@ -56,7 +56,7 @@ constexpr auto last(T... args)
   return std::get<sizeof...(T) - 1>(std::tuple{args...});
 }
 
-/** 
+/**
  * @brief return the Ith integer in `{n...}`
  */
 template <int I, int... n>
@@ -85,11 +85,11 @@ constexpr auto join(std::integer_sequence<int, n1...>, std::integer_sequence<int
 }
 
 /**
- * @brief multidimensional loop tool that evaluates the lambda body inside the innermost loop. 
- * 
+ * @brief multidimensional loop tool that evaluates the lambda body inside the innermost loop.
+ *
  * @tparam n integer template arguments describing the shape of the iteration space
  * @tparam lambda the type of the functor object to be executed in the loop
- * 
+ *
  * @note
  * \code{.cpp}
  * for_constexpr< 2, 3 >([](auto i, auto j) { std::cout << i << " " << j << std::endl; }
@@ -103,15 +103,15 @@ constexpr auto join(std::integer_sequence<int, n1...>, std::integer_sequence<int
  * 1 1
  * 1 2
  * \endcode
- * 
+ *
  * @note latter integer template parameters correspond to more nested loops
- * 
+ *
  * @note The lambda function should be a callable object taking sizeof ... (n) arguments.
  * Anything returned from f() will be discarded
  * note: this forces multidimensional loop unrolling, which can be beneficial for
  * runtime performance, but can hurt compile time and executable size as the loop
  * dimensions become larger.
- * 
+ *
  */
 template <int... n, typename lambda>
 inline constexpr void for_constexpr(lambda&& f)

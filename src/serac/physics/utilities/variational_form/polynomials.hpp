@@ -69,7 +69,7 @@ constexpr int factorial(int n)
   }
   return nfactorial;
 }
- 
+
 /** @brief return a tensor of n entries {1, x, x*x, ... } */
 template <int n, typename T>
 constexpr tensor<T, n> powers(T x)

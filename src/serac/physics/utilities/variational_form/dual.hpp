@@ -20,20 +20,21 @@ namespace serac {
 
 /**
  * @brief Dual number struct (value plus gradient)
- * @tparam gradient_type The type of the gradient (should support addition, scalar multiplication/division, and unary negation operators)
+ * @tparam gradient_type The type of the gradient (should support addition, scalar multiplication/division, and unary
+ * negation operators)
  */
 template <typename gradient_type>
 struct dual {
-  double        value;    ///< the actual numerical value 
-  gradient_type gradient; ///< the partial derivatives of value w.r.t. some other quantity
+  double        value;     ///< the actual numerical value
+  gradient_type gradient;  ///< the partial derivatives of value w.r.t. some other quantity
 };
 
 /**
  * @brief class template argument deduction guide for type `dual`.
- * 
- * @note this lets users write 
+ *
+ * @note this lets users write
  * \code{.cpp} dual something{my_value, my_gradient}; \endcode
- * instead of explicitly writing the template parameter 
+ * instead of explicitly writing the template parameter
  * \code{.cpp} dual< decltype(my_gradient) > something{my_value, my_gradient}; \endcode
  */
 template <typename T>
@@ -154,11 +155,11 @@ constexpr auto operator/(dual<gradient_type_a> a, dual<gradient_type_b> b)
     return a.value x b.value;                                   \
   };
 
-binary_comparator_overload(<);  ///< implement operator<  for dual numbers
-binary_comparator_overload(<=); ///< implement operator<= for dual numbers
-binary_comparator_overload(==); ///< implement operator== for dual numbers
-binary_comparator_overload(>=); ///< implement operator>= for dual numbers
-binary_comparator_overload(>);  ///< implement operator>  for dual numbers
+binary_comparator_overload(<);   ///< implement operator<  for dual numbers
+binary_comparator_overload(<=);  ///< implement operator<= for dual numbers
+binary_comparator_overload(==);  ///< implement operator== for dual numbers
+binary_comparator_overload(>=);  ///< implement operator>= for dual numbers
+binary_comparator_overload(>);   ///< implement operator>  for dual numbers
 
 #undef binary_comparator_overload
 
@@ -297,13 +298,13 @@ auto get_gradient(dual<gradient_type> arg)
 /** @brief class for checking if a type is a dual number or not */
 template <typename T>
 struct is_dual_number {
-  static constexpr bool value = false; ///< whether or not type T is a dual number
+  static constexpr bool value = false;  ///< whether or not type T is a dual number
 };
 
 /** @brief class for checking if a type is a dual number or not */
 template <typename T>
 struct is_dual_number<dual<T> > {
-  static constexpr bool value = true; ///< whether or not type T is a dual number
+  static constexpr bool value = true;  ///< whether or not type T is a dual number
 };
 
 }  // namespace serac

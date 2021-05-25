@@ -456,7 +456,7 @@ struct get_test_space;  // undefined
  */
 template <typename test_space, typename trial_space>
 struct get_test_space<test_space(trial_space)> {
-  using type = test_space; ///< the test space
+  using type = test_space;  ///< the test space
 };
 
 /**
@@ -472,7 +472,7 @@ struct get_trial_space;  // undefined
  */
 template <typename test_space, typename trial_space>
 struct get_trial_space<test_space(trial_space)> {
-  using type = trial_space; ///< the trial space
+  using type = trial_space;  ///< the trial space
 };
 
 /**
@@ -526,8 +526,6 @@ using test_space_t = typename detail::get_test_space<spaces>::type;
 template <typename spaces>
 using trial_space_t = typename detail::get_trial_space<spaces>::type;
 
-
-
 static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
                                                     Geometry::Hexahedron};
 
@@ -539,8 +537,8 @@ static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::S
 template <typename spaces>
 class Integral {
 public:
-  using test_space  = test_space_t<spaces>;  ///< the test function space
-  using trial_space = trial_space_t<spaces>; ///< the trial function space
+  using test_space  = test_space_t<spaces>;   ///< the test function space
+  using trial_space = trial_space_t<spaces>;  ///< the trial function space
 
   /**
    * @brief Constructs an @p Integral from a user-provided quadrature function

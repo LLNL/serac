@@ -183,8 +183,8 @@ struct tensor<T, first, rest...> {
 
 /**
  * @brief class template argument deduction guide for type `tensor`.
- * 
- * @note this lets users write 
+ *
+ * @note this lets users write
  * \code{.cpp} tensor A = {{0.0, 1.0, 2.0}}; \endcode
  * instead of explicitly writing the template parameters
  * \code{.cpp} tensor< double, 3 > A = {{1.0, 2.0, 3.0}}; \endcode
@@ -194,8 +194,8 @@ tensor(const T (&data)[n1]) -> tensor<T, n1>;
 
 /**
  * @brief class template argument deduction guide for type `tensor`.
- * 
- * @note this lets users write 
+ *
+ * @note this lets users write
  * \code{.cpp} tensor A = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}}; \endcode
  * instead of explicitly writing the template parameters
  * \code{.cpp} tensor< double, 3, 3 > A = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}}; \endcode
@@ -426,7 +426,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, n...>& A, S scale)
  * @tparam S the scalar value type. Must be arithmetic (e.g. float, double, int) or a dual number
  * @tparam T the underlying type of the tensor (righthand) argument
  * @tparam n integers describing the tensor shape
- * @param[in] scale The numerator 
+ * @param[in] scale The numerator
  * @param[in] A The tensor of denominators
  */
 template <typename S, typename T, int... n,
@@ -446,7 +446,7 @@ constexpr auto operator/(S scale, const tensor<T, n...>& A)
  * @tparam T the underlying type of the tensor (righthand) argument
  * @tparam n integers describing the tensor shape
  * @param[in] A The tensor of numerators
- * @param[in] scale The denominator 
+ * @param[in] scale The denominator
  */
 template <typename S, typename T, int... n,
           typename = std::enable_if_t<std::is_arithmetic_v<S> || is_dual_number<S>::value>>
@@ -523,7 +523,7 @@ constexpr auto& operator-=(tensor<T, n...>& A, zero)
  * @tparam T the type of the righthand argument
  * @param[in] A The lefthand argument
  * @param[in] B The righthand argument
- * 
+ *
  * @note this overload implements the special case where both arguments are scalars
  */
 template <typename S, typename T>
@@ -619,7 +619,8 @@ constexpr auto outer(const tensor<S, m>& A, const tensor<T, n>& B)
 
 /**
  * @overload
- * @note this overload implements the case where the left argument is a 2nd order tensor, and the right argument is a scalar
+ * @note this overload implements the case where the left argument is a 2nd order tensor, and the right argument is a
+ * scalar
  */
 template <typename S, typename T, int m, int n>
 constexpr auto outer(const tensor<S, m, n>& A, T B)
@@ -636,7 +637,8 @@ constexpr auto outer(const tensor<S, m, n>& A, T B)
 
 /**
  * @overload
- * @note this overload implements the case where the left argument is a 2nd order tensor, and the right argument is a first order tensor
+ * @note this overload implements the case where the left argument is a 2nd order tensor, and the right argument is a
+ * first order tensor
  */
 template <typename S, typename T, int m, int n, int p>
 constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p>& B)
@@ -654,7 +656,8 @@ constexpr auto outer(const tensor<S, m, n>& A, const tensor<T, p>& B)
 
 /**
  * @overload
- * @note this overload implements the case where the left argument is a 1st order tensor, and the right argument is a 2nd order tensor
+ * @note this overload implements the case where the left argument is a 1st order tensor, and the right argument is a
+ * 2nd order tensor
  */
 template <typename S, typename T, int m, int n, int p>
 constexpr auto outer(const tensor<S, m>& A, const tensor<T, n, p>& B)
@@ -874,7 +877,7 @@ constexpr auto ddot(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
   return AB;
 }
 
-/** 
+/**
  * @brief this is a shorthand for dot(A, B)
  */
 template <typename S, typename T, int m, int n, int p>
@@ -883,7 +886,7 @@ constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
   return dot(A, B);
 }
 
-/** 
+/**
  * @brief this is a shorthand for dot(A, B)
  */
 template <typename S, typename T, int m, int n>
@@ -892,7 +895,7 @@ constexpr auto operator*(const tensor<S, m>& A, const tensor<T, m, n>& B)
   return dot(A, B);
 }
 
-/** 
+/**
  * @brief this is a shorthand for dot(A, B)
  */
 template <typename S, typename T, int m, int n>
@@ -1216,7 +1219,7 @@ constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
  * hardcode the analytic derivative of the
  * inverse of a square matrix, rather than
  * apply gauss elimination directly on the dual number types
- * 
+ *
  * TODO: compare performance of this hardcoded implementation to just using inv() directly
  */
 template <typename gradient_type, int n>
@@ -1235,12 +1238,11 @@ auto inv(tensor<dual<gradient_type>, n, n> A)
   });
 }
 
-
 /**
- * @brief recursively serialize the entries in a tensor to an ostream. 
+ * @brief recursively serialize the entries in a tensor to an ostream.
  * Output format uses braces and comma separators to mimic C syntax for multidimensional array
  * initialization.
- * 
+ *
  * @param[in] out the std::ostream to write to (e.g. std::cout or std::ofstream)
  * @param[in] A The tensor to write out
  */
