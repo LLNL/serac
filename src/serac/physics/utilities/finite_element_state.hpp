@@ -120,6 +120,23 @@ public:
   const mfem::ParGridFunction& gridFunc() const { return retrieve(gf_); }
 
   /**
+   * Returns a GridFunctionCoefficient referencing the internal grid function
+   */
+  mfem::GridFunctionCoefficient gridFuncCoef() const
+  {
+    const auto& gf = retrieve(gf_);
+    return mfem::GridFunctionCoefficient{&gf, gf.VectorDim()};
+  }
+
+  /**
+   * Returns a VectorGridFunctionCoefficient referencing the internal grid function
+   */
+  mfem::VectorGridFunctionCoefficient vectorGridFuncCoef() const
+  {
+    return mfem::VectorGridFunctionCoefficient{&retrieve(gf_)};
+  }
+
+  /**
    * Returns a non-owning reference to the internal mesh object
    */
   mfem::ParMesh& mesh() { return mesh_; }
