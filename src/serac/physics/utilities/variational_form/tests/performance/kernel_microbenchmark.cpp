@@ -12,7 +12,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 
-#include "serac/physics/utilities/variational_form/detail/timer.hpp"
+#include "axom/core/utilities/Timer.hpp"
 
 #include "serac/physics/utilities/variational_form/tensor.hpp"
 #include "serac/physics/utilities/variational_form/integral.hpp"
@@ -414,7 +414,7 @@ int main(int argc, char* argv[])
 
   U_L.Randomize();
 
-  timer stopwatch[3];
+  axom::utilities::Timer stopwatch[3];
 
   stopwatch[0].start();
   G->Mult(U_L, U_E);

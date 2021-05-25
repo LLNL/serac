@@ -1190,7 +1190,6 @@ constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
     // zero entries below in this column
     for (int j = i + 1; j < n; j++) {
       if (A[j][i] != 0.0) {
-        // if (A[j][i] * A[j][i] > 1.0e-25) {
         double c = -A[j][i] / A[i][i];
         A[j] += c * A[i];
         B[j] += c * B[i];
@@ -1204,7 +1203,6 @@ constexpr tensor<T, n, n> inv(const tensor<T, n, n>& A)
     B[i] = B[i] / A[i][i];
     for (int j = i - 1; j >= 0; j--) {
       if (A[j][i] != 0.0) {
-        // if (A[j][i] * A[j][i] > 1.0e-25) {
         B[j] -= A[j][i] * B[i];
       }
     }
