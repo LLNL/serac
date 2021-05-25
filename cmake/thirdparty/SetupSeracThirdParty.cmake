@@ -245,4 +245,19 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
             endif()
         endif()
     endforeach()
+
+    # List of TPL targets built in to BLT - will need to be adjusted when we start using HIP
+    set(TPL_DEPS)
+    blt_list_append(TO TPL_DEPS ELEMENTS cuda cuda_runtime IF ENABLE_CUDA)
+    blt_list_append(TO TPL_DEPS ELEMENTS mpi IF ENABLE_MPI)
+
+    foreach(dep ${TPL_DEPS})
+        # If the target is EXPORTABLE, add it to the export set
+        get_target_property(_is_imported ${dep} IMPORTED)
+        if(NOT ${_is_imported})
+            install(TARGETS              ${dep}
+                    EXPORT               serac-targets
+                    DESTINATION          lib)
+        endif()
+    endforeach()
 endif()
