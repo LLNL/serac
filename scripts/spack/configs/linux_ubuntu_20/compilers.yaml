@@ -9,7 +9,6 @@ compilers:
     flags: 
       cflags: -pthread
       cxxflags: -pthread
-      ldlibs: -lpthread
     operating_system: ubuntu20.04
     target: x86_64
     modules: []
