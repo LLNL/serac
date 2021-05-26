@@ -15,8 +15,8 @@
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-#include "serac/physics/utilities/weak_form/weak_form.hpp"
-#include "serac/physics/utilities/weak_form/tensor.hpp"
+#include "serac/physics/utilities/functional/functional.hpp"
+#include "serac/physics/utilities/functional/tensor.hpp"
 
 #include <gtest/gtest.h>
 

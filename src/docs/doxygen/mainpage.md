@@ -21,6 +21,7 @@
 * [First order ODE solver](@ref serac::mfem_ext::FirstOrderODE)
 * [Second order ODE solver](@ref serac::mfem_ext::SecondOrderODE)
 
-#### Weak Form Interface ####
+#### Functional Interface ####
 
 * [Integral](@ref serac::Integral)
+* <a style="font-weight:bold" href="classserac_1_1Functional_3_01test_07trial_08_4.html">Functional</a>

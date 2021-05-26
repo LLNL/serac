@@ -76,16 +76,16 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
-  // Set up the same problem using weak form
+  // Set up the same problem using functional
 
   // Define the types for the test and trial spaces using the function arguments
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-  // Construct the new weak form object using the known test and trial spaces
+  // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
-  // Add the total domain residual term to the weak form
+  // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{},
       [&](auto x, auto temperature) {
@@ -100,7 +100,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Compute the residual using standard MFEM methods
   mfem::Vector r1 = (*J) * U - (*F);
 
-  // Compute the residual using weak form
+  // Compute the residual using functional
   mfem::Vector r2 = residual(U);
 
   if (verbose) {
@@ -112,10 +112,10 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Test that the two residuals are equivalent
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
-  // Compute the gradient using weak form
+  // Compute the gradient using functional
   mfem::Operator& grad2 = residual.GetGradient(U);
 
-  // Compute the gradient action using standard MFEM and weakform
+  // Compute the gradient action using standard MFEM and functional
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad2 * U;
 

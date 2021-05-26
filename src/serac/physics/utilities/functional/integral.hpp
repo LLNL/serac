@@ -7,7 +7,7 @@
 /**
  * @file integral.hpp
  *
- * @brief This file contains the Integral core of the weak form
+ * @brief This file contains the Integral core of the functional
  */
 #pragma once
 
