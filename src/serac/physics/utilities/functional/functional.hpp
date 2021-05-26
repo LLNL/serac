@@ -40,7 +40,7 @@ auto get_boundary_dof_ordering(mfem::ParFiniteElementSpace* pfes)
 
 /// @cond
 template <typename T>
-class WeakForm;
+class Functional;
 /// @endcond
 
 /**
@@ -54,13 +54,13 @@ class WeakForm;
  * And this represents a function that takes values from an Hcurl field and returns a
  * residual vector associated with an H1 field:
  * @code{.cpp}
- * WeakForm< H1(Hcurl) > my_residual;
+ * Functional< H1(Hcurl) > my_residual;
  * @endcode
  *
  * @tparam test The space of test functions to use
  * @tparam trial The space of trial functions to use
  *
- * To use this class, you use the methods @p WeakForm::Add****Integral(integrand,domain_of_integration)
+ * To use this class, you use the methods @p Functional::Add****Integral(integrand,domain_of_integration)
  * where @p integrand is a q-function lambda or functor and @p domain_of_integration is an @p mfem::mesh
  *
  * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
@@ -82,14 +82,14 @@ class WeakForm;
  * @endcode
  */
 template <typename test, typename trial>
-class WeakForm<test(trial)> : public mfem::Operator {
+class Functional<test(trial)> : public mfem::Operator {
 public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
    * @param[in] test_fes The test space
    * @param[in] trial_fes The trial space
    */
-  WeakForm(mfem::ParFiniteElementSpace* test_fes, mfem::ParFiniteElementSpace* trial_fes)
+  Functional(mfem::ParFiniteElementSpace* test_fes, mfem::ParFiniteElementSpace* trial_fes)
       : Operator(test_fes->GetTrueVSize(), trial_fes->GetTrueVSize()),
         test_space_(test_fes),
         trial_space_(trial_fes),
@@ -261,8 +261,8 @@ public:
    * @brief Implements mfem::Operator::GetGradient
    * @param[in] x The input vector where the gradient is evaluated
    *
-   * Note: at present, this WeakForm::Gradient object only supports the action of the gradient (i.e. directional
-   * derivative) We are looking into making that WeakForm::Gradient also be convertible to a sparse matrix format as
+   * Note: at present, this Functional::Gradient object only supports the action of the gradient (i.e. directional
+   * derivative) We are looking into making that Functional::Gradient also be convertible to a sparse matrix format as
    * well.
    */
   mfem::Operator& GetGradient(const mfem::Vector& x) const override
@@ -315,23 +315,23 @@ private:
   };
 
   /**
-   * @brief Lightweight shim for mfem::Operator that produces the gradient of a @p WeakForm from a @p Mult
+   * @brief Lightweight shim for mfem::Operator that produces the gradient of a @p Functional from a @p Mult
    */
   class Gradient : public mfem::Operator {
   public:
     /**
-     * @brief Constructs a Gradient wrapper that references a parent @p WeakForm
-     * @param[in] f The @p WeakForm to use for gradient calculations
+     * @brief Constructs a Gradient wrapper that references a parent @p Functional
+     * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(WeakForm& f) : mfem::Operator(f.Height()), form(f){};
+    Gradient(Functional& f) : mfem::Operator(f.Height()), form(f){};
 
     virtual void Mult(const mfem::Vector& x, mfem::Vector& y) const override { form.GradientMult(x, y); }
 
   private:
     /**
-     * @brief The "parent" @p WeakForm to calculate gradients with
+     * @brief The "parent" @p Functional to calculate gradients with
      */
-    WeakForm<test(trial)>& form;
+    Functional<test(trial)>& form;
   };
 
   /**

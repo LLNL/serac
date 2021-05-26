@@ -7,7 +7,7 @@
 /**
  * @file tensor.hpp
  *
- * @brief Implementation of the tensor class used by WeakForm
+ * @brief Implementation of the tensor class used by Functional
  */
 
 #pragma once
