@@ -57,8 +57,8 @@ packages:
   # LLNL blueos CUDA
   cuda:
     externals:
-      - spec: cuda@11.1.1
-        prefix: /usr/tce/packages/cuda/cuda-11.1.1
+      - spec: cuda@11.2.0
+        prefix: /usr/tce/packages/cuda/cuda-11.2.0
     buildable: false
 
   # LLNL blueos mpi
