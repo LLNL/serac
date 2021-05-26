@@ -19,6 +19,8 @@ Developer Guide
    profiling
    memory_checking
    new_docker_image
+   tensor_dual
+   weak_form
    mfem_dev
 
 Developing a New Physics Module
