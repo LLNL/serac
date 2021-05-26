@@ -186,6 +186,7 @@ class Serac(CachedCMakePackage, CudaPackage):
                 # CXX flags will be propagated to the host compiler
                 cxxflags = ' '.join(spec.compiler_flags['cxxflags'])
                 cuda_flags = arch_flag + cxxflags
+                cuda_flags += ' --expt-extended-lambda --expt-relaxed-constexpr '
                 entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
                                                   cuda_flags))
                 entries.append(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES",

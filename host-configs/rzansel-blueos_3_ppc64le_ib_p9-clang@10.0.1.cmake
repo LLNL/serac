@@ -61,7 +61,7 @@ set(CMAKE_CUDA_HOST_COMPILER "${MPI_CXX_COMPILER}" CACHE PATH "")
 
 set(ENABLE_CUDA ON CACHE BOOL "")
 
-set(CMAKE_CUDA_FLAGS "-arch sm_70 " CACHE STRING "")
+set(CMAKE_CUDA_FLAGS "-arch sm_70 --expt-extended-lambda --expt-relaxed-constexpr" CACHE STRING "")
 
 set(CMAKE_CUDA_ARCHITECTURES "70" CACHE STRING "")
 
@@ -126,5 +126,3 @@ set(SPHINX_EXECUTABLE "/collab/usr/gapps/python/build/spack-coralea.4/opt/spack/
 set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-2.1/bin/cppcheck" CACHE PATH "")
 
 set(DOXYGEN_EXECUTABLE "${DEVTOOLS_ROOT}/doxygen-1.8.17/bin/doxygen" CACHE PATH "")
-
-
