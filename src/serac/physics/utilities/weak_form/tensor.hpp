@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "host_device_annotations.hpp"
+#include "serac/infrastructure/accelerator.hpp"
 
 #include "dual.hpp"
 

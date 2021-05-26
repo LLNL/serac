@@ -148,6 +148,9 @@ auto displacement_gradient(double t)
 
 int main()
 {
+  // create & initialize test logger, finalized when exiting scope
+  axom::slic::SimpleLogger logger;  
+
   axom::utilities::Timer stopwatch;
   double                 J2_evaluation_time = 0.0;
   double                 J2_gradient_time   = 0.0;
