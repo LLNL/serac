@@ -60,10 +60,8 @@ endforeach()
 if(ENABLE_CUDA)
 
     set(weakform_tests_cuda
-        tests/internal_error_reproducer.cu
-        tests/internal_error_reproducer2.cu
-        tests/tensor_unit_tests_cuda.cu)
- 
+        tensor_unit_tests_cuda.cu)
+        
     foreach(filename ${weakform_tests_cuda})
         get_filename_component(test_name ${filename} NAME_WE)
         
