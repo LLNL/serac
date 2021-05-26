@@ -20,7 +20,7 @@ Developer Guide
    memory_checking
    new_docker_image
    tensor_dual
-   weak_form
+   functional
    mfem_dev
 
 Developing a New Physics Module

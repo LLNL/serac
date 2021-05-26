@@ -3,13 +3,13 @@
 .. ##
 .. ## SPDX-License-Identifier: (BSD-3-Clause)
 
-.. _weak-form-label:
+.. _functional-label:
 
-=========
-Weak Form
-=========
+==========
+Functional
+==========
 
-``WeakForm`` is a class that is used specify and evaluate
+``Functional`` is a class that is used specify and evaluate
 finite-element-type calculations. For example, the weighted residual for
 a solid mechanics simulation may look something like:
 
@@ -23,7 +23,7 @@ a solid mechanics simulation may look something like:
    \underbrace{\int_{\partial\Omega} \psi \cdot \mathbf{t}(\mathbf{x}) \; \text{d}a}_{\text{surface loads}},
 
 where :math:`\psi` are the test basis functions. To describe this
-residual using ``WeakForm``, we first create the object itself, providing a
+residual using ``Functional``, we first create the object itself, providing a
 template parameter that expresses the test and trial spaces (i.e. the
 "inputs" and "outputs" of the residual function, :math:`r`). In this
 case, solid mechanics uses nodal displacements and residuals (i.e. H1 test and trial spaces), so we write:
@@ -34,7 +34,7 @@ case, solid mechanics uses nodal displacements and residuals (i.e. H1 test and t
    constexpr int dim = 3; // the dimension of our problem
    using test = H1<order, dim>;
    using trial = H1<order, dim>;
-   WeakForm< test(trial) > residual(test_fes, trial_fes);
+   Functional< test(trial) > residual(test_fes, trial_fes);
 
 where ``test_fes``, ``trial_fes`` are the ``mfem`` finite element spaces for the problem. 
 The template argument follows the same convention of ``std::function``:
@@ -44,7 +44,7 @@ the snippet above is saying that ``residual`` is going to represent a
 calculation that takes in an H1 field (displacements), and returns a
 vector of weighted residuals, using H1 test functions.
 
-Now that the ``WeakForm`` object is created, we can use the
+Now that the ``Functional`` object is created, we can use the
 following functions to define integral terms (depending on their
 dimensionality). Here, we use :math:`s` to denote the "source" term
 (integrated against test functions), and :math:`f` to denote the 
@@ -55,7 +55,7 @@ dimensionality). Here, we use :math:`s` to denote the "source" term
 
    .. code-block:: cpp
 
-      WeakForm::AddAreaIntegral([](auto ... args){
+      Functional::AddAreaIntegral([](auto ... args){
       	auto s = ...;
       	auto f = ...;
       	return std::tuple{s, f};
@@ -66,7 +66,7 @@ dimensionality). Here, we use :math:`s` to denote the "source" term
 
    .. code-block:: cpp
 
-      WeakForm::AddVolumeIntegral([](auto ... args){
+      Functional::AddVolumeIntegral([](auto ... args){
       	auto s = ...;
       	auto f = ...;
       	return std::tuple{s, f};
@@ -77,7 +77,7 @@ dimensionality). Here, we use :math:`s` to denote the "source" term
 
    .. code-block:: cpp
 
-      WeakForm::AddSurfaceIntegral([](auto ... args){
+      Functional::AddSurfaceIntegral([](auto ... args){
       	auto s = ...;
       	return s;
       }, domain_of_integration);	
@@ -98,7 +98,7 @@ the stress response term:
      // Here, we unpack the {value, derivative} tuple into separate variables
      auto [u, grad_u] = disp;
      
-     // WeakForm expects us to return a tuple of the form {s, f} (see table above)
+     // Functional expects us to return a tuple of the form {s, f} (see table above)
      auto body_force = zero{}; // for this case, the source term is identically zero.
      auto stress = material_model(grad_u); // call some constitutive model for the material in this domain
      
@@ -112,7 +112,7 @@ The other terms follow a similar pattern. For the body force:
 
    residual.AddVolumeIntegral([](auto x, auto disp /* unused */){
      
-     // WeakForm::AddVolumeIntegral() expects us to return a tuple of the form {s, f}
+     // Functional::AddVolumeIntegral() expects us to return a tuple of the form {s, f}
      auto body_force = b(x); // evaluate the body-force at the location of the quadrature point
      auto stress = zero{}; // for this term, the stress term is identically zero
      
@@ -124,14 +124,14 @@ And finally, for the surface tractions:
 
 .. code-block:: cpp
 
-   // WeakForm::AddSurfaceIntegral() only expects us to return s, so we don't need a tuple
+   // Functional::AddSurfaceIntegral() only expects us to return s, so we don't need a tuple
    residual.AddSurfaceIntegral([](auto x, auto disp /* unused */){
      return traction(x); // evaluate the traction at the location of the quadrature point
    }, surface_mesh);
 
 Now that we've finished describing all the integral terms that appear in
 our residual, we can carry out the actual calculation by calling
-``WeakForm::operator()``:
+``Functional::operator()``:
 
 .. code-block:: cpp
 
@@ -143,7 +143,7 @@ Putting these snippets together without the verbose comments, we have (note: the
 
    using test = H1<order, dim>;
    using trial = H1<order, dim>;
-   WeakForm< test(trial) > residual(test_fes, trial_fes);
+   Functional< test(trial) > residual(test_fes, trial_fes);
 
    // note: the first two AddVolumeIntegral calls can be fused
    // into one, provided they share the same domain of integration
@@ -163,20 +163,20 @@ element kernels!
 Implementation
 --------------
 
-For the most part, the ``WeakForm`` class is just a container of
+For the most part, the ``Functional`` class is just a container of
 ``Integral`` objects, and some prolongation and restriction operators to
 get the data they need:
 
 .. code-block:: cpp
 
    template <typename test, typename trial>
-   struct WeakForm<test(trial)> : public mfem::Operator {
+   struct Functional<test(trial)> : public mfem::Operator {
      ...
      std::vector< Integral<test(trial)> > domain_integrals;
      std::vector< Integral<test(trial)> > boundary_integrals;
    };
 
-The calls to ``WeakForm::Add****Integral`` forward the integrand and
+The calls to ``Functional::Add****Integral`` forward the integrand and
 mesh information to an ``Integral`` constructor and add it to the
 appropriate list (either ``domain_integrals`` or
 ``boundary_integrals``). MFEM treats domain and boundary integrals
@@ -265,6 +265,6 @@ inside a ``std::function`` object with the appropriate signature. This
      
    }
 
-Finally, when the user calls ``WeakForm::operator()``, it loops over the
+Finally, when the user calls ``Functional::operator()``, it loops over the
 domain and surface integrals, calling ``Integral::Mult()`` on each one
 to compute the weighted residual contribution from each term.
