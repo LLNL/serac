@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/utilities/weak_form/tensor.hpp"
+#include "serac/physics/utilities/functional/tensor.hpp"
 
 using namespace serac;
 
