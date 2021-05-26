@@ -5,20 +5,20 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file weak_form.hpp
+ * @file functional.hpp
  *
- * @brief Implementation of the quadrature-function-based weak-form enabling rapid development of FEM formulations
+ * @brief Implementation of the quadrature-function-based functional enabling rapid development of FEM formulations
  */
 
 #pragma once
 
 #include "mfem.hpp"
 
-#include "serac/physics/utilities/weak_form/tensor.hpp"
-#include "serac/physics/utilities/weak_form/quadrature.hpp"
-#include "serac/physics/utilities/weak_form/finite_element.hpp"
-#include "serac/physics/utilities/weak_form/tuple_arithmetic.hpp"
-#include "serac/physics/utilities/weak_form/integral.hpp"
+#include "serac/physics/utilities/functional/tensor.hpp"
+#include "serac/physics/utilities/functional/quadrature.hpp"
+#include "serac/physics/utilities/functional/finite_element.hpp"
+#include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
+#include "serac/physics/utilities/functional/integral.hpp"
 
 namespace serac {
 

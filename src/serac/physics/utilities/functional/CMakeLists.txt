@@ -4,15 +4,15 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(weakform_depends serac_physics mfem mpi)
+set(functional_depends serac_physics mfem mpi)
 
 #if(ENABLE_CUDA)
-#    list(APPEND weakform_depends cuda)
+#    list(APPEND functional_depends cuda)
 #endif()
 
 # Add the library first
-set(weakform_headers
-    weak_form.hpp
+set(functional_headers
+    functional.hpp
     tensor.hpp
     dual.hpp
     tuple_arithmetic.hpp
@@ -29,15 +29,15 @@ set(weakform_headers
     )
 
 blt_add_library(
-      NAME        serac_weakform
-      HEADERS     ${weakform_headers}
-      DEPENDS_ON  ${weakform_depends}
+      NAME        serac_functional
+      HEADERS     ${functional_headers}
+      DEPENDS_ON  ${functional_depends}
       )
 
 
-install(FILES ${weakform_headers} DESTINATION include/serac/physics/utilities/weak_form )
+install(FILES ${functional_headers} DESTINATION include/serac/physics/utilities/functional )
 
-install(TARGETS              serac_weakform
+install(TARGETS              serac_functional
         EXPORT               serac-targets
         DESTINATION          lib
         )
@@ -47,7 +47,7 @@ install(TARGETS              serac_weakform
 blt_add_executable(NAME        tensor_unit_tests
                    SOURCES     tests/tensor_unit_tests.cpp
                    OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                   DEPENDS_ON  gtest serac_weakform ${weakform_depends}
+                   DEPENDS_ON  gtest serac_functional ${functional_depends}
                    FOLDER      serac/tests)
 
 if(ENABLE_TESTS)
