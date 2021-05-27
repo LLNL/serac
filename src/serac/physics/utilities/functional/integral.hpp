@@ -7,17 +7,17 @@
 /**
  * @file integral.hpp
  *
- * @brief This file contains the Integral core of the weak form
+ * @brief This file contains the Integral core of the functional
  */
 #pragma once
 
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
 
-#include "serac/physics/utilities/weak_form/tensor.hpp"
-#include "serac/physics/utilities/weak_form/quadrature.hpp"
-#include "serac/physics/utilities/weak_form/finite_element.hpp"
-#include "serac/physics/utilities/weak_form/tuple_arithmetic.hpp"
+#include "serac/physics/utilities/functional/tensor.hpp"
+#include "serac/physics/utilities/functional/quadrature.hpp"
+#include "serac/physics/utilities/functional/finite_element.hpp"
+#include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
 
 // For now, mfem's support for getting surface element information (dof values, jacobians, etc)
 // is lacking, making it difficult to actually implement surface integrals on our end

@@ -15,8 +15,8 @@
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-#include "serac/physics/utilities/weak_form/weak_form.hpp"
-#include "serac/physics/utilities/weak_form/tensor.hpp"
+#include "serac/physics/utilities/functional/functional.hpp"
+#include "serac/physics/utilities/functional/tensor.hpp"
 
 #include <gtest/gtest.h>
 
@@ -66,7 +66,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-  WeakForm<test_space(trial_space)> residual(&fespace, &fespace);
+  Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
   residual.AddSurfaceIntegral([&](auto x, auto /* u */) { return 1.0; }, mesh);
 
