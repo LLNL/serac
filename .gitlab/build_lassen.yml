@@ -9,12 +9,18 @@
     - if: '$CI_COMMIT_BRANCH =~ /_lnone/ || $ON_LASSEN == "OFF"' #run except if ...
       when: never
     - when: on_success
+  before_script:
+    # python3.8 is needed on lassen to avoid trampling on the x86 clingo wheel
+    - module load python/3.8
+    # Workaround for multiple before_scripts - see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2301
+    # See also https://github.com/LLNL/serac/pull/417#discussion_r631194968
+    - if [[ $CUDA_BUILD == "ON" ]]; then module load cuda/11.2.0; fi
 
 ####
 # Load required CUDA module
 .with_cuda:
-  before_script:
-    - module load cuda/11.1.1
+  variables:
+    CUDA_BUILD: "ON"
 
 ####
 # Template

@@ -1,5 +1,11 @@
-.. _header-n2:
+.. ## Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+.. ## other Serac Project Developers. See the top-level COPYRIGHT file for details.
+.. ##
+.. ## SPDX-License-Identifier: (BSD-3-Clause)
 
+.. _weak-form-label:
+
+=========
 Weak Form
 =========
 
@@ -20,7 +26,7 @@ where :math:`\psi` are the test basis functions. To describe this
 residual using ``WeakForm``, we first create the object itself, providing a
 template parameter that expresses the test and trial spaces (i.e. the
 "inputs" and "outputs" of the residual function, :math:`r`). In this
-case, solid mechanics uses H1 test and trial spaces, so we write:
+case, solid mechanics uses nodal displacements and residuals (i.e. H1 test and trial spaces), so we write:
 
 .. code-block:: cpp
 
@@ -153,10 +159,9 @@ Putting these snippets together without the verbose comments, we have (note: the
 So, in only a few lines of code, we can create optimized, custom finite
 element kernels!
 
-.. _header-n34:
 
 Implementation
-==============
+--------------
 
 For the most part, the ``WeakForm`` class is just a container of
 ``Integral`` objects, and some prolongation and restriction operators to

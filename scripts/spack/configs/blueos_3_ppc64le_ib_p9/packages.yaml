@@ -46,19 +46,19 @@ packages:
   perl:
     buildable: false
     externals:
-    - spec: perl
+    - spec: perl@5.16.3
       prefix: /usr
   pkg-config:
     buildable: false
     externals:
-    - spec: pkg-config
+    - spec: pkg-config@0.27.1
       prefix: /usr
 
   # LLNL blueos CUDA
   cuda:
     externals:
-      - spec: cuda@11.1.1
-        prefix: /usr/tce/packages/cuda/cuda-11.1.1
+      - spec: cuda@11.2.0
+        prefix: /usr/tce/packages/cuda/cuda-11.2.0
     buildable: false
 
   # LLNL blueos mpi
@@ -72,37 +72,37 @@ packages:
   # System level packages to not build
   autoconf:
     externals:
-      - spec: autoconf
+      - spec: autoconf@2.69
         prefix: /usr
     buildable: false 
   automake:
     externals:
-      - spec: automake
+      - spec: automake@1.13.4
         prefix: /usr
     buildable: false
   bzip2:
     externals:
-      - spec: bzip2
+      - spec: bzip2@1.0.6
         prefix: /usr
     buildable: false
   gettext:
     externals:
-      - spec: gettext
+      - spec: gettext@0.19.8.1
         prefix: /usr
     buildable: false
   libtool:
     externals:
-      - spec: libtool
+      - spec: libtool@2.4.2
         prefix: /usr
     buildable: false
   m4:
     externals:
-      - spec: m4
+      - spec: m4@1.4.16
         prefix: /usr
     buildable: false
   tar:
     externals:
-      - spec: tar
+      - spec: tar@1.26
         prefix: /usr
     buildable: false
   netlib-lapack:
@@ -134,7 +134,7 @@ packages:
     version: [10.0.0]
     buildable: false
     externals:
-    - spec: llvm+clang
+    - spec: llvm+clang@10.0.0
       prefix: /usr/tce/packages/clang/clang-10.0.0
   python:
     version: [3.8.2]

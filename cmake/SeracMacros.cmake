@@ -32,7 +32,7 @@ macro(serac_add_code_checks)
          "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
 
     set(_all_sources)
-    file(GLOB_RECURSE _all_sources "*.cpp" "*.hpp")
+    file(GLOB_RECURSE _all_sources "*.cpp" "*.hpp" "*.inl")
 
     # Check for includes/excludes
     if (NOT DEFINED arg_INCLUDES)

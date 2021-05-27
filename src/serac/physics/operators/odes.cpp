@@ -43,7 +43,7 @@ void SecondOrderODE::SetTimestepper(const serac::TimestepMethod timestepper)
       // to characterize which parameter combinations work with time-varying
       // dirichlet constraints
       SLIC_WARNING_ROOT(
-          "Cannot guarantee stability for AverageAccerlation with time-dependent Dirichlet Boundary Conditions");
+          "Cannot guarantee stability for AverageAcceleration with time-dependent Dirichlet Boundary Conditions");
       second_order_ode_solver_ = std::make_unique<mfem::AverageAccelerationSolver>();
       break;
     case serac::TimestepMethod::LinearAcceleration:

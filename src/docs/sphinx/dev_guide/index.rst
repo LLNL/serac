@@ -21,6 +21,7 @@ Developer Guide
    new_docker_image
    tensor_dual
    weak_form
+   mfem_dev
 
 Developing a New Physics Module
 -------------------------------
