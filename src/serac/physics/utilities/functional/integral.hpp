@@ -562,8 +562,8 @@ public:
            Dimension<spatial_dim>, lambda_type&& qf)
       : J_(J), X_(X)
   {
-    constexpr auto geometry = supported_geometries[geometry_dim];
-    constexpr auto Q        = std::max(test_space::order, trial_space::order) + 1;
+    constexpr auto geometry                      = supported_geometries[geometry_dim];
+    constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
     constexpr auto quadrature_points_per_element = (spatial_dim == 2) ? Q * Q : Q * Q * Q;
 
     uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
@@ -577,7 +577,7 @@ public:
     using u_du_t          = typename detail::lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
     using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
-    std::shared_ptr < derivative_type[] > qf_derivatives(new derivative_type[num_quadrature_points]);
+    std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).

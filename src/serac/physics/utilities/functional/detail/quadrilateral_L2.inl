@@ -14,7 +14,7 @@
 //
 // this specialization defines shape functions (and their gradients) that
 // interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
-// 
+//
 // note 1: mfem assumes the parent element domain is [0,1]x[0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
@@ -26,10 +26,8 @@ struct finite_element<Geometry::Quadrilateral, L2<p, c> > {
   static constexpr int  dim        = 2;
   static constexpr int  ndof       = (p + 1) * (p + 1);
 
-  using residual_type = typename std::conditional< components == 1, 
-    tensor< double, ndof >,
-    tensor< double, ndof, components >
-  >::type;
+  using residual_type =
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
 
   static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
@@ -64,6 +62,5 @@ struct finite_element<Geometry::Quadrilateral, L2<p, c> > {
     }
     return dN;
   }
-
 };
 /// @endcond

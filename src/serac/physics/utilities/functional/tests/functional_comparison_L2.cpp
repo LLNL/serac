@@ -53,7 +53,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   // Create a linear form for the load term using the standard MFEM method
   ParLinearForm       f(&fespace);
   FunctionCoefficient load_func([&](const Vector& coords) { return 100 * coords(0) * coords(1); });
-  //FunctionCoefficient load_func([&]([[maybe_unused]] const Vector& coords) { return 1.0; });
+  // FunctionCoefficient load_func([&]([[maybe_unused]] const Vector& coords) { return 1.0; });
 
   // Create and assemble the linear load term into a vector
   f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
@@ -89,7 +89,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
       mesh);
 
   // Compute the residual using standard MFEM methods
-  //mfem::Vector r1 = (*J) * U - (*F);
+  // mfem::Vector r1 = (*J) * U - (*F);
   mfem::Vector r1 = A * U - (*F);
 
   // Compute the residual using weak form
@@ -128,8 +128,6 @@ TEST(L2, 2D_cubic) { functional_test(*mesh2D, L2<3>{}, L2<3>{}, Dimension<2>{});
 TEST(L2, 3D_linear) { functional_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
 TEST(L2, 3D_quadratic) { functional_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
 TEST(L2, 3D_cubic) { functional_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
-
-
 
 int main(int argc, char* argv[])
 {

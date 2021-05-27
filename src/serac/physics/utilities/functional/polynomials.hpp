@@ -58,20 +58,29 @@ constexpr tensor<T, n> GaussLegendreNodes() {
 /**
  * @brief The weights associated with each Gauss-Legendre point
  * @tparam n The number of points
- * 
+ *
  * Mathematica/Wolfram Language code to generate more entries in the table:
- * Do[Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[GaussianQuadratureWeights[n, 0, 1, 17][[All, 2]]] <> ";"], {n, 1, 8}] 
+ * Do[Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[GaussianQuadratureWeights[n, 0, 1, 17][[All,
+ * 2]]] <> ";"], {n, 1, 8}]
  */
-template <int n, typename T = double >
-constexpr tensor<T, n> GaussLegendreWeights() {
+template <int n, typename T = double>
+constexpr tensor<T, n> GaussLegendreWeights()
+{
   if constexpr (n == 1) return {1.000000000000000};
-  if constexpr (n == 2) return {0.500000000000000,0.500000000000000};
-  if constexpr (n == 3) return {0.277777777777778,0.444444444444444,0.277777777777778}; 
-  if constexpr (n == 4) return {0.173927422568727,0.326072577431273,0.326072577431273,0.173927422568727};
-  if constexpr (n == 5) return {0.118463442528095,0.239314335249683,0.284444444444444,0.239314335249683,0.118463442528095};
-  if constexpr (n == 6) return {0.085662246189585,0.180380786524069,0.233956967286346,0.233956967286346,0.180380786524069,0.085662246189585};
-  if constexpr (n == 7) return {0.0647424830844348,0.139852695744638,0.190915025252559,0.208979591836735,0.190915025252559,0.139852695744638,0.0647424830844348}; 
-  if constexpr (n == 8) return {0.0506142681451881,0.111190517226687,0.156853322938944,0.181341891689181,0.181341891689181,0.156853322938944,0.111190517226687,0.0506142681451881};
+  if constexpr (n == 2) return {0.500000000000000, 0.500000000000000};
+  if constexpr (n == 3) return {0.277777777777778, 0.444444444444444, 0.277777777777778};
+  if constexpr (n == 4) return {0.173927422568727, 0.326072577431273, 0.326072577431273, 0.173927422568727};
+  if constexpr (n == 5)
+    return {0.118463442528095, 0.239314335249683, 0.284444444444444, 0.239314335249683, 0.118463442528095};
+  if constexpr (n == 6)
+    return {0.085662246189585, 0.180380786524069, 0.233956967286346,
+            0.233956967286346, 0.180380786524069, 0.085662246189585};
+  if constexpr (n == 7)
+    return {0.0647424830844348, 0.139852695744638, 0.190915025252559, 0.208979591836735,
+            0.190915025252559,  0.139852695744638, 0.0647424830844348};
+  if constexpr (n == 8)
+    return {0.0506142681451881, 0.111190517226687, 0.156853322938944, 0.181341891689181,
+            0.181341891689181,  0.156853322938944, 0.111190517226687, 0.0506142681451881};
   return tensor<double, n>{};
 };
 // clang-format on
@@ -242,15 +251,16 @@ constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[maybe_unused]] T x)
 
 /**
  * @brief Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [0, 1]
- * 
+ *
  * Do[xi = GaussianQuadratureWeights[n, 0, 1, 30][[All, 1]];
- *  Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[CForm /@ HornerForm /@ (InterpolatingPolynomial[Transpose[{xi, #}], x] & /@ IdentityMatrix[n])] <> ";"], 
- *  {n, 1, 4}
+ *  Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[CForm /@ HornerForm /@
+ * (InterpolatingPolynomial[Transpose[{xi, #}], x] & /@ IdentityMatrix[n])] <> ";"], {n, 1, 4}
  * ]
- * 
- * note: the quadratic (n == 2) and cubic (n == 3) versions of this function only satisfied the kronecker delta property to an error of ~1.0e-13
- *       and keeping more than 16 significant figures seems to help bring that error down to machine epsilon again.
- * 
+ *
+ * note: the quadratic (n == 2) and cubic (n == 3) versions of this function only satisfied the kronecker delta property
+ * to an error of ~1.0e-13 and keeping more than 16 significant figures seems to help bring that error down to machine
+ * epsilon again.
+ *
  * @tparam[in] n how many entries to compute
  * @param[in] x where to evaluate the polynomials
  */
@@ -258,21 +268,36 @@ template <int n, typename T>
 tensor<T, n> GaussLegendreInterpolation([[maybe_unused]] T x)
 {
   if constexpr (n == 1) return {1};
-  if constexpr (n == 2) return {1.3660254037844386467637231708 - 1.732050807568877293527446342*x, -0.3660254037844386467637231708 + 1.732050807568877293527446342*x};
-  if constexpr (n == 3) return {1.47883055770123614752987757 + x*(-4.6243277820691389617264218 + 3.33333333333333333333333333*x), -0.666666666666666666666666667 + (6.66666666666666666666666667 - 6.666666666666666666666666667*x)*x, 0.1878361089654305191367891 + x*(-2.04233888459752770494024487 + 3.33333333333333333333333333*x)};
-  if constexpr (n == 4) return {1.5267881254572667869843283 + x*(-8.546023607872198765973019 + (14.325858354171888152966621 - 7.420540068038946105200642*x)*x), -0.8136324494869272605618981 + x*(13.807166925689577066158695 + x*(-31.388222363446060212058231 + 18.795449407555060811261716*x)), 0.400761520311650404800281777 + x*(-7.41707042146263907582738061 + (24.9981258592191222217269164 - 18.79544940755506081126171563*x)*x), -0.113917196281989931222711973 + x*(2.15592710364526077564170438 + x*(-7.9357618499449501626353065 + 7.4205400680389461052006424*x))};
+  if constexpr (n == 2)
+    return {1.3660254037844386467637231708 - 1.732050807568877293527446342 * x,
+            -0.3660254037844386467637231708 + 1.732050807568877293527446342 * x};
+  if constexpr (n == 3)
+    return {1.47883055770123614752987757 + x * (-4.6243277820691389617264218 + 3.33333333333333333333333333 * x),
+            -0.666666666666666666666666667 + (6.66666666666666666666666667 - 6.666666666666666666666666667 * x) * x,
+            0.1878361089654305191367891 + x * (-2.04233888459752770494024487 + 3.33333333333333333333333333 * x)};
+  if constexpr (n == 4)
+    return {
+        1.5267881254572667869843283 +
+            x * (-8.546023607872198765973019 + (14.325858354171888152966621 - 7.420540068038946105200642 * x) * x),
+        -0.8136324494869272605618981 +
+            x * (13.807166925689577066158695 + x * (-31.388222363446060212058231 + 18.795449407555060811261716 * x)),
+        0.400761520311650404800281777 + x * (-7.41707042146263907582738061 +
+                                             (24.9981258592191222217269164 - 18.79544940755506081126171563 * x) * x),
+        -0.113917196281989931222711973 +
+            x * (2.15592710364526077564170438 + x * (-7.9357618499449501626353065 + 7.4205400680389461052006424 * x))};
   return tensor<T, n>{};
 }
 
 /**
- * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [-1, 1]
- * 
+ * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Legendre points on the interval [-1,
+ * 1]
+ *
  * Mathematica/Wolfram Language code to generate more entries in the table:
  * Do[xi = GaussianQuadratureWeights[n, 0, 1, 30][[All, 1]];
- *  Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[CForm /@ HornerForm /@ (D[InterpolatingPolynomial[Transpose[{xi, #}], x], x] & /@ IdentityMatrix[n])] <> ";"], 
- *  {n, 1, 4}
+ *  Print["if constexpr (n == " <> ToString[n] <> ") return " <> ToString[CForm /@ HornerForm /@
+ * (D[InterpolatingPolynomial[Transpose[{xi, #}], x], x] & /@ IdentityMatrix[n])] <> ";"], {n, 1, 4}
  * ]
- * 
+ *
  * @tparam[in] n how many entries to compute
  * @param[in] x where to evaluate the polynomials
  */
@@ -281,8 +306,15 @@ tensor<T, n> GaussLegendreInterpolationDerivative([[maybe_unused]] T x)
 {
   if constexpr (n == 1) return {0};
   if constexpr (n == 2) return {-1.7320508075688772935274463415, 1.7320508075688772935274463415};
-  if constexpr (n == 3) return {-4.6243277820691389617264218 + 6.6666666666666666666666667*x, 6.66666666666666666666666667 - 13.3333333333333333333333333*x, -2.04233888459752770494024487 + 6.66666666666666666666666667*x};
-  if constexpr (n == 4) return {-8.5460236078721987659730185 + (28.651716708343776305933241 - 22.261620204116838315601927*x)*x, 13.8071669256895770661586947 + x*(-62.776444726892120424116461 + 56.386348222665182433785147*x), -7.4170704214626390758273806 + (49.996251718438244443453833 - 56.386348222665182433785147*x)*x, 2.15592710364526077564170438 + x*(-15.871523699889900325270613 + 22.2616202041168383156019272*x)};
+  if constexpr (n == 3)
+    return {-4.6243277820691389617264218 + 6.6666666666666666666666667 * x,
+            6.66666666666666666666666667 - 13.3333333333333333333333333 * x,
+            -2.04233888459752770494024487 + 6.66666666666666666666666667 * x};
+  if constexpr (n == 4)
+    return {-8.5460236078721987659730185 + (28.651716708343776305933241 - 22.261620204116838315601927 * x) * x,
+            13.8071669256895770661586947 + x * (-62.776444726892120424116461 + 56.386348222665182433785147 * x),
+            -7.4170704214626390758273806 + (49.996251718438244443453833 - 56.386348222665182433785147 * x) * x,
+            2.15592710364526077564170438 + x * (-15.871523699889900325270613 + 22.2616202041168383156019272 * x)};
   return tensor<T, n>{};
 }
 
