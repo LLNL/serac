@@ -66,7 +66,13 @@ public:
     /**
      * @brief Advances the iterator
      */
-    PunIterator& operator++();
+    auto& operator++()
+    {
+      // This is permissible because we're not actually dereferencing ptr_
+      // as a T*, just using it for arithmetic
+      ptr_ = static_cast<decltype(obj_)*>(ptr_) + 1;
+      return *this;
+    }
 
     /**
      * @brief Compares two iterators for equality
@@ -171,16 +177,6 @@ QuadratureData<T>::PunIterator<U>::~PunIterator()
   if (ptr_ && (ptr_ != end_ptr_)) {
     std::memcpy(ptr_, &obj_, sizeof(U));
   }
-}
-
-template <typename T>
-template <typename U>
-QuadratureData<T>::PunIterator<U>& QuadratureData<T>::PunIterator<U>::operator++()
-{
-  // This is permissible because we're not actually dereferencing ptr_
-  // as a T*, just using it for arithmetic
-  ptr_ = static_cast<decltype(obj_)*>(ptr_) + 1;
-  return *this;
 }
 
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
