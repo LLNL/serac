@@ -139,8 +139,7 @@ void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, com
 template <typename element_type, typename T, int dim>
 auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
 {
-  // TODO: Static assert that element_type is an element??
-  if constexpr (element_type::family == Family::H1) {
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return std::tuple{dot(u, element_type::shape_functions(xi)),
                       dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
   }
@@ -205,7 +204,7 @@ template <typename element_type, typename T, int dim>
 auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
 {
   // TODO: Helpful static_assert about f being tuple or tuple-like for H1, hcurl, hdiv
-  if constexpr (element_type::family == Family::H1) {
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     auto W     = element_type::shape_functions(xi);
     auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
     return outer(W, std::get<0>(f)) + dot(dW_dx, std::get<1>(f));
@@ -490,6 +489,12 @@ struct lambda_argument<H1<p, c>, dim, dim> {
   using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
 };
 
+// specialization for an L2 space with polynomial order p, and c components
+template <int p, int c, int dim>
+struct lambda_argument<L2<p, c>, dim, dim> {
+  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
+};
+
 // specialization for an H1 space with polynomial order p, and c components
 // evaluated in a line integral or surface integral. Note: only values are provided in this case
 template <int p, int c, int geometry_dim, int spatial_dim>
@@ -559,6 +564,9 @@ public:
   {
     constexpr auto geometry = supported_geometries[geometry_dim];
     constexpr auto Q        = std::max(test_space::order, trial_space::order) + 1;
+    constexpr auto quadrature_points_per_element = (spatial_dim == 2) ? Q * Q : Q * Q * Q;
+
+    uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
 
     // these lines of code figure out the argument types that will be passed
     // into the quadrature function in the finite element kernel.
@@ -569,11 +577,7 @@ public:
     using u_du_t          = typename detail::lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
     using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
-    auto num_quadrature_points = static_cast<uint32_t>(X.Size() / spatial_dim);
-    qf_derivatives_.resize(sizeof(derivative_type) * num_quadrature_points);
-
-    // FIXME: Strict aliasing rule?
-    auto qf_derivatives_ptr = reinterpret_cast<derivative_type*>(qf_derivatives_.data());
+    std::shared_ptr < derivative_type[] > qf_derivatives(new derivative_type[num_quadrature_points]);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
@@ -583,12 +587,12 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
     evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-      evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives_ptr, J_,
+      evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
                                                                                          X_, num_elements, qf);
     };
 
     gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-      gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives_ptr, J_,
+      gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives.get(), J_,
                                                                                        num_elements);
     };
   }
@@ -618,12 +622,6 @@ private:
    * @brief Mapped (physical) coordinates of all quadrature points
    */
   const mfem::Vector X_;
-
-  /**
-   * @brief Byte array of derivative data
-   */
-  std::vector<char> qf_derivatives_;
-  // ^ replace with std::byte when C++20 available
 
   /**
    * @brief Type-erased handle to evaluation kernel

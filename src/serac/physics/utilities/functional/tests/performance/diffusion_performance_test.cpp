@@ -31,11 +31,11 @@ using namespace serac;
 template <int Q1D, int D1D>
 auto count_ops0(tensor<double, D1D, D1D, D1D> x)
 {
-  static constexpr auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
+  static constexpr auto xi = GaussLegendreNodes<Q1D>();
 
-  auto B = make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolation01<D1D>(xi[j])[i]; });
+  auto B = make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolation<D1D>(xi[j])[i]; });
 
-  auto G = make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolationDerivative01<D1D>(xi[j])[i]; });
+  auto G = make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolationDerivative<D1D>(xi[j])[i]; });
 
   int count = 0;
 
@@ -87,7 +87,7 @@ auto count_ops1(tensor<double, D1D * D1D * D1D> x)
 {
   using element_type = finite_element< ::Geometry::Hexahedron, H1<D1D - 1> >;
 
-  auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
+  auto xi = GaussLegendreNodes<Q1D>();
 
   tensor<double, Q1D, Q1D, Q1D, 3> grad{};
 
@@ -104,11 +104,11 @@ auto count_ops1(tensor<double, D1D * D1D * D1D> x)
 template <int Q1D, int D1D>
 auto compute_all_gradients0(const tensor<double, D1D, D1D, D1D>& x)
 {
-  static constexpr auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
+  static constexpr auto xi = GaussLegendreNodes<Q1D>();
 
-  auto B = make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolation01<D1D>(xi[j])[i]; });
+  auto B = make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolation<D1D>(xi[j])[i]; });
 
-  auto G = make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolationDerivative01<D1D>(xi[j])[i]; });
+  auto G = make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolationDerivative<D1D>(xi[j])[i]; });
 
   tensor<double, Q1D, Q1D, Q1D, 3> grad{};
   for (int dz = 0; dz < D1D; ++dz) {
@@ -153,13 +153,13 @@ auto compute_all_gradients0(const tensor<double, D1D, D1D, D1D>& x)
 template <int Q1D, int D1D>
 auto compute_all_gradients1(const tensor<double, D1D, D1D, D1D>& x)
 {
-  static constexpr auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
+  static constexpr auto xi = GaussLegendreNodes<Q1D>();
 
   static constexpr auto B =
-      make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolation01<D1D>(xi[j])[i]; });
+      make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolation<D1D>(xi[j])[i]; });
 
   static constexpr auto G =
-      make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolationDerivative01<D1D>(xi[j])[i]; });
+      make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolationDerivative<D1D>(xi[j])[i]; });
 
   tensor<double, Q1D, Q1D, Q1D, 3> grad{};
   for (int dz = 0; dz < D1D; ++dz) {
@@ -206,7 +206,7 @@ auto compute_all_gradients2(const tensor<double, D1D * D1D * D1D>& x)
 {
   using element_type = finite_element< ::Geometry::Hexahedron, H1<D1D - 1> >;
 
-  auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
+  auto xi = GaussLegendreNodes<Q1D>();
 
   tensor<double, Q1D, Q1D, Q1D, 3> grad{};
 
@@ -222,7 +222,7 @@ auto compute_all_gradients3(const tensor<double, D1D * D1D * D1D>& x)
 {
   using element_type = finite_element< ::Geometry::Hexahedron, H1<D1D - 1> >;
 
-  [[maybe_unused]] static constexpr auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
+  [[maybe_unused]] static constexpr auto xi = GaussLegendreNodes<Q1D>();
 
   tensor<double, Q1D, Q1D, Q1D, 3> grad{};
 
@@ -237,12 +237,12 @@ auto compute_all_gradients3(const tensor<double, D1D * D1D * D1D>& x)
 template <int D1D>
 auto differentiate(const tensor<double, 3>& xi, const tensor<double, D1D * D1D * D1D>& u)
 {
-  auto N_xi    = GaussLobattoInterpolation01<D1D>(xi[0]);
-  auto N_eta   = GaussLobattoInterpolation01<D1D>(xi[1]);
-  auto N_zeta  = GaussLobattoInterpolation01<D1D>(xi[2]);
-  auto dN_xi   = GaussLobattoInterpolationDerivative01<D1D>(xi[0]);
-  auto dN_eta  = GaussLobattoInterpolationDerivative01<D1D>(xi[1]);
-  auto dN_zeta = GaussLobattoInterpolationDerivative01<D1D>(xi[2]);
+  auto N_xi    = GaussLobattoInterpolation<D1D>(xi[0]);
+  auto N_eta   = GaussLobattoInterpolation<D1D>(xi[1]);
+  auto N_zeta  = GaussLobattoInterpolation<D1D>(xi[2]);
+  auto dN_xi   = GaussLobattoInterpolationDerivative<D1D>(xi[0]);
+  auto dN_eta  = GaussLobattoInterpolationDerivative<D1D>(xi[1]);
+  auto dN_zeta = GaussLobattoInterpolationDerivative<D1D>(xi[2]);
 
   int               count = 0;
   tensor<double, 3> grad{};
@@ -262,7 +262,7 @@ auto differentiate(const tensor<double, 3>& xi, const tensor<double, D1D * D1D *
 template <int Q1D, int D1D>
 auto compute_all_gradients4(const tensor<double, D1D * D1D * D1D>& x)
 {
-  auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
+  auto xi = GaussLegendreNodes<Q1D>();
 
   tensor<double, Q1D, Q1D, Q1D, 3> grad{};
 
@@ -276,13 +276,13 @@ auto compute_all_gradients4(const tensor<double, D1D * D1D * D1D>& x)
 template <int Q1D, int D1D>
 auto compute_all_gradients5(const tensor<double, D1D * D1D * D1D>& u)
 {
-  static constexpr auto xi = GaussLegendreNodes<Q1D>(0.0, 1.0);
+  static constexpr auto xi = GaussLegendreNodes<Q1D>();
 
   static constexpr auto N =
-      make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolation01<D1D>(xi[j])[i]; });
+      make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolation<D1D>(xi[j])[i]; });
 
   static constexpr auto dN =
-      make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolationDerivative01<D1D>(xi[j])[i]; });
+      make_tensor<D1D, Q1D>([](auto i, auto j) { return GaussLobattoInterpolationDerivative<D1D>(xi[j])[i]; });
 
   tensor<double, Q1D, Q1D, Q1D, 3> grad{};
 

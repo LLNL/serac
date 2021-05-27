@@ -27,6 +27,7 @@ endforeach()
 set(functional_tests_mpi
     # functional_boundary_test.cpp
     functional_comparisons.cpp
+    functional_comparison_L2.cpp
     )
     
 foreach(filename ${functional_tests_mpi})
