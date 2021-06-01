@@ -18,7 +18,7 @@
 template <int p, int c>
 struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   static constexpr auto geometry   = Geometry::Hexahedron;
-  static constexpr auto family     = Family::H1;
+  static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
   static constexpr int  dim        = 3;
   static constexpr int  ndof       = (p + 1) * (p + 1) * (p + 1);
