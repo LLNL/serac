@@ -11,146 +11,13 @@
  */
 #pragma once
 
-#include "mfem.hpp"
-#include "mfem/linalg/dtensor.hpp"
-
-#include "serac/physics/utilities/functional/tensor.hpp"
+#include "serac/physics/utilities/functional/integral_utilities.hpp"
 #include "serac/physics/utilities/functional/quadrature.hpp"
-#include "serac/physics/utilities/functional/finite_element.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
 
 namespace serac {
 
-namespace detail {
-
-/**
- * @brief Wrapper for mfem::Reshape compatible with Serac's finite element space types
- * @tparam space A test or trial space
- * @param[in] u The raw data to reshape into an mfem::DeviceTensor
- * @param[in] n1 The first dimension to reshape into
- * @param[in] n2 The second dimension to reshape into
- * @see mfem::Reshape
- */
-template <typename space>
-auto Reshape(double* u, int n1, int n2)
-{
-  if constexpr (space::components == 1) {
-    return mfem::Reshape(u, n1, n2);
-  }
-  if constexpr (space::components > 1) {
-    return mfem::Reshape(u, n1, space::components, n2);
-  }
-};
-/// @overload
-template <typename space>
-auto Reshape(const double* u, int n1, int n2)
-{
-  if constexpr (space::components == 1) {
-    return mfem::Reshape(u, n1, n2);
-  }
-  if constexpr (space::components > 1) {
-    return mfem::Reshape(u, n1, space::components, n2);
-  }
-};
-
-/**
- * @brief Extracts the dof values for a particular element
- * @param[in] u The decomposed per-element DOFs, libCEED's E-vector
- * @param[in] e The index of the element to retrieve DOFs for
- * @note For the case of only 1 dof per node, detail::Load returns a tensor<double, ndof>
- */
-template <int ndof>
-inline auto Load(const mfem::DeviceTensor<2, const double>& u, int e)
-{
-  return make_tensor<ndof>([&u, e](int i) { return u(i, e); });
-}
-/**
- * @overload
- * @note For the case of multiple dofs per node, detail::Load returns a tensor<double, components, ndof>
- */
-template <int ndof, int components>
-inline auto Load(const mfem::DeviceTensor<3, const double>& u, int e)
-{
-  return make_tensor<components, ndof>([&u, e](int j, int i) { return u(i, j, e); });
-}
-/**
- * @overload
- * @note Intended to be used with Serac's finite element space types
- */
-template <typename space, typename T>
-auto Load(const T& u, int e)
-{
-  if constexpr (space::components == 1) {
-    return detail::Load<space::ndof>(u, e);
-  }
-  if constexpr (space::components > 1) {
-    return detail::Load<space::ndof, space::components>(u, e);
-  }
-};
-
-/**
- * @brief Adds the contributions of the local residual to the global residual
- * @param[inout] r_global The full element-decomposed residual
- * @param[in] r_local The contributions to a residual from a single element
- * @param[in] e The index of the element whose residual is @a r_local
- */
-template <int ndof>
-void Add(const mfem::DeviceTensor<2, double>& r_global, tensor<double, ndof> r_local, int e)
-{
-  for (int i = 0; i < ndof; i++) {
-    r_global(i, e) += r_local[i];
-  }
-}
-/**
- * @overload
- * @note Used when each node has multiple DOFs
- */
-template <int ndof, int components>
-void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, components> r_local, int e)
-{
-  for (int i = 0; i < ndof; i++) {
-    for (int j = 0; j < components; j++) {
-      r_global(i, j, e) += r_local[i][j];
-    }
-  }
-}
-
-/**
- * @brief Computes the arguments to be passed into the q-function (shape function evaluations)
- * By default:
- *  H1 family elements will compute {value, gradient}
- *  Hcurl family elements will compute {value, curl}
- *  TODO: Hdiv family elements will compute {value, divergence}
- *  TODO: L2 family elements will compute value
- *
- * In the future, the user will be able to override these defaults
- * to omit unused components (e.g. specify that they only need the gradient)
- *
- * @param[in] u The DOF values for the element
- * @param[in] xi The position of the quadrature point in reference space
- * @param[in] J The Jacobian of the element transformation at the quadrature point
- * @tparam element_type The type of the element (used to determine the family)
- */
-template <typename element_type, typename T, int dim>
-auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
-{
-  // TODO: Static assert that element_type is an element??
-  if constexpr (element_type::family == Family::H1) {
-    return std::tuple{dot(u, element_type::shape_functions(xi)),
-                      dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
-  }
-
-  if constexpr (element_type::family == Family::HCURL) {
-    // HCURL shape functions undergo a covariant Piola transformation when going
-    // from parent element to physical element
-    auto value = dot(u, dot(element_type::shape_functions(xi), inv(J)));
-    auto curl  = dot(u, element_type::shape_function_curl(xi) / det(J));
-    if constexpr (dim == 3) {
-      curl = dot(curl, transpose(J));
-    }
-    return std::tuple{value, curl};
-  }
-}
+namespace boundary_integral {
 
 /**
  * @overload
@@ -160,60 +27,17 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim
  *
  * QUESTION: are gradients useful in these cases or not?
  */
-template <typename element_type, typename T, int geometry_dim, int spatial_dim>
-auto Preprocess(T u, const tensor<double, geometry_dim> xi,
-                [[maybe_unused]] const tensor<double, spatial_dim, geometry_dim> J)
+template <typename element_type, typename T, int dim>
+auto Preprocess(T u, const tensor<double, dim> xi)
 {
-  if constexpr (element_type::family == Family::H1) {
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return dot(u, element_type::shape_functions(xi));
   }
 
-  if constexpr (element_type::family == Family::HCURL) {
-    return dot(u, dot(element_type::shape_functions(xi), inv(J)));
-  }
-}
-
-/**
- * @brief Computes residual contributions from the output of the q-function
- * This involves integrating the q-function output against functions from the
- * test function space.
- *
- * By default:
- *  H1 family elements integrate std::get<0>(f) against the test space shape functions
- *                           and std::get<1>(f) against the test space shape function gradients
- *  Hcurl family elements integrate std::get<0>(f) against the test space shape functions
- *                              and std::get<1>(f) against the curl of the test space shape functions
- * TODO: Hdiv family elements integrate std::get<0>(f) against the test space shape functions
- *                                  and std::get<1>(f) against the divergence of the test space shape functions
- * TODO: L2 family elements integrate f against test space shape functions
- *
- * In the future, the user will be able to override these defaults
- * to omit unused components (e.g. provide only the term to be integrated against test function gradients)
- * @tparam element_type The type of the element (used to determine the family)
- * @tparam T The type of the output from the user-provided q-function
- * @pre T must be a pair type for H1, H(curl) and H(div) family elements
- * @param[in] f The value component output of the user's quadrature function (as opposed to the value/derivative pair)
- * @param[in] xi The position of the quadrature point in reference space
- * @param[in] J The Jacobian of the element transformation at the quadrature point
- */
-template <typename element_type, typename T, int dim>
-auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
-{
-  // TODO: Helpful static_assert about f being tuple or tuple-like for H1, hcurl, hdiv
-  if constexpr (element_type::family == Family::H1) {
-    auto W     = element_type::shape_functions(xi);
-    auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
-    return outer(W, std::get<0>(f)) + dot(dW_dx, std::get<1>(f));
-  }
-
-  if constexpr (element_type::family == Family::HCURL) {
-    auto W      = dot(element_type::shape_functions(xi), inv(J));
-    auto curl_W = element_type::shape_function_curl(xi) / det(J);
-    if constexpr (dim == 3) {
-      curl_W = dot(curl_W, transpose(J));
-    }
-    return (W * std::get<0>(f) + curl_W * std::get<1>(f));
-  }
+  // we can't support HCURL until fixing some shortcomings in mfem
+  //if constexpr (element_type::family == Family::HCURL) {
+  //  return dot(u, dot(element_type::shape_functions(xi), inv(J)));
+  //}
 }
 
 /**
@@ -225,42 +49,18 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
  * In this case, q-function outputs are only integrated against test space shape functions
  * QUESTION: Should test function gradients be supported here or not?
  */
-template <typename element_type, typename T, int geometry_dim, int spatial_dim>
-auto Postprocess(T f, const tensor<double, geometry_dim> xi,
-                 [[maybe_unused]] const tensor<double, spatial_dim, geometry_dim> J)
+template <typename element_type, typename T, int dim>
+auto Postprocess(T f, const tensor<double, dim> xi)
 {
-  if constexpr (element_type::family == Family::H1) {
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return outer(element_type::shape_functions(xi), f);
   }
 
-  if constexpr (element_type::family == Family::HCURL) {
-    return outer(element_type::shape_functions(xi), dot(inv(J), f));
-  }
+  // we can't support HCURL until fixing some shortcomings in mfem
+  //if constexpr (element_type::family == Family::HCURL) {
+  //  return outer(element_type::shape_functions(xi), dot(inv(J), f));
+  //}
 }
-
-/**
- * @brief Takes in a Jacobian matrix and computes the
- * associated length / area / volume ratio of the transformation
- *
- * In general, this is given by sqrt(det(J^T * J)), but for the case
- * where J is square, this is equivalent to just det(J)
- *
- * @param[in] A The Jacobian to compute the ratio on
- */
-template <int n>
-auto Measure(const tensor<double, n, n>& A)
-{
-  return det(A);
-}
-
-/// @overload
-template <int m, int n>
-auto Measure(const tensor<double, m, n>& A)
-{
-  return ::sqrt(det(transpose(A) * A));
-}
-
-}  // namespace detail
 
 /**
  * @brief The base kernel template used to create different finite element calculation routines
@@ -291,7 +91,7 @@ auto Measure(const tensor<double, m, n>& A)
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
  */
-template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+template <Geometry g, typename test, typename trial, int dim, int Q,
           typename derivatives_type, typename lambda>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
@@ -305,8 +105,8 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto X = mfem::Reshape(X_.Read(), rule.size(), spatial_dim, num_elements);
-  auto J = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
+  auto X = mfem::Reshape(X_.Read(), rule.size(), dim+1, num_elements);
+  auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements);
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
@@ -324,12 +124,11 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       // and calculate the measure of that point in physical space.
       auto   xi  = rule.points[q];
       auto   dxi = rule.weights[q];
-      auto   x_q = make_tensor<spatial_dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-      auto   J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = detail::Measure(J_q) * dxi;
+      auto   x_q = make_tensor<dim+1>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+      double dx  = J(q, e) * dxi;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
-      auto arg = detail::Preprocess<trial_element>(u_elem, xi, J_q);
+      auto arg = Preprocess<trial_element>(u_elem, xi);
 
       // evaluate the user-specified constitutive model
       //
@@ -339,7 +138,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
-      r_elem += detail::Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+      r_elem += Postprocess<test_element>(get_value(qf_output), xi) * dx;
 
       // here, we store the derivative of the q-function w.r.t. its input arguments
       //
@@ -380,7 +179,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+template <Geometry g, typename test, typename trial, int dim, int Q,
           typename derivatives_type>
 void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
                      const mfem::Vector& J_, int num_elements)
@@ -394,7 +193,7 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J  = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
+  auto J  = mfem::Reshape(J_.Read(), rule.size(), num_elements);
   auto du = detail::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
   auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
 
@@ -412,11 +211,10 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
       // and calculate the measure of that point in physical space.
       auto   xi  = rule.points[q];
       auto   dxi = rule.weights[q];
-      auto   J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = detail::Measure(J_q) * dxi;
+      double dx  = J(q, e) * dxi;
 
       // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = detail::Preprocess<trial_element>(du_elem, xi, J_q);
+      auto darg = Preprocess<trial_element>(du_elem, xi);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
@@ -426,7 +224,7 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
 
       // integrate dq against test space shape functions / gradients
       // to get the (change in) element residual contributions
-      dr_elem += detail::Postprocess<test_element>(dq, xi, J_q) * dx;
+      dr_elem += Postprocess<test_element>(dq, xi) * dx;
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -435,94 +233,7 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
-/// @cond
-namespace detail {
-
-/**
- * @brief a class that helps to extract the test space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename spaces>
-struct get_test_space;  // undefined
-
-/**
- * @brief a class that helps to extract the test space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename test_space, typename trial_space>
-struct get_test_space<test_space(trial_space)> {
-  using type = test_space;  ///< the test space
-};
-
-/**
- * @brief a class that helps to extract the trial space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename spaces>
-struct get_trial_space;  // undefined
-
-/**
- * @brief a class that helps to extract the trial space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename test_space, typename trial_space>
-struct get_trial_space<test_space(trial_space)> {
-  using type = trial_space;  ///< the trial space
-};
-
-/**
- * @brief a class that provides the lambda argument types for a given integral
- * @tparam trial_space the trial space associated with the integral
- * @tparam geometry_dim the dimensionality of the element type
- * @tparam spatial_dim the dimensionality of the space the mesh lives in
- */
-template <typename space, int geometry_dim, int spatial_dim>
-struct lambda_argument;
-
-// specialization for an H1 space with polynomial order p, and c components
-template <int p, int c, int dim>
-struct lambda_argument<H1<p, c>, dim, dim> {
-  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
-};
-
-// specialization for an H1 space with polynomial order p, and c components
-// evaluated in a line integral or surface integral. Note: only values are provided in this case
-template <int p, int c, int geometry_dim, int spatial_dim>
-struct lambda_argument<H1<p, c>, geometry_dim, spatial_dim> {
-  using type = reduced_tensor<double, c>;
-};
-
-// specialization for an Hcurl space with polynomial order p in 2D
-template <int p>
-struct lambda_argument<Hcurl<p>, 2, 2> {
-  using type = std::tuple<tensor<double, 2>, double>;
-};
-
-// specialization for an Hcurl space with polynomial order p in 3D
-template <int p>
-struct lambda_argument<Hcurl<p>, 3, 3> {
-  using type = std::tuple<tensor<double, 3>, tensor<double, 3> >;
-};
-
-}  // namespace detail
-/// @endcond
-
-/**
- * @brief a type function that extracts the test space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename spaces>
-using test_space_t = typename detail::get_test_space<spaces>::type;
-
-/**
- * @brief a type function that extracts the trial space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename spaces>
-using trial_space_t = typename detail::get_trial_space<spaces>::type;
-
-static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
-                                                    Geometry::Hexahedron};
+}  // namespace boundary_integral
 
 /**
  * @brief Describes a single integral term in a weak forumulation of a partial differential equation
@@ -546,11 +257,10 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename lambda_type>
-  BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>,
-                   Dimension<spatial_dim>, lambda_type&& qf)
+  BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf)
       : J_(J), X_(X)
   {
-    constexpr auto geometry = supported_geometries[geometry_dim];
+    constexpr auto geometry = supported_geometries[dim];
     constexpr auto Q        = std::max(test_space::order, trial_space::order) + 1;
 
     // these lines of code figure out the argument types that will be passed
@@ -558,11 +268,11 @@ public:
     //
     // we use them to observe the output type and allocate memory to store
     // the derivative information at each quadrature point
-    using x_t             = tensor<double, spatial_dim>;
-    using u_du_t          = typename detail::lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
+    using x_t             = tensor<double, dim>;
+    using u_du_t          = typename detail::lambda_argument<trial_space, dim - 1, dim>::type;
     using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
-    auto num_quadrature_points = static_cast<uint32_t>(X.Size() / spatial_dim);
+    auto num_quadrature_points = static_cast<uint32_t>(X.Size() / dim);
     qf_derivatives_.resize(sizeof(derivative_type) * num_quadrature_points);
 
     // FIXME: Strict aliasing rule?
@@ -576,13 +286,11 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
     evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-      evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives_ptr, J_,
-                                                                                         X_, num_elements, qf);
+      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, dim, Q>(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
     };
 
     gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-      gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives_ptr, J_,
-                                                                                       num_elements);
+      boundary_integral::gradient_kernel<geometry, test_space, trial_space, dim, Q>(dU, dR, qf_derivatives_ptr, J_, num_elements);
     };
   }
 

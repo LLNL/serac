@@ -12,6 +12,7 @@
 
 #pragma once
 
+
 #include "mfem.hpp"
 
 #include "serac/physics/utilities/functional/tensor.hpp"
@@ -19,8 +20,15 @@
 #include "serac/physics/utilities/functional/finite_element.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
 #include "serac/physics/utilities/functional/integral.hpp"
+#include "serac/physics/utilities/functional/boundary_integral.hpp"
 
 namespace serac {
+
+template < typename T >
+struct is_hcurl{ static constexpr bool value = false; };
+
+template < int p, int c >
+struct is_hcurl< Hcurl< p, c > >{ static constexpr bool value = true; };
 
 #ifdef ENABLE_BOUNDARY_INTEGRALS
 // for some reason, mfem doesn't support lexicographic ordering for Nedelec segment elements,
@@ -37,6 +45,16 @@ auto get_boundary_dof_ordering(mfem::ParFiniteElementSpace* pfes)
   }
 }
 #endif
+
+template < typename space >
+const mfem::Operator * GetFaceRestriction(mfem::ParFiniteElementSpace* pfes)
+{
+  if (!is_hcurl<space>::value) {
+    return pfes->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary);
+  } else {
+    return nullptr;
+  }
+}
 
 /// @cond
 template <typename T>
@@ -95,14 +113,10 @@ public:
         trial_space_(trial_fes),
         P_test_(test_space_->GetProlongationMatrix()),
         G_test_(test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-#ifdef ENABLE_BOUNDARY_INTEGRALS
-        G_test_boundary_(
-            test_space_->GetFaceRestriction(get_boundary_dof_ordering(test_fes), mfem::FaceType::Boundary)),
-        G_trial_boundary_(
-            trial_space_->GetFaceRestriction(get_boundary_dof_ordering(trial_fes), mfem::FaceType::Boundary)),
-#endif
         P_trial_(trial_space_->GetProlongationMatrix()),
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
+        G_test_boundary_(GetFaceRestriction<test>(test_fes)),
+        G_trial_boundary_(GetFaceRestriction<trial>(trial_fes)),
         grad_(*this)
   {
     SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
@@ -114,11 +128,15 @@ public:
     output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
     output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
 
-#ifdef ENABLE_BOUNDARY_INTEGRALS
-    input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
-    output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
-    output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-#endif
+    // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
+    if (!(is_hcurl<test>::value || is_hcurl<trial>::value)) {
+      G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary);
+      G_trial_boundary_ = trial_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary);
+
+      input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
+      output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
+      output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+    }
 
     my_output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
@@ -135,65 +153,47 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int geometry_dim, int spatial_dim, typename lambda>
-  void AddIntegral(Dimension<geometry_dim>, Dimension<spatial_dim>, lambda&& integrand, mfem::Mesh& domain)
+  template <int dim, typename lambda>
+  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
   {
-    if constexpr (geometry_dim == spatial_dim) {
-      auto num_elements = domain.GetNE();
-      SLIC_ERROR_IF(num_elements == 0, "Mesh has no elements");
+    auto num_elements = domain.GetNE();
+    SLIC_ERROR_IF(num_elements == 0, "Mesh has no elements");
 
-      auto dim = domain.Dimension();
-      for (int e = 0; e < num_elements; e++) {
-        SLIC_ERROR_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
-      }
-
-      const mfem::FiniteElement&   el = *test_space_->GetFE(0);
-      const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-
-      constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
-      auto           geom  = domain.GetGeometricFactors(ir, flags);
-      domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{},
-                                     Dimension<spatial_dim>{}, integrand);
-      return;
+    SLIC_ERROR_IF(dim != domain.Dimension(), "Error: invalid mesh dimension for domain integral");
+    for (int e = 0; e < num_elements; e++) {
+      SLIC_ERROR_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
-#ifdef ENABLE_BOUNDARY_INTEGRALS
-    else if constexpr ((geometry_dim + 1) == spatial_dim) {
-      // TODO: fix mfem::FaceGeometricFactors
-      constexpr bool always_false = (geometry_dim == spatial_dim);
-      static_assert(always_false,
-                    "unsupported integral dimensionality due to unimplemented features in mfem::FaceGeometricFactors");
 
-      auto num_boundary_elements = domain.GetNBE();
-      SLIC_ERROR_IF(num_boundary_elements == 0, "Mesh has no boundary elements");
+    const mfem::FiniteElement&   el = *test_space_->GetFE(0);
+    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
-      auto dim = domain.Dimension();
-      SLIC_ERROR_IF(dim != spatial_dim, "Error: invalid mesh dimension for integral");
-      for (int e = 0; e < num_boundary_elements; e++) {
-        SLIC_ERROR_IF(domain.GetBdrElementType(e) != supported_types[dim - 1],
-                      "Mesh contains unsupported element type");
-      }
+    constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
+    auto           geom  = domain.GetGeometricFactors(ir, flags);
+    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand);
+  }
 
-      const mfem::FiniteElement&   el = *test_space_->GetBE(0);
-      const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-      constexpr auto flags            = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::JACOBIANS;
 
-      // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
-      // this is currently a dealbreaker, as we need this information to do any calculations
-      auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-      boundary_integrals_.emplace_back(num_boundary_elements, geom->J, geom->X, Dimension<geometry_dim>{},
-                                       Dimension<spatial_dim>{}, integrand);
-      return;
+  template <int dim, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain) {
+
+    // TODO: fix mfem::FaceGeometricFactors
+    auto num_boundary_elements = domain.GetNBE();
+    SLIC_ERROR_IF(num_boundary_elements == 0, "Mesh has no boundary elements");
+
+    SLIC_ERROR_IF(dim != domain.Dimension(), "Error: invalid mesh dimension for boundary integral");
+    for (int e = 0; e < num_boundary_elements; e++) {
+      SLIC_ERROR_IF(domain.GetBdrElementType(e) != supported_types[dim - 1],
+                    "Mesh contains unsupported element type");
     }
-#endif
 
-    else {
-      // if static_assert has a literal 'false' for its first arg,
-      // it will trigger even when this branch isn't selected. So,
-      // we define an expression that is always false (see first
-      // if constexpr expression) to work around this limitation
-      constexpr bool always_false = (geometry_dim == spatial_dim);
-      static_assert(always_false, "unsupported integral dimensionality");
-    }
+    const mfem::FiniteElement&   el = *test_space_->GetBE(0);
+    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+    constexpr auto flags            = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS;
+
+    // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
+    // this is currently a dealbreaker, as we need this information to do any calculations
+    auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
+    boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, Dimension<dim>{}, integrand);
   }
 
   /**
@@ -205,7 +205,7 @@ public:
   template <typename lambda>
   void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain)
   {
-    AddIntegral(Dimension<2>{} /* geometry */, Dimension<2>{} /* spatial */, integrand, domain);
+    AddDomainIntegral(Dimension<2>{}, integrand, domain);
   }
 
   /**
@@ -217,35 +217,8 @@ public:
   template <typename lambda>
   void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain)
   {
-    AddIntegral(Dimension<3>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain);
+    AddDomainIntegral(Dimension<3>{}, integrand, domain);
   }
-
-  /**
-   * @brief Adds a domain integral
-   * @tparam d The dimension of the elements *and* the space they're embedded in
-   * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
-   * @param[in] integrand The quadrature function
-   * @param[in] domain The mesh to evaluate the integral on
-   */
-  template <int d, typename lambda>
-  void AddDomainIntegral(Dimension<d>, lambda&& integrand, mfem::Mesh& domain)
-  {
-    AddIntegral(Dimension<d>{} /* geometry */, Dimension<d>{} /* spatial */, integrand, domain);
-  }
-
-#ifdef ENABLE_BOUNDARY_INTEGRALS
-  /**
-   * @brief Adds a surface integral, i.e., over 2D elements in R^3 space
-   * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
-   * @param[in] integrand The quadrature function
-   * @param[in] domain The mesh to evaluate the integral on
-   */
-  template <typename lambda>
-  void AddSurfaceIntegral(lambda&& integrand, mfem::Mesh& domain)
-  {
-    AddIntegral(Dimension<2>{} /* geometry */, Dimension<3>{} /* spatial */, integrand, domain);
-  }
-#endif
 
   /**
    * @brief Implements mfem::Operator::Mult
@@ -366,7 +339,7 @@ private:
       G_test_->MultTranspose(output_E_, output_L_);
     }
 
-#ifdef ENABLE_BOUNDARY_INTEGRALS
+#if 0
     if (boundary_integrals_.size() > 0) {
       G_trial_boundary_->Mult(input_L_, input_E_boundary_);
 
@@ -437,13 +410,14 @@ private:
   /**
    * @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
    */
-  mutable mfem::Vector output_L_boundary_
+  mutable mfem::Vector output_L_boundary_;
 #endif
 
-      /**
-       * @brief The set of true DOF values, used as a scratchpad for @p operator()
-       */
-      mutable mfem::Vector my_output_T_;
+  /**
+   * @brief The set of true DOF values, used as a scratchpad for @p operator()
+   */
+  mutable mfem::Vector my_output_T_;
+
   /**
    * @brief A working vector for @p GetGradient
    */
@@ -511,7 +485,7 @@ private:
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<Integral<test(trial)> > boundary_integrals_;
+  std::vector<BoundaryIntegral<test(trial)> > boundary_integrals_;
 #endif
 
   // simplex elements are currently not supported;

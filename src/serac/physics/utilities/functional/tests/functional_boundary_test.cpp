@@ -68,7 +68,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
-  residual.AddSurfaceIntegral([&](auto x, auto /* u */) { return 1.0; }, mesh);
+  residual.AddBoundaryIntegral(Dimension<dim>{}, [&](auto x, auto /* u */) { return 1.0 + 0.0 * x[0]; }, mesh);
 
   mfem::Vector r1 = A * u_global - f;
   mfem::Vector r2 = residual * u_global;
