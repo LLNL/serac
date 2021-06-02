@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file quadrilateral_h1.inl
+ * @file quadrilateral_H1.inl
  *
  * @brief Specialization of finite_element for H1 on quadrilateral geometry
  */
