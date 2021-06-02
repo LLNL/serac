@@ -26,6 +26,7 @@ using namespace serac;
 using namespace serac::profiling;
 
 int num_procs, myid;
+int nsamples = 1;  // because mfem doesn't take in unsigned int
 
 constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
@@ -75,10 +76,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   // Create and assemble the linear load term into a vector
   f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
-  {
-    SERAC_PROFILE_SCOPE(serac::profiling::concat("mfem_fAssemble", postfix).c_str());
-    f.Assemble();
-  }
+  SERAC_PROFILE_VOID_EXPR(serac::profiling::concat("mfem_fAssemble", postfix).c_str(), f.Assemble());
   std::unique_ptr<mfem::HypreParVector> F(
       SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix).c_str(), f.ParallelAssemble()));
 
@@ -111,10 +109,10 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       mesh);
 
   // Compute the residual using standard MFEM methods
-  mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix).c_str(), (*J) * U - (*F));
+  mfem::Vector r1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_Apply", postfix).c_str(), (*J) * U - (*F), nsamples);
 
   // Compute the residual using functional
-  mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix).c_str(), residual(U));
+  mfem::Vector r2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_Apply", postfix).c_str(), residual(U), nsamples);
 
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
@@ -130,8 +128,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix).c_str(), residual.GetGradient(U));
 
   // Compute the gradient action using standard MFEM and functional
-  mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix).c_str(), (*J) * U);
-  mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("weakform_ApplyGradient", postfix).c_str(), grad2 * U);
+  mfem::Vector g1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_ApplyGradient", postfix).c_str(), (*J) * U, nsamples);
+  mfem::Vector g2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient", postfix).c_str(), grad2 * U, nsamples);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
@@ -371,7 +369,6 @@ int main(int argc, char* argv[])
 
   int serial_refinement   = 1;
   int parallel_refinement = 0;
-  int nsamples            = 1;
 
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&serial_refinement, "-r", "--ref", "");

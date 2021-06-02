@@ -127,6 +127,16 @@ auto&& forwarder(T&& thing)
     return static_cast<typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr)>(expr); \
   }()
 
+#define SERAC_PROFILE_EXPR_LOOP(name, expr, ntest)                                                                  \
+  (                                                                                                                 \
+      [&]() {                                                                                                       \
+        for (int SERAC_CONCAT(i, __LINE__) = 0; SERAC_CONCAT(i, __LINE__) < ntest - 1; SERAC_CONCAT(i, __LINE__)++) \
+          SERAC_PROFILE_EXPR(name, expr);                                                                           \
+      }(),                                                                                                          \
+      SERAC_PROFILE_EXPR(name, expr))
+
+#define SERAC_PROFILE_VOID_EXPR(name, expr) CALI_WRAP_STATEMENT(name, expr)
+
 #else  // SERAC_USE_CALIPER not defined
 
 // Define all these as nothing so annotated code will still compile
@@ -139,6 +149,8 @@ auto&& forwarder(T&& thing)
 #define SERAC_SET_METADATA(name, data)
 #define SERAC_PROFILE_SCOPE(name)
 #define SERAC_PROFILE_EXPR(name, expr) expr
+#define SERAC_PROFILE_EXPR_LOOP(name, expr, ntest) expr
+#define SERAC_PROFILE_VOID_EXPR(name, expr) expr
 
 #endif
 
