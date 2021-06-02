@@ -7,9 +7,9 @@
 set(functional_depends serac_physics mfem mpi)
 blt_list_append( TO functional_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
-#if(ENABLE_CUDA)
-#    list(APPEND functional_depends cuda)
-#endif()
+if(ENABLE_CUDA)
+    list(APPEND functional_depends cuda)
+endif()
 
 # Add the library first
 set(functional_headers
