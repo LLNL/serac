@@ -31,7 +31,6 @@ void basic_tensor_tests()
 
   constexpr tensor<double, 3, 3> invAp1 = {{{-4, -1, 3}, {-1.5, 0.5, 0.5}, {2, 0, -1}}};
   static_assert(abs(sqnorm(inv(A + Identity<3>()) - invAp1)) < 1.0e-16);
-  // static_assert(abs(sqnorm(inv(A + Identity<3>()) - invAp1)) < 1.0e-16);
 
   constexpr tensor<double, 3> Au = {16, 22, 28};
   static_assert(abs(sqnorm(dot(A, u) - Au)) < 1.0e-16);
@@ -95,7 +94,7 @@ void navier_stokes_tests()
   constexpr double p = 3.14;
   constexpr tensor v = {{1.0, 2.0, 3.0}};
   // CUDA WORKAROUND template deduction failed
-  constexpr tensor<double,3,3> L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+  constexpr tensor<double, 3, 3> L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
 
   {
     [[maybe_unused]] static constexpr auto exact = dsigma_dp(p, v, L);
@@ -123,5 +122,5 @@ int main()
 {
   basic_tensor_tests();
   elasticity_tests();
-  navier_stokes_tests(); // template deduction failed for tensor L
+  navier_stokes_tests();
 }

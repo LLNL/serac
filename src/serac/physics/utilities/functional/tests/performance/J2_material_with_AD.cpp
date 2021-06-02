@@ -171,7 +171,6 @@ int main()
   J2::State state{};
 
   while (t < 1.0) {
-    
     auto grad_u = displacement_gradient(t);
 
     auto backup = state;

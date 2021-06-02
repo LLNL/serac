@@ -82,8 +82,8 @@ struct tensor;
 
 template <typename T>
 struct tensor<T> {
-  using type                    = T;
-  static constexpr int ndim     = 0;
+  using type                = T;
+  static constexpr int ndim = 0;
 
   template <typename... S>
   SERAC_HOST_DEVICE constexpr auto& operator()(S...)
@@ -105,10 +105,10 @@ struct tensor<T> {
 
 template <typename T, int n>
 struct tensor<T, n> {
-  using type                       = T;
-  static constexpr int ndim        = 1;
+  using type                     = T;
+  static constexpr int ndim      = 1;
   static constexpr int first_dim = n;
-  
+
   template <typename S>
   SERAC_HOST_DEVICE constexpr auto& operator()(S i)
   {
@@ -149,7 +149,6 @@ struct tensor<T, first, rest...> {
    */
   static constexpr int first_dim = first;
 
-  
   /**
    * @brief Retrieves the sub-tensor corresponding to the indices provided in the pack @a i
    * @param[in] i The pack of indices
