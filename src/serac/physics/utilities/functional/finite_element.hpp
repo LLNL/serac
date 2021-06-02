@@ -152,20 +152,16 @@ struct is_finite_element<finite_element<g, Hcurl<p> > > {
   static constexpr bool value = true;  ///< whether or not type T is a finite_element
 };
 
-#include "detail/segment_h1.inl"
-//#include "detail/segment_hcurl.inl"
+#include "detail/segment_H1.inl"
+#include "detail/segment_Hcurl.inl"
+#include "detail/segment_L2.inl"
 
-//#include "detail/triangle_h1.inl"
-//#include "detail/triangle_hcurl.inl"
-
-#include "detail/quadrilateral_h1.inl"
-#include "detail/quadrilateral_hcurl.inl"
+#include "detail/quadrilateral_H1.inl"
+#include "detail/quadrilateral_Hcurl.inl"
 #include "detail/quadrilateral_L2.inl"
 
-//#include "detail/tetrahedron_h1.inl"
-//#include "detail/tetrahedron_hcurl.inl"
-
-#include "detail/hexahedron_h1.inl"
-#include "detail/hexahedron_hcurl.inl"
+#include "detail/hexahedron_H1.inl"
+#include "detail/hexahedron_Hcurl.inl"
+#include "detail/hexahedron_L2.inl"
 
 }  // namespace serac
