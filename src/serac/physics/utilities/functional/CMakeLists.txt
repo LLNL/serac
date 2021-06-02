@@ -20,12 +20,15 @@ set(functional_headers
     polynomials.hpp
     quadrature.hpp
     finite_element.hpp
-    detail/hexahedron_h1.inl
-    detail/hexahedron_hcurl.inl
-    detail/quadrilateral_h1.inl
-    detail/quadrilateral_hcurl.inl
+    detail/hexahedron_H1.inl
+    detail/hexahedron_Hcurl.inl
+    detail/hexahedron_L2.inl
+    detail/quadrilateral_H1.inl
+    detail/quadrilateral_Hcurl.inl
     detail/quadrilateral_L2.inl
-    detail/segment_h1.inl
+    detail/segment_H1.inl
+    detail/segment_Hcurl.inl
+    detail/segment_L2.inl
     detail/metaprogramming.hpp
     )
 

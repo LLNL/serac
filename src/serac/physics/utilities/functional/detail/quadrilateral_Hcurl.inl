@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file quadrilateral_hcurl.inl
+ * @file quadrilateral_Hcurl.inl
  *
  * @brief Specialization of finite_element for Hcurl on quadrilateral geometry
  */
@@ -109,8 +109,8 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     tensor<double, ndof, dim> N{};
 
     // do all the x-facing nodes first
-    tensor<double, p + 1> N_closed = GaussLobattoInterpolation01<p + 1>(xi[1]);
-    tensor<double, p>     N_open   = GaussLegendreInterpolation01<p>(xi[0]);
+    tensor<double, p + 1> N_closed = GaussLobattoInterpolation<p + 1>(xi[1]);
+    tensor<double, p>     N_open   = GaussLegendreInterpolation<p>(xi[0]);
     for (int j = 0; j < p + 1; j++) {
       for (int i = 0; i < p; i++) {
         N[count++] = {N_open[i] * N_closed[j], 0.0};
@@ -118,8 +118,8 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     }
 
     // then all the y-facing nodes
-    N_closed = GaussLobattoInterpolation01<p + 1>(xi[0]);
-    N_open   = GaussLegendreInterpolation01<p>(xi[1]);
+    N_closed = GaussLobattoInterpolation<p + 1>(xi[0]);
+    N_open   = GaussLegendreInterpolation<p>(xi[1]);
     for (int j = 0; j < p; j++) {
       for (int i = 0; i < p + 1; i++) {
         N[count++] = {0.0, N_closed[i] * N_open[j]};
@@ -135,8 +135,8 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     tensor<double, ndof> curl_z{};
 
     // do all the x-facing nodes first
-    tensor<double, p + 1> dN_closed = GaussLobattoInterpolationDerivative01<p + 1>(xi[1]);
-    tensor<double, p>     N_open    = GaussLegendreInterpolation01<p>(xi[0]);
+    tensor<double, p + 1> dN_closed = GaussLobattoInterpolationDerivative<p + 1>(xi[1]);
+    tensor<double, p>     N_open    = GaussLegendreInterpolation<p>(xi[0]);
     for (int j = 0; j < p + 1; j++) {
       for (int i = 0; i < p; i++) {
         curl_z[count++] = -N_open[i] * dN_closed[j];
@@ -144,8 +144,8 @@ struct finite_element<Geometry::Quadrilateral, Hcurl<p> > {
     }
 
     // then all the y-facing nodes
-    dN_closed = GaussLobattoInterpolationDerivative01<p + 1>(xi[0]);
-    N_open    = GaussLegendreInterpolation01<p>(xi[1]);
+    dN_closed = GaussLobattoInterpolationDerivative<p + 1>(xi[0]);
+    N_open    = GaussLegendreInterpolation<p>(xi[1]);
     for (int j = 0; j < p; j++) {
       for (int i = 0; i < p + 1; i++) {
         curl_z[count++] = dN_closed[i] * N_open[j];

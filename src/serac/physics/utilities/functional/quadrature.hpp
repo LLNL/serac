@@ -48,7 +48,7 @@ struct QuadratureRule {
 template <Geometry g, int Q>
 constexpr auto GaussQuadratureRule()
 {
-  auto x = GaussLegendreNodes<Q>(0.0, 1.0);
+  auto x = GaussLegendreNodes<Q>();
   auto w = GaussLegendreWeights<Q>();
   if constexpr (g == Geometry::Quadrilateral) {
     QuadratureRule<Q * Q, 2> rule{};
