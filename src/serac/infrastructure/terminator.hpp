@@ -20,7 +20,7 @@ namespace serac {
 namespace terminator {
 
 /**
- * Registers the signalHandler function to handle various fatal
+ * @brief Registers the signalHandler function to handle various fatal
  * signals
  * @note The behavior of MPI when a signal is sent to the mpirun
  * process is implementation-defined.  OpenMPI will send a SIGTERM
