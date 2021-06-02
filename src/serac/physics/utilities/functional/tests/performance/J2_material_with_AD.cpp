@@ -149,7 +149,7 @@ auto displacement_gradient(double t)
 int main()
 {
   // create & initialize test logger, finalized when exiting scope
-  axom::slic::SimpleLogger logger;  
+  axom::slic::SimpleLogger logger;
 
   axom::utilities::Timer stopwatch;
   double                 J2_evaluation_time = 0.0;
@@ -189,11 +189,9 @@ int main()
     stopwatch.stop();
     J2_AD_time += stopwatch.elapsed();
 
-    bool error_too_big = 
-       (norm(stress - get_value(stress_and_C)) > 1.0e-12) || 
-       (norm(C - get_gradient(stress_and_C)) > 1.0e-12) || 
-       (norm(state.beta - backup.beta) > 1.0e-12) || 
-       (fabs(state.pl_strain - backup.pl_strain) > 1.0e-12);
+    bool error_too_big =
+        (norm(stress - get_value(stress_and_C)) > 1.0e-12) || (norm(C - get_gradient(stress_and_C)) > 1.0e-12) ||
+        (norm(state.beta - backup.beta) > 1.0e-12) || (fabs(state.pl_strain - backup.pl_strain) > 1.0e-12);
 
     if (error_too_big) {
       SLIC_ERROR("Significant difference between expected and actual results. Exiting...");

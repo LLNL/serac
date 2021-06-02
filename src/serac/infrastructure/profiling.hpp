@@ -82,7 +82,7 @@
 
 #define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name)
 
-namespace detail {
+namespace serac::profiling::detail {
 
 /**
  * @brief Removes an rvalue reference from a type, if applicable
@@ -111,19 +111,20 @@ auto&& forwarder(T&& thing)
   return std::forward<T>(thing);
 }
 
-}  // namespace detail
+}  // namespace serac::profiling::detail
 
 /**
  * @brief The type that should be returned from the profiling wrapper lambda
  * It converts rvalue reference arguments of type T&& to T to avoid returning
  * a reference to a temporary and leaves all other types intact.
  */
-#define SERAC_PROFILE_EXPR_RETURN_TYPE(expr) detail::remove_rvalue_reference<decltype(detail::forwarder(expr))>::type
+#define SERAC_PROFILE_EXPR_RETURN_TYPE(expr) \
+  serac::profiling::detail::remove_rvalue_reference<decltype(serac::profiling::detail::forwarder(expr))>::type
 
-#define SERAC_PROFILE_EXPR(name, expr)                                \
-  [&]() -> SERAC_PROFILE_EXPR_RETURN_TYPE(expr) {                     \
-    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name); \
-    return static_cast<SERAC_PROFILE_EXPR_RETURN_TYPE(expr)>(expr);   \
+#define SERAC_PROFILE_EXPR(name, expr)                                       \
+  [&]() -> typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr) {                   \
+    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name);        \
+    return static_cast<typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr)>(expr); \
   }()
 
 #else  // SERAC_USE_CALIPER not defined
@@ -194,14 +195,6 @@ void startCaliperRegion(const char* name);
  * @param[in] name The tag to associate with the region.
  */
 void endCaliperRegion(const char* name);
-
-template <class T>
-struct type_identity {
-  using type = T;
-};
-
-template <class T>
-using type_identity_t = typename type_identity<T>::type;
 
 }  // namespace detail
 
