@@ -195,11 +195,13 @@ void startCaliperRegion(const char* name);
  */
 void endCaliperRegion(const char* name);
 
+/// @brief Provides the member typedef type that names T.
 template <class T>
 struct type_identity {
   using type = T;
 };
 
+/// @brief Helper type for type identity
 template <class T>
 using type_identity_t = typename type_identity<T>::type;
 
