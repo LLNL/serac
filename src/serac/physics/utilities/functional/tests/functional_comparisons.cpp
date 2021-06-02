@@ -40,7 +40,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   static constexpr double b = 2.1;
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto                  fec = mfem::H1_FECollection(p, dim);
+  auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
   mfem::ParBilinearForm A(&fespace);
@@ -138,7 +138,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   static constexpr double a = 1.7;
   static constexpr double b = 2.1;
 
-  auto                  fec = mfem::H1_FECollection(p, dim);
+  auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
 
   mfem::ParBilinearForm A(&fespace);
@@ -222,7 +222,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   static constexpr double a = 1.7;
   static constexpr double b = 2.1;
 
-  auto                  fec = mfem::ND_FECollection(p, dim);
+  auto                        fec = mfem::ND_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
   mfem::ParBilinearForm B(&fespace);

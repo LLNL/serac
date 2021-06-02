@@ -583,7 +583,7 @@ public:
     //
     // This shared_ptr should have a comparable lifetime to the Integral instance itself, since
     // the reference count will increase when it is captured by the lambda functions below, and
-    // the reference count will go back to zero after those std::functions are deconstructed in 
+    // the reference count will go back to zero after those std::functions are deconstructed in
     // Integral::~Integral()
     //
     // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
