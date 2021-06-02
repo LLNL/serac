@@ -14,6 +14,9 @@
 
 namespace serac {
 
+/**
+ * @brief Terminator functionality
+ */
 namespace terminator {
 
 /**
