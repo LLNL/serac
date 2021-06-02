@@ -505,5 +505,6 @@ protected:
  */
 template <>
 struct FromInlet<serac::Solid::InputOptions> {
+  /// @brief Returns created object from Inlet container
   serac::Solid::InputOptions operator()(const axom::inlet::Container& base);
 };
