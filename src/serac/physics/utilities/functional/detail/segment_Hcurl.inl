@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file segment_hcurl.inl
+ * @file segment_Hcurl.inl
  *
  * @brief Specialization of finite_element for Hcurl on segment geometry
  */

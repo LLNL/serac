@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file segment_h1.inl
+ * @file segment_H1.inl
  *
  * @brief Specialization of finite_element for H1 on segment geometry
  */

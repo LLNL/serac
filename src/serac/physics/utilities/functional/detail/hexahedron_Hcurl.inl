@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file hexahedron_hcurl.inl
+ * @file hexahedron_Hcurl.inl
  *
  * @brief Specialization of finite_element for Hcurl on hexahedron geometry
  */
