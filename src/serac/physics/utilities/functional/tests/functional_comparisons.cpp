@@ -20,8 +20,6 @@
 
 #include <gtest/gtest.h>
 
-using namespace std;
-using namespace mfem;
 using namespace serac;
 
 int num_procs, myid;
@@ -42,18 +40,18 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   static constexpr double b = 2.1;
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto                  fec = H1_FECollection(p, dim);
-  ParFiniteElementSpace fespace(&mesh, &fec);
+  auto                  fec = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
-  ParBilinearForm A(&fespace);
+  mfem::ParBilinearForm A(&fespace);
 
   // Add the mass term using the standard MFEM method
-  ConstantCoefficient a_coef(a);
-  A.AddDomainIntegrator(new MassIntegrator(a_coef));
+  mfem::ConstantCoefficient a_coef(a);
+  A.AddDomainIntegrator(new mfem::MassIntegrator(a_coef));
 
   // Add the diffusion term using the standard MFEM method
-  ConstantCoefficient b_coef(b);
-  A.AddDomainIntegrator(new DiffusionIntegrator(b_coef));
+  mfem::ConstantCoefficient b_coef(b);
+  A.AddDomainIntegrator(new mfem::DiffusionIntegrator(b_coef));
 
   // Assemble the bilinear form into a matrix
   A.Assemble(0);
@@ -61,19 +59,19 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
   // Create a linear form for the load term using the standard MFEM method
-  ParLinearForm       f(&fespace);
-  FunctionCoefficient load_func([&](const Vector& coords) { return 100 * coords(0) * coords(1); });
+  mfem::ParLinearForm       f(&fespace);
+  mfem::FunctionCoefficient load_func([&](const mfem::Vector& coords) { return 100 * coords(0) * coords(1); });
 
   // Create and assemble the linear load term into a vector
-  f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
+  f.AddDomainIntegrator(new mfem::DomainLFIntegrator(load_func));
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   // Set a random state to evaluate the residual
-  ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
-  Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
   // Set up the same problem using functional
@@ -140,36 +138,36 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   static constexpr double a = 1.7;
   static constexpr double b = 2.1;
 
-  auto                  fec = H1_FECollection(p, dim);
-  ParFiniteElementSpace fespace(&mesh, &fec, dim);
+  auto                  fec = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
 
-  ParBilinearForm A(&fespace);
+  mfem::ParBilinearForm A(&fespace);
 
-  ConstantCoefficient a_coef(a);
-  A.AddDomainIntegrator(new VectorMassIntegrator(a_coef));
+  mfem::ConstantCoefficient a_coef(a);
+  A.AddDomainIntegrator(new mfem::VectorMassIntegrator(a_coef));
 
-  ConstantCoefficient lambda_coef(b);
-  ConstantCoefficient mu_coef(b);
-  A.AddDomainIntegrator(new ElasticityIntegrator(lambda_coef, mu_coef));
+  mfem::ConstantCoefficient lambda_coef(b);
+  mfem::ConstantCoefficient mu_coef(b);
+  A.AddDomainIntegrator(new mfem::ElasticityIntegrator(lambda_coef, mu_coef));
   A.Assemble(0);
   A.Finalize();
 
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
-  ParLinearForm             f(&fespace);
-  VectorFunctionCoefficient load_func(dim, [&](const Vector& /*coords*/, Vector& force) {
+  mfem::ParLinearForm             f(&fespace);
+  mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& /*coords*/, mfem::Vector& force) {
     force    = 0.0;
     force(0) = -1.0;
   });
 
-  f.AddDomainIntegrator(new VectorDomainLFIntegrator(load_func));
+  f.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(load_func));
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
-  ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
-  Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
   [[maybe_unused]] static constexpr auto I = Identity<dim>();
@@ -224,22 +222,22 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   static constexpr double a = 1.7;
   static constexpr double b = 2.1;
 
-  auto                  fec = ND_FECollection(p, dim);
-  ParFiniteElementSpace fespace(&mesh, &fec);
+  auto                  fec = mfem::ND_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
-  ParBilinearForm B(&fespace);
+  mfem::ParBilinearForm B(&fespace);
 
-  ConstantCoefficient a_coef(a);
-  B.AddDomainIntegrator(new VectorFEMassIntegrator(a_coef));
+  mfem::ConstantCoefficient a_coef(a);
+  B.AddDomainIntegrator(new mfem::VectorFEMassIntegrator(a_coef));
 
-  ConstantCoefficient b_coef(b);
-  B.AddDomainIntegrator(new CurlCurlIntegrator(b_coef));
+  mfem::ConstantCoefficient b_coef(b);
+  B.AddDomainIntegrator(new mfem::CurlCurlIntegrator(b_coef));
   B.Assemble(0);
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
 
-  ParLinearForm             f(&fespace);
-  VectorFunctionCoefficient load_func(dim, [&](const Vector& coords, Vector& output) {
+  mfem::ParLinearForm             f(&fespace);
+  mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& coords, mfem::Vector& output) {
     double x  = coords(0);
     double y  = coords(1);
     output    = 0.0;
@@ -247,14 +245,14 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
     output(1) = -5 * (x - y) * y;
   });
 
-  f.AddDomainIntegrator(new VectorFEDomainLFIntegrator(load_func));
+  f.AddDomainIntegrator(new mfem::VectorFEDomainLFIntegrator(load_func));
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
-  ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
-  Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
   using test_space  = decltype(test);
