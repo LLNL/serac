@@ -241,7 +241,7 @@ T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c,
  *
  * @tparam T a container that implements operator[] and size() or mfem::Array
  * @param[in] m the mesh
- * @param[in] attr_list a list of attributes to assign to the given mesh
+ * @param[in] list a list of attributes to assign to the given mesh
  */
 
 template <typename T>
@@ -311,7 +311,7 @@ T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(do
  * @pre T must implement operator[]
  *
  * @param[in] m the mesh
- * @param[in] attr_list a list of attributes to assign to the given mesh
+ * @param[in] list a list of attributes to assign to the given mesh
  */
 
 template <typename T>
@@ -420,6 +420,7 @@ public:
   /**
    * @brief Evaluate the coefficient at a quadrature point
    *
+   * @param[in] v  The evaluated coefficient vector at the quadrature point
    * @param[in] Tr The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
    * @return The value of the coefficient at the quadrature point
@@ -467,7 +468,7 @@ public:
    *
    * @param[in] dim d.o.f of this mfem::Vectorcoefficient
    * @param[in] func A function to apply to the evaluations of all args and return mfem::Vector
-   * @param[in[ args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
+   * @param[in] args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
    */
   TransformedVectorCoefficient(int                                                                          dim,
                                std::function<mfem::Vector(typename detail::eval_result_t<Types>::type&...)> func,
@@ -482,7 +483,7 @@ public:
    * @brief Evaluate the coefficient at a quadrature point
    *
    * @param[out] V The evaluated coefficient vector at the quadrature point
-   * @param[in] T The element transformation for the evaluation
+   * @param[in] Tr The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
    */
   void Eval(mfem::Vector& V, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
@@ -521,7 +522,7 @@ public:
    *
    *
    * @param[in] func A function to apply to the evaluations of all args and return double
-   * @param[in[ args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
+   * @param[in] args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
    */
   TransformedScalarCoefficient(std::function<double(typename detail::eval_result_t<Types>::type&...)> func,
                                Types&... args)
@@ -534,7 +535,7 @@ public:
   /**
    * @brief Evaluate the coefficient at a quadrature point
    *
-   * @param[in] T The element transformation for the evaluation
+   * @param[in] Tr The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
    * @return The value of the coefficient at the quadrature point
    */
