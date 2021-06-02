@@ -177,6 +177,10 @@ struct BoxInputOptions {
   std::vector<double> overall_size;
 };
 
+/**
+ * @brief Input options for generated meshes
+ *
+ */
 struct NBallInputOptions {
   /**
    * @brief The approximate total number of desired elements
