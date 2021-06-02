@@ -31,7 +31,7 @@
 * <a style="font-weight:bold" href="accelerator_8hpp.html">Accelerator</a>
 * <a style="font-weight:bold" href="cli_8hpp.html">Command line interface</a>
 * <a style="font-weight:bold" href="initialize_8hpp.html">Initialize</a>
-* <a style="font-weight:bold" href="input_8hpp.html">Input File</a>
+* <a style="font-weight:bold" href="input_8hpp.html">Input file</a>
 * <a style="font-weight:bold" href="logger_8hpp.html">Logging</a>
 * <a style="font-weight:bold" href="profiling_8hpp.html">Profiling</a>
 * <a style="font-weight:bold" href="terminator_8hpp.html">Terminator</a>
