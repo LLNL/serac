@@ -115,8 +115,6 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
  * Template parameters other than the test and trial spaces are used for customization + optimization
  * and are erased through the @p std::function members of @p Integral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
- * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
- * @tparam spatial_dim The full dimension of the mesh
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
  * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
@@ -134,7 +132,7 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
  */
-template <Geometry g, typename test, typename trial, int dim, int Q,
+template <Geometry g, typename test, typename trial, int Q,
           typename derivatives_type, typename lambda>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
@@ -142,6 +140,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename trial_element::residual_type;
+  static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
@@ -207,8 +206,6 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  * Template parameters other than the test and trial spaces are used for customization + optimization
  * and are erased through the @p std::function members of @p Integral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
- * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
- * @tparam spatial_dim The full dimension of the mesh
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
@@ -223,14 +220,14 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int dim, int Q,
-          typename derivatives_type>
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
                      const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename trial_element::residual_type;
+  static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
@@ -291,8 +288,7 @@ public:
 
   /**
    * @brief Constructs an @p Integral from a user-provided quadrature function
-   * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
-   * @tparam spatial_dim The full dimension of the mesh
+   * @tparam dim The dimension of the mesh
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
@@ -301,14 +297,13 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameters
    */
-  template <int geometry_dim, int spatial_dim, typename lambda_type>
-  Integral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<geometry_dim>,
-           Dimension<spatial_dim>, lambda_type&& qf)
+  template <int dim, typename lambda_type>
+  Integral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf)
       : J_(J), X_(X)
   {
-    constexpr auto geometry                      = supported_geometries[geometry_dim];
+    constexpr auto geometry                      = supported_geometries[dim];
     constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
-    constexpr auto quadrature_points_per_element = (spatial_dim == 2) ? Q * Q : Q * Q * Q;
+    constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
     uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
 
@@ -317,8 +312,8 @@ public:
     //
     // we use them to observe the output type and allocate memory to store
     // the derivative information at each quadrature point
-    using x_t             = tensor<double, spatial_dim>;
-    using u_du_t          = typename detail::lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
+    using x_t             = tensor<double, dim>;
+    using u_du_t          = typename detail::lambda_argument<trial_space, dim, dim>::type;
     using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
     std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
@@ -331,13 +326,11 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
     evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-      evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
-                                                                                         X_, num_elements, qf);
+      evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
     };
 
     gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-      gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives.get(), J_,
-                                                                                       num_elements);
+      gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_, num_elements);
     };
   }
 

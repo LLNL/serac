@@ -25,10 +25,10 @@ namespace boundary_integral {
  * where the spatial dimension is different from the dimension of the element geometry
  * (i.e. surface integrals in 3D space, line integrals in 2D space, etc)
  *
- * QUESTION: are gradients useful in these cases or not?
+ * TODO: provide gradients as well (needs some more info from mfem)
  */
-template <typename element_type, typename T, int dim>
-auto Preprocess(T u, const tensor<double, dim> xi)
+template <typename element_type, typename T, typename coord_type>
+auto Preprocess(T u, coord_type xi)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return dot(u, element_type::shape_functions(xi));
@@ -49,8 +49,8 @@ auto Preprocess(T u, const tensor<double, dim> xi)
  * In this case, q-function outputs are only integrated against test space shape functions
  * QUESTION: Should test function gradients be supported here or not?
  */
-template <typename element_type, typename T, int dim>
-auto Postprocess(T f, const tensor<double, dim> xi)
+template <typename element_type, typename T, typename coord_type>
+auto Postprocess(T f, coord_type xi)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return outer(element_type::shape_functions(xi), f);
@@ -91,7 +91,7 @@ auto Postprocess(T f, const tensor<double, dim> xi)
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
  */
-template <Geometry g, typename test, typename trial, int dim, int Q,
+template <Geometry g, typename test, typename trial, int Q,
           typename derivatives_type, typename lambda>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
@@ -99,6 +99,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename trial_element::residual_type;
+  static constexpr int dim = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
@@ -179,8 +180,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int dim, int Q,
-          typename derivatives_type>
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
                      const mfem::Vector& J_, int num_elements)
 {
@@ -233,7 +233,7 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
-}  // namespace boundary_integral
+} // namespace boundary_integral
 
 /**
  * @brief Describes a single integral term in a weak forumulation of a partial differential equation
@@ -260,8 +260,11 @@ public:
   BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf)
       : J_(J), X_(X)
   {
-    constexpr auto geometry = supported_geometries[dim];
-    constexpr auto Q        = std::max(test_space::order, trial_space::order) + 1;
+    constexpr auto geometry                      = supported_geometries[dim];
+    constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
+    constexpr auto quadrature_points_per_element = detail::pow(Q, dim);
+
+    uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
 
     // these lines of code figure out the argument types that will be passed
     // into the quadrature function in the finite element kernel.
@@ -272,11 +275,7 @@ public:
     using u_du_t          = typename detail::lambda_argument<trial_space, dim - 1, dim>::type;
     using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
-    auto num_quadrature_points = static_cast<uint32_t>(X.Size() / dim);
-    qf_derivatives_.resize(sizeof(derivative_type) * num_quadrature_points);
-
-    // FIXME: Strict aliasing rule?
-    auto qf_derivatives_ptr = reinterpret_cast<derivative_type*>(qf_derivatives_.data());
+    std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
@@ -286,11 +285,11 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
     evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, dim, Q>(U, R, qf_derivatives_ptr, J_, X_, num_elements, qf);
+      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
     };
 
     gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-      boundary_integral::gradient_kernel<geometry, test_space, trial_space, dim, Q>(dU, dR, qf_derivatives_ptr, J_, num_elements);
+      boundary_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_, num_elements);
     };
   }
 
@@ -311,26 +310,23 @@ public:
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
 
 private:
+
   /**
    * @brief Jacobians of the element transformations at all quadrature points
    */
   const mfem::Vector J_;
+
   /**
    * @brief Mapped (physical) coordinates of all quadrature points
    */
   const mfem::Vector X_;
 
   /**
-   * @brief Byte array of derivative data
-   */
-  std::vector<char> qf_derivatives_;
-  // ^ replace with std::byte when C++20 available
-
-  /**
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel
    */
   std::function<void(const mfem::Vector&, mfem::Vector&)> evaluation_;
+
   /**
    * @brief Type-erased handle to gradient kernel
    * @see gradient_kernel

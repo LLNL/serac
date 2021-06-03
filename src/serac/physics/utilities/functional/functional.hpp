@@ -130,9 +130,6 @@ public:
 
     // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
     if (!(is_hcurl<test>::value || is_hcurl<trial>::value)) {
-      G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary);
-      G_trial_boundary_ = trial_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary);
-
       input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
       output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
       output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
@@ -180,9 +177,9 @@ public:
     auto num_boundary_elements = domain.GetNBE();
     SLIC_ERROR_IF(num_boundary_elements == 0, "Mesh has no boundary elements");
 
-    SLIC_ERROR_IF(dim != domain.Dimension(), "Error: invalid mesh dimension for boundary integral");
+    SLIC_ERROR_IF((dim+1) != domain.Dimension(), "Error: invalid mesh dimension for boundary integral");
     for (int e = 0; e < num_boundary_elements; e++) {
-      SLIC_ERROR_IF(domain.GetBdrElementType(e) != supported_types[dim - 1],
+      SLIC_ERROR_IF(domain.GetBdrElementType(e) != supported_types[dim],
                     "Mesh contains unsupported element type");
     }
 
@@ -339,7 +336,6 @@ private:
       G_test_->MultTranspose(output_E_, output_L_);
     }
 
-#if 0
     if (boundary_integrals_.size() > 0) {
       G_trial_boundary_->Mult(input_L_, input_E_boundary_);
 
@@ -359,7 +355,6 @@ private:
 
       output_L_ += output_L_boundary_;
     }
-#endif
 
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T);

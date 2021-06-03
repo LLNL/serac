@@ -26,7 +26,7 @@ using namespace serac;
 
 int            num_procs, myid;
 int            refinements = 0;
-constexpr bool verbose     = false;
+constexpr bool verbose     = true;
 
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
@@ -34,8 +34,8 @@ std::unique_ptr<mfem::ParMesh> mesh3D;
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  static constexpr double a = 1.7;
-  static constexpr double b = 2.1;
+  static constexpr double a = 0.0;
+  static constexpr double b = 0.0;
 
   auto                  fec = H1_FECollection(p, dim);
   ParFiniteElementSpace fespace(&mesh, &fec);
@@ -52,7 +52,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
   LinearForm          f(&fespace);
-  FunctionCoefficient load_func([&](const Vector& coords) { return 100 * coords(0) * coords(1); });
+  FunctionCoefficient load_func([&](const Vector& coords) { return 0.0 * coords(0) * coords(1); });
 
   f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
   f.Assemble();
@@ -68,12 +68,13 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
-  residual.AddBoundaryIntegral(Dimension<dim>{}, [&](auto x, auto /* u */) { return 1.0 + 0.0 * x[0]; }, mesh);
+  residual.AddBoundaryIntegral(Dimension<dim-1>{}, [&](auto x, auto /* u */) { return 1.0 + 0.0 * x[0]; }, mesh);
 
   mfem::Vector r1 = A * u_global - f;
-  mfem::Vector r2 = residual * u_global;
+  mfem::Vector r2 = residual(u_global);
 
   if (verbose) {
+    std::cout << "sum(r2):  " << r2.Sum() << std::endl;
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
     std::cout << "||r2||: " << r2.Norml2() << std::endl;
     std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;

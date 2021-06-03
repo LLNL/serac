@@ -11,6 +11,19 @@ namespace serac {
 namespace detail {
 
 /**
+ * @brief a constexpr function for computing an integer raised to an integer power
+ * @param[in] x the (integer) number to be raised to some power
+ * @param[in] n the (integer) power
+ */
+constexpr int pow(int x, int n) {
+  int x_to_the_n = 1;
+  for (int i = 0; i < n; i++) {
+    x_to_the_n *= x;
+  }
+  return x_to_the_n;
+}
+
+/**
  * @brief Wrapper for mfem::Reshape compatible with Serac's finite element space types
  * @tparam space A test or trial space
  * @param[in] u The raw data to reshape into an mfem::DeviceTensor
