@@ -347,7 +347,8 @@ serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator
   return options;
 }
 
-serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::operator()(const axom::inlet::Container& base)
+serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::operator()(
+    const axom::inlet::Container& base)
 {
   auto lin = base["linear"].get<LinearSolverOptions>();
   if (base.contains("nonlinear")) {

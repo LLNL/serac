@@ -50,6 +50,7 @@ void terminateCaliper()
 #endif
 }
 
+/// @cond
 namespace detail {
 void setCaliperMetadata([[maybe_unused]] const std::string& name, [[maybe_unused]] double data)
 {
@@ -94,5 +95,5 @@ void endCaliperRegion([[maybe_unused]] const char* name)
 }
 
 }  // namespace detail
-
+   /// @endcond
 }  // namespace serac::profiling

@@ -66,18 +66,21 @@ std::size_t size(const mfem::Array<T>& container)
 /// @brief Returns return type of POD-type T
 template <typename T, typename = void>
 struct eval_result_t {
+  /// @brief POD-type
   using type = T;
 };
 
 /// @brief Returns return type for mfem::Coefficient
 template <typename T>
 struct eval_result_t<T, std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T>>> {
+  /// @brief mfem::Coefficient return type
   using type = double;
 };
 
 /// @brief Returns return type for mfem::VectorCefficient
 template <typename T>
 struct eval_result_t<T, std::enable_if_t<std::is_base_of_v<mfem::VectorCoefficient, T>>> {
+  /// @brief mfem::VectorCoefficient return type
   using type = mfem::Vector;
 };
 
@@ -603,8 +606,15 @@ public:
   }
 
 protected:
+  /**
+   * @brief Underlying element attribute-based coefficient
+   */
   mfem::Coefficient& coef_;
-  mfem::ParMesh&     pmesh_;
+
+  /**
+   * @brief mfem::ParMesh containing attributes
+   */
+  mfem::ParMesh& pmesh_;
 };
 
 /**
@@ -624,6 +634,13 @@ public:
   {
   }
 
+  /**
+   * @brief Evaluates an element attribute-based coefficient on the a boundary element
+   *
+   * @param[inout] V The vector-value of the element attribute-based coefficient evaluated on the boundary
+   * @param[in] Tr The local surface FE transformation
+   * @param[in] ip The current surface element integration point
+   */
   void Eval(mfem::Vector& V, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
   {
     // Find attached element
@@ -638,8 +655,15 @@ public:
   }
 
 protected:
+  /**
+   * @brief Underlying element attribute-based mfem::VectorCoefficient
+   */
   mfem::VectorCoefficient& coef_;
-  mfem::ParMesh&           pmesh_;
+
+  /**
+   * @brief mfem::ParMesh containing attributes
+   */
+  mfem::ParMesh& pmesh_;
 };
 
 }  // namespace serac::mfem_ext

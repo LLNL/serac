@@ -82,6 +82,7 @@
 
 #define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name)
 
+/// @cond
 namespace detail {
 
 /**
@@ -112,6 +113,7 @@ auto&& forwarder(T&& thing)
 }
 
 }  // namespace detail
+/// @endcond
 
 /**
  * @brief The type that should be returned from the profiling wrapper lambda
