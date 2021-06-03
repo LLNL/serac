@@ -105,7 +105,7 @@ public:
     /**
      * @brief Input file parameters specific to this class
      *
-     * @param[in] table Inlet container on which the input schema will be defined
+     * @param[in] container Inlet container on which the input schema will be defined
      **/
     static void defineInputFileSchema(axom::inlet::Container& container);
 
@@ -505,5 +505,6 @@ protected:
  */
 template <>
 struct FromInlet<serac::Solid::InputOptions> {
+  /// @brief Returns created object from Inlet container
   serac::Solid::InputOptions operator()(const axom::inlet::Container& base);
 };

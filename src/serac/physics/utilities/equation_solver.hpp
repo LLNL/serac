@@ -224,6 +224,7 @@ inline LinearSolverOptions AugmentAMGForElasticity(const LinearSolverOptions&   
  */
 template <>
 struct FromInlet<serac::LinearSolverOptions> {
+  /// @brief Returns created object from Inlet container
   serac::LinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
@@ -234,6 +235,7 @@ struct FromInlet<serac::LinearSolverOptions> {
  */
 template <>
 struct FromInlet<serac::NonlinearSolverOptions> {
+  /// @brief Returns created object from Inlet container
   serac::NonlinearSolverOptions operator()(const axom::inlet::Container& base);
 };
 
@@ -244,5 +246,6 @@ struct FromInlet<serac::NonlinearSolverOptions> {
  */
 template <>
 struct FromInlet<serac::mfem_ext::EquationSolver> {
+  /// @brief Returns created object from Inlet container
   serac::mfem_ext::EquationSolver operator()(const axom::inlet::Container& base);
 };
