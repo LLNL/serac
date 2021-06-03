@@ -12,6 +12,10 @@
   before_script:
     # python3.8 is needed on lassen to avoid trampling on the x86 clingo wheel
     - module load python/3.8
+    # CMake >= 3.17 is needed for FindCUDAToolkit with caliper
+    # We could also extract the CMake executable location from the hostconfig in common_build_functions
+    # like we do in config-build
+    - module load cmake/3.18
     # Workaround for multiple before_scripts - see https://gitlab.com/gitlab-org/gitlab-runner/-/issues/2301
     # See also https://github.com/LLNL/serac/pull/417#discussion_r631194968
     - if [[ $CUDA_BUILD == "ON" ]]; then module load cuda/11.2.0; fi
