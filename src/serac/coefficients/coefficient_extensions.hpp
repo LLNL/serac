@@ -26,7 +26,7 @@
  */
 namespace serac::mfem_ext {
 
-/// @brief Internal details namespace
+/// @brief Internal implementation details namespace
 namespace detail {
 
 // methods for determining index type
