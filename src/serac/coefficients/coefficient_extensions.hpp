@@ -587,8 +587,8 @@ public:
   /**
    * @brief Evaluates an element attribute-based coefficient on the a boundary element
    *
-   * @param[in] Tr The local FE transformation
-   * @param[in] ip The current integration point
+   * @param[in] Tr The local surface FE transformation
+   * @param[in] ip The current surface element integration point
    * @return The value of the element attribute-based coefficient evaluated on the boundary
    */
   double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
