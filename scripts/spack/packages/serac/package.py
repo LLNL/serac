@@ -140,12 +140,17 @@ class Serac(CachedCMakePackage, CudaPackage):
     cuda_deps = ["mfem", "axom"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
+    depends_on("caliper+cuda", when="+caliper+cuda")
 
     for sm_ in CudaPackage.cuda_arch_values:
         depends_on('mfem+amgx cuda_arch=sm_{0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         depends_on('axom cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
+        # Caliper may not currently use its cuda_arch
+        # but probably good practice to set it
+        depends_on('caliper cuda_arch={0}'.format(sm_),
+                when='+caliper cuda_arch={0}'.format(sm_))
         
 
     def _get_sys_type(self, spec):
