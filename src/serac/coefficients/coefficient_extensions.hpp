@@ -26,26 +26,35 @@
  */
 namespace serac::mfem_ext {
 
+/// @brief Internal details namespace
 namespace detail {
+
 // methods for determining index type
+
+/// @brief Provides the member typedef type for the index of type T
 template <typename T>
 struct index_t {
+  /// @brief Member typedef type
   using type = std::size_t;
 };
 
+/// @brief Provides the member typedef type for the index of mfem::Arrays
 template <typename T>
 struct index_t<mfem::Array<T>> {
+  /// @brief Member typedef type
   using type = int;
 };
 
 // Methods for determining the size of a container
+
+/// @brief Returns the size of container T
 template <typename T>
 auto size(T&& container)
 {
   return container.size();
 }
 
-/// mfem:Array size call
+/// @brief Returns the size of mfem::Array
 template <typename T>
 std::size_t size(const mfem::Array<T>& container)
 {
@@ -53,34 +62,37 @@ std::size_t size(const mfem::Array<T>& container)
 }
 
 // Methods for determining type of coefficient evaluations
-// Returns default POD-type
+
+/// @brief Returns return type of POD-type T
 template <typename T, typename = void>
 struct eval_result_t {
   using type = T;
 };
 
-// returns return type for mfem::Coefficient
+/// @brief Returns return type for mfem::Coefficient
 template <typename T>
 struct eval_result_t<T, std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T>>> {
   using type = double;
 };
 
-// returns return type for mfem::VectorCefficient
+/// @brief Returns return type for mfem::VectorCefficient
 template <typename T>
 struct eval_result_t<T, std::enable_if_t<std::is_base_of_v<mfem::VectorCoefficient, T>>> {
   using type = mfem::Vector;
 };
 
-/// methods for evaluating coefficient stuff with the same prototype
+// Methods for evaluating coefficient stuff with the same prototype
+
+/// @brief Returns d unevaluated
 double eval(double& d, mfem::ElementTransformation&, const mfem::IntegrationPoint&) { return d; }
 
-/// evaluates an mfem::Coefficient
+/// @brief evaluates an mfem::Coefficient
 double eval(mfem::Coefficient& c, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
   return c.Eval(Tr, ip);
 }
 
-/// evaluates a mfem::VectorCoefficient
+/// @brief evaluates a mfem::VectorCoefficient
 mfem::Vector eval(mfem::VectorCoefficient& v, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
   mfem::Vector temp(v.GetVDim());
@@ -572,6 +584,13 @@ public:
    */
   SurfaceElementAttrCoefficient(mfem::ParMesh& mesh, mfem::Coefficient& c) : coef_(c), pmesh_(mesh) {}
 
+  /**
+   * @brief Evaluates an element attribute-based coefficient on the a boundary element
+   *
+   * @param[in] Tr The local FE transformation
+   * @param[in] ip The current integration point
+   * @return The value of the element attribute-based coefficient evaluated on the boundary
+   */
   double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
   {
     // Find attached element

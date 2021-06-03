@@ -21,7 +21,7 @@ Logging Streams
 
 SLIC has a concept of logging streams.  Logging streams controls the following:
 
- * How each message is formatted. More info `here <https://axom.readthedocs.io/en/develop/axom/slic/docs/sphinx/sections/architecture.html#log-message-format>`_ .
+ * How each message is formatted. More info `here <https://axom.readthedocs.io/en/develop/axom/slic/docs/sphinx/sections/architecture.html#log-message-format>`__ .
  * Where each messages are output, such as ``std::cout``, ``std::cerr``, or to a file stream.
  * Logic for handling and filtering of messages, based on message level or content.
 
