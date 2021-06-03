@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file hexahedron_h1.inl
+ * @file hexahedron_H1.inl
  *
  * @brief Specialization of finite_element for H1 on hexahedron geometry
  */

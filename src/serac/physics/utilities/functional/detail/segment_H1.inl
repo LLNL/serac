@@ -5,13 +5,11 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file segment_hcurl.inl
+ * @file segment_H1.inl
  *
- * @brief Specialization of finite_element for Hcurl on segment geometry
+ * @brief Specialization of finite_element for H1 on segment geometry
  */
 
-// specialization of finite_element for Hcurl on segment geometry
-//
 // this specialization defines shape functions (and their gradients) that
 // interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
 //
@@ -19,18 +17,21 @@
 // for additional information on the finite_element concept requirements, see finite_element.hpp
 /// @cond
 template <int p, int c>
-struct finite_element<Geometry::Segment, Hcurl<p, c> > {
+struct finite_element<Geometry::Segment, H1<p, c> > {
   static constexpr auto geometry   = Geometry::Segment;
-  static constexpr auto family     = Family::HCURL;
+  static constexpr auto family     = Family::H1;
   static constexpr int  components = c;
   static constexpr int  dim        = 1;
   static constexpr int  ndof       = (p + 1);
 
-  static constexpr tensor<double, ndof> shape_functions(double xi) { return GaussLegendreInterpolation<ndof>(xi); }
+  using residual_type =
+      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components> >::type;
+
+  static constexpr tensor<double, ndof> shape_functions(double xi) { return GaussLobattoInterpolation<ndof>(xi); }
 
   static constexpr tensor<double, ndof> shape_function_gradients(double xi)
   {
-    return GaussLegendreInterpolationDerivative<ndof>(xi);
+    return GaussLobattoInterpolationDerivative<ndof>(xi);
   }
 };
 /// @endcond

@@ -14,8 +14,6 @@
 
 #include <gtest/gtest.h>
 
-using namespace std;
-using namespace mfem;
 using namespace serac;
 
 int num_procs, myid;
@@ -36,14 +34,14 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   [[maybe_unused]] static constexpr double b = 0.0;
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto                  fec = L2_FECollection(p, dim);
-  ParFiniteElementSpace fespace(&mesh, &fec);
+  auto                        fec = mfem::L2_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
-  ParBilinearForm A(&fespace);
+  mfem::ParBilinearForm A(&fespace);
 
   // Add the mass term using the standard MFEM method
-  ConstantCoefficient a_coef(a);
-  A.AddDomainIntegrator(new MassIntegrator(a_coef));
+  mfem::ConstantCoefficient a_coef(a);
+  A.AddDomainIntegrator(new mfem::MassIntegrator(a_coef));
 
   // Assemble the bilinear form into a matrix
   A.Assemble(0);
@@ -51,20 +49,20 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
   // Create a linear form for the load term using the standard MFEM method
-  ParLinearForm       f(&fespace);
-  FunctionCoefficient load_func([&](const Vector& coords) { return 100 * coords(0) * coords(1); });
+  mfem::ParLinearForm       f(&fespace);
+  mfem::FunctionCoefficient load_func([&](const mfem::Vector& coords) { return 100 * coords(0) * coords(1); });
   // FunctionCoefficient load_func([&]([[maybe_unused]] const Vector& coords) { return 1.0; });
 
   // Create and assemble the linear load term into a vector
-  f.AddDomainIntegrator(new DomainLFIntegrator(load_func));
+  f.AddDomainIntegrator(new mfem::DomainLFIntegrator(load_func));
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   // Set a random state to evaluate the residual
-  ParGridFunction u_global(&fespace);
+  mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
-  Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
   // Set up the same problem using weak form

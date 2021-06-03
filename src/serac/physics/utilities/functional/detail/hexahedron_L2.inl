@@ -10,7 +10,7 @@
  * @brief Specialization of finite_element for L2 on hexahedron geometry
  */
 
-// interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
+// interpolate at Gauss-Legendre nodes for the appropriate polynomial order
 //
 // note: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
@@ -18,7 +18,7 @@
 template <int p, int c>
 struct finite_element<Geometry::Hexahedron, L2<p, c> > {
   static constexpr auto geometry   = Geometry::Hexahedron;
-  static constexpr auto family     = Family::H1;
+  static constexpr auto family     = Family::L2;
   static constexpr int  components = c;
   static constexpr int  dim        = 3;
   static constexpr int  ndof       = (p + 1) * (p + 1) * (p + 1);

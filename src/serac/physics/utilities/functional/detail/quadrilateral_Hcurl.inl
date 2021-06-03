@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file quadrilateral_hcurl.inl
+ * @file quadrilateral_Hcurl.inl
  *
  * @brief Specialization of finite_element for Hcurl on quadrilateral geometry
  */

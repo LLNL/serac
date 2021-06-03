@@ -316,6 +316,17 @@ public:
     using u_du_t          = typename detail::lambda_argument<trial_space, dim, dim>::type;
     using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
+    // the derivative_type data is stored in a shared_ptr here, because it can't be a
+    // member variable on the Integral class template (since it depends on the lambda function,
+    // which isn't known until the time of construction).
+    //
+    // This shared_ptr should have a comparable lifetime to the Integral instance itself, since
+    // the reference count will increase when it is captured by the lambda functions below, and
+    // the reference count will go back to zero after those std::functions are deconstructed in
+    // Integral::~Integral()
+    //
+    // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
+    // qf_derivatives[e * quadrature_points_per_element + q]
     std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
 
     // this is where we actually specialize the finite element kernel templates with
