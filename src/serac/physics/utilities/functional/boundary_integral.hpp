@@ -94,7 +94,7 @@ auto Postprocess(T f, coord_type xi)
 template <Geometry g, typename test, typename trial, int Q,
           typename derivatives_type, typename lambda>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
-                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
+                       const mfem::Vector& J_, const mfem::Vector& X_, const mfem::Vector & N_, int num_elements, lambda qf)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -106,6 +106,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
+  auto N = mfem::Reshape(N_.Read(), rule.size(), dim+1, num_elements);
   auto X = mfem::Reshape(X_.Read(), rule.size(), dim+1, num_elements);
   auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements);
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
@@ -126,6 +127,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       auto   xi  = rule.points[q];
       auto   dxi = rule.weights[q];
       auto   x_q = make_tensor<dim+1>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+      [[maybe_unused]] auto   n_q = make_tensor<dim+1>([&](int i) { return N(q, i, e); });  // Physical coords of unit normal
       double dx  = J(q, e) * dxi;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
@@ -135,7 +137,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
-      auto qf_output = qf(x_q, make_dual(arg));
+      auto qf_output = qf(x_q, n_q, make_dual(arg));
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
@@ -257,8 +259,8 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename lambda_type>
-  BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf)
-      : J_(J), X_(X)
+  BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector & normals, Dimension<dim>, lambda_type&& qf)
+      : J_(J), X_(X), normals_(normals)
   {
     constexpr auto geometry                      = supported_geometries[dim];
     constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
@@ -271,9 +273,9 @@ public:
     //
     // we use them to observe the output type and allocate memory to store
     // the derivative information at each quadrature point
-    using x_t             = tensor<double, dim>;
-    using u_du_t          = typename detail::lambda_argument<trial_space, dim - 1, dim>::type;
-    using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
+    using x_t             = tensor<double, dim+1>;
+    using u_du_t          = typename detail::lambda_argument<trial_space, dim, dim+1>::type;
+    using derivative_type = decltype(get_gradient(qf(x_t{}, x_t{}, make_dual(u_du_t{}))));
 
     std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
 
@@ -285,7 +287,7 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
     evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
+      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_, normals_, num_elements, qf);
     };
 
     gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
@@ -320,6 +322,11 @@ private:
    * @brief Mapped (physical) coordinates of all quadrature points
    */
   const mfem::Vector X_;
+
+  /**
+   * @brief physical coordinates of surface unit normals at all quadrature points
+   */
+  const mfem::Vector normals_;
 
   /**
    * @brief Type-erased handle to evaluation kernel

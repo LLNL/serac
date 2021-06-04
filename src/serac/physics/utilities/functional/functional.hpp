@@ -185,12 +185,14 @@ public:
 
     const mfem::FiniteElement&   el = *test_space_->GetBE(0);
     const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
-    constexpr auto flags            = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS;
+    constexpr auto flags            = mfem::FaceGeometricFactors::COORDINATES | 
+    mfem::FaceGeometricFactors::DETERMINANTS | 
+    mfem::FaceGeometricFactors::NORMALS;
 
     // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-    boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, Dimension<dim>{}, integrand);
+    boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{}, integrand);
   }
 
   /**
