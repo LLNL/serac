@@ -439,6 +439,192 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
+template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+          typename derivatives_type>
+void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
+                            int num_elements)
+{
+  using test_element  = finite_element<g, test>;
+  using trial_element = finite_element<g, trial>;
+  //  using element_residual_type      = typename trial_element::residual_type;
+  static constexpr int  test_ndof  = test_element::ndof;
+  static constexpr int  test_dim   = test_element::components;
+  static constexpr int  trial_ndof = trial_element::ndof;
+  static constexpr int  trial_dim  = test_element::components;
+  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
+
+  // mfem provides this information in 1D arrays, so we reshape it
+  // into strided multidimensional arrays before using
+  auto J = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
+  //      auto du = impl::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
+  [[maybe_unused]] auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
+
+  // for each element in the domain
+  for (int e = 0; e < num_elements; e++) {
+    // get the (change in) values for this particular element
+    // tensor du_elem = impl::Load<trial_element>(du, e);
+
+    // this is where we will accumulate the (change in) element residual tensor
+    //    element_residual_type dr_elem{};
+    //    mfem::DenseMatrix K_elem(test_ndof, trial_ndof);
+    tensor<double, test_ndof * test_dim, trial_ndof * trial_dim> K_elem{};
+
+    // for each quadrature point in the element
+    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
+      // get the position of this quadrature point in the parent and physical space,
+      // and calculate the measure of that point in physical space.
+      auto                    xi_q  = rule.points[q];
+      auto                    dxi_q = rule.weights[q];
+      auto                    J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
+      auto                    detJ_q = detail::Measure(J_q);
+      [[maybe_unused]] double dx     = detJ_q * dxi_q;
+
+      // evaluate the (change in) value/derivatives at this quadrature point
+      // auto darg = impl::Preprocess<trial_element>(du_elem, xi, J_q);
+
+      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
+      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
+
+      // use the chain rule to compute the first-order change in the q-function output
+      // auto dq = chain_rule(dq_darg, darg);
+      [[maybe_unused]] auto M          = test_element::shape_functions(xi_q);
+      [[maybe_unused]] auto N          = trial_element::shape_functions(xi_q);
+      [[maybe_unused]] auto df0_du     = convert<test_dim, trial_dim>(std::get<0>(std::get<0>(dq_darg)));
+      [[maybe_unused]] auto df0_dgradu = convert<test_dim, trial_dim, spatial_dim>(std::get<1>(std::get<0>(dq_darg)));
+      [[maybe_unused]] auto df1_du     = std::get<0>(std::get<1>(dq_darg));
+      [[maybe_unused]] auto df1_dgradu = std::get<1>(std::get<1>(dq_darg));
+
+      // df0_du stiffness contribution
+      // size(M) = test_ndof
+      // size(N) = trial_ndof
+      // size(df0_du) = test_dim x trial_dim
+      for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](auto i, auto id, auto j, auto jd) {
+        // maybe we should have a mapping for dofs x dim
+        K_elem[i + test_ndof * id][j + trial_ndof * jd] += M[i] * df0_du[id][jd] * N[j] * dx;
+      });
+
+      if constexpr (test_element::family == Family::H1 || test_element::family == Family::L2) {
+        [[maybe_unused]] auto dM_dx = dot(test_element::shape_function_gradients(xi_q), inv(J_q));
+        [[maybe_unused]] auto dN_dx = dot(trial_element::shape_function_gradients(xi_q), inv(J_q));
+
+        // df0_dgradu stiffness contribution
+        // size(M) = test_ndof
+        // size(df0_dgradu) = test_dim x trial_dim x spatial_dim
+        // size(dN_dx) = trial_ndof x spatial_dim
+        for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>([&](auto i, auto id, auto j, auto jd,
+                                                                              auto dummy_i) {
+          // maybe we should have a mapping for dofs x dim
+          K_elem[i * test_dim + id][j * trial_dim + jd] += M[i] * df0_dgradu[id][jd][dummy_i] * dN_dx[j][dummy_i] * dx;
+          K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+              M[i] * df0_dgradu[id][jd][dummy_i] * dN_dx[j][dummy_i] * dx;
+        });
+
+        // // df1_du stiffness contribution
+        // size(dM_dx) = test_ndof x spatial_dim
+        // size(N) = trial_ndof
+        // size(df1_du) = test_dim x spatial_dim x trial_dim
+        if constexpr (!is_zero<decltype(df1_du)>::value) {
+          if constexpr (test_dim == 1 && trial_dim == 1) {
+            for_loop<test_ndof, trial_ndof, spatial_dim>([&](auto i, auto j, auto dummy_i) {
+              // maybe we should have a mapping for dofs x dim
+              K_elem[i * test_dim][j * trial_dim] += dM_dx[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
+            });
+          } else {
+            for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
+                [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
+                  // maybe we should have a mapping for dofs x dim
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                      dM_dx[i][dummy_i] * df1_du[id][dummy_i][jd] * N[j] * dx;
+                });
+          }
+        }
+
+        // df1_dgradu stiffness contribution
+        // size(dM_dx) = test_ndof x spatial_dim
+        // size(dN_dx) = trial_ndof x spatial_dim
+        // size(df1_dgradu) = test_dim x spatial_dim x trial_dim x spatial_dim
+        if constexpr (!is_zero<decltype(df1_dgradu)>::value) {
+          if constexpr (test_dim == 1 && trial_dim == 1) {
+            for_loop<test_ndof, trial_ndof, spatial_dim, spatial_dim>([&](auto i, auto j, auto dummy_i, auto dummy_j) {
+              // maybe we should have a mapping for dofs x dim
+              K_elem[i][j] += dM_dx[i][dummy_i] * df1_dgradu[dummy_i][dummy_j] * dN_dx[j][dummy_j] * dx;
+            });
+          } else {
+            for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
+                [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
+                  // maybe we should have a mapping for dofs x dim
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                      dM_dx[i][dummy_i] * df1_dgradu[id][dummy_i][jd][dummy_j] * dN_dx[j][dummy_j] * dx;
+                });
+          }
+        }
+      } else {
+        [[maybe_unused]] auto dM_dx = dot(test_element::shape_function_curl(xi_q), inv(J_q));
+        [[maybe_unused]] auto dN_dx = dot(trial_element::shape_function_curl(xi_q), inv(J_q));
+
+        // df0_dgradu stiffness contribution
+        // size(M) = test_ndof
+        // size(df0_dgradu) = test_dim x trial_dim x spatial_dim
+        // size(dN_dx) = trial_ndof x spatial_dim
+        for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
+            [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
+              // maybe we should have a mapping for dofs x dim
+              K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                  M[i] * df0_dgradu[id][jd][dummy_i] * dN_dx[j][dummy_i] * dx;
+            });
+
+        // // df1_du stiffness contribution
+        // size(dM_dx) = test_ndof x spatial_dim
+        // size(N) = trial_ndof
+        // size(df1_du) = test_dim x spatial_dim x trial_dim
+        if constexpr (!is_zero<decltype(df1_du)>::value) {
+          if constexpr (test_dim == 1 && trial_dim == 1) {
+            for_loop<test_ndof, trial_ndof, spatial_dim>([&](auto i, auto j, auto dummy_i) {
+              // maybe we should have a mapping for dofs x dim
+              K_elem[i * test_dim][j * trial_dim] += dM_dx[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
+            });
+          } else {
+            for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
+                [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
+                  // maybe we should have a mapping for dofs x dim
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                      dM_dx[i][dummy_i] * df1_du[id][dummy_i][jd] * N[j] * dx;
+                });
+          }
+        }
+
+        // df1_dgradu stiffness contribution
+        // size(dM_dx) = test_ndof x spatial_dim
+        // size(dN_dx) = trial_ndof x spatial_dim
+        // size(df1_dgradu) = test_dim x spatial_dim x trial_dim x spatial_dim
+        if constexpr (!is_zero<decltype(df1_dgradu)>::value) {
+          if constexpr (test_dim == 1 && trial_dim == 1) {
+            for_loop<test_ndof, trial_ndof, spatial_dim, spatial_dim>([&](auto i, auto j, auto dummy_i, auto dummy_j) {
+              // maybe we should have a mapping for dofs x dim
+              K_elem[i][j] += dM_dx[i][dummy_i] * df1_dgradu[dummy_i][dummy_j] * dN_dx[j][dummy_j] * dx;
+            });
+          } else {
+            for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
+                [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
+                  // maybe we should have a mapping for dofs x dim
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                      dM_dx[i][dummy_i] * df1_dgradu[id][dummy_i][jd][dummy_j] * dN_dx[j][dummy_j] * dx;
+                });
+          }
+        }
+      }
+    }
+
+    // once we've finished the element integration loop, write our element stifness
+    // out to memory, to be later assembled into global stifnesss by mfem
+    for (int i = 0; i < test_ndof * test_dim; i++) {
+      for (int j = 0; j < trial_ndof * trial_dim; j++) {
+        dk(i, j, e) += K_elem[i][j];
+      }
+    }
+  }
+}
+
 /// @cond
 namespace detail {
 
@@ -606,6 +792,11 @@ public:
       gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives.get(), J_,
                                                                                        num_elements);
     };
+
+    gradient_mat_ = [=](mfem::Vector& K_e) {
+      gradient_matrix_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(K_e, qf_derivatives.get(),
+                                                                                              J_, num_elements);
+    };
   }
 
   /**
@@ -623,6 +814,13 @@ public:
    * @see gradient_kernel
    */
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
+
+  /**
+   * @brief Computes the element stiffness matrices in as a reshaped vector
+   * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
+   * elem)
+   */
+  void GradientMatrix(mfem::Vector& K_e) const { gradient_mat_(K_e); }
 
 private:
   /**
@@ -644,6 +842,11 @@ private:
    * @see gradient_kernel
    */
   std::function<void(const mfem::Vector&, mfem::Vector&)> gradient_;
+  /**
+   * @brief Type-erased handle to gradient matrix assembly kernel
+   * @see gradient_matrix_kernel
+   */
+  std::function<void(mfem::Vector&)> gradient_mat_;
 };
 
 }  // namespace serac
