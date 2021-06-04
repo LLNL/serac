@@ -295,8 +295,14 @@ public:
     is_restart_ = false;
   };
 
+  /**
+   * @brief Gives ownership of mesh to StateManager
+   */
   static void setMesh(std::unique_ptr<mfem::ParMesh> mesh);
 
+  /**
+   * @brief Returns a non-owning reference to mesh held by StateManager
+   */
   static mfem::ParMesh& mesh();
 
 private:

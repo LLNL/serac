@@ -82,6 +82,7 @@
 
 #define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name)
 
+/// @cond
 namespace detail {
 
 /**
@@ -112,6 +113,7 @@ auto&& forwarder(T&& thing)
 }
 
 }  // namespace detail
+/// @endcond
 
 /**
  * @brief The type that should be returned from the profiling wrapper lambda
@@ -195,11 +197,15 @@ void startCaliperRegion(const char* name);
  */
 void endCaliperRegion(const char* name);
 
+/// @brief Provides the member typedef type that names T.
+/// see: https://en.cppreference.com/w/cpp/types/type_identity
 template <class T>
 struct type_identity {
+  /// @brief The member typedef type that names T.
   using type = T;
 };
 
+/// @brief Helper type for type identity
 template <class T>
 using type_identity_t = typename type_identity<T>::type;
 
