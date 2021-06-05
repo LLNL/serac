@@ -17,10 +17,13 @@
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
+#include "serac/numerics/assembled_sparse_matrix.hpp"
+#include "serac/infrastructure/profiling.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace serac;
+using namespace serac::profiling;
 
 int num_procs, myid;
 
@@ -38,7 +41,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 {
   static constexpr double a = 1.7;
   static constexpr double b = 2.1;
-
+  std::string                              postfix = serac::profiling::concat("_H1<", p, ">");
+  serac::profiling::initializeCaliper();
+  
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -54,9 +59,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   A.AddDomainIntegrator(new mfem::DiffusionIntegrator(b_coef));
 
   // Assemble the bilinear form into a matrix
-  A.Assemble(0);
+  {
+    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix).c_str());
+    A.Assemble(0);
+  }
   A.Finalize();
-  std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
+  std::unique_ptr<mfem::HypreParMatrix> J(SERAC_PROFILE_EXPR(concat("mfem_parAssemble", postfix).c_str(), A.ParallelAssemble()));
 
   // Create a linear form for the load term using the standard MFEM method
   mfem::ParLinearForm       f(&fespace);
@@ -113,18 +121,46 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Compute the gradient using functional
   mfem::Operator& grad2 = residual.GetGradient(U);
 
+  // Test fully assembled matrix
+  mfem::Array<int> dofs;
+  fespace.GetElementDofs(0, dofs);
+  mfem::Vector K_e(mesh.GetNE() * dofs.Size() * fespace.GetVDim() * dofs.Size() * fespace.GetVDim());
+  K_e = 0.;
+  {
+    SERAC_PROFILE_SCOPE(concat("functional_gradientMatrix", postfix).c_str());
+    residual.GradientMatrix(K_e);
+  }
+
+  serac::mfem_ext::AssembledSparseMatrix A_serac_mat(fespace, fespace, mfem::ElementDofOrdering::LEXICOGRAPHIC);
+  {
+    SERAC_PROFILE_SCOPE(concat("AssembledSparseMatrix_FillData", postfix).c_str());
+    A_serac_mat.FillData(K_e);
+  }
+
+  A_serac_mat.Finalize();
+
+  std::unique_ptr<mfem::HypreParMatrix> J2(SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(),
+							      A.ParallelAssemble(&A_serac_mat)));
+  
   // Compute the gradient action using standard MFEM and functional
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad2 * U;
+  mfem::Vector g3 = (*J2) * U;
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
+    std::cout << "||g3||: " << g2.Norml2() << std::endl;
     std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g3||/||g1||: " << mfem::Vector(g1 - g3).Norml2() / g1.Norml2() << std::endl;
   }
 
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-14);
+
+  serac::profiling::terminateCaliper();
+  
 }
 
 // this test sets up a toy "elasticity" problem where the residual includes contributions
