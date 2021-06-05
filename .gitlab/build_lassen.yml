@@ -26,15 +26,15 @@
 # Template
 .src_build_on_lassen:
   stage: build
-  variables: 
-    ALLOC_COMMAND: lalloc 1 -W 10 -q pdebug -G eng
+  variables:
+    ALLOC_COMMAND: lalloc 1 -W 10 -q pdebug -G ${ALLOC_BANK}
   extends: [.src_build_script, .on_lassen, .src_workflow]
   needs: []
 
 .full_build_on_lassen:
   stage: build
   variables:
-    ALLOC_COMMAND: lalloc 1 -W 45 -q pdebug -G eng
+    ALLOC_COMMAND: lalloc 1 -W 45 -q pdebug -G ${ALLOC_BANK}
   extends: [.full_build_script, .on_lassen, .full_workflow]
   needs: []
 
