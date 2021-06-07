@@ -26,75 +26,6 @@ template <typename T>
 class QuadratureData {
 public:
   /**
-   * @brief Type-punning iterator using same method as std::bit_cast
-   * @tparam U The type to pun (separate from T to allow for const/non-const iterator instantiations)
-   * @note This class should be used carefully as changes to the object are
-   * not propagated back to the underlying pointer until the destructor is called
-   */
-  template <typename U>
-  class PunIterator {
-    // Semantics get too confusing
-    static_assert(!std::is_pointer_v<U>, "Raw pointer types not supported");
-
-  public:
-    /**
-     * @brief Constructs an "empty" iterator
-     */
-    PunIterator() = default;
-    /**
-     * @brief Constructs an iterator
-     * @param[in] ptr A pointer to an element
-     * @param[in] end_ptr A pointer to one-past-the-end of the container
-     */
-    PunIterator(void* ptr, void* end_ptr) : ptr_(ptr), end_ptr_(end_ptr) {}
-
-    /**
-     * @brief Cleans up by storing @p obj_ back into @p ptr_ to maintain coherency
-     */
-    ~PunIterator();
-
-    /**
-     * @brief Returns the stored object
-     * @note Changes to the object will not be propagated until the destructor is called
-     */
-    U& operator*()
-    {
-      std::memcpy(&obj_, ptr_, sizeof(U));
-      return obj_;
-    }
-
-    /**
-     * @brief Advances the iterator
-     */
-    auto& operator++()
-    {
-      // This is permissible because we're not actually dereferencing ptr_
-      // as a T*, just using it for arithmetic
-      ptr_ = static_cast<decltype(obj_)*>(ptr_) + 1;
-      return *this;
-    }
-
-    /**
-     * @brief Compares two iterators for equality
-     */
-    bool operator!=(const PunIterator& other) { return ptr_ != other.ptr_; }
-
-  private:
-    /**
-     * @brief Pointer to the current element
-     */
-    void* ptr_ = nullptr;
-    /**
-     * @brief Pointer to one-past-the-end of the container
-     */
-    void* end_ptr_ = nullptr;
-    /**
-     * @brief A mirror of the data in ptr_
-     */
-    std::remove_const_t<U> obj_;
-  };
-
-  /**
    * @brief Constructs using a mesh and polynomial order
    * @param[in] mesh The mesh for which quadrature-point data should be stored
    * @param[in] p The polynomial order of the associated finite elements
@@ -117,25 +48,39 @@ public:
   /**
    * @brief Iterator to the data for the first quadrature point
    */
-  PunIterator<T> begin()
-  {
-    // WARNING: THIS IS REQUIRED BEFORE ANY ACCESSES AND MUST BE PROPAGATED TO OTHER ACCESSORS
-    proxy_.reset();
-    return {qfunc_.GetData(), qfunc_.GetData() + qfunc_.Size()};
-  }
+  auto begin() { return data_.begin(); }
   /// @overload
-  PunIterator<const T> begin() const
-  {
-    // WARNING: THIS IS REQUIRED BEFORE ANY ACCESSES AND MUST BE PROPAGATED TO OTHER ACCESSORS
-    proxy_.reset();
-    return {qfunc_.GetData(), qfunc_.GetData() + qfunc_.Size()};
-  }
+  auto begin() const { return data_.begin(); }
   /**
    * @brief Iterator to one element past the data for the last quadrature point
    */
-  PunIterator<T> end() { return {qfunc_.GetData() + qfunc_.Size(), qfunc_.GetData() + qfunc_.Size()}; }
+  auto end() { return data_.end(); }
   /// @overload
-  PunIterator<const T> end() const { return {qfunc_.GetData() + qfunc_.Size(), qfunc_.GetData() + qfunc_.Size()}; }
+  auto end() const { return data_.end(); }
+
+  void syncFromQFunc()
+  {
+    const double* qfunc_ptr = qfunc_.GetData();
+    int           j         = 0;
+    T*            data_ptr  = data_.data();
+    for (int i = 0; i < qfunc_.Size(); i += stride_) {
+      // The only legal (portable, defined) way to do type punning in C++
+      std::memcpy(data_ptr + j, qfunc_ptr + i, sizeof(T));
+      j++;
+    }
+  }
+
+  void syncToQFunc()
+  {
+    double*  qfunc_ptr = qfunc_.GetData();
+    int      j         = 0;
+    const T* data_ptr  = data_.data();
+    for (int i = 0; i < qfunc_.Size(); i += stride_) {
+      // The only legal (portable, defined) way to do type punning in C++
+      std::memcpy(qfunc_ptr + i, data_ptr + j, sizeof(T));
+      j++;
+    }
+  }
 
 private:
   // FIXME: These will probably need to be MaybeOwningPointers
@@ -148,10 +93,8 @@ private:
    * @brief Per-quadrature point data, stored as array of doubles for compatibility with Sidre
    */
   mfem::QuadratureFunction qfunc_;
-  /**
-   * @brief Provides reference-like semantics through a standard-compliant type pun
-   */
-  mutable std::optional<PunIterator<T>> proxy_;
+
+  std::vector<T> data_;
   /**
    * @brief The stride of the array
    */
@@ -170,18 +113,10 @@ class QuadratureData<void> {
 // but it's not really mutable because no operations are defined for it
 QuadratureData<void> dummy_qdata;
 
-template <typename T>
-template <typename U>
-QuadratureData<T>::PunIterator<U>::~PunIterator()
-{
-  if (ptr_ && (ptr_ != end_ptr_)) {
-    std::memcpy(ptr_, &obj_, sizeof(U));
-  }
-}
-
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
 template <typename T>
-QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p) : qspace_(&mesh, p + 1), qfunc_(&qspace_, stride_)
+QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p)
+    : qspace_(&mesh, p + 1), qfunc_(&qspace_, stride_), data_(qfunc_.Size() / stride_)
 {
   // To avoid violating C++'s strict aliasing rule we need to std::memcpy a default-constructed object
   // See e.g. https://gist.github.com/shafik/848ae25ee209f698763cffee272a58f8
@@ -189,13 +124,6 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p) : qspace_(&mesh
   // also https://chromium.googlesource.com/chromium/src/base/+/refs/heads/master/bit_cast.h
   static_assert(std::is_default_constructible_v<T>, "Must be able to default-construct the stored type");
   static_assert(std::is_trivially_copyable_v<T>, "Uses memcpy - requires trivial copies");
-  T       default_constructed;  // Will be memcpy'd into each element
-  double* ptr = qfunc_.GetData();
-  for (int i = 0; i < qfunc_.Size(); i += stride_) {
-    // The only legal (portable, defined) way to do type punning in C++
-    // Would be illegal to just placement-new construct a T here
-    std::memcpy(ptr + i, &default_constructed, sizeof(T));
-  }
 }
 
 template <typename T>
@@ -204,17 +132,17 @@ T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
   // A view into the quadrature point data
   mfem::Vector view;
   qfunc_.GetElementValues(element_idx, q_idx, view);
-  proxy_.emplace(view.GetData(), qfunc_.GetData() + qfunc_.Size());
-  return *proxy_.value();
+  double*    end_ptr   = view.GetData();
+  double*    start_ptr = qfunc_.GetData();
+  const auto idx       = (end_ptr - start_ptr) / stride_;
+  return data_[idx];
 }
 
 template <typename T>
 QuadratureData<T>& QuadratureData<T>::operator=(const T& item)
 {
-  double* ptr = qfunc_.GetData();
-  for (int i = 0; i < qfunc_.Size(); i += stride_) {
-    std::memcpy(ptr + i, &item, sizeof(T));
-  }
+  data_.assign(data_.size(), item);
   return *this;
 }
+
 // }  // namespace serac

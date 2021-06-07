@@ -14,9 +14,9 @@
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
 
+#include "serac/physics/utilities/finite_element_state.hpp"
 #include "serac/physics/utilities/weak_form/tensor.hpp"
 #include "serac/physics/utilities/weak_form/quadrature.hpp"
-#include "serac/physics/utilities/weak_form/quadrature_data.hpp"
 #include "serac/physics/utilities/weak_form/finite_element.hpp"
 #include "serac/physics/utilities/weak_form/tuple_arithmetic.hpp"
 
