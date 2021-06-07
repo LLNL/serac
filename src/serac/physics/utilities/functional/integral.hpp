@@ -529,19 +529,16 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         // size(N) = trial_ndof
         // size(df1_du) = test_dim x spatial_dim x trial_dim
         if constexpr (!is_zero<decltype(df1_du)>::value) {
-          if constexpr (test_dim == 1 && trial_dim == 1) {
-            for_loop<test_ndof, trial_ndof, spatial_dim>([&](auto i, auto j, auto dummy_i) {
-              // maybe we should have a mapping for dofs x dim
-              K_elem[i * test_dim][j * trial_dim] += dM_dx[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
-            });
-          } else {
-            for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
-                [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
-                  // maybe we should have a mapping for dofs x dim
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
+              [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
+                // maybe we should have a mapping for dofs x dim
+                if constexpr (test_dim == 1 && trial_dim == 1) {
+                  K_elem[i * test_dim][j * trial_dim] += dM_dx[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
+                } else {
                   K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
                       dM_dx[i][dummy_i] * df1_du[id][dummy_i][jd] * N[j] * dx;
-                });
-          }
+                }
+              });
         }
 
         // df1_dgradu stiffness contribution
@@ -549,19 +546,16 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         // size(dN_dx) = trial_ndof x spatial_dim
         // size(df1_dgradu) = test_dim x spatial_dim x trial_dim x spatial_dim
         if constexpr (!is_zero<decltype(df1_dgradu)>::value) {
-          if constexpr (test_dim == 1 && trial_dim == 1) {
-            for_loop<test_ndof, trial_ndof, spatial_dim, spatial_dim>([&](auto i, auto j, auto dummy_i, auto dummy_j) {
-              // maybe we should have a mapping for dofs x dim
-              K_elem[i][j] += dM_dx[i][dummy_i] * df1_dgradu[dummy_i][dummy_j] * dN_dx[j][dummy_j] * dx;
-            });
-          } else {
-            for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
-                [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
+              [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
+                if constexpr (test_dim == 1 && trial_dim == 1) {
+                  K_elem[i][j] += dM_dx[i][dummy_i] * df1_dgradu[dummy_i][dummy_j] * dN_dx[j][dummy_j] * dx;
+                } else {
                   // maybe we should have a mapping for dofs x dim
                   K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
                       dM_dx[i][dummy_i] * df1_dgradu[id][dummy_i][jd][dummy_j] * dN_dx[j][dummy_j] * dx;
-                });
-          }
+                }
+              });
         }
       } else {
         [[maybe_unused]] auto curl_M = test_element::shape_function_curl(xi_q) / det(J_q);
@@ -593,19 +587,16 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         // size(N) = trial_ndof
         // size(df1_du) = test_dim x spatial_dim x trial_dim
         if constexpr (!is_zero<decltype(df1_du)>::value) {
-          if constexpr (test_dim == 1 && trial_dim == 1) {
-            for_loop<test_ndof, trial_ndof, spatial_dim>([&](auto i, auto j, auto dummy_i) {
-              // maybe we should have a mapping for dofs x dim
-              K_elem[i * test_dim][j * trial_dim] += curl_M[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
-            });
-          } else {
-            for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
-                [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
-                  // maybe we should have a mapping for dofs x dim
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
+              [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
+                // maybe we should have a mapping for dofs x dim
+                if constexpr (test_dim == 1 && trial_dim == 1) {
+                  K_elem[i * test_dim][j * trial_dim] += curl_M[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
+                } else {
                   K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
                       curl_M[i][dummy_i] * df1_du[id][dummy_i][jd] * N[j] * dx;
-                });
-          }
+                }
+              });
         }
 
         // df1_dgradu stiffness contribution
@@ -613,19 +604,16 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         // size(dN_dx) = trial_ndof x spatial_dim
         // size(df1_dgradu) = test_dim x spatial_dim x trial_dim x spatial_dim
         if constexpr (!is_zero<decltype(df1_dgradu)>::value) {
-          if constexpr (test_dim == 1 && trial_dim == 1) {
-            for_loop<test_ndof, trial_ndof, spatial_dim, spatial_dim>([&](auto i, auto j, auto dummy_i, auto dummy_j) {
-              // maybe we should have a mapping for dofs x dim
-              K_elem[i][j] += curl_M[i][dummy_i] * df1_dgradu[dummy_i][dummy_j] * curl_N[j][dummy_j] * dx;
-            });
-          } else {
-            for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
-                [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
-                  // maybe we should have a mapping for dofs x dim
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
+              [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
+                // maybe we should have a mapping for dofs x dim
+                if constexpr (test_dim == 1 && trial_dim == 1) {
+                  K_elem[i][j] += curl_M[i][dummy_i] * df1_dgradu[dummy_i][dummy_j] * curl_N[j][dummy_j] * dx;
+                } else {
                   K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
                       curl_M[i][dummy_i] * df1_dgradu[id][dummy_i][jd][dummy_j] * curl_N[j][dummy_j] * dx;
-                });
-          }
+                }
+              });
         }
       }
     }
@@ -858,4 +846,10 @@ private:
    */
   std::function<void(const mfem::Vector&, mfem::Vector&)> gradient_;
   /**
-   * @brief Type-erased handle to gradie
+   * @brief Type-erased handle to gradient matrix assembly kernel
+   * @see gradient_matrix_kernel
+   */
+  std::function<void(mfem::Vector&)> gradient_mat_;
+};
+
+}  // namespace serac
