@@ -294,14 +294,14 @@ public:
 
   /**
    * @brief Obtains the element stiffness matrix reshaped a mfem::Vector
-   * @param[inout] K_e A mfem::Vector containing the assembled element stiffness matrix (test_dim * test_ndof, trial_dim * trial_ndof, nelem)
-   */ 
+   * @param[inout] K_e A mfem::Vector containing the assembled element stiffness matrix (test_dim * test_ndof, trial_dim
+   * * trial_ndof, nelem)
+   */
   virtual void GradientMatrix(mfem::Vector& K_e) const
   {
-    for (auto domain: domain_integrals_)
-      domain.GradientMatrix(K_e);
+    for (auto domain : domain_integrals_) domain.GradientMatrix(K_e);
   }
-  
+
   /**
    * @brief Applies an essential boundary condition to the attributes specified by @a ess_attr
    * @param[in] ess_attr The mesh attributes to apply the BC to

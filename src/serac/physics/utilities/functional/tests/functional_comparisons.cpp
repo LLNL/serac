@@ -39,11 +39,11 @@ std::unique_ptr<mfem::ParMesh> mesh3D;
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  static constexpr double a = 1.7;
-  static constexpr double b = 2.1;
-  std::string                              postfix = serac::profiling::concat("_H1<", p, ">");
+  static constexpr double a       = 1.7;
+  static constexpr double b       = 2.1;
+  std::string             postfix = serac::profiling::concat("_H1<", p, ">");
   serac::profiling::initializeCaliper();
-  
+
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -64,7 +64,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
     A.Assemble(0);
   }
   A.Finalize();
-  std::unique_ptr<mfem::HypreParMatrix> J(SERAC_PROFILE_EXPR(concat("mfem_parAssemble", postfix).c_str(), A.ParallelAssemble()));
+  std::unique_ptr<mfem::HypreParMatrix> J(
+      SERAC_PROFILE_EXPR(concat("mfem_parAssemble", postfix).c_str(), A.ParallelAssemble()));
 
   // Create a linear form for the load term using the standard MFEM method
   mfem::ParLinearForm       f(&fespace);
@@ -139,9 +140,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   A_serac_mat.Finalize();
 
-  std::unique_ptr<mfem::HypreParMatrix> J2(SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(),
-							      A.ParallelAssemble(&A_serac_mat)));
-  
+  std::unique_ptr<mfem::HypreParMatrix> J2(
+      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), A.ParallelAssemble(&A_serac_mat)));
+
   // Compute the gradient action using standard MFEM and functional
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad2 * U;
@@ -160,7 +161,6 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-14);
 
   serac::profiling::terminateCaliper();
-  
 }
 
 // this test sets up a toy "elasticity" problem where the residual includes contributions
