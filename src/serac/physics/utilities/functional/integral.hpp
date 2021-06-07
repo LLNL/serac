@@ -447,11 +447,12 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
   //  using element_residual_type      = typename trial_element::residual_type;
-  static constexpr int  test_ndof  = test_element::ndof;
-  static constexpr int  test_dim   = test_element::components;
-  static constexpr int  trial_ndof = trial_element::ndof;
-  static constexpr int  trial_dim  = test_element::components;
-  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
+  static constexpr int  test_ndof        = test_element::ndof;
+  static constexpr int  test_dim         = test_element::components;
+  static constexpr int  trial_ndof       = trial_element::ndof;
+  static constexpr int  trial_dim        = test_element::components;
+  static constexpr auto rule             = GaussQuadratureRule<g, Q>();
+  static constexpr int  curl_spatial_dim = spatial_dim == 3 ? 3 : 1;
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -487,12 +488,12 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
 
       // use the chain rule to compute the first-order change in the q-function output
       // auto dq = chain_rule(dq_darg, darg);
-      [[maybe_unused]] auto M          = test_element::shape_functions(xi_q);
-      [[maybe_unused]] auto N          = trial_element::shape_functions(xi_q);
-      [[maybe_unused]] auto f00        = std::get<0>(std::get<0>(dq_darg));
-      [[maybe_unused]] auto f01        = std::get<1>(std::get<0>(dq_darg));
-      [[maybe_unused]] auto df1_du     = std::get<0>(std::get<1>(dq_darg));
-      [[maybe_unused]] auto df1_dgradu = std::get<1>(std::get<1>(dq_darg));
+      [[maybe_unused]] auto M   = test_element::shape_functions(xi_q);
+      [[maybe_unused]] auto N   = trial_element::shape_functions(xi_q);
+      [[maybe_unused]] auto f00 = std::get<0>(std::get<0>(dq_darg));
+      [[maybe_unused]] auto f01 = std::get<1>(std::get<0>(dq_darg));
+      [[maybe_unused]] auto f10 = std::get<0>(std::get<1>(dq_darg));
+      [[maybe_unused]] auto f11 = std::get<1>(std::get<1>(dq_darg));
 
       // df0_du stiffness contribution
       // size(M) = test_ndof
@@ -528,7 +529,8 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         // size(dM_dx) = test_ndof x spatial_dim
         // size(N) = trial_ndof
         // size(df1_du) = test_dim x spatial_dim x trial_dim
-        if constexpr (!is_zero<decltype(df1_du)>::value) {
+        if constexpr (!is_zero<decltype(f10)>::value) {
+          auto& df1_du = f10;
           for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
               [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
                 // maybe we should have a mapping for dofs x dim
@@ -545,7 +547,8 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         // size(dM_dx) = test_ndof x spatial_dim
         // size(dN_dx) = trial_ndof x spatial_dim
         // size(df1_dgradu) = test_dim x spatial_dim x trial_dim x spatial_dim
-        if constexpr (!is_zero<decltype(df1_dgradu)>::value) {
+        if constexpr (!is_zero<decltype(f11)>::value) {
+          auto& df1_dgradu = f11;
           for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
               [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
                 if constexpr (test_dim == 1 && trial_dim == 1) {
@@ -557,7 +560,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
                 }
               });
         }
-      } else {
+      } else {  // HCurl
         [[maybe_unused]] auto curl_M = test_element::shape_function_curl(xi_q) / det(J_q);
         if constexpr (spatial_dim == 3) {
           curl_M = dot(curl_M, transpose(J_q));
@@ -570,48 +573,70 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
 
         // df0_dgradu stiffness contribution
         // size(M) = test_ndof
-        // size(df0_dcurlu) = test_dim x trial_dim x spatial_dim
-        // size(dN_dx) = trial_ndof x spatial_dim
+        // size(df0_dcurlu) = test_dim x trial_dim x curl_spatial_dim
+        // size(curl_N) = trial_ndof x curl_spatial_dim
         if constexpr (!is_zero<decltype(f01)>::value) {
-          auto df0_dcurlu = convert<test_dim, trial_dim, spatial_dim>(f01);
-          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
+          auto df0_dcurlu = convert<test_dim, trial_dim, curl_spatial_dim>(f01);
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim>(
               [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
                 // maybe we should have a mapping for dofs x dim
-                K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
-                    M[i] * df0_dcurlu[id][jd][dummy_i] * curl_N[j][dummy_i] * dx;
+                if constexpr (spatial_dim == 3) {
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                      M[i] * df0_dcurlu[id][jd][dummy_i] * curl_N[j][dummy_i] * dx;
+                } else {
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] += M[i] * df0_dcurlu[id][jd] * curl_N[j] * dx;
+                }
               });
         }
 
         // // df1_du stiffness contribution
-        // size(dM_dx) = test_ndof x spatial_dim
+        // size(curl_M) = test_ndof x curl_spatial_dim
         // size(N) = trial_ndof
-        // size(df1_du) = test_dim x spatial_dim x trial_dim
-        if constexpr (!is_zero<decltype(df1_du)>::value) {
-          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
+        // size(df1_du) = test_dim x curl_spatial_dim x trial_dim
+        if constexpr (!is_zero<decltype(f10)>::value) {
+          auto& df1_du = f10;
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim>(
               [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
                 // maybe we should have a mapping for dofs x dim
                 if constexpr (test_dim == 1 && trial_dim == 1) {
-                  K_elem[i * test_dim][j * trial_dim] += curl_M[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
+                  if constexpr (spatial_dim == 3) {
+                    K_elem[i * test_dim][j * trial_dim] += curl_M[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
+                  } else {
+                    K_elem[i * test_dim][j * trial_dim] += curl_M[i] * df1_du * N[j] * dx;
+                  }
                 } else {
-                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
-                      curl_M[i][dummy_i] * df1_du[id][dummy_i][jd] * N[j] * dx;
+                  if constexpr (spatial_dim == 3) {
+                    K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                        curl_M[i][dummy_i] * df1_du[id][dummy_i][jd] * N[j] * dx;
+                  } else {
+                    K_elem[i + test_ndof * id][j + trial_ndof * jd] += curl_M[i] * df1_du[id][jd] * N[j] * dx;
+                  }
                 }
               });
         }
 
         // df1_dgradu stiffness contribution
-        // size(dM_dx) = test_ndof x spatial_dim
-        // size(dN_dx) = trial_ndof x spatial_dim
-        // size(df1_dgradu) = test_dim x spatial_dim x trial_dim x spatial_dim
-        if constexpr (!is_zero<decltype(df1_dgradu)>::value) {
-          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
+        // size(curl_M) = test_ndof x curl_spatial_dim
+        // size(curl_N) = trial_ndof x curl_spatial_dim
+        // size(df1_dcurl) = test_dim x curl_spatial_dim x trial_dim x curl_spatial_dim
+        if constexpr (!is_zero<decltype(f11)>::value) {
+          auto& df1_dcurlu = f11;
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim, curl_spatial_dim>(
               [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
                 // maybe we should have a mapping for dofs x dim
                 if constexpr (test_dim == 1 && trial_dim == 1) {
-                  K_elem[i][j] += curl_M[i][dummy_i] * df1_dgradu[dummy_i][dummy_j] * curl_N[j][dummy_j] * dx;
+                  if constexpr (spatial_dim == 3) {
+                    K_elem[i][j] += curl_M[i][dummy_i] * df1_dcurlu[dummy_i][dummy_j] * curl_N[j][dummy_j] * dx;
+                  } else {
+                    K_elem[i][j] += curl_M[i] * df1_dcurlu * curl_N[j] * dx;
+                  }
                 } else {
-                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
-                      curl_M[i][dummy_i] * df1_dgradu[id][dummy_i][jd][dummy_j] * curl_N[j][dummy_j] * dx;
+                  if constexpr (spatial_dim == 3) {
+                    K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                        curl_M[i][dummy_i] * df1_dcurlu[id][dummy_i][jd][dummy_j] * curl_N[j][dummy_j] * dx;
+                  } else {
+                    K_elem[i + test_ndof * id][j + trial_ndof * jd] += curl_M[i] * df1_dcurlu[id][jd] * curl_N[j] * dx;
+                  }
                 }
               });
         }
