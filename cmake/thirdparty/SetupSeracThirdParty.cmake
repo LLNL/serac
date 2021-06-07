@@ -154,6 +154,13 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     if(CALIPER_DIR)
         serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
 
+        # Should this logic be in the Caliper CMake package?
+        # If CMake version doesn't support CUDAToolkit the libraries
+        # are just "baked in"
+        if(ENABLE_CUDA AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
+            find_package(CUDAToolkit REQUIRED)
+        endif()
+
         find_package(caliper REQUIRED NO_DEFAULT_PATH 
                      PATHS ${CALIPER_DIR})
         message(STATUS "Caliper support is ON")

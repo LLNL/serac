@@ -8,6 +8,7 @@ variables:
   PROJECT_ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
   BUILD_ROOT: ${CI_PROJECT_DIR}
   FULL_BUILD_ROOT: ${CI_BUILDS_DIR}/serac/${CI_JOB_NAME}
+  ALLOC_BANK: eng
 
 stages:
   - allocate
