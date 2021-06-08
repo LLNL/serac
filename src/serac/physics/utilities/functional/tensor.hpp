@@ -1494,13 +1494,13 @@ auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p.
  * @brief tensor conversions since double and tensor are different types
  */
 template <int m, int n, typename T>
-auto convert(tensor<T, m, n> A)
+auto convert_to_tensor_with_shape(tensor<T, m, n> A)
 {
   return A;
 }
 
 template <int m, int n, typename T>
-auto convert(T value)
+auto convert_to_tensor_with_shape(T value)
 {
   tensor<T, m, n> A;
   A[0][0] = value;
@@ -1508,13 +1508,13 @@ auto convert(T value)
 }
 
 template <int m, int n, int o, typename T>
-auto convert(tensor<T, m, n, o> A)
+auto convert_to_tensor_with_shape(tensor<T, m, n, o> A)
 {
   return A;
 }
 
 template <int m, int n, int o, typename T>
-auto convert(T value)
+auto convert_to_tensor_with_shape(T value)
 {
   tensor<T, m, n, o> A;
   A[0][0][0] = value;

@@ -515,7 +515,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
       // size(N) = trial_ndof
       // size(df0_du) = test_dim x trial_dim
       if constexpr (!is_zero<decltype(f00)>::value) {
-        auto df0_du = convert<test_dim, trial_dim>(f00);
+        auto df0_du = convert_to_tensor_with_shape<test_dim, trial_dim>(f00);
         for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](auto i, auto id, auto j, auto jd) {
           // maybe we should have a mapping for dofs x dim
           K_elem[i + test_ndof * id][j + trial_ndof * jd] += M[i] * df0_du[id][jd] * N[j] * dx;
@@ -531,7 +531,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         // size(df0_dgradu) = test_dim x trial_dim x spatial_dim
         // size(dN_dx) = trial_ndof x spatial_dim
         if constexpr (!is_zero<decltype(f01)>::value) {
-          auto df0_dgradu = convert<test_dim, trial_dim, spatial_dim>(f01);
+          auto df0_dgradu = convert_to_tensor_with_shape<test_dim, trial_dim, spatial_dim>(f01);
           for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
               [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
                 // maybe we should have a mapping for dofs x dim
@@ -591,7 +591,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         // size(df0_dcurlu) = test_dim x trial_dim x curl_spatial_dim
         // size(curl_N) = trial_ndof x curl_spatial_dim
         if constexpr (!is_zero<decltype(f01)>::value) {
-          auto df0_dcurlu = convert<test_dim, trial_dim, curl_spatial_dim>(f01);
+          auto df0_dcurlu = convert_to_tensor_with_shape<test_dim, trial_dim, curl_spatial_dim>(f01);
           for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim>(
               [&](auto i, auto id, auto j, auto jd, [[maybe_unused]] auto dummy_i) {
                 // maybe we should have a mapping for dofs x dim
