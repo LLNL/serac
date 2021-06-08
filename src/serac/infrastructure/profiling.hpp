@@ -122,12 +122,12 @@ auto&& forwarder(T&& thing)
 /**
  * @brief Guarantees str is a c string
  */
-const char* make_cstr(const char* str) { return str; }
+inline const char* make_cstr(const char* str) { return str; }
 
 /**
  * @brief Converts a std::string into a c string
  */
-const char* make_cstr(const std::string& str) { return str.c_str(); }
+inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 
 }  // namespace serac::profiling::detail
 
