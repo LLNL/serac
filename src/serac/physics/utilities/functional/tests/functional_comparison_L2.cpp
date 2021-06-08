@@ -137,7 +137,9 @@ TEST(L2, 3D_cubic) { functional_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{});
 /** CUDA workaround
 Issue with std::variant for InputOptions in mesh_utils.hpp
 
-// this file has a lot of warnings
+This file has a lot of warnings. The summary of the issue is described in more detail here (https://github.com/LLNL/serac/issues/485))
+
+The following is an excerpt of a warning:
 serac/src/serac/infrastructure/../../serac/physics/utilities/functional/tensor.hpp(347): warning: calling a __host__
 function("std::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > ::operator =") from a __host__ __device__
 function("serac::operator +< ::serac::dual<    ::std::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > > ,
