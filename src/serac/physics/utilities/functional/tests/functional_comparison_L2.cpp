@@ -32,7 +32,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 {
   [[maybe_unused]] static constexpr double a       = 1.7;
   [[maybe_unused]] static constexpr double b       = 0.0;
-  std::string                              postfix = serac::profiling::concat("_L2<", p, ">");
+  std::string                              postfix = concat("_L2<", p, ">");
 
   serac::profiling::initializeCaliper();
 
@@ -47,7 +47,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   A.AddDomainIntegrator(new mfem::MassIntegrator(a_coef));
 
   // Assemble the bilinear form into a matrix
-  SERAC_PROFILE_VOID_EXPR(concat("mfem_localAssemble").c_str(), A.Assemble(0));
+  SERAC_PROFILE_VOID_EXPR(concat("mfem_localAssemble", postfix).c_str(), A.Assemble(0));
   A.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 

@@ -39,7 +39,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 {
   static constexpr double a       = 1.7;
   static constexpr double b       = 2.1;
-  std::string             postfix = serac::profiling::concat("_H1<", p, ">");
+  std::string             postfix = concat("_H1<", p, ">");
 
   serac::profiling::initializeCaliper();
 
@@ -59,7 +59,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   // Assemble the bilinear form into a matrix
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble").c_str());
+    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix).c_str());
     A.Assemble(0);
   }
 
@@ -150,7 +150,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 {
   static constexpr double a       = 1.7;
   static constexpr double b       = 2.1;
-  std::string             postfix = serac::profiling::concat("_H1<", p, ",", dim, ">");
+  std::string             postfix = concat("_H1<", p, ",", dim, ">");
 
   serac::profiling::initializeCaliper();
 
@@ -247,7 +247,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 {
   static constexpr double a       = 1.7;
   static constexpr double b       = 2.1;
-  std::string             postfix = serac::profiling::concat("_Hcurl<", p, ">");
+  std::string             postfix = concat("_Hcurl<", p, ">");
   serac::profiling::initializeCaliper();
 
   auto                        fec = mfem::ND_FECollection(p, dim);

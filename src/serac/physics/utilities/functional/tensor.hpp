@@ -82,11 +82,11 @@ struct tensor;
 
 template <typename T>
 struct tensor<T> {
-  using type                = T;
-  static constexpr int ndim = 0;
-  static constexpr int first_dim = 1;
+  using type                                  = T;
+  static constexpr int              ndim      = 0;
+  static constexpr int              first_dim = 1;
   SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; }
-  SERAC_HOST_DEVICE constexpr auto operator[](int) const { return value; }
+  SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; }
 
   template <typename... S>
   SERAC_HOST_DEVICE constexpr auto& operator()(S...)
