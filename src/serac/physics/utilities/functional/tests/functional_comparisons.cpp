@@ -171,11 +171,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
-  static constexpr double a = 1.7;
-  static constexpr double b = 2.1;
+  static constexpr double a       = 1.7;
+  static constexpr double b       = 2.1;
   std::string             postfix = concat("_H1<", p, ",", dim, ">");
   serac::profiling::initializeCaliper();
-  
+
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
 
@@ -246,7 +246,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   A_serac_mat.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J2(
       SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), A.ParallelAssemble(&A_serac_mat)));
-  
+
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad * U;
   mfem::Vector g3 = (*J2) * U;
@@ -271,18 +271,18 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 {
-  static constexpr double a = 1.7;
-  static constexpr double b = 2.1;
+  static constexpr double a       = 1.7;
+  static constexpr double b       = 2.1;
   std::string             postfix = concat("_H1<", p, ",", dim, ">");
   serac::profiling::initializeCaliper();
-  
+
   auto                        fec = mfem::ND_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
   mfem::ParBilinearForm B(&fespace);
 
   mfem::ConstantCoefficient a_coef(a);
-  B.AddDomainIntegrator(new mfem::VectorFEMassIntegrator(a_coef));
+  // B.AddDomainIntegrator(new mfem::VectorFEMassIntegrator(a_coef));
 
   mfem::ConstantCoefficient b_coef(b);
   B.AddDomainIntegrator(new mfem::CurlCurlIntegrator(b_coef));
@@ -318,7 +318,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
       Dimension<dim>{},
       [&](auto x, auto vector_potential) {
         auto [A, curl_A] = vector_potential;
-        auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
+        auto J_term      = 0.0 * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
         auto H_term      = b * curl_A;
         return std::tuple{J_term, H_term};
       },
@@ -337,34 +337,23 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   mfem::Operator& grad = residual.GetGradient(U);
 
   mfem::SparseMatrix B_mat(B.SpMat());
-  
-  mfem::Vector K_e(fespace.GetFE(0)->GetDof() * fespace.GetFE(0)->GetDim() *
-	     fespace.GetFE(0)->GetDof() * fespace.GetFE(0)->GetDim() *
-	     fespace.GetNE());
+
+  mfem::Vector K_e(fespace.GetFE(0)->GetDof() * fespace.GetFE(0)->GetDim() * fespace.GetFE(0)->GetDof() *
+                   fespace.GetFE(0)->GetDim() * fespace.GetNE());
   K_e = 0.;
-  
-  //residual.ComputeElementMatrices(K_e);
-  
+
+  // residual.ComputeElementMatrices(K_e);
+
   serac::mfem_ext::AssembledSparseMatrix B_serac_mat(fespace, fespace, mfem::ElementDofOrdering::LEXICOGRAPHIC);
   {
     SERAC_PROFILE_SCOPE(concat("functional_gradientMatrix+FillData", postfix).c_str());
     residual.UpdateAssembledSparseMatrix(B_serac_mat);
-    //B_serac_mat.FillData(K_e);
+    // B_serac_mat.FillData(K_e);
   }
   B_serac_mat.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J2(
       SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), B.ParallelAssemble(&B_serac_mat)));
 
-
-  // for (int r = 0; r < B_serac_mat.Height(); r++) {
-  //   auto columns = B_serac_mat.GetRowColumns(r);
-  //   for (int c = 0; c < B_serac_mat.RowSize(r); c++) {
-  //     const int column_ind = columns[c]  >= 0 ? columns[c] : -1-columns[c];
-  //     EXPECT_NEAR(B_mat(r, column_ind), B_serac_mat(r, column_ind), 1.e-10);
-  //   }
-     
-  // }
-  
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad * U;
   mfem::Vector g3 = (*J2) * U;
@@ -415,7 +404,7 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 0;
+  int serial_refinement   = 2;
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";

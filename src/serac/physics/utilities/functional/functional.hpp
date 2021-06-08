@@ -304,11 +304,11 @@ public:
   }
 
   /**
-   * @brief Computes element matrices and updates a serac::mfem_ext::AssembledSparseMatrix 
+   * @brief Computes element matrices and updates a serac::mfem_ext::AssembledSparseMatrix
    * @param[inout] mat Update AssembledSparseMatrix with newly assembled entries
    */
 
-  void UpdateAssembledSparseMatrix(serac::mfem_ext::AssembledSparseMatrix & mat)
+  void UpdateAssembledSparseMatrix(serac::mfem_ext::AssembledSparseMatrix& mat)
   {
     mfem::Vector K_e(mat.GetElementDataSize());
     K_e = 0.;

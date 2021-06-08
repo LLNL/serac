@@ -502,8 +502,15 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
 
       // use the chain rule to compute the first-order change in the q-function output
       // auto dq = chain_rule(dq_darg, darg);
-      [[maybe_unused]] auto M   = test_element::shape_functions(xi_q);
-      [[maybe_unused]] auto N   = trial_element::shape_functions(xi_q);
+      [[maybe_unused]] auto M = test_element::shape_functions(xi_q);
+      [[maybe_unused]] auto N = trial_element::shape_functions(xi_q);
+      if constexpr (test_element::family == Family::HCURL) {
+        M = dot(M, inv(J_q));
+      }
+      if constexpr (trial_element::family == Family::HCURL) {
+        N = dot(N, inv(J_q));
+      }
+
       [[maybe_unused]] auto f00 = std::get<0>(std::get<0>(dq_darg));
       [[maybe_unused]] auto f01 = std::get<1>(std::get<0>(dq_darg));
       [[maybe_unused]] auto f10 = std::get<0>(std::get<1>(dq_darg));
@@ -575,6 +582,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
               });
         }
       } else {  // HCurl
+
         [[maybe_unused]] auto curl_M = test_element::shape_function_curl(xi_q) / det(J_q);
         if constexpr (spatial_dim == 3) {
           curl_M = dot(curl_M, transpose(J_q));
@@ -582,7 +590,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
 
         [[maybe_unused]] auto curl_N = trial_element::shape_function_curl(xi_q) / det(J_q);
         if constexpr (spatial_dim == 3) {
-          curl_N = dot(curl_M, transpose(J_q));
+          curl_N = dot(curl_N, transpose(J_q));
         }
 
         // df0_dgradu stiffness contribution
@@ -629,7 +637,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
               });
         }
 
-        // df1_dgradu stiffness contribution
+        // df1_dcurlu stiffness contribution
         // size(curl_M) = test_ndof x curl_spatial_dim
         // size(curl_N) = trial_ndof x curl_spatial_dim
         // size(df1_dcurl) = test_dim x curl_spatial_dim x trial_dim x curl_spatial_dim
