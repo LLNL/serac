@@ -10,7 +10,7 @@
  * @brief Specialization of finite_element for L2 on hexahedron geometry
  */
 
-// interpolate at Gauss-Legendre nodes for the appropriate polynomial order
+// interpolate at Gauss-Lobatto nodes for the appropriate polynomial order
 //
 // note: mfem assumes the parent element domain is [0,1]x[0,1]x[0,1]
 // for additional information on the finite_element concept requirements, see finite_element.hpp
@@ -28,9 +28,9 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
 
   static constexpr tensor<double, ndof> shape_functions(tensor<double, dim> xi)
   {
-    auto N_xi   = GaussLegendreInterpolation<p + 1>(xi[0]);
-    auto N_eta  = GaussLegendreInterpolation<p + 1>(xi[1]);
-    auto N_zeta = GaussLegendreInterpolation<p + 1>(xi[2]);
+    auto N_xi   = GaussLobattoInterpolation<p + 1>(xi[0]);
+    auto N_eta  = GaussLobattoInterpolation<p + 1>(xi[1]);
+    auto N_zeta = GaussLobattoInterpolation<p + 1>(xi[2]);
 
     int count = 0;
 
@@ -47,12 +47,12 @@ struct finite_element<Geometry::Hexahedron, L2<p, c> > {
 
   static constexpr tensor<double, ndof, dim> shape_function_gradients(tensor<double, dim> xi)
   {
-    auto N_xi    = GaussLegendreInterpolation<p + 1>(xi[0]);
-    auto N_eta   = GaussLegendreInterpolation<p + 1>(xi[1]);
-    auto N_zeta  = GaussLegendreInterpolation<p + 1>(xi[2]);
-    auto dN_xi   = GaussLegendreInterpolationDerivative<p + 1>(xi[0]);
-    auto dN_eta  = GaussLegendreInterpolationDerivative<p + 1>(xi[1]);
-    auto dN_zeta = GaussLegendreInterpolationDerivative<p + 1>(xi[2]);
+    auto N_xi    = GaussLobattoInterpolation<p + 1>(xi[0]);
+    auto N_eta   = GaussLobattoInterpolation<p + 1>(xi[1]);
+    auto N_zeta  = GaussLobattoInterpolation<p + 1>(xi[2]);
+    auto dN_xi   = GaussLobattoInterpolationDerivative<p + 1>(xi[0]);
+    auto dN_eta  = GaussLobattoInterpolationDerivative<p + 1>(xi[1]);
+    auto dN_zeta = GaussLobattoInterpolationDerivative<p + 1>(xi[2]);
 
     int count = 0;
 
