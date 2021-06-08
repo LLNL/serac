@@ -447,12 +447,12 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
   //  using element_residual_type      = typename trial_element::residual_type;
-  static constexpr int  test_ndof        = test_element::ndof;
-  static constexpr int  test_dim         = test_element::components;
-  static constexpr int  trial_ndof       = trial_element::ndof;
-  static constexpr int  trial_dim        = test_element::components;
-  static constexpr auto rule             = GaussQuadratureRule<g, Q>();
-  static constexpr int  curl_spatial_dim = spatial_dim == 3 ? 3 : 1;
+  static constexpr int                  test_ndof        = test_element::ndof;
+  static constexpr int                  test_dim         = test_element::components;
+  static constexpr int                  trial_ndof       = trial_element::ndof;
+  static constexpr int                  trial_dim        = test_element::components;
+  static constexpr auto                 rule             = GaussQuadratureRule<g, Q>();
+  [[maybe_unused]] static constexpr int curl_spatial_dim = spatial_dim == 3 ? 3 : 1;
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -532,7 +532,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         if constexpr (!is_zero<decltype(f10)>::value) {
           auto& df1_du = f10;
           for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
-              [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
+              [&](auto i, [[maybe_unused]] auto id, auto j, [[maybe_unused]] auto jd, auto dummy_i) {
                 // maybe we should have a mapping for dofs x dim
                 if constexpr (test_dim == 1 && trial_dim == 1) {
                   K_elem[i * test_dim][j * trial_dim] += dM_dx[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
@@ -550,7 +550,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         if constexpr (!is_zero<decltype(f11)>::value) {
           auto& df1_dgradu = f11;
           for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
-              [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
+              [&](auto i, [[maybe_unused]] auto id, auto j, [[maybe_unused]] auto jd, auto dummy_i, auto dummy_j) {
                 if constexpr (test_dim == 1 && trial_dim == 1) {
                   K_elem[i][j] += dM_dx[i][dummy_i] * df1_dgradu[dummy_i][dummy_j] * dN_dx[j][dummy_j] * dx;
                 } else {
@@ -578,7 +578,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         if constexpr (!is_zero<decltype(f01)>::value) {
           auto df0_dcurlu = convert<test_dim, trial_dim, curl_spatial_dim>(f01);
           for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim>(
-              [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
+              [&](auto i, auto id, auto j, auto jd, [[maybe_unused]] auto dummy_i) {
                 // maybe we should have a mapping for dofs x dim
                 if constexpr (spatial_dim == 3) {
                   K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
@@ -596,7 +596,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         if constexpr (!is_zero<decltype(f10)>::value) {
           auto& df1_du = f10;
           for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim>(
-              [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
+              [&](auto i, [[maybe_unused]] auto id, auto j, [[maybe_unused]] auto jd, auto dummy_i) {
                 // maybe we should have a mapping for dofs x dim
                 if constexpr (test_dim == 1 && trial_dim == 1) {
                   if constexpr (spatial_dim == 3) {
@@ -622,7 +622,8 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         if constexpr (!is_zero<decltype(f11)>::value) {
           auto& df1_dcurlu = f11;
           for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim, curl_spatial_dim>(
-              [&](auto i, auto id, auto j, auto jd, auto dummy_i, auto dummy_j) {
+              [&](auto i, [[maybe_unused]] auto id, auto j, [[maybe_unused]] auto jd, [[maybe_unused]] auto dummy_i,
+                  [[maybe_unused]] auto dummy_j) {
                 // maybe we should have a mapping for dofs x dim
                 if constexpr (test_dim == 1 && trial_dim == 1) {
                   if constexpr (spatial_dim == 3) {
