@@ -274,7 +274,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   mfem::ParBilinearForm B(&fespace);
 
   mfem::ConstantCoefficient a_coef(a);
-  // B.AddDomainIntegrator(new mfem::VectorFEMassIntegrator(a_coef));
+  B.AddDomainIntegrator(new mfem::VectorFEMassIntegrator(a_coef));
 
   mfem::ConstantCoefficient b_coef(b);
   B.AddDomainIntegrator(new mfem::CurlCurlIntegrator(b_coef));
@@ -310,7 +310,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
       Dimension<dim>{},
       [&](auto x, auto vector_potential) {
         auto [A, curl_A] = vector_potential;
-        auto J_term      = 0.0 * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
+        auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
         auto H_term      = b * curl_A;
         return std::tuple{J_term, H_term};
       },
