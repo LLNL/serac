@@ -457,17 +457,11 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto J = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
-  //      auto du = impl::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
   [[maybe_unused]] auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
-    // get the (change in) values for this particular element
-    // tensor du_elem = impl::Load<trial_element>(du, e);
 
-    // this is where we will accumulate the (change in) element residual tensor
-    //    element_residual_type dr_elem{};
-    //    mfem::DenseMatrix K_elem(test_ndof, trial_ndof);
     tensor<double, test_ndof * test_dim, trial_ndof * trial_dim> K_elem{};
 
     // for each quadrature point in the element
@@ -479,9 +473,6 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
       auto                    J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
       auto                    detJ_q = detail::Measure(J_q);
       [[maybe_unused]] double dx     = detJ_q * dxi_q;
-
-      // evaluate the (change in) value/derivatives at this quadrature point
-      // auto darg = impl::Preprocess<trial_element>(du_elem, xi, J_q);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
