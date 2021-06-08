@@ -378,7 +378,6 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tensor<T, n...>& A)
 template <typename S, typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, n...>& A, const tensor<T, n...>& B)
 {
-  // FIX: hcurl_unit_tests
   tensor<decltype(S{} + T{}), n...> C{};
   for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
     C[i] = A[i] - B[i];
