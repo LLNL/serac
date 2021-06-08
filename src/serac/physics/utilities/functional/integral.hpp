@@ -480,12 +480,11 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
+  auto                  J  = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
   [[maybe_unused]] auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
-
     tensor<double, test_ndof * test_dim, trial_ndof * trial_dim> K_elem{};
 
     // for each quadrature point in the element

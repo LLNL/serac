@@ -30,7 +30,7 @@ protected:
 
   // Trial space describing the sparsity pattern
   const mfem::FiniteElementSpace& trial_fes;
-  
+
   // Test space element restriction
   mfem::ElementRestriction test_restriction;
 
@@ -41,11 +41,11 @@ protected:
   mfem::ElementDofOrdering elem_ordering;
 
   // Maps individual element matrix entries in the K_e vector to the final CSR data offset
-  mfem::Array<int>         ea_map;
+  mfem::Array<int> ea_map;
 
 private:
   // Computes the row offsets for the CSR sparsity pattern given by the spaces test(trial)
-  int  FillI();
+  int FillI();
   // Computes the column indicies per row for a CSR sparsity pattern given by the spaces test(trial)
   void FillJ();
 };

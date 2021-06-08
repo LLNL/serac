@@ -2,21 +2,27 @@
 #include "mfem/linalg/dtensor.hpp"
 #include "assembled_sparse_matrix.hpp"
 
+namespace detail {
+/**
+ * We'd like to access the protected offset, indices, and gatherMap variables from mfem::ElementRestriction
+ * to compute our sparsity patterns in a manner consistent with MFEM.
+ * In order to do that, we use the following template tricks.
+ * Here's an article that explains the trick being used: https://accu.org/journals/overload/28/156/harrison_2776/
+ */
 template <auto offsetV, auto indicesV, auto gatherV>
 struct forbidden_restriction {
-  //  friend result_fes _get_fes(From & from) { return & from.*fesV; }
-  friend mfem::Array<int>& __get_offsets(mfem::ElementRestriction& from) { return from.*offsetV; }
-  friend mfem::Array<int>& __get_indices(mfem::ElementRestriction& from) { return from.*indicesV; }
-  friend mfem::Array<int>& __get_gatherMap(mfem::ElementRestriction& from) { return from.*gatherV; }
+  friend mfem::Array<int>& ElementRestriction_offsets(mfem::ElementRestriction& from) { return from.*offsetV; }
+  friend mfem::Array<int>& ElementRestriction_indices(mfem::ElementRestriction& from) { return from.*indicesV; }
+  friend mfem::Array<int>& ElementRestriction_gatherMap(mfem::ElementRestriction& from) { return from.*gatherV; }
 };
 
-// const FiniteElementSpace * __get_fes(mfem::ElementRestriction &);
-mfem::Array<int>& __get_offsets(mfem::ElementRestriction&);
-mfem::Array<int>& __get_indices(mfem::ElementRestriction&);
-mfem::Array<int>& __get_gatherMap(mfem::ElementRestriction&);
+mfem::Array<int>& ElementRestriction_offsets(mfem::ElementRestriction&);
+mfem::Array<int>& ElementRestriction_indices(mfem::ElementRestriction&);
+mfem::Array<int>& ElementRestriction_gatherMap(mfem::ElementRestriction&);
 
 template struct forbidden_restriction<&mfem::ElementRestriction::offsets, &mfem::ElementRestriction::indices,
                                       &mfem::ElementRestriction::gatherMap>;
+}  // namespace detail
 
 namespace serac {
 namespace mfem_ext {
@@ -51,12 +57,9 @@ int AssembledSparseMatrix::FillI()
   // offsets are the row offsets corresponding to a vdof
   // indices maps a given vdof to the the assembled element matrix vector (dof * ne + d).
   // gatherMap takes an element matrix vector offset (dof, ne) and returns the partition-local vdof (d.o.f. id).
-  [[maybe_unused]] auto& test_offsets    = __get_offsets(test_restriction);
-  [[maybe_unused]] auto& test_indices    = __get_indices(test_restriction);
-  [[maybe_unused]] auto& test_gatherMap  = __get_gatherMap(test_restriction);
-  [[maybe_unused]] auto& trial_offsets   = __get_offsets(trial_restriction);
-  [[maybe_unused]] auto& trial_indices   = __get_indices(trial_restriction);
-  [[maybe_unused]] auto& trial_gatherMap = __get_gatherMap(trial_restriction);
+  auto& test_offsets    = detail::ElementRestriction_offsets(test_restriction);
+  auto& test_indices    = detail::ElementRestriction_indices(test_restriction);
+  auto& trial_gatherMap = detail::ElementRestriction_gatherMap(trial_restriction);
 
   /**
      We expect mat_ea to be of size (test_elem_dof * test_vdim, trial_elem_dof * trial_vdim, ne)
@@ -125,12 +128,9 @@ int AssembledSparseMatrix::FillI()
 
 void AssembledSparseMatrix::FillJ()
 {
-  [[maybe_unused]] auto& test_offsets    = __get_offsets(test_restriction);
-  [[maybe_unused]] auto& test_indices    = __get_indices(test_restriction);
-  [[maybe_unused]] auto& test_gatherMap  = __get_gatherMap(test_restriction);
-  [[maybe_unused]] auto& trial_offsets   = __get_offsets(trial_restriction);
-  [[maybe_unused]] auto& trial_indices   = __get_indices(trial_restriction);
-  [[maybe_unused]] auto& trial_gatherMap = __get_gatherMap(trial_restriction);
+  auto& test_offsets    = detail::ElementRestriction_offsets(test_restriction);
+  auto& test_indices    = detail::ElementRestriction_indices(test_restriction);
+  auto& trial_gatherMap = detail::ElementRestriction_gatherMap(trial_restriction);
 
   const int                  test_elem_dof  = test_fes.GetFE(0)->GetDof();
   const int                  trial_elem_dof = trial_fes.GetFE(0)->GetDof();
@@ -161,10 +161,10 @@ void AssembledSparseMatrix::FillJ()
     // Build temporary array for assembled J
     for (int e_index = 0; e_index < nrow_elems; e_index++) {
       // test_indices can be negative in the case of Hcurl
-      const int                  test_index_v = test_indices[test_row_offset + e_index];
-      const int                  test_index   = test_index_v >= 0 ? test_index_v : -test_index_v - 1;
-      const int                  e            = test_index / test_elem_dof;
-      [[maybe_unused]] const int test_i_elem  = test_index % test_elem_dof;
+      const int test_index_v = test_indices[test_row_offset + e_index];
+      const int test_index   = test_index_v >= 0 ? test_index_v : -test_index_v - 1;
+      const int e            = test_index / test_elem_dof;
+      const int test_i_elem  = test_index % test_elem_dof;
 
       // find corresponding trial_vdofs
       mfem::Array<int> trial_elem_vdofs(trial_elem_dof);
@@ -232,13 +232,6 @@ void AssembledSparseMatrix::FillData(const mfem::Vector& ea_data)
 {
   auto Data = WriteData();
 
-  [[maybe_unused]] auto& test_offsets    = __get_offsets(test_restriction);
-  [[maybe_unused]] auto& test_indices    = __get_indices(test_restriction);
-  [[maybe_unused]] auto& test_gatherMap  = __get_gatherMap(test_restriction);
-  [[maybe_unused]] auto& trial_offsets   = __get_offsets(trial_restriction);
-  [[maybe_unused]] auto& trial_indices   = __get_indices(trial_restriction);
-  [[maybe_unused]] auto& trial_gatherMap = __get_gatherMap(trial_restriction);
-
   const int                  test_elem_dof  = test_fes.GetFE(0)->GetDof();
   const int                  trial_elem_dof = trial_fes.GetFE(0)->GetDof();
   const int                  test_vdim      = test_fes.GetVDim();
@@ -247,7 +240,6 @@ void AssembledSparseMatrix::FillData(const mfem::Vector& ea_data)
 
   const int ne = trial_fes.GetNE();
 
-  //      auto map_ea = mfem::Reshape(ea_map.Read(), test_elem_dof * test_vdim, trial_elem_dof * trial_vdim, ne);
   auto map_ea = mfem::Reshape(ea_map.Read(), test_elem_dof * test_vdim, trial_elem_dof * trial_vdim, ne);
 
   auto mat_ea = mfem::Reshape(ea_data.Read(), test_elem_dof * test_vdim, trial_elem_dof * trial_vdim, ne);
