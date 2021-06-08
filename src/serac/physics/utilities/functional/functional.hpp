@@ -19,6 +19,7 @@
 #include "serac/physics/utilities/functional/finite_element.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
 #include "serac/physics/utilities/functional/integral.hpp"
+#include "serac/numerics/assembled_sparse_matrix.hpp"
 
 namespace serac {
 
@@ -300,6 +301,19 @@ public:
   void ComputeElementMatrices(mfem::Vector& K_e) const
   {
     for (auto domain : domain_integrals_) domain.ComputeElementMatrices(K_e);
+  }
+
+  /**
+   * @brief Computes element matrices and updates a serac::mfem_ext::AssembledSparseMatrix 
+   * @param[inout] mat Update AssembledSparseMatrix with newly assembled entries
+   */
+
+  void UpdateAssembledSparseMatrix(serac::mfem_ext::AssembledSparseMatrix & mat)
+  {
+    mfem::Vector K_e(mat.GetElementDataSize());
+    K_e = 0.;
+    ComputeElementMatrices(K_e);
+    mat.FillData(K_e);
   }
 
   /**

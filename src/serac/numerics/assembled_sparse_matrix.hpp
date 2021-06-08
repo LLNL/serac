@@ -21,27 +21,39 @@ public:
                         const mfem::FiniteElementSpace& trial,  // trial_elem_dofs * ne * vdim x vdim * trial_ndofs
                         mfem::ElementDofOrdering        elem_order);
 
-  /// Updates SparseMatrix entries based on new element assembled matrices
+  /**
+   * @brief Updates SparseMatrix entries based on new element assembled matrices
+   * @param[in] ea_data Element-assembled data
+   */
   virtual void FillData(const mfem::Vector& ea_data);
 
+  /**
+   * @brief Returns the necessary size of element assembled data
+   * @return Size of ea_map
+   */
+  auto GetElementDataSize()
+  {
+    return ea_map_.Size();
+  }
+  
 protected:
   // Test space describing the sparsity pattern
-  const mfem::FiniteElementSpace& test_fes;
+  const mfem::FiniteElementSpace& test_fes_;
 
   // Trial space describing the sparsity pattern
-  const mfem::FiniteElementSpace& trial_fes;
+  const mfem::FiniteElementSpace& trial_fes_;
 
   // Test space element restriction
-  mfem::ElementRestriction test_restriction;
+  mfem::ElementRestriction test_restriction_;
 
   // Trial space element restriction
-  mfem::ElementRestriction trial_restriction;
+  mfem::ElementRestriction trial_restriction_;
 
   // Consistent element ordering
-  mfem::ElementDofOrdering elem_ordering;
+  mfem::ElementDofOrdering elem_ordering_;
 
   // Maps individual element matrix entries in the K_e vector to the final CSR data offset
-  mfem::Array<int> ea_map;
+  mfem::Array<int> ea_map_;
 
 private:
   // Computes the row offsets for the CSR sparsity pattern given by the spaces test(trial)
