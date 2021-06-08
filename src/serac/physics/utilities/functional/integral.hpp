@@ -864,7 +864,7 @@ public:
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
    */
-  void GradientMatrix(mfem::Vector& K_e) const { gradient_mat_(K_e); }
+  void ComputeElementMatrices(mfem::Vector& K_e) const { gradient_mat_(K_e); }
 
 private:
   /**

@@ -6,7 +6,7 @@ namespace serac {
 namespace mfem_ext {
 
 /**
- Creates a CSR sparse matrix from element matrices assembled usign a mfem::ElementDofOrdering
+ @brief Creates a CSR sparse matrix from element matrices assembled usign a mfem::ElementDofOrdering
 */
 class AssembledSparseMatrix : public mfem::SparseMatrix {
 public:
@@ -25,16 +25,28 @@ public:
   virtual void FillData(const mfem::Vector& ea_data);
 
 protected:
+  // Test space describing the sparsity pattern
   const mfem::FiniteElementSpace& test_fes;
+
+  // Trial space describing the sparsity pattern
   const mfem::FiniteElementSpace& trial_fes;
-  // class local ElementRestriction objects
+  
+  // Test space element restriction
   mfem::ElementRestriction test_restriction;
+
+  // Trial space element restriction
   mfem::ElementRestriction trial_restriction;
+
+  // Consistent element ordering
   mfem::ElementDofOrdering elem_ordering;
+
+  // Maps individual element matrix entries in the K_e vector to the final CSR data offset
   mfem::Array<int>         ea_map;
 
 private:
+  // Computes the row offsets for the CSR sparsity pattern given by the spaces test(trial)
   int  FillI();
+  // Computes the column indicies per row for a CSR sparsity pattern given by the spaces test(trial)
   void FillJ();
 };
 }  // namespace mfem_ext

@@ -297,9 +297,9 @@ public:
    * @param[inout] K_e A mfem::Vector containing the assembled element stiffness matrix (test_dim * test_ndof, trial_dim
    * * trial_ndof, nelem)
    */
-  virtual void GradientMatrix(mfem::Vector& K_e) const
+  void ComputeElementMatrices(mfem::Vector& K_e) const
   {
-    for (auto domain : domain_integrals_) domain.GradientMatrix(K_e);
+    for (auto domain : domain_integrals_) domain.ComputeElementMatrices(K_e);
   }
 
   /**

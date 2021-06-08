@@ -129,7 +129,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   K_e = 0.;
   {
     SERAC_PROFILE_SCOPE(concat("functional_gradientMatrix", postfix).c_str());
-    residual.GradientMatrix(K_e);
+    residual.ComputeElementMatrices(K_e);
   }
 
   serac::mfem_ext::AssembledSparseMatrix A_serac_mat(fespace, fespace, mfem::ElementDofOrdering::LEXICOGRAPHIC);
