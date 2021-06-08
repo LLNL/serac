@@ -121,7 +121,7 @@ inline constexpr void for_constexpr(lambda&& f)
 
 // sam's templates for undoing for_constexpr for faster compile times
 template <int n1, typename lambda>
-void for_loop(lambda f)
+void for_loop(const lambda & f)
 {
   for (int i = 0; i < n1; i++) {
     f(i);
