@@ -439,6 +439,30 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
+/**
+ * @brief The base kernel template used to compute tangent element entries that can be assembled
+ * into a tangent matrix
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p Integral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
+ * @tparam spatial_dim The full dimension of the mesh
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
+ *
+ *
+ * @param[inout] K_e The full set of per-element element tangents [test_ndofs x test_dim, trial_ndofs x trial_dim]
+ * @param[in] derivatives_ptr The address at which derivatives of the q-function with
+ * respect to its arguments are stored
+ * @param[in] J_ The Jacobians of the element transformations at all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ */
 template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
           typename derivatives_type>
 void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
