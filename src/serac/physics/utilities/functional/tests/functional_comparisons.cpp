@@ -59,13 +59,13 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   // Assemble the bilinear form into a matrix
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix).c_str());
+    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
     A.Assemble(0);
   }
 
   A.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(
-      SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix).c_str(), A.ParallelAssemble()));
+      SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix), A.ParallelAssemble()));
 
   // Create a linear form for the load term using the standard MFEM method
   mfem::ParLinearForm       f(&fespace);
@@ -73,9 +73,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   // Create and assemble the linear load term into a vector
   f.AddDomainIntegrator(new mfem::DomainLFIntegrator(load_func));
-  SERAC_PROFILE_VOID_EXPR(serac::profiling::concat("mfem_fAssemble", postfix).c_str(), f.Assemble());
+  SERAC_PROFILE_VOID_EXPR(serac::profiling::concat("mfem_fAssemble", postfix), f.Assemble());
   std::unique_ptr<mfem::HypreParVector> F(
-      SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix).c_str(), f.ParallelAssemble()));
+      SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
 
   // Set a random state to evaluate the residual
   mfem::ParGridFunction u_global(&fespace);
@@ -106,10 +106,10 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       mesh);
 
   // Compute the residual using standard MFEM methods
-  mfem::Vector r1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_Apply", postfix).c_str(), (*J) * U - (*F), nsamples);
+  mfem::Vector r1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_Apply", postfix), (*J) * U - (*F), nsamples);
 
   // Compute the residual using functional
-  mfem::Vector r2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_Apply", postfix).c_str(), residual(U), nsamples);
+  mfem::Vector r2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_Apply", postfix), residual(U), nsamples);
 
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
@@ -122,11 +122,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   // Compute the gradient using functional
   mfem::Operator& grad2 =
-      SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix).c_str(), residual.GetGradient(U));
+      SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
   // Compute the gradient action using standard MFEM and functional
-  mfem::Vector g1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_ApplyGradient", postfix).c_str(), (*J) * U, nsamples);
-  mfem::Vector g2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient", postfix).c_str(), grad2 * U, nsamples);
+  mfem::Vector g1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_ApplyGradient", postfix), (*J) * U, nsamples);
+  mfem::Vector g2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient", postfix), grad2 * U, nsamples);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
@@ -166,13 +166,13 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   mfem::ConstantCoefficient mu_coef(b);
   A.AddDomainIntegrator(new mfem::ElasticityIntegrator(lambda_coef, mu_coef));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix).c_str());
+    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
     A.Assemble(0);
   }
   A.Finalize();
 
   std::unique_ptr<mfem::HypreParMatrix> J(
-      SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix).c_str(), A.ParallelAssemble()));
+      SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix), A.ParallelAssemble()));
 
   mfem::ParLinearForm             f(&fespace);
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& /*coords*/, mfem::Vector& force) {
@@ -182,11 +182,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   f.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(load_func));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_fAssemble", postfix).c_str());
+    SERAC_PROFILE_SCOPE(concat("mfem_fAssemble", postfix));
     f.Assemble();
   }
   std::unique_ptr<mfem::HypreParVector> F(
-      SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix).c_str(), f.ParallelAssemble()));
+      SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
 
   mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
@@ -212,8 +212,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
       },
       mesh);
 
-  mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix).c_str(), (*J) * U - (*F));
-  mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix).c_str(), residual(U));
+  mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
+  mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual(U));
 
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
@@ -222,10 +222,10 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
-  mfem::Operator& grad = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix).c_str(), residual.GetGradient(U));
+  mfem::Operator& grad = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
-  mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix).c_str(), (*J) * U);
-  mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix).c_str(), grad * U);
+  mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix), (*J) * U);
+  mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix), grad * U);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
@@ -261,12 +261,12 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   mfem::ConstantCoefficient b_coef(b);
   B.AddDomainIntegrator(new mfem::CurlCurlIntegrator(b_coef));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix).c_str());
+    SERAC_PROFILE_SCOPE(concat("mfem_localAssemble", postfix));
     B.Assemble(0);
   }
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(
-      SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix).c_str(), B.ParallelAssemble()));
+      SERAC_PROFILE_EXPR(concat("mfem_parallelAssemble", postfix), B.ParallelAssemble()));
 
   mfem::ParLinearForm             f(&fespace);
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& coords, mfem::Vector& output) {
@@ -279,11 +279,11 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 
   f.AddDomainIntegrator(new mfem::VectorFEDomainLFIntegrator(load_func));
   {
-    SERAC_PROFILE_SCOPE(concat("mfem_fAssemble", postfix).c_str());
+    SERAC_PROFILE_SCOPE(concat("mfem_fAssemble", postfix));
     f.Assemble();
   }
   std::unique_ptr<mfem::HypreParVector> F(
-      SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix).c_str(), f.ParallelAssemble()));
+      SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
 
   mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
@@ -306,8 +306,8 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
       },
       mesh);
 
-  mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix).c_str(), (*J) * U - (*F));
-  mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix).c_str(), residual(U));
+  mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
+  mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual(U));
 
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
@@ -316,10 +316,10 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-13);
 
-  mfem::Operator& grad = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix).c_str(), residual.GetGradient(U));
+  mfem::Operator& grad = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
-  mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix).c_str(), (*J) * U);
-  mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix).c_str(), grad * U);
+  mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix), (*J) * U);
+  mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix), grad * U);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;

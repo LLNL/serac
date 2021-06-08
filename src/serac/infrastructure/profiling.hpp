@@ -63,9 +63,20 @@
  */
 
 /**
- * @def SERAC_PROFILE_EXPR(name)
- * Profiles a single expression using a cali::ScopeAnnotation internally.
+ * @def SERAC_PROFILE_EXPR(name, expr)
+ * Profiles a single expression using a cali::ScopeAnnotation internally. Returns evaluation.
  */
+
+/**
+ * @def SERAC_PROFILE_VOID_EXPR(name, expr)
+ * Profiles a single void-expression using a cali::ScopeAnnotation internally. 
+ */
+
+/**
+ * @def SERAC_PROFILE_EXPR_LOOP(name, expr, ntest)
+ * Profiles an expression several times. Returns the last evaluation
+ */
+
 
 #ifdef SERAC_USE_CALIPER
 
@@ -79,8 +90,6 @@
 
 #define SERAC_CONCAT_(a, b) a##b
 #define SERAC_CONCAT(a, b) SERAC_CONCAT_(a, b)
-
-#define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name)
 
 namespace serac::profiling::detail {
 
@@ -111,7 +120,25 @@ auto&& forwarder(T&& thing)
   return std::forward<T>(thing);
 }
 
+  /**
+   * @brief Guarantees str is a c string
+   */
+template <typename T>
+ std::enable_if_t<std::is_same_v<const char *, T>, const char * > make_cstr(T str) {
+    return str;
+}
+
+  /**
+   * @brief Converts a std::string into a c string
+   */  
+template <typename T>
+std::enable_if_t<std::is_same_v<std::string, T>, const char * > make_cstr(const T & str) {
+    return str.c_str();
+}
+  
 }  // namespace serac::profiling::detail
+
+#define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name))
 
 /**
  * @brief The type that should be returned from the profiling wrapper lambda
@@ -123,19 +150,22 @@ auto&& forwarder(T&& thing)
 
 #define SERAC_PROFILE_EXPR(name, expr)                                       \
   [&]() -> typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr) {                   \
-    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(name);        \
+    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name)); \
     return static_cast<typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr)>(expr); \
   }()
 
+/**
+ * @brief Profiles an expression several times; Return the last evaluation
+ */
 #define SERAC_PROFILE_EXPR_LOOP(name, expr, ntest)                                                                  \
   (                                                                                                                 \
       [&]() {                                                                                                       \
         for (int SERAC_CONCAT(i, __LINE__) = 0; SERAC_CONCAT(i, __LINE__) < ntest - 1; SERAC_CONCAT(i, __LINE__)++) \
-          SERAC_PROFILE_EXPR(name, expr);                                                                           \
+          SERAC_PROFILE_EXPR(serac::profiling::detail::make_cstr(name), expr); \
       }(),                                                                                                          \
-      SERAC_PROFILE_EXPR(name, expr))
+      SERAC_PROFILE_EXPR(serac::profiling::detail::make_cstr(name), expr))
 
-#define SERAC_PROFILE_VOID_EXPR(name, expr) CALI_WRAP_STATEMENT(name, expr)
+#define SERAC_PROFILE_VOID_EXPR(name, expr) CALI_WRAP_STATEMENT(serac::profiling::detail::make_cstr(name), expr)
 
 #else  // SERAC_USE_CALIPER not defined
 

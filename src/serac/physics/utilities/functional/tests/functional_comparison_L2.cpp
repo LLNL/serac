@@ -47,7 +47,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   A.AddDomainIntegrator(new mfem::MassIntegrator(a_coef));
 
   // Assemble the bilinear form into a matrix
-  SERAC_PROFILE_VOID_EXPR(concat("mfem_localAssemble", postfix).c_str(), A.Assemble(0));
+  SERAC_PROFILE_VOID_EXPR(concat("mfem_localAssemble", postfix), A.Assemble(0));
   A.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
@@ -58,9 +58,9 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 
   // Create and assemble the linear load term into a vector
   f.AddDomainIntegrator(new mfem::DomainLFIntegrator(load_func));
-  SERAC_PROFILE_VOID_EXPR(serac::profiling::concat("mfem_fAssemble", postfix).c_str(), f.Assemble());
+  SERAC_PROFILE_VOID_EXPR(serac::profiling::concat("mfem_fAssemble", postfix), f.Assemble());
   std::unique_ptr<mfem::HypreParVector> F(
-      SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix).c_str(), f.ParallelAssemble()));
+      SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
 
   // Set a random state to evaluate the residual
   mfem::ParGridFunction u_global(&fespace);
@@ -92,10 +92,10 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 
   // Compute the residual using standard MFEM methods
   // mfem::Vector r1 = (*J) * U - (*F);
-  mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix).c_str(), A * U - (*F));
+  mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), A * U - (*F));
 
   // Compute the residual using weak form
-  mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix).c_str(), residual(U));
+  mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual(U));
 
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
@@ -108,11 +108,11 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 
   // Compute the gradient using weak form
   mfem::Operator& grad2 =
-      SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix).c_str(), residual.GetGradient(U));
+      SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
   // Compute the gradient action using standard MFEM and Functional
-  mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix).c_str(), (*J) * U);
-  mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix).c_str(), grad2 * U);
+  mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix), (*J) * U);
+  mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix), grad2 * U);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
@@ -137,7 +137,8 @@ TEST(L2, 3D_cubic) { functional_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{});
 /** CUDA workaround
 Issue with std::variant for InputOptions in mesh_utils.hpp
 
-This file has a lot of warnings. The summary of the issue is described in more detail here (https://github.com/LLNL/serac/issues/485))
+This file has a lot of warnings. The summary of the issue is described in more detail here
+(https://github.com/LLNL/serac/issues/485))
 
 The following is an excerpt of a warning:
 serac/src/serac/infrastructure/../../serac/physics/utilities/functional/tensor.hpp(347): warning: calling a __host__
