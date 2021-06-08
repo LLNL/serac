@@ -69,14 +69,13 @@
 
 /**
  * @def SERAC_PROFILE_VOID_EXPR(name, expr)
- * Profiles a single void-expression using a cali::ScopeAnnotation internally. 
+ * Profiles a single void-expression using a cali::ScopeAnnotation internally.
  */
 
 /**
  * @def SERAC_PROFILE_EXPR_LOOP(name, expr, ntest)
  * Profiles an expression several times. Returns the last evaluation
  */
-
 
 #ifdef SERAC_USE_CALIPER
 
@@ -120,25 +119,20 @@ auto&& forwarder(T&& thing)
   return std::forward<T>(thing);
 }
 
-  /**
-   * @brief Guarantees str is a c string
-   */
-template <typename T>
- std::enable_if_t<std::is_same_v<const char *, T>, const char * > make_cstr(T str) {
-    return str;
-}
+/**
+ * @brief Guarantees str is a c string
+ */
+const char* make_cstr(const char* str) { return str; }
 
-  /**
-   * @brief Converts a std::string into a c string
-   */  
-template <typename T>
-std::enable_if_t<std::is_same_v<std::string, T>, const char * > make_cstr(const T & str) {
-    return str.c_str();
-}
-  
+/**
+ * @brief Converts a std::string into a c string
+ */
+const char* make_cstr(const std::string& str) { return str.c_str(); }
+
 }  // namespace serac::profiling::detail
 
-#define SERAC_PROFILE_SCOPE(name) cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name))
+#define SERAC_PROFILE_SCOPE(name) \
+  cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name))
 
 /**
  * @brief The type that should be returned from the profiling wrapper lambda
@@ -148,10 +142,10 @@ std::enable_if_t<std::is_same_v<std::string, T>, const char * > make_cstr(const 
 #define SERAC_PROFILE_EXPR_RETURN_TYPE(expr) \
   serac::profiling::detail::remove_rvalue_reference<decltype(serac::profiling::detail::forwarder(expr))>::type
 
-#define SERAC_PROFILE_EXPR(name, expr)                                       \
-  [&]() -> typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr) {                   \
+#define SERAC_PROFILE_EXPR(name, expr)                                                                     \
+  [&]() -> typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr) {                                                 \
     const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name)); \
-    return static_cast<typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr)>(expr); \
+    return static_cast<typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr)>(expr);                               \
   }()
 
 /**
@@ -161,7 +155,7 @@ std::enable_if_t<std::is_same_v<std::string, T>, const char * > make_cstr(const 
   (                                                                                                                 \
       [&]() {                                                                                                       \
         for (int SERAC_CONCAT(i, __LINE__) = 0; SERAC_CONCAT(i, __LINE__) < ntest - 1; SERAC_CONCAT(i, __LINE__)++) \
-          SERAC_PROFILE_EXPR(serac::profiling::detail::make_cstr(name), expr); \
+          SERAC_PROFILE_EXPR(serac::profiling::detail::make_cstr(name), expr);                                      \
       }(),                                                                                                          \
       SERAC_PROFILE_EXPR(serac::profiling::detail::make_cstr(name), expr))
 
