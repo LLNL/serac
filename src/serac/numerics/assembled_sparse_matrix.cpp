@@ -28,9 +28,9 @@ namespace serac {
 namespace mfem_ext {
 
 AssembledSparseMatrix::AssembledSparseMatrix(
-    const mfem::FiniteElementSpace& test,   // test_elem_dofs * ne * vdim x vdim * test_ndofs
-    const mfem::FiniteElementSpace& trial,  // trial_elem_dofs * ne * vdim x vdim * trial_ndofs
-    mfem::ElementDofOrdering        elem_order)
+    const mfem::ParFiniteElementSpace& test,   // test_elem_dofs * ne * vdim x vdim * test_ndofs
+    const mfem::ParFiniteElementSpace& trial,  // trial_elem_dofs * ne * vdim x vdim * trial_ndofs
+    mfem::ElementDofOrdering           elem_order)
     : mfem::SparseMatrix(test.GetNDofs() * test.GetVDim(), trial.GetNDofs() * trial.GetVDim()),
       test_fes_(test),
       trial_fes_(trial),
@@ -86,9 +86,9 @@ int AssembledSparseMatrix::FillI()
     int nnz_row = 0;
     for (int e_index = 0; e_index < nrow_elems; e_index++) {
       // test_indices can be negative in the case of Hcurl
-      const int                  test_index_v = test_indices[test_row_offset + e_index];
-      const int                  test_index   = test_index_v >= 0 ? test_index_v : -test_index_v - 1;
-      const int                  e            = test_index / test_elem_dof;
+      const int test_index_v = test_indices[test_row_offset + e_index];
+      const int test_index   = test_index_v >= 0 ? test_index_v : -test_index_v - 1;
+      const int e            = test_index / test_elem_dof;
 
       // find corresponding trial_vdofs
       mfem::Array<int> trial_elem_vdofs(trial_elem_dof);
@@ -131,10 +131,10 @@ void AssembledSparseMatrix::FillJ()
   auto& test_indices    = detail::ElementRestriction_indices(test_restriction_);
   auto& trial_gatherMap = detail::ElementRestriction_gatherMap(trial_restriction_);
 
-  const int                  test_elem_dof  = test_fes_.GetFE(0)->GetDof();
-  const int                  trial_elem_dof = trial_fes_.GetFE(0)->GetDof();
-  const int                  test_vdim      = test_fes_.GetVDim();
-  const int                  trial_vdim     = trial_fes_.GetVDim();
+  const int test_elem_dof  = test_fes_.GetFE(0)->GetDof();
+  const int trial_elem_dof = trial_fes_.GetFE(0)->GetDof();
+  const int test_vdim      = test_fes_.GetVDim();
+  const int trial_vdim     = trial_fes_.GetVDim();
 
   const int ne = trial_fes_.GetNE();
   ea_map_.SetSize(test_elem_dof * test_vdim * trial_elem_dof * trial_vdim * ne);
@@ -230,10 +230,10 @@ void AssembledSparseMatrix::FillData(const mfem::Vector& ea_data)
 {
   auto Data = WriteData();
 
-  const int                  test_elem_dof  = test_fes_.GetFE(0)->GetDof();
-  const int                  trial_elem_dof = trial_fes_.GetFE(0)->GetDof();
-  const int                  test_vdim      = test_fes_.GetVDim();
-  const int                  trial_vdim     = trial_fes_.GetVDim();
+  const int test_elem_dof  = test_fes_.GetFE(0)->GetDof();
+  const int trial_elem_dof = trial_fes_.GetFE(0)->GetDof();
+  const int test_vdim      = test_fes_.GetVDim();
+  const int trial_vdim     = trial_fes_.GetVDim();
 
   const int ne = trial_fes_.GetNE();
 

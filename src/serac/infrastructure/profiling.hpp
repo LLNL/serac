@@ -121,7 +121,7 @@ auto&& forwarder(T&& thing)
  * a reference to a temporary and leaves all other types intact.
  */
 #define SERAC_PROFILE_EXPR_RETURN_TYPE(expr) \
-  serac::profiling::detail::remove_rvalue_reference<decltype(serac::profiling::detail::forwarder(expr))>::type
+  typename serac::profiling::detail::remove_rvalue_reference<decltype(serac::profiling::detail::forwarder(expr))>::type
 
 #define SERAC_PROFILE_EXPR(name, expr)                                \
   [&]() -> SERAC_PROFILE_EXPR_RETURN_TYPE(expr) {                     \

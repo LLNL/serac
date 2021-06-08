@@ -480,8 +480,8 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto                  J  = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
-  [[maybe_unused]] auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
+  auto J  = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
+  auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
@@ -511,10 +511,10 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         N = dot(N, inv(J_q));
       }
 
-      [[maybe_unused]] auto f00 = std::get<0>(std::get<0>(dq_darg));
-      [[maybe_unused]] auto f01 = std::get<1>(std::get<0>(dq_darg));
-      [[maybe_unused]] auto f10 = std::get<0>(std::get<1>(dq_darg));
-      [[maybe_unused]] auto f11 = std::get<1>(std::get<1>(dq_darg));
+      auto f00 = std::get<0>(std::get<0>(dq_darg));
+      auto f01 = std::get<1>(std::get<0>(dq_darg));
+      auto f10 = std::get<0>(std::get<1>(dq_darg));
+      auto f11 = std::get<1>(std::get<1>(dq_darg));
 
       // df0_du stiffness contribution
       // size(M) = test_ndof

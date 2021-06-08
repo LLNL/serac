@@ -125,12 +125,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Test fully assembled matrix
   mfem::Array<int> dofs;
   fespace.GetElementDofs(0, dofs);
-  mfem::Vector K_e(mesh.GetNE() * dofs.Size() * fespace.GetVDim() * dofs.Size() * fespace.GetVDim());
-  K_e = 0.;
-  {
-    SERAC_PROFILE_SCOPE(concat("functional_gradientMatrix", postfix).c_str());
-    residual.ComputeElementMatrices(K_e);
-  }
+  mfem::Vector K_e = residual.ComputeElementMatrices();
 
   serac::mfem_ext::AssembledSparseMatrix A_serac_mat(fespace, fespace, mfem::ElementDofOrdering::LEXICOGRAPHIC);
   {
@@ -141,7 +136,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   A_serac_mat.Finalize();
 
   std::unique_ptr<mfem::HypreParMatrix> J2(
-      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), A.ParallelAssemble(&A_serac_mat)));
+      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), A_serac_mat.ParallelAssemble()));
 
   // Compute the gradient action using standard MFEM and functional
   mfem::Vector g1 = (*J) * U;
@@ -238,14 +233,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   mfem::Operator& grad = residual.GetGradient(U);
 
-  serac::mfem_ext::AssembledSparseMatrix A_serac_mat(fespace, fespace, mfem::ElementDofOrdering::LEXICOGRAPHIC);
-  {
-    SERAC_PROFILE_SCOPE(concat("functional_gradientMatrix+FillData", postfix).c_str());
-    residual.UpdateAssembledSparseMatrix(A_serac_mat);
-  }
+  auto& A_serac_mat = residual.GetAssembledSparseMatrix();
+
   A_serac_mat.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J2(
-      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), A.ParallelAssemble(&A_serac_mat)));
+      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), A_serac_mat.ParallelAssemble()));
 
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad * U;
@@ -336,23 +328,10 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 
   mfem::Operator& grad = residual.GetGradient(U);
 
-  mfem::SparseMatrix B_mat(B.SpMat());
-
-  mfem::Vector K_e(fespace.GetFE(0)->GetDof() * fespace.GetFE(0)->GetDim() * fespace.GetFE(0)->GetDof() *
-                   fespace.GetFE(0)->GetDim() * fespace.GetNE());
-  K_e = 0.;
-
-  // residual.ComputeElementMatrices(K_e);
-
-  serac::mfem_ext::AssembledSparseMatrix B_serac_mat(fespace, fespace, mfem::ElementDofOrdering::LEXICOGRAPHIC);
-  {
-    SERAC_PROFILE_SCOPE(concat("functional_gradientMatrix+FillData", postfix).c_str());
-    residual.UpdateAssembledSparseMatrix(B_serac_mat);
-    // B_serac_mat.FillData(K_e);
-  }
+  auto& B_serac_mat = residual.GetAssembledSparseMatrix();
   B_serac_mat.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J2(
-      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), B.ParallelAssemble(&B_serac_mat)));
+      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), B_serac_mat.ParallelAssemble()));
 
   mfem::Vector g1 = (*J) * U;
   mfem::Vector g2 = grad * U;
@@ -404,7 +383,7 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 2;
+  int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";

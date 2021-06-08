@@ -17,9 +17,9 @@ public:
    * @param[in] trial Trial finite element space
    * @param[in] elem_order ElementDofOrdering chosen for both spaces
    */
-  AssembledSparseMatrix(const mfem::FiniteElementSpace& test,   // test_elem_dofs * ne * vdim x vdim * test_ndofs
-                        const mfem::FiniteElementSpace& trial,  // trial_elem_dofs * ne * vdim x vdim * trial_ndofs
-                        mfem::ElementDofOrdering        elem_order);
+  AssembledSparseMatrix(const mfem::ParFiniteElementSpace& test,   // test_elem_dofs * ne * vdim x vdim * test_ndofs
+                        const mfem::ParFiniteElementSpace& trial,  // trial_elem_dofs * ne * vdim x vdim * trial_ndofs
+                        mfem::ElementDofOrdering           elem_order);
 
   /**
    * @brief Updates SparseMatrix entries based on new element assembled matrices
@@ -31,17 +31,28 @@ public:
    * @brief Returns the necessary size of element assembled data
    * @return Size of ea_map
    */
-  auto GetElementDataSize()
+  auto GetElementDataSize() { return ea_map_.Size(); }
+
+  /**
+   * @brief Assembles a new HypreParMatrix
+   * @returns a new HypreParMatrix
+   */
+
+  auto ParallelAssemble()
   {
-    return ea_map_.Size();
+    auto A =
+        std::make_unique<mfem::HypreParMatrix>(trial_fes_.GetComm(), test_fes_.GlobalVSize(), trial_fes_.GlobalVSize(),
+                                               test_fes_.GetDofOffsets(), trial_fes_.GetDofOffsets(), this);
+
+    return RAP(test_fes_.Dof_TrueDof_Matrix(), A.release(), trial_fes_.Dof_TrueDof_Matrix());
   }
-  
+
 protected:
   // Test space describing the sparsity pattern
-  const mfem::FiniteElementSpace& test_fes_;
+  const mfem::ParFiniteElementSpace& test_fes_;
 
   // Trial space describing the sparsity pattern
-  const mfem::FiniteElementSpace& trial_fes_;
+  const mfem::ParFiniteElementSpace& trial_fes_;
 
   // Test space element restriction
   mfem::ElementRestriction test_restriction_;
