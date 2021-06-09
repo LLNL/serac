@@ -20,8 +20,6 @@
 
 #include <gtest/gtest.h>
 
-using namespace std;
-using namespace mfem;
 using namespace serac;
 
 int            num_procs, myid;
@@ -34,24 +32,34 @@ std::unique_ptr<mfem::ParMesh> mesh3D;
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  auto                  fec = H1_FECollection(p, dim);
-  ParFiniteElementSpace fespace(&mesh, &fec);
 
-  LinearForm          f(&fespace);
-  FunctionCoefficient scalar_function([&](const Vector& coords) { return coords(0) * coords(1); });
-  VectorFunctionCoefficient vector_function(dim, [&](const Vector& coords, Vector & output) { 
+  double rho = 1.75;
+
+  auto                  fec = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+
+  mfem::LinearForm          f(&fespace);
+  mfem::FunctionCoefficient scalar_function([&](const mfem::Vector& coords) { return coords(0) * coords(1); });
+  mfem::VectorFunctionCoefficient vector_function(dim, [&](const mfem::Vector& coords, mfem::Vector & output) { 
     output[0] = sin(coords[0]); 
     output[1] = coords[0] * coords[1];
   });
 
-  f.AddBoundaryIntegrator(new BoundaryLFIntegrator(scalar_function));
-  f.AddBoundaryIntegrator(new BoundaryNormalLFIntegrator(vector_function));
+  f.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(scalar_function));
+  f.AddBoundaryIntegrator(new mfem::BoundaryNormalLFIntegrator(vector_function));
   f.Assemble();
 
-  ParGridFunction u_global(&fespace);
+  mfem::ParBilinearForm B(&fespace);
+  mfem::ConstantCoefficient density(rho);
+  B.AddBoundaryIntegrator(new mfem::BoundaryMassIntegrator(density));
+  B.Assemble(0);
+  B.Finalize();
+  std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
+
+  mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
-  Vector U(fespace.TrueVSize());
+  mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
   using test_space  = decltype(test);
@@ -59,13 +67,13 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
-  residual.AddBoundaryIntegral(Dimension<dim-1>{}, [&](auto x, auto n, auto /* u */) { 
+  residual.AddBoundaryIntegral(Dimension<dim-1>{}, [&]([[maybe_unused]] auto x, [[maybe_unused]] auto n, auto u) { 
     tensor<double,dim> b{sin(x[0]), x[0] * x[1]};
-    return x[0] * x[1] + dot(b, n);
+    return x[0] * x[1] + dot(b, n) + rho * u;
   }, mesh);
 
-  mfem::Vector r1 = f;
-  mfem::Vector r2 = residual(u_global);
+  mfem::Vector r1 = (*J) * U + f;
+  mfem::Vector r2 = residual(U);
 
   if (verbose) {
     std::cout << "sum(r2):  " << r2.Sum() << std::endl;
@@ -74,7 +82,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
     std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
   }
 
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-4);
+  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-3);
 
 }
 
