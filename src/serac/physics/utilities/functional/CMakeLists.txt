@@ -32,6 +32,10 @@ set(functional_headers
     detail/metaprogramming.hpp
     )
 
+if(ENABLE_CUDA)
+list(APPEND functional_headers integral_cuda.cuh)
+endif()
+
 blt_add_library(
       NAME        serac_functional
       HEADERS     ${functional_headers}

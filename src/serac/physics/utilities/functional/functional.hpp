@@ -18,7 +18,7 @@
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/finite_element.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
-#include "serac/physics/utilities/functional/integral.hpp"
+#include "serac/physics/utilities/functional/integral_eval.hpp"
 
 namespace serac {
 
