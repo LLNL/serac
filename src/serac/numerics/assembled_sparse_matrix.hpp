@@ -40,11 +40,11 @@ public:
 
   auto ParallelAssemble()
   {
-    auto A =
+    auto hypre_A =
         std::make_unique<mfem::HypreParMatrix>(trial_fes_.GetComm(), test_fes_.GlobalVSize(), trial_fes_.GlobalVSize(),
                                                test_fes_.GetDofOffsets(), trial_fes_.GetDofOffsets(), this);
 
-    return RAP(test_fes_.Dof_TrueDof_Matrix(), A.release(), trial_fes_.Dof_TrueDof_Matrix());
+    return RAP(test_fes_.Dof_TrueDof_Matrix(), hypre_A.release(), trial_fes_.Dof_TrueDof_Matrix());
   }
 
 protected:
