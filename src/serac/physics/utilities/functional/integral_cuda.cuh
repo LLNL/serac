@@ -16,6 +16,7 @@ SERAC_HOST_DEVICE   inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr,
 
 } // namespace detail
 
+
 template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
 typename derivatives_type, typename lambda>
 __global__ void evaluation_kernel_cuda(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
@@ -75,6 +76,7 @@ derivatives_ptr[e * int(rule.size()) + q] = get_gradient(qf_output);
 // once we've finished the element integration loop, write our element residuals
 // out to memory, to be later assembled into global residuals by mfem
 detail::Add(r, r_elem, e);
+
 }
 
 }

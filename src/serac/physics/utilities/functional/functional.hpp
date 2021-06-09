@@ -136,7 +136,7 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int geometry_dim, int spatial_dim, typename lambda>
-  void AddIntegral(Dimension<geometry_dim>, Dimension<spatial_dim>, lambda&& integrand, mfem::Mesh& domain)
+  void AddIntegral(Dimension<geometry_dim>, Dimension<spatial_dim>, lambda&& integrand, mfem::Mesh& domain, bool use_cuda = false)
   {
     if constexpr (geometry_dim == spatial_dim) {
       auto num_elements = domain.GetNE();
@@ -153,7 +153,7 @@ public:
       constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
       auto           geom  = domain.GetGeometricFactors(ir, flags);
       domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{},
-                                     Dimension<spatial_dim>{}, integrand);
+                                     Dimension<spatial_dim>{}, integrand, use_cuda);
       return;
     }
 #ifdef ENABLE_BOUNDARY_INTEGRALS
@@ -228,7 +228,7 @@ public:
    * @param[in] domain The mesh to evaluate the integral on
    */
   template <int d, typename lambda>
-  void AddDomainIntegral(Dimension<d>, lambda&& integrand, mfem::Mesh& domain)
+  void AddDomainIntegral(Dimension<d>, lambda&& integrand, mfem::Mesh& domain, bool use_cuda = false)
   {
     AddIntegral(Dimension<d>{} /* geometry */, Dimension<d>{} /* spatial */, integrand, domain);
   }

@@ -31,9 +31,9 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameters
    */
-  template <int geometry_dim, int spatial_dim, typename lambda_type, bool use_cuda = false>
+  template <int geometry_dim, int spatial_dim, typename lambda_type>
   Integral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<geometry_dim>,
-           Dimension<spatial_dim>, lambda_type&& qf)
+           Dimension<spatial_dim>, lambda_type&& qf, bool use_cuda = false)
       : J_(J), X_(X)
   {
     constexpr auto geometry                      = supported_geometries[geometry_dim];
@@ -72,9 +72,9 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
     evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-      if constexpr (use_cuda) {
+      if (use_cuda) {
 #if defined(__CUDACC__)
-      evaluation_kernel_cuda<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
+	evaluation_kernel_cuda<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q><<<1,1>>>(U, R, qf_derivatives.get(), J_,
                                                                                          X_, num_elements, qf);
       #endif
 	} else {
