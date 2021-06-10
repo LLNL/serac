@@ -121,7 +121,7 @@ inline constexpr void for_constexpr(lambda&& f)
 
 // sam's templates for undoing for_constexpr for faster compile times
 template <int n1, typename lambda>
-void for_loop(const lambda& f)
+void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     f(i);
@@ -129,7 +129,7 @@ void for_loop(const lambda& f)
 }
 
 template <int n1, int n2, typename lambda>
-void for_loop(const lambda& f)
+void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
@@ -139,7 +139,7 @@ void for_loop(const lambda& f)
 }
 
 template <int n1, int n2, int n3, typename lambda>
-void for_loop(const lambda& f)
+void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
@@ -151,7 +151,7 @@ void for_loop(const lambda& f)
 }
 
 template <int n1, int n2, int n3, int n4, typename lambda>
-void for_loop(const lambda& f)
+void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
@@ -165,7 +165,7 @@ void for_loop(const lambda& f)
 }
 
 template <int n1, int n2, int n3, int n4, int n5, typename lambda>
-void for_loop(const lambda& f)
+void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
@@ -181,7 +181,7 @@ void for_loop(const lambda& f)
 }
 
 template <int n1, int n2, int n3, int n4, int n5, int n6, typename lambda>
-void for_loop(const lambda& f)
+void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
