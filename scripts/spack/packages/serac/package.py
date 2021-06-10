@@ -73,7 +73,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mpi")
     depends_on("cmake@3.8:")
 
-    depends_on("ascent~vtkh~fortran~shared~openmp")
+    depends_on("ascent@0.7.1serac~vtkh~fortran~shared~openmp")
 
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")

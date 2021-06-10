@@ -43,6 +43,11 @@ class Ascent(Package, CudaPackage):
             branch='develop',
             submodules=True)
 
+    # SERAC EDIT START
+    # 0.7.1 + https://github.com/Alpine-DAV/ascent/pull/747
+    version('0.7.1serac', commit='358b578be84408f99345156455f1b66dc8ccaac8', submodules="True")
+    # SERAC EDIT END
+
     version('0.7.1',
             tag='v0.7.1',
             submodules=True,
@@ -352,9 +357,6 @@ class Ascent(Package, CudaPackage):
         else:
             cfg.write(cmake_cache_entry("BUILD_SHARED_LIBS", "OFF"))
 
-
-        ####### SERAC EDIT - Fixed in pending Spack PR:
-        ## https://github.com/spack/spack/pull/23826
         # use global spack compiler flags
         cppflags = ' '.join(spec.compiler_flags['cppflags'])
         if cppflags:
@@ -371,8 +373,6 @@ class Ascent(Package, CudaPackage):
             fflags += " -ef"
         if fflags:
             cfg.write(cmake_cache_entry("CMAKE_Fortran_FLAGS", fflags))
-
-        #### END SERAC EDIT
 
         #######################
         # Unit Tests
