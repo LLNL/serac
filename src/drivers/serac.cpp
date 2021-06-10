@@ -24,6 +24,7 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/infrastructure/logger.hpp"
+#include "serac/infrastructure/output.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/thermal_solid.hpp"
@@ -98,6 +99,8 @@ int main(int argc, char* argv[])
 
   // Check for the doc creation command line argument
   bool create_input_file_docs = cli_opts.find("create_input_file_docs") != cli_opts.end();
+  // Check for the output fields command line argument
+  bool output_fields = cli_opts.find("output_fields") != cli_opts.end();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
@@ -193,6 +196,10 @@ int main(int argc, char* argv[])
 
     // Determine if this is the last timestep
     last_step = (t >= t_final - 1e-8 * dt);
+  }
+
+  if (output_fields) {
+    serac::output::outputFields(datastore, "serac_fields", t, serac::output::Language::JSON);
   }
 
   serac::exitGracefully();
