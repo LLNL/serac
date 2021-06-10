@@ -32,12 +32,11 @@ RUN git clone --recursive --branch $branch --single-branch --depth 1 https://git
 # New containers will use Python3
 RUN cd serac && python3.6 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu16/ \
                                                        --project-json=.uberenv_config.json \
-                                                       --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k \
-             && rm -rf /home/serac/serac_tpls/builds
+                                                       --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
 
 RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac/*.cmake /home/serac/export_hostconfig
 
 # Make sure the new hostconfig worked
-RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test \
-             && cd /home/serac && rm -rf serac
+RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
+RUN rm -rf serac
