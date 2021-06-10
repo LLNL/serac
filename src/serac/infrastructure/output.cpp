@@ -14,6 +14,8 @@
 #include "ascent/ascent.hpp"
 #include "axom/sidre.hpp"
 
+#include "mpi.h"
+
 namespace serac::output {
 
 void outputFields(axom::sidre::DataStore& datastore, const std::string& file_name_prefix, double time,
@@ -24,7 +26,8 @@ void outputFields(axom::sidre::DataStore& datastore, const std::string& file_nam
   // Configure Ascent to extract data
   ascent::Ascent ascent;
   conduit::Node  ascent_opts;
-  ascent_opts["mpi_comm"] = MPI_COMM_WORLD;
+  // Use MPI function that always returns an int type for the communicator
+  ascent_opts["mpi_comm"] = MPI_Comm_c2f(MPI_COMM_WORLD);
   // Do not allow Ascent to use a local file to override actions
   ascent_opts["actions_file"] = "";
   ascent.open(ascent_opts);
