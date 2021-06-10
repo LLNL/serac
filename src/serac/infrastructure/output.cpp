@@ -61,12 +61,6 @@ void outputFields(axom::sidre::DataStore& datastore, const std::string& file_nam
     extracts["e1/params/fields"].append() = curr_field_grp->getName();
   }
 
-  // std::vector<std::string> field_names = {"temperature", "velocity", "displacement"};
-  // for (auto field_name : field_names) {
-  //   SLIC_ERROR_IF(!fields_grp->hasGroup(field_names[i]), "Field name not found: " << field_names[i]);
-  //   extracts["e1/params/fields"].append() = field_names[i];
-  // }
-
   // Create Ascent actions
   conduit::Node  actions;
   conduit::Node& add_extracts = actions.append();
