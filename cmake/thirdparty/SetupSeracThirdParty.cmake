@@ -257,7 +257,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # to work around CMake error
     #---------------------------------------------------------------------------
     set(_imported_targets
-        ascent::ascent
+        ascent::ascent_mpi
         axom
         conduit
         conduit::conduit_mpi
