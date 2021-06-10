@@ -97,7 +97,10 @@ class Ascent(Package, CudaPackage):
     ###########################################################################
 
     # Certain CMake versions have been found to break for our use cases
-    depends_on("cmake@3.14.1:3.14.99,3.18.2:", type='build')
+    # SERAC EDIT START
+    #depends_on("cmake@3.14.1:3.14.99,3.18.2:", type='build')
+    depends_on("cmake@3.14.1:3.14.99,3.18.0:", type='build')
+    # SERAC EDIT END
     depends_on("conduit~python", when="~python")
     depends_on("conduit+python", when="+python+shared")
     depends_on("conduit~shared~python", when="~shared")
