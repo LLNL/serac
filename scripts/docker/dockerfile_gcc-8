@@ -33,6 +33,8 @@ RUN git clone --recursive --branch $branch --single-branch --depth 1 https://git
 RUN cd serac && python3.6 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu16/ \
                                                        --project-json=.uberenv_config.json \
                                                        --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
+# white238: commented out due to logs disapearing and this being saved due to layering
+#RUN rm -rf /home/serac/serac_tpls/builds
 
 RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac/*.cmake /home/serac/export_hostconfig
