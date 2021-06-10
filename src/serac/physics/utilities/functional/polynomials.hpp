@@ -100,7 +100,7 @@ constexpr int factorial(int n)
 
 /**
  * @brief compute the first n powers of x
- * @tparam[in] n how many powers to compute
+ * @tparam n how many powers to compute
  * @param[in] x the number to be raised to varying powers
  */
 template <int n, typename T>
@@ -118,7 +118,7 @@ constexpr tensor<T, n> powers(T x)
  * @brief Chebyshev polynomials of the first kind
  * Satisfying:
  * T_n(cos(t)) == cos(n*t)
- * @tparam[in] n how many entries to compute
+ * @tparam n how many entries to compute
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename S>
@@ -139,7 +139,7 @@ constexpr tensor<S, n> ChebyshevT(S x)
  * @brief Chebyshev polynomials of the second kind
  * Satisfying:
  * sin(t) U_n(cos(t)) == sin((n+1)*t)
- * @tparam[in] n how many entries to compute
+ * @tparam n how many entries to compute
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
@@ -159,7 +159,7 @@ tensor<T, n> ChebyshevU(T x)
 /**
  * @brief Legendre Polynomials, orthogonal on the domain (-1, 1)
  * with unit weight function.
- * @tparam[in] n how many entries to compute
+ * @tparam n how many entries to compute
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
@@ -178,7 +178,7 @@ tensor<T, n> Legendre(T x)
 
 /**
  * @brief Bernstein Polynomials on the domain [0, 1]
- * @tparam[in] n how many entries to compute
+ * @tparam n how many entries to compute
  * @param[in] s where to evaluate the polynomials
  */
 template <int n, typename T>
@@ -205,7 +205,7 @@ tensor<T, n> Bernstein(T s)
 
 /**
  * @brief Lagrange Interpolating polynomials for nodes at Gauss-Lobatto points on the interval [0, 1]
- * @tparam[in] n how many entries to compute
+ * @tparam n how many entries to compute
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
@@ -228,7 +228,7 @@ constexpr tensor<T, n> GaussLobattoInterpolation(T x)
 
 /**
  * @brief Derivatives of the Lagrange Interpolating polynomials for nodes at Gauss-Lobatto points on the interval [0, 1]
- * @tparam[in] n how many entries to compute
+ * @tparam n how many entries to compute
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
@@ -261,7 +261,7 @@ constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[maybe_unused]] T x)
  * to an error of ~1.0e-13 and keeping more than 16 significant figures seems to help bring that error down to machine
  * epsilon again.
  *
- * @tparam[in] n how many entries to compute
+ * @tparam n how many entries to compute
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
@@ -298,7 +298,7 @@ tensor<T, n> GaussLegendreInterpolation([[maybe_unused]] T x)
  * (D[InterpolatingPolynomial[Transpose[{xi, #}], x], x] & /@ IdentityMatrix[n])] <> ";"], {n, 1, 4}
  * ]
  *
- * @tparam[in] n how many entries to compute
+ * @tparam n how many entries to compute
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>

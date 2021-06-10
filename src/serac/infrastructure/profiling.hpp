@@ -134,6 +134,9 @@ inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 #define SERAC_PROFILE_SCOPE(name) \
   cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name))
 
+}  // namespace detail
+/// @endcond
+
 /**
  * @brief The type that should be returned from the profiling wrapper lambda
  * It converts rvalue reference arguments of type T&& to T to avoid returning

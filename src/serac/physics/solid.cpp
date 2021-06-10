@@ -468,7 +468,7 @@ using serac::DirichletEnforcementMethod;
 using serac::Solid;
 using serac::TimestepMethod;
 
-Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet::Container& base)
+serac::Solid::InputOptions FromInlet<serac::Solid::InputOptions>::operator()(const axom::inlet::Container& base)
 {
   Solid::InputOptions result;
 
