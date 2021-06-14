@@ -570,7 +570,7 @@ private:
   /**
    * @brief Local AssembledSparseMatrix storage for ComputeElementMatrices
    *
-   * If unique_ptr is empty, construct AssembledSparsMatrix.
+   * If unique_ptr is empty, construct AssembledSparseMatrix.
    *
    * @return reference to internal AssembledSparseMatrix
    */
