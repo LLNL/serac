@@ -563,7 +563,7 @@ private:
   mutable Gradient grad_;
 
   /**
-   * @brief The element tangent matrix vector for ComputeElementMatrices() and UpdateAssembledSparseMatrix() calls
+   * @brief storage buffer for element stiffness matrices, used in ComputeElementMatrices() and UpdateAssembledSparseMatrix()
    */
   mutable mfem::Vector K_e_;
 
