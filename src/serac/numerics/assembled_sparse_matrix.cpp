@@ -22,6 +22,41 @@ mfem::Array<int>& ElementRestriction_gatherMap(mfem::ElementRestriction&);
 
 template struct forbidden_restriction<&mfem::ElementRestriction::offsets, &mfem::ElementRestriction::indices,
                                       &mfem::ElementRestriction::gatherMap>;
+/**
+ * @brief Account for HCURL-oriented index
+ * @param[in] index Index-value. Can be negative for HCURL
+ * @return corresponding valid index value in array (must be positive)
+ */
+
+template <typename T>
+T oriented_index(T index)
+{
+  return index >= 0 ? index : -1 - index;
+}
+
+/**
+ * @brief Returns sign of index
+ * @param[in] index Index-value.
+ * @return sign of index. +1 for 0 or positive, and -1 for negative
+ */
+
+template <typename T>
+T sign(T index)
+{
+  return index >= 0 ? 1 : -1;
+}
+
+/**
+ * @brief Adds HCURL orientation encoding to index
+ * @param[in] index positive index value
+ * @param[in] orientation Positive orientation or negative
+ */
+template <typename T>
+T orient_index(T index, bool pos)
+{
+  return pos ? index : -1 - index;
+}
+
 }  // namespace detail
 
 namespace serac {
@@ -69,11 +104,8 @@ int AssembledSparseMatrix::FillI()
   const int trial_elem_dof = trial_fes_.GetFE(0)->GetDof();
   const int test_vdim      = test_fes_.GetVDim();
   const int trial_vdim     = trial_fes_.GetVDim();
-  const int test_ndofs     = test_fes_.GetNDofs();
 
-  for (int i = 0; i < test_vdim * test_ndofs; i++) {
-    I[i] = 0;
-  }
+  std::fill(&I[0], &I[I.Capacity()], 0);
 
   for (int test_vdof = 0; test_vdof < test_fes_.GetNDofs(); test_vdof++) {
     // Look through each element corresponding to a test_vdof
@@ -113,14 +145,16 @@ int AssembledSparseMatrix::FillI()
     }
   }
 
-  // Perform inclusive scan on all entries
+  // Perform exclusive scan
+  // Note: Currently gcc8.3.1 doesn't support exclusive_scan
+  // Use when possible: std::exclusive_scan(&I[0], &I[I.Capacity()], &I[0], 0);
   int nnz = 0;
-  for (int i = 0; i < test_ndofs * trial_vdim; i++) {
+  for (int i = 0; i < I.Capacity() - 1; i++) {
     int temp = I[i];
     I[i]     = nnz;
     nnz += temp;
   }
-  I[test_ndofs * trial_vdim] = nnz;
+  I[I.Capacity() - 1] = nnz;
 
   return nnz;
 }
@@ -153,14 +187,14 @@ void AssembledSparseMatrix::FillJ()
     // here we assume all the components have the same number of columns
     const int        nnz_row = I[test_fes_.DofToVDof(test_vdof, 0) + 1] - I[test_fes_.DofToVDof(test_vdof, 0)];
     mfem::Array<int> trial_vdofs(nnz_row);
-    trial_vdofs      = -1;
+    trial_vdofs      = -1;  // initialize with -1
     int j_vdof_index = 0;
 
     // Build temporary array for assembled J
     for (int e_index = 0; e_index < nrow_elems; e_index++) {
       // test_indices can be negative in the case of Hcurl
       const int test_index_v = test_indices[test_row_offset + e_index];
-      const int test_index   = test_index_v >= 0 ? test_index_v : -test_index_v - 1;
+      const int test_index   = detail::oriented_index(test_index_v);
       const int e            = test_index / test_elem_dof;
       const int test_i_elem  = test_index % test_elem_dof;
 
@@ -169,7 +203,7 @@ void AssembledSparseMatrix::FillJ()
       for (int j_elem = 0; j_elem < trial_elem_dof; j_elem++) {
         // could be negative.. but trial_elem_vdofs is a temporary array
         const auto trial_j_vdof_v = trial_gatherMap[trial_elem_dof * e + j_elem];
-        const auto trial_j_vdof   = trial_j_vdof_v >= 0 ? trial_j_vdof_v : -1 - trial_j_vdof_v;
+        const auto trial_j_vdof   = detail::oriented_index(trial_j_vdof_v);
         trial_elem_vdofs[j_elem]  = trial_j_vdof;
 
         // since trial_j_vdof could be negative but there are now two indices that point to the same dof (just oriented
@@ -189,7 +223,7 @@ void AssembledSparseMatrix::FillJ()
               const auto j_nnz_index  = i_dof_offset + column_index;
               // this index may be negative, but J needs to be positive
               const auto j_value = trial_fes_.DofToVDof(trial_j_vdof_v, vj);
-              J[j_nnz_index]     = j_value >= 0 ? j_value : -1 - j_value;
+              J[j_nnz_index]     = detail::oriented_index(j_value);
             }
           }
 
@@ -200,9 +234,9 @@ void AssembledSparseMatrix::FillJ()
               const auto column_index       = j_vdof_index + vj * nnz_row / trial_vdim;
               const int  index_val          = i_dof_offset + column_index;
               const int  trial_index        = trial_fes_.DofToVDof(trial_j_vdof_v, vj);
-              const int  orientation_factor = (test_index_v >= 0 ? 1 : -1) * (trial_index >= 0 ? 1 : -1);
+              const int  orientation_factor = detail::sign(test_index_v) * detail::sign(trial_index);
               map_ea(test_i_elem + test_elem_dof * vi, j_elem + trial_elem_dof * vj, e) =
-                  orientation_factor > 0 ? index_val : -1 - index_val;
+                  detail::orient_index(index_val, orientation_factor > 0);
             }
           }
 
@@ -216,9 +250,9 @@ void AssembledSparseMatrix::FillJ()
               const auto column_index       = find_index + vj * nnz_row / trial_vdim;
               const int  index_val          = i_dof_offset + column_index;
               const int  trial_index        = trial_fes_.DofToVDof(trial_j_vdof_v, vj);
-              const int  orientation_factor = (test_index_v >= 0 ? 1 : -1) * (trial_index >= 0 ? 1 : -1);
+              const int  orientation_factor = detail::sign(test_index_v) * detail::sign(trial_index);
               map_ea(test_i_elem + test_elem_dof * vi, j_elem + trial_elem_dof * vj, e) =
-                  orientation_factor > 0 ? index_val : -1 - index_val;
+                  detail::orient_index(index_val, orientation_factor > 0);
             }
           }
         }
@@ -248,9 +282,9 @@ void AssembledSparseMatrix::FillData(const mfem::Vector& ea_data)
         for (int j_elem = 0; j_elem < trial_elem_dof; j_elem++) {
           for (int vj = 0; vj < trial_vdim; vj++) {
             const auto map_ea_v     = map_ea(i_elem + vi * test_elem_dof, j_elem + vj * trial_elem_dof, e);
-            const auto map_ea_index = map_ea_v >= 0 ? map_ea_v : -1 - map_ea_v;
+            const auto map_ea_index = detail::oriented_index(map_ea_v);
             Data[map_ea_index] +=
-                (map_ea_v >= 0 ? 1 : -1) * mat_ea(i_elem + vi * test_elem_dof, j_elem + vj * trial_elem_dof, e);
+                detail::sign(map_ea_v) * mat_ea(i_elem + vi * test_elem_dof, j_elem + vj * trial_elem_dof, e);
           }
         }
       }
