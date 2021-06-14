@@ -867,7 +867,7 @@ public:
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
 
   /**
-   * @brief Computes the element stiffness matrices in as a reshaped vector
+   * @brief Computes the element stiffness matrices, storing them in an `mfem::Vector` that has been reshaped into a multidimensional array
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
    */
