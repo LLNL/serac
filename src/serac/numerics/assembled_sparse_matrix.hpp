@@ -69,7 +69,7 @@ protected:
 private:
   // Computes the row offsets for the CSR sparsity pattern given by the spaces test(trial)
   int FillI();
-  // Computes the column indicies per row for a CSR sparsity pattern given by the spaces test(trial)
+  // Computes the column indices per row for a CSR sparsity pattern given by the spaces test(trial)
   void FillJ();
 };
 }  // namespace mfem_ext
