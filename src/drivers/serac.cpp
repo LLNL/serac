@@ -141,10 +141,11 @@ int main(int argc, char* argv[])
   std::optional<serac::ThermalConduction::InputOptions> thermal_solver_options;
 
   // If the blocks exist, read the appropriate input file options
-  if (inlet.contains("solid")) {
+  // FIXME: This will get patched in inlet so we can do inlet.isUserProvided("solid") etc
+  if (inlet.getGlobalContainer().getChildContainers().at("solid")->isUserProvided()) {
     solid_solver_options = inlet["solid"].get<serac::Solid::InputOptions>();
   }
-  if (inlet.contains("thermal_conduction")) {
+  if (inlet.getGlobalContainer().getChildContainers().at("thermal_conduction")->isUserProvided()) {
     thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
   }
 

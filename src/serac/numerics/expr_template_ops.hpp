@@ -42,7 +42,7 @@ auto operator-(MFEMVec&& u)
  * @brief Returns vector that has been multiplied by the given double
  *
  * @param[in] u vector operand
- * @param[in] a double operand 
+ * @param[in] a double operand
  * @return Vector result
  */
 template <typename T>
@@ -78,7 +78,7 @@ auto operator*(MFEMVec&& u, const double a)
  * @brief Returns vector that has been divided by the given double
  *
  * @param[in] u vector operand
- * @param[in] a double operand 
+ * @param[in] a double operand
  * @return Vector result
  */
 template <typename T>
@@ -116,7 +116,7 @@ auto operator/(const double a, MFEMVec&& u)
  * @brief Returns vector that is the sum of two given vectors
  *
  * @param[in] u vector operand
- * @param[in] v vector operand 
+ * @param[in] v vector operand
  * @return Vector result
  */
 template <typename S, typename T>
@@ -151,7 +151,7 @@ auto operator+(MFEMVecL&& u, MFEMVecR&& v)
  * @brief Returns vector that is the difference of two given vectors
  *
  * @param[in] u vector operand
- * @param[in] v vector operand 
+ * @param[in] v vector operand
  * @return Vector result
  */
 template <typename S, typename T>
