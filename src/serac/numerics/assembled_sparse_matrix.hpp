@@ -6,7 +6,7 @@ namespace serac {
 namespace mfem_ext {
 
 /**
- @brief Creates a CSR sparse matrix from element matrices assembled usign a mfem::ElementDofOrdering
+ @brief Creates a CSR sparse matrix from element matrices assembled using a mfem::ElementDofOrdering
 */
 class AssembledSparseMatrix : public mfem::SparseMatrix {
 public:
