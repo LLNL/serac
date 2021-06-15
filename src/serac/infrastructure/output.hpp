@@ -13,7 +13,6 @@
 #pragma once
 
 #include <string>
-#include <variant>
 
 #include "mfem.hpp"
 #include "axom/sidre.hpp"
