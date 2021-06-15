@@ -15,7 +15,8 @@ namespace detail {
  * @param[in] x the (integer) number to be raised to some power
  * @param[in] n the (integer) power
  */
-constexpr int pow(int x, int n) {
+constexpr int pow(int x, int n)
+{
   int x_to_the_n = 1;
   for (int i = 0; i < n; i++) {
     x_to_the_n *= x;
@@ -119,7 +120,6 @@ void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, com
   }
 }
 
-
 /**
  * @brief a class that helps to extract the test space from a function signature template parameter
  * @tparam space The function signature itself
@@ -199,7 +199,7 @@ struct lambda_argument<Hcurl<p>, 3, 3> {
   using type = std::tuple<tensor<double, 3>, tensor<double, 3> >;
 };
 
-}
+}  // namespace detail
 
 /**
  * @brief a type function that extracts the test space from a function signature template parameter
@@ -218,4 +218,4 @@ using trial_space_t = typename detail::get_trial_space<spaces>::type;
 static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
                                                     Geometry::Hexahedron};
 
-}
+}  // namespace serac

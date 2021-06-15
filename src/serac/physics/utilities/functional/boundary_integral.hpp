@@ -35,7 +35,7 @@ auto Preprocess(T u, coord_type xi)
   }
 
   // we can't support HCURL until fixing some shortcomings in mfem
-  //if constexpr (element_type::family == Family::HCURL) {
+  // if constexpr (element_type::family == Family::HCURL) {
   //  return dot(u, dot(element_type::shape_functions(xi), inv(J)));
   //}
 }
@@ -57,7 +57,7 @@ auto Postprocess(T f, coord_type xi)
   }
 
   // we can't support HCURL until fixing some shortcomings in mfem
-  //if constexpr (element_type::family == Family::HCURL) {
+  // if constexpr (element_type::family == Family::HCURL) {
   //  return outer(element_type::shape_functions(xi), dot(inv(J), f));
   //}
 }
@@ -91,23 +91,23 @@ auto Postprocess(T f, coord_type xi)
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
  */
-template <Geometry g, typename test, typename trial, int Q,
-          typename derivatives_type, typename lambda>
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
-                       const mfem::Vector& J_, const mfem::Vector& X_, const mfem::Vector & N_, int num_elements, lambda qf)
+                       const mfem::Vector& J_, const mfem::Vector& X_, const mfem::Vector& N_, int num_elements,
+                       lambda qf)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename trial_element::residual_type;
-  static constexpr int dim = dimension_of(g);
+  static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto N = mfem::Reshape(N_.Read(), rule.size(), dim+1, num_elements);
-  auto X = mfem::Reshape(X_.Read(), rule.size(), dim+1, num_elements);
+  auto N = mfem::Reshape(N_.Read(), rule.size(), dim + 1, num_elements);
+  auto X = mfem::Reshape(X_.Read(), rule.size(), dim + 1, num_elements);
   auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements);
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
@@ -124,11 +124,12 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       // get the position of this quadrature point in the parent and physical space,
       // and calculate the measure of that point in physical space.
-      auto   xi  = rule.points[q];
-      auto   dxi = rule.weights[q];
-      auto   x_q = make_tensor<dim+1>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-      [[maybe_unused]] auto   n_q = make_tensor<dim+1>([&](int i) { return N(q, i, e); });  // Physical coords of unit normal
-      double dx  = J(q, e) * dxi;
+      auto                  xi  = rule.points[q];
+      auto                  dxi = rule.weights[q];
+      auto                  x_q = make_tensor<dim + 1>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+      [[maybe_unused]] auto n_q =
+          make_tensor<dim + 1>([&](int i) { return N(q, i, e); });  // Physical coords of unit normal
+      double dx = J(q, e) * dxi;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
       auto arg = Preprocess<trial_element>(u_elem, xi);
@@ -235,7 +236,7 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
-} // namespace boundary_integral
+}  // namespace boundary_integral
 
 /**
  * @brief Describes a single integral term in a weak forumulation of a partial differential equation
@@ -259,7 +260,8 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename lambda_type>
-  BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector & normals, Dimension<dim>, lambda_type&& qf)
+  BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
+                   Dimension<dim>, lambda_type&& qf)
       : J_(J), X_(X), normals_(normals)
   {
     constexpr auto geometry                      = supported_geometries[dim];
@@ -273,8 +275,8 @@ public:
     //
     // we use them to observe the output type and allocate memory to store
     // the derivative information at each quadrature point
-    using x_t             = tensor<double, dim+1>;
-    using u_du_t          = typename detail::lambda_argument<trial_space, dim, dim+1>::type;
+    using x_t             = tensor<double, dim + 1>;
+    using u_du_t          = typename detail::lambda_argument<trial_space, dim, dim + 1>::type;
     using derivative_type = decltype(get_gradient(qf(x_t{}, x_t{}, make_dual(u_du_t{}))));
 
     std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
@@ -287,11 +289,13 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
     evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_, normals_, num_elements, qf);
+      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
+                                                                                 normals_, num_elements, qf);
     };
 
     gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-      boundary_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_, num_elements);
+      boundary_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_,
+                                                                               num_elements);
     };
   }
 
@@ -312,7 +316,6 @@ public:
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
 
 private:
-
   /**
    * @brief Jacobians of the element transformations at all quadrature points
    */

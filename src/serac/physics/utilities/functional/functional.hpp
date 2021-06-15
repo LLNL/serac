@@ -12,7 +12,6 @@
 
 #pragma once
 
-
 #include "mfem.hpp"
 
 #include "serac/physics/utilities/functional/tensor.hpp"
@@ -24,11 +23,15 @@
 
 namespace serac {
 
-template < typename T >
-struct is_hcurl{ static constexpr bool value = false; };
+template <typename T>
+struct is_hcurl {
+  static constexpr bool value = false;
+};
 
-template < int p, int c >
-struct is_hcurl< Hcurl< p, c > >{ static constexpr bool value = true; };
+template <int p, int c>
+struct is_hcurl<Hcurl<p, c> > {
+  static constexpr bool value = true;
+};
 
 #ifdef ENABLE_BOUNDARY_INTEGRALS
 // for some reason, mfem doesn't support lexicographic ordering for Nedelec segment elements,
@@ -46,11 +49,12 @@ auto get_boundary_dof_ordering(mfem::ParFiniteElementSpace* pfes)
 }
 #endif
 
-template < typename space >
-const mfem::Operator * GetFaceRestriction(mfem::ParFiniteElementSpace* pfes)
+template <typename space>
+const mfem::Operator* GetFaceRestriction(mfem::ParFiniteElementSpace* pfes)
 {
   if (!is_hcurl<space>::value) {
-    return pfes->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+    return pfes->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary,
+                                    mfem::L2FaceValues::SingleValued);
   } else {
     return nullptr;
   }
@@ -169,30 +173,28 @@ public:
     domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand);
   }
 
-
   template <int dim, typename lambda>
-  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain) {
-
+  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
+  {
     // TODO: fix mfem::FaceGeometricFactors
     auto num_boundary_elements = domain.GetNBE();
     SLIC_ERROR_IF(num_boundary_elements == 0, "Mesh has no boundary elements");
 
-    SLIC_ERROR_IF((dim+1) != domain.Dimension(), "Error: invalid mesh dimension for boundary integral");
+    SLIC_ERROR_IF((dim + 1) != domain.Dimension(), "Error: invalid mesh dimension for boundary integral");
     for (int e = 0; e < num_boundary_elements; e++) {
-      SLIC_ERROR_IF(domain.GetBdrElementType(e) != supported_types[dim],
-                    "Mesh contains unsupported element type");
+      SLIC_ERROR_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
     const mfem::FiniteElement&   el = *test_space_->GetFE(0);
     const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], el.GetOrder() * 2);
-    constexpr auto flags            = mfem::FaceGeometricFactors::COORDINATES | 
-                                      mfem::FaceGeometricFactors::DETERMINANTS | 
-                                      mfem::FaceGeometricFactors::NORMALS;
+    constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
+                           mfem::FaceGeometricFactors::NORMALS;
 
     // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-    boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{}, integrand);
+    boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
+                                     integrand);
   }
 
   /**

@@ -132,8 +132,7 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
  */
-template <Geometry g, typename test, typename trial, int Q,
-          typename derivatives_type, typename lambda>
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
 {
