@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
 
   // Intialize MFEMSidreDataCollection
   // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-  serac::StateManager::initialize(datastore, restart_cycle);
+  serac::StateManager::initialize(datastore, "serac", restart_cycle);
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);

@@ -9,6 +9,7 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
+#include "serac/physics/utilities/finite_element_state.hpp"
 
 #include "conduit/conduit.hpp"
 #include "ascent/ascent.hpp"
@@ -50,9 +51,10 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& fi
   // Get domain Sidre group
   // TODO: get this from StateManager directly?
   const axom::sidre::Group* sidre_root = datastore.getRoot();
-  const std::string   coll_name  = "serac_datacoll";
-  SLIC_ERROR_IF(!sidre_root->hasGroup(coll_name), "Data Collection was not found when outputting data!");
-  const axom::sidre::Group* domain_grp = sidre_root->getGroup(coll_name);
+  const std::string collection_name  = StateManager::collectionName();
+  SLIC_ERROR_IF(!sidre_root->hasGroup(collection_name),
+                fmt::format("Expected a datacollection root at '{0}' but it was not found", collection_name));
+  const axom::sidre::Group* domain_grp = sidre_root->getGroup(collection_name);
 
   // Add field names to extract field lists
   SLIC_ERROR_IF(!domain_grp->hasGroup("blueprint/fields"), "Data Collection did not have `fields`!");

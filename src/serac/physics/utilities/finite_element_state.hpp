@@ -267,9 +267,10 @@ public:
   /**
    * @brief Initializes the StateManager with a sidre DataStore (into which state will be written/read)
    * @param[in] ds The DataStore to use
+   * @param[in] collection_name_prefix The prefix for the name of the Sidre DataCollection to be created
    * @param[in] cycle_to_load The cycle to load - required for restarts
    */
-  static void initialize(axom::sidre::DataStore& ds, const std::optional<int> cycle_to_load = {});
+  static void initialize(axom::sidre::DataStore& ds, const std::string& collection_name_prefix = "serac", const std::optional<int> cycle_to_load = {});
 
   /**
    * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
@@ -305,6 +306,11 @@ public:
    */
   static mfem::ParMesh& mesh();
 
+  /**
+   * @brief Returns the Sidre DataCollection name
+   */
+  static const std::string collectionName() { return collection_name_; }
+
 private:
   /**
    * @brief The datacollection instance
@@ -317,6 +323,10 @@ private:
    * @brief Whether this simulation has been restarted from another simulation
    */
   static bool is_restart_;
+  /**
+   * @brief Name of the Sidre DataCollection
+   */
+  static std::string collection_name_;  
 };
 
 }  // namespace serac
