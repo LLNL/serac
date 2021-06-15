@@ -41,7 +41,7 @@ enum class Language
  * @param[in] time Current simulation time
  * @param[in] language The output language format
  */
-void outputFields(axom::sidre::DataStore& datastore, const std::string& file_name_prefix, double time,
+void outputFields(const axom::sidre::DataStore& datastore, const std::string& file_name_prefix, double time,
                   const Language language = Language::JSON);
 
 }  // namespace serac::output

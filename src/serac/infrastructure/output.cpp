@@ -18,7 +18,7 @@
 
 namespace serac::output {
 
-void outputFields(axom::sidre::DataStore& datastore, const std::string& file_name_prefix, double time,
+void outputFields(const axom::sidre::DataStore& datastore, const std::string& file_name_prefix, double time,
                   const Language language)
 {
   SLIC_INFO(fmt::format("Outputting field data at time: {}", time));
@@ -49,18 +49,18 @@ void outputFields(axom::sidre::DataStore& datastore, const std::string& file_nam
 
   // Get domain Sidre group
   // TODO: get this from StateManager directly?
-  axom::sidre::Group* sidre_root = datastore.getRoot();
+  const axom::sidre::Group* sidre_root = datastore.getRoot();
   const std::string   coll_name  = "serac_datacoll";
   SLIC_ERROR_IF(!sidre_root->hasGroup(coll_name), "Data Collection was not found when outputting data!");
-  axom::sidre::Group* domain_grp = sidre_root->getGroup(coll_name);
+  const axom::sidre::Group* domain_grp = sidre_root->getGroup(coll_name);
 
   // Add field names to extract field lists
   SLIC_ERROR_IF(!domain_grp->hasGroup("blueprint/fields"), "Data Collection did not have `fields`!");
-  axom::sidre::Group* fields_grp = domain_grp->getGroup("blueprint/fields");
+  const axom::sidre::Group* fields_grp = domain_grp->getGroup("blueprint/fields");
   // TODO: get these from input file
   for (axom::sidre::IndexType idx = fields_grp->getFirstValidGroupIndex(); axom::sidre::indexIsValid(idx);
        idx                        = fields_grp->getNextValidGroupIndex(idx)) {
-    axom::sidre::Group* curr_field_grp    = fields_grp->getGroup(idx);
+    const axom::sidre::Group* curr_field_grp    = fields_grp->getGroup(idx);
     extracts["e1/params/fields"].append() = curr_field_grp->getName();
   }
 
