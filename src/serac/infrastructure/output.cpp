@@ -50,8 +50,8 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& fi
 
   // Get domain Sidre group
   // TODO: get this from StateManager directly?
-  const axom::sidre::Group* sidre_root = datastore.getRoot();
-  const std::string collection_name  = StateManager::collectionName();
+  const axom::sidre::Group* sidre_root      = datastore.getRoot();
+  const std::string         collection_name = StateManager::collectionName();
   SLIC_ERROR_IF(!sidre_root->hasGroup(collection_name),
                 fmt::format("Expected a datacollection root at '{0}' but it was not found", collection_name));
   const axom::sidre::Group* domain_grp = sidre_root->getGroup(collection_name);
@@ -62,8 +62,8 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& fi
   // TODO: get these from input file
   for (axom::sidre::IndexType idx = fields_grp->getFirstValidGroupIndex(); axom::sidre::indexIsValid(idx);
        idx                        = fields_grp->getNextValidGroupIndex(idx)) {
-    const axom::sidre::Group* curr_field_grp    = fields_grp->getGroup(idx);
-    extracts["e1/params/fields"].append() = curr_field_grp->getName();
+    const axom::sidre::Group* curr_field_grp = fields_grp->getGroup(idx);
+    extracts["e1/params/fields"].append()    = curr_field_grp->getName();
   }
 
   // Create Ascent actions

@@ -37,10 +37,11 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunctio
 
 // Initialize StateManager's static members - both of these will be fully initialized in StateManager::initialize
 std::optional<axom::sidre::MFEMSidreDataCollection> StateManager::datacoll_;
-bool                                                StateManager::is_restart_ = false;
+bool                                                StateManager::is_restart_      = false;
 std::string                                         StateManager::collection_name_ = "";
 
-void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& collection_name_prefix, const std::optional<int> cycle_to_load)
+void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& collection_name_prefix,
+                              const std::optional<int> cycle_to_load)
 {
   // If the global object has already been initialized, clear it out
   if (datacoll_) {
@@ -59,10 +60,11 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& col
   datacoll_->SetComm(MPI_COMM_WORLD);
   if (cycle_to_load) {
     is_restart_ = true;
+    // NOTE: Load invalidates previous Sidre pointers
     datacoll_->Load(*cycle_to_load);
-//    datacoll_->SetGroupPointers(bp_index_grp, domain_grp);
-    datacoll_->SetGroupPointers(ds.getRoot()->getGroup(collection_name_ + "_global/blueprint_index/" + collection_name_),
-                                ds.getRoot()->getGroup(collection_name_));
+    datacoll_->SetGroupPointers(
+        ds.getRoot()->getGroup(collection_name_ + "_global/blueprint_index/" + collection_name_),
+        ds.getRoot()->getGroup(collection_name_));
     SLIC_ERROR_ROOT_IF(datacoll_->GetBPGroup()->getNumGroups() == 0,
                        "Loaded datastore is empty, was the datastore created on a "
                        "different number of nodes?");
