@@ -17,7 +17,11 @@ if (ENABLE_TESTS)
                  NUM_MPI_TASKS 1 )
 
     blt_add_test(NAME          serac_driver_no_thermal
-                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/tests/solid/dyn_direct_solve.lua
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/tests/solid/qs_linear.lua
+                 NUM_MPI_TASKS 1 )
+
+    blt_add_test(NAME          serac_driver_no_solid
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/tests/thermal_conduction/static_solve.lua
                  NUM_MPI_TASKS 1 )
 
     blt_add_test(NAME          serac_driver_help
