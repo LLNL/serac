@@ -50,7 +50,7 @@ template < typename space >
 const mfem::Operator * GetFaceRestriction(mfem::ParFiniteElementSpace* pfes)
 {
   if (!is_hcurl<space>::value) {
-    return pfes->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary);
+    return pfes->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
   } else {
     return nullptr;
   }
@@ -183,11 +183,11 @@ public:
                     "Mesh contains unsupported element type");
     }
 
-    const mfem::FiniteElement&   el = *test_space_->GetBE(0);
-    const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
+    const mfem::FiniteElement&   el = *test_space_->GetFE(0);
+    const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], el.GetOrder() * 2);
     constexpr auto flags            = mfem::FaceGeometricFactors::COORDINATES | 
-    mfem::FaceGeometricFactors::DETERMINANTS | 
-    mfem::FaceGeometricFactors::NORMALS;
+                                      mfem::FaceGeometricFactors::DETERMINANTS | 
+                                      mfem::FaceGeometricFactors::NORMALS;
 
     // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
@@ -318,6 +318,7 @@ private:
     // get the values for each local processor
     P_trial_->Mult(input_T, input_L_);
 
+    output_L_ = 0.0;
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
       G_trial_->Mult(input_L_, input_E_);
@@ -351,6 +352,8 @@ private:
           integral.GradientMult(input_E_boundary_, output_E_boundary_);
         }
       }
+
+      output_L_boundary_ = 0.0;
 
       // scatter-add to compute residuals on the local processor
       G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);

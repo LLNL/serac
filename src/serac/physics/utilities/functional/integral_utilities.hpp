@@ -180,6 +180,13 @@ struct lambda_argument<H1<p, c>, geometry_dim, spatial_dim> {
   using type = reduced_tensor<double, c>;
 };
 
+// specialization for an H1 space with polynomial order p, and c components
+// evaluated in a line integral or surface integral. Note: only values are provided in this case
+template <int p, int c, int geometry_dim, int spatial_dim>
+struct lambda_argument<L2<p, c>, geometry_dim, spatial_dim> {
+  using type = reduced_tensor<double, c>;
+};
+
 // specialization for an Hcurl space with polynomial order p in 2D
 template <int p>
 struct lambda_argument<Hcurl<p>, 2, 2> {
