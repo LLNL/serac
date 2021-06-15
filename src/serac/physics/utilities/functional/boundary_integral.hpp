@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file integral.hpp
+ * @file boundary_integral.hpp
  *
- * @brief This file contains the Integral core of the functional
+ * @brief This file defines a class, BoundaryIntegral, for integrating q-functions against finite element
+ * basis functions on a mesh boundary region.
  */
 #pragma once
 
@@ -34,7 +35,7 @@ auto Preprocess(T u, coord_type xi)
     return dot(u, element_type::shape_functions(xi));
   }
 
-  // we can't support HCURL until fixing some shortcomings in mfem
+  // we can't support HCURL until some issues in mfem are fixed
   // if constexpr (element_type::family == Family::HCURL) {
   //  return dot(u, dot(element_type::shape_functions(xi), inv(J)));
   //}
@@ -47,7 +48,6 @@ auto Preprocess(T u, coord_type xi)
  * (i.e. surface integrals in 3D space, line integrals in 2D space, etc)
  *
  * In this case, q-function outputs are only integrated against test space shape functions
- * QUESTION: Should test function gradients be supported here or not?
  */
 template <typename element_type, typename T, typename coord_type>
 auto Postprocess(T f, coord_type xi)
@@ -87,6 +87,7 @@ auto Postprocess(T f, coord_type xi)
  * respect to its arguments will be stored
  * @param[in] J_ The Jacobians of the element transformations at all quadrature points
  * @param[in] X_ The actual (not reference) coordinates of all quadrature points
+ * @param[in] N_ The unit normals of all quadrature points
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
@@ -255,6 +256,7 @@ public:
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
+   * @param[in] N The unit normals of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
