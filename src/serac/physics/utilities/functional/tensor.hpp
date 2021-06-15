@@ -1356,7 +1356,7 @@ using outer_product_t = typename detail::outer_prod<T1, T2>::type;
  * @param[in] arg The tensor of dual numbers
  */
 template <typename T, int... n>
-auto get_value(const tensor<dual<T>, n...>& arg)
+SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
 {
   tensor<double, n...> value{};
   for_constexpr<n...>([&](auto... i) { value(i...) = arg(i...).value; });
@@ -1367,14 +1367,14 @@ auto get_value(const tensor<dual<T>, n...>& arg)
  * @brief Retrieves the gradient component of a double (which is nothing)
  * @return The sentinel, @see zero
  */
-auto get_gradient(double /* arg */) { return zero{}; }
+SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
 
 /**
  * @brief Retrieves a gradient tensor from a tensor of dual numbers
  * @param[in] arg The tensor of dual numbers
  */
 template <typename T, int... n>
-auto get_gradient(const tensor<dual<double>, n...>& arg)
+SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
   for_constexpr<n...>([&](auto... i) { g[{i...}] = arg[{i...}].gradient; });
@@ -1383,7 +1383,7 @@ auto get_gradient(const tensor<dual<double>, n...>& arg)
 
 /// @overload
 template <int... n, int... m>
-auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
+SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 {
   tensor<double, n..., m...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });

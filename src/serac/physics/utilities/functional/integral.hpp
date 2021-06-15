@@ -137,7 +137,7 @@ void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, com
  * @tparam element_type The type of the element (used to determine the family)
  */
 template <typename element_type, typename T, int dim>
-auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
+SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return std::tuple{dot(u, element_type::shape_functions(xi)),
@@ -165,7 +165,7 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim
  * QUESTION: are gradients useful in these cases or not?
  */
 template <typename element_type, typename T, int geometry_dim, int spatial_dim>
-auto Preprocess(T u, const tensor<double, geometry_dim> xi,
+SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, geometry_dim> xi,
                 [[maybe_unused]] const tensor<double, spatial_dim, geometry_dim> J)
 {
   if constexpr (element_type::family == Family::H1) {
@@ -201,7 +201,7 @@ auto Preprocess(T u, const tensor<double, geometry_dim> xi,
  * @param[in] J The Jacobian of the element transformation at the quadrature point
  */
 template <typename element_type, typename T, int dim>
-auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
+SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
 {
   // TODO: Helpful static_assert about f being tuple or tuple-like for H1, hcurl, hdiv
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
@@ -230,7 +230,7 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
  * QUESTION: Should test function gradients be supported here or not?
  */
 template <typename element_type, typename T, int geometry_dim, int spatial_dim>
-auto Postprocess(T f, const tensor<double, geometry_dim> xi,
+SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, geometry_dim> xi,
                  [[maybe_unused]] const tensor<double, spatial_dim, geometry_dim> J)
 {
   if constexpr (element_type::family == Family::H1) {
@@ -252,14 +252,14 @@ auto Postprocess(T f, const tensor<double, geometry_dim> xi,
  * @param[in] A The Jacobian to compute the ratio on
  */
 template <int n>
-auto Measure(const tensor<double, n, n>& A)
+SERAC_HOST_DEVICE auto Measure(const tensor<double, n, n>& A)
 {
   return det(A);
 }
 
 /// @overload
 template <int m, int n>
-auto Measure(const tensor<double, m, n>& A)
+SERAC_HOST_DEVICE auto Measure(const tensor<double, m, n>& A)
 {
   return ::sqrt(det(transpose(A) * A));
 }

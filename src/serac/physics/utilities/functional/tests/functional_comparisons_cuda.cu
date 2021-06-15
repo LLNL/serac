@@ -96,7 +96,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{},
-      [=] __device__ (auto x, auto temperature) {
+      [&](auto x, auto temperature) {
         // get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
         auto source     = a * u - (100 * x[0] * x[1]);
@@ -202,7 +202,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   residual.AddDomainIntegral(
       Dimension<dim>{},
-      [&] SERAC_HOST_DEVICE (auto /*x*/, auto displacement) {
+      [&](auto /*x*/, auto displacement) {
         auto [u, du_dx] = displacement;
         auto body_force = a * u + I[0];
         auto strain     = 0.5 * (du_dx + transpose(du_dx));
@@ -297,7 +297,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 
   residual.AddDomainIntegral(
       Dimension<dim>{},
-      [&] SERAC_HOST_DEVICE (auto x, auto vector_potential) {
+      [&](auto x, auto vector_potential) {
         auto [A, curl_A] = vector_potential;
         auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
         auto H_term      = b * curl_A;

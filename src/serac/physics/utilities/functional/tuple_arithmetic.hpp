@@ -17,11 +17,13 @@
 // std::tuple< baz, qux > b;
 //
 // std::tuple sum1 = a + b;
-// std::tuple sum2{std::get<0>(a) + std::get<0>(b), std::get<1>(a) + std::get<1>(b)};
+// std::tuple sum2{serac::get<0>(a) + serac::get<0>(b), serac::get<1>(a) + serac::get<1>(b)};
 
 #pragma once
 
-#include <tuple>
+#include "serac_tuple.hpp"
+
+#include <utility>
 
 #include "tensor.hpp"
 
@@ -31,7 +33,7 @@ namespace serac {
 namespace detail {
 
 /**
- * @brief Trait for checking if a type is a @p std::tuple
+ * @brief Trait for checking if a type is a @p serac::tuple
  */
 template <typename T>
 struct is_tuple {
@@ -40,12 +42,12 @@ struct is_tuple {
 };
 /// @overload
 template <typename... T>
-struct is_tuple<std::tuple<T...> > {
+struct is_tuple<serac::tuple<T...> > {
   static constexpr bool value = true;
 };
 
 /**
- * @brief Trait for checking if a type if a @p std::tuple containting only @p std::tuple
+ * @brief Trait for checking if a type if a @p serac::tuple containting only @p serac::tuple
  */
 template <typename T>
 struct is_tuple_of_tuples {
@@ -53,7 +55,7 @@ struct is_tuple_of_tuples {
 };
 /// @overload
 template <typename... T>
-struct is_tuple_of_tuples<std::tuple<T...> > {
+struct is_tuple_of_tuples<serac::tuple<T...> > {
   static constexpr bool value = (is_tuple<T>::value && ...);
 };
 
@@ -61,44 +63,44 @@ struct is_tuple_of_tuples<std::tuple<T...> > {
 
 // apply operator+ elementwise to entries in two equally-sized tuples
 template <typename... S, typename... T, int... I>
-constexpr auto plus_helper(const std::tuple<S...>& A, const std::tuple<T...>& B, std::integer_sequence<int, I...>)
+constexpr auto plus_helper(const serac::tuple<S...>& A, const serac::tuple<T...>& B, std::integer_sequence<int, I...>)
 {
-  return std::make_tuple((std::get<I>(A) + std::get<I>(B))...);
+  return serac::make_tuple((serac::get<I>(A) + serac::get<I>(B))...);
 }
 
 // apply operator- elementwise to entries in two equally-sized tuples
 template <typename... S, typename... T, int... I>
-constexpr auto minus_helper(const std::tuple<S...>& A, const std::tuple<T...>& B, std::integer_sequence<int, I...>)
+constexpr auto minus_helper(const serac::tuple<S...>& A, const serac::tuple<T...>& B, std::integer_sequence<int, I...>)
 {
-  return std::make_tuple((std::get<I>(A) - std::get<I>(B))...);
+  return serac::make_tuple((serac::get<I>(A) - serac::get<I>(B))...);
 }
 
 // apply (entry * scale) to each entry in a tuple
 template <typename... S, typename T, int... I>
-constexpr auto mult_helper(const std::tuple<S...>& A, T scale, std::integer_sequence<int, I...>)
+constexpr auto mult_helper(const serac::tuple<S...>& A, T scale, std::integer_sequence<int, I...>)
 {
-  return std::make_tuple(std::get<I>(A) * scale...);
+  return serac::make_tuple(serac::get<I>(A) * scale...);
 }
 
 // apply (scale * entry) to each entry in a tuple
 template <typename S, typename... T, int... I>
-constexpr auto mult_helper(S scale, const std::tuple<T...>& A, std::integer_sequence<int, I...>)
+constexpr auto mult_helper(S scale, const serac::tuple<T...>& A, std::integer_sequence<int, I...>)
 {
-  return std::make_tuple((scale * std::get<I>(A))...);
+  return serac::make_tuple((scale * serac::get<I>(A))...);
 }
 
 // apply (entry / denominator) to each entry in a tuple
 template <typename... S, typename T, int... I>
-constexpr auto div_helper(const std::tuple<S...>& numerators, T denominator, std::integer_sequence<int, I...>)
+constexpr auto div_helper(const serac::tuple<S...>& numerators, T denominator, std::integer_sequence<int, I...>)
 {
-  return std::make_tuple(std::get<I>(numerators) / denominator...);
+  return serac::make_tuple(serac::get<I>(numerators) / denominator...);
 }
 
 // apply (numerator / entry) to each entry in a tuple
 template <typename S, typename... T, int... I>
-constexpr auto div_helper(S numerator, const std::tuple<T...>& denominators, std::integer_sequence<int, I...>)
+constexpr auto div_helper(S numerator, const serac::tuple<T...>& denominators, std::integer_sequence<int, I...>)
 {
-  return std::make_tuple((numerator / std::get<I>(denominators))...);
+  return serac::make_tuple((numerator / serac::get<I>(denominators))...);
 }
 
 // promote a double-precision value to a dual number representation that keeps track of
@@ -107,10 +109,10 @@ constexpr auto div_helper(S numerator, const std::tuple<T...>& denominators, std
 template <int j, int... i>
 constexpr auto make_dual_helper(double arg, std::integer_sequence<int, i...>)
 {
-  using gradient_type = std::tuple<typename std::conditional<i == j, double, zero>::type...>;
+  using gradient_type = serac::tuple<typename std::conditional<i == j, double, zero>::type...>;
   dual<gradient_type> arg_dual{};
   arg_dual.value                 = arg;
-  std::get<j>(arg_dual.gradient) = 1.0;
+  serac::get<j>(arg_dual.gradient) = 1.0;
   return arg_dual;
 }
 
@@ -120,11 +122,11 @@ constexpr auto make_dual_helper(double arg, std::integer_sequence<int, i...>)
 template <int I, typename T, int... n, int... i>
 constexpr auto make_dual_helper(const tensor<T, n...>& arg, std::integer_sequence<int, i...>)
 {
-  using gradient_type = std::tuple<typename std::conditional<i == I, tensor<T, n...>, zero>::type...>;
+  using gradient_type = serac::tuple<typename std::conditional<i == I, tensor<T, n...>, zero>::type...>;
   tensor<dual<gradient_type>, n...> arg_dual{};
   for_constexpr<n...>([&](auto... j) {
     arg_dual(j...).value                       = arg(j...);
-    std::get<I>(arg_dual(j...).gradient)(j...) = 1.0;
+    serac::get<I>(arg_dual(j...).gradient)(j...) = 1.0;
   });
   return arg_dual;
 }
@@ -132,61 +134,61 @@ constexpr auto make_dual_helper(const tensor<T, n...>& arg, std::integer_sequenc
 // promote a tuple of values to a tuple of dual value representations that keeps track of
 // derivatives w.r.t. each tuple entry.
 template <typename... T, int... i>
-constexpr auto make_dual_helper(std::tuple<T...> args, std::integer_sequence<int, i...> seq)
+constexpr auto make_dual_helper(serac::tuple<T...> args, std::integer_sequence<int, i...> seq)
 {
-  return std::make_tuple((make_dual_helper<i>(std::get<i>(args), seq))...);
+  return serac::make_tuple((make_dual_helper<i>(serac::get<i>(args), seq))...);
 }
 
 // chain rule between a tuple of values and a single value,
 // effectively equivalent to
 //
-// std::tuple df{
-//   chain_rule(std::get<0>(df_dx), dx),
-//   chain_rule(std::get<1>(df_dx), dx),
-//   chain_rule(std::get<2>(df_dx), dx),
+// serac::tuple df{
+//   chain_rule(serac::get<0>(df_dx), dx),
+//   chain_rule(serac::get<1>(df_dx), dx),
+//   chain_rule(serac::get<2>(df_dx), dx),
 //   ...
 // }
 template <typename... T, typename S>
-auto chain_rule_tuple_scale(std::tuple<T...> df_dx, S dx)
+auto chain_rule_tuple_scale(serac::tuple<T...> df_dx, S dx)
 {
   return std::apply(
-      [&](auto... each_component_of_df_dx) { return std::tuple{chain_rule(each_component_of_df_dx, dx)...}; }, df_dx);
+      [&](auto... each_component_of_df_dx) { return serac::tuple{chain_rule(each_component_of_df_dx, dx)...}; }, df_dx);
 }
 
 // chain rule between two tuples of values, kind of like a "dot product"
 // effectively equivalent to
 //
-// std::tuple df{
-//   chain_rule(std::get<0>(df_dx), std::get<0>(dx)),
-//   chain_rule(std::get<1>(df_dx), std::get<1>(dx)),
-//   chain_rule(std::get<2>(df_dx), std::get<2>(dx)),
+// serac::tuple df{
+//   chain_rule(serac::get<0>(df_dx), serac::get<0>(dx)),
+//   chain_rule(serac::get<1>(df_dx), serac::get<1>(dx)),
+//   chain_rule(serac::get<2>(df_dx), serac::get<2>(dx)),
 //   ...
 // }
 template <typename... T, typename... S, int... i>
-auto chain_rule_tuple_vecvec(std::tuple<T...> df_dx, std::tuple<S...> dx, std::integer_sequence<int, i...>)
+auto chain_rule_tuple_vecvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx, std::integer_sequence<int, i...>)
 {
-  return (chain_rule(std::get<i>(df_dx), std::get<i>(dx)) + ...);
+  return (chain_rule(serac::get<i>(df_dx), serac::get<i>(dx)) + ...);
 }
 
 // chain rule between a tuple-of-tuples, and another tuple, kind of like a "matrix vector product"
 // effectively equivalent to
 //
 // clang-format off
-// std::tuple df{
-//   chain_rule(std::get<0>(std::get<0>(df_dx)), std::get<0>(dx)) + chain_rule(std::get<1>(std::get<0>(df_dx)), std::get<1>(dx)) + ... , 
-//   chain_rule(std::get<0>(std::get<1>(df_dx)), std::get<0>(dx)) + chain_rule(std::get<1>(std::get<1>(df_dx)), std::get<1>(dx)) + ... , 
-//   chain_rule(std::get<0>(std::get<2>(df_dx)), std::get<0>(dx)) + chain_rule(std::get<1>(std::get<2>(df_dx)), std::get<1>(dx)) + ... ,
+// serac::tuple df{
+//   chain_rule(serac::get<0>(serac::get<0>(df_dx)), serac::get<0>(dx)) + chain_rule(serac::get<1>(serac::get<0>(df_dx)), serac::get<1>(dx)) + ... , 
+//   chain_rule(serac::get<0>(serac::get<1>(df_dx)), serac::get<0>(dx)) + chain_rule(serac::get<1>(serac::get<1>(df_dx)), serac::get<1>(dx)) + ... , 
+//   chain_rule(serac::get<0>(serac::get<2>(df_dx)), serac::get<0>(dx)) + chain_rule(serac::get<1>(serac::get<2>(df_dx)), serac::get<1>(dx)) + ... ,
 //   ...
 // }
 // clang-format on
 template <typename... T, typename... S>
-auto chain_rule_tuple_matvec(std::tuple<T...> df_dx, std::tuple<S...> dx)
+auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx)
 {
   auto int_seq = std::make_integer_sequence<int, int(sizeof...(S))>();
 
   return std::apply(
       [&](auto... each_component_of_df_dx) {
-        return std::tuple{chain_rule_tuple_vecvec(each_component_of_df_dx, dx, int_seq)...};
+        return serac::tuple{chain_rule_tuple_vecvec(each_component_of_df_dx, dx, int_seq)...};
       },
       df_dx);
 }
@@ -199,14 +201,14 @@ auto chain_rule_tuple_matvec(std::tuple<T...> df_dx, std::tuple<S...> dx)
  * @param[in] A a tuple of values
  * @param[in] B a tuple of values
  * Note: A and B must have the same size, and the type of the ith entry of the returned tuple
- * is given by decltype(std::get<i>(A) + std::get<i>(B))
+ * is given by decltype(serac::get<i>(A) + serac::get<i>(B))
  */
-template <typename... S, typename... T>
-constexpr auto operator+(const std::tuple<S...>& A, const std::tuple<T...>& B)
-{
-  static_assert(sizeof...(S) == sizeof...(T), "Error in operator+: tuple sizes must match");
-  return detail::plus_helper(A, B, std::make_integer_sequence<int, int(sizeof...(S))>{});
-}
+// template <typename... S, typename... T>
+// constexpr auto operator+(const serac::tuple<S...>& A, const serac::tuple<T...>& B)
+// {
+//   static_assert(sizeof...(S) == sizeof...(T), "Error in operator+: tuple sizes must match");
+//   return detail::plus_helper(A, B, std::make_integer_sequence<int, int(sizeof...(S))>{});
+// }
 
 /**
  * @brief apply operator+= to each pair of entries in two similarly-sized and similarly-typed tuples
@@ -215,7 +217,7 @@ constexpr auto operator+(const std::tuple<S...>& A, const std::tuple<T...>& B)
  * Note: A and B must have the same size
  */
 template <typename... S>
-constexpr auto operator+=(std::tuple<S...>& A, const std::tuple<S...>& B)
+constexpr auto operator+=(serac::tuple<S...>& A, const serac::tuple<S...>& B)
 {
   return A = A + B;
 }
@@ -225,24 +227,24 @@ constexpr auto operator+=(std::tuple<S...>& A, const std::tuple<S...>& B)
  * @param[in] A a tuple of values
  * @param[in] B a tuple of values
  * Note: A and B must have the same size, and the type of the ith entry of the returned tuple
- * is given by decltype(std::get<i>(A) - std::get<i>(B))
+ * is given by decltype(serac::get<i>(A) - serac::get<i>(B))
  */
-template <typename... S, typename... T>
-constexpr auto operator-(const std::tuple<S...>& A, const std::tuple<T...>& B)
-{
-  static_assert(sizeof...(S) == sizeof...(T), "Error in operator+: tuple sizes must match");
-  return detail::minus_helper(A, B, std::make_integer_sequence<int, int(sizeof...(S))>{});
-}
+// template <typename... S, typename... T>
+// constexpr auto operator-(const serac::tuple<S...>& A, const serac::tuple<T...>& B)
+// {
+//   static_assert(sizeof...(S) == sizeof...(T), "Error in operator+: tuple sizes must match");
+//   return detail::minus_helper(A, B, std::make_integer_sequence<int, int(sizeof...(S))>{});
+// }
 
 /**
  * @brief apply a scaling (from the right) to each entry in a tuple
  * @param[in] A a tuple of values
  * @param[in] scale the scaling factor
  * Note: the type of the ith entry of the returned tuple
- * is given by decltype(std::get<i>(A) * scale)
+ * is given by decltype(serac::get<i>(A) * scale)
  */
 template <typename... S, typename T>
-constexpr auto operator*(const std::tuple<S...>& A, T scale)
+constexpr auto operator*(const serac::tuple<S...>& A, T scale)
 {
   return detail::mult_helper(A, scale, std::make_integer_sequence<int, int(sizeof...(S))>{});
 }
@@ -252,10 +254,10 @@ constexpr auto operator*(const std::tuple<S...>& A, T scale)
  * @param[in] scale the scaling factor
  * @param[in] A a tuple of values
  * Note: the type of the ith entry of the returned tuple
- * is given by decltype(scale * std::get<i>(A))
+ * is given by decltype(scale * serac::get<i>(A))
  */
 template <typename S, typename... T>
-constexpr auto operator*(S scale, const std::tuple<T...>& A)
+constexpr auto operator*(S scale, const serac::tuple<T...>& A)
 {
   return detail::mult_helper(scale, A, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
@@ -265,10 +267,10 @@ constexpr auto operator*(S scale, const std::tuple<T...>& A)
  * @param[in] numerators a tuple of numerators
  * @param[in] denominator the denominator
  * Note: the type of the ith entry of the returned tuple
- * is given by decltype(std::get<i>(numerators) / denominator)
+ * is given by decltype(serac::get<i>(numerators) / denominator)
  */
 template <typename... S, typename T>
-constexpr auto operator/(const std::tuple<S...>& numerators, T denominator)
+constexpr auto operator/(const serac::tuple<S...>& numerators, T denominator)
 {
   return detail::div_helper(numerators, denominator, std::make_integer_sequence<int, int(sizeof...(S))>{});
 }
@@ -278,10 +280,10 @@ constexpr auto operator/(const std::tuple<S...>& numerators, T denominator)
  * @param[in] numerator a numerator value
  * @param[in] denominators a tuple of denominator values
  * Note: the type of the ith entry of the returned tuple
- * is given by decltype(numerator / std::get<i>(denominators))
+ * is given by decltype(numerator / serac::get<i>(denominators))
  */
 template <typename S, typename... T>
-constexpr auto operator/(S numerator, const std::tuple<T...>& denominators)
+constexpr auto operator/(S numerator, const serac::tuple<T...>& denominators)
 {
   return detail::div_helper(numerator, denominators, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
@@ -294,11 +296,11 @@ constexpr auto operator/(S numerator, const std::tuple<T...>& denominators)
 template <typename... T>
 constexpr auto make_dual(T... args)
 {
-  return detail::make_dual_helper(std::tuple{args...}, std::make_integer_sequence<int, int(sizeof...(T))>{});
+  return detail::make_dual_helper(serac::tuple{args...}, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
 /// @overload
 template <typename... T>
-constexpr auto make_dual(std::tuple<T...> args)
+constexpr auto make_dual(serac::tuple<T...> args)
 {
   return detail::make_dual_helper(args, std::make_integer_sequence<int, int(sizeof...(T))>{});
 }
@@ -309,9 +311,9 @@ constexpr auto make_dual(std::tuple<T...> args)
  * @pre The tuple must contain only scalars or tensors of @p dual numbers or doubles
  */
 template <typename... T>
-auto get_value(std::tuple<T...> tuple_of_values)
+SERAC_HOST_DEVICE auto get_value(serac::tuple<T...> & tuple_of_values)
 {
-  return std::apply([](auto... each_value) { return std::tuple{get_value(each_value)...}; }, tuple_of_values);
+  return std::apply([](auto&... each_value) { return serac::tuple{get_value(each_value)...}; }, tuple_of_values);
 }
 
 /**
@@ -319,25 +321,25 @@ auto get_value(std::tuple<T...> tuple_of_values)
  * @param[in] arg The set of numbers to retrieve gradients from
  */
 template <typename... T>
-auto get_gradient(dual<std::tuple<T...> > arg)
+auto get_gradient(dual<serac::tuple<T...> > arg)
 {
-  return std::apply([](auto... each_value) { return std::tuple{each_value...}; }, arg.gradient);
+  return std::apply([](auto... each_value) { return serac::tuple{each_value...}; }, arg.gradient);
 }
 /// @overload
 template <typename... T, int... n>
-auto get_gradient(const tensor<dual<std::tuple<T...> >, n...>& arg)
+auto get_gradient(const tensor<dual<serac::tuple<T...> >, n...>& arg)
 {
-  std::tuple<outer_product_t<tensor<double, n...>, T>...> g{};
+  serac::tuple<outer_product_t<tensor<double, n...>, T>...> g{};
   for_constexpr<n...>([&](auto... i) {
-    for_constexpr<sizeof...(T)>([&](auto j) { std::get<j>(g)(i...) = std::get<j>(arg(i...).gradient); });
+    for_constexpr<sizeof...(T)>([&](auto j) { serac::get<j>(g)(i...) = serac::get<j>(arg(i...).gradient); });
   });
   return g;
 }
 /// @overload
 template <typename... T>
-auto get_gradient(std::tuple<T...> tuple_of_values)
+auto get_gradient(serac::tuple<T...> tuple_of_values)
 {
-  return std::apply([](auto... each_value) { return std::tuple{get_gradient(each_value)...}; }, tuple_of_values);
+  return std::apply([](auto... each_value) { return serac::tuple{get_gradient(each_value)...}; }, tuple_of_values);
 }
 
 /**
@@ -352,7 +354,7 @@ auto chain_rule(S df_dx, T dx)
   if constexpr ((detail::is_tuple_of_tuples<S>::value && detail::is_tuple<T>::value)) {
     return detail::chain_rule_tuple_matvec(df_dx, dx);
   } else if constexpr (detail::is_tuple<S>::value && detail::is_tuple<T>::value) {
-    auto int_seq = std::make_integer_sequence<int, int(std::tuple_size<T>{})>();
+    auto int_seq = std::make_integer_sequence<int, int(serac::tuple_size<T>{})>();
     return detail::chain_rule_tuple_vecvec(df_dx, dx, int_seq);
   } else if constexpr (detail::is_tuple<S>::value && !detail::is_tuple<T>::value) {
     return detail::chain_rule_tuple_scale(df_dx, dx);
