@@ -52,7 +52,7 @@ if(NOT SERAC_FOUND)
     if(NOT ASCENT_DIR) 
       set(ASCENT_DIR ${SERAC_ASCENT_DIR}) 
     endif()
-    find_dependency(Ascent REQUIRED NO_DEFAULT_PATH PATHS PATHS "${ASCENT_DIR}/lib/cmake")
+    find_dependency(Ascent REQUIRED NO_DEFAULT_PATH PATHS "${ASCENT_DIR}/lib/cmake")
   endif()
 
   # Axom
@@ -62,7 +62,7 @@ if(NOT SERAC_FOUND)
     if(NOT AXOM_DIR) 
       set(AXOM_DIR ${SERAC_AXOM_DIR}) 
     endif()
-    find_dependency(Axom REQUIRED NO_DEFAULT_PATH PATHS PATHS "${AXOM_DIR}/lib/cmake")
+    find_dependency(Axom REQUIRED NO_DEFAULT_PATH PATHS "${AXOM_DIR}/lib/cmake")
   endif()
 
   # Conduit
