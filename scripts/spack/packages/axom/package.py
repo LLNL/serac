@@ -365,7 +365,7 @@ class Axom(CachedCMakePackage, CudaPackage):
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
                                                 dep_dir))
             else:
-                entries.append('# %s not build\n' % dep.upper())
+                entries.append('# %s not built\n' % dep.upper())
 
         if '+scr' in spec:
             dep_dir = get_spec_path(spec, 'scr', path_replacements)
@@ -377,7 +377,7 @@ class Axom(CachedCMakePackage, CudaPackage):
                     dep_dir = get_spec_path(spec, dep, path_replacements)
                     entries.append(cmake_cache_path('%s_DIR' % dep.upper(), dep_dir))
         else:
-            entries.append('# scr not build\n')
+            entries.append('# scr not built\n')
 
         ##################################
         # Devtools
