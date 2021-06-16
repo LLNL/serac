@@ -26,26 +26,35 @@
  */
 namespace serac::mfem_ext {
 
+/// @brief Internal implementation details namespace
 namespace detail {
+
 // methods for determining index type
+
+/// @brief Provides the member typedef type for the index of type T
 template <typename T>
 struct index_t {
+  /// @brief Member typedef type
   using type = std::size_t;
 };
 
+/// @brief Provides the member typedef type for the index of mfem::Arrays
 template <typename T>
 struct index_t<mfem::Array<T>> {
+  /// @brief Member typedef type
   using type = int;
 };
 
 // Methods for determining the size of a container
+
+/// @brief Returns the size of container T
 template <typename T>
 auto size(T&& container)
 {
   return container.size();
 }
 
-/// mfem:Array size call
+/// @brief Returns the size of mfem::Array
 template <typename T>
 std::size_t size(const mfem::Array<T>& container)
 {
@@ -53,34 +62,40 @@ std::size_t size(const mfem::Array<T>& container)
 }
 
 // Methods for determining type of coefficient evaluations
-// Returns default POD-type
+
+/// @brief Returns return type of POD-type T
 template <typename T, typename = void>
 struct eval_result_t {
+  /// @brief POD-type
   using type = T;
 };
 
-// returns return type for mfem::Coefficient
+/// @brief Returns return type for mfem::Coefficient
 template <typename T>
 struct eval_result_t<T, std::enable_if_t<std::is_base_of_v<mfem::Coefficient, T>>> {
+  /// @brief mfem::Coefficient return type
   using type = double;
 };
 
-// returns return type for mfem::VectorCefficient
+/// @brief Returns return type for mfem::VectorCefficient
 template <typename T>
 struct eval_result_t<T, std::enable_if_t<std::is_base_of_v<mfem::VectorCoefficient, T>>> {
+  /// @brief mfem::VectorCoefficient return type
   using type = mfem::Vector;
 };
 
-/// methods for evaluating coefficient stuff with the same prototype
+// Methods for evaluating coefficient stuff with the same prototype
+
+/// @brief Returns d unevaluated
 double eval(double& d, mfem::ElementTransformation&, const mfem::IntegrationPoint&) { return d; }
 
-/// evaluates an mfem::Coefficient
+/// @brief evaluates an mfem::Coefficient
 double eval(mfem::Coefficient& c, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
   return c.Eval(Tr, ip);
 }
 
-/// evaluates a mfem::VectorCoefficient
+/// @brief evaluates a mfem::VectorCoefficient
 mfem::Vector eval(mfem::VectorCoefficient& v, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip)
 {
   mfem::Vector temp(v.GetVDim());
@@ -241,7 +256,7 @@ T MakeAttributeList(mfem::Mesh& m, mfem::Coefficient& c,
  *
  * @tparam T a container that implements operator[] and size() or mfem::Array
  * @param[in] m the mesh
- * @param[in] attr_list a list of attributes to assign to the given mesh
+ * @param[in] list a list of attributes to assign to the given mesh
  */
 
 template <typename T>
@@ -311,7 +326,7 @@ T MakeBdrAttributeList(mfem::Mesh& m, mfem::Coefficient& c, std::function<int(do
  * @pre T must implement operator[]
  *
  * @param[in] m the mesh
- * @param[in] attr_list a list of attributes to assign to the given mesh
+ * @param[in] list a list of attributes to assign to the given mesh
  */
 
 template <typename T>
@@ -420,6 +435,7 @@ public:
   /**
    * @brief Evaluate the coefficient at a quadrature point
    *
+   * @param[in] v  The evaluated coefficient vector at the quadrature point
    * @param[in] Tr The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
    * @return The value of the coefficient at the quadrature point
@@ -467,7 +483,7 @@ public:
    *
    * @param[in] dim d.o.f of this mfem::Vectorcoefficient
    * @param[in] func A function to apply to the evaluations of all args and return mfem::Vector
-   * @param[in[ args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
+   * @param[in] args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
    */
   TransformedVectorCoefficient(int                                                                          dim,
                                std::function<mfem::Vector(typename detail::eval_result_t<Types>::type&...)> func,
@@ -482,7 +498,7 @@ public:
    * @brief Evaluate the coefficient at a quadrature point
    *
    * @param[out] V The evaluated coefficient vector at the quadrature point
-   * @param[in] T The element transformation for the evaluation
+   * @param[in] Tr The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
    */
   void Eval(mfem::Vector& V, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
@@ -521,7 +537,7 @@ public:
    *
    *
    * @param[in] func A function to apply to the evaluations of all args and return double
-   * @param[in[ args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
+   * @param[in] args A list of mfem::Coefficients, mfem::VectorCoefficients, or numbers
    */
   TransformedScalarCoefficient(std::function<double(typename detail::eval_result_t<Types>::type&...)> func,
                                Types&... args)
@@ -534,7 +550,7 @@ public:
   /**
    * @brief Evaluate the coefficient at a quadrature point
    *
-   * @param[in] T The element transformation for the evaluation
+   * @param[in] Tr The element transformation for the evaluation
    * @param[in] ip The integration point for the evaluation
    * @return The value of the coefficient at the quadrature point
    */
@@ -571,6 +587,13 @@ public:
    */
   SurfaceElementAttrCoefficient(mfem::ParMesh& mesh, mfem::Coefficient& c) : coef_(c), pmesh_(mesh) {}
 
+  /**
+   * @brief Evaluates an element attribute-based coefficient on the a boundary element
+   *
+   * @param[in] Tr The local surface FE transformation
+   * @param[in] ip The current surface element integration point
+   * @return The value of the element attribute-based coefficient evaluated on the boundary
+   */
   double Eval(mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
   {
     // Find attached element
@@ -583,8 +606,15 @@ public:
   }
 
 protected:
+  /**
+   * @brief Underlying element attribute-based coefficient
+   */
   mfem::Coefficient& coef_;
-  mfem::ParMesh&     pmesh_;
+
+  /**
+   * @brief mfem::ParMesh containing attributes
+   */
+  mfem::ParMesh& pmesh_;
 };
 
 /**
@@ -604,6 +634,13 @@ public:
   {
   }
 
+  /**
+   * @brief Evaluates an element attribute-based coefficient on the a boundary element
+   *
+   * @param[inout] V The vector-value of the element attribute-based coefficient evaluated on the boundary
+   * @param[in] Tr The local surface FE transformation
+   * @param[in] ip The current surface element integration point
+   */
   void Eval(mfem::Vector& V, mfem::ElementTransformation& Tr, const mfem::IntegrationPoint& ip) override
   {
     // Find attached element
@@ -618,8 +655,15 @@ public:
   }
 
 protected:
+  /**
+   * @brief Underlying element attribute-based mfem::VectorCoefficient
+   */
   mfem::VectorCoefficient& coef_;
-  mfem::ParMesh&           pmesh_;
+
+  /**
+   * @brief mfem::ParMesh containing attributes
+   */
+  mfem::ParMesh& pmesh_;
 };
 
 }  // namespace serac::mfem_ext

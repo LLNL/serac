@@ -211,7 +211,7 @@ namespace detail {
 /**
  * @brief Prepends a prefix to a target string if @p name is non-empty with an
  * underscore delimiter
- * @param[in] addPrefix The string to prepend
+ * @param[in] prefix The string to prepend
  * @param[in] target The string to prepend to
  */
 std::string addPrefix(const std::string& prefix, const std::string& target);
