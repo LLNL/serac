@@ -291,7 +291,7 @@ using serac::DirichletEnforcementMethod;
 using serac::ThermalConduction;
 using serac::TimestepMethod;
 
-ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::operator()(
+serac::ThermalConduction::InputOptions FromInlet<serac::ThermalConduction::InputOptions>::operator()(
     const axom::inlet::Container& base)
 {
   ThermalConduction::InputOptions result;

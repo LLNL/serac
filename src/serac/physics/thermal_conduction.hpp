@@ -438,5 +438,6 @@ protected:
  */
 template <>
 struct FromInlet<serac::ThermalConduction::InputOptions> {
+  /// @brief Returns created object from Inlet container
   serac::ThermalConduction::InputOptions operator()(const axom::inlet::Container& base);
 };

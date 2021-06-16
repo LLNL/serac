@@ -173,6 +173,7 @@ struct BoundaryConditionInputOptions {
  */
 template <>
 struct FromInlet<mfem::Vector> {
+  /// @brief Returns created object from Inlet container
   mfem::Vector operator()(const axom::inlet::Container& base);
 };
 
@@ -188,6 +189,7 @@ enum class OutputType;
  */
 template <>
 struct FromInlet<serac::OutputType> {
+  /// @brief Returns created object from Inlet container
   serac::OutputType operator()(const axom::inlet::Container& base);
 };
 
@@ -198,6 +200,7 @@ struct FromInlet<serac::OutputType> {
  */
 template <>
 struct FromInlet<serac::input::CoefficientInputOptions> {
+  /// @brief Returns created object from Inlet container
   serac::input::CoefficientInputOptions operator()(const axom::inlet::Container& base);
 };
 
@@ -208,5 +211,6 @@ struct FromInlet<serac::input::CoefficientInputOptions> {
  */
 template <>
 struct FromInlet<serac::input::BoundaryConditionInputOptions> {
+  /// @brief Returns created object from Inlet container
   serac::input::BoundaryConditionInputOptions operator()(const axom::inlet::Container& base);
 };

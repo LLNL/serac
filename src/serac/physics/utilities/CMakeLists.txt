@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-add_subdirectory(weak_form)
+add_subdirectory(functional)
 
 set(physics_utilities_headers
     boundary_condition.hpp
