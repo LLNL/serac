@@ -500,8 +500,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
 
-      // use the chain rule to compute the first-order change in the q-function output
-      // auto dq = chain_rule(dq_darg, darg);
+      // evaluate shape functions 
       [[maybe_unused]] auto M = test_element::shape_functions(xi_q);
       [[maybe_unused]] auto N = trial_element::shape_functions(xi_q);
       if constexpr (test_element::family == Family::HCURL) {

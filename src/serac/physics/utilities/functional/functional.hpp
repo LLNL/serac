@@ -568,11 +568,10 @@ private:
   mutable mfem::Vector K_e_;
 
   /**
-   * @brief Local AssembledSparseMatrix storage for ComputeElementMatrices
+   * @brief Local internal AssembledSparseMatrix storage for ComputeElementMatrices
    *
    * If unique_ptr is empty, construct AssembledSparseMatrix.
    *
-   * @return reference to internal AssembledSparseMatrix
    */
   std::unique_ptr<serac::mfem_ext::AssembledSparseMatrix> assembled_spmat_;
 };
