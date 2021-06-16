@@ -263,10 +263,14 @@ class Axom(CachedCMakePackage, CudaPackage):
         description = ("Adds a missing rpath for libraries "
                        "associated with the fortran compiler")
 
+
+        # SERAC EDIT BEGIN - BLT_EXE_LINKER_FLAGS aren't filtered
+        # for the Wl/Xlinker incompability
         if "+cuda" in spec:
             linker_flags = "${BLT_EXE_LINKER_FLAGS} -Xlinker -rpath -Xlinker " + libdir
         else:
             linker_flags = "${BLT_EXE_LINKER_FLAGS} -Wl,-rpath," + libdir
+        # SERAC EDIT END
 
         entries.append(cmake_cache_string("BLT_EXE_LINKER_FLAGS", linker_flags, description))
 
