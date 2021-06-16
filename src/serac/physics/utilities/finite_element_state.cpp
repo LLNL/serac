@@ -37,29 +37,34 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunctio
 
 // Initialize StateManager's static members - both of these will be fully initialized in StateManager::initialize
 std::optional<axom::sidre::MFEMSidreDataCollection> StateManager::datacoll_;
-bool                                                StateManager::is_restart_ = false;
+bool                                                StateManager::is_restart_      = false;
+std::string                                         StateManager::collection_name_ = "";
 
-void StateManager::initialize(axom::sidre::DataStore& ds, const std::optional<int> cycle_to_load)
+void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& collection_name_prefix,
+                              const std::optional<int> cycle_to_load)
 {
   // If the global object has already been initialized, clear it out
   if (datacoll_) {
     reset();
   }
 
-  const std::string coll_name    = "serac_datacoll";
-  auto              global_grp   = ds.getRoot()->createGroup(coll_name + "_global");
-  auto              bp_index_grp = global_grp->createGroup("blueprint_index/" + coll_name);
-  auto              domain_grp   = ds.getRoot()->createGroup(coll_name);
+  collection_name_ = collection_name_prefix + "_datacoll";
+
+  auto global_grp   = ds.getRoot()->createGroup(collection_name_ + "_global");
+  auto bp_index_grp = global_grp->createGroup("blueprint_index/" + collection_name_);
+  auto domain_grp   = ds.getRoot()->createGroup(collection_name_);
 
   // Needs to be configured to own the mesh data so all mesh data is saved to datastore/output file
   const bool owns_mesh_data = true;
-  datacoll_.emplace("serac_datacoll", bp_index_grp, domain_grp, owns_mesh_data);
+  datacoll_.emplace(collection_name_, bp_index_grp, domain_grp, owns_mesh_data);
   datacoll_->SetComm(MPI_COMM_WORLD);
   if (cycle_to_load) {
     is_restart_ = true;
+    // NOTE: Load invalidates previous Sidre pointers
     datacoll_->Load(*cycle_to_load);
-    datacoll_->SetGroupPointers(ds.getRoot()->getGroup(coll_name + "_global/blueprint_index/" + coll_name),
-                                ds.getRoot()->getGroup(coll_name));
+    datacoll_->SetGroupPointers(
+        ds.getRoot()->getGroup(collection_name_ + "_global/blueprint_index/" + collection_name_),
+        ds.getRoot()->getGroup(collection_name_));
     SLIC_ERROR_ROOT_IF(datacoll_->GetBPGroup()->getNumGroups() == 0,
                        "Loaded datastore is empty, was the datastore created on a "
                        "different number of nodes?");

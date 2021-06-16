@@ -15,40 +15,49 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
-    # Conduit (required by Axom)
+    # Conduit (required by Axom and Ascent)
     #------------------------------------------------------------------------------
     if(NOT CONDUIT_DIR)
         MESSAGE(FATAL_ERROR "Could not find Conduit. Conduit requires explicit CONDUIT_DIR.")
     endif()
 
-    if(NOT WIN32)
-        set(_conduit_config "${CONDUIT_DIR}/lib/cmake/ConduitConfig.cmake")
-        if(NOT EXISTS ${_conduit_config})
-            MESSAGE(FATAL_ERROR "Could not find Conduit cmake include file ${_conduit_config}")
-        endif()
-
-        find_package(Conduit REQUIRED
-                     NO_DEFAULT_PATH
-                     PATHS ${CONDUIT_DIR}/lib/cmake)
-    else()
-        # Allow for several different configurations of Conduit
-        find_package(Conduit CONFIG 
-            REQUIRED
-            HINTS ${CONDUIT_DIR}/cmake/conduit 
-                  ${CONDUIT_DIR}/lib/cmake/conduit
-                  ${CONDUIT_DIR}/share/cmake/conduit
-                  ${CONDUIT_DIR}/share/conduit
-                  ${CONDUIT_DIR}/cmake)
+    set(_conduit_config "${CONDUIT_DIR}/lib/cmake/ConduitConfig.cmake")
+    if(NOT EXISTS ${_conduit_config})
+        MESSAGE(FATAL_ERROR "Could not find Conduit CMake include file ${_conduit_config}")
     endif()
 
-    # Manually set includes as system includes
-    set_property(TARGET conduit::conduit 
-                 APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                 "${CONDUIT_INSTALL_PREFIX}/include/")
+    find_package(Conduit REQUIRED
+                 NO_DEFAULT_PATH
+                 PATHS ${CONDUIT_DIR}/lib/cmake)
 
+    # Manually set includes as system includes
+    get_target_property(_dirs conduit::conduit INTERFACE_INCLUDE_DIRECTORIES)
     set_property(TARGET conduit::conduit 
                  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                 "${CONDUIT_INSTALL_PREFIX}/include/conduit/")
+                 "${_dirs}")
+
+
+    #------------------------------------------------------------------------------
+    # Ascent
+    #------------------------------------------------------------------------------
+    if(NOT ASCENT_DIR)
+        MESSAGE(FATAL_ERROR "Could not find Ascent. Ascent requires explicit ASCENT_DIR.")
+    endif()
+
+    set(_ascent_config "${ASCENT_DIR}/lib/cmake/ascent/AscentConfig.cmake")
+    if(NOT EXISTS ${_ascent_config})
+        MESSAGE(FATAL_ERROR "Could not find Ascent CMake include file ${_ascent_config}")
+    endif()
+
+    find_package(Ascent REQUIRED
+                 NO_DEFAULT_PATH
+                 PATHS ${ASCENT_DIR}/lib/cmake)
+
+    # Manually set includes as system includes
+    get_target_property(_dirs ascent::ascent_mpi INTERFACE_INCLUDE_DIRECTORIES)
+    set_property(TARGET ascent::ascent_mpi
+                 APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                 "${_dirs}")
 
 
     #------------------------------------------------------------------------------
@@ -226,6 +235,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # to work around CMake error
     #---------------------------------------------------------------------------
     set(_imported_targets
+        ascent::ascent_mpi
         axom
         conduit
         conduit::conduit_mpi
