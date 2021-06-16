@@ -24,6 +24,7 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/infrastructure/logger.hpp"
+#include "serac/infrastructure/output.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/thermal_solid.hpp"
@@ -98,13 +99,15 @@ int main(int argc, char* argv[])
 
   // Check for the doc creation command line argument
   bool create_input_file_docs = cli_opts.find("create_input_file_docs") != cli_opts.end();
+  // Check for the output fields command line argument
+  bool output_fields = cli_opts.find("output_fields") != cli_opts.end();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
 
   // Intialize MFEMSidreDataCollection
   // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-  serac::StateManager::initialize(datastore, restart_cycle);
+  serac::StateManager::initialize(datastore, "serac", restart_cycle);
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
@@ -112,9 +115,7 @@ int main(int argc, char* argv[])
 
   // Optionally, create input file documentation and quit
   if (create_input_file_docs) {
-    auto writer = std::make_unique<axom::inlet::SphinxWriter>("serac_input.rst");
-    inlet.registerWriter(std::move(writer));
-    inlet.write();
+    inlet.write(axom::inlet::SphinxWriter("serac_input.rst"));
     serac::exitGracefully();
   }
 
@@ -193,6 +194,10 @@ int main(int argc, char* argv[])
 
     // Determine if this is the last timestep
     last_step = (t >= t_final - 1e-8 * dt);
+  }
+
+  if (output_fields) {
+    serac::output::outputFields(datastore, "serac_fields", t, serac::output::Language::JSON);
   }
 
   serac::exitGracefully();

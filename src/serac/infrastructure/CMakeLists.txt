@@ -10,6 +10,7 @@ set(infrastructure_headers
     initialize.hpp
     input.hpp
     logger.hpp
+    output.hpp
     profiling.hpp
     terminator.hpp
     )
@@ -20,11 +21,12 @@ set(infrastructure_sources
     initialize.cpp
     input.cpp
     logger.cpp
+    output.cpp
     profiling.cpp
     terminator.cpp
     )
 
-set(infrastructure_depends axom fmt mpi cli11 mfem)
+set(infrastructure_depends axom fmt ascent::ascent_mpi mpi cli11 mfem)
 blt_list_append( TO infrastructure_depends ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
 blt_add_library(
