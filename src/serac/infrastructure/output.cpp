@@ -22,7 +22,7 @@ namespace serac::output {
 void outputFields(const axom::sidre::DataStore& datastore, const std::string& file_name_prefix, double time,
                   const Language language)
 {
-  SLIC_INFO(fmt::format("Outputting field data at time: {}", time));
+  SLIC_INFO_ROOT(fmt::format("Outputting field data at time: {}", time));
 
   // Configure Ascent to extract data
   ascent::Ascent ascent;
@@ -43,7 +43,8 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& fi
   }
 
   conduit::Node extracts;
-  extracts["e1/type"]            = "relay";  // relay is the saving extract
+  // "relay" is the Ascents Extract type for saving data
+  extracts["e1/type"]            = "relay";
   auto [_, rank]                 = serac::getMPIInfo();
   extracts["e1/params/path"]     = fmt::format("{}.{}.{}", file_name_prefix, rank, output_language);
   extracts["e1/params/protocol"] = output_language;
@@ -52,12 +53,12 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& fi
   // TODO: get this from StateManager directly?
   const axom::sidre::Group* sidre_root      = datastore.getRoot();
   const std::string         collection_name = StateManager::collectionName();
-  SLIC_ERROR_IF(!sidre_root->hasGroup(collection_name),
-                fmt::format("Expected a datacollection root at '{0}' but it was not found", collection_name));
+  SLIC_ERROR_ROOT_IF(!sidre_root->hasGroup(collection_name),
+                     fmt::format("Expected a datacollection root at '{0}' but it was not found", collection_name));
   const axom::sidre::Group* domain_grp = sidre_root->getGroup(collection_name);
 
   // Add field names to extract field lists
-  SLIC_ERROR_IF(!domain_grp->hasGroup("blueprint/fields"), "Data Collection did not have `fields`!");
+  SLIC_ERROR_ROOT_IF(!domain_grp->hasGroup("blueprint/fields"), "Data Collection did not have `fields`!");
   const axom::sidre::Group* fields_grp = domain_grp->getGroup("blueprint/fields");
   // TODO: get these from input file
   for (axom::sidre::IndexType idx = fields_grp->getFirstValidGroupIndex(); axom::sidre::indexIsValid(idx);
