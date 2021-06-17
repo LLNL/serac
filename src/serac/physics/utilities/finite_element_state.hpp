@@ -265,13 +265,21 @@ private:
 };
 
 /**
+ * @brief A shim class for describing the interface of something that can be synced
+ */
+class SyncableData {
+public:
+  virtual void sync() = 0;
+};
+
+/**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
  * @pre T must be default-constructible (TODO: Do we want to allow non-default constructible types?)
  * @pre T must be trivially copyable (due to the use of memcpy for type punning)
  */
 template <typename T>
-class QuadratureData {
+class QuadratureData : public SyncableData {
 public:
   /**
    * @brief Constructs using a mesh and polynomial order
@@ -321,7 +329,16 @@ public:
 
   mfem::QuadratureFunction& QFunc() { return detail::retrieve(qfunc_); }
 
-  void syncToQFunc()
+  /**
+   * @brief Synchronizes data from the stored vector<T> to the raw double*
+   * array used by the underlying mfem::QuadratureFunction
+   *
+   * Used for saving to a file - MFEMSidreDataCollection
+   * (and by extension mfem::DataCollection's interface) only allow for
+   * quadrature-point-specific data via mfem::QuadratureFunction, so this logic
+   * is needed to glue together a generic array of data with that class
+   */
+  void sync() override
   {
     double*  qfunc_ptr = detail::retrieve(qfunc_).GetData();
     int      j         = 0;
@@ -421,17 +438,20 @@ public:
   static FiniteElementState newState(FiniteElementState::Options&& options = {});
 
   template <typename T>
-  static QuadratureData<T> newQuadratureData(const std::string& name, const int p)
+  static QuadratureData<T>& newQuadratureData(const std::string& name, const int p)
   {
     if (is_restart_) {
       auto field = datacoll_->GetQField(name);
-      return {*field};
+      syncable_data_.push_back(std::make_unique<QuadratureData<T>>(*field));
+      // return {*field};
+      return static_cast<QuadratureData<T>&>(*syncable_data_.back());
     } else {
       SLIC_ERROR_ROOT_IF(datacoll_->HasQField(name),
                          fmt::format("Serac's datacollection was already given a qfield named '{0}'", name));
-      QuadratureData<T> qdata(mesh(), p, false);
-      datacoll_->RegisterField(name, &(qdata.QFunc()));
-      // qspace_sync_callbacks_.push_back([]())
+      syncable_data_.push_back(std::make_unique<QuadratureData<T>>(mesh(), p, false));
+      // The static_cast is safe here because we "know" what we just inserted into the vector
+      auto& qdata = static_cast<QuadratureData<T>&>(*syncable_data_.back());
+      datacoll_->RegisterQField(name, &(qdata.QFunc()));
       return qdata;
     }
   }
@@ -475,7 +495,7 @@ private:
    */
   static bool is_restart_;
 
-  static std::vector<std::function<void(void)>> qspace_sync_callbacks_;
+  static std::vector<std::unique_ptr<SyncableData>> syncable_data_;
 };
 
 }  // namespace serac

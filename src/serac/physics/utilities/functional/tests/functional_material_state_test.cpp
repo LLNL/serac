@@ -129,6 +129,71 @@ TEST_F(QuadratureDataTest, basic_integrals_multi_fields)
   }
 }
 
+TEST_F(QuadratureDataTest, basic_integrals_state_manager)
+{
+  constexpr int cycle = 0;
+  // After element of the state has been incremented once...
+  constexpr StateWithMultiFields incremented_once{0.6, 1.0};
+  constexpr StateWithMultiFields incremented_twice{0.7, 1.7};
+
+  // First set up the Functional object, run it once to update the state once,
+  // then save it
+  {
+    axom::sidre::DataStore datastore;
+    serac::StateManager::initialize(datastore);
+    serac::StateManager::setMesh(std::move(mesh));
+    auto& qdata = serac::StateManager::newQuadratureData<StateWithMultiFields>("test_data", p);
+
+    residual->AddDomainIntegral(
+        Dimension<dim>{},
+        [&](auto /* x */, auto u, auto& state) {
+          state.x += 0.1;
+          state.y += 0.7;
+          return u;
+        },
+        serac::StateManager::mesh(), qdata);
+    // If we run through it one time...
+    mfem::Vector U(festate->space().TrueVSize());
+    (*residual)(U);
+
+    for (const auto& s : qdata) {
+      EXPECT_EQ(s, incremented_once);
+    }
+    serac::StateManager::save(0.0, cycle);
+    serac::StateManager::reset();
+  }
+
+  // Then reload the state to make sure it was synced correctly, and update it again before saving
+  {
+    axom::sidre::DataStore datastore;
+    serac::StateManager::initialize(datastore, cycle);
+    auto& qdata = serac::StateManager::newQuadratureData<StateWithMultiFields>("test_data", p);
+    // Make sure the changes from the first increment were propagated through
+    for (const auto& s : qdata) {
+      EXPECT_EQ(s, incremented_once);
+    }
+    // Then increment it for the second time
+    mfem::Vector U(festate->space().TrueVSize());
+    (*residual)(U);
+    // Before saving it again
+    serac::StateManager::save(0.1, cycle + 1);
+    serac::StateManager::reset();
+  }
+
+  // Reload the state again to make sure the same synchronization still happens when the data
+  // is read in from a restart
+  {
+    axom::sidre::DataStore datastore;
+    serac::StateManager::initialize(datastore, cycle + 1);
+    auto& qdata = serac::StateManager::newQuadratureData<StateWithMultiFields>("test_data", p);
+    // Make sure the changes from the second increment were propagated through
+    for (const auto& s : qdata) {
+      EXPECT_EQ(s, incremented_twice);
+    }
+    serac::StateManager::reset();
+  }
+}
+
 //------------------------------------------------------------------------------
 #include "axom/slic/core/SimpleLogger.hpp"
 
