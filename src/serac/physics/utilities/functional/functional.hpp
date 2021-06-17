@@ -563,7 +563,8 @@ private:
   mutable Gradient grad_;
 
   /**
-   * @brief storage buffer for element stiffness matrices, used in ComputeElementMatrices() and UpdateAssembledSparseMatrix()
+   * @brief storage buffer for element stiffness matrices, used in ComputeElementMatrices() and
+   * UpdateAssembledSparseMatrix()
    */
   mutable mfem::Vector K_e_;
 

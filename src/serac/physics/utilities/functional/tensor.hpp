@@ -82,9 +82,11 @@ struct tensor;
 
 template <typename T>
 struct tensor<T> {
-  using type                    = T;
-  static constexpr int ndim     = 0;
-  static constexpr int shape[1] = {0};
+  using type                                  = T;
+  static constexpr int              ndim      = 0;
+  static constexpr int              first_dim = 1;
+  SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; }
+  SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; }
 
   template <typename... S>
   SERAC_HOST_DEVICE constexpr auto& operator()(S...)
@@ -106,9 +108,9 @@ struct tensor<T> {
 
 template <typename T, int n>
 struct tensor<T, n> {
-  using type                       = T;
-  static constexpr int ndim        = 1;
-  static constexpr int shape[ndim] = {n};
+  using type                     = T;
+  static constexpr int ndim      = 1;
+  static constexpr int first_dim = n;
 
   template <typename S>
   SERAC_HOST_DEVICE constexpr auto& operator()(S i)
@@ -148,7 +150,7 @@ struct tensor<T, first, rest...> {
    * @brief The array of dimensions containing the shape (not the data itself)
    * Similar to numpy.ndarray.shape
    */
-  static constexpr int shape[ndim] = {first, rest...};
+  static constexpr int first_dim = first;
 
   /**
    * @brief Retrieves the sub-tensor corresponding to the indices provided in the pack @a i
@@ -353,7 +355,7 @@ template <typename S, typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto operator+(const tensor<S, n...>& A, const tensor<T, n...>& B)
 {
   tensor<decltype(S{} + T{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
+  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
     C[i] = A[i] + B[i];
   }
   return C;
@@ -369,7 +371,7 @@ template <typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto operator-(const tensor<T, n...>& A)
 {
   tensor<T, n...> B{};
-  for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
+  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
     B[i] = -A[i];
   }
   return B;
@@ -387,7 +389,7 @@ template <typename S, typename T, int... n>
 SERAC_HOST_DEVICE constexpr auto operator-(const tensor<S, n...>& A, const tensor<T, n...>& B)
 {
   tensor<decltype(S{} + T{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
+  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
     C[i] = A[i] - B[i];
   }
   return C;
@@ -406,7 +408,7 @@ template <typename S, typename T, int... n,
 SERAC_HOST_DEVICE constexpr auto operator*(S scale, const tensor<T, n...>& A)
 {
   tensor<decltype(S{} * T{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
+  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
     C[i] = scale * A[i];
   }
   return C;
@@ -425,7 +427,7 @@ template <typename S, typename T, int... n,
 SERAC_HOST_DEVICE constexpr auto operator*(const tensor<T, n...>& A, S scale)
 {
   tensor<decltype(T{} * S{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
+  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
     C[i] = A[i] * scale;
   }
   return C;
@@ -444,7 +446,7 @@ template <typename S, typename T, int... n,
 constexpr auto operator/(S scale, const tensor<T, n...>& A)
 {
   tensor<decltype(S{} * T{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
+  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
     C[i] = scale / A[i];
   }
   return C;
@@ -463,7 +465,7 @@ template <typename S, typename T, int... n,
 constexpr auto operator/(const tensor<T, n...>& A, S scale)
 {
   tensor<decltype(T{} * S{}), n...> C{};
-  for (int i = 0; i < tensor<T, n...>::shape[0]; i++) {
+  for (int i = 0; i < tensor<T, n...>::first_dim; i++) {
     C[i] = A[i] / scale;
   }
   return C;
@@ -480,7 +482,7 @@ constexpr auto operator/(const tensor<T, n...>& A, S scale)
 template <typename S, typename T, int... n>
 constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
 {
-  for (int i = 0; i < tensor<S, n...>::shape[0]; i++) {
+  for (int i = 0; i < tensor<S, n...>::first_dim; i++) {
     A[i] += B[i];
   }
   return A;
@@ -509,7 +511,7 @@ constexpr auto& operator+=(tensor<T, n...>& A, zero)
 template <typename S, typename T, int... n>
 constexpr auto& operator-=(tensor<S, n...>& A, const tensor<T, n...>& B)
 {
-  for (int i = 0; i < tensor<S, n...>::shape[0]; i++) {
+  for (int i = 0; i < tensor<S, n...>::first_dim; i++) {
     A[i] -= B[i];
   }
   return A;
@@ -1267,7 +1269,7 @@ template <typename T, int... n>
 auto& operator<<(std::ostream& out, const tensor<T, n...>& A)
 {
   out << '{' << A[0];
-  for (int i = 1; i < tensor<T, n...>::shape[0]; i++) {
+  for (int i = 1; i < tensor<T, n...>::first_dim; i++) {
     out << ", " << A[i];
   }
   out << '}';

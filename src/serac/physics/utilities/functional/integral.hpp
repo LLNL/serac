@@ -500,7 +500,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
 
-      // evaluate shape functions 
+      // evaluate shape functions
       [[maybe_unused]] auto M = test_element::shape_functions(xi_q);
       [[maybe_unused]] auto N = trial_element::shape_functions(xi_q);
       if constexpr (test_element::family == Family::HCURL) {
@@ -866,7 +866,8 @@ public:
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
 
   /**
-   * @brief Computes the element stiffness matrices, storing them in an `mfem::Vector` that has been reshaped into a multidimensional array
+   * @brief Computes the element stiffness matrices, storing them in an `mfem::Vector` that has been reshaped into a
+   * multidimensional array
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
    */
