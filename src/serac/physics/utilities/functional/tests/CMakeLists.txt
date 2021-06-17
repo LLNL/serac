@@ -26,8 +26,8 @@ endforeach()
 # Then add the examples/tests
 set(functional_tests_mpi
     # functional_boundary_test.cpp
-    functional_comparisons.cpp
-    functional_comparison_L2.cpp
+    # functional_comparisons.cpp
+    # functional_comparison_L2.cpp
     )
     
 foreach(filename ${functional_tests_mpi})
@@ -61,8 +61,9 @@ endforeach()
 if(ENABLE_CUDA)
 
     set(functional_tests_cuda
-        tensor_unit_tests_cuda.cu
-	functional_comparisons_cuda.cu)	
+    #    tensor_unit_tests_cuda.cu
+    #    functional_comparisons_cuda.cu
+    )
         
     foreach(filename ${functional_tests_cuda})
         get_filename_component(test_name ${filename} NAME_WE)

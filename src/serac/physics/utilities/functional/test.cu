@@ -24,7 +24,7 @@ static constexpr double mu  = 2.0;
   // CUDA workaround template deduction guide failed
   constexpr tensor<double, 3, 3> L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
 
-  auto output = std::apply(f, make_dual(p, v, L));
+  auto output = serac::apply(f, make_dual(p, v, L));
 
   //  auto value = get_value(output);
   //  auto grad  = get_gradient(output);

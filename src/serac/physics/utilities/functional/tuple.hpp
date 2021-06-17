@@ -1,5 +1,6 @@
-
 #pragma once 
+
+#include <utility>
 
 namespace serac{
 
@@ -126,6 +127,26 @@ namespace serac{
     return div_helper(x, y, std::make_integer_sequence<int, sizeof ... (S) >());    
   }
 
+  template < typename ... T, int ... i >
+  constexpr auto div_helper(const double a, const tuple < T ... > & x, std::integer_sequence< int, i...>) {
+    return tuple{a / get<i>(x) ...};
+  }
+
+  template < typename ... T, int ... i >
+  constexpr auto div_helper(const tuple < T ... > & x, const double a, std::integer_sequence< int, i...>) {
+    return tuple{get<i>(x) / a ...};
+  }
+
+  template < typename ... T >
+  constexpr auto operator/(const double a, const tuple < T ... > & x) {
+    return div_helper(a, x, std::make_integer_sequence<int, sizeof ... (T) >());    
+  }
+
+  template < typename ... T >
+  constexpr auto operator/(const tuple < T ... > & x, const double a) {
+    return div_helper(x, a, std::make_integer_sequence<int, sizeof ... (T) >());    
+  }
+
 
   template < typename ... S, typename ... T, int ... i >
   constexpr auto mult_helper(const tuple < S ... > & x, const tuple < T ... > & y, std::integer_sequence< int, i...>) {
@@ -138,6 +159,48 @@ namespace serac{
     return mult_helper(x, y, std::make_integer_sequence<int, sizeof ... (S) >());    
   }
 
+  template < typename ... T, int ... i >
+  constexpr auto mult_helper(const double a, const tuple < T ... > & x, std::integer_sequence< int, i...>) {
+    return tuple{a * get<i>(x) ...};
+  }
+
+  template < typename ... T, int ... i >
+  constexpr auto mult_helper(const tuple < T ... > & x, const double a, std::integer_sequence< int, i...>) {
+    return tuple{get<i>(x) * a ...};
+  }
+
+  template < typename ... T >
+  constexpr auto operator*(const double a, const tuple < T ... > & x) {
+    return mult_helper(a, x, std::make_integer_sequence<int, sizeof ... (T) >());    
+  }
+
+  template < typename ... T >
+  constexpr auto operator*(const tuple < T ... > & x, const double a) {
+    return mult_helper(x, a, std::make_integer_sequence<int, sizeof ... (T) >());    
+  }
+
+  template < typename lambda, typename ... T, int ... i >
+  auto apply_helper(lambda f, tuple< T ... > & args, std::integer_sequence< int, i...>) {
+    return f(get<i>(args) ...);
+  }
+
+  template < typename lambda, typename ... T >
+  auto apply(lambda f, tuple< T ... > & args) {
+    return apply_helper(f, std::move(args), std::make_integer_sequence<int, sizeof ... (T) >());
+  }
+
+  template < typename lambda, typename ... T, int ... i >
+  auto apply_helper(lambda f, const tuple< T ... > & args, std::integer_sequence< int, i...>) {
+    return f(get<i>(args) ...);
+  }
+
+  template < typename lambda, typename ... T >
+  auto apply(lambda f, const tuple< T ... > & args) {
+    return apply_helper(f, std::move(args), std::make_integer_sequence<int, sizeof ... (T) >());
+  }
+
+
+#if 0
 template <class T>
 struct unwrap_refwrapper
 {
@@ -160,5 +223,19 @@ tuple<unwrap_decay_t<Types>...> make_tuple(Types&&... args)
 {
     return tuple<unwrap_decay_t<Types>...>(std::forward<Types>(args)...);
 }
+#endif
 
 } // namespace serac
+
+namespace std {
+
+  template < size_t i, typename ... T >
+  constexpr auto & get(const serac::tuple< T ... > & values) { return serac::get<i>(values); }
+
+  template < size_t i, typename ... T >
+  constexpr auto get(const serac::tuple< T ... > values) { return serac::get<i>(values); }
+
+  template< typename  ... Types >
+  struct tuple_size< serac::tuple<Types...> > : std::integral_constant<std::size_t, sizeof...(Types)> {};
+
+} // namespace std

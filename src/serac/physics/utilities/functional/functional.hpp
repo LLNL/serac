@@ -228,7 +228,7 @@ public:
    * @param[in] domain The mesh to evaluate the integral on
    */
   template <int d, typename lambda>
-  void AddDomainIntegral(Dimension<d>, lambda&& integrand, mfem::Mesh& domain, bool use_cuda = false)
+  void AddDomainIntegral(Dimension<d>, lambda&& integrand, mfem::Mesh& domain, [[maybe_unused]] bool use_cuda = false)
   {
     AddIntegral(Dimension<d>{} /* geometry */, Dimension<d>{} /* spatial */, integrand, domain);
   }

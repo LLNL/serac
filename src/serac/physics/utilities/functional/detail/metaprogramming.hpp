@@ -16,6 +16,8 @@
 #include <utility>
 #include <type_traits>
 
+#include "serac/infrastructure/accelerator.hpp"
+
 /**
  * @brief return the Ith integer in `{n...}`
  */
@@ -29,60 +31,19 @@ constexpr auto get(std::integer_sequence<int, n...>)
 /// @cond
 namespace detail {
 template <typename lambda, int... i>
-inline constexpr void for_constexpr(lambda&& f, std::integral_constant<int, i>... args)
+SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f, std::integral_constant<int, i>... args)
 {
   f(args...);
 }
 
 template <int... n, typename lambda, typename... arg_types>
-inline constexpr void for_constexpr(lambda&& f, std::integer_sequence<int, n...>, arg_types... args)
+SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f, std::integer_sequence<int, n...>, arg_types... args)
 {
   (detail::for_constexpr(f, args..., std::integral_constant<int, n>{}), ...);
 }
 
-template <int r, int... n, int... i>
-constexpr auto remove_helper(std::integer_sequence<int, n...>, std::integer_sequence<int, i...>)
-{
-  return std::integer_sequence<int, get<i + (i >= r)>(std::integer_sequence<int, n...>{})...>{};
-}
 }  // namespace detail
 /// @endcond
-
-/**
- * @brief return the `first` argument in a variadic list
- */
-template <typename... T>
-constexpr auto first(T... args)
-{
-  return std::get<0>(std::tuple{args...});
-}
-
-/**
- * @brief return the `last` argument in a variadic list
- */
-template <typename... T>
-constexpr auto last(T... args)
-{
-  return std::get<sizeof...(T) - 1>(std::tuple{args...});
-}
-
-/**
- * @brief return a new std::integer_sequence, after removing the rth entry from another std::integer_sequence
- */
-template <int r, int... n>
-constexpr auto remove(std::integer_sequence<int, n...> seq)
-{
-  return detail::remove_helper<r>(seq, std::make_integer_sequence<int, int(sizeof...(n)) - 1>{});
-}
-
-/**
- * @brief return the concatenation of two std::integer_sequences
- */
-template <int... n1, int... n2>
-constexpr auto join(std::integer_sequence<int, n1...>, std::integer_sequence<int, n2...>)
-{
-  return std::integer_sequence<int, n1..., n2...>{};
-}
 
 /**
  * @brief multidimensional loop tool that evaluates the lambda body inside the innermost loop.
@@ -114,7 +75,7 @@ constexpr auto join(std::integer_sequence<int, n1...>, std::integer_sequence<int
  *
  */
 template <int... n, typename lambda>
-inline constexpr void for_constexpr(lambda&& f)
+SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f)
 {
   detail::for_constexpr(f, std::make_integer_sequence<int, n>{}...);
 }
