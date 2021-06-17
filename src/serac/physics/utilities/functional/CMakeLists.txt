@@ -5,10 +5,8 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(functional_depends serac_physics mfem mpi)
-
-#if(ENABLE_CUDA)
-#    list(APPEND functional_depends cuda)
-#endif()
+blt_list_append( TO functional_depends ELEMENTS cuda    IF ENABLE_CUDA )
+blt_list_append( TO functional_depends ELEMENTS caliper IF SERAC_USE_CALIPER )
 
 # Add the library first
 set(functional_headers

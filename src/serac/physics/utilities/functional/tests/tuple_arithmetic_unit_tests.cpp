@@ -139,13 +139,15 @@ TEST(ChainRuleTests, tuple_output_with_tuple_input)
     return std::tuple{rho * outer(v, v) + 2.0 * mu * sym(L) - p * I, v + dot(v, L)};
   };
 
-  constexpr double p = 3.14;
-  constexpr tensor v = {{1.0, 2.0, 3.0}};
-  constexpr tensor L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+  [[maybe_unused]] constexpr double p = 3.14;
+  [[maybe_unused]] constexpr tensor v = {{1.0, 2.0, 3.0}};
+  // CUDA workaround template deduction guide failed
+  constexpr tensor<double, 3, 3> L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
 
   constexpr double dp = 1.23;
   constexpr tensor dv = {{2.0, 1.0, 4.0}};
-  constexpr tensor dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
+  // CUDA workaround template deduction guide failed
+  constexpr tensor<double, 3, 3> dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
 
   auto output = std::apply(f, make_dual(p, v, L));
 

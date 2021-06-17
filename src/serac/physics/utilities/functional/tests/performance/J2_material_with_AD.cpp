@@ -139,7 +139,8 @@ struct J2 {
 // impose some arbitrary time-dependent deformation
 auto displacement_gradient(double t)
 {
-  return 10 * tensor{{
+  /** CUDA WORKAROUND deduction guide failed **/
+  return 10 * tensor<double, 3, 3>{{
                   {sin(t), 0.0, 0.0},
                   {0.0, t, exp(t) - 1},
                   {0.0, 0.0, t * t},

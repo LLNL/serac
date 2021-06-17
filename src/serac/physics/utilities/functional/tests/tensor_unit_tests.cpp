@@ -93,7 +93,8 @@ void navier_stokes_tests()
 
   constexpr double p = 3.14;
   constexpr tensor v = {{1.0, 2.0, 3.0}};
-  constexpr tensor L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+  // CUDA WORKAROUND template deduction failed
+  constexpr tensor<double, 3, 3> L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
 
   {
     [[maybe_unused]] static constexpr auto exact = dsigma_dp(p, v, L);
