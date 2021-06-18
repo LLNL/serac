@@ -37,7 +37,6 @@ public:
    * @brief Assembles a new HypreParMatrix
    * @returns a new HypreParMatrix
    */
-
   auto ParallelAssemble()
   {
     auto hypre_A =
