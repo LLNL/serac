@@ -1516,7 +1516,7 @@ auto convert_to_tensor_with_shape(T value)
  * @brief Recast the shape of a tensor<m, n, o>
  */
 template <int m, int n, int o, typename T>
-auto convert_to_tensor_with_shape(tensor<T, m, n, o> A)
+auto convert_to_tensor_with_shape(const tensor<T, m, n, o>& A)
 {
   return A;
 }
