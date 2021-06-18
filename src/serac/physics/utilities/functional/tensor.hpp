@@ -1496,7 +1496,7 @@ auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p.
  * @brief Recast the shape of a tensor <m,n>
  */
 template <int m, int n, typename T>
-auto convert_to_tensor_with_shape(tensor<T, m, n> A)
+auto convert_to_tensor_with_shape(const tensor<T, m, n>& A)
 {
   return A;
 }
