@@ -11,25 +11,29 @@ namespace detail {
  */
 template <auto offsetV, auto indicesV, auto gatherV>
 struct forbidden_restriction {
-  friend mfem::Array<int>& ElementRestriction_offsets(mfem::ElementRestriction& from) { return from.*offsetV; }
-  friend mfem::Array<int>& ElementRestriction_indices(mfem::ElementRestriction& from) { return from.*indicesV; }
-  friend mfem::Array<int>& ElementRestriction_gatherMap(mfem::ElementRestriction& from) { return from.*gatherV; }
+  friend mfem::Array<int>& ElementRestrictionOffsets(mfem::ElementRestriction& from) { return from.*offsetV; }
+  friend mfem::Array<int>& ElementRestrictionIndices(mfem::ElementRestriction& from) { return from.*indicesV; }
+  friend mfem::Array<int>& ElementRestrictionGatherMap(mfem::ElementRestriction& from) { return from.*gatherV; }
 };
 
-mfem::Array<int>& ElementRestriction_offsets(mfem::ElementRestriction&);
-mfem::Array<int>& ElementRestriction_indices(mfem::ElementRestriction&);
-mfem::Array<int>& ElementRestriction_gatherMap(mfem::ElementRestriction&);
+mfem::Array<int>& ElementRestrictionOffsets(mfem::ElementRestriction&);
+mfem::Array<int>& ElementRestrictionIndices(mfem::ElementRestriction&);
+mfem::Array<int>& ElementRestrictionGatherMap(mfem::ElementRestriction&);
 
 template struct forbidden_restriction<&mfem::ElementRestriction::offsets, &mfem::ElementRestriction::indices,
                                       &mfem::ElementRestriction::gatherMap>;
 /**
  * @brief Account for HCURL-oriented index
+ *
+ * HCURL-indices can be negative. This function maps it back to a positive index.
+ * It's useful for retrieving results from arrays which need non-negative indices.
+ *
  * @param[in] index Index-value. Can be negative for HCURL
  * @return corresponding valid index value in array (must be positive)
  */
 
 template <typename T>
-T oriented_index(T index)
+T makePositiveOrientedIndex(T index)
 {
   return index >= 0 ? index : -1 - index;
 }
@@ -49,12 +53,12 @@ T sign(T index)
 /**
  * @brief Adds HCURL orientation encoding to index
  * @param[in] index positive index value
- * @param[in] orientation Positive orientation or negative
+ * @param[in] positive_orientation Positive orientation or negative
  */
 template <typename T>
-T orient_index(T index, bool pos)
+T makeIndexOriented(T index, bool positive_orientation)
 {
-  return pos ? index : -1 - index;
+  return positive_orientation ? index : -1 - index;
 }
 
 }  // namespace detail
@@ -92,9 +96,9 @@ int AssembledSparseMatrix::FillI()
   // offsets are the row offsets corresponding to a vdof
   // indices maps a given vdof to the the assembled element matrix vector (dof * ne + d).
   // gatherMap takes an element matrix vector offset (dof, ne) and returns the partition-local vdof (d.o.f. id).
-  auto& test_offsets    = detail::ElementRestriction_offsets(test_restriction_);
-  auto& test_indices    = detail::ElementRestriction_indices(test_restriction_);
-  auto& trial_gatherMap = detail::ElementRestriction_gatherMap(trial_restriction_);
+  auto& test_offsets    = detail::ElementRestrictionOffsets(test_restriction_);
+  auto& test_indices    = detail::ElementRestrictionIndices(test_restriction_);
+  auto& trial_gatherMap = detail::ElementRestrictionGatherMap(trial_restriction_);
 
   /**
      We expect mat_ea to be of size (test_elem_dof * test_vdim, trial_elem_dof * trial_vdim, ne)
@@ -161,9 +165,9 @@ int AssembledSparseMatrix::FillI()
 
 void AssembledSparseMatrix::FillJ()
 {
-  auto& test_offsets    = detail::ElementRestriction_offsets(test_restriction_);
-  auto& test_indices    = detail::ElementRestriction_indices(test_restriction_);
-  auto& trial_gatherMap = detail::ElementRestriction_gatherMap(trial_restriction_);
+  auto& test_offsets    = detail::ElementRestrictionOffsets(test_restriction_);
+  auto& test_indices    = detail::ElementRestrictionIndices(test_restriction_);
+  auto& trial_gatherMap = detail::ElementRestrictionGatherMap(trial_restriction_);
 
   const int test_elem_dof  = test_fes_.GetFE(0)->GetDof();
   const int trial_elem_dof = trial_fes_.GetFE(0)->GetDof();
@@ -194,7 +198,7 @@ void AssembledSparseMatrix::FillJ()
     for (int e_index = 0; e_index < nrow_elems; e_index++) {
       // test_indices can be negative in the case of Hcurl
       const int test_index_v = test_indices[test_row_offset + e_index];
-      const int test_index   = detail::oriented_index(test_index_v);
+      const int test_index   = detail::makePositiveOrientedIndex(test_index_v);
       const int e            = test_index / test_elem_dof;
       const int test_i_elem  = test_index % test_elem_dof;
 
@@ -203,7 +207,7 @@ void AssembledSparseMatrix::FillJ()
       for (int j_elem = 0; j_elem < trial_elem_dof; j_elem++) {
         // could be negative.. but trial_elem_vdofs is a temporary array
         const auto trial_j_vdof_v = trial_gatherMap[trial_elem_dof * e + j_elem];
-        const auto trial_j_vdof   = detail::oriented_index(trial_j_vdof_v);
+        const auto trial_j_vdof   = detail::makePositiveOrientedIndex(trial_j_vdof_v);
         trial_elem_vdofs[j_elem]  = trial_j_vdof;
 
         // since trial_j_vdof could be negative but there are now two indices that point to the same dof (just oriented
@@ -223,7 +227,7 @@ void AssembledSparseMatrix::FillJ()
               const auto j_nnz_index  = i_dof_offset + column_index;
               // this index may be negative, but J needs to be positive
               const auto j_value = trial_fes_.DofToVDof(trial_j_vdof_v, vj);
-              J[j_nnz_index]     = detail::oriented_index(j_value);
+              J[j_nnz_index]     = detail::makePositiveOrientedIndex(j_value);
             }
           }
 
@@ -236,7 +240,7 @@ void AssembledSparseMatrix::FillJ()
               const int  trial_index        = trial_fes_.DofToVDof(trial_j_vdof_v, vj);
               const int  orientation_factor = detail::sign(test_index_v) * detail::sign(trial_index);
               map_ea(test_i_elem + test_elem_dof * vi, j_elem + trial_elem_dof * vj, e) =
-                  detail::orient_index(index_val, orientation_factor > 0);
+                  detail::makeIndexOriented(index_val, orientation_factor > 0);
             }
           }
 
@@ -252,7 +256,7 @@ void AssembledSparseMatrix::FillJ()
               const int  trial_index        = trial_fes_.DofToVDof(trial_j_vdof_v, vj);
               const int  orientation_factor = detail::sign(test_index_v) * detail::sign(trial_index);
               map_ea(test_i_elem + test_elem_dof * vi, j_elem + trial_elem_dof * vj, e) =
-                  detail::orient_index(index_val, orientation_factor > 0);
+                  detail::makeIndexOriented(index_val, orientation_factor > 0);
             }
           }
         }
@@ -282,7 +286,7 @@ void AssembledSparseMatrix::FillData(const mfem::Vector& ea_data)
         for (int j_elem = 0; j_elem < trial_elem_dof; j_elem++) {
           for (int vj = 0; vj < trial_vdim; vj++) {
             const auto map_ea_v     = map_ea(i_elem + vi * test_elem_dof, j_elem + vj * trial_elem_dof, e);
-            const auto map_ea_index = detail::oriented_index(map_ea_v);
+            const auto map_ea_index = detail::makePositiveOrientedIndex(map_ea_v);
             Data[map_ea_index] +=
                 detail::sign(map_ea_v) * mat_ea(i_elem + vi * test_elem_dof, j_elem + vj * trial_elem_dof, e);
           }
