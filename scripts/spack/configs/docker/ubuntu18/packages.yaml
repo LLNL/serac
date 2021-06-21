@@ -107,3 +107,29 @@ packages:
     externals:
     - spec: llvm@10.0.0+clang
       prefix: /usr
+
+  # Devtools
+  cppcheck:
+    version: [1.82]
+    buildable: false
+    externals:
+    - spec: cppcheck@1.82
+      prefix: /usr
+  doxygen:
+    version: [1.8.13]
+    buildable: false
+    externals:
+    - spec: doxygen@1.8.13
+      prefix: /usr
+  python:
+    version: [3.6.5]
+    buildable: false
+    externals:
+    - spec: python@3.6.5
+      prefix: /usr
+  py-sphinx:
+    version: [4.0.2]
+    buildable: false
+    externals:
+    - spec: py-sphinx@4.0.2
+      prefix: /usr
