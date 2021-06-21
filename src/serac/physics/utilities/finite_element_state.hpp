@@ -290,7 +290,7 @@ public:
   QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc = true);
 
   QuadratureData(mfem::QuadratureFunction& qfunc)
-      : qspace_(qfunc.GetSpace()), qfunc_(&qfunc), data_(qfunc.Size() / stride_)
+      : qspace_(qfunc.GetSpace()), qfunc_(&qfunc), data_(static_cast<std::size_t>(qfunc.Size() / stride_))
   {
     const double* qfunc_ptr = detail::retrieve(qfunc_).GetData();
     int           j         = 0;
@@ -392,7 +392,7 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
                          &detail::retrieve(qspace_), stride_)}
                    : detail::MaybeOwningPointer<mfem::QuadratureFunction>{new mfem::QuadratureFunction(
                          &detail::retrieve(qspace_), nullptr, stride_)}),
-      data_(detail::retrieve(qfunc_).Size() / stride_)
+      data_(static_cast<std::size_t>(detail::retrieve(qfunc_).Size() / stride_))
 {
   // To avoid violating C++'s strict aliasing rule we need to std::memcpy a default-constructed object
   // See e.g. https://gist.github.com/shafik/848ae25ee209f698763cffee272a58f8
@@ -407,11 +407,13 @@ T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
 {
   // A view into the quadrature point data
   mfem::Vector view;
+  // Use the existing MFEM offset calculation logic instead of reimplementing it here
+  // Avoids making this code dependent on mfem::QuadratureSpace impl
   detail::retrieve(qfunc_).GetElementValues(element_idx, q_idx, view);
   double*    end_ptr   = view.GetData();
   double*    start_ptr = detail::retrieve(qfunc_).GetData();
   const auto idx       = (end_ptr - start_ptr) / stride_;
-  return data_[idx];
+  return data_[static_cast<std::size_t>(idx)];
 }
 
 template <typename T>
