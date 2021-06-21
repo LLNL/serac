@@ -305,11 +305,7 @@ public:
   /**
    * @brief Returns a non-owning reference to mesh held by StateManager
    */
-  static mfem::ParMesh& mesh();
-
-  /**
-   * @brief Returns the Sidre DataCollection name
-   */
+  static mfem::ParMesh&    mesh();
   static const std::string collectionName() { return collection_name_; }
 
 private:

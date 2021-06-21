@@ -37,7 +37,14 @@ or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG
 or_die cd build-$HOST_CONFIG-debug
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
+    # First check code style
     or_die make check
+    # Then check docs style
+    # Discard stdout and redirect stderr to stdout (so we can pipe it)
+    # Then tee it so the errors will be visible from the logs too,
+    # and see how many warning/error lines there were - insufficient to use
+    # retcode from "make serac_doxygen"
+    or_die make serac_doxygen 2>&1 > /dev/null | tee /dev/stderr | wc -l
 fi
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
