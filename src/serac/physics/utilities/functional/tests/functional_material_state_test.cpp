@@ -182,7 +182,7 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
         serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
 
     this->residual->AddDomainIntegral(
-        Dimension<this->dim>{},
+        Dimension<TestFixture::dim>{},
         [&](auto /* x */, auto u, auto& state) {
           TestFixture::mutate(state);
           return u;
@@ -215,7 +215,7 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
     // Note that the mesh here has been recovered from the save file,
     // same for the qdata (or rather the underlying QuadratureFunction)
     this->residual->AddDomainIntegral(
-        Dimension<this->dim>{},
+        Dimension<TestFixture::dim>{},
         [&](auto /* x */, auto u, auto& state) {
           TestFixture::mutate(state);
           return u;
