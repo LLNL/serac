@@ -31,21 +31,23 @@ protected:
   void SetUp() override
   {
     constexpr auto mesh_file = SERAC_REPO_DIR "/data/meshes/star.mesh";
-    mesh                     = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 0, 0);
-    festate                  = std::make_unique<FiniteElementState>(*mesh);
-    festate->gridFunc()      = 0.0;
-    resetResidual();
+    default_mesh             = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 0, 0);
+    resetWithNewMesh(*default_mesh);
   }
 
-  void resetResidual()
+  void resetWithNewMesh(mfem::ParMesh& new_mesh)
   {
-    residual = std::make_unique<Functional<test_space(trial_space)>>(&festate->space(), &festate->space());
+    mesh                = &new_mesh;
+    festate             = std::make_unique<FiniteElementState>(*mesh);
+    festate->gridFunc() = 0.0;
+    residual            = std::make_unique<Functional<test_space(trial_space)>>(&festate->space(), &festate->space());
   }
   static constexpr int p   = 1;
   static constexpr int dim = 2;
   using test_space         = H1<p>;
   using trial_space        = H1<p>;
-  std::unique_ptr<mfem::ParMesh>                       mesh;
+  std::unique_ptr<mfem::ParMesh>                       default_mesh;
+  mfem::ParMesh*                                       mesh = nullptr;
   std::unique_ptr<FiniteElementState>                  festate;
   std::unique_ptr<Functional<test_space(trial_space)>> residual;
 };
@@ -146,7 +148,7 @@ TEST_F(QuadratureDataTest, basic_integrals_state_manager)
   {
     axom::sidre::DataStore datastore;
     serac::StateManager::initialize(datastore);
-    serac::StateManager::setMesh(std::move(mesh));
+    serac::StateManager::setMesh(std::move(default_mesh));
     auto& qdata = serac::StateManager::newQuadratureData<StateWithMultiFields>("test_data", p);
 
     residual->AddDomainIntegral(
@@ -156,7 +158,7 @@ TEST_F(QuadratureDataTest, basic_integrals_state_manager)
           state.y += 0.7;
           return u;
         },
-        serac::StateManager::mesh(), qdata);
+        *mesh, qdata);
     // If we run through it one time...
     mfem::Vector U(festate->space().TrueVSize());
     (*residual)(U);
@@ -166,25 +168,36 @@ TEST_F(QuadratureDataTest, basic_integrals_state_manager)
     }
     serac::StateManager::save(0.0, cycle);
     serac::StateManager::reset();
-    resetResidual();
   }
 
   // Then reload the state to make sure it was synced correctly, and update it again before saving
   {
     axom::sidre::DataStore datastore;
     serac::StateManager::initialize(datastore, "serac", cycle);
+    // Since the original mesh is dead, use the mesh recovered from the save file to build a new Functional
+    resetWithNewMesh(serac::StateManager::mesh());
     auto& qdata = serac::StateManager::newQuadratureData<StateWithMultiFields>("test_data", p);
     // Make sure the changes from the first increment were propagated through
     for (const auto& s : qdata) {
       EXPECT_EQ(s, incremented_once);
     }
+
+    // Note that the mesh here has been recovered from the save file,
+    // same for the qdata (or rather the underlying QuadratureFunction)
+    residual->AddDomainIntegral(
+        Dimension<dim>{},
+        [&](auto /* x */, auto u, auto& state) {
+          state.x += 0.1;
+          state.y += 0.7;
+          return u;
+        },
+        *mesh, qdata);
     // Then increment it for the second time
     mfem::Vector U(festate->space().TrueVSize());
     (*residual)(U);
     // Before saving it again
     serac::StateManager::save(0.1, cycle + 1);
     serac::StateManager::reset();
-    resetResidual();
   }
 
   // Reload the state again to make sure the same synchronization still happens when the data
