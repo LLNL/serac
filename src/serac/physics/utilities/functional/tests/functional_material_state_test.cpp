@@ -153,7 +153,7 @@ struct MultiFieldWrapper {
 };
 
 using StateTypes = ::testing::Types<MultiFieldWrapper>;
-TYPED_TEST_SUITE(QuadratureDataStateManagerTest, StateTypes);
+TYPED_TEST_SUITE(QuadratureDataStateManagerTest, StateTypes, );
 
 TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
 {
