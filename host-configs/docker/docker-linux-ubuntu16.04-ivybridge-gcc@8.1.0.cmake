@@ -61,7 +61,9 @@ set(ENABLE_MPI ON CACHE BOOL "")
 
 set(TPL_ROOT "/home/serac/serac_tpls/gcc-8.1.0" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.4.0serac" CACHE PATH "")
+set(ASCENT_DIR "${TPL_ROOT}/ascent-0.7.1serac" CACHE PATH "")
+
+set(AXOM_DIR "${TPL_ROOT}/axom-0.5.0serac" CACHE PATH "")
 
 set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.1" CACHE PATH "")
 
@@ -98,3 +100,5 @@ set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
 set(ENABLE_CLANGTIDY OFF CACHE BOOL "")
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
+
+

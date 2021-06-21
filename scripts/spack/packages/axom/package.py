@@ -38,11 +38,12 @@ class Axom(CachedCMakePackage, CudaPackage):
     git      = "https://github.com/LLNL/axom.git"
 
     # SERAC EDIT START
-    version('0.4.0serac', commit='47760d803313dee2e3a79bc3979f8300efe87ef0', submodules="True")
+    version('0.5.0serac', commit='664f2b3d6467c729ec40bebccb60d395eb8c0ca5', submodules="True")
     # SERAC EDIT END
 
     version('main', branch='main', submodules=True)
     version('develop', branch='develop', submodules=True)
+    version('0.5.0', tag='v0.5.0', submodules=True)
     version('0.4.0', tag='v0.4.0', submodules=True)
     version('0.3.3', tag='v0.3.3', submodules=True)
     version('0.3.2', tag='v0.3.2', submodules=True)
@@ -59,6 +60,9 @@ class Axom(CachedCMakePackage, CudaPackage):
             description='Enable build of shared libraries')
     variant('debug',    default=False,
             description='Build debug instead of optimized version')
+
+    variant('examples', default=True, description='Build examples')
+    variant('tools',    default=True, description='Build tools')
 
     variant('cpp14',    default=True, description="Build with C++14 support")
 
@@ -99,6 +103,8 @@ class Axom(CachedCMakePackage, CudaPackage):
     depends_on("lua", when="+lua")
 
     depends_on("scr", when="+scr")
+    depends_on("kvtree@master", when="+scr")
+    depends_on("dtcmp", when="+scr")
 
     depends_on("raja~openmp", when="+raja~openmp")
     depends_on("raja+openmp", when="+raja+openmp")
@@ -127,6 +133,20 @@ class Axom(CachedCMakePackage, CudaPackage):
     depends_on("py-sphinx", when="+devtools")
     depends_on("py-shroud", when="+devtools")
     depends_on("llvm+clang@10.0.0", when="+devtools", type='build')
+
+    # Conduit's cmake config files moved and < 0.4.0 can't find it
+    conflicts("^conduit@0.7.2:", when="@:0.4.0")
+
+    # Sidre requires conduit_blueprint_mpi.hpp
+    conflicts("^conduit@:0.6.0", when="@0.5.0:")
+
+    def flag_handler(self, name, flags):
+        if self.spec.satisfies('%cce') and name == 'fflags':
+            flags.append('-ef')
+
+        if name in ('cflags', 'cxxflags', 'cppflags', 'fflags'):
+            return (None, None, None)  # handled in the cmake cache
+        return (flags, None, None)
 
     def _get_sys_type(self, spec):
         sys_type = spec.architecture
@@ -191,7 +211,7 @@ class Axom(CachedCMakePackage, CudaPackage):
         entries = super(Axom, self).initconfig_hardware_entries()
 
         if spec.satisfies('target=ppc64le:'):
-            if spec.satisfies('^cuda'):
+            if "+cuda" in spec:
                 entries.append(cmake_cache_option("ENABLE_CUDA", True))
                 entries.append(cmake_cache_option("CUDA_SEPARABLE_COMPILATION",
                                                   True))
@@ -304,7 +324,7 @@ class Axom(CachedCMakePackage, CudaPackage):
         spec = self.spec
         entries = super(Axom, self).initconfig_mpi_entries()
 
-        if spec.satisfies('^mpi'):
+        if "+mpi" in spec:
             entries.append(cmake_cache_option("ENABLE_MPI", True))
             if spec['mpi'].name == 'spectrum-mpi':
                 entries.append(cmake_cache_string("BLT_MPI_COMMAND_APPEND",
@@ -339,13 +359,25 @@ class Axom(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path("CONDUIT_DIR", conduit_dir))
 
         # optional tpls
-        for dep in ('mfem', 'hdf5', 'lua', 'scr', 'raja', 'umpire'):
+        for dep in ('mfem', 'hdf5', 'lua', 'raja', 'umpire'):
             if '+%s' % dep in spec:
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
                                                 dep_dir))
             else:
-                entries.append('# %s not build\n' % dep.upper())
+                entries.append('# %s not built\n' % dep.upper())
+
+        if '+scr' in spec:
+            dep_dir = get_spec_path(spec, 'scr', path_replacements)
+            entries.append(cmake_cache_path('SCR_DIR', dep_dir))
+
+            # scr's dependencies
+            for dep in ('kvtree', 'dtcmp'):
+                if spec.satisfies('^{0}'.format(dep)):
+                    dep_dir = get_spec_path(spec, dep, path_replacements)
+                    entries.append(cmake_cache_path('%s_DIR' % dep.upper(), dep_dir))
+        else:
+            entries.append('# scr not built\n')
 
         ##################################
         # Devtools
@@ -416,5 +448,15 @@ class Axom(CachedCMakePackage, CudaPackage):
 
         options.append(self.define_from_variant(
             'BUILD_SHARED_LIBS', 'shared'))
+        options.append(self.define_from_variant(
+            'AXOM_ENABLE_EXAMPLES', 'examples'))
+        options.append(self.define_from_variant(
+            'AXOM_ENABLE_TOOLS', 'tools'))
 
         return options
+
+    def patch(self):
+        if self.spec.satisfies('%cce'):
+            filter_file('PROPERTIES LINKER_LANGUAGE CXX',
+                        'PROPERTIES LINKER_LANGUAGE CXX \n LINK_FLAGS "-fopenmp"',
+                        'src/axom/quest/examples/CMakeLists.txt')

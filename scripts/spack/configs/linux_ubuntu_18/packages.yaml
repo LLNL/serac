@@ -30,85 +30,76 @@ packages:
   bzip2:
     buildable: false
     externals:
-    - spec: bzip2
+    - spec: bzip2@1.0.6
       prefix: /
   gettext:
     buildable: false
     externals:
-    - spec: gettext
+    - spec: gettext@0.19.8.1
       prefix: /usr
   perl:
     buildable: false
     externals:
-    - spec: perl
+    - spec: perl@5.26.1
       prefix: /usr
   tar:
     buildable: false
     externals:
-    - spec: tar
+    - spec: tar@1.29
       prefix: /
   libx11:
     buildable: false
     externals:
-    - spec: libx11
+    - spec: libx11@1.6.4
       prefix: /usr
   autoconf:
     buildable: false
     externals:
-    - spec: autoconf
-      prefix: /usr
-  flex:
-    buildable: false
-    externals:
-    - spec: flex
-      prefix: /usr
-  openmpi:
-    externals:
-    - spec: openmpi
+    - spec: autoconf@2.69
       prefix: /usr
   openssl:
     externals:
-    - spec: openssl
+    - spec: openssl@1.1.1
       prefix: /usr/lib/x86_64-linux-gnu/
   openblas:
     buildable: false
     externals:
-    - spec: openblas
+    - spec: openblas@0.2.20
       prefix: /usr/lib/x86_64-linux-gnu/
 
   # Lock in versions of Devtools
   cmake:
     buildable: false
     externals:
-    - spec: cmake@3.10.2
+    - spec: cmake@3.20.1
       prefix: /usr
   cppcheck:
     version: [1.82]
     buildable: false
     externals:
-    - spec: cppcheck
+    - spec: cppcheck@1.82
       prefix: /usr
   doxygen:
     version: [1.8.13]
     buildable: false
     externals:
-    - spec: doxygen
+    - spec: doxygen@1.8.13
       prefix: /usr
   llvm:
     version: [10.0.0]
     buildable: false
     externals:
-    - spec: llvm+clang
+    - spec: llvm@10.0.0+clang
       prefix: /usr
   python:
-    version: [3.6.9]
+    version: [3.7.5]
     buildable: false
     externals:
-    - spec: python
+    - spec: python@3.7.5
       prefix: /usr
   py-sphinx:
     version: [1.6.7]
     buildable: false
     externals:
-    - spec: py-sphinx
+    - spec: py-sphinx@1.6.7
       prefix: /usr
