@@ -9,12 +9,6 @@ static constexpr auto   I   = Identity<3>();
 static constexpr double rho = 3.0;
 static constexpr double mu  = 2.0;
 
-
-  // printf("gpu");
-  // std::tuple<int, double> foo {};
-  // std::tuple<int, double> bar = foo;
-  // foo = foo;
-
   constexpr auto f = [](auto p, auto v, auto L) {
     return serac::tuple{rho * outer(v, v) + 2.0 * mu * sym(L) - p * I, v + dot(v, L)};
   };

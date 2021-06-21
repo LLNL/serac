@@ -101,7 +101,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
         auto [u, du_dx] = temperature;
         auto source     = a * u - (100 * x[0] * x[1]);
         auto flux       = b * du_dx;
-        return std::tuple{source, flux};
+        return serac::tuple{source, flux};
       },
       mesh);
 
@@ -207,7 +207,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
         auto body_force = a * u + I[0];
         auto strain     = 0.5 * (du_dx + transpose(du_dx));
         auto stress     = b * tr(strain) * I + 2.0 * b * strain;
-        return std::tuple{body_force, stress};
+        return serac::tuple{body_force, stress};
       },
       mesh);
 
@@ -301,7 +301,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
         auto [A, curl_A] = vector_potential;
         auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
         auto H_term      = b * curl_A;
-        return std::tuple{J_term, H_term};
+        return serac::tuple{J_term, H_term};
       },
       mesh);
 
@@ -359,8 +359,8 @@ Issue with std::variant for InputOptions in mesh_utils.hpp
 
 // this file has a lot of warnings
 serac/src/serac/infrastructure/../../serac/physics/utilities/functional/tensor.hpp(347): warning: calling a __host__
-function("std::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > ::operator =") from a __host__ __device__
-function("serac::operator +< ::serac::dual<    ::std::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > > ,
+function("serac::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > ::operator =") from a __host__ __device__
+function("serac::operator +< ::serac::dual<    ::serac::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > > ,
 double, (int)3 > ") is not allowed
 **/
 

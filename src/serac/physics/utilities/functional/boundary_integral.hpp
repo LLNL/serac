@@ -136,7 +136,7 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim
 {
   // TODO: Static assert that element_type is an element??
   if constexpr (element_type::family == Family::H1) {
-    return std::tuple{dot(u, element_type::shape_functions(xi)),
+    return serac::tuple{dot(u, element_type::shape_functions(xi)),
                       dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
   }
 
@@ -148,7 +148,7 @@ auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim
     if constexpr (dim == 3) {
       curl = dot(curl, transpose(J));
     }
-    return std::tuple{value, curl};
+    return serac::tuple{value, curl};
   }
 }
 
@@ -482,7 +482,7 @@ struct lambda_argument;
 // specialization for an H1 space with polynomial order p, and c components
 template <int p, int c, int dim>
 struct lambda_argument<H1<p, c>, dim, dim> {
-  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
+  using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
 };
 
 // specialization for an H1 space with polynomial order p, and c components
@@ -495,13 +495,13 @@ struct lambda_argument<H1<p, c>, geometry_dim, spatial_dim> {
 // specialization for an Hcurl space with polynomial order p in 2D
 template <int p>
 struct lambda_argument<Hcurl<p>, 2, 2> {
-  using type = std::tuple<tensor<double, 2>, double>;
+  using type = serac::tuple<tensor<double, 2>, double>;
 };
 
 // specialization for an Hcurl space with polynomial order p in 3D
 template <int p>
 struct lambda_argument<Hcurl<p>, 3, 3> {
-  using type = std::tuple<tensor<double, 3>, tensor<double, 3> >;
+  using type = serac::tuple<tensor<double, 3>, tensor<double, 3> >;
 };
 
 }  // namespace detail

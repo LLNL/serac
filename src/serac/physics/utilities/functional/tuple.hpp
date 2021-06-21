@@ -38,8 +38,7 @@ namespace serac{
   struct tuple_size {};
 
   template< class... Types >
-  struct tuple_size< serac::tuple<Types...> >
-    : std::integral_constant<std::size_t, sizeof...(Types)> { };
+  struct tuple_size< serac::tuple<Types...> > : std::integral_constant<std::size_t, sizeof...(Types)> { };
 
   template < int i, typename ... T >
   constexpr auto & get(tuple< T ... > & values) {
@@ -227,15 +226,15 @@ tuple<unwrap_decay_t<Types>...> make_tuple(Types&&... args)
 
 } // namespace serac
 
-namespace std {
-
-  template < size_t i, typename ... T >
-  constexpr auto & get(const serac::tuple< T ... > & values) { return serac::get<i>(values); }
-
-  template < size_t i, typename ... T >
-  constexpr auto get(const serac::tuple< T ... > values) { return serac::get<i>(values); }
-
-  template< typename  ... Types >
-  struct tuple_size< serac::tuple<Types...> > : std::integral_constant<std::size_t, sizeof...(Types)> {};
-
-} // namespace std
+//namespace std {
+//
+//  template < size_t i, typename ... T >
+//  constexpr auto & get(const serac::tuple< T ... > & values) { return serac::get<i>(values); }
+//
+//  template < size_t i, typename ... T >
+//  constexpr auto get(const serac::tuple< T ... > values) { return serac::get<i>(values); }
+//
+//  template< typename  ... Types >
+//  struct tuple_size< serac::tuple<Types...> > : std::integral_constant<std::size_t, sizeof...(Types)> {};
+//
+//} // namespace std

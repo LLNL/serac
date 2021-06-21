@@ -15,8 +15,10 @@
 
 #if defined(__CUDACC__)
 #define SERAC_HOST_DEVICE __host__ __device__
+#define SERAC_DEVICE __device__
 #else
 #define SERAC_HOST_DEVICE
+#define SERAC_DEVICE
 #endif
 
 namespace serac::accelerator {

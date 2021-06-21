@@ -79,37 +79,37 @@ void evaluation_kernel_cuda(const mfem::Vector& U, mfem::Vector& R, derivatives_
 const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
 {
 
-    using test_element               = finite_element<g, test>;
-    using trial_element              = finite_element<g, trial>;
-    using element_residual_type      = typename trial_element::residual_type;
-    static constexpr int  test_ndof  = test_element::ndof;
-    static constexpr int  trial_ndof = trial_element::ndof;
-    static constexpr auto rule       = GaussQuadratureRule<g, Q>();
+  using test_element               = finite_element<g, test>;
+  using trial_element              = finite_element<g, trial>;
+  using element_residual_type      = typename trial_element::residual_type;
+  static constexpr int  test_ndof  = test_element::ndof;
+  static constexpr int  trial_ndof = trial_element::ndof;
+  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
-    // Use the device (GPU)
- X_.UseDevice(true);
- J_.UseDevice(true);
- U.UseDevice(true);
- R.UseDevice(true);
+  // Use the device (GPU)
+  X_.UseDevice(true);
+  J_.UseDevice(true);
+  U.UseDevice(true);
+  R.UseDevice(true);
 
-// Note: Since we cannot call Reshape (__host__) within a kernel we pass in the resulting mfem::DeviceTensors which should be pointing to Device pointers via .Read() and .ReadWrite()
+  // Note: Since we cannot call Reshape (__host__) within a kernel we pass in the resulting mfem::DeviceTensors which should be pointing to Device pointers via .Read() and .ReadWrite()
 
-// mfem provides this information in 1D arrays, so we reshape it
-// into strided multidimensional arrays before using
-auto X = detail::Reshape(X_.Read(), rule.size(), spatial_dim, num_elements);
-auto J = detail::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
-auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
-auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
+  // mfem provides this information in 1D arrays, so we reshape it
+  // into strided multidimensional arrays before using
+  auto X = detail::Reshape(X_.Read(), rule.size(), spatial_dim, num_elements);
+  auto J = detail::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
+  auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
+  auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
- eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda> <<<1,1>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+  eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q> <<<1,1>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
 
- // copy back to host?
- R.HostRead();
+  // copy back to host?
+  R.HostRead();
 
- X_.UseDevice(false);
- J_.UseDevice(false);
- U.UseDevice(false);
- R.UseDevice(false);
+  X_.UseDevice(false);
+  J_.UseDevice(false);
+  U.UseDevice(false);
+  R.UseDevice(false);
 
 }
 

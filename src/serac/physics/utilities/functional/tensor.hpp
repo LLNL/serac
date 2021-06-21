@@ -319,16 +319,62 @@ SERAC_HOST_DEVICE constexpr auto tensor_with_shape(std::integer_sequence<int, n.
  * @tparam n The parameter pack of integer dimensions
  * @param[in] f The functor to generate the tensor values from
  * @pre @a f must accept @p sizeof...(n) arguments of type @p int
+ * 
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc.
  */
-template <int... n, typename lambda_type>
-SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
-{
-  using T = decltype(f(n...));
-  tensor<T, n...> A{};
-  if constexpr (sizeof...(n) == 0) {
-    A.value = f();
-  } else {
-    for_constexpr<n...>([&](auto... i) { A(i...) = f(i...); });
+template <typename lambda_type>
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) {
+  using T = decltype(f());
+  return tensor<T>{f()}; 
+}
+
+template <int n1, typename lambda_type>
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) { 
+  using T = decltype(f(n1));
+  tensor<T, n1> A{}; 
+  for (int i = 0; i < n1; i++) { A(i) = f(i); }
+  return A;
+}
+
+template <int n1, int n2, typename lambda_type>
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) { 
+  using T = decltype(f(n1, n2));
+  tensor<T, n1, n2> A{}; 
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) { 
+      A(i,j) = f(i,j); 
+    }
+  }
+  return A;
+}
+
+template <int n1, int n2, int n3, typename lambda_type>
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) { 
+  using T = decltype(f(n1, n2, n3));
+  tensor<T, n1, n2, n3> A{}; 
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) { 
+      for (int k = 0; k < n3; k++) { 
+        A(i,j,k) = f(i,j,k); 
+      }
+    }
+  }
+  return A;
+}
+
+template <int n1, int n2, int n3, int n4, typename lambda_type>
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) { 
+  using T = decltype(f(n1, n2, n3, n4));
+  tensor<T, n1, n2, n3, n4> A{}; 
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) {
+      for (int k = 0; k < n3; k++) {
+        for (int l = 0; l < n4; l++) {
+          A(i,j,k,l) = f(i,j,k,l); 
+        }
+      }
+    }
   }
   return A;
 }

@@ -86,7 +86,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
         auto [u, du_dx] = temperature;
         auto source     = a * u - (100 * x[0] * x[1]);
         auto flux       = b * du_dx;
-        return std::tuple{source, flux};
+        return serac::tuple{source, flux};
       },
       mesh);
 
@@ -141,8 +141,8 @@ This file has a lot of warnings. The summary of the issue is described in more d
 
 The following is an excerpt of a warning:
 serac/src/serac/infrastructure/../../serac/physics/utilities/functional/tensor.hpp(347): warning: calling a __host__
-function("std::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > ::operator =") from a __host__ __device__
-function("serac::operator +< ::serac::dual<    ::std::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > > ,
+function("serac::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > ::operator =") from a __host__ __device__
+function("serac::operator +< ::serac::dual<    ::serac::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > > ,
 double, (int)3 > ") is not allowed
 **/
 
