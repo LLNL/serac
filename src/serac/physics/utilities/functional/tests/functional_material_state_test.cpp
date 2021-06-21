@@ -34,6 +34,11 @@ protected:
     mesh                     = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 0, 0);
     festate                  = std::make_unique<FiniteElementState>(*mesh);
     festate->gridFunc()      = 0.0;
+    resetResidual();
+  }
+
+  void resetResidual()
+  {
     residual = std::make_unique<Functional<test_space(trial_space)>>(&festate->space(), &festate->space());
   }
   static constexpr int p   = 1;
@@ -161,12 +166,13 @@ TEST_F(QuadratureDataTest, basic_integrals_state_manager)
     }
     serac::StateManager::save(0.0, cycle);
     serac::StateManager::reset();
+    resetResidual();
   }
 
   // Then reload the state to make sure it was synced correctly, and update it again before saving
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, cycle);
+    serac::StateManager::initialize(datastore, "serac", cycle);
     auto& qdata = serac::StateManager::newQuadratureData<StateWithMultiFields>("test_data", p);
     // Make sure the changes from the first increment were propagated through
     for (const auto& s : qdata) {
@@ -178,13 +184,14 @@ TEST_F(QuadratureDataTest, basic_integrals_state_manager)
     // Before saving it again
     serac::StateManager::save(0.1, cycle + 1);
     serac::StateManager::reset();
+    resetResidual();
   }
 
   // Reload the state again to make sure the same synchronization still happens when the data
   // is read in from a restart
   {
     axom::sidre::DataStore datastore;
-    serac::StateManager::initialize(datastore, cycle + 1);
+    serac::StateManager::initialize(datastore, "serac", cycle + 1);
     auto& qdata = serac::StateManager::newQuadratureData<StateWithMultiFields>("test_data", p);
     // Make sure the changes from the second increment were propagated through
     for (const auto& s : qdata) {

@@ -269,7 +269,8 @@ private:
  */
 class SyncableData {
 public:
-  virtual void sync() = 0;
+  virtual ~SyncableData() = default;
+  virtual void sync()     = 0;
 };
 
 /**
@@ -385,8 +386,12 @@ extern QuadratureData<void> dummy_qdata;
 template <typename T>
 QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc)
     : qspace_(std::make_unique<mfem::QuadratureSpace>(&mesh, p + 1)),
-      qfunc_(alloc ? std::make_unique<mfem::QuadratureFunction>(&detail::retrieve(qspace_), stride_)
-                   : std::make_unique<mfem::QuadratureFunction>(&detail::retrieve(qspace_), nullptr, stride_)),
+      // When left unallocated, the allocation can happen inside the datastore
+      // Use a raw pointer here when unallocated, lifetime will be managed by the DataCollection
+      qfunc_(alloc ? detail::MaybeOwningPointer<mfem::QuadratureFunction>{std::make_unique<mfem::QuadratureFunction>(
+                         &detail::retrieve(qspace_), stride_)}
+                   : detail::MaybeOwningPointer<mfem::QuadratureFunction>{new mfem::QuadratureFunction(
+                         &detail::retrieve(qspace_), nullptr, stride_)}),
       data_(detail::retrieve(qfunc_).Size() / stride_)
 {
   // To avoid violating C++'s strict aliasing rule we need to std::memcpy a default-constructed object
@@ -472,6 +477,7 @@ public:
   {
     datacoll_.reset();
     is_restart_ = false;
+    syncable_data_.clear();
   };
 
   /**
