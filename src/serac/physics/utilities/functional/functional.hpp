@@ -18,11 +18,15 @@
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/finite_element.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
-#include "serac/physics/utilities/functional/integral.hpp"
+#include "serac/physics/utilities/functional/domain_integral.hpp"
 #include "serac/physics/utilities/functional/boundary_integral.hpp"
 
 namespace serac {
 
+
+/**
+ * @brief a type trait used to identify the Hcurl family
+ */
 template <typename T>
 struct is_hcurl {
   static constexpr bool value = false;
@@ -33,22 +37,10 @@ struct is_hcurl<Hcurl<p, c> > {
   static constexpr bool value = true;
 };
 
-#ifdef ENABLE_BOUNDARY_INTEGRALS
-// for some reason, mfem doesn't support lexicographic ordering for Nedelec segment elements,
-// so we have to specifically detect this case, and use a different ordering (?)
-auto get_boundary_dof_ordering(mfem::ParFiniteElementSpace* pfes)
-{
-  const mfem::FiniteElement* fe         = pfes->GetFaceElement(0);
-  const bool                 is_segment = fe->GetGeomType() == mfem::Geometry::SEGMENT;
-  const bool                 is_hcurl   = fe->GetMapType() == mfem::FiniteElement::MapType::H_CURL;
-  if (is_segment && is_hcurl) {
-    return mfem::ElementDofOrdering::NATIVE;
-  } else {
-    return mfem::ElementDofOrdering::LEXICOGRAPHIC;
-  }
-}
-#endif
-
+/**
+ * @brief Right now, mfem doesn't have an implementation of GetFaceRestriction for Hcurl. 
+ *   This function exists to avoid calling that unimplemented case.
+ */
 template <typename space>
 const mfem::Operator* GetFaceRestriction(mfem::ParFiniteElementSpace* pfes)
 {
@@ -259,7 +251,7 @@ public:
    * @brief Obtains the gradients for all the constituent integrals
    * @param[in] input_T The input vector
    * @param[out] output_T The output vector
-   * @see Integral::GradientMult
+   * @see DomainIntegral::GradientMult, BoundaryIntegral::GradientMult
    */
   virtual void GradientMult(const mfem::Vector& input_T, mfem::Vector& output_T) const
   {
@@ -398,7 +390,6 @@ private:
    */
   mutable mfem::Vector output_E_;
 
-#ifdef ENABLE_BOUNDARY_INTEGRALS
   /**
    * @brief The input set of per-boundaryelement DOF values
    */
@@ -413,7 +404,6 @@ private:
    * @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
    */
   mutable mfem::Vector output_L_boundary_;
-#endif
 
   /**
    * @brief The set of true DOF values, used as a scratchpad for @p operator()
@@ -464,7 +454,6 @@ private:
    */
   const mfem::Operator* G_trial_;
 
-#ifdef ENABLE_BOUNDARY_INTEGRALS
   /**
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
    * for the test space
@@ -476,19 +465,16 @@ private:
    * for the trial space
    */
   const mfem::Operator* G_trial_boundary_;
-#endif
 
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<Integral<test(trial)> > domain_integrals_;
+  std::vector< DomainIntegral<test(trial)> > domain_integrals_;
 
-#ifdef ENABLE_BOUNDARY_INTEGRALS
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
   std::vector<BoundaryIntegral<test(trial)> > boundary_integrals_;
-#endif
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,

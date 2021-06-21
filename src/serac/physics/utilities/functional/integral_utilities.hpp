@@ -7,7 +7,7 @@
 /**
  * @file intergal_utilities.hpp
  *
- * @brief this file contains functions and tools used by both integral.hpp and boundary_integral.hpp
+ * @brief this file contains functions and tools used by both domain_integral.hpp and boundary_integral.hpp
  */
 
 #pragma once

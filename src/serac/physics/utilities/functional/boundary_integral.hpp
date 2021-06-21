@@ -70,7 +70,7 @@ auto Postprocess(T f, coord_type xi)
  * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
  *
  * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p Integral
+ * and are erased through the @p std::function members of @p BoundaryIntegral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
  * @tparam spatial_dim The full dimension of the mesh
@@ -166,7 +166,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
  *
  * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p Integral
+ * and are erased through the @p std::function members of @p BoundaryIntegral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
  * @tparam spatial_dim The full dimension of the mesh
@@ -251,7 +251,7 @@ public:
   using trial_space = trial_space_t<spaces>;  ///< the trial function space
 
   /**
-   * @brief Constructs an @p Integral from a user-provided quadrature function
+   * @brief Constructs an @p BoundaryIntegral from a user-provided quadrature function
    * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points

@@ -5,9 +5,11 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file integral.hpp
+ * @file domain_integral.hpp
  *
- * @brief This file contains the Integral core of the functional
+ * @brief This file contains the implementations of finite element kernels with matching geometric and
+ *   spatial dimensions (e.g. quadrilaterals in 2D, hexahedra in 3D), and the class template DomainIntegral
+ *   for encapsulating those kernels.
  */
 #pragma once
 
@@ -15,14 +17,9 @@
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
 
-// For now, mfem's support for getting surface element information (dof values, jacobians, etc)
-// is lacking, making it difficult to actually implement surface integrals on our end
-//
-#define ENABLE_BOUNDARY_INTEGRALS
-
 namespace serac {
 
-namespace detail {
+namespace domain_integral {
 
 /**
  * @brief Computes the arguments to be passed into the q-function (shape function evaluations)
@@ -103,8 +100,6 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
   }
 }
 
-}  // namespace detail
-
 /**
  * @brief The base kernel template used to create different finite element calculation routines
  *
@@ -113,7 +108,7 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
  * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
  *
  * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p Integral
+ * and are erased through the @p std::function members of @p DomainIntegral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
@@ -170,7 +165,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       double dx  = det(J_q) * dxi;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
-      auto arg = detail::Preprocess<trial_element>(u_elem, xi, J_q);
+      auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
 
       // evaluate the user-specified constitutive model
       //
@@ -180,7 +175,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
-      r_elem += detail::Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+      r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
 
       // here, we store the derivative of the q-function w.r.t. its input arguments
       //
@@ -203,7 +198,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
  *
  * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p Integral
+ * and are erased through the @p std::function members of @p DomainIntegral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
@@ -255,7 +250,7 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
       double dx  = det(J_q) * dxi;
 
       // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = detail::Preprocess<trial_element>(du_elem, xi, J_q);
+      auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
@@ -265,7 +260,7 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
 
       // integrate dq against test space shape functions / gradients
       // to get the (change in) element residual contributions
-      dr_elem += detail::Postprocess<test_element>(dq, xi, J_q) * dx;
+      dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -274,19 +269,21 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
+}  // namespace domain_integral
+
 /**
  * @brief Describes a single integral term in a weak forumulation of a partial differential equation
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  */
 template <typename spaces>
-class Integral {
+class DomainIntegral {
 public:
   using test_space  = test_space_t<spaces>;   ///< the test function space
   using trial_space = trial_space_t<spaces>;  ///< the trial function space
 
   /**
-   * @brief Constructs an @p Integral from a user-provided quadrature function
+   * @brief Constructs a @p DomainIntegral from a user-provided quadrature function
    * @tparam dim The dimension of the mesh
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
@@ -297,7 +294,7 @@ public:
    * and @a spatial_dim template parameters
    */
   template <int dim, typename lambda_type>
-  Integral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf)
+  DomainIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf)
       : J_(J), X_(X)
   {
     constexpr auto geometry                      = supported_geometries[dim];
@@ -316,13 +313,13 @@ public:
     using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
 
     // the derivative_type data is stored in a shared_ptr here, because it can't be a
-    // member variable on the Integral class template (since it depends on the lambda function,
+    // member variable on the DomainIntegral class template (it depends on the lambda function,
     // which isn't known until the time of construction).
     //
-    // This shared_ptr should have a comparable lifetime to the Integral instance itself, since
+    // This shared_ptr should have a comparable lifetime to the DomainIntegral instance itself, since
     // the reference count will increase when it is captured by the lambda functions below, and
     // the reference count will go back to zero after those std::functions are deconstructed in
-    // Integral::~Integral()
+    // DomainIntegral::~DomainIntegral()
     //
     // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
     // qf_derivatives[e * quadrature_points_per_element + q]
@@ -336,11 +333,11 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
     evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-      evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
+      domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
     };
 
     gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-      gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_, num_elements);
+      domain_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_, num_elements);
     };
   }
 
