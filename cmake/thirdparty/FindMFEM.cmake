@@ -115,6 +115,7 @@ else()
         list(APPEND MFEM_LIBRARIES ${CMAKE_CUDA_LINK_FLAGS})
         list(APPEND MFEM_LIBRARIES ${CUDA_LIBRARIES})
         list(APPEND MFEM_LIBRARIES ${CUDA_CUBLAS_LIBRARIES})
+        list(APPEND MFEM_LIBRARIES ${CUDA_cusolver_LIBRARY})
     endif()
 
     blt_import_library(
