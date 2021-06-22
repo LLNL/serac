@@ -139,32 +139,57 @@ TEST_F(QuadratureDataTest, basic_integrals_multi_fields)
 template <typename T>
 class QuadratureDataStateManagerTest : public QuadratureDataTest {
 public:
-  using value_type = typename T::value_type;
-  static void mutate(value_type& v) { T::mutate(v); }
+  using value_type                          = typename T::value_type;
+  static constexpr value_type initial_state = T::initial_state;
+  static void                 mutate(value_type& v) { T::mutate(v); }
 };
 
 struct MultiFieldWrapper {
-  using value_type = StateWithMultiFields;
-  static void mutate(value_type& v)
+  using value_type                          = StateWithMultiFields;
+  static constexpr value_type initial_state = {};
+  static void                 mutate(value_type& v)
   {
     v.x += 0.1;
     v.y += 0.7;
   }
 };
 
-using StateTypes = ::testing::Types<MultiFieldWrapper>;
+struct IntWrapper {
+  using value_type                          = int;
+  static constexpr value_type initial_state = 0;
+  static void                 mutate(value_type& v) { v += 4; }
+};
+
+struct FiveBytes {
+  int  x = 120;
+  char y = 19;
+};
+
+bool operator==(const FiveBytes& lhs, const FiveBytes& rhs) { return (lhs.x == rhs.x) && (lhs.y == rhs.y); }
+
+struct FiveBytesWrapper {
+  using value_type                          = FiveBytes;
+  static constexpr value_type initial_state = {};
+  static void                 mutate(value_type& v)
+  {
+    v.x += 3;
+    v.y = static_cast<char>(v.y + 5);
+  }
+};
+
+using StateTypes = ::testing::Types<MultiFieldWrapper, IntWrapper, FiveBytesWrapper>;
 TYPED_TEST_SUITE(QuadratureDataStateManagerTest, StateTypes, );
 
 TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
 {
   constexpr int cycle        = 0;
   const auto    mutated_once = []() {
-    typename TestFixture::value_type result;
+    typename TestFixture::value_type result = TestFixture::initial_state;
     TestFixture::mutate(result);
     return result;
   }();
   const auto mutated_twice = []() {
-    typename TestFixture::value_type result;
+    typename TestFixture::value_type result = TestFixture::initial_state;
     TestFixture::mutate(result);
     TestFixture::mutate(result);
     return result;
@@ -180,6 +205,7 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
     // Can't use auto& here because we're in a template context
     serac::QuadratureData<typename TestFixture::value_type>& qdata =
         serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
+    qdata = TestFixture::initial_state;
 
     this->residual->AddDomainIntegral(
         Dimension<TestFixture::dim>{},
