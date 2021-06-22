@@ -27,6 +27,7 @@ if(NOT SERAC_FOUND)
   #----------------------------------------------------------------------------
 
   # SERAC external TPLs
+  set(SERAC_USE_ASCENT         "@SERAC_USE_ASCENT@")
   set(SERAC_USE_AXOM           "@SERAC_USE_AXOM@")
   set(SERAC_USE_CONDUIT        "@SERAC_USE_CONDUIT@")
   set(SERAC_USE_FMT            "@SERAC_USE_FMT@")
@@ -37,22 +38,34 @@ if(NOT SERAC_FOUND)
   set(SERAC_USE_CALIPER        "@SERAC_USE_CALIPER@")
   set(SERAC_USE_PETSC          "@SERAC_USE_PETSC@")
 
+  # SERAC "builtin" TPLs
+  set(SERAC_ENABLE_CUDA "@ENABLE_CUDA@")
+
   #----------------------------------------------------------------------------
   # Bring in required  dependencies for this serac configuration
   #----------------------------------------------------------------------------
   include(CMakeFindDependencyMacro)
 
-  # axom
+  # Ascent
+  if(SERAC_USE_ASCENT)
+    set(SERAC_ASCENT_DIR "@ASCENT_DIR@")
+    if(NOT ASCENT_DIR) 
+      set(ASCENT_DIR ${SERAC_ASCENT_DIR}) 
+    endif()
+    find_dependency(Ascent REQUIRED NO_DEFAULT_PATH PATHS "${ASCENT_DIR}/lib/cmake")
+  endif()
+
+  # Axom
   # also covers fmt
   if(SERAC_USE_AXOM)
     set(SERAC_AXOM_DIR "@AXOM_DIR@")
     if(NOT AXOM_DIR) 
       set(AXOM_DIR ${SERAC_AXOM_DIR}) 
     endif()
-    find_dependency(Axom REQUIRED NO_DEFAULT_PATH PATHS PATHS "${AXOM_DIR}/lib/cmake")
+    find_dependency(Axom REQUIRED NO_DEFAULT_PATH PATHS "${AXOM_DIR}/lib/cmake")
   endif()
 
-  # conduit
+  # Conduit
   if(SERAC_USE_CONDUIT)
     set(SERAC_CONDUIT_DIR  "@CONDUIT_DIR@")
     if(NOT CONDUIT_DIR) 
@@ -61,13 +74,13 @@ if(NOT SERAC_FOUND)
     find_dependency(Conduit REQUIRED NO_DEFAULT_PATH PATHS "${CONDUIT_DIR}/lib/cmake")
   endif()
 
-  # hdf5
+  # HDF5
   if(SERAC_USE_HDF5)
     set(SERAC_HDF5_DIR     "@HDF5_DIR@")
     # Note: Targets not currently imported
   endif()
 
-  # mfem
+  # MFEM
   if(SERAC_USE_MFEM)
     set(SERAC_MFEM_DIR              "@MFEM_DIR@")
     set(SERAC_MFEM_INCLUDE_DIRS     "@MFEM_INCLUDE_DIRS@")
@@ -88,7 +101,7 @@ if(NOT SERAC_FOUND)
     endif()
   endif()
 
-  # tribol
+  # Tribol
   if(SERAC_USE_TRIBOL)
     set(SERAC_TRIBOL_DIR   "@TRIBOL_DIR@")
     if(NOT TRIBOL_DIR) 
@@ -97,16 +110,20 @@ if(NOT SERAC_FOUND)
     find_dependency(tribol REQUIRED NO_DEFAULT_PATH PATHS "${TRIBOL_DIR}/lib/cmake")
   endif()
 
-  # caliper
+  # Caliper
   if(SERAC_USE_CALIPER)
     set(SERAC_CALIPER_DIR     "@CALIPER_DIR@")
     if(NOT CALIPER_DIR) 
       set(CALIPER_DIR ${SERAC_CALIPER_DIR}) 
     endif()
+    # See comment in SetupSeracThirdParty.cmake
+    if(SERAC_ENABLE_CUDA AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
+      find_package(CUDAToolkit REQUIRED)
+    endif()
     find_dependency(caliper REQUIRED NO_DEFAULT_PATH PATHS "${CALIPER_DIR}")
   endif()
 
-  # petsc
+  # Petsc
   if(SERAC_USE_PETSC)
     set(SERAC_PETSC_DIR     "@PETSC_DIR@")
     if(NOT PETSC_DIR)
@@ -117,13 +134,13 @@ if(NOT SERAC_FOUND)
 
 
   #----------------------------------------------------------------------------
-  # Include targets exported by cmake
+  # Include targets exported by CMake
   #----------------------------------------------------------------------------
   get_filename_component(SERAC_CMAKE_CONFIG_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
   include(${SERAC_CMAKE_CONFIG_DIR}/serac-targets.cmake)
 
   #----------------------------------------------------------------------------
-  # Indicate that serac is correctly set up
+  # Indicate that Serac is correctly set up
   #----------------------------------------------------------------------------
   set(SERAC_FOUND TRUE)
 

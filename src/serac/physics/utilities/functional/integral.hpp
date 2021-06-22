@@ -183,12 +183,12 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, geometry_dim> xi,
  * test function space.
  *
  * By default:
- *  H1 family elements integrate std::get<0>(f) against the test space shape functions
- *                           and std::get<1>(f) against the test space shape function gradients
- *  Hcurl family elements integrate std::get<0>(f) against the test space shape functions
- *                              and std::get<1>(f) against the curl of the test space shape functions
- * TODO: Hdiv family elements integrate std::get<0>(f) against the test space shape functions
- *                                  and std::get<1>(f) against the divergence of the test space shape functions
+ *  H1 family elements integrate serac::get<0>(f) against the test space shape functions
+ *                           and serac::get<1>(f) against the test space shape function gradients
+ *  Hcurl family elements integrate serac::get<0>(f) against the test space shape functions
+ *                              and serac::get<1>(f) against the curl of the test space shape functions
+ * TODO: Hdiv family elements integrate serac::get<0>(f) against the test space shape functions
+ *                                  and serac::get<1>(f) against the divergence of the test space shape functions
  * TODO: L2 family elements integrate f against test space shape functions
  *
  * In the future, the user will be able to override these defaults
@@ -207,7 +207,7 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     auto W     = element_type::shape_functions(xi);
     auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
-    return outer(W, std::get<0>(f)) + dot(dW_dx, std::get<1>(f));
+    return outer(W, serac::get<0>(f)) + dot(dW_dx, serac::get<1>(f));
   }
 
   if constexpr (element_type::family == Family::HCURL) {
@@ -216,7 +216,7 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
     if constexpr (dim == 3) {
       curl_W = dot(curl_W, transpose(J));
     }
-    return (W * std::get<0>(f) + curl_W * std::get<1>(f));
+    return (W * serac::get<0>(f) + curl_W * serac::get<1>(f));
   }
 }
 
@@ -439,6 +439,242 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
+/**
+ * @brief The base kernel template used to compute tangent element entries that can be assembled
+ * into a tangent matrix
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p Integral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
+ * @tparam spatial_dim The full dimension of the mesh
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
+ *
+ *
+ * @param[inout] K_e The full set of per-element element tangents [test_ndofs x test_dim, trial_ndofs x trial_dim]
+ * @param[in] derivatives_ptr The address at which derivatives of the q-function with
+ * respect to its arguments are stored
+ * @param[in] J_ The Jacobians of the element transformations at all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ */
+template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+          typename derivatives_type>
+void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
+                            int num_elements)
+{
+  using test_element  = finite_element<g, test>;
+  using trial_element = finite_element<g, trial>;
+  //  using element_residual_type      = typename trial_element::residual_type;
+  static constexpr int                  test_ndof        = test_element::ndof;
+  static constexpr int                  test_dim         = test_element::components;
+  static constexpr int                  trial_ndof       = trial_element::ndof;
+  static constexpr int                  trial_dim        = test_element::components;
+  static constexpr auto                 rule             = GaussQuadratureRule<g, Q>();
+  [[maybe_unused]] static constexpr int curl_spatial_dim = spatial_dim == 3 ? 3 : 1;
+
+  // mfem provides this information in 1D arrays, so we reshape it
+  // into strided multidimensional arrays before using
+  auto J  = mfem::Reshape(J_.Read(), rule.size(), spatial_dim, geometry_dim, num_elements);
+  auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
+
+  // for each element in the domain
+  for (int e = 0; e < num_elements; e++) {
+    tensor<double, test_ndof * test_dim, trial_ndof * trial_dim> K_elem{};
+
+    // for each quadrature point in the element
+    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
+      // get the position of this quadrature point in the parent and physical space,
+      // and calculate the measure of that point in physical space.
+      auto                    xi_q  = rule.points[q];
+      auto                    dxi_q = rule.weights[q];
+      auto                    J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
+      auto                    detJ_q = detail::Measure(J_q);
+      [[maybe_unused]] double dx     = detJ_q * dxi_q;
+
+      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
+      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
+
+      // evaluate shape functions
+      [[maybe_unused]] auto M = test_element::shape_functions(xi_q);
+      [[maybe_unused]] auto N = trial_element::shape_functions(xi_q);
+      if constexpr (test_element::family == Family::HCURL) {
+        M = dot(M, inv(J_q));
+      }
+      if constexpr (trial_element::family == Family::HCURL) {
+        N = dot(N, inv(J_q));
+      }
+
+      auto f00 = serac::get<0>(serac::get<0>(dq_darg));
+      [[maybe_unused]] auto f01 = serac::get<1>(serac::get<0>(dq_darg));
+      [[maybe_unused]] auto f10 = serac::get<0>(serac::get<1>(dq_darg));
+      auto f11 = serac::get<1>(serac::get<1>(dq_darg));
+
+      // df0_du stiffness contribution
+      // size(M) = test_ndof
+      // size(N) = trial_ndof
+      // size(df0_du) = test_dim x trial_dim
+      if constexpr (!is_zero<decltype(f00)>::value) {
+        auto df0_du = convert_to_tensor_with_shape<test_dim, trial_dim>(f00);
+        for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](auto i, auto id, auto j, auto jd) {
+          // maybe we should have a mapping for dofs x dim
+          K_elem[i + test_ndof * id][j + trial_ndof * jd] += M[i] * df0_du[id][jd] * N[j] * dx;
+        });
+      }
+
+      if constexpr (test_element::family == Family::H1 || test_element::family == Family::L2) {
+        [[maybe_unused]] auto dM_dx = dot(test_element::shape_function_gradients(xi_q), inv(J_q));
+        [[maybe_unused]] auto dN_dx = dot(trial_element::shape_function_gradients(xi_q), inv(J_q));
+
+        // df0_dgradu stiffness contribution
+        // size(M) = test_ndof
+        // size(df0_dgradu) = test_dim x trial_dim x spatial_dim
+        // size(dN_dx) = trial_ndof x spatial_dim
+        if constexpr (!is_zero<decltype(f01)>::value) {
+          auto df0_dgradu = convert_to_tensor_with_shape<test_dim, trial_dim, spatial_dim>(f01);
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
+              [&](auto i, auto id, auto j, auto jd, auto dummy_i) {
+                // maybe we should have a mapping for dofs x dim
+                K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                    M[i] * df0_dgradu[id][jd][dummy_i] * dN_dx[j][dummy_i] * dx;
+              });
+        }
+
+        // // df1_du stiffness contribution
+        // size(dM_dx) = test_ndof x spatial_dim
+        // size(N) = trial_ndof
+        // size(df1_du) = test_dim x spatial_dim x trial_dim
+        if constexpr (!is_zero<decltype(f10)>::value) {
+          auto& df1_du = f10;
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim>(
+              [&](auto i, [[maybe_unused]] auto id, auto j, [[maybe_unused]] auto jd, auto dummy_i) {
+                // maybe we should have a mapping for dofs x dim
+                if constexpr (test_dim == 1 && trial_dim == 1) {
+                  K_elem[i * test_dim][j * trial_dim] += dM_dx[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
+                } else {
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                      dM_dx[i][dummy_i] * df1_du[id][dummy_i][jd] * N[j] * dx;
+                }
+              });
+        }
+
+        // df1_dgradu stiffness contribution
+        // size(dM_dx) = test_ndof x spatial_dim
+        // size(dN_dx) = trial_ndof x spatial_dim
+        // size(df1_dgradu) = test_dim x spatial_dim x trial_dim x spatial_dim
+        if constexpr (!is_zero<decltype(f11)>::value) {
+          auto& df1_dgradu = f11;
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, spatial_dim, spatial_dim>(
+              [&](auto i, [[maybe_unused]] auto id, auto j, [[maybe_unused]] auto jd, auto dummy_i, auto dummy_j) {
+                if constexpr (test_dim == 1 && trial_dim == 1) {
+                  K_elem[i][j] += dM_dx[i][dummy_i] * df1_dgradu[dummy_i][dummy_j] * dN_dx[j][dummy_j] * dx;
+                } else {
+                  // maybe we should have a mapping for dofs x dim
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                      dM_dx[i][dummy_i] * df1_dgradu[id][dummy_i][jd][dummy_j] * dN_dx[j][dummy_j] * dx;
+                }
+              });
+        }
+      } else {  // HCurl
+
+        [[maybe_unused]] auto curl_M = test_element::shape_function_curl(xi_q) / det(J_q);
+        if constexpr (spatial_dim == 3) {
+          curl_M = dot(curl_M, transpose(J_q));
+        }
+
+        [[maybe_unused]] auto curl_N = trial_element::shape_function_curl(xi_q) / det(J_q);
+        if constexpr (spatial_dim == 3) {
+          curl_N = dot(curl_N, transpose(J_q));
+        }
+
+        // df0_dgradu stiffness contribution
+        // size(M) = test_ndof
+        // size(df0_dcurlu) = test_dim x trial_dim x curl_spatial_dim
+        // size(curl_N) = trial_ndof x curl_spatial_dim
+        if constexpr (!is_zero<decltype(f01)>::value) {
+          auto df0_dcurlu = convert_to_tensor_with_shape<test_dim, trial_dim, curl_spatial_dim>(f01);
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim>(
+              [&](auto i, auto id, auto j, auto jd, [[maybe_unused]] auto dummy_i) {
+                // maybe we should have a mapping for dofs x dim
+                if constexpr (spatial_dim == 3) {
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                      M[i] * df0_dcurlu[id][jd][dummy_i] * curl_N[j][dummy_i] * dx;
+                } else {
+                  K_elem[i + test_ndof * id][j + trial_ndof * jd] += M[i] * df0_dcurlu[id][jd] * curl_N[j] * dx;
+                }
+              });
+        }
+
+        // // df1_du stiffness contribution
+        // size(curl_M) = test_ndof x curl_spatial_dim
+        // size(N) = trial_ndof
+        // size(df1_du) = test_dim x curl_spatial_dim x trial_dim
+        if constexpr (!is_zero<decltype(f10)>::value) {
+          auto& df1_du = f10;
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim>(
+              [&](auto i, [[maybe_unused]] auto id, auto j, [[maybe_unused]] auto jd, auto dummy_i) {
+                // maybe we should have a mapping for dofs x dim
+                if constexpr (test_dim == 1 && trial_dim == 1) {
+                  if constexpr (spatial_dim == 3) {
+                    K_elem[i * test_dim][j * trial_dim] += curl_M[i][dummy_i] * df1_du[dummy_i] * N[j] * dx;
+                  } else {
+                    K_elem[i * test_dim][j * trial_dim] += curl_M[i] * df1_du * N[j] * dx;
+                  }
+                } else {
+                  if constexpr (spatial_dim == 3) {
+                    K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                        curl_M[i][dummy_i] * df1_du[id][dummy_i][jd] * N[j] * dx;
+                  } else {
+                    K_elem[i + test_ndof * id][j + trial_ndof * jd] += curl_M[i] * df1_du[id][jd] * N[j] * dx;
+                  }
+                }
+              });
+        }
+
+        // df1_dcurlu stiffness contribution
+        // size(curl_M) = test_ndof x curl_spatial_dim
+        // size(curl_N) = trial_ndof x curl_spatial_dim
+        // size(df1_dcurl) = test_dim x curl_spatial_dim x trial_dim x curl_spatial_dim
+        if constexpr (!is_zero<decltype(f11)>::value) {
+          auto& df1_dcurlu = f11;
+          for_loop<test_ndof, test_dim, trial_ndof, trial_dim, curl_spatial_dim, curl_spatial_dim>(
+              [&](auto i, [[maybe_unused]] auto id, auto j, [[maybe_unused]] auto jd, [[maybe_unused]] auto dummy_i,
+                  [[maybe_unused]] auto dummy_j) {
+                // maybe we should have a mapping for dofs x dim
+                if constexpr (test_dim == 1 && trial_dim == 1) {
+                  if constexpr (spatial_dim == 3) {
+                    K_elem[i][j] += curl_M[i][dummy_i] * df1_dcurlu[dummy_i][dummy_j] * curl_N[j][dummy_j] * dx;
+                  } else {
+                    K_elem[i][j] += curl_M[i] * df1_dcurlu * curl_N[j] * dx;
+                  }
+                } else {
+                  if constexpr (spatial_dim == 3) {
+                    K_elem[i + test_ndof * id][j + trial_ndof * jd] +=
+                        curl_M[i][dummy_i] * df1_dcurlu[id][dummy_i][jd][dummy_j] * curl_N[j][dummy_j] * dx;
+                  } else {
+                    K_elem[i + test_ndof * id][j + trial_ndof * jd] += curl_M[i] * df1_dcurlu[id][jd] * curl_N[j] * dx;
+                  }
+                }
+              });
+        }
+      }
+    }
+
+    // once we've finished the element integration loop, write our element stifness
+    // out to memory, to be later assembled into global stifnesss by mfem
+    for (int i = 0; i < test_ndof * test_dim; i++) {
+      for (int j = 0; j < trial_ndof * trial_dim; j++) {
+        dk(i, j, e) += K_elem[i][j];
+      }
+    }
+  }
+}
+
 /// @cond
 namespace detail {
 
@@ -534,5 +770,134 @@ using trial_space_t = typename detail::get_trial_space<spaces>::type;
 static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
                                                     Geometry::Hexahedron};
 
+/**
+ * @brief Describes a single integral term in a weak forumulation of a partial differential equation
+ * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
+ * function spaces, i.e., @p test(trial)
+ */
+template <typename spaces>
+class Integral {
+public:
+  using test_space  = test_space_t<spaces>;   ///< the test function space
+  using trial_space = trial_space_t<spaces>;  ///< the trial function space
+
+  /**
+   * @brief Constructs an @p Integral from a user-provided quadrature function
+   * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
+   * @tparam spatial_dim The full dimension of the mesh
+   * @param[in] num_elements The number of elements in the mesh
+   * @param[in] J The Jacobians of the element transformations at all quadrature points
+   * @param[in] X The actual (not reference) coordinates of all quadrature points
+   * @see mfem::GeometricFactors
+   * @param[in] qf The user-provided quadrature function
+   * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
+   * and @a spatial_dim template parameters
+   */
+  template <int geometry_dim, int spatial_dim, typename lambda_type>
+  Integral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<geometry_dim>,
+           Dimension<spatial_dim>, lambda_type&& qf)
+      : J_(J), X_(X)
+  {
+    constexpr auto geometry                      = supported_geometries[geometry_dim];
+    constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
+    constexpr auto quadrature_points_per_element = (spatial_dim == 2) ? Q * Q : Q * Q * Q;
+
+    uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
+
+    // these lines of code figure out the argument types that will be passed
+    // into the quadrature function in the finite element kernel.
+    //
+    // we use them to observe the output type and allocate memory to store
+    // the derivative information at each quadrature point
+    using x_t             = tensor<double, spatial_dim>;
+    using u_du_t          = typename detail::lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
+    using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
+
+    // the derivative_type data is stored in a shared_ptr here, because it can't be a
+    // member variable on the Integral class template (since it depends on the lambda function,
+    // which isn't known until the time of construction).
+    //
+    // This shared_ptr should have a comparable lifetime to the Integral instance itself, since
+    // the reference count will increase when it is captured by the lambda functions below, and
+    // the reference count will go back to zero after those std::functions are deconstructed in
+    // Integral::~Integral()
+    //
+    // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
+    // qf_derivatives[e * quadrature_points_per_element + q]
+    std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
+
+    // this is where we actually specialize the finite element kernel templates with
+    // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
+    //
+    // std::function's type erasure lets us wrap those specific details inside a function with known signature
+    //
+    // note: the qf_derivatives_ptr is copied by value to each lambda function below,
+    //       to allow the evaluation kernel to pass derivative values to the gradient kernel
+    evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
+      evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
+                                                                                         X_, num_elements, qf);
+    };
+
+    gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
+      gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives.get(), J_,
+                                                                                       num_elements);
+    };
+
+    gradient_mat_ = [=](mfem::Vector& K_e) {
+      gradient_matrix_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(K_e, qf_derivatives.get(),
+                                                                                              J_, num_elements);
+    };
+  }
+
+  /**
+   * @brief Applies the integral, i.e., @a output_E = evaluate( @a input_E )
+   * @param[in] input_E The input to the evaluation; per-element DOF values
+   * @param[out] output_E The output of the evalution; per-element DOF residuals
+   * @see evaluation_kernel
+   */
+  void Mult(const mfem::Vector& input_E, mfem::Vector& output_E) const { evaluation_(input_E, output_E); }
+
+  /**
+   * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
+   * @param[in] input_E The input to the evaluation; per-element DOF values
+   * @param[out] output_E The output of the evalution; per-element DOF residuals
+   * @see gradient_kernel
+   */
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
+
+  /**
+   * @brief Computes the element stiffness matrices, storing them in an `mfem::Vector` that has been reshaped into a
+   * multidimensional array
+   * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
+   * elem)
+   */
+  void ComputeElementMatrices(mfem::Vector& K_e) const { gradient_mat_(K_e); }
+
+private:
+  /**
+   * @brief Jacobians of the element transformations at all quadrature points
+   */
+  const mfem::Vector J_;
+  /**
+   * @brief Mapped (physical) coordinates of all quadrature points
+   */
+  const mfem::Vector X_;
+
+  /**
+   * @brief Type-erased handle to evaluation kernel
+   * @see evaluation_kernel
+   */
+  std::function<void(const mfem::Vector&, mfem::Vector&)> evaluation_;
+  /**
+   * @brief Type-erased handle to gradient kernel
+   * @see gradient_kernel
+   */
+  std::function<void(const mfem::Vector&, mfem::Vector&)> gradient_;
+  /**
+   * @brief Type-erased handle to gradient matrix assembly kernel
+   * @see gradient_matrix_kernel
+   */
+  std::function<void(mfem::Vector&)> gradient_mat_;
+};
 
 }  // namespace serac

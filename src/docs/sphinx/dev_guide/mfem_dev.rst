@@ -30,21 +30,20 @@ Assuming the default serac build configuration we need to make the following mod
 
     # change MFEM_USE_MPI from OFF to ON
     option(MFEM_USE_MPI "Enable MPI parallel build" ON)
-    ...
+    #...
     # Serac's default build also includes
     option(MFEM_USE_SUNDIALS "Enable SUNDIALS usage" ON)
     option(MFEM_USE_SUPERLU "Enable SuperLU_DIST usage" ON)
     option(MFEM_USE_NETCDF "Enable NETCDF usage" ON)    
-    ...
+    #...
     # For use with CUDA, turn the following ON
     option(MFEM_USE_AMGX "Enable AmgX usage" OFF)
     option(MFEM_USE_CUDA "Enable CUDA" OFF)
-    ...
+    #...
     # uncomment HYPRE_REQUIRED_PACKAGES
     set(HYPRE_REQUIRED_PACKAGES "BLAS" "LAPACK" CACHE STRING
       "Packages that HYPRE depends on.")
 
-      
 
 Afterwards create a MFEM build directory and run ``cmake`` using a Serac host-config.
 

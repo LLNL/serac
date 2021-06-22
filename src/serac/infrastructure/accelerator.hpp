@@ -17,10 +17,16 @@
 #define SERAC_HOST_DEVICE __host__ __device__
 #define SERAC_DEVICE __device__
 #else
+/**
+ * @brief Macro that toggles between decorating a function for host and device or noop's for non-accelated builds.
+ */
 #define SERAC_HOST_DEVICE
 #define SERAC_DEVICE
 #endif
 
+/**
+ * @brief Accelerator functionality
+ */
 namespace serac::accelerator {
 
 /**

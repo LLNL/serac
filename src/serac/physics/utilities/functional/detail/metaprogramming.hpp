@@ -79,3 +79,82 @@ SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f)
 {
   detail::for_constexpr(f, std::make_integer_sequence<int, n>{}...);
 }
+
+// sam's templates for undoing for_constexpr for faster compile times
+template <int n1, typename lambda>
+void for_loop(lambda f)
+{
+  for (int i = 0; i < n1; i++) {
+    f(i);
+  }
+}
+
+template <int n1, int n2, typename lambda>
+void for_loop(lambda f)
+{
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) {
+      f(i, j);
+    }
+  }
+}
+
+template <int n1, int n2, int n3, typename lambda>
+void for_loop(lambda f)
+{
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) {
+      for (int k = 0; k < n3; k++) {
+        f(i, j, k);
+      }
+    }
+  }
+}
+
+template <int n1, int n2, int n3, int n4, typename lambda>
+void for_loop(lambda f)
+{
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) {
+      for (int k = 0; k < n3; k++) {
+        for (int l = 0; l < n4; l++) {
+          f(i, j, k, l);
+        }
+      }
+    }
+  }
+}
+
+template <int n1, int n2, int n3, int n4, int n5, typename lambda>
+void for_loop(lambda f)
+{
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) {
+      for (int k = 0; k < n3; k++) {
+        for (int l = 0; l < n4; l++) {
+          for (int m = 0; m < n5; m++) {
+            f(i, j, k, l, m);
+          }
+        }
+      }
+    }
+  }
+}
+
+template <int n1, int n2, int n3, int n4, int n5, int n6, typename lambda>
+void for_loop(lambda f)
+{
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) {
+      for (int k = 0; k < n3; k++) {
+        for (int l = 0; l < n4; l++) {
+          for (int m = 0; m < n5; m++) {
+            for (int n = 0; n < n6; n++) {
+              f(i, j, k, l, m, n);
+            }
+          }
+        }
+      }
+    }
+  }
+}

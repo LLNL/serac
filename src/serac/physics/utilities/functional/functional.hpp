@@ -18,7 +18,8 @@
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/finite_element.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
-#include "serac/physics/utilities/functional/integral_eval.hpp"
+#include "serac/physics/utilities/functional/integral.hpp"
+#include "serac/numerics/assembled_sparse_matrix.hpp"
 
 namespace serac {
 
@@ -293,6 +294,44 @@ public:
   }
 
   /**
+   * @brief Obtains the element stiffness matrix reshaped a mfem::Vector
+   * @returns A mfem::Vector containing the assembled element stiffness matrix (test_dim * test_ndof, trial_dim
+   * * trial_ndof, nelem)
+   */
+  mfem::Vector ComputeElementMatrices()
+  {
+    // Resize K_e_ if this is the first time
+    if (K_e_.Size() == 0) {
+      const auto& test_el  = *test_space_->GetFE(0);
+      const auto& trial_el = *trial_space_->GetFE(0);
+      K_e_.SetSize(test_el.GetDof() * test_space_->GetVDim() * trial_el.GetDof() * trial_space_->GetVDim() *
+                   test_space_->GetNE());
+    }
+    // zero out internal vector
+    K_e_ = 0.;
+    // loop through integrals and accumulate
+    for (auto domain : domain_integrals_) domain.ComputeElementMatrices(K_e_);
+
+    return K_e_;
+  }
+
+  /**
+   * @brief Computes element matrices and returns AssembledSparseMatrix
+   * @return reference to AssembledSparseMatrix with newly assembled entries
+   */
+
+  serac::mfem_ext::AssembledSparseMatrix& GetAssembledSparseMatrix()
+  {
+    ComputeElementMatrices();  // Updates K_e_
+    if (!assembled_spmat_) {
+      assembled_spmat_ = std::make_unique<serac::mfem_ext::AssembledSparseMatrix>(
+          *test_space_, *trial_space_, mfem::ElementDofOrdering::LEXICOGRAPHIC);
+    }
+    assembled_spmat_->FillData(K_e_);
+    return *assembled_spmat_;
+  }
+
+  /**
    * @brief Applies an essential boundary condition to the attributes specified by @a ess_attr
    * @param[in] ess_attr The mesh attributes to apply the BC to
    *
@@ -522,6 +561,20 @@ private:
    * @brief The gradient object used to implement @p GetGradient
    */
   mutable Gradient grad_;
+
+  /**
+   * @brief storage buffer for element stiffness matrices, used in ComputeElementMatrices() and
+   * UpdateAssembledSparseMatrix()
+   */
+  mutable mfem::Vector K_e_;
+
+  /**
+   * @brief Local internal AssembledSparseMatrix storage for ComputeElementMatrices
+   *
+   * If unique_ptr is empty, construct AssembledSparseMatrix.
+   *
+   */
+  std::unique_ptr<serac::mfem_ext::AssembledSparseMatrix> assembled_spmat_;
 };
 
 }  // namespace serac

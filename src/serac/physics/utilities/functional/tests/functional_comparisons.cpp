@@ -16,6 +16,7 @@
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
+#include "serac/numerics/assembled_sparse_matrix.hpp"
 #include "serac/infrastructure/profiling.hpp"
 #include <gtest/gtest.h>
 
@@ -40,7 +41,6 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   static constexpr double a       = 1.7;
   static constexpr double b       = 2.1;
   std::string             postfix = concat("_H1<", p, ">");
-
   serac::profiling::initializeCaliper();
 
   // Create standard MFEM bilinear and linear forms on H1
@@ -123,18 +123,38 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Compute the gradient using functional
   mfem::Operator& grad2 = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
+  // Test fully assembled matrix
+  mfem::Array<int> dofs;
+  fespace.GetElementDofs(0, dofs);
+  mfem::Vector K_e = residual.ComputeElementMatrices();
+
+  serac::mfem_ext::AssembledSparseMatrix A_serac_mat(fespace, fespace, mfem::ElementDofOrdering::LEXICOGRAPHIC);
+  {
+    SERAC_PROFILE_SCOPE(concat("AssembledSparseMatrix_FillData", postfix).c_str());
+    A_serac_mat.FillData(K_e);
+  }
+
+  A_serac_mat.Finalize();
+
+  std::unique_ptr<mfem::HypreParMatrix> J2(
+      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), A_serac_mat.ParallelAssemble()));
+
   // Compute the gradient action using standard MFEM and functional
   mfem::Vector g1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_ApplyGradient", postfix), (*J) * U, nsamples);
   mfem::Vector g2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient", postfix), grad2 * U, nsamples);
+  mfem::Vector g3 = SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient_Matrix", postfix), (*J2) * U, nsamples);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
+    std::cout << "||g3||: " << g2.Norml2() << std::endl;
     std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g3||/||g1||: " << mfem::Vector(g1 - g3).Norml2() / g1.Norml2() << std::endl;
   }
 
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-14);
 
   serac::profiling::terminateCaliper();
 }
@@ -150,7 +170,6 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   static constexpr double a       = 1.7;
   static constexpr double b       = 2.1;
   std::string             postfix = concat("_H1<", p, ",", dim, ">");
-
   serac::profiling::initializeCaliper();
 
   auto                        fec = mfem::H1_FECollection(p, dim);
@@ -223,15 +242,24 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   mfem::Operator& grad = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
+  auto& A_serac_mat = residual.GetAssembledSparseMatrix();
+
+  A_serac_mat.Finalize();
+  std::unique_ptr<mfem::HypreParMatrix> J2(
+      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), A_serac_mat.ParallelAssemble()));
+
   mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix), (*J) * U);
   mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix), grad * U);
+  mfem::Vector g3 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient_Matrix", postfix), (*J2) * U);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
     std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g3||/||g1||: " << mfem::Vector(g1 - g3).Norml2() / g1.Norml2() << std::endl;
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-14);
 
   serac::profiling::terminateCaliper();
 }
@@ -317,15 +345,24 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 
   mfem::Operator& grad = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
+  auto& B_serac_mat = residual.GetAssembledSparseMatrix();
+  B_serac_mat.Finalize();
+  std::unique_ptr<mfem::HypreParMatrix> J2(
+      SERAC_PROFILE_EXPR(concat("functional_gradParAssemble", postfix).c_str(), B_serac_mat.ParallelAssemble()));
+
   mfem::Vector g1 = SERAC_PROFILE_EXPR(concat("mfem_ApplyGradient", postfix), (*J) * U);
   mfem::Vector g2 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient", postfix), grad * U);
+  mfem::Vector g3 = SERAC_PROFILE_EXPR(concat("functional_ApplyGradient_Matrix", postfix), (*J2) * U);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
+    std::cout << "||g3||: " << g3.Norml2() << std::endl;
     std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+    std::cout << "||g1-g3||/||g1||: " << mfem::Vector(g1 - g3).Norml2() / g1.Norml2() << std::endl;
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-13);
+  EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-13);
 
   serac::profiling::terminateCaliper();
 }
@@ -372,10 +409,6 @@ mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
 
   // Ensure correctness
   serac::logger::flush();
-  // if (!axom::utilities::filesystem::pathExists(mesh_file)) {
-  //   msg = fmt::format("Given mesh file does not exist: {0}", mesh_file);
-  //   SLIC_ERROR_ROOT(msg);
-  // }
 
   // This inherits from std::ifstream, and will work the same way as a std::ifstream,
   // but is required for Exodus meshes

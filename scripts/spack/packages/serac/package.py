@@ -73,6 +73,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mpi")
     depends_on("cmake@3.8:")
 
+    depends_on("ascent@0.7.1serac~vtkh~fortran~shared~openmp")
+
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")
     depends_on('doxygen', when="+devtools")
@@ -115,7 +117,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom@0.4.0serac~openmp~fortran+mfem~shared"
+    axom_spec = "axom@0.5.0serac~openmp~fortran~examples+mfem~shared"
     cmake_debug_deps = [axom_spec,
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
@@ -140,12 +142,17 @@ class Serac(CachedCMakePackage, CudaPackage):
     cuda_deps = ["mfem", "axom"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
+    depends_on("caliper+cuda", when="+caliper+cuda")
 
     for sm_ in CudaPackage.cuda_arch_values:
         depends_on('mfem+amgx cuda_arch=sm_{0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         depends_on('axom cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
+        # Caliper may not currently use its cuda_arch
+        # but probably good practice to set it
+        depends_on('caliper cuda_arch={0}'.format(sm_),
+                when='+caliper cuda_arch={0}'.format(sm_))
         
 
     def _get_sys_type(self, spec):
@@ -250,7 +257,7 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_path("TPL_ROOT", tpl_root))
 
         # required tpls
-        for dep in ('axom', 'conduit', 'mfem', 'hdf5',
+        for dep in ('ascent', 'axom', 'conduit', 'mfem', 'hdf5',
                     'hypre', 'metis', 'parmetis'):
             dep_dir = get_spec_path(spec, dep, path_replacements)
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),

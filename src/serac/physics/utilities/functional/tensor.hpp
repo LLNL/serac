@@ -234,6 +234,16 @@ struct zero {
   }
 };
 
+/** @brief checks if a type is `zero` */
+template <typename T>
+struct is_zero : std::false_type {
+};
+
+/** @overload */
+template <>
+struct is_zero<zero> : std::true_type {
+};
+
 /** @brief the sum of two `zero`s is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator+(zero, zero) { return zero{}; }
 
@@ -946,6 +956,15 @@ constexpr auto operator*(const tensor<S, m>& A, const tensor<T, m, n>& B)
 /**
  * @brief this is a shorthand for dot(A, B)
  */
+template <typename S, typename T, int m>
+constexpr auto operator*(const tensor<S, m>& A, const tensor<T, m>& B)
+{
+  return dot(A, B);
+}
+
+/**
+ * @brief this is a shorthand for dot(A, B)
+ */
 template <typename S, typename T, int m, int n>
 constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n>& B)
 {
@@ -1517,6 +1536,46 @@ auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p.
     }
   }
   return total;
+}
+
+/**
+ * @brief Recast the shape of a tensor <m,n>
+ */
+template <int m, int n, typename T>
+auto convert_to_tensor_with_shape(const tensor<T, m, n>& A)
+{
+  return A;
+}
+
+/**
+ * @brief Recast a double as a tensor
+ */
+template <int m, int n, typename T>
+auto convert_to_tensor_with_shape(T value)
+{
+  tensor<T, m, n> A;
+  A[0][0] = value;
+  return A;
+}
+
+/**
+ * @brief Recast the shape of a tensor<m, n, o>
+ */
+template <int m, int n, int o, typename T>
+auto convert_to_tensor_with_shape(const tensor<T, m, n, o>& A)
+{
+  return A;
+}
+
+/**
+ * @brief Recast a double as a tensor
+ */
+template <int m, int n, int o, typename T>
+auto convert_to_tensor_with_shape(T value)
+{
+  tensor<T, m, n, o> A;
+  A[0][0][0] = value;
+  return A;
 }
 
 }  // namespace serac

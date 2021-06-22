@@ -130,6 +130,7 @@ inline const char* make_cstr(const char* str) { return str; }
 inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 
 }  // namespace serac::profiling::detail
+/// @endcond
 
 #define SERAC_PROFILE_SCOPE(name) \
   cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name))
