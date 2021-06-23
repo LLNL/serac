@@ -50,8 +50,9 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& da
 
   // Get domain Sidre group
   const axom::sidre::Group* sidre_root = datastore.getRoot();
-  SLIC_ERROR_ROOT_IF(!sidre_root->hasGroup(data_collection_name),
-                     fmt::format("Expected a datacollection root at '{0}' but it was not found", data_collection_name));
+  SLIC_ERROR_ROOT_IF(
+      !sidre_root->hasGroup(data_collection_name),
+      fmt::format("Expected a Sidre Data Collection root at '{0}' but it was not found", data_collection_name));
   const axom::sidre::Group* domain_grp = sidre_root->getGroup(data_collection_name);
 
   // Add field names to extract field lists
