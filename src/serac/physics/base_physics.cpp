@@ -13,6 +13,7 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 
 namespace serac {
 
