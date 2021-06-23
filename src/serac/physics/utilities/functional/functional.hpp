@@ -153,8 +153,7 @@ public:
 
       constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
       auto           geom  = domain.GetGeometricFactors(ir, flags);
-      domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{},
-                                     Dimension<spatial_dim>{}, integrand, use_cuda);
+      domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{}, Dimension<spatial_dim>{}, integrand);
       return;
     }
 #ifdef ENABLE_BOUNDARY_INTEGRALS

@@ -280,13 +280,14 @@ SERAC_HOST_DEVICE auto get_value(const serac::tuple<T...> & tuple_of_values)
  * @param[in] arg The set of numbers to retrieve gradients from
  */
 template <typename... T>
-auto get_gradient(dual<serac::tuple<T...> > arg)
+SERAC_HOST_DEVICE auto get_gradient(dual<serac::tuple<T...> > arg)
 {
   return serac::apply([](auto... each_value) { return serac::tuple{each_value...}; }, arg.gradient);
 }
+
 /// @overload
 template <typename... T, int... n>
-auto get_gradient(const tensor<dual<serac::tuple<T...> >, n...>& arg)
+SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<serac::tuple<T...> >, n...>& arg)
 {
   serac::tuple<outer_product_t<tensor<double, n...>, T>...> g{};
   for_constexpr<n...>([&](auto... i) {

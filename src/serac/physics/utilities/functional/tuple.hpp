@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "serac/infrastructure/accelerator.hpp"
+
 namespace serac{
 
   template < typename ... T >
@@ -41,7 +43,7 @@ namespace serac{
   struct tuple_size< serac::tuple<Types...> > : std::integral_constant<std::size_t, sizeof...(Types)> { };
 
   template < int i, typename ... T >
-  constexpr auto & get(tuple< T ... > & values) {
+  SERAC_HOST_DEVICE constexpr auto & get(tuple< T ... > & values) {
     static_assert(i < sizeof ... (T), ""); 
     if constexpr (i == 0) { return values.v0; }
     if constexpr (i == 1) { return values.v1; }
@@ -54,7 +56,7 @@ namespace serac{
   }
 
   template < int i, typename ... T >
-  constexpr auto get(const tuple< T ... > & values) {
+  SERAC_HOST_DEVICE constexpr auto get(const tuple< T ... > & values) {
     static_assert(i < sizeof ... (T), ""); 
     if constexpr (i == 0) { return values.v0; }
     if constexpr (i == 1) { return values.v1; }
@@ -67,7 +69,7 @@ namespace serac{
   }
 
   template < typename S, typename ... T >
-  constexpr auto & get(tuple< T ... > & values) { 
+  SERAC_HOST_DEVICE constexpr auto & get(tuple< T ... > & values) { 
     if constexpr (sizeof ... (T) > 0) { if constexpr (std::is_same_v<S,decltype(values.v0)>) { return values.v0; } }
     if constexpr (sizeof ... (T) > 1) { if constexpr (std::is_same_v<S,decltype(values.v1)>) { return values.v1; } }
     if constexpr (sizeof ... (T) > 2) { if constexpr (std::is_same_v<S,decltype(values.v2)>) { return values.v2; } }
@@ -79,7 +81,7 @@ namespace serac{
   }
 
   template < typename S, typename ... T >
-  constexpr auto get(const tuple< T ... > & values) { 
+  SERAC_HOST_DEVICE constexpr auto get(const tuple< T ... > & values) { 
     if constexpr (sizeof ... (T) > 0) { if constexpr (std::is_same_v<S,decltype(values.v0)>) { return values.v0; } }
     if constexpr (sizeof ... (T) > 1) { if constexpr (std::is_same_v<S,decltype(values.v1)>) { return values.v1; } }
     if constexpr (sizeof ... (T) > 2) { if constexpr (std::is_same_v<S,decltype(values.v2)>) { return values.v2; } }
@@ -92,109 +94,109 @@ namespace serac{
 
   
   template < typename ... S, typename ... T, int ... i >
-  constexpr auto plus_helper(const tuple < S ... > & x, const tuple < T ... > & y, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE constexpr auto plus_helper(const tuple < S ... > & x, const tuple < T ... > & y, std::integer_sequence< int, i...>) {
     return tuple{get<i>(x) + get<i>(y) ...};
   }
 
   template < typename ... S, typename ... T >
-  constexpr auto operator+(const tuple < S ... > & x, const tuple < T ... > & y) {
+  SERAC_HOST_DEVICE constexpr auto operator+(const tuple < S ... > & x, const tuple < T ... > & y) {
     static_assert(sizeof ... (S) == sizeof ... (T));
     return plus_helper(x, y, std::make_integer_sequence<int, sizeof ... (S) >());    
   }
 
 
   template < typename ... S, typename ... T, int ... i >
-  constexpr auto minus_helper(const tuple < S ... > & x, const tuple < T ... > & y, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE constexpr auto minus_helper(const tuple < S ... > & x, const tuple < T ... > & y, std::integer_sequence< int, i...>) {
     return tuple{get<i>(x) - get<i>(y) ...};
   }
 
   template < typename ... S, typename ... T >
-  constexpr auto operator-(const tuple < S ... > & x, const tuple < T ... > & y) {
+  SERAC_HOST_DEVICE constexpr auto operator-(const tuple < S ... > & x, const tuple < T ... > & y) {
     static_assert(sizeof ... (S) == sizeof ... (T));
     return minus_helper(x, y, std::make_integer_sequence<int, sizeof ... (S) >());    
   }
 
 
   template < typename ... S, typename ... T, int ... i >
-  constexpr auto div_helper(const tuple < S ... > & x, const tuple < T ... > & y, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE constexpr auto div_helper(const tuple < S ... > & x, const tuple < T ... > & y, std::integer_sequence< int, i...>) {
     return tuple{get<i>(x) / get<i>(y) ...};
   }
 
   template < typename ... S, typename ... T >
-  constexpr auto operator/(const tuple < S ... > & x, const tuple < T ... > & y) {
+  SERAC_HOST_DEVICE constexpr auto operator/(const tuple < S ... > & x, const tuple < T ... > & y) {
     static_assert(sizeof ... (S) == sizeof ... (T));
     return div_helper(x, y, std::make_integer_sequence<int, sizeof ... (S) >());    
   }
 
   template < typename ... T, int ... i >
-  constexpr auto div_helper(const double a, const tuple < T ... > & x, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE constexpr auto div_helper(const double a, const tuple < T ... > & x, std::integer_sequence< int, i...>) {
     return tuple{a / get<i>(x) ...};
   }
 
   template < typename ... T, int ... i >
-  constexpr auto div_helper(const tuple < T ... > & x, const double a, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE constexpr auto div_helper(const tuple < T ... > & x, const double a, std::integer_sequence< int, i...>) {
     return tuple{get<i>(x) / a ...};
   }
 
   template < typename ... T >
-  constexpr auto operator/(const double a, const tuple < T ... > & x) {
+  SERAC_HOST_DEVICE constexpr auto operator/(const double a, const tuple < T ... > & x) {
     return div_helper(a, x, std::make_integer_sequence<int, sizeof ... (T) >());    
   }
 
   template < typename ... T >
-  constexpr auto operator/(const tuple < T ... > & x, const double a) {
+  SERAC_HOST_DEVICE constexpr auto operator/(const tuple < T ... > & x, const double a) {
     return div_helper(x, a, std::make_integer_sequence<int, sizeof ... (T) >());    
   }
 
 
   template < typename ... S, typename ... T, int ... i >
-  constexpr auto mult_helper(const tuple < S ... > & x, const tuple < T ... > & y, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple < S ... > & x, const tuple < T ... > & y, std::integer_sequence< int, i...>) {
     return tuple{get<i>(x) * get<i>(y) ...};
   }
 
   template < typename ... S, typename ... T >
-  constexpr auto operator*(const tuple < S ... > & x, const tuple < T ... > & y) {
+  SERAC_HOST_DEVICE constexpr auto operator*(const tuple < S ... > & x, const tuple < T ... > & y) {
     static_assert(sizeof ... (S) == sizeof ... (T));
     return mult_helper(x, y, std::make_integer_sequence<int, sizeof ... (S) >());    
   }
 
   template < typename ... T, int ... i >
-  constexpr auto mult_helper(const double a, const tuple < T ... > & x, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE constexpr auto mult_helper(const double a, const tuple < T ... > & x, std::integer_sequence< int, i...>) {
     return tuple{a * get<i>(x) ...};
   }
 
   template < typename ... T, int ... i >
-  constexpr auto mult_helper(const tuple < T ... > & x, const double a, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple < T ... > & x, const double a, std::integer_sequence< int, i...>) {
     return tuple{get<i>(x) * a ...};
   }
 
   template < typename ... T >
-  constexpr auto operator*(const double a, const tuple < T ... > & x) {
+  SERAC_HOST_DEVICE constexpr auto operator*(const double a, const tuple < T ... > & x) {
     return mult_helper(a, x, std::make_integer_sequence<int, sizeof ... (T) >());    
   }
 
   template < typename ... T >
-  constexpr auto operator*(const tuple < T ... > & x, const double a) {
+  SERAC_HOST_DEVICE constexpr auto operator*(const tuple < T ... > & x, const double a) {
     return mult_helper(x, a, std::make_integer_sequence<int, sizeof ... (T) >());    
   }
 
   template < typename lambda, typename ... T, int ... i >
-  auto apply_helper(lambda f, tuple< T ... > & args, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE auto apply_helper(lambda f, tuple< T ... > & args, std::integer_sequence< int, i...>) {
     return f(get<i>(args) ...);
   }
 
   template < typename lambda, typename ... T >
-  auto apply(lambda f, tuple< T ... > & args) {
+  SERAC_HOST_DEVICE auto apply(lambda f, tuple< T ... > & args) {
     return apply_helper(f, std::move(args), std::make_integer_sequence<int, sizeof ... (T) >());
   }
 
   template < typename lambda, typename ... T, int ... i >
-  auto apply_helper(lambda f, const tuple< T ... > & args, std::integer_sequence< int, i...>) {
+  SERAC_HOST_DEVICE auto apply_helper(lambda f, const tuple< T ... > & args, std::integer_sequence< int, i...>) {
     return f(get<i>(args) ...);
   }
 
   template < typename lambda, typename ... T >
-  auto apply(lambda f, const tuple< T ... > & args) {
+  SERAC_HOST_DEVICE auto apply(lambda f, const tuple< T ... > & args) {
     return apply_helper(f, std::move(args), std::make_integer_sequence<int, sizeof ... (T) >());
   }
 

@@ -16,12 +16,19 @@
 #if defined(__CUDACC__)
 #define SERAC_HOST_DEVICE __host__ __device__
 #define SERAC_DEVICE __device__
+
+#if __CUDAVER__ >= 75000
+#define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING #pragma nv_exec_check_disable
+#else
+#define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING #pragma hd_warning_disable
+#endif
 #else
 /**
  * @brief Macro that toggles between decorating a function for host and device or noop's for non-accelated builds.
  */
 #define SERAC_HOST_DEVICE
 #define SERAC_DEVICE
+#define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 #endif
 
 /**

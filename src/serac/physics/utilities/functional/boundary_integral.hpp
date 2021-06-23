@@ -179,12 +179,12 @@ auto Preprocess(T u, const tensor<double, geometry_dim> xi,
  * test function space.
  *
  * By default:
- *  H1 family elements integrate std::get<0>(f) against the test space shape functions
- *                           and std::get<1>(f) against the test space shape function gradients
- *  Hcurl family elements integrate std::get<0>(f) against the test space shape functions
- *                              and std::get<1>(f) against the curl of the test space shape functions
- * TODO: Hdiv family elements integrate std::get<0>(f) against the test space shape functions
- *                                  and std::get<1>(f) against the divergence of the test space shape functions
+ *  H1 family elements integrate serac::get<0>(f) against the test space shape functions
+ *                           and serac::get<1>(f) against the test space shape function gradients
+ *  Hcurl family elements integrate serac::get<0>(f) against the test space shape functions
+ *                              and serac::get<1>(f) against the curl of the test space shape functions
+ * TODO: Hdiv family elements integrate serac::get<0>(f) against the test space shape functions
+ *                                  and serac::get<1>(f) against the divergence of the test space shape functions
  * TODO: L2 family elements integrate f against test space shape functions
  *
  * In the future, the user will be able to override these defaults
@@ -203,7 +203,7 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
   if constexpr (element_type::family == Family::H1) {
     auto W     = element_type::shape_functions(xi);
     auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
-    return outer(W, std::get<0>(f)) + dot(dW_dx, std::get<1>(f));
+    return outer(W, serac::get<0>(f)) + dot(dW_dx, serac::get<1>(f));
   }
 
   if constexpr (element_type::family == Family::HCURL) {
@@ -212,7 +212,7 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
     if constexpr (dim == 3) {
       curl_W = dot(curl_W, transpose(J));
     }
-    return (W * std::get<0>(f) + curl_W * std::get<1>(f));
+    return (W * serac::get<0>(f) + curl_W * serac::get<1>(f));
   }
 }
 

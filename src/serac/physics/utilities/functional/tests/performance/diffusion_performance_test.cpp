@@ -319,8 +319,8 @@ auto time(lambda&& f)
 template <int Q1D, int D1D>
 void run_tests(int n)
 {
-  tensor<double, D1D, D1D, D1D>   y;
-  tensor<double, D1D * D1D * D1D> y2;
+  tensor<double, D1D, D1D, D1D>   y{};
+  tensor<double, D1D * D1D * D1D> y2{};
 
   std::cout << "running tests " << n << " times, with D1D: " << D1D << ", Q1D: " << Q1D << std::endl;
 

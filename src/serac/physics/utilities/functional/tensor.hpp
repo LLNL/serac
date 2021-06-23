@@ -331,14 +331,16 @@ SERAC_HOST_DEVICE constexpr auto tensor_with_shape(std::integer_sequence<int, n.
  * @pre @a f must accept @p sizeof...(n) arguments of type @p int
  * 
  * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
- *       to work around a limitation in nvcc.
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
  */
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) {
   using T = decltype(f());
   return tensor<T>{f()}; 
 }
 
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int n1, typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) { 
   using T = decltype(f(n1));
@@ -347,6 +349,7 @@ SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) {
   return A;
 }
 
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int n1, int n2, typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) { 
   using T = decltype(f(n1, n2));
@@ -359,6 +362,7 @@ SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) {
   return A;
 }
 
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int n1, int n2, int n3, typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) { 
   using T = decltype(f(n1, n2, n3));
@@ -373,6 +377,7 @@ SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) {
   return A;
 }
 
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int n1, int n2, int n3, int n4, typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f) { 
   using T = decltype(f(n1, n2, n3, n4));
