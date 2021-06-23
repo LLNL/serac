@@ -12,11 +12,7 @@
 
 #pragma once
 
-//#include <functional>
-//#include <memory>
 #include <optional>
-//#include <type_traits>
-//#include <variant>
 
 #include "mfem.hpp"
 #include "axom/sidre/core/MFEMSidreDataCollection.hpp"
