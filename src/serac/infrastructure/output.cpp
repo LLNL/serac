@@ -18,8 +18,8 @@
 
 namespace serac::output {
 
-void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
-                  const std::string& file_name_prefix, double time, const Language language)
+void outputFields(const axom::sidre::DataStore& datastore, const std::string& driver_name, double time,
+                  const Language language)
 {
   SLIC_INFO_ROOT(fmt::format("Outputting field data at time: {}", time));
 
@@ -45,11 +45,13 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& da
   // "relay" is the Ascents Extract type for saving data
   extracts["e1/type"]            = "relay";
   auto [_, rank]                 = serac::getMPIInfo();
-  extracts["e1/params/path"]     = fmt::format("{}.{}.{}", file_name_prefix, rank, output_language);
+  extracts["e1/params/path"]     = fmt::format("{}_fields.{}.{}", driver_name, rank, output_language);
   extracts["e1/params/protocol"] = output_language;
 
   // Get domain Sidre group
   const axom::sidre::Group* sidre_root = datastore.getRoot();
+  // Note: this must match up with collection name in StateManager
+  const std::string data_collection_name = driver_name + "_datacoll";
   SLIC_ERROR_ROOT_IF(
       !sidre_root->hasGroup(data_collection_name),
       fmt::format("Expected a Sidre Data Collection root at '{0}' but it was not found", data_collection_name));

@@ -23,6 +23,7 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& col
     reset();
   }
 
+  // Note: this must match up with collection name in outputFields()
   collection_name_ = collection_name_prefix + "_datacoll";
 
   auto global_grp   = ds.getRoot()->createGroup(collection_name_ + "_global");
