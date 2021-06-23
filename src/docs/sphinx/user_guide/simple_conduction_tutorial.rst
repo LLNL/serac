@@ -30,6 +30,14 @@ In this example, we are building a thermal conduction simulation, so we include 
    :end-before: _incl_thermal_header_end
    :language: C++
 
+The following header provides access to the `StateManager` class which manages the individual finite element states
+and the mesh:
+
+.. literalinclude:: ../../../../examples/simple_conduction/without_input_file.cpp
+   :start-after: _incl_state_manager_start
+   :end-before: _incl_state_manager_end
+   :language: C++
+
 Serac also provides a set of setup/teardown functions that encapsulate much of the boilerplate setup required
 for each simulation, e.g., MPI initialization/finalization and logger setup/teardown, so we include their headers:
 
