@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
   }
 
   if (output_fields) {
-    serac::output::outputFields(datastore, "serac", t, serac::output::Language::JSON);
+    serac::output::outputFields(datastore, serac::StateManager::collectionName(), t, serac::output::Language::JSON);
   }
 
   serac::exitGracefully();
