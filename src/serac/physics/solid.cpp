@@ -10,6 +10,7 @@
 #include "serac/physics/integrators/traction_integrator.hpp"
 #include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 
