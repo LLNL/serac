@@ -391,7 +391,7 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
       qfunc_(alloc ? detail::MaybeOwningPointer<mfem::QuadratureFunction>{std::make_unique<mfem::QuadratureFunction>(
                          &detail::retrieve(qspace_), std::ceil(stride_))}
                    : detail::MaybeOwningPointer<mfem::QuadratureFunction>{new mfem::QuadratureFunction(
-                         &detail::retrieve(qspace_), nullptr, std::ceil(stride_))}),
+                         &detail::retrieve(qspace_), nullptr, static_cast<int>(std::ceil(stride_)))}),
       data_(static_cast<std::size_t>(detail::retrieve(qfunc_).Size() / std::ceil(stride_)))
 {
   // To avoid violating C++'s strict aliasing rule we need to std::memcpy a default-constructed object
@@ -412,7 +412,7 @@ T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
   detail::retrieve(qfunc_).GetElementValues(element_idx, q_idx, view);
   double*    end_ptr   = view.GetData();
   double*    start_ptr = detail::retrieve(qfunc_).GetData();
-  const auto idx       = (end_ptr - start_ptr) / static_cast<std::size_t>(std::ceil(stride_));
+  const auto idx       = static_cast<std::size_t>(end_ptr - start_ptr) / static_cast<std::size_t>(std::ceil(stride_));
   return data_[static_cast<std::size_t>(idx)];
 }
 
