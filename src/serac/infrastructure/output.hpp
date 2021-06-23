@@ -38,10 +38,11 @@ enum class Language
  *
  * @param[in] datastore Root of the Sidre datastore
  * @param[in] file_name_prefix Prefix used for generating output file name
+ * @param[in] data_collection_name Name of the Data Collection stored in Sidre
  * @param[in] time Current simulation time
  * @param[in] language The output language format
  */
-void outputFields(const axom::sidre::DataStore& datastore, const std::string& file_name_prefix, double time,
-                  const Language language = Language::JSON);
+void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
+                  const std::string& file_name_prefix, double time, const Language language = Language::JSON);
 
 }  // namespace serac::output
