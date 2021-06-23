@@ -38,7 +38,6 @@ enum class Language
  *
  * @param[in] datastore Root of the Sidre datastore
  * @param[in] driver_name String used to prefix file name and Sidre Data Collection name
- * @param[in] data_collection_name Name of the Data Collection stored in Sidre
  * @param[in] time Current simulation time
  * @param[in] language The output language format
  */
