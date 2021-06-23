@@ -1,5 +1,5 @@
 # Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level LICENSE file for details.
+# Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -73,6 +73,7 @@ class Axom(CachedCMakePackage, CudaPackage):
     variant("mpi",      default=True, description="Build MPI support")
     variant('openmp',   default=True, description='Turn on OpenMP support.')
 
+    variant("c2c",      default=False, description="Build with c2c")
     variant("mfem",     default=False, description="Build with mfem")
     variant("hdf5",     default=True, description="Build with hdf5")
     variant("lua",      default=True, description="Build with Lua")
@@ -119,6 +120,10 @@ class Axom(CachedCMakePackage, CudaPackage):
                    when='+raja cuda_arch={0}'.format(sm_))
         depends_on('umpire cuda_arch={0}'.format(sm_),
                    when='+umpire cuda_arch={0}'.format(sm_))
+
+    # SERAC EDIT BEGIN - we don't have or use the c2c package
+    #depends_on("c2c", when="+c2c")
+    # SERAC EDIT BEGIN
 
     depends_on("mfem", when="+mfem")
     depends_on("mfem~mpi", when="+mfem~mpi")
@@ -210,7 +215,7 @@ class Axom(CachedCMakePackage, CudaPackage):
         spec = self.spec
         entries = super(Axom, self).initconfig_hardware_entries()
 
-        if spec.satisfies('^cuda'):
+        if "+cuda" in spec:
             entries.append(cmake_cache_option("ENABLE_CUDA", True))
             entries.append(cmake_cache_option("CUDA_SEPARABLE_COMPILATION",
                                               True))
@@ -275,50 +280,52 @@ class Axom(CachedCMakePackage, CudaPackage):
             not spec.satisfies('+cuda target=ppc64le:')
         ))
 
-        # Grab lib directory for the current fortran compiler
-        libdir = pjoin(os.path.dirname(
-                       os.path.dirname(self.compiler.fc)),
-                       "lib")
-        description = ("Adds a missing rpath for libraries "
-                       "associated with the fortran compiler")
+        if (self.compiler.fc is not None) and ("xlf" in self.compiler.fc):
+            # Grab lib directory for the current fortran compiler
+            libdir = pjoin(os.path.dirname(
+                           os.path.dirname(self.compiler.fc)),
+                           "lib")
+            description = ("Adds a missing rpath for libraries "
+                           "associated with the fortran compiler")
 
+            # SERAC EDIT BEGIN - BLT_EXE_LINKER_FLAGS aren't filtered
+            # for the Wl/Xlinker incompability
+            if "+cuda" in spec:
+                linker_flags = "${BLT_EXE_LINKER_FLAGS} -Xlinker -rpath -Xlinker " + libdir
+            else:
+                linker_flags = "${BLT_EXE_LINKER_FLAGS} -Wl,-rpath," + libdir
+            # SERAC EDIT END
 
-        # SERAC EDIT BEGIN - BLT_EXE_LINKER_FLAGS aren't filtered
-        # for the Wl/Xlinker incompability
-        if "+cuda" in spec:
-            linker_flags = "${BLT_EXE_LINKER_FLAGS} -Xlinker -rpath -Xlinker " + libdir
-        else:
-            linker_flags = "${BLT_EXE_LINKER_FLAGS} -Wl,-rpath," + libdir
-        # SERAC EDIT END
+            entries.append(cmake_cache_string("BLT_EXE_LINKER_FLAGS",
+                                              linker_flags, description))
 
-        entries.append(cmake_cache_string("BLT_EXE_LINKER_FLAGS", linker_flags, description))
+            if "+shared" in spec:
+                linker_flags = "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath," \
+                               + libdir
+                entries.append(cmake_cache_string(
+                    "CMAKE_SHARED_LINKER_FLAGS",
+                    linker_flags, description))
 
-        if "+shared" in spec:
-            linker_flags = "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath," \
-                           + libdir
+            description = ("Converts C-style comments to Fortran style "
+                           "in preprocessed files")
             entries.append(cmake_cache_string(
-                "CMAKE_SHARED_LINKER_FLAGS",
-                linker_flags, description))
+                "BLT_FORTRAN_FLAGS",
+                "-WF,-C!  -qxlf2003=polymorphic",
+                description))
 
-        if spec.satisfies('target=ppc64le:'):
-            if (self.compiler.fc is not None) and ("xlf" in self.compiler.fc):
-                description = ("Converts C-style comments to Fortran style "
-                               "in preprocessed files")
-                entries.append(cmake_cache_string(
-                    "BLT_FORTRAN_FLAGS",
-                    "-WF,-C!  -qxlf2003=polymorphic",
-                    description))
-            # Fix for working around CMake adding implicit link directories
-            # returned by the BlueOS compilers to link executables with
-            # non-system default stdlib
-            _gcc_prefix = "/usr/tce/packages/gcc/gcc-4.9.3/lib64"
-            if os.path.exists(_gcc_prefix):
-                _gcc_prefix2 = pjoin(
-                    _gcc_prefix,
-                    "gcc/powerpc64le-unknown-linux-gnu/4.9.3")
-                _link_dirs = "{0};{1}".format(_gcc_prefix, _gcc_prefix2)
-                entries.append(cmake_cache_string(
-                    "BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE", _link_dirs))
+            if spec.satisfies('target=ppc64le:'):
+                # Fix for working around CMake adding implicit link directories
+                # returned by the BlueOS compilers to link executables with
+                # non-system default stdlib
+                _gcc_prefix = "/usr/tce/packages/gcc/gcc-4.9.3/lib64"
+                if os.path.exists(_gcc_prefix):
+                    _gcc_prefix2 = pjoin(
+                        _gcc_prefix,
+                        "gcc/powerpc64le-unknown-linux-gnu/4.9.3")
+                    _link_dirs = "{0};{1}".format(_gcc_prefix, _gcc_prefix2)
+                    entries.append(cmake_cache_string(
+                        "BLT_CMAKE_IMPLICIT_LINK_DIRECTORIES_EXCLUDE",
+                        _link_dirs))
 
         return entries
 
@@ -361,7 +368,7 @@ class Axom(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path("CONDUIT_DIR", conduit_dir))
 
         # optional tpls
-        for dep in ('mfem', 'hdf5', 'lua', 'raja', 'umpire'):
+        for dep in ('c2c', 'mfem', 'hdf5', 'lua', 'raja', 'umpire'):
             if '+%s' % dep in spec:
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
