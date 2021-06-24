@@ -297,7 +297,7 @@ SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<serac::tuple<T...> >, n...
 }
 /// @overload
 template <typename... T>
-auto get_gradient(serac::tuple<T...> tuple_of_values)
+SERAC_HOST_DEVICE auto get_gradient(serac::tuple<T...> tuple_of_values)
 {
   return serac::apply([](auto... each_value) { return serac::tuple{get_gradient(each_value)...}; }, tuple_of_values);
 }

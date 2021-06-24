@@ -27,6 +27,7 @@ set(functional_headers
     detail/segment_Hcurl.inl
     detail/segment_L2.inl
     detail/metaprogramming.hpp
+    integral_utilities.hpp
     )
 
 if(ENABLE_CUDA)

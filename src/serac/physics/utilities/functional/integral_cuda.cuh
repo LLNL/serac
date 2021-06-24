@@ -3,7 +3,8 @@
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
 
-#include "serac/physics/utilities/functional/integral.hpp"
+#include "serac/physics/utilities/functional/integral_utilities.hpp"
+//#include "serac/physics/utilities/functional/integral.hpp"
 
 namespace serac {
 
@@ -105,6 +106,8 @@ const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
 
   // copy back to host?
   R.HostRead();
+
+std::cout << "Host Read:" << std::endl;
 
   X_.UseDevice(false);
   J_.UseDevice(false);

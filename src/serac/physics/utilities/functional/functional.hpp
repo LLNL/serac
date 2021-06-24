@@ -370,7 +370,7 @@ private:
     /**
      * @brief The "parent" @p Functional to calculate gradients with
      */
-    Functional<test(trial)>& form;
+    Functional<test(trial), execution_policy>& form;
   };
 
   /**
