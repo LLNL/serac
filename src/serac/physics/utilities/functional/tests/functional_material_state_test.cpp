@@ -160,24 +160,25 @@ struct IntWrapper {
   static void                 mutate(value_type& v) { v += 4; }
 };
 
-struct FiveBytes {
-  int  x = 120;
-  char y = 19;
+struct ThreeBytes {
+  char x[3] = {1, 2, 3};
 };
 
-bool operator==(const FiveBytes& lhs, const FiveBytes& rhs) { return (lhs.x == rhs.x) && (lhs.y == rhs.y); }
+bool operator==(const ThreeBytes& lhs, const ThreeBytes& rhs) { return std::equal(lhs.x, lhs.x + 3, rhs.x); }
 
-struct FiveBytesWrapper {
-  using value_type                          = FiveBytes;
+struct ThreeBytesWrapper {
+  using value_type = ThreeBytes;
+  static_assert(sizeof(value_type) == 3);
   static constexpr value_type initial_state = {};
   static void                 mutate(value_type& v)
   {
-    v.x += 3;
-    v.y = static_cast<char>(v.y + 5);
+    v.x[0] += 3;
+    v.x[1] += 2;
+    v.x[2] += 1;
   }
 };
 
-using StateTypes = ::testing::Types<MultiFieldWrapper, IntWrapper, FiveBytesWrapper>;
+using StateTypes = ::testing::Types<MultiFieldWrapper, IntWrapper, ThreeBytesWrapper>;
 TYPED_TEST_SUITE(QuadratureDataStateManagerTest, StateTypes, );
 
 TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
