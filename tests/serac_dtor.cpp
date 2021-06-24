@@ -15,6 +15,7 @@
 #include "mfem.hpp"
 
 #include "serac/numerics/mesh_utils.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {

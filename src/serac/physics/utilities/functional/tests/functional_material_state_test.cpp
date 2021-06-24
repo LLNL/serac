@@ -16,7 +16,7 @@
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
 
-#include "serac/physics/utilities/finite_element_state.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 
 using namespace serac;
 
