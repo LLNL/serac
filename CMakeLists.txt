@@ -123,6 +123,7 @@ add_subdirectory(examples)
 # Add Code Checks
 #------------------------------------------------------------------------------
 
+message(STATUS "Serac Code Checks: ${SERAC_ENABLE_CODE_CHECKS}")
 if (SERAC_ENABLE_CODE_CHECKS)
     serac_add_code_checks(PREFIX   serac
                           INCLUDES /src/ /tests/
