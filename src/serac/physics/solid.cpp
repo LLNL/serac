@@ -19,7 +19,7 @@ namespace serac {
 /**
  * @brief The number of fields in this physics module (displacement and velocity)
  */
-constexpr int NUM_FIELDS = 2;
+constexpr int NUM_FIELDS = 3;
 
 Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
              FinalMeshOption keep_deformation, const std::string& name)
@@ -28,6 +28,8 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
           .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
       displacement_(StateManager::newState(FiniteElementState::Options{
           .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
+      adjoint_(StateManager::newState(FiniteElementState::Options{
+          .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
       geom_nonlin_(geom_nonlin),
       keep_deformation_(keep_deformation),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
@@ -35,6 +37,7 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
 {
   state_.push_back(velocity_);
   state_.push_back(displacement_);
+  state_.push_back(adjoint_);
 
   // Initialize the mesh node pointers
   reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
@@ -46,6 +49,7 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
 
   displacement_.trueVec() = 0.0;
   velocity_.trueVec()     = 0.0;
+  adjoint_.trueVec()      = 0.0;
 
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -393,6 +397,22 @@ void Solid::advanceTimestep(double& dt)
   mesh_.NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
+}
+
+void Solid::solveAdjoint()
+{
+  auto& lin_solver = nonlin_solver_.LinearSolver();
+
+  auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
+  bcs_.eliminateAllEssentialDofsFromMatrix(J);
+
+  lin_solver.SetOperator(J);
+  lin_solver.Mult(*adjoint_load_, adjoint_.trueVec());
+
+  adjoint_.distributeSharedDofs();
+
+  // Reset the equation solver to use the full nonlinear residual operator
+  nonlin_solver_.SetOperator(*residual_);
 }
 
 void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& container)

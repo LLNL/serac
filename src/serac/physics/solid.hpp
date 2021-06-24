@@ -271,6 +271,14 @@ public:
                              bool material_nonlin = true);
 
   /**
+   * @brief Set the adjoint load
+   * @note The ParLinearForm must be built on the same finite element space as the displacement
+   *
+   * @param adjoint_load The adjoint load to apply
+   */
+  void setAdjointLoad(mfem::ParLinearForm& adjoint_load);
+
+  /**
    * @brief Set the initial displacement value
    *
    * @param[in] disp_state The initial displacement state
@@ -314,6 +322,18 @@ public:
   FiniteElementState& velocity() { return velocity_; };
 
   /**
+   * @brief Get the adjoint variable
+   *
+   * @return The adjoint state field
+   */
+  FiniteElementState& adjoint() { return adjoint_; };
+
+  /**
+   * @overload
+   */
+  const FiniteElementState& adjoint() const { return adjoint_; };
+
+  /**
    * @brief Complete the setup of all of the internal MFEM objects and prepare for timestepping
    */
   void completeSetup() override;
@@ -325,6 +345,13 @@ public:
    * schemes
    */
   void advanceTimestep(double& dt) override;
+
+  /**
+   * @brief Solve the adjoint problem
+   * @note It is expected that the forward analysis is complete and the current displacement state is valid
+   *
+   */
+  void solveAdjoint();
 
   /**
    * @brief Destroy the Nonlinear Solid Solver object
@@ -371,6 +398,11 @@ protected:
    * @brief Displacement field
    */
   FiniteElementState displacement_;
+
+  /**
+   * @brief Adjoint displacement field
+   */
+  FiniteElementState adjoint_;
 
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers
@@ -446,6 +478,11 @@ protected:
    * @brief external force coefficents
    */
   std::vector<std::shared_ptr<mfem::VectorCoefficient>> ext_force_coefs_;
+
+  /**
+   * @brief Load vector for the adjoint problem
+   */
+  std::unique_ptr<mfem::HypreParVector> adjoint_load_;
 
   /**
    * @brief zero vector of the appropriate dimensions
