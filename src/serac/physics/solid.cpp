@@ -401,6 +401,10 @@ void Solid::advanceTimestep(double& dt)
 
 void Solid::solveAdjoint()
 {
+  SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
+  SLIC_ERROR_ROOT_IF(cycle_ == 0, "Adjoint analysis only valid following a forward solve.");
+  SLIC_ERROR_ROOT_IF(!adjoint_load_, "Adjoint load must be set before adjoint solve");
+
   auto& lin_solver = nonlin_solver_.LinearSolver();
 
   auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
