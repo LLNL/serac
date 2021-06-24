@@ -8,7 +8,7 @@
 
 #include "serac/serac_config.hpp"
 
-#include "serac/numerics/mesh_utils.hpp"
+#include "serac/numerics/mesh_utils_base.hpp"
 
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
