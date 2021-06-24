@@ -17,7 +17,8 @@
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
-#include <gtest/gtest.h>
+#include <gtest/gtest.h> 
+#include "serac/infrastructure/initialize.hpp"
 
 namespace serac {
 
@@ -425,7 +426,7 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, con
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
-  MPI_Init(&argc, &argv);
+  serac::initialize(argc, argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
@@ -451,6 +452,8 @@ int main(int argc, char* argv[])
     args.PrintOptions(std::cout);
   }
 
+
+
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
   mesh2D                 = refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
@@ -458,7 +461,6 @@ int main(int argc, char* argv[])
   mesh3D                 = refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   int result = RUN_ALL_TESTS();
-  MPI_Finalize();
 
   return result;
 }
