@@ -15,6 +15,7 @@
 
 #if defined(__CUDACC__)
 #define SERAC_HOST_DEVICE __host__ __device__
+#define SERAC_HOST __host__
 #define SERAC_DEVICE __device__
 
 #if __CUDAVER__ >= 75000
@@ -28,13 +29,31 @@
  */
 #define SERAC_HOST_DEVICE
 #define SERAC_DEVICE
+#define SERAC_HOST
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 #endif
 
 /**
  * @brief Accelerator functionality
  */
-namespace serac::accelerator {
+namespace serac{
+
+/**
+ * @brief tag type for signaling that calculations that should be performed on the CPU
+ */
+struct cpu_policy{};
+
+/**
+ * @brief tag type for signaling that calculations that should be performed on the CPU
+ */
+struct gpu_policy{};
+
+/**
+ * @brief for now, we'll just default to the CPU
+ */
+using default_policy = cpu_policy;
+
+namespace accelerator {
 
 /**
  * @brief Initializes the device (GPU)
@@ -48,4 +67,6 @@ void initializeDevice();
  */
 void terminateDevice();
 
-}  // namespace serac::accelerator
+}
+
+}  

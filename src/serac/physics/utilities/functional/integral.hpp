@@ -775,7 +775,7 @@ static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::S
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  */
-template <typename spaces>
+template <typename spaces, typename execution_policy>
 class Integral {
 public:
   using test_space  = test_space_t<spaces>;   ///< the test function space
@@ -833,20 +833,28 @@ public:
     //
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
-    evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-      evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
-                                                                                         X_, num_elements, qf);
-    };
 
-    gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-      gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives.get(), J_,
-                                                                                       num_elements);
-    };
+    if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
+      evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
+        evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
+                                                                                           X_, num_elements, qf);
+      };
 
-    gradient_mat_ = [=](mfem::Vector& K_e) {
-      gradient_matrix_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(K_e, qf_derivatives.get(),
-                                                                                              J_, num_elements);
-    };
+      gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
+        gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives.get(), J_,
+                                                                                         num_elements);
+      };
+
+      gradient_mat_ = [=](mfem::Vector& K_e) {
+        gradient_matrix_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(K_e, qf_derivatives.get(),
+                                                                                                J_, num_elements);
+      };
+    } 
+
+    if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
+      // todo
+    }
+
   }
 
   /**

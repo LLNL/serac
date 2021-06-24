@@ -46,7 +46,7 @@ struct is_tuple<serac::tuple<T...> > {
 };
 
 /**
- * @brief Trait for checking if a type if a @p serac::tuple containting only @p serac::tuple
+ * @brief Trait for checking if a type if a @p serac::tuple containing only @p serac::tuple
  */
 template <typename T>
 struct is_tuple_of_tuples {
