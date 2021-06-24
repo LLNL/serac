@@ -38,11 +38,11 @@ struct variant_storage {
   {
     switch (index_) {
       case 0: {
-        t0_ = std::move(other.t0_);
+        new (&t0_) T0(std::move(other.t0_));
         break;
       }
       case 1: {
-        t1_ = std::move(other.t1_);
+        new (&t1_) T1(std::move(other.t1_));
         break;
       }
     }
@@ -62,24 +62,6 @@ struct variant_storage {
   }
 
   constexpr variant_storage() : index_{0}, t0_{} {}
-
-  template <typename T,
-            typename SFINAE2 = std::enable_if_t<std::is_same_v<std::decay_t<T>, T0> || std::is_assignable_v<T0, T> ||
-                                                std::is_same_v<std::decay_t<T>, T1> || std::is_assignable_v<T1, T>>>
-  constexpr variant_storage(T&& t)
-  {
-    // FIXME: Things that are convertible to T0 etc
-    if constexpr (std::is_same_v<std::decay_t<T>, T0> || std::is_assignable_v<T0, T>) {
-      index_ = 0;
-      new (&t0_) T0(std::forward<T>(t));
-    } else if constexpr (std::is_same_v<std::decay_t<T>, T1> || std::is_assignable_v<T1, T>) {
-      index_ = 1;
-      new (&t1_) T1(std::forward<T>(t));
-    } else {
-      static_assert(sizeof(T) < 0, "Type not supported");
-    }
-  }
-
   ~variant_storage() { clear(); }
 };
 
@@ -92,9 +74,13 @@ struct variant_storage<T0, T1,
     T1 t1_;
   };
   constexpr variant_storage() : index_{0}, t0_{} {}
-  constexpr variant_storage(const T0& t0) : index_{0}, t0_{t0} {}
-  constexpr variant_storage(const T1& t1) : index_{1}, t1_{t1} {}
   constexpr void clear() {}
+};
+
+template <typename T, typename T0, typename T1>
+struct is_variant_assignable {
+  constexpr static bool value = std::is_same_v<std::decay_t<T>, T0> || std::is_assignable_v<T0, T> ||
+                                std::is_same_v<std::decay_t<T>, T1> || std::is_assignable_v<T1, T>;
 };
 
 }  // namespace detail
@@ -121,19 +107,24 @@ struct variant {
   constexpr variant(const variant& other) = default;
   constexpr variant(variant&& other)      = default;
 
-  template <typename T,
-            typename SFINAE = std::enable_if_t<std::is_same_v<std::decay_t<T>, T0> || std::is_assignable_v<T0, T> ||
-                                               std::is_same_v<std::decay_t<T>, T1> || std::is_assignable_v<T1, T>>>
-  constexpr variant(T&& t) : storage_(std::forward<T>(t))
+  template <typename T, typename SFINAE = std::enable_if_t<detail::is_variant_assignable<T, T0, T1>::value>>
+  constexpr variant(T&& t)
   {
+    if constexpr (std::is_same_v<std::decay_t<T>, T0> || std::is_assignable_v<T0, T>) {
+      storage_.index_ = 0;
+      new (&storage_.t0_) T0(std::forward<T>(t));
+    } else if constexpr (std::is_same_v<std::decay_t<T>, T1> || std::is_assignable_v<T1, T>) {
+      storage_.index_ = 1;
+      new (&storage_.t1_) T1(std::forward<T>(t));
+    } else {
+      static_assert(sizeof(T) < 0, "Type not supported");
+    }
   }
 
   constexpr variant& operator=(const variant& other) = default;
   constexpr variant& operator=(variant&& other) = default;
 
-  template <typename T,
-            typename SFINAE = std::enable_if_t<std::is_same_v<std::decay_t<T>, T0> || std::is_assignable_v<T0, T> ||
-                                               std::is_same_v<std::decay_t<T>, T1> || std::is_assignable_v<T1, T>>>
+  template <typename T, typename SFINAE = std::enable_if_t<detail::is_variant_assignable<T, T0, T1>::value>>
   constexpr variant& operator=(T&& t)
   {
     // FIXME: Things that are convertible to T0 etc
@@ -189,8 +180,7 @@ constexpr T& get(variant<T0, T1>& v)
 }
 
 template <typename Visitor, typename Variant>
-constexpr decltype(std::declval<Visitor&>()(std::declval<decltype(get<0>(std::declval<Variant&>()))&>())) visit(
-    Visitor visitor, Variant&& v)
+constexpr decltype(std::declval<Visitor&>()(get<0>(std::declval<Variant&>()))) visit(Visitor visitor, Variant&& v)
 {
   if (v.index() == 0) {
     return visitor(get<0>(v));
