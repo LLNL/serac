@@ -170,7 +170,7 @@ public:
   {
     // TODO: fix mfem::FaceGeometricFactors
     auto num_boundary_elements = domain.GetNBE();
-    SLIC_ERROR_IF(num_boundary_elements == 0, "Mesh has no boundary elements");
+    SLIC_ERROR_ROOT_IF(num_boundary_elements == 0, "Mesh has no boundary elements");
 
     SLIC_ERROR_IF((dim + 1) != domain.Dimension(), "Error: invalid mesh dimension for boundary integral");
     for (int e = 0; e < num_boundary_elements; e++) {
