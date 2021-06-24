@@ -172,9 +172,9 @@ struct ThreeBytesWrapper {
   static constexpr value_type initial_state = {};
   static void                 mutate(value_type& v)
   {
-    v.x[0] += 3;
-    v.x[1] += 2;
-    v.x[2] += 1;
+    v.x[0] = static_cast<char>(v.x[0] + 3);
+    v.x[1] = static_cast<char>(v.x[1] + 2);
+    v.x[2] = static_cast<char>(v.x[2] + 1);
   }
 };
 
