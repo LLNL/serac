@@ -37,7 +37,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
-  mfem::LinearForm                f(&fespace);
+  mfem::ParLinearForm                f(&fespace);
   mfem::FunctionCoefficient       scalar_function([&](const mfem::Vector& coords) { return coords(0) * coords(1); });
   mfem::VectorFunctionCoefficient vector_function(dim, [&](const mfem::Vector& coords, mfem::Vector& output) {
     output[0] = sin(coords[0]);
@@ -47,6 +47,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   f.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(scalar_function));
   f.AddBoundaryIntegrator(new mfem::BoundaryNormalLFIntegrator(vector_function));
   f.Assemble();
+  std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   mfem::ParBilinearForm     B(&fespace);
   mfem::ConstantCoefficient density(rho);
@@ -74,7 +75,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
       },
       mesh);
 
-  mfem::Vector r1 = (*J) * U + f;
+  mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
 
   if (verbose) {
@@ -96,7 +97,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   auto                        fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
-  mfem::LinearForm          f(&fespace);
+  mfem::ParLinearForm          f(&fespace);
   mfem::FunctionCoefficient scalar_function([&](const mfem::Vector& coords) { return coords(0) * coords(1); });
   f.AddBdrFaceIntegrator(new mfem::BoundaryLFIntegrator(scalar_function));
 
@@ -107,6 +108,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   //});
   // f.AddBdrFaceIntegrator(new mfem::BoundaryNormalLFIntegrator(vector_function));
   f.Assemble();
+  std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   mfem::ParBilinearForm     B(&fespace);
   mfem::ConstantCoefficient density(rho);
@@ -135,7 +137,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
       },
       mesh);
 
-  mfem::Vector r1 = (*J) * U + f;
+  mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
 
   if (verbose) {
