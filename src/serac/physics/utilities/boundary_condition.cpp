@@ -14,7 +14,7 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
                                      const std::set<int>& attrs, const int num_attrs)
     : coef_(coef), component_(component), markers_(num_attrs)
 {
-  if (std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
+  if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_ROOT_IF(component_, "A vector coefficient must be applied to all components");
   }
   markers_ = 0;
@@ -28,7 +28,7 @@ BoundaryCondition::BoundaryCondition(GeneralCoefficient coef, const std::optiona
                                      const mfem::Array<int>& true_dofs)
     : coef_(coef), component_(component), markers_(0), true_dofs_(true_dofs)
 {
-  if (std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
+  if (get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_)) {
     SLIC_ERROR_IF(component_, "A vector coefficient must be applied to all components");
   }
 }
@@ -61,12 +61,12 @@ void BoundaryCondition::project(FiniteElementState& state) const
 
     // the only reason to store a VectorCoefficient is to act on all components
     if (is_vector_valued(coef_)) {
-      auto vec_coef = std::get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
+      auto vec_coef = get<std::shared_ptr<mfem::VectorCoefficient>>(coef_);
       state.gridFunc().ProjectCoefficient(*vec_coef, dof_list);
     } else {
       // an mfem::Coefficient could be used to describe a scalar-valued function, or
       // a single component of a vector-valued function
-      auto scalar_coef = std::get<std::shared_ptr<mfem::Coefficient>>(coef_);
+      auto scalar_coef = get<std::shared_ptr<mfem::Coefficient>>(coef_);
       if (component_) {
         state.gridFunc().ProjectCoefficient(*scalar_coef, dof_list, *component_);
       } else {
@@ -85,15 +85,15 @@ void BoundaryCondition::project() const
 void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar) const
 {
   if (should_be_scalar) {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
+    SLIC_ASSERT_MSG(holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
                     "Boundary condition should have been an mfem::Coefficient");
   } else {
-    SLIC_ASSERT_MSG(std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
+    SLIC_ASSERT_MSG(holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
                     "Boundary condition should have been an mfem::VectorCoefficient");
   }
 
   // markers_ should be const param but it's not
-  std::visit(
+  visit(
       [&gf, &markers = const_cast<mfem::Array<int>&>(markers_), time](auto&& coef) {
         coef->SetTime(time);
         gf.ProjectBdrCoefficient(*coef, markers);
@@ -146,7 +146,7 @@ void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vecto
 
 const mfem::Coefficient& BoundaryCondition::scalarCoefficient() const
 {
-  auto scalar_coef = std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
+  auto scalar_coef = get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
   SLIC_ERROR_ROOT_IF(!scalar_coef,
                      "Asking for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
   return **scalar_coef;
@@ -154,7 +154,7 @@ const mfem::Coefficient& BoundaryCondition::scalarCoefficient() const
 
 mfem::Coefficient& BoundaryCondition::scalarCoefficient()
 {
-  auto scalar_coef = std::get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
+  auto scalar_coef = get_if<std::shared_ptr<mfem::Coefficient>>(&coef_);
   SLIC_ERROR_ROOT_IF(!scalar_coef,
                      "Asking for a scalar coefficient on a BoundaryCondition that contains a vector coefficient.");
   return **scalar_coef;
@@ -162,7 +162,7 @@ mfem::Coefficient& BoundaryCondition::scalarCoefficient()
 
 const mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient() const
 {
-  auto vec_coef = std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
+  auto vec_coef = get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
   SLIC_ERROR_ROOT_IF(!vec_coef,
                      "Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
   return **vec_coef;
@@ -170,7 +170,7 @@ const mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient() const
 
 mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
 {
-  auto vec_coef = std::get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
+  auto vec_coef = get_if<std::shared_ptr<mfem::VectorCoefficient>>(&coef_);
   SLIC_ERROR_ROOT_IF(!vec_coef,
                      "Asking for a vector coefficient on a BoundaryCondition that contains a scalar coefficient.");
   return **vec_coef;
@@ -178,7 +178,7 @@ mfem::VectorCoefficient& BoundaryCondition::vectorCoefficient()
 
 void BoundaryCondition::setTime(const double time)
 {
-  std::visit([time](auto&& coef) { coef->SetTime(time); }, coef_);
+  visit([time](auto&& coef) { coef->SetTime(time); }, coef_);
 }
 
 }  // namespace serac

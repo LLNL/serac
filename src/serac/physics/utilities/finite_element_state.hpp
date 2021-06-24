@@ -33,7 +33,20 @@ struct variant_storage {
     T1 t1_;
   };
 
-  constexpr variant_storage(const variant_storage& other) = default;
+  constexpr variant_storage(const variant_storage& other) : index_(other.index_)
+  {
+    switch (index_) {
+      case 0: {
+        new (&t0_) T0(other.t0_);
+        break;
+      }
+      case 1: {
+        new (&t1_) T1(other.t1_);
+        break;
+      }
+    }
+  };
+
   constexpr variant_storage(variant_storage&& other) : index_(other.index_)
   {
     switch (index_) {
@@ -179,6 +192,16 @@ constexpr T& get(variant<T0, T1>& v)
   }
 }
 
+template <typename T, typename T0, typename T1>
+constexpr const T& get(const variant<T0, T1>& v)
+{
+  if constexpr (std::is_same_v<T, T0>) {
+    return get<0>(v);
+  } else if constexpr (std::is_same_v<T, T1>) {
+    return get<1>(v);
+  }
+}
+
 template <typename Visitor, typename Variant>
 constexpr decltype(std::declval<Visitor&>()(get<0>(std::declval<Variant&>()))) visit(Visitor visitor, Variant&& v)
 {
@@ -187,6 +210,39 @@ constexpr decltype(std::declval<Visitor&>()(get<0>(std::declval<Variant&>()))) v
   } else {
     return visitor(get<1>(v));
   }
+}
+
+template <typename T, typename T0, typename T1>
+bool holds_alternative(const variant<T0, T1>& v)
+{
+  if constexpr (std::is_same_v<T, T0>) {
+    return v.index() == 0;
+  } else if constexpr (std::is_same_v<T, T1>) {
+    return v.index() == 1;
+  }
+  return false;
+}
+
+template <typename T, typename T0, typename T1>
+T* get_if(variant<T0, T1>* v)
+{
+  if constexpr (std::is_same_v<T, T0>) {
+    return (v->index() == 0) ? &get<0>(*v) : nullptr;
+  } else if constexpr (std::is_same_v<T, T1>) {
+    return (v->index() == 1) ? &get<1>(*v) : nullptr;
+  }
+  return nullptr;
+}
+
+template <typename T, typename T0, typename T1>
+const T* get_if(const variant<T0, T1>* v)
+{
+  if constexpr (std::is_same_v<T, T0>) {
+    return (v->index() == 0) ? &get<0>(*v) : nullptr;
+  } else if constexpr (std::is_same_v<T, T1>) {
+    return (v->index() == 1) ? &get<1>(*v) : nullptr;
+  }
+  return nullptr;
 }
 
 namespace detail {
@@ -228,14 +284,14 @@ static const T& retrieve(const MaybeOwningPointer<T>& obj)
 /**
  * @brief A sum type for encapsulating either a scalar or vector coeffient
  */
-using GeneralCoefficient = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
+using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 /**
  * @brief convenience function for querying the type stored in a GeneralCoefficient
  */
 inline bool is_scalar_valued(const GeneralCoefficient& coef)
 {
-  return std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef);
+  return holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef);
 }
 
 /**
@@ -243,7 +299,7 @@ inline bool is_scalar_valued(const GeneralCoefficient& coef)
  */
 inline bool is_vector_valued(const GeneralCoefficient& coef)
 {
-  return std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef);
+  return holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef);
 }
 
 /**
@@ -366,7 +422,7 @@ public:
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit([this](auto&& concrete_coef) { detail::retrieve(gf_).ProjectCoefficient(*concrete_coef); }, coef);
+    visit([this](auto&& concrete_coef) { detail::retrieve(gf_).ProjectCoefficient(*concrete_coef); }, coef);
   }
   /// \overload
   void project(mfem::Coefficient& coef) { detail::retrieve(gf_).ProjectCoefficient(coef); }
