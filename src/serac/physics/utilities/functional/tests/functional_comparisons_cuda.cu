@@ -20,19 +20,6 @@
 #include <gtest/gtest.h> 
 #include "serac/infrastructure/initialize.hpp"
 
-namespace serac {
-
-  namespace detail {
-    /// Print cuda Errors
-    void displayLastCUDAErrorMessage(std::ostream & o) {
-      auto error = cudaGetLastError();
-      if(error != cudaError::cudaSuccess) {
-	o << cudaGetErrorString(error) << std::endl;
-      }
-    }
-  }
-}
-
 using namespace serac;
 using namespace serac::profiling;
 
@@ -423,10 +410,23 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, con
   return parallel_mesh;
 }
 /** CUDA workaround end **/
+
+__global__ void print_hello_world ()
+{
+  printf("hello world\n");
+}
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
-  serac::initialize(argc, argv);
+
+  MPI_Init(&argc, &argv);
+  // std::cout << "mfem::Device CUDA:" << (mfem::Device::Allows(mfem::Backend::CUDA) ? "true" : "false") << std::endl; // false
+  // serac::initialize(argc, argv);
+
+  std::cout << "mfem::Device CUDA:" << (mfem::Device::Allows(mfem::Backend::CUDA) ? "true" : "false") << std::endl; // true if we call serac::initialize
+
+
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
@@ -452,7 +452,8 @@ int main(int argc, char* argv[])
     args.PrintOptions(std::cout);
   }
 
-
+  print_hello_world<<<1,1>>>();
+  serac::detail::displayLastCUDAErrorMessage(std::cout);
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
   mesh2D                 = refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
