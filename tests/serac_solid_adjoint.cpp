@@ -95,7 +95,7 @@ TEST(solid_solver, adjoint)
   auto&  adjoint_state = solid_solver.solveAdjoint(adjoint_load);
   double adjoint_norm  = adjoint_state.gridFunc().ComputeLpError(2.0, zerovec);
 
-  fmt::print("Adjoint norm: {}\n", adjoint_norm);
+  SLIC_INFO_ROOT(fmt::format("Adjoint norm: {}", adjoint_norm));
 
   // Do a forward solve again to make sure the adjoint solve didn't break the solver
   solid_solver.setDisplacement(*deform);
