@@ -66,10 +66,6 @@ TEST(solid_solver, reuse_mesh)
   double u_norm_1 = 0.0;
   double u_norm_2 = 0.0;
 
-  mfem::Vector zero(dim);
-  zero = 0.0;
-  mfem::VectorConstantCoefficient zerovec(zero);
-
   // Keep the solver_1 and solver_2 objects in a different scope for testing
   {
     // initialize the dynamic solver object
@@ -107,8 +103,8 @@ TEST(solid_solver, reuse_mesh)
     solid_solver_1.outputState();
 
     // Check the final displacement and velocity L2 norms
-    u_norm_1 = solid_solver_1.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-    u_norm_2 = solid_solver_2.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+    u_norm_1 = solid_solver_1.displacement().norm();
+    u_norm_2 = solid_solver_2.displacement().norm();
 
     EXPECT_NEAR(0.0, u_norm_1 - u_norm_2, 0.001);
   }
@@ -129,12 +125,12 @@ TEST(solid_solver, reuse_mesh)
   double dt = 1.0;
   solid_solver_3.advanceTimestep(dt);
 
-  double u_norm_3 = solid_solver_3.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+  double u_norm_3 = solid_solver_3.displacement().norm();
   EXPECT_NEAR(0.0, u_norm_1 - u_norm_3, 0.001);
 
   solid_solver_3.resetToReferenceConfiguration();
-  EXPECT_NEAR(0.0, solid_solver_3.displacement().gridFunc().ComputeLpError(2.0, zerovec), 1.0e-8);
-  EXPECT_NEAR(0.0, solid_solver_3.velocity().gridFunc().ComputeLpError(2.0, zerovec), 1.0e-8);
+  EXPECT_NEAR(0.0, solid_solver_3.displacement().norm(), 1.0e-8);
+  EXPECT_NEAR(0.0, solid_solver_3.velocity().norm(), 1.0e-8);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

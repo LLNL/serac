@@ -196,6 +196,14 @@ public:
     return std::make_unique<Tensor>(&retrieve(space_));
   }
 
+  /**
+   * @brief Calculate the Lp norm of the underlying state grid function
+   *
+   * @param p Order of the norm
+   * @return The norm value
+   */
+  double norm(double p = 2) const;
+
 private:
   /**
    * @brief A helper type for uniform semantics over owning/non-owning pointers

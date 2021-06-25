@@ -33,4 +33,17 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunctio
   true_vec_ = 0.0;
 }
 
+double FiniteElementState::norm(const double p) const
+{
+  if (retrieve(space_).GetVDim() == 1) {
+    mfem::ConstantCoefficient zero(0.0);
+    return retrieve(gf_).ComputeLpError(p, zero);
+  } else {
+    mfem::Vector zero(retrieve(space_).GetVDim());
+    zero = 0.0;
+    mfem::VectorConstantCoefficient zerovec(zero);
+    return retrieve(gf_).ComputeLpError(p, zerovec);
+  }
+}
+
 }  // namespace serac
