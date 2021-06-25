@@ -271,14 +271,6 @@ public:
                              bool material_nonlin = true);
 
   /**
-   * @brief Set the adjoint load
-   * @note The ParLinearForm must be built on the same finite element space as the displacement
-   *
-   * @param adjoint_load The adjoint load to apply
-   */
-  void setAdjointLoad(mfem::ParLinearForm& adjoint_load);
-
-  /**
    * @brief Set the initial displacement value
    *
    * @param[in] disp_state The initial displacement state
@@ -350,8 +342,10 @@ public:
    * @brief Solve the adjoint problem
    * @note It is expected that the forward analysis is complete and the current displacement state is valid
    *
+   * @param[in] adjoint_load_form The linear form that when assembled contains the right hand side of the adjoint system
+   * @return The computed adjoint finite element state
    */
-  void solveAdjoint();
+  const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form);
 
   /**
    * @brief Destroy the Nonlinear Solid Solver object
@@ -478,11 +472,6 @@ protected:
    * @brief external force coefficents
    */
   std::vector<std::shared_ptr<mfem::VectorCoefficient>> ext_force_coefs_;
-
-  /**
-   * @brief Load vector for the adjoint problem
-   */
-  std::unique_ptr<mfem::HypreParVector> adjoint_load_;
 
   /**
    * @brief zero vector of the appropriate dimensions

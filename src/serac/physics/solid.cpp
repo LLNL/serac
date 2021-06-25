@@ -399,11 +399,16 @@ void Solid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-void Solid::solveAdjoint()
+const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_form)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
   SLIC_ERROR_ROOT_IF(cycle_ == 0, "Adjoint analysis only valid following a forward solve.");
-  SLIC_ERROR_ROOT_IF(!adjoint_load_, "Adjoint load must be set before adjoint solve");
+
+  // Set the mesh nodes to the reference configuration
+  mesh_.NewNodes(*reference_nodes_);
+
+  adjoint_load_form.Assemble();
+  auto adjoint_load_vector = std::unique_ptr<mfem::HypreParVector>(adjoint_load_form.ParallelAssemble());
 
   auto& lin_solver = nonlin_solver_.LinearSolver();
 
@@ -412,12 +417,20 @@ void Solid::solveAdjoint()
   bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
 
   lin_solver.SetOperator(*J_T);
-  lin_solver.Mult(*adjoint_load_, adjoint_.trueVec());
+  lin_solver.Mult(*adjoint_load_vector, adjoint_.trueVec());
 
   adjoint_.distributeSharedDofs();
 
+  // Update the mesh with the new deformed nodes
+  deformed_nodes_->Set(1.0, displacement_.gridFunc());
+  deformed_nodes_->Add(1.0, *reference_nodes_);
+
+  mesh_.NewNodes(*deformed_nodes_);
+
   // Reset the equation solver to use the full nonlinear residual operator
   nonlin_solver_.SetOperator(*residual_);
+
+  return adjoint_;
 }
 
 void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
