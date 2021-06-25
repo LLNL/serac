@@ -407,7 +407,7 @@ void Solid::solveAdjoint()
 
   auto& lin_solver = nonlin_solver_.LinearSolver();
 
-  auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
+  auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
   bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
 
