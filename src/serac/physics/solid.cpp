@@ -408,9 +408,10 @@ void Solid::solveAdjoint()
   auto& lin_solver = nonlin_solver_.LinearSolver();
 
   auto& J = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
-  bcs_.eliminateAllEssentialDofsFromMatrix(J);
+  auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
+  bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
 
-  lin_solver.SetOperator(J);
+  lin_solver.SetOperator(*J_T);
   lin_solver.Mult(*adjoint_load_, adjoint_.trueVec());
 
   adjoint_.distributeSharedDofs();
