@@ -341,11 +341,16 @@ public:
   /**
    * @brief Solve the adjoint problem
    * @note It is expected that the forward analysis is complete and the current displacement state is valid
+   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
    *
    * @param[in] adjoint_load_form The linear form that when assembled contains the right hand side of the adjoint system
+   * @param[in] state_with_essential_boundary A optional finite element state containing the non-homogenous essential
+   * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
+   *
    */
-  const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form);
+  const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
+                                                FiniteElementState*  state_with_essential_boundary = nullptr);
 
   /**
    * @brief Destroy the Nonlinear Solid Solver object

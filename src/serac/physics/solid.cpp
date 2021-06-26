@@ -399,7 +399,8 @@ void Solid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_form)
+const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
+                                              FiniteElementState*  state_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
   SLIC_ERROR_ROOT_IF(cycle_ == 0, "Adjoint analysis only valid following a forward solve.");
@@ -414,7 +415,15 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
 
   auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
-  bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
+
+  if (state_with_essential_boundary) {
+    for (const auto& bc : bcs_.essentials()) {
+      bc.eliminateFromMatrix(*J_T);
+      bc.apply(*J_T, *adjoint_load_vector, *state_with_essential_boundary);
+    }
+  } else {
+    bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
+  }
 
   lin_solver.SetOperator(*J_T);
   lin_solver.Mult(*adjoint_load_vector, adjoint_.trueVec());

@@ -92,10 +92,10 @@ TEST(solid_solver, adjoint)
   mfem::VectorConstantCoefficient loadvec(load);
   adjoint_load.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(loadvec));
 
-  auto&  adjoint_state = solid_solver.solveAdjoint(adjoint_load);
-  double adjoint_norm  = adjoint_state.gridFunc().ComputeLpError(2.0, zerovec);
+  auto&  adjoint_state_1 = solid_solver.solveAdjoint(adjoint_load);
+  double adjoint_norm_1  = adjoint_state_1.gridFunc().ComputeLpError(2.0, zerovec);
 
-  SLIC_INFO_ROOT(fmt::format("Adjoint norm: {}", adjoint_norm));
+  SLIC_INFO_ROOT(fmt::format("Adjoint norm (homogeneous BCs): {}", adjoint_norm_1));
 
   // Do a forward solve again to make sure the adjoint solve didn't break the solver
   solid_solver.setDisplacement(*deform);
@@ -106,7 +106,21 @@ TEST(solid_solver, adjoint)
   EXPECT_NEAR(0.0, u_norm_1 - u_norm_2, 0.00001);
 
   // Check that the adjoint solve is a known value
-  EXPECT_NEAR(adjoint_norm, 7.38410307, 0.0001);
+  EXPECT_NEAR(adjoint_norm_1, 7.38410307, 0.0001);
+
+  // Do another adjoint solve with a non-homogeneous BC
+  FiniteElementState adjoint_essential(StateManager::mesh(), solid_solver.displacement(), "adjoint_essential");
+
+  // Set the essential boundary to a non-zero value
+  adjoint_essential = 300.0;
+
+  auto&  adjoint_state_2 = solid_solver.solveAdjoint(adjoint_load, &adjoint_essential);
+  double adjoint_norm_2  = adjoint_state_2.gridFunc().ComputeLpError(2.0, zerovec);
+
+  SLIC_INFO_ROOT(fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
+
+  // Check that the adjoint solve is a known value
+  EXPECT_NEAR(adjoint_norm_2, 7.529864118, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

@@ -106,6 +106,14 @@ public:
   FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "");
 
   /**
+   * @brief Minimal constructor for a FiniteElementState given an already-existing state
+   * @param[in] mesh The problem mesh (object does not take ownership)
+   * @param[in] fe_state The state for the new state to copy
+   * @param[in] name The name of the field
+   */
+  FiniteElementState(mfem::ParMesh& mesh, FiniteElementState& gf, const std::string& name = "");
+
+  /**
    * Returns the MPI communicator for the state
    */
   MPI_Comm comm() const { return retrieve(space_).GetComm(); }
@@ -164,12 +172,25 @@ public:
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit([this](auto&& concrete_coef) { retrieve(gf_).ProjectCoefficient(*concrete_coef); }, coef);
+    std::visit(
+        [this](auto&& concrete_coef) {
+          retrieve(gf_).ProjectCoefficient(*concrete_coef);
+          initializeTrueVec();
+        },
+        coef);
   }
   /// \overload
-  void project(mfem::Coefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
+  void project(mfem::Coefficient& coef)
+  {
+    retrieve(gf_).ProjectCoefficient(coef);
+    initializeTrueVec();
+  }
   /// \overload
-  void project(mfem::VectorCoefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
+  void project(mfem::VectorCoefficient& coef)
+  {
+    retrieve(gf_).ProjectCoefficient(coef);
+    initializeTrueVec();
+  }
 
   /**
    * Initialize the true DOF vector by extracting true DOFs from the internal
@@ -181,6 +202,14 @@ public:
    * Set the internal grid function using the true DOF values
    */
   void distributeSharedDofs() { retrieve(gf_).SetFromTrueDofs(true_vec_); }
+
+  /**
+   * @brief Set a finite element state to a constant value
+   *
+   * @param value The constant to set the finite element state to
+   * @return The modified finite element state
+   */
+  FiniteElementState& operator=(const double value);
 
   /**
    * Utility function for creating a tensor, e.g. mfem::HypreParVector,
