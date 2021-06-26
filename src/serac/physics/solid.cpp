@@ -417,9 +417,10 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
 
   if (state_with_essential_boundary) {
+    state_with_essential_boundary->initializeTrueVec();
     for (const auto& bc : bcs_.essentials()) {
       bc.eliminateFromMatrix(*J_T);
-      bc.apply(*J_T, *adjoint_load_vector, *state_with_essential_boundary);
+      bc.eliminateToRHS(*J_T, *adjoint_load_vector, state_with_essential_boundary->trueVec());
     }
   } else {
     bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);

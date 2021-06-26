@@ -120,7 +120,7 @@ TEST(solid_solver, adjoint)
   SLIC_INFO_ROOT(fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
 
   // Check that the adjoint solve is a known value
-  EXPECT_NEAR(adjoint_norm_2, 7.529864118, 0.0001);
+  EXPECT_NEAR(adjoint_norm_2, 7.3840835, 0.0001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
