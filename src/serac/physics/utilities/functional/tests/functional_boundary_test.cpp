@@ -12,7 +12,7 @@
 #include "axom/slic/core/SimpleLogger.hpp"
 
 #include "serac/serac_config.hpp"
-#include "serac/numerics/mesh_utils.hpp"
+//#include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/physics/utilities/functional/functional.hpp"
@@ -29,6 +29,50 @@ constexpr bool verbose     = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+
+mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
+{
+  // Open the mesh
+  std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
+  SLIC_INFO_ROOT(msg);
+
+  // Ensure correctness
+  serac::logger::flush();
+
+  // This inherits from std::ifstream, and will work the same way as a std::ifstream,
+  // but is required for Exodus meshes
+  mfem::named_ifgzstream imesh(mesh_file);
+
+  if (!imesh) {
+    serac::logger::flush();
+    std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
+    SLIC_ERROR_ROOT(err_msg);
+  }
+
+  return mfem::Mesh{imesh, 1, 1, true};
+}
+
+namespace mesh{
+
+
+std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, const int refine_serial = 0,
+                                                   const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD) {
+  // Serial refinement first
+  for (int lev = 0; lev < refine_serial; lev++) {
+    serial_mesh.UniformRefinement();
+  }
+
+  // Then create the parallel mesh and apply parallel refinement
+  auto parallel_mesh = std::make_unique<mfem::ParMesh>(comm, serial_mesh);
+  for (int lev = 0; lev < refine_parallel; lev++) {
+    parallel_mesh->UniformRefinement();
+  }
+
+  return parallel_mesh;
+}
+
+}
+
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
@@ -44,10 +88,18 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
     output[1] = coords[0] * coords[1];
   });
 
-  f.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(scalar_function));
-  f.AddBoundaryIntegrator(new mfem::BoundaryNormalLFIntegrator(vector_function));
+  //f.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(scalar_function, 2, 0));
+  f.AddBoundaryIntegrator(new mfem::BoundaryNormalLFIntegrator(vector_function, 2, 0));
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
+
+  // values in BoundaryNormalLFIntegrator
+  // normal: {0, 0.25000100000000003}
+  // position: {0.75618757232383782, 0.95105700000000004}
+
+  // values in GetFaceGeometricFactors
+  // normal: {0, 0.12500050000000001} 
+  // position: {0.75618757232383782, 0.95105700000000015}
 
   mfem::ParBilinearForm     B(&fespace);
   mfem::ConstantCoefficient density(rho);
@@ -57,7 +109,11 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
 
   mfem::ParGridFunction u_global(&fespace);
-  u_global.Randomize();
+
+  //u_global.Randomize();
+
+  mfem::FunctionCoefficient linear_function([&](const mfem::Vector& coords) { return coords(0) + 2 * coords(1); });
+  u_global.ProjectCoefficient(linear_function);
 
   mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
@@ -71,11 +127,12 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
       Dimension<dim - 1>{},
       [&](auto x, auto n, auto u) {
         tensor<double, dim> b{sin(x[0]), x[0] * x[1]};
-        return x[0] * x[1] + dot(b, n) + rho * u;
+        return 0.0 * x[0] * x[1] + dot(b, n) + 0 * rho * u;
       },
       mesh);
 
-  mfem::Vector r1 = (*J) * U + (*F);
+  //mfem::Vector r1 = (*J) * U + (*F);
+  mfem::Vector r1 = (*F);
   mfem::Vector r2 = residual(U);
 
   if (verbose) {
@@ -86,7 +143,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
     std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
   }
 
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-3);
+  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-8);
 }
 
 template <int p, int dim>
@@ -146,10 +203,9 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
     std::cout << "||r2||: " << r2.Norml2() << std::endl;
     std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
-    std::cout << "sum(r1):  " << r1.Sum() << std::endl;
   }
 
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-3);
+  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-8);
 }
 
 TEST(boundary, 2D_linear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
@@ -158,11 +214,11 @@ TEST(boundary, 2D_quadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimensio
 TEST(boundary, 3D_linear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
 TEST(boundary, 3D_quadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 
-TEST(boundary_L2, 2D_linear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
-TEST(boundary_L2, 2D_quadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
-
-TEST(boundary_L2, 3D_linear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
-TEST(boundary_L2, 3D_quadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
+//TEST(boundary_L2, 2D_linear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
+//TEST(boundary_L2, 2D_quadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
+//
+//TEST(boundary_L2, 3D_linear) { boundary_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{}); }
+//TEST(boundary_L2, 3D_quadratic) { boundary_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {
