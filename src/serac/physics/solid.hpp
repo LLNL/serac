@@ -349,8 +349,8 @@ public:
    * @return The computed adjoint finite element state
    *
    */
-  const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
-                                                FiniteElementState*  state_with_essential_boundary = nullptr);
+  virtual const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
+                                                        FiniteElementState*  state_with_essential_boundary = nullptr);
 
   /**
    * @brief Destroy the Nonlinear Solid Solver object
