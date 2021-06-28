@@ -314,7 +314,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_path("CLANGTIDY_EXECUTABLE",
                                             clang_tidy_path))
         else:
-            entries.append("# Clang tools disabled due to disabled devtools\n")
+            entries.append("# Code checks disabled due to disabled devtools\n")
+            entries.append(cmake_cache_option("SERAC_ENABLE_CODE_CHECKS", False))
             entries.append(cmake_cache_option("ENABLE_CLANGFORMAT", False))
             entries.append(cmake_cache_option("ENABLE_CLANGTIDY", False))
 
