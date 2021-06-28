@@ -19,7 +19,7 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
     url      = "https://github.com/LLNL/camp/archive/v0.1.0.tar.gz"
 
     # SERAC EDIT START
-    version('0.1.0serac', commit='e566f174cdbefbc3d59a07390b3c929f99da7996', submodules="True")
+    version('0.1.0serac', commit='891a2a66d7c66f0d97dfc10701a2c9b96e5f2a96', submodules="True")
     # SERAC EDIT END
 
     version('master', branch='master', submodules='True')
