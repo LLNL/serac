@@ -96,9 +96,7 @@ TEST(solid_solver, qs_custom_solve)
 
   solid_solver.outputState();
 
-  double x_norm = norm(solid_solver.displacement());
-
-  EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_u_l2norm"], norm(solid_solver.displacement()), inlet["epsilon"]);
 
   // 0 = R(u) + K(u) du
   // u_sol = u + du

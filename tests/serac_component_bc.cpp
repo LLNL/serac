@@ -87,9 +87,7 @@ TEST(solid_solver, qs_component_solve)
 
   auto state = solid_solver.getState();
 
-  double x_norm = norm(solid_solver.displacement());
-
-  EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_u_l2norm"], norm(solid_solver.displacement()), inlet["epsilon"]);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

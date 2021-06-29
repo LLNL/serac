@@ -63,8 +63,7 @@ TEST(solid_solver, reuse_mesh)
 
   const Solid::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
-  double u_norm_1 = 0.0;
-  double u_norm_2 = 0.0;
+  mfem::Vector u_1_true_vec;
 
   // Keep the solver_1 and solver_2 objects in a different scope for testing
   {
@@ -102,11 +101,11 @@ TEST(solid_solver, reuse_mesh)
     // Output the final state
     solid_solver_1.outputState();
 
-    // Check the final displacement and velocity L2 norms
-    u_norm_1 = norm(solid_solver_1.displacement());
-    u_norm_2 = norm(solid_solver_2.displacement());
+    u_1_true_vec = solid_solver_1.displacement().trueVec();
 
-    EXPECT_NEAR(0.0, u_norm_1 - u_norm_2, 0.001);
+    EXPECT_NEAR(
+        0.0, (mfem::Vector(solid_solver_1.displacement().trueVec() - solid_solver_2.displacement().trueVec())).Norml2(),
+        0.001);
   }
 
   Solid solid_solver_3(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);
@@ -125,8 +124,7 @@ TEST(solid_solver, reuse_mesh)
   double dt = 1.0;
   solid_solver_3.advanceTimestep(dt);
 
-  double u_norm_3 = norm(solid_solver_3.displacement());
-  EXPECT_NEAR(0.0, u_norm_1 - u_norm_3, 0.001);
+  EXPECT_NEAR(0.0, (mfem::Vector(u_1_true_vec - solid_solver_3.displacement().trueVec())).Norml2(), 0.001);
 
   solid_solver_3.resetToReferenceConfiguration();
   EXPECT_NEAR(0.0, norm(solid_solver_3.displacement()), 1.0e-8);

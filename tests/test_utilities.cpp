@@ -135,8 +135,7 @@ template <>
 void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet)
 {
   if (inlet.contains("expected_t_l2norm")) {
-    double t_norm = norm(phys_module.temperature());
-    EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
+    EXPECT_NEAR(inlet["expected_t_l2norm"], norm(phys_module.temperature()), inlet["epsilon"]);
   }
 
   if (inlet.contains("exact_solution")) {

@@ -133,13 +133,9 @@ TEST(dynamic_solver, dyn_solve)
   // Output the final state
   ts_solver.outputState();
 
-  double v_norm    = norm(ts_solver.velocity());
-  double x_norm    = norm(ts_solver.displacement());
-  double temp_norm = norm(ts_solver.temperature());
-
-  EXPECT_NEAR(0.122796, x_norm, 0.001);
-  EXPECT_NEAR(0.001791, v_norm, 0.001);
-  EXPECT_NEAR(6.494477, temp_norm, 0.001);
+  EXPECT_NEAR(0.122796, norm(ts_solver.displacement()), 0.001);
+  EXPECT_NEAR(0.001791, norm(ts_solver.velocity()), 0.001);
+  EXPECT_NEAR(6.494477, norm(ts_solver.temperature()), 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
