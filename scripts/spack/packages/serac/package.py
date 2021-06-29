@@ -110,10 +110,9 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Axom enables RAJA/Umpire by default
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
-    # patch for RAJA#978
-    depends_on("raja@develop~openmp~shared", when="+raja")
-    # Need fix Umpire#541
-    depends_on("umpire@develop~shared", when="+umpire")
+    depends_on("camp@0.1.0serac", when="+raja")
+    depends_on("raja@0.13.1serac~openmp~shared", when="+raja")
+    depends_on("umpire@5.0.1~shared", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
@@ -148,6 +147,8 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on('mfem+amgx cuda_arch=sm_{0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         depends_on('axom cuda_arch={0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
+        depends_on('raja cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         # Caliper may not currently use its cuda_arch
         # but probably good practice to set it
