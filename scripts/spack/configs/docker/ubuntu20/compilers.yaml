@@ -4,8 +4,8 @@ compilers:
       extra_rpaths: []
       # Axom example sidre_shocktube_F_ex doesn't link otherwise
       flags:
-        cflags: -fPIC
-        cppflags: -fPIC
+        cflags: -fPIC -pthread
+        cppflags: -fPIC -pthread
       modules: []
       operating_system: ubuntu20.04
       paths:
