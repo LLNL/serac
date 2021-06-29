@@ -259,6 +259,7 @@ private:
 /**
  * @brief Calculate the Lp norm of a finite element state
  *
+ * @param state The state variable to compute a norm of 
  * @param p Order of the norm
  * @return The norm value
  */
