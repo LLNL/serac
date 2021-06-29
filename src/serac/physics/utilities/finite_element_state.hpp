@@ -196,14 +196,6 @@ public:
     return std::make_unique<Tensor>(&retrieve(space_));
   }
 
-  /**
-   * @brief Calculate the Lp norm of the underlying state grid function
-   *
-   * @param p Order of the norm
-   * @return The norm value
-   */
-  double norm(double p = 2) const;
-
 private:
   /**
    * @brief A helper type for uniform semantics over owning/non-owning pointers
@@ -263,5 +255,13 @@ private:
   mfem::HypreParVector                      true_vec_;
   std::string                               name_ = "";
 };
+
+/**
+ * @brief Calculate the Lp norm of a finite element state
+ *
+ * @param p Order of the norm
+ * @return The norm value
+ */
+double norm(const FiniteElementState& state, double p = 2);
 
 }  // namespace serac

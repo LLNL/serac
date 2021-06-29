@@ -33,16 +33,16 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunctio
   true_vec_ = 0.0;
 }
 
-double FiniteElementState::norm(const double p) const
+double norm(const FiniteElementState& state, const double p)
 {
-  if (retrieve(space_).GetVDim() == 1) {
+  if (state.space().GetVDim() == 1) {
     mfem::ConstantCoefficient zero(0.0);
-    return retrieve(gf_).ComputeLpError(p, zero);
+    return state.gridFunc().ComputeLpError(p, zero);
   } else {
-    mfem::Vector zero(retrieve(space_).GetVDim());
+    mfem::Vector zero(state.space().GetVDim());
     zero = 0.0;
     mfem::VectorConstantCoefficient zerovec(zero);
-    return retrieve(gf_).ComputeLpError(p, zerovec);
+    return state.gridFunc().ComputeLpError(p, zerovec);
   }
 }
 

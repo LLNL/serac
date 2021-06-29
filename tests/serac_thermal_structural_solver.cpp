@@ -133,9 +133,9 @@ TEST(dynamic_solver, dyn_solve)
   // Output the final state
   ts_solver.outputState();
 
-  double v_norm    = ts_solver.velocity().norm();
-  double x_norm    = ts_solver.displacement().norm();
-  double temp_norm = ts_solver.temperature().norm();
+  double v_norm    = norm(ts_solver.velocity());
+  double x_norm    = norm(ts_solver.displacement());
+  double temp_norm = norm(ts_solver.temperature());
 
   EXPECT_NEAR(0.122796, x_norm, 0.001);
   EXPECT_NEAR(0.001791, v_norm, 0.001);

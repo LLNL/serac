@@ -122,11 +122,11 @@ template <>
 void verifyFields(const Solid& phys_module, const axom::inlet::Inlet& inlet)
 {
   if (inlet.contains("expected_u_l2norm")) {
-    double x_norm = phys_module.displacement().norm();
+    double x_norm = norm(phys_module.displacement());
     EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_v_l2norm")) {
-    double v_norm = phys_module.velocity().norm();
+    double v_norm = norm(phys_module.velocity());
     EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
   }
 }
@@ -135,7 +135,7 @@ template <>
 void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet)
 {
   if (inlet.contains("expected_t_l2norm")) {
-    double t_norm = phys_module.temperature().norm();
+    double t_norm = norm(phys_module.temperature());
     EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
   }
 

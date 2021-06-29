@@ -103,8 +103,8 @@ TEST(solid_solver, reuse_mesh)
     solid_solver_1.outputState();
 
     // Check the final displacement and velocity L2 norms
-    u_norm_1 = solid_solver_1.displacement().norm();
-    u_norm_2 = solid_solver_2.displacement().norm();
+    u_norm_1 = norm(solid_solver_1.displacement());
+    u_norm_2 = norm(solid_solver_2.displacement());
 
     EXPECT_NEAR(0.0, u_norm_1 - u_norm_2, 0.001);
   }
@@ -125,12 +125,12 @@ TEST(solid_solver, reuse_mesh)
   double dt = 1.0;
   solid_solver_3.advanceTimestep(dt);
 
-  double u_norm_3 = solid_solver_3.displacement().norm();
+  double u_norm_3 = norm(solid_solver_3.displacement());
   EXPECT_NEAR(0.0, u_norm_1 - u_norm_3, 0.001);
 
   solid_solver_3.resetToReferenceConfiguration();
-  EXPECT_NEAR(0.0, solid_solver_3.displacement().norm(), 1.0e-8);
-  EXPECT_NEAR(0.0, solid_solver_3.velocity().norm(), 1.0e-8);
+  EXPECT_NEAR(0.0, norm(solid_solver_3.displacement()), 1.0e-8);
+  EXPECT_NEAR(0.0, norm(solid_solver_3.velocity()), 1.0e-8);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
