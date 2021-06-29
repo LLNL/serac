@@ -27,9 +27,9 @@ else()
 
 endif()
 
-set(CMAKE_C_FLAGS "-fPIC -fPIC" CACHE STRING "")
+set(CMAKE_C_FLAGS "-fPIC -pthread -fPIC -pthread" CACHE STRING "")
 
-set(CMAKE_CXX_FLAGS "-fPIC " CACHE STRING "")
+set(CMAKE_CXX_FLAGS "-fPIC -pthread " CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # MPI
@@ -93,12 +93,12 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 # Devtools
 #------------------------------------------------------------------------------
 
-# Clang tools disabled due to disabled devtools
+# Code checks disabled due to disabled devtools
+
+set(SERAC_ENABLE_CODE_CHECKS OFF CACHE BOOL "")
 
 set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
 
 set(ENABLE_CLANGTIDY OFF CACHE BOOL "")
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
-
-
