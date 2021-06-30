@@ -111,7 +111,7 @@ public:
    * @param[in] fe_state The state for the new state to copy
    * @param[in] name The name of the field
    */
-  FiniteElementState(mfem::ParMesh& mesh, FiniteElementState& gf, const std::string& name = "");
+  FiniteElementState(mfem::ParMesh& mesh, FiniteElementState& fe_state, const std::string& name = "");
 
   /**
    * Returns the MPI communicator for the state
