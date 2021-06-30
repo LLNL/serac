@@ -1,14 +1,10 @@
-FROM axom/compilers:ubuntu-20-clang-10_06-29-21_12h-23m
+FROM axom/compilers:ubuntu-20-clang-10_06-29-21_22h-14m
 LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
 RUN sudo apt-get install ssh libopenblas-dev mpich gfortran -fy
-
-# Avoid building CMake from scratch
-RUN wget https://cmake.org/files/v3.18/cmake-3.18.5-Linux-x86_64.sh
-RUN sudo sh cmake-3.18.5-Linux-x86_64.sh --prefix=/usr --exclude-subdir
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
