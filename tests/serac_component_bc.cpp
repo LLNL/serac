@@ -87,13 +87,7 @@ TEST(solid_solver, qs_component_solve)
 
   auto state = solid_solver.getState();
 
-  mfem::Vector zero(dim);
-  zero = 0.0;
-  mfem::VectorConstantCoefficient zerovec(zero);
-
-  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-
-  EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_u_l2norm"], norm(solid_solver.displacement()), inlet["epsilon"]);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
