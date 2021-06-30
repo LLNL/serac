@@ -111,38 +111,31 @@ std::string moduleName<ThermalConduction>()
  * @brief Verifies the solution fields against the input file
  * @param[in] phys_module The module whose fields should be verified
  * @param[in] inlet The Inlet object from which expected solution values will be obtained
- * @param[in] dim The mesh dimension
  */
 template <typename PhysicsModule>
-void verifyFields(const PhysicsModule&, const axom::inlet::Inlet&, const int)
+void verifyFields(const PhysicsModule&, const axom::inlet::Inlet&)
 {
   static_assert(AlwaysFalse<PhysicsModule>::value, "Test driver is not supported for selected type");
 }
 
 template <>
-void verifyFields(const Solid& phys_module, const axom::inlet::Inlet& inlet, const int dim)
+void verifyFields(const Solid& phys_module, const axom::inlet::Inlet& inlet)
 {
-  mfem::Vector zero(dim);
-  zero = 0.0;
-  mfem::VectorConstantCoefficient zerovec(zero);
-
   if (inlet.contains("expected_u_l2norm")) {
-    double x_norm = phys_module.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+    double x_norm = norm(phys_module.displacement());
     EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_v_l2norm")) {
-    double v_norm = phys_module.velocity().gridFunc().ComputeLpError(2.0, zerovec);
+    double v_norm = norm(phys_module.velocity());
     EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
   }
 }
 
 template <>
-void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet, const int)
+void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet& inlet)
 {
-  mfem::ConstantCoefficient zero(0.0);
   if (inlet.contains("expected_t_l2norm")) {
-    double t_norm = phys_module.temperature().gridFunc().ComputeLpError(2.0, zero);
-    EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
+    EXPECT_NEAR(inlet["expected_t_l2norm"], norm(phys_module.temperature()), inlet["epsilon"]);
   }
 
   if (inlet.contains("exact_solution")) {
@@ -185,8 +178,6 @@ void runModuleTest(const std::string& input_file, const std::string& test_name, 
     auto mesh = serac::mesh::buildParallelMesh(mesh_options);
     serac::StateManager::setMesh(std::move(mesh));
   }
-
-  const int dim = serac::StateManager::mesh().Dimension();
 
   const std::string module_name = detail::moduleName<PhysicsModule>();
 
@@ -232,7 +223,7 @@ void runModuleTest(const std::string& input_file, const std::string& test_name, 
   // Output the final state
   phys_module.outputState();
 
-  detail::verifyFields(phys_module, inlet, dim);
+  detail::verifyFields(phys_module, inlet);
   // WARNING: This will destroy the mesh before the Solid module destructor gets called
   // serac::StateManager::reset();
 }
