@@ -347,7 +347,6 @@ public:
    * @param[in] state_with_essential_boundary A optional finite element state containing the non-homogenous essential
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
-   *
    */
   virtual const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
                                                         FiniteElementState*  state_with_essential_boundary = nullptr);
