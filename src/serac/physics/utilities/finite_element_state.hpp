@@ -285,4 +285,13 @@ private:
   std::string                               name_ = "";
 };
 
+/**
+ * @brief Calculate the Lp norm of a finite element state
+ *
+ * @param state The state variable to compute a norm of 
+ * @param p Order of the norm
+ * @return The norm value
+ */
+double norm(const FiniteElementState& state, double p = 2);
+
 }  // namespace serac

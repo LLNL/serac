@@ -7,6 +7,7 @@
 
 #include "serac/serac_config.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
+#include "serac/numerics/mesh_utils_base.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
@@ -133,63 +134,6 @@ TEST(L2, 3D_linear) { functional_test(*mesh3D, L2<1>{}, L2<1>{}, Dimension<3>{})
 TEST(L2, 3D_quadratic) { functional_test(*mesh3D, L2<2>{}, L2<2>{}, Dimension<3>{}); }
 TEST(L2, 3D_cubic) { functional_test(*mesh3D, L2<3>{}, L2<3>{}, Dimension<3>{}); }
 
-/** CUDA workaround
-Issue with std::variant for InputOptions in mesh_utils.hpp
-
-This file has a lot of warnings. The summary of the issue is described in more detail here
-(https://github.com/LLNL/serac/issues/485))
-
-The following is an excerpt of a warning:
-serac/src/serac/infrastructure/../../serac/physics/utilities/functional/tensor.hpp(347): warning: calling a __host__
-function("std::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > ::operator =") from a __host__ __device__
-function("serac::operator +< ::serac::dual<    ::std::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > > ,
-double, (int)3 > ") is not allowed
-**/
-
-mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
-{
-  // Open the mesh
-  std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
-  SLIC_INFO_ROOT(msg);
-
-  // Ensure correctness
-  serac::logger::flush();
-  // if (!axom::utilities::filesystem::pathExists(mesh_file)) {
-  //   msg = fmt::format("Given mesh file does not exist: {0}", mesh_file);
-  //   SLIC_ERROR_ROOT(msg);
-  // }
-
-  // This inherits from std::ifstream, and will work the same way as a std::ifstream,
-  // but is required for Exodus meshes
-  mfem::named_ifgzstream imesh(mesh_file);
-
-  if (!imesh) {
-    serac::logger::flush();
-    std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
-    SLIC_ERROR_ROOT(err_msg);
-  }
-
-  return mfem::Mesh{imesh, 1, 1, true};
-}
-
-std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, const int refine_serial,
-                                                   const int refine_parallel, const MPI_Comm comm = MPI_COMM_WORLD)
-{
-  // Serial refinement first
-  for (int lev = 0; lev < refine_serial; lev++) {
-    serial_mesh.UniformRefinement();
-  }
-
-  // Then create the parallel mesh and apply parallel refinement
-  auto parallel_mesh = std::make_unique<mfem::ParMesh>(comm, serial_mesh);
-  for (int lev = 0; lev < refine_parallel; lev++) {
-    parallel_mesh->UniformRefinement();
-  }
-
-  return parallel_mesh;
-}
-/** CUDA workaround end **/
-
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
@@ -203,10 +147,10 @@ int main(int argc, char* argv[])
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  mesh2D                 = refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+  mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  mesh3D                 = refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+  mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   int result = RUN_ALL_TESTS();
 

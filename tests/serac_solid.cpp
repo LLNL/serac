@@ -65,8 +65,7 @@ TEST(solid_solver, qs_custom_solve)
     file_opts->absolute_mesh_file_name =
         serac::input::findMeshFilePath(file_opts->relative_mesh_file_name, input_file_path);
   }
-  auto      mesh = serac::mesh::buildParallelMesh(mesh_options);
-  const int dim  = mesh->Dimension();
+  auto mesh = serac::mesh::buildParallelMesh(mesh_options);
   serac::StateManager::setMesh(std::move(mesh));
 
   // Define the solid solver object
@@ -97,13 +96,7 @@ TEST(solid_solver, qs_custom_solve)
 
   solid_solver.outputState();
 
-  mfem::Vector zero(dim);
-  zero = 0.0;
-  mfem::VectorConstantCoefficient zerovec(zero);
-
-  double x_norm = solid_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-
-  EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
+  EXPECT_NEAR(inlet["expected_u_l2norm"], norm(solid_solver.displacement()), inlet["epsilon"]);
 
   // 0 = R(u) + K(u) du
   // u_sol = u + du
