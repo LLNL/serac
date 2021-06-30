@@ -13,6 +13,7 @@
 #pragma once
 
 #include <string>
+#include <sstream>
 
 #include "serac/serac_config.hpp"
 
@@ -56,15 +57,110 @@
  * Sets metadata in caliper file. Calls serac::profiling::detail::setCaliperMetadata
  */
 
+/**
+ * @def SERAC_PROFILE_SCOPE(name)
+ * Uses cali::ScopeAnnotation to profile a particular scope
+ */
+
+/**
+ * @def SERAC_PROFILE_EXPR(name, expr)
+ * Profiles a single expression using a cali::ScopeAnnotation internally. Returns evaluation.
+ */
+
+/**
+ * @def SERAC_PROFILE_VOID_EXPR(name, expr)
+ * Profiles a single void-expression using a cali::ScopeAnnotation internally.
+ */
+
+/**
+ * @def SERAC_PROFILE_EXPR_LOOP(name, expr, ntest)
+ * Profiles an expression several times. Returns the last evaluation
+ */
+
 #ifdef SERAC_USE_CALIPER
 
 #define SERAC_MARK_FUNCTION CALI_CXX_MARK_FUNCTION
 #define SERAC_MARK_LOOP_START(id, name) CALI_CXX_MARK_LOOP_BEGIN(id, name)
 #define SERAC_MARK_LOOP_ITER(id, i) CALI_CXX_MARK_LOOP_ITERATION(id, i)
 #define SERAC_MARK_LOOP_END(id) CALI_CXX_MARK_LOOP_END(id)
-#define SERAC_MARK_START(name) CALI_MARK_BEGIN(name)
-#define SERAC_MARK_END(name) CALI_MARK_END(name)
+#define SERAC_MARK_START(name) serac::profiling::detail::startCaliperRegion(name)
+#define SERAC_MARK_END(name) serac::profiling::detail::endCaliperRegion(name)
 #define SERAC_SET_METADATA(name, data) serac::profiling::detail::setCaliperMetadata(name, data)
+
+#define SERAC_CONCAT_(a, b) a##b
+#define SERAC_CONCAT(a, b) SERAC_CONCAT_(a, b)
+
+namespace serac::profiling::detail {
+
+/**
+ * @brief Removes an rvalue reference from a type, if applicable
+ * @see std::remove_reference
+ * @tparam T The type to remove an rvalue reference from
+ */
+template <typename T>
+struct remove_rvalue_reference {
+  using type = T;
+};
+
+template <typename T>
+struct remove_rvalue_reference<T&&> {
+  using type = T;
+};
+
+/**
+ * @brief Wrapper over std::forward for type deduction purposes
+ * The return type participates in reference collapsing so the return type will indicate
+ * the true value category of @a thing
+ * @param[in] thing The object whose value category is to be deduced
+ */
+template <typename T>
+auto&& forwarder(T&& thing)
+{
+  return std::forward<T>(thing);
+}
+
+/**
+ * @brief Guarantees str is a c string
+ */
+inline const char* make_cstr(const char* str) { return str; }
+
+/**
+ * @brief Converts a std::string into a c string
+ */
+inline const char* make_cstr(const std::string& str) { return str.c_str(); }
+
+}  // namespace serac::profiling::detail
+/// @endcond
+
+#define SERAC_PROFILE_SCOPE(name) \
+  cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name))
+
+/**
+ * @brief The type that should be returned from the profiling wrapper lambda
+ * It converts rvalue reference arguments of type T&& to T to avoid returning
+ * a reference to a temporary and leaves all other types intact.
+ */
+#define SERAC_PROFILE_EXPR_RETURN_TYPE(expr) \
+  serac::profiling::detail::remove_rvalue_reference<decltype(serac::profiling::detail::forwarder(expr))>::type
+
+#define SERAC_PROFILE_EXPR(name, expr)                                                                     \
+  [&]() -> typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr) {                                                 \
+    const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name)); \
+    return static_cast<typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr)>(expr);                               \
+  }()
+
+/**
+ * @brief Profiles an expression several times; Return the last evaluation
+ */
+#define SERAC_PROFILE_EXPR_LOOP(name, expr, ntest)                                                                  \
+  (                                                                                                                 \
+      [&]() {                                                                                                       \
+        for (int SERAC_CONCAT(i, __LINE__) = 0; SERAC_CONCAT(i, __LINE__) < ntest - 1; SERAC_CONCAT(i, __LINE__)++) \
+          SERAC_PROFILE_EXPR(serac::profiling::detail::make_cstr(name), expr);                                      \
+      }(),                                                                                                          \
+      SERAC_PROFILE_EXPR(serac::profiling::detail::make_cstr(name), expr))
+
+#define SERAC_PROFILE_VOID_EXPR(name, expr) CALI_WRAP_STATEMENT(serac::profiling::detail::make_cstr(name), expr)
 
 #else  // SERAC_USE_CALIPER not defined
 
@@ -76,6 +172,10 @@
 #define SERAC_MARK_START(name)
 #define SERAC_MARK_END(name)
 #define SERAC_SET_METADATA(name, data)
+#define SERAC_PROFILE_SCOPE(name)
+#define SERAC_PROFILE_EXPR(name, expr) expr
+#define SERAC_PROFILE_EXPR_LOOP(name, expr, ntest) expr
+#define SERAC_PROFILE_VOID_EXPR(name, expr) expr
 
 #endif
 
@@ -118,6 +218,30 @@ void setCaliperMetadata(const std::string& name, double data);
   @overload
 */
 void setCaliperMetadata(const std::string& name, unsigned int data);
+
+/**
+ * @brief Caliper method for marking the start of a profiling region
+ *
+ * @param[in] name The tag to associate with the region.
+ */
+void startCaliperRegion(const char* name);
+
+/**
+ * @brief Caliper methods for marking the end of a region
+ *
+ * @param[in] name The tag to associate with the region.
+ */
+void endCaliperRegion(const char* name);
+
 }  // namespace detail
+
+/// Produces a string by applying << to all arguments
+template <typename... T>
+std::string concat(T... args)
+{
+  std::stringstream ss;
+  (ss << ... << args);
+  return ss.str();
+}
 
 }  // namespace serac::profiling

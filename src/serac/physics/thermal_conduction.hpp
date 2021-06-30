@@ -213,8 +213,9 @@ public:
    * @brief Construct a new Thermal Solver object
    *
    * @param[in] options The solver information parsed from the input file
+   * @param[in] name An optional name for the physics module instance
    */
-  ThermalConduction(const InputOptions& options);
+  ThermalConduction(const InputOptions& options, const std::string& name = "");
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -437,5 +438,6 @@ protected:
  */
 template <>
 struct FromInlet<serac::ThermalConduction::InputOptions> {
+  /// @brief Returns created object from Inlet container
   serac::ThermalConduction::InputOptions operator()(const axom::inlet::Container& base);
 };

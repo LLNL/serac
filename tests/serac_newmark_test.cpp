@@ -9,17 +9,18 @@
 
 #include <memory>
 
+#include "mfem.hpp"
+
 #include "serac/coefficients/coefficient_extensions.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-#include "mfem.hpp"
-
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/infrastructure/input.hpp"
-#include "serac/serac_config.hpp"
-#include "test_utilities.hpp"
 #include "serac/physics/solid.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/operators/odes.hpp"
+#include "serac/serac_config.hpp"
+#include "test_utilities.hpp"
 
 using namespace std;
 
@@ -76,11 +77,8 @@ protected:
       int                       ne = std::get<serac::mesh::BoxInputOptions>(mesh_options.extra_options).elements[0];
       mfem::FunctionCoefficient fixed([ne](const mfem::Vector& x) { return (x[0] < 1. / ne) ? 1. : 0.; });
 
-      mfem::Array<int> bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList(*pmesh, fixed);
-      for (int be = 0; be < pmesh->GetNBE(); be++) {
-        pmesh->GetBdrElement(be)->SetAttribute(bdr_attr_list[be]);
-      }
-      pmesh->SetAttributes();
+      auto bdr_attr_list = serac::mfem_ext::MakeBdrAttributeList<std::vector<int>>(*pmesh, fixed);
+      serac::mfem_ext::AssignMeshBdrAttributes(*pmesh, bdr_attr_list);
     }
     const int space_dim = pmesh->SpaceDimension();
     serac::StateManager::setMesh(std::move(pmesh));

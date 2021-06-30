@@ -12,6 +12,7 @@
  */
 
 #include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/numerics/mesh_utils.hpp"

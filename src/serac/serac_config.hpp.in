@@ -25,6 +25,7 @@
 
 
 // Compiler defines for TPLs
+#cmakedefine SERAC_USE_ASCENT
 #cmakedefine SERAC_USE_AXOM
 #cmakedefine AXOM_DEBUG
 

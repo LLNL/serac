@@ -10,6 +10,7 @@
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/physics/integrators/nonlinear_reaction_integrator.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 
 namespace serac {
 
@@ -55,8 +56,8 @@ ThermalConduction::ThermalConduction(int order, const SolverOptions& options, co
   rho_ = std::make_unique<mfem::ConstantCoefficient>(1.0);
 }
 
-ThermalConduction::ThermalConduction(const InputOptions& options)
-    : ThermalConduction(options.order, options.solver_options)
+ThermalConduction::ThermalConduction(const InputOptions& options, const std::string& name)
+    : ThermalConduction(options.order, options.solver_options, name)
 {
   setConductivity(std::make_unique<mfem::ConstantCoefficient>(options.kappa));
   setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.rho));
@@ -84,12 +85,12 @@ ThermalConduction::ThermalConduction(const InputOptions& options)
   // Process the BCs in sorted order for correct behavior with repeated attributes
   std::map<std::string, input::BoundaryConditionInputOptions> sorted_bcs(options.boundary_conditions.begin(),
                                                                          options.boundary_conditions.end());
-  for (const auto& [name, bc] : sorted_bcs) {
+  for (const auto& [bc_name, bc] : sorted_bcs) {
     // FIXME: Better naming for boundary conditions?
-    if (name.find("temperature") != std::string::npos) {
+    if (bc_name.find("temperature") != std::string::npos) {
       std::shared_ptr<mfem::Coefficient> temp_coef(bc.coef_opts.constructScalar());
       setTemperatureBCs(bc.attrs, temp_coef);
-    } else if (name.find("flux") != std::string::npos) {
+    } else if (bc_name.find("flux") != std::string::npos) {
       std::shared_ptr<mfem::Coefficient> flux_coef(bc.coef_opts.constructScalar());
       setFluxBCs(bc.attrs, flux_coef);
     } else {
@@ -291,7 +292,7 @@ using serac::DirichletEnforcementMethod;
 using serac::ThermalConduction;
 using serac::TimestepMethod;
 
-ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::operator()(
+serac::ThermalConduction::InputOptions FromInlet<serac::ThermalConduction::InputOptions>::operator()(
     const axom::inlet::Container& base)
 {
   ThermalConduction::InputOptions result;

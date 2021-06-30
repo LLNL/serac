@@ -177,6 +177,10 @@ struct BoxInputOptions {
   std::vector<double> overall_size;
 };
 
+/**
+ * @brief Input options for generated meshes
+ *
+ */
 struct NBallInputOptions {
   /**
    * @brief The approximate total number of desired elements
@@ -256,5 +260,6 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, con
  */
 template <>
 struct FromInlet<serac::mesh::InputOptions> {
+  /// @brief Returns created object from Inlet container
   serac::mesh::InputOptions operator()(const axom::inlet::Container& base);
 };

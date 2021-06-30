@@ -15,40 +15,49 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
-    # Conduit (required by Axom)
+    # Conduit (required by Axom and Ascent)
     #------------------------------------------------------------------------------
     if(NOT CONDUIT_DIR)
         MESSAGE(FATAL_ERROR "Could not find Conduit. Conduit requires explicit CONDUIT_DIR.")
     endif()
 
-    if(NOT WIN32)
-        set(_conduit_config "${CONDUIT_DIR}/lib/cmake/ConduitConfig.cmake")
-        if(NOT EXISTS ${_conduit_config})
-            MESSAGE(FATAL_ERROR "Could not find Conduit cmake include file ${_conduit_config}")
-        endif()
-
-        find_package(Conduit REQUIRED
-                     NO_DEFAULT_PATH
-                     PATHS ${CONDUIT_DIR}/lib/cmake)
-    else()
-        # Allow for several different configurations of Conduit
-        find_package(Conduit CONFIG 
-            REQUIRED
-            HINTS ${CONDUIT_DIR}/cmake/conduit 
-                  ${CONDUIT_DIR}/lib/cmake/conduit
-                  ${CONDUIT_DIR}/share/cmake/conduit
-                  ${CONDUIT_DIR}/share/conduit
-                  ${CONDUIT_DIR}/cmake)
+    set(_conduit_config "${CONDUIT_DIR}/lib/cmake/ConduitConfig.cmake")
+    if(NOT EXISTS ${_conduit_config})
+        MESSAGE(FATAL_ERROR "Could not find Conduit CMake include file ${_conduit_config}")
     endif()
 
-    # Manually set includes as system includes
-    set_property(TARGET conduit::conduit 
-                 APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                 "${CONDUIT_INSTALL_PREFIX}/include/")
+    find_package(Conduit REQUIRED
+                 NO_DEFAULT_PATH
+                 PATHS ${CONDUIT_DIR}/lib/cmake)
 
+    # Manually set includes as system includes
+    get_target_property(_dirs conduit::conduit INTERFACE_INCLUDE_DIRECTORIES)
     set_property(TARGET conduit::conduit 
                  APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
-                 "${CONDUIT_INSTALL_PREFIX}/include/conduit/")
+                 "${_dirs}")
+
+
+    #------------------------------------------------------------------------------
+    # Ascent
+    #------------------------------------------------------------------------------
+    if(NOT ASCENT_DIR)
+        MESSAGE(FATAL_ERROR "Could not find Ascent. Ascent requires explicit ASCENT_DIR.")
+    endif()
+
+    set(_ascent_config "${ASCENT_DIR}/lib/cmake/ascent/AscentConfig.cmake")
+    if(NOT EXISTS ${_ascent_config})
+        MESSAGE(FATAL_ERROR "Could not find Ascent CMake include file ${_ascent_config}")
+    endif()
+
+    find_package(Ascent REQUIRED
+                 NO_DEFAULT_PATH
+                 PATHS ${ASCENT_DIR}/lib/cmake)
+
+    # Manually set includes as system includes
+    get_target_property(_dirs ascent::ascent_mpi INTERFACE_INCLUDE_DIRECTORIES)
+    set_property(TARGET ascent::ascent_mpi
+                 APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                 "${_dirs}")
 
     #------------------------------------------------------------------------------
     # PETSC
@@ -241,6 +250,13 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     if(CALIPER_DIR)
         serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
 
+        # Should this logic be in the Caliper CMake package?
+        # If CMake version doesn't support CUDAToolkit the libraries
+        # are just "baked in"
+        if(ENABLE_CUDA AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
+            find_package(CUDAToolkit REQUIRED)
+        endif()
+
         find_package(caliper REQUIRED NO_DEFAULT_PATH 
                      PATHS ${CALIPER_DIR})
         message(STATUS "Caliper support is ON")
@@ -264,8 +280,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
     list(APPEND _props INTERFACE_COMPILE_OPTIONS)
 
-    # This flag is empty due to us not enabling fortran but we need to strip it so it doesnt propagate
-    # in our project
+    # This flag is empty due to us not enabling fortran but we need to strip it
+    # so it doesn't propagate in our project
     if("${OpenMP_Fortran_FLAGS}" STREQUAL "")
         set(OpenMP_Fortran_FLAGS "$<$<NOT:$<COMPILE_LANGUAGE:Fortran>>:-fopenmp=libomp>;$<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>")
     endif()
@@ -288,4 +304,51 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         endif()
     endforeach()
 
+    #---------------------------------------------------------------------------
+    # Remove non-existant INTERFACE_INCLUDE_DIRECTORIES from imported targets
+    # to work around CMake error
+    #---------------------------------------------------------------------------
+    set(_imported_targets
+        ascent::ascent_mpi
+        axom
+        conduit
+        conduit::conduit_mpi
+        conduit::conduit
+        conduit_relay_mpi
+        conduit_relay_mpi_io
+        conduit_blueprint
+        conduit_blueprint_mpi)
+
+    foreach(_target ${_imported_targets})
+        if(TARGET ${_target})
+            message(STATUS "Removing non-existant include directories from target[${_target}]")
+
+            get_target_property(_dirs ${_target} INTERFACE_INCLUDE_DIRECTORIES)
+            set(_existing_dirs)
+            foreach(_dir ${_dirs})
+                if (EXISTS "${_dir}")
+                    list(APPEND _existing_dirs "${_dir}")
+                endif()
+            endforeach()
+            if (_existing_dirs)
+                set_target_properties(${_target} PROPERTIES
+                                      INTERFACE_INCLUDE_DIRECTORIES "${_existing_dirs}" )
+            endif()
+        endif()
+    endforeach()
+
+    # List of TPL targets built in to BLT - will need to be adjusted when we start using HIP
+    set(TPL_DEPS)
+    blt_list_append(TO TPL_DEPS ELEMENTS cuda cuda_runtime IF ENABLE_CUDA)
+    blt_list_append(TO TPL_DEPS ELEMENTS mpi IF ENABLE_MPI)
+
+    foreach(dep ${TPL_DEPS})
+        # If the target is EXPORTABLE, add it to the export set
+        get_target_property(_is_imported ${dep} IMPORTED)
+        if(NOT ${_is_imported})
+            install(TARGETS              ${dep}
+                    EXPORT               serac-targets
+                    DESTINATION          lib)
+        endif()
+    endforeach()
 endif()

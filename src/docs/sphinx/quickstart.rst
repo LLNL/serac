@@ -26,7 +26,7 @@ Serac is hosted on `GitHub <https://github.com/LLNL/serac>`_. Serac uses git sub
 Overview of the Serac build process
 ------------------------------------
 
-The serac build process has been broken into three phases with various related options:
+The Serac build process has been broken into three phases with various related options:
 
 1. (Optional) Build the developer tools
 2. Build the third party libraries
@@ -37,6 +37,12 @@ third party libraries that are required by Serac. Two options exist for this pro
 via the `uberenv wrapper script <https://github.com/LLNL/uberenv>`_ or building the required dependencies on your own. We recommend the first
 option as building HPC libraries by hand can be a tedious process. Once the third party libraries are built, Serac can be built using the
 cmake-based `BLT HPC build system <https://github.com/LLNL/blt>`_.
+
+.. note::
+  If you get the following error ``ERROR: pip version 19.0.3 is too old to install clingo``, run the
+  following command to upgrade your pip: ``python3 -m pip install --user --upgrade pip``.  This error
+  will not necessarily be the last error on the screen.
+
 
 Building Serac's Developer Tools
 --------------------------------
@@ -61,7 +67,13 @@ For other machines:
 
 .. code-block:: bash
 
-   $ python scripts/uberenv/uberenv.py --project-json=scripts/uberenv/devtools.json --prefix=<devtool/build/path>
+   $ python scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=<spack/config/dir> --prefix=<devtool/build/path>
+
+For example on **Ubuntu 20.04**:
+
+.. code-block:: bash
+
+   python scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install
 
 Unlike Serac's library dependencies, our developer tools can be built with any compiler because
 they are not linked into the serac executable.  We recommend GCC 8 because we have tested that they all
@@ -83,7 +95,7 @@ This has been encapsulated using `Uberenv <https://github.com/LLNL/uberenv>`_. U
 doing the following:
 
 * Pulls a blessed version of Spack locally
-* If you are on a known operating system (like TOSS3), we have defined spack configuration files
+* If you are on a known operating system (like TOSS3), we have defined Spack configuration files
   to keep Spack from building the world
 * Installs our Spack packages into the local Spack
 * Simplifies whole dependency build into one command
@@ -226,7 +238,7 @@ install cmake, MPICH, openblas, OpenGL, and the various developer tools using th
 
    $ sudo apt-get update
    $ sudo apt-get upgrade
-   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-sphinx clang-format-10
+   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-sphinx python3-pip clang-format-10
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
 **Ubuntu 18.04**
@@ -237,7 +249,7 @@ install cmake, MPICH, openblas, OpenGL, and the various developer tools using th
    $ sudo apt-get upgrade
    $ sudo apt-get install g++-8 gcc-8
    $ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
-   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-distutils
+   $ sudo apt-get install cmake libopenblas-dev libopenblas-base mpich mesa-common-dev libglu1-mesa-dev freeglut3-dev cppcheck doxygen libreadline-dev python3-distutils python3-pip
    $ sudo ln -s /usr/lib/x86_64-linux-gnu/* /usr/lib
 
 Note that the last line is required since Spack expects the system libraries to exist in a directory
@@ -246,8 +258,34 @@ must be specified using either:
 
 **Ubuntu 20.04**
 
-``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_20``
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install``
 
 **Ubuntu 18.04**
 
-``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_18``
+``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_18 --prefix=../path/to/install``
+
+Preparing OSX for Serac Installation
+------------------------------------
+
+.. warning::
+   These instructions are in development and are only one example of how to handle this.
+
+.. warning::
+   OSX MPI may throw a popup that causes all MPI runs to fail.
+
+Install required compilers and MPI via `homebrew <https://brew.sh/>`_:
+
+.. code-block:: bash
+
+  $ brew install gcc@8
+  $ brew install llvm@11
+  $ brew install mpich
+
+Build third-party libraries via Uberenv:
+
+``python scripts/uberenv/uberenv.py --spec=%apple-clang@11.0.1 --prefix=../path/to/install``
+
+.. note::
+   You may need to alter the compiler spec inside ``scripts/spack/configs/darwin/compilers.yaml``.
+   The checked-in version worked for one developer but often needs to be changed for installed compiler
+   paths as well as `operating_system` to match your machine.

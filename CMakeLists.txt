@@ -10,10 +10,18 @@
 
 cmake_minimum_required(VERSION 3.8)
 
-project(serac LANGUAGES CXX)
+project(serac LANGUAGES CXX C)
 
 # MPI is required in Serac.
 set(ENABLE_MPI ON CACHE BOOL "")
+
+if (NOT MPI_C_COMPILER OR NOT MPI_CXX_COMPILER)
+message(FATAL_ERROR 
+"Serac requires MPI.  It is required to provide the MPI C/C++ "
+"compiler wrappers via the CMake variables, "
+"MPI_C_COMPILER and MPI_CXX_COMPILER."
+)
+endif()
 
 # Save off "raw" flags before they are modified by serac/BLT
 set(RAW_CMAKE_C_FLAGS   ${CMAKE_C_FLAGS}   CACHE STRING "")
@@ -44,13 +52,44 @@ endif()
 if (NOT BLT_CXX_STD)
     set(BLT_CXX_STD "c++17" CACHE STRING "")
 endif()
-set(ENABLE_ASTYLE      OFF CACHE BOOL "")
-set(ENABLE_CLANGQUERY  OFF CACHE BOOL "")
-set(ENABLE_UNCRUSTIFY  OFF CACHE BOOL "")
+
+# These BLT tools are not used in Serac, turn them off
+set(_unused_blt_tools
+    CLANGQUERY
+    VALGRIND
+    ASTYLE
+    CMAKEFORMAT
+    UNCRUSTIFY
+    YAPF)
+foreach(_tool ${_unused_blt_tools})
+    set(ENABLE_${_tool} OFF CACHE BOOL "")
+endforeach()
+
+# These BLT tools are only used by Serac developers, so turn them off
+# unless an explicit executable path is given
+set(_used_blt_tools
+    CLANGFORMAT
+    CLANGTIDY
+    CPPCHECK
+    DOXYGEN
+    SPHINX)
+foreach(_tool ${_used_blt_tools})
+    if(NOT ${_tool}_EXECUTABLE)
+        set(ENABLE_${_tool} OFF CACHE BOOL "")
+    else()
+        set(ENABLE_${_tool} ON CACHE BOOL "")
+    endif()
+endforeach()
+
+set(BLT_REQUIRED_CLANGFORMAT_VERSION  "10" CACHE STRING "")
+
 set(ENABLE_BENCHMARKS  OFF CACHE BOOL "")
 
 set(ENABLE_ALL_WARNINGS ON CACHE BOOL "")
 set(ENABLE_WARNINGS_AS_ERRORS ON CACHE BOOL "")
+
+# Allows MPI/CUDA/etc targets to be exported in the serac namespace
+set(BLT_EXPORT_THIRDPARTY ON CACHE BOOL "")
 
 include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 
@@ -99,9 +138,12 @@ add_subdirectory(examples)
 # Add Code Checks
 #------------------------------------------------------------------------------
 
-serac_add_code_checks(PREFIX   serac
-                      INCLUDES /src/ /tests/
-                      EXCLUDES cmake/blt uberenv_libs)
+message(STATUS "Serac Code Checks: ${SERAC_ENABLE_CODE_CHECKS}")
+if (SERAC_ENABLE_CODE_CHECKS)
+    serac_add_code_checks(PREFIX   serac
+                          INCLUDES /src/ /tests/
+                          EXCLUDES cmake/blt uberenv_libs)
+endif()
 
 #------------------------------------------------------------------------------
 # Export Targets

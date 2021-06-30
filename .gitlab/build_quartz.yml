@@ -7,71 +7,74 @@
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /_qnone/ || $ON_QUARTZ == "OFF"' #run except if ...
       when: never
-    - if: '$CI_JOB_NAME =~ /release_resources_build_quartz/'
+    - if: '$CI_JOB_NAME =~ /quartz_release/'
       when: always
     - when: on_success
 
 ####
 # In pre-build phase, allocate a node for builds
-allocate_resources_build_quartz:
+quartz_allocate:
   variables:
     GIT_STRATEGY: none
-  extends: [.on_quartz, .pr_workflow]
-  stage: q_allocate_resources
+  extends: [.on_quartz, .src_workflow]
+  stage: allocate
   script:
-    - salloc ${SLURM_ACCOUNT} -N 1 -c 36 -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
+    - salloc -p pdebug -A ${ALLOC_BANK} -N 1 -c 36 -t 30 --no-shell --job-name=${PROJECT_ALLOC_NAME}
   needs: []
 
 ####
 # In post-build phase, deallocate resources
 # Note : make sure this is run even on build phase failure
-release_resources_build_quartz:
+quartz_release:
   variables:
     GIT_STRATEGY: none
-  extends: [.on_quartz, .pr_workflow]
-  stage: q_release_resources
+  extends: [.on_quartz, .src_workflow]
+  stage: release
   script:
     - export JOBID=$(squeue -h --name=${PROJECT_ALLOC_NAME} --format=%A)
     - if [[ -n "${JOBID}" ]]; then scancel ${JOBID}; fi
 
 ####
 # Template
-.pr_build_on_quartz:
-  stage: q_build
-  extends: [.srun_build_script, .on_quartz, .pr_workflow]
-  needs: [allocate_resources_build_quartz]
+.src_build_on_quartz:
+  stage: build
+  variables:
+    ALLOC_COMMAND: "srun -p pdebug -A ${ALLOC_BANK} -t 10 -N 1 ${ASSIGN_ID}"
+  extends: [.src_build_script, .on_quartz, .src_workflow]
+  needs: [quartz_allocate]
 
-.main_build_with_deps_on_quartz:
-  stage: q_build_with_deps
-  extends: [.srun_build_with_deps_script, .on_quartz, .main_workflow]
+.full_build_on_quartz:
+  stage: build
+  variables:
+    ALLOC_COMMAND: "srun -p pdebug -A ${ALLOC_BANK} -t 45 -N 1"
+  extends: [.full_build_script, .on_quartz, .full_workflow]
   needs: []
-
-.main_build_devtools_on_quartz:
-  stage: q_build_devtools
-  extends: [.srun_build_devtools_script, .on_quartz, .main_workflow]
+  before_script:
+    # LC version of pip is ancient
+    - if [[ $(python3 -c 'import pip; print(pip.__version__ < "19.3")') == "True" ]]; then python3 -m pip install --user --upgrade pip; fi
 
 ####
 # Build jobs
-clang_10_0_0 (PR build_on_quartz):
+quartz-clang_10_0_0-src:
   variables:
     COMPILER: "clang@10.0.0"
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-${COMPILER}.cmake"
-  extends: .pr_build_on_quartz
+  extends: .src_build_on_quartz
 
-gcc_8_3_1 (PR build_on_quartz):
+quartz-gcc_8_3_1-src:
   variables:
     COMPILER: "gcc@8.3.1"
     HOST_CONFIG: "quartz-toss_3_x86_64_ib-${COMPILER}.cmake"
-  extends: .pr_build_on_quartz
+  extends: .src_build_on_quartz
 
-clang_10_0_0 (Main build_with_deps_on_quartz):
+quartz-clang_10_0_0-full:
   variables:
     COMPILER: "clang@10.0.0"
-    SPEC: "@develop%${COMPILER}"
-  extends: .main_build_with_deps_on_quartz
+    SPEC: "%${COMPILER}"
+  extends: .full_build_on_quartz
 
-gcc_8_3_1 (Main build_with_deps_on_quartz):
+quartz-gcc_8_3_1-full:
   variables:
     COMPILER: "gcc@8.3.1"
-    SPEC: "@develop%${COMPILER}"
-  extends: .main_build_with_deps_on_quartz
+    SPEC: "%${COMPILER}"
+  extends: .full_build_on_quartz

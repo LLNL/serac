@@ -10,6 +10,7 @@
 #include "serac/physics/integrators/traction_integrator.hpp"
 #include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 
@@ -73,7 +74,8 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   zero_ = 0.0;
 }
 
-Solid::Solid(const Solid::InputOptions& options) : Solid(options.order, options.solver_options, options.geom_nonlin)
+Solid::Solid(const Solid::InputOptions& options, const std::string& name)
+    : Solid(options.order, options.solver_options, options.geom_nonlin, FinalMeshOption::Deformed, name)
 {
   // This is the only other options stored in the input file that we can use
   // in the initialization stage
@@ -93,9 +95,9 @@ Solid::Solid(const Solid::InputOptions& options) : Solid(options.order, options.
   setViscosity(std::make_unique<mfem::ConstantCoefficient>(options.viscosity));
   setMassDensity(std::make_unique<mfem::ConstantCoefficient>(options.initial_mass_density));
 
-  for (const auto& [name, bc] : options.boundary_conditions) {
+  for (const auto& [bc_name, bc] : options.boundary_conditions) {
     // FIXME: Better naming for boundary conditions?
-    if (name.find("displacement") != std::string::npos) {
+    if (bc_name.find("displacement") != std::string::npos) {
       if (bc.coef_opts.isVector()) {
         std::shared_ptr<mfem::VectorCoefficient> disp_coef(bc.coef_opts.constructVector(dim));
         setDisplacementBCs(bc.attrs, disp_coef);
@@ -105,24 +107,24 @@ Solid::Solid(const Solid::InputOptions& options) : Solid(options.order, options.
         std::shared_ptr<mfem::Coefficient> disp_coef(bc.coef_opts.constructScalar());
         setDisplacementBCs(bc.attrs, disp_coef, *bc.coef_opts.component);
       }
-    } else if (name.find("traction") != std::string::npos) {
+    } else if (bc_name.find("traction") != std::string::npos) {
       std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
       if (geom_nonlin_ == GeometricNonlinearities::Off) {
         setTractionBCs(bc.attrs, trac_coef, true);
       } else {
         setTractionBCs(bc.attrs, trac_coef, false);
       }
-    } else if (name.find("traction_ref") != std::string::npos) {
+    } else if (bc_name.find("traction_ref") != std::string::npos) {
       std::shared_ptr<mfem::VectorCoefficient> trac_coef(bc.coef_opts.constructVector(dim));
       setTractionBCs(bc.attrs, trac_coef, true);
-    } else if (name.find("pressure") != std::string::npos) {
+    } else if (bc_name.find("pressure") != std::string::npos) {
       std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
       if (geom_nonlin_ == GeometricNonlinearities::Off) {
         setPressureBCs(bc.attrs, pres_coef, true);
       } else {
         setPressureBCs(bc.attrs, pres_coef, false);
       }
-    } else if (name.find("pressure_ref") != std::string::npos) {
+    } else if (bc_name.find("pressure_ref") != std::string::npos) {
       std::shared_ptr<mfem::Coefficient> pres_coef(bc.coef_opts.constructScalar());
       setPressureBCs(bc.attrs, pres_coef, true);
     } else {
@@ -467,7 +469,7 @@ using serac::DirichletEnforcementMethod;
 using serac::Solid;
 using serac::TimestepMethod;
 
-Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet::Container& base)
+serac::Solid::InputOptions FromInlet<serac::Solid::InputOptions>::operator()(const axom::inlet::Container& base)
 {
   Solid::InputOptions result;
 

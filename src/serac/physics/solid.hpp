@@ -105,7 +105,7 @@ public:
     /**
      * @brief Input file parameters specific to this class
      *
-     * @param[in] table Inlet container on which the input schema will be defined
+     * @param[in] container Inlet container on which the input schema will be defined
      **/
     static void defineInputFileSchema(axom::inlet::Container& container);
 
@@ -194,8 +194,9 @@ public:
    * @brief Construct a new Nonlinear Solid Solver object
    *
    * @param[in] options The solver information parsed from the input file
+   * @param[in] name An optional name for the physics module instance
    */
-  Solid(const InputOptions& options);
+  Solid(const InputOptions& options, const std::string& name = "");
 
   /**
    * @brief Set displacement boundary conditions
@@ -504,5 +505,6 @@ protected:
  */
 template <>
 struct FromInlet<serac::Solid::InputOptions> {
+  /// @brief Returns created object from Inlet container
   serac::Solid::InputOptions operator()(const axom::inlet::Container& base);
 };

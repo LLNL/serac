@@ -1,5 +1,4 @@
-Serac
-====
+# <img src="/share/serac/logo/serac-logo-blue.png?raw=true" width="150" alt="Serac"/>
 
 [![Build
 Status](https://dev.azure.com/llnl-serac/serac/_apis/build/status/LLNL.serac?branchName=develop)](https://dev.azure.com/llnl-serac/serac/_build/latest?definitionId=1&branchName=develop)
@@ -9,7 +8,7 @@ Status](https://dev.azure.com/llnl-serac/serac/_apis/build/status/LLNL.serac?bra
 
 Serac is a 3D implicit nonlinear thermal-structural simulation code. Its primary purpose is to investigate multiphysics 
 abstraction strategies and implicit finite element-based algorithm development for emerging computing architectures. 
-It also serves as a proxy-app for LLNL's Smith code.
+It also serves as a proxy-app for LLNL's Smith code and heavily leverages the [MFEM finite element library](https://mfem.org/).
 
 Documentation
 ------
