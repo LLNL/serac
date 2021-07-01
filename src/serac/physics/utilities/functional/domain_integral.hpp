@@ -293,21 +293,20 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int Q,
-          typename derivatives_type>
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
                             int num_elements)
 {
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
   //  using element_residual_type      = typename trial_element::residual_type;
-  static constexpr int                  test_ndof        = test_element::ndof;
-  static constexpr int                  test_dim         = test_element::components;
-  static constexpr int                  trial_ndof       = trial_element::ndof;
-  static constexpr int                  trial_dim        = test_element::components;
-  static constexpr auto                 rule             = GaussQuadratureRule<g, Q>();
-  static constexpr int                  dim              = dimension_of(g);
-  [[maybe_unused]] static constexpr int curl_dim = dim == 3 ? 3 : 1;
+  static constexpr int                  test_ndof  = test_element::ndof;
+  static constexpr int                  test_dim   = test_element::components;
+  static constexpr int                  trial_ndof = trial_element::ndof;
+  static constexpr int                  trial_dim  = test_element::components;
+  static constexpr auto                 rule       = GaussQuadratureRule<g, Q>();
+  static constexpr int                  dim        = dimension_of(g);
+  [[maybe_unused]] static constexpr int curl_dim   = dim == 3 ? 3 : 1;
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -322,9 +321,9 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       // get the position of this quadrature point in the parent and physical space,
       // and calculate the measure of that point in physical space.
-      auto                    xi_q  = rule.points[q];
-      auto                    dxi_q = rule.weights[q];
-      auto                    J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      auto                    xi_q   = rule.points[q];
+      auto                    dxi_q  = rule.weights[q];
+      auto                    J_q    = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
       auto                    detJ_q = det(J_q);
       [[maybe_unused]] double dx     = detJ_q * dxi_q;
 
@@ -578,8 +577,7 @@ public:
     };
 
     gradient_mat_ = [=](mfem::Vector& K_e) {
-      gradient_matrix_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(),
-                                                                                              J_, num_elements);
+      gradient_matrix_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_, num_elements);
     };
   }
 

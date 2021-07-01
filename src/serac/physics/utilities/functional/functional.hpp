@@ -22,7 +22,6 @@
 #include "serac/physics/utilities/functional/boundary_integral.hpp"
 #include "serac/numerics/assembled_sparse_matrix.hpp"
 
-
 namespace serac {
 
 /**
