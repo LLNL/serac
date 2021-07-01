@@ -6,6 +6,7 @@
 
 # Then add the examples/tests
 set(functional_tests_serial
+    functional_boundary_test.cpp # NOTE: this only works in serial due to a possible MFEM bug
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp)
@@ -25,7 +26,6 @@ endforeach()
 
 # Then add the examples/tests
 set(functional_tests_mpi
-    functional_boundary_test.cpp
     functional_comparisons.cpp
     functional_comparison_L2.cpp
     )

@@ -29,7 +29,6 @@ constexpr bool verbose     = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-
 mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
 {
   // Open the mesh
@@ -52,11 +51,11 @@ mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
   return mfem::Mesh{imesh, 1, 1, true};
 }
 
-namespace mesh{
-
+namespace mesh {
 
 std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, const int refine_serial = 0,
-                                                   const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD) {
+                                                   const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD)
+{
   // Serial refinement first
   for (int lev = 0; lev < refine_serial; lev++) {
     serial_mesh.UniformRefinement();
@@ -71,7 +70,7 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, con
   return parallel_mesh;
 }
 
-}
+}  // namespace mesh
 
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
@@ -81,10 +80,10 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
-  mfem::ParLinearForm                f(&fespace);
+  mfem::ParLinearForm             f(&fespace);
   mfem::FunctionCoefficient       scalar_function([&](const mfem::Vector& coords) { return coords(0) * coords(1); });
   mfem::VectorFunctionCoefficient vector_function(dim, [&](const mfem::Vector& coords, mfem::Vector& output) {
-    output = 0.0;
+    output    = 0.0;
     output[0] = sin(coords[0]);
     output[1] = coords[0] * coords[1];
   });
@@ -143,7 +142,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   auto                        fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
-  mfem::ParLinearForm          f(&fespace);
+  mfem::ParLinearForm       f(&fespace);
   mfem::FunctionCoefficient scalar_function([&](const mfem::Vector& coords) { return coords(0) * coords(1); });
   f.AddBdrFaceIntegrator(new mfem::BoundaryLFIntegrator(scalar_function, 2, 0));
 
