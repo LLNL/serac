@@ -3,15 +3,16 @@ name: Docker TPL build
 # Manually triggered
 on:
   workflow_dispatch:
-    # No input required
+    inputs:
+      image-name:
+          description: 'Image to build (clang-10 or gcc-8)'
+          required: true
+          default: 'clang-10'
 
 jobs:
   build_images:
     runs-on: ubuntu-latest
     name: Builds a docker image and extracts generated hostconfigs
-    strategy:
-      matrix:
-        compiler: [clang-10, gcc-8]
     env:
       REPO: seracllnl/tpls
       HOSTCONFIG_LOC: /home/serac/export_hostconfig
@@ -23,14 +24,14 @@ jobs:
       id: extract_branch
     - name: Get dockerfile name
       shell: bash
-      run: echo "##[set-output name=filename;]$(echo ${DOCKERFILE_PREFIX}${{ matrix.compiler }})"
+      run: echo "##[set-output name=filename;]$(echo ${DOCKERFILE_PREFIX}${{ github.event.inputs.image-name }})"
       id: dockerfile_name
     - name: Get dockerhub repo name
       shell: bash
       run: |
-        echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`
-        echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${{ matrix.compiler }}_`date "+%m-%d-%y_%Hh-%Mm"`)"
-        echo "##[set-output name=repo_plus_latest;]$(echo ${REPO}:${{ matrix.compiler }}_latest)"
+        echo ${REPO}:${{ github.event.inputs.image-name }}_`date "+%m-%d-%y_%Hh-%Mm"`
+        echo "##[set-output name=repo_plus_tag;]$(echo ${REPO}:${{ github.event.inputs.image-name }}_`date "+%m-%d-%y_%Hh-%Mm"`)"
+        echo "##[set-output name=repo_plus_latest;]$(echo ${REPO}:${{ github.event.inputs.image-name }}_latest)"
       id: repo_name
 
     - name: Checkout
@@ -68,5 +69,5 @@ jobs:
     - name: Upload hostconfig
       uses: actions/upload-artifact@v2
       with:
-        name: ${{ matrix.compiler }}_hostconfigs
+        name: ${{ github.event.inputs.image-name }}_hostconfigs
         path: ./extracted_hc/export_hostconfig/*
