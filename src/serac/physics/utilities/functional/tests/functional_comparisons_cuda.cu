@@ -77,12 +77,14 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   SERAC_PROFILE_VOID_EXPR(serac::profiling::concat("mfem_fAssemble", postfix), f.Assemble());
   std::unique_ptr<mfem::HypreParVector> F(
       SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
+  F->UseDevice(true);
 
   // Set a random state to evaluate the residual
   mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
   mfem::Vector U(fespace.TrueVSize());
+  U.UseDevice(true);
   u_global.GetTrueDofs(U);
 
   // Set up the same problem using functional
@@ -107,10 +109,14 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
       mesh);
 
   // Compute the residual using standard MFEM methods
-  mfem::Vector r1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_Apply", postfix), (*J) * U - (*F), nsamples);
+  mfem::Vector r1(U.Size());
+  J->Mult(U, r1);
+  r1 -= *F;
+
+  std::cout << "using device: " << r1.UseDevice() << std::endl;
 
   // Compute the residual using functional
-  mfem::Vector r2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_Apply", postfix), residual(U), nsamples);
+  mfem::Vector r2 = residual(U);
 
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
@@ -411,26 +417,14 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, con
 }
 /** CUDA workaround end **/
 
-__global__ void print_hello_world ()
-{
-  printf("hello world\n");
-}
 
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
 
-  MPI_Init(&argc, &argv);
-  // std::cout << "mfem::Device CUDA:" << (mfem::Device::Allows(mfem::Backend::CUDA) ? "true" : "false") << std::endl; // false
-  // serac::initialize(argc, argv);
-
+  std::cout << "mfem::Device CUDA:" << (mfem::Device::Allows(mfem::Backend::CUDA) ? "true" : "false") << std::endl; // false
+  auto [num_procs, myid] = serac::initialize(argc, argv);
   std::cout << "mfem::Device CUDA:" << (mfem::Device::Allows(mfem::Backend::CUDA) ? "true" : "false") << std::endl; // true if we call serac::initialize
-
-
-  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
-  axom::slic::SimpleLogger logger;
 
   int serial_refinement   = 1;
   int parallel_refinement = 0;
@@ -451,9 +445,6 @@ int main(int argc, char* argv[])
   if (myid == 0) {
     args.PrintOptions(std::cout);
   }
-
-  print_hello_world<<<1,1>>>();
-  serac::detail::displayLastCUDAErrorMessage(std::cout);
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
   mesh2D                 = refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);

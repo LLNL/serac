@@ -39,21 +39,17 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
   // __global__ void eval_cuda(const mfem::DeviceTensor<2, const double>& u, mfem::DeviceTensor<2, double>& r, derivatives_type* derivatives_ptr,
   // 			    const mfem::DeviceTensor<4, const double>& J, const mfem::DeviceTensor<3, const double>& X, int num_elements, lambda qf) {
   template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q, typename derivatives_type, typename lambda>
-  __global__ void eval_cuda(const mfem::DeviceTensor<2, const double>& u, mfem::DeviceTensor<2, double>& r, derivatives_type* derivatives_ptr, const mfem::DeviceTensor<4, const double>& J, const mfem::DeviceTensor<3, const double>& X, int num_elements, lambda qf) {
-
-
+  __global__ void eval_cuda(const mfem::DeviceTensor<2, const double> u, mfem::DeviceTensor<2, double> r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) {
 
     using test_element               = finite_element<g, test>;
     using trial_element              = finite_element<g, trial>;
     using element_residual_type      = typename trial_element::residual_type;
-    // // static constexpr int  test_ndof  = test_element::ndof;
-    // // static constexpr int  trial_ndof = trial_element::ndof;
     static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
     // for each element in the domain
     for (int e = 0; e < num_elements; e++) {
       // get the DOF values for this particular element
-      tensor u_elem = detail::Load<trial_element>(u, e);
+      auto u_elem = detail::Load<trial_element>(u, e);
 
       // this is where we will accumulate the element residual tensor
       element_residual_type r_elem{};
@@ -84,8 +80,9 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
       	// here, we store the derivative of the q-function w.r.t. its input arguments
       	//
       	// this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
-	// NOTE: Comment this back in later!
-	//      	derivatives_ptr[e * int(rule.size()) + q] = get_gradient(qf_output);
+
+	      // NOTE: Comment this back in later!
+       	derivatives_ptr[e * int(rule.size()) + q] = get_gradient(qf_output);
       }
 
       // once we've finished the element integration loop, write our element residuals
@@ -94,10 +91,6 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
 
     } // e loop
 
-  }
-
-  __global__ void testing() {
-    printf("testing 1.2.3\n");
   }
 
 template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
@@ -128,16 +121,24 @@ const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
-
   uint32_t num_quadrature_points = rule.size() * num_elements;
-  // derivatives_type * qf_derivatives_temp;
-  // cudaMalloc(&qf_derivatives_temp, sizeof(derivatives_type) * num_quadrature_points);
-  int* qf_derivatives_temp;
-  cudaMalloc(&qf_derivatives_temp, sizeof(int) * num_quadrature_points);
 
+  using T1 = serac::tuple<serac::tuple<double, serac::zero>, serac::tuple<serac::zero, serac::tensor<double, 2, 2>>>;
+  using T2 = serac::tuple<serac::tuple<double, serac::zero>, serac::tuple<serac::outer_product_t<serac::tensor<double, 2>, serac::zero>, serac::outer_product_t<serac::tensor<double, 2>, serac::tensor<double, 2>>>>;
   
-  serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh before eval_cuda is fine");
+  T1 * qf_derivatives;
+  cudaMalloc(&qf_derivatives, sizeof(T1) * num_quadrature_points);
 
+//  T2 * qf_derivatives;
+//  cudaMalloc(&qf_derivatives, sizeof(T2) * num_quadrature_points);
+
+  //int * q = qf_derivatives;
+
+  std::cout << qf_derivatives << std::endl;
+  std::cout << u << std::endl;
+
+  cudaDeviceSynchronize();
+  serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh before eval_cuda is fine");
 
   //testing <<<1,1>>> ();
   // eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q> <<<1,1>>>(u, r, derivatives_ptr, J, X, num_elements, qf  );
@@ -145,13 +146,13 @@ const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
   // Note: CUDA does not seem to like derivatives_type?
   // eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda ><<<1,1>>>(u, r, qf_derivatives_temp, J, X, num_elements, qf);
 
-  eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q, int, lambda ><<<1,1>>>(u, r, qf_derivatives_temp, J, X, num_elements, qf);
+  //eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q, int, lambda ><<<1,1>>>(u, r, qf_derivatives_temp, J, X, num_elements, qf);
+  eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q ><<<1,1>>>(u, r, qf_derivatives, J, X, num_elements, qf);
 
-
-  serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh after eval_cuda is fine");
   cudaDeviceSynchronize();
+  serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh after eval_cuda is fine");
 
-  cudaFree(qf_derivatives_temp);
+  cudaFree(qf_derivatives);
 
   // copy back to host?
   R.HostRead();
