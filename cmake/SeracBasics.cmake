@@ -14,7 +14,16 @@ if(ENABLE_ASAN)
     endif()
 endif()
 
-option(ENABLE_LUMBERJACK "Enable Axom's Lumberjack component" ON)
+option(SERAC_ENABLE_LUMBERJACK "Enable Axom's Lumberjack component" ON)
+
+# Only enable Serac's code checks by default if it is the top-level project
+# or a user overrides it
+if("${CMAKE_PROJECT_NAME}" STREQUAL "serac")
+    set(_enable_serac_code_checks ON)
+else()
+    set(_enable_serac_code_checks OFF)
+endif()
+option(SERAC_ENABLE_CODE_CHECKS "Enable Serac's code checks" ${_enable_serac_code_checks})
 
 #------------------------------------------------------------------------------
 # Create symlink in installed bin

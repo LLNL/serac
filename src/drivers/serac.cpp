@@ -29,6 +29,7 @@
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/thermal_solid.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -197,7 +198,7 @@ int main(int argc, char* argv[])
   }
 
   if (output_fields) {
-    serac::output::outputFields(datastore, "serac_fields", t, serac::output::Language::JSON);
+    serac::output::outputFields(datastore, serac::StateManager::collectionName(), t, serac::output::Language::JSON);
   }
 
   serac::exitGracefully();

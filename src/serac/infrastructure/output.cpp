@@ -9,7 +9,6 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
-#include "serac/physics/utilities/finite_element_state.hpp"
 
 #include "conduit/conduit.hpp"
 #include "ascent/ascent.hpp"
@@ -19,7 +18,7 @@
 
 namespace serac::output {
 
-void outputFields(const axom::sidre::DataStore& datastore, const std::string& file_name_prefix, double time,
+void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name, double time,
                   const Language language)
 {
   SLIC_INFO_ROOT(fmt::format("Outputting field data at time: {}", time));
@@ -46,16 +45,15 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& fi
   // "relay" is the Ascents Extract type for saving data
   extracts["e1/type"]            = "relay";
   auto [_, rank]                 = serac::getMPIInfo();
-  extracts["e1/params/path"]     = fmt::format("{}.{}.{}", file_name_prefix, rank, output_language);
+  extracts["e1/params/path"]     = fmt::format("{}_fields.{}.{}", data_collection_name, rank, output_language);
   extracts["e1/params/protocol"] = output_language;
 
   // Get domain Sidre group
-  // TODO: get this from StateManager directly?
-  const axom::sidre::Group* sidre_root      = datastore.getRoot();
-  const std::string         collection_name = StateManager::collectionName();
-  SLIC_ERROR_ROOT_IF(!sidre_root->hasGroup(collection_name),
-                     fmt::format("Expected a datacollection root at '{0}' but it was not found", collection_name));
-  const axom::sidre::Group* domain_grp = sidre_root->getGroup(collection_name);
+  const axom::sidre::Group* sidre_root = datastore.getRoot();
+  SLIC_ERROR_ROOT_IF(
+      !sidre_root->hasGroup(data_collection_name),
+      fmt::format("Expected a Sidre Data Collection root at '{0}' but it was not found", data_collection_name));
+  const axom::sidre::Group* domain_grp = sidre_root->getGroup(data_collection_name);
 
   // Add field names to extract field lists
   SLIC_ERROR_ROOT_IF(!domain_grp->hasGroup("blueprint/fields"), "Data Collection did not have `fields`!");

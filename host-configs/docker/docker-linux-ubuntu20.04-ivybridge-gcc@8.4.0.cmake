@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 # Compilers
 #------------------------------------------------------------------------------
-# Compiler Spec: gcc@8.1.0
+# Compiler Spec: gcc@8.4.0
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
@@ -59,7 +59,7 @@ set(ENABLE_MPI ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/home/serac/serac_tpls/gcc-8.1.0" CACHE PATH "")
+set(TPL_ROOT "/home/serac/serac_tpls/gcc-8.4.0" CACHE PATH "")
 
 set(ASCENT_DIR "${TPL_ROOT}/ascent-0.7.1serac" CACHE PATH "")
 
@@ -93,12 +93,12 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 # Devtools
 #------------------------------------------------------------------------------
 
-# Clang tools disabled due to disabled devtools
+# Code checks disabled due to disabled devtools
+
+set(SERAC_ENABLE_CODE_CHECKS OFF CACHE BOOL "")
 
 set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
 
 set(ENABLE_CLANGTIDY OFF CACHE BOOL "")
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
-
-
