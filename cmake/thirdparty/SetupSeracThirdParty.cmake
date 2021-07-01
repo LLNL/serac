@@ -212,8 +212,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src)
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
         # Mark the axom includes as "system"
-        get_target_property(_axom_includes axom INCLUDE_DIRECTORIES)
-        target_include_directories(axom SYSTEM INTERFACE $<BUILD_INTERFACE:${_axom_includes}>)
+        get_target_property(_axom_includes axom INTERFACE_INCLUDE_DIRECTORIES)
+        # target_include_directories(axom SYSTEM INTERFACE $<BUILD_INTERFACE:${_axom_includes}>)
+        set_target_properties(axom PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${_axom_includes}>")
+        set_target_properties(axom PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${_axom_includes}>")
+        get_target_property(_axom_includes axom INTERFACE_INCLUDE_DIRECTORIES)
+        message(STATUS "includes are ${_axom_includes}")
     endif()
 
     #------------------------------------------------------------------------------
