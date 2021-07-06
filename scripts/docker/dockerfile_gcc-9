@@ -24,5 +24,5 @@ RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac/*.cmake /home/serac/export_hostconfig
 
 # Make sure the new hostconfig worked
-RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
+RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j4 && make -j4 test
 RUN rm -rf serac
