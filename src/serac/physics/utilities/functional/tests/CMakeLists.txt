@@ -71,7 +71,7 @@ if(ENABLE_CUDA)
         blt_add_executable(NAME        ${test_name}
                            SOURCES     ${filename}
                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                           DEPENDS_ON  gtest serac_functional ${functional_depends} cuda
+                           DEPENDS_ON  gtest serac_functional ${functional_depends} cuda cuda_runtime
                            FOLDER      serac/tests)
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}

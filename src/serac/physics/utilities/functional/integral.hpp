@@ -537,83 +537,28 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
   }
 }
 
-/// @cond
-namespace detail {
+/**
+ * @brief create shared_ptr to an array of `n` values of type `T`, either on the host or device
+ * @tparam T the type of the value to be stored in the array 
+ * @tparam execution_policy the memory space where the data lives
+ * @param n how many entries to allocate in the array
+ */
+template <typename T, typename execution_policy>
+std::shared_ptr < T > make_shared_array(int n) {
 
-// /**
-//  * @brief a class that helps to extract the test space from a function signature template parameter
-//  * @tparam space The function signature itself
-//  */
-// template <typename spaces>
-// struct get_test_space;  // undefined
+  if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
+    T * data = (T *)malloc(sizeof(T) * n);
+    auto deleter = [](auto ptr){ free(ptr); };    
+    return std::shared_ptr < T >(data, deleter);    
+  }
 
-// /**
-//  * @brief a class that helps to extract the test space from a function signature template parameter
-//  * @tparam space The function signature itself
-//  */
-// template <typename test_space, typename trial_space>
-// struct get_test_space<test_space(trial_space)> {
-//   using type = test_space;  ///< the test space
-// };
-
-// /**
-//  * @brief a class that helps to extract the trial space from a function signature template parameter
-//  * @tparam space The function signature itself
-//  */
-// template <typename spaces>
-// struct get_trial_space;  // undefined
-
-// /**
-//  * @brief a class that helps to extract the trial space from a function signature template parameter
-//  * @tparam space The function signature itself
-//  */
-// template <typename test_space, typename trial_space>
-// struct get_trial_space<test_space(trial_space)> {
-//   using type = trial_space;  ///< the trial space
-// };
-
-// /**
-//  * @brief a class that provides the lambda argument types for a given integral
-//  * @tparam trial_space the trial space associated with the integral
-//  * @tparam geometry_dim the dimensionality of the element type
-//  * @tparam spatial_dim the dimensionality of the space the mesh lives in
-//  */
-// template <typename space, int geometry_dim, int spatial_dim>
-// struct lambda_argument;
-
-// // specialization for an H1 space with polynomial order p, and c components
-// template <int p, int c, int dim>
-// struct lambda_argument<H1<p, c>, dim, dim> {
-//   using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
-// };
-
-// // specialization for an L2 space with polynomial order p, and c components
-// template <int p, int c, int dim>
-// struct lambda_argument<L2<p, c>, dim, dim> {
-//   using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
-// };
-
-// // specialization for an H1 space with polynomial order p, and c components
-// // evaluated in a line integral or surface integral. Note: only values are provided in this case
-// template <int p, int c, int geometry_dim, int spatial_dim>
-// struct lambda_argument<H1<p, c>, geometry_dim, spatial_dim> {
-//   using type = reduced_tensor<double, c>;
-// };
-
-// // specialization for an Hcurl space with polynomial order p in 2D
-// template <int p>
-// struct lambda_argument<Hcurl<p>, 2, 2> {
-//   using type = serac::tuple<tensor<double, 2>, double>;
-// };
-
-// // specialization for an Hcurl space with polynomial order p in 3D
-// template <int p>
-// struct lambda_argument<Hcurl<p>, 3, 3> {
-//   using type = serac::tuple<tensor<double, 3>, tensor<double, 3> >;
-// };
-
-}  // namespace detail
-/// @endcond
+  if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
+    T * data;
+    cudaMalloc(&data, sizeof(T) * n);    
+    auto deleter = [](T * ptr){ cudaFree(ptr); };    
+    return std::shared_ptr< T >(data, deleter);    
+  }
+}
 
 /**
  * @brief a type function that extracts the test space from a function signature template parameter
@@ -673,7 +618,8 @@ public:
     // the derivative information at each quadrature point
     using x_t             = tensor<double, spatial_dim>;
     using u_du_t          = typename detail::lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
-    using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
+    using qf_output_t = decltype(qf(std::declval<x_t>(), make_dual(std::declval<u_du_t>())));
+    using derivative_type = decltype(get_gradient(std::declval<qf_output_t>()));
 
     // the derivative_type data is stored in a shared_ptr here, because it can't be a
     // member variable on the Integral class template (since it depends on the lambda function,
@@ -686,7 +632,7 @@ public:
     //
     // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
     // qf_derivatives[e * quadrature_points_per_element + q]
-    std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
+    auto qf_derivatives = make_shared_array< derivative_type, execution_policy >(num_quadrature_points);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
@@ -695,6 +641,8 @@ public:
     //
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
+
+    //int * tmp = qf_derivatives.get();
 
     if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {

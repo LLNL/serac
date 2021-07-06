@@ -30,6 +30,21 @@ constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+static constexpr double a       = 1.7;
+static constexpr double b       = 2.1;
+
+template < int dim >
+struct thermal_qfunction{
+  template < typename x_t, typename temperature_t >
+  __host__ __device__ auto operator()(x_t x, temperature_t temperature) {
+    // get the value and the gradient from the input tuple
+    auto [u, du_dx] = temperature;
+    auto source     = a * u - (100 * x[0] * x[1]);
+    auto flux       = b * du_dx;
+    return serac::tuple{source, flux};
+  }
+};
+
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
 //
@@ -38,8 +53,6 @@ std::unique_ptr<mfem::ParMesh> mesh3D;
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  static constexpr double a       = 1.7;
-  static constexpr double b       = 2.1;
   std::string             postfix = concat("_H1<", p, ">");
 
   serac::profiling::initializeCaliper();
@@ -97,16 +110,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   Functional<test_space(trial_space), gpu_policy> residual(&fespace, &fespace);
 
   // Add the total domain residual term to the functional
-  residual.AddDomainIntegral(
-      Dimension<dim>{},
-      [] __device__ (auto x, auto temperature) {
-        // get the value and the gradient from the input tuple
-        auto [u, du_dx] = temperature;
-        auto source     = a * u - (100 * x[0] * x[1]);
-        auto flux       = b * du_dx;
-        return serac::tuple{source, flux};
-      },
-      mesh);
+  // note: NVCC's limited support for __device__ lambda functions
+  // means we have to use a functor class to describe the qfunction instead of a lambda
+  residual.AddDomainIntegral(Dimension<dim>{}, thermal_qfunction<dim>{}, mesh);
 
   // Compute the residual using standard MFEM methods
   mfem::Vector r1(U.Size());
@@ -156,8 +162,6 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
-  static constexpr double a       = 1.7;
-  static constexpr double b       = 2.1;
   std::string             postfix = concat("_H1<", p, ",", dim, ">");
 
   serac::profiling::initializeCaliper();
@@ -253,8 +257,6 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 {
-  static constexpr double a       = 1.7;
-  static constexpr double b       = 2.1;
   std::string             postfix = concat("_Hcurl<", p, ">");
   serac::profiling::initializeCaliper();
 

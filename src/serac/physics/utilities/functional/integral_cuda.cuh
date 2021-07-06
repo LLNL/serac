@@ -4,7 +4,6 @@
 #include "mfem/linalg/dtensor.hpp"
 
 #include "serac/physics/utilities/functional/integral_utilities.hpp"
-//#include "serac/physics/utilities/functional/integral.hpp"
 
 namespace serac {
 
@@ -121,43 +120,18 @@ const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
-  uint32_t num_quadrature_points = rule.size() * num_elements;
-
-  using T1 = serac::tuple<serac::tuple<double, serac::zero>, serac::tuple<serac::zero, serac::tensor<double, 2, 2>>>;
-  using T2 = serac::tuple<serac::tuple<double, serac::zero>, serac::tuple<serac::outer_product_t<serac::tensor<double, 2>, serac::zero>, serac::outer_product_t<serac::tensor<double, 2>, serac::tensor<double, 2>>>>;
-  
-  T1 * qf_derivatives;
-  cudaMalloc(&qf_derivatives, sizeof(T1) * num_quadrature_points);
-
-//  T2 * qf_derivatives;
-//  cudaMalloc(&qf_derivatives, sizeof(T2) * num_quadrature_points);
-
-  //int * q = qf_derivatives;
-
-  std::cout << qf_derivatives << std::endl;
-  std::cout << u << std::endl;
-
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh before eval_cuda is fine");
 
-  //testing <<<1,1>>> ();
-  // eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q> <<<1,1>>>(u, r, derivatives_ptr, J, X, num_elements, qf  );
-
-  // Note: CUDA does not seem to like derivatives_type?
-  // eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda ><<<1,1>>>(u, r, qf_derivatives_temp, J, X, num_elements, qf);
-
-  //eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q, int, lambda ><<<1,1>>>(u, r, qf_derivatives_temp, J, X, num_elements, qf);
-  eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q ><<<1,1>>>(u, r, qf_derivatives, J, X, num_elements, qf);
+  eval_cuda<g, test, trial, geometry_dim, spatial_dim, Q ><<<1,1>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
 
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh after eval_cuda is fine");
 
-  cudaFree(qf_derivatives);
-
   // copy back to host?
   R.HostRead();
 
-std::cout << "Host Read:" << std::endl;
+  std::cout << "Host Read:" << std::endl;
 
   X_.UseDevice(false);
   J_.UseDevice(false);
