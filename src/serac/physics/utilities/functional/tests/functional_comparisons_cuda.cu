@@ -131,7 +131,10 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   }
 
   // Test that the two residuals are equivalent
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
+  mfem::Vector error = r1;
+  error -= r2;
+
+  EXPECT_NEAR(0., error.Norml2() / r1.Norml2(), 1.e-14);
 
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
@@ -455,6 +458,8 @@ int main(int argc, char* argv[])
   mesh3D                 = refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   int result = RUN_ALL_TESTS();
+
+  //serac::accelerator::terminateDevice(); // ?
 
   return result;
 }
