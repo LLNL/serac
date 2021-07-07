@@ -68,11 +68,6 @@
  */
 
 /**
- * @def SERAC_PROFILE_VOID_EXPR(name, expr)
- * Profiles a single void-expression using a cali::ScopeAnnotation internally.
- */
-
-/**
  * @def SERAC_PROFILE_EXPR_LOOP(name, expr, ntest)
  * Profiles an expression several times. Returns the last evaluation
  */
@@ -93,33 +88,6 @@
 namespace serac::profiling::detail {
 
 /**
- * @brief Removes an rvalue reference from a type, if applicable
- * @see std::remove_reference
- * @tparam T The type to remove an rvalue reference from
- */
-template <typename T>
-struct remove_rvalue_reference {
-  using type = T;
-};
-
-template <typename T>
-struct remove_rvalue_reference<T&&> {
-  using type = T;
-};
-
-/**
- * @brief Wrapper over std::forward for type deduction purposes
- * The return type participates in reference collapsing so the return type will indicate
- * the true value category of @a thing
- * @param[in] thing The object whose value category is to be deduced
- */
-template <typename T>
-auto&& forwarder(T&& thing)
-{
-  return std::forward<T>(thing);
-}
-
-/**
  * @brief Guarantees str is a c string
  */
 inline const char* make_cstr(const char* str) { return str; }
@@ -130,23 +98,17 @@ inline const char* make_cstr(const char* str) { return str; }
 inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 
 }  // namespace serac::profiling::detail
-/// @endcond
 
 #define SERAC_PROFILE_SCOPE(name) \
   cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name))
 
-/**
- * @brief The type that should be returned from the profiling wrapper lambda
- * It converts rvalue reference arguments of type T&& to T to avoid returning
- * a reference to a temporary and leaves all other types intact.
- */
-#define SERAC_PROFILE_EXPR_RETURN_TYPE(expr) \
-  serac::profiling::detail::remove_rvalue_reference<decltype(serac::profiling::detail::forwarder(expr))>::type
-
+// We use decltype(auto) here instead of the default auto for a different set of type deduction rules -
+// the latter uses template type deduction rules but the former uses those for decltype, which we need
+// in order for the return type to take into account the value category (rvalue, lvalue) of the expression
 #define SERAC_PROFILE_EXPR(name, expr)                                                                     \
-  [&]() -> typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr) {                                                 \
+  [&]() -> decltype(auto) {                                                                                \
     const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name)); \
-    return static_cast<typename SERAC_PROFILE_EXPR_RETURN_TYPE(expr)>(expr);                               \
+    return expr;                                                                                           \
   }()
 
 /**
@@ -159,8 +121,6 @@ inline const char* make_cstr(const std::string& str) { return str.c_str(); }
           SERAC_PROFILE_EXPR(serac::profiling::detail::make_cstr(name), expr);                                      \
       }(),                                                                                                          \
       SERAC_PROFILE_EXPR(serac::profiling::detail::make_cstr(name), expr))
-
-#define SERAC_PROFILE_VOID_EXPR(name, expr) CALI_WRAP_STATEMENT(serac::profiling::detail::make_cstr(name), expr)
 
 #else  // SERAC_USE_CALIPER not defined
 
@@ -175,7 +135,6 @@ inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 #define SERAC_PROFILE_SCOPE(name)
 #define SERAC_PROFILE_EXPR(name, expr) expr
 #define SERAC_PROFILE_EXPR_LOOP(name, expr, ntest) expr
-#define SERAC_PROFILE_VOID_EXPR(name, expr) expr
 
 #endif
 
