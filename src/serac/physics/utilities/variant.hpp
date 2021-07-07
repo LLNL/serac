@@ -18,14 +18,28 @@ namespace serac {
 
 namespace detail {
 
+/**
+ * @brief Storage abstraction to provide trivial destructor when both variant types are trivially destructible
+ * @tparam T0 The type of the first variant element
+ * @tparam T1 The type of the second variant element
+ * @tparam SFINAE Used to switch between the trivially destructible and not-trivially destructible implementations
+ */
 template <typename T0, typename T1, typename SFINAE = void>
 struct variant_storage {
+  /**
+   * @brief The index of the active member
+   */
   int index_ = 0;
   union {
     T0 t0_;
     T1 t1_;
   };
 
+  /**
+   * @brief Copy constructor for nontrivial types
+   * Placement-new is required to correctly initialize the union
+   * @param[in] other The variant_storage to copy from
+   */
   constexpr variant_storage(const variant_storage& other) : index_(other.index_)
   {
     switch (index_) {
@@ -40,6 +54,11 @@ struct variant_storage {
     }
   };
 
+  /**
+   * @brief Move constructor for nontrivial types
+   * Placement-new is required to correctly initialize the union
+   * @param[in] other The variant_storage to move from
+   */
   constexpr variant_storage(variant_storage&& other) : index_(other.index_)
   {
     switch (index_) {
@@ -53,6 +72,11 @@ struct variant_storage {
       }
     }
   };
+
+  /**
+   * @brief Resets the union by destroying the active member
+   * FIXME: The index is technically invalid here after this function is called
+   */
   constexpr void clear()
   {
     switch (index_) {
@@ -67,31 +91,66 @@ struct variant_storage {
     }
   }
 
+  /**
+   * @brief Default constructor
+   * Default initializes the first member of the variant
+   */
   constexpr variant_storage() : index_{0}, t0_{} {}
+
+  /**
+   * @brief Destroys the variant by calling the destructor of the active member
+   */
   ~variant_storage() { clear(); }
 };
 
 template <typename T0, typename T1>
 struct variant_storage<T0, T1,
                        std::enable_if_t<std::is_trivially_destructible_v<T0> && std::is_trivially_destructible_v<T1>>> {
+  /**
+   * @brief The index of the active member
+   */
   int index_ = 0;
   union {
     T0 t0_;
     T1 t1_;
   };
+
+  /**
+   * @brief Default constructor
+   * Default initializes the first member of the variant
+   */
   constexpr variant_storage() : index_{0}, t0_{} {}
+
+  /**
+   * @brief No-op clear as both member types are trivially destructible
+   */
   constexpr void clear() {}
 };
 
+/**
+ * @brief Determines if T can be assigned to a variant<T0, T1>
+ * @tparam T The type on the right-hand side of the assignment
+ * @tparam T0 The first member type of the variant
+ * @tparam T1 The second member type of the variant
+ */
 template <typename T, typename T0, typename T1>
 struct is_variant_assignable {
+  // FIXME: Is having just the is_assignable good enough?
   constexpr static bool value = std::is_same_v<std::decay_t<T>, T0> || std::is_assignable_v<T0, T> ||
                                 std::is_same_v<std::decay_t<T>, T1> || std::is_assignable_v<T1, T>;
 };
 
 }  // namespace detail
 
-// Should we #include <variant> for std::variant_alternative??
+// FIXME: Should we just #include <variant> for std::variant_alternative?? Probably don't want to pull in the full
+// header
+
+/**
+ * @brief Obtains the type at index @p I of a variant<T0, T1>
+ * @tparam I The index to find the corresponding type for
+ * @tparam T0 The first member type of the variant
+ * @tparam T1 The second member type of the variant
+ */
 template <int I, typename T0, typename T1>
 struct variant_alternative;
 
@@ -105,14 +164,48 @@ struct variant_alternative<1, T0, T1> {
   using type = T1;
 };
 
+/**
+ * @brief A simple variant type that supports only two elements
+ *
+ * Avoids the recursive template instantiation associated with std::variant
+ * and provides a (roughly) identical interface that is fully constexpr (when both types are
+ * trivially destructible)
+ * @tparam T0 The first member type of the variant
+ * @tparam T1 The second member type of the variant
+ */
 template <typename T0, typename T1>
 struct variant {
+  /**
+   * @brief Storage abstraction used to provide constexpr functionality when applicable
+   */
   detail::variant_storage<T0, T1> storage_;
+
+  /**
+   * @brief Default constructor - will default-initialize first member of the variant
+   */
   constexpr variant() = default;
 
+  // These are needed explicitly so the variant(T&&) doesn't match first
+  /**
+   * @brief Copy constructor
+   * @param[in] other The variant to copy from
+   */
   constexpr variant(const variant& other) = default;
-  constexpr variant(variant&& other)      = default;
 
+  /**
+   * @brief Move constructor
+   * @param[in] other The variant to move from
+   */
+  constexpr variant(variant&& other) = default;
+
+  /**
+   * @brief "Parameterized" constructor with which a value can be assigned
+   * @tparam T The type of the parameter to assign to one of the variant elements
+   * @param[in] t The parameter to assign to the variant's contents
+   * @pre The parameter type @p T must be equal to or assignable to either @p T0 or @p T1
+   * @note If the conversion is ambiguous, i.e., if @a t is equal or convertible to *both* @p T0 and @p T1,
+   * the first element of the variant - of type @p T0 - will be assigned to
+   */
   template <typename T, typename SFINAE = std::enable_if_t<detail::is_variant_assignable<T, T0, T1>::value>>
   constexpr variant(T&& t)
   {
@@ -127,9 +220,25 @@ struct variant {
     }
   }
 
+  // These are needed explicitly so the operator=(T&&) doesn't match first
+  /**
+   * @brief Copy assignment
+   * @param[in] other The variant to copy from
+   */
   constexpr variant& operator=(const variant& other) = default;
+
+  /**
+   * @brief Move assignment
+   * @param[in] other The variant to move from
+   */
   constexpr variant& operator=(variant&& other) = default;
 
+  /**
+   * "Parameterized" assignment with which a value can be assigned
+   * @tparam T The type of the parameter to assign to one of the variant elements
+   * @param[in] t The parameter to assign to the variant's contents
+   * @see variant::variant(T&& t) for notes and preconditions
+   */
   template <typename T, typename SFINAE = std::enable_if_t<detail::is_variant_assignable<T, T0, T1>::value>>
   constexpr variant& operator=(T&& t)
   {
@@ -152,8 +261,17 @@ struct variant {
     return *this;
   }
 
+  /**
+   * @brief Returns the index of the active variant member
+   */
   constexpr int index() const { return storage_.index_; }
 
+  /**
+   * @brief Returns the variant member at the provided index
+   * @tparam I The index of the element to retrieve
+   * @param[in] v The variant to return the element of
+   * @see std::variant::get
+   */
   template <int I>
   friend constexpr typename variant_alternative<I, T0, T1>::type& get(variant& v)
   {
@@ -164,6 +282,7 @@ struct variant {
     }
   }
 
+  /// @overload
   template <int I>
   friend constexpr const typename variant_alternative<I, T0, T1>::type& get(const variant& v)
   {
@@ -175,6 +294,16 @@ struct variant {
   }
 };
 
+/**
+ * @brief Returns the variant member of specified type
+ * @tparam T The type of the element to retrieve
+ * @tparam T0 The first member type of the variant
+ * @tparam T1 The second member type of the variant
+ * @param[in] v The variant to return the element of
+ * @see std::variant::get
+ * @pre T must be either @p T0 or @p T1
+ * @note If T == T0 == T1, the element at index 0 will be returned
+ */
 template <typename T, typename T0, typename T1>
 constexpr T& get(variant<T0, T1>& v)
 {
@@ -185,6 +314,7 @@ constexpr T& get(variant<T0, T1>& v)
   }
 }
 
+/// @overload
 template <typename T, typename T0, typename T1>
 constexpr const T& get(const variant<T0, T1>& v)
 {
@@ -195,8 +325,14 @@ constexpr const T& get(const variant<T0, T1>& v)
   }
 }
 
+/**
+ * @brief Applies a functor to the active variant element
+ * @param[in] visitor The functor to apply
+ * @param[in] v The variant to apply the functor to
+ * @see std::visit
+ */
 template <typename Visitor, typename Variant>
-constexpr decltype(std::declval<Visitor&>()(get<0>(std::declval<Variant&>()))) visit(Visitor visitor, Variant&& v)
+constexpr decltype(auto) visit(Visitor visitor, Variant&& v)
 {
   if (v.index() == 0) {
     return visitor(get<0>(v));
@@ -205,6 +341,12 @@ constexpr decltype(std::declval<Visitor&>()(get<0>(std::declval<Variant&>()))) v
   }
 }
 
+/**
+ * @brief Checks whether a variant's active member is of a certain type
+ * @tparam T The type to check for
+ * @param[in] v The variant to check
+ * @see std::holds_alternative
+ */
 template <typename T, typename T0, typename T1>
 bool holds_alternative(const variant<T0, T1>& v)
 {
@@ -216,6 +358,12 @@ bool holds_alternative(const variant<T0, T1>& v)
   return false;
 }
 
+/**
+ * @brief Returns the member of requested type if it's active, otherwise @p nullptr
+ * @tparam T The type to check for
+ * @param[in] v The variant to check/retrieve from
+ * @see std::get_if
+ */
 template <typename T, typename T0, typename T1>
 T* get_if(variant<T0, T1>* v)
 {
@@ -227,6 +375,7 @@ T* get_if(variant<T0, T1>* v)
   return nullptr;
 }
 
+/// @overload
 template <typename T, typename T0, typename T1>
 const T* get_if(const variant<T0, T1>* v)
 {
