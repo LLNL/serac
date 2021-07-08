@@ -186,7 +186,7 @@ const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
 
 template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
           typename derivatives_type>
-__global__ void gradient_cuda(const mfem::DeviceTensor<2, const double> du, const mfem::DeviceTensor<2, double> dr, derivatives_type* derivatives_ptr,
+__global__ void gradient_cuda_element(const mfem::DeviceTensor<2, const double> du, const mfem::DeviceTensor<2, double> dr, derivatives_type* derivatives_ptr,
                      const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
   using test_element               = finite_element<g, test>;
@@ -196,7 +196,9 @@ __global__ void gradient_cuda(const mfem::DeviceTensor<2, const double> du, cons
 
 
   // for each element in the domain
-  for (int e = 0; e < num_elements; e++) {
+  //  for (int e = 0; e < num_elements; e++) {
+  int e = blockIdx.x * blockDim.x + threadIdx.x;
+  if (e < num_elements) {
     // get the (change in) values for this particular element
     tensor du_elem = detail::Load<trial_element>(du, e);
 
@@ -261,7 +263,10 @@ void gradient_kernel_cuda(const mfem::Vector& dU, mfem::Vector& dR, derivatives_
   serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh before gradient_cuda is fine");
 
   // call gradient_cuda
-  gradient_cuda<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type> <<< 1, 1>>>(du, dr, derivatives_ptr, J, num_elements);
+  const int blocksize = 128;
+  [[maybe_unused]] int blocks_element = (num_elements +blocksize - 1)/blocksize;
+
+  gradient_cuda_element<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type> <<< blocks_element, blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
 
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh before gradient_cuda is fine");
