@@ -68,7 +68,7 @@ constexpr auto make_dual_helper(double arg, std::integer_sequence<int, i...>)
 {
   using gradient_type = serac::tuple<typename std::conditional<i == j, double, zero>::type...>;
   dual<gradient_type> arg_dual{};
-  arg_dual.value                 = arg;
+  arg_dual.value                   = arg;
   serac::get<j>(arg_dual.gradient) = 1.0;
   return arg_dual;
 }
@@ -82,7 +82,7 @@ constexpr auto make_dual_helper(const tensor<T, n...>& arg, std::integer_sequenc
   using gradient_type = serac::tuple<typename std::conditional<i == I, tensor<T, n...>, zero>::type...>;
   tensor<dual<gradient_type>, n...> arg_dual{};
   for_constexpr<n...>([&](auto... j) {
-    arg_dual(j...).value                       = arg(j...);
+    arg_dual(j...).value                         = arg(j...);
     serac::get<I>(arg_dual(j...).gradient)(j...) = 1.0;
   });
   return arg_dual;
@@ -270,9 +270,10 @@ constexpr auto make_dual(serac::tuple<T...> args)
  * @pre The tuple must contain only scalars or tensors of @p dual numbers or doubles
  */
 template <typename... T>
-SERAC_HOST_DEVICE auto get_value(const serac::tuple<T...> & tuple_of_values)
+SERAC_HOST_DEVICE auto get_value(const serac::tuple<T...>& tuple_of_values)
 {
-  return serac::apply([](const auto &... each_value) { return serac::tuple{get_value(each_value)...}; }, tuple_of_values);
+  return serac::apply([](const auto&... each_value) { return serac::tuple{get_value(each_value)...}; },
+                      tuple_of_values);
 }
 
 /**

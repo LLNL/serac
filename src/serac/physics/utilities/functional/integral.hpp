@@ -97,7 +97,7 @@ namespace detail {
 //     return detail::Load<space::ndof, space::components>(u, e);
 //   }
 // };
-  
+
 // /**
 //  * @brief Adds the contributions of the local residual to the global residual
 //  * @param[inout] r_global The full element-decomposed residual
@@ -124,7 +124,6 @@ namespace detail {
 //     }
 //   }
 // }
-
 
 }  // namespace detail
 
@@ -210,7 +209,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       // here, we store the derivative of the q-function w.r.t. its input arguments
       //
       // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
-      derivatives_ptr[e * int(rule.size()) + q] = get_gradient(qf_output);
+      detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -285,7 +284,8 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
       auto darg = detail::Preprocess<trial_element>(du_elem, xi, J_q);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
+
+      auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
 
       // use the chain rule to compute the first-order change in the q-function output
       auto dq = chain_rule(dq_darg, darg);
@@ -360,7 +360,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
       [[maybe_unused]] double dx     = detJ_q * dxi_q;
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
+      auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
 
       // evaluate shape functions
       [[maybe_unused]] auto M = test_element::shape_functions(xi_q);
@@ -372,10 +372,10 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         N = dot(N, inv(J_q));
       }
 
-      auto f00 = serac::get<0>(serac::get<0>(dq_darg));
+      auto                  f00 = serac::get<0>(serac::get<0>(dq_darg));
       [[maybe_unused]] auto f01 = serac::get<1>(serac::get<0>(dq_darg));
       [[maybe_unused]] auto f10 = serac::get<0>(serac::get<1>(dq_darg));
-      auto f11 = serac::get<1>(serac::get<1>(dq_darg));
+      auto                  f11 = serac::get<1>(serac::get<1>(dq_darg));
 
       // df0_du stiffness contribution
       // size(M) = test_ndof
@@ -539,24 +539,24 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
 
 /**
  * @brief create shared_ptr to an array of `n` values of type `T`, either on the host or device
- * @tparam T the type of the value to be stored in the array 
+ * @tparam T the type of the value to be stored in the array
  * @tparam execution_policy the memory space where the data lives
  * @param n how many entries to allocate in the array
  */
 template <typename T, typename execution_policy>
-std::shared_ptr < T > make_shared_array(int n) {
-
+std::shared_ptr<T> make_shared_array(std::size_t n)
+{
   if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
-    T * data = (T *)malloc(sizeof(T) * n);
-    auto deleter = [](auto ptr){ free(ptr); };    
-    return std::shared_ptr < T >(data, deleter);    
+    T*   data    = static_cast<T*>(malloc(sizeof(T) * n));
+    auto deleter = [](auto ptr) { free(ptr); };
+    return std::shared_ptr<T>(data, deleter);
   }
 
   if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
-    T * data;
-    cudaMalloc(&data, sizeof(T) * n);    
-    auto deleter = [](T * ptr){ cudaFree(ptr); };    
-    return std::shared_ptr< T >(data, deleter);    
+    T* data;
+    cudaMalloc(&data, sizeof(T) * n);
+    auto deleter = [](T* ptr) { cudaFree(ptr); };
+    return std::shared_ptr<T>(data, deleter);
   }
 }
 
@@ -618,7 +618,7 @@ public:
     // the derivative information at each quadrature point
     using x_t             = tensor<double, spatial_dim>;
     using u_du_t          = typename detail::lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
-    using qf_output_t = decltype(qf(std::declval<x_t>(), make_dual(std::declval<u_du_t>())));
+    using qf_output_t     = decltype(qf(std::declval<x_t>(), make_dual(std::declval<u_du_t>())));
     using derivative_type = decltype(get_gradient(std::declval<qf_output_t>()));
 
     // the derivative_type data is stored in a shared_ptr here, because it can't be a
@@ -632,7 +632,7 @@ public:
     //
     // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
     // qf_derivatives[e * quadrature_points_per_element + q]
-    auto qf_derivatives = make_shared_array< derivative_type, execution_policy >(num_quadrature_points);
+    auto qf_derivatives = make_shared_array<derivative_type, execution_policy>(num_quadrature_points);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
@@ -642,35 +642,33 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
 
-    //int * tmp = qf_derivatives.get();
+    // int * tmp = qf_derivatives.get();
 
     if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-        evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
-                                                                                           X_, num_elements, qf);
+        evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(),
+                                                                                           J_, X_, num_elements, qf);
       };
 
       gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-        gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives.get(), J_,
-                                                                                         num_elements);
+        gradient_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(dU, dR, qf_derivatives.get(),
+                                                                                         J_, num_elements);
       };
 
       gradient_mat_ = [=](mfem::Vector& K_e) {
-        gradient_matrix_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(K_e, qf_derivatives.get(),
-                                                                                                J_, num_elements);
+        gradient_matrix_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(
+            K_e, qf_derivatives.get(), J_, num_elements);
       };
-    } 
+    }
 
     if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
       // todo
 
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-        evaluation_kernel_cuda<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
-                                                                                           X_, num_elements, qf);
+        evaluation_kernel_cuda<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(
+            U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
       };
-
     }
-
   }
 
   /**

@@ -74,13 +74,13 @@ public:
     evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
       if (use_cuda) {
 #if defined(__CUDACC__)
-	// Note: It seems you cannot launch a kernel from a lambda
-	evaluation_kernel_cuda<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
-												X_, num_elements, qf);
-      #endif
-	} else {
-      evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(), J_,
-                                                                                         X_, num_elements, qf);
+        // Note: It seems you cannot launch a kernel from a lambda
+        evaluation_kernel_cuda<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(
+            U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
+#endif
+      } else {
+        evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(),
+                                                                                           J_, X_, num_elements, qf);
       }
     };
 
@@ -128,4 +128,4 @@ private:
   std::function<void(const mfem::Vector&, mfem::Vector&)> gradient_;
 };
 
-}
+}  // namespace serac

@@ -40,7 +40,7 @@ auto get_boundary_dof_ordering(mfem::ParFiniteElementSpace* pfes)
 #endif
 
 /// @cond
-template <typename T, typename execution_policy = serac::default_policy >
+template <typename T, typename execution_policy = serac::default_policy>
 class Functional;
 /// @endcond
 
@@ -83,7 +83,7 @@ class Functional;
  * my_residual.AddDomainIntegral(Dimension<3>{}, integrand, domain_of_integration);
  * @endcode
  */
-template <typename test, typename trial, typename execution_policy >
+template <typename test, typename trial, typename execution_policy>
 class Functional<test(trial), execution_policy> : public mfem::Operator {
 public:
   /**
@@ -138,7 +138,8 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int geometry_dim, int spatial_dim, typename lambda>
-  void AddIntegral(Dimension<geometry_dim>, Dimension<spatial_dim>, lambda&& integrand, mfem::Mesh& domain, bool use_cuda = false)
+  void AddIntegral(Dimension<geometry_dim>, Dimension<spatial_dim>, lambda&& integrand, mfem::Mesh& domain,
+                   [[maybe_unused]] bool use_cuda = false)
   {
     if constexpr (geometry_dim == spatial_dim) {
       auto num_elements = domain.GetNE();
@@ -154,7 +155,8 @@ public:
 
       constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
       auto           geom  = domain.GetGeometricFactors(ir, flags);
-      domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{}, Dimension<spatial_dim>{}, integrand);
+      domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<geometry_dim>{},
+                                     Dimension<spatial_dim>{}, integrand);
       return;
     }
 #ifdef ENABLE_BOUNDARY_INTEGRALS

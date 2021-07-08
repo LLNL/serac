@@ -36,17 +36,19 @@
 /**
  * @brief Accelerator functionality
  */
-namespace serac{
+namespace serac {
 
 /**
  * @brief tag type for signaling that calculations that should be performed on the CPU
  */
-struct cpu_policy{};
+struct cpu_policy {
+};
 
 /**
  * @brief tag type for signaling that calculations that should be performed on the CPU
  */
-struct gpu_policy{};
+struct gpu_policy {
+};
 
 /**
  * @brief for now, we'll just default to the CPU
@@ -67,6 +69,6 @@ void initializeDevice();
  */
 void terminateDevice();
 
-}
+}  // namespace accelerator
 
-}  
+}  // namespace serac

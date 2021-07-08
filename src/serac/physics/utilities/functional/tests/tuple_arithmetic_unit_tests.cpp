@@ -31,15 +31,15 @@ TEST(TupleTests, structured_binding)
 {
   serac::tuple x{0, 1.0, 2.0f};
   auto [a, b, c] = x;
-  EXPECT_NEAR(a, 0, 1.0-10);
-  EXPECT_NEAR(b, 1.00, 1.0-10);
-  EXPECT_NEAR(c, 2.0f, 1.0-10);
+  EXPECT_NEAR(a, 0, 1.0 - 10);
+  EXPECT_NEAR(b, 1.00, 1.0 - 10);
+  EXPECT_NEAR(c, 2.0f, 1.0 - 10);
 }
 
 TEST(TupleTests, add)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
   serac::tuple b = a + a;
   EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
   EXPECT_NEAR(norm(serac::get<1>(b)), 10.39230484541326, 1.0e-10);
@@ -49,7 +49,7 @@ TEST(TupleTests, add)
 TEST(TupleTests, subtract)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
   serac::tuple b = a - a;
   EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
   EXPECT_NEAR(norm(serac::get<1>(b)), 0.0, 1.0e-10);
@@ -59,7 +59,7 @@ TEST(TupleTests, subtract)
 TEST(TupleTests, multiply)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
   serac::tuple b = 2.0 * a;
   EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
   EXPECT_NEAR(norm(serac::get<1>(b)), 10.39230484541326, 1.0e-10);
@@ -69,7 +69,7 @@ TEST(TupleTests, multiply)
 TEST(TupleTests, divide)
 {
   serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
   serac::tuple b = a / 0.5;
   EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
   EXPECT_NEAR(norm(serac::get<1>(b)), 10.39230484541326, 1.0e-10);
@@ -152,10 +152,10 @@ TEST(ChainRuleTests, tuple_output_with_tuple_input)
 
   [[maybe_unused]] constexpr double p = 3.14;
   [[maybe_unused]] constexpr tensor v = {{1.0, 2.0, 3.0}};
-  constexpr tensor<double, 3, 3> L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+  constexpr tensor<double, 3, 3>    L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
 
-  constexpr double dp = 1.23;
-  constexpr tensor dv = {{2.0, 1.0, 4.0}};
+  constexpr double               dp = 1.23;
+  constexpr tensor               dv = {{2.0, 1.0, 4.0}};
   constexpr tensor<double, 3, 3> dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
 
   auto output = serac::apply(f, make_dual(p, v, L));

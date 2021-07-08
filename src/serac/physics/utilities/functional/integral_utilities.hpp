@@ -115,8 +115,8 @@ template <int ndof>
 SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<2, double>& r_global, tensor<double, ndof> r_local, int e)
 {
   for (int i = 0; i < ndof; i++) {
-    //r_global(i, e) += r_local[i];
-    AtomicAdd(r_global(i,e), r_local[i]);
+    // r_global(i, e) += r_local[i];
+    AtomicAdd(r_global(i, e), r_local[i]);
   }
 }
 
@@ -125,7 +125,8 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<2, double>& r_global, tensor
  * @note Used when each node has multiple DOFs
  */
 template <int ndof, int components>
-SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, components> r_local, int e)
+SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, components> r_local,
+                           int e)
 {
   for (int i = 0; i < ndof; i++) {
     for (int j = 0; j < components; j++) {
@@ -234,7 +235,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim> xi, const tenso
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return serac::tuple{dot(u, element_type::shape_functions(xi)),
-                      dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
+                        dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
   }
 
   if constexpr (element_type::family == Family::HCURL) {
@@ -259,7 +260,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim> xi, const tenso
  */
 template <typename element_type, typename T, int geometry_dim, int spatial_dim>
 SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, geometry_dim> xi,
-                [[maybe_unused]] const tensor<double, spatial_dim, geometry_dim> J)
+                                  [[maybe_unused]] const tensor<double, spatial_dim, geometry_dim> J)
 {
   if constexpr (element_type::family == Family::H1) {
     return dot(u, element_type::shape_functions(xi));
@@ -324,7 +325,7 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
  */
 template <typename element_type, typename T, int geometry_dim, int spatial_dim>
 SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, geometry_dim> xi,
-                 [[maybe_unused]] const tensor<double, spatial_dim, geometry_dim> J)
+                                   [[maybe_unused]] const tensor<double, spatial_dim, geometry_dim> J)
 {
   if constexpr (element_type::family == Family::H1) {
     return outer(element_type::shape_functions(xi), f);
@@ -357,6 +358,28 @@ SERAC_HOST_DEVICE auto Measure(const tensor<double, m, n>& A)
   return ::sqrt(det(transpose(A) * A));
 }
 
+/**
+ * @brief derivatives_ptr access
+ *
+ * Templating this will allow us to change the stride-access patterns more consistently
+ *
+ * @param[in] derivative_ptr pointer to derivatives
+ * @param[in] e element number
+ * @param[in] q qaudrature number
+ * @param[in] rule quadrature rule
+ * @param[in] num_elements number of finite elements
+ */
+template <typename derivatives_type, typename rule_type, bool quadrature_coalescing = true>
+SERAC_HOST_DEVICE derivatives_type& AccessDerivatives(derivatives_type* derivatives_ptr, int e, int q,
+                                                      [[maybe_unused]] rule_type& rule,
+                                                      [[maybe_unused]] int        num_elements)
+{
+  if constexpr (quadrature_coalescing) {
+    return derivatives_ptr[e * int(rule.size()) + q];
+  } else {
+    return derivatives_ptr[q * num_elements + e];
+  }
+}
 
 }  // namespace detail
 

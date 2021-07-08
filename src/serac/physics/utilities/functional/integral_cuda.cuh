@@ -34,7 +34,7 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
 } // namespace detail
 
   template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q , typename derivatives_type, typename lambda, typename u_elem_type, typename element_residual_type>
-  SERAC_HOST_DEVICE element_residual_type eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type r_elem, mfem::DeviceTensor<2, double> r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, lambda qf) 
+  SERAC_HOST_DEVICE element_residual_type eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type r_elem, mfem::DeviceTensor<2, double> r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) 
   {
     using test_element               = finite_element<g, test>;
     using trial_element              = finite_element<g, trial>;
@@ -65,7 +65,7 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
     // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
 
     // Note: This pattern appears to result in non-coalesced access
-    derivatives_ptr[e * int(rule.size()) + q] = get_gradient(qf_output);
+    detail::AccessDerivatives(derivatives_ptr, e , q, rule, num_elements) = get_gradient(qf_output);
 
     return r_elem;
   }
@@ -90,7 +90,7 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
 
       // for each quadrature point in the element
       for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-	r_elem = eval_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, r, derivatives_ptr, J, X, qf);
+	r_elem = eval_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, r, derivatives_ptr, J, X, num_elements, qf);
       }
 
       // once we've finished the element integration loop, write our element residuals
@@ -121,7 +121,7 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
       element_residual_type r_elem{};
 
       // for each quadrature point in the element
-      r_elem = eval_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, r, derivatives_ptr, J, X, qf);
+      r_elem = eval_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, r, derivatives_ptr, J, X, num_elements, qf);
 
 
       // once we've finished the element integration loop, write our element residuals
@@ -164,7 +164,7 @@ const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
   serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh before eval_cuda is fine");
 
   const int blocksize = 128;
-  int blocks_element = (num_elements +blocksize - 1)/blocksize;
+  [[maybe_unused]] int blocks_element = (num_elements +blocksize - 1)/blocksize;
   // eval_cuda_element<g, test, trial, geometry_dim, spatial_dim, Q ><<<blocks_element,blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
   int blocks_quadrature_element = (num_elements * rule.size() + blocksize - 1)/blocksize;
   eval_cuda_quadrature<g, test, trial, geometry_dim, spatial_dim, Q ><<<blocks_quadrature_element,blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
