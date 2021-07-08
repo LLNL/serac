@@ -34,11 +34,10 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
 } // namespace detail
 
   template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q , typename derivatives_type, typename lambda, typename u_elem_type, typename element_residual_type>
-  SERAC_HOST_DEVICE element_residual_type eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type r_elem, mfem::DeviceTensor<2, double> r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) 
+  SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type & r_elem, mfem::DeviceTensor<2, double> r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) 
   {
     using test_element               = finite_element<g, test>;
     using trial_element              = finite_element<g, trial>;
-    //    using element_residual_type      = typename trial_element::residual_type;
     static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
     auto   xi  = rule.points[q];
@@ -67,7 +66,6 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
     // Note: This pattern appears to result in non-coalesced access
     detail::AccessDerivatives(derivatives_ptr, e , q, rule, num_elements) = get_gradient(qf_output);
 
-    return r_elem;
   }
 
 
@@ -90,7 +88,7 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
 
       // for each quadrature point in the element
       for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-	r_elem = eval_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, r, derivatives_ptr, J, X, num_elements, qf);
+	eval_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, r, derivatives_ptr, J, X, num_elements, qf);
       }
 
       // once we've finished the element integration loop, write our element residuals
@@ -121,7 +119,7 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
       element_residual_type r_elem{};
 
       // for each quadrature point in the element
-      r_elem = eval_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, r, derivatives_ptr, J, X, num_elements, qf);
+      eval_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, r, derivatives_ptr, J, X, num_elements, qf);
 
 
       // once we've finished the element integration loop, write our element residuals
@@ -184,6 +182,40 @@ const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
 
 }
 
+
+template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+          typename derivatives_type, typename du_elem_type, typename dr_elem_type>
+SERAC_HOST_DEVICE void gradient_quadrature(int e, int q, du_elem_type & du_elem, dr_elem_type & dr_elem, derivatives_type* derivatives_ptr, const mfem::DeviceTensor<4, const double> J, int num_elements)
+{
+
+  using test_element               = finite_element<g, test>;
+  using trial_element              = finite_element<g, trial>;
+  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
+
+      // get the position of this quadrature point in the parent and physical space,
+      // and calculate the measure of that point in physical space.
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = detail::Measure(J_q) * dxi;
+
+      // evaluate the (change in) value/derivatives at this quadrature point
+      auto darg = detail::Preprocess<trial_element>(du_elem, xi, J_q);
+
+      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
+
+      auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
+
+      // use the chain rule to compute the first-order change in the q-function output
+      auto dq = chain_rule(dq_darg, darg);
+
+      // integrate dq against test space shape functions / gradients
+      // to get the (change in) element residual contributions
+      dr_elem += detail::Postprocess<test_element>(dq, xi, J_q) * dx;
+
+}
+  
+  
 template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
           typename derivatives_type>
 __global__ void gradient_cuda_element(const mfem::DeviceTensor<2, const double> du, const mfem::DeviceTensor<2, double> dr, derivatives_type* derivatives_ptr,
@@ -207,26 +239,8 @@ __global__ void gradient_cuda_element(const mfem::DeviceTensor<2, const double> 
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      // get the position of this quadrature point in the parent and physical space,
-      // and calculate the measure of that point in physical space.
-      auto   xi  = rule.points[q];
-      auto   dxi = rule.weights[q];
-      auto   J_q = make_tensor<spatial_dim, geometry_dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = detail::Measure(J_q) * dxi;
 
-      // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = detail::Preprocess<trial_element>(du_elem, xi, J_q);
-
-      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-
-      auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
-
-      // use the chain rule to compute the first-order change in the q-function output
-      auto dq = chain_rule(dq_darg, darg);
-
-      // integrate dq against test space shape functions / gradients
-      // to get the (change in) element residual contributions
-      dr_elem += detail::Postprocess<test_element>(dq, xi, J_q) * dx;
+      gradient_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type>(e, q, du_elem, dr_elem, derivatives_ptr, J, num_elements);
     }
 
     // once we've finished the element integration loop, write our element residuals

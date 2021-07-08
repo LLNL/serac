@@ -130,7 +130,8 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor
 {
   for (int i = 0; i < ndof; i++) {
     for (int j = 0; j < components; j++) {
-      r_global(i, j, e) += r_local[i][j];
+      // r_global(i, j, e) += r_local[i][j];
+      AtomicAdd(r_global(i, j, e), r_local[i][j]);
     }
   }
 }
