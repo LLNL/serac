@@ -111,12 +111,17 @@ public:
         G_test_(test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
         P_trial_(trial_space_->GetProlongationMatrix()),
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-        G_test_boundary_(GetFaceRestriction<test>(test_fes)),
-        G_trial_boundary_(GetFaceRestriction<trial>(trial_fes)),
         grad_(*this)
   {
     SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
     SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
+
+    // Ensure the mesh has the appropriate neighbor information before constructing the face restriction operators
+    test_fes->GetParMesh()->ExchangeFaceNbrData();
+
+    // Generate the face restriction operators using the shared face mesh data
+    G_test_boundary_  = GetFaceRestriction<test>(test_fes);
+    G_trial_boundary_ = GetFaceRestriction<trial>(trial_fes);
 
     input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
     input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
@@ -168,16 +173,6 @@ public:
   template <int dim, typename lambda>
   void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
   {
-    // TODO: Fix boundary integrals for parallel runs
-    //
-    // Right now, this only works for serial runs. I believe this is due to a bug in the MFEM face
-    // restriction operator, but further debugging is needed.
-    int num_procs = 0;
-    if (MPI_Comm_size(trial_space_->GetComm(), &num_procs) != MPI_SUCCESS) {
-      SLIC_ERROR("Failed to determine number of MPI processes");
-    }
-    SLIC_ERROR_ROOT_IF(num_procs > 1, "Functional boundary integrals only allowed in serial runs");
-
     // TODO: fix mfem::FaceGeometricFactors
     auto num_boundary_elements = domain.GetNBE();
     if (num_boundary_elements == 0) return;
