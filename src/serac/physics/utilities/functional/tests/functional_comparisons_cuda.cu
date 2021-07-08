@@ -139,21 +139,21 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
-  // // Compute the gradient using functional
-  // mfem::Operator& grad2 = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
+  // Compute the gradient using functional
+  mfem::Operator& grad2 = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
-  // // Compute the gradient action using standard MFEM and functional
-  // mfem::Vector g1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_ApplyGradient", postfix), (*J) * U, nsamples);
-  // mfem::Vector g2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient", postfix), grad2 * U, nsamples);
+  // Compute the gradient action using standard MFEM and functional
+  mfem::Vector g1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_ApplyGradient", postfix), (*J) * U, nsamples);
+  mfem::Vector g2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient", postfix), grad2 * U, nsamples);
 
-  // if (verbose) {
-  //   std::cout << "||g1||: " << g1.Norml2() << std::endl;
-  //   std::cout << "||g2||: " << g2.Norml2() << std::endl;
-  //   std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
-  // }
+  if (verbose) {
+    std::cout << "||g1||: " << g1.Norml2() << std::endl;
+    std::cout << "||g2||: " << g2.Norml2() << std::endl;
+    std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
+  }
 
-  // // Ensure the two methods generate the same result
-  // EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
+  // Ensure the two methods generate the same result
+  EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 
   serac::profiling::terminateCaliper();
 }

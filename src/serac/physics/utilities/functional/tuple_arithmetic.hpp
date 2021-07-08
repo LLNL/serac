@@ -106,7 +106,7 @@ constexpr auto make_dual_helper(serac::tuple<T...> args, std::integer_sequence<i
 //   ...
 // }
 template <typename... T, typename S>
-auto chain_rule_tuple_scale(serac::tuple<T...> df_dx, S dx)
+SERAC_HOST_DEVICE auto chain_rule_tuple_scale(serac::tuple<T...> df_dx, S dx)
 {
   return serac::apply(
       [&](auto... each_component_of_df_dx) { return serac::tuple{chain_rule(each_component_of_df_dx, dx)...}; }, df_dx);
@@ -122,7 +122,8 @@ auto chain_rule_tuple_scale(serac::tuple<T...> df_dx, S dx)
 //   ...
 // }
 template <typename... T, typename... S, int... i>
-auto chain_rule_tuple_vecvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx, std::integer_sequence<int, i...>)
+SERAC_HOST_DEVICE auto chain_rule_tuple_vecvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx,
+                                               std::integer_sequence<int, i...>)
 {
   return (chain_rule(serac::get<i>(df_dx), serac::get<i>(dx)) + ...);
 }
@@ -139,7 +140,7 @@ auto chain_rule_tuple_vecvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx, st
 // }
 // clang-format on
 template <typename... T, typename... S>
-auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx)
+SERAC_HOST_DEVICE auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx)
 {
   auto int_seq = std::make_integer_sequence<int, int(sizeof...(S))>();
 
@@ -310,7 +311,7 @@ SERAC_HOST_DEVICE auto get_gradient(serac::tuple<T...> tuple_of_values)
  * @param[in] dx a small change in the inputs to the transformation f
  */
 template <typename S, typename T>
-auto chain_rule(S df_dx, T dx)
+SERAC_HOST_DEVICE auto chain_rule(S df_dx, T dx)
 {
   if constexpr ((detail::is_tuple_of_tuples<S>::value && detail::is_tuple<T>::value)) {
     return detail::chain_rule_tuple_matvec(df_dx, dx);

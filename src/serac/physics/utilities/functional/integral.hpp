@@ -668,6 +668,11 @@ public:
         evaluation_kernel_cuda<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(
             U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
       };
+
+      gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
+        gradient_kernel_cuda<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(
+            dU, dR, qf_derivatives.get(), J_, num_elements);
+      };
     }
   }
 

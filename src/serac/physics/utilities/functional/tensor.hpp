@@ -1470,14 +1470,14 @@ SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<tensor<double, m...>>, n..
 /**
  * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
  */
-constexpr auto chain_rule(const zero /* df_dx */, const zero /* dx */) { return zero{}; }
+SERAC_HOST_DEVICE constexpr auto chain_rule(const zero /* df_dx */, const zero /* dx */) { return zero{}; }
 
 /**
  * @overload
  * @note this overload implements a no-op for the case where the gradient w.r.t. an input argument is identically zero
  */
 template <typename T>
-constexpr auto chain_rule(const zero /* df_dx */, const T /* dx */)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const zero /* df_dx */, const T /* dx */)
 {
   return zero{};
 }
@@ -1487,7 +1487,7 @@ constexpr auto chain_rule(const zero /* df_dx */, const T /* dx */)
  * @note this overload implements a no-op for the case where the small change is indentically zero
  */
 template <typename T>
-constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */)
 {
   return zero{};
 }
@@ -1496,14 +1496,14 @@ constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */)
  * @overload
  * @note for a scalar-valued function of a scalar, the chain rule is just multiplication
  */
-constexpr auto chain_rule(const double df_dx, const double dx) { return df_dx * dx; }
+SERAC_HOST_DEVICE constexpr auto chain_rule(const double df_dx, const double dx) { return df_dx * dx; }
 
 /**
  * @overload
  * @note for a tensor-valued function of a scalar, the chain rule is just scalar multiplication
  */
 template <int... n>
-constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
 {
   return df_dx * dx;
 }
@@ -1513,7 +1513,7 @@ constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
  * @note for a scalar-valued function of a tensor, the chain rule is the inner product
  */
 template <int... n>
-constexpr auto chain_rule(const tensor<double, n...>& df_dx, const tensor<double, n...>& dx)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const tensor<double, n...>& df_dx, const tensor<double, n...>& dx)
 {
   double total{};
   for_constexpr<n...>([&](auto... i) { total += df_dx(i...) * dx(i...); });
@@ -1525,7 +1525,7 @@ constexpr auto chain_rule(const tensor<double, n...>& df_dx, const tensor<double
  * @note for a vector-valued function of a tensor, the chain rule contracts over all indices of dx
  */
 template <int m, int... n>
-constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<double, n...>& dx)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<double, n...>& dx)
 {
   tensor<double, m> total{};
   for (int i = 0; i < m; i++) {
@@ -1539,7 +1539,7 @@ constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<dou
  * @note for a matrix-valued function of a tensor, the chain rule contracts over all indices of dx
  */
 template <int m, int n, int... p>
-auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p...>& dx)
+SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p...>& dx)
 {
   tensor<double, m, n> total{};
   for (int i = 0; i < m; i++) {

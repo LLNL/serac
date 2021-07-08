@@ -370,9 +370,9 @@ SERAC_HOST_DEVICE auto Measure(const tensor<double, m, n>& A)
  * @param[in] num_elements number of finite elements
  */
 template <typename derivatives_type, typename rule_type, bool quadrature_coalescing = true>
-SERAC_HOST_DEVICE derivatives_type& AccessDerivatives(derivatives_type* derivatives_ptr, int e, int q,
-                                                      [[maybe_unused]] rule_type& rule,
-                                                      [[maybe_unused]] int        num_elements)
+SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type* derivatives_ptr, int e, int q,
+                                                                [[maybe_unused]] rule_type& rule,
+                                                                [[maybe_unused]] int        num_elements)
 {
   if constexpr (quadrature_coalescing) {
     return derivatives_ptr[e * int(rule.size()) + q];
