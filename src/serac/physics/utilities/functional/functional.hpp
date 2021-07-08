@@ -117,7 +117,8 @@ public:
     SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
 
     // Ensure the mesh has the appropriate neighbor information before constructing the face restriction operators
-    test_fes->GetParMesh()->ExchangeFaceNbrData();
+    test_fes->ExchangeFaceNbrData();
+    trial_fes->ExchangeFaceNbrData();
 
     // Generate the face restriction operators using the shared face mesh data
     G_test_boundary_  = GetFaceRestriction<test>(test_fes);
