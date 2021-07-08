@@ -19,6 +19,7 @@
 #include "serac/infrastructure/profiling.hpp"
 #include <gtest/gtest.h> 
 #include "serac/infrastructure/initialize.hpp"
+ #include "serac/infrastructure/terminator.hpp"
 
 using namespace serac;
 using namespace serac::profiling;
@@ -459,7 +460,8 @@ int main(int argc, char* argv[])
 
   int result = RUN_ALL_TESTS();
 
-  //serac::accelerator::terminateDevice(); // ?
+  // serac::accelerator::terminateDevice(); // ?
+  serac::exitGracefully();
 
   return result;
 }

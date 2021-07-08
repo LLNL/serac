@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
+//#include "mfem/general/backends.hpp"
 
 #include "serac/physics/utilities/functional/tensor.hpp"
 #include "serac/physics/utilities/functional/finite_element.hpp"
@@ -114,7 +115,8 @@ template <int ndof>
 SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<2, double>& r_global, tensor<double, ndof> r_local, int e)
 {
   for (int i = 0; i < ndof; i++) {
-    r_global(i, e) += r_local[i];
+    //r_global(i, e) += r_local[i];
+    AtomicAdd(r_global(i,e), r_local[i]);
   }
 }
 
