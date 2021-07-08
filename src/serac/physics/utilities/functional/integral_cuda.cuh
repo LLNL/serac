@@ -68,6 +68,36 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
 
   }
 
+  template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q, typename derivatives_type, typename lambda, typename u_type, typename r_type>
+  __global__ void eval_cuda_serial(const u_type u, r_type r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) {
+
+    using test_element               = finite_element<g, test>;
+    using trial_element              = finite_element<g, trial>;
+    using element_residual_type      = typename trial_element::residual_type;
+    static constexpr auto rule       = GaussQuadratureRule<g, Q>();
+
+    int e = blockIdx.x * blockDim.x + threadIdx.x;
+    // for each element in the domain
+    for (int e = 0; e < num_elements; e++) {
+      // get the DOF values for this particular element
+      auto u_elem = detail::Load<trial_element>(u, e);
+
+      // this is where we will accumulate the element residual tensor
+      element_residual_type r_elem{};
+
+      // for each quadrature point in the element
+      for (int q = 0; q < static_cast<int>(rule.size()); q++) {
+	eval_quadrature<g, test, trial, geometry_dim, spatial_dim, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, r, derivatives_ptr, J, X, num_elements, qf);
+      }
+
+      // once we've finished the element integration loop, write our element residuals
+      // out to memory, to be later assembled into global residuals by mfem
+      detail::Add(r, r_elem, e);
+    } // e loop
+
+  }
+
+  
 
   template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q, typename derivatives_type, typename lambda, typename u_type, typename r_type>
   __global__ void eval_cuda_element(const u_type u, r_type r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) {
@@ -165,8 +195,11 @@ const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
   [[maybe_unused]] int blocks_element = (num_elements + blocksize - 1)/blocksize;
   // eval_cuda_element<g, test, trial, geometry_dim, spatial_dim, Q ><<<blocks_element,blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
   int blocks_quadrature_element = (num_elements * rule.size() + blocksize - 1)/blocksize;
-  eval_cuda_quadrature<g, test, trial, geometry_dim, spatial_dim, Q ><<<blocks_quadrature_element,blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+  // eval_cuda_quadrature<g, test, trial, geometry_dim, spatial_dim, Q ><<<blocks_quadrature_element,blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
 
+  eval_cuda_serial<g, test, trial, geometry_dim, spatial_dim, Q ><<<1,1>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+
+  
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh after eval_cuda is fine");
 
