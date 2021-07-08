@@ -41,6 +41,14 @@ public:
    */
   QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc = true);
 
+  /**
+   * @brief Constructs from an existing quadrature function
+   * @param[in] qfunc The QuadratureFunction with existing quadrature
+   * point data
+   *
+   * @pre @a qfunc must be created via an instance of this class, i.e.,
+   * this constructor is intended to be used as part of a save/restart
+   */
   QuadratureData(mfem::QuadratureFunction& qfunc)
       : qspace_(qfunc.GetSpace()), qfunc_(&qfunc), data_(static_cast<std::size_t>(qfunc.Size() / std::ceil(stride_)))
   {
@@ -53,6 +61,13 @@ public:
       j++;
     }
   }
+
+  // When a QuadratureData instance is managed by StateManager, we don't
+  // ever want to copy from or move from that instance.  This is sort of
+  // overkill when QuadratureData objects are created outside of the StateManager,
+  // but this case should be fairly rare.
+  QuadratureData(const QuadratureData&) = delete;
+  QuadratureData(QuadratureData&&)      = delete;
 
   /**
    * @brief Retrieves the data for a given quadrature point
@@ -104,8 +119,6 @@ public:
   }
 
 private:
-  // FIXME: These will probably need to be MaybeOwningPointers
-  // See https://github.com/LLNL/axom/pull/433
   /**
    * @brief Storage layout of @p qfunc_ containing mesh and polynomial order info
    */

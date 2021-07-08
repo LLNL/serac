@@ -186,17 +186,8 @@ struct variant {
   constexpr variant() = default;
 
   // These are needed explicitly so the variant(T&&) doesn't match first
-  /**
-   * @brief Copy constructor
-   * @param[in] other The variant to copy from
-   */
-  constexpr variant(const variant& other) = default;
-
-  /**
-   * @brief Move constructor
-   * @param[in] other The variant to move from
-   */
-  constexpr variant(variant&& other) = default;
+  constexpr variant(const variant&) = default;
+  constexpr variant(variant&&)      = default;
 
   /**
    * @brief "Parameterized" constructor with which a value can be assigned
@@ -221,17 +212,8 @@ struct variant {
   }
 
   // These are needed explicitly so the operator=(T&&) doesn't match first
-  /**
-   * @brief Copy assignment
-   * @param[in] other The variant to copy from
-   */
-  constexpr variant& operator=(const variant& other) = default;
-
-  /**
-   * @brief Move assignment
-   * @param[in] other The variant to move from
-   */
-  constexpr variant& operator=(variant&& other) = default;
+  constexpr variant& operator=(const variant&) = default;
+  constexpr variant& operator=(variant&&) = default;
 
   /**
    * "Parameterized" assignment with which a value can be assigned

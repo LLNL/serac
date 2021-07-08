@@ -8,6 +8,19 @@
 
 namespace serac {
 
+namespace detail {
+
+MaybeOwningPointer<mfem::ParGridFunction> initialGridFunc(mfem::ParFiniteElementSpace* space, const bool alloc)
+{
+  if (alloc) {
+    return std::make_unique<mfem::ParGridFunction>(space);
+  } else {
+    return new mfem::ParGridFunction(space, static_cast<double*>(nullptr));
+  }
+}
+
+}  // namespace detail
+
 FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::Options&& options)
     : mesh_(mesh),
       coll_(options.coll ? std::move(options.coll)
@@ -16,10 +29,7 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
                                                            options.ordering)),
       // When left unallocated, the allocation can happen inside the datastore
       // Use a raw pointer here when unallocated, lifetime will be managed by the DataCollection
-      gf_(options.alloc_gf ? detail::MaybeOwningPointer<mfem::ParGridFunction>{std::make_unique<mfem::ParGridFunction>(
-                                 &detail::retrieve(space_))}
-                           : detail::MaybeOwningPointer<mfem::ParGridFunction>{new mfem::ParGridFunction(
-                                 &detail::retrieve(space_), static_cast<double*>(nullptr))}),
+      gf_(detail::initialGridFunc(&detail::retrieve(space_), options.alloc_gf)),
       true_vec_(&detail::retrieve(space_)),
       name_(options.name)
 {
