@@ -33,8 +33,8 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
 
 } // namespace detail
 
-  template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q , typename derivatives_type, typename lambda, typename u_elem_type, typename element_residual_type>
-  SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type & r_elem, mfem::DeviceTensor<2, double> r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) 
+  template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q , typename derivatives_type, typename lambda, typename u_elem_type, typename element_residual_type, typename r_type>
+  SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type & r_elem, r_type r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) 
   {
     using test_element               = finite_element<g, test>;
     using trial_element              = finite_element<g, trial>;
@@ -69,8 +69,8 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
   }
 
 
-  template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q, typename derivatives_type, typename lambda>
-  __global__ void eval_cuda_element(const mfem::DeviceTensor<2, const double> u, mfem::DeviceTensor<2, double> r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) {
+  template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q, typename derivatives_type, typename lambda, typename u_type, typename r_type>
+  __global__ void eval_cuda_element(const u_type u, r_type r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) {
 
     using test_element               = finite_element<g, test>;
     using trial_element              = finite_element<g, trial>;
@@ -98,8 +98,8 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
 
   }
 
-  template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q, typename derivatives_type, typename lambda>
-  __global__ void eval_cuda_quadrature(const mfem::DeviceTensor<2, const double> u, mfem::DeviceTensor<2, double> r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) {
+template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q, typename derivatives_type, typename lambda, typename u_type, typename r_type>
+  __global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type * derivatives_ptr, const mfem::DeviceTensor<4, const double> J, const mfem::DeviceTensor<3, const double> X, int num_elements, lambda qf) {
 
     using test_element               = finite_element<g, test>;
     using trial_element              = finite_element<g, trial>;
@@ -217,8 +217,8 @@ SERAC_HOST_DEVICE void gradient_quadrature(int e, int q, du_elem_type & du_elem,
   
   
 template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
-          typename derivatives_type>
-__global__ void gradient_cuda_element(const mfem::DeviceTensor<2, const double> du, const mfem::DeviceTensor<2, double> dr, derivatives_type* derivatives_ptr,
+          typename derivatives_type, typename du_type, typename dr_type>
+__global__ void gradient_cuda_element(const du_type du, dr_type dr, derivatives_type* derivatives_ptr,
                      const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
   using test_element               = finite_element<g, test>;
@@ -250,8 +250,8 @@ __global__ void gradient_cuda_element(const mfem::DeviceTensor<2, const double> 
 }
 
 template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
-          typename derivatives_type>
-__global__ void gradient_cuda_quadrature(const mfem::DeviceTensor<2, const double> du, const mfem::DeviceTensor<2, double> dr, derivatives_type* derivatives_ptr,
+          typename derivatives_type, typename du_type, typename dr_type>
+__global__ void gradient_cuda_quadrature(const du_type du, dr_type dr, derivatives_type* derivatives_ptr,
                      const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
   using test_element               = finite_element<g, test>;

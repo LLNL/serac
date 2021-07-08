@@ -27,7 +27,7 @@ using namespace serac::profiling;
 int num_procs, myid;
 int nsamples = 1;  // because mfem doesn't take in unsigned int
 
-constexpr bool                 verbose = false;
+constexpr bool                 verbose = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
@@ -43,6 +43,20 @@ struct thermal_qfunction{
     auto source     = a * u - (100 * x[0] * x[1]);
     auto flux       = b * du_dx;
     return serac::tuple{source, flux};
+  }
+};
+
+template < int dim >
+struct elastic_qfunction{
+  template < typename x_t, typename displacement_t >
+  __host__ __device__ auto operator()(x_t x, displacement_t displacement) {
+    // get the value and the gradient from the input tuple
+    auto [u, du_dx] = displacement;
+    auto I = Identity<dim>();
+    auto body_force = a * u + I[0];
+    auto strain     = 0.5 * (du_dx + transpose(du_dx));
+    auto stress     = b * tr(strain) * I + 2.0 * b * strain;
+    return serac::tuple{body_force, stress};  
   }
 };
 
@@ -201,13 +215,16 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
     SERAC_PROFILE_SCOPE(concat("mfem_fAssemble", postfix));
     f.Assemble();
   }
+
   std::unique_ptr<mfem::HypreParVector> F(
       SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
-
+  F->UseDevice(true);
+  
   mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
   mfem::Vector U(fespace.TrueVSize());
+  U.UseDevice(true);
   u_global.GetTrueDofs(U);
 
   [[maybe_unused]] static constexpr auto I = Identity<dim>();
@@ -215,18 +232,19 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+  Functional<test_space(trial_space), gpu_policy> residual(&fespace, &fespace);
 
-  residual.AddDomainIntegral(
-      Dimension<dim>{},
-      [&](auto /*x*/, auto displacement) {
-        auto [u, du_dx] = displacement;
-        auto body_force = a * u + I[0];
-        auto strain     = 0.5 * (du_dx + transpose(du_dx));
-        auto stress     = b * tr(strain) * I + 2.0 * b * strain;
-        return serac::tuple{body_force, stress};
-      },
-      mesh);
+  // residual.AddDomainIntegral(
+  //     Dimension<dim>{},
+  //     [&](auto /*x*/, auto displacement) {
+  //       auto [u, du_dx] = displacement;
+  //       auto body_force = a * u + I[0];
+  //       auto strain     = 0.5 * (du_dx + transpose(du_dx));
+  //       auto stress     = b * tr(strain) * I + 2.0 * b * strain;
+  //       return serac::tuple{body_force, stress};
+  //     },
+  //     mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, elastic_qfunction<dim>{}, mesh);
 
   mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
   mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual(U));
@@ -345,7 +363,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   serac::profiling::terminateCaliper();
 }
 
-TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+// TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
 // TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
 // TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
 
@@ -361,7 +379,7 @@ TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<
 // TEST(hcurl, 3D_quadratic) { functional_test(*mesh3D, Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
 // TEST(hcurl, 3D_cubic) { functional_test(*mesh3D, Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
 
-// TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
 // TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
 // TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
 
