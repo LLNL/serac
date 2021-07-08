@@ -105,10 +105,12 @@ inline const char* make_cstr(const std::string& str) { return str.c_str(); }
 // We use decltype(auto) here instead of the default auto for a different set of type deduction rules -
 // the latter uses template type deduction rules but the former uses those for decltype, which we need
 // in order for the return type to take into account the value category (rvalue, lvalue) of the expression
+// We have to return (expr) instead of expr to ensure that reference-ness is propagated through correctly
+// in Clang - GCC handles this correctly without the parentheses as expected
 #define SERAC_PROFILE_EXPR(name, expr)                                                                     \
   [&]() -> decltype(auto) {                                                                                \
     const cali::ScopeAnnotation SERAC_CONCAT(region, __LINE__)(serac::profiling::detail::make_cstr(name)); \
-    return expr;                                                                                           \
+    return (expr);                                                                                         \
   }()
 
 /**
