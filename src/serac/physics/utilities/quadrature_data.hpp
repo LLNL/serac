@@ -18,6 +18,12 @@ namespace serac {
 
 /**
  * @brief A shim class for describing the interface of something that can be synced
+ *
+ * In practice this is used by StateManager so that the T[] stored by QuadratureData
+ * can be synced (copied) to the double[] owned by its underlying mfem::QuadratureFunction
+ * immediately prior to saving the data to disk.  That is, the interface for this class
+ * is intended to capture the T[] -> double[] action required to use QuadratureData
+ * with mfem::DataCollection's interface for quadrature point data (i.e., through mfem::QuadratureFunction)
  */
 class SyncableData {
 public:
