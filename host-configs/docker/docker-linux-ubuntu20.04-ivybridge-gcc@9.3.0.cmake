@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 # Compilers
 #------------------------------------------------------------------------------
-# Compiler Spec: gcc@8.4.0
+# Compiler Spec: gcc@9.3.0
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
@@ -19,9 +19,9 @@ if(DEFINED ENV{SPACK_CC})
 
 else()
 
-  set(CMAKE_C_COMPILER "/usr/bin/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/bin/gcc-9" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/bin/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/bin/g++-9" CACHE PATH "")
 
   set(CMAKE_Fortran_COMPILER "/usr/bin/gfortran" CACHE PATH "")
 
@@ -59,7 +59,7 @@ set(ENABLE_MPI ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/home/serac/serac_tpls/gcc-8.4.0" CACHE PATH "")
+set(TPL_ROOT "/home/serac/serac_tpls/gcc-9.3.0" CACHE PATH "")
 
 set(ASCENT_DIR "${TPL_ROOT}/ascent-0.7.1serac" CACHE PATH "")
 
