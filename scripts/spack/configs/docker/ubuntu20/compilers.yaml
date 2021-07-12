@@ -24,9 +24,24 @@ compilers:
       modules: []
       operating_system: ubuntu20.04
       paths:
-        cc: /usr/bin/gcc
-        cxx: /usr/bin/g++
+        cc: /usr/bin/gcc-8
+        cxx: /usr/bin/g++-8
         f77: /usr/bin/gfortran
         fc: /usr/bin/gfortran
       spec: gcc@8.4.0
+      target: x86_64
+  - compiler:
+      environment: {}
+      extra_rpaths: []
+      flags:
+        cflags: -pthread
+        cxxflags: -pthread
+      modules: []
+      operating_system: ubuntu20.04
+      paths:
+        cc: /usr/bin/gcc-9
+        cxx: /usr/bin/g++-9
+        f77: /usr/bin/gfortran
+        fc: /usr/bin/gfortran
+      spec: gcc@9.3.0
       target: x86_64

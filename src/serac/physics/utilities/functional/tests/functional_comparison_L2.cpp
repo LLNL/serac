@@ -48,7 +48,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   A.AddDomainIntegrator(new mfem::MassIntegrator(a_coef));
 
   // Assemble the bilinear form into a matrix
-  SERAC_PROFILE_VOID_EXPR(concat("mfem_localAssemble", postfix), A.Assemble(0));
+  SERAC_PROFILE_EXPR(concat("mfem_localAssemble", postfix), A.Assemble(0));
   A.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(A.ParallelAssemble());
 
@@ -59,7 +59,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
 
   // Create and assemble the linear load term into a vector
   f.AddDomainIntegrator(new mfem::DomainLFIntegrator(load_func));
-  SERAC_PROFILE_VOID_EXPR(serac::profiling::concat("mfem_fAssemble", postfix), f.Assemble());
+  SERAC_PROFILE_EXPR(serac::profiling::concat("mfem_fAssemble", postfix), f.Assemble());
   std::unique_ptr<mfem::HypreParVector> F(
       SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
 

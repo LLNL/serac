@@ -27,9 +27,9 @@ else()
 
 endif()
 
-set(CMAKE_C_FLAGS "-fPIC -pthread -fPIC -pthread" CACHE STRING "")
+set(CMAKE_C_FLAGS "-fPIC -pthread" CACHE STRING "")
 
-set(CMAKE_CXX_FLAGS "-fPIC -pthread " CACHE STRING "")
+set(CMAKE_CXX_FLAGS "-fPIC -pthread" CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # MPI
