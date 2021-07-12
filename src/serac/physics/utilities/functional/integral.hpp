@@ -344,6 +344,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
+      // TODO: Refactor the call to qf here since the current approach is somewhat messy
       auto qf_output = [&qf, &x_q, &arg, &data, e, q]() {
         if constexpr (std::is_same_v<PointData, void>) {
           // [[maybe_unused]] not supported in captures

@@ -179,6 +179,8 @@ struct ThreeBytesWrapper {
 };
 
 using StateTypes = ::testing::Types<MultiFieldWrapper, IntWrapper, ThreeBytesWrapper>;
+// NOTE: The extra comma is here due a clang issue where the variadic macro param is not provided
+// so instead, we leave it unspecified/empty
 TYPED_TEST_SUITE(QuadratureDataStateManagerTest, StateTypes, );
 
 TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)

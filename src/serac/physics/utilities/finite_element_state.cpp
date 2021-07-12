@@ -10,9 +10,15 @@ namespace serac {
 
 namespace detail {
 
-MaybeOwningPointer<mfem::ParGridFunction> initialGridFunc(mfem::ParFiniteElementSpace* space, const bool alloc)
+/**
+ * @brief Helper function for creating a GridFunction in both restart and not-restart scenarios
+ * @param[in] space The FESpace to construct the GridFunction with
+ * @param[in] alloc_gf Whether to allocate the GridFunction - if this is a non-restart run, we delay the allocation
+ * so it can be taken care of inside MFEMSidreDataCollection
+ */
+MaybeOwningPointer<mfem::ParGridFunction> initialGridFunc(mfem::ParFiniteElementSpace* space, const bool alloc_gf)
 {
-  if (alloc) {
+  if (alloc_gf) {
     return std::make_unique<mfem::ParGridFunction>(space);
   } else {
     return new mfem::ParGridFunction(space, static_cast<double*>(nullptr));

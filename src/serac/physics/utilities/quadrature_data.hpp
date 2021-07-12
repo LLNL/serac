@@ -34,11 +34,19 @@ constexpr int ceil(const double num)
 /**
  * @brief A shim class for describing the interface of something that can be synced
  *
- * In practice this is used by StateManager so that the T[] stored by QuadratureData
- * can be synced (copied) to the double[] owned by its underlying mfem::QuadratureFunction
+ * Because @p QuadratureData is templated, we cannot store a collection of them of arbitrary type.
+ * To support this for the purposes of iterating over them + synchronizing them within @p StateManager::Save
+ * we need to introduce a non-templated layer of indirection, i.e., this class.  We store a collection of these
+ * references to @p QuadratureData<T> (of varying @p T ) and call their virtual @p sync() methods to perform
+ * the type-punning synchronization such that the underlying @p mfem::QuadratureFunction contains the updated data
+ * that gets saved to disk by @p MFEMSidreDataCollection.
+ *
+ * Further info:
+ * In practice this is used by @p StateManager so that the @p T[] stored by @p QuadratureData
+ * can be synced (copied) to the @p double[] owned by its underlying @p mfem::QuadratureFunction
  * immediately prior to saving the data to disk.  That is, the interface for this class
- * is intended to capture the T[] -> double[] action required to use QuadratureData
- * with mfem::DataCollection's interface for quadrature point data (i.e., through mfem::QuadratureFunction)
+ * is intended to capture the @p T[] -> @p double[] action required to use @p QuadratureData
+ * with @p mfem::DataCollection's interface for quadrature point data (i.e., through @p mfem::QuadratureFunction )
  */
 class SyncableData {
 public:
@@ -157,7 +165,10 @@ private:
 };
 
 /**
- * @brief "Dummy" specialization, intended to be used as sentinel
+ * @brief "Dummy" specialization, intended to be used as a sentinel
+ * This is used as the default argument when a reference to a @p QuadratureData is used as a function
+ * argument. By comparing the argument to the dummy instance of this class, functions to easily check
+ * if the user has passed in a "real" @p QuadratureData.
  */
 template <>
 class QuadratureData<void> {

@@ -52,7 +52,6 @@ public:
     if (is_restart_) {
       auto field = datacoll_->GetQField(name);
       syncable_data_.push_back(std::make_unique<QuadratureData<T>>(*field));
-      // return {*field};
       return static_cast<QuadratureData<T>&>(*syncable_data_.back());
     } else {
       SLIC_ERROR_ROOT_IF(datacoll_->HasQField(name),
@@ -112,7 +111,10 @@ private:
   /**
    * @brief Name of the Sidre DataCollection
    */
-  static std::string                                collection_name_;
+  static std::string collection_name_;
+  /**
+   * @brief A set of @p QuadratureData<T> objects that need to be synchronized before saving to disk
+   */
   static std::vector<std::unique_ptr<SyncableData>> syncable_data_;
 };
 
