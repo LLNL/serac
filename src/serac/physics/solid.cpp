@@ -420,7 +420,7 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
     state_with_essential_boundary->initializeTrueVec();
     for (const auto& bc : bcs_.essentials()) {
       bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, *adjoint_load_vector, state_with_essential_boundary->trueVec());
+      bc.eliminateToRHS(*J_T, state_with_essential_boundary->trueVec(), *adjoint_load_vector);
     }
   } else {
     bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
