@@ -84,7 +84,12 @@ class Functional;
  */
 template <typename test, typename trial>
 class Functional<test(trial)> : public mfem::Operator {
-public:
+
+  static constexpr bool is_qoi = std::is_same_v<test, QOI>;
+
+  using return_type = std::conditional_t< is_qoi, double, mfem::Vector & >;
+
+ public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
    * @param[in] test_fes The test space
@@ -276,10 +281,14 @@ public:
    * @brief Alias for @p Mult that uses a return value instead of an output parameter
    * @param[in] input_T The input vector
    */
-  mfem::Vector& operator()(const mfem::Vector& input_T) const
+  return_type operator()(const mfem::Vector& input_T) const
   {
     Evaluation<Operation::Mult>(input_T, my_output_T_);
-    return my_output_T_;
+    if constexpr (is_qoi) {
+      return my_output_T_[0];
+    } else {
+      return my_output_T_;
+    }
   }
 
   /**

@@ -96,10 +96,20 @@ struct L2 {
 };
 
 /**
+ * @brief a type used in the test space template parameter of Functional,
+ * signifying that the functional produces a scalar, rather a Galerkin-type weighted integral
+ */
+struct QOI {
+  static constexpr int order      = 0;  ///< the polynomial order of the elements
+  static constexpr int components = 1;  ///< the number of components at each node
+};
+
+/**
  * @brief Element conformity
  */
 enum class Family
 {
+  QOI,
   H1,
   HCURL,
   HDIV,
@@ -152,6 +162,10 @@ struct is_finite_element<finite_element<g, Hcurl<p> > > {
   static constexpr bool value = true;  ///< whether or not type T is a finite_element
 };
 
+template < typename T >
+constexpr int order(T) { return T::order; }
+constexpr int order(double) { return 0; }
+
 #include "detail/segment_H1.inl"
 #include "detail/segment_Hcurl.inl"
 #include "detail/segment_L2.inl"
@@ -163,5 +177,7 @@ struct is_finite_element<finite_element<g, Hcurl<p> > > {
 #include "detail/hexahedron_H1.inl"
 #include "detail/hexahedron_Hcurl.inl"
 #include "detail/hexahedron_L2.inl"
+
+#include "detail/qoi.inl"
 
 }  // namespace serac

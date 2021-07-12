@@ -46,6 +46,7 @@ auto Reshape(double* u, int n1, int n2)
     return mfem::Reshape(u, n1, space::components, n2);
   }
 };
+
 /// @overload
 template <typename space>
 auto Reshape(const double* u, int n1, int n2)
@@ -118,6 +119,11 @@ void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, com
       r_global(i, j, e) += r_local[i][j];
     }
   }
+}
+
+void Add(const mfem::DeviceTensor<2, double>& r_global, double r_local, int e)
+{
+  r_global(0, e) += r_local;
 }
 
 /**
@@ -201,7 +207,7 @@ auto Preprocess(T u, const tensor<double, geometry_dim> xi,
  * @param[in] J The Jacobian of the element transformation at the quadrature point
  */
 template <typename element_type, typename T, int dim>
-auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
+auto Postprocess(T f, [[maybe_unused]] const tensor<double, dim> xi, [[maybe_unused]] const tensor<double, dim, dim> J)
 {
   // TODO: Helpful static_assert about f being tuple or tuple-like for H1, hcurl, hdiv
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
@@ -218,6 +224,8 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
     }
     return (W * std::get<0>(f) + curl_W * std::get<1>(f));
   }
+
+  if constexpr (element_type::family == Family::QOI) { return f; }
 }
 
 /**
@@ -302,7 +310,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
-  using element_residual_type      = typename trial_element::residual_type;
+  using element_residual_type      = typename test_element::residual_type;
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
@@ -391,7 +399,7 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
-  using element_residual_type      = typename trial_element::residual_type;
+  using element_residual_type      = typename test_element::residual_type;
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
@@ -463,11 +471,15 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
+
+
+#if 0
 template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
           typename derivatives_type>
 void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
                             int num_elements)
 {
+
   using test_element  = finite_element<g, test>;
   using trial_element = finite_element<g, trial>;
   //  using element_residual_type      = typename trial_element::residual_type;
@@ -674,6 +686,11 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
     }
   }
 }
+#else
+template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
+          typename derivatives_type>
+void gradient_matrix_kernel(mfem::Vector&, derivatives_type*, const mfem::Vector&, int) {}
+#endif
 
 /// @cond
 namespace detail {
@@ -799,7 +816,7 @@ public:
       : J_(J), X_(X)
   {
     constexpr auto geometry                      = supported_geometries[geometry_dim];
-    constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
+    constexpr auto Q                             = std::max(order(test_space{}), order(trial_space{})) + 1;
     constexpr auto quadrature_points_per_element = (spatial_dim == 2) ? Q * Q : Q * Q * Q;
 
     uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
@@ -823,7 +840,6 @@ public:
     // Integral::~Integral()
     //
     // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
-    // qf_derivatives[e * quadrature_points_per_element + q]
     std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
 
     // this is where we actually specialize the finite element kernel templates with
@@ -843,10 +859,12 @@ public:
                                                                                        num_elements);
     };
 
-    gradient_mat_ = [=](mfem::Vector& K_e) {
-      gradient_matrix_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(K_e, qf_derivatives.get(),
-                                                                                              J_, num_elements);
-    };
+    if constexpr (!std::is_same_v<trial_space, double>) {
+      gradient_mat_ = [=](mfem::Vector& K_e) {
+        gradient_matrix_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(K_e, qf_derivatives.get(),
+                                                                                                J_, num_elements);
+      };
+    }
   }
 
   /**
