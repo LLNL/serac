@@ -107,7 +107,7 @@ TEST(solid_solver, adjoint)
   FiniteElementState adjoint_essential(StateManager::mesh(), solid_solver.displacement(), "adjoint_essential");
 
   // Set the essential boundary to a non-zero value
-  adjoint_essential = 300.0;
+  adjoint_essential = 0.5;
 
   auto&  adjoint_state_2 = solid_solver.solveAdjoint(adjoint_load, &adjoint_essential);
   double adjoint_norm_2  = norm(adjoint_state_2);
@@ -115,7 +115,7 @@ TEST(solid_solver, adjoint)
   SLIC_INFO_ROOT(fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
 
   // Check that the adjoint solve is a known value
-  EXPECT_NEAR(adjoint_norm_2, 1474.66629815, 0.00005);
+  EXPECT_NEAR(adjoint_norm_2, 9.153054, 0.005);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
