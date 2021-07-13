@@ -286,7 +286,7 @@ auto Measure(const tensor<double, m, n>& A)
  * be evaluated at each quadrature point.
  * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
  * information on the idea behind a quadrature function and its inputs/outputs
- * @tparam PointData The type of the data to store for each quadrature point
+ * @tparam qpt_data_type The type of the data to store for each quadrature point
  *
  * @param[in] U The full set of per-element DOF values (primary input)
  * @param[inout] R The full set of per-element residuals (primary output)
@@ -300,10 +300,10 @@ auto Measure(const tensor<double, m, n>& A)
  * @param[inout] data The data for each quadrature point
  */
 template <Geometry g, typename test, typename trial, int geometry_dim, int spatial_dim, int Q,
-          typename derivatives_type, typename lambda, typename PointData = void>
+          typename derivatives_type, typename lambda, typename qpt_data_type = void>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf,
-                       QuadratureData<PointData>& data = dummy_qdata)
+                       QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -344,8 +344,9 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
+      // TODO: Refactor the call to qf here since the current approach is somewhat messy
       auto qf_output = [&qf, &x_q, &arg, &data, e, q]() {
-        if constexpr (std::is_same_v<PointData, void>) {
+        if constexpr (std::is_same_v<qpt_data_type, void>) {
           // [[maybe_unused]] not supported in captures
           (void)data;
           (void)e;
@@ -770,18 +771,18 @@ struct lambda_argument<Hcurl<p>, 3, 3> {
  * @tparam lambda_type The type of the lambda itself
  * @tparam x_t The type of the "value" itself
  * @tparam u_du_t The type of the derivative
- * @tparam PointData The type of the per-quadrature state data, @p void when not applicable
+ * @tparam qpt_data_type The type of the per-quadrature state data, @p void when not applicable
  */
-template <typename lambda_type, typename x_t, typename u_du_t, typename PointData, typename SFINAE = void>
+template <typename lambda_type, typename x_t, typename u_du_t, typename qpt_data_type, typename SFINAE = void>
 struct qf_result {
   using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>()))>;
 };
 
-template <typename lambda_type, typename x_t, typename u_du_t, typename PointData>
-struct qf_result<lambda_type, x_t, u_du_t, PointData, std::enable_if_t<!std::is_same_v<PointData, void>>> {
+template <typename lambda_type, typename x_t, typename u_du_t, typename qpt_data_type>
+struct qf_result<lambda_type, x_t, u_du_t, qpt_data_type, std::enable_if_t<!std::is_same_v<qpt_data_type, void>>> {
   // Expecting that qf lambdas take an lvalue reference to a state
   using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>())),
-                                    std::add_lvalue_reference_t<PointData>>;
+                                    std::add_lvalue_reference_t<qpt_data_type>>;
 };
 
 }  // namespace detail
@@ -819,7 +820,7 @@ public:
    * @brief Constructs an @p Integral from a user-provided quadrature function
    * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
    * @tparam spatial_dim The full dimension of the mesh
-   * @tparam PointData The type of the data to store for each quadrature point
+   * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
@@ -829,9 +830,9 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameters
    */
-  template <int geometry_dim, int spatial_dim, typename lambda_type, typename PointData = void>
+  template <int geometry_dim, int spatial_dim, typename lambda_type, typename qpt_data_type = void>
   Integral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<geometry_dim>,
-           Dimension<spatial_dim>, lambda_type&& qf, QuadratureData<PointData>& data = dummy_qdata)
+           Dimension<spatial_dim>, lambda_type&& qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
       : J_(J), X_(X)
   {
     constexpr auto geometry                      = supported_geometries[geometry_dim];
@@ -847,7 +848,7 @@ public:
     // the derivative information at each quadrature point
     using x_t             = tensor<double, spatial_dim>;
     using u_du_t          = typename detail::lambda_argument<trial_space, geometry_dim, spatial_dim>::type;
-    using qf_result_type  = typename detail::qf_result<lambda_type, x_t, u_du_t, PointData>::type;
+    using qf_result_type  = typename detail::qf_result<lambda_type, x_t, u_du_t, qpt_data_type>::type;
     using derivative_type = decltype(get_gradient(std::declval<qf_result_type>()));
 
     // the derivative_type data is stored in a shared_ptr here, because it can't be a

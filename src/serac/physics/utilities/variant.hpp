@@ -8,10 +8,16 @@
  * @file variant.hpp
  *
  * @brief This file contains the declaration of a two-element variant type
+ *
+ * This is necessary to work around an issue reported to LC in April 2021 regarding
+ * the use of the GCC 8 libstdc++ variant header with NVCC 11.  As of July 2021 this
+ * has not been fixed.  Additionally, the non-recursive implementation here should reduce
+ * compile times, though this effect may be limited for a variant with only two alternatives.
  */
 
 #pragma once
 
+#include <memory>
 #include <type_traits>
 
 namespace serac {
