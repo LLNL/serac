@@ -162,6 +162,19 @@ struct is_finite_element<finite_element<g, Hcurl<p> > > {
   static constexpr bool value = true;  ///< whether or not type T is a finite_element
 };
 
+template <typename T>
+struct is_qoi {
+  static constexpr bool value = false;  ///< whether or not type T is QOI
+};
+
+template <>
+struct is_qoi<QOI> {
+  static constexpr bool value = true;  ///< whether or not type T is QOI
+};
+
+template <typename T>
+static constexpr auto is_qoi_v = is_qoi<T>::value;
+
 template < typename T >
 constexpr int order(T) { return T::order; }
 constexpr int order(double) { return 0; }

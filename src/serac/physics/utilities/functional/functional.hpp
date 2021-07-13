@@ -23,21 +23,33 @@
 
 namespace serac {
 
-#ifdef ENABLE_BOUNDARY_INTEGRALS
-// for some reason, mfem doesn't support lexicographic ordering for Nedelec segment elements,
-// so we have to specifically detect this case, and use a different ordering (?)
-auto get_boundary_dof_ordering(mfem::ParFiniteElementSpace* pfes)
-{
-  const mfem::FiniteElement* fe         = pfes->GetFaceElement(0);
-  const bool                 is_segment = fe->GetGeomType() == mfem::Geometry::SEGMENT;
-  const bool                 is_hcurl   = fe->GetMapType() == mfem::FiniteElement::MapType::H_CURL;
-  if (is_segment && is_hcurl) {
-    return mfem::ElementDofOrdering::NATIVE;
-  } else {
-    return mfem::ElementDofOrdering::LEXICOGRAPHIC;
+struct QoIProlongation : public mfem::Operator { 
+  QoIProlongation(MPI_Comm c) : mfem::Operator(1, 1), comm(c) {}
+
+  void Mult(const mfem::Vector&, mfem::Vector&) const override {
+    std::cout << "QoIProlongation::Mult() is not defined, exiting..." << std::endl;
+    std::exit(1);
   }
-}
-#endif
+
+  void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override {
+    MPI_Allreduce (&input[0], &output[0], 1, MPI_DOUBLE, MPI_SUM, comm);
+  }
+
+  MPI_Comm comm;
+};
+
+struct QoIElementRestriction : public mfem::Operator { 
+  QoIElementRestriction(int num_elements) : mfem::Operator(num_elements, 1) {}
+
+  void Mult(const mfem::Vector&, mfem::Vector&) const override {
+    std::cout << "QoIElementRestriction::Mult() is not defined, exiting..." << std::endl;
+    std::exit(1);
+  }
+
+  void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override {
+    output[0] = input.Sum();
+  }
+};
 
 /// @cond
 template <typename T>
@@ -85,14 +97,42 @@ class Functional;
 template <typename test, typename trial>
 class Functional<test(trial)> : public mfem::Operator {
 
-  static constexpr bool is_qoi = std::is_same_v<test, QOI>;
+  using return_type = std::conditional_t< is_qoi_v<test>, double, mfem::Vector & >;
 
-  using return_type = std::conditional_t< is_qoi, double, mfem::Vector & >;
+ private:
+  void InitializeVectors() {
+    SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
+    SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
+    input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
+    input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
+    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
+    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+    my_output_T_.SetSize(Height(), mfem::Device::GetMemoryType());
+    dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
+  }
 
  public:
+
+  /**
+   * @brief Constructs using a @p mfem::ParFiniteElementSpace object corresponding to the trial space
+   * @param[in] trial_fes The trial space
+   */
+  Functional(mfem::ParFiniteElementSpace* trial_fes)
+      : Operator(1 /* the output of a QoI is a scalar */, trial_fes->GetTrueVSize()),
+        test_space_(nullptr),
+        trial_space_(trial_fes),
+        P_test_(new QoIProlongation(trial_fes->GetParMesh()->GetComm())),
+        G_test_(new QoIElementRestriction(trial_fes->GetParMesh()->GetNE())),
+        P_trial_(trial_space_->GetProlongationMatrix()),
+        G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
+        grad_(*this) {
+    static_assert(is_qoi_v<test>, "Functional::Functional(ParFES) constructor only enabled for QoI test space");
+    InitializeVectors();
+  }
+
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
-   * @param[in] test_fes The test space
+   * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
   Functional(mfem::ParFiniteElementSpace* test_fes, mfem::ParFiniteElementSpace* trial_fes)
@@ -101,34 +141,11 @@ class Functional<test(trial)> : public mfem::Operator {
         trial_space_(trial_fes),
         P_test_(test_space_->GetProlongationMatrix()),
         G_test_(test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-#ifdef ENABLE_BOUNDARY_INTEGRALS
-        G_test_boundary_(
-            test_space_->GetFaceRestriction(get_boundary_dof_ordering(test_fes), mfem::FaceType::Boundary)),
-        G_trial_boundary_(
-            trial_space_->GetFaceRestriction(get_boundary_dof_ordering(trial_fes), mfem::FaceType::Boundary)),
-#endif
         P_trial_(trial_space_->GetProlongationMatrix()),
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-        grad_(*this)
-  {
-    SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
-    SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
-
-    input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
-    input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
-
-    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
-    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-
-#ifdef ENABLE_BOUNDARY_INTEGRALS
-    input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
-    output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
-    output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
-#endif
-
-    my_output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
-
-    dummy_.SetSize(trial_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
+        grad_(*this) {
+    static_assert(!is_qoi_v<test>, "Functional::Functional(ParFES, ParFES) constructor only enabled for non-QoI test spaces");
+    InitializeVectors();
   }
 
   /**
@@ -153,7 +170,7 @@ class Functional<test(trial)> : public mfem::Operator {
         SLIC_ERROR_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
       }
 
-      const mfem::FiniteElement&   el = *test_space_->GetFE(0);
+      const mfem::FiniteElement&   el = *trial_space_->GetFE(0);
       const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
       constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
@@ -284,7 +301,7 @@ class Functional<test(trial)> : public mfem::Operator {
   return_type operator()(const mfem::Vector& input_T) const
   {
     Evaluation<Operation::Mult>(input_T, my_output_T_);
-    if constexpr (is_qoi) {
+    if constexpr (is_qoi_v<test>) {
       return my_output_T_[0];
     } else {
       return my_output_T_;
@@ -349,7 +366,7 @@ class Functional<test(trial)> : public mfem::Operator {
   void SetEssentialBC(const mfem::Array<int>& ess_attr)
   {
     static_assert(std::is_same_v<test, trial>, "can't specify essential bc on incompatible spaces");
-    test_space_->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
+    trial_space_->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
   }
 
 private:
@@ -409,6 +426,8 @@ private:
           integral.GradientMult(input_E_, output_E_);
         }
       }
+
+      output_E_.Print(std::cout);
 
       // scatter-add to compute residuals on the local processor
       G_test_->MultTranspose(output_E_, output_L_);

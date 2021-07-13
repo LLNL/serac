@@ -26,6 +26,22 @@ constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+double region_measure(mfem::ParMesh& mesh) {
+  mfem::ConstantCoefficient one(1.0);
+
+  auto fec = mfem::H1_FECollection(1, mesh.Dimension());
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+
+  mfem::ParLinearForm mass_lf(&fespace);
+  mass_lf.AddDomainIntegrator(new mfem::DomainLFIntegrator(one));
+  mass_lf.Assemble();
+
+  mfem::ParGridFunction one_gf(&fespace);
+  one_gf.ProjectCoefficient(one);
+
+  return mass_lf(one_gf);
+}
+
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
 //
@@ -49,19 +65,15 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   // Define the types for the test and trial spaces using the function arguments
   using trial_space = decltype(trial);
 
-  // Construct the new functional object using the known test and trial spaces
-  Functional<QOI(trial_space)> objective(nullptr, &fespace);
+  // Construct the new functional object 
+  Functional<QOI(trial_space)> measure(&fespace);
+  measure.AddDomainIntegral(Dimension<dim>{}, [&](auto, auto) { return 1.0; }, mesh);
 
-  // Add the total domain residual term to the functional
-  objective.AddDomainIntegral(
-      Dimension<dim>{},
-      [&](auto /* x */, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto heat_flux = k * du_dx;
-        return dot(du_dx, heat_flux);
-      }, mesh);
+  // evaluate the quantity of interest (region measure)
+  double m1 = measure(U);
+  double m2 = region_measure(mesh);
 
-  [[maybe_unused]] double value = objective(U);
+  std::cout << m1 << " " << m2 << std::endl;
 
 }
 
@@ -84,6 +96,7 @@ int main(int argc, char* argv[])
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   functional_qoi_test(*mesh2D, H1<1>{}, Dimension<2>{});
+  functional_qoi_test(*mesh3D, H1<1>{}, Dimension<3>{});
 
 #if 0
   int result = RUN_ALL_TESTS();

@@ -859,7 +859,7 @@ public:
                                                                                        num_elements);
     };
 
-    if constexpr (!std::is_same_v<trial_space, double>) {
+    if constexpr (!std::is_same_v<test_space, QOI>) {
       gradient_mat_ = [=](mfem::Vector& K_e) {
         gradient_matrix_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(K_e, qf_derivatives.get(),
                                                                                                 J_, num_elements);
