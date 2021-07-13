@@ -29,6 +29,23 @@ constexpr int ceil(const double num)
   return (static_cast<double>(as_int) == num) ? as_int : as_int + 1;
 }
 
+/**
+ * @brief Helper function for creating an mfem::QuadratureFunction in both restart and not-restart scenarios
+ * @param[in] space The QSpace to construct the mfem::QuadratureFunction with
+ * @param[in] alloc_qf Whether to allocate the mfem::QuadratureFunction - if this is a non-restart run, we delay the
+ * allocation so it can be taken care of inside MFEMSidreDataCollection
+ * @param[in] stride The stride of the array (number of doubles to allocate per point)
+ */
+inline MaybeOwningPointer<mfem::QuadratureFunction> initialQuadFunc(mfem::QuadratureSpace* space, const bool alloc_qf,
+                                                                    const int stride)
+{
+  if (alloc_qf) {
+    return std::make_unique<mfem::QuadratureFunction>(space, stride);
+  } else {
+    return new mfem::QuadratureFunction(space, nullptr, stride);
+  }
+}
+
 }  // namespace detail
 
 /**
@@ -156,7 +173,9 @@ private:
    * @brief Per-quadrature point data, stored as array of doubles for compatibility with Sidre
    */
   detail::MaybeOwningPointer<mfem::QuadratureFunction> qfunc_;
-
+  /**
+   * @brief The actual data
+   */
   std::vector<T> data_;
   /**
    * @brief The stride of the array
@@ -185,10 +204,7 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
     : qspace_(std::make_unique<mfem::QuadratureSpace>(&mesh, p + 1)),
       // When left unallocated, the allocation can happen inside the datastore
       // Use a raw pointer here when unallocated, lifetime will be managed by the DataCollection
-      qfunc_(alloc ? detail::MaybeOwningPointer<mfem::QuadratureFunction>{std::make_unique<mfem::QuadratureFunction>(
-                         &detail::retrieve(qspace_), stride_)}
-                   : detail::MaybeOwningPointer<mfem::QuadratureFunction>{new mfem::QuadratureFunction(
-                         &detail::retrieve(qspace_), nullptr, stride_)}),
+      qfunc_(detail::initialQuadFunc(&detail::retrieve(qspace_), alloc, stride_)),
       data_(static_cast<std::size_t>(detail::retrieve(qfunc_).Size() / stride_))
 {
   // To avoid violating C++'s strict aliasing rule we need to std::memcpy a default-constructed object
