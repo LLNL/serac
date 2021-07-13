@@ -185,6 +185,20 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Umpire
+    #------------------------------------------------------------------------------
+    if(UMPIRE_DIR)
+        serac_assert_is_directory(VARIABLE_NAME UMPIRE_DIR)
+        find_package(umpire REQUIRED NO_DEFAULT_PATH 
+                     PATHS ${UMPIRE_DIR})
+        message(STATUS "Umpire support is ON")
+        set(UMPIRE_FOUND TRUE)
+    else()
+        message(STATUS "Umpire support is OFF")
+        set(UMPIRE_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # PETSC
     #------------------------------------------------------------------------------
     if(PETSC_DIR)

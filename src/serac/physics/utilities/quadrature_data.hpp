@@ -12,6 +12,17 @@
 
 #pragma once
 
+#include "mfem.hpp"
+
+#include "serac/serac_config.hpp"
+
+#ifdef SERAC_USE_UMPIRE
+#include "umpire/ResourceManager.hpp"
+#include "umpire/TypedAllocator.hpp"
+#endif
+
+#include "serac/infrastructure/accelerator.hpp"
+
 #include "serac/physics/utilities/variant.hpp"
 
 namespace serac {
@@ -46,7 +57,49 @@ inline MaybeOwningPointer<mfem::QuadratureFunction> initialQuadFunc(mfem::Quadra
   }
 }
 
+template <auto offsetV>
+struct forbidden_offsets {
+  friend int* quadSpaceOffsets(mfem::QuadratureSpace& from) { return from.*offsetV; }
+};
+
+int* quadSpaceOffsets(mfem::QuadratureSpace&);
+
+template struct forbidden_offsets<&mfem::QuadratureSpace::element_offsets>;
+
 }  // namespace detail
+
+template <typename T>
+struct Array {
+  Array() = default;
+  Array(const std::size_t size) : size_(size)
+  {
+    // FIXME: Is this the condition we want to be using?
+#ifdef __CUDACC__
+    cudaMallocManaged(&ptr_, size_ * sizeof(T));
+#else
+    ptr_ = new T[size_];
+#endif
+  }
+  ~Array()
+  {
+    if (ptr_) {
+      // FIXME: Is this the condition we want to be using?
+#ifdef __CUDACC__
+      cudaFree(ptr_);
+#else
+      delete ptr_;
+#endif
+    }
+  }
+  SERAC_HOST_DEVICE T&    operator[](const std::size_t idx) { return ptr_[idx]; }
+  SERAC_HOST_DEVICE const T& operator[](const std::size_t idx) const { return ptr_[idx]; }
+  SERAC_HOST_DEVICE std::size_t size() const { return size_; }
+  SERAC_HOST_DEVICE T* data() { return ptr_; }
+  SERAC_HOST_DEVICE T* begin() { return ptr_; }
+  SERAC_HOST_DEVICE T* end() { return ptr_ + size_; }
+  T*                   ptr_  = nullptr;
+  std::size_t          size_ = 0;
+};
 
 /**
  * @brief A shim class for describing the interface of something that can be synced
@@ -96,8 +149,13 @@ public:
    * this constructor is intended to be used as part of a save/restart
    */
   QuadratureData(mfem::QuadratureFunction& qfunc)
-      : qspace_(qfunc.GetSpace()), qfunc_(&qfunc), data_(static_cast<std::size_t>(qfunc.Size() / stride_))
+      : qspace_(qfunc.GetSpace()),
+        qfunc_(&qfunc),
+        data_(static_cast<std::size_t>(detail::retrieve(qfunc_).Size() / stride_)),
+        offsets_(static_cast<std::size_t>(qfunc.GetSpace()->GetNE() + 1))
   {
+    std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
+                (qfunc.GetSpace()->GetNE() + 1) * sizeof(int));
     const double* qfunc_ptr = detail::retrieve(qfunc_).GetData();
     int           j         = 0;
     T*            data_ptr  = data_.data();
@@ -120,7 +178,7 @@ public:
    * @param[in] element_idx The index of the desired element within the mesh
    * @param[in] q_idx The index of the desired quadrature point within the element
    */
-  T& operator()(const int element_idx, const int q_idx);
+  SERAC_HOST_DEVICE T& operator()(const int element_idx, const int q_idx);
 
   /**
    * @brief Assigns an item to each quadrature point
@@ -176,7 +234,9 @@ private:
   /**
    * @brief The actual data
    */
-  std::vector<T> data_;
+  Array<T> data_;
+
+  Array<int> offsets_;
   /**
    * @brief The stride of the array
    */
@@ -205,7 +265,8 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
       // When left unallocated, the allocation can happen inside the datastore
       // Use a raw pointer here when unallocated, lifetime will be managed by the DataCollection
       qfunc_(detail::initialQuadFunc(&detail::retrieve(qspace_), alloc, stride_)),
-      data_(static_cast<std::size_t>(detail::retrieve(qfunc_).Size() / stride_))
+      data_(static_cast<std::size_t>(detail::retrieve(qfunc_).Size() / stride_)),
+      offsets_(static_cast<std::size_t>(mesh.GetNE() + 1))
 {
   // To avoid violating C++'s strict aliasing rule we need to std::memcpy a default-constructed object
   // See e.g. https://gist.github.com/shafik/848ae25ee209f698763cffee272a58f8
@@ -213,26 +274,22 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
   // also https://chromium.googlesource.com/chromium/src/base/+/refs/heads/master/bit_cast.h
   static_assert(std::is_default_constructible_v<T>, "Must be able to default-construct the stored type");
   static_assert(std::is_trivially_copyable_v<T>, "Uses memcpy - requires trivial copies");
+  std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)), (mesh.GetNE() + 1) * sizeof(int));
 }
 
 template <typename T>
-T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
+SERAC_HOST_DEVICE T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
 {
-  // A view into the quadrature point data
-  mfem::Vector view;
-  // Use the existing MFEM offset calculation logic instead of reimplementing it here
-  // Avoids making this code dependent on mfem::QuadratureSpace impl
-  detail::retrieve(qfunc_).GetElementValues(element_idx, q_idx, view);
-  double*    end_ptr   = view.GetData();
-  double*    start_ptr = detail::retrieve(qfunc_).GetData();
-  const auto idx       = static_cast<std::size_t>(end_ptr - start_ptr) / stride_;
+  const auto idx = offsets_[element_idx] + q_idx;
   return data_[static_cast<std::size_t>(idx)];
 }
 
 template <typename T>
 QuadratureData<T>& QuadratureData<T>::operator=(const T& item)
 {
-  data_.assign(data_.size(), item);
+  for (auto& datum : data_) {
+    datum = item;
+  }
   return *this;
 }
 
