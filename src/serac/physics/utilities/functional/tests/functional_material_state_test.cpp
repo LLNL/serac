@@ -303,7 +303,7 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
     serac::QuadratureData<typename TestFixture::value_type>& qdata =
         serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
     // Make sure the changes from the distance-specified increment were propagated through and in the correct order
-    int i = 0;
+    std::size_t i = 0;
     for (const auto& s : qdata) {
       EXPECT_EQ(s, origin_mutated_data[i]);
       i++;
