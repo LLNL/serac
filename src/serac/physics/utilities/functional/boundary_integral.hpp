@@ -151,6 +151,10 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 
       auto qf_output = [&qf, &x_q, &n_q, &arg, &data, e, q]() {
         if constexpr (std::is_same_v<qpt_data_type, void>) {
+          // [[maybe_unused]] not supported in captures
+          (void)data;
+          (void)e;
+          (void)q;
           return qf(x_q, n_q, make_dual(arg));
         } else {
           return qf(x_q, n_q, make_dual(arg), data(e, q));
