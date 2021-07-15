@@ -154,7 +154,7 @@ public:
         offsets_(static_cast<std::size_t>(qfunc.GetSpace()->GetNE() + 1))
   {
     std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
-                (qfunc.GetSpace()->GetNE() + 1) * sizeof(int));
+                static_cast<std::size_t>(qfunc.GetSpace()->GetNE() + 1) * sizeof(int));
     const double* qfunc_ptr = detail::retrieve(qfunc_).GetData();
     int           j         = 0;
     T*            data_ptr  = data_.data();
@@ -228,6 +228,7 @@ private:
   detail::MaybeOwningPointer<mfem::QuadratureSpace> qspace_;
   /**
    * @brief Per-quadrature point data, stored as array of doubles for compatibility with Sidre
+   * @note It may be possible to reduce memory pressure by only constructing the qfunc immediately prior to saving
    */
   detail::MaybeOwningPointer<mfem::QuadratureFunction> qfunc_;
 /**
@@ -283,13 +284,15 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
   // also https://chromium.googlesource.com/chromium/src/base/+/refs/heads/master/bit_cast.h
   static_assert(std::is_default_constructible_v<T>, "Must be able to default-construct the stored type");
   static_assert(std::is_trivially_copyable_v<T>, "Uses memcpy - requires trivial copies");
-  std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)), (mesh.GetNE() + 1) * sizeof(int));
+  // FIXME: Can we avoid storing a copy of the offsets array in the general case?
+  std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
+              static_cast<std::size_t>(mesh.GetNE() + 1) * sizeof(int));
 }
 
 template <typename T>
 SERAC_HOST_DEVICE T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
 {
-  const auto idx = offsets_[element_idx] + q_idx;
+  const auto idx = offsets_[static_cast<std::size_t>(element_idx)] + q_idx;
   return data_[static_cast<std::size_t>(idx)];
 }
 
