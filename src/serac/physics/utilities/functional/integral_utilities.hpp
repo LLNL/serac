@@ -176,13 +176,13 @@ struct lambda_argument;
 // specialization for an H1 space with polynomial order p, and c components
 template <int p, int c, int dim>
 struct lambda_argument<H1<p, c>, dim, dim> {
-  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
+  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
 // specialization for an L2 space with polynomial order p, and c components
 template <int p, int c, int dim>
 struct lambda_argument<L2<p, c>, dim, dim> {
-  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
+  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
 // specialization for an H1 space with polynomial order p, and c components
@@ -208,7 +208,26 @@ struct lambda_argument<Hcurl<p>, 2, 2> {
 // specialization for an Hcurl space with polynomial order p in 3D
 template <int p>
 struct lambda_argument<Hcurl<p>, 3, 3> {
-  using type = std::tuple<tensor<double, 3>, tensor<double, 3> >;
+  using type = std::tuple<tensor<double, 3>, tensor<double, 3>>;
+};
+
+/**
+ * @brief Determines the return type of a qfunction lambda
+ * @tparam lambda_type The type of the lambda itself
+ * @tparam x_t The type of the "value" itself
+ * @tparam u_du_t The type of the derivative
+ * @tparam qpt_data_type The type of the per-quadrature state data, @p void when not applicable
+ */
+template <typename lambda_type, typename x_t, typename u_du_t, typename qpt_data_type, typename SFINAE = void>
+struct qf_result {
+  using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>()))>;
+};
+
+template <typename lambda_type, typename x_t, typename u_du_t, typename qpt_data_type>
+struct qf_result<lambda_type, x_t, u_du_t, qpt_data_type, std::enable_if_t<!std::is_same_v<qpt_data_type, void>>> {
+  // Expecting that qf lambdas take an lvalue reference to a state
+  using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>())),
+                                    std::add_lvalue_reference_t<qpt_data_type>>;
 };
 
 }  // namespace detail

@@ -13,6 +13,12 @@
  */
 #pragma once
 
+#include "mfem.hpp"
+#include "mfem/linalg/dtensor.hpp"
+
+#include "serac/physics/utilities/quadrature_data.hpp"
+
+#include "serac/physics/utilities/functional/tensor.hpp"
 #include "serac/physics/utilities/functional/integral_utilities.hpp"
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
@@ -116,6 +122,7 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
  * be evaluated at each quadrature point.
  * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
  * information on the idea behind a quadrature function and its inputs/outputs
+ * @tparam qpt_data_type The type of the data to store for each quadrature point
  *
  * @param[in] U The full set of per-element DOF values (primary input)
  * @param[inout] R The full set of per-element residuals (primary output)
@@ -126,10 +133,13 @@ auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, di
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
+ * @param[inout] data The data for each quadrature point
  */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda>
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
+          typename qpt_data_type = void>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
-                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
+                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf,
+                       QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -171,7 +181,18 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
-      auto qf_output = qf(x_q, make_dual(arg));
+      // TODO: Refactor the call to qf here since the current approach is somewhat messy
+      auto qf_output = [&qf, &x_q, &arg, &data, e, q]() {
+        if constexpr (std::is_same_v<qpt_data_type, void>) {
+          // [[maybe_unused]] not supported in captures
+          (void)data;
+          (void)e;
+          (void)q;
+          return qf(x_q, make_dual(arg));
+        } else {
+          return qf(x_q, make_dual(arg), data(e, q));
+        }
+      }();
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
@@ -519,6 +540,7 @@ public:
   /**
    * @brief Constructs a @p DomainIntegral from a user-provided quadrature function
    * @tparam dim The dimension of the mesh
+   * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
@@ -527,8 +549,9 @@ public:
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters
    */
-  template <int dim, typename lambda_type>
-  DomainIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf)
+  template <int dim, typename lambda_type, typename qpt_data_type = void>
+  DomainIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
+                 QuadratureData<qpt_data_type>& data = dummy_qdata)
       : J_(J), X_(X)
   {
     constexpr auto geometry                      = supported_geometries[dim];
@@ -544,7 +567,8 @@ public:
     // the derivative information at each quadrature point
     using x_t             = tensor<double, dim>;
     using u_du_t          = typename detail::lambda_argument<trial_space, dim, dim>::type;
-    using derivative_type = decltype(get_gradient(qf(x_t{}, make_dual(u_du_t{}))));
+    using qf_result_type  = typename detail::qf_result<lambda_type, x_t, u_du_t, qpt_data_type>::type;
+    using derivative_type = decltype(get_gradient(std::declval<qf_result_type>()));
 
     // the derivative_type data is stored in a shared_ptr here, because it can't be a
     // member variable on the DomainIntegral class template (it depends on the lambda function,
@@ -566,9 +590,9 @@ public:
     //
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
-    evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
+    evaluation_ = [=, &data](const mfem::Vector& U, mfem::Vector& R) {
       domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
-                                                                               num_elements, qf);
+                                                                               num_elements, qf, data);
     };
 
     gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
