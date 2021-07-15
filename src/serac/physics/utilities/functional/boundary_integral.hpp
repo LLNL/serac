@@ -134,12 +134,11 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       // get the position of this quadrature point in the parent and physical space,
       // and calculate the measure of that point in physical space.
-      auto                  xi  = rule.points[q];
-      auto                  dxi = rule.weights[q];
-      auto                  x_q = make_tensor<dim + 1>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-      [[maybe_unused]] auto n_q =
-          make_tensor<dim + 1>([&](int i) { return N(q, i, e); });  // Physical coords of unit normal
-      double dx = J(q, e) * dxi;
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   x_q = make_tensor<dim + 1>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+      auto   n_q = make_tensor<dim + 1>([&](int i) { return N(q, i, e); });  // Physical coords of unit normal
+      double dx  = J(q, e) * dxi;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
       auto arg = Preprocess<trial_element>(u_elem, xi);
@@ -277,7 +276,7 @@ public:
    * @param[in] num_elements The number of elements in the mesh
    * @param[in] J The Jacobians of the element transformations at all quadrature points
    * @param[in] X The actual (not reference) coordinates of all quadrature points
-   * @param[in] N The unit normals of all quadrature points
+   * @param[in] normals The unit normals of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
