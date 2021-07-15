@@ -10,12 +10,12 @@ jobs:
     matrix:
       linux_gcc8:
           VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: 'seracllnl/tpls:gcc-9_07-06-21_13h-00m'
+          Compiler_ImageName: 'seracllnl/tpls:gcc-9_07-15-21_05h-56m'
           TEST_TARGET: 'linux_gcc9'
           HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-gcc@9.3.0.cmake'
       linux_clang10:
           VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: 'seracllnl/tpls:clang-10_07-06-21_13h-00m'
+          Compiler_ImageName: 'seracllnl/tpls:clang-10_07-15-21_05h-56m'
           TEST_TARGET: 'linux_clang10'
           HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-clang@10.0.0.cmake'
 
@@ -41,7 +41,7 @@ jobs:
 - job: Check_Code
   variables:
     VM_ImageName: 'ubuntu-20.04'
-    Compiler_ImageName: 'seracllnl/tpls:clang-10_07-06-21_13h-00m'
+    Compiler_ImageName: 'seracllnl/tpls:clang-10_07-15-21_05h-56m'
     TEST_TARGET: 'linux_clang10'
     HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-clang@10.0.0'
 

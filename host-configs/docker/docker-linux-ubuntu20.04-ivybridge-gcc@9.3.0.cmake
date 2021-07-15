@@ -65,7 +65,7 @@ set(ASCENT_DIR "${TPL_ROOT}/ascent-0.7.1serac" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.5.0serac" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.1" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2" CACHE PATH "")
 
 set(MFEM_DIR "${TPL_ROOT}/mfem-4.2.0" CACHE PATH "")
 
@@ -102,3 +102,5 @@ set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
 set(ENABLE_CLANGTIDY OFF CACHE BOOL "")
 
 set(ENABLE_DOCS OFF CACHE BOOL "")
+
+
