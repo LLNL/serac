@@ -14,6 +14,8 @@ set(physics_utilities_headers
     physics_utils.hpp
     solver_config.hpp
     state_manager.hpp
+    quadrature_data.hpp
+    variant.hpp
     )
 
 set(physics_utilities_sources
