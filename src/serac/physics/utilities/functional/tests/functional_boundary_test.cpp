@@ -12,11 +12,11 @@
 #include "axom/slic/core/SimpleLogger.hpp"
 
 #include "serac/serac_config.hpp"
-//#include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
+#include "serac/numerics/mesh_utils_base.hpp"
 
 #include <gtest/gtest.h>
 
@@ -28,49 +28,6 @@ constexpr bool verbose     = true;
 
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
-
-mfem::Mesh buildMeshFromFile(const std::string& mesh_file)
-{
-  // Open the mesh
-  std::string msg = fmt::format("Opening mesh file: {0}", mesh_file);
-  SLIC_INFO_ROOT(msg);
-
-  // Ensure correctness
-  serac::logger::flush();
-
-  // This inherits from std::ifstream, and will work the same way as a std::ifstream,
-  // but is required for Exodus meshes
-  mfem::named_ifgzstream imesh(mesh_file);
-
-  if (!imesh) {
-    serac::logger::flush();
-    std::string err_msg = fmt::format("Can not open mesh file: {0}", mesh_file);
-    SLIC_ERROR_ROOT(err_msg);
-  }
-
-  return mfem::Mesh{imesh, 1, 1, true};
-}
-
-namespace mesh {
-
-std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, const int refine_serial = 0,
-                                                   const int refine_parallel = 0, const MPI_Comm comm = MPI_COMM_WORLD)
-{
-  // Serial refinement first
-  for (int lev = 0; lev < refine_serial; lev++) {
-    serial_mesh.UniformRefinement();
-  }
-
-  // Then create the parallel mesh and apply parallel refinement
-  auto parallel_mesh = std::make_unique<mfem::ParMesh>(comm, serial_mesh);
-  for (int lev = 0; lev < refine_parallel; lev++) {
-    parallel_mesh->UniformRefinement();
-  }
-
-  return parallel_mesh;
-}
-
-}  // namespace mesh
 
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
