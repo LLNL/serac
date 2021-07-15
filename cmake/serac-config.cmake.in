@@ -119,7 +119,7 @@ if(NOT SERAC_FOUND)
     # See comment in SetupSeracThirdParty.cmake
     if(SERAC_ENABLE_CUDA)
       if(CMAKE_VERSION VERSION_LESS 3.17)
-        message(FATAL_ERROR "Serac+Caliper+CUDA require CMake > 3.17.")
+        message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
       else()
         find_package(CUDAToolkit REQUIRED)
       endif() 
