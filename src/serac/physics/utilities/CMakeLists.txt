@@ -28,6 +28,7 @@ set(physics_utilities_sources
     )
 
 set(physics_utilities_depends serac_infrastructure)
+blt_list_append(TO physics_utilities_depends ELEMENTS chai IF CHAI_FOUND)
 
 blt_add_library(
     NAME        serac_physics_utilities

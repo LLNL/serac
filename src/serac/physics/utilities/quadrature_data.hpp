@@ -16,9 +16,8 @@
 
 #include "serac/serac_config.hpp"
 
-#ifdef SERAC_USE_UMPIRE
-#include "umpire/ResourceManager.hpp"
-#include "umpire/TypedAllocator.hpp"
+#ifdef SERAC_USE_CHAI
+#include "chai/ManagedArray.hpp"
 #endif
 
 #include "serac/infrastructure/accelerator.hpp"
@@ -189,15 +188,15 @@ public:
   /**
    * @brief Iterator to the data for the first quadrature point
    */
-  auto begin() { return data_.begin(); }
+  auto begin() { return data_.data(); }
   /// @overload
-  auto begin() const { return data_.begin(); }
+  auto begin() const { return data_.data(); }
   /**
    * @brief Iterator to one element past the data for the last quadrature point
    */
-  auto end() { return data_.end(); }
+  auto end() { return data_.data() + data_.size(); }
   /// @overload
-  auto end() const { return data_.end(); }
+  auto end() const { return data_.data() + data_.size(); }
 
   mfem::QuadratureFunction& QFunc() { return detail::retrieve(qfunc_); }
 
@@ -231,12 +230,22 @@ private:
    * @brief Per-quadrature point data, stored as array of doubles for compatibility with Sidre
    */
   detail::MaybeOwningPointer<mfem::QuadratureFunction> qfunc_;
-  /**
-   * @brief The actual data
-   */
-  Array<T> data_;
-
-  Array<int> offsets_;
+/**
+ * @brief The actual data
+ */
+#ifdef SERAC_USE_CHAI
+  chai::ManagedArray<T> data_;
+#else
+  std::vector<T> data_;
+#endif
+/**
+ * @brief A copy of the element_offsets member from mfem::QuadratureSpace
+ */
+#ifdef SERAC_USE_CHAI
+  chai::ManagedArray<int> offsets_;
+#else
+  std::vector<int> offsets_;
+#endif
   /**
    * @brief The stride of the array
    */
