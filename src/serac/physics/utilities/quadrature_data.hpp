@@ -24,6 +24,25 @@
 
 #include "serac/physics/utilities/variant.hpp"
 
+// FIXME: CHAI PR for this
+#ifdef SERAC_USE_CHAI
+namespace chai {
+
+template <typename T>
+T* begin(ManagedArray<T>& arr)
+{
+  return arr.data();
+}
+
+template <typename T>
+T* end(ManagedArray<T>& arr)
+{
+  return arr.data() + arr.size();
+}
+
+}  // namespace chai
+#endif
+
 namespace serac {
 
 namespace detail {
