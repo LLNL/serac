@@ -6,14 +6,16 @@
 
 #include "serac/physics/utilities/state_manager.hpp"
 
-#include "serac/infrastructure/logger.hpp"
-
 namespace serac {
+
+// Definition of extern variable
+QuadratureData<void> dummy_qdata;
 
 // Initialize StateManager's static members - both of these will be fully initialized in StateManager::initialize
 std::optional<axom::sidre::MFEMSidreDataCollection> StateManager::datacoll_;
 bool                                                StateManager::is_restart_      = false;
 std::string                                         StateManager::collection_name_ = "";
+std::vector<std::unique_ptr<SyncableData>>          StateManager::syncable_data_;
 
 void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& collection_name_prefix,
                               const std::optional<int> cycle_to_load)
@@ -74,6 +76,9 @@ FiniteElementState StateManager::newState(FiniteElementState::Options&& options)
 void StateManager::save(const double t, const int cycle)
 {
   SLIC_ERROR_ROOT_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
+  for (const auto& data : syncable_data_) {
+    data->sync();
+  }
   datacoll_->SetTime(t);
   datacoll_->SetCycle(cycle);
   datacoll_->Save();

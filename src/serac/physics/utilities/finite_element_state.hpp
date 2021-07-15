@@ -16,24 +16,24 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <type_traits>
-#include <variant>
 
 #include "mfem.hpp"
+
+#include "serac/physics/utilities/variant.hpp"
 
 namespace serac {
 
 /**
  * @brief A sum type for encapsulating either a scalar or vector coeffient
  */
-using GeneralCoefficient = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
+using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 /**
  * @brief convenience function for querying the type stored in a GeneralCoefficient
  */
 inline bool is_scalar_valued(const GeneralCoefficient& coef)
 {
-  return std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef);
+  return holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef);
 }
 
 /**
@@ -41,7 +41,7 @@ inline bool is_scalar_valued(const GeneralCoefficient& coef)
  */
 inline bool is_vector_valued(const GeneralCoefficient& coef)
 {
-  return std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef);
+  return holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef);
 }
 
 /**
@@ -116,21 +116,21 @@ public:
   /**
    * Returns the MPI communicator for the state
    */
-  MPI_Comm comm() const { return retrieve(space_).GetComm(); }
+  MPI_Comm comm() const { return detail::retrieve(space_).GetComm(); }
 
   /**
    * Returns a non-owning reference to the internal grid function
    */
-  mfem::ParGridFunction& gridFunc() { return retrieve(gf_); }
+  mfem::ParGridFunction& gridFunc() { return detail::retrieve(gf_); }
   /// \overload
-  const mfem::ParGridFunction& gridFunc() const { return retrieve(gf_); }
+  const mfem::ParGridFunction& gridFunc() const { return detail::retrieve(gf_); }
 
   /**
    * Returns a GridFunctionCoefficient referencing the internal grid function
    */
   mfem::GridFunctionCoefficient gridFuncCoef() const
   {
-    const auto& gf = retrieve(gf_);
+    const auto& gf = detail::retrieve(gf_);
     return mfem::GridFunctionCoefficient{&gf, gf.VectorDim()};
   }
 
@@ -139,7 +139,7 @@ public:
    */
   mfem::VectorGridFunctionCoefficient vectorGridFuncCoef() const
   {
-    return mfem::VectorGridFunctionCoefficient{&retrieve(gf_)};
+    return mfem::VectorGridFunctionCoefficient{&detail::retrieve(gf_)};
   }
 
   /**
@@ -150,9 +150,9 @@ public:
   /**
    * Returns a non-owning reference to the internal FESpace
    */
-  mfem::ParFiniteElementSpace& space() { return retrieve(space_); }
+  mfem::ParFiniteElementSpace& space() { return detail::retrieve(space_); }
   /// \overload
-  const mfem::ParFiniteElementSpace& space() const { return retrieve(space_); }
+  const mfem::ParFiniteElementSpace& space() const { return detail::retrieve(space_); }
 
   /**
    * Returns a non-owning reference to the vector of true DOFs
@@ -172,9 +172,9 @@ public:
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit(
+    visit(
         [this](auto&& concrete_coef) {
-          retrieve(gf_).ProjectCoefficient(*concrete_coef);
+          detail::retrieve(gf_).ProjectCoefficient(*concrete_coef);
           initializeTrueVec();
         },
         coef);
@@ -182,13 +182,13 @@ public:
   /// \overload
   void project(mfem::Coefficient& coef)
   {
-    retrieve(gf_).ProjectCoefficient(coef);
+    detail::retrieve(gf_).ProjectCoefficient(coef);
     initializeTrueVec();
   }
   /// \overload
   void project(mfem::VectorCoefficient& coef)
   {
-    retrieve(gf_).ProjectCoefficient(coef);
+    detail::retrieve(gf_).ProjectCoefficient(coef);
     initializeTrueVec();
   }
 
@@ -196,12 +196,12 @@ public:
    * Initialize the true DOF vector by extracting true DOFs from the internal
    * grid function into the internal true DOF vector
    */
-  void initializeTrueVec() { retrieve(gf_).GetTrueDofs(true_vec_); }
+  void initializeTrueVec() { detail::retrieve(gf_).GetTrueDofs(true_vec_); }
 
   /**
    * Set the internal grid function using the true DOF values
    */
-  void distributeSharedDofs() { retrieve(gf_).SetFromTrueDofs(true_vec_); }
+  void distributeSharedDofs() { detail::retrieve(gf_).SetFromTrueDofs(true_vec_); }
 
   /**
    * @brief Set a finite element state to a constant value
@@ -222,42 +222,10 @@ public:
   {
     static_assert(std::is_constructible_v<Tensor, mfem::ParFiniteElementSpace*>,
                   "Tensor must be constructible with a ptr to ParFESpace");
-    return std::make_unique<Tensor>(&retrieve(space_));
+    return std::make_unique<Tensor>(&detail::retrieve(space_));
   }
 
 private:
-  /**
-   * @brief A helper type for uniform semantics over owning/non-owning pointers
-   *
-   * This logic is needed to integrate with the mesh and field reconstruction logic
-   * provided by Sidre's MFEMSidreDataCollection.  When a Serac restart occurs, the
-   * saved data is used to construct fully functional mfem::(Par)Mesh and
-   * mfem::(Par)GridFunction objects.  The FiniteElementCollection and (Par)FiniteElementSpace
-   * objects are intermediates in the construction of these objects and are therefore owned
-   * by the MFEMSidreDataCollection in the case of a restart/reconstruction.  In a normal run,
-   * Serac constructs the mesh and fields, so these FEColl and FESpace objects are owned
-   * by Serac.  In both cases, the MFEMSidreDataCollection maintains ownership of the mesh
-   * and field objects themselves.
-   */
-  template <typename T>
-  using MaybeOwningPointer = std::variant<T*, std::unique_ptr<T>>;
-
-  /**
-   * @brief Retrieves a reference to the underlying object in a MaybeOwningPointer
-   * @param[in] obj The object to dereference
-   */
-  template <typename T>
-  static T& retrieve(MaybeOwningPointer<T>& obj)
-  {
-    return std::visit([](auto&& ptr) -> T& { return *ptr; }, obj);
-  }
-  /// @overload
-  template <typename T>
-  static const T& retrieve(const MaybeOwningPointer<T>& obj)
-  {
-    return std::visit([](auto&& ptr) -> const T& { return *ptr; }, obj);
-  }
-
   /**
    * @brief A reference to the mesh object on which the field is defined
    */
@@ -268,21 +236,21 @@ private:
    * in a restart run
    * @note Must be const as FESpaces store a const reference to their FEColls
    */
-  MaybeOwningPointer<const mfem::FiniteElementCollection> coll_;
+  detail::MaybeOwningPointer<const mfem::FiniteElementCollection> coll_;
   /**
    * @brief Possibly-owning handle to the FiniteElementCollection, as it is owned
    * by the FiniteElementState in a normal run and by the MFEMSidreDataCollection
    * in a restart run
    */
-  MaybeOwningPointer<mfem::ParFiniteElementSpace> space_;
+  detail::MaybeOwningPointer<mfem::ParFiniteElementSpace> space_;
   /**
    * @brief Possibly-owning handle to the ParGridFunction, as it is owned
    * by the FiniteElementState in a normal run and by the MFEMSidreDataCollection
    * in a restart run
    */
-  MaybeOwningPointer<mfem::ParGridFunction> gf_;
-  mfem::HypreParVector                      true_vec_;
-  std::string                               name_ = "";
+  detail::MaybeOwningPointer<mfem::ParGridFunction> gf_;
+  mfem::HypreParVector                              true_vec_;
+  std::string                                       name_ = "";
 };
 
 /**

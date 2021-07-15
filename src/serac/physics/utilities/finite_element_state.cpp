@@ -8,28 +8,44 @@
 
 namespace serac {
 
+namespace detail {
+
+/**
+ * @brief Helper function for creating a GridFunction in both restart and not-restart scenarios
+ * @param[in] space The FESpace to construct the GridFunction with
+ * @param[in] alloc_gf Whether to allocate the GridFunction - if this is a non-restart run, we delay the allocation
+ * so it can be taken care of inside MFEMSidreDataCollection
+ */
+MaybeOwningPointer<mfem::ParGridFunction> initialGridFunc(mfem::ParFiniteElementSpace* space, const bool alloc_gf)
+{
+  if (alloc_gf) {
+    return std::make_unique<mfem::ParGridFunction>(space);
+  } else {
+    return new mfem::ParGridFunction(space, static_cast<double*>(nullptr));
+  }
+}
+
+}  // namespace detail
+
 FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::Options&& options)
     : mesh_(mesh),
       coll_(options.coll ? std::move(options.coll)
                          : std::make_unique<mfem::H1_FECollection>(options.order, mesh.Dimension())),
-      space_(
-          std::make_unique<mfem::ParFiniteElementSpace>(&mesh, &retrieve(coll_), options.vector_dim, options.ordering)),
+      space_(std::make_unique<mfem::ParFiniteElementSpace>(&mesh, &detail::retrieve(coll_), options.vector_dim,
+                                                           options.ordering)),
       // When left unallocated, the allocation can happen inside the datastore
       // Use a raw pointer here when unallocated, lifetime will be managed by the DataCollection
-      gf_(options.alloc_gf
-              ? MaybeOwningPointer<mfem::ParGridFunction>{std::make_unique<mfem::ParGridFunction>(&retrieve(space_))}
-              : MaybeOwningPointer<mfem::ParGridFunction>{new mfem::ParGridFunction(&retrieve(space_),
-                                                                                    static_cast<double*>(nullptr))}),
-      true_vec_(&retrieve(space_)),
+      gf_(detail::initialGridFunc(&detail::retrieve(space_), options.alloc_gf)),
+      true_vec_(&detail::retrieve(space_)),
       name_(options.name)
 {
   true_vec_ = 0.0;
 }
 
 FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name)
-    : mesh_(mesh), space_(gf.ParFESpace()), gf_(&gf), true_vec_(&retrieve(space_)), name_(name)
+    : mesh_(mesh), space_(gf.ParFESpace()), gf_(&gf), true_vec_(&detail::retrieve(space_)), name_(name)
 {
-  coll_     = retrieve(space_).FEColl();
+  coll_     = detail::retrieve(space_).FEColl();
   true_vec_ = 0.0;
 }
 
