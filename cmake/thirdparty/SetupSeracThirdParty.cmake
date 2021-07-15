@@ -166,8 +166,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Should this logic be in the Caliper CMake package?
         # If CMake version doesn't support CUDAToolkit the libraries
         # are just "baked in"
-        if(ENABLE_CUDA AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
-            find_package(CUDAToolkit REQUIRED)
+        if(ENABLE_CUDA)
+            if(CMAKE_VERSION VERSION_LESS 3.17)
+                message(FATAL_ERROR "Serac+Caliper+CUDA require CMake > 3.17.")
+            else()
+                find_package(CUDAToolkit REQUIRED)
+            endif() 
         endif()
 
         find_package(caliper REQUIRED NO_DEFAULT_PATH 
