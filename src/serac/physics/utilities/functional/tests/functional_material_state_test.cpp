@@ -141,23 +141,27 @@ class QuadratureDataStateManagerTest : public QuadratureDataTest {
 public:
   using value_type                          = typename T::value_type;
   static constexpr value_type initial_state = T::initial_state;
-  static void                 mutate(value_type& v) { T::mutate(v); }
+  static void                 mutate(value_type& v, double other = 0.0) { T::mutate(v, other); }
 };
 
 struct MultiFieldWrapper {
   using value_type                          = StateWithMultiFields;
   static constexpr value_type initial_state = {};
-  static void                 mutate(value_type& v)
+  static void                 mutate(value_type& v, double other = 0.0)
   {
-    v.x += 0.1;
-    v.y += 0.7;
+    v.x += (0.1 + other);
+    v.y += (0.7 + other);
   }
 };
 
 struct IntWrapper {
   using value_type                          = int;
   static constexpr value_type initial_state = 0;
-  static void                 mutate(value_type& v) { v += 4; }
+  static void                 mutate(value_type& v, double other = 0.0)
+  {
+    v += 4;
+    v += static_cast<int>(other * 10);
+  }
 };
 
 struct ThreeBytes {
@@ -170,11 +174,11 @@ struct ThreeBytesWrapper {
   using value_type = ThreeBytes;
   static_assert(sizeof(value_type) == 3);
   static constexpr value_type initial_state = {};
-  static void                 mutate(value_type& v)
+  static void                 mutate(value_type& v, double other = 0.0)
   {
-    v.x[0] = static_cast<char>(v.x[0] + 3);
-    v.x[1] = static_cast<char>(v.x[1] + 2);
-    v.x[2] = static_cast<char>(v.x[2] + 1);
+    v.x[0] = static_cast<char>(v.x[0] + 3 + (other * 10));
+    v.x[1] = static_cast<char>(v.x[1] + 2 + (other * 10));
+    v.x[2] = static_cast<char>(v.x[2] + 1 + (other * 10));
   }
 };
 
@@ -258,16 +262,51 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
     serac::StateManager::reset();
   }
 
+  // Ordered quadrature point data that is unique (mutated with the point's distance from the origin)
+  std::vector<typename TestFixture::value_type> origin_mutated_data;
+
   // Reload the state again to make sure the same synchronization still happens when the data
   // is read in from a restart
   {
     axom::sidre::DataStore datastore;
     serac::StateManager::initialize(datastore, "serac", cycle + 1);
+    // Since the original mesh is dead, use the mesh recovered from the save file to build a new Functional
+    this->resetWithNewMesh(serac::StateManager::mesh());
     serac::QuadratureData<typename TestFixture::value_type>& qdata =
         serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
     // Make sure the changes from the second increment were propagated through
     for (const auto& s : qdata) {
       EXPECT_EQ(s, mutated_twice);
+    }
+
+    this->residual->AddDomainIntegral(
+        Dimension<TestFixture::dim>{},
+        [&](auto x, auto u, auto& state) {
+          TestFixture::mutate(state, norm(x));
+          origin_mutated_data.push_back(state);
+          return u;
+        },
+        *this->mesh, qdata);
+    // Then mutate it for the third time
+    mfem::Vector U(this->festate->space().TrueVSize());
+    (*this->residual)(U);
+    // Before saving it again
+    serac::StateManager::save(0.1, cycle + 2);
+    serac::StateManager::reset();
+  }
+
+  // Reload the state one more time to make sure order is preserved when reloading - the previous mutation
+  // included the distance of the quadrature point from the origin (which is unique)
+  {
+    axom::sidre::DataStore datastore;
+    serac::StateManager::initialize(datastore, "serac", cycle + 2);
+    serac::QuadratureData<typename TestFixture::value_type>& qdata =
+        serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
+    // Make sure the changes from the distance-specified increment were propagated through and in the correct order
+    std::size_t i = 0;
+    for (const auto& s : qdata) {
+      EXPECT_EQ(s, origin_mutated_data[i]);
+      i++;
     }
     serac::StateManager::reset();
   }
