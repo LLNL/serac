@@ -1096,7 +1096,7 @@ constexpr auto dev(const tensor<T, n, n>& A)
  * @return I_dim
  */
 template <int dim>
-constexpr tensor<double, dim, dim> Identity()
+SERAC_HOST_DEVICE constexpr tensor<double, dim, dim> Identity()
 {
   tensor<double, dim, dim> I{};
   for (int i = 0; i < dim; i++) {

@@ -645,6 +645,7 @@ public:
     // int * tmp = qf_derivatives.get();
 
     if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
+	std::cout << "cpu_policy\n";
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
         evaluation_kernel<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(U, R, qf_derivatives.get(),
                                                                                            J_, X_, num_elements, qf);
@@ -663,7 +664,7 @@ public:
 
     if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
       // todo
-
+	std::cout << "gpu_policy\n";
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
         evaluation_kernel_cuda<geometry, test_space, trial_space, geometry_dim, spatial_dim, Q>(
             U, R, qf_derivatives.get(), J_, X_, num_elements, qf);

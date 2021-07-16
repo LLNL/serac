@@ -52,13 +52,25 @@ struct elastic_qfunction{
   __host__ __device__ auto operator()(x_t x, displacement_t displacement) {
     // get the value and the gradient from the input tuple
     auto [u, du_dx] = displacement;
-    auto I = Identity<dim>();
+    constexpr auto I = Identity<dim>();
     auto body_force = a * u + I[0];
     auto strain     = 0.5 * (du_dx + transpose(du_dx));
     auto stress     = b * tr(strain) * I + 2.0 * b * strain;
     return serac::tuple{body_force, stress};  
   }
 };
+
+template < int dim >
+struct hcurl_qfunction{
+  template < typename x_t, typename vector_potential_t >
+  __host__ __device__ auto operator()(x_t x, vector_potential_t vector_potential) {
+    auto [A, curl_A] = vector_potential;
+    auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
+    auto H_term      = b * curl_A;
+    return serac::tuple{J_term, H_term};
+      }
+};
+
 
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
@@ -206,8 +218,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   mfem::ParLinearForm             f(&fespace);
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& /*coords*/, mfem::Vector& force) {
-    force    = 0.0;
-    force(0) = -1.0;
+      force    = 0.0;
+      force(0) = -1.;
   });
 
   f.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(load_func));
@@ -219,6 +231,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   std::unique_ptr<mfem::HypreParVector> F(
       SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
   F->UseDevice(true);
+
+  F->HostRead();
   
   mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
@@ -246,8 +260,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   //     mesh);
   residual.AddDomainIntegral(Dimension<dim>{}, elastic_qfunction<dim>{}, mesh);
 
+  // Functional<test_space(trial_space)> residual_cpu(&fespace, &fespace);
+  // residual_cpu.AddDomainIntegral(Dimension<dim>{}, elastic_qfunction<dim>{}, mesh);
+
   mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
   mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual(U));
+  // mfem::Vector r3 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual_cpu(U));
 
   if (verbose) {
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
@@ -316,29 +334,41 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   }
   std::unique_ptr<mfem::HypreParVector> F(
       SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
+  F->UseDevice(true);
 
   mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
   mfem::Vector U(fespace.TrueVSize());
+  U.UseDevice(true);
   u_global.GetTrueDofs(U);
 
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+  Functional<test_space(trial_space), gpu_policy> residual(&fespace, &fespace);
 
-  residual.AddDomainIntegral(
-      Dimension<dim>{},
-      [&](auto x, auto vector_potential) {
-        auto [A, curl_A] = vector_potential;
-        auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
-        auto H_term      = b * curl_A;
-        return serac::tuple{J_term, H_term};
-      },
-      mesh);
+  // residual.AddDomainIntegral(
+  //     Dimension<dim>{},
+  //     [&](auto x, auto vector_potential) {
+  //       auto [A, curl_A] = vector_potential;
+  //       auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
+  //       auto H_term      = b * curl_A;
+  //       return serac::tuple{J_term, H_term};
+  //     },
+  //     mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, hcurl_qfunction<dim>{}, mesh);
 
-  mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
+  // Compute the residual using standard MFEM methods
+  mfem::Vector r1(U.Size());
+  {
+    SERAC_PROFILE_SCOPE(concat("mfem_Apply", postfix));
+    J->Mult(U, r1);
+    r1 -= *F;
+  }
+
+
+  // mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
   mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual(U));
 
   if (verbose) {
