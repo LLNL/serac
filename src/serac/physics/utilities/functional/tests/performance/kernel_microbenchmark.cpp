@@ -15,7 +15,7 @@
 #include "axom/core/utilities/Timer.hpp"
 
 #include "serac/physics/utilities/functional/tensor.hpp"
-#include "serac/physics/utilities/functional/integral.hpp"
+#include "serac/physics/utilities/functional/domain_integral.hpp"
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/finite_element.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
