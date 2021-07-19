@@ -38,7 +38,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   serac::profiling::initializeCaliper();
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::L2_FECollection(p, dim);
+  auto                        fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
   mfem::ParBilinearForm A(&fespace);
