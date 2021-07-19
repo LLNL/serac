@@ -42,6 +42,22 @@ double region_measure(mfem::ParMesh& mesh) {
   return mass_lf(one_gf);
 }
 
+double first_moment_x(mfem::ParMesh& mesh) {
+  mfem::FunctionCoefficient one([](mfem::Vector x){ return x[0]; });
+
+  auto fec = mfem::H1_FECollection(1, mesh.Dimension());
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+
+  mfem::ParLinearForm mass_lf(&fespace);
+  mass_lf.AddDomainIntegrator(new mfem::DomainLFIntegrator(one));
+  mass_lf.Assemble();
+
+  mfem::ParGridFunction one_gf(&fespace);
+  one_gf.ProjectCoefficient(one);
+
+  return mass_lf(one_gf);
+}
+
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
 //
@@ -60,8 +76,6 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
-  [[maybe_unused]] static constexpr double k = 2.0;
-
   // Define the types for the test and trial spaces using the function arguments
   using trial_space = decltype(trial);
 
@@ -74,6 +88,10 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   double m2 = region_measure(mesh);
 
   std::cout << m1 << " " << m2 << std::endl;
+
+  Functional<QOI(trial_space)> x_moment(&fespace);
+  x_moment.AddDomainIntegral(Dimension<dim>{}, [&](auto x, auto) { return x[0]; }, mesh);
+
 
 }
 

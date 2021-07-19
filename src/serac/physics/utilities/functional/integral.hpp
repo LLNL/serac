@@ -11,6 +11,8 @@
  */
 #pragma once
 
+#include <memory>
+
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
 
