@@ -428,8 +428,6 @@ private:
         }
       }
 
-      output_E_.Print(std::cout);
-
       // scatter-add to compute residuals on the local processor
       G_test_->MultTranspose(output_E_, output_L_);
     }

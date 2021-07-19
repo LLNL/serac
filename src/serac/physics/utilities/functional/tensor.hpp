@@ -100,9 +100,9 @@ struct tensor<T> {
     return value;
   }
 
-  SERAC_HOST_DEVICE tensor() : value{} {}
-  SERAC_HOST_DEVICE tensor(T v) : value(v) {}
-  SERAC_HOST_DEVICE operator T() { return value; }
+  SERAC_HOST_DEVICE constexpr tensor() : value{} {}
+  SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
+  SERAC_HOST_DEVICE constexpr operator T() { return value; }
   T                 value;
 };
 
@@ -121,9 +121,9 @@ struct tensor<T, 1> {
   SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
   SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
 
-  operator T(){ return value; }
-  tensor() : value() {}
-  tensor(T v) : value(v) {}
+  SERAC_HOST_DEVICE constexpr operator T(){ return value; }
+  SERAC_HOST_DEVICE constexpr tensor() : value() {}
+  SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
   T value;
 };
 

@@ -14,9 +14,9 @@ blt_add_executable(NAME        tensor_unit_tests
 
 set(functional_tests_serial
     refactor_element_matrix_assembly.cpp
-    #hcurl_unit_tests.cpp
-    #test_tensor_ad.cpp
-    #tuple_arithmetic_unit_tests.cpp
+    hcurl_unit_tests.cpp
+    test_tensor_ad.cpp
+    tuple_arithmetic_unit_tests.cpp
 )
     
 foreach(filename ${functional_tests_serial})
@@ -36,7 +36,7 @@ endforeach()
 set(functional_tests_mpi
     # functional_boundary_test.cpp
     # functional_qoi.cpp
-    # functional_comparisons.cpp
+    functional_comparisons.cpp
     # functional_comparison_L2.cpp
 )
     
@@ -72,7 +72,7 @@ endforeach()
 if(ENABLE_CUDA)
 
     set(functional_tests_cuda
-        #tensor_unit_tests_cuda.cu
+        tensor_unit_tests_cuda.cu
     )
         
     foreach(filename ${functional_tests_cuda})

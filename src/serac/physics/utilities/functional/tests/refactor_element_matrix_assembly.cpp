@@ -43,6 +43,7 @@ struct linear_isotropic_electromagnetism {
   } 
 };
 
+#if 0
 template < typename T1, typename T2 >
 struct pair {
   T1 value;
@@ -85,6 +86,7 @@ auto evaluate_shape_functions(tensor < double, dim > xi, tensor< double, dim, di
 
   }
 }
+#endif
 
 template < Geometry g, typename test, typename trial, typename lambda_type >
 auto element_stiffness(lambda_type qf) {
