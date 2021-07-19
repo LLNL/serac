@@ -76,12 +76,18 @@ packages:
     externals:
     - spec: zlib@1.2.11
       prefix: /usr
+  cuda:
+    buildable: false
+    externals:
+    - spec: cuda@11.2.0
+      prefix: /usr/local/cuda-11.2
+
 
   # Lock in versions of Devtools
   cmake:
     buildable: false
     externals:
-    - spec: cmake@3.16.3
+    - spec: cmake@3.20.4
       prefix: /usr
   cppcheck:
     version: [1.90]

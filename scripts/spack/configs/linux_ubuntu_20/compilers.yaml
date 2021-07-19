@@ -7,7 +7,8 @@ compilers:
       f77: /usr/bin/gfortran
       fc: /usr/bin/gfortran
     flags: 
-      ldlibs: -lpthread
+      cflags: -pthread
+      cxxflags: -pthread
     operating_system: ubuntu20.04
     target: x86_64
     modules: []

@@ -243,6 +243,7 @@ mfem::Mesh buildCylinderMesh(int radial_refinement, int elements_lengthwise, dou
   return mfem::Mesh(*mfem::Extrude2D(&mesh, elements_lengthwise, height));
 }
 
+/// @brief Constructs a 2D MFEM mesh of a ring
 mfem::Mesh buildRing(int radial_refinement, double inner_radius, double outer_radius, double total_angle, int sectors)
 {
   using index_type = int;

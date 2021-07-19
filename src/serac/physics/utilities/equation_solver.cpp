@@ -279,7 +279,7 @@ using serac::LinearSolverOptions;
 using serac::NonlinearSolverOptions;
 using serac::mfem_ext::EquationSolver;
 
-LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet::Container& base)
+serac::LinearSolverOptions FromInlet<serac::LinearSolverOptions>::operator()(const axom::inlet::Container& base)
 {
   LinearSolverOptions options;
   std::string         type = base["type"];
@@ -327,7 +327,7 @@ LinearSolverOptions FromInlet<LinearSolverOptions>::operator()(const axom::inlet
   return options;
 }
 
-NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom::inlet::Container& base)
+serac::NonlinearSolverOptions FromInlet<serac::NonlinearSolverOptions>::operator()(const axom::inlet::Container& base)
 {
   NonlinearSolverOptions options;
   options.rel_tol               = base["rel_tol"];
@@ -347,7 +347,8 @@ NonlinearSolverOptions FromInlet<NonlinearSolverOptions>::operator()(const axom:
   return options;
 }
 
-EquationSolver FromInlet<EquationSolver>::operator()(const axom::inlet::Container& base)
+serac::mfem_ext::EquationSolver FromInlet<serac::mfem_ext::EquationSolver>::operator()(
+    const axom::inlet::Container& base)
 {
   auto lin = base["linear"].get<LinearSolverOptions>();
   if (base.contains("nonlinear")) {

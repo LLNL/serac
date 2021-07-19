@@ -4,6 +4,8 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+add_subdirectory(functional)
+
 set(physics_utilities_headers
     boundary_condition.hpp
     boundary_condition_manager.hpp
@@ -11,6 +13,9 @@ set(physics_utilities_headers
     finite_element_state.hpp
     physics_utils.hpp
     solver_config.hpp
+    state_manager.hpp
+    quadrature_data.hpp
+    variant.hpp
     )
 
 set(physics_utilities_sources
@@ -19,6 +24,7 @@ set(physics_utilities_sources
     equation_solver.cpp
     finite_element_state.cpp
     physics_utils.cpp
+    state_manager.cpp
     )
 
 set(physics_utilities_depends serac_infrastructure)

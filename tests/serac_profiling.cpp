@@ -22,13 +22,14 @@ TEST(serac_profiling, mesh_refinement)
   MPI_Barrier(MPI_COMM_WORLD);
   serac::profiling::initializeCaliper();
 
-  SERAC_MARK_START("LOAD_MESH");
-
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/bortel_echem.e";
 
-  SERAC_MARK_END("LOAD_MESH");
+  // the following string is a proxy for templated test names
+  std::string test_name = "_profiling";
 
-  auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 0, 0);
+  SERAC_MARK_START(profiling::concat("RefineAndLoadMesh", test_name).c_str());
+  auto pmesh = mesh::refineAndDistribute(SERAC_PROFILE_EXPR("LOAD_MESH", buildMeshFromFile(mesh_file)), 0, 0);
+  SERAC_MARK_END(profiling::concat("RefineAndLoadMesh", test_name).c_str());
 
   SERAC_MARK_LOOP_START(refinement_loop, "refinement_loop");
   for (int i = 0; i < 2; i++) {
@@ -36,6 +37,12 @@ TEST(serac_profiling, mesh_refinement)
     pmesh->UniformRefinement();
   }
   SERAC_MARK_LOOP_END(refinement_loop);
+
+  // Refine once more and utilize SERAC_PROFILE_SCOPE
+  {
+    SERAC_PROFILE_SCOPE("RefineOnceMore");
+    pmesh->UniformRefinement();
+  }
 
   SERAC_SET_METADATA("mesh_file", mesh_file.c_str());
   SERAC_SET_METADATA("number_mesh_elements", pmesh->GetNE());
@@ -63,6 +70,82 @@ TEST(serac_profiling, mesh_refinement)
 
   serac::profiling::terminateCaliper();
 
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(serac_profiling, exception)
+{
+  // profile mesh refinement
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initializeCaliper();
+
+  {
+    SERAC_PROFILE_SCOPE("Non-exceptionScope");
+    try {
+      SERAC_PROFILE_SCOPE("Exception scope");
+      throw std::runtime_error("Caliper to verify RAII");
+    } catch (std::exception& e) {
+      std::cout << e.what() << "\n";
+    }
+  }
+
+  serac::profiling::terminateCaliper();
+
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+struct NonCopyableOrMovable {
+  int value                                         = 0;
+  NonCopyableOrMovable()                            = default;
+  NonCopyableOrMovable(const NonCopyableOrMovable&) = delete;
+  NonCopyableOrMovable(NonCopyableOrMovable&&)      = delete;
+};
+
+TEST(serac_profiling, lvalue_reference_expr)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initializeCaliper();
+  NonCopyableOrMovable foo;
+  // This statement requires that the RHS be *exactly* a non-const lvalue
+  // reference - of course a const lvalue reference cannot be bound here,
+  // but also an rvalue reference would also cause compilation to fail
+  NonCopyableOrMovable& bar = SERAC_PROFILE_EXPR("lvalue_reference_assign", foo);
+  serac::profiling::terminateCaliper();
+  bar.value = 6;
+  EXPECT_EQ(foo.value, 6);
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+struct MovableOnly {
+  int value                       = 0;
+  MovableOnly()                   = default;
+  MovableOnly(const MovableOnly&) = delete;
+  MovableOnly(MovableOnly&&)      = default;
+};
+
+TEST(serac_profiling, rvalue_reference_expr)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initializeCaliper();
+  MovableOnly foo;
+  foo.value = 6;
+  // This statement requires that the RHS be *exactly* an rvalue reference
+  // An lvalue reference cannot be used to construct here (copy ctor deleted)
+  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", std::move(foo));
+  serac::profiling::terminateCaliper();
+  EXPECT_EQ(bar.value, 6);
+  MPI_Barrier(MPI_COMM_WORLD);
+}
+
+TEST(serac_profiling, temp_rvalue_reference_expr)
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  serac::profiling::initializeCaliper();
+  // This statement requires that the RHS be *exactly* an rvalue reference
+  // An lvalue reference cannot be used to construct here (copy ctor deleted)
+  MovableOnly bar = SERAC_PROFILE_EXPR("rvalue_reference_assign", MovableOnly{6});
+  serac::profiling::terminateCaliper();
+  EXPECT_EQ(bar.value, 6);
   MPI_Barrier(MPI_COMM_WORLD);
 }
 

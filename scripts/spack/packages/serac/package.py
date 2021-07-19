@@ -73,6 +73,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mpi")
     depends_on("cmake@3.8:")
 
+    depends_on("ascent@0.7.1serac~vtkh~fortran~shared~openmp")
+
     # Devtool dependencies these need to match serac_devtools/package.py
     depends_on('cppcheck', when="+devtools")
     depends_on('doxygen', when="+devtools")
@@ -108,14 +110,13 @@ class Serac(CachedCMakePackage, CudaPackage):
     # Axom enables RAJA/Umpire by default
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
-    # patch for RAJA#978
-    depends_on("raja@develop~openmp~shared", when="+raja")
-    # Need fix Umpire#541
-    depends_on("umpire@develop~shared", when="+umpire")
+    depends_on("camp@0.1.0serac", when="+raja")
+    depends_on("raja@0.13.1serac~openmp~shared", when="+raja")
+    depends_on("umpire@5.0.1~shared", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
-    axom_spec = "axom@0.4.0serac~openmp~fortran+mfem~shared"
+    axom_spec = "axom@0.5.0serac~openmp~fortran~examples+mfem~shared+cpp14+lua"
     cmake_debug_deps = [axom_spec,
                         "metis@5.1.0~shared",
                         "parmetis@4.0.3~shared"]
@@ -124,7 +125,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on("{0} build_type=Debug".format(dep), when="+debug")
 
     # Libraries that do not have a debug variant
-    depends_on("conduit@0.7.1~shared~python")
+    depends_on("conduit@0.7.2~shared~python")
     depends_on("caliper@master~shared+mpi~adiak~papi", when="+caliper")
     depends_on("superlu-dist@6.1.1~shared")
 
@@ -140,12 +141,19 @@ class Serac(CachedCMakePackage, CudaPackage):
     cuda_deps = ["mfem", "axom"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
+    depends_on("caliper+cuda", when="+caliper+cuda")
 
     for sm_ in CudaPackage.cuda_arch_values:
         depends_on('mfem+amgx cuda_arch=sm_{0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         depends_on('axom cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
+        depends_on('raja cuda_arch={0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
+        # Caliper may not currently use its cuda_arch
+        # but probably good practice to set it
+        depends_on('caliper cuda_arch={0}'.format(sm_),
+                when='+caliper cuda_arch={0}'.format(sm_))
         
 
     def _get_sys_type(self, spec):
@@ -186,6 +194,7 @@ class Serac(CachedCMakePackage, CudaPackage):
                 # CXX flags will be propagated to the host compiler
                 cxxflags = ' '.join(spec.compiler_flags['cxxflags'])
                 cuda_flags = arch_flag + cxxflags
+                cuda_flags += ' --expt-extended-lambda --expt-relaxed-constexpr '
                 entries.append(cmake_cache_string("CMAKE_CUDA_FLAGS",
                                                   cuda_flags))
                 entries.append(cmake_cache_string("CMAKE_CUDA_ARCHITECTURES",
@@ -249,7 +258,7 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_path("TPL_ROOT", tpl_root))
 
         # required tpls
-        for dep in ('axom', 'conduit', 'mfem', 'hdf5',
+        for dep in ('ascent', 'axom', 'conduit', 'mfem', 'hdf5',
                     'hypre', 'metis', 'parmetis'):
             dep_dir = get_spec_path(spec, dep, path_replacements)
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
@@ -306,7 +315,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_path("CLANGTIDY_EXECUTABLE",
                                             clang_tidy_path))
         else:
-            entries.append("# Clang tools disabled due to disabled devtools\n")
+            entries.append("# Code checks disabled due to disabled devtools\n")
+            entries.append(cmake_cache_option("SERAC_ENABLE_CODE_CHECKS", False))
             entries.append(cmake_cache_option("ENABLE_CLANGFORMAT", False))
             entries.append(cmake_cache_option("ENABLE_CLANGTIDY", False))
 

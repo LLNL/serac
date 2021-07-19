@@ -10,6 +10,7 @@
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/physics/integrators/nonlinear_reaction_integrator.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 
 namespace serac {
 
@@ -291,7 +292,7 @@ using serac::DirichletEnforcementMethod;
 using serac::ThermalConduction;
 using serac::TimestepMethod;
 
-ThermalConduction::InputOptions FromInlet<ThermalConduction::InputOptions>::operator()(
+serac::ThermalConduction::InputOptions FromInlet<serac::ThermalConduction::InputOptions>::operator()(
     const axom::inlet::Container& base)
 {
   ThermalConduction::InputOptions result;

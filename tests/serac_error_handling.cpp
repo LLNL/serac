@@ -14,6 +14,7 @@
 #include "serac/physics/thermal_conduction.hpp"
 #include "serac/physics/utilities/boundary_condition.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 class SlicErrorException : public std::exception {

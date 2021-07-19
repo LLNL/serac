@@ -1,26 +1,10 @@
-FROM axom/compilers:gcc-8
+FROM axom/compilers:ubuntu-20-gcc-8_06-29-21_11h-59m
 LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install -y software-properties-common # Needed for add-apt-repository
-RUN sudo add-apt-repository ppa:deadsnakes/ppa # python3.6 needed for clingo
-RUN sudo apt-get update -y
-RUN sudo apt-get install curl wget ssh pkg-config build-essential libopenblas-dev tar lcov xsltproc python3.6 python3-pip -fy
-RUN sudo apt-get -qq install -y --no-install-recommends gfortran-7 && sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-7 100
-RUN sudo ln -f -s python3.6 /usr/bin/python # Compatibility with legacy Python
-RUN sudo ln -f -s python3.6 /usr/bin/python3 # Override the default python3 (3.5) for spack
-RUN sudo python3.6 -m pip install --upgrade pip
-RUN sudo python3.6 -m pip install clingo
-
-# Avoid building CMake from scratch
-RUN wget https://cmake.org/files/v3.18/cmake-3.18.5-Linux-x86_64.sh
-RUN sudo sh cmake-3.18.5-Linux-x86_64.sh --prefix=/usr --exclude-subdir
-
-# Avoid building all MPICH3.3 dependencies from scratch - is there a xenial-compatible binary somewhere?
-RUN wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz && tar xfz mpich-3.3.2.tar.gz
-RUN cd mpich-3.3.2 && ./configure -prefix=/usr && make -j && sudo make install
+RUN sudo apt-get install ssh libopenblas-dev mpich gfortran -fy
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
@@ -30,14 +14,15 @@ USER serac
 RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git
 
 # New containers will use Python3
-RUN cd serac && python3.6 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu16/ --project-json=.uberenv_config.json \
-                                                     --spec=%gcc@8.1.0 --prefix=/home/serac/serac_tpls -k
-
-# Make sure the new hostconfig worked
-RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
+RUN cd serac && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu20/ \
+                                                       --project-json=.uberenv_config.json \
+                                                       --spec=%gcc@8.4.0 --prefix=/home/serac/serac_tpls -k
+# white238: commented out due to logs disapearing and this being saved due to layering
+#RUN rm -rf /home/serac/serac_tpls/builds
 
 RUN mkdir -p /home/serac/export_hostconfig
 RUN cp ./serac/*.cmake /home/serac/export_hostconfig
 
+# Make sure the new hostconfig worked
+RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test
 RUN rm -rf serac
-RUN rm -rf serac_tpls/builds

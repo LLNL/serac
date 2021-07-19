@@ -36,7 +36,7 @@ message(STATUS "Configuring Serac version ${SERAC_VERSION_FULL}")
 #------------------------------------------------------------------------------
 # Create variable for every TPL
 #------------------------------------------------------------------------------
-set(TPL_DEPS AXOM CONDUIT FMT HDF5 MFEM MPI TRIBOL CALIPER PETSC )
+set(TPL_DEPS ASCENT AXOM CONDUIT FMT HDF5 MFEM MPI TRIBOL CALIPER PETSC )
 foreach(dep ${TPL_DEPS})
     if( ${dep}_FOUND OR ENABLE_${dep} )
         set(SERAC_USE_${dep} TRUE)
@@ -59,7 +59,7 @@ endif()
 #--------------------------------------------------------------------------
 # Options that change behavior
 #--------------------------------------------------------------------------
-set(SERAC_USE_LUMBERJACK ${ENABLE_LUMBERJACK})
+set(SERAC_USE_LUMBERJACK ${SERAC_ENABLE_LUMBERJACK})
 
 
 #------------------------------------------------------------------------------

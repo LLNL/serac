@@ -113,7 +113,7 @@ void TractionIntegrator::AssembleFaceGrad(const mfem::FiniteElement& element_1, 
   // If computing on the deformed configuration calculate the stiffness contributions via finite difference
   // Otherwise, the contributuion is zero
   //
-  // NOTE: This is not performant and should be replaced by the upcoming weak_form functionality
+  // NOTE: This is not performant and should be replaced by the upcoming functional functionality
   if (!compute_on_reference_) {
     for (int j = 0; j < temp.Size(); j++) {
       temp[j] += diff_step;
@@ -233,7 +233,7 @@ void PressureIntegrator::AssembleFaceGrad(const mfem::FiniteElement& element_1, 
   // If computing on the deformed configuration calculate the stiffness contributions via finite difference
   // Otherwise, the contribution is zero
   //
-  // NOTE: This is not performant and should be replaced by the upcoming weak_form functionality
+  // NOTE: This is not performant and should be replaced by the upcoming functional functionality
   if (!compute_on_reference_) {
     for (int j = 0; j < temp.Size(); j++) {
       temp[j] += diff_step;

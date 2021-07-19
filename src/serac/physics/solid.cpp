@@ -10,6 +10,7 @@
 #include "serac/physics/integrators/traction_integrator.hpp"
 #include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 
@@ -468,7 +469,7 @@ using serac::DirichletEnforcementMethod;
 using serac::Solid;
 using serac::TimestepMethod;
 
-Solid::InputOptions FromInlet<Solid::InputOptions>::operator()(const axom::inlet::Container& base)
+serac::Solid::InputOptions FromInlet<serac::Solid::InputOptions>::operator()(const axom::inlet::Container& base)
 {
   Solid::InputOptions result;
 
