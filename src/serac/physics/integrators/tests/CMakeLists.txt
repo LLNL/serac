@@ -9,10 +9,10 @@ if (ENABLE_GTEST)
     set(test_dependencies serac_physics serac_coefficients test_utils)
     blt_list_append( TO test_dependencies ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
-    set(utility_tests
-        serac_operator.cpp)
+    set(integrator_tests
+        serac_wrapper_tests.cpp)
 
-    foreach(filename ${utility_tests})
+    foreach(filename ${integrator_tests})
         get_filename_component(test_name ${filename} NAME_WE)
 
         blt_add_executable(NAME        ${test_name}
