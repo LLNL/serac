@@ -4,6 +4,10 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+
 set(physics_operators_headers
     odes.hpp
     stdfunction_operator.hpp

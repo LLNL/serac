@@ -10,9 +10,6 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies serac_physics serac_coefficients test_utils)
-    blt_list_append( TO test_dependencies ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
-
     set(mfem_tests
         mfem_ex9p_blockilu.cpp
         )
@@ -23,7 +20,7 @@ if (ENABLE_GTEST)
         blt_add_executable(NAME        ${test_name}
                            SOURCES     ${filename}
                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                           DEPENDS_ON  ${test_dependencies}
+                           DEPENDS_ON  gtest serac_physics_utilities
                            FOLDER      serac/tests )
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}
@@ -31,14 +28,8 @@ if (ENABLE_GTEST)
     endforeach()
 
     set(language_tests
-        mesh_generation.cpp
         copy_elision.cpp
-        mfem_array_std_algo.cpp
-        expr_templates.cpp
-        serac_error_handling.cpp
-        serac_odes.cpp
-        serac_input.cpp
-        serac_profiling.cpp)
+        mfem_array_std_algo.cpp)
 
     foreach(filename ${language_tests})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -46,7 +37,7 @@ if (ENABLE_GTEST)
         blt_add_executable(NAME        ${test_name}
                            SOURCES     ${filename}
                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                           DEPENDS_ON  ${test_dependencies}
+                           DEPENDS_ON  gtest mfem mpi 
                            FOLDER      serac/tests )
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}
@@ -61,27 +52,17 @@ if (ENABLE_GTEST)
         blt_add_executable( NAME        serac_cuda_smoketest
                             SOURCES     serac_cuda_smoketest.cpp 
                             OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                            DEPENDS_ON  serac_cuda_smoketest_kernel ${test_dependencies} cuda_runtime
+                            DEPENDS_ON  serac_cuda_smoketest_kernel gtest cuda_runtime
                             FOLDER      serac/tests)
         blt_add_test( NAME          serac_cuda_smoketest
                       COMMAND       serac_cuda_smoketest )
-    endif()
-
-    if(ENABLE_BENCHMARKS)
-        blt_add_executable( NAME        benchmark_expr_templates
-                            SOURCES     benchmark_expr_templates.cpp
-                            DEPENDS_ON  gbenchmark ${test_dependencies}
-                            FOLDER      serac/tests)
-        blt_add_benchmark(  NAME        benchmark_expr_templates
-                            COMMAND     benchmark_expr_templates "--benchmark_min_time=0.0 --v=3 --benchmark_format=console"
-                            NUM_MPI_TASKS 4)
     endif()
 
     if(SERAC_USE_PETSC)
         blt_add_executable( NAME        petsc_smoketest
                             SOURCES     petsc_smoketest.cpp
                             OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                            DEPENDS_ON  PETSc ${test_dependencies}
+                            DEPENDS_ON  PETSc gtest
                             FOLDER      serac/tests )
         blt_add_test(NAME         petsc_smoketest
                     COMMAND       petsc_smoketest
