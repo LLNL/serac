@@ -13,14 +13,11 @@ if (ENABLE_GTEST)
     set(test_dependencies serac_physics serac_coefficients test_utils)
     blt_list_append( TO test_dependencies ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
-    set(solver_utility_tests
-        serac_dtor.cpp
-        serac_boundary_cond.cpp
-        serac_mesh.cpp
+    set(mfem_tests
         mfem_ex9p_blockilu.cpp
-        serac_newmark_test.cpp)
+        )
 
-    foreach(filename ${solver_utility_tests})
+    foreach(filename ${mfem_tests})
         get_filename_component(test_name ${filename} NAME_WE)
 
         blt_add_executable(NAME        ${test_name}
@@ -31,25 +28,6 @@ if (ENABLE_GTEST)
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}
                      NUM_MPI_TASKS 2 )
-    endforeach()
-
-
-    set(utility_tests
-        serac_operator.cpp
-        serac_component_bc.cpp
-        serac_wrapper_tests.cpp)
-
-    foreach(filename ${utility_tests})
-        get_filename_component(test_name ${filename} NAME_WE)
-
-        blt_add_executable(NAME        ${test_name}
-                           SOURCES     ${filename}
-                           OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                           DEPENDS_ON  ${test_dependencies}
-                           FOLDER      serac/tests )
-        blt_add_test(NAME          ${test_name}
-                     COMMAND       ${test_name}
-                     NUM_MPI_TASKS 1 )
     endforeach()
 
     set(language_tests

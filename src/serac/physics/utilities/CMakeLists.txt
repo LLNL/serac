@@ -6,6 +6,10 @@
 
 add_subdirectory(functional)
 
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+
 set(physics_utilities_headers
     boundary_condition.hpp
     boundary_condition_manager.hpp
