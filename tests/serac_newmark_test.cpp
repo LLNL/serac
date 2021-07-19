@@ -20,7 +20,7 @@
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/operators/odes.hpp"
 #include "serac/serac_config.hpp"
-#include "test_utilities.hpp"
+#include "serac/physics/tests/test_utilities.hpp"
 
 using namespace std;
 
