@@ -33,6 +33,10 @@ if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
     cmake_args="$cmake_args -DENABLE_COVERAGE=ON -DGCOV_EXECUTABLE=/home/serac/gcov"
 fi
 
+if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
+    cmake_args="$cmake_args -DENABLE_CLANGFORMAT=ON"
+fi
+
 or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake $cmake_args
 or_die cd build-$HOST_CONFIG-debug
 
