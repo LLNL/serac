@@ -6,7 +6,7 @@
 
 if (ENABLE_GTEST)
 
-    set(test_dependencies serac_physics serac_coefficients test_utils)
+    set(test_dependencies gtest serac_physics_integrators)
     blt_list_append( TO test_dependencies ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
     set(integrator_tests
