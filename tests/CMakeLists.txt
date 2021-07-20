@@ -48,7 +48,7 @@ if (ENABLE_GTEST)
         blt_add_executable( NAME        serac_cuda_smoketest
                             SOURCES     serac_cuda_smoketest.cpp 
                             OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                            DEPENDS_ON  serac_cuda_smoketest_kernel gtest cuda_runtime
+                            DEPENDS_ON  serac_cuda_smoketest_kernel gtest
                             FOLDER      serac/tests)
         blt_add_test( NAME          serac_cuda_smoketest
                       COMMAND       serac_cuda_smoketest )
