@@ -34,7 +34,7 @@ if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
 fi
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
-    cmake_args="$cmake_args -DENABLE_CLANGFORMAT=ON -DCLANGFORMAT_EXECUTABLE=clang-format"
+    cmake_args="$cmake_args -DENABLE_CLANGFORMAT=ON -DCLANGFORMAT_EXECUTABLE=/usr/bin/clang-format"
     echo "~~~~~ START: clang executables ~~~~~"
     ls -al /usr/bin | grep clang
     echo "~~~~~ END: clang executables ~~~~~"
