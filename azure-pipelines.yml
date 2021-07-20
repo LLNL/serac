@@ -41,7 +41,7 @@ jobs:
 - job: Check_Code
   variables:
     VM_ImageName: 'ubuntu-20.04'
-    Compiler_ImageName: 'seracllnl/tpls:clang-10_07-15-21_05h-56m'
+    Compiler_ImageName: 'seracllnl/tpls:clang-10_07-19-21_23h-10m'
     TEST_TARGET: 'linux_clang10'
     HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-clang@10.0.0'
 
