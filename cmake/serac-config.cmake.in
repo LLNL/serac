@@ -132,6 +132,16 @@ if(NOT SERAC_FOUND)
     # Note: Targets not currently imported
   endif()
 
+  # FIXME: We probably will need these for RAJA/Umpire at some point
+
+  # CHAI
+  if(SERAC_USE_CHAI)
+    set(SERAC_CHAI_DIR "@CHAI_DIR@")
+    if(NOT CHAI_DIR) 
+      set(CHAI_DIR ${SERAC_CHAI_DIR}) 
+    endif()
+    find_dependency(CHAI REQUIRED NO_DEFAULT_PATH PATHS "${CHAI_DIR}")
+  endif()
 
   #----------------------------------------------------------------------------
   # Include targets exported by CMake
