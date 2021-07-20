@@ -34,10 +34,12 @@ if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
 fi
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
-    cmake_args="$cmake_args -DENABLE_CLANGFORMAT=ON -DCLANGFORMAT_EXECUTABLE=/usr/bin/clang-format"
-    echo "~~~~~ START: clang executables ~~~~~"
-    ls -al /usr/bin | grep clang
-    echo "~~~~~ END: clang executables ~~~~~"
+    CLANGFORMAT_EXECUTABLE=/usr/bin/clang-format
+    if [[ ! -f "$CLANGFORMAT_EXECUTABLE" ]]; then
+        echo "clang-format not found: $CLANGFORMAT_EXECUTABLE"
+        exit 1
+    fi    
+    cmake_args="$cmake_args -DENABLE_CLANGFORMAT=ON -DCLANGFORMAT_EXECUTABLE=$CLANGFORMAT_EXECUTABLE"
 fi
 
 or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake $cmake_args
