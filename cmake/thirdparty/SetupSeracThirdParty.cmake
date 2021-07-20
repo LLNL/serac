@@ -8,6 +8,19 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # Prevent this file from being called twice in the same scope
     set(SERAC_THIRD_PARTY_LIBRARIES_FOUND TRUE)
 
+    #------------------------------------------------------------------------------
+    # CUDA
+    #------------------------------------------------------------------------------
+    if(ENABLE_CUDA)
+        # Manually set includes as system includes
+        foreach(_target cuda_runtime cuda)
+            get_target_property(_dirs ${_target} INTERFACE_INCLUDE_DIRECTORIES)
+            set_property(TARGET ${_target} 
+                         APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                         "${_dirs}")
+        endforeach()
+    endif()
+
     # Policy to use <PackageName>_ROOT variable in find_<Package> commands
     # Policy added in 3.12+
     if(POLICY CMP0074)
