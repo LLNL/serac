@@ -7,7 +7,7 @@
 # This test is all constexpr-evaluated, so it doesn't
 # actually need to run, if it compiles without error, the tests have passed
 blt_add_executable(NAME        tensor_unit_tests
-                   SOURCES     tests/tensor_unit_tests.cpp
+                   SOURCES     tensor_unit_tests.cpp
                    OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
                    DEPENDS_ON  serac_functional ${functional_depends}
                    FOLDER      serac/tests)
