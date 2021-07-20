@@ -44,7 +44,7 @@ or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG
 or_die cd build-$HOST_CONFIG-debug
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
-    or_die make check
+    or_die make VERBOSE=1 check
 fi
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
