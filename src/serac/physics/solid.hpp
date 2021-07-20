@@ -318,12 +318,12 @@ public:
    *
    * @return The adjoint state field
    */
-  FiniteElementState& adjoint() { return adjoint_; };
+  FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
 
   /**
    * @overload
    */
-  const FiniteElementState& adjoint() const { return adjoint_; };
+  const FiniteElementState& adjointDisplacement() const { return adjoint_displacement_; };
 
   /**
    * @brief Complete the setup of all of the internal MFEM objects and prepare for timestepping
@@ -400,7 +400,7 @@ protected:
   /**
    * @brief Adjoint displacement field
    */
-  FiniteElementState adjoint_;
+  FiniteElementState adjoint_displacement_;
 
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers

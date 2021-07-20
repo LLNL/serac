@@ -28,7 +28,7 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
           .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
       displacement_(StateManager::newState(FiniteElementState::Options{
           .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
-      adjoint_(StateManager::newState(FiniteElementState::Options{
+      adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
           .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
       geom_nonlin_(geom_nonlin),
       keep_deformation_(keep_deformation),
@@ -37,7 +37,7 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
 {
   state_.push_back(velocity_);
   state_.push_back(displacement_);
-  state_.push_back(adjoint_);
+  state_.push_back(adjoint_displacement_);
 
   // Initialize the mesh node pointers
   reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
@@ -47,9 +47,9 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-  displacement_.trueVec() = 0.0;
-  velocity_.trueVec()     = 0.0;
-  adjoint_.trueVec()      = 0.0;
+  displacement_.trueVec()         = 0.0;
+  velocity_.trueVec()             = 0.0;
+  adjoint_displacement_.trueVec() = 0.0;
 
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -427,9 +427,9 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
   }
 
   lin_solver.SetOperator(*J_T);
-  lin_solver.Mult(*adjoint_load_vector, adjoint_.trueVec());
+  lin_solver.Mult(*adjoint_load_vector, adjoint_displacement_.trueVec());
 
-  adjoint_.distributeSharedDofs();
+  adjoint_displacement_.distributeSharedDofs();
 
   // Update the mesh with the new deformed nodes
   deformed_nodes_->Set(1.0, displacement_.gridFunc());
@@ -440,7 +440,7 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
   // Reset the equation solver to use the full nonlinear residual operator
   nonlin_solver_.SetOperator(*residual_);
 
-  return adjoint_;
+  return adjoint_displacement_;
 }
 
 void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
