@@ -17,7 +17,9 @@
 #include "mfem.hpp"
 #include "axom/sidre/core/MFEMSidreDataCollection.hpp"
 
-#include "finite_element_state.hpp"
+#include "serac/infrastructure/logger.hpp"
+#include "serac/physics/utilities/finite_element_state.hpp"
+#include "serac/physics/utilities/quadrature_data.hpp"
 
 namespace serac {
 
@@ -44,6 +46,24 @@ public:
    */
   static FiniteElementState newState(FiniteElementState::Options&& options = {});
 
+  template <typename T>
+  static QuadratureData<T>& newQuadratureData(const std::string& name, const int p)
+  {
+    if (is_restart_) {
+      auto field = datacoll_->GetQField(name);
+      syncable_data_.push_back(std::make_unique<QuadratureData<T>>(*field));
+      return static_cast<QuadratureData<T>&>(*syncable_data_.back());
+    } else {
+      SLIC_ERROR_ROOT_IF(datacoll_->HasQField(name),
+                         fmt::format("Serac's datacollection was already given a qfield named '{0}'", name));
+      syncable_data_.push_back(std::make_unique<QuadratureData<T>>(mesh(), p, false));
+      // The static_cast is safe here because we "know" what we just inserted into the vector
+      auto& qdata = static_cast<QuadratureData<T>&>(*syncable_data_.back());
+      datacoll_->RegisterQField(name, &(qdata.QFunc()));
+      return qdata;
+    }
+  }
+
   /**
    * @brief Updates the Conduit Blueprint state in the datastore and saves to a file
    * @param[in] t The current sim time
@@ -58,6 +78,7 @@ public:
   {
     datacoll_.reset();
     is_restart_ = false;
+    syncable_data_.clear();
   };
 
   /**
@@ -91,6 +112,10 @@ private:
    * @brief Name of the Sidre DataCollection
    */
   static std::string collection_name_;
+  /**
+   * @brief A set of @p QuadratureData<T> objects that need to be synchronized before saving to disk
+   */
+  static std::vector<std::unique_ptr<SyncableData>> syncable_data_;
 };
 
 }  // namespace serac

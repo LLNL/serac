@@ -14,6 +14,7 @@ blt_add_executable(NAME        tensor_unit_tests
 
 set(functional_tests_serial
     refactor_element_matrix_assembly.cpp
+    functional_boundary_test.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp
@@ -38,6 +39,7 @@ set(functional_tests_mpi
     # functional_qoi.cpp
     functional_comparisons.cpp
     # functional_comparison_L2.cpp
+    # functional_material_state_test.cpp
 )
     
 foreach(filename ${functional_tests_mpi})
