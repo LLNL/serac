@@ -37,6 +37,9 @@ if(NOT SERAC_FOUND)
   set(SERAC_USE_TRIBOL         "@SERAC_USE_TRIBOL@")
   set(SERAC_USE_CALIPER        "@SERAC_USE_CALIPER@")
   set(SERAC_USE_PETSC          "@SERAC_USE_PETSC@")
+  set(SERAC_USE_UMPIRE         "@SERAC_USE_UMPIRE@")
+  set(SERAC_USE_RAJA           "@SERAC_USE_RAJA@")
+  set(SERAC_USE_CHAI           "@SERAC_USE_CHAI@")
 
   # SERAC "builtin" TPLs
   set(SERAC_ENABLE_CUDA "@ENABLE_CUDA@")
