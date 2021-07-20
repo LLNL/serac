@@ -16,14 +16,32 @@
 
 #include "serac/serac_config.hpp"
 
-#ifdef SERAC_USE_UMPIRE
-#include "umpire/ResourceManager.hpp"
-#include "umpire/TypedAllocator.hpp"
+#ifdef SERAC_USE_CHAI
+#include "chai/ManagedArray.hpp"
 #endif
 
 #include "serac/infrastructure/accelerator.hpp"
 
 #include "serac/physics/utilities/variant.hpp"
+
+// FIXME: CHAI PR for this
+#ifdef SERAC_USE_CHAI
+namespace chai {
+
+template <typename T>
+T* begin(ManagedArray<T>& arr)
+{
+  return arr.data();
+}
+
+template <typename T>
+T* end(ManagedArray<T>& arr)
+{
+  return arr.data() + arr.size();
+}
+
+}  // namespace chai
+#endif
 
 namespace serac {
 
@@ -155,7 +173,7 @@ public:
         offsets_(static_cast<std::size_t>(qfunc.GetSpace()->GetNE() + 1))
   {
     std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
-                (qfunc.GetSpace()->GetNE() + 1) * sizeof(int));
+                static_cast<std::size_t>(qfunc.GetSpace()->GetNE() + 1) * sizeof(int));
     const double* qfunc_ptr = detail::retrieve(qfunc_).GetData();
     int           j         = 0;
     T*            data_ptr  = data_.data();
@@ -189,15 +207,15 @@ public:
   /**
    * @brief Iterator to the data for the first quadrature point
    */
-  auto begin() { return data_.begin(); }
+  auto begin() { return data_.data(); }
   /// @overload
-  auto begin() const { return data_.begin(); }
+  auto begin() const { return data_.data(); }
   /**
    * @brief Iterator to one element past the data for the last quadrature point
    */
-  auto end() { return data_.end(); }
+  auto end() { return data_.data() + data_.size(); }
   /// @overload
-  auto end() const { return data_.end(); }
+  auto end() const { return data_.data() + data_.size(); }
 
   mfem::QuadratureFunction& QFunc() { return detail::retrieve(qfunc_); }
 
@@ -229,14 +247,25 @@ private:
   detail::MaybeOwningPointer<mfem::QuadratureSpace> qspace_;
   /**
    * @brief Per-quadrature point data, stored as array of doubles for compatibility with Sidre
+   * @note It may be possible to reduce memory pressure by only constructing the qfunc immediately prior to saving
    */
   detail::MaybeOwningPointer<mfem::QuadratureFunction> qfunc_;
-  /**
-   * @brief The actual data
-   */
-  Array<T> data_;
-
-  Array<int> offsets_;
+/**
+ * @brief The actual data
+ */
+#ifdef SERAC_USE_CHAI
+  chai::ManagedArray<T> data_;
+#else
+  std::vector<T> data_;
+#endif
+/**
+ * @brief A copy of the element_offsets member from mfem::QuadratureSpace
+ */
+#ifdef SERAC_USE_CHAI
+  chai::ManagedArray<int> offsets_;
+#else
+  std::vector<int> offsets_;
+#endif
   /**
    * @brief The stride of the array
    */
@@ -274,13 +303,19 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
   // also https://chromium.googlesource.com/chromium/src/base/+/refs/heads/master/bit_cast.h
   static_assert(std::is_default_constructible_v<T>, "Must be able to default-construct the stored type");
   static_assert(std::is_trivially_copyable_v<T>, "Uses memcpy - requires trivial copies");
-  std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)), (mesh.GetNE() + 1) * sizeof(int));
+  // FIXME: Can we avoid storing a copy of the offsets array in the general case?
+  std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
+              static_cast<std::size_t>(mesh.GetNE() + 1) * sizeof(int));
+#ifdef SERAC_USE_CHAI
+  // Unlike std::vector, ManagedArray does not appear to default-construct the elements
+  std::fill_n(data_.data(), data_.size(), T{});
+#endif
 }
 
 template <typename T>
 SERAC_HOST_DEVICE T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
 {
-  const auto idx = offsets_[element_idx] + q_idx;
+  const auto idx = offsets_[static_cast<std::size_t>(element_idx)] + q_idx;
   return data_[static_cast<std::size_t>(idx)];
 }
 

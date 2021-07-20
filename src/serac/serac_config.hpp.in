@@ -38,6 +38,7 @@
 #cmakedefine SERAC_USE_CALIPER
 #cmakedefine SERAC_USE_RAJA
 #cmakedefine SERAC_USE_UMPIRE
+#cmakedefine SERAC_USE_CHAI
 
 
 #endif  /* SERAC_CONFIG_CPP */
