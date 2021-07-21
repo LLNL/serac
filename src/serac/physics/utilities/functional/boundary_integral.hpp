@@ -256,6 +256,60 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
+void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
+{
+  using test_element               = finite_element<g, test>;
+  using trial_element              = finite_element<g, trial>;
+  static constexpr int  test_ndof  = test_element::ndof;
+  static constexpr int  test_dim   = test_element::components;
+  static constexpr int  trial_ndof = trial_element::ndof;
+  static constexpr int  trial_dim  = test_element::components;
+  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
+
+  // mfem provides this information in 1D arrays, so we reshape it
+  // into strided multidimensional arrays before using
+  auto J  = mfem::Reshape(J_.Read(), rule.size(), num_elements);
+  auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
+
+  // for each element in the domain
+  for (int e = 0; e < num_elements; e++) {
+    tensor<double, test_ndof, trial_ndof, test_dim, trial_dim> K_elem{};
+
+    // for each quadrature point in the element
+    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
+
+      // get the position of this quadrature point in the parent and physical space,
+      // and calculate the measure of that point in physical space.
+      auto   xi_q   = rule.points[q];
+      auto   dxi_q  = rule.weights[q];
+      double dx     = J(q, e) * dxi_q;
+
+      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
+      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
+
+      auto M = test_element::shape_functions(xi_q);
+      auto N = trial_element::shape_functions(xi_q);
+
+      for (int i = 0; i < test_ndof; i++) {
+        for (int j = 0; j < trial_ndof; j++) {
+          K_elem[i][j] += M[i] * dq_darg * N[j] * dx;
+        } 
+      } 
+    }
+
+    // once we've finished the element integration loop, write our element gradients
+    // out to memory, to be later assembled into the global gradient by mfem
+    // 
+    // Note: we "transpose" these values to get them into the layout that mfem expects
+    for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
+      dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
+    });
+
+  }
+
+}
+
 }  // namespace boundary_integral
 
 /**

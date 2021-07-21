@@ -13,7 +13,7 @@ blt_add_executable(NAME        tensor_unit_tests
                    FOLDER      serac/tests)
 
 set(functional_tests_serial
-    refactor_element_matrix_assembly.cpp
+    #refactor_element_matrix_assembly.cpp
     functional_boundary_test.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp

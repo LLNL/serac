@@ -100,7 +100,9 @@ class Functional;
 template <typename test, typename trial>
 class Functional<test(trial)> : public mfem::Operator {
 
-  using return_type = std::conditional_t< is_qoi_v<test>, double, mfem::Vector & >;
+  static constexpr bool is_qoi = test::family == Family::QOI;
+
+  using return_type = std::conditional_t< is_qoi, double, mfem::Vector & >;
 
  private:
   void InitializeVectors() {
@@ -108,11 +110,17 @@ class Functional<test(trial)> : public mfem::Operator {
     SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
 
     // Ensure the mesh has the appropriate neighbor information before constructing the face restriction operators
-    test_fes->ExchangeFaceNbrData();
-    trial_fes->ExchangeFaceNbrData();
+    if (test_space_) test_space_->ExchangeFaceNbrData();
+    if (trial_space_) trial_space_->ExchangeFaceNbrData();
 
     // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
-    if (!(is_hcurl<test>::value || is_hcurl<trial>::value)) {
+    if (trial::family != Family::HCURL && test::family != Family::HCURL) {
+      if (test_space_) {
+        G_test_boundary_  = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+      }
+      if (trial_space_) {
+        G_trial_boundary_  = trial_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+      }
       input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
       output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
       output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
@@ -141,7 +149,7 @@ class Functional<test(trial)> : public mfem::Operator {
         P_trial_(trial_space_->GetProlongationMatrix()),
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
         grad_(*this) {
-    static_assert(is_qoi_v<test>, "Functional::Functional(ParFES) constructor only enabled for QoI test space");
+    static_assert(is_qoi, "Functional::Functional(ParFES) constructor only enabled for QoI test space");
     InitializeVectors();
   }
 
@@ -160,7 +168,7 @@ class Functional<test(trial)> : public mfem::Operator {
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
         grad_(*this)
   {
-    static_assert(!is_qoi_v<test>, "Functional::Functional(ParFES, ParFES) constructor not enabled for QoI test space");
+    static_assert(!is_qoi, "Functional::Functional(ParFES, ParFES) constructor not enabled for QoI test space");
     InitializeVectors();
   }
 
@@ -280,7 +288,7 @@ class Functional<test(trial)> : public mfem::Operator {
   return_type operator()(const mfem::Vector& input_T) const
   {
     Evaluation<Operation::Mult>(input_T, my_output_T_);
-    if constexpr (is_qoi_v<test>) {
+    if constexpr (is_qoi) {
       return my_output_T_[0];
     } else {
       return my_output_T_;

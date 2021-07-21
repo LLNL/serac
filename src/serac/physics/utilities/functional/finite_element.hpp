@@ -63,6 +63,18 @@ constexpr int dimension_of(Geometry g)
 }
 
 /**
+ * @brief Element conformity
+ */
+enum class Family
+{
+  QOI,
+  H1,
+  HCURL,
+  HDIV,
+  L2
+};
+
+/**
  * @brief H1 elements of order @p p
  * @tparam p The order of the elements
  * @tparam c The vector dimension
@@ -71,6 +83,7 @@ template <int p, int c = 1>
 struct H1 {
   static constexpr int order      = p;  ///< the polynomial order of the elements
   static constexpr int components = c;  ///< the number of components at each node
+  static constexpr Family family = Family::H1;
 };
 
 /**
@@ -82,6 +95,7 @@ template <int p, int c = 1>
 struct Hcurl {
   static constexpr int order      = p;  ///< the polynomial order of the elements
   static constexpr int components = c;  ///< the number of components at each node
+  static constexpr Family family = Family::HCURL;
 };
 
 /**
@@ -93,6 +107,7 @@ template <int p, int c = 1>
 struct L2 {
   static constexpr int order      = p;  ///< the polynomial order of the elements
   static constexpr int components = c;  ///< the number of components at each node
+  static constexpr Family family = Family::L2;
 };
 
 /**
@@ -102,18 +117,7 @@ struct L2 {
 struct QOI {
   static constexpr int order      = 0;  ///< the polynomial order of the elements
   static constexpr int components = 1;  ///< the number of components at each node
-};
-
-/**
- * @brief Element conformity
- */
-enum class Family
-{
-  QOI,
-  H1,
-  HCURL,
-  HDIV,
-  L2
+  static constexpr Family family = Family::QOI;
 };
 
 /**
@@ -161,19 +165,6 @@ template <Geometry g, int p>
 struct is_finite_element<finite_element<g, Hcurl<p> > > {
   static constexpr bool value = true;  ///< whether or not type T is a finite_element
 };
-
-template <typename T>
-struct is_qoi {
-  static constexpr bool value = false;  ///< whether or not type T is QOI
-};
-
-template <>
-struct is_qoi<QOI> {
-  static constexpr bool value = true;  ///< whether or not type T is QOI
-};
-
-template <typename T>
-static constexpr auto is_qoi_v = is_qoi<T>::value;
 
 template < typename T >
 constexpr int order(T) { return T::order; }
