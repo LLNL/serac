@@ -21,14 +21,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         MESSAGE(FATAL_ERROR "Could not find Conduit. Conduit requires explicit CONDUIT_DIR.")
     endif()
 
-    set(_conduit_config "${CONDUIT_DIR}/lib/cmake/ConduitConfig.cmake")
+    set(_conduit_config "${CONDUIT_DIR}/lib/cmake/conduit/ConduitConfig.cmake")
     if(NOT EXISTS ${_conduit_config})
         MESSAGE(FATAL_ERROR "Could not find Conduit CMake include file ${_conduit_config}")
     endif()
 
     find_package(Conduit REQUIRED
                  NO_DEFAULT_PATH
-                 PATHS ${CONDUIT_DIR}/lib/cmake)
+                 PATHS ${CONDUIT_DIR}/lib/cmake/conduit)
 
     # Manually set includes as system includes
     get_target_property(_dirs conduit::conduit INTERFACE_INCLUDE_DIRECTORIES)
@@ -166,8 +166,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Should this logic be in the Caliper CMake package?
         # If CMake version doesn't support CUDAToolkit the libraries
         # are just "baked in"
-        if(ENABLE_CUDA AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
-            find_package(CUDAToolkit REQUIRED)
+        if(ENABLE_CUDA)
+            if(CMAKE_VERSION VERSION_LESS 3.17)
+                message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
+            else()
+                find_package(CUDAToolkit REQUIRED)
+            endif() 
         endif()
 
         find_package(caliper REQUIRED NO_DEFAULT_PATH 
