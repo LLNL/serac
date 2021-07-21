@@ -86,39 +86,6 @@ template struct forbidden_offsets<&mfem::QuadratureSpace::element_offsets>;
 
 }  // namespace detail
 
-template <typename T>
-struct Array {
-  Array() = default;
-  Array(const std::size_t size) : size_(size)
-  {
-    // FIXME: Is this the condition we want to be using?
-#ifdef __CUDACC__
-    cudaMallocManaged(&ptr_, size_ * sizeof(T));
-#else
-    ptr_ = new T[size_];
-#endif
-  }
-  ~Array()
-  {
-    if (ptr_) {
-      // FIXME: Is this the condition we want to be using?
-#ifdef __CUDACC__
-      cudaFree(ptr_);
-#else
-      delete ptr_;
-#endif
-    }
-  }
-  SERAC_HOST_DEVICE T&    operator[](const std::size_t idx) { return ptr_[idx]; }
-  SERAC_HOST_DEVICE const T& operator[](const std::size_t idx) const { return ptr_[idx]; }
-  SERAC_HOST_DEVICE std::size_t size() const { return size_; }
-  SERAC_HOST_DEVICE T* data() { return ptr_; }
-  SERAC_HOST_DEVICE T* begin() { return ptr_; }
-  SERAC_HOST_DEVICE T* end() { return ptr_ + size_; }
-  T*                   ptr_  = nullptr;
-  std::size_t          size_ = 0;
-};
-
 /**
  * @brief A shim class for describing the interface of something that can be synced
  *
@@ -256,7 +223,7 @@ private:
 #ifdef SERAC_USE_CHAI
   chai::ManagedArray<T> data_;
 #else
-  std::vector<T> data_;
+  std::vector<T>   data_;
 #endif
 /**
  * @brief A copy of the element_offsets member from mfem::QuadratureSpace

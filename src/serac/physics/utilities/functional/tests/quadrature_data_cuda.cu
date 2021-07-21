@@ -4,30 +4,14 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
+#include <gtest/gtest.h>
+
 #include "serac/serac_config.hpp"
 #include "serac/numerics/mesh_utils_base.hpp"
 
 #include "serac/physics/utilities/quadrature_data.hpp"
 
 using serac::QuadratureData;
-
-// template <typename T>
-// struct QuadratureData {
-//   QuadratureData(mfem::Mesh& mesh) : stride(nquad)
-//   {
-//     const int nelem = mesh.GetNE();
-//     // FIXME: This assumes a homogeneous mesh
-//     const int geom  = mesh.GetElementBaseGeometry(0);
-//     const int nquad = mfem::IntRules.Get(geom, p).GetNPoints();
-//     cudaMallocManaged(&ptr, sizeof(T) * nelem * nquad);
-//   };
-
-//   void destroy() { cudaFree(ptr); }
-
-//   __host__ __device__ T& operator()(int e, int q) { return ptr[e * stride + q]; }
-//   T*                     ptr;
-//   int                    stride;
-// };
 
 template <typename T>
 __global__ void fill(QuadratureData<T>& output, int num_elements, int num_quadrature_points)
@@ -50,12 +34,8 @@ __global__ void copy(QuadratureData<T>& destination, QuadratureData<T>& source, 
   }
 }
 
-int main(int argc, char* argv[])
+TEST(QuadratureDataCUDA, basic_fill_and_copy)
 {
-  MPI_Init(&argc, &argv);
-
-  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
-
   constexpr auto mesh_file          = SERAC_REPO_DIR "/data/meshes/star.mesh";
   auto           mesh               = serac::mesh::refineAndDistribute(serac::buildMeshFromFile(mesh_file), 0, 0);
   constexpr int  p                  = 1;
@@ -76,13 +56,25 @@ int main(int argc, char* argv[])
   copy<<<grids, blocks>>>(destination, source, num_elements, num_quadrature_points);
   cudaDeviceSynchronize();
 
-  // Trick with std::transform to get what's roughly a zip iterator
-  std::vector<int> temp;
-  std::transform(source.begin(), source.end(), destination.begin(), std::back_inserter(temp),
-                 [](const auto& src, const auto& dest) {
-                   std::cout << src << " " << dest << std::endl;
-                   return 0;
-                 });
+  EXPECT_TRUE(std::equal(source.begin(), source.end(), destination.begin()));
+}
+
+//------------------------------------------------------------------------------
+#include "axom/slic/core/SimpleLogger.hpp"
+
+int main(int argc, char* argv[])
+{
+  int result = 0;
+
+  ::testing::InitGoogleTest(&argc, argv);
+
+  MPI_Init(&argc, &argv);
+
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
+
+  result = RUN_ALL_TESTS();
 
   MPI_Finalize();
+
+  return result;
 }
