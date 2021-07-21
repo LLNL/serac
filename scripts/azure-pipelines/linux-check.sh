@@ -33,11 +33,20 @@ if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
     cmake_args="$cmake_args -DENABLE_COVERAGE=ON -DGCOV_EXECUTABLE=/home/serac/gcov"
 fi
 
+if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
+    CLANGFORMAT_EXECUTABLE=/usr/bin/clang-format
+    if [[ ! -f "$CLANGFORMAT_EXECUTABLE" ]]; then
+        echo "clang-format not found: $CLANGFORMAT_EXECUTABLE"
+        exit 1
+    fi    
+    cmake_args="$cmake_args -DENABLE_CLANGFORMAT=ON -DCLANGFORMAT_EXECUTABLE=$CLANGFORMAT_EXECUTABLE"
+fi
+
 or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake $cmake_args
 or_die cd build-$HOST_CONFIG-debug
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
-    or_die make check
+    or_die make VERBOSE=1 check
 fi
 
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
