@@ -19,7 +19,7 @@ namespace serac {
 /**
  * @brief The number of fields in this physics module (displacement and velocity)
  */
-constexpr int NUM_FIELDS = 2;
+constexpr int NUM_FIELDS = 3;
 
 Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
              FinalMeshOption keep_deformation, const std::string& name)
@@ -28,6 +28,8 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
           .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
       displacement_(StateManager::newState(FiniteElementState::Options{
           .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
+      adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
+          .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
       geom_nonlin_(geom_nonlin),
       keep_deformation_(keep_deformation),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
@@ -35,6 +37,7 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
 {
   state_.push_back(velocity_);
   state_.push_back(displacement_);
+  state_.push_back(adjoint_displacement_);
 
   // Initialize the mesh node pointers
   reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
@@ -44,8 +47,9 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-  displacement_.trueVec() = 0.0;
-  velocity_.trueVec()     = 0.0;
+  displacement_.trueVec()         = 0.0;
+  velocity_.trueVec()             = 0.0;
+  adjoint_displacement_.trueVec() = 0.0;
 
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -393,6 +397,50 @@ void Solid::advanceTimestep(double& dt)
   mesh_.NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
+}
+
+const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
+                                              FiniteElementState*  state_with_essential_boundary)
+{
+  SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
+  SLIC_ERROR_ROOT_IF(cycle_ == 0, "Adjoint analysis only valid following a forward solve.");
+
+  // Set the mesh nodes to the reference configuration
+  mesh_.NewNodes(*reference_nodes_);
+
+  adjoint_load_form.Assemble();
+  auto adjoint_load_vector = std::unique_ptr<mfem::HypreParVector>(adjoint_load_form.ParallelAssemble());
+
+  auto& lin_solver = nonlin_solver_.LinearSolver();
+
+  auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
+  auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
+
+  if (state_with_essential_boundary) {
+    state_with_essential_boundary->initializeTrueVec();
+    for (const auto& bc : bcs_.essentials()) {
+      bc.eliminateFromMatrix(*J_T);
+      bc.eliminateToRHS(*J_T, state_with_essential_boundary->trueVec(), *adjoint_load_vector);
+    }
+  } else {
+    bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
+  }
+
+  lin_solver.SetOperator(*J_T);
+  lin_solver.Mult(*adjoint_load_vector, adjoint_displacement_.trueVec());
+
+  adjoint_displacement_.distributeSharedDofs();
+
+  // Update the mesh with the new deformed nodes
+  deformed_nodes_->Set(1.0, displacement_.gridFunc());
+  deformed_nodes_->Add(1.0, *reference_nodes_);
+
+  mesh_.NewNodes(*deformed_nodes_);
+
+  // Reset the equation solver to use the full nonlinear residual operator
+  nonlin_solver_.SetOperator(*residual_);
+
+  return adjoint_displacement_;
 }
 
 void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& container)

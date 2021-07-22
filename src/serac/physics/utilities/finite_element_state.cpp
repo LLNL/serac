@@ -54,6 +54,18 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunctio
   true_vec_ = 0.0;
 }
 
+FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState& fe_state, const std::string& name)
+    : FiniteElementState(mesh, fe_state.gridFunc(), name)
+{
+}
+
+FiniteElementState& FiniteElementState::operator=(const double value)
+{
+  true_vec_ = value;
+  distributeSharedDofs();
+  return *this;
+}
+
 double norm(const FiniteElementState& state, const double p)
 {
   if (state.space().GetVDim() == 1) {

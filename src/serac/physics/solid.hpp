@@ -314,6 +314,18 @@ public:
   FiniteElementState& velocity() { return velocity_; };
 
   /**
+   * @brief Get the adjoint variable
+   *
+   * @return The adjoint state field
+   */
+  FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
+
+  /**
+   * @overload
+   */
+  const FiniteElementState& adjointDisplacement() const { return adjoint_displacement_; };
+
+  /**
    * @brief Complete the setup of all of the internal MFEM objects and prepare for timestepping
    */
   void completeSetup() override;
@@ -325,6 +337,19 @@ public:
    * schemes
    */
   void advanceTimestep(double& dt) override;
+
+  /**
+   * @brief Solve the adjoint problem
+   * @note It is expected that the forward analysis is complete and the current displacement state is valid
+   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   *
+   * @param[in] adjoint_load_form The linear form that when assembled contains the right hand side of the adjoint system
+   * @param[in] state_with_essential_boundary A optional finite element state containing the non-homogenous essential
+   * boundary condition data for the adjoint problem
+   * @return The computed adjoint finite element state
+   */
+  virtual const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
+                                                        FiniteElementState*  state_with_essential_boundary = nullptr);
 
   /**
    * @brief Destroy the Nonlinear Solid Solver object
@@ -371,6 +396,11 @@ protected:
    * @brief Displacement field
    */
   FiniteElementState displacement_;
+
+  /**
+   * @brief Adjoint displacement field
+   */
+  FiniteElementState adjoint_displacement_;
 
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers
