@@ -433,6 +433,13 @@ mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace&
 
 mfem::ParLinearForm& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space)
 {
+  SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None,
+                     "Sensitivities only valid following a forward and adjoint solve.");
+  SLIC_WARNING_ROOT_IF(
+      previous_solve_ == PreviousSolve::Forward,
+      "Sensitivities only valid following a forward and adjoint solve (in that order). The previous solve was a "
+      "forward analysis. Ensure that the correct displacement and adjoint states are set for sensitivies.");
+
   if (!bulk_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
 

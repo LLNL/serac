@@ -368,6 +368,9 @@ public:
    *
    * @param shear_space The finite element space used to parameterize the shear modulus
    * @return The sensitivity with respect to the shear modulus
+   *
+   * @note Before this call, a forward and adjoint solve (with the appropriate QoI-based adjoint load) must be
+   * completed. If this does not occur, the returned linear form will be incorrect.
    */
   virtual mfem::ParLinearForm& shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space);
 
