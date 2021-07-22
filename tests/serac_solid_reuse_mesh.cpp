@@ -14,6 +14,7 @@
 #include "serac/coefficients/coefficient_extensions.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/numerics/mesh_utils.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
@@ -62,12 +63,7 @@ TEST(solid_solver, reuse_mesh)
 
   const Solid::SolverOptions default_static = {default_linear_options, default_nonlinear_options};
 
-  double u_norm_1 = 0.0;
-  double u_norm_2 = 0.0;
-
-  mfem::Vector zero(dim);
-  zero = 0.0;
-  mfem::VectorConstantCoefficient zerovec(zero);
+  mfem::Vector u_1_true_vec;
 
   // Keep the solver_1 and solver_2 objects in a different scope for testing
   {
@@ -105,11 +101,11 @@ TEST(solid_solver, reuse_mesh)
     // Output the final state
     solid_solver_1.outputState();
 
-    // Check the final displacement and velocity L2 norms
-    u_norm_1 = solid_solver_1.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-    u_norm_2 = solid_solver_2.displacement().gridFunc().ComputeLpError(2.0, zerovec);
+    u_1_true_vec = solid_solver_1.displacement().trueVec();
 
-    EXPECT_NEAR(0.0, u_norm_1 - u_norm_2, 0.001);
+    EXPECT_NEAR(
+        0.0, (mfem::Vector(solid_solver_1.displacement().trueVec() - solid_solver_2.displacement().trueVec())).Norml2(),
+        0.001);
   }
 
   Solid solid_solver_3(1, default_static, GeometricNonlinearities::On, FinalMeshOption::Deformed);
@@ -128,12 +124,11 @@ TEST(solid_solver, reuse_mesh)
   double dt = 1.0;
   solid_solver_3.advanceTimestep(dt);
 
-  double u_norm_3 = solid_solver_3.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-  EXPECT_NEAR(0.0, u_norm_1 - u_norm_3, 0.001);
+  EXPECT_NEAR(0.0, (mfem::Vector(u_1_true_vec - solid_solver_3.displacement().trueVec())).Norml2(), 0.001);
 
   solid_solver_3.resetToReferenceConfiguration();
-  EXPECT_NEAR(0.0, solid_solver_3.displacement().gridFunc().ComputeLpError(2.0, zerovec), 1.0e-8);
-  EXPECT_NEAR(0.0, solid_solver_3.velocity().gridFunc().ComputeLpError(2.0, zerovec), 1.0e-8);
+  EXPECT_NEAR(0.0, norm(solid_solver_3.displacement()), 1.0e-8);
+  EXPECT_NEAR(0.0, norm(solid_solver_3.velocity()), 1.0e-8);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

@@ -7,29 +7,29 @@
 #------------------------------------------------------------------------------
 # Compilers
 #------------------------------------------------------------------------------
-# Compiler Spec: gcc@8.1.0
+# Compiler Spec: clang@10.0.0
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/clang/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/gcc/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/clang/clang++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/home/serac/serac_tpls/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
 
 else()
 
-  set(CMAKE_C_COMPILER "/usr/bin/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/bin/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/bin/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE PATH "")
 
   set(CMAKE_Fortran_COMPILER "/usr/bin/gfortran" CACHE PATH "")
 
 endif()
 
-set(CMAKE_C_FLAGS "-pthread" CACHE STRING "")
+set(CMAKE_C_FLAGS "-fPIC -pthread" CACHE STRING "")
 
-set(CMAKE_CXX_FLAGS "-pthread" CACHE STRING "")
+set(CMAKE_CXX_FLAGS "-fPIC -pthread" CACHE STRING "")
 
 #------------------------------------------------------------------------------
 # MPI
@@ -59,13 +59,13 @@ set(ENABLE_MPI ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/home/serac/serac_tpls/gcc-8.1.0" CACHE PATH "")
+set(TPL_ROOT "/home/serac/serac_tpls/clang-10.0.0" CACHE PATH "")
 
 set(ASCENT_DIR "${TPL_ROOT}/ascent-0.7.1serac" CACHE PATH "")
 
 set(AXOM_DIR "${TPL_ROOT}/axom-0.5.0serac" CACHE PATH "")
 
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.1" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2" CACHE PATH "")
 
 set(MFEM_DIR "${TPL_ROOT}/mfem-4.2.0" CACHE PATH "")
 
@@ -93,7 +93,9 @@ set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 # Devtools
 #------------------------------------------------------------------------------
 
-# Clang tools disabled due to disabled devtools
+# Code checks disabled due to disabled devtools
+
+set(SERAC_ENABLE_CODE_CHECKS OFF CACHE BOOL "")
 
 set(ENABLE_CLANGFORMAT OFF CACHE BOOL "")
 

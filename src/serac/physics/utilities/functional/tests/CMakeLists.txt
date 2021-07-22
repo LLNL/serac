@@ -6,6 +6,7 @@
 
 # Then add the examples/tests
 set(functional_tests_serial
+    functional_boundary_test.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp)
@@ -25,9 +26,9 @@ endforeach()
 
 # Then add the examples/tests
 set(functional_tests_mpi
-    #functional_boundary_test.cpp
     functional_comparisons.cpp
     functional_comparison_L2.cpp
+    functional_material_state_test.cpp
     )
     
 foreach(filename ${functional_tests_mpi})
@@ -71,7 +72,7 @@ if(ENABLE_CUDA)
         blt_add_executable(NAME        ${test_name}
                            SOURCES     ${filename}
                            OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                           DEPENDS_ON  gtest serac_functional ${functional_depends} cuda cuda_runtime
+                           DEPENDS_ON  gtest serac_functional ${functional_depends} cuda
                            FOLDER      serac/tests)
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}

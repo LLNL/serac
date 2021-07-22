@@ -13,6 +13,7 @@
 
 #include "serac/coefficients/coefficient_extensions.hpp"
 #include "serac/numerics/mesh_utils.hpp"
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -132,18 +133,9 @@ TEST(dynamic_solver, dyn_solve)
   // Output the final state
   ts_solver.outputState();
 
-  // Check the final displacement and velocity L2 norms
-  mfem::Vector zero(dim);
-  zero = 0.0;
-  mfem::VectorConstantCoefficient zerovec(zero);
-
-  double v_norm    = ts_solver.velocity().gridFunc().ComputeLpError(2.0, zerovec);
-  double x_norm    = ts_solver.displacement().gridFunc().ComputeLpError(2.0, zerovec);
-  double temp_norm = ts_solver.temperature().gridFunc().ComputeLpError(2.0, zerovec);
-
-  EXPECT_NEAR(0.122796, x_norm, 0.001);
-  EXPECT_NEAR(0.001791, v_norm, 0.001);
-  EXPECT_NEAR(6.494477, temp_norm, 0.001);
+  EXPECT_NEAR(0.122796, norm(ts_solver.displacement()), 0.001);
+  EXPECT_NEAR(0.001791, norm(ts_solver.velocity()), 0.001);
+  EXPECT_NEAR(6.494477, norm(ts_solver.temperature()), 0.001);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

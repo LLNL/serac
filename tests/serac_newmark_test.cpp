@@ -9,17 +9,18 @@
 
 #include <memory>
 
+#include "mfem.hpp"
+
 #include "serac/coefficients/coefficient_extensions.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-#include "mfem.hpp"
-
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/infrastructure/input.hpp"
-#include "serac/serac_config.hpp"
-#include "test_utilities.hpp"
 #include "serac/physics/solid.hpp"
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/operators/odes.hpp"
+#include "serac/serac_config.hpp"
+#include "test_utilities.hpp"
 
 using namespace std;
 

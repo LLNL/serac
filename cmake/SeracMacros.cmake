@@ -42,7 +42,7 @@ macro(serac_add_code_checks)
         foreach(_source ${_all_sources})
             set(_to_be_included FALSE)
             foreach(_include ${arg_INCLUDES})
-                if (${_source} MATCHES ${_include})
+                if (${_source} MATCHES "^${PROJECT_SOURCE_DIR}${_include}")
                     set(_to_be_included TRUE)
                     break()
                 endif()
@@ -71,20 +71,20 @@ macro(serac_add_code_checks)
     set(_src_sources)
     file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp")
 
-    blt_add_clang_tidy_target(  NAME              ${arg_PREFIX}_guidelines_check
-                                CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*"
-                                SRC_FILES         ${_src_sources})
+    blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check
+                              CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*"
+                              SRC_FILES         ${_src_sources})
 
     set(_test_sources)
     file(GLOB_RECURSE _test_sources "tests/*.cpp" "tests/*.hpp")
 
-    blt_add_clang_tidy_target(  NAME              ${arg_PREFIX}_guidelines_check_tests
-                                CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
-                                SRC_FILES         ${_test_sources})
+    blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check_tests
+                              CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
+                              SRC_FILES         ${_test_sources})
     if (ENABLE_COVERAGE)
-        blt_add_code_coverage_target( NAME   ${arg_PREFIX}_coverage
-                                    RUNNER ${CMAKE_MAKE_PROGRAM} test
-                                    SOURCE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src )
+        blt_add_code_coverage_target(NAME   ${arg_PREFIX}_coverage
+                                     RUNNER ${CMAKE_MAKE_PROGRAM} test
+                                     SOURCE_DIRECTORIES ${PROJECT_SOURCE_DIR}/src )
     endif()
 
 endmacro(serac_add_code_checks)

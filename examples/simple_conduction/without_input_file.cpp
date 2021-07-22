@@ -14,6 +14,9 @@
 // _incl_thermal_header_start
 #include "serac/physics/thermal_conduction.hpp"
 // _incl_thermal_header_end
+// _incl_state_manager_start
+#include "serac/physics/utilities/state_manager.hpp"
+// _incl_state_manager_end
 // _incl_infra_start
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
