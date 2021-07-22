@@ -4,6 +4,14 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+# This test is all constexpr-evaluated, so it doesn't
+# actually need to run, if it compiles without error, the tests have passed
+blt_add_executable(NAME        tensor_unit_tests
+                   SOURCES     tensor_unit_tests.cpp
+                   OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                   DEPENDS_ON  serac_functional ${functional_depends}
+                   FOLDER      serac/tests)
+
 # Then add the examples/tests
 set(functional_tests_serial
     functional_boundary_test.cpp

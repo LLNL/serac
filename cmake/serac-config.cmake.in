@@ -71,7 +71,7 @@ if(NOT SERAC_FOUND)
     if(NOT CONDUIT_DIR) 
       set(CONDUIT_DIR ${SERAC_CONDUIT_DIR}) 
     endif()
-    find_dependency(Conduit REQUIRED NO_DEFAULT_PATH PATHS "${CONDUIT_DIR}/lib/cmake")
+    find_dependency(Conduit REQUIRED NO_DEFAULT_PATH PATHS "${CONDUIT_DIR}/lib/cmake/conduit")
   endif()
 
   # HDF5
