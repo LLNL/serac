@@ -13,6 +13,7 @@
 #include "serac/physics/utilities/state_manager.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
+#include "serac/coefficients/sensitivity_coefficients.hpp"
 
 namespace serac {
 
@@ -397,6 +398,50 @@ void Solid::advanceTimestep(double& dt)
   mesh_.NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
+}
+
+mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space)
+{
+  if (!shear_sensitivity_coef_) {
+    LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+
+    SLIC_ERROR_ROOT_IF(!linear_mat, "Only neo-Hookean materials allowed for sensitivity analysis.");
+
+    shear_sensitivity_coef_ =
+        std::make_unique<mfem_ext::ShearSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
+  }
+
+  if (!shear_sensitivity_form_ || shear_sensitivity_form_->FESpace() != &shear_space) {
+    shear_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&shear_space);
+
+    shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_));
+  }
+
+  shear_sensitivity_form_->Assemble();
+
+  return *shear_sensitivity_form_;
+}
+
+mfem::ParLinearForm& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space)
+{
+  if (!bulk_sensitivity_coef_) {
+    LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+
+    SLIC_ERROR_ROOT_IF(!linear_mat, "Only neo-Hookean materials allowed for sensitivity analysis.");
+
+    bulk_sensitivity_coef_ =
+        std::make_unique<mfem_ext::BulkSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
+  }
+
+  if (!bulk_sensitivity_form_ || shear_sensitivity_form_->FESpace() != &bulk_space) {
+    bulk_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&bulk_space);
+
+    bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_));
+  }
+
+  bulk_sensitivity_form_->Assemble();
+
+  return *bulk_sensitivity_form_;
 }
 
 const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_form,

@@ -5,10 +5,12 @@
 # SPDX-License-Identifier: (BSD-3-Clause)
 
 set(coefficients_sources
+    sensitivity_coefficients.cpp
     loading_functions.cpp
     )
 
 set(coefficients_headers
+    sensitivity_coefficients.hpp
     loading_functions.hpp
     coefficient_extensions.hpp
     )

@@ -234,6 +234,10 @@ public:
    */
   LinearElasticMaterial() = delete;
 
+  virtual void EvalShearSensitivity(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& d_sigma_d_shear) const;
+
+  virtual void EvalBulkSensitivity(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& d_sigma_d_bulk) const;
+
 protected:
   /**
    * @brief Shear modulus in constant form

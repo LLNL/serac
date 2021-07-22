@@ -22,6 +22,7 @@
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/physics/materials/hyperelastic_material.hpp"
 #include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
+#include "serac/coefficients/sensitivity_coefficients.hpp"
 
 namespace serac {
 
@@ -351,6 +352,9 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
                                                         FiniteElementState*  state_with_essential_boundary = nullptr);
 
+  virtual mfem::ParLinearForm& shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space);
+
+  virtual mfem::ParLinearForm& bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space);
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
@@ -524,6 +528,18 @@ protected:
    * @brief Previous time step
    */
   double c1_;
+
+  /**
+   * @brief Linear form containing the derivative of the residual vector with respect to the shear modulus
+   *
+   */
+  std::unique_ptr<mfem::ParLinearForm> shear_sensitivity_form_;
+
+  std::unique_ptr<mfem_ext::ShearSensitivityCoefficient> shear_sensitivity_coef_;
+
+  std::unique_ptr<mfem::ParLinearForm> bulk_sensitivity_form_;
+
+  std::unique_ptr<mfem_ext::BulkSensitivityCoefficient> bulk_sensitivity_coef_;
 };
 
 }  // namespace serac
