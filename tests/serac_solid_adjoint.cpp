@@ -93,6 +93,27 @@ TEST(solid_solver, adjoint)
 
   SLIC_INFO_ROOT(fmt::format("Adjoint norm (homogeneous BCs): {}", adjoint_norm_1));
 
+  // Create an L2 space for the shear modulus discretization
+  mfem::L2_FECollection       l2_fe_coll(0, dim);
+  mfem::ParFiniteElementSpace l2_fe_space(&serac::StateManager::mesh(), &l2_fe_coll);
+
+  // Compute, assemble, and check the sensitivities
+  mfem::ParLinearForm& shear_sensitivity = solid_solver.shearModulusSensitivity(l2_fe_space);
+
+  std::unique_ptr<mfem::HypreParVector> assembled_shear_sensitivity(shear_sensitivity.ParallelAssemble());
+
+  double shear_norm = mfem::ParNormlp(*assembled_shear_sensitivity, 2, MPI_COMM_WORLD);
+
+  SLIC_INFO_ROOT(fmt::format("Shear sensitivity vector norm: {}", shear_norm));
+
+  mfem::ParLinearForm& bulk_sensitivity = solid_solver.bulkModulusSensitivity(l2_fe_space);
+
+  std::unique_ptr<mfem::HypreParVector> assembled_bulk_sensitivity(bulk_sensitivity.ParallelAssemble());
+
+  double bulk_norm = mfem::ParNormlp(*assembled_bulk_sensitivity, 2, MPI_COMM_WORLD);
+
+  SLIC_INFO_ROOT(fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
+
   // Do a forward solve again to make sure the adjoint solve didn't break the solver
   solid_solver.setDisplacement(*deform);
   solid_solver.advanceTimestep(dt);
@@ -116,27 +137,6 @@ TEST(solid_solver, adjoint)
 
   // Check that the adjoint solve is a known value
   EXPECT_NEAR(adjoint_norm_2, 9.153054, 0.005);
-
-  // Create an L2 space for the shear modulus discretization
-  mfem::L2_FECollection       l2_fe_coll(0, dim);
-  mfem::ParFiniteElementSpace l2_fe_space(&serac::StateManager::mesh(), &l2_fe_coll);
-
-  // Compute, assemble, and check the sensitivities
-  mfem::ParLinearForm& shear_sensitivity = solid_solver.shearModulusSensitivity(l2_fe_space);
-
-  std::unique_ptr<mfem::HypreParVector> assembled_shear_sensitivity(shear_sensitivity.ParallelAssemble());
-
-  double shear_norm = mfem::ParNormlp(*assembled_shear_sensitivity, 2, MPI_COMM_WORLD);
-
-  SLIC_INFO_ROOT(fmt::format("Shear sensitivity vector norm: {}", shear_norm));
-
-  mfem::ParLinearForm& bulk_sensitivity = solid_solver.bulkModulusSensitivity(l2_fe_space);
-
-  std::unique_ptr<mfem::HypreParVector> assembled_bulk_sensitivity(bulk_sensitivity.ParallelAssemble());
-
-  double bulk_norm = mfem::ParNormlp(*assembled_bulk_sensitivity, 2, MPI_COMM_WORLD);
-
-  SLIC_INFO_ROOT(fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
