@@ -414,7 +414,7 @@ mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace&
   if (!shear_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
 
-    SLIC_ERROR_ROOT_IF(!linear_mat, "Only neo-Hookean materials allowed for sensitivity analysis.");
+    SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
 
     shear_sensitivity_coef_ =
         std::make_unique<mfem_ext::ShearSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
@@ -436,7 +436,7 @@ mfem::ParLinearForm& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace& 
   if (!bulk_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
 
-    SLIC_ERROR_ROOT_IF(!linear_mat, "Only neo-Hookean materials allowed for sensitivity analysis.");
+    SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
 
     bulk_sensitivity_coef_ =
         std::make_unique<mfem_ext::BulkSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
