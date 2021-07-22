@@ -4,6 +4,10 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+
 set(coefficients_sources
     sensitivity_coefficients.cpp
     loading_functions.cpp
