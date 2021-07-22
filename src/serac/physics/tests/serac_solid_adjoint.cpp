@@ -84,7 +84,7 @@ TEST(solid_solver, adjoint)
   mfem::ParLinearForm adjoint_load(&solid_solver.displacement().space());
 
   mfem::Vector load(dim);
-  load = 0.001;
+  load = 0.1;
   mfem::VectorConstantCoefficient loadvec(load);
   adjoint_load.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(loadvec));
 
@@ -106,6 +106,8 @@ TEST(solid_solver, adjoint)
 
   SLIC_INFO_ROOT(fmt::format("Shear sensitivity vector norm: {}", shear_norm));
 
+  EXPECT_NEAR(shear_norm, 0.000211078850122, 1.0e-8);
+
   mfem::ParLinearForm& bulk_sensitivity = solid_solver.bulkModulusSensitivity(l2_fe_space);
 
   std::unique_ptr<mfem::HypreParVector> assembled_bulk_sensitivity(bulk_sensitivity.ParallelAssemble());
@@ -113,6 +115,8 @@ TEST(solid_solver, adjoint)
   double bulk_norm = mfem::ParNormlp(*assembled_bulk_sensitivity, 2, MPI_COMM_WORLD);
 
   SLIC_INFO_ROOT(fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
+
+  EXPECT_NEAR(bulk_norm, 6.026196496111377e-06, 3.0e-9);
 
   // Do a forward solve again to make sure the adjoint solve didn't break the solver
   solid_solver.setDisplacement(*deform);
@@ -122,7 +126,7 @@ TEST(solid_solver, adjoint)
   EXPECT_NEAR(0.0, (mfem::Vector(true_vec_1 - solid_solver.displacement().trueVec())).Norml2(), 0.00001);
 
   // Check that the adjoint solve is a known value
-  EXPECT_NEAR(adjoint_norm_1, 7.384084921, 0.00005);
+  EXPECT_NEAR(adjoint_norm_1, 738.4103079, 0.05);
 
   // Do another adjoint solve with a non-homogeneous BC
   FiniteElementState adjoint_essential(StateManager::mesh(), solid_solver.displacement(), "adjoint_essential");
@@ -136,7 +140,7 @@ TEST(solid_solver, adjoint)
   SLIC_INFO_ROOT(fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
 
   // Check that the adjoint solve is a known value
-  EXPECT_NEAR(adjoint_norm_2, 9.153054, 0.005);
+  EXPECT_NEAR(adjoint_norm_2, 739.98432, 0.05);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
