@@ -11,7 +11,7 @@
 
 #include <cmath>
 
-namespace serac::mfem_ext {
+namespace serac {
 
 inline void NeoHookeanMaterial::EvalCoeffs() const
 {
@@ -114,7 +114,7 @@ void LinearElasticMaterial::EvalShearSensitivity(const mfem::DenseMatrix& du_dX,
   d_sigma_d_shear      = 0.0;
   double trace_epsilon = epsilon_.Trace();
 
-  // Calculate the stress by Hooke's law
+  // Calculate the sensitivity of the scress with respect to the shear moulus by differentiating Hooke's law
   d_sigma_d_shear.Add(2.0, epsilon_);
   for (int i = 0; i < dim; ++i) {
     d_sigma_d_shear(i, i) += (-2.0 / dim) * trace_epsilon;
@@ -133,7 +133,7 @@ void LinearElasticMaterial::EvalBulkSensitivity(const mfem::DenseMatrix& du_dX, 
   d_sigma_d_bulk       = 0.0;
   double trace_epsilon = epsilon_.Trace();
 
-  // Calculate the stress by Hooke's law
+  // Calculate the sensitivity of the scress with respect to the bulk moulus by differentiating Hooke's law
   for (int i = 0; i < dim; ++i) {
     d_sigma_d_bulk(i, i) += trace_epsilon;
   }
@@ -181,4 +181,4 @@ void LinearElasticMaterial::evalTangentStiffness(const mfem::DenseMatrix& du_dX,
   }
 }
 
-}  // namespace serac::mfem_ext
+}  // namespace serac

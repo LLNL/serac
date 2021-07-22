@@ -398,10 +398,19 @@ void Solid::advanceTimestep(double& dt)
   mesh_.NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
+
+  previous_solve_ = PreviousSolve::Forward;
 }
 
 mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space)
 {
+  SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None,
+                     "Sensitivities only valid following a forward and adjoint solve.");
+  SLIC_WARNING_ROOT_IF(
+      previous_solve_ == PreviousSolve::Forward,
+      "Sensitivities only valid following a forward and adjoint solve (in that order). The previous solve was a "
+      "forward analysis. Ensure that the correct displacement and adjoint states are set for sensitivies.");
+
   if (!shear_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
 
@@ -448,7 +457,10 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
                                               FiniteElementState*  state_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
-  SLIC_ERROR_ROOT_IF(cycle_ == 0, "Adjoint analysis only valid following a forward solve.");
+  SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None, "Adjoint analysis only valid following a forward solve.");
+  SLIC_WARNING_ROOT_IF(previous_solve_ == PreviousSolve::Adjoint,
+                       "Adjoint analysis only valid following a forward solve. The previous solve was an adjoint. "
+                       "Ensure that the correct displacement state is set for adjoint analysis.");
 
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
@@ -484,6 +496,8 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
 
   // Reset the equation solver to use the full nonlinear residual operator
   nonlin_solver_.SetOperator(*residual_);
+
+  previous_solve_ = PreviousSolve::Adjoint;
 
   return adjoint_displacement_;
 }

@@ -49,6 +49,16 @@ enum class FinalMeshOption
 };
 
 /**
+ * @brief Enum to denote the previous solve completed in the Solid module
+ *
+ */
+enum class PreviousSolve
+{
+  Forward, /**< Previous solve was a forward analysis */
+  Adjoint, /**< Previous solve was an adjoint analysis */
+  None     /**< No solves have been completed */
+};
+/**
  * @brief The nonlinear solid solver class
  *
  * The nonlinear hyperelastic quasi-static and dynamic
@@ -352,9 +362,24 @@ public:
   virtual const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
                                                         FiniteElementState*  state_with_essential_boundary = nullptr);
 
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the shear modulus
+   *
+   * @param shear_space The finite element space used to parameterize the shear modulus
+   * @return The sensitivity with respect to the shear modulus
+   */
   virtual mfem::ParLinearForm& shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space);
 
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the bulk modulus
+   *
+   * @param shear_space The finite element space used to parameterize the bulk modulus
+   * @return The sensitivity with respect to the bulk modulus
+   */
   virtual mfem::ParLinearForm& bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space);
+
   /**
    * @brief Destroy the Nonlinear Solid Solver object
    */
@@ -405,6 +430,12 @@ protected:
    * @brief Adjoint displacement field
    */
   FiniteElementState adjoint_displacement_;
+
+  /**
+   * @brief Flag denoting the previous solve mode
+   * @note This is used for error checking in the adjoint and sensitivity analyses
+   */
+  PreviousSolve previous_solve_ = PreviousSolve::None;
 
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers
@@ -530,15 +561,25 @@ protected:
   double c1_;
 
   /**
-   * @brief Linear form containing the derivative of the residual vector with respect to the shear modulus
-   *
+   * @brief Linear form containing the derivative of the quantity of interest with respect to the shear modulus
    */
   std::unique_ptr<mfem::ParLinearForm> shear_sensitivity_form_;
 
+  /**
+   * @brief Sensitivity coefficient used in defining the explicit derivative of the residual with respect to the shear
+   * modulus
+   */
   std::unique_ptr<mfem_ext::ShearSensitivityCoefficient> shear_sensitivity_coef_;
 
+  /**
+   * @brief Linear form containing the derivative of the quantity of interest with respect to the bulk modulus
+   */
   std::unique_ptr<mfem::ParLinearForm> bulk_sensitivity_form_;
 
+  /**
+   * @brief Sensitivity coefficient used in defining the explicit derivative of the residual with respect to the bulk
+   * modulus
+   */
   std::unique_ptr<mfem_ext::BulkSensitivityCoefficient> bulk_sensitivity_coef_;
 };
 

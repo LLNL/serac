@@ -234,9 +234,21 @@ public:
    */
   LinearElasticMaterial() = delete;
 
-  virtual void EvalShearSensitivity(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& d_sigma_d_shear) const;
+  /**
+   * @brief Evaluate the derivative of the Cauchy stress wrt the shear modulus
+   *
+   * @param du_dX the displacement gradient
+   * @param d_sigma_d_shear The derivative of the Cauchy stress with respect to the shear modulus
+   */
+  void EvalShearSensitivity(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& d_sigma_d_shear) const;
 
-  virtual void EvalBulkSensitivity(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& d_sigma_d_bulk) const;
+  /**
+   * @brief Evaluate the derivative of the Cauchy stress wrt the bulk modulus
+   *
+   * @param du_dX the displacement gradient
+   * @param d_sigma_d_bulk The derivative of the Cauchy stress with respect to the bulk modulus
+   */
+  void EvalBulkSensitivity(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& d_sigma_d_bulk) const;
 
 protected:
   /**
