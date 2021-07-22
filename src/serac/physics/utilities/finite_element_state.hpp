@@ -208,6 +208,8 @@ public:
    *
    * @param value The constant to set the finite element state to
    * @return The modified finite element state
+   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
+   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
    */
   FiniteElementState& operator=(const double value);
 
