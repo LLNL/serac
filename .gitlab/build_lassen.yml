@@ -50,10 +50,10 @@ lassen-clang_10_0_1-src:
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
   extends: [.src_build_on_lassen, .with_cuda]
 
+# Note: to reduce duplication SPEC is not defined here, if we move to more than one
+# spec on lassen add it back like quartz
 lassen-clang_10_0_1-full:
   variables:
     COMPILER: "clang@10.0.1"
-    SPEC: "%${COMPILER}+cuda"
-    EXTRA_SPEC: "cuda_arch=70"
     HOST_CONFIG: "lassen-blueos_3_ppc64le_ib_p9-${COMPILER}.cmake"
   extends: [.full_build_on_lassen, .with_cuda]
