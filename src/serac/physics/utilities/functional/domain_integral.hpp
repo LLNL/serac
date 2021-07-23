@@ -540,6 +540,7 @@ public:
     if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
       // todo
 	std::cout << "gpu_policy\n";
+#if defined(__CUDACC__)	
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
 	domain_integral::evaluation_kernel_cuda<geometry, test_space, trial_space, Q>(
             U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
@@ -549,6 +550,7 @@ public:
 	domain_integral::gradient_kernel_cuda<geometry, test_space, trial_space, Q>(
             dU, dR, qf_derivatives.get(), J_, num_elements);
       };
+      #endif
     }
   }
 
