@@ -28,6 +28,7 @@ set(functional_headers
     detail/segment_L2.inl
     detail/metaprogramming.hpp
     integral_utilities.hpp
+    domain_integral_shared.hpp
     )
 
 if(ENABLE_CUDA)

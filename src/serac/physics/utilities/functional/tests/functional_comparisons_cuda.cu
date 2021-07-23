@@ -114,7 +114,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 
   // Create and assemble the linear load term into a vector
   f.AddDomainIntegrator(new mfem::DomainLFIntegrator(load_func));
-  SERAC_PROFILE_VOID_EXPR(serac::profiling::concat("mfem_fAssemble", postfix), f.Assemble());
+  SERAC_PROFILE_EXPR(serac::profiling::concat("mfem_fAssemble", postfix), f.Assemble());
   std::unique_ptr<mfem::HypreParVector> F(
       SERAC_PROFILE_EXPR(concat("mfem_fParallelAssemble", postfix), f.ParallelAssemble()));
   F->UseDevice(true);
