@@ -420,12 +420,15 @@ mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace&
         std::make_unique<mfem_ext::ShearSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
   }
 
+  // Add a scalar linear form integrator using the shear sensitivity coefficient against the given shear modulus finite
+  // element space
   if (!shear_sensitivity_form_ || shear_sensitivity_form_->FESpace() != &shear_space) {
     shear_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&shear_space);
 
     shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_));
   }
 
+  // Assemble the linear form at the current state and adjoint values
   shear_sensitivity_form_->Assemble();
 
   return *shear_sensitivity_form_;
@@ -449,12 +452,15 @@ mfem::ParLinearForm& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace& 
         std::make_unique<mfem_ext::BulkSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
   }
 
+  // Add a scalar linear form integrator using the shear sensitivity coefficient against the given bulk modulus finite
+  // element space
   if (!bulk_sensitivity_form_ || shear_sensitivity_form_->FESpace() != &bulk_space) {
     bulk_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&bulk_space);
 
     bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_));
   }
 
+  // Assemble the linear form at the current state and adjoint values
   bulk_sensitivity_form_->Assemble();
 
   return *bulk_sensitivity_form_;

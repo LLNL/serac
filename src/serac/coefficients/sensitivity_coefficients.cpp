@@ -27,24 +27,28 @@ double ShearSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const m
 {
   T.SetIntPoint(&ip);
 
+  // Compute the displacement and deformation gradient
   displacement_.gridFunc().GetVectorGradient(T, du_dX_);
 
   solid_util::calcDeformationGradient(du_dX_, F_);
 
   double det_J = F_.Det();
 
+  // Compute the adjoint gradient and strain
   adjoint_displacement_.gridFunc().GetVectorGradient(T, dp_dX_);
 
   serac::solid_util::calcLinearizedStrain(dp_dX_, adjoint_strain_);
 
-  // Evaluate the Cauchy stress using the calculated deformation gradient
+  // Evaluate the derivative of the Cauchy stress with respect to the shear modulus using the calculated deformation
+  // gradient
   material_.EvalShearSensitivity(du_dX_, d_sigma_d_shear_);
 
-  // Accumulate the residual using the Cauchy stress and the B matrix
+  // Scale the derivative matrix by the geometric and quadrature weights
   d_sigma_d_shear_ *= det_J * ip.weight * T.Weight();
 
   double scalar_sum = 0.0;
 
+  // Compute the inner product of the stress sensitivity and the adjoint strain
   for (int i = 0; i < dim_; ++i) {
     for (int j = 0; j < dim_; ++j) {
       scalar_sum += d_sigma_d_shear_(i, j) * adjoint_strain_(i, j);
@@ -72,24 +76,28 @@ double BulkSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const mf
 {
   T.SetIntPoint(&ip);
 
+  // Compute the displacement and deformation gradient
   displacement_.gridFunc().GetVectorGradient(T, du_dX_);
 
   solid_util::calcDeformationGradient(du_dX_, F_);
 
   double det_J = F_.Det();
 
+  // Compute the adjoint gradient and strain
   adjoint_displacement_.gridFunc().GetVectorGradient(T, dp_dX_);
 
   serac::solid_util::calcLinearizedStrain(dp_dX_, adjoint_strain_);
 
-  // Evaluate the Cauchy stress using the calculated deformation gradient
+  // Evaluate the derivative of the Cauchy stress with respect to the bulk modulus using the calculated deformation
+  // gradient
   material_.EvalBulkSensitivity(du_dX_, d_sigma_d_bulk_);
 
-  // Accumulate the residual using the Cauchy stress and the B matrix
+  // Scale the derivative matrix by the geometric and quadrature weights
   d_sigma_d_bulk_ *= det_J * ip.weight * T.Weight();
 
   double scalar_sum = 0.0;
 
+  // Compute the inner product of the stress sensitivity and the adjoint strain
   for (int i = 0; i < dim_; ++i) {
     for (int j = 0; j < dim_; ++j) {
       scalar_sum += d_sigma_d_bulk_(i, j) * adjoint_strain_(i, j);
