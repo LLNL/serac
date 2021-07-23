@@ -38,7 +38,7 @@
 .full_build_on_lassen:
   stage: build
   variables:
-    ALLOC_COMMAND: lalloc 1 -W 45 -q pdebug -G ${ALLOC_BANK}
+    ALLOC_COMMAND: lalloc 1 -W 55 -q pdebug -G ${ALLOC_BANK}
   extends: [.full_build_script, .on_lassen, .full_workflow]
   needs: []
 
