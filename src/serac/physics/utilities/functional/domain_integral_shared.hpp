@@ -27,7 +27,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim> xi, const tenso
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return serac::tuple{dot(u, element_type::shape_functions(xi)),
-                      dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
+                        dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
   }
 
   if constexpr (element_type::family == Family::HCURL) {
@@ -85,6 +85,6 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
   }
 }
 
-} // namespace domain_interal
+}  // namespace domain_integral
 
-} // namespace serac
+}  // namespace serac

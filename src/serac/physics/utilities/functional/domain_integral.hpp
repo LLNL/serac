@@ -28,7 +28,6 @@
 #include "serac/physics/utilities/functional/integral_cuda.cuh"
 #endif
 
-
 namespace serac {
 
 namespace domain_integral {
@@ -519,38 +518,37 @@ public:
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
 
-
     if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
-	std::cout << "cpu_policy\n";
-	evaluation_ = [=, &data](const mfem::Vector& U, mfem::Vector& R) {
-	  domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
-										   num_elements, qf, data);
-	};
-
-	gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-	  domain_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_,
-										 num_elements);
-	};
-
-	gradient_mat_ = [=](mfem::Vector& K_e) {
-	  gradient_matrix_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_, num_elements);
-	};
-      }
-
-    if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
-      // todo
-	std::cout << "gpu_policy\n";
-#if defined(__CUDACC__)	
-      evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-	domain_integral::evaluation_kernel_cuda<geometry, test_space, trial_space, Q>(
-            U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
+      std::cout << "cpu_policy\n";
+      evaluation_ = [=, &data](const mfem::Vector& U, mfem::Vector& R) {
+        domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
+                                                                                 num_elements, qf, data);
       };
 
       gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-	domain_integral::gradient_kernel_cuda<geometry, test_space, trial_space, Q>(
-            dU, dR, qf_derivatives.get(), J_, num_elements);
+        domain_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_,
+                                                                               num_elements);
       };
-      #endif
+
+      gradient_mat_ = [=](mfem::Vector& K_e) {
+        gradient_matrix_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_, num_elements);
+      };
+    }
+
+    if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
+      // todo
+      std::cout << "gpu_policy\n";
+#if defined(__CUDACC__)
+      evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
+        domain_integral::evaluation_kernel_cuda<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_,
+                                                                                      X_, num_elements, qf);
+      };
+
+      gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
+        domain_integral::gradient_kernel_cuda<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_,
+                                                                                    num_elements);
+      };
+#endif
     }
   }
 

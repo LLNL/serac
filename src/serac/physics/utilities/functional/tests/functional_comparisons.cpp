@@ -31,19 +31,19 @@ constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-static constexpr double a       = 1.7;
-static constexpr double b       = 2.1;
+static constexpr double a = 1.7;
+static constexpr double b = 2.1;
 
-
-template < int dim >
-struct hcurl_qfunction{
-  template < typename x_t, typename vector_potential_t >
-  SERAC_HOST_DEVICE auto operator()(x_t x, vector_potential_t vector_potential) {
+template <int dim>
+struct hcurl_qfunction {
+  template <typename x_t, typename vector_potential_t>
+  SERAC_HOST_DEVICE auto operator()(x_t x, vector_potential_t vector_potential)
+  {
     auto [A, curl_A] = vector_potential;
     auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
     auto H_term      = b * curl_A;
     return serac::tuple{J_term, H_term};
-      }
+  }
 };
 
 // this test sets up a toy "thermal" problem where the residual includes contributions
@@ -54,7 +54,7 @@ struct hcurl_qfunction{
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  std::string             postfix = concat("_H1<", p, ">");
+  std::string postfix = concat("_H1<", p, ">");
   serac::profiling::initializeCaliper();
 
   // Create standard MFEM bilinear and linear forms on H1
@@ -181,7 +181,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
-  std::string             postfix = concat("_H1<", p, ",", dim, ">");
+  std::string postfix = concat("_H1<", p, ",", dim, ">");
   serac::profiling::initializeCaliper();
 
   auto                        fec = mfem::H1_FECollection(p, dim);
@@ -284,7 +284,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 {
-  std::string             postfix = concat("_Hcurl<", p, ">");
+  std::string postfix = concat("_Hcurl<", p, ">");
   serac::profiling::initializeCaliper();
 
   auto                        fec = mfem::ND_FECollection(p, dim);
@@ -333,10 +333,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
-  residual.AddDomainIntegral(
-      Dimension<dim>{},
-      hcurl_qfunction<dim>{},
-      mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, hcurl_qfunction<dim>{}, mesh);
 
   mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
   mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual(U));
@@ -395,7 +392,6 @@ TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Di
 TEST(elasticity, 3D_linear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
 TEST(elasticity, 3D_quadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
 TEST(elasticity, 3D_cubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
-
 
 int main(int argc, char* argv[])
 {

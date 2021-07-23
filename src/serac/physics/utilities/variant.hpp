@@ -264,10 +264,10 @@ struct variant {
   friend constexpr typename variant_alternative<I, T0, T1>::type& get(variant& v)
   {
     if constexpr (I == 0) {
-	return v.storage_.t0_;
-      } else if constexpr (I == 1) {
-	return v.storage_.t1_;
-      }
+      return v.storage_.t0_;
+    } else if constexpr (I == 1) {
+      return v.storage_.t1_;
+    }
   }
 
   /// @overload
@@ -276,9 +276,9 @@ struct variant {
   {
     if constexpr (I == 0) {
       return v.storage_.t0_;
-      } else if constexpr (I == 1) { 
+    } else if constexpr (I == 1) {
       return v.storage_.t1_;
-      }
+    }
   }
 };
 

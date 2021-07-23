@@ -180,13 +180,13 @@ struct lambda_argument;
 // specialization for an H1 space with polynomial order p, and c components
 template <int p, int c, int dim>
 struct lambda_argument<H1<p, c>, dim, dim> {
-  using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
+  using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
 // specialization for an L2 space with polynomial order p, and c components
 template <int p, int c, int dim>
 struct lambda_argument<L2<p, c>, dim, dim> {
-  using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim> >;
+  using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
 // specialization for an H1 space with polynomial order p, and c components
@@ -212,7 +212,7 @@ struct lambda_argument<Hcurl<p>, 2, 2> {
 // specialization for an Hcurl space with polynomial order p in 3D
 template <int p>
 struct lambda_argument<Hcurl<p>, 3, 3> {
-  using type = serac::tuple<tensor<double, 3>, tensor<double, 3> >;
+  using type = serac::tuple<tensor<double, 3>, tensor<double, 3>>;
 };
 
 /**
@@ -298,5 +298,5 @@ std::shared_ptr<T> make_shared_array(std::size_t n)
     return std::shared_ptr<T>(data, deleter);
   }
 }
-  
+
 }  // namespace serac
