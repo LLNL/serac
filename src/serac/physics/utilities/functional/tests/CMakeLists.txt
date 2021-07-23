@@ -52,7 +52,7 @@ if(ENABLE_CUDA)
     set(functional_tests_cuda
         tensor_unit_tests_cuda.cu)
 
-    serac_add_tests( SOURCES ${functional_tests_cuda
+    serac_add_tests( SOURCES ${functional_tests_cuda}
                     DEPENDS_ON gtest serac_functional ${functional_depends} cuda)
 
 endif()
