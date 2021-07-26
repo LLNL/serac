@@ -18,6 +18,29 @@
 
 namespace serac::output {
 
+void outputCurves(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
+                  const Language language)
+{
+  auto [_, rank] = getMPIInfo();
+  if (rank != 0) {
+     return;
+  }
+
+  std::string output_language = "";
+  if (language == Language::JSON) {
+    output_language = "json";
+  } else if (language == Language::HDF5) {
+    // FIXME: remove this error when implemented, do we even want hdf5 curves?
+    SLIC_ERROR_ROOT("hdf5 has not been implemented in outputCurves");
+    output_language = "hdf5";
+  } else if (language == Language::YAML) {
+    output_language = "yaml";
+  }
+
+  const std::string file_name = fmt::format("{0}_curves.{1}", data_collection_name, output_language);
+  datastore.getRoot()->getGroup("serac_curves")->save(file_name, output_language);
+}
+
 void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name, double time,
                   const Language language)
 {

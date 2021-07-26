@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "mfem.hpp"
+#include "axom/sidre.hpp"
 
 #include "serac/physics/utilities/boundary_condition_manager.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
@@ -114,6 +115,18 @@ public:
    *
    */
   virtual void outputState() const;
+
+  /**
+   * @brief Initializes the Sidre structure for curves data
+   *
+   */
+  virtual void initializeCurves(axom::sidre::DataStore& datastore, axom::IndexType array_size) const;
+
+  /**
+   * @brief Saves the curves data to the Sidre Datastore
+   *
+   */
+  virtual void saveCurves(axom::sidre::DataStore& datastore, const double t) const;
 
   /**
    * @brief Destroy the Base Solver object

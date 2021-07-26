@@ -176,6 +176,8 @@ int main(int argc, char* argv[])
   // should be inlet["output_type"].get<OutputType>()
   main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac");
 
+  main_physics->initializeCurves(datastore, static_cast<axom::IndexType>(ceil(t_final / dt)));  // size assumption okay?
+
   // Enter the time step loop.
   for (int ti = 1; !last_step; ti++) {
     // Compute the real timestep. This may be less than dt for the last timestep.
@@ -193,10 +195,14 @@ int main(int argc, char* argv[])
     // Output a visualization file
     main_physics->outputState();
 
+    // Save curve data to Sidre datastore to be output later
+    main_physics->saveCurves(datastore, t);
+
     // Determine if this is the last timestep
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
+  serac::output::outputCurves(datastore, serac::StateManager::collectionName(), serac::output::Language::JSON);
   if (output_fields) {
     serac::output::outputFields(datastore, serac::StateManager::collectionName(), t, serac::output::Language::JSON);
   }

@@ -158,6 +158,8 @@ public:
    * Returns a non-owning reference to the vector of true DOFs
    */
   mfem::HypreParVector& trueVec() { return true_vec_; }
+  /// \overload
+  const mfem::HypreParVector& trueVec() const { return true_vec_; }
 
   /**
    * Returns the name of the FEState (field)
@@ -254,6 +256,32 @@ private:
   mfem::HypreParVector                              true_vec_;
   std::string                                       name_ = "";
 };
+
+// FIXME: Should these go somewhere else?
+
+/**
+ * @brief Find the average value of a finite element state across all nodes
+ *
+ * @param state The state variable to compute a max of
+ * @return The average value
+ */
+double avg(const FiniteElementState& state);
+
+/**
+ * @brief Find the max value of a finite element state across all nodes
+ *
+ * @param state The state variable to compute a max of
+ * @return The max value
+ */
+double max(const FiniteElementState& state);
+
+/**
+ * @brief Find the min value of a finite element state across all nodes
+ *
+ * @param state The state variable to compute a min of
+ * @return The min value
+ */
+double min(const FiniteElementState& state);
 
 /**
  * @brief Calculate the Lp norm of a finite element state

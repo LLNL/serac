@@ -6,6 +6,8 @@
 
 #include "serac/physics/utilities/finite_element_state.hpp"
 
+#include "mpi.h"
+
 namespace serac {
 
 namespace detail {
@@ -59,6 +61,29 @@ FiniteElementState& FiniteElementState::operator=(const double value)
   true_vec_ = value;
   distributeSharedDofs();
   return *this;
+}
+
+double avg(const FiniteElementState& state)
+{
+  int count;
+  MPI_Comm_size(state.comm(), &count);
+  double sum, local_avg = state.trueVec().Sum() / state.trueVec().Size();
+  MPI_Allreduce(&local_avg, &sum, 1, MPI_DOUBLE, MPI_SUM, state.comm());
+  return sum / count;
+}
+
+double max(const FiniteElementState& state)
+{
+  double max, local_max = state.trueVec().Max();
+  MPI_Allreduce(&local_max, &max, 1, MPI_DOUBLE, MPI_MAX, state.comm());
+  return max;
+}
+
+double min(const FiniteElementState& state)
+{
+  double min, local_min = state.trueVec().Min();
+  MPI_Allreduce(&local_min, &min, 1, MPI_DOUBLE, MPI_MIN, state.comm());
+  return min;
 }
 
 double norm(const FiniteElementState& state, const double p)

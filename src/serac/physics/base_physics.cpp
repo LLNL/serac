@@ -9,10 +9,12 @@
 #include <fstream>
 
 #include "fmt/fmt.hpp"
+#include "mpi.h"
 
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
+#include "serac/physics/utilities/finite_element_state.hpp"
 #include "serac/physics/utilities/state_manager.hpp"
 
 namespace serac {
@@ -131,6 +133,106 @@ void BasePhysics::outputState() const
 
     default:
       SLIC_ERROR_ROOT("OutputType not recognized!");
+  }
+}
+
+void BasePhysics::initializeCurves(axom::sidre::DataStore& datastore, axom::IndexType array_size) const
+{
+  // Curves Sidre Structure
+  // Sidre root
+  // └── serac_curves
+  //     ├── next_index : axom::IndexType
+  //     ├── t : Sidre::Array<axom::IndexType>
+  //     ├── <FiniteElementState name>
+  //     │    ├── l1norm : Sidre::Array<double>
+  //     │    └── l2norm : Sidre::Array<double>
+  //     ...
+  //     └── <FiniteElementState name>
+  //          ├── l1norm : Sidre::Array<double>
+  //          └── l2norm : Sidre::Array<double>
+
+  auto [_, rank] = getMPIInfo();
+  if (rank != 0) {
+    // Don't save curves on anything other than root node
+    return;
+  }
+  const std::string   curves_group_name = "serac_curves";
+  axom::sidre::Group* sidre_root        = datastore.getRoot();
+  SLIC_ERROR_ROOT_IF(sidre_root->hasGroup(curves_group_name),
+                     fmt::format("Sidre Group '{0}' cannot exist when initializeCurves is called", curves_group_name));
+  axom::sidre::Group* curves_group = sidre_root->createGroup(curves_group_name);
+
+  // t: array of each time step value
+  axom::sidre::View*         t_array_view = curves_group->createView("t");
+  axom::sidre::Array<double> ts(t_array_view, 0, 1, array_size);
+
+  for (FiniteElementState& state : state_) {
+    // Group for each Finite Element State
+    axom::sidre::Group* state_group = curves_group->createGroup(state.name());
+
+    for (std::string state_name : {"l1norms", "l2norms", "linfnorms", "avgs", "mins", "maxs"}) {
+      // array for each curve data
+      axom::sidre::View*         curr_array_view = state_group->createView(state_name);
+      axom::sidre::Array<double> array(curr_array_view, 0, 1, array_size);
+    }
+  }
+}
+
+void BasePhysics::saveCurves(axom::sidre::DataStore& datastore, const double t) const
+{
+  double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
+
+  for (FiniteElementState& state : state_) {
+    //MPI_Barrier(MPI_COMM_WORLD);
+    l1norm_value = norm(state, 1);
+    l2norm_value = norm(state, 2);
+    linfnorm_value = norm(state, mfem::infinity());
+    avg_value = avg(state);
+    max_value = max(state);
+    min_value = min(state);
+
+    auto [_, rank] = getMPIInfo();
+    if (rank == 0) {
+      // Don't save curves on anything other than root node
+      const std::string curves_group_name = "serac_curves";
+
+      // Get Sidre curves group
+      axom::sidre::Group* sidre_root = datastore.getRoot();
+      SLIC_ERROR_ROOT_IF(!sidre_root->hasGroup(curves_group_name),
+                         fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
+      axom::sidre::Group* curves_group = sidre_root->getGroup(curves_group_name);
+
+      // t
+      axom::sidre::Array<double> ts(curves_group->getView("t"));
+      ts.append(t);
+
+      // Group for each Finite Element State
+      axom::sidre::Group* state_group = curves_group->getGroup(state.name());
+
+      axom::sidre::View*         l1norms_view = state_group->getView("l1norms");
+      axom::sidre::Array<double> l1norms(l1norms_view);
+      l1norms.append(l1norm_value);
+
+      axom::sidre::View*         l2norms_view = state_group->getView("l2norms");
+      axom::sidre::Array<double> l2norms(l2norms_view);
+      l2norms.append(l2norm_value);
+
+      axom::sidre::View*         linfnorms_view = state_group->getView("linfnorms");
+      axom::sidre::Array<double> linfnorms(linfnorms_view);
+      linfnorms.append(linfnorm_value);
+
+      axom::sidre::View*         avgs_view = state_group->getView("avgs");
+      axom::sidre::Array<double> avgs(avgs_view);
+      avgs.append(avg_value);
+
+      axom::sidre::View*         maxs_view = state_group->getView("maxs");
+      axom::sidre::Array<double> maxs(maxs_view);
+      maxs.append(max_value);
+
+      axom::sidre::View*         mins_view = state_group->getView("mins");
+      axom::sidre::Array<double> mins(mins_view);
+      mins.append(min_value);
+    }
   }
 }
 
