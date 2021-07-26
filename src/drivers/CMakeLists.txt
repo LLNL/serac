@@ -16,6 +16,10 @@ if (ENABLE_TESTS)
                  COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/default.lua
                  NUM_MPI_TASKS 1 )
 
+    blt_add_test(NAME          serac_driver_default_parallel
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/default.lua
+                 NUM_MPI_TASKS 2 )
+
     blt_add_test(NAME          serac_driver_no_thermal
                  COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/tests/solid/qs_linear.lua
                  NUM_MPI_TASKS 1 )
