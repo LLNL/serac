@@ -115,7 +115,6 @@ template <int ndof>
 SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<2, double>& r_global, tensor<double, ndof> r_local, int e)
 {
   for (int i = 0; i < ndof; i++) {
-    // r_global(i, e) += r_local[i];
     AtomicAdd(r_global(i, e), r_local[i]);
   }
 }
@@ -130,7 +129,6 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor
 {
   for (int i = 0; i < ndof; i++) {
     for (int j = 0; j < components; j++) {
-      // r_global(i, j, e) += r_local[i][j];
       AtomicAdd(r_global(i, j, e), r_local[i][j]);
     }
   }

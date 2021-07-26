@@ -5,6 +5,7 @@
 
 #include "serac/physics/utilities/functional/integral_utilities.hpp"
 #include "serac/physics/utilities/functional/domain_integral_shared.hpp"
+#include <cstring>
 
 namespace serac {
 
@@ -16,61 +17,24 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
    }
 
 
-    /// Print cuda Errors
-  template <typename S>
-  inline void displayLastCUDAErrorMessage(std::ostream & o, const S & prefix) {
+  /**
+   * @brief utility method to display last cuda error message
+   *
+   * @param[in] o The output stream to post success or CUDA error messages
+   * @param[in] success_string A string to print if there are no CUDA error messages
+   */
+  inline void displayLastCUDAErrorMessage(std::ostream & o, const char * success_string = "") {
       auto error = cudaGetLastError();
       if(error != cudaError::cudaSuccess) {
-	o << "Last Cuda Error Message :" << cudaGetErrorString(error) << std::endl;
-      } else {
-	o << prefix << std::endl;
+	o << "Last CUDA Error Message :" << cudaGetErrorString(error) << std::endl;
+      } else if (strlen(success_string) > 0) {
+	o << success_string << std::endl;
       }
     }
 
-  inline void displayLastCUDAErrorMessage(std::ostream & o) {
-    displayLastCUDAErrorMessage(o, "");
-  }
-
-
 } // namespace detail
 
-  namespace domain_integral {
-  
-  template <Geometry g, typename test, typename trial, int Q , typename derivatives_type, typename lambda, typename u_elem_type, typename element_residual_type, typename J_type, typename X_type>
-  SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type & r_elem, derivatives_type * derivatives_ptr, J_type J, X_type X, int num_elements, lambda qf) 
-  {
-    using test_element               = finite_element<g, test>;
-    using trial_element              = finite_element<g, trial>;
-    static constexpr auto rule       = GaussQuadratureRule<g, Q>();
-    static constexpr int  dim        = dimension_of(g);
-  
-    auto   xi  = rule.points[q];
-    auto   dxi = rule.weights[q];
-    auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-    auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-    double dx  = det(J_q) * dxi;
-
-    // evaluate the value/derivatives needed for the q-function at this quadrature point
-    auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
-
-    // evaluate the user-specified constitutive model
-    //
-    // note: make_dual(arg) promotes those arguments to dual number types
-    // so that qf_output will contain values and derivatives
-    auto qf_output = qf(x_q, make_dual(arg));
-
-    // integrate qf_output against test space shape functions / gradients
-    // to get element residual contributions
-    r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
-
-    // here, we store the derivative of the q-function w.r.t. its input arguments
-    //
-    // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
-
-    // Note: This pattern appears to result in non-coalesced access
-    detail::AccessDerivatives(derivatives_ptr, e , q, rule, num_elements) = get_gradient(qf_output);
-
-  } 
+  namespace domain_integral {  
 
   template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda, typename u_type, typename r_type, typename J_type, typename X_type>
   __global__ void eval_cuda_element(const u_type u, r_type r, derivatives_type * derivatives_ptr, J_type J, X_type X, int num_elements, lambda qf) {
@@ -111,6 +75,7 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
     static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
     const int grid_stride = blockDim.x * gridDim.x;
+    // launch a thread for each quadrature x element point
     for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
     // warps won't fetch that many elements ... not great.. but not horrible
     int e = qe / rule.size();
@@ -124,16 +89,15 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
       // for each quadrature point in the element
       eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X, num_elements, qf);
 
-
       // once we've finished the element integration loop, write our element residuals
       // out to memory, to be later assembled into global residuals by mfem
       detail::Add(r, r_elem, e);
-    } // qe branch
+    } // quadrature x element loop
 
   }
 
 
-template <Geometry g, typename test, typename trial, int Q,
+    template <Geometry g, typename test, typename trial, int Q, int blocksize,
 	  typename derivatives_type, typename lambda>
 void evaluation_kernel_cuda(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
 			    const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
@@ -164,21 +128,18 @@ void evaluation_kernel_cuda(const mfem::Vector& U, mfem::Vector& R, derivatives_
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
   cudaDeviceSynchronize();
-  serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh before eval_cuda is fine");
+  serac::detail::displayLastCUDAErrorMessage(std::cout);
 
-  const int blocksize = 128;
   [[maybe_unused]] int blocks_element = (num_elements + blocksize - 1)/blocksize;
   //  eval_cuda_element<g, test, trial, Q ><<<blocks_element,blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
   int blocks_quadrature_element = (num_elements * rule.size() + blocksize - 1)/blocksize;
   eval_cuda_quadrature<g, test, trial, Q ><<<blocks_quadrature_element,blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
 
   cudaDeviceSynchronize();
-  serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh after eval_cuda is fine");
+  serac::detail::displayLastCUDAErrorMessage(std::cout);
 
-  // copy back to host?
+  // copy back to host
   R.HostRead();
-
-  std::cout << "Host Read:" << std::endl;
 
   X_.UseDevice(false);
   J_.UseDevice(false);
@@ -321,7 +282,7 @@ void gradient_kernel_cuda(const mfem::Vector& dU, mfem::Vector& dR, derivatives_
   auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
 
   cudaDeviceSynchronize();
-  serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh before gradient_cuda is fine");
+  serac::detail::displayLastCUDAErrorMessage(std::cout);
 
   // call gradient_cuda
   const int blocksize = 128;
@@ -333,7 +294,7 @@ void gradient_kernel_cuda(const mfem::Vector& dU, mfem::Vector& dR, derivatives_
 
   
   cudaDeviceSynchronize();
-  serac::detail::displayLastCUDAErrorMessage(std::cout, "integral_cuda.cuh before gradient_cuda is fine");
+  serac::detail::displayLastCUDAErrorMessage(std::cout);
   dR.HostRead();
 
   J_.UseDevice(false);

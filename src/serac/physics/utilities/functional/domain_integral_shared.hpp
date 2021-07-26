@@ -85,6 +85,47 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
   }
 }
 
+// TODO: Add more comments. Quadrature level evaluation
+
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
+          typename u_elem_type, typename element_residual_type, typename J_type, typename X_type>
+SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type& r_elem,
+                                       derivatives_type* derivatives_ptr, J_type J, X_type X, int num_elements,
+                                       lambda qf)
+{
+  using test_element         = finite_element<g, test>;
+  using trial_element        = finite_element<g, trial>;
+  static constexpr auto rule = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim  = dimension_of(g);
+
+  auto   xi  = rule.points[q];
+  auto   dxi = rule.weights[q];
+  auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+  auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+  double dx  = det(J_q) * dxi;
+
+  // evaluate the value/derivatives needed for the q-function at this quadrature point
+  auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
+
+  // evaluate the user-specified constitutive model
+  //
+  // note: make_dual(arg) promotes those arguments to dual number types
+  // so that qf_output will contain values and derivatives
+  auto qf_output = qf(x_q, make_dual(arg));
+
+  // integrate qf_output against test space shape functions / gradients
+  // to get element residual contributions
+  r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+
+  // here, we store the derivative of the q-function w.r.t. its input arguments
+  //
+  // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
+
+  // detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
+  // Note: This pattern may result in non-coalesced access depend on how it executed.
+  detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
+}
+
 }  // namespace domain_integral
 
 }  // namespace serac
