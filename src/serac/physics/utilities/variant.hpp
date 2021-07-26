@@ -276,7 +276,7 @@ struct variant {
   {
     if constexpr (I == 0) {
       return v.storage_.t0_;
-    } else if constexpr (I == 1) {
+    } else /*if constexpr (I == 1)*/ {
       return v.storage_.t1_;
     }
   }

@@ -288,10 +288,10 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
         N = dot(N, inv(J_q));
       }
 
-      auto f00 = serac::get<0>(serac::get<0>(dq_darg));
-      auto f01 = serac::get<1>(serac::get<0>(dq_darg));
-      auto f10 = serac::get<0>(serac::get<1>(dq_darg));
-      auto f11 = serac::get<1>(serac::get<1>(dq_darg));
+      [[maybe_unused]] auto f00 = serac::get<0>(serac::get<0>(dq_darg));
+      [[maybe_unused]] auto f01 = serac::get<1>(serac::get<0>(dq_darg));
+      [[maybe_unused]] auto f10 = serac::get<0>(serac::get<1>(dq_darg));
+      [[maybe_unused]] auto f11 = serac::get<1>(serac::get<1>(dq_darg));
 
       // df0_du stiffness contribution
       // size(M) = test_ndof
