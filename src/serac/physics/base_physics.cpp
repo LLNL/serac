@@ -182,8 +182,26 @@ void BasePhysics::saveCurves(axom::sidre::DataStore& datastore, const double t) 
 {
   double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
 
+  axom::sidre::Group* sidre_root;
+  axom::sidre::Group* curves_group;
+  auto [_, rank] = getMPIInfo();
+
+  // Don't save curves on anything other than root node
+  if (rank == 0) {
+    const std::string curves_group_name = "serac_curves";
+
+    // Get Sidre curves group
+    sidre_root = datastore.getRoot();
+    SLIC_ERROR_ROOT_IF(!sidre_root->hasGroup(curves_group_name),
+                       fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
+    curves_group = sidre_root->getGroup(curves_group_name);
+
+    // t
+    axom::sidre::Array<double> ts(curves_group->getView("t"));
+    ts.append(t);
+  }
+
   for (FiniteElementState& state : state_) {
-    //MPI_Barrier(MPI_COMM_WORLD);
     l1norm_value = norm(state, 1);
     l2norm_value = norm(state, 2);
     linfnorm_value = norm(state, mfem::infinity());
@@ -191,21 +209,8 @@ void BasePhysics::saveCurves(axom::sidre::DataStore& datastore, const double t) 
     max_value = max(state);
     min_value = min(state);
 
-    auto [_, rank] = getMPIInfo();
+    // Don't save curves on anything other than root node
     if (rank == 0) {
-      // Don't save curves on anything other than root node
-      const std::string curves_group_name = "serac_curves";
-
-      // Get Sidre curves group
-      axom::sidre::Group* sidre_root = datastore.getRoot();
-      SLIC_ERROR_ROOT_IF(!sidre_root->hasGroup(curves_group_name),
-                         fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
-      axom::sidre::Group* curves_group = sidre_root->getGroup(curves_group_name);
-
-      // t
-      axom::sidre::Array<double> ts(curves_group->getView("t"));
-      ts.append(t);
-
       // Group for each Finite Element State
       axom::sidre::Group* state_group = curves_group->getGroup(state.name());
 
