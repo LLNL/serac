@@ -31,9 +31,9 @@ TEST(TupleTests, structured_binding)
 {
   serac::tuple x{0, 1.0, 2.0f};
   auto [a, b, c] = x;
-  EXPECT_NEAR(a, 0, 1.0 - 10);
-  EXPECT_NEAR(b, 1.00, 1.0 - 10);
-  EXPECT_NEAR(c, 2.0f, 1.0 - 10);
+  EXPECT_NEAR(a, 0, 1.0e-10);
+  EXPECT_NEAR(b, 1.00, 1.0e-10);
+  EXPECT_NEAR(c, 2.0f, 1.0e-10);
 }
 
 TEST(TupleTests, add)
