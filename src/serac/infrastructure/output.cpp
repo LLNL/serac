@@ -44,8 +44,7 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& da
   conduit::Node extracts;
   // "relay" is the Ascents Extract type for saving data
   extracts["e1/type"]            = "relay";
-  auto [_, rank]                 = serac::getMPIInfo();
-  extracts["e1/params/path"]     = fmt::format("{}_fields.{}.{}", data_collection_name, rank, output_language);
+  extracts["e1/params/path"]     = fmt::format("{}_fields.{}", data_collection_name, output_language);
   extracts["e1/params/protocol"] = output_language;
 
   // Get domain Sidre group
