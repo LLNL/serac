@@ -54,7 +54,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim> xi, const tenso
  *                              and std::get<1>(f) against the curl of the test space shape functions
  * TODO: Hdiv family elements integrate std::get<0>(f) against the test space shape functions
  *                                  and std::get<1>(f) against the divergence of the test space shape functions
- * TODO: L2 family elements integrate f against test space shape functions
+ *  L2 family elements integrate f against test space shape functions
  *
  * In the future, the user will be able to override these defaults
  * to omit unused components (e.g. provide only the term to be integrated against test function gradients)
