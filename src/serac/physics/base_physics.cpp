@@ -202,12 +202,12 @@ void BasePhysics::saveCurves(axom::sidre::DataStore& datastore, const double t) 
   }
 
   for (FiniteElementState& state : state_) {
-    l1norm_value = norm(state, 1);
-    l2norm_value = norm(state, 2);
+    l1norm_value   = norm(state, 1);
+    l2norm_value   = norm(state, 2);
     linfnorm_value = norm(state, mfem::infinity());
-    avg_value = avg(state);
-    max_value = max(state);
-    min_value = min(state);
+    avg_value      = avg(state);
+    max_value      = max(state);
+    min_value      = min(state);
 
     // Don't save curves on anything other than root node
     if (rank == 0) {

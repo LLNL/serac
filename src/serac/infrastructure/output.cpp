@@ -23,7 +23,7 @@ void outputCurves(const axom::sidre::DataStore& datastore, const std::string& da
 {
   auto [_, rank] = getMPIInfo();
   if (rank != 0) {
-     return;
+    return;
   }
 
   std::string output_language = "";
