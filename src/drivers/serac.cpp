@@ -180,6 +180,9 @@ int main(int argc, char* argv[])
 
   // Enter the time step loop.
   for (int ti = 1; !last_step; ti++) {
+    // Flush all messages held by the logger
+    serac::logger::flush();
+
     // Compute the real timestep. This may be less than dt for the last timestep.
     double dt_real = std::min(dt, t_final - t);
 
