@@ -246,7 +246,9 @@ __global__ void gradient_cuda_quadrature(const du_type du, dr_type dr, derivativ
 
   const int grid_stride = blockDim.x * gridDim.x;
 #pragma unroll
-  for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
+  auto thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+  auto num_quadrature_points = num_elements * rule.size();
+  for (int qe = thread_id; qe < num_quadrature_points; qe += grid_stride) {
 
     int e = qe / rule.size();
     int q = qe % rule.size();
