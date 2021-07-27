@@ -32,7 +32,7 @@ set(functional_headers
     )
 
 if(ENABLE_CUDA)
-list(APPEND functional_headers integral_cuda.cuh)
+list(APPEND functional_headers domain_integral_cuda.cuh)
 endif()
 
 blt_add_library(

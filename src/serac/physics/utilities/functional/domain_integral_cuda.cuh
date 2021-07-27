@@ -10,12 +10,6 @@
 namespace serac {
 
 namespace detail {
-template <typename T, typename... Dims>
-__host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... dims)
-   {
-      return mfem::DeviceTensor<sizeof...(Dims),T>(ptr, dims...);
-   }
-
 
   /**
    * @brief utility method to display last cuda error message
@@ -32,6 +26,18 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
       }
     }
 
+  /**
+   * @brief Defines whether to use organize threads
+   */ 
+  enum ThreadExecutionPolicy {
+    THREAD_PER_ELEMENT_QUADRATURE_POINT,
+    THREAD_PER_ELEMENT
+  };
+  
+  struct ThreadExecutionConfiguration {
+    int blocksize;
+  };
+  
 } // namespace detail
 
   namespace domain_integral {  
@@ -97,9 +103,9 @@ __host__ inline mfem::DeviceTensor<sizeof...(Dims),T> Reshape(T *ptr, Dims... di
   }
 
 
-    template <Geometry g, typename test, typename trial, int Q, int blocksize,
+    template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
 	  typename derivatives_type, typename lambda>
-void evaluation_kernel_cuda(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
+    void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
 			    const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
 {
 
@@ -122,18 +128,22 @@ void evaluation_kernel_cuda(const mfem::Vector& U, mfem::Vector& R, derivatives_
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto X = detail::Reshape(X_.Read(), rule.size(), dim, num_elements);
-  auto J = detail::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
+  auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements);
+  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
-  [[maybe_unused]] int blocks_element = (num_elements + blocksize - 1)/blocksize;
-  //  eval_cuda_element<g, test, trial, Q ><<<blocks_element,blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
-  int blocks_quadrature_element = (num_elements * rule.size() + blocksize - 1)/blocksize;
-  eval_cuda_quadrature<g, test, trial, Q ><<<blocks_quadrature_element,blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+  if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT) {
+      int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1)/config.blocksize;
+      eval_cuda_quadrature<g, test, trial, Q ><<<blocks_quadrature_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+
+    } else if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT) {
+      int blocks_element = (num_elements + config.blocksize - 1)/config.blocksize;
+      eval_cuda_element<g, test, trial, Q ><<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+    }
 
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
@@ -170,7 +180,6 @@ SERAC_HOST_DEVICE void gradient_quadrature(int e, int q, du_elem_type & du_elem,
   auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
 
   // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-
   auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
 
   // use the chain rule to compute the first-order change in the q-function output
