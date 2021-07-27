@@ -9,7 +9,6 @@
 #include <fstream>
 
 #include "fmt/fmt.hpp"
-#include "mpi.h"
 
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
