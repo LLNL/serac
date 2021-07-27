@@ -183,26 +183,8 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      // get the position of this quadrature point in the parent and physical space,
-      // and calculate the measure of that point in physical space.
-      auto   xi  = rule.points[q];
-      auto   dxi = rule.weights[q];
-      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = det(J_q) * dxi;
-
-      // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
-
-      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-
-      auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
-
-      // use the chain rule to compute the first-order change in the q-function output
-      auto dq = chain_rule(dq_darg, darg);
-
-      // integrate dq against test space shape functions / gradients
-      // to get the (change in) element residual contributions
-      dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
+      gradient_quadrature<g, test, trial, Q, derivatives_type>(e, q, du_elem, dr_elem, derivatives_ptr, J,
+                                                               num_elements);
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -541,8 +523,12 @@ public:
       };
 
       gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-        domain_integral::gradient_kernel_cuda<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_,
-                                                                                    num_elements);
+        serac::detail::ThreadExecutionConfiguration exec_config{.blocksize = 128};
+
+        domain_integral::gradient_kernel_cuda<
+            geometry, test_space, trial_space, Q,
+            serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT>(
+            exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
       };
 #endif
     }

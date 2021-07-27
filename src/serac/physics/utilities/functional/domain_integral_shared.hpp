@@ -126,6 +126,38 @@ SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element
   detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
 }
 
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename du_elem_type,
+          typename dr_elem_type>
+SERAC_HOST_DEVICE void gradient_quadrature(int e, int q, du_elem_type& du_elem, dr_elem_type& dr_elem,
+                                           derivatives_type*                         derivatives_ptr,
+                                           const mfem::DeviceTensor<4, const double> J, int num_elements)
+{
+  using test_element         = finite_element<g, test>;
+  using trial_element        = finite_element<g, trial>;
+  static constexpr auto rule = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim  = dimension_of(g);
+
+  // get the position of this quadrature point in the parent and physical space,
+  // and calculate the measure of that point in physical space.
+  auto   xi  = rule.points[q];
+  auto   dxi = rule.weights[q];
+  auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+  double dx  = det(J_q) * dxi;
+
+  // evaluate the (change in) value/derivatives at this quadrature point
+  auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
+
+  // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
+  auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
+
+  // use the chain rule to compute the first-order change in the q-function output
+  auto dq = chain_rule(dq_darg, darg);
+
+  // integrate dq against test space shape functions / gradients
+  // to get the (change in) element residual contributions
+  dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
+}
+
 }  // namespace domain_integral
 
 }  // namespace serac

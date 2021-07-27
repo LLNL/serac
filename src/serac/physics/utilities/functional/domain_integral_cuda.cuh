@@ -156,41 +156,7 @@ namespace detail {
   U.UseDevice(false);
   R.UseDevice(false);
 
-}
-
-
-template <Geometry g, typename test, typename trial, int Q,
-          typename derivatives_type, typename du_elem_type, typename dr_elem_type>
-SERAC_HOST_DEVICE void gradient_quadrature(int e, int q, du_elem_type & du_elem, dr_elem_type & dr_elem, derivatives_type* derivatives_ptr, const mfem::DeviceTensor<4, const double> J, int num_elements)
-{
-
-  using test_element               = finite_element<g, test>;
-  using trial_element              = finite_element<g, trial>;
-  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
-  static constexpr int  dim        = dimension_of(g);
-  
-  // get the position of this quadrature point in the parent and physical space,
-  // and calculate the measure of that point in physical space.
-  auto   xi  = rule.points[q];
-  auto   dxi = rule.weights[q];
-  auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-  double dx  = det(J_q) * dxi;
-
-  // evaluate the (change in) value/derivatives at this quadrature point
-  auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
-
-  // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-  auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
-
-  // use the chain rule to compute the first-order change in the q-function output
-  auto dq = chain_rule(dq_darg, darg);
-
-  // integrate dq against test space shape functions / gradients
-  // to get the (change in) element residual contributions
-  dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
-
-}
-  
+}  
   
 template <Geometry g, typename test, typename trial, int Q,
           typename derivatives_type, typename du_type, typename dr_type>
@@ -202,11 +168,6 @@ __global__ void gradient_cuda_element(const du_type du, dr_type dr, derivatives_
   using element_residual_type      = typename trial_element::residual_type;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
-
-  // for each element in the domain
-  //  for (int e = 0; e < num_elements; e++) {
-  //int e = blockIdx.x * blockDim.x + threadIdx.x;
-  //if (e < num_elements) {
   const int grid_stride = blockDim.x * gridDim.x;
 #pragma unroll
   for (int e = blockIdx.x * blockDim.x + threadIdx.x; e < num_elements; e += grid_stride) {
@@ -238,12 +199,6 @@ __global__ void gradient_cuda_quadrature(const du_type du, dr_type dr, derivativ
   using element_residual_type      = typename trial_element::residual_type;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
-
-  // for each element in the domain
-  //  for (int e = 0; e < num_elements; e++) {
-  // int qe = blockIdx.x * blockDim.x + threadIdx.x;
-  // if (qe < num_elements * rule.size()) {
-
   const int grid_stride = blockDim.x * gridDim.x;
 #pragma unroll
   auto thread_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -268,9 +223,9 @@ __global__ void gradient_cuda_quadrature(const du_type du, dr_type dr, derivativ
 
   
 
-template <Geometry g, typename test, typename trial, int Q,
+template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
           typename derivatives_type>
-void gradient_kernel_cuda(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
+void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
                      const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
@@ -296,13 +251,14 @@ void gradient_kernel_cuda(const mfem::Vector& dU, mfem::Vector& dR, derivatives_
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
   // call gradient_cuda
-  const int blocksize = 128;
-  [[maybe_unused]] int blocks_element = (num_elements + blocksize - 1)/blocksize;
-  // gradient_cuda_element<g, test, trial, Q, derivatives_type> <<< blocks_element, blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
+  if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT) {
+      int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1)/config.blocksize;
+      gradient_cuda_quadrature<g, test, trial, Q, derivatives_type> <<< blocks_quadrature_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
 
-  [[maybe_unused]] int blocks_quadrature_element = (num_elements * rule.size() + blocksize - 1)/blocksize;
-  gradient_cuda_quadrature<g, test, trial, Q, derivatives_type> <<< blocks_quadrature_element, blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
-
+    } else if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT) {
+      int blocks_element = (num_elements + config.blocksize - 1)/config.blocksize;
+      gradient_cuda_element<g, test, trial, Q, derivatives_type> <<< blocks_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
+    }
   
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
