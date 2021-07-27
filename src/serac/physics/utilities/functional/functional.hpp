@@ -72,7 +72,7 @@ class Functional;
  * Functional< H1(Hcurl) > my_residual;
  * @endcode
  *
- * @tparam execution_policy the The space of test functions to use
+ * @tparam execution_policy which kind of processor should be used to carry out calculations
  * @tparam test The space of test functions to use
  * @tparam trial The space of trial functions to use
  *
