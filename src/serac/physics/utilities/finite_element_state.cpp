@@ -8,6 +8,8 @@
 
 #include "mpi.h"
 
+#include "serac/infrastructure/initialize.hpp"
+
 namespace serac {
 
 namespace detail {
@@ -65,8 +67,7 @@ FiniteElementState& FiniteElementState::operator=(const double value)
 
 double avg(const FiniteElementState& state)
 {
-  int count;
-  MPI_Comm_size(state.comm(), &count);
+  auto [count, _] = getMPIInfo(state.comm());
   double sum, local_avg = state.trueVec().Sum() / state.trueVec().Size();
   MPI_Allreduce(&local_avg, &sum, 1, MPI_DOUBLE, MPI_SUM, state.comm());
   return sum / count;
