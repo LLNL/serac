@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
   // should be inlet["output_type"].get<OutputType>()
   main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac");
 
-  main_physics->initializeCurves(datastore, static_cast<axom::IndexType>(ceil(t_final / dt)));  // size assumption okay?
+  main_physics->initializeCurves(datastore, t_final, dt);
 
   // Enter the time step loop.
   for (int ti = 1; !last_step; ti++) {

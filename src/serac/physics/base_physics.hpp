@@ -119,12 +119,17 @@ public:
   /**
    * @brief Initializes the Sidre structure for curves data
    *
+   * @param[in] datastore Sidre DataStore where curves are saved
+   * @param[in] t_final Final time of the simulation
+   * @param[in] dt The time step
    */
-  virtual void initializeCurves(axom::sidre::DataStore& datastore, axom::IndexType array_size) const;
+  virtual void initializeCurves(axom::sidre::DataStore& datastore, const double t_final, const double dt) const;
 
   /**
    * @brief Saves the curves data to the Sidre Datastore
    *
+   * @param[in] datastore Sidre DataStore where curves are saved
+   * @param[in] t The current time of the simulation
    */
   virtual void saveCurves(axom::sidre::DataStore& datastore, const double t) const;
 

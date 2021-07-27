@@ -136,7 +136,7 @@ void BasePhysics::outputState() const
   }
 }
 
-void BasePhysics::initializeCurves(axom::sidre::DataStore& datastore, axom::IndexType array_size) const
+void BasePhysics::initializeCurves(axom::sidre::DataStore& datastore, double t_final, double dt) const
 {
   // Curves Sidre Structure
   // Sidre root
@@ -161,6 +161,9 @@ void BasePhysics::initializeCurves(axom::sidre::DataStore& datastore, axom::Inde
   SLIC_ERROR_ROOT_IF(sidre_root->hasGroup(curves_group_name),
                      fmt::format("Sidre Group '{0}' cannot exist when initializeCurves is called", curves_group_name));
   axom::sidre::Group* curves_group = sidre_root->createGroup(curves_group_name);
+
+  // Calculate how many time steps which is the array size
+  axom::IndexType array_size = static_cast<axom::IndexType>(ceil(t_final / dt));
 
   // t: array of each time step value
   axom::sidre::View*         t_array_view = curves_group->createView("t");
