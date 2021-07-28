@@ -200,9 +200,9 @@ __global__ void gradient_cuda_quadrature(const du_type du, dr_type dr, derivativ
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   const int grid_stride = blockDim.x * gridDim.x;
-#pragma unroll
   auto thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   auto num_quadrature_points = num_elements * rule.size();
+#pragma unroll
   for (int qe = thread_id; qe < num_quadrature_points; qe += grid_stride) {
 
     int e = qe / rule.size();

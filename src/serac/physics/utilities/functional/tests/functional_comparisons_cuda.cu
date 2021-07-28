@@ -183,6 +183,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 
   serac::profiling::terminateCaliper();
+  std::cout << "finished " << std::endl;
 }
 
 // this test sets up a toy "elasticity" problem where the residual includes contributions
@@ -249,16 +250,6 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   Functional<test_space(trial_space), gpu_policy> residual(&fespace, &fespace);
 
-  // residual.AddDomainIntegral(
-  //     Dimension<dim>{},
-  //     [&](auto /*x*/, auto displacement) {
-  //       auto [u, du_dx] = displacement;
-  //       auto body_force = a * u + I[0];
-  //       auto strain     = 0.5 * (du_dx + transpose(du_dx));
-  //       auto stress     = b * tr(strain) * I + 2.0 * b * strain;
-  //       return serac::tuple{body_force, stress};
-  //     },
-  //     mesh);
   residual.AddDomainIntegral(Dimension<dim>{}, elastic_qfunction<dim>{}, mesh);
 
   // Functional<test_space(trial_space)> residual_cpu(&fespace, &fespace);
@@ -349,15 +340,6 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 
   Functional<test_space(trial_space), gpu_policy> residual(&fespace, &fespace);
 
-  // residual.AddDomainIntegral(
-  //     Dimension<dim>{},
-  //     [&](auto x, auto vector_potential) {
-  //       auto [A, curl_A] = vector_potential;
-  //       auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
-  //       auto H_term      = b * curl_A;
-  //       return serac::tuple{J_term, H_term};
-  //     },
-  //     mesh);
   residual.AddDomainIntegral(Dimension<dim>{}, hcurl_qfunction<dim>{}, mesh);
 
   // Compute the residual using standard MFEM methods
@@ -394,8 +376,8 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   serac::profiling::terminateCaliper();
 }
 
-// TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-// TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
 // TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
 
 // TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
@@ -410,7 +392,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 // TEST(hcurl, 3D_quadratic) { functional_test(*mesh3D, Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
 // TEST(hcurl, 3D_cubic) { functional_test(*mesh3D, Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
 
-TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+// TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
 // TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
 // TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
 
@@ -465,7 +447,6 @@ int main(int argc, char* argv[])
 
   int result = RUN_ALL_TESTS();
 
-  // serac::accelerator::terminateDevice(); // ?
   serac::exitGracefully();
 
   return result;
