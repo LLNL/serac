@@ -29,6 +29,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
                "Writes Sphinx documentation for input file, then exits");
   bool output_fields{true};
   app.add_flag("--output-fields,!--no-output-fields", output_fields, "Writes field data to file system.");
+  std::string output_directory;
+  app.add_option("-o, --output_directory", output_directory, "Directory to put outputted files.");
+
 
   // Parse the arguments and check if they are good
   try {
@@ -57,6 +60,9 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   }
   if (output_fields) {
     cli_opts.insert({"output_fields", {}});
+  }
+  if (output_directory != "") {
+    cli_opts.insert({std::string("output_directory"), output_directory});
   }
   return cli_opts;
 }

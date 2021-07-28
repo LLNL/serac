@@ -49,8 +49,8 @@ void outputSummary(const axom::sidre::DataStore& datastore, const std::string& d
   datastore.getRoot()->getGroup("serac_summary")->save(file_name, file_format_string);
 }
 
-void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name, double time,
-                  const FileFormat file_format)
+void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
+                  const std::string& output_directory, double time, const FileFormat file_format)
 {
   SLIC_INFO_ROOT(fmt::format("Outputting field data at time: {}", time));
 
@@ -68,7 +68,7 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& da
   conduit::Node extracts;
   // "relay" is the Ascents Extract type for saving data
   extracts["e1/type"]            = "relay";
-  extracts["e1/params/path"]     = fmt::format("{}_fields.{}", data_collection_name, file_format_string);
+  extracts["e1/params/path"]     = fmt::format("{}/{}_fields.{}", output_directory, data_collection_name, file_format_string);
   extracts["e1/params/protocol"] = file_format_string;
 
   // Get domain Sidre group

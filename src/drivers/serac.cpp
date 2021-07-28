@@ -92,6 +92,15 @@ int main(int argc, char* argv[])
     input_file_path = search->second;
   }
 
+  // Output directory
+  std::string output_directory = "";
+  search          = cli_opts.find("output_directory");
+  if (search != cli_opts.end()) {
+    output_directory = search->second;
+  }
+  axom::utilities::filesystem::makeDirsForPath(output_directory);
+  SLIC_INFO(fmt::format("Output Directory: {}", output_directory));
+
   // Check if a restart was requested
   std::optional<int> restart_cycle;
   if (auto cycle = cli_opts.find("restart_cycle"); cycle != cli_opts.end()) {
@@ -207,7 +216,7 @@ int main(int argc, char* argv[])
 
   serac::output::outputSummary(datastore, serac::StateManager::collectionName());
   if (output_fields) {
-    serac::output::outputFields(datastore, serac::StateManager::collectionName(), t);
+    serac::output::outputFields(datastore, serac::StateManager::collectionName(), output_directory, t);
   }
 
   serac::exitGracefully();
