@@ -76,16 +76,16 @@ double avg(const FiniteElementState& state)
 
 double max(const FiniteElementState& state)
 {
-  double max, local_max = state.trueVec().Max();
-  MPI_Allreduce(&local_max, &max, 1, MPI_DOUBLE, MPI_MAX, state.comm());
-  return max;
+  double global_max, local_max = state.trueVec().Max();
+  MPI_Allreduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, state.comm());
+  return global_max;
 }
 
 double min(const FiniteElementState& state)
 {
-  double min, local_min = state.trueVec().Min();
-  MPI_Allreduce(&local_min, &min, 1, MPI_DOUBLE, MPI_MIN, state.comm());
-  return min;
+  double global_min, local_min = state.trueVec().Min();
+  MPI_Allreduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, state.comm());
+  return global_min;
 }
 
 double norm(const FiniteElementState& state, const double p)
