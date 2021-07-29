@@ -17,6 +17,9 @@ set(functional_headers
     polynomials.hpp
     quadrature.hpp
     finite_element.hpp
+    )
+
+set(functional_detail_headers
     detail/hexahedron_H1.inl
     detail/hexahedron_Hcurl.inl
     detail/hexahedron_L2.inl
@@ -31,12 +34,13 @@ set(functional_headers
 
 blt_add_library(
       NAME        serac_functional
-      HEADERS     ${functional_headers}
+      HEADERS     ${functional_headers} ${functional_detail_headers}
       DEPENDS_ON  ${functional_depends}
       )
 
 
 install(FILES ${functional_headers} DESTINATION include/serac/physics/utilities/functional )
+install(FILES ${functional_detail_headers} DESTINATION include/serac/physics/utilities/functional/detail )
 
 install(TARGETS              serac_functional
         EXPORT               serac-targets
