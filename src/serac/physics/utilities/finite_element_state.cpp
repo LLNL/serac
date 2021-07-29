@@ -67,10 +67,11 @@ FiniteElementState& FiniteElementState::operator=(const double value)
 
 double avg(const FiniteElementState& state)
 {
-  auto [count, _] = getMPIInfo(state.comm());
-  double sum, local_avg = state.trueVec().Sum() / state.trueVec().Size();
-  MPI_Allreduce(&local_avg, &sum, 1, MPI_DOUBLE, MPI_SUM, state.comm());
-  return sum / count;
+  double global_sum, local_sum = state.trueVec().Sum();
+  int global_size, local_size = state.trueVec().Size();
+  MPI_Allreduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, state.comm());
+  MPI_Allreduce(&local_size, &global_size, 1, MPI_INT, MPI_SUM, state.comm());
+  return global_sum / global_size;
 }
 
 double max(const FiniteElementState& state)
