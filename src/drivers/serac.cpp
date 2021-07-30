@@ -205,9 +205,9 @@ int main(int argc, char* argv[])
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
-  serac::output::outputCurves(datastore, serac::StateManager::collectionName(), serac::output::Language::JSON);
+  serac::output::outputCurves(datastore, serac::StateManager::collectionName());
   if (output_fields) {
-    serac::output::outputFields(datastore, serac::StateManager::collectionName(), t, serac::output::Language::JSON);
+    serac::output::outputFields(datastore, serac::StateManager::collectionName(), t);
   }
 
   serac::exitGracefully();

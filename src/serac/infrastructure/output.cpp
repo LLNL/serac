@@ -18,31 +18,41 @@
 
 namespace serac::output {
 
+namespace detail {
+std::string file_format_string(const FileFormat file_format)
+{
+  std::string value = "";
+  if (file_format == FileFormat::JSON) {
+    value = "json";
+  } else if (file_format == FileFormat::HDF5) {
+    value = "hdf5";
+  } else if (file_format == FileFormat::YAML) {
+    value = "yaml";
+  }
+  return value;
+}
+}
+
 void outputCurves(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
-                  const Language language)
+                  const FileFormat file_format)
 {
   auto [_, rank] = getMPIInfo();
   if (rank != 0) {
     return;
   }
 
-  std::string output_language = "";
-  if (language == Language::JSON) {
-    output_language = "json";
-  } else if (language == Language::HDF5) {
+  if (file_format == FileFormat::HDF5) {
     // FIXME: remove this error when implemented, do we even want hdf5 curves?
     SLIC_ERROR_ROOT("hdf5 has not been implemented in outputCurves");
-    output_language = "hdf5";
-  } else if (language == Language::YAML) {
-    output_language = "yaml";
   }
+  std::string file_format_string = detail::file_format_string(file_format);
 
-  const std::string file_name = fmt::format("{0}_curves.{1}", data_collection_name, output_language);
-  datastore.getRoot()->getGroup("serac_curves")->save(file_name, output_language);
+  const std::string file_name = fmt::format("{0}_curves.{1}", data_collection_name, file_format_string);
+  datastore.getRoot()->getGroup("serac_curves")->save(file_name, file_format_string);
 }
 
 void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name, double time,
-                  const Language language)
+                  const FileFormat file_format)
 {
   SLIC_INFO_ROOT(fmt::format("Outputting field data at time: {}", time));
 
@@ -55,20 +65,13 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& da
   ascent_opts["actions_file"] = "";
   ascent.open(ascent_opts);
 
-  std::string output_language = "";
-  if (language == Language::JSON) {
-    output_language = "json";
-  } else if (language == Language::HDF5) {
-    output_language = "hdf5";
-  } else if (language == Language::YAML) {
-    output_language = "yaml";
-  }
+  std::string file_format_string = detail::file_format_string(file_format);
 
   conduit::Node extracts;
   // "relay" is the Ascents Extract type for saving data
   extracts["e1/type"]            = "relay";
-  extracts["e1/params/path"]     = fmt::format("{}_fields.{}", data_collection_name, output_language);
-  extracts["e1/params/protocol"] = output_language;
+  extracts["e1/params/path"]     = fmt::format("{}_fields.{}", data_collection_name, file_format_string);
+  extracts["e1/params/protocol"] = file_format_string;
 
   // Get domain Sidre group
   const axom::sidre::Group* sidre_root = datastore.getRoot();

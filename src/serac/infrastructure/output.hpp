@@ -24,9 +24,9 @@
 namespace serac::output {
 
 /**
- * @brief The output file languages supported
+ * @brief The output file formats supported
  */
-enum class Language
+enum class FileFormat
 {
   HDF5,
   JSON,
@@ -42,7 +42,7 @@ enum class Language
  * @param[in] language The output language format
  */
 void outputCurves(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
-                  const Language language = Language::JSON);
+                  const FileFormat language = FileFormat::JSON);
 
 /**
  * @brief Outputs simulation field data from the datastore to the given file
@@ -53,6 +53,6 @@ void outputCurves(const axom::sidre::DataStore& datastore, const std::string& da
  * @param[in] language The output language format
  */
 void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name, double time,
-                  const Language language = Language::JSON);
+                  const FileFormat language = FileFormat::JSON);
 
 }  // namespace serac::output
