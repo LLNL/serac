@@ -31,7 +31,7 @@ std::string file_format_string(const FileFormat file_format)
   }
   return value;
 }
-}
+}  // namespace detail
 
 void outputCurves(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
                   const FileFormat file_format)

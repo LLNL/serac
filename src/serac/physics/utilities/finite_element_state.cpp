@@ -67,8 +67,8 @@ FiniteElementState& FiniteElementState::operator=(const double value)
 
 double avg(const FiniteElementState& state)
 {
-  double global_sum, local_sum = state.trueVec().Sum();
-  int global_size, local_size = state.trueVec().Size();
+  double global_sum, local_sum   = state.trueVec().Sum();
+  int    global_size, local_size = state.trueVec().Size();
   MPI_Allreduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, state.comm());
   MPI_Allreduce(&local_size, &global_size, 1, MPI_INT, MPI_SUM, state.comm());
   return global_sum / global_size;
