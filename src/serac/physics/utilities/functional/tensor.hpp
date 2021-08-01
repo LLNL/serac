@@ -377,14 +377,14 @@ SERAC_HOST_DEVICE constexpr auto tensor_with_shape(std::integer_sequence<int, n.
  * @pre @a f must accept @p sizeof...(n) arguments of type @p int
  */
 template <int... n, typename lambda_type>
-SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type && f)
 {
   using T = decltype(f(n...));
   tensor<T, n...> A{};
   if constexpr (sizeof...(n) == 0) {
     A.value = f();
   } else {
-    for_constexpr<n...>([&](auto... i) { A(i...) = f(i...); });
+    for_loop<n...>([&](auto... i) { A(i...) = f(i...); });
   }
   return A;
 }

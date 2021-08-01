@@ -59,6 +59,7 @@ endforeach()
 
 # not sure how we want to handle performance-related tests
 set(functional_performance_tests
+    performance/csr_vs_bsr.cpp
     #performance/J2_material_with_AD.cpp
     #performance/diffusion_performance_test.cpp
 )
