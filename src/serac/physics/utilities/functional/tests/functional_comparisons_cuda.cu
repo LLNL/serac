@@ -24,6 +24,8 @@
 
 using namespace serac;
 using namespace serac::profiling;
+int serial_refinement   = 1;
+int parallel_refinement = 0;
 
 int num_procs, myid;
 int nsamples = 1;  // because mfem doesn't take in unsigned int
@@ -79,11 +81,25 @@ struct hcurl_qfunction{
 // the same problem is expressed with mfem and functional, and their residuals and gradient action
 // are compared to ensure the implementations are in agreement.
 template <int p, int dim>
-void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
+void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  std::string             postfix = concat("_H1<", p, ">");
+  /* workaround because of strange ParFiniteElementSpaceDestroy c
+udaFree error */
 
-  serac::profiling::initializeCaliper();
+  std::unique_ptr< mfem::ParMesh > pmesh;
+
+  if constexpr(dim == 2) {
+      std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+      pmesh          = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+    } else {
+    std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+    pmesh                 = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+  }
+
+  mfem::ParMesh & mesh = *pmesh;
+  /* end workaround */
+
+  std::string             postfix = concat("_H1<", p, ">");
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
@@ -182,8 +198,13 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 
-  serac::profiling::terminateCaliper();
   std::cout << "finished " << std::endl;
+
+  /* mfem workaround */
+  serac::profiling::terminateCaliper();
+ 
+  serac::accelerator::terminateDevice();
+  /* end mfem workaround */
 }
 
 // this test sets up a toy "elasticity" problem where the residual includes contributions
@@ -192,11 +213,24 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 // the same problem is expressed with mfem and functional, and their residuals and gradient action
 // are compared to ensure the implementations are in agreement.
 template <int p, int dim>
-void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
+void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
-  std::string             postfix = concat("_H1<", p, ",", dim, ">");
+  /* workaround because of strange ParFiniteElementSpaceDestroy c
+udaFree error */
 
-  serac::profiling::initializeCaliper();
+  std::unique_ptr< mfem::ParMesh > pmesh;
+
+  if constexpr(dim == 2) {
+      std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+      pmesh          = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+    } else {
+    std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+    pmesh                 = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+  }
+
+  mfem::ParMesh & mesh = *pmesh;
+  /* end workaround */
+  std::string             postfix = concat("_H1<", p, ",", dim, ">");
 
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
@@ -278,7 +312,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 
+  /* mfem workaround */
   serac::profiling::terminateCaliper();
+ 
+  serac::accelerator::terminateDevice();
+  /* end mfem workaround */
 }
 
 // this test sets up part of a toy "magnetic diffusion" problem where the residual includes contributions
@@ -287,8 +325,24 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 // the same problem is expressed with mfem and functional, and their residuals and gradient action
 // are compared to ensure the implementations are in agreement.
 template <int p, int dim>
-void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
+void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 {
+  /* workaround because of strange ParFiniteElementSpaceDestroy c
+udaFree error */
+
+  std::unique_ptr< mfem::ParMesh > pmesh;
+
+  if constexpr(dim == 2) {
+      std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+      pmesh          = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+    } else {
+    std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+    pmesh                 = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+  }
+
+  mfem::ParMesh & mesh = *pmesh;
+  /* end workaround */
+
   std::string             postfix = concat("_Hcurl<", p, ">");
   serac::profiling::initializeCaliper();
 
@@ -373,54 +427,43 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-13);
 
+  /* mfem workaround */
   serac::profiling::terminateCaliper();
+ 
+  serac::accelerator::terminateDevice();
+  /* end mfem workaround */
+
 }
 
-TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-// TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
+TEST(thermal, 2D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<2>{}); };
+TEST(thermal, 2D_quadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(thermal, 2D_cubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<2>{}); }
 
-// TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-// TEST(thermal, 3D_quadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-// TEST(thermal, 3D_cubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
+TEST(thermal, 3D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(thermal, 3D_quadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(thermal, 3D_cubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<3>{}); }
 
-// TEST(hcurl, 2D_linear) { functional_test(*mesh2D, Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }
-// TEST(hcurl, 2D_quadratic) { functional_test(*mesh2D, Hcurl<2>{}, Hcurl<2>{}, Dimension<2>{}); }
-// TEST(hcurl, 2D_cubic) { functional_test(*mesh2D, Hcurl<3>{}, Hcurl<3>{}, Dimension<2>{}); }
+// TEST(hcurl, 2D_linear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }
+// TEST(hcurl, 2D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<2>{}); }
+// TEST(hcurl, 2D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<2>{}); }
 
-// TEST(hcurl, 3D_linear) { functional_test(*mesh3D, Hcurl<1>{}, Hcurl<1>{}, Dimension<3>{}); }
-// TEST(hcurl, 3D_quadratic) { functional_test(*mesh3D, Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
-// TEST(hcurl, 3D_cubic) { functional_test(*mesh3D, Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
+// TEST(hcurl, 3D_linear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<3>{}); }
+// TEST(hcurl, 3D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
+// TEST(hcurl, 3D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
 
-// TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
-// TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
-// TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_linear) { functional_test(H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_quadratic) { functional_test(H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_cubic) { functional_test(H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
 
-// TEST(elasticity, 3D_linear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
-// TEST(elasticity, 3D_quadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
-// TEST(elasticity, 3D_cubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
-
-/** CUDA workaround
-Issue with std::variant for InputOptions in mesh_utils.hpp
-
-// this file has a lot of warnings
-serac/src/serac/infrastructure/../../serac/physics/utilities/functional/tensor.hpp(347): warning: calling a __host__
-function("serac::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > ::operator =") from a __host__ __device__
-function("serac::operator +< ::serac::dual<    ::serac::tuple< ::serac::tensor<double, (int)3 > ,  ::serac::zero > > ,
-double, (int)3 > ") is not allowed
-**/
-
+TEST(elasticity, 3D_linear) { functional_test(H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_quadratic) { functional_test(H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_cubic) { functional_test(H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
 
-  std::cout << "mfem::Device CUDA:" << (mfem::Device::Allows(mfem::Backend::CUDA) ? "true" : "false") << std::endl; // false
   auto [num_procs, myid] = serac::initialize(argc, argv);
-  std::cout << "mfem::Device CUDA:" << (mfem::Device::Allows(mfem::Backend::CUDA) ? "true" : "false") << std::endl; // true if we call serac::initialize
-
-  int serial_refinement   = 1;
-  int parallel_refinement = 0;
 
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&serial_refinement, "-r", "--ref", "");
@@ -438,12 +481,6 @@ int main(int argc, char* argv[])
   if (myid == 0) {
     args.PrintOptions(std::cout);
   }
-
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  mesh2D                 = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
-
-  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  mesh3D                 = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   int result = RUN_ALL_TESTS();
 
