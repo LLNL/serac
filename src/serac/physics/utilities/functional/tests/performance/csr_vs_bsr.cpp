@@ -134,8 +134,8 @@ int main() {
   constexpr int m = 3;
   constexpr int n = 3;
   double sparsity = 0.03;
-  int num_block_rows = 1000;
-  int num_block_cols = 1000;
+  int num_block_rows = 10000;
+  int num_block_cols = 10000;
 
   BSRMatrix A1 = BSRMatrix<m, n>::random(num_block_rows, num_block_cols, sparsity);
   CSRMatrix A2 = CSRMatrix::from_BSRMatrix(A1);

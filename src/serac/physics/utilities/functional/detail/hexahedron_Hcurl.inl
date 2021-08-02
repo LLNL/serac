@@ -27,6 +27,8 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
   static constexpr int  ndof       = 3 * p * (p + 1) * (p + 1);
   static constexpr int  components = 1;
 
+  using residual_type = typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
+
   static constexpr auto directions = [] {
     int dof_per_direction = p * (p + 1) * (p + 1);
 
@@ -72,9 +74,6 @@ struct finite_element<Geometry::Hexahedron, Hcurl<p>> {
 
     return nodes;
   }();
-
-  using residual_type =
-      typename std::conditional<components == 1, tensor<double, ndof>, tensor<double, ndof, components>>::type;
 
   static constexpr tensor<double, ndof, dim> shape_functions(tensor<double, dim> xi)
   {

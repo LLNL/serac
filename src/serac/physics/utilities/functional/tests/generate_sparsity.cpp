@@ -116,8 +116,8 @@ void apply_permutation(mfem::Array<int> & input, const mfem::Array<int> & permut
   input = output;
 }
 
-template < typename test, typename trial >
-void sparsity(mfem::ParMesh & mesh, std::string prefix = "") {
+template < typename test, typename trial, int dimension, typename lambda >
+void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
 
   auto test_fec = to_mfem_fecollection<test>(mesh);
   auto trial_fec = to_mfem_fecollection<trial>(mesh);
@@ -228,12 +228,7 @@ void sparsity(mfem::ParMesh & mesh, std::string prefix = "") {
 
   mfem::Vector U(trial_fespace.TrueVSize());
   Functional < test(trial) > f(&test_fespace, &trial_fespace);
-  if (mesh.Dimension() == 2) {
-    f.AddAreaIntegral([](auto /*x*/, auto field){ return field; }, mesh);
-  } 
-  if (mesh.Dimension() == 3) {
-    f.AddVolumeIntegral([](auto /*x*/, auto field){ return field; }, mesh);
-  }
+  f.AddDomainIntegral(Dimension<dimension>{}, qf, mesh);
   f(U);
   mfem::Vector element_matrices = f.ComputeElementMatrices();
   auto K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element, dofs_per_trial_element, num_elements);
@@ -288,10 +283,19 @@ int main(int argc, char* argv[])
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
-  sparsity< H1<1>, H1<1> >(*mesh2D, "h1h1_2D_");
-  sparsity< H1<1>, H1<1> >(*mesh3D, "h1h1_3D_");
+  auto default_qf = [](auto /*x*/, auto field){ return field; };
 
-  sparsity< Hcurl<1>, Hcurl<1> >(*mesh2D, "hcurlhcurl_2D_");
-  sparsity< Hcurl<1>, Hcurl<1> >(*mesh3D, "hcurlhcurl_3D_");
+  sparsity< H1<1>, H1<1>, 2 >(*mesh2D, default_qf, "h1h1_2D_");
+  sparsity< H1<1>, H1<1>, 3 >(*mesh3D, default_qf, "h1h1_3D_");
+
+  sparsity< Hcurl<1>, Hcurl<1>, 2 >(*mesh2D, default_qf, "hcurlhcurl_2D_");
+  sparsity< Hcurl<1>, Hcurl<1>, 3 >(*mesh3D, default_qf, "hcurlhcurl_3D_");
+
+  auto hcurl_h1_3D_qf = [](auto /*x*/, auto field){ 
+    auto [u, grad_u] = field;
+    return std::tuple{grad_u, grad_u}; 
+  };
+
+  sparsity< Hcurl<1>, H1<1>, 3 >(*mesh3D, hcurl_h1_3D_qf, "hcurlh1_3D_");
 
 }

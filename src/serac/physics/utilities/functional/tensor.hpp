@@ -534,20 +534,20 @@ constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
   return A;
 }
 
-template <typename S, typename T>
-constexpr auto& operator+=(tensor<S>& A, const T & B)
+template <typename T>
+constexpr auto& operator+=(tensor<T>& A, const T & B)
 {
   return A.value += B;
 }
 
-template <typename S, typename T>
-constexpr auto& operator+=(tensor<S, 1>& A, const T & B)
+template <typename T>
+constexpr auto& operator+=(tensor<T, 1>& A, const T & B)
 {
   return A.value += B;
 }
 
-template <typename S, typename T>
-constexpr auto& operator+=(tensor<S, 1, 1>& A, const T & B)
+template <typename T>
+constexpr auto& operator+=(tensor<T, 1, 1>& A, const T & B)
 {
   return A.value += B;
 }
