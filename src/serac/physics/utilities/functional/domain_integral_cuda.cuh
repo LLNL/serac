@@ -83,9 +83,11 @@ namespace detail {
     const int grid_stride = blockDim.x * gridDim.x;
     // launch a thread for each quadrature x element point
     for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
-    // warps won't fetch that many elements ... not great.. but not horrible
-    int e = qe / rule.size();
-    int q = qe % rule.size();
+
+      // warps won't fetch that many elements ... not great.. but not horrible
+      int e = qe / rule.size();
+      int q = qe % rule.size();
+
       // get the DOF values for this particular element
       auto u_elem = detail::Load<trial_element>(u, e);
 
