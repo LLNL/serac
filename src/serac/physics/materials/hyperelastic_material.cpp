@@ -114,7 +114,7 @@ void LinearElasticMaterial::EvalShearSensitivity(const mfem::DenseMatrix& du_dX,
   d_sigma_d_shear      = 0.0;
   double trace_epsilon = epsilon_.Trace();
 
-  // Calculate the sensitivity of the scress with respect to the shear moulus by differentiating Hooke's law
+  // Calculate the sensitivity of the stress with respect to the shear moulus by differentiating Hooke's law
   d_sigma_d_shear.Add(2.0, epsilon_);
   for (int i = 0; i < dim; ++i) {
     d_sigma_d_shear(i, i) += (-2.0 / dim) * trace_epsilon;

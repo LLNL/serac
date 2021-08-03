@@ -43,8 +43,8 @@ double ShearSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const m
   // gradient
   material_.EvalShearSensitivity(du_dX_, d_sigma_d_shear_);
 
-  // Scale the derivative matrix by the geometric and quadrature weights
-  d_sigma_d_shear_ *= det_J * ip.weight * T.Weight();
+  // Scale the derivative matrix by the geometric deformation weight
+  d_sigma_d_shear_ *= det_J;
 
   double scalar_sum = 0.0;
 
@@ -92,8 +92,8 @@ double BulkSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const mf
   // gradient
   material_.EvalBulkSensitivity(du_dX_, d_sigma_d_bulk_);
 
-  // Scale the derivative matrix by the geometric and quadrature weights
-  d_sigma_d_bulk_ *= det_J * ip.weight * T.Weight();
+  // Scale the derivative matrix by the geometric deformation weight
+  d_sigma_d_bulk_ *= det_J;
 
   double scalar_sum = 0.0;
 

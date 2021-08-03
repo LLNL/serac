@@ -420,6 +420,11 @@ protected:
   virtual void quasiStaticSolve();
 
   /**
+   * @brief Check that the solid module is in the appropriate state for sensitivity analysis
+   */
+  void checkSensitivityMode() const;
+
+  /**
    * @brief Velocity field
    */
   FiniteElementState velocity_;

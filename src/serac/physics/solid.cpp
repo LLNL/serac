@@ -402,7 +402,7 @@ void Solid::advanceTimestep(double& dt)
   previous_solve_ = PreviousSolve::Forward;
 }
 
-mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space)
+void Solid::checkSensitivityMode() const
 {
   SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None,
                      "Sensitivities only valid following a forward and adjoint solve.");
@@ -411,10 +411,17 @@ mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace&
       "Sensitivities only valid following a forward and adjoint solve (in that order). The previous solve was a "
       "forward analysis. Ensure that the correct displacement and adjoint states are set for sensitivies.");
 
+  LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+
+  SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
+}
+
+mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space)
+{
+  checkSensitivityMode();
+
   if (!shear_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
-
-    SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
 
     shear_sensitivity_coef_ =
         std::make_unique<mfem_ext::ShearSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
@@ -436,17 +443,10 @@ mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace&
 
 mfem::ParLinearForm& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space)
 {
-  SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None,
-                     "Sensitivities only valid following a forward and adjoint solve.");
-  SLIC_WARNING_ROOT_IF(
-      previous_solve_ == PreviousSolve::Forward,
-      "Sensitivities only valid following a forward and adjoint solve (in that order). The previous solve was a "
-      "forward analysis. Ensure that the correct displacement and adjoint states are set for sensitivies.");
+  checkSensitivityMode();
 
   if (!bulk_sensitivity_coef_) {
     LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
-
-    SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
 
     bulk_sensitivity_coef_ =
         std::make_unique<mfem_ext::BulkSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
