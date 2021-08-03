@@ -10,10 +10,6 @@
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
-#include "serac/infrastructure/initialize.hpp"
-#include "serac/numerics/mesh_utils_base.hpp"
-
-using namespace serac;
 
 int serial_refinement   = 1;
 int parallel_refinement = 0;
@@ -31,8 +27,17 @@ std::map< int, std::string > meshfiles = {
 
 void some_parametrized_test(int p, int dim) {
 
-  auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(meshfiles[dim]), serial_refinement, parallel_refinement);
-  mfem::ParMesh & mesh = *pmesh;
+  std::ifstream stream(meshfiles[dim]);
+  mfem::Mesh serial_mesh(stream, 1, 1, true);
+  for (int i = 0; i < serial_refinement; i++)
+  {
+    serial_mesh.UniformRefinement();
+  }
+  
+  mfem::ParMesh mesh(MPI_COMM_WORLD, serial_mesh);
+  for (int i = 0; i < parallel_refinement; i++) {
+    mesh.UniformRefinement();
+  }
 
   // Create standard MFEM bilinear and linear forms on H1
   auto fec = mfem::H1_FECollection(p, dim);
@@ -75,9 +80,11 @@ void some_parametrized_test(int p, int dim) {
 
 int main(int argc, char* argv[])
 {
-
+  mfem::MPI_Session mpi(argc, argv);
+  int num_procs = mpi.WorldSize();
+  int myid = mpi.WorldRank();
+  
   mfem::Device device("cuda");
-  auto [num_procs, myid] = serac::initialize(argc, argv);
 
   int p, dim;
   some_parametrized_test(p = 1, dim = 2);
