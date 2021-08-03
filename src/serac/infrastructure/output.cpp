@@ -33,22 +33,20 @@ std::string file_format_string(const FileFormat file_format)
 }
 }  // namespace detail
 
-void outputCurves(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
-                  const FileFormat file_format)
+void outputSummary(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
+                   const FileFormat file_format)
 {
   auto [_, rank] = getMPIInfo();
   if (rank != 0) {
     return;
   }
 
-  if (file_format == FileFormat::HDF5) {
-    // FIXME: remove this error when implemented, do we even want hdf5 curves?
-    SLIC_ERROR_ROOT("hdf5 has not been implemented in outputCurves");
-  }
+  // FIXME: remove this error when implemented, do we even want hdf5 curves?
+  SLIC_ERROR_ROOT_IF(file_format == FileFormat::HDF5, "hdf5 has not been implemented in outputCurves");
   std::string file_format_string = detail::file_format_string(file_format);
 
-  const std::string file_name = fmt::format("{0}_curves.{1}", data_collection_name, file_format_string);
-  datastore.getRoot()->getGroup("serac_curves")->save(file_name, file_format_string);
+  const std::string file_name = fmt::format("{0}_summary.{1}", data_collection_name, file_format_string);
+  datastore.getRoot()->getGroup("serac_summary")->save(file_name, file_format_string);
 }
 
 void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name, double time,

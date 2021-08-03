@@ -117,21 +117,21 @@ public:
   virtual void outputState() const;
 
   /**
-   * @brief Initializes the Sidre structure for curves data
+   * @brief Initializes the Sidre structure for simulation summary data
    *
-   * @param[in] datastore Sidre DataStore where curves are saved
+   * @param[in] datastore Sidre DataStore where data are saved
    * @param[in] t_final Final time of the simulation
    * @param[in] dt The time step
    */
-  virtual void initializeCurves(axom::sidre::DataStore& datastore, const double t_final, const double dt) const;
+  virtual void initializeSummary(axom::sidre::DataStore& datastore, const double t_final, const double dt) const;
 
   /**
-   * @brief Saves the curves data to the Sidre Datastore
+   * @brief Saves the summary data to the Sidre Datastore
    *
    * @param[in] datastore Sidre DataStore where curves are saved
    * @param[in] t The current time of the simulation
    */
-  virtual void saveCurves(axom::sidre::DataStore& datastore, const double t) const;
+  virtual void saveSummary(axom::sidre::DataStore& datastore, const double t) const;
 
   /**
    * @brief Destroy the Base Solver object

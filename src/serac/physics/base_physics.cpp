@@ -135,31 +135,43 @@ void BasePhysics::outputState() const
   }
 }
 
-void BasePhysics::initializeCurves(axom::sidre::DataStore& datastore, double t_final, double dt) const
+void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_final, double dt) const
 {
-  // Curves Sidre Structure
+  // Summary Sidre Structure
   // Sidre root
-  // └── serac_curves
-  //     ├── next_index : axom::IndexType
-  //     ├── t : Sidre::Array<axom::IndexType>
-  //     ├── <FiniteElementState name>
-  //     │    ├── l1norm : Sidre::Array<double>
-  //     │    └── l2norm : Sidre::Array<double>
-  //     ...
-  //     └── <FiniteElementState name>
-  //          ├── l1norm : Sidre::Array<double>
-  //          └── l2norm : Sidre::Array<double>
+  // └── serac_summary
+  //     ├── user_name : const char*
+  //     ├── host_name : const char*
+  //     ├── mpi_rank_count : int
+  //     └── curves
+  //         ├── t : Sidre::Array<axom::IndexType>
+  //         ├── <FiniteElementState name>
+  //         │    ├── l1norm : Sidre::Array<double>
+  //         │    └── l2norm : Sidre::Array<double>
+  //         ...
+  //         └── <FiniteElementState name>
+  //              ├── l1norm : Sidre::Array<double>
+  //              └── l2norm : Sidre::Array<double>
 
-  auto [_, rank] = getMPIInfo();
+  auto [count, rank] = getMPIInfo();
   if (rank != 0) {
-    // Don't save curves on anything other than root node
+    // Don't initialize except on root node
     return;
   }
-  const std::string   curves_group_name = "serac_curves";
-  axom::sidre::Group* sidre_root        = datastore.getRoot();
-  SLIC_ERROR_ROOT_IF(sidre_root->hasGroup(curves_group_name),
-                     fmt::format("Sidre Group '{0}' cannot exist when initializeCurves is called", curves_group_name));
-  axom::sidre::Group* curves_group = sidre_root->createGroup(curves_group_name);
+  const std::string   summary_group_name = "serac_summary";
+  axom::sidre::Group* sidre_root         = datastore.getRoot();
+  SLIC_ERROR_ROOT_IF(
+      sidre_root->hasGroup(summary_group_name),
+      fmt::format("Sidre Group '{0}' cannot exist when initializeSummary is called", summary_group_name));
+  axom::sidre::Group* summary_group = sidre_root->createGroup(summary_group_name);
+
+  // Write run info
+  summary_group->createViewString("user_name", serac::getUserName());
+  summary_group->createViewString("host_name", serac::getHostName());
+  summary_group->createViewScalar("mpi_rank_count", count);
+
+  // Write curves info
+  axom::sidre::Group* curves_group = summary_group->createGroup("curves");
 
   // Calculate how many time steps which is the array size
   axom::IndexType array_size = static_cast<axom::IndexType>(ceil(t_final / dt));
@@ -180,7 +192,7 @@ void BasePhysics::initializeCurves(axom::sidre::DataStore& datastore, double t_f
   }
 }
 
-void BasePhysics::saveCurves(axom::sidre::DataStore& datastore, const double t) const
+void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t) const
 {
   double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
 
@@ -190,7 +202,7 @@ void BasePhysics::saveCurves(axom::sidre::DataStore& datastore, const double t) 
 
   // Don't save curves on anything other than root node
   if (rank == 0) {
-    const std::string curves_group_name = "serac_curves";
+    const std::string curves_group_name = "serac_summary/curves";
 
     // Get Sidre curves group
     sidre_root = datastore.getRoot();

@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
   // should be inlet["output_type"].get<OutputType>()
   main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac");
 
-  main_physics->initializeCurves(datastore, t_final, dt);
+  main_physics->initializeSummary(datastore, t_final, dt);
 
   // Enter the time step loop.
   for (int ti = 1; !last_step; ti++) {
@@ -199,13 +199,13 @@ int main(int argc, char* argv[])
     main_physics->outputState();
 
     // Save curve data to Sidre datastore to be output later
-    main_physics->saveCurves(datastore, t);
+    main_physics->saveSummary(datastore, t);
 
     // Determine if this is the last timestep
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
-  serac::output::outputCurves(datastore, serac::StateManager::collectionName());
+  serac::output::outputSummary(datastore, serac::StateManager::collectionName());
   if (output_fields) {
     serac::output::outputFields(datastore, serac::StateManager::collectionName(), t);
   }

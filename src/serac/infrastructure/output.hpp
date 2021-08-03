@@ -34,15 +34,15 @@ enum class FileFormat
 };
 
 /**
- * @brief Outputs simulation curve data from the datastore to the given file
+ * @brief Outputs simulation summary data from the datastore to the given file
  * only on rank 0
  *
  * @param[in] datastore Root of the Sidre datastore
  * @param[in] data_collection_name Name of the Data Collection stored in Sidre
  * @param[in] language The output language format
  */
-void outputCurves(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
-                  const FileFormat language = FileFormat::JSON);
+void outputSummary(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
+                   const FileFormat language = FileFormat::JSON);
 
 /**
  * @brief Outputs simulation field data from the datastore to the given file
