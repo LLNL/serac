@@ -133,7 +133,7 @@ void LinearElasticMaterial::EvalBulkSensitivity(const mfem::DenseMatrix& du_dX, 
   d_sigma_d_bulk       = 0.0;
   double trace_epsilon = epsilon_.Trace();
 
-  // Calculate the sensitivity of the scress with respect to the bulk moulus by differentiating Hooke's law
+  // Calculate the sensitivity of the stress with respect to the bulk moulus by differentiating Hooke's law
   for (int i = 0; i < dim; ++i) {
     d_sigma_d_bulk(i, i) += trace_epsilon;
   }
