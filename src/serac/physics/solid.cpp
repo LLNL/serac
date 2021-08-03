@@ -13,6 +13,7 @@
 #include "serac/physics/utilities/state_manager.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
+#include "serac/coefficients/sensitivity_coefficients.hpp"
 
 namespace serac {
 
@@ -397,13 +398,82 @@ void Solid::advanceTimestep(double& dt)
   mesh_.NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
+
+  previous_solve_ = PreviousSolve::Forward;
+}
+
+void Solid::checkSensitivityMode() const
+{
+  SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None,
+                     "Sensitivities only valid following a forward and adjoint solve.");
+  SLIC_WARNING_ROOT_IF(
+      previous_solve_ == PreviousSolve::Forward,
+      "Sensitivities only valid following a forward and adjoint solve (in that order). The previous solve was a "
+      "forward analysis. Ensure that the correct displacement and adjoint states are set for sensitivies.");
+
+  LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+
+  SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
+}
+
+mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space)
+{
+  checkSensitivityMode();
+
+  if (!shear_sensitivity_coef_) {
+    LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+
+    shear_sensitivity_coef_ =
+        std::make_unique<mfem_ext::ShearSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
+  }
+
+  // Add a scalar linear form integrator using the shear sensitivity coefficient against the given shear modulus finite
+  // element space
+  if (!shear_sensitivity_form_ || shear_sensitivity_form_->FESpace() != &shear_space) {
+    shear_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&shear_space);
+
+    shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_));
+  }
+
+  // Assemble the linear form at the current state and adjoint values
+  shear_sensitivity_form_->Assemble();
+
+  return *shear_sensitivity_form_;
+}
+
+mfem::ParLinearForm& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space)
+{
+  checkSensitivityMode();
+
+  if (!bulk_sensitivity_coef_) {
+    LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+
+    bulk_sensitivity_coef_ =
+        std::make_unique<mfem_ext::BulkSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
+  }
+
+  // Add a scalar linear form integrator using the shear sensitivity coefficient against the given bulk modulus finite
+  // element space
+  if (!bulk_sensitivity_form_ || shear_sensitivity_form_->FESpace() != &bulk_space) {
+    bulk_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&bulk_space);
+
+    bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_));
+  }
+
+  // Assemble the linear form at the current state and adjoint values
+  bulk_sensitivity_form_->Assemble();
+
+  return *bulk_sensitivity_form_;
 }
 
 const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
                                               FiniteElementState*  state_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
-  SLIC_ERROR_ROOT_IF(cycle_ == 0, "Adjoint analysis only valid following a forward solve.");
+  SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None, "Adjoint analysis only valid following a forward solve.");
+  SLIC_WARNING_ROOT_IF(previous_solve_ == PreviousSolve::Adjoint,
+                       "Adjoint analysis only valid following a forward solve. The previous solve was an adjoint. "
+                       "Ensure that the correct displacement state is set for adjoint analysis.");
 
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
@@ -439,6 +509,8 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
 
   // Reset the equation solver to use the full nonlinear residual operator
   nonlin_solver_.SetOperator(*residual_);
+
+  previous_solve_ = PreviousSolve::Adjoint;
 
   return adjoint_displacement_;
 }
