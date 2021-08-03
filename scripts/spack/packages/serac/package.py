@@ -87,8 +87,8 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Libraries that support +debug
     mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
-    debug_deps = ["mfem@4.2.0{0}".format(mfem_variants),
-                  "hypre@2.18.2~shared~superlu-dist+mpi"]
+    debug_deps = ["mfem@4.3.0{0}".format(mfem_variants),
+                  "hypre@2.22.0~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
     depends_on("petsc+debug", when="+petsc+debug")
@@ -135,7 +135,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     conflicts('cuda_arch=none', when='+cuda',
               msg='CUDA architecture is required')
     depends_on("amgx@2.1.x", when="+cuda")
-    cuda_deps = ["mfem", "axom"]
+    cuda_deps = ["mfem", "axom", "hypre"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
     depends_on("caliper+cuda", when="+caliper+cuda")
@@ -151,6 +151,8 @@ class Serac(CachedCMakePackage, CudaPackage):
         # but probably good practice to set it
         depends_on('caliper cuda_arch={0}'.format(sm_),
                 when='+caliper cuda_arch={0}'.format(sm_))
+        depends_on('hypre cuda_arch={0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
         
 
     def _get_sys_type(self, spec):

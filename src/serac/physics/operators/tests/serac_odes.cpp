@@ -250,7 +250,7 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
 
   mfem::DenseMatrix J(3, 3);
 
-  mfem::Mesh               mesh1D(2);
+  auto                     mesh1D = mfem::Mesh::MakeCartesian1D(2);
   mfem::ParMesh            mesh(MPI_COMM_WORLD, mesh1D);
   BoundaryConditionManager bcs(mesh);
 
@@ -360,7 +360,7 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
 
   mfem::DenseMatrix J(3, 3);
 
-  mfem::Mesh               mesh1D(2);
+  auto                     mesh1D = mfem::Mesh::MakeCartesian1D(2);
   mfem::ParMesh            mesh(MPI_COMM_WORLD, mesh1D);
   BoundaryConditionManager bcs(mesh);
 
