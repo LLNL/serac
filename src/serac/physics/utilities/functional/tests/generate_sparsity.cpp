@@ -127,6 +127,9 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
   mfem::Array<int> test_dofs;
   mfem::Array<int> trial_dofs;
 
+  int test_vdim  = test_fespace.GetVDim();
+  int trial_vdim = trial_fespace.GetVDim();
+
   test_fespace.GetElementDofs(0, test_dofs);
   trial_fespace.GetElementDofs(0, trial_dofs);
   int num_elements = test_fespace.GetNE();
@@ -150,6 +153,7 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
   infos.reserve(num_infos[0] + num_infos[1]);
 
   {
+    bool on_boundary = false;
     const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(test_fespace.GetFE(0))->GetDofMap();
     const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(trial_fespace.GetFE(0))->GetDofMap();
 
@@ -160,15 +164,24 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
       apply_permutation(trial_dofs, trial_native_to_lexicographic);
       for (int i = 0; i < dofs_per_test_element; i++) {
         for (int j = 0; j < dofs_per_trial_element; j++) {
-          infos.push_back(elem_info{mfem_index(test_dofs[i]), mfem_index(trial_dofs[j]), i, j, e, mfem_sign(test_dofs[i]) * mfem_sign(trial_dofs[j]), false});
+          for (int k = 0; k < test_vdim; k++) {
+            int test_vdof = test_fespace.DofToVDof(mfem_index(test_dofs[i]), k);
+            for (int l = 0; l < trial_vdim; l++) {
+              int trial_vdof = trial_fespace.DofToVDof(mfem_index(trial_dofs[j]), l);
+              infos.push_back(elem_info{test_vdof, trial_vdof, i * test_vdim + k, j * trial_vdim + l, e, mfem_sign(test_dofs[i]) * mfem_sign(trial_dofs[j]), on_boundary});
+            }
+          }
         }
       }
     }
+
   }
 
   // mfem doesn't implement GetDofMap for some of its Nedelec elements (??),
   // so we have to temporarily disable boundary terms for Hcurl until they do
   if (test::family != Family::HCURL && trial::family != Family::HCURL && mesh.Dimension() == 3) {
+    bool on_boundary = true;
+
     const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(test_fespace.GetBE(0))->GetDofMap();
     const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(trial_fespace.GetBE(0))->GetDofMap();
 
@@ -179,15 +192,22 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
       apply_permutation(trial_dofs, trial_native_to_lexicographic);
       for (int i = 0; i < dofs_per_test_boundary_element; i++) {
         for (int j = 0; j < dofs_per_test_boundary_element; j++) {
-          infos.push_back(elem_info{mfem_index(test_dofs[i]), mfem_index(trial_dofs[j]), i, j, b, mfem_sign(test_dofs[i]) * mfem_sign(trial_dofs[j]), true});
+          for (int k = 0; k < test_vdim; k++) {
+            int test_vdof = test_fespace.DofToVDof(mfem_index(test_dofs[i]), k);
+            for (int l = 0; l < trial_vdim; l++) {
+              int trial_vdof = trial_fespace.DofToVDof(mfem_index(trial_dofs[j]), l);
+              infos.push_back(elem_info{test_vdof, trial_vdof, i * test_vdim + k, j * trial_vdim + l, b, mfem_sign(test_dofs[i]) * mfem_sign(trial_dofs[j]), on_boundary});
+            }
+          }
         }
       }
     }
+
   }
 
   std::sort(infos.begin(), infos.end());
 
-  std::vector < int > row_ptr(test_fespace.GetNDofs() + 1);
+  std::vector < int > row_ptr(test_fespace.GetNDofs() * test_fespace.GetVDim() + 1);
   std::vector < int > col_ind;
   std::vector < signed_index > nonzero_ids(infos.size());
 
@@ -213,8 +233,8 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
 
   row_ptr.back() = ++nnz;
 
-  Array3D<signed_index> element_nonzero_LUT(num_elements, dofs_per_test_element, dofs_per_trial_element);
-  Array3D<signed_index> boundary_element_nonzero_LUT(num_boundary_elements, dofs_per_test_boundary_element, dofs_per_trial_boundary_element);
+  Array3D<signed_index> element_nonzero_LUT(num_elements, dofs_per_test_element * test_vdim, dofs_per_trial_element * trial_vdim);
+  Array3D<signed_index> boundary_element_nonzero_LUT(num_boundary_elements, dofs_per_test_boundary_element * test_vdim, dofs_per_trial_boundary_element * trial_vdim);
 
   for (size_t i = 0; i < infos.size(); i++) {
     auto [_1, _2, local_row, local_col, element_id, _3, on_boundary] = infos[i];
@@ -234,8 +254,8 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
   auto K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element, dofs_per_trial_element, num_elements);
 
   std::vector<double> values(nnz, 0.0);
-  int num_rows = test_fespace.GetNDofs();
-  int num_cols = trial_fespace.GetNDofs();
+  int num_rows = test_fespace.GetNDofs() * test_fespace.GetVDim();
+  int num_cols = trial_fespace.GetNDofs() * trial_fespace.GetVDim();
   for (int e = 0; e < num_elements; e++) {
     for (int i = 0; i < dofs_per_test_element; i++) {
       for (int j = 0; j < dofs_per_trial_element; j++) {
@@ -262,6 +282,7 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
 
   if (A != B) { 
     std::cout << "test " + prefix + " failed " << std::endl;
+    exit(1);
   }
 
 }
@@ -287,6 +308,9 @@ int main(int argc, char* argv[])
 
   sparsity< H1<1>, H1<1>, 2 >(*mesh2D, default_qf, "h1h1_2D_");
   sparsity< H1<1>, H1<1>, 3 >(*mesh3D, default_qf, "h1h1_3D_");
+
+  sparsity< H1<1, 2>, H1<1, 2>, 2 >(*mesh2D, default_qf, "h1vh1v_2D_");
+  sparsity< H1<1, 3>, H1<1, 3>, 3 >(*mesh3D, default_qf, "h1vh1v_3D_");
 
   sparsity< Hcurl<1>, Hcurl<1>, 2 >(*mesh2D, default_qf, "hcurlhcurl_2D_");
   sparsity< Hcurl<1>, Hcurl<1>, 3 >(*mesh3D, default_qf, "hcurlhcurl_3D_");
