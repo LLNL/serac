@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "mfem.hpp"
+#include "axom/sidre.hpp"
 
 #include "serac/physics/utilities/boundary_condition_manager.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
@@ -114,6 +115,23 @@ public:
    *
    */
   virtual void outputState() const;
+
+  /**
+   * @brief Initializes the Sidre structure for simulation summary data
+   *
+   * @param[in] datastore Sidre DataStore where data are saved
+   * @param[in] t_final Final time of the simulation
+   * @param[in] dt The time step
+   */
+  virtual void initializeSummary(axom::sidre::DataStore& datastore, const double t_final, const double dt) const;
+
+  /**
+   * @brief Saves the summary data to the Sidre Datastore
+   *
+   * @param[in] datastore Sidre DataStore where curves are saved
+   * @param[in] t The current time of the simulation
+   */
+  virtual void saveSummary(axom::sidre::DataStore& datastore, const double t) const;
 
   /**
    * @brief Destroy the Base Solver object
