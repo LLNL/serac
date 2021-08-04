@@ -58,17 +58,17 @@ if(ENABLE_CUDA)
     # Due to GPU bug we build the test and then create ctests for each individual gtest
     set(functional_comparisons_cuda_tests
         thermal.2D_linear
-	thermal.2D_quadratic
-	thermal.2D_cubic
-	thermal.3D_linear
-	thermal.3D_quadratic
-	thermal.3D_cubic
+        thermal.2D_quadratic
+        thermal.2D_cubic
+        thermal.3D_linear
+        thermal.3D_quadratic
+        thermal.3D_cubic
         elasticity.2D_linear
-	elasticity.2D_quadratic
-	elasticity.2D_cubic
-	elasticity.3D_linear
-	elasticity.3D_quadratic
-	elasticity.3D_cubic)
+        elasticity.2D_quadratic
+        elasticity.2D_cubic
+        elasticity.3D_linear
+        elasticity.3D_quadratic
+        elasticity.3D_cubic)
 
     blt_add_executable(NAME        functional_comparisons_cuda
                        SOURCES     functional_comparisons_cuda.cu
@@ -78,7 +78,7 @@ if(ENABLE_CUDA)
 
     foreach(kernel_test ${functional_comparisons_cuda_tests})
         blt_add_test(NAME          functional_comparisons_cuda.${kernel_test}
-	             COMMAND       functional_comparisons_cuda --gtest_filter=${kernel_test}
+                     COMMAND       functional_comparisons_cuda --gtest_filter=${kernel_test}
                      NUM_MPI_TASKS 2)
     endforeach()
 
