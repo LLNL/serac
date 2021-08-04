@@ -88,14 +88,13 @@ struct hcurl_qfunction{
 template <int p, int dim>
 void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 {
-
-  mfem::Device device("cuda");
-
   auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(meshfiles[dim]), serial_refinement, parallel_refinement);
   mfem::ParMesh & mesh = *pmesh;
 
   std::string             postfix = concat("_H1<", p, ">");
 
+  serac::profiling::initializeCaliper();
+  
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -192,8 +191,8 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
-
-  std::cout << "finished " << std::endl;
+  
+  serac::profiling::terminateCaliper();
 }
 
 // this test sets up a toy "elasticity" problem where the residual includes contributions
@@ -209,6 +208,8 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 
   std::string             postfix = concat("_H1<", p, ",", dim, ">");
 
+  serac::profiling::initializeCaliper();
+  
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
 
@@ -289,11 +290,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 
-  /* mfem workaround */
   serac::profiling::terminateCaliper();
- 
-  serac::accelerator::terminateDevice();
-  /* end mfem workaround */
 }
 
 // this test sets up part of a toy "magnetic diffusion" problem where the residual includes contributions
@@ -309,6 +306,8 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 
   std::string             postfix = concat("_Hcurl<", p, ">");
 
+  serac::profiling::initializeCaliper();
+  
   auto                        fec = mfem::ND_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
@@ -367,7 +366,6 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
     r1 -= *F;
   }
 
-  // mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
   mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual(U));
 
   if (verbose) {
@@ -389,16 +387,18 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-13);
 
+  serac::profiling::terminateCaliper();  
 }
 
-// TEST(thermal, 2D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<2>{}); };
-// TEST(thermal, 2D_quadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<2>{}); }
-// TEST(thermal, 2D_cubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<2>{}); }
+TEST(thermal, 2D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<2>{}); };
+TEST(thermal, 2D_quadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(thermal, 2D_cubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<2>{}); }
 
-// TEST(thermal, 3D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(thermal, 3D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<3>{}); }
 TEST(thermal, 3D_quadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<3>{}); }
-// TEST(thermal, 3D_cubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<3>{}); }
+TEST(thermal, 3D_cubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<3>{}); }
 
+// TODO: There seems to be a calculation issue where Nans are produced for the Hcurl case?
 // TEST(hcurl, 2D_linear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }
 // TEST(hcurl, 2D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<2>{}); }
 // TEST(hcurl, 2D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<2>{}); }
@@ -407,19 +407,18 @@ TEST(thermal, 3D_quadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<3>{});
 // TEST(hcurl, 3D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
 // TEST(hcurl, 3D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
 
-//TEST(elasticity, 2D_linear) { functional_test(H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
-//TEST(elasticity, 2D_quadratic) { functional_test(H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
-//TEST(elasticity, 2D_cubic) { functional_test(H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_linear) { functional_test(H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_quadratic) { functional_test(H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_cubic) { functional_test(H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
 
-//TEST(elasticity, 3D_linear) { functional_test(H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
-//TEST(elasticity, 3D_quadratic) { functional_test(H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
-//TEST(elasticity, 3D_cubic) { functional_test(H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_linear) { functional_test(H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_quadratic) { functional_test(H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_cubic) { functional_test(H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
 
-  serac::profiling::initializeCaliper();
   auto [num_procs, myid] = serac::initialize(argc, argv);
 
   mfem::OptionsParser args(argc, argv);
