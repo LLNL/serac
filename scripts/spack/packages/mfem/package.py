@@ -437,14 +437,9 @@ class Mfem(Package):
             # The hypre package always links with 'blas' and 'lapack'.
             all_hypre_libs = hypre.libs + hypre['lapack'].libs + \
                 hypre['blas'].libs
-            # SERAC EDIT BEGIN
-            hypre_lib = ld_flags_from_library_list(all_hypre_libs)
-            if '+cuda' in spec:
-                hypre_lib += ' -lcurand'
             options += [
                 'HYPRE_OPT=-I%s' % hypre.prefix.include,
-                'HYPRE_LIB=%s' % hypre_lib]
-            # SERAC EDIT END
+                'HYPRE_LIB=%s' % ld_flags_from_library_list(all_hypre_libs)]
 
         if '+metis' in spec:
             options += [
