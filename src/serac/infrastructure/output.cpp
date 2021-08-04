@@ -41,8 +41,8 @@ void outputSummary(const axom::sidre::DataStore& datastore, const std::string& d
     return;
   }
 
-  // FIXME: remove this error when implemented, do we even want hdf5 curves?
-  SLIC_ERROR_ROOT_IF(file_format == FileFormat::HDF5, "hdf5 has not been implemented in outputCurves");
+  SLIC_ERROR_ROOT_IF(file_format == FileFormat::HDF5,
+                     "Output file format ('hdf5') is not supported for Serac summary files.");
   std::string file_format_string = detail::file_format_string(file_format);
 
   const std::string file_name = fmt::format("{0}_summary.{1}", data_collection_name, file_format_string);

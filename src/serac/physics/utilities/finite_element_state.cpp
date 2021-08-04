@@ -67,8 +67,10 @@ FiniteElementState& FiniteElementState::operator=(const double value)
 
 double avg(const FiniteElementState& state)
 {
-  double global_sum, local_sum   = state.trueVec().Sum();
-  int    global_size, local_size = state.trueVec().Size();
+  double global_sum;
+  double local_sum = state.trueVec().Sum();
+  int    global_size;
+  double local_size = state.trueVec().Size();
   MPI_Allreduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, state.comm());
   MPI_Allreduce(&local_size, &global_size, 1, MPI_INT, MPI_SUM, state.comm());
   return global_sum / global_size;
@@ -76,14 +78,16 @@ double avg(const FiniteElementState& state)
 
 double max(const FiniteElementState& state)
 {
-  double global_max, local_max = state.trueVec().Max();
+  double global_max;
+  double local_max = state.trueVec().Max();
   MPI_Allreduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, state.comm());
   return global_max;
 }
 
 double min(const FiniteElementState& state)
 {
-  double global_min, local_min = state.trueVec().Min();
+  double global_min;
+  double local_min = state.trueVec().Min();
   MPI_Allreduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, state.comm());
   return global_min;
 }

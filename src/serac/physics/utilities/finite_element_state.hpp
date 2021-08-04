@@ -257,8 +257,6 @@ private:
   std::string                                       name_ = "";
 };
 
-// FIXME: Should these go somewhere else?
-
 /**
  * @brief Find the average value of a finite element state across all nodes
  *
