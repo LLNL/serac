@@ -17,7 +17,7 @@
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
-#include <gtest/gtest.h> 
+#include <gtest/gtest.h>
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/numerics/mesh_utils_base.hpp"
@@ -34,18 +34,17 @@ constexpr bool                 verbose = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-std::map< int, std::string > meshfiles = {
-  {2, SERAC_REPO_DIR "/data/meshes/star.mesh"},
-  {3, SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"}
-};
+std::map<int, std::string> meshfiles = {{2, SERAC_REPO_DIR "/data/meshes/star.mesh"},
+                                        {3, SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"}};
 
-static constexpr double a       = 1.7;
-static constexpr double b       = 2.1;
+static constexpr double a = 1.7;
+static constexpr double b = 2.1;
 
-template < int dim >
-struct thermal_qfunction{
-  template < typename x_t, typename temperature_t >
-  __host__ __device__ auto operator()(x_t x, temperature_t temperature) {
+template <int dim>
+struct thermal_qfunction {
+  template <typename x_t, typename temperature_t>
+  __host__ __device__ auto operator()(x_t x, temperature_t temperature)
+  {
     // get the value and the gradient from the input tuple
     auto [u, du_dx] = temperature;
     auto source     = a * u - (100 * x[0] * x[1]);
@@ -54,31 +53,32 @@ struct thermal_qfunction{
   }
 };
 
-template < int dim >
-struct elastic_qfunction{
-  template < typename x_t, typename displacement_t >
-  __host__ __device__ auto operator()(x_t x, displacement_t displacement) {
+template <int dim>
+struct elastic_qfunction {
+  template <typename x_t, typename displacement_t>
+  __host__ __device__ auto operator()(x_t x, displacement_t displacement)
+  {
     // get the value and the gradient from the input tuple
-    auto [u, du_dx] = displacement;
-    constexpr auto I = Identity<dim>();
-    auto body_force = a * u + I[0];
-    auto strain     = 0.5 * (du_dx + transpose(du_dx));
-    auto stress     = b * tr(strain) * I + 2.0 * b * strain;
-    return serac::tuple{body_force, stress};  
+    auto [u, du_dx]           = displacement;
+    constexpr auto I          = Identity<dim>();
+    auto           body_force = a * u + I[0];
+    auto           strain     = 0.5 * (du_dx + transpose(du_dx));
+    auto           stress     = b * tr(strain) * I + 2.0 * b * strain;
+    return serac::tuple{body_force, stress};
   }
 };
 
-template < int dim >
-struct hcurl_qfunction{
-  template < typename x_t, typename vector_potential_t >
-  __host__ __device__ auto operator()(x_t x, vector_potential_t vector_potential) {
+template <int dim>
+struct hcurl_qfunction {
+  template <typename x_t, typename vector_potential_t>
+  __host__ __device__ auto operator()(x_t x, vector_potential_t vector_potential)
+  {
     auto [A, curl_A] = vector_potential;
     auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
     auto H_term      = b * curl_A;
     return serac::tuple{J_term, H_term};
-      }
+  }
 };
-
 
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
@@ -89,12 +89,12 @@ template <int p, int dim>
 void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 {
   auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(meshfiles[dim]), serial_refinement, parallel_refinement);
-  mfem::ParMesh & mesh = *pmesh;
+  mfem::ParMesh& mesh = *pmesh;
 
-  std::string             postfix = concat("_H1<", p, ">");
+  std::string postfix = concat("_H1<", p, ">");
 
   serac::profiling::initializeCaliper();
-  
+
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -191,7 +191,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
-  
+
   serac::profiling::terminateCaliper();
 }
 
@@ -204,12 +204,12 @@ template <int p, int dim>
 void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
   auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(meshfiles[dim]), serial_refinement, parallel_refinement);
-  mfem::ParMesh & mesh = *pmesh;
+  mfem::ParMesh& mesh = *pmesh;
 
-  std::string             postfix = concat("_H1<", p, ",", dim, ">");
+  std::string postfix = concat("_H1<", p, ",", dim, ">");
 
   serac::profiling::initializeCaliper();
-  
+
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
 
@@ -232,8 +232,8 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 
   mfem::ParLinearForm             f(&fespace);
   mfem::VectorFunctionCoefficient load_func(dim, [&](const mfem::Vector& /*coords*/, mfem::Vector& force) {
-      force    = 0.0;
-      force(0) = -1.;
+    force    = 0.0;
+    force(0) = -1.;
   });
 
   f.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(load_func));
@@ -247,7 +247,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
   F->UseDevice(true);
 
   F->HostRead();
-  
+
   mfem::ParGridFunction u_global(&fespace);
   u_global.Randomize();
 
@@ -302,12 +302,12 @@ template <int p, int dim>
 void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 {
   auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(meshfiles[dim]), serial_refinement, parallel_refinement);
-  mfem::ParMesh & mesh = *pmesh;
+  mfem::ParMesh& mesh = *pmesh;
 
-  std::string             postfix = concat("_Hcurl<", p, ">");
+  std::string postfix = concat("_Hcurl<", p, ">");
 
   serac::profiling::initializeCaliper();
-  
+
   auto                        fec = mfem::ND_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
@@ -387,7 +387,7 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
   }
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-13);
 
-  serac::profiling::terminateCaliper();  
+  serac::profiling::terminateCaliper();
 }
 
 TEST(thermal, 2D_linear) { functional_test(H1<1>{}, H1<1>{}, Dimension<2>{}); };
@@ -420,6 +420,8 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   auto [num_procs, myid] = serac::initialize(argc, argv);
+
+  mfem::Device("cuda");
 
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&serial_refinement, "-r", "--ref", "");

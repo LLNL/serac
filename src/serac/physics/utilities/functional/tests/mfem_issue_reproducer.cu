@@ -20,27 +20,24 @@ int nsamples = 1;  // because mfem doesn't take in unsigned int
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-std::map< int, std::string > meshfiles = {
-  {2, SERAC_REPO_DIR "/data/meshes/star.mesh"},
-  {3, SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"}
-};
+std::map<int, std::string> meshfiles = {{2, SERAC_REPO_DIR "/data/meshes/star.mesh"},
+                                        {3, SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"}};
 
-void some_parametrized_test(int p, int dim) {
-
+void some_parametrized_test(int p, int dim)
+{
   std::ifstream stream(meshfiles[dim]);
-  mfem::Mesh serial_mesh(stream, 1, 1, true);
-  for (int i = 0; i < serial_refinement; i++)
-  {
+  mfem::Mesh    serial_mesh(stream, 1, 1, true);
+  for (int i = 0; i < serial_refinement; i++) {
     serial_mesh.UniformRefinement();
   }
-  
+
   mfem::ParMesh mesh(MPI_COMM_WORLD, serial_mesh);
   for (int i = 0; i < parallel_refinement; i++) {
     mesh.UniformRefinement();
   }
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto fec = mfem::H1_FECollection(p, dim);
+  auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
   mfem::ParBilinearForm A(&fespace);
@@ -70,7 +67,7 @@ void some_parametrized_test(int p, int dim) {
   U.UseDevice(true);
   u_global.GetTrueDofs(U);
 
- // Compute the residual using standard MFEM methods
+  // Compute the residual using standard MFEM methods
   mfem::Vector r1(U.Size());
   J->Mult(U, r1);
   r1 -= *F;
@@ -81,14 +78,13 @@ void some_parametrized_test(int p, int dim) {
 int main(int argc, char* argv[])
 {
   mfem::MPI_Session mpi(argc, argv);
-  int num_procs = mpi.WorldSize();
-  int myid = mpi.WorldRank();
-  
+  int               num_procs = mpi.WorldSize();
+  int               myid      = mpi.WorldRank();
+
   mfem::Device device("cuda");
 
   int p, dim;
   some_parametrized_test(p = 1, dim = 2);
   some_parametrized_test(p = 2, dim = 2);
   some_parametrized_test(p = 3, dim = 2);
-
 }

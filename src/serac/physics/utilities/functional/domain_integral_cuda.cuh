@@ -11,106 +11,113 @@ namespace serac {
 
 namespace detail {
 
-  /**
-   * @brief utility method to display last cuda error message
-   *
-   * @param[in] o The output stream to post success or CUDA error messages
-   * @param[in] success_string A string to print if there are no CUDA error messages
-   */
-  inline void displayLastCUDAErrorMessage(std::ostream & o, const char * success_string = "") {
-      auto error = cudaGetLastError();
-      if(error != cudaError::cudaSuccess) {
-	o << "Last CUDA Error Message :" << cudaGetErrorString(error) << std::endl;
-      } else if (strlen(success_string) > 0) {
-	o << success_string << std::endl;
-      }
+/**
+ * @brief utility method to display last cuda error message
+ *
+ * @param[in] o The output stream to post success or CUDA error messages
+ * @param[in] success_string A string to print if there are no CUDA error messages
+ */
+inline void displayLastCUDAErrorMessage(std::ostream& o, const char* success_string = "")
+{
+  auto error = cudaGetLastError();
+  if (error != cudaError::cudaSuccess) {
+    o << "Last CUDA Error Message :" << cudaGetErrorString(error) << std::endl;
+  } else if (strlen(success_string) > 0) {
+    o << success_string << std::endl;
+  }
+}
+
+/**
+ * @brief Defines whether to loop by elements or quadrature points
+ */
+enum ThreadExecutionPolicy
+{
+  THREAD_PER_ELEMENT_QUADRATURE_POINT,
+  THREAD_PER_ELEMENT
+};
+
+/**
+ * @brief Contains the GPU launch configuration
+ */
+struct ThreadExecutionConfiguration {
+  int blocksize;
+};
+
+}  // namespace detail
+
+namespace domain_integral {
+
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda, typename u_type,
+          typename r_type, typename J_type, typename X_type>
+__global__ void eval_cuda_element(const u_type u, r_type r, derivatives_type* derivatives_ptr, J_type J, X_type X,
+                                  int num_elements, lambda qf)
+{
+  using test_element          = finite_element<g, test>;
+  using trial_element         = finite_element<g, trial>;
+  using element_residual_type = typename trial_element::residual_type;
+  static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+
+  // for each element in the domain
+  const int grid_stride = blockDim.x * gridDim.x;
+#pragma unroll
+  for (int e = blockIdx.x * blockDim.x + threadIdx.x; e < num_elements; e += grid_stride) {
+    // get the DOF values for this particular element
+    auto u_elem = detail::Load<trial_element>(u, e);
+
+    // this is where we will accumulate the element residual tensor
+    element_residual_type r_elem{};
+
+    // for each quadrature point in the element
+    for (int q = 0; q < static_cast<int>(rule.size()); q++) {
+      eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
+                                                                   num_elements, qf);
     }
 
-  /**
-   * @brief Defines whether to use organize threads
-   */ 
-  enum ThreadExecutionPolicy {
-    THREAD_PER_ELEMENT_QUADRATURE_POINT,
-    THREAD_PER_ELEMENT
-  };
-  
-  struct ThreadExecutionConfiguration {
-    int blocksize;
-  };
-  
-} // namespace detail
+    // once we've finished the element integration loop, write our element residuals
+    // out to memory, to be later assembled into global residuals by mfem
+    detail::Add(r, r_elem, e);
+  }  // e loop
+}
 
-  namespace domain_integral {  
-
-  template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda, typename u_type, typename r_type, typename J_type, typename X_type>
-  __global__ void eval_cuda_element(const u_type u, r_type r, derivatives_type * derivatives_ptr, J_type J, X_type X, int num_elements, lambda qf) {
-
-    using test_element               = finite_element<g, test>;
-    using trial_element              = finite_element<g, trial>;
-    using element_residual_type      = typename trial_element::residual_type;
-    static constexpr auto rule       = GaussQuadratureRule<g, Q>();
-
-    // for each element in the domain
-    const int grid_stride = blockDim.x * gridDim.x;
-#pragma unroll
-    for (int e = blockIdx.x * blockDim.x + threadIdx.x; e < num_elements ; e += grid_stride) {
-      // get the DOF values for this particular element
-      auto u_elem = detail::Load<trial_element>(u, e);
-
-      // this is where we will accumulate the element residual tensor
-      element_residual_type r_elem{};
-
-      // for each quadrature point in the element
-      for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-	eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X, num_elements, qf);
-      }
-
-      // once we've finished the element integration loop, write our element residuals
-      // out to memory, to be later assembled into global residuals by mfem
-      detail::Add(r, r_elem, e);
-    } // e loop
-
-  }
-
-  template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda, typename u_type, typename r_type, typename J_type, typename X_type>
-  __global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type * derivatives_ptr, J_type J, X_type X, int num_elements, lambda qf) {
-
-    using test_element               = finite_element<g, test>;
-    using trial_element              = finite_element<g, trial>;
-    using element_residual_type      = typename trial_element::residual_type;
-    static constexpr auto rule       = GaussQuadratureRule<g, Q>();
-
-    const int grid_stride = blockDim.x * gridDim.x;
-    // launch a thread for each quadrature x element point
-    for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
-
-      // warps won't fetch that many elements ... not great.. but not horrible
-      int e = qe / rule.size();
-      int q = qe % rule.size();
-
-      // get the DOF values for this particular element
-      auto u_elem = detail::Load<trial_element>(u, e);
-
-      // this is where we will accumulate the element residual tensor
-      element_residual_type r_elem{};
-
-      // for each quadrature point in the element
-      eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X, num_elements, qf);
-
-      // once we've finished the element integration loop, write our element residuals
-      // out to memory, to be later assembled into global residuals by mfem
-      detail::Add(r, r_elem, e);
-    } // quadrature x element loop
-
-  }
-
-
-    template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
-	  typename derivatives_type, typename lambda>
-    void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
-			    const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf)
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda, typename u_type,
+          typename r_type, typename J_type, typename X_type>
+__global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type* derivatives_ptr, J_type J, X_type X,
+                                     int num_elements, lambda qf)
 {
+  using test_element          = finite_element<g, test>;
+  using trial_element         = finite_element<g, trial>;
+  using element_residual_type = typename trial_element::residual_type;
+  static constexpr auto rule  = GaussQuadratureRule<g, Q>();
 
+  const int grid_stride = blockDim.x * gridDim.x;
+  // launch a thread for each quadrature x element point
+  for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
+    // warps won't fetch that many elements ... not great.. but not horrible
+    int e = qe / rule.size();
+    int q = qe % rule.size();
+
+    // get the DOF values for this particular element
+    auto u_elem = detail::Load<trial_element>(u, e);
+
+    // this is where we will accumulate the element residual tensor
+    element_residual_type r_elem{};
+
+    // for each quadrature point in the element
+    eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
+                                                                 num_elements, qf);
+
+    // once we've finished the element integration loop, write our element residuals
+    // out to memory, to be later assembled into global residuals by mfem
+    detail::Add(r, r_elem, e);
+  }  // quadrature x element loop
+}
+
+template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
+          typename derivatives_type, typename lambda>
+void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& U, mfem::Vector& R,
+                            derivatives_type* derivatives_ptr, const mfem::Vector& J_, const mfem::Vector& X_,
+                            int num_elements, lambda qf)
+{
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename trial_element::residual_type;
@@ -118,7 +125,7 @@ namespace detail {
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
   static constexpr int  dim        = dimension_of(g);
-  
+
   // Use the device (GPU)
   X_.UseDevice(true);
   J_.UseDevice(true);
@@ -126,7 +133,8 @@ namespace detail {
   R = 0.;
   R.UseDevice(true);
 
-  // Note: Since we cannot call Reshape (__host__) within a kernel we pass in the resulting mfem::DeviceTensors which should be pointing to Device pointers via .Read() and .ReadWrite()
+  // Note: Since we cannot call Reshape (__host__) within a kernel we pass in the resulting mfem::DeviceTensors which
+  // should be pointing to Device pointers via .Read() and .ReadWrite()
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -139,13 +147,15 @@ namespace detail {
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
   if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT) {
-      int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1)/config.blocksize;
-      eval_cuda_quadrature<g, test, trial, Q ><<<blocks_quadrature_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+    int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
+    eval_cuda_quadrature<g, test, trial, Q>
+        <<<blocks_quadrature_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
 
-    } else if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT) {
-      int blocks_element = (num_elements + config.blocksize - 1)/config.blocksize;
-      eval_cuda_element<g, test, trial, Q ><<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
-    }
+  } else if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT) {
+    int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;
+    eval_cuda_element<g, test, trial, Q>
+        <<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+  }
 
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
@@ -157,18 +167,17 @@ namespace detail {
   J_.UseDevice(false);
   U.UseDevice(false);
   R.UseDevice(false);
+}
 
-}  
-  
-template <Geometry g, typename test, typename trial, int Q,
-          typename derivatives_type, typename du_type, typename dr_type>
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename du_type,
+          typename dr_type>
 __global__ void gradient_cuda_element(const du_type du, dr_type dr, derivatives_type* derivatives_ptr,
-                     const mfem::DeviceTensor<4, const double> J, int num_elements)
+                                      const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
-  using test_element               = finite_element<g, test>;
-  using trial_element              = finite_element<g, trial>;
-  using element_residual_type      = typename trial_element::residual_type;
-  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
+  using test_element          = finite_element<g, test>;
+  using trial_element         = finite_element<g, trial>;
+  using element_residual_type = typename trial_element::residual_type;
+  static constexpr auto rule  = GaussQuadratureRule<g, Q>();
 
   const int grid_stride = blockDim.x * gridDim.x;
 #pragma unroll
@@ -181,8 +190,8 @@ __global__ void gradient_cuda_element(const du_type du, dr_type dr, derivatives_
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-
-      gradient_quadrature<g, test, trial, Q, derivatives_type>(e, q, du_elem, dr_elem, derivatives_ptr, J, num_elements);
+      gradient_quadrature<g, test, trial, Q, derivatives_type>(e, q, du_elem, dr_elem, derivatives_ptr, J,
+                                                               num_elements);
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -191,22 +200,21 @@ __global__ void gradient_cuda_element(const du_type du, dr_type dr, derivatives_
   }
 }
 
-template <Geometry g, typename test, typename trial, int Q,
-          typename derivatives_type, typename du_type, typename dr_type>
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename du_type,
+          typename dr_type>
 __global__ void gradient_cuda_quadrature(const du_type du, dr_type dr, derivatives_type* derivatives_ptr,
-                     const mfem::DeviceTensor<4, const double> J, int num_elements)
+                                         const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
-  using test_element               = finite_element<g, test>;
-  using trial_element              = finite_element<g, trial>;
-  using element_residual_type      = typename trial_element::residual_type;
-  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
+  using test_element          = finite_element<g, test>;
+  using trial_element         = finite_element<g, trial>;
+  using element_residual_type = typename trial_element::residual_type;
+  static constexpr auto rule  = GaussQuadratureRule<g, Q>();
 
-  const int grid_stride = blockDim.x * gridDim.x;
-  auto thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  auto num_quadrature_points = num_elements * rule.size();
+  const int grid_stride           = blockDim.x * gridDim.x;
+  auto      thread_id             = blockIdx.x * blockDim.x + threadIdx.x;
+  auto      num_quadrature_points = num_elements * rule.size();
 #pragma unroll
   for (int qe = thread_id; qe < num_quadrature_points; qe += grid_stride) {
-
     int e = qe / rule.size();
     int q = qe % rule.size();
     // get the (change in) values for this particular element
@@ -223,12 +231,10 @@ __global__ void gradient_cuda_quadrature(const du_type du, dr_type dr, derivativ
   }
 }
 
-  
-
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
           typename derivatives_type>
-void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
-                     const mfem::Vector& J_, int num_elements)
+void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
+                          derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -237,7 +243,7 @@ void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, co
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
   static constexpr int  dim        = dimension_of(g);
-  
+
   // Use the device (GPU)
   J_.UseDevice(true);
   dU.UseDevice(true);
@@ -254,14 +260,16 @@ void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, co
 
   // call gradient_cuda
   if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT) {
-      int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1)/config.blocksize;
-      gradient_cuda_quadrature<g, test, trial, Q, derivatives_type> <<< blocks_quadrature_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
+    int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
+    gradient_cuda_quadrature<g, test, trial, Q, derivatives_type>
+        <<<blocks_quadrature_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
 
-    } else if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT) {
-      int blocks_element = (num_elements + config.blocksize - 1)/config.blocksize;
-      gradient_cuda_element<g, test, trial, Q, derivatives_type> <<< blocks_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
-    }
-  
+  } else if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT) {
+    int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;
+    gradient_cuda_element<g, test, trial, Q, derivatives_type>
+        <<<blocks_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
+  }
+
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
   dR.HostRead();
@@ -269,10 +277,8 @@ void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, co
   J_.UseDevice(false);
   dU.UseDevice(false);
   dR.UseDevice(false);
-
-
 }
 
-} // namespace domain_integral
+}  // namespace domain_integral
 
-} // namespace serac
+}  // namespace serac

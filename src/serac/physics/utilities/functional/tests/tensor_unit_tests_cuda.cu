@@ -8,13 +8,16 @@
 
 using namespace serac;
 
-template < int n >
-void custom_assert(bool condition, const char (&message)[n]) {
-  if (condition == false) { printf("error: %s", message); }
+template <int n>
+void custom_assert(bool condition, const char (&message)[n])
+{
+  if (condition == false) {
+    printf("error: %s", message);
+  }
 }
 
-__global__ void basic_tensor_tests() {
-
+__global__ void basic_tensor_tests()
+{
   constexpr auto abs = [](auto x) { return (x < 0) ? -x : x; };
 
   constexpr tensor<double, 3> u = {1, 2, 3};
@@ -47,7 +50,6 @@ __global__ void basic_tensor_tests() {
 
   constexpr double uBv = 300;
   static_assert(abs(dot(u, B, v) - uBv) < 1.0e-16);
-
 }
 
 #if 0
@@ -123,7 +125,7 @@ void navier_stokes_tests()
 
 int main()
 {
-  basic_tensor_tests<<<1,1>>>();
-  //elasticity_tests();
-  //navier_stokes_tests();
+  basic_tensor_tests<<<1, 1>>>();
+  // elasticity_tests();
+  // navier_stokes_tests();
 }
