@@ -234,17 +234,15 @@ mfem::Operator& EquationSolver::SuperLUNonlinearOperatorWrapper::GetGradient(con
 
 void EquationSolver::DefineInputFileSchema(axom::inlet::Container& container)
 {
-  auto& linear_container = container.addStruct("linear", "Linear Equation Solver Parameters")
-                               .required()
-                               .registerVerifier([](const axom::inlet::Container& container_to_verify) {
-                                 // Make sure that the provided options match the desired linear solver type
-                                 const bool is_iterative =
-                                     (container_to_verify["type"].get<std::string>() == "iterative") &&
-                                     container_to_verify.contains("iterative_options");
-                                 const bool is_direct = (container_to_verify["type"].get<std::string>() == "direct") &&
-                                                        container_to_verify.contains("direct_options");
-                                 return is_iterative || is_direct;
-                               });
+  auto& linear_container = container.addStruct("linear", "Linear Equation Solver Parameters");
+  linear_container.required().registerVerifier([](const axom::inlet::Container& container_to_verify) {
+    // Make sure that the provided options match the desired linear solver type
+    const bool is_iterative = (container_to_verify["type"].get<std::string>() == "iterative") &&
+                              container_to_verify.contains("iterative_options");
+    const bool is_direct =
+        (container_to_verify["type"].get<std::string>() == "direct") && container_to_verify.contains("direct_options");
+    return is_iterative || is_direct;
+  });
 
   // Enforce the solver type - must be iterative or direct
   linear_container.addString("type", "The type of solver parameters to use (iterative|direct)")

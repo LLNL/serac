@@ -276,6 +276,9 @@ class Mfem(Package):
     # https://github.com/mfem/mfem/pull/1043 for the bugfix contributed
     # upstream.
     patch('mfem-4.0.0-makefile-syntax-fix.patch', when='@4.0.0')
+
+    # Fix issue with mesh constructor
+    patch('mfem-4.3_mesh_op.patch', when='@4.3.0')
     phases = ['configure', 'build', 'install']
 
     def setup_build_environment(self, env):

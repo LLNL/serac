@@ -1,0 +1,13 @@
+diff --git a/mesh/mesh.hpp b/mesh/mesh.hpp
+index ef3f91b91..7d5ac216a 100644
+--- a/mesh/mesh.hpp
++++ b/mesh/mesh.hpp
+@@ -503,7 +503,7 @@ public:
+    Mesh& operator=(Mesh &&mesh);
+ 
+    /// Explicitly delete the copy assignment operator.
+-   Mesh& operator=(Mesh &mesh) = delete;
++   Mesh& operator=(const Mesh &mesh) = delete;
+ 
+    /** @name Named mesh constructors.
+ 
