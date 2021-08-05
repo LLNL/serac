@@ -142,7 +142,7 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
   int num_boundary_elements = test_fespace.GetNBE();
   int dofs_per_test_boundary_element = test_dofs.Size();
   int dofs_per_trial_boundary_element = trial_dofs.Size();
-  int entries_per_boundary_element = dofs_per_test_boundary_element * dofs_per_trial_boundary_element;
+  int entries_per_boundary_element = dofs_per_test_boundary_element * test_vdim * dofs_per_trial_boundary_element * trial_vdim;
 
   int num_infos[2] = {
     entries_per_element * num_elements,
@@ -168,7 +168,7 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
             int test_vdof = test_fespace.DofToVDof(mfem_index(test_dofs[i]), k);
             for (int l = 0; l < trial_vdim; l++) {
               int trial_vdof = trial_fespace.DofToVDof(mfem_index(trial_dofs[j]), l);
-              infos.push_back(elem_info{test_vdof, trial_vdof, i * test_vdim + k, j * trial_vdim + l, e, mfem_sign(test_dofs[i]) * mfem_sign(trial_dofs[j]), on_boundary});
+              infos.push_back(elem_info{test_vdof, trial_vdof, i + dofs_per_test_element * k, j + dofs_per_trial_element * l, e, mfem_sign(test_dofs[i]) * mfem_sign(trial_dofs[j]), on_boundary});
             }
           }
         }
@@ -196,7 +196,7 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
             int test_vdof = test_fespace.DofToVDof(mfem_index(test_dofs[i]), k);
             for (int l = 0; l < trial_vdim; l++) {
               int trial_vdof = trial_fespace.DofToVDof(mfem_index(trial_dofs[j]), l);
-              infos.push_back(elem_info{test_vdof, trial_vdof, i * test_vdim + k, j * trial_vdim + l, b, mfem_sign(test_dofs[i]) * mfem_sign(trial_dofs[j]), on_boundary});
+              infos.push_back(elem_info{test_vdof, trial_vdof, i + dofs_per_test_boundary_element * k, j + dofs_per_trial_boundary_element * l, b, mfem_sign(test_dofs[i]) * mfem_sign(trial_dofs[j]), on_boundary});
             }
           }
         }
@@ -251,14 +251,14 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
   f.AddDomainIntegral(Dimension<dimension>{}, qf, mesh);
   f(U);
   mfem::Vector element_matrices = f.ComputeElementMatrices();
-  auto K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element, dofs_per_trial_element, num_elements);
+  auto K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element * test_vdim, dofs_per_trial_element * trial_vdim, num_elements);
 
   std::vector<double> values(nnz, 0.0);
   int num_rows = test_fespace.GetNDofs() * test_fespace.GetVDim();
   int num_cols = trial_fespace.GetNDofs() * trial_fespace.GetVDim();
   for (int e = 0; e < num_elements; e++) {
-    for (int i = 0; i < dofs_per_test_element; i++) {
-      for (int j = 0; j < dofs_per_trial_element; j++) {
+    for (int i = 0; i < dofs_per_test_element * test_vdim; i++) {
+      for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
         auto [index, sign] = element_nonzero_LUT(e,i,j);
         values[index] += sign * K_elem(i,j,e);
       }
@@ -309,9 +309,6 @@ int main(int argc, char* argv[])
   sparsity< H1<1>, H1<1>, 2 >(*mesh2D, default_qf, "h1h1_2D_");
   sparsity< H1<1>, H1<1>, 3 >(*mesh3D, default_qf, "h1h1_3D_");
 
-  sparsity< H1<1, 2>, H1<1, 2>, 2 >(*mesh2D, default_qf, "h1vh1v_2D_");
-  sparsity< H1<1, 3>, H1<1, 3>, 3 >(*mesh3D, default_qf, "h1vh1v_3D_");
-
   sparsity< Hcurl<1>, Hcurl<1>, 2 >(*mesh2D, default_qf, "hcurlhcurl_2D_");
   sparsity< Hcurl<1>, Hcurl<1>, 3 >(*mesh3D, default_qf, "hcurlhcurl_3D_");
 
@@ -321,5 +318,9 @@ int main(int argc, char* argv[])
   };
 
   sparsity< Hcurl<1>, H1<1>, 3 >(*mesh3D, hcurl_h1_3D_qf, "hcurlh1_3D_");
+
+  sparsity< H1<1, 2>, H1<1, 2>, 2 >(*mesh2D, default_qf, "h1vh1v_2D_");
+  sparsity< H1<1, 3>, H1<1, 3>, 3 >(*mesh3D, default_qf, "h1vh1v_3D_");
+
 
 }
