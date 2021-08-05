@@ -87,7 +87,7 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     # Libraries that support +debug
     mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
-    debug_deps = ["mfem@4.2.0{0}".format(mfem_variants),
+    debug_deps = ["mfem@4.3.0{0}".format(mfem_variants),
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
