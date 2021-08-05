@@ -39,7 +39,7 @@ quartz_release:
 .src_build_on_quartz:
   stage: build
   variables:
-    ALLOC_COMMAND: "srun -p pdebug -A ${ALLOC_BANK} -t 10 -N 1 ${ASSIGN_ID}"
+    ALLOC_COMMAND: "srun -p pdebug -A ${ALLOC_BANK} -t 15 -N 1 ${ASSIGN_ID}"
   extends: [.src_build_script, .on_quartz, .src_workflow]
   needs: [quartz_allocate]
 
@@ -70,11 +70,11 @@ quartz-gcc_8_3_1-src:
 quartz-clang_10_0_0-full:
   variables:
     COMPILER: "clang@10.0.0"
-    SPEC: "%${COMPILER}"
+    SPEC: "--spec=%${COMPILER}"
   extends: .full_build_on_quartz
 
 quartz-gcc_8_3_1-full:
   variables:
     COMPILER: "gcc@8.3.1"
-    SPEC: "%${COMPILER}"
+    SPEC: "--spec=%${COMPILER}"
   extends: .full_build_on_quartz

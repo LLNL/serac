@@ -17,6 +17,9 @@ set(functional_headers
     polynomials.hpp
     quadrature.hpp
     finite_element.hpp
+    )
+
+set(functional_detail_headers
     detail/hexahedron_H1.inl
     detail/hexahedron_Hcurl.inl
     detail/hexahedron_L2.inl
@@ -31,25 +34,18 @@ set(functional_headers
 
 blt_add_library(
       NAME        serac_functional
-      HEADERS     ${functional_headers}
+      HEADERS     ${functional_headers} ${functional_detail_headers}
       DEPENDS_ON  ${functional_depends}
       )
 
 
 install(FILES ${functional_headers} DESTINATION include/serac/physics/utilities/functional )
+install(FILES ${functional_detail_headers} DESTINATION include/serac/physics/utilities/functional/detail )
 
 install(TARGETS              serac_functional
         EXPORT               serac-targets
         DESTINATION          lib
         )
-
-# this test is all constexpr-evaluated, so it doesn't
-# actually need to run, if it compiles without error, the tests have passed
-blt_add_executable(NAME        tensor_unit_tests
-                   SOURCES     tests/tensor_unit_tests.cpp
-                   OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                   DEPENDS_ON  gtest serac_functional ${functional_depends}
-                   FOLDER      serac/tests)
 
 if(ENABLE_TESTS)
    add_subdirectory(tests)

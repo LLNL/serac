@@ -9,6 +9,10 @@ add_subdirectory(operators)
 add_subdirectory(integrators)
 add_subdirectory(materials)
 
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+
 set(physics_sources
     base_physics.cpp
     solid.cpp
@@ -25,6 +29,7 @@ set(physics_headers
 
 set(physics_dependencies
     serac_infrastructure
+    serac_coefficients
     serac_physics_integrators
     serac_physics_materials
     serac_numerics

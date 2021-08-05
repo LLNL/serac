@@ -18,7 +18,7 @@ TEST(boundary_cond, simple_repeated_dofs)
   MPI_Barrier(MPI_COMM_WORLD);
   constexpr int      N    = 15;
   constexpr int      ATTR = 1;
-  mfem::Mesh         mesh(N, N, mfem::Element::TRIANGLE);
+  auto               mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
   mfem::ParMesh      par_mesh(MPI_COMM_WORLD, mesh);
   FiniteElementState state(par_mesh);
 
@@ -55,8 +55,8 @@ enum OtherTag
 TEST(boundary_cond, filter_generics)
 {
   MPI_Barrier(MPI_COMM_WORLD);
-  constexpr int N = 15;
-  mfem::Mesh    mesh(N, N, mfem::Element::TRIANGLE);
+  constexpr int N    = 15;
+  auto          mesh = mfem::Mesh::MakeCartesian2D(N, N, mfem::Element::TRIANGLE);
   mfem::ParMesh par_mesh(MPI_COMM_WORLD, mesh);
 
   BoundaryConditionManager bcs(par_mesh);
