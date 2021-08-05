@@ -285,6 +285,16 @@ void sparsity(mfem::ParMesh & mesh, lambda qf, std::string prefix = "") {
     exit(1);
   }
 
+  mfem::SparseMatrix C = grad(f);
+  outfile.open(prefix + "C.mtx");
+  C.PrintMM(outfile);
+  outfile.close();
+
+  if (A != C) { 
+    std::cout << "test " + prefix + " failed " << std::endl;
+    exit(1);
+  }
+
 }
 
 int main(int argc, char* argv[])

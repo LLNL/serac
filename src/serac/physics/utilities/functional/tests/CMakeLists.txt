@@ -15,10 +15,10 @@ blt_add_executable(NAME        tensor_unit_tests
 set(functional_tests_serial
     #refactor_element_matrix_assembly.cpp
     generate_sparsity.cpp
-    functional_boundary_test.cpp
-    hcurl_unit_tests.cpp
-    test_tensor_ad.cpp
-    tuple_arithmetic_unit_tests.cpp
+    #functional_boundary_test.cpp
+    #hcurl_unit_tests.cpp
+    #test_tensor_ad.cpp
+    #tuple_arithmetic_unit_tests.cpp
 )
     
 foreach(filename ${functional_tests_serial})
