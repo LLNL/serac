@@ -132,7 +132,8 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   // Set a random state to evaluate the residual
   mfem::ParGridFunction u_global(&fespace);
-  u_global.Randomize();
+  u_global = 1.;
+  //  u_global.Randomize();
 
   mfem::Vector U(fespace.TrueVSize());
   U.UseDevice(true);
@@ -421,7 +422,9 @@ int main(int argc, char* argv[])
 
   auto [num_procs, myid] = serac::initialize(argc, argv);
 
-  mfem::Device("cuda");
+  const char *device_config = "cuda";
+  mfem::Device device(device_config);
+  if (myid == 0) { device.Print(); }
 
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&serial_refinement, "-r", "--ref", "");

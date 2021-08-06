@@ -81,8 +81,7 @@ __global__ void eval_cuda_element(const u_type u, r_type r, derivatives_type* de
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda, typename u_type,
           typename r_type, typename J_type, typename X_type>
-__global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type* derivatives_ptr, J_type J, X_type X,
-                                     int num_elements, lambda qf)
+__global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type* derivatives_ptr, J_type & J, X_type & X, int num_elements, lambda qf)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -114,7 +113,7 @@ __global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type*
 
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
           typename derivatives_type, typename lambda>
-void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& U, mfem::Vector& R,
+void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector U, mfem::Vector R,
                             derivatives_type* derivatives_ptr, const mfem::Vector& J_, const mfem::Vector& X_,
                             int num_elements, lambda qf)
 {
@@ -143,6 +142,12 @@ void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, 
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
+  std::cout << "X:" << &X << " " << X_.Read() << std::endl;
+  std::cout << "J:" << &J << " " << J_.Read() << std::endl;
+  std::cout << "u:" << &u << " " << U.Read() << std::endl;
+  std::cout << "r:" << &r << " " << R.ReadWrite() << std::endl;
+  std::cout << "qf:" << &qf << " " << std::endl;
+  
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
@@ -160,13 +165,16 @@ void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, 
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
+  std::vector<double> debug_cuda(test_ndof, num_elements);
+  cudaMemcpy(debug_cuda.data(), R.ReadWrite(), debug_cuda.size() * sizeof(double), cudaMemcpyDeviceToHost);
+  
   // copy back to host
   R.HostRead();
 
-  X_.UseDevice(false);
-  J_.UseDevice(false);
-  U.UseDevice(false);
-  R.UseDevice(false);
+  // X_.UseDevice(false);
+  // J_.UseDevice(false);
+  // U.UseDevice(false);
+  // R.UseDevice(false);
 }
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename du_type,
@@ -245,9 +253,9 @@ void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, co
   static constexpr int  dim        = dimension_of(g);
 
   // Use the device (GPU)
-  J_.UseDevice(true);
-  dU.UseDevice(true);
-  dR.UseDevice(true);
+  // J_.UseDevice(true);
+  // dU.UseDevice(true);
+  // dR.UseDevice(true);
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
@@ -274,9 +282,9 @@ void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, co
   serac::detail::displayLastCUDAErrorMessage(std::cout);
   dR.HostRead();
 
-  J_.UseDevice(false);
-  dU.UseDevice(false);
-  dR.UseDevice(false);
+  // J_.UseDevice(false);
+  // dU.UseDevice(false);
+  // dR.UseDevice(false);
 }
 
 }  // namespace domain_integral
