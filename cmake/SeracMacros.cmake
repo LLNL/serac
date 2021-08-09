@@ -70,6 +70,7 @@ macro(serac_add_code_checks)
 
     set(_src_sources)
     file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp" "src/*.inl")
+    list(FILTER _src_sources EXCLUDE REGEX ".*/tests/.*pp")
 
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check
                               CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*"
