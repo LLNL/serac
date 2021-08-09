@@ -80,8 +80,7 @@ macro(serac_add_code_checks)
     # NOTE: GLOB operator ** did not appear to be supported by cmake and did not recursively find test subdirectories
     # NOTE: Do not include all directories at root (for example: blt)
 
-    file(GLOB_RECURSE _src_and_test_files "${PROJECT_SOURCE_DIR}/src/*.cpp" "{PROJECT_SOURCE_DIR}/tests/*.cpp")
-    set(_test_sources ${_src_and_test_files})
+    file(GLOB_RECURSE _test_sources "${PROJECT_SOURCE_DIR}/src/*.cpp" "{PROJECT_SOURCE_DIR}/tests/*.cpp")
     list(FILTER _test_sources INCLUDE REGEX ".*/tests/.*pp")
 
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check_tests
