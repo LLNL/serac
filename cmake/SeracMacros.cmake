@@ -69,7 +69,7 @@ macro(serac_add_code_checks)
 
 
     set(_src_sources)
-    file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp")
+    file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp" "src/*.inl")
 
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check
                               CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*"
@@ -79,14 +79,9 @@ macro(serac_add_code_checks)
     # NOTE: GLOB operator ** did not appear to be supported by cmake and did not recursively find test subdirectories
     # NOTE: Do not include all directories at root (for example: blt)
 
-    set(_test_glob_dirs "${PROJECT_SOURCE_DIR}/tests/*.*pp"
-                        "${PROJECT_SOURCE_DIR}/src/tests/*.*pp")
-    foreach(i RANGE 10)
-        set(_temp "${_temp}/*")
-        list(APPEND _test_glob_dirs "${PROJECT_SOURCE_DIR}/src${_temp}/tests/*.*pp")
-    endforeach()
-    set(_test_sources)
-    file(GLOB_RECURSE _test_sources ${_test_glob_dirs})
+    file(GLOB_RECURSE _src_and_test_files "${PROJECT_SOURCE_DIR}/src/*.cpp" "{PROJECT_SOURCE_DIR}/tests/*.cpp")
+    set(_test_sources ${_src_and_test_files})
+    list(FILTER _test_sources INCLUDE REGEX ".*/tests/.*pp")
 
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check_tests
                               CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
