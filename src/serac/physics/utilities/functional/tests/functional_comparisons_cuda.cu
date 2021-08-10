@@ -132,8 +132,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   // Set a random state to evaluate the residual
   mfem::ParGridFunction u_global(&fespace);
-  u_global = 1.;
-  //  u_global.Randomize();
+  u_global.Randomize();
 
   mfem::Vector U(fespace.TrueVSize());
   U.UseDevice(true);

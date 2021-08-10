@@ -511,8 +511,6 @@ public:
     }
 
     if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
-      // TODO: add support for gradient_matrix_kernel
-#if defined(__CUDACC__)
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
         serac::detail::ThreadExecutionConfiguration exec_config{.blocksize = 128};
 
@@ -530,7 +528,6 @@ public:
             serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT>(
             exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
       };
-#endif
     }
   }
 
