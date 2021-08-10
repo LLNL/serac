@@ -69,13 +69,16 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
+  mfem::Array<int> boundary_attrs(mesh.bdr_attributes.Max());
+  boundary_attrs = 1;
+
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{},
       [&](auto x, auto n, auto u) {
         tensor<double, dim> b{sin(x[0]), x[0] * x[1]};
         return x[0] * x[1] + dot(b, n) + rho * u;
       },
-      mesh);
+      mesh, boundary_attrs);
 
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
@@ -130,6 +133,9 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
+  mfem::Array<int> boundary_attrs(mesh.bdr_attributes.Max());
+  boundary_attrs = 1;
+
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{},
       [&]([[maybe_unused]] auto x, [[maybe_unused]] auto n, [[maybe_unused]] auto u) {
@@ -137,7 +143,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
         // tensor<double,dim> b{sin(x[0]), x[0] * x[1]};
         return x[0] * x[1] + /*dot(b, n) +*/ rho * u;
       },
-      mesh);
+      mesh, boundary_attrs);
 
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);

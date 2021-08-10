@@ -34,7 +34,7 @@ struct is_hcurl {
 };
 
 template <int p, int c>
-struct is_hcurl<Hcurl<p, c> > {
+struct is_hcurl<Hcurl<p, c>> {
   static constexpr bool value = true;
 };
 
@@ -140,6 +140,8 @@ public:
 
     my_output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
+    output_T_boundary_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
+
     dummy_.SetSize(trial_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
   }
 
@@ -176,7 +178,7 @@ public:
   }
 
   template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
+  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain, const mfem::Array<int>& attributes,
                            QuadratureData<qpt_data_type>& data = dummy_qdata)
   {
     // TODO: fix mfem::FaceGeometricFactors
@@ -196,8 +198,14 @@ public:
     // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-    boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
-                                     integrand, data);
+
+    mfem::Array<int> boundary_dofs;
+    test_space_->GetEssentialTrueDofs(attributes, boundary_dofs);
+
+    std::pair<BoundaryIntegral<test(trial)>, mfem::Array<int>> boundary_integral{
+        {num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{}, integrand, data}, {boundary_dofs}};
+
+    boundary_integrals_.emplace_back(std::move(boundary_integral));
   }
 
   /**
@@ -386,32 +394,36 @@ private:
       G_test_->MultTranspose(output_E_, output_L_);
     }
 
-    if (boundary_integrals_.size() > 0) {
-      G_trial_boundary_->Mult(input_L_, input_E_boundary_);
-
-      output_E_boundary_ = 0.0;
-      for (auto& integral : boundary_integrals_) {
-        if constexpr (op == Operation::Mult) {
-          integral.Mult(input_E_boundary_, output_E_boundary_);
-        }
-
-        if constexpr (op == Operation::GradientMult) {
-          integral.GradientMult(input_E_boundary_, output_E_boundary_);
-        }
-      }
-
-      output_L_boundary_ = 0.0;
-
-      // scatter-add to compute residuals on the local processor
-      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
-
-      output_L_ += output_L_boundary_;
-    }
-
     // scatter-add to compute global residuals
     P_test_->MultTranspose(output_L_, output_T);
 
     output_T.HostReadWrite();
+
+    if (boundary_integrals_.size() > 0) {
+      G_trial_boundary_->Mult(input_L_, input_E_boundary_);
+
+      for (auto& integral : boundary_integrals_) {
+        output_E_boundary_ = 0.0;
+
+        if constexpr (op == Operation::Mult) {
+          integral.first.Mult(input_E_boundary_, output_E_boundary_);
+        }
+
+        if constexpr (op == Operation::GradientMult) {
+          integral.first.GradientMult(input_E_boundary_, output_E_boundary_);
+        }
+
+        // scatter-add to compute residuals on the local processor
+        G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+
+        P_test_->MultTranspose(output_L_boundary_, output_T_boundary_);
+
+        for (int idx : integral.second) {
+          output_T(idx) += output_T_boundary_(idx);
+        }
+      }
+    }
+
     for (int i = 0; i < ess_tdof_list_.Size(); i++) {
       if constexpr (op == Operation::Mult) {
         output_T(ess_tdof_list_[i]) = 0.0;
@@ -462,6 +474,11 @@ private:
    * @brief The set of true DOF values, used as a scratchpad for @p operator()
    */
   mutable mfem::Vector my_output_T_;
+
+  /**
+   * @brief Scratch vector for accumulating true boundary integral dofs
+   */
+  mutable mfem::Vector output_T_boundary_;
 
   /**
    * @brief A working vector for @p GetGradient
@@ -522,12 +539,12 @@ private:
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<DomainIntegral<test(trial)> > domain_integrals_;
+  std::vector<DomainIntegral<test(trial)>> domain_integrals_;
 
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<BoundaryIntegral<test(trial)> > boundary_integrals_;
+  std::vector<std::pair<BoundaryIntegral<test(trial)>, mfem::Array<int>>> boundary_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
