@@ -202,10 +202,9 @@ public:
     mfem::Array<int> boundary_dofs;
     test_space_->GetEssentialTrueDofs(attributes, boundary_dofs);
 
-    std::pair<BoundaryIntegral<test(trial)>, mfem::Array<int>> boundary_integral{
-        {num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{}, integrand, data}, {boundary_dofs}};
-
-    boundary_integrals_.emplace_back(std::move(boundary_integral));
+    //boundary_integrals_.emplace_back(std::move(boundary_integral));
+    boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
+                                     integrand, boundary_dofs, data);
   }
 
   /**
@@ -402,15 +401,16 @@ private:
     if (boundary_integrals_.size() > 0) {
       G_trial_boundary_->Mult(input_L_, input_E_boundary_);
 
+      output_E_boundary_ = 0.0;
+      
       for (auto& integral : boundary_integrals_) {
-        output_E_boundary_ = 0.0;
 
         if constexpr (op == Operation::Mult) {
-          integral.first.Mult(input_E_boundary_, output_E_boundary_);
+          integral.Mult(input_E_boundary_, output_E_boundary_);
         }
 
         if constexpr (op == Operation::GradientMult) {
-          integral.first.GradientMult(input_E_boundary_, output_E_boundary_);
+          integral.GradientMult(input_E_boundary_, output_E_boundary_);
         }
 
         // scatter-add to compute residuals on the local processor
@@ -418,21 +418,24 @@ private:
 
         P_test_->MultTranspose(output_L_boundary_, output_T_boundary_);
 
-        for (int idx : integral.second) {
+        const mfem::Array<int>& dofs = integral.dofs();
+
+        for (auto idx : dofs) {
           output_T(idx) += output_T_boundary_(idx);
         }
       }
     }
 
-    for (int i = 0; i < ess_tdof_list_.Size(); i++) {
-      if constexpr (op == Operation::Mult) {
-        output_T(ess_tdof_list_[i]) = 0.0;
-      }
+    for (int i = 0; i < ess_tdof_list_.Size(); i++)
+      {
+        if constexpr (op == Operation::Mult) {
+          output_T(ess_tdof_list_[i]) = 0.0;
+        }
 
-      if constexpr (op == Operation::GradientMult) {
-        output_T(ess_tdof_list_[i]) = input_T(ess_tdof_list_[i]);
+        if constexpr (op == Operation::GradientMult) {
+          output_T(ess_tdof_list_[i]) = input_T(ess_tdof_list_[i]);
+        }
       }
-    }
   }
 
   /**
@@ -544,7 +547,9 @@ private:
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<std::pair<BoundaryIntegral<test(trial)>, mfem::Array<int>>> boundary_integrals_;
+  std::vector<BoundaryIntegral<test(trial)>> boundary_integrals_;
+
+  std::vector<mfem::Array<int>> boundary_dofs_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,

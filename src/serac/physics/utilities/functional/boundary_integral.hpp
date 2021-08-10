@@ -283,8 +283,8 @@ public:
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
-                   Dimension<dim>, lambda_type&& qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
-      : J_(J), X_(X), normals_(normals)
+                   Dimension<dim>, lambda_type&& qf, mfem::Array<int>& dofs, QuadratureData<qpt_data_type>& data = dummy_qdata)
+      : J_(J), X_(X), normals_(normals), dofs_(dofs)
 
   {
     constexpr auto geometry                      = supported_geometries[dim];
@@ -338,7 +338,9 @@ public:
    */
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
 
-private:
+  const mfem::Array<int>& dofs() const {return dofs_;} 
+
+private :
   /**
    * @brief Jacobians of the element transformations at all quadrature points
    */
@@ -353,6 +355,8 @@ private:
    * @brief physical coordinates of surface unit normals at all quadrature points
    */
   const mfem::Vector normals_;
+
+  mfem::Array<int> dofs_;
 
   /**
    * @brief Type-erased handle to evaluation kernel
