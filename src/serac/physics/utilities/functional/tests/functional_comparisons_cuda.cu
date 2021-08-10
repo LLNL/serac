@@ -399,13 +399,13 @@ TEST(thermal, 3D_quadratic) { functional_test(H1<2>{}, H1<2>{}, Dimension<3>{});
 TEST(thermal, 3D_cubic) { functional_test(H1<3>{}, H1<3>{}, Dimension<3>{}); }
 
 // TODO: There seems to be a calculation issue where Nans are produced for the Hcurl case?
-// TEST(hcurl, 2D_linear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }
-// TEST(hcurl, 2D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<2>{}); }
-// TEST(hcurl, 2D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<2>{}); }
+TEST(hcurl, 2D_linear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<2>{}); }
+TEST(hcurl, 2D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<2>{}); }
+TEST(hcurl, 2D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<2>{}); }
 
-// TEST(hcurl, 3D_linear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<3>{}); }
-// TEST(hcurl, 3D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
-// TEST(hcurl, 3D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
+TEST(hcurl, 3D_linear) { functional_test(Hcurl<1>{}, Hcurl<1>{}, Dimension<3>{}); }
+TEST(hcurl, 3D_quadratic) { functional_test(Hcurl<2>{}, Hcurl<2>{}, Dimension<3>{}); }
+TEST(hcurl, 3D_cubic) { functional_test(Hcurl<3>{}, Hcurl<3>{}, Dimension<3>{}); }
 
 TEST(elasticity, 2D_linear) { functional_test(H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
 TEST(elasticity, 2D_quadratic) { functional_test(H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
