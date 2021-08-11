@@ -39,6 +39,41 @@ struct is_hcurl<Hcurl<p, c>> {
 };
 
 /**
+ * @brief Get the degrees of freedom associated with the given attributes on the boundary
+ * @note This is required because GetEssentialTrueDofs does not work for L2 (DG) spaces
+ *
+ * @param pfes The parallel finite element space
+ * @param attributes The marker array of attributes. 1 indicates an attribute to include.
+ * @return The array of dofs active on the attribute boundary
+ */
+mfem::Array<int> GetBoundaryDofs(mfem::ParFiniteElementSpace& pfes, const mfem::Array<int>& attributes)
+{
+  mfem::Array<int> boundary_dofs;
+  mfem::Array<int> element_dofs;
+
+  for (int i = 0; i < pfes.GetNBE(); i++) {
+    const int boundary_attribute = pfes.GetMesh()->GetBdrAttribute(i);
+
+    if (attributes[boundary_attribute - 1] == 0) {
+      continue;
+    }
+
+    auto face_transformation = pfes.GetMesh()->GetBdrFaceTransformations(i);
+
+    if (face_transformation != nullptr) {
+      pfes.GetElementVDofs(face_transformation->Elem1No, element_dofs);
+    }
+
+    boundary_dofs.Append(element_dofs);
+  }
+
+  boundary_dofs.Sort();
+  boundary_dofs.Unique();
+
+  return boundary_dofs;
+}
+
+/**
  * @brief Right now, mfem doesn't have an implementation of GetFaceRestriction for Hcurl.
  *   This function exists to avoid calling that unimplemented case.
  */
@@ -199,10 +234,10 @@ public:
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
 
-    mfem::Array<int> boundary_dofs;
-    test_space_->GetEssentialTrueDofs(attributes, boundary_dofs);
+    // get the degrees of freedom associated with the boundary. Note that we can't use GetEssentialTrueDofs because it
+    // does not work for L2 (DG) spaces
+    auto boundary_dofs = GetBoundaryDofs(*test_space_, attributes);
 
-    //boundary_integrals_.emplace_back(std::move(boundary_integral));
     boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
                                      integrand, boundary_dofs, data);
   }
@@ -402,9 +437,8 @@ private:
       G_trial_boundary_->Mult(input_L_, input_E_boundary_);
 
       output_E_boundary_ = 0.0;
-      
-      for (auto& integral : boundary_integrals_) {
 
+      for (auto& integral : boundary_integrals_) {
         if constexpr (op == Operation::Mult) {
           integral.Mult(input_E_boundary_, output_E_boundary_);
         }
@@ -420,22 +454,22 @@ private:
 
         const mfem::Array<int>& dofs = integral.dofs();
 
+        // only accumulate the dofs on the active attribute dofs
         for (auto idx : dofs) {
           output_T(idx) += output_T_boundary_(idx);
         }
       }
     }
 
-    for (int i = 0; i < ess_tdof_list_.Size(); i++)
-      {
-        if constexpr (op == Operation::Mult) {
-          output_T(ess_tdof_list_[i]) = 0.0;
-        }
-
-        if constexpr (op == Operation::GradientMult) {
-          output_T(ess_tdof_list_[i]) = input_T(ess_tdof_list_[i]);
-        }
+    for (int i = 0; i < ess_tdof_list_.Size(); i++) {
+      if constexpr (op == Operation::Mult) {
+        output_T(ess_tdof_list_[i]) = 0.0;
       }
+
+      if constexpr (op == Operation::GradientMult) {
+        output_T(ess_tdof_list_[i]) = input_T(ess_tdof_list_[i]);
+      }
+    }
   }
 
   /**
