@@ -517,18 +517,16 @@ public:
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
         serac::detail::ThreadExecutionConfiguration exec_config{.blocksize = 128};
 
-        domain_integral::evaluation_kernel_cuda<
-            geometry, test_space, trial_space, Q,
-            serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT>(
+        domain_integral::evaluation_kernel_cuda<geometry, test_space, trial_space, Q,
+                                                serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT>(
             exec_config, U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
       };
 
       gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
         serac::detail::ThreadExecutionConfiguration exec_config{.blocksize = 128};
 
-        domain_integral::gradient_kernel_cuda<
-            geometry, test_space, trial_space, Q,
-            serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT>(
+        domain_integral::gradient_kernel_cuda<geometry, test_space, trial_space, Q,
+                                              serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT>(
             exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
       };
 #else

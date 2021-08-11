@@ -32,7 +32,7 @@ inline void displayLastCUDAErrorMessage(std::ostream& o, const char* success_str
  */
 enum ThreadExecutionPolicy
 {
-  THREAD_PER_ELEMENT_QUADRATURE_POINT,
+  THREAD_PER_QUADRATURE_POINT,
   THREAD_PER_ELEMENT
 };
 
@@ -47,10 +47,10 @@ struct ThreadExecutionConfiguration {
 
 namespace domain_integral {
 
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda, typename u_type,
-          typename r_type, typename J_type, typename X_type>
-__global__ void eval_cuda_element(const u_type u, r_type r, derivatives_type* derivatives_ptr, J_type J, X_type X,
-                                  int num_elements, lambda qf)
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
+          typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
+__global__ void eval_cuda_element(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
+                                  jacobian_type J, position_type X, int num_elements, lambda qf)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -78,10 +78,10 @@ __global__ void eval_cuda_element(const u_type u, r_type r, derivatives_type* de
   }  // e loop
 }
 
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda, typename u_type,
-          typename r_type, typename J_type, typename X_type>
-__global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type* derivatives_ptr, J_type J, X_type X,
-                                     int num_elements, lambda qf)
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
+          typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
+__global__ void eval_cuda_quadrature(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
+                                     jacobian_type J, position_type X, int num_elements, lambda qf)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -125,13 +125,6 @@ void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, 
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
   static constexpr int  dim        = dimension_of(g);
 
-  // Use the device (GPU)
-  X_.UseDevice(true);
-  J_.UseDevice(true);
-  U.UseDevice(true);
-  R = 0.;
-  R.UseDevice(true);
-
   // Note: Since we cannot call Reshape (__host__) within a kernel we pass in the resulting mfem::DeviceTensors which
   // should be pointing to Device pointers via .Read() and .ReadWrite()
 
@@ -145,7 +138,7 @@ void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, 
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
-  if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT) {
+  if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
     eval_cuda_quadrature<g, test, trial, Q>
         <<<blocks_quadrature_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
@@ -160,9 +153,9 @@ void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, 
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 }
 
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename du_type,
-          typename dr_type>
-__global__ void gradient_cuda_element(const du_type du, dr_type dr, derivatives_type* derivatives_ptr,
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
+          typename dresidual_type>
+__global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr, derivatives_type* derivatives_ptr,
                                       const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
   using test_element          = finite_element<g, test>;
@@ -191,9 +184,9 @@ __global__ void gradient_cuda_element(const du_type du, dr_type dr, derivatives_
   }
 }
 
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename du_type,
-          typename dr_type>
-__global__ void gradient_cuda_quadrature(const du_type du, dr_type dr, derivatives_type* derivatives_ptr,
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
+          typename dresidual_type>
+__global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type dr, derivatives_type* derivatives_ptr,
                                          const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
   using test_element          = finite_element<g, test>;
@@ -235,11 +228,6 @@ void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, co
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
   static constexpr int  dim        = dimension_of(g);
 
-  // Use the device (GPU)
-  // J_.UseDevice(true);
-  // dU.UseDevice(true);
-  // dR.UseDevice(true);
-
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto J  = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
@@ -250,7 +238,7 @@ void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, co
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
   // call gradient_cuda
-  if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT) {
+  if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
     gradient_cuda_quadrature<g, test, trial, Q, derivatives_type>
         <<<blocks_quadrature_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
@@ -264,10 +252,6 @@ void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, co
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
   dR.HostRead();
-
-  // J_.UseDevice(false);
-  // dU.UseDevice(false);
-  // dR.UseDevice(false);
 }
 
 }  // namespace domain_integral

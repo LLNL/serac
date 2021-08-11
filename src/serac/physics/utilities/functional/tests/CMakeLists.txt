@@ -50,38 +50,12 @@ endforeach()
 if(ENABLE_CUDA)
 
     set(functional_tests_cuda 
-        tensor_unit_tests_cuda.cu )
+        tensor_unit_tests_cuda.cu 
+        functional_comparisons_cuda.cu
+       )
 
     serac_add_tests( SOURCES ${functional_tests_cuda}
                      DEPENDS_ON gtest serac_functional ${functional_depends} cuda)
-
-    # Due to GPU bug we build the test and then create ctests for each individual gtest
-    set(functional_comparisons_cuda_tests
-        thermal.2D_linear
-        thermal.2D_quadratic
-        thermal.2D_cubic
-        thermal.3D_linear
-        thermal.3D_quadratic
-        thermal.3D_cubic
-        elasticity.2D_linear
-        elasticity.2D_quadratic
-        elasticity.2D_cubic
-        elasticity.3D_linear
-        elasticity.3D_quadratic
-        elasticity.3D_cubic)
-
-    blt_add_executable(NAME        functional_comparisons_cuda
-                       SOURCES     functional_comparisons_cuda.cu
-                       OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                       DEPENDS_ON  gtest serac_functional ${functional_depends} cuda
-                       FOLDER      serac/tests )
-
-    foreach(kernel_test ${functional_comparisons_cuda_tests})
-        blt_add_test(NAME          functional_comparisons_cuda.${kernel_test}
-                     COMMAND       functional_comparisons_cuda --gtest_filter=${kernel_test}
-                     NUM_MPI_TASKS 2)
-    endforeach()
-
 
     # FIXME: Different linker is used depending on whether axom is a dependency??
     # clang directly (with axom) or the MPI wrapper (without axom)
