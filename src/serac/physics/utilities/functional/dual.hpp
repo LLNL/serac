@@ -201,7 +201,7 @@ constexpr auto& operator-=(dual<gradient_type>& a, double b)
 template <typename gradient_type>
 auto abs(dual<gradient_type> x)
 {
-  return (x.value > 0) ? x : -x;
+  return (x.value >= 0) ? x : -x;
 }
 
 /** @brief implementation of square root for dual numbers */
