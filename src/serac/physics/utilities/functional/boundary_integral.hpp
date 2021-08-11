@@ -283,9 +283,9 @@ public:
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
-                   Dimension<dim>, lambda_type&& qf, mfem::Array<int>& dofs,
+                   Dimension<dim>, lambda_type&& qf, const mfem::Array<int>& attr,
                    QuadratureData<qpt_data_type>& data = dummy_qdata)
-      : J_(J), X_(X), normals_(normals), dofs_(dofs)
+      : J_(J), X_(X), normals_(normals), attribute_markers_(attr)
 
   {
     constexpr auto geometry                      = supported_geometries[dim];
@@ -339,7 +339,7 @@ public:
    */
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
 
-  const mfem::Array<int>& dofs() const { return dofs_; }
+  const mfem::Array<int>& GetAttributeMarkers() const { return attribute_markers_; }
 
 private:
   /**
@@ -357,7 +357,7 @@ private:
    */
   const mfem::Vector normals_;
 
-  mfem::Array<int> dofs_;
+  const mfem::Array<int> attribute_markers_;
 
   /**
    * @brief Type-erased handle to evaluation kernel

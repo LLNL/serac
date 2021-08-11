@@ -39,41 +39,6 @@ struct is_hcurl<Hcurl<p, c>> {
 };
 
 /**
- * @brief Get the degrees of freedom associated with the given attributes on the boundary
- * @note This is required because GetEssentialTrueDofs does not work for L2 (DG) spaces
- *
- * @param pfes The parallel finite element space
- * @param attributes The marker array of attributes. 1 indicates an attribute to include.
- * @return The array of dofs active on the attribute boundary
- */
-mfem::Array<int> GetBoundaryDofs(mfem::ParFiniteElementSpace& pfes, const mfem::Array<int>& attributes)
-{
-  mfem::Array<int> boundary_dofs;
-  mfem::Array<int> element_dofs;
-
-  for (int i = 0; i < pfes.GetNBE(); i++) {
-    const int boundary_attribute = pfes.GetMesh()->GetBdrAttribute(i);
-
-    if (attributes[boundary_attribute - 1] == 0) {
-      continue;
-    }
-
-    auto face_transformation = pfes.GetMesh()->GetBdrFaceTransformations(i);
-
-    if (face_transformation != nullptr) {
-      pfes.GetElementVDofs(face_transformation->Elem1No, element_dofs);
-    }
-
-    boundary_dofs.Append(element_dofs);
-  }
-
-  boundary_dofs.Sort();
-  boundary_dofs.Unique();
-
-  return boundary_dofs;
-}
-
-/**
  * @brief Right now, mfem doesn't have an implementation of GetFaceRestriction for Hcurl.
  *   This function exists to avoid calling that unimplemented case.
  */
@@ -175,8 +140,6 @@ public:
 
     my_output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
 
-    output_T_boundary_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
-
     dummy_.SetSize(trial_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
   }
 
@@ -234,12 +197,8 @@ public:
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
 
-    // get the degrees of freedom associated with the boundary. Note that we can't use GetEssentialTrueDofs because it
-    // does not work for L2 (DG) spaces
-    auto boundary_dofs = GetBoundaryDofs(*test_space_, attributes);
-
     boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
-                                     integrand, boundary_dofs, data);
+                                     integrand, attributes, data);
   }
 
   /**
@@ -447,18 +406,25 @@ private:
           integral.GradientMult(input_E_boundary_, output_E_boundary_);
         }
 
+        int dofs_per_boundary_element = output_E_boundary_.Size() / test_space_->GetNBE();
+
+        for (int i = 0; i < test_space_->GetNBE(); i++) {
+          const int boundary_attribute = test_space_->GetMesh()->GetBdrAttribute(i);
+
+          if (integral.GetAttributeMarkers()[boundary_attribute - 1] == 0) {
+            for (int dof = 0; dof < dofs_per_boundary_element; ++dof) {
+              output_E_boundary_(dofs_per_boundary_element * i + dof) = 0.0;
+            }
+          }
+        }
+
         // scatter-add to compute residuals on the local processor
         G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
 
-        P_test_->MultTranspose(output_L_boundary_, output_T_boundary_);
-
-        const mfem::Array<int>& dofs = integral.dofs();
-
-        // only accumulate the dofs on the active attribute dofs
-        for (auto idx : dofs) {
-          output_T(idx) += output_T_boundary_(idx);
-        }
+        output_L_ += output_L_boundary_;
       }
+
+      P_test_->MultTranspose(output_L_boundary_, output_T);
     }
 
     for (int i = 0; i < ess_tdof_list_.Size(); i++) {
@@ -511,11 +477,6 @@ private:
    * @brief The set of true DOF values, used as a scratchpad for @p operator()
    */
   mutable mfem::Vector my_output_T_;
-
-  /**
-   * @brief Scratch vector for accumulating true boundary integral dofs
-   */
-  mutable mfem::Vector output_T_boundary_;
 
   /**
    * @brief A working vector for @p GetGradient
@@ -582,8 +543,6 @@ private:
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
   std::vector<BoundaryIntegral<test(trial)>> boundary_integrals_;
-
-  std::vector<mfem::Array<int>> boundary_dofs_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,

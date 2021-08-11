@@ -37,6 +37,13 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
+  mfem::Array<int> boundary_attrs(mesh.bdr_attributes.Max());
+  boundary_attrs    = 0;
+  boundary_attrs[0] = 1;
+
+  fmt::print("marker: ");
+  boundary_attrs.Print();
+
   mfem::ParLinearForm             f(&fespace);
   mfem::FunctionCoefficient       scalar_function([&](const mfem::Vector& coords) { return coords(0) * coords(1); });
   mfem::VectorFunctionCoefficient vector_function(dim, [&](const mfem::Vector& coords, mfem::Vector& output) {
@@ -45,14 +52,14 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
     output[1] = coords[0] * coords[1];
   });
 
-  f.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(scalar_function, 2, 0));
-  f.AddBoundaryIntegrator(new mfem::BoundaryNormalLFIntegrator(vector_function, 2, 0));
+  f.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(scalar_function, 2, 0), boundary_attrs);
+  f.AddBoundaryIntegrator(new mfem::BoundaryNormalLFIntegrator(vector_function, 2, 0), boundary_attrs);
   f.Assemble();
   std::unique_ptr<mfem::HypreParVector> F(f.ParallelAssemble());
 
   mfem::ParBilinearForm     B(&fespace);
   mfem::ConstantCoefficient density(rho);
-  B.AddBoundaryIntegrator(new mfem::BoundaryMassIntegrator(density));
+  B.AddBoundaryIntegrator(new mfem::BoundaryMassIntegrator(density), boundary_attrs);
   B.Assemble(0);
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
@@ -68,9 +75,6 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   using trial_space = decltype(trial);
 
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
-
-  mfem::Array<int> boundary_attrs(mesh.bdr_attributes.Max());
-  boundary_attrs = 1;
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{},
@@ -102,9 +106,13 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   auto                        fec = mfem::L2_FECollection(p, dim, mfem::BasisType::GaussLobatto);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
+  mfem::Array<int> boundary_attrs(mesh.bdr_attributes.Max());
+  boundary_attrs    = 1;
+  boundary_attrs[0] = 1;
+
   mfem::ParLinearForm       f(&fespace);
   mfem::FunctionCoefficient scalar_function([&](const mfem::Vector& coords) { return coords(0) * coords(1); });
-  f.AddBdrFaceIntegrator(new mfem::BoundaryLFIntegrator(scalar_function, 2, 0));
+  f.AddBdrFaceIntegrator(new mfem::BoundaryLFIntegrator(scalar_function, 2, 0), boundary_attrs);
 
   // mfem is missing the implementation of BoundaryNormalLFIntegrator for L2
   // mfem::VectorFunctionCoefficient vector_function(dim, [&](const mfem::Vector& coords, mfem::Vector & output) {
@@ -117,7 +125,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   mfem::ParBilinearForm     B(&fespace);
   mfem::ConstantCoefficient density(rho);
-  B.AddBdrFaceIntegrator(new mfem::BoundaryMassIntegrator(density));
+  B.AddBdrFaceIntegrator(new mfem::BoundaryMassIntegrator(density), boundary_attrs);
   B.Assemble(0);
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
@@ -132,9 +140,6 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   using trial_space = decltype(trial);
 
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
-
-  mfem::Array<int> boundary_attrs(mesh.bdr_attributes.Max());
-  boundary_attrs = 1;
 
   residual.AddBoundaryIntegral(
       Dimension<dim - 1>{},
@@ -180,10 +185,10 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 1;
+  int serial_refinement   = 0;
   int parallel_refinement = 0;
 
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/square.mesh";
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
