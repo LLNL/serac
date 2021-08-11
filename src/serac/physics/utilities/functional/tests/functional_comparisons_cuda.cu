@@ -421,9 +421,11 @@ int main(int argc, char* argv[])
 
   auto [num_procs, myid] = serac::initialize(argc, argv);
 
-  const char *device_config = "cuda";
+  const char*  device_config = "cuda";
   mfem::Device device(device_config);
-  if (myid == 0) { device.Print(); }
+  if (myid == 0) {
+    device.Print();
+  }
 
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&serial_refinement, "-r", "--ref", "");

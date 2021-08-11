@@ -24,6 +24,8 @@
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
 #include "serac/physics/utilities/functional/domain_integral_shared.hpp"
 
+#include "serac/infrastructure/logger.hpp"
+
 #if defined(__CUDACC__)
 #include "serac/physics/utilities/functional/domain_integral_cuda.cuh"
 #endif
@@ -511,6 +513,7 @@ public:
     }
 
     if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
+#if defined(__CUDACC__)
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
         serac::detail::ThreadExecutionConfiguration exec_config{.blocksize = 128};
 
@@ -528,6 +531,9 @@ public:
             serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT_QUADRATURE_POINT>(
             exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
       };
+#else
+      SLIC_ERROR_ROOT("serac::gpu_policy not supported on non-cuda platforms at the moment");
+#endif
     }
   }
 

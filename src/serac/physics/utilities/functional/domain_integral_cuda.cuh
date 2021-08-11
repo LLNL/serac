@@ -80,7 +80,8 @@ __global__ void eval_cuda_element(const u_type u, r_type r, derivatives_type* de
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda, typename u_type,
           typename r_type, typename J_type, typename X_type>
-__global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type* derivatives_ptr, J_type J, X_type X, int num_elements, lambda qf)
+__global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type* derivatives_ptr, J_type J, X_type X,
+                                     int num_elements, lambda qf)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -112,7 +113,7 @@ __global__ void eval_cuda_quadrature(const u_type u, r_type r, derivatives_type*
 
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
           typename derivatives_type, typename lambda>
-void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector & U, mfem::Vector & R,
+void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& U, mfem::Vector& R,
                             derivatives_type* derivatives_ptr, const mfem::Vector& J_, const mfem::Vector& X_,
                             int num_elements, lambda qf)
 {
@@ -140,7 +141,7 @@ void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, 
   auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
-  
+
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
 
@@ -157,7 +158,6 @@ void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, 
 
   cudaDeviceSynchronize();
   serac::detail::displayLastCUDAErrorMessage(std::cout);
-  
 }
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename du_type,
