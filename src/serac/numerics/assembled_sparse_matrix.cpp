@@ -18,21 +18,21 @@ struct forbidden_restriction {
 
 /**
  * @brief Get the element restriction offsets from MFEM
- * 
+ *
  * @return The element restriction offsets
  */
 mfem::Array<int>& ElementRestrictionOffsets(mfem::ElementRestriction&);
 
 /**
  * @brief Get the element restriction indices from MFEM
- * 
+ *
  * @return The element restriction indices
  */
 mfem::Array<int>& ElementRestrictionIndices(mfem::ElementRestriction&);
 
 /**
  * @brief Get the element restriction map from MFEM
- * 
+ *
  * @return The element restriction map
  */
 mfem::Array<int>& ElementRestrictionGatherMap(mfem::ElementRestriction&);

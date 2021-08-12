@@ -71,7 +71,7 @@ public:
   /**
    * @brief Perform the sync action
    */
-  virtual void sync()     = 0;
+  virtual void sync() = 0;
 };
 
 /**
@@ -147,7 +147,7 @@ public:
 
   /**
    * @brief Get the underlying MFEM quadrature function
-   * 
+   *
    * @return The underlying quadrature function MFEM-based data container
    */
   mfem::QuadratureFunction& QFunc() { return detail::retrieve(qfunc_); }

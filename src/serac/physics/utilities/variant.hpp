@@ -221,14 +221,14 @@ struct variant {
 
   /**
    * @brief Default constructor
-   * @note These are needed explicitly so the variant(T&&) doesn't match first 
+   * @note These are needed explicitly so the variant(T&&) doesn't match first
    */
   constexpr variant(const variant&) = default;
 
   /**
    * @brief Default constructor
    */
-  constexpr variant(variant&&)      = default;
+  constexpr variant(variant&&) = default;
 
   /**
    * @brief "Parameterized" constructor with which a value can be assigned
@@ -255,14 +255,14 @@ struct variant {
   /**
    * @brief Default assignment operator
    * @note These are needed explicitly so the operator=(T&&) doesn't match first
-   * 
+   *
    * @return The modified variant
    */
   constexpr variant& operator=(const variant&) = default;
 
-    /**
+  /**
    * @brief Default assignment operator
-   * 
+   *
    * @return The modified variant
    */
   constexpr variant& operator=(variant&&) = default;

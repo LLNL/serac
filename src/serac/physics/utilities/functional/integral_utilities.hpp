@@ -210,9 +210,6 @@ struct lambda_argument<H1<p, c>, geometry_dim, spatial_dim> {
   using type = reduced_tensor<double, c>;
 };
 
-// 
-// 
-
 /**
  * @overload
  * @note specialization for an H1 space with polynomial order p, and c components
