@@ -46,7 +46,7 @@ quartz_release:
 .full_build_on_quartz:
   stage: build
   variables:
-    ALLOC_COMMAND: "srun -p pdebug -A ${ALLOC_BANK} -t 45 -N 1"
+    ALLOC_COMMAND: "srun -p pdebug -A ${ALLOC_BANK} -t 45 -N 1 --interactive"
   extends: [.full_build_script, .on_quartz, .full_workflow]
   needs: []
   before_script:
