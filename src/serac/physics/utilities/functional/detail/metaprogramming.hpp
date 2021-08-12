@@ -119,7 +119,9 @@ inline constexpr void for_constexpr(lambda&& f)
   detail::for_constexpr(f, std::make_integer_sequence<int, n>{}...);
 }
 
-// sam's templates for undoing for_constexpr for faster compile times
+/**
+ * @overload
+ */
 template <int n1, typename lambda>
 void for_loop(lambda f)
 {
@@ -128,6 +130,9 @@ void for_loop(lambda f)
   }
 }
 
+/**
+ * @overload
+ */
 template <int n1, int n2, typename lambda>
 void for_loop(lambda f)
 {
@@ -138,6 +143,9 @@ void for_loop(lambda f)
   }
 }
 
+/**
+ * @overload
+ */
 template <int n1, int n2, int n3, typename lambda>
 void for_loop(lambda f)
 {
@@ -150,6 +158,9 @@ void for_loop(lambda f)
   }
 }
 
+/**
+ * @overload
+ */
 template <int n1, int n2, int n3, int n4, typename lambda>
 void for_loop(lambda f)
 {
@@ -164,6 +175,9 @@ void for_loop(lambda f)
   }
 }
 
+/**
+ * @overload
+ */
 template <int n1, int n2, int n3, int n4, int n5, typename lambda>
 void for_loop(lambda f)
 {
@@ -180,6 +194,9 @@ void for_loop(lambda f)
   }
 }
 
+/**
+ * @overload
+ */
 template <int n1, int n2, int n3, int n4, int n5, int n6, typename lambda>
 void for_loop(lambda f)
 {

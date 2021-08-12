@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file intergal_utilities.hpp
+ * @file integral_utilities.hpp
  *
  * @brief this file contains functions and tools used by both domain_integral.hpp and boundary_integral.hpp
  */
@@ -173,41 +173,77 @@ struct get_trial_space<test_space(trial_space)> {
 template <typename space, int geometry_dim, int spatial_dim>
 struct lambda_argument;
 
-// specialization for an H1 space with polynomial order p, and c components
+/**
+ * @overload
+ * @note specialization for an H1 space with polynomial order p, and c components
+ */
 template <int p, int c, int dim>
 struct lambda_argument<H1<p, c>, dim, dim> {
+  /**
+   * @brief The arguments for the lambda function
+   */
   using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
-// specialization for an L2 space with polynomial order p, and c components
+/**
+ * @overload
+ * @note specialization for an L2 space with polynomial order p, and c components
+ */
 template <int p, int c, int dim>
 struct lambda_argument<L2<p, c>, dim, dim> {
+  /**
+   * @brief The arguments for the lambda function
+   */
   using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
-// specialization for an H1 space with polynomial order p, and c components
-// evaluated in a line integral or surface integral. Note: only values are provided in this case
+/**
+ * @overload
+ * @note specialization for an H1 space with polynomial order p, and c components
+ *       evaluated in a line integral or surface integral. Note: only values are provided in this case
+ */
 template <int p, int c, int geometry_dim, int spatial_dim>
 struct lambda_argument<H1<p, c>, geometry_dim, spatial_dim> {
+  /**
+   * @brief The arguments for the lambda function
+   */
   using type = reduced_tensor<double, c>;
 };
 
-// specialization for an H1 space with polynomial order p, and c components
-// evaluated in a line integral or surface integral. Note: only values are provided in this case
+/**
+ * @overload
+ * @note specialization for an H1 space with polynomial order p, and c components
+ *       evaluated in a line integral or surface integral. Note: only values are provided in this case
+ */
 template <int p, int c, int geometry_dim, int spatial_dim>
 struct lambda_argument<L2<p, c>, geometry_dim, spatial_dim> {
+  /**
+   * @brief The arguments for the lambda function
+   */
   using type = reduced_tensor<double, c>;
 };
 
-// specialization for an Hcurl space with polynomial order p in 2D
+/**
+ * @overload
+ * @note specialization for an Hcurl space with polynomial order p in 2D
+ */
 template <int p>
 struct lambda_argument<Hcurl<p>, 2, 2> {
+  /**
+   * @brief The arguments for the lambda function
+   */
   using type = std::tuple<tensor<double, 2>, double>;
 };
 
-// specialization for an Hcurl space with polynomial order p in 3D
+/**
+ * @overload
+ * @note specialization for an Hcurl space with polynomial order p in 3D
+ */
 template <int p>
 struct lambda_argument<Hcurl<p>, 3, 3> {
+  /**
+   * @brief The arguments for the lambda function
+   */
   using type = std::tuple<tensor<double, 3>, tensor<double, 3>>;
 };
 
@@ -220,12 +256,21 @@ struct lambda_argument<Hcurl<p>, 3, 3> {
  */
 template <typename lambda_type, typename x_t, typename u_du_t, typename qpt_data_type, typename SFINAE = void>
 struct qf_result {
+  /**
+   * @brief The type of the quadrature function result
+   */
   using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>()))>;
 };
 
+/**
+ * @overload
+ */
 template <typename lambda_type, typename x_t, typename u_du_t, typename qpt_data_type>
 struct qf_result<lambda_type, x_t, u_du_t, qpt_data_type, std::enable_if_t<!std::is_same_v<qpt_data_type, void>>> {
-  // Expecting that qf lambdas take an lvalue reference to a state
+  /**
+   * @brief The type of the quadrature function result
+   * @note Expecting that qf lambdas take an lvalue reference to a state
+   */
   using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>())),
                                     std::add_lvalue_reference_t<qpt_data_type>>;
 };
