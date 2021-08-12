@@ -24,8 +24,6 @@
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
 #include "serac/physics/utilities/functional/domain_integral_shared.hpp"
 
-#include "serac/infrastructure/logger.hpp"
-
 #if defined(__CUDACC__)
 #include "serac/physics/utilities/functional/domain_integral_cuda.cuh"
 #endif
@@ -530,7 +528,7 @@ public:
             exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
       };
 #else
-      SLIC_ERROR_ROOT("serac::gpu_policy not supported on non-cuda platforms at the moment");
+      #error "serac::gpu_policy not supported on non-cuda platforms at the moment"
 #endif
     }
   }

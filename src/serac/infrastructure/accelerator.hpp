@@ -28,8 +28,8 @@
  * @brief Macro that toggles between decorating a function for host and device or noop's for non-accelated builds.
  */
 #define SERAC_HOST_DEVICE
-#define SERAC_DEVICE
 #define SERAC_HOST
+#define SERAC_DEVICE
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 #endif
 

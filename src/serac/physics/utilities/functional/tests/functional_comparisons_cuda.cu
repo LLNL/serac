@@ -9,6 +9,8 @@
 
 #include "mfem.hpp"
 
+#include <gtest/gtest.h>
+
 #include "axom/slic/core/SimpleLogger.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/serac_config.hpp"
@@ -17,7 +19,6 @@
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"
-#include <gtest/gtest.h>
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
 #include "serac/numerics/mesh_utils_base.hpp"
