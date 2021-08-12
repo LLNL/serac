@@ -109,6 +109,9 @@ struct variant_storage {
   ~variant_storage() { clear(); }
 };
 
+/**
+ * @overload
+ */
 template <typename T0, typename T1>
 struct variant_storage<T0, T1,
                        std::enable_if_t<std::is_trivially_destructible_v<T0> && std::is_trivially_destructible_v<T1>>> {
@@ -117,7 +120,13 @@ struct variant_storage<T0, T1,
    */
   int index_ = 0;
   union {
+    /**
+     * @brief The storage for the first data type
+     */
     T0 t0_;
+    /**
+     * @brief The storage for the second data type
+     */
     T1 t1_;
   };
 
@@ -142,6 +151,9 @@ struct variant_storage<T0, T1,
 template <typename T, typename T0, typename T1>
 struct is_variant_assignable {
   // FIXME: Is having just the is_assignable good enough?
+  /**
+   * @brief If T can be assigned to the variant type
+   */
   constexpr static bool value = std::is_same_v<std::decay_t<T>, T0> || std::is_assignable_v<T0, T> ||
                                 std::is_same_v<std::decay_t<T>, T1> || std::is_assignable_v<T1, T>;
 };
@@ -160,13 +172,29 @@ struct is_variant_assignable {
 template <int I, typename T0, typename T1>
 struct variant_alternative;
 
+/**
+ * @brief Obtains the type at index 0 of a variant<T0, T1>
+ * @tparam T0 The first member type of the variant
+ * @tparam T1 The second member type of the variant
+ */
 template <typename T0, typename T1>
 struct variant_alternative<0, T0, T1> {
+  /**
+   * @brief The type of the first member
+   */
   using type = T0;
 };
 
+/**
+ * @brief Obtains the type at index 1 of a variant<T0, T1>
+ * @tparam T0 The first member type of the variant
+ * @tparam T1 The second member type of the variant
+ */
 template <typename T0, typename T1>
 struct variant_alternative<1, T0, T1> {
+  /**
+   * @brief The type of the second member
+   */
   using type = T1;
 };
 
@@ -191,8 +219,15 @@ struct variant {
    */
   constexpr variant() = default;
 
-  // These are needed explicitly so the variant(T&&) doesn't match first
+  /**
+   * @brief Default constructor
+   * @note These are needed explicitly so the variant(T&&) doesn't match first 
+   */
   constexpr variant(const variant&) = default;
+
+  /**
+   * @brief Default constructor
+   */
   constexpr variant(variant&&)      = default;
 
   /**
@@ -217,8 +252,19 @@ struct variant {
     }
   }
 
-  // These are needed explicitly so the operator=(T&&) doesn't match first
+  /**
+   * @brief Default assignment operator
+   * @note These are needed explicitly so the operator=(T&&) doesn't match first
+   * 
+   * @return The modified variant
+   */
   constexpr variant& operator=(const variant&) = default;
+
+    /**
+   * @brief Default assignment operator
+   * 
+   * @return The modified variant
+   */
   constexpr variant& operator=(variant&&) = default;
 
   /**
@@ -257,7 +303,6 @@ struct variant {
   /**
    * @brief Returns the variant member at the provided index
    * @tparam I The index of the element to retrieve
-   * @param[in] v The variant to return the element of
    * @see std::variant::get
    */
   template <int I>

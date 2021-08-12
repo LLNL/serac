@@ -4,7 +4,7 @@
 
 namespace detail {
 /**
- * We'd like to access the protected offset, indices, and gatherMap variables from mfem::ElementRestriction
+ * @note We'd like to access the protected offset, indices, and gatherMap variables from mfem::ElementRestriction
  * to compute our sparsity patterns in a manner consistent with MFEM.
  * In order to do that, we use the following template tricks.
  * Here's an article that explains the trick being used: https://accu.org/journals/overload/28/156/harrison_2776/
@@ -16,8 +16,25 @@ struct forbidden_restriction {
   friend mfem::Array<int>& ElementRestrictionGatherMap(mfem::ElementRestriction& from) { return from.*gatherV; }
 };
 
+/**
+ * @brief Get the element restriction offsets from MFEM
+ * 
+ * @return The element restriction offsets
+ */
 mfem::Array<int>& ElementRestrictionOffsets(mfem::ElementRestriction&);
+
+/**
+ * @brief Get the element restriction indices from MFEM
+ * 
+ * @return The element restriction indices
+ */
 mfem::Array<int>& ElementRestrictionIndices(mfem::ElementRestriction&);
+
+/**
+ * @brief Get the element restriction map from MFEM
+ * 
+ * @return The element restriction map
+ */
 mfem::Array<int>& ElementRestrictionGatherMap(mfem::ElementRestriction&);
 
 template struct forbidden_restriction<&mfem::ElementRestriction::offsets, &mfem::ElementRestriction::indices,
