@@ -10,13 +10,16 @@ blt_list_append( TO functional_depends ELEMENTS caliper IF SERAC_USE_CALIPER )
 
 # Add the library first
 set(functional_headers
-    functional.hpp
-    tensor.hpp
+    boundary_integral.hpp
+    domain_integral.hpp
     dual.hpp
-    tuple_arithmetic.hpp
+    finite_element.hpp
+    functional.hpp
+    integral_utilities.hpp
     polynomials.hpp
     quadrature.hpp
-    finite_element.hpp
+    tensor.hpp
+    tuple_arithmetic.hpp
     )
 
 set(functional_detail_headers

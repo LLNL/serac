@@ -69,18 +69,24 @@ macro(serac_add_code_checks)
 
 
     set(_src_sources)
-    file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp")
+    file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp" "src/*.inl")
+    list(FILTER _src_sources EXCLUDE REGEX ".*/tests/.*pp")
 
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check
                               CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*"
                               SRC_FILES         ${_src_sources})
 
-    set(_test_sources)
-    file(GLOB_RECURSE _test_sources "tests/*.cpp" "tests/*.hpp")
+    # Create list of recursive test directory glob expressions
+    # NOTE: GLOB operator ** did not appear to be supported by cmake and did not recursively find test subdirectories
+    # NOTE: Do not include all directories at root (for example: blt)
+
+    file(GLOB_RECURSE _test_sources "${PROJECT_SOURCE_DIR}/src/*.cpp" "{PROJECT_SOURCE_DIR}/tests/*.cpp")
+    list(FILTER _test_sources INCLUDE REGEX ".*/tests/.*pp")
 
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check_tests
                               CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
                               SRC_FILES         ${_test_sources})
+                                  
     if (ENABLE_COVERAGE)
         blt_add_code_coverage_target(NAME   ${arg_PREFIX}_coverage
                                      RUNNER ${CMAKE_MAKE_PROGRAM} test
