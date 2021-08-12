@@ -378,7 +378,7 @@ public:
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
    * problem with respect to the bulk modulus
    *
-   * @param shear_space The finite element space used to parameterize the bulk modulus
+   * @param bulk_space The finite element space used to parameterize the bulk modulus
    * @return The sensitivity with respect to the bulk modulus
    */
   virtual mfem::ParLinearForm& bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space);
