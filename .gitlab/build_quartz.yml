@@ -39,7 +39,7 @@ quartz_release:
 .src_build_on_quartz:
   stage: build
   variables:
-    ALLOC_COMMAND: "srun -p pdebug -A ${ALLOC_BANK} -t 15 -N 1 ${ASSIGN_ID}"
+    ALLOC_COMMAND: "srun -p pdebug -A ${ALLOC_BANK} -t 15 -N 1 --interactive ${ASSIGN_ID}"
   extends: [.src_build_script, .on_quartz, .src_workflow]
   needs: [quartz_allocate]
 
