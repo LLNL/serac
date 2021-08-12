@@ -528,7 +528,7 @@ public:
             exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
       };
 #else
-      #error "serac::gpu_policy not supported on non-cuda platforms at the moment"
+#error "serac::gpu_policy not supported on non-cuda platforms at the moment"
 #endif
     }
   }

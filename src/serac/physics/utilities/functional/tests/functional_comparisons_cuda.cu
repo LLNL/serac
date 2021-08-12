@@ -35,8 +35,8 @@ constexpr bool                 verbose = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-std::map<int, std::string> meshfiles = {{2, SERAC_REPO_DIR "/data/meshes/star.mesh"},
-                                        {3, SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"}};
+const std::map<int, std::string> meshfiles = {{2, SERAC_REPO_DIR "/data/meshes/star.mesh"},
+                                              {3, SERAC_REPO_DIR "/data/meshes/beam-hex.mesh"}};
 
 static constexpr double a = 1.7;
 static constexpr double b = 2.1;
