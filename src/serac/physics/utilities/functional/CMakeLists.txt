@@ -10,13 +10,19 @@ blt_list_append( TO functional_depends ELEMENTS caliper IF SERAC_USE_CALIPER )
 
 # Add the library first
 set(functional_headers
-    functional.hpp
-    tensor.hpp
+    boundary_integral.hpp
+    domain_integral.hpp
     dual.hpp
-    tuple_arithmetic.hpp
+    finite_element.hpp
+    functional.hpp
+    integral_utilities.hpp
     polynomials.hpp
     quadrature.hpp
-    finite_element.hpp
+    tensor.hpp
+    tuple_arithmetic.hpp
+    )
+
+set(functional_detail_headers
     detail/hexahedron_H1.inl
     detail/hexahedron_Hcurl.inl
     detail/hexahedron_L2.inl
@@ -31,18 +37,18 @@ set(functional_headers
 
 blt_add_library(
       NAME        serac_functional
-      HEADERS     ${functional_headers}
+      HEADERS     ${functional_headers} ${functional_detail_headers}
       DEPENDS_ON  ${functional_depends}
       )
 
 
 install(FILES ${functional_headers} DESTINATION include/serac/physics/utilities/functional )
+install(FILES ${functional_detail_headers} DESTINATION include/serac/physics/utilities/functional/detail )
 
 install(TARGETS              serac_functional
         EXPORT               serac-targets
         DESTINATION          lib
         )
-
 
 if(ENABLE_TESTS)
    add_subdirectory(tests)

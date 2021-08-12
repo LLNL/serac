@@ -4,6 +4,10 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+
 set(numerics_headers
     array_4D.hpp
     expr_template_impl.hpp

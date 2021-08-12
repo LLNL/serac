@@ -28,6 +28,8 @@ if(MFEM_FOUND)
     # MFEM was built with CMake so use that config file
     message(STATUS "Using MFEM's CMake config file")
     set(MFEM_BUILT_WITH_CMAKE TRUE)
+    # It looks like include directories are not always built into the target
+    target_include_directories(mfem INTERFACE ${MFEM_INCLUDE_DIRS})
 else()
     set(MFEM_BUILT_WITH_CMAKE FALSE)
     find_path(

@@ -4,18 +4,23 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 #
+
+variables:
+  Clang_10_ImageName: 'seracllnl/tpls:clang-10_08-05-21_13h-29m'
+  GCC_9_ImageName: 'seracllnl/tpls:gcc-9_08-05-21_13h-29m'
+
 jobs:
 - job: Build_and_Test
   strategy:
     matrix:
-      linux_gcc8:
+      linux_gcc9:
           VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: 'seracllnl/tpls:gcc-9_07-15-21_05h-56m'
+          Compiler_ImageName: $(GCC_9_ImageName)
           TEST_TARGET: 'linux_gcc9'
           HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-gcc@9.3.0.cmake'
       linux_clang10:
           VM_ImageName: 'ubuntu-20.04'
-          Compiler_ImageName: 'seracllnl/tpls:clang-10_07-15-21_05h-56m'
+          Compiler_ImageName: $(Clang_10_ImageName)
           TEST_TARGET: 'linux_clang10'
           HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-clang@10.0.0.cmake'
 
@@ -41,7 +46,7 @@ jobs:
 - job: Check_Code
   variables:
     VM_ImageName: 'ubuntu-20.04'
-    Compiler_ImageName: 'seracllnl/tpls:clang-10_07-15-21_05h-56m'
+    Compiler_ImageName: $(Clang_10_ImageName)
     TEST_TARGET: 'linux_clang10'
     HOST_CONFIG: 'docker-linux-ubuntu20.04-ivybridge-clang@10.0.0'
 

@@ -26,10 +26,10 @@ protected:
     int ney = 4;
     int nez = 4;
 
-    mfem::Mesh mesh(nex, ney, nez, mfem::Element::HEXAHEDRON, true);
-    pmesh_ = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, mesh);
-    fec_   = std::make_unique<mfem::H1_FECollection>(1, dim_, mfem::BasisType::GaussLobatto);
-    pfes_  = std::make_shared<mfem::ParFiniteElementSpace>(pmesh_.get(), fec_.get(), 1, mfem::Ordering::byNODES);
+    auto mesh = mfem::Mesh::MakeCartesian3D(nex, ney, nez, mfem::Element::HEXAHEDRON, true);
+    pmesh_    = std::make_shared<mfem::ParMesh>(MPI_COMM_WORLD, mesh);
+    fec_      = std::make_unique<mfem::H1_FECollection>(1, dim_, mfem::BasisType::GaussLobatto);
+    pfes_     = std::make_shared<mfem::ParFiniteElementSpace>(pmesh_.get(), fec_.get(), 1, mfem::Ordering::byNODES);
 
     fec_v_  = std::make_unique<mfem::H1_FECollection>(1, dim_, mfem::BasisType::GaussLobatto);
     pfes_v_ = std::make_shared<mfem::ParFiniteElementSpace>(pmesh_.get(), fec_v_.get(), dim_, mfem::Ordering::byNODES);
