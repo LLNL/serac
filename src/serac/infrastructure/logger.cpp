@@ -17,9 +17,6 @@ static int logger_rank = 0;
 
 int rank() { return logger_rank; }
 
-// output stream for the SLIC LogStreams that write to a file
-static std::ofstream logger_ofstream;
-
 bool initialize(MPI_Comm comm)
 {
   namespace slic = axom::slic;
@@ -41,19 +38,9 @@ bool initialize(MPI_Comm comm)
   }
 
   // Console streams, std::cout for info/debug, std::cerr for warnings/errors
-  slic::LogStream* i_console_logstream  = nullptr;  // info
-  slic::LogStream* d_console_logstream  = nullptr;  // debug
-  slic::LogStream* we_console_logstream = nullptr;  // warnings and errors
-
-  // File streams, all message levels go to one file
-  if (rank == 0) {
-    // Only root node writes/opens the file, other nodes will have a noop stream
-    logger_ofstream.open("serac.out", std::ofstream::out);
-  }
-
-  slic::LogStream* i_file_logstream  = nullptr;  // info
-  slic::LogStream* d_file_logstream  = nullptr;  // debug
-  slic::LogStream* we_file_logstream = nullptr;  // warnings and errors
+  slic::LogStream* i_logstream  = nullptr;  // info
+  slic::LogStream* d_logstream  = nullptr;  // debug
+  slic::LogStream* we_logstream = nullptr;  // warnings and errors
 
   // Stream formatting strings
   std::string i_format_string  = "<MESSAGE>\n";
@@ -71,51 +58,27 @@ bool initialize(MPI_Comm comm)
 #ifdef SERAC_USE_LUMBERJACK
     const int RLIMIT = 8;
 
-    // Console streams
-    i_console_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, i_format_string);
-    d_console_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, d_format_string);
-    we_console_logstream = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, we_format_string);
-
-    // File streams
-    i_file_logstream  = new slic::LumberjackStream(&logger_ofstream, comm, RLIMIT, i_format_string);
-    d_file_logstream  = new slic::LumberjackStream(&logger_ofstream, comm, RLIMIT, d_format_string);
-    we_file_logstream = new slic::LumberjackStream(&logger_ofstream, comm, RLIMIT, we_format_string);
+    i_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, i_format_string);
+    d_logstream  = new slic::LumberjackStream(&std::cout, comm, RLIMIT, d_format_string);
+    we_logstream = new slic::LumberjackStream(&std::cerr, comm, RLIMIT, we_format_string);
 #else
-    // Console streams
-    i_console_logstream  = new slic::SynchronizedStream(&std::cout, comm, i_format_string);
-    d_console_logstream  = new slic::SynchronizedStream(&std::cout, comm, d_format_string);
-    we_console_logstream = new slic::SynchronizedStream(&std::cerr, comm, we_format_string);
-
-    // File streams
-    i_file_logstream  = new slic::SynchronizedStream(&logger_ofstream, comm, i_format_string);
-    d_file_logstream  = new slic::SynchronizedStream(&logger_ofstream, comm, d_format_string);
-    we_file_logstream = new slic::SynchronizedStream(&logger_ofstream, comm, we_format_string);
+    i_logstream  = new slic::SynchronizedStream(&std::cout, comm, i_format_string);
+    d_logstream  = new slic::SynchronizedStream(&std::cout, comm, d_format_string);
+    we_logstream = new slic::SynchronizedStream(&std::cerr, comm, we_format_string);
 #endif
   } else {
-    // Console streams
-    i_console_logstream  = new slic::GenericOutputStream(&std::cout, i_format_string);
-    d_console_logstream  = new slic::GenericOutputStream(&std::cout, d_format_string);
-    we_console_logstream = new slic::GenericOutputStream(&std::cerr, we_format_string);
-
-    // File streams
-    i_file_logstream  = new slic::GenericOutputStream(&logger_ofstream, i_format_string);
-    d_file_logstream  = new slic::GenericOutputStream(&logger_ofstream, d_format_string);
-    we_file_logstream = new slic::GenericOutputStream(&logger_ofstream, we_format_string);
+    i_logstream  = new slic::GenericOutputStream(&std::cout, i_format_string);
+    d_logstream  = new slic::GenericOutputStream(&std::cout, d_format_string);
+    we_logstream = new slic::GenericOutputStream(&std::cerr, we_format_string);
   }
 
   slic::setLoggingMsgLevel(slic::message::Debug);
 
-  // Add message levels to console streams
-  addStreamToMsgLevel(i_console_logstream, slic::message::Info);
-  addStreamToMsgLevel(d_console_logstream, slic::message::Debug);
-  addStreamToMsgLevel(we_console_logstream, slic::message::Warning);
-  addStreamToMsgLevel(we_console_logstream, slic::message::Error);
-
-  // Add message levels to file streams
-  addStreamToMsgLevel(i_file_logstream, slic::message::Info);
-  addStreamToMsgLevel(d_file_logstream, slic::message::Debug);
-  addStreamToMsgLevel(we_file_logstream, slic::message::Warning);
-  addStreamToMsgLevel(we_file_logstream, slic::message::Error);
+  // Add message levels to streams
+  addStreamToMsgLevel(i_logstream, slic::message::Info);
+  addStreamToMsgLevel(d_logstream, slic::message::Debug);
+  addStreamToMsgLevel(we_logstream, slic::message::Warning);
+  addStreamToMsgLevel(we_logstream, slic::message::Error);
 
   // Exit gracefully on error
   slic::setAbortFunction([]() { exitGracefully(true); });
@@ -132,9 +95,6 @@ bool initialize(MPI_Comm comm)
 void finalize()
 {
   axom::slic::finalize();
-  if (logger_ofstream.is_open()) {
-    logger_ofstream.close();
-  }
 }
 
 void flush() { axom::slic::flushStreams(); }
