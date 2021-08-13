@@ -12,18 +12,9 @@ blt_add_executable(NAME        tensor_unit_tests
                    DEPENDS_ON  gtest serac_functional ${functional_depends}
                    FOLDER      serac/tests)
 
-set(functional_tests_serial
-    #refactor_element_matrix_assembly.cpp
-    generate_sparsity.cpp
-    #functional_boundary_test.cpp
-    #hcurl_unit_tests.cpp
-    #test_tensor_ad.cpp
-    #tuple_arithmetic_unit_tests.cpp
-)
-
 # Then add the examples/tests
 set(functional_tests_serial
-    functional_boundary_test.cpp
+    generate_sparsity.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp)
@@ -33,7 +24,7 @@ serac_add_tests( SOURCES ${functional_tests_serial}
 
 # Then add the examples/tests
 set(functional_tests_mpi
-    # functional_boundary_test.cpp
+    functional_boundary_test.cpp
     # functional_qoi.cpp
     functional_comparisons.cpp
     # functional_comparison_L2.cpp

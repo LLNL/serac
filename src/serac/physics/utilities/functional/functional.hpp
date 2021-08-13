@@ -564,6 +564,16 @@ private:
 
     operator mfem::SparseMatrix() {
 
+      // the CSR graph (sparsity pattern) is reusable, so we cache
+      // that and ask mfem to not free that memory in ~SparseMatrix()
+      constexpr bool sparse_matrix_frees_graph_ptrs = false;
+
+      // the CSR values are NOT reusable, so we pass ownership of
+      // them to the mfem::SparseMatrix, to be freed in ~SparseMatrix()
+      constexpr bool sparse_matrix_frees_values_ptr = true;
+
+      constexpr bool col_ind_is_sorted = true;
+
       int num_elements = form.test_space_->GetNE();
       int test_vdim  = form.test_space_->GetVDim();
       int trial_vdim = form.trial_space_->GetVDim();
@@ -573,7 +583,7 @@ private:
       auto K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element * test_vdim, dofs_per_trial_element * trial_vdim, num_elements);
 
       int nnz = row_ptr.back();
-      std::vector<double> values(nnz, 0.0);
+      double * values = new double[nnz]{};
       for (int e = 0; e < num_elements; e++) {
         for (int i = 0; i < dofs_per_test_element * test_vdim; i++) {
           for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
@@ -583,17 +593,7 @@ private:
         }
       }
 
-      int num_rows = form.test_space_->GetNDofs() * form.test_space_->GetVDim();
-      int num_cols = form.trial_space_->GetNDofs() * form.trial_space_->GetVDim();
-
-      mfem::SparseMatrix tmp(row_ptr.data(), col_ind.data(), values.data(), num_rows, num_cols, false, true, true);
-      
-      std::ofstream outfile("tmp.mtx");
-      tmp.PrintMM(outfile);
-      outfile.close();
-
-      return tmp;
-//      return mfem::SparseMatrix(row_ptr.data(), col_ind.data(), values.data(), num_rows, num_cols, false, true, true);
+      return mfem::SparseMatrix(row_ptr.data(), col_ind.data(), values, Height(), Width(), sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
       
     }
 

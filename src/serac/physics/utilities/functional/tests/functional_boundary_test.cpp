@@ -29,6 +29,31 @@ constexpr bool verbose     = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+bool operator==(const mfem::SparseMatrix & A, const mfem::SparseMatrix & B) {
+  if (A.Height() != B.Height()) return false;
+  if (A.Width()  != B.Width())  return false;
+
+  constexpr double tolerance = 1.0e-15;
+  double fnorm_A_plus_B = 0.0;
+  double fnorm_A_minus_B = 0.0;
+
+  for (int r = 0; r < A.Height(); r++) {
+    auto columns = A.GetRowColumns(r);
+    for (int j = 0; j < A.RowSize(r); j++) {
+      int c = columns[j];
+      if (c < 0) std::cout << "??" << std::endl;
+      fnorm_A_plus_B += (A(r, c) + B(r, c)) * (A(r, c) + B(r, c));
+      fnorm_A_minus_B += (A(r, c) - B(r, c)) * (A(r, c) - B(r, c));
+    }
+  }
+
+  return sqrt(fnorm_A_minus_B) < (tolerance * sqrt(fnorm_A_plus_B));
+}
+
+bool operator!=(const mfem::SparseMatrix & A, const mfem::SparseMatrix & B) { return !(A == B); }
+
+
+
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
@@ -80,6 +105,8 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
 
+  auto gradient = grad(residual);
+
   if (verbose) {
     std::cout << "sum(r1):  " << r1.Sum() << std::endl;
     std::cout << "sum(r2):  " << r2.Sum() << std::endl;
@@ -89,6 +116,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   }
 
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+
 }
 
 template <int p, int dim>
@@ -141,6 +169,7 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
+
 
   if (verbose) {
     std::cout << "sum(r1):  " << r1.Sum() << std::endl;
