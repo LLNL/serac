@@ -32,7 +32,6 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   std::string output_directory;
   app.add_option("-o, --output_directory", output_directory, "Directory to put outputted files.");
 
-
   // Parse the arguments and check if they are good
   try {
     app.parse(argc, argv);

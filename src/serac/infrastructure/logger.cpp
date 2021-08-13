@@ -92,10 +92,7 @@ bool initialize(MPI_Comm comm)
   return true;
 }
 
-void finalize()
-{
-  axom::slic::finalize();
-}
+void finalize() { axom::slic::finalize(); }
 
 void flush() { axom::slic::flushStreams(); }
 

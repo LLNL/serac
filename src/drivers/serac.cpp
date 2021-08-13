@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 
   // Output directory
   std::string output_directory = "";
-  search          = cli_opts.find("output_directory");
+  search                       = cli_opts.find("output_directory");
   if (search != cli_opts.end()) {
     output_directory = search->second;
   }

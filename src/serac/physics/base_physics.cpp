@@ -123,14 +123,14 @@ void BasePhysics::outputState(const std::string output_directory) const
     case serac::OutputType::GLVis: {
       const std::string mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
       const std::string mesh_path = axom::utilities::filesystem::joinPath(output_directory, mesh_name);
-      std::ofstream omesh(mesh_path);
+      std::ofstream     omesh(mesh_path);
       omesh.precision(FLOAT_PRECISION_);
       state_.front().get().mesh().Print(omesh);
 
       for (FiniteElementState& state : state_) {
-        std::string   sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state.name(), cycle_, mpi_rank_);
+        std::string sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state.name(), cycle_, mpi_rank_);
         const std::string sol_path = axom::utilities::filesystem::joinPath(output_directory, sol_name);
-        std::ofstream osol(sol_path);
+        std::ofstream     osol(sol_path);
         osol.precision(FLOAT_PRECISION_);
         state.gridFunc().Save(osol);
       }
