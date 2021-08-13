@@ -12,6 +12,7 @@
 
 #include "conduit/conduit.hpp"
 #include "ascent/ascent.hpp"
+#include "axom/core.hpp"
 #include "axom/sidre.hpp"
 
 #include "mpi.h"
@@ -68,7 +69,9 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& da
   conduit::Node extracts;
   // "relay" is the Ascents Extract type for saving data
   extracts["e1/type"]            = "relay";
-  extracts["e1/params/path"]     = fmt::format("{}/{}_fields.{}", output_directory, data_collection_name, file_format_string);
+  std::string file_name = fmt::format("{}_fields.{}", data_collection_name, file_format_string);
+  std::string path = axom::utilities::filesystem::joinPath(output_directory, file_name);
+  extracts["e1/params/path"]     = path;
   extracts["e1/params/protocol"] = file_format_string;
 
   // Get domain Sidre group
