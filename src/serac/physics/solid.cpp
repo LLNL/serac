@@ -471,9 +471,6 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
   SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None, "Adjoint analysis only valid following a forward solve.");
-  SLIC_WARNING_ROOT_IF(previous_solve_ == PreviousSolve::Adjoint,
-                       "Adjoint analysis only valid following a forward solve. The previous solve was an adjoint. "
-                       "Ensure that the correct displacement state is set for adjoint analysis.");
 
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
