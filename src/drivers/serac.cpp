@@ -130,7 +130,8 @@ int main(int argc, char* argv[])
   }
 
   // Save input values to file
-  datastore.getRoot()->getGroup("input_file")->save("serac_input.json", "json");
+  std::string input_values_file = fmt::format("{0}/serac_input_values.json", output_directory);
+  datastore.getRoot()->getGroup("input_file")->save(input_values_file, "json");
 
   // Not restarting, so we need to create the mesh and register it with the StateManager
   if (!restart_cycle) {
