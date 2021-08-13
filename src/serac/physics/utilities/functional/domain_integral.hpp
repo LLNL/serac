@@ -95,7 +95,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       // eval_quadrature is a SERAC_HOST_DEVICE quadrature point calculation
       if constexpr (std::is_same_v<qpt_data_type, void>) {
         eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
-                                                                     num_elements, qf);
+                                                                     num_elements, qf, data);
       } else {
         auto   xi  = rule.points[q];
         auto   dxi = rule.weights[q];
@@ -510,8 +510,8 @@ public:
       };
     }
 
+    #if defined(__CUDACC__)
     if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
-#if defined(__CUDACC__)
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
         serac::detail::ThreadExecutionConfiguration exec_config{.blocksize = 128};
 
@@ -527,10 +527,9 @@ public:
                                               serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT>(
             exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
       };
-#else
-#error "serac::gpu_policy not supported on non-cuda platforms at the moment"
-#endif
     }
+#endif
+    
   }
 
   /**
