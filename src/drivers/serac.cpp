@@ -215,7 +215,7 @@ int main(int argc, char* argv[])
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
-  serac::output::outputSummary(datastore, serac::StateManager::collectionName());
+  serac::output::outputSummary(datastore, serac::StateManager::collectionName(), output_directory);
   if (output_fields) {
     serac::output::outputFields(datastore, serac::StateManager::collectionName(), output_directory, t);
   }
