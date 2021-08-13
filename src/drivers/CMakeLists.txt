@@ -11,21 +11,22 @@ blt_add_executable( NAME        serac_driver
                     )
 
 if (ENABLE_TESTS)
+    set(input_files_dir ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files)
     # Make sure running serac driver doesn't completely fail
     blt_add_test(NAME          serac_driver_default
-                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/default.lua
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default -i ${input_files_dir}/default.lua
                  NUM_MPI_TASKS 1 )
 
     blt_add_test(NAME          serac_driver_default_parallel
-                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default_parallel -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/default.lua
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default_parallel -i ${input_files_dir}/default.lua
                  NUM_MPI_TASKS 2 )
 
     blt_add_test(NAME          serac_driver_no_thermal
-                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default_no_thermal -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/tests/solid/qs_linear.lua
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default_no_thermal -i ${input_files_dir}/tests/solid/qs_linear.lua
                  NUM_MPI_TASKS 1 )
 
     blt_add_test(NAME          serac_driver_no_solid
-                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default_no_solid -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/tests/thermal_conduction/static_solve.lua
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default_no_solid -i ${input_files_dir}/tests/thermal_conduction/static_solve.lua
                  NUM_MPI_TASKS 1 )
 
     blt_add_test(NAME          serac_driver_help
@@ -33,7 +34,7 @@ if (ENABLE_TESTS)
                  NUM_MPI_TASKS 1 )
 
     blt_add_test(NAME          serac_driver_docs
-                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -d -i ${CMAKE_CURRENT_SOURCE_DIR}/../../data/input_files/default.lua
+                 COMMAND       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/serac -o default_docs -d -i ${input_files_dir}/default.lua
                  NUM_MPI_TASKS 1 )
 endif()
 

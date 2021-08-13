@@ -6,6 +6,8 @@
 
 #include "serac/physics/utilities/state_manager.hpp"
 
+#include "axom/core.hpp"
+
 namespace serac {
 
 /**
@@ -20,7 +22,7 @@ std::string                                         StateManager::collection_nam
 std::vector<std::unique_ptr<SyncableData>>          StateManager::syncable_data_;
 
 void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& collection_name_prefix,
-                              const std::optional<int> cycle_to_load)
+                              const std::string output_directory, const std::optional<int> cycle_to_load)
 {
   // If the global object has already been initialized, clear it out
   if (datacoll_) {
@@ -37,6 +39,11 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& col
   const bool owns_mesh_data = true;
   datacoll_.emplace(collection_name_, bp_index_grp, domain_grp, owns_mesh_data);
   datacoll_->SetComm(MPI_COMM_WORLD);
+
+  if (!output_directory.empty()) {
+    datacoll_->SetPrefixPath(output_directory);
+  }
+
   if (cycle_to_load) {
     is_restart_ = true;
     // NOTE: Load invalidates previous Sidre pointers

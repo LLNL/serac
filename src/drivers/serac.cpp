@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
 
   // Intialize MFEMSidreDataCollection
   // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-  serac::StateManager::initialize(datastore, "serac", restart_cycle);
+  serac::StateManager::initialize(datastore, "serac", output_directory, restart_cycle);
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
@@ -125,7 +125,8 @@ int main(int argc, char* argv[])
 
   // Optionally, create input file documentation and quit
   if (create_input_file_docs) {
-    inlet.write(axom::inlet::SphinxWriter("serac_input.rst"));
+    std::string input_docs_path = axom::utilities::filesystem::joinPath(output_directory, "serac_input.rst");
+    inlet.write(axom::inlet::SphinxWriter(input_docs_path));
     serac::exitGracefully();
   }
 
@@ -206,7 +207,7 @@ int main(int argc, char* argv[])
     main_physics->advanceTimestep(dt_real);
 
     // Output a visualization file
-    main_physics->outputState();
+    main_physics->outputState(output_directory);
 
     // Save curve data to Sidre datastore to be output later
     main_physics->saveSummary(datastore, t);

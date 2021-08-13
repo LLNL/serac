@@ -113,8 +113,9 @@ public:
   /**
    * @brief Output the current state of the PDE fields
    *
+   * @param[in] output_directory The directory to output files to
    */
-  virtual void outputState() const;
+  virtual void outputState(const std::string output_directory = "") const;
 
   /**
    * @brief Initializes the Sidre structure for simulation summary data
