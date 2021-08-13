@@ -511,8 +511,8 @@ public:
       };
     }
 
-    if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
 #if defined(__CUDACC__)
+    if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
         serac::detail::ThreadExecutionConfiguration exec_config{.blocksize = 128};
 
@@ -528,10 +528,8 @@ public:
                                               serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT>(
             exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
       };
-#else
-#error "serac::gpu_policy not supported on non-cuda platforms at the moment"
-#endif
     }
+#endif
   }
 
   /**

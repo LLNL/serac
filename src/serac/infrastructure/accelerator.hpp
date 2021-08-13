@@ -19,8 +19,9 @@
 #define SERAC_DEVICE __device__
 
 /**
- * Note: nvcc will sometimes emit a warning if a __host__ __device__ function calls a __host__-only or __device__-only function. 
- * make_tensor is marked __host__ __device__ and is used frequently in the code base, so it was emitting a lot of warnings. This #pragma directive suppresses the warning for a specific function.
+ * Note: nvcc will sometimes emit a warning if a __host__ __device__ function calls a __host__-only or __device__-only
+ * function. make_tensor is marked __host__ __device__ and is used frequently in the code base, so it was emitting a lot
+ * of warnings. This #pragma directive suppresses the warning for a specific function.
  */
 
 #if __CUDAVER__ >= 75000
