@@ -5,8 +5,6 @@
 
 #include "serac/physics/utilities/functional/integral_utilities.hpp"
 #include "serac/physics/utilities/functional/domain_integral_shared.hpp"
-#include "serac/physics/utilities/quadrature_data.hpp"
-
 #include <cstring>
 
 namespace serac {
@@ -50,9 +48,9 @@ struct ThreadExecutionConfiguration {
 namespace domain_integral {
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
-          typename solution_type, typename residual_type, typename jacobian_type, typename position_type, typename qpt_data_type >
+          typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
 __global__ void eval_cuda_element(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
-                                  jacobian_type J, position_type X, int num_elements, lambda qf, QuadratureData<qpt_data_type> data)
+                                  jacobian_type J, position_type X, int num_elements, lambda qf)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -71,7 +69,7 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
-                                                                   num_elements, qf, data);
+                                                                   num_elements, qf);
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -81,9 +79,9 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
 }
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
-          typename solution_type, typename residual_type, typename jacobian_type, typename position_type, typename qpt_data_type>
+          typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
 __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
-                                     jacobian_type J, position_type X, int num_elements, lambda qf, QuadratureData<qpt_data_type> data)
+                                     jacobian_type J, position_type X, int num_elements, lambda qf)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -105,7 +103,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
 
     // for each quadrature point in the element
     eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
-                                                                 num_elements, qf, data);
+                                                                 num_elements, qf);
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
@@ -114,10 +112,10 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
 }
 
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
-          typename derivatives_type, typename lambda, typename qpt_data_type = void>
+          typename derivatives_type, typename lambda>
 void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& U, mfem::Vector& R,
                             derivatives_type* derivatives_ptr, const mfem::Vector& J_, const mfem::Vector& X_,
-                            int num_elements, lambda qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
+                            int num_elements, lambda qf)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -143,12 +141,12 @@ void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, 
   if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
     eval_cuda_quadrature<g, test, trial, Q>
-      <<<blocks_quadrature_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf, data);
+        <<<blocks_quadrature_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
 
   } else if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT) {
     int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;
     eval_cuda_element<g, test, trial, Q>
-      <<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf, data);
+        <<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
   }
 
   cudaDeviceSynchronize();

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "serac/physics/utilities/quadrature_data.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
 
 namespace serac {
@@ -13,7 +12,7 @@ namespace domain_integral {
  *  H1 family elements will compute {value, gradient}
  *  Hcurl family elements will compute {value, curl}
  *  TODO: Hdiv family elements will compute {value, divergence}
- *  L2 family elements will compute value
+ *  TODO: L2 family elements will compute value
  *
  * In the future, the user will be able to override these defaults
  * to omit unused components (e.g. specify that they only need the gradient)
@@ -89,11 +88,10 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
 // TODO: Add more comments. Quadrature level evaluation
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
-          typename u_elem_type, typename element_residual_type, typename J_type, typename X_type,
-	  typename qpt_data_type>
+          typename u_elem_type, typename element_residual_type, typename J_type, typename X_type>
 SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type& r_elem,
                                        derivatives_type* derivatives_ptr, J_type J, X_type X, int num_elements,
-                                       lambda qf, QuadratureData<qpt_data_type>& data)
+                                       lambda qf)
 {
   using test_element         = finite_element<g, test>;
   using trial_element        = finite_element<g, trial>;
@@ -112,16 +110,8 @@ SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element
   // evaluate the user-specified constitutive model
   //
   // note: make_dual(arg) promotes those arguments to dual number types
-  // so that qf_output will contain values and derivatives  
-  // auto qf_output = qf(x_q, make_dual(arg));
-  
-  // evaluate the user-specified constitutive model
-  //
-  // note: make_dual(arg) promotes those arguments to dual number types
   // so that qf_output will contain values and derivatives
-  // TODO: Refactor the call to qf here since the current approach is somewhat messy
-  auto qf_output = [&qf, &x_q, &arg, &data, e, q]() { return qf(x_q, make_dual(arg), data(e, q)); }();
-  
+  auto qf_output = qf(x_q, make_dual(arg));
 
   // integrate qf_output against test space shape functions / gradients
   // to get element residual contributions
