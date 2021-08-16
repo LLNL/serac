@@ -374,6 +374,10 @@ public:
       boundary_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_,
                                                                                num_elements);
     };
+
+    gradient_mat_ = [=](mfem::Vector& K_b) {
+      boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives.get(), J_, num_elements);
+    };
   }
 
   /**
@@ -391,6 +395,14 @@ public:
    * @see gradient_kernel
    */
   void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
+
+  /**
+   * @brief Computes the element stiffness matrices, storing them in an `mfem::Vector` that has been reshaped into a
+   * multidimensional array
+   * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
+   * elem)
+   */
+  void ComputeElementMatrices(mfem::Vector& K_b) const { gradient_mat_(K_b); }
 
 private:
   /**
@@ -419,6 +431,12 @@ private:
    * @see gradient_kernel
    */
   std::function<void(const mfem::Vector&, mfem::Vector&)> gradient_;
+
+  /**
+   * @brief Type-erased handle to gradient matrix assembly kernel
+   * @see gradient_matrix_kernel
+   */
+  std::function<void(mfem::Vector&)> gradient_mat_;
 };
 
 }  // namespace serac

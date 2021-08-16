@@ -353,9 +353,9 @@ class Functional<test(trial)> : public mfem::Operator {
   }
 
   /**
-   * @brief Obtains the element stiffness matrix reshaped a mfem::Vector
-   * @returns A mfem::Vector containing the assembled element stiffness matrix (test_dim * test_ndof, trial_dim
-   * * trial_ndof, nelem)
+   * @brief calculate and return the element stiffness matrices flattened into a mfem::Vector
+   * @returns A mfem::Vector containing the element stiffness matrix entries (flattened from a 3D array 
+   * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
    */
   mfem::Vector ComputeElementMatrices()
   {
@@ -373,6 +373,30 @@ class Functional<test(trial)> : public mfem::Operator {
 
     return K_e_;
   }
+
+  /**
+   * @brief calculate and return the boundary element stiffness matrices flattened into a mfem::Vector
+   * @returns A mfem::Vector containing the boundary element matrix entries (flattened from a 3D array 
+   * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
+   */
+  mfem::Vector ComputeBoundaryElementMatrices()
+  {
+    // Resize K_b_ if this is the first time
+    if (K_b_.Size() == 0) {
+      int num_boundary_elements = test_space_->GetNE();
+      int dofs_per_test_boundary_element = test_space_->GetBE(0)->GetDof() * test_space_->GetVDim();
+      int dofs_per_trial_boundary_element = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
+      K_b_.SetSize(dofs_per_test_boundary_element * dofs_per_trial_boundary_element * num_boundary_elements);
+    }
+    // zero out internal vector
+    K_b_ = 0.;
+    // loop through integrals and accumulate
+    for (auto boundary : boundary_integrals_) boundary.ComputeElementMatrices(K_b_);
+
+    return K_b_;
+  }
+
+
 
   /**
    * @brief Computes element matrices and returns AssembledSparseMatrix
@@ -431,9 +455,7 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<test(trial)> & f) : mfem::Operator(f.Height(), f.Width()), form(f) {
-      initialize_sparsity_pattern();
-    };
+    Gradient(Functional<test(trial)> & f) : mfem::Operator(f.Height(), f.Width()), form(f), sparsity_pattern_initialized(false) {};
 
     virtual void Mult(const mfem::Vector& x, mfem::Vector& y) const override { form.GradientMult(x, y); }
 
@@ -460,14 +482,14 @@ private:
       int entries_per_boundary_element = dofs_per_test_boundary_element * test_vdim * dofs_per_trial_boundary_element * trial_vdim;
 
       int num_infos[2] = {
-        entries_per_element * num_elements,
-        entries_per_boundary_element * num_boundary_elements
+        (form.domain_integrals_.size() > 0) * entries_per_element * num_elements,
+        (form.boundary_integrals_.size() > 0) * entries_per_boundary_element * num_boundary_elements
       };
 
       std::vector < ::detail::elem_info > infos;
       infos.reserve(num_infos[0] + num_infos[1]);
 
-      {
+      if (form.domain_integrals_.size() > 0) {
         bool on_boundary = false;
         const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.test_space_->GetFE(0))->GetDofMap();
         const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetFE(0))->GetDofMap();
@@ -494,30 +516,33 @@ private:
 
       // mfem doesn't implement GetDofMap for some of its Nedelec elements (??),
       // so we have to temporarily disable boundary terms for Hcurl until they do
-      if (test::family != Family::HCURL && trial::family != Family::HCURL) {
-        bool on_boundary = true;
+      //if (test::family == Family::H1 && trial::family == Family::H1) {
+      if (form.boundary_integrals_.size() > 0) {
+        if (test::family != Family::HCURL && trial::family != Family::HCURL) {
+          bool on_boundary = true;
 
-        const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.test_space_->GetBE(0))->GetDofMap();
-        const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetBE(0))->GetDofMap();
+          const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.test_space_->GetBE(0))->GetDofMap();
+          const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetBE(0))->GetDofMap();
 
-        for (int b = 0; b < num_boundary_elements; b++) {
-          form.test_space_->GetBdrElementDofs(b, test_dofs);
-          form.trial_space_->GetBdrElementDofs(b, trial_dofs);
-          ::detail::apply_permutation(test_dofs, test_native_to_lexicographic);
-          ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
-          for (int i = 0; i < dofs_per_test_boundary_element; i++) {
-            for (int j = 0; j < dofs_per_test_boundary_element; j++) {
-              for (int k = 0; k < test_vdim; k++) {
-                int test_vdof = form.test_space_->DofToVDof(::detail::get_index(test_dofs[i]), k);
-                for (int l = 0; l < trial_vdim; l++) {
-                  int trial_vdof = form.trial_space_->DofToVDof(::detail::get_index(trial_dofs[j]), l);
-                  infos.push_back({test_vdof, trial_vdof, i + dofs_per_test_boundary_element * k, j + dofs_per_trial_boundary_element * l, b, ::detail::get_sign(test_dofs[i]) * ::detail::get_sign(trial_dofs[j]), on_boundary});
+          for (int b = 0; b < num_boundary_elements; b++) {
+            form.test_space_->GetBdrElementDofs(b, test_dofs);
+            form.trial_space_->GetBdrElementDofs(b, trial_dofs);
+            ::detail::apply_permutation(test_dofs, test_native_to_lexicographic);
+            ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
+            for (int i = 0; i < dofs_per_test_boundary_element; i++) {
+              for (int j = 0; j < dofs_per_test_boundary_element; j++) {
+                for (int k = 0; k < test_vdim; k++) {
+                  int test_vdof = form.test_space_->DofToVDof(::detail::get_index(test_dofs[i]), k);
+                  for (int l = 0; l < trial_vdim; l++) {
+                    int trial_vdof = form.trial_space_->DofToVDof(::detail::get_index(trial_dofs[j]), l);
+                    infos.push_back({test_vdof, trial_vdof, i + dofs_per_test_boundary_element * k, j + dofs_per_trial_boundary_element * l, b, ::detail::get_sign(test_dofs[i]) * ::detail::get_sign(trial_dofs[j]), on_boundary});
+                  }
                 }
               }
             }
           }
-        }
 
+        }
       }
 
       std::sort(infos.begin(), infos.end());
@@ -560,9 +585,13 @@ private:
         }
       }
 
+      sparsity_pattern_initialized = true;
+
     }
 
     operator mfem::SparseMatrix() {
+
+      if (!sparsity_pattern_initialized) initialize_sparsity_pattern();
 
       // the CSR graph (sparsity pattern) is reusable, so we cache
       // that and ask mfem to not free that memory in ~SparseMatrix()
@@ -574,21 +603,44 @@ private:
 
       constexpr bool col_ind_is_sorted = true;
 
-      int num_elements = form.test_space_->GetNE();
-      int test_vdim  = form.test_space_->GetVDim();
-      int trial_vdim = form.trial_space_->GetVDim();
-      int dofs_per_test_element = form.test_space_->GetFE(0)->GetDof();
-      int dofs_per_trial_element = form.trial_space_->GetFE(0)->GetDof();
-      mfem::Vector element_matrices = form.ComputeElementMatrices();
-      auto K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element * test_vdim, dofs_per_trial_element * trial_vdim, num_elements);
 
       int nnz = row_ptr.back();
       double * values = new double[nnz]{};
-      for (int e = 0; e < num_elements; e++) {
-        for (int i = 0; i < dofs_per_test_element * test_vdim; i++) {
-          for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
-            auto [index, sign] = element_nonzero_LUT(e,i,j);
-            values[index] += sign * K_elem(i,j,e);
+
+      if (form.domain_integrals_.size() > 0) {
+        int num_elements = form.test_space_->GetNE();
+        int test_vdim  = form.test_space_->GetVDim();
+        int trial_vdim = form.trial_space_->GetVDim();
+        int dofs_per_test_element = form.test_space_->GetFE(0)->GetDof();
+        int dofs_per_trial_element = form.trial_space_->GetFE(0)->GetDof();
+
+        mfem::Vector element_matrices = form.ComputeElementMatrices();
+        auto K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element * test_vdim, dofs_per_trial_element * trial_vdim, num_elements);
+        for (int e = 0; e < num_elements; e++) {
+          for (int i = 0; i < dofs_per_test_element * test_vdim; i++) {
+            for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
+              auto [index, sign] = element_nonzero_LUT(e,i,j);
+              values[index] += sign * K_elem(i,j,e);
+            }
+          }
+        }
+      }
+
+      if (form.boundary_integrals_.size() > 0) {
+        int num_boundary_elements = form.test_space_->GetNBE();
+        int test_vdim  = form.test_space_->GetVDim();
+        int trial_vdim = form.trial_space_->GetVDim();
+        int dofs_per_test_boundary_element = form.test_space_->GetBE(0)->GetDof();
+        int dofs_per_trial_boundary_element = form.trial_space_->GetBE(0)->GetDof();
+ 
+        mfem::Vector boundary_element_matrices = form.ComputeBoundaryElementMatrices();
+        auto K_elem = mfem::Reshape(boundary_element_matrices.HostReadWrite(), dofs_per_test_boundary_element * test_vdim, dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
+        for (int e = 0; e < num_boundary_elements; e++) {
+          for (int i = 0; i < dofs_per_test_boundary_element * test_vdim; i++) {
+            for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
+              auto [index, sign] = boundary_element_nonzero_LUT(e,i,j);
+              values[index] += sign * K_elem(i,j,e);
+            }
           }
         }
       }
@@ -611,6 +663,8 @@ private:
     Array3D< ::detail::signed_index > boundary_element_nonzero_LUT;
 
     mfem::SparseMatrix A;
+
+    bool sparsity_pattern_initialized;
 
   };
 
@@ -804,6 +858,12 @@ private:
    * UpdateAssembledSparseMatrix()
    */
   mutable mfem::Vector K_e_;
+
+  /**
+   * @brief storage buffer for boundary element stiffness matrices, used in ComputeBoundaryElementMatrices() and
+   * UpdateAssembledSparseMatrix()
+   */
+  mutable mfem::Vector K_b_;
 
   /**
    * @brief Local internal AssembledSparseMatrix storage for ComputeElementMatrices
