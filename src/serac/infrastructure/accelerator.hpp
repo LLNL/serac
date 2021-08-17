@@ -37,7 +37,11 @@
 #define SERAC_HOST
 #define SERAC_DEVICE
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
+
+#include <cuda_runtime.h>
 #endif
+
+#include <iostream>
 
 /**
  * @brief Accelerator functionality
@@ -74,6 +78,24 @@ void initializeDevice();
  * @brief Cleans up the device, if applicable
  */
 void terminateDevice();
+
+#if defined(__CUDACC__)
+/**
+ * @brief utility method to display last cuda error message
+ *
+ * @param[in] o The output stream to post success or CUDA error messages
+ * @param[in] success_string A string to print if there are no CUDA error messages
+ */
+inline void displayLastCUDAErrorMessage(std::ostream& o, const char* success_string = "")
+{
+  auto error = cudaGetLastError();
+  if (error != cudaError::cudaSuccess) {
+    o << "Last CUDA Error Message :" << cudaGetErrorString(error) << std::endl;
+  } else if (strlen(success_string) > 0) {
+    o << success_string << std::endl;
+  }
+}
+#endif
 
 }  // namespace accelerator
 
