@@ -369,7 +369,7 @@ class Functional<test(trial)> : public mfem::Operator {
     // zero out internal vector
     K_e_ = 0.;
     // loop through integrals and accumulate
-    for (auto domain : domain_integrals_) domain.ComputeElementMatrices(K_e_);
+    for (auto & domain : domain_integrals_) domain.ComputeElementMatrices(K_e_);
 
     return K_e_;
   }
@@ -383,7 +383,7 @@ class Functional<test(trial)> : public mfem::Operator {
   {
     // Resize K_b_ if this is the first time
     if (K_b_.Size() == 0) {
-      int num_boundary_elements = test_space_->GetNE();
+      int num_boundary_elements = test_space_->GetNBE();
       int dofs_per_test_boundary_element = test_space_->GetBE(0)->GetDof() * test_space_->GetVDim();
       int dofs_per_trial_boundary_element = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
       K_b_.SetSize(dofs_per_test_boundary_element * dofs_per_trial_boundary_element * num_boundary_elements);
@@ -391,7 +391,7 @@ class Functional<test(trial)> : public mfem::Operator {
     // zero out internal vector
     K_b_ = 0.;
     // loop through integrals and accumulate
-    for (auto boundary : boundary_integrals_) boundary.ComputeElementMatrices(K_b_);
+    for (auto & boundary : boundary_integrals_) boundary.ComputeElementMatrices(K_b_);
 
     return K_b_;
   }

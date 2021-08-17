@@ -304,6 +304,10 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
     // Note: we "transpose" these values to get them into the layout that mfem expects
     for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
       dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
+
+      if ((i + test_ndof * j > test_ndof * test_dim) ||  (k + trial_ndof * l >= trial_ndof * trial_dim)) {
+        std::cout << "?" << std::endl;
+      }
     });
 
   }
