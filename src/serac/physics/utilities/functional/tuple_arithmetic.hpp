@@ -131,14 +131,12 @@ SERAC_HOST_DEVICE auto chain_rule_tuple_vecvec(serac::tuple<T...> df_dx, serac::
 // chain rule between a tuple-of-tuples, and another tuple, kind of like a "matrix vector product"
 // effectively equivalent to
 //
-// clang-format off
 // serac::tuple df{
 //   chain_rule(serac::get<0>(serac::get<0>(df_dx)), serac::get<0>(dx)) + chain_rule(serac::get<1>(serac::get<0>(df_dx)), serac::get<1>(dx)) + ... , 
 //   chain_rule(serac::get<0>(serac::get<1>(df_dx)), serac::get<0>(dx)) + chain_rule(serac::get<1>(serac::get<1>(df_dx)), serac::get<1>(dx)) + ... , 
 //   chain_rule(serac::get<0>(serac::get<2>(df_dx)), serac::get<0>(dx)) + chain_rule(serac::get<1>(serac::get<2>(df_dx)), serac::get<1>(dx)) + ... ,
 //   ...
 // }
-// clang-format on
 template <typename... T, typename... S>
 SERAC_HOST_DEVICE auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::tuple<S...> dx)
 {
@@ -153,100 +151,6 @@ SERAC_HOST_DEVICE auto chain_rule_tuple_matvec(serac::tuple<T...> df_dx, serac::
 
 }  // namespace detail
 /// @endcond
-
-/**
- * @brief apply operator+ to each pair of entries in two similarly-sized tuples
- * @param[in] A a tuple of values
- * @param[in] B a tuple of values
- * Note: A and B must have the same size, and the type of the ith entry of the returned tuple
- * is given by decltype(serac::get<i>(A) + serac::get<i>(B))
- */
-// template <typename... S, typename... T>
-// constexpr auto operator+(const serac::tuple<S...>& A, const serac::tuple<T...>& B)
-// {
-//   static_assert(sizeof...(S) == sizeof...(T), "Error in operator+: tuple sizes must match");
-//   return detail::plus_helper(A, B, std::make_integer_sequence<int, int(sizeof...(S))>{});
-// }
-
-#if 0
-/**
- * @brief apply operator+= to each pair of entries in two similarly-sized and similarly-typed tuples
- * @param[in] A a tuple of values
- * @param[in] B a tuple of values
- * Note: A and B must have the same size
- */
-template <typename... S>
-constexpr auto operator+=(serac::tuple<S...>& A, const serac::tuple<S...>& B)
-{
-  return A = A + B;
-}
-
-/**
- * @brief apply operator- to each pair of entries in two similarly-sized tuples
- * @param[in] A a tuple of values
- * @param[in] B a tuple of values
- * Note: A and B must have the same size, and the type of the ith entry of the returned tuple
- * is given by decltype(serac::get<i>(A) - serac::get<i>(B))
- */
-// template <typename... S, typename... T>
-// constexpr auto operator-(const serac::tuple<S...>& A, const serac::tuple<T...>& B)
-// {
-//   static_assert(sizeof...(S) == sizeof...(T), "Error in operator+: tuple sizes must match");
-//   return detail::minus_helper(A, B, std::make_integer_sequence<int, int(sizeof...(S))>{});
-// }
-
-/**
- * @brief apply a scaling (from the right) to each entry in a tuple
- * @param[in] A a tuple of values
- * @param[in] scale the scaling factor
- * Note: the type of the ith entry of the returned tuple
- * is given by decltype(serac::get<i>(A) * scale)
- */
-template <typename... S, typename T>
-constexpr auto operator*(const serac::tuple<S...>& A, T scale)
-{
-  return detail::mult_helper(A, scale, std::make_integer_sequence<int, int(sizeof...(S))>{});
-}
-
-/**
- * @brief apply a scaling (from the left) to each entry in a tuple
- * @param[in] scale the scaling factor
- * @param[in] A a tuple of values
- * Note: the type of the ith entry of the returned tuple
- * is given by decltype(scale * serac::get<i>(A))
- */
-template <typename S, typename... T>
-constexpr auto operator*(S scale, const serac::tuple<T...>& A)
-{
-  return detail::mult_helper(scale, A, std::make_integer_sequence<int, int(sizeof...(T))>{});
-}
-
-/**
- * @brief divide each entry in a tuple by a denominator
- * @param[in] numerators a tuple of numerators
- * @param[in] denominator the denominator
- * Note: the type of the ith entry of the returned tuple
- * is given by decltype(serac::get<i>(numerators) / denominator)
- */
-template <typename... S, typename T>
-constexpr auto operator/(const serac::tuple<S...>& numerators, T denominator)
-{
-  return detail::div_helper(numerators, denominator, std::make_integer_sequence<int, int(sizeof...(S))>{});
-}
-
-/**
- * @brief return a tuple with entries defined by dividing a numerator value by each entry of a tuple
- * @param[in] numerator a numerator value
- * @param[in] denominators a tuple of denominator values
- * Note: the type of the ith entry of the returned tuple
- * is given by decltype(numerator / serac::get<i>(denominators))
- */
-template <typename S, typename... T>
-constexpr auto operator/(S numerator, const serac::tuple<T...>& denominators)
-{
-  return detail::div_helper(numerator, denominators, std::make_integer_sequence<int, int(sizeof...(T))>{});
-}
-#endif
 
 /**
  * @brief Constructs a tuple of dual numbers from a parameter pack of values
