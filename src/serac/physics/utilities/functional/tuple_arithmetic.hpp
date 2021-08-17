@@ -132,9 +132,12 @@ SERAC_HOST_DEVICE auto chain_rule_tuple_vecvec(serac::tuple<T...> df_dx, serac::
 // effectively equivalent to
 //
 // serac::tuple df{
-//   chain_rule(serac::get<0>(serac::get<0>(df_dx)), serac::get<0>(dx)) + chain_rule(serac::get<1>(serac::get<0>(df_dx)), serac::get<1>(dx)) + ... , 
-//   chain_rule(serac::get<0>(serac::get<1>(df_dx)), serac::get<0>(dx)) + chain_rule(serac::get<1>(serac::get<1>(df_dx)), serac::get<1>(dx)) + ... , 
-//   chain_rule(serac::get<0>(serac::get<2>(df_dx)), serac::get<0>(dx)) + chain_rule(serac::get<1>(serac::get<2>(df_dx)), serac::get<1>(dx)) + ... ,
+//   chain_rule(serac::get<0>(serac::get<0>(df_dx)), serac::get<0>(dx)) +
+//   chain_rule(serac::get<1>(serac::get<0>(df_dx)), serac::get<1>(dx)) + ... ,
+//   chain_rule(serac::get<0>(serac::get<1>(df_dx)), serac::get<0>(dx)) +
+//   chain_rule(serac::get<1>(serac::get<1>(df_dx)), serac::get<1>(dx)) + ... ,
+//   chain_rule(serac::get<0>(serac::get<2>(df_dx)), serac::get<0>(dx)) +
+//   chain_rule(serac::get<1>(serac::get<2>(df_dx)), serac::get<1>(dx)) + ... ,
 //   ...
 // }
 template <typename... T, typename... S>

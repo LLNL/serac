@@ -7,7 +7,7 @@
 /**
  * @file tuple.hpp
  *
- * @brief Implements a std::tuple-like object that works in CUDA kernels 
+ * @brief Implements a std::tuple-like object that works in CUDA kernels
  */
 #pragma once
 
@@ -19,11 +19,11 @@ namespace serac {
 
 /**
  * @tparam T the types stored in the tuple
- * @brief This is a class that mimics most of std::tuple's interface, 
+ * @brief This is a class that mimics most of std::tuple's interface,
  * except that it is usable in CUDA kernels and admits some arithmetic operator overloads.
  *
  * see https://en.cppreference.com/w/cpp/utility/tuple for more information about std::tuple
- */ 
+ */
 template <typename... T>
 struct tuple {
 };
@@ -111,7 +111,7 @@ struct tuple_size<serac::tuple<Types...> > : std::integral_constant<std::size_t,
  * @tparam i the tuple index to access
  * @tparam T the types stored in the tuple
  * @brief return a reference to the ith tuple entry
- */ 
+ */
 template <int i, typename... T>
 SERAC_HOST_DEVICE constexpr auto& get(tuple<T...>& values)
 {
@@ -146,7 +146,7 @@ SERAC_HOST_DEVICE constexpr auto& get(tuple<T...>& values)
  * @tparam i the tuple index to access
  * @tparam T the types stored in the tuple
  * @brief return a copy of the ith tuple entry
- */ 
+ */
 template <int i, typename... T>
 SERAC_HOST_DEVICE constexpr auto get(const tuple<T...>& values)
 {
@@ -190,7 +190,7 @@ SERAC_HOST_DEVICE constexpr auto plus_helper(const tuple<S...>& x, const tuple<T
  * @param x a tuple of values
  * @param y a tuple of values
  * @brief return a tuple of values defined by elementwise sum of x and y
- */ 
+ */
 template <typename... S, typename... T>
 SERAC_HOST_DEVICE constexpr auto operator+(const tuple<S...>& x, const tuple<T...>& y)
 {
@@ -211,7 +211,7 @@ SERAC_HOST_DEVICE constexpr auto minus_helper(const tuple<S...>& x, const tuple<
  * @param x a tuple of values
  * @param y a tuple of values
  * @brief return a tuple of values defined by elementwise difference of x and y
- */ 
+ */
 template <typename... S, typename... T>
 SERAC_HOST_DEVICE constexpr auto operator-(const tuple<S...>& x, const tuple<T...>& y)
 {
@@ -232,7 +232,7 @@ SERAC_HOST_DEVICE constexpr auto div_helper(const tuple<S...>& x, const tuple<T.
  * @param x a tuple of values
  * @param y a tuple of values
  * @brief return a tuple of values defined by elementwise division of x by y
- */ 
+ */
 template <typename... S, typename... T>
 SERAC_HOST_DEVICE constexpr auto operator/(const tuple<S...>& x, const tuple<T...>& y)
 {
@@ -257,7 +257,7 @@ SERAC_HOST_DEVICE constexpr auto div_helper(const tuple<T...>& x, const double a
  * @param a the numerator
  * @param y a tuple of denominator values
  * @brief return a tuple of values defined by division of a by the elements of x
- */ 
+ */
 template <typename... T>
 SERAC_HOST_DEVICE constexpr auto operator/(const double a, const tuple<T...>& x)
 {
@@ -269,7 +269,7 @@ SERAC_HOST_DEVICE constexpr auto operator/(const double a, const tuple<T...>& x)
  * @param x a tuple of numerator values
  * @param a a denominator
  * @brief return a tuple of values defined by elementwise division of x by a
- */ 
+ */
 template <typename... T>
 SERAC_HOST_DEVICE constexpr auto operator/(const tuple<T...>& x, const double a)
 {
@@ -289,7 +289,7 @@ SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple<S...>& x, const tuple<T
  * @param x a tuple of values
  * @param y a tuple of values
  * @brief return a tuple of values defined by elementwise multiplication of x and y
- */ 
+ */
 template <typename... S, typename... T>
 SERAC_HOST_DEVICE constexpr auto operator*(const tuple<S...>& x, const tuple<T...>& y)
 {
@@ -314,7 +314,7 @@ SERAC_HOST_DEVICE constexpr auto mult_helper(const tuple<T...>& x, const double 
  * @param a a scaling factor
  * @param x the tuple object
  * @brief multiply each component of x by the value a on the left
- */ 
+ */
 template <typename... T>
 SERAC_HOST_DEVICE constexpr auto operator*(const double a, const tuple<T...>& x)
 {
@@ -326,7 +326,7 @@ SERAC_HOST_DEVICE constexpr auto operator*(const double a, const tuple<T...>& x)
  * @param x the tuple object
  * @param a a scaling factor
  * @brief multiply each component of x by the value a on the right
- */ 
+ */
 template <typename... T>
 SERAC_HOST_DEVICE constexpr auto operator*(const tuple<T...>& x, const double a)
 {
@@ -345,9 +345,9 @@ SERAC_HOST_DEVICE auto apply_helper(lambda f, tuple<T...>& args, std::integer_se
  * @param f the callable object
  * @param args a tuple of arguments
  * @brief a way of passing an n-tuple to a function that expects n separate arguments
- * 
+ *
  *   e.g. foo(bar, baz) is equivalent to apply(foo, serac::tuple(bar,baz));
- */ 
+ */
 template <typename lambda, typename... T>
 SERAC_HOST_DEVICE auto apply(lambda f, tuple<T...>& args)
 {
@@ -366,9 +366,9 @@ SERAC_HOST_DEVICE auto apply_helper(lambda f, const tuple<T...>& args, std::inte
  * @param f the callable object
  * @param args a tuple of arguments
  * @brief a way of passing an n-tuple to a function that expects n separate arguments
- * 
+ *
  *   e.g. foo(bar, baz) is equivalent to apply(foo, serac::tuple(bar,baz));
- */ 
+ */
 template <typename lambda, typename... T>
 SERAC_HOST_DEVICE auto apply(lambda f, const tuple<T...>& args)
 {

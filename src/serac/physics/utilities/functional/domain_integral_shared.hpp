@@ -98,6 +98,9 @@ SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element
   static constexpr auto rule = GaussQuadratureRule<g, Q>();
   static constexpr int  dim  = dimension_of(g);
 
+  // get the position of this quadrature point in the parent and physical space,
+  // and calculate the measure of that point in physical space.
+
   auto   xi  = rule.points[q];
   auto   dxi = rule.weights[q];
   auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt

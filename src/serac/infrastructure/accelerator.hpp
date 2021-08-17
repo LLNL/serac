@@ -29,7 +29,9 @@
 #else
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING #pragma hd_warning_disable
 #endif
-#else
+
+#include <cuda_runtime.h>
+#else  //__CUDACC__
 /**
  * @brief Macro that toggles between decorating a function for host and device or noop's for non-accelated builds.
  */
@@ -37,8 +39,6 @@
 #define SERAC_HOST
 #define SERAC_DEVICE
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
-
-#include <cuda_runtime.h>
 #endif
 
 #include <iostream>
@@ -81,7 +81,7 @@ void terminateDevice();
 
 #if defined(__CUDACC__)
 /**
- * @brief utility method to display last cuda error message
+ * @brief Utility method to display last cuda error message
  *
  * @param[in] o The output stream to post success or CUDA error messages
  * @param[in] success_string A string to print if there are no CUDA error messages
