@@ -121,7 +121,6 @@ SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element
   //
   // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
 
-  // detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
   // Note: This pattern may result in non-coalesced access depend on how it executed.
   detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
 }
