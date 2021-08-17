@@ -6,7 +6,7 @@
 
 namespace serac {
 
-// This is a class that mimics most of std::tuple's interface, except that it is usable in CUDA kernels and 
+// This is a class that mimics most of std::tuple's interface, except that it is usable in CUDA kernels and
 // admits some arithmetic operator overloads
 template <typename... T>
 struct tuple {

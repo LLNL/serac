@@ -12,25 +12,9 @@ namespace serac {
 namespace detail {
 
 /**
- * @brief utility method to display last cuda error message
- *
- * @param[in] o The output stream to post success or CUDA error messages
- * @param[in] success_string A string to print if there are no CUDA error messages
- */
-inline void displayLastCUDAErrorMessage(std::ostream& o, const char* success_string = "")
-{
-  auto error = cudaGetLastError();
-  if (error != cudaError::cudaSuccess) {
-    o << "Last CUDA Error Message :" << cudaGetErrorString(error) << std::endl;
-  } else if (strlen(success_string) > 0) {
-    o << success_string << std::endl;
-  }
-}
-
-/**
  * @brief Defines whether to loop by elements or quadrature points
  */
-enum ThreadExecutionPolicy
+enum ThreadParallelizationStrategy
 {
   THREAD_PER_QUADRATURE_POINT,
   THREAD_PER_ELEMENT
@@ -39,13 +23,48 @@ enum ThreadExecutionPolicy
 /**
  * @brief Contains the GPU launch configuration
  */
-struct ThreadExecutionConfiguration {
+struct GPULaunchConfiguration {
   int blocksize;
 };
 
 }  // namespace detail
 
 namespace domain_integral {
+
+/**
+ * @brief The GPU kernel template used to create different finite element calculation routines.
+ *
+ * This GPU kernel proccess one element per thread.
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p DomainIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
+ * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
+ * be evaluated at each quadrature point.
+ * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
+ * information on the idea behind a quadrature function and its inputs/outputs
+ * @tparam qpt_data_type The type of the data to store for each quadrature point
+ *
+ * @tparam solution_type element solution
+ * @tparam residual_type element residual
+ * @tparam position_type element position
+ *
+ * @param[in] u The element DOF values (primary input)
+ * @param[inout] r The element residuals (primary output)
+ * @param[out] derivatives_ptr The address at which derivatives of @a lambda with
+ * respect to its arguments will be stored
+ * @param[in] J The Jacobians of the element transformation at all quadrature points
+ * @param[in] X The actual (not reference) coordinates of all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ * @param[in] qf The actual quadrature function, see @p lambda
+ */
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
@@ -77,6 +96,41 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
     detail::Add(r, r_elem, e);
   }  // e loop
 }
+
+/**
+ * @brief The GPU kernel template used to create different finite element calculation routines.
+ *
+ * This GPU kernel proccess one quadrature point per thread.
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p DomainIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
+ * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
+ * be evaluated at each quadrature point.
+ * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
+ * information on the idea behind a quadrature function and its inputs/outputs
+ * @tparam qpt_data_type The type of the data to store for each quadrature point
+ *
+ * @tparam solution_type element solution
+ * @tparam residual_type element residual
+ * @tparam position_type element position
+ *
+ * @param[in] u The element DOF values (primary input)
+ * @param[inout] r The element residuals (primary output)
+ * @param[out] derivatives_ptr The address at which derivatives of @a lambda with
+ * respect to its arguments will be stored
+ * @param[in] J The Jacobians of the element transformation at all quadrature points
+ * @param[in] X The actual (not reference) coordinates of all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ * @param[in] qf The actual quadrature function, see @p lambda
+ */
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
@@ -111,9 +165,41 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
   }  // quadrature x element loop
 }
 
-template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
+/**
+ * @brief The GPU base template used to create different finite element calculation routines
+ *
+ * This function is used to invoke different GPU kernels.
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p DomainIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
+ * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
+ * be evaluated at each quadrature point.
+ * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
+ * information on the idea behind a quadrature function and its inputs/outputs
+ * @tparam qpt_data_type The type of the data to store for each quadrature point
+ *
+ * @param[in] config Execution configuration for the GPU kernel
+ * @param[in] U The full set of per-element DOF values (primary input)
+ * @param[inout] R The full set of per-element residuals (primary output)
+ * @param[out] derivatives_ptr The address at which derivatives of @a lambda with
+ * respect to its arguments will be stored
+ * @param[in] J_ The Jacobians of the element transformations at all quadrature points
+ * @param[in] X_ The actual (not reference) coordinates of all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ * @param[in] qf The actual quadrature function, see @p lambda
+ */
+
+template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type, typename lambda>
-void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& U, mfem::Vector& R,
+void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& U, mfem::Vector& R,
                             derivatives_type* derivatives_ptr, const mfem::Vector& J_, const mfem::Vector& X_,
                             int num_elements, lambda qf)
 {
@@ -136,22 +222,53 @@ void evaluation_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, 
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
   cudaDeviceSynchronize();
-  serac::detail::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
 
-  if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT) {
+  if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
     eval_cuda_quadrature<g, test, trial, Q>
         <<<blocks_quadrature_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
 
-  } else if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT) {
+  } else if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_ELEMENT) {
     int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;
     eval_cuda_element<g, test, trial, Q>
         <<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
   }
 
   cudaDeviceSynchronize();
-  serac::detail::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
 }
+
+/**
+ * @brief The GPU kernel template used to create create custom directional derivative
+ * kernels associated with finite element calculations
+ *
+ * This kernel processes the gradient of one element per thread
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p DomainIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
+ *
+ * @note lambda does not appear as a template argument, as the directional derivative is
+ * inherently just a linear transformation
+ *
+ * @tparam dsolution_type element solution
+ * @tparam dresidual_type element residual
+ *
+ * @param[in] dU The element DOF values (primary input)
+ * @param[inout] dR The element residuals (primary output)
+ * @param[in] derivatives_ptr The address at which derivatives of the q-function with
+ * respect to its arguments are stored
+ * @param[in] J_ The Jacobians of the element transformations at all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ */
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
           typename dresidual_type>
@@ -184,6 +301,37 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
   }
 }
 
+/**
+ * @brief The GPU kernel template used to create create custom directional derivative
+ * kernels associated with finite element calculations
+ *
+ * This kernel processes the gradient of one quadrature point per thread
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p DomainIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
+ *
+ * @note lambda does not appear as a template argument, as the directional derivative is
+ * inherently just a linear transformation
+ *
+ * @tparam dsolution_type element solution
+ * @tparam dresidual_type element residual
+ *
+ * @param[in] dU The element DOF values (primary input)
+ * @param[inout] dR The element residuals (primary output)
+ * @param[in] derivatives_ptr The address at which derivatives of the q-function with
+ * respect to its arguments are stored
+ * @param[in] J_ The Jacobians of the element transformations at all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ */
+
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
           typename dresidual_type>
 __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type dr, derivatives_type* derivatives_ptr,
@@ -215,9 +363,38 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
   }
 }
 
-template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadExecutionPolicy policy,
+/**
+ * @brief The base template used to create create custom directional derivative
+ * kernels associated with finite element calculations
+ *
+ * This function is used to invoke the GPU kernels
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p DomainIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
+ *
+ * @note lambda does not appear as a template argument, as the directional derivative is
+ * inherently just a linear transformation
+ *
+ * @param[in] config Execution configuration for the GPU kernel
+ * @param[in] dU The full set of per-element DOF values (primary input)
+ * @param[inout] dR The full set of per-element residuals (primary output)
+ * @param[in] derivatives_ptr The address at which derivatives of the q-function with
+ * respect to its arguments are stored
+ * @param[in] J_ The Jacobians of the element transformations at all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ */
+
+template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type>
-void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
+void gradient_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
                           derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
@@ -235,22 +412,22 @@ void gradient_kernel_cuda(serac::detail::ThreadExecutionConfiguration config, co
   auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
 
   cudaDeviceSynchronize();
-  serac::detail::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
 
   // call gradient_cuda
-  if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT) {
+  if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
     gradient_cuda_quadrature<g, test, trial, Q, derivatives_type>
         <<<blocks_quadrature_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
 
-  } else if constexpr (policy == serac::detail::ThreadExecutionPolicy::THREAD_PER_ELEMENT) {
+  } else if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_ELEMENT) {
     int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;
     gradient_cuda_element<g, test, trial, Q, derivatives_type>
         <<<blocks_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
   }
 
   cudaDeviceSynchronize();
-  serac::detail::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
   dR.HostRead();
 }
 

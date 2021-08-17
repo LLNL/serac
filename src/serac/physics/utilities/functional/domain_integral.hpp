@@ -93,6 +93,10 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       // eval_quadrature is a SERAC_HOST_DEVICE quadrature point calculation
+
+      // At the moment, the GPU versions of the kernels don't support quadrature data.
+      // That will be addressed in an upcoming PR.
+      // We check if quadrature data is empty and execute on the GPU, otherwise we must execute on the CPU.
       if constexpr (std::is_same_v<qpt_data_type, void>) {
         eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
                                                                      num_elements, qf);
@@ -514,18 +518,24 @@ public:
 #if defined(__CUDACC__)
     if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
-        serac::detail::ThreadExecutionConfiguration exec_config{.blocksize = 128};
+        // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
+        // optimized
+        serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
 
-        domain_integral::evaluation_kernel_cuda<geometry, test_space, trial_space, Q,
-                                                serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT>(
+        domain_integral::evaluation_kernel_cuda<
+            geometry, test_space, trial_space, Q,
+            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
             exec_config, U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
       };
 
       gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-        serac::detail::ThreadExecutionConfiguration exec_config{.blocksize = 128};
+        // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
+        // optimized
+        serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
 
-        domain_integral::gradient_kernel_cuda<geometry, test_space, trial_space, Q,
-                                              serac::detail::ThreadExecutionPolicy::THREAD_PER_QUADRATURE_POINT>(
+        domain_integral::gradient_kernel_cuda<
+            geometry, test_space, trial_space, Q,
+            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
             exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
       };
     }
