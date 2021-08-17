@@ -12,7 +12,7 @@ namespace domain_integral {
  *  H1 family elements will compute {value, gradient}
  *  Hcurl family elements will compute {value, curl}
  *  TODO: Hdiv family elements will compute {value, divergence}
- *  TODO: L2 family elements will compute value
+ *  L2 family elements will compute value
  *
  * In the future, the user will be able to override these defaults
  * to omit unused components (e.g. specify that they only need the gradient)
