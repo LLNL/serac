@@ -42,6 +42,7 @@
 #endif
 
 #include <iostream>
+#include <memory>
 
 /**
  * @brief Accelerator functionality
@@ -96,6 +97,31 @@ inline void displayLastCUDAErrorMessage(std::ostream& o, const char* success_str
   }
 }
 #endif
+
+/**
+ * @brief create shared_ptr to an array of `n` values of type `T`, either on the host or device
+ * @tparam T the type of the value to be stored in the array
+ * @tparam execution_policy the memory space where the data lives
+ * @param n how many entries to allocate in the array
+ */
+template <typename T, typename execution_policy>
+std::shared_ptr<T> make_shared_array(std::size_t n)
+{
+  if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
+    T*   data    = static_cast<T*>(malloc(sizeof(T) * n));
+    auto deleter = [](auto ptr) { free(ptr); };
+    return std::shared_ptr<T>(data, deleter);
+  }
+
+#if defined(__CUDACC__)
+  if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
+    T* data;
+    cudaMalloc(&data, sizeof(T) * n);
+    auto deleter = [](T* ptr) { cudaFree(ptr); };
+    return std::shared_ptr<T>(data, deleter);
+  }
+#endif
+}
 
 }  // namespace accelerator
 

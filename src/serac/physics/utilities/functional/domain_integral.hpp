@@ -489,7 +489,8 @@ public:
     //
     // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
     // qf_derivatives[e * quadrature_points_per_element + q]
-    auto qf_derivatives = make_shared_array<derivative_type, execution_policy>(num_quadrature_points);
+    auto qf_derivatives =
+        serac::accelerator::make_shared_array<derivative_type, execution_policy>(num_quadrature_points);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
