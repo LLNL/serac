@@ -101,7 +101,7 @@ struct QoIElementRestriction : public mfem::Operator {
 };
 
 /// @cond
-template <typename T>
+template <typename T, typename execution_policy = serac::default_policy>
 class Functional;
 /// @endcond
 
@@ -121,6 +121,7 @@ class Functional;
  *
  * @tparam test The space of test functions to use
  * @tparam trial The space of trial functions to use
+ * @tparam execution_policy which kind of processor should be used to carry out calculations
  *
  * To use this class, you use the methods @p Functional::Add****Integral(integrand,domain_of_integration)
  * where @p integrand is a q-function lambda or functor and @p domain_of_integration is an @p mfem::mesh
@@ -143,8 +144,8 @@ class Functional;
  * my_residual.AddDomainIntegral(Dimension<3>{}, integrand, domain_of_integration);
  * @endcode
  */
-template <typename test, typename trial>
-class Functional<test(trial)> : public mfem::Operator {
+template <typename test, typename trial, typename execution_policy>
+class Functional<test(trial), execution_policy> : public mfem::Operator {
 
   static constexpr bool is_qoi = test::family == Family::QOI;
 
@@ -219,9 +220,8 @@ class Functional<test(trial)> : public mfem::Operator {
   }
 
   /**
-   * @brief Adds an integral term to the weak formulation of the PDE
-   * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
-   * @tparam spatial_dim The full dimension of the mesh
+   * @brief Adds a domain integral term to the weak formulation of the PDE
+   * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
@@ -250,6 +250,17 @@ class Functional<test(trial)> : public mfem::Operator {
     domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
   }
 
+  /**
+   * @brief Adds a boundary integral term to the weak formulation of the PDE
+   * @tparam dim The dimension of the boundary element (1 for line, 2 for quad, etc)
+   * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
+   * @tparam qpt_data_type The type of the data to store for each quadrature point
+   * @param[in] integrand The user-provided quadrature function, see @p Integral
+   * @param[in] domain The domain on which to evaluate the integral
+   * @param[in] data The data structure containing per-quadrature-point data
+   * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
+   * and @a spatial_dim template parameter
+   */
   template <int dim, typename lambda, typename qpt_data_type = void>
   void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
                            QuadratureData<qpt_data_type>& data = dummy_qdata)
@@ -661,7 +672,7 @@ private:
     /**
      * @brief The "parent" @p Functional to calculate gradients with
      */
-    Functional<test(trial)>& form;
+    Functional<test(trial), execution_policy>& form;
 
     std::vector< int > row_ptr;
     std::vector< int > col_ind;
@@ -672,7 +683,6 @@ private:
     mfem::SparseMatrix A;
 
     bool sparsity_pattern_initialized;
-
   };
 
   /**
@@ -844,7 +854,7 @@ private:
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<DomainIntegral<test(trial)> > domain_integrals_;
+  std::vector<DomainIntegral<test(trial), execution_policy> > domain_integrals_;
 
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)

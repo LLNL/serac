@@ -46,6 +46,13 @@ public:
    */
   static FiniteElementState newState(FiniteElementState::Options&& options = {});
 
+  /**
+   * @brief Factory method for creating a new QuadratureData object
+   * @tparam T The type of the per-qpt data
+   * @param[in] name The name of the quadrature data field
+   * @param[in] p The order of the quadrature rule
+   * @see QuadratureData::QuadratureData
+   */
   template <typename T>
   static QuadratureData<T>& newQuadratureData(const std::string& name, const int p)
   {

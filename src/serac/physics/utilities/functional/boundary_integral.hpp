@@ -98,6 +98,7 @@ auto Postprocess(T f, coord_type xi)
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
+ * @param[in] data The quadrature point data
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
@@ -337,6 +338,7 @@ public:
    * @param[in] normals The unit normals of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
+   * @param[in] data The quadrature point data
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>

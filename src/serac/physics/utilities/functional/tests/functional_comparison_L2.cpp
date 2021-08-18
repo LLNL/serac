@@ -87,7 +87,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
         auto [u, du_dx] = temperature;
         auto source     = a * u - (100 * x[0] * x[1]);
         auto flux       = b * du_dx;
-        return std::tuple{source, flux};
+        return serac::tuple{source, flux};
       },
       mesh);
 

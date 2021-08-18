@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file intergal_utilities.hpp
+ * @file integral_utilities.hpp
  *
  * @brief this file contains functions and tools used by both domain_integral.hpp and boundary_integral.hpp
  */
@@ -17,6 +17,7 @@
 
 #include "serac/physics/utilities/functional/tensor.hpp"
 #include "serac/physics/utilities/functional/finite_element.hpp"
+#include "serac/physics/utilities/functional/tuple.hpp"
 
 namespace serac {
 
@@ -74,7 +75,7 @@ auto Reshape(const double* u, int n1, int n2)
  * @note For the case of only 1 dof per node, detail::Load returns a tensor<double, ndof>
  */
 template <int ndof>
-inline auto Load(const mfem::DeviceTensor<2, const double>& u, int e)
+SERAC_HOST_DEVICE inline auto Load(const mfem::DeviceTensor<2, const double>& u, int e)
 {
   return make_tensor<ndof>([&u, e](int i) { return u(i, e); });
 }
@@ -84,7 +85,7 @@ inline auto Load(const mfem::DeviceTensor<2, const double>& u, int e)
  * @note For the case of multiple dofs per node, detail::Load returns a tensor<double, components, ndof>
  */
 template <int ndof, int components>
-inline auto Load(const mfem::DeviceTensor<3, const double>& u, int e)
+SERAC_HOST_DEVICE inline auto Load(const mfem::DeviceTensor<3, const double>& u, int e)
 {
   return make_tensor<components, ndof>([&u, e](int j, int i) { return u(i, j, e); });
 }
@@ -94,7 +95,7 @@ inline auto Load(const mfem::DeviceTensor<3, const double>& u, int e)
  * @note Intended to be used with Serac's finite element space types
  */
 template <typename space, typename T>
-auto Load(const T& u, int e)
+SERAC_HOST_DEVICE auto Load(const T& u, int e)
 {
   if constexpr (space::components == 1) {
     return detail::Load<space::ndof>(u, e);
@@ -111,10 +112,10 @@ auto Load(const T& u, int e)
  * @param[in] e The index of the element whose residual is @a r_local
  */
 template <int ndof>
-void Add(const mfem::DeviceTensor<2, double>& r_global, tensor<double, ndof> r_local, int e)
+SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<2, double>& r_global, tensor<double, ndof> r_local, int e)
 {
   for (int i = 0; i < ndof; i++) {
-    r_global(i, e) += r_local[i];
+    AtomicAdd(r_global(i, e), r_local[i]);
   }
 }
 
@@ -123,11 +124,12 @@ void Add(const mfem::DeviceTensor<2, double>& r_global, tensor<double, ndof> r_l
  * @note Used when each node has multiple DOFs
  */
 template <int ndof, int components>
-void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, components> r_local, int e)
+SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor<double, ndof, components> r_local,
+                           int e)
 {
   for (int i = 0; i < ndof; i++) {
     for (int j = 0; j < components; j++) {
-      r_global(i, j, e) += r_local[i][j];
+      AtomicAdd(r_global(i, j, e), r_local[i][j]);
     }
   }
 }
@@ -173,42 +175,78 @@ struct get_trial_space<test_space(trial_space)> {
 template <typename space, int geometry_dim, int spatial_dim>
 struct lambda_argument;
 
-// specialization for an H1 space with polynomial order p, and c components
+/**
+ * @overload
+ * @note specialization for an H1 space with polynomial order p, and c components
+ */
 template <int p, int c, int dim>
 struct lambda_argument<H1<p, c>, dim, dim> {
-  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
+  /**
+   * @brief The arguments for the lambda function
+   */
+  using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
-// specialization for an L2 space with polynomial order p, and c components
+/**
+ * @overload
+ * @note specialization for an L2 space with polynomial order p, and c components
+ */
 template <int p, int c, int dim>
 struct lambda_argument<L2<p, c>, dim, dim> {
-  using type = std::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
+  /**
+   * @brief The arguments for the lambda function
+   */
+  using type = serac::tuple<reduced_tensor<double, c>, reduced_tensor<double, c, dim>>;
 };
 
-// specialization for an H1 space with polynomial order p, and c components
-// evaluated in a line integral or surface integral. Note: only values are provided in this case
+/**
+ * @overload
+ * @note specialization for an H1 space with polynomial order p, and c components
+ *       evaluated in a line integral or surface integral. Note: only values are provided in this case
+ */
 template <int p, int c, int geometry_dim, int spatial_dim>
 struct lambda_argument<H1<p, c>, geometry_dim, spatial_dim> {
+  /**
+   * @brief The arguments for the lambda function
+   */
   using type = reduced_tensor<double, c>;
 };
 
-// specialization for an H1 space with polynomial order p, and c components
-// evaluated in a line integral or surface integral. Note: only values are provided in this case
+/**
+ * @overload
+ * @note specialization for an H1 space with polynomial order p, and c components
+ *       evaluated in a line integral or surface integral. Note: only values are provided in this case
+ */
 template <int p, int c, int geometry_dim, int spatial_dim>
 struct lambda_argument<L2<p, c>, geometry_dim, spatial_dim> {
+  /**
+   * @brief The arguments for the lambda function
+   */
   using type = reduced_tensor<double, c>;
 };
 
-// specialization for an Hcurl space with polynomial order p in 2D
+/**
+ * @overload
+ * @note specialization for an Hcurl space with polynomial order p in 2D
+ */
 template <int p>
 struct lambda_argument<Hcurl<p>, 2, 2> {
-  using type = std::tuple<tensor<double, 2>, double>;
+  /**
+   * @brief The arguments for the lambda function
+   */
+  using type = serac::tuple<tensor<double, 2>, double>;
 };
 
-// specialization for an Hcurl space with polynomial order p in 3D
+/**
+ * @overload
+ * @note specialization for an Hcurl space with polynomial order p in 3D
+ */
 template <int p>
 struct lambda_argument<Hcurl<p>, 3, 3> {
-  using type = std::tuple<tensor<double, 3>, tensor<double, 3>>;
+  /**
+   * @brief The arguments for the lambda function
+   */
+  using type = serac::tuple<tensor<double, 3>, tensor<double, 3>>;
 };
 
 /**
@@ -220,15 +258,51 @@ struct lambda_argument<Hcurl<p>, 3, 3> {
  */
 template <typename lambda_type, typename x_t, typename u_du_t, typename qpt_data_type, typename SFINAE = void>
 struct qf_result {
+  /**
+   * @brief The type of the quadrature function result
+   */
   using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>()))>;
 };
 
+/**
+ * @overload
+ */
 template <typename lambda_type, typename x_t, typename u_du_t, typename qpt_data_type>
 struct qf_result<lambda_type, x_t, u_du_t, qpt_data_type, std::enable_if_t<!std::is_same_v<qpt_data_type, void>>> {
-  // Expecting that qf lambdas take an lvalue reference to a state
+  /**
+   * @brief The type of the quadrature function result
+   * @note Expecting that qf lambdas take an lvalue reference to a state
+   */
   using type = std::invoke_result_t<lambda_type, x_t, decltype(make_dual(std::declval<u_du_t>())),
                                     std::add_lvalue_reference_t<qpt_data_type>>;
 };
+
+/**
+ * @brief derivatives_ptr access
+ *
+ * Templating this will allow us to change the stride-access patterns more consistently
+ * By default derivatives_ptr is accessed using row_major ordering derivatives_ptr(element, quadrature).
+ *
+ * @tparam derivatives_type The type of the derivatives
+ * @tparam rule_type The type of the quadrature rule
+ * @tparam row_major A boolean to choose to use row major access patterns or column major
+ * @param[in] derivative_ptr pointer to derivatives
+ * @param[in] e element number
+ * @param[in] q qaudrature number
+ * @param[in] rule quadrature rule
+ * @param[in] num_elements number of finite elements
+ */
+template <typename derivatives_type, typename rule_type, bool row_major = true>
+SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type* derivatives_ptr, int e, int q,
+                                                                [[maybe_unused]] rule_type& rule,
+                                                                [[maybe_unused]] int        num_elements)
+{
+  if constexpr (row_major) {
+    return derivatives_ptr[e * int(rule.size()) + q];
+  } else {
+    return derivatives_ptr[q * num_elements + e];
+  }
+}
 
 }  // namespace detail
 

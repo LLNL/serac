@@ -24,6 +24,11 @@
 #include "serac/physics/utilities/functional/integral_utilities.hpp"
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
+#include "serac/physics/utilities/functional/domain_integral_shared.hpp"
+
+#if defined(__CUDACC__)
+#include "serac/physics/utilities/functional/domain_integral_cuda.cuh"
+#endif
 
 namespace serac {
 
@@ -32,87 +37,6 @@ namespace domain_integral {
 void Add(const mfem::DeviceTensor<2, double>& r_global, double r_local, int e)
 {
   r_global(0, e) += r_local;
-}
-
-/**
- * @brief Computes the arguments to be passed into the q-function (shape function evaluations)
- * By default:
- *  H1 family elements will compute {value, gradient}
- *  Hcurl family elements will compute {value, curl}
- *  TODO: Hdiv family elements will compute {value, divergence}
- *  TODO: L2 family elements will compute value
- *
- * In the future, the user will be able to override these defaults
- * to omit unused components (e.g. specify that they only need the gradient)
- *
- * @param[in] u The DOF values for the element
- * @param[in] xi The position of the quadrature point in reference space
- * @param[in] J The Jacobian of the element transformation at the quadrature point
- * @tparam element_type The type of the element (used to determine the family)
- */
-template <typename element_type, typename T, int dim>
-auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
-{
-  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
-    return std::tuple{dot(u, element_type::shape_functions(xi)),
-                      dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
-  }
-
-  if constexpr (element_type::family == Family::HCURL) {
-    // HCURL shape functions undergo a covariant Piola transformation when going
-    // from parent element to physical element
-    auto value = dot(u, dot(element_type::shape_functions(xi), inv(J)));
-    auto curl  = dot(u, element_type::shape_function_curl(xi) / det(J));
-    if constexpr (dim == 3) {
-      curl = dot(curl, transpose(J));
-    }
-    return std::tuple{value, curl};
-  }
-}
-
-/**
- * @brief Computes residual contributions from the output of the q-function
- * This involves integrating the q-function output against functions from the
- * test function space.
- *
- * By default:
- *  H1 family elements integrate std::get<0>(f) against the test space shape functions
- *                           and std::get<1>(f) against the test space shape function gradients
- *  Hcurl family elements integrate std::get<0>(f) against the test space shape functions
- *                              and std::get<1>(f) against the curl of the test space shape functions
- * TODO: Hdiv family elements integrate std::get<0>(f) against the test space shape functions
- *                                  and std::get<1>(f) against the divergence of the test space shape functions
- * TODO: L2 family elements integrate f against test space shape functions
- *
- * In the future, the user will be able to override these defaults
- * to omit unused components (e.g. provide only the term to be integrated against test function gradients)
- * @tparam element_type The type of the element (used to determine the family)
- * @tparam T The type of the output from the user-provided q-function
- * @pre T must be a pair type for H1, H(curl) and H(div) family elements
- * @param[in] f The value component output of the user's quadrature function (as opposed to the value/derivative pair)
- * @param[in] xi The position of the quadrature point in reference space
- * @param[in] J The Jacobian of the element transformation at the quadrature point
- */
-template <typename element_type, typename T, int dim>
-auto Postprocess(T f, [[maybe_unused]] const tensor<double, dim> xi, [[maybe_unused]] const tensor<double, dim, dim> J)
-{
-  // TODO: Helpful static_assert about f being tuple or tuple-like for H1, hcurl, hdiv
-  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
-    auto W     = element_type::shape_functions(xi);
-    auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
-    return outer(W, std::get<0>(f)) + dot(dW_dx, std::get<1>(f));
-  }
-
-  if constexpr (element_type::family == Family::HCURL) {
-    auto W      = dot(element_type::shape_functions(xi), inv(J));
-    auto curl_W = element_type::shape_function_curl(xi) / det(J);
-    if constexpr (dim == 3) {
-      curl_W = dot(curl_W, transpose(J));
-    }
-    return (W * std::get<0>(f) + curl_W * std::get<1>(f));
-  }
-
-  if constexpr (element_type::family == Family::QOI) { return f; }
 }
 
 /**
@@ -175,42 +99,40 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      // get the position of this quadrature point in the parent and physical space,
-      // and calculate the measure of that point in physical space.
-      auto   xi  = rule.points[q];
-      auto   dxi = rule.weights[q];
-      auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = det(J_q) * dxi;
+      // eval_quadrature is a SERAC_HOST_DEVICE quadrature point calculation
 
-      // evaluate the value/derivatives needed for the q-function at this quadrature point
-      auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
+      // At the moment, the GPU versions of the kernels don't support quadrature data.
+      // That will be addressed in an upcoming PR.
+      // We check if quadrature data is empty and execute on the GPU, otherwise we must execute on the CPU.
+      if constexpr (std::is_same_v<qpt_data_type, void>) {
+        eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
+                                                                     num_elements, qf);
+      } else {
+        auto   xi  = rule.points[q];
+        auto   dxi = rule.weights[q];
+        auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+        auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+        double dx  = det(J_q) * dxi;
 
-      // evaluate the user-specified constitutive model
-      //
-      // note: make_dual(arg) promotes those arguments to dual number types
-      // so that qf_output will contain values and derivatives
-      // TODO: Refactor the call to qf here since the current approach is somewhat messy
-      auto qf_output = [&qf, &x_q, &arg, &data, e, q]() {
-        if constexpr (std::is_same_v<qpt_data_type, void>) {
-          // [[maybe_unused]] not supported in captures
-          (void)data;
-          (void)e;
-          (void)q;
-          return qf(x_q, make_dual(arg));
-        } else {
-          return qf(x_q, make_dual(arg), data(e, q));
-        }
-      }();
+        // evaluate the value/derivatives needed for the q-function at this quadrature point
+        auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
 
-      // integrate qf_output against test space shape functions / gradients
-      // to get element residual contributions
-      r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+        // evaluate the user-specified constitutive model
+        //
+        // note: make_dual(arg) promotes those arguments to dual number types
+        // so that qf_output will contain values and derivatives
+        // TODO: Refactor the call to qf here since the current approach is somewhat messy
+        auto qf_output = [&qf, &x_q, &arg, &data, e, q]() { return qf(x_q, make_dual(arg), data(e, q)); }();
 
-      // here, we store the derivative of the q-function w.r.t. its input arguments
-      //
-      // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
-      derivatives_ptr[e * int(rule.size()) + q] = get_gradient(qf_output);
+        // integrate qf_output against test space shape functions / gradients
+        // to get element residual contributions
+        r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+
+        // here, we store the derivative of the q-function w.r.t. its input arguments
+        //
+        // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
+        detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
+      }
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -272,25 +194,8 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      // get the position of this quadrature point in the parent and physical space,
-      // and calculate the measure of that point in physical space.
-      auto   xi  = rule.points[q];
-      auto   dxi = rule.weights[q];
-      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = det(J_q) * dxi;
-
-      // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
-
-      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
-
-      // use the chain rule to compute the first-order change in the q-function output
-      auto dq = chain_rule(dq_darg, darg);
-
-      // integrate dq against test space shape functions / gradients
-      // to get the (change in) element residual contributions
-      dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
+      gradient_quadrature<g, test, trial, Q, derivatives_type>(e, q, du_elem, dr_elem, derivatives_ptr, J,
+                                                               num_elements);
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -398,7 +303,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
       [[maybe_unused]] double dx     = detJ_q * dxi_q;
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
+      auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
 
       auto & q00 = std::get<0>(std::get<0>(dq_darg)); // derivative of source term w.r.t. field value
       auto & q01 = std::get<1>(std::get<0>(dq_darg)); // derivative of source term w.r.t. field derivative
@@ -438,7 +343,7 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  */
-template <typename spaces>
+template <typename spaces, typename execution_policy>
 class DomainIntegral {
 public:
   using test_space  = test_space_t<spaces>;   ///< the test function space
@@ -453,6 +358,7 @@ public:
    * @param[in] X The actual (not reference) coordinates of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
+   * @param[in] data The quadrature point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters
    */
@@ -487,7 +393,9 @@ public:
     // DomainIntegral::~DomainIntegral()
     //
     // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
-    std::shared_ptr<derivative_type[]> qf_derivatives(new derivative_type[num_quadrature_points]);
+    // qf_derivatives[e * quadrature_points_per_element + q]
+    auto qf_derivatives =
+        serac::accelerator::make_shared_array<derivative_type, execution_policy>(num_quadrature_points);
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
@@ -496,19 +404,50 @@ public:
     //
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
-    evaluation_ = [=, &data](const mfem::Vector& U, mfem::Vector& R) {
-      domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
-                                                                               num_elements, qf, data);
-    };
 
-    gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-      domain_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_,
-                                                                             num_elements);
-    };
+    if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
+      evaluation_ = [=, &data](const mfem::Vector& U, mfem::Vector& R) {
+        domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
+                                                                                 num_elements, qf, data);
+      };
 
-    gradient_mat_ = [=](mfem::Vector& K_e) {
-      domain_integral::gradient_matrix_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_, num_elements);
-    };
+      gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
+        domain_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_,
+                                                                               num_elements);
+      };
+
+      gradient_mat_ = [=](mfem::Vector& K_e) {
+        domain_integral::gradient_matrix_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_, num_elements);
+      };
+    }
+
+    // TEMPORARY: Add temporary guard so gpu_policy cannot be used when there is no GPU.
+    // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
+#if defined(__CUDACC__)
+    if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
+      evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
+        // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
+        // optimized
+        serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
+
+        domain_integral::evaluation_kernel_cuda<
+            geometry, test_space, trial_space, Q,
+            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
+            exec_config, U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
+      };
+
+      gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
+        // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
+        // optimized
+        serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
+
+        domain_integral::gradient_kernel_cuda<
+            geometry, test_space, trial_space, Q,
+            serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
+            exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
+      };
+    }
+#endif
   }
 
   /**

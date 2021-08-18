@@ -201,7 +201,11 @@ template <typename... T>
 std::string concat(T... args)
 {
   std::stringstream ss;
-  (ss << ... << args);
+  // this fold expression is a more elegant way to implement the concatenation,
+  // but nvcc incorrectly generates warning "warning: expression has no effect"
+  // when using the fold expression version
+  // (ss << ... << args);
+  ((ss << args), ...);
   return ss.str();
 }
 
