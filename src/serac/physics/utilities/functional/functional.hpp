@@ -491,12 +491,13 @@ private:
 
       if (form.domain_integrals_.size() > 0) {
         bool on_boundary = false;
-        const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.test_space_->GetFE(0))->GetDofMap();
-        const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetFE(0))->GetDofMap();
 
         for (int e = 0; e < num_elements; e++) {
           form.test_space_->GetElementDofs(e, test_dofs);
           form.trial_space_->GetElementDofs(e, trial_dofs);
+
+          const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.test_space_->GetFE(0))->GetDofMap();
+          const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetFE(0))->GetDofMap();
           ::detail::apply_permutation(test_dofs, test_native_to_lexicographic);
           ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
           for (int i = 0; i < dofs_per_test_element; i++) {
@@ -516,38 +517,41 @@ private:
 
       // mfem doesn't implement GetDofMap for some of its Nedelec elements (??),
       // so we have to temporarily disable boundary terms for Hcurl until they do
-      //if (test::family == Family::H1 && trial::family == Family::H1) {
       if (form.boundary_integrals_.size() > 0) {
-        if (test::family != Family::HCURL && trial::family != Family::HCURL) {
-          bool on_boundary = true;
+        bool on_boundary = true;
 
-          const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.test_space_->GetBE(0))->GetDofMap();
-          const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetBE(0))->GetDofMap();
+        for (int b = 0; b < num_boundary_elements; b++) {
+          form.test_space_->GetBdrElementDofs(b, test_dofs);
+          form.trial_space_->GetBdrElementDofs(b, trial_dofs);
 
-          for (int b = 0; b < num_boundary_elements; b++) {
-            form.test_space_->GetBdrElementDofs(b, test_dofs);
-            form.trial_space_->GetBdrElementDofs(b, trial_dofs);
+          if constexpr (test::family != Family::HCURL) {
+            const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.test_space_->GetBE(0))->GetDofMap();
             ::detail::apply_permutation(test_dofs, test_native_to_lexicographic);
+          }
+
+          if constexpr (trial::family != Family::HCURL) {
+            const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetBE(0))->GetDofMap();
             ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
-            for (int i = 0; i < dofs_per_test_boundary_element; i++) {
-              for (int j = 0; j < dofs_per_test_boundary_element; j++) {
-                for (int k = 0; k < test_vdim; k++) {
-                  int test_vdof = form.test_space_->DofToVDof(::detail::get_index(test_dofs[i]), k);
-                  for (int l = 0; l < trial_vdim; l++) {
-                    int trial_vdof = form.trial_space_->DofToVDof(::detail::get_index(trial_dofs[j]), l);
-                    infos.push_back({test_vdof, trial_vdof, i + dofs_per_test_boundary_element * k, j + dofs_per_trial_boundary_element * l, b, ::detail::get_sign(test_dofs[i]) * ::detail::get_sign(trial_dofs[j]), on_boundary});
-                  }
+          }
+
+          for (int i = 0; i < dofs_per_test_boundary_element; i++) {
+            for (int j = 0; j < dofs_per_trial_boundary_element; j++) {
+              for (int k = 0; k < test_vdim; k++) {
+                int test_vdof = form.test_space_->DofToVDof(::detail::get_index(test_dofs[i]), k);
+                for (int l = 0; l < trial_vdim; l++) {
+                  int trial_vdof = form.trial_space_->DofToVDof(::detail::get_index(trial_dofs[j]), l);
+                  infos.push_back({test_vdof, trial_vdof, i + dofs_per_test_boundary_element * k, j + dofs_per_trial_boundary_element * l, b, ::detail::get_sign(test_dofs[i]) * ::detail::get_sign(trial_dofs[j]), on_boundary});
                 }
               }
             }
           }
-
         }
       }
 
       std::sort(infos.begin(), infos.end());
 
-      row_ptr.resize(form.test_space_->GetNDofs() * form.test_space_->GetVDim() + 1);
+      int nrows = form.test_space_->GetNDofs() * form.test_space_->GetVDim();
+      row_ptr.resize(nrows + 1);
       std::vector < ::detail::signed_index > nonzero_ids(infos.size());
 
       int nnz = 0;
@@ -570,7 +574,10 @@ private:
         }
       }
 
-      row_ptr.back() = ++nnz;
+      ++nnz;
+      for (int j = infos.back().global_row; j < nrows; j++) {
+        row_ptr[j+1] = nnz;
+      }
 
       element_nonzero_LUT = Array3D<::detail::signed_index>(num_elements, dofs_per_test_element * test_vdim, dofs_per_trial_element * trial_vdim);
       boundary_element_nonzero_LUT = Array3D<::detail::signed_index>(num_boundary_elements, dofs_per_test_boundary_element * test_vdim, dofs_per_trial_boundary_element * trial_vdim);

@@ -29,12 +29,11 @@ constexpr bool verbose     = true;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-bool operator==(const mfem::SparseMatrix & A, const mfem::SparseMatrix & B) {
+double relative_error_frobenius_norm(const mfem::SparseMatrix & A, const mfem::SparseMatrix & B) {
   if (A.Height() != B.Height()) return false;
   if (A.Width()  != B.Width())  return false;
 
-  constexpr double tolerance = 1.0e-15;
-  double fnorm_A_plus_B = 0.0;
+  double fnorm_A = 0.0;
   double fnorm_A_minus_B = 0.0;
 
   for (int r = 0; r < A.Height(); r++) {
@@ -42,17 +41,19 @@ bool operator==(const mfem::SparseMatrix & A, const mfem::SparseMatrix & B) {
     for (int j = 0; j < A.RowSize(r); j++) {
       int c = columns[j];
       if (c < 0) std::cout << "??" << std::endl;
-      fnorm_A_plus_B += (A(r, c) + B(r, c)) * (A(r, c) + B(r, c));
+      fnorm_A += A(r, c) * A(r, c);
       fnorm_A_minus_B += (A(r, c) - B(r, c)) * (A(r, c) - B(r, c));
     }
   }
 
-  return sqrt(fnorm_A_minus_B) < (tolerance * sqrt(fnorm_A_plus_B));
+  return sqrt(fnorm_A_minus_B / fnorm_A);
+}
+
+bool operator==(const mfem::SparseMatrix & A, const mfem::SparseMatrix & B) {
+  return relative_error_frobenius_norm(A, B) < 1.0e-15;
 }
 
 bool operator!=(const mfem::SparseMatrix & A, const mfem::SparseMatrix & B) { return !(A == B); }
-
-
 
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
@@ -106,18 +107,8 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
 
-  mfem::SparseMatrix gradient = grad(residual);
-
-  std::ofstream outfile;
-  outfile.open("A_functional.mtx");
-  gradient.PrintMM(outfile);
-  outfile.close();
-
-  auto Bmatrix = B.SpMat();
-  Bmatrix.SortColumnIndices();
-  outfile.open("A_mfem.mtx");
-  Bmatrix.PrintMM(outfile);
-  outfile.close();
+  mfem::SparseMatrix gradient1 = B.SpMat();
+  mfem::SparseMatrix gradient2 = grad(residual);
 
   if (verbose) {
     std::cout << "sum(r1):  " << r1.Sum() << std::endl;
@@ -125,9 +116,21 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
     std::cout << "||r1||: " << r1.Norml2() << std::endl;
     std::cout << "||r2||: " << r2.Norml2() << std::endl;
     std::cout << "||r1-r2||/||r1||: " << mfem::Vector(r1 - r2).Norml2() / r1.Norml2() << std::endl;
+
+    std::ofstream outfile;
+
+    outfile.open("A_mfem.mtx");
+    gradient1.SortColumnIndices();
+    gradient1.PrintMM(outfile);
+    outfile.close();
+
+    outfile.open("A_functional.mtx");
+    gradient2.PrintMM(outfile);
+    outfile.close();
   }
 
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
+  EXPECT_NEAR(0.0, relative_error_frobenius_norm(gradient1, gradient2), 1.0e-5);
 
 }
 
@@ -195,10 +198,10 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
 }
 
 TEST(boundary, 2D_linear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-//TEST(boundary, 2D_quadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(boundary, 2D_quadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
 
-//TEST(boundary, 3D_linear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-//TEST(boundary, 3D_quadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(boundary, 3D_linear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(boundary, 3D_quadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 
 //TEST(boundary_L2, 2D_linear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
 //TEST(boundary_L2, 2D_quadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
@@ -215,7 +218,7 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 1;
+  int serial_refinement   = 0;
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
