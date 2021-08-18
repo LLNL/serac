@@ -516,6 +516,8 @@ public:
       };
     }
 
+    // TEMPORARY: Add temporary guard so gpu_policy cannot be used when there is no GPU.
+    // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
 #if defined(__CUDACC__)
     if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
       evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {

@@ -59,6 +59,8 @@ struct cpu_policy {
  * @brief tag type for signaling that calculations that should be performed on the GPU
  */
 #if defined(__CUDACC__)
+// TEMPORARY: Add temporary guard so gpu_policy cannot be used when there is no GPU.
+// The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
 struct gpu_policy {
 };
 #endif
