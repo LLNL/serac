@@ -56,10 +56,12 @@ struct cpu_policy {
 };
 
 /**
- * @brief tag type for signaling that calculations that should be performed on the CPU
+ * @brief tag type for signaling that calculations that should be performed on the GPU
  */
+#if defined(__CUDACC__)
 struct gpu_policy {
 };
+#endif
 
 /**
  * @brief for now, we'll just default to the CPU
