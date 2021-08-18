@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "../tuple.hpp"
-#include "../tuple_arithmetic.hpp"
-#include "../tensor.hpp"
+#include "serac/physics/utilities/functional/tuple.hpp"
+#include "serac/physics/utilities/functional//tuple_arithmetic.hpp"
+#include "serac/physics/utilities/functional//tensor.hpp"
 
 #include <random>
 #include <iostream>

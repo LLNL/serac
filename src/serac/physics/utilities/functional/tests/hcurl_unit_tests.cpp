@@ -4,9 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "../detail/metaprogramming.hpp"
-#include "../tensor.hpp"
-#include "../finite_element.hpp"
+#include "serac/physics/utilities/functional/detail/metaprogramming.hpp"
+#include "serac/physics/utilities/functional/tensor.hpp"
+#include "serac/physics/utilities/functional/finite_element.hpp"
 
 #include <gtest/gtest.h>
 

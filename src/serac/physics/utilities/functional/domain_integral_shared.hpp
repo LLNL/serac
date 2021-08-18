@@ -85,8 +85,6 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
   }
 }
 
-// TODO: Add more comments. Quadrature level evaluation
-
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename u_elem_type, typename element_residual_type, typename J_type, typename X_type>
 SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type& r_elem,
