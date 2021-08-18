@@ -109,12 +109,10 @@ inline void displayLastCUDAErrorMessage(std::ostream& o, const char* success_str
  * @param n how many entries to allocate in the array
  */
 template <typename T, typename execution_policy>
-std::shared_ptr<T> make_shared_array(std::size_t n)
+std::shared_ptr<T[]> make_shared_array(std::size_t n)
 {
   if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
-    T*   data    = static_cast<T*>(malloc(sizeof(T) * n));
-    auto deleter = [](auto ptr) { free(ptr); };
-    return std::shared_ptr<T>(data, deleter);
+    return std::shared_ptr<T[]>(new T[n]);
   }
 
 #if defined(__CUDACC__)
@@ -122,7 +120,7 @@ std::shared_ptr<T> make_shared_array(std::size_t n)
     T* data;
     cudaMalloc(&data, sizeof(T) * n);
     auto deleter = [](T* ptr) { cudaFree(ptr); };
-    return std::shared_ptr<T>(data, deleter);
+    return std::shared_ptr<T[]>(data, deleter);
   }
 #endif
 }
