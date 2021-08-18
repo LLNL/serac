@@ -85,8 +85,36 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
   }
 }
 
-// TODO: Add more comments. Quadrature level evaluation
-
+/**
+ * @brief A host/device template used to calculate element residuals at the quadrature point level
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p DomainIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
+ * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
+ * be evaluated at each quadrature point.
+ * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
+ * information on the idea behind a quadrature function and its inputs/outputs
+ * @tparam qpt_data_type The type of the data to store for each quadrature point
+ *
+ * @param[in] e The element number
+ * @param[in] q The quadrature point index
+ * @param[in] u_elem The element DOF values (primary input)
+ * @param[inout] r_elem The element residuals (primary output)
+ * @param[out] derivatives_ptr The address at which derivatives of @a lambda with
+ * respect to its arguments will be stored
+ * @param[in] J The Jacobian of the element transformation at all quadrature points
+ * @param[in] X The actual (not reference) coordinates of all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ * @param[in] qf The actual quadrature function, see @p lambda
+ */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename u_elem_type, typename element_residual_type, typename J_type, typename X_type>
 SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type& r_elem,
@@ -127,6 +155,37 @@ SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element
   // Note: This pattern may result in non-coalesced access depend on how it executed.
   detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
 }
+
+/**
+ * @brief This a host/device template used to calculate gradients at a quadrature point
+ * kernels associated with finite element calculations
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p DomainIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
+ *
+ * @note lambda does not appear as a template argument, as the directional derivative is
+ * inherently just a linear transformation
+ *
+ * @tparam dsolution_type element solution
+ * @tparam dresidual_type element residual
+ *
+ * @param[in] e The element number
+ * @param[in] q The quadrature point index
+ * @param[in] dU The element DOF values (primary input)
+ * @param[inout] dR The element residuals (primary output)
+ * @param[in] derivatives_ptr The address at which derivatives of the q-function with
+ * respect to its arguments are stored
+ * @param[in] J_ The Jacobians of the element transformations at all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ */
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename du_elem_type,
           typename dr_elem_type>
