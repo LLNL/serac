@@ -23,6 +23,7 @@
 #include "serac/physics/materials/hyperelastic_material.hpp"
 #include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
 #include "serac/coefficients/sensitivity_coefficients.hpp"
+#include "serac/physics/utilities/finite_element_dual.hpp"
 
 namespace serac {
 
@@ -354,13 +355,13 @@ public:
    * @note It is expected that the forward analysis is complete and the current displacement state is valid
    * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
    *
-   * @param[in] adjoint_load_form The linear form that when assembled contains the right hand side of the adjoint system
+   * @param[in] adjoint_load_state The dual state that contains the right hand side of the adjoint system
    * @param[in] state_with_essential_boundary A optional finite element state containing the non-homogenous essential
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
    */
-  virtual const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
-                                                        FiniteElementState*  state_with_essential_boundary = nullptr);
+  virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load_state,
+                                                        FiniteElementDual* state_with_essential_boundary = nullptr);
 
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
@@ -371,8 +372,10 @@ public:
    *
    * @note Before this call, a forward and adjoint solve (with the appropriate QoI-based adjoint load) must be
    * completed. If this does not occur, the returned linear form will be incorrect.
+   *
+   * @note T
    */
-  virtual mfem::ParLinearForm& shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space);
+  virtual FiniteElementDual& shearModulusSensitivity(mfem::ParFiniteElementSpace* shear_space = nullptr);
 
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
@@ -381,7 +384,7 @@ public:
    * @param bulk_space The finite element space used to parameterize the bulk modulus
    * @return The sensitivity with respect to the bulk modulus
    */
-  virtual mfem::ParLinearForm& bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space);
+  virtual FiniteElementDual& bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space = nullptr);
 
   /**
    * @brief Destroy the Nonlinear Solid Solver object
@@ -580,6 +583,11 @@ protected:
   std::unique_ptr<mfem_ext::ShearSensitivityCoefficient> shear_sensitivity_coef_;
 
   /**
+   * @brief Assembled shear sensitivity linear form applied to a specific basis
+   */
+  std::unique_ptr<FiniteElementDual> shear_sensitivity_;
+
+  /**
    * @brief Linear form containing the derivative of the quantity of interest with respect to the bulk modulus
    */
   std::unique_ptr<mfem::ParLinearForm> bulk_sensitivity_form_;
@@ -589,6 +597,11 @@ protected:
    * modulus
    */
   std::unique_ptr<mfem_ext::BulkSensitivityCoefficient> bulk_sensitivity_coef_;
+
+  /**
+   * @brief Assembled bulk sensitivity linear form applied to a specific basis
+   */
+  std::unique_ptr<FiniteElementDual> bulk_sensitivity_;
 };
 
 }  // namespace serac

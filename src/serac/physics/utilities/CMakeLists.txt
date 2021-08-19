@@ -11,6 +11,7 @@ set(physics_utilities_headers
     boundary_condition_manager.hpp
     equation_solver.hpp
     finite_element_state.hpp
+    finite_element_dual.hpp
     physics_utils.hpp
     solver_config.hpp
     state_manager.hpp

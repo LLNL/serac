@@ -416,7 +416,7 @@ void Solid::checkSensitivityMode() const
   SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
 }
 
-mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space)
+FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* shear_space)
 {
   checkSensitivityMode();
 
@@ -429,8 +429,10 @@ mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace&
 
   // Add a scalar linear form integrator using the shear sensitivity coefficient against the given shear modulus finite
   // element space
-  if (!shear_sensitivity_form_ || shear_sensitivity_form_->FESpace() != &shear_space) {
-    shear_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&shear_space);
+  if (!shear_sensitivity_form_ || shear_space) {
+    SLIC_ERROR_IF(!shear_space, fmt::format("Finite element space is required for first sensitivity call."));
+    shear_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *shear_space);
+    shear_sensitivity_form_ = shear_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 
     shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_));
   }
@@ -438,10 +440,13 @@ mfem::ParLinearForm& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace&
   // Assemble the linear form at the current state and adjoint values
   shear_sensitivity_form_->Assemble();
 
-  return *shear_sensitivity_form_;
+  shear_sensitivity_->trueVec() = *shear_sensitivity_form_->ParallelAssemble();
+  shear_sensitivity_->distributeSharedDofs();
+
+  return *shear_sensitivity_;
 }
 
-mfem::ParLinearForm& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space)
+FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space)
 {
   checkSensitivityMode();
 
@@ -454,20 +459,25 @@ mfem::ParLinearForm& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace& 
 
   // Add a scalar linear form integrator using the shear sensitivity coefficient against the given bulk modulus finite
   // element space
-  if (!bulk_sensitivity_form_ || shear_sensitivity_form_->FESpace() != &bulk_space) {
-    bulk_sensitivity_form_ = std::make_unique<mfem::ParLinearForm>(&bulk_space);
+  if (!bulk_sensitivity_form_ || bulk_space) {
+    SLIC_ERROR_IF(!bulk_space, fmt::format("Finite element space is required for first sensitivity call."));
+    bulk_sensitivity_       = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
+    shear_sensitivity_form_ = shear_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 
-    bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_));
+    shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_));
   }
 
   // Assemble the linear form at the current state and adjoint values
   bulk_sensitivity_form_->Assemble();
 
-  return *bulk_sensitivity_form_;
+  bulk_sensitivity_->trueVec() = *bulk_sensitivity_form_->ParallelAssemble();
+  bulk_sensitivity_->distributeSharedDofs();
+
+  return *bulk_sensitivity_;
 }
 
-const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
-                                              FiniteElementState*  state_with_essential_boundary)
+const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load_vec,
+                                              FiniteElementDual* state_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
   SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None, "Adjoint analysis only valid following a forward solve.");
@@ -475,8 +485,8 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
 
-  adjoint_load_form.Assemble();
-  auto adjoint_load_vector = std::unique_ptr<mfem::HypreParVector>(adjoint_load_form.ParallelAssemble());
+  adjoint_load_vec.initializeTrueVec();
+  mfem::HypreParVector adjoint_load_vector = adjoint_load_vec.trueVec();
 
   auto& lin_solver = nonlin_solver_.LinearSolver();
 
@@ -487,14 +497,14 @@ const FiniteElementState& Solid::solveAdjoint(mfem::ParLinearForm& adjoint_load_
     state_with_essential_boundary->initializeTrueVec();
     for (const auto& bc : bcs_.essentials()) {
       bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, state_with_essential_boundary->trueVec(), *adjoint_load_vector);
+      bc.eliminateToRHS(*J_T, state_with_essential_boundary->trueVec(), adjoint_load_vector);
     }
   } else {
     bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
   }
 
   lin_solver.SetOperator(*J_T);
-  lin_solver.Mult(*adjoint_load_vector, adjoint_displacement_.trueVec());
+  lin_solver.Mult(adjoint_load_vector, adjoint_displacement_.trueVec());
 
   adjoint_displacement_.distributeSharedDofs();
 

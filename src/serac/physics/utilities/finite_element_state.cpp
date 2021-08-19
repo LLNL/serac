@@ -46,6 +46,15 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
   true_vec_ = 0.0;
 }
 
+FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space, const std::string& name)
+    : mesh_(mesh),
+      coll_(std::unique_ptr<mfem::FiniteElementCollection>(space.FEColl()->Clone(space.FEColl()->GetOrder()))),
+      space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh, &detail::retrieve(coll_))),
+      name_(name)
+{
+  true_vec_ = 0.0;
+}
+
 FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name)
     : mesh_(mesh), space_(gf.ParFESpace()), gf_(&gf), true_vec_(&detail::retrieve(space_)), name_(name)
 {
