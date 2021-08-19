@@ -105,6 +105,8 @@ inline void displayLastCUDAErrorMessage(const char* success_string = "")
 /**
  * @brief Utility method to query the amount of memory (bytes) that is free on the device at runtime
  *
+ * Granularity appears to be about 2MB of device memory on volta.
+ *
  * @return tuple of free and total memory at the moment on the device context
  */
 
