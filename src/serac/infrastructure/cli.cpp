@@ -61,7 +61,7 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
     cli_opts.insert({"output_fields", {}});
   }
   if (output_directory != "") {
-    cli_opts.insert({std::string("output_directory"), output_directory});
+    cli_opts.insert({"output_directory", output_directory});
   }
   return cli_opts;
 }
