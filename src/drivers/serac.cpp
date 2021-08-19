@@ -92,11 +92,21 @@ int main(int argc, char* argv[])
     input_file_path = search->second;
   }
 
-  // Output directory
+  // Output directory used for all files written to the file system.
+  // Example of outputted files:
+  //
+  // * Inlet docs + input file value file
+  // * StateManager state files
+  // * Summary file
+  // * Field data files
   std::string output_directory = "";
   search                       = cli_opts.find("output_directory");
   if (search != cli_opts.end()) {
+    // if given by user use that
     output_directory = search->second;
+  } else {
+    // otherwise use input file's basename minus extension
+    output_directory = serac::input::getInputFileName(input_file_path);
   }
   axom::utilities::filesystem::makeDirsForPath(output_directory);
   SLIC_INFO(fmt::format("Output Directory: {}", output_directory));
