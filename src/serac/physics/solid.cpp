@@ -440,7 +440,11 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   // Assemble the linear form at the current state and adjoint values
   shear_sensitivity_form_->Assemble();
 
-  shear_sensitivity_->trueVec() = *shear_sensitivity_form_->ParallelAssemble();
+  auto& true_vec = shear_sensitivity_->trueVec();
+  std::unique_ptr<mfem::HypreParVector> new_vec(shear_sensitivity_form_->ParallelAssemble());
+
+  true_vec = *new_vec;
+
   shear_sensitivity_->distributeSharedDofs();
 
   return *shear_sensitivity_;
@@ -486,7 +490,12 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load_ve
   mesh_.NewNodes(*reference_nodes_);
 
   adjoint_load_vec.initializeTrueVec();
-  mfem::HypreParVector adjoint_load_vector = adjoint_load_vec.trueVec();
+
+  // note: The assignment operator must be called after the copy constructor because
+  // the copy constructor only sets the partitioning, it does not copy the actual vector
+  // values
+  mfem::HypreParVector adjoint_load_vector(adjoint_load_vec.trueVec());
+  adjoint_load_vector = adjoint_load_vec.trueVec();
 
   auto& lin_solver = nonlin_solver_.LinearSolver();
 

@@ -48,8 +48,10 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState::
 
 FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space, const std::string& name)
     : mesh_(mesh),
-      coll_(std::unique_ptr<mfem::FiniteElementCollection>(space.FEColl()->Clone(space.FEColl()->GetOrder()))),
+      coll_(std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(space.FEColl()->Name()))),
       space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh, &detail::retrieve(coll_))),
+      gf_(detail::initialGridFunc(&detail::retrieve(space_), true)),
+      true_vec_(&detail::retrieve(space_)),
       name_(name)
 {
   true_vec_ = 0.0;
