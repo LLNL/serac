@@ -63,7 +63,7 @@ const mfem::Operator* GetFaceRestriction(mfem::ParFiniteElementSpace* pfes)
 }
 
 /// @cond
-template <typename T>
+template <typename T, typename execution_policy = serac::default_policy>
 class Functional;
 /// @endcond
 
@@ -81,6 +81,7 @@ class Functional;
  * Functional< H1(Hcurl) > my_residual;
  * @endcode
  *
+ * @tparam execution_policy which kind of processor should be used to carry out calculations
  * @tparam test The space of test functions to use
  * @tparam trial The space of trial functions to use
  *
@@ -105,8 +106,8 @@ class Functional;
  * my_residual.AddDomainIntegral(Dimension<3>{}, integrand, domain_of_integration);
  * @endcode
  */
-template <typename test, typename trial>
-class Functional<test(trial)> : public mfem::Operator {
+template <typename test, typename trial, typename execution_policy>
+class Functional<test(trial), execution_policy> : public mfem::Operator {
 public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
@@ -369,7 +370,7 @@ private:
     /**
      * @brief The "parent" @p Functional to calculate gradients with
      */
-    Functional<test(trial)>& form;
+    Functional<test(trial), execution_policy>& form;
   };
 
   /**
@@ -541,7 +542,7 @@ private:
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<DomainIntegral<test(trial)> > domain_integrals_;
+  std::vector<DomainIntegral<test(trial), execution_policy> > domain_integrals_;
 
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)

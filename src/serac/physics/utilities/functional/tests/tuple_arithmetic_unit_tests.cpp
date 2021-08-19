@@ -4,7 +4,9 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "../tuple_arithmetic.hpp"
+#include "serac/physics/utilities/functional/tuple.hpp"
+#include "serac/physics/utilities/functional//tuple_arithmetic.hpp"
+#include "serac/physics/utilities/functional//tensor.hpp"
 
 #include <random>
 #include <iostream>
@@ -25,44 +27,53 @@ static constexpr double mu  = 2.0;
 
 static constexpr double epsilon = 1.0e-6;
 
+TEST(TupleTests, structured_binding)
+{
+  serac::tuple x{0, 1.0, 2.0f};
+  auto [a, b, c] = x;
+  EXPECT_NEAR(a, 0, 1.0e-10);
+  EXPECT_NEAR(b, 1.00, 1.0e-10);
+  EXPECT_NEAR(c, 2.0f, 1.0e-10);
+}
+
 TEST(TupleTests, add)
 {
-  std::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
-  std::tuple b = a + a;
-  EXPECT_NEAR(std::get<0>(b), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(std::get<1>(b)), 10.39230484541326, 1.0e-10);
-  EXPECT_NEAR(norm(std::get<2>(b)), 2.977782431376876, 1.0e-10);
+  serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  serac::tuple b = a + a;
+  EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(serac::get<1>(b)), 10.39230484541326, 1.0e-10);
+  EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
 TEST(TupleTests, subtract)
 {
-  std::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
-  std::tuple b = a - a;
-  EXPECT_NEAR(std::get<0>(b), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(std::get<1>(b)), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(std::get<2>(b)), 0.0, 1.0e-10);
+  serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  serac::tuple b = a - a;
+  EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(serac::get<1>(b)), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(serac::get<2>(b)), 0.0, 1.0e-10);
 }
 
 TEST(TupleTests, multiply)
 {
-  std::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
-  std::tuple b = 2.0 * a;
-  EXPECT_NEAR(std::get<0>(b), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(std::get<1>(b)), 10.39230484541326, 1.0e-10);
-  EXPECT_NEAR(norm(std::get<2>(b)), 2.977782431376876, 1.0e-10);
+  serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  serac::tuple b = 2.0 * a;
+  EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(serac::get<1>(b)), 10.39230484541326, 1.0e-10);
+  EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
 TEST(TupleTests, divide)
 {
-  std::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
-               make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
-  std::tuple b = a / 0.5;
-  EXPECT_NEAR(std::get<0>(b), 0.0, 1.0e-10);
-  EXPECT_NEAR(norm(std::get<1>(b)), 10.39230484541326, 1.0e-10);
-  EXPECT_NEAR(norm(std::get<2>(b)), 2.977782431376876, 1.0e-10);
+  serac::tuple a{0.0, make_tensor<3>([](int) { return 3.0; }),
+                 make_tensor<5, 3>([](int i, int j) { return 1.0 / (i + j + 1); })};
+  serac::tuple b = a / 0.5;
+  EXPECT_NEAR(serac::get<0>(b), 0.0, 1.0e-10);
+  EXPECT_NEAR(norm(serac::get<1>(b)), 10.39230484541326, 1.0e-10);
+  EXPECT_NEAR(norm(serac::get<2>(b)), 2.977782431376876, 1.0e-10);
 }
 
 TEST(ChainRuleTests, scalar_output_with_scalar_input)
@@ -136,20 +147,18 @@ TEST(ChainRuleTests, scalar_output_with_matrix_input)
 TEST(ChainRuleTests, tuple_output_with_tuple_input)
 {
   constexpr auto f = [](auto p, auto v, auto L) {
-    return std::tuple{rho * outer(v, v) + 2.0 * mu * sym(L) - p * I, v + dot(v, L)};
+    return serac::tuple{rho * outer(v, v) + 2.0 * mu * sym(L) - p * I, v + dot(v, L)};
   };
 
   [[maybe_unused]] constexpr double p = 3.14;
   [[maybe_unused]] constexpr tensor v = {{1.0, 2.0, 3.0}};
-  // CUDA workaround template deduction guide failed
-  constexpr tensor<double, 3, 3> L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
+  constexpr tensor<double, 3, 3>    L = {{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}}};
 
-  constexpr double dp = 1.23;
-  constexpr tensor dv = {{2.0, 1.0, 4.0}};
-  // CUDA workaround template deduction guide failed
+  constexpr double               dp = 1.23;
+  constexpr tensor               dv = {{2.0, 1.0, 4.0}};
   constexpr tensor<double, 3, 3> dL = {{{3.0, 1.0, 2.0}, {2.0, 7.0, 3.0}, {4.0, 4.0, 3.0}}};
 
-  auto output = std::apply(f, make_dual(p, v, L));
+  auto output = serac::apply(f, make_dual(p, v, L));
 
   auto value = get_value(output);
   auto grad  = get_gradient(output);
@@ -158,21 +167,21 @@ TEST(ChainRuleTests, tuple_output_with_tuple_input)
                 f(p - epsilon * dp, v - epsilon * dv, L - epsilon * dL)) /
                (2 * epsilon);
 
-  auto df0 = (std::get<0>(std::get<0>(grad)) * dp) + dot(std::get<1>(std::get<0>(grad)), dv) +
-             ddot(std::get<2>(std::get<0>(grad)), dL);
+  auto df0 = (serac::get<0>(serac::get<0>(grad)) * dp) + dot(serac::get<1>(serac::get<0>(grad)), dv) +
+             ddot(serac::get<2>(serac::get<0>(grad)), dL);
 
-  auto df1 = (std::get<0>(std::get<1>(grad)) * dp) + dot(std::get<1>(std::get<1>(grad)), dv) +
-             ddot(std::get<2>(std::get<1>(grad)), dL);
+  auto df1 = (serac::get<0>(serac::get<1>(grad)) * dp) + dot(serac::get<1>(serac::get<1>(grad)), dv) +
+             ddot(serac::get<2>(serac::get<1>(grad)), dL);
 
-  auto df_ad = chain_rule(grad, std::tuple{dp, dv, dL});
+  auto df_ad = chain_rule(grad, serac::tuple{dp, dv, dL});
 
-  EXPECT_NEAR(norm(std::get<0>(f(p, v, L)) - std::get<0>(value)), 0.0, 1.e-13);
-  EXPECT_NEAR(norm(std::get<1>(f(p, v, L)) - std::get<1>(value)), 0.0, 1.e-13);
+  EXPECT_NEAR(norm(serac::get<0>(f(p, v, L)) - serac::get<0>(value)), 0.0, 1.e-13);
+  EXPECT_NEAR(norm(serac::get<1>(f(p, v, L)) - serac::get<1>(value)), 0.0, 1.e-13);
 
-  EXPECT_NEAR(norm(std::get<0>(df_ad) - df0), 0.0, 1.e-8);
-  EXPECT_NEAR(norm(std::get<1>(df_ad) - df1), 0.0, 1.e-8);
-  EXPECT_NEAR(norm(std::get<0>(df_ad) - std::get<0>(df_fd)), 0.0, 1.e-8);
-  EXPECT_NEAR(norm(std::get<1>(df_ad) - std::get<1>(df_fd)), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(serac::get<0>(df_ad) - df0), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(serac::get<1>(df_ad) - df1), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(serac::get<0>(df_ad) - serac::get<0>(df_fd)), 0.0, 1.e-8);
+  EXPECT_NEAR(norm(serac::get<1>(df_ad) - serac::get<1>(df_fd)), 0.0, 1.e-8);
 }
 
 int main(int argc, char* argv[])
