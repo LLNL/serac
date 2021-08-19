@@ -49,10 +49,24 @@ endforeach()
 
 if(ENABLE_CUDA)
 
-    set(functional_tests_cuda
-        tensor_unit_tests_cuda.cu)
+    set(functional_tests_cuda 
+        tensor_unit_tests_cuda.cu 
+        functional_comparisons_cuda.cu
+       )
 
     serac_add_tests( SOURCES ${functional_tests_cuda}
                      DEPENDS_ON gtest serac_functional ${functional_depends} cuda)
+
+    # FIXME: Different linker is used depending on whether axom is a dependency??
+    # clang directly (with axom) or the MPI wrapper (without axom)
+    #serac_add_tests( SOURCES mfem_issue_reproducer.cu
+    #                 DEPENDS_ON mfem cuda mpi axom)
+
+    blt_add_executable(NAME        mfem_issue_reproducer
+                       SOURCES     mfem_issue_reproducer.cu
+                       OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                       DEPENDS_ON  gtest serac_functional ${functional_depends} cuda
+                       FOLDER      serac/tests )
+
 
 endif()
