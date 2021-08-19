@@ -94,6 +94,9 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   std::string postfix = concat("_H1<", p, ">");
 
+  auto [free_memory, total_memory] = serac::accelerator::getCUDAMemInfo();
+  std::cout << "Free memory:" << free_memory << " Total_memory:" << total_memory << std::endl;
+
   serac::profiling::initializeCaliper();
 
   // Create standard MFEM bilinear and linear forms on H1
@@ -139,6 +142,10 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
   U.UseDevice(true);
   u_global.GetTrueDofs(U);
 
+  cudaDeviceSynchronize();
+  auto [mfem_free_memory, mfem_total_memory] = serac::accelerator::getCUDAMemInfo();
+  std::cout << "MFEM Free memory:" << mfem_free_memory << " Total_memory:" << mfem_total_memory << std::endl;
+
   // Set up the same problem using functional
 
   // Define the types for the test and trial spaces using the function arguments
@@ -175,7 +182,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   EXPECT_NEAR(0., error.Norml2() / r1.Norml2(), 1.e-14);
 
-  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAErrorMessage();
 
   // Compute the gradient using functional
   mfem::Operator& grad2 = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
@@ -192,6 +199,11 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
+
+  cudaDeviceSynchronize();
+  auto [functional_free_memory, functional_total_memory] = serac::accelerator::getCUDAMemInfo();
+  std::cout << "Functional: Free memory:" << functional_free_memory << " Total_memory:" << functional_total_memory
+            << std::endl;
 
   serac::profiling::terminateCaliper();
 }
@@ -413,6 +425,11 @@ TEST(elasticity, 3D_cubic) { functional_test(H1<3, 3>{}, H1<3, 3>{}, Dimension<3
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
+
+  cudaDeviceSynchronize();
+  auto [functional_free_memory, functional_total_memory] = serac::accelerator::getCUDAMemInfo();
+  std::cout << "Initial: Free memory:" << functional_free_memory << " Total_memory:" << functional_total_memory
+            << std::endl;
 
   auto [num_procs, myid] = serac::initialize(argc, argv);
 

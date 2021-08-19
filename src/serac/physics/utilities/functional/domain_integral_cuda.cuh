@@ -222,7 +222,7 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
   cudaDeviceSynchronize();
-  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAErrorMessage();
 
   if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
@@ -236,7 +236,7 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
   }
 
   cudaDeviceSynchronize();
-  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAErrorMessage();
 }
 
 /**
@@ -412,7 +412,7 @@ void gradient_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mf
   auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
 
   cudaDeviceSynchronize();
-  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAErrorMessage();
 
   // call gradient_cuda
   if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT) {
@@ -427,7 +427,7 @@ void gradient_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mf
   }
 
   cudaDeviceSynchronize();
-  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAErrorMessage();
   dR.HostRead();
 }
 
