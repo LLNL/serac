@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file finite_element_state.hpp
+ * @file finite_element_dual.hpp
  *
  * @brief This file contains the declaration of structure that manages the MFEM objects
  * that make up the state for a given field
@@ -20,7 +20,7 @@
 namespace serac {
 
 /**
- * @brief Class for encapsulating the topological dual (adjoint) space of a finite element space (i.e. the
+ * @brief Class for encapsulating the topological dual space of a finite element space (i.e. the
  * space of linear forms) as applied to a specific basis set
  *
  * @note While a grid function is provided by this class, interpolation operations are not
