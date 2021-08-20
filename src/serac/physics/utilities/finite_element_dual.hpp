@@ -7,8 +7,8 @@
 /**
  * @file finite_element_dual.hpp
  *
- * @brief This file contains the declaration of structure that manages the MFEM objects
- * that make up the state for a given field
+ * @brief This contains a class that represents the space of topological duals sampled
+ * on a discrete finite element basis, i.e. the space of residuals and sensitivities.
  */
 
 #pragma once

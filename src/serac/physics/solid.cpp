@@ -440,18 +440,11 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   // Assemble the linear form at the current state and adjoint values
   shear_sensitivity_form_->Assemble();
 
-  std::unique_ptr<mfem::HypreParVector> assembled_shear_sensitivity(shear_sensitivity_form_->ParallelAssemble());
+  // Set the dual state to the assembled shear sensitivity
+  std::unique_ptr<mfem::HypreParVector> assembled_vec(shear_sensitivity_form_->ParallelAssemble());
+  shear_sensitivity_->trueVec() = *assembled_vec;
 
-  double shear_norm = mfem::ParNormlp(*assembled_shear_sensitivity, 2, MPI_COMM_WORLD);
-
-  SLIC_INFO_ROOT(fmt::format("shear sensitivity norm = {}", shear_norm));
-
-  auto& true_vec = shear_sensitivity_->trueVec();
-
-  std::unique_ptr<mfem::HypreParVector> new_vec(shear_sensitivity_form_->ParallelAssemble());
-
-  true_vec = *new_vec;
-
+  // Distribute the shared dofs in the dual state
   shear_sensitivity_->distributeSharedDofs();
 
   return *shear_sensitivity_;
@@ -481,7 +474,11 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
   // Assemble the linear form at the current state and adjoint values
   bulk_sensitivity_form_->Assemble();
 
-  bulk_sensitivity_->trueVec() = *bulk_sensitivity_form_->ParallelAssemble();
+  // Set the dual state to the assembled bulk sensitivity
+  std::unique_ptr<mfem::HypreParVector> assembled_vec(bulk_sensitivity_form_->ParallelAssemble());
+  bulk_sensitivity_->trueVec() = *assembled_vec;
+
+  // Distribute the shared dofs in the dual state
   bulk_sensitivity_->distributeSharedDofs();
 
   return *bulk_sensitivity_;
