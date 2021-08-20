@@ -106,7 +106,7 @@ public:
   FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "");
 
   /**
-   * @brief Minimal constructor for a FiniteElementState given an already-existing field
+   * @brief Minimal constructor for a FiniteElementState given a finite element space
    * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
    * @param[in] name The name of the field
