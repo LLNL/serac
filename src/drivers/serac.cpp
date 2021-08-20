@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
 
   // Read input file
   std::string input_file_path = "";
-  auto        search          = cli_opts.find("input_file");
+  auto        search          = cli_opts.find("input-file");
   if (search != cli_opts.end()) {
     input_file_path = search->second;
   }
@@ -100,27 +100,22 @@ int main(int argc, char* argv[])
   // * Summary file
   // * Field data files
   std::string output_directory = "";
-  search                       = cli_opts.find("output_directory");
+  search                       = cli_opts.find("output-directory");
   if (search != cli_opts.end()) {
-    // if given by user use that
     output_directory = search->second;
-  } else {
-    // otherwise use input file's basename minus extension
-    output_directory = serac::input::getInputFileName(input_file_path);
   }
   axom::utilities::filesystem::makeDirsForPath(output_directory);
-  SLIC_INFO(fmt::format("Output Directory: {}", output_directory));
 
   // Check if a restart was requested
   std::optional<int> restart_cycle;
-  if (auto cycle = cli_opts.find("restart_cycle"); cycle != cli_opts.end()) {
+  if (auto cycle = cli_opts.find("restart-cycle"); cycle != cli_opts.end()) {
     restart_cycle = std::stoi(cycle->second);
   }
 
   // Check for the doc creation command line argument
-  bool create_input_file_docs = cli_opts.find("create_input_file_docs") != cli_opts.end();
+  bool create_input_file_docs = cli_opts.find("create-input-file-docs") != cli_opts.end();
   // Check for the output fields command line argument
-  bool output_fields = cli_opts.find("output_fields") != cli_opts.end();
+  bool output_fields = cli_opts.find("output-fields") != cli_opts.end();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
