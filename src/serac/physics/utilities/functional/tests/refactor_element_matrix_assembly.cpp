@@ -1,12 +1,9 @@
 #include "serac/serac_config.hpp"
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
-
-#include <tuple>
+#include "serac/physics/utilities/functional/tuple.hpp"
 
 using namespace serac;
-
-
 
 template < int dim >
 struct linear_isotropic_conduction {
@@ -15,7 +12,7 @@ struct linear_isotropic_conduction {
   template < typename x_t, typename temperature_t >
   auto operator()(x_t /*x*/, temperature_t temperature){
     auto [u, du_dx] = temperature;
-    return std::tuple{u, du_dx};
+    return serac::tuple{u, du_dx};
   }
 };
 
@@ -27,7 +24,7 @@ struct linear_isotropic_elasticity {
   template < typename x_t, typename displacement_t >
   auto operator()(x_t /*x*/, displacement_t displacement){
     auto [u, du_dx] = displacement;
-    return std::tuple{u, du_dx};
+    return serac::tuple{u, du_dx};
   }
 };
 
@@ -39,7 +36,7 @@ struct linear_isotropic_electromagnetism {
   template < typename x_t, typename displacement_t >
   auto operator()(x_t /*x*/, displacement_t displacement){
     auto [u, du_dx] = displacement;
-    return std::tuple{u, du_dx};
+    return serac::tuple{u, du_dx};
   } 
 };
 

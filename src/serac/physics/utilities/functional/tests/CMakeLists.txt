@@ -25,7 +25,7 @@ serac_add_tests( SOURCES ${functional_tests_serial}
 # Then add the examples/tests
 set(functional_tests_mpi
     functional_boundary_test.cpp
-    # functional_qoi.cpp
+    functional_qoi.cpp
     functional_comparisons.cpp
     # functional_comparison_L2.cpp
     # functional_material_state_test.cpp

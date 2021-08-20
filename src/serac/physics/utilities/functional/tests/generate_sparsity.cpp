@@ -324,7 +324,7 @@ int main(int argc, char* argv[])
 
   auto hcurl_h1_3D_qf = [](auto /*x*/, auto field){ 
     auto [u, grad_u] = field;
-    return std::tuple{grad_u, grad_u}; 
+    return serac::tuple{grad_u, grad_u}; 
   };
 
   sparsity< Hcurl<1>, H1<1>, 3 >(*mesh3D, hcurl_h1_3D_qf, "hcurlh1_3D_");

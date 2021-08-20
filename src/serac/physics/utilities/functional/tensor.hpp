@@ -345,6 +345,10 @@ SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
   return zero{};
 }
 
+/** @brief let `zero` be accessed like a tuple */
+template < int i >
+zero & get(zero & x) { return x; }
+
 /**
  * @brief Removes 1s from tensor dimensions
  * For example, a tensor<T, 1, 10> is equivalent to a tensor<T, 10>

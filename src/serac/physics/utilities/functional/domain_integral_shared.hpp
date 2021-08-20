@@ -66,7 +66,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim> xi, const tenso
  * @param[in] J The Jacobian of the element transformation at the quadrature point
  */
 template <typename element_type, typename T, int dim>
-SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
+SERAC_HOST_DEVICE auto Postprocess(T f, [[maybe_unused]] const tensor<double, dim> xi, [[maybe_unused]] const tensor<double, dim, dim> J)
 {
   // TODO: Helpful static_assert about f being tuple or tuple-like for H1, hcurl, hdiv
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
@@ -83,6 +83,11 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
     }
     return (W * serac::get<0>(f) + curl_W * serac::get<1>(f));
   }
+
+  if constexpr (element_type::family == Family::QOI) {
+    return f;
+  }
+
 }
 
 /**

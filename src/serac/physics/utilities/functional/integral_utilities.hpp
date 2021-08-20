@@ -135,6 +135,15 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor
 }
 
 /**
+ * @overload
+ * @note Used for quantities of interest 
+ */
+void Add(const mfem::DeviceTensor<2, double>& r_global, double r_local, int e)
+{
+  r_global(0, e) += r_local;
+}
+
+/**
  * @brief a class that helps to extract the test space from a function signature template parameter
  * @tparam space The function signature itself
  */
