@@ -22,7 +22,7 @@ namespace serac {
 /**
  * @brief Class for encapsulating the topological dual (adjoint) space of a finite element space (i.e. the
  * space of linear forms) as applied to a specific basis set
- * 
+ *
  * @note While a grid function is provided by this class, interpolation operations are not
  * defined in this representation of the dual space and should be used with caution
  *

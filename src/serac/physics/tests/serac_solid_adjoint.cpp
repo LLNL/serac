@@ -82,7 +82,7 @@ TEST(solid_solver, adjoint)
 
   // Make a dummy adjoint load for testing
 
-  FiniteElementDual assembled_adjoint_load(StateManager::mesh(), solid_solver.displacement(), "adjoint_load");
+  FiniteElementDual assembled_adjoint_load(StateManager::mesh(), solid_solver.displacement().space(), "adjoint_load");
 
   mfem::ParLinearForm adjoint_load(&assembled_adjoint_load.space());
 

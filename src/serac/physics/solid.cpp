@@ -447,6 +447,7 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   SLIC_INFO_ROOT(fmt::format("shear sensitivity norm = {}", shear_norm));
 
   auto& true_vec = shear_sensitivity_->trueVec();
+
   std::unique_ptr<mfem::HypreParVector> new_vec(shear_sensitivity_form_->ParallelAssemble());
 
   true_vec = *new_vec;
@@ -471,7 +472,7 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
   // element space
   if (!bulk_sensitivity_form_ || bulk_space) {
     SLIC_ERROR_IF(!bulk_space, fmt::format("Finite element space is required for first sensitivity call."));
-    bulk_sensitivity_       = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
+    bulk_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
     bulk_sensitivity_form_ = bulk_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 
     bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_));
