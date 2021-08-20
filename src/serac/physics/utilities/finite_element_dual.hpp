@@ -22,12 +22,15 @@ namespace serac {
 /**
  * @brief Class for encapsulating the topological dual (adjoint) space of a finite element space (i.e. the
  * space of linear forms) as applied to a specific basis set
+ * 
+ * @note While a grid function is provided by this class, interpolation operations are not
+ * defined in this representation of the dual space and should be used with caution
  *
  */
 class FiniteElementDual : public FiniteElementState {
 public:
   /**
-   * Main constructor for building a new dual state object
+   * Main constructor for building a new dual object
    * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] options The options specified, namely those relating to the order of the problem,
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
@@ -42,7 +45,7 @@ public:
       : FiniteElementState(mesh, std::forward<Options>(options)){};
 
   /**
-   * @brief Minimal constructor for a FiniteElementDualState given an already-existing field
+   * @brief Minimal constructor for a FiniteElementDual given an already-existing field
    * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] gf The field for the state to create (object does not take ownership)
    * @param[in] name The name of the field
@@ -51,7 +54,7 @@ public:
       : FiniteElementState(mesh, gf, name){};
 
   /**
-   * @brief Minimal constructor for a FiniteElementState given an already-existing field
+   * @brief Minimal constructor for a FiniteElementDual given an already-existing field
    * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
    * @param[in] name The name of the field
@@ -60,7 +63,7 @@ public:
       : FiniteElementState(mesh, space, name){};
 
   /**
-   * @brief Minimal constructor for a FiniteElementDualState given an already-existing state
+   * @brief Minimal constructor for a FiniteElementDual given an already-existing state
    * @param[in] mesh The problem mesh (object does not take ownership)
    * @param[in] fe_state The state for the new state to copy
    * @param[in] name The name of the field
