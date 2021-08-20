@@ -440,6 +440,12 @@ FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* s
   // Assemble the linear form at the current state and adjoint values
   shear_sensitivity_form_->Assemble();
 
+  std::unique_ptr<mfem::HypreParVector> assembled_shear_sensitivity(shear_sensitivity_form_->ParallelAssemble());
+
+  double shear_norm = mfem::ParNormlp(*assembled_shear_sensitivity, 2, MPI_COMM_WORLD);
+
+  SLIC_INFO_ROOT(fmt::format("shear sensitivity norm = {}", shear_norm));
+
   auto& true_vec = shear_sensitivity_->trueVec();
   std::unique_ptr<mfem::HypreParVector> new_vec(shear_sensitivity_form_->ParallelAssemble());
 
@@ -466,9 +472,9 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
   if (!bulk_sensitivity_form_ || bulk_space) {
     SLIC_ERROR_IF(!bulk_space, fmt::format("Finite element space is required for first sensitivity call."));
     bulk_sensitivity_       = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
-    shear_sensitivity_form_ = shear_sensitivity_->createOnSpace<mfem::ParLinearForm>();
+    bulk_sensitivity_form_ = bulk_sensitivity_->createOnSpace<mfem::ParLinearForm>();
 
-    shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_));
+    bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_));
   }
 
   // Assemble the linear form at the current state and adjoint values
