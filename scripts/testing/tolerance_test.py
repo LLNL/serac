@@ -36,11 +36,19 @@ if args.good_file == False: # NOTE: for some reason it isn't passing as true?
 
     good_field_names = get_field_names(good_data) # set variable equal to all field names for good data
     testing_field_names = get_field_names(testing_data) # set variable equal to all field names for testing data
-
+ 
     # Checker for if the number of field names/keys in testing file is not equal to number field names/keys in good file
-    if sorted(good_field_names) != sorted(testing_field_names):
-        print("ERROR: testing file does not have the same number of field names as the good file.")
-        exit()
+  #  if sorted(good_field_names) != sorted(testing_field_names):
+    #if len(good_field_names) != len(testing_field_names):
+    if len(good_field_names) > len(testing_field_names):
+            print("ERROR: testing file doesn't have enough field names")
+            exit()
+    elif len(good_field_names) < len(testing_field_names):
+            print("ERROR: testing field has too many field names:")
+            exit()
+    elif len(good_field_names) != len(testing_field_names):
+            print("ERROR: testing file does not have the same number of field names as the good file.")
+            exit()
 
         
       
@@ -64,6 +72,7 @@ if args.good_file == False: # NOTE: for some reason it isn't passing as true?
             for value in range(len(good_values)): # iterates through values within the good_values list
                 #print(good_values[i], "->", testing_values[i])  # one integer, index on both lists, i.e. testing_values[0] goes with good_values[0]
                 if math.isclose(good_values[value], testing_values[value], abs_tol = args.tolerance) == False:
-                    print(testing_values[value], "is not correct") # print which value is incorrect from the testing data
+                    print(testing_values[value], "in", field_name, data_name, "is not correct") # print which value from what dictionary field and data name is incorrect from the testing data
+                    
            
            
