@@ -142,7 +142,7 @@ class Functional<QOI(trial), execution_policy> : public mfem::Operator {
       SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
-    const mfem::FiniteElement&   el = *test_space_->GetFE(0);
+    const mfem::FiniteElement&   el = *trial_space_->GetBE(0);
     const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], el.GetOrder() * 2);
     constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                            mfem::FaceGeometricFactors::NORMALS;
@@ -222,7 +222,7 @@ class Functional<QOI(trial), execution_policy> : public mfem::Operator {
     // Resize K_e_ if this is the first time
     if (K_e_.Size() == 0) {
       const auto& trial_el = *trial_space_->GetFE(0);
-      K_e_.SetSize(trial_el.GetDof() * trial_space_->GetVDim() * test_space_->GetNE());
+      K_e_.SetSize(trial_el.GetDof() * trial_space_->GetVDim() * trial_space_->GetNE());
     }
     // zero out internal vector
     K_e_ = 0.;

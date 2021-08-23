@@ -59,6 +59,23 @@ double x_moment_mfem(mfem::ParMesh& mesh) {
   return mass_lf(x_gf);
 }
 
+double sum_of_measures_mfem(mfem::ParMesh& mesh) {
+  mfem::ConstantCoefficient one(1.0);
+
+  auto fec = mfem::H1_FECollection(1, mesh.Dimension());
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+
+  mfem::ParLinearForm lf(&fespace);
+  lf.AddDomainIntegrator(new mfem::DomainLFIntegrator(one));
+  lf.AddBoundaryIntegrator(new mfem::BoundaryLFIntegrator(one));
+  lf.Assemble();
+
+  mfem::ParGridFunction one_gf(&fespace);
+  one_gf.ProjectCoefficient(one);
+
+  return lf(one_gf);
+}
+
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
 //
@@ -82,14 +99,20 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
 
   // Construct the new functional object 
   Functional<QOI(trial_space)> measure(&fespace);
-  measure.AddDomainIntegral(Dimension<dim>{}, [&](auto, auto) { return 1.0; }, mesh);
+  measure.AddDomainIntegral(Dimension<dim>{}, [&](auto /*x*/, auto /*u*/) { return 1.0; }, mesh);
 
-  std::cout << measure(U) << " " << measure_mfem(mesh) << std::endl;
+  std::cout << "simplest possible domain qoi: " << measure(U) << " " << measure_mfem(mesh) << std::endl;
 
   Functional<QOI(trial_space)> x_moment(&fespace);
-  x_moment.AddDomainIntegral(Dimension<dim>{}, [&](auto x, auto) { return x[0]; }, mesh);
+  x_moment.AddDomainIntegral(Dimension<dim>{}, [&](auto x, auto /*u*/) { return x[0]; }, mesh);
 
-  std::cout << x_moment(U) << " " << x_moment_mfem(mesh) << std::endl;
+  std::cout << "spatially-dependent domain qoi: " << x_moment(U) << " " << x_moment_mfem(mesh) << std::endl;
+
+  Functional<QOI(trial_space)> sum_of_measures(&fespace);
+  sum_of_measures.AddDomainIntegral(Dimension<dim>{}, [&](auto /*x*/, auto /*u*/) { return 1.0; }, mesh);
+  sum_of_measures.AddBoundaryIntegral(Dimension<dim-1>{}, [&](auto /*x*/, auto /*n*/, auto /*u*/) { return 1.0; }, mesh);
+
+  std::cout << "combined domain and boundary qoi: " << sum_of_measures(U) << " " << sum_of_measures_mfem(mesh) << std::endl;
 
 }
 

@@ -56,7 +56,7 @@ auto Preprocess(T u, coord_type xi)
  * In this case, q-function outputs are only integrated against test space shape functions
  */
 template <typename element_type, typename T, typename coord_type>
-auto Postprocess(T f, coord_type xi)
+auto Postprocess(T f, [[maybe_unused]] coord_type xi)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return outer(element_type::shape_functions(xi), f);
@@ -66,6 +66,8 @@ auto Postprocess(T f, coord_type xi)
   // if constexpr (element_type::family == Family::HCURL) {
   //  return outer(element_type::shape_functions(xi), dot(inv(J), f));
   //}
+
+  if constexpr (element_type::family == Family::QOI) { return f; }
 }
 
 /**
@@ -109,7 +111,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
-  using element_residual_type      = typename trial_element::residual_type;
+  using element_residual_type      = typename test_element::residual_type;
   static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
@@ -199,7 +201,7 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
-  using element_residual_type      = typename trial_element::residual_type;
+  using element_residual_type      = typename test_element::residual_type;
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
@@ -278,14 +280,24 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
 
-      auto M = test_element::shape_functions(xi_q);
-      auto N = trial_element::shape_functions(xi_q);
-
-      for (int i = 0; i < test_ndof; i++) {
+      if constexpr (std::is_same< test, QOI >::value) {
+        auto N = trial_element::shape_functions(xi_q);
         for (int j = 0; j < trial_ndof; j++) {
-          K_elem[i][j] += M[i] * dq_darg * N[j] * dx;
+          K_elem[0][j] += dq_darg * N[j] * dx;
         } 
       } 
+
+      if constexpr (!std::is_same< test, QOI >::value) {
+        auto M = test_element::shape_functions(xi_q);
+        auto N = trial_element::shape_functions(xi_q);
+
+        for (int i = 0; i < test_ndof; i++) {
+          for (int j = 0; j < trial_ndof; j++) {
+            K_elem[i][j] += M[i] * dq_darg * N[j] * dx;
+          } 
+        } 
+      } 
+
     }
 
     // once we've finished the element integration loop, write our element gradients
