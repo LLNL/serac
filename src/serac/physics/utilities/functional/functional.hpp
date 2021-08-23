@@ -176,8 +176,7 @@ class Functional<test(trial), execution_policy> : public mfem::Operator {
    * and @a spatial_dim template parameter
    */
   template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                         QuadratureData<qpt_data_type>& data = dummy_qdata)
+  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -192,7 +191,7 @@ class Functional<test(trial), execution_policy> : public mfem::Operator {
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
     auto           geom  = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
+    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand);
   }
 
   /**
@@ -207,8 +206,7 @@ class Functional<test(trial), execution_policy> : public mfem::Operator {
    * and @a spatial_dim template parameter
    */
   template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                           QuadratureData<qpt_data_type>& data = dummy_qdata)
+  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
   {
     // TODO: fix mfem::FaceGeometricFactors
     auto num_boundary_elements = domain.GetNBE();
@@ -228,7 +226,7 @@ class Functional<test(trial), execution_policy> : public mfem::Operator {
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
     boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
-                                     integrand, data);
+                                     integrand);
   }
 
   /**

@@ -26,7 +26,7 @@ constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
-double region_measure(mfem::ParMesh& mesh) {
+double measure_mfem(mfem::ParMesh& mesh) {
   mfem::ConstantCoefficient one(1.0);
 
   auto fec = mfem::H1_FECollection(1, mesh.Dimension());
@@ -42,8 +42,8 @@ double region_measure(mfem::ParMesh& mesh) {
   return mass_lf(one_gf);
 }
 
-double first_moment_x(mfem::ParMesh& mesh) {
-  mfem::FunctionCoefficient one([](mfem::Vector x){ return x[0]; });
+double x_moment_mfem(mfem::ParMesh& mesh) {
+  mfem::ConstantCoefficient one(1.0);
 
   auto fec = mfem::H1_FECollection(1, mesh.Dimension());
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
@@ -52,10 +52,11 @@ double first_moment_x(mfem::ParMesh& mesh) {
   mass_lf.AddDomainIntegrator(new mfem::DomainLFIntegrator(one));
   mass_lf.Assemble();
 
-  mfem::ParGridFunction one_gf(&fespace);
-  one_gf.ProjectCoefficient(one);
+  mfem::FunctionCoefficient x_coordinate([](mfem::Vector x){ return x[0]; });
+  mfem::ParGridFunction x_gf(&fespace);
+  x_gf.ProjectCoefficient(x_coordinate);
 
-  return mass_lf(one_gf);
+  return mass_lf(x_gf);
 }
 
 // this test sets up a toy "thermal" problem where the residual includes contributions
@@ -83,15 +84,12 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   Functional<QOI(trial_space)> measure(&fespace);
   measure.AddDomainIntegral(Dimension<dim>{}, [&](auto, auto) { return 1.0; }, mesh);
 
-  // evaluate the quantity of interest (region measure)
-  double m1 = measure(U);
-  double m2 = region_measure(mesh);
-
-  std::cout << m1 << " " << m2 << std::endl;
+  std::cout << measure(U) << " " << measure_mfem(mesh) << std::endl;
 
   Functional<QOI(trial_space)> x_moment(&fespace);
   x_moment.AddDomainIntegral(Dimension<dim>{}, [&](auto x, auto) { return x[0]; }, mesh);
 
+  std::cout << x_moment(U) << " " << x_moment_mfem(mesh) << std::endl;
 
 }
 

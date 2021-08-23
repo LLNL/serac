@@ -104,7 +104,7 @@ template <Geometry g, typename test, typename trial, int Q, typename derivatives
           typename qpt_data_type = void>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
                        const mfem::Vector& J_, const mfem::Vector& X_, const mfem::Vector& N_, int num_elements,
-                       lambda qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
+                       lambda qf)
 
 {
   using test_element               = finite_element<g, test>;
@@ -148,18 +148,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
-
-      auto qf_output = [&qf, &x_q, &n_q, &arg, &data, e, q]() {
-        if constexpr (std::is_same_v<qpt_data_type, void>) {
-          // [[maybe_unused]] not supported in captures
-          (void)data;
-          (void)e;
-          (void)q;
-          return qf(x_q, n_q, make_dual(arg));
-        } else {
-          return qf(x_q, n_q, make_dual(arg), data(e, q));
-        }
-      }();
+      auto qf_output = qf(x_q, n_q, make_dual(arg));
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
@@ -305,10 +294,6 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
     // Note: we "transpose" these values to get them into the layout that mfem expects
     for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
       dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
-
-      if ((i + test_ndof * j > test_ndof * test_dim) ||  (k + trial_ndof * l >= trial_ndof * trial_dim)) {
-        std::cout << "?" << std::endl;
-      }
     });
 
   }
@@ -343,8 +328,7 @@ public:
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
-                   Dimension<dim>, lambda_type&& qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
-      : J_(J), X_(X), normals_(normals)
+                   Dimension<dim>, lambda_type&& qf) : J_(J), X_(X), normals_(normals)
 
   {
     constexpr auto geometry                      = supported_geometries[dim];
@@ -371,9 +355,9 @@ public:
     //
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
-    evaluation_ = [=, &data](const mfem::Vector& U, mfem::Vector& R) {
+    evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
       boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
-                                                                                 normals_, num_elements, qf, data);
+                                                                                 normals_, num_elements, qf);
     };
 
     gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {

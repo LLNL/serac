@@ -101,8 +101,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
       [&](auto x, auto n, auto u) {
         tensor<double, dim> b{sin(x[0]), x[0] * x[1]};
         return x[0] * x[1] + dot(b, n) + rho * u;
-      },
-      mesh);
+      }, mesh);
 
   mfem::Vector r1 = (*J) * U + (*F);
   mfem::Vector r2 = residual(U);
