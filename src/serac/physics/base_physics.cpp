@@ -56,10 +56,11 @@ double BasePhysics::time() const { return time_; }
 
 int BasePhysics::cycle() const { return cycle_; }
 
-void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name)
+void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name, const std::string output_directory)
 {
   root_name_   = root_name;
   output_type_ = output_type;
+  output_directory_ = output_directory;
 
   switch (output_type_) {
     case serac::OutputType::VisIt: {
@@ -100,7 +101,7 @@ void BasePhysics::initializeOutput(const serac::OutputType output_type, const st
   }
 }
 
-void BasePhysics::outputState(const std::string output_directory) const
+void BasePhysics::outputState() const
 {
   switch (output_type_) {
     case serac::OutputType::VisIt:
@@ -108,8 +109,8 @@ void BasePhysics::outputState(const std::string output_directory) const
     case serac::OutputType::ParaView:
       dc_->SetCycle(cycle_);
       dc_->SetTime(time_);
-      if (!output_directory.empty()) {
-        dc_->SetPrefixPath(output_directory);
+      if (!output_directory_.empty()) {
+        dc_->SetPrefixPath(output_directory_);
       }
       dc_->Save();
       break;
@@ -122,14 +123,14 @@ void BasePhysics::outputState(const std::string output_directory) const
 
     case serac::OutputType::GLVis: {
       const std::string mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
-      const std::string mesh_path = axom::utilities::filesystem::joinPath(output_directory, mesh_name);
+      const std::string mesh_path = axom::utilities::filesystem::joinPath(output_directory_, mesh_name);
       std::ofstream     omesh(mesh_path);
       omesh.precision(FLOAT_PRECISION_);
       state_.front().get().mesh().Print(omesh);
 
       for (FiniteElementState& state : state_) {
         std::string sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state.name(), cycle_, mpi_rank_);
-        const std::string sol_path = axom::utilities::filesystem::joinPath(output_directory, sol_name);
+        const std::string sol_path = axom::utilities::filesystem::joinPath(output_directory_, sol_name);
         std::ofstream     osol(sol_path);
         osol.precision(FLOAT_PRECISION_);
         state.gridFunc().Save(osol);

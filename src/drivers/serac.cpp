@@ -190,7 +190,7 @@ int main(int argc, char* argv[])
 
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>()
-  main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac");
+  main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac", output_directory);
 
   main_physics->initializeSummary(datastore, t_final, dt);
 
@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
     main_physics->advanceTimestep(dt_real);
 
     // Output a visualization file
-    main_physics->outputState(output_directory);
+    main_physics->outputState();
 
     // Save curve data to Sidre datastore to be output later
     main_physics->saveSummary(datastore, t);
