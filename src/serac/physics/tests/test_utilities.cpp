@@ -158,7 +158,7 @@ void runModuleTest(const std::string& input_file, const std::string& test_name, 
   // WARNING: This must happen before serac::input::initialize, as the loading
   // process will wipe out the datastore
   if (restart_cycle) {
-    serac::StateManager::initialize(datastore, "serac", *restart_cycle);
+    serac::StateManager::initialize(datastore, "serac", "", *restart_cycle);
   } else {
     serac::StateManager::initialize(datastore);
   }
