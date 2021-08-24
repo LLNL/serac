@@ -78,7 +78,7 @@ std::string cliValueToString(bool value) { return value ? "true" : "false"; }
 
 std::string cliValueToString(int value) { return std::to_string(value); }
 
-} // namespace detail
+}  // namespace detail
 
 void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
 {
