@@ -21,17 +21,17 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   // specify all input arguments
   CLI::App    app{app_description};
   std::string input_file_path;
-  app.add_option("-i, --input-file", input_file_path, "Input file to use.")->required()->check(CLI::ExistingFile);
+  app.add_option("-i, --input-file", input_file_path, "Input file to use")->required()->check(CLI::ExistingFile);
   int  restart_cycle;
   auto restart_opt =
-      app.add_option("-c, --restart-cycle", restart_cycle, "Cycle to restart from.")->check(CLI::PositiveNumber);
+      app.add_option("-c, --restart-cycle", restart_cycle, "Cycle to restart from")->check(CLI::PositiveNumber);
   bool create_input_file_docs{false};
   app.add_flag("-d, --create-input-file-docs", create_input_file_docs,
                "Writes Sphinx documentation for input file, then exits");
   bool output_fields{false};
-  app.add_flag("--output-fields", output_fields, "Writes field data to file system.");
+  app.add_flag("--output-fields", output_fields, "Writes field data to file system");
   std::string output_directory;
-  app.add_option("-o, --output-directory", output_directory, "Directory to put outputted files.");
+  app.add_option("-o, --output-directory", output_directory, "Directory to put outputted files");
 
   // Parse the arguments and check if they are good
   try {
