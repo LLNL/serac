@@ -56,10 +56,11 @@ double BasePhysics::time() const { return time_; }
 
 int BasePhysics::cycle() const { return cycle_; }
 
-void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name, const std::string output_directory)
+void BasePhysics::initializeOutput(const serac::OutputType output_type, const std::string& root_name,
+                                   const std::string output_directory)
 {
-  root_name_   = root_name;
-  output_type_ = output_type;
+  root_name_        = root_name;
+  output_type_      = output_type;
   output_directory_ = output_directory;
 
   switch (output_type_) {
