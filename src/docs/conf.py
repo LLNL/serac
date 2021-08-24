@@ -167,9 +167,10 @@ def setup(app):
 # using the given strftime format.
 #html_last_updated_fmt = '%b %d, %Y'
 
-# If true, SmartyPants will be used to convert quotes and dashes to
-# typographically correct entities.
-#html_use_smartypants = True
+# If true, the Docutils Smart Quotes transform, originally based on SmartyPants
+# (limited to English) and currently applying to many languages, will be used to convert
+# quotes and dashes to typographically correct entities. Default: True.
+smartquotes = False
 
 # Custom sidebar templates, maps document names to template names.
 #html_sidebars = {}
