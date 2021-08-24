@@ -12,7 +12,6 @@ Below is the documentation for Serac's command line options:
 .. list-table:: Options
    :widths: 25 25 25 25
    :header-rows: 1
-   :stub-columns: 1
 
    * - Long form
      - Short form
