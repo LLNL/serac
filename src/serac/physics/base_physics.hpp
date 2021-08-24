@@ -107,12 +107,13 @@ public:
    *
    * @param[in] output_type The type of output files to produce
    * @param[in] root_name The root name of the output files
+   * @param[in] output_directory The directory to output files to
    */
-  virtual void initializeOutput(const serac::OutputType output_type, const std::string& root_name);
+  virtual void initializeOutput(const serac::OutputType output_type, const std::string& root_name,
+                                const std::string output_directory = "");
 
   /**
    * @brief Output the current state of the PDE fields
-   *
    */
   virtual void outputState() const;
 
@@ -178,6 +179,11 @@ protected:
    * @brief Root output name
    */
   std::string root_name_;
+
+  /**
+   * @brief Directory to output files
+   */
+  std::string output_directory_;
 
   /**
    * @brief Number of significant figures to output for floating-point

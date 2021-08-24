@@ -12,6 +12,7 @@
 
 #include "conduit/conduit.hpp"
 #include "ascent/ascent.hpp"
+#include "axom/core.hpp"
 #include "axom/sidre.hpp"
 
 #include "mpi.h"
@@ -34,7 +35,7 @@ std::string file_format_string(const FileFormat file_format)
 }  // namespace detail
 
 void outputSummary(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
-                   const FileFormat file_format)
+                   const std::string& output_directory, const FileFormat file_format)
 {
   auto [_, rank] = getMPIInfo();
   if (rank != 0) {
@@ -46,11 +47,12 @@ void outputSummary(const axom::sidre::DataStore& datastore, const std::string& d
   std::string file_format_string = detail::file_format_string(file_format);
 
   const std::string file_name = fmt::format("{0}_summary.{1}", data_collection_name, file_format_string);
-  datastore.getRoot()->getGroup("serac_summary")->save(file_name, file_format_string);
+  const std::string path      = axom::utilities::filesystem::joinPath(output_directory, file_name);
+  datastore.getRoot()->getGroup("serac_summary")->save(path, file_format_string);
 }
 
-void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name, double time,
-                  const FileFormat file_format)
+void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
+                  const std::string& output_directory, double time, const FileFormat file_format)
 {
   SLIC_INFO_ROOT(fmt::format("Outputting field data at time: {}", time));
 
@@ -68,7 +70,9 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& da
   conduit::Node extracts;
   // "relay" is the Ascents Extract type for saving data
   extracts["e1/type"]            = "relay";
-  extracts["e1/params/path"]     = fmt::format("{}_fields.{}", data_collection_name, file_format_string);
+  const std::string file_name    = fmt::format("{}_fields.{}", data_collection_name, file_format_string);
+  const std::string path         = axom::utilities::filesystem::joinPath(output_directory, file_name);
+  extracts["e1/params/path"]     = path;
   extracts["e1/params/protocol"] = file_format_string;
 
   // Get domain Sidre group
