@@ -87,16 +87,22 @@ void initializeDevice();
 void terminateDevice();
 
 #if defined(__CUDACC__)
+
 /**
  * @brief Utility method to display last cuda error message
  *
  * @param[in] success_string A string to print if there are no CUDA error messages
+ * @param[in] exit_on_error Exit on CUDA error
  */
-inline void displayLastCUDAErrorMessage(const char* success_string = "")
+inline void displayLastCUDAErrorMessage(const char* success_string = "", bool exit_on_error = false)
 {
   auto error = cudaGetLastError();
   if (error != cudaError::cudaSuccess) {
-    SLIC_ERROR_ROOT(serac::profiling::concat("Last CUDA Error Message :", cudaGetErrorString(error)));
+    if (exit_on_error) {
+      SLIC_ERROR_ROOT(serac::profiling::concat("Last CUDA Error Message :", cudaGetErrorString(error)));
+    } else {
+      SLIC_WARNING_ROOT(serac::profiling::concat("Last CUDA Error Message :", cudaGetErrorString(error)));
+    }
   } else if (strlen(success_string) > 0) {
     SLIC_INFO_ROOT(success_string);
   }
@@ -117,6 +123,17 @@ inline std::tuple<std::size_t, std::size_t> getCUDAMemInfo()
   displayLastCUDAErrorMessage();
   return std::make_tuple(free_memory, total_memory);
 }
+
+/**
+ * @brief returns a string with GPU memory information
+ */
+
+std::string getCUDAMemInfoString()
+{
+  auto [free_memory, total_memory] = getCUDAMemInfo();
+  return fmt::format("Free memory: {} Total_memory: {}", free_memory, total_memory);
+}
+
 #endif
 
 /**

@@ -94,8 +94,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   std::string postfix = concat("_H1<", p, ">");
 
-  auto [free_memory, total_memory] = serac::accelerator::getCUDAMemInfo();
-  std::cout << "Free memory:" << free_memory << " Total_memory:" << total_memory << std::endl;
+  std::cout << serac::accelerator::getCUDAMemInfoString() << std::endl;
 
   serac::profiling::initializeCaliper();
 
@@ -143,8 +142,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
   u_global.GetTrueDofs(U);
 
   cudaDeviceSynchronize();
-  auto [mfem_free_memory, mfem_total_memory] = serac::accelerator::getCUDAMemInfo();
-  std::cout << "MFEM Free memory:" << mfem_free_memory << " Total_memory:" << mfem_total_memory << std::endl;
+  std::cout << "MFEM " << serac::accelerator::getCUDAMemInfoString() << std::endl;
 
   // Set up the same problem using functional
 
@@ -200,10 +198,8 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 
-  cudaDeviceSynchronize();
-  auto [functional_free_memory, functional_total_memory] = serac::accelerator::getCUDAMemInfo();
-  std::cout << "Functional: Free memory:" << functional_free_memory << " Total_memory:" << functional_total_memory
-            << std::endl;
+  //  auto [functional_free_memory, functional_total_memory] = serac::accelerator::getCUDAMemInfo();
+  std::cout << "Functional:" << serac::accelerator::getCUDAMemInfoString() << std::endl;
 
   serac::profiling::terminateCaliper();
 }
@@ -427,9 +423,7 @@ int main(int argc, char* argv[])
   ::testing::InitGoogleTest(&argc, argv);
 
   cudaDeviceSynchronize();
-  auto [functional_free_memory, functional_total_memory] = serac::accelerator::getCUDAMemInfo();
-  std::cout << "Initial: Free memory:" << functional_free_memory << " Total_memory:" << functional_total_memory
-            << std::endl;
+  std::cout << "Initial:" << serac::accelerator::getCUDAMemInfoString() << std::endl;
 
   auto [num_procs, myid] = serac::initialize(argc, argv);
 
