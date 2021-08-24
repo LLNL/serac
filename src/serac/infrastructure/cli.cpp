@@ -70,11 +70,15 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   return cli_opts;
 }
 
+namespace detail {
+
 std::string cliValueToString(std::string value) { return value; }
 
 std::string cliValueToString(bool value) { return value ? "true" : "false"; }
 
 std::string cliValueToString(int value) { return std::to_string(value); }
+
+} // namespace detail
 
 void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
 {
@@ -95,7 +99,7 @@ void printGiven(std::unordered_map<std::string, std::string>& cli_opts)
   for (auto output_pair : opts_output_map) {
     auto search = cli_opts.find(output_pair.first);
     if (search != cli_opts.end()) {
-      optsMsg += fmt::format("{0}: {1}\n", output_pair.second, cliValueToString(search->second));
+      optsMsg += fmt::format("{0}: {1}\n", output_pair.second, detail::cliValueToString(search->second));
     }
   }
 
