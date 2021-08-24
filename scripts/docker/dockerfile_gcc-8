@@ -1,10 +1,10 @@
-FROM axom/compilers:ubuntu-20-gcc-8_06-29-21_11h-59m
+FROM axom/compilers:ubuntu-20-gcc-8_08-24-21_07h-18m
 LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install ssh libopenblas-dev mpich gfortran -fy
+RUN sudo apt-get install gfortran libopenblas-dev mpich ssh -fy
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 

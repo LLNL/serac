@@ -1,10 +1,10 @@
-FROM axom/compilers:ubuntu-20-clang-10_07-19-21_23h-07m
+FROM axom/compilers:ubuntu-20-clang-10_08-24-21_07h-18m
 LABEL maintainer="bramwell1@llnl.gov"
 ARG branch=develop
 
 SHELL ["/bin/bash", "-c"]
 RUN sudo apt-get update -y
-RUN sudo apt-get install ssh libopenblas-dev mpich gfortran -fy
+RUN sudo apt-get install doxygen gfortran libopenblas-dev mpich python3-sphinx ssh -fy
 
 RUN sudo useradd -m -s /bin/bash -G sudo serac
 
@@ -15,8 +15,8 @@ RUN git clone --recursive --branch $branch --single-branch --depth 1 https://git
 
 # New containers will use Python3
 RUN cd serac && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu20/ \
-                                                       --project-json=.uberenv_config.json \
-                                                       --spec=%clang@10.0.0 --prefix=/home/serac/serac_tpls -k
+                                                     --project-json=.uberenv_config.json \
+                                                     --spec=%clang@10.0.0 --prefix=/home/serac/serac_tpls -k
 # white238: commented out due to logs disapearing and this being saved due to layering
 #RUN rm -rf /home/serac/serac_tpls/builds
 
