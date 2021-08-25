@@ -253,22 +253,6 @@ class Functional<QOI(trial), execution_policy> : public mfem::Operator {
     return K_b_;
   }
 
-  /**
-   * @brief Computes element matrices and returns AssembledSparseMatrix
-   * @return reference to AssembledSparseMatrix with newly assembled entries
-   */
-
-  serac::mfem_ext::AssembledSparseMatrix& GetAssembledSparseMatrix()
-  {
-    ComputeElementMatrices();  // Updates K_e_
-    if (!assembled_spmat_) {
-      assembled_spmat_ = std::make_unique<serac::mfem_ext::AssembledSparseMatrix>(
-          *test_space_, *trial_space_, mfem::ElementDofOrdering::LEXICOGRAPHIC);
-    }
-    assembled_spmat_->FillData(K_e_);
-    return *assembled_spmat_;
-  }
-
 private:
   /**
    * @brief Indicates whether to obtain values or gradients from a calculation
@@ -356,64 +340,44 @@ private:
 
     operator mfem::Vector() {
 
-#if 0
-      // the CSR graph (sparsity pattern) is reusable, so we cache
-      // that and ask mfem to not free that memory in ~SparseMatrix()
-      constexpr bool sparse_matrix_frees_graph_ptrs = false;
+      constexpr int dofs_per_test_element = 1;
+      constexpr int dofs_per_test_boundary_element = 1;
 
-      // the CSR values are NOT reusable, so we pass ownership of
-      // them to the mfem::SparseMatrix, to be freed in ~SparseMatrix()
-      constexpr bool sparse_matrix_frees_values_ptr = true;
-
-      constexpr bool col_ind_is_sorted = true;
-
-
-      int nnz = row_ptr.back();
-      double * values = new double[nnz]{};
+      mfem::Vector g(form.trial_space_->TrueVSize());
+      g = 0.0;
 
       if (form.domain_integrals_.size() > 0) {
         int num_elements = form.test_space_->GetNE();
-        int test_vdim  = form.test_space_->GetVDim();
         int trial_vdim = form.trial_space_->GetVDim();
-        int dofs_per_test_element = form.test_space_->GetFE(0)->GetDof();
         int dofs_per_trial_element = form.trial_space_->GetFE(0)->GetDof();
 
-        mfem::Vector element_matrices = form.ComputeElementMatrices();
-        auto K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element * test_vdim, dofs_per_trial_element * trial_vdim, num_elements);
+        mfem::Vector element_gradients = form.ComputeElementMatrices();
+        auto K_elem = mfem::Reshape(element_gradients.HostReadWrite(), dofs_per_test_element, dofs_per_trial_element * trial_vdim, num_elements);
         for (int e = 0; e < num_elements; e++) {
-          for (int i = 0; i < dofs_per_test_element * test_vdim; i++) {
-            for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
-              auto [index, sign] = element_nonzero_LUT(e,i,j);
-              values[index] += sign * K_elem(i,j,e);
-            }
+          for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
+            auto [index, sign] = element_nonzero_LUT(e,j);
+            g[index] += sign * K_elem(0,j,e);
           }
         }
       }
 
       if (form.boundary_integrals_.size() > 0) {
         int num_boundary_elements = form.test_space_->GetNBE();
-        int test_vdim  = form.test_space_->GetVDim();
         int trial_vdim = form.trial_space_->GetVDim();
-        int dofs_per_test_boundary_element = form.test_space_->GetBE(0)->GetDof();
         int dofs_per_trial_boundary_element = form.trial_space_->GetBE(0)->GetDof();
  
-        mfem::Vector boundary_element_matrices = form.ComputeBoundaryElementMatrices();
-        auto K_elem = mfem::Reshape(boundary_element_matrices.HostReadWrite(), dofs_per_test_boundary_element * test_vdim, dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
+        mfem::Vector boundary_element_gradients = form.ComputeBoundaryElementMatrices();
+        auto K_elem = mfem::Reshape(boundary_element_gradients.HostReadWrite(), dofs_per_test_element, dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
         for (int e = 0; e < num_boundary_elements; e++) {
-          for (int i = 0; i < dofs_per_test_boundary_element * test_vdim; i++) {
-            for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
-              auto [index, sign] = boundary_element_nonzero_LUT(e,i,j);
-              values[index] += sign * K_elem(i,j,e);
-            }
+          for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
+            auto [index, sign] = boundary_element_nonzero_LUT(e,j);
+            g[index] += sign * K_elem(0,j,e);
           }
         }
       }
 
-      return mfem::SparseMatrix(row_ptr.data(), col_ind.data(), values, Height(), Width(), sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
-      
-#endif
+      return g;
 
-      return mfem::Vector();
     }
 
   private:
@@ -425,8 +389,6 @@ private:
 
     Array2D< ::detail::signed_index > element_nonzero_LUT;
     Array2D< ::detail::signed_index > boundary_element_nonzero_LUT;
-
-    mfem::Vector g;
 
     bool lookup_tables_initialized;
 
@@ -628,15 +590,6 @@ private:
    * UpdateAssembledSparseMatrix()
    */
   mutable mfem::Vector K_b_;
-
-  /**
-   * @brief Local internal AssembledSparseMatrix storage for ComputeElementMatrices
-   *
-   * If unique_ptr is empty, construct AssembledSparseMatrix.
-   *
-   */
-  std::unique_ptr<serac::mfem_ext::AssembledSparseMatrix> assembled_spmat_;
-
 
   template < typename T >
   friend typename Functional<T>::Gradient & grad(Functional<T> &);
