@@ -118,8 +118,6 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   f.AddDomainIntegral(Dimension<dim>{}, [&](auto x, auto temperature) { 
     auto [u, grad_u] = temperature;
     return x[0] * x[0] + sin(x[1]) + x[0] * u * u * u;
-    //std::cout << get_value(u) << " " << x[0] * x[0] << std::endl;
-    //return u - x[0] * x[0];
   }, mesh);
   f.AddBoundaryIntegral(Dimension<dim-1>{}, [&](auto x, auto /*n*/, auto u) {
     return x[0] - x[1] + cos(u * x[1]);
