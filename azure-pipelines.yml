@@ -6,8 +6,8 @@
 #
 
 variables:
-  Clang_10_ImageName: 'seracllnl/tpls:clang-10_08-05-21_13h-29m'
-  GCC_9_ImageName: 'seracllnl/tpls:gcc-9_08-05-21_13h-29m'
+  Clang_10_ImageName: 'seracllnl/tpls:clang-10_08-24-21_20h-13m'
+  GCC_9_ImageName: 'seracllnl/tpls:gcc-9_08-24-21_20h-13m'
 
 jobs:
 - job: Build_and_Test
@@ -52,12 +52,18 @@ jobs:
 
   strategy:
     matrix:
-      style:
-        DO_STYLE_CHECK: 'yes'
-        DO_COVERAGE_CHECK: 'no'
       coverage:
-        DO_STYLE_CHECK: 'no'
         DO_COVERAGE_CHECK: 'yes'
+        DO_DOCS_CHECK: 'no'
+        DO_STYLE_CHECK: 'no'
+      docs:
+        DO_COVERAGE_CHECK: 'no'
+        DO_DOCS_CHECK: 'yes'
+        DO_STYLE_CHECK: 'no'
+      style:
+        DO_COVERAGE_CHECK: 'no'
+        DO_DOCS_CHECK: 'no'
+        DO_STYLE_CHECK: 'yes'
 
   pool:
     vmImage: $(VM_ImageName)

@@ -33,6 +33,20 @@ if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
     cmake_args="$cmake_args -DENABLE_COVERAGE=ON -DGCOV_EXECUTABLE=/home/serac/gcov"
 fi
 
+if [[ "$DO_DOCS_CHECK" == "yes" ]] ; then
+    SPHINX_EXECUTABLE=/usr/bin/sphinx-build
+    if [[ ! -f "$SPHINX_EXECUTABLE" ]]; then
+        echo "sphinx not found: $SPHINX_EXECUTABLE"
+        exit 1
+    fi    
+    DOXYGEN_EXECUTABLE=/usr/bin/doxygen
+    if [[ ! -f "$DOXYGEN_EXECUTABLE" ]]; then
+        echo "doxygen not found: $DOXYGEN_EXECUTABLE"
+        exit 1
+    fi    
+    cmake_args="$cmake_args -DENABLE_DOCS=ON -DSPHINX_EXECUTABLE=$SPHINX_EXECUTABLE -DDOXYGEN_EXECUTABLE=$DOXYGEN_EXECUTABLE"
+fi
+
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
     CLANGFORMAT_EXECUTABLE=/usr/bin/clang-format
     if [[ ! -f "$CLANGFORMAT_EXECUTABLE" ]]; then
@@ -45,16 +59,21 @@ fi
 or_die ./config-build.py -hc /home/serac/serac/host-configs/docker/${HOST_CONFIG}.cmake $cmake_args
 or_die cd build-$HOST_CONFIG-debug
 
-if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
-    or_die make VERBOSE=1 check
-fi
-
 if [[ "$DO_COVERAGE_CHECK" == "yes" ]] ; then
     or_die make -j4
     or_die make serac_coverage
     # Rename to file expected by codecov
     cp serac_coverage.info.cleaned lcov.info
     or_die curl -s https://codecov.io/bash | bash /dev/stdin -X gcov
+fi
+
+if [[ "$DO_DOCS_CHECK" == "yes" ]] ; then
+    or_die make VERBOSE=1 docs 2>&1 | tee docs_output
+    or_die scripts/azure-pipelines/check_for_docs_warnings.py docs_output
+fi
+
+if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
+    or_die make VERBOSE=1 check
 fi
 
 exit 0
