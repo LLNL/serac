@@ -87,28 +87,42 @@ int main(int argc, char* argv[])
 
   // Read input file
   std::string input_file_path = "";
-  auto        search          = cli_opts.find("input_file");
+  auto        search          = cli_opts.find("input-file");
   if (search != cli_opts.end()) {
     input_file_path = search->second;
   }
 
+  // Output directory used for all files written to the file system.
+  // Example of outputted files:
+  //
+  // * Inlet docs + input file value file
+  // * StateManager state files
+  // * Summary file
+  // * Field data files
+  std::string output_directory = "";
+  search                       = cli_opts.find("output-directory");
+  if (search != cli_opts.end()) {
+    output_directory = search->second;
+  }
+  axom::utilities::filesystem::makeDirsForPath(output_directory);
+
   // Check if a restart was requested
   std::optional<int> restart_cycle;
-  if (auto cycle = cli_opts.find("restart_cycle"); cycle != cli_opts.end()) {
+  if (auto cycle = cli_opts.find("restart-cycle"); cycle != cli_opts.end()) {
     restart_cycle = std::stoi(cycle->second);
   }
 
   // Check for the doc creation command line argument
-  bool create_input_file_docs = cli_opts.find("create_input_file_docs") != cli_opts.end();
+  bool create_input_file_docs = cli_opts.find("create-input-file-docs") != cli_opts.end();
   // Check for the output fields command line argument
-  bool output_fields = cli_opts.find("output_fields") != cli_opts.end();
+  bool output_fields = cli_opts.find("output-fields") != cli_opts.end();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
 
   // Intialize MFEMSidreDataCollection
   // If restart_cycle is non-empty, then this is a restart run and the data will be loaded here
-  serac::StateManager::initialize(datastore, "serac", restart_cycle);
+  serac::StateManager::initialize(datastore, "serac", output_directory, restart_cycle);
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
@@ -116,12 +130,14 @@ int main(int argc, char* argv[])
 
   // Optionally, create input file documentation and quit
   if (create_input_file_docs) {
-    inlet.write(axom::inlet::SphinxWriter("serac_input.rst"));
+    std::string input_docs_path = axom::utilities::filesystem::joinPath(output_directory, "serac_input.rst");
+    inlet.write(axom::inlet::SphinxWriter(input_docs_path));
     serac::exitGracefully();
   }
 
   // Save input values to file
-  datastore.getRoot()->getGroup("input_file")->save("serac_input.json", "json");
+  std::string input_values_path = axom::utilities::filesystem::joinPath(output_directory, "serac_input_values.json");
+  datastore.getRoot()->getGroup("input_file")->save(input_values_path, "json");
 
   // Not restarting, so we need to create the mesh and register it with the StateManager
   if (!restart_cycle) {
@@ -174,10 +190,15 @@ int main(int argc, char* argv[])
 
   // FIXME: This and the FromInlet specialization are hacked together,
   // should be inlet["output_type"].get<OutputType>()
-  main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac");
+  main_physics->initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "serac", output_directory);
+
+  main_physics->initializeSummary(datastore, t_final, dt);
 
   // Enter the time step loop.
   for (int ti = 1; !last_step; ti++) {
+    // Flush all messages held by the logger
+    serac::logger::flush();
+
     // Compute the real timestep. This may be less than dt for the last timestep.
     double dt_real = std::min(dt, t_final - t);
 
@@ -193,12 +214,16 @@ int main(int argc, char* argv[])
     // Output a visualization file
     main_physics->outputState();
 
+    // Save curve data to Sidre datastore to be output later
+    main_physics->saveSummary(datastore, t);
+
     // Determine if this is the last timestep
     last_step = (t >= t_final - 1e-8 * dt);
   }
 
+  serac::output::outputSummary(datastore, serac::StateManager::collectionName(), output_directory);
   if (output_fields) {
-    serac::output::outputFields(datastore, serac::StateManager::collectionName(), t, serac::output::Language::JSON);
+    serac::output::outputFields(datastore, serac::StateManager::collectionName(), output_directory, t);
   }
 
   serac::exitGracefully();

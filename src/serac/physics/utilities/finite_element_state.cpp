@@ -6,6 +6,10 @@
 
 #include "serac/physics/utilities/finite_element_state.hpp"
 
+#include "mpi.h"
+
+#include "serac/infrastructure/initialize.hpp"
+
 namespace serac {
 
 namespace detail {
@@ -47,6 +51,45 @@ FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunctio
 {
   coll_     = detail::retrieve(space_).FEColl();
   true_vec_ = 0.0;
+}
+
+FiniteElementState::FiniteElementState(mfem::ParMesh& mesh, FiniteElementState& fe_state, const std::string& name)
+    : FiniteElementState(mesh, fe_state.gridFunc(), name)
+{
+}
+
+FiniteElementState& FiniteElementState::operator=(const double value)
+{
+  true_vec_ = value;
+  distributeSharedDofs();
+  return *this;
+}
+
+double avg(const FiniteElementState& state)
+{
+  double global_sum;
+  double local_sum = state.trueVec().Sum();
+  int    global_size;
+  int    local_size = state.trueVec().Size();
+  MPI_Allreduce(&local_sum, &global_sum, 1, MPI_DOUBLE, MPI_SUM, state.comm());
+  MPI_Allreduce(&local_size, &global_size, 1, MPI_INT, MPI_SUM, state.comm());
+  return global_sum / global_size;
+}
+
+double max(const FiniteElementState& state)
+{
+  double global_max;
+  double local_max = state.trueVec().Max();
+  MPI_Allreduce(&local_max, &global_max, 1, MPI_DOUBLE, MPI_MAX, state.comm());
+  return global_max;
+}
+
+double min(const FiniteElementState& state)
+{
+  double global_min;
+  double local_min = state.trueVec().Min();
+  MPI_Allreduce(&local_min, &global_min, 1, MPI_DOUBLE, MPI_MIN, state.comm());
+  return global_min;
 }
 
 double norm(const FiniteElementState& state, const double p)

@@ -101,6 +101,44 @@ inline void LinearElasticMaterial::EvalCoeffs() const
   bulk_ = c_bulk_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
 }
 
+void LinearElasticMaterial::EvalShearSensitivity(const mfem::DenseMatrix& du_dX,
+                                                 mfem::DenseMatrix&       d_sigma_d_shear) const
+{
+  int dim = du_dX.Width();
+  d_sigma_d_shear.SetSize(dim);
+  epsilon_.SetSize(dim);
+
+  // Evaluate the linearized strain tensor from the displacement gradient
+  serac::solid_util::calcLinearizedStrain(du_dX, epsilon_);
+
+  d_sigma_d_shear      = 0.0;
+  double trace_epsilon = epsilon_.Trace();
+
+  // Calculate the sensitivity of the stress with respect to the shear moulus by differentiating Hooke's law
+  d_sigma_d_shear.Add(2.0, epsilon_);
+  for (int i = 0; i < dim; ++i) {
+    d_sigma_d_shear(i, i) += (-2.0 / dim) * trace_epsilon;
+  }
+}
+
+void LinearElasticMaterial::EvalBulkSensitivity(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& d_sigma_d_bulk) const
+{
+  int dim = du_dX.Width();
+  d_sigma_d_bulk.SetSize(dim);
+  epsilon_.SetSize(dim);
+
+  // Evaluate the linearized strain tensor from the displacement gradient
+  serac::solid_util::calcLinearizedStrain(du_dX, epsilon_);
+
+  d_sigma_d_bulk       = 0.0;
+  double trace_epsilon = epsilon_.Trace();
+
+  // Calculate the sensitivity of the stress with respect to the bulk moulus by differentiating Hooke's law
+  for (int i = 0; i < dim; ++i) {
+    d_sigma_d_bulk(i, i) += trace_epsilon;
+  }
+}
+
 void LinearElasticMaterial::evalStress(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& sigma) const
 {
   int dim = du_dX.Width();

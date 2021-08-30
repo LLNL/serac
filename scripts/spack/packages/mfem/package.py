@@ -45,10 +45,15 @@ class Mfem(Package):
     # other version.
     version('develop', branch='master')
 
+    # SERAC EDIT BEGIN
+    version('4.3.0',
+            sha256='3a495602121b986049286ea0b23512279cdbdfb43c15c42a1511b521051fbe38',
+            url='https://bit.ly/mfem-4-3', extension='tar.gz')
+    # SERAC EDIT END
+
     version('4.2.0',
             '4352a225b55948d2e73a5ee88cece0e88bdbe7ba6726a23d68b2736d3221a86d',
-            url='https://bit.ly/mfem-4-2', extension='tar.gz',
-            preferred=True)
+            url='https://bit.ly/mfem-4-2', extension='tar.gz')
 
     version('4.1.0',
             '4c83fdcf083f8e2f5b37200a755db843cdb858811e25a8486ad36b2cbec0e11d',
@@ -271,6 +276,9 @@ class Mfem(Package):
     # https://github.com/mfem/mfem/pull/1043 for the bugfix contributed
     # upstream.
     patch('mfem-4.0.0-makefile-syntax-fix.patch', when='@4.0.0')
+
+    # Fix issue with mesh constructor
+    patch('mfem-4.3_mesh_op.patch', when='@4.3.0')
     phases = ['configure', 'build', 'install']
 
     def setup_build_environment(self, env):

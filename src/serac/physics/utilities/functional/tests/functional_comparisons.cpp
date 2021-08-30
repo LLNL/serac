@@ -31,6 +31,21 @@ constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
+static constexpr double a = 1.7;
+static constexpr double b = 2.1;
+
+template <int dim>
+struct hcurl_qfunction {
+  template <typename x_t, typename vector_potential_t>
+  SERAC_HOST_DEVICE auto operator()(x_t x, vector_potential_t vector_potential)
+  {
+    auto [A, curl_A] = vector_potential;
+    auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
+    auto H_term      = b * curl_A;
+    return serac::tuple{J_term, H_term};
+  }
+};
+
 // this test sets up a toy "thermal" problem where the residual includes contributions
 // from a temperature-dependent source term and a temperature-gradient-dependent flux
 //
@@ -39,9 +54,7 @@ std::unique_ptr<mfem::ParMesh> mesh3D;
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
-  static constexpr double a       = 1.7;
-  static constexpr double b       = 2.1;
-  std::string             postfix = concat("_H1<", p, ">");
+  std::string postfix = concat("_H1<", p, ">");
   serac::profiling::initializeCaliper();
 
   // Create standard MFEM bilinear and linear forms on H1
@@ -97,12 +110,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{},
-      [&](auto x, auto temperature) {
+      [=](auto x, auto temperature) {
         // get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
         auto source     = a * u - (100 * x[0] * x[1]);
         auto flux       = b * du_dx;
-        return std::tuple{source, flux};
+        return serac::tuple{source, flux};
       },
       mesh);
 
@@ -168,9 +181,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
-  static constexpr double a       = 1.7;
-  static constexpr double b       = 2.1;
-  std::string             postfix = concat("_H1<", p, ",", dim, ">");
+  std::string postfix = concat("_H1<", p, ",", dim, ">");
   serac::profiling::initializeCaliper();
 
   auto                        fec = mfem::H1_FECollection(p, dim);
@@ -222,12 +233,12 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 
   residual.AddDomainIntegral(
       Dimension<dim>{},
-      [&](auto /*x*/, auto displacement) {
+      [=](auto /*x*/, auto displacement) {
         auto [u, du_dx] = displacement;
         auto body_force = a * u + I[0];
         auto strain     = 0.5 * (du_dx + transpose(du_dx));
         auto stress     = b * tr(strain) * I + 2.0 * b * strain;
-        return std::tuple{body_force, stress};
+        return serac::tuple{body_force, stress};
       },
       mesh);
 
@@ -273,9 +284,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 template <int p, int dim>
 void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
 {
-  static constexpr double a       = 1.7;
-  static constexpr double b       = 2.1;
-  std::string             postfix = concat("_Hcurl<", p, ">");
+  std::string postfix = concat("_Hcurl<", p, ">");
   serac::profiling::initializeCaliper();
 
   auto                        fec = mfem::ND_FECollection(p, dim);
@@ -324,15 +333,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
 
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
-  residual.AddDomainIntegral(
-      Dimension<dim>{},
-      [&](auto x, auto vector_potential) {
-        auto [A, curl_A] = vector_potential;
-        auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
-        auto H_term      = b * curl_A;
-        return std::tuple{J_term, H_term};
-      },
-      mesh);
+  residual.AddDomainIntegral(Dimension<dim>{}, hcurl_qfunction<dim>{}, mesh);
 
   mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
   mfem::Vector r2 = SERAC_PROFILE_EXPR(concat("functional_Apply", postfix), residual(U));

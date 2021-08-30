@@ -10,13 +10,19 @@ blt_list_append( TO functional_depends ELEMENTS caliper IF SERAC_USE_CALIPER )
 
 # Add the library first
 set(functional_headers
-    functional.hpp
-    tensor.hpp
+    boundary_integral.hpp
+    domain_integral.hpp
     dual.hpp
-    tuple_arithmetic.hpp
+    finite_element.hpp
+    functional.hpp
+    integral_utilities.hpp
     polynomials.hpp
     quadrature.hpp
-    finite_element.hpp
+    tensor.hpp
+    tuple_arithmetic.hpp
+    )
+
+set(functional_detail_headers
     detail/hexahedron_H1.inl
     detail/hexahedron_Hcurl.inl
     detail/hexahedron_L2.inl
@@ -27,29 +33,26 @@ set(functional_headers
     detail/segment_Hcurl.inl
     detail/segment_L2.inl
     detail/metaprogramming.hpp
+    integral_utilities.hpp
+    domain_integral_shared.hpp
     )
+
+blt_list_append(TO functional_headers ELEMENTS domain_integral_cuda.cuh IF ENABLE_CUDA)
 
 blt_add_library(
       NAME        serac_functional
-      HEADERS     ${functional_headers}
+      HEADERS     ${functional_headers} ${functional_detail_headers}
       DEPENDS_ON  ${functional_depends}
       )
 
 
 install(FILES ${functional_headers} DESTINATION include/serac/physics/utilities/functional )
+install(FILES ${functional_detail_headers} DESTINATION include/serac/physics/utilities/functional/detail )
 
 install(TARGETS              serac_functional
         EXPORT               serac-targets
         DESTINATION          lib
         )
-
-# this test is all constexpr-evaluated, so it doesn't
-# actually need to run, if it compiles without error, the tests have passed
-blt_add_executable(NAME        tensor_unit_tests
-                   SOURCES     tests/tensor_unit_tests.cpp
-                   OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
-                   DEPENDS_ON  gtest serac_functional ${functional_depends}
-                   FOLDER      serac/tests)
 
 if(ENABLE_TESTS)
    add_subdirectory(tests)

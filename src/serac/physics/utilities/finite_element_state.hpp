@@ -106,6 +106,14 @@ public:
   FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "");
 
   /**
+   * @brief Minimal constructor for a FiniteElementState given an already-existing state
+   * @param[in] mesh The problem mesh (object does not take ownership)
+   * @param[in] fe_state The state for the new state to copy
+   * @param[in] name The name of the field
+   */
+  FiniteElementState(mfem::ParMesh& mesh, FiniteElementState& fe_state, const std::string& name = "");
+
+  /**
    * Returns the MPI communicator for the state
    */
   MPI_Comm comm() const { return detail::retrieve(space_).GetComm(); }
@@ -150,6 +158,8 @@ public:
    * Returns a non-owning reference to the vector of true DOFs
    */
   mfem::HypreParVector& trueVec() { return true_vec_; }
+  /// \overload
+  const mfem::HypreParVector& trueVec() const { return true_vec_; }
 
   /**
    * Returns the name of the FEState (field)
@@ -164,12 +174,25 @@ public:
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    visit([this](auto&& concrete_coef) { detail::retrieve(gf_).ProjectCoefficient(*concrete_coef); }, coef);
+    visit(
+        [this](auto&& concrete_coef) {
+          detail::retrieve(gf_).ProjectCoefficient(*concrete_coef);
+          initializeTrueVec();
+        },
+        coef);
   }
   /// \overload
-  void project(mfem::Coefficient& coef) { detail::retrieve(gf_).ProjectCoefficient(coef); }
+  void project(mfem::Coefficient& coef)
+  {
+    detail::retrieve(gf_).ProjectCoefficient(coef);
+    initializeTrueVec();
+  }
   /// \overload
-  void project(mfem::VectorCoefficient& coef) { detail::retrieve(gf_).ProjectCoefficient(coef); }
+  void project(mfem::VectorCoefficient& coef)
+  {
+    detail::retrieve(gf_).ProjectCoefficient(coef);
+    initializeTrueVec();
+  }
 
   /**
    * Initialize the true DOF vector by extracting true DOFs from the internal
@@ -181,6 +204,16 @@ public:
    * Set the internal grid function using the true DOF values
    */
   void distributeSharedDofs() { detail::retrieve(gf_).SetFromTrueDofs(true_vec_); }
+
+  /**
+   * @brief Set a finite element state to a constant value
+   *
+   * @param value The constant to set the finite element state to
+   * @return The modified finite element state
+   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
+   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
+   */
+  FiniteElementState& operator=(const double value);
 
   /**
    * Utility function for creating a tensor, e.g. mfem::HypreParVector,
@@ -223,6 +256,30 @@ private:
   mfem::HypreParVector                              true_vec_;
   std::string                                       name_ = "";
 };
+
+/**
+ * @brief Find the average value of a finite element state across all nodes
+ *
+ * @param state The state variable to compute a max of
+ * @return The average value
+ */
+double avg(const FiniteElementState& state);
+
+/**
+ * @brief Find the max value of a finite element state across all nodes
+ *
+ * @param state The state variable to compute a max of
+ * @return The max value
+ */
+double max(const FiniteElementState& state);
+
+/**
+ * @brief Find the min value of a finite element state across all nodes
+ *
+ * @param state The state variable to compute a min of
+ * @return The min value
+ */
+double min(const FiniteElementState& state);
 
 /**
  * @brief Calculate the Lp norm of a finite element state

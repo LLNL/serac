@@ -33,10 +33,11 @@ public:
    * @brief Initializes the StateManager with a sidre DataStore (into which state will be written/read)
    * @param[in] ds The DataStore to use
    * @param[in] collection_name_prefix The prefix for the name of the Sidre DataCollection to be created
+   * @param[in] output_directory The directory to output files to
    * @param[in] cycle_to_load The cycle to load - required for restarts
    */
   static void initialize(axom::sidre::DataStore& ds, const std::string& collection_name_prefix = "serac",
-                         const std::optional<int> cycle_to_load = {});
+                         const std::string output_directory = "", const std::optional<int> cycle_to_load = {});
 
   /**
    * @brief Factory method for creating a new FEState object, signature is identical to FEState constructor
@@ -46,6 +47,13 @@ public:
    */
   static FiniteElementState newState(FiniteElementState::Options&& options = {});
 
+  /**
+   * @brief Factory method for creating a new QuadratureData object
+   * @tparam T The type of the per-qpt data
+   * @param[in] name The name of the quadrature data field
+   * @param[in] p The order of the quadrature rule
+   * @see QuadratureData::QuadratureData
+   */
   template <typename T>
   static QuadratureData<T>& newQuadratureData(const std::string& name, const int p)
   {

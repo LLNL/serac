@@ -265,7 +265,7 @@ constexpr tensor<T, n> GaussLobattoInterpolationDerivative([[maybe_unused]] T x)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-tensor<T, n> GaussLegendreInterpolation([[maybe_unused]] T x)
+constexpr tensor<T, n> GaussLegendreInterpolation([[maybe_unused]] T x)
 {
   if constexpr (n == 1) return {1};
   if constexpr (n == 2)
@@ -302,7 +302,7 @@ tensor<T, n> GaussLegendreInterpolation([[maybe_unused]] T x)
  * @param[in] x where to evaluate the polynomials
  */
 template <int n, typename T>
-tensor<T, n> GaussLegendreInterpolationDerivative([[maybe_unused]] T x)
+constexpr tensor<T, n> GaussLegendreInterpolationDerivative([[maybe_unused]] T x)
 {
   if constexpr (n == 1) return {0};
   if constexpr (n == 2) return {-1.7320508075688772935274463415, 1.7320508075688772935274463415};

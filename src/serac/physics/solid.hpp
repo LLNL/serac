@@ -22,6 +22,7 @@
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/physics/materials/hyperelastic_material.hpp"
 #include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
+#include "serac/coefficients/sensitivity_coefficients.hpp"
 
 namespace serac {
 
@@ -47,6 +48,16 @@ enum class FinalMeshOption
   Reference /**< Revert the mesh to the reference state post-destruction */
 };
 
+/**
+ * @brief Enum to denote the previous solve completed in the Solid module
+ *
+ */
+enum class PreviousSolve
+{
+  Forward, /**< Previous solve was a forward analysis */
+  Adjoint, /**< Previous solve was an adjoint analysis */
+  None     /**< No solves have been completed */
+};
 /**
  * @brief The nonlinear solid solver class
  *
@@ -314,6 +325,18 @@ public:
   FiniteElementState& velocity() { return velocity_; };
 
   /**
+   * @brief Get the adjoint variable
+   *
+   * @return The adjoint state field
+   */
+  FiniteElementState& adjointDisplacement() { return adjoint_displacement_; };
+
+  /**
+   * @overload
+   */
+  const FiniteElementState& adjointDisplacement() const { return adjoint_displacement_; };
+
+  /**
    * @brief Complete the setup of all of the internal MFEM objects and prepare for timestepping
    */
   void completeSetup() override;
@@ -325,6 +348,40 @@ public:
    * schemes
    */
   void advanceTimestep(double& dt) override;
+
+  /**
+   * @brief Solve the adjoint problem
+   * @note It is expected that the forward analysis is complete and the current displacement state is valid
+   * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
+   *
+   * @param[in] adjoint_load_form The linear form that when assembled contains the right hand side of the adjoint system
+   * @param[in] state_with_essential_boundary A optional finite element state containing the non-homogenous essential
+   * boundary condition data for the adjoint problem
+   * @return The computed adjoint finite element state
+   */
+  virtual const serac::FiniteElementState& solveAdjoint(mfem::ParLinearForm& adjoint_load_form,
+                                                        FiniteElementState*  state_with_essential_boundary = nullptr);
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the shear modulus
+   *
+   * @param shear_space The finite element space used to parameterize the shear modulus
+   * @return The sensitivity with respect to the shear modulus
+   *
+   * @note Before this call, a forward and adjoint solve (with the appropriate QoI-based adjoint load) must be
+   * completed. If this does not occur, the returned linear form will be incorrect.
+   */
+  virtual mfem::ParLinearForm& shearModulusSensitivity(mfem::ParFiniteElementSpace& shear_space);
+
+  /**
+   * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint
+   * problem with respect to the bulk modulus
+   *
+   * @param bulk_space The finite element space used to parameterize the bulk modulus
+   * @return The sensitivity with respect to the bulk modulus
+   */
+  virtual mfem::ParLinearForm& bulkModulusSensitivity(mfem::ParFiniteElementSpace& bulk_space);
 
   /**
    * @brief Destroy the Nonlinear Solid Solver object
@@ -363,6 +420,11 @@ protected:
   virtual void quasiStaticSolve();
 
   /**
+   * @brief Check that the solid module is in the appropriate state for sensitivity analysis
+   */
+  void checkSensitivityMode() const;
+
+  /**
    * @brief Velocity field
    */
   FiniteElementState velocity_;
@@ -371,6 +433,17 @@ protected:
    * @brief Displacement field
    */
   FiniteElementState displacement_;
+
+  /**
+   * @brief Adjoint displacement field
+   */
+  FiniteElementState adjoint_displacement_;
+
+  /**
+   * @brief Flag denoting the previous solve mode
+   * @note This is used for error checking in the adjoint and sensitivity analyses
+   */
+  PreviousSolve previous_solve_ = PreviousSolve::None;
 
   /**
    * @brief The quasi-static operator for use with the MFEM newton solvers
@@ -494,6 +567,28 @@ protected:
    * @brief Previous time step
    */
   double c1_;
+
+  /**
+   * @brief Linear form containing the derivative of the quantity of interest with respect to the shear modulus
+   */
+  std::unique_ptr<mfem::ParLinearForm> shear_sensitivity_form_;
+
+  /**
+   * @brief Sensitivity coefficient used in defining the explicit derivative of the residual with respect to the shear
+   * modulus
+   */
+  std::unique_ptr<mfem_ext::ShearSensitivityCoefficient> shear_sensitivity_coef_;
+
+  /**
+   * @brief Linear form containing the derivative of the quantity of interest with respect to the bulk modulus
+   */
+  std::unique_ptr<mfem::ParLinearForm> bulk_sensitivity_form_;
+
+  /**
+   * @brief Sensitivity coefficient used in defining the explicit derivative of the residual with respect to the bulk
+   * modulus
+   */
+  std::unique_ptr<mfem_ext::BulkSensitivityCoefficient> bulk_sensitivity_coef_;
 };
 
 }  // namespace serac

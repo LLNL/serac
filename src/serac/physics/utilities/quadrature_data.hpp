@@ -106,7 +106,10 @@ template struct forbidden_offsets<&mfem::QuadratureSpace::element_offsets>;
 class SyncableData {
 public:
   virtual ~SyncableData() = default;
-  virtual void sync()     = 0;
+  /**
+   * @brief Perform the sync action
+   */
+  virtual void sync() = 0;
 };
 
 /**
@@ -122,6 +125,7 @@ public:
    * @brief Constructs using a mesh and polynomial order
    * @param[in] mesh The mesh for which quadrature-point data should be stored
    * @param[in] p The polynomial order of the associated finite elements
+   * @param[in] alloc Flag to allocate the underlying data
    */
   QuadratureData(mfem::Mesh& mesh, const int p, const bool alloc = true);
 
@@ -184,6 +188,11 @@ public:
   /// @overload
   auto end() const { return data_.data() + data_.size(); }
 
+  /**
+   * @brief Get the underlying MFEM quadrature function
+   *
+   * @return The underlying quadrature function MFEM-based data container
+   */
   mfem::QuadratureFunction& QFunc() { return detail::retrieve(qfunc_); }
 
   /**

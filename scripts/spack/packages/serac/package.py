@@ -82,14 +82,12 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on('python', when="+devtools")
     depends_on('py-sphinx', when="+devtools")
 
-    # Workaround for concretizer bug
-    #depends_on("mfem+sundials", when="+sundials")
-    #depends_on("sundials~shared", when="+sundials")
-    depends_on("sundials~shared+hypre+monitoring")
+    depends_on("sundials~shared+hypre+monitoring~examples-c~examples-f77~examples-install",
+               when="+sundials")
 
     # Libraries that support +debug
     mfem_variants = "~shared+metis+superlu-dist+lapack+mpi"
-    debug_deps = ["mfem@4.2.0{0}".format(mfem_variants),
+    debug_deps = ["mfem@4.3.0{0}".format(mfem_variants),
                   "hypre@2.18.2~shared~superlu-dist+mpi"]
 
     depends_on("petsc~shared", when="+petsc")
@@ -101,7 +99,6 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("mfem+netcdf", when="+netcdf")
     depends_on("mfem+petsc", when="+petsc")
     depends_on("mfem+sundials", when="+sundials")
-    depends_on("sundials~shared", when="+sundials")
     depends_on("netcdf-c@4.7.4~shared", when="+netcdf")
 
     # Needs to be first due to a bug with the Spack concretizer
