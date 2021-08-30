@@ -94,7 +94,7 @@ void terminateDevice();
  * @param[in] success_string A string to print if there are no CUDA error messages
  * @param[in] exit_on_error Exit on CUDA error
  */
-inline void displayLastCUDAErrorMessage(const char* success_string = "", bool exit_on_error = false)
+inline void displayLastCUDAMessage(const char* success_string = "", bool exit_on_error = false)
 {
   auto error = cudaGetLastError();
   if (error != cudaError::cudaSuccess) {
@@ -120,7 +120,7 @@ inline std::tuple<std::size_t, std::size_t> getCUDAMemInfo()
 {
   std::size_t free_memory, total_memory;
   auto        error = cudaMemGetInfo(&free_memory, &total_memory);
-  displayLastCUDAErrorMessage();
+  displayLastCUDAMessage();
   return std::make_tuple(free_memory, total_memory);
 }
 

@@ -180,7 +180,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   EXPECT_NEAR(0., error.Norml2() / r1.Norml2(), 1.e-14);
 
-  serac::accelerator::displayLastCUDAErrorMessage();
+  serac::accelerator::displayLastCUDAMessage();
 
   // Compute the gradient using functional
   mfem::Operator& grad2 = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
@@ -198,7 +198,6 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
 
-  //  auto [functional_free_memory, functional_total_memory] = serac::accelerator::getCUDAMemInfo();
   std::cout << "Functional:" << serac::accelerator::getCUDAMemInfoString() << std::endl;
 
   serac::profiling::terminateCaliper();
