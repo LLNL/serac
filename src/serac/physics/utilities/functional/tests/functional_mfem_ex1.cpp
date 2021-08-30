@@ -70,12 +70,13 @@ ess_bdr = 1;
 residual.SetEssentialBC(ess_bdr);
 
 // Add the total domain residual term to the functional
-residual.AddAreaIntegral(
+residual.AddDomainIntegral(
+    Dimension<dim>{},
     [=]([[maybe_unused]] auto x, auto temperature) {
       // get the value and the gradient from the input tuple
       auto [u, du_dx] = temperature;
       auto source     = -1.0;
-      auto flux       = 1.0 * du_dx;
+      auto flux       = du_dx;
       return serac::tuple{source, flux};
     },
     *mesh);
