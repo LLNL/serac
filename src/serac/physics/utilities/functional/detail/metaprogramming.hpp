@@ -87,7 +87,7 @@ SERAC_HOST_DEVICE constexpr void for_constexpr(lambda&& f)
  * @overload
  */
 template <int n1, typename lambda>
-void for_loop(lambda f)
+constexpr void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     f(i);
@@ -98,7 +98,7 @@ void for_loop(lambda f)
  * @overload
  */
 template <int n1, int n2, typename lambda>
-void for_loop(lambda f)
+constexpr void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
@@ -111,7 +111,7 @@ void for_loop(lambda f)
  * @overload
  */
 template <int n1, int n2, int n3, typename lambda>
-void for_loop(lambda f)
+constexpr void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
@@ -126,7 +126,7 @@ void for_loop(lambda f)
  * @overload
  */
 template <int n1, int n2, int n3, int n4, typename lambda>
-void for_loop(lambda f)
+constexpr void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
@@ -143,7 +143,7 @@ void for_loop(lambda f)
  * @overload
  */
 template <int n1, int n2, int n3, int n4, int n5, typename lambda>
-void for_loop(lambda f)
+constexpr void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
@@ -162,7 +162,7 @@ void for_loop(lambda f)
  * @overload
  */
 template <int n1, int n2, int n3, int n4, int n5, int n6, typename lambda>
-void for_loop(lambda f)
+constexpr void for_loop(lambda f)
 {
   for (int i = 0; i < n1; i++) {
     for (int j = 0; j < n2; j++) {
