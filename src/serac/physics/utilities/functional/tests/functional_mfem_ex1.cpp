@@ -36,7 +36,7 @@ int main(int argc, char*argv[])
   auto fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(mesh.get(), &fec);
 
-  // Create a 
+  // Create a grid function to contain the solution of the PDE
   mfem::ParGridFunction u_global(&fespace);
   mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
