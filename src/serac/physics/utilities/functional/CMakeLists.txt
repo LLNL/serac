@@ -57,3 +57,8 @@ install(TARGETS              serac_functional
 if(ENABLE_TESTS)
    add_subdirectory(tests)
 endif()
+
+#if(ENABLE_BENCHMARKS)
+   add_subdirectory(benchmarking)
+#endif()
+
