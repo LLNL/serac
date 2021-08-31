@@ -220,6 +220,23 @@ SERAC_HOST_DEVICE constexpr auto operator-(const tuple<S...>& x, const tuple<T..
 }
 
 template <typename... S, typename... T, int... i>
+SERAC_HOST_DEVICE constexpr auto negation_helper(const tuple<S...>& x, std::integer_sequence<int, i...>)
+{
+  return tuple{-get<i>(x) ...};
+}
+
+/**
+ * @tparam S the types stored in the tuple x
+ * @param x a tuple of values
+ * @brief return a tuple of values defined by applying unary negation to each value in x
+ */
+template <typename... S>
+SERAC_HOST_DEVICE constexpr auto operator-(const tuple<S...>& x)
+{
+  return negation_helper(x, std::make_integer_sequence<int, static_cast<int>(sizeof...(S))>());
+}
+
+template <typename... S, typename... T, int... i>
 SERAC_HOST_DEVICE constexpr auto div_helper(const tuple<S...>& x, const tuple<T...>& y,
                                             std::integer_sequence<int, i...>)
 {

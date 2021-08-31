@@ -15,6 +15,7 @@
 #include "mfem.hpp"
 
 #include "serac/infrastructure/logger.hpp"
+#include "serac/physics/utilities/functional/boundary_element_restriction.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/finite_element.hpp"
@@ -23,52 +24,6 @@
 #include "serac/physics/utilities/functional/boundary_integral.hpp"
 #include "serac/numerics/assembled_sparse_matrix.hpp"
 #include "serac/infrastructure/logger.hpp"
-
-namespace detail {
-
-  struct elem_info{
-    int global_row;
-    int global_col;
-    int local_row;
-    int local_col;
-    int element_id;
-    int sign;
-    bool on_boundary;
-  };
-
-  // for sorting lexicographically by {global_row, global_col}
-  bool operator<(const elem_info & x, const elem_info & y) {
-    return (x.global_row < y.global_row) || (x.global_row == y.global_row && x.global_col < y.global_col);
-  }
-
-  bool operator!=(const elem_info & x, const elem_info & y) {
-    return (x.global_row != y.global_row) || (x.global_col != y.global_col);
-  }
-
-  int get_sign(int i) { return (i >= 0) ? 1 : -1; }
-  int get_index(int i) { return (i >= 0) ? i : - 1 - i; }
-
-  struct signed_index{
-    int index;
-    int sign;
-    operator int(){ return index; }
-  };
-
-  void apply_permutation(mfem::Array<int> & input, const mfem::Array<int> & permutation) {
-    auto output = input;
-    for (int i = 0; i < permutation.Size(); i++) {
-      if (permutation[i] >= 0) {
-        output[i] = input[permutation[i]];
-      } else {
-        output[i] = -input[-permutation[i]-1]-1;
-      }
-    }
-    input = output;
-  }
-
-
-
-}
 
 namespace serac {
 
@@ -146,10 +101,26 @@ class Functional<test(trial), execution_policy> : public mfem::Operator {
     // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
     if (trial::family != Family::HCURL && test::family != Family::HCURL) {
       if (test_space_) {
-        G_test_boundary_  = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+        G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+        //G_test_boundary_ = new BoundaryElementRestriction(*test_space_);
       }
       if (trial_space_) {
         G_trial_boundary_  = trial_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+        //G_trial_boundary_ = new BoundaryElementRestriction(*trial_space_);
+
+        G_trial_boundary_->PrintMatlab(std::cout);
+
+        [[maybe_unused]] BoundaryElementRestriction b(*trial_space_);
+
+        //std::vector < double > doubles(24);
+        //for (int i = 0; i < 24; i++) { doubles[i] = i; }
+        //auto view = mfem::Reshape(doubles.data(), 4, 6);
+        //for (int i = 0; i < 6; i++) {
+        //  for (int j = 0; j < 4; j++) {
+        //    std::cout << view(j,i) << std::endl;
+        //  }
+        //}
+
       }
       input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
       output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
@@ -408,6 +379,12 @@ private:
     Gradient(Functional<test(trial)> & f) : mfem::Operator(f.Height(), f.Width()), form(f), sparsity_pattern_initialized(false) {};
 
     virtual void Mult(const mfem::Vector& x, mfem::Vector& y) const override { form.GradientMult(x, y); }
+    
+    mfem::Vector operator()(const mfem::Vector& x) const { 
+      mfem::Vector y(form.Height());
+      form.GradientMult(x, y); 
+      return y;
+    }
 
     void initialize_sparsity_pattern() {
 
@@ -439,17 +416,26 @@ private:
       std::vector < ::detail::elem_info > infos;
       infos.reserve(num_infos[0] + num_infos[1]);
 
-      if (form.domain_integrals_.size() > 0) {
+      //if (form.domain_integrals_.size() > 0) {
+      if (true) {
         bool on_boundary = false;
+
+        std::ofstream outfile("domain_test_dofs_list.txt");
+        std::ofstream outfile_mapped("domain_test_dofs_list_mapped.txt");
 
         for (int e = 0; e < num_elements; e++) {
           form.test_space_->GetElementDofs(e, test_dofs);
           form.trial_space_->GetElementDofs(e, trial_dofs);
 
+          test_dofs.Print(outfile);
+
           const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.test_space_->GetFE(0))->GetDofMap();
           const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetFE(0))->GetDofMap();
           ::detail::apply_permutation(test_dofs, test_native_to_lexicographic);
           ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
+
+          test_dofs.Print(outfile_mapped);
+
           for (int i = 0; i < dofs_per_test_element; i++) {
             for (int j = 0; j < dofs_per_trial_element; j++) {
               for (int k = 0; k < test_vdim; k++) {
@@ -463,6 +449,9 @@ private:
           }
         }
 
+        outfile.close();
+        outfile_mapped.close();
+
       }
 
       // mfem doesn't implement GetDofMap for some of its Nedelec elements (??),
@@ -470,9 +459,14 @@ private:
       if (form.boundary_integrals_.size() > 0) {
         bool on_boundary = true;
 
+        std::ofstream outfile("boundary_test_dofs_list.txt");
+        std::ofstream outfile_mapped("boundary_test_dofs_list_mapped.txt");
+
         for (int b = 0; b < num_boundary_elements; b++) {
           form.test_space_->GetBdrElementDofs(b, test_dofs);
           form.trial_space_->GetBdrElementDofs(b, trial_dofs);
+
+          test_dofs.Print(outfile);
 
           if constexpr (test::family != Family::HCURL) {
             const mfem::Array<int> & test_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.test_space_->GetBE(0))->GetDofMap();
@@ -483,6 +477,8 @@ private:
             const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetBE(0))->GetDofMap();
             ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
           }
+
+          test_dofs.Print(outfile_mapped);
 
           for (int i = 0; i < dofs_per_test_boundary_element; i++) {
             for (int j = 0; j < dofs_per_trial_boundary_element; j++) {
@@ -496,6 +492,9 @@ private:
             }
           }
         }
+
+        outfile.close();
+        outfile_mapped.close();
       }
 
       std::sort(infos.begin(), infos.end());

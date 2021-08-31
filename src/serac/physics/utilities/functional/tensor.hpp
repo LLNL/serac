@@ -309,6 +309,9 @@ SERAC_HOST_DEVICE constexpr auto operator+(T other, zero)
 
 /////////////////////////////////////////////////
 
+/** @brief the unary negation of `zero` is `zero` */
+SERAC_HOST_DEVICE constexpr auto operator-(zero) { return zero{}; }
+
 /** @brief the difference of two `zero`s is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator-(zero, zero) { return zero{}; }
 

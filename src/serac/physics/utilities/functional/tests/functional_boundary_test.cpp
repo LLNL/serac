@@ -55,6 +55,39 @@ bool operator==(const mfem::SparseMatrix & A, const mfem::SparseMatrix & B) {
 
 bool operator!=(const mfem::SparseMatrix & A, const mfem::SparseMatrix & B) { return !(A == B); }
 
+template < typename T >
+void check_gradient(Functional < T > & f, mfem::GridFunction & U) {
+
+  int seed = 42;
+  mfem::GridFunction dU = U;
+  dU.Randomize(seed);
+
+  double epsilon = 1.0e-6;
+
+  // grad(f) evaluates the gradient of f at the last evaluation, 
+  // so we evaluate f(U) before calling grad(f)
+  f(U);
+
+  auto dfdU = grad(f);
+  mfem::Vector df3 = dfdU(dU);
+
+  mfem::Vector df2 = mfem::SparseMatrix(dfdU) * dU;
+  
+  mfem::GridFunction U_plus = U;
+  U_plus.Add(epsilon, dU);
+  mfem::Vector f_plus = f(U_plus);
+
+  mfem::GridFunction U_minus = U;
+  U_minus.Add(-epsilon, dU);
+  mfem::Vector f_minus = f(U_minus);
+
+  mfem::Vector df1 = (f_plus - f_minus) / (2 * epsilon);
+
+  std::cout << mfem::Vector(df1 - df2).Norml2() / df1.Norml2() << std::endl;
+  std::cout << mfem::Vector(df1 - df3).Norml2() / df1.Norml2() << std::endl;
+
+}
+
 template <int p, int dim>
 void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 {
@@ -84,12 +117,8 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
 
-  mfem::ParGridFunction u_global(&fespace);
-
-  u_global.Randomize();
-
-  mfem::Vector U(fespace.TrueVSize());
-  u_global.GetTrueDofs(U);
+  mfem::ParGridFunction U(&fespace);
+  U.Randomize();
 
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
@@ -118,14 +147,16 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
     std::ofstream outfile;
 
-    outfile.open("A_mfem.mtx");
+    outfile.open(std::to_string(p) + "_" + std::to_string(dim) + "_A_mfem.mtx");
     gradient1.SortColumnIndices();
     gradient1.PrintMM(outfile);
     outfile.close();
 
-    outfile.open("A_functional.mtx");
+    outfile.open(std::to_string(p) + "_" + std::to_string(dim) + "_A_functional.mtx");
     gradient2.PrintMM(outfile);
     outfile.close();
+
+    check_gradient(residual, U);
   }
 
   EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
@@ -196,11 +227,11 @@ void boundary_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim>)
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
 }
 
-TEST(boundary, 2D_linear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-TEST(boundary, 2D_quadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+//TEST(boundary, 2D_linear) { boundary_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+//TEST(boundary, 2D_quadratic) { boundary_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
 
 TEST(boundary, 3D_linear) { boundary_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-TEST(boundary, 3D_quadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+//TEST(boundary, 3D_quadratic) { boundary_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 
 //TEST(boundary_L2, 2D_linear) { boundary_test(*mesh2D, L2<1>{}, L2<1>{}, Dimension<2>{}); }
 //TEST(boundary_L2, 2D_quadratic) { boundary_test(*mesh2D, L2<2>{}, L2<2>{}, Dimension<2>{}); }
@@ -221,7 +252,8 @@ int main(int argc, char* argv[])
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  //std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/onehex.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 

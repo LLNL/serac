@@ -9,6 +9,9 @@ blt_list_append( TO functional_depends ELEMENTS cuda    IF ENABLE_CUDA )
 blt_list_append( TO functional_depends ELEMENTS caliper IF SERAC_USE_CALIPER )
 
 # Add the library first
+set(functional_sources
+    boundary_element_restriction.cpp)
+
 set(functional_headers
     boundary_integral.hpp
     domain_integral.hpp
@@ -41,6 +44,7 @@ blt_list_append(TO functional_headers ELEMENTS domain_integral_cuda.cuh IF ENABL
 
 blt_add_library(
       NAME        serac_functional
+      SOURCES     ${functional_sources}
       HEADERS     ${functional_headers} ${functional_detail_headers}
       DEPENDS_ON  ${functional_depends}
       )

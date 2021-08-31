@@ -264,10 +264,11 @@ private:
   };
 
   /**
-   * @brief Lightweight shim for mfem::Operator that produces the gradient of a @p Functional from a @p Mult
+   * @brief mfem::Operator that produces the gradient of a @p Functional from a @p Mult
    */
   class Gradient {
 
+    // TODO: replace with axom::Array when ready
     template < typename T >
     struct Array2D{
       Array2D() = default;
@@ -282,7 +283,7 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<QOI(trial)> & f) : form(f), lookup_tables_initialized(false) {
+    Gradient(Functional<QOI(trial)> & f) : form(f) {
 
       int trial_vdim = form.trial_space_->GetVDim();
 
@@ -300,36 +301,32 @@ private:
       element_nonzero_LUT = Array2D<::detail::signed_index>(num_elements, dofs_per_trial_element * trial_vdim);
       boundary_element_nonzero_LUT = Array2D<::detail::signed_index>(num_boundary_elements, dofs_per_trial_boundary_element * trial_vdim);
 
-      if (form.domain_integrals_.size() > 0) {
-        for (int e = 0; e < num_elements; e++) {
-          form.trial_space_->GetElementDofs(e, trial_dofs);
-          const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetFE(0))->GetDofMap();
-          ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
-          for (int j = 0; j < dofs_per_trial_element; j++) {
-            for (int l = 0; l < trial_vdim; l++) {
-              int trial_vdof = form.trial_space_->DofToVDof(::detail::get_index(trial_dofs[j]), l);
-              element_nonzero_LUT(e, j + dofs_per_trial_element * l) = {::detail::get_index(trial_vdof), ::detail::get_sign(trial_vdof)};
-            }
+      for (int e = 0; e < num_elements; e++) {
+        form.trial_space_->GetElementDofs(e, trial_dofs);
+        const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetFE(0))->GetDofMap();
+        ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
+        for (int j = 0; j < dofs_per_trial_element; j++) {
+          for (int l = 0; l < trial_vdim; l++) {
+            int trial_vdof = form.trial_space_->DofToVDof(::detail::get_index(trial_dofs[j]), l);
+            element_nonzero_LUT(e, j + dofs_per_trial_element * l) = {::detail::get_index(trial_vdof), ::detail::get_sign(trial_vdof)};
           }
         }
       }
 
       // mfem doesn't implement GetDofMap for some of its Nedelec elements (??),
       // so we have to temporarily disable boundary terms for Hcurl until they do
-      if (form.boundary_integrals_.size() > 0) {
-        for (int b = 0; b < num_boundary_elements; b++) {
-          form.trial_space_->GetBdrElementDofs(b, trial_dofs);
+      for (int b = 0; b < num_boundary_elements; b++) {
+        form.trial_space_->GetBdrElementDofs(b, trial_dofs);
 
-          if constexpr (trial::family != Family::HCURL) {
-            const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetBE(0))->GetDofMap();
-            ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
-          }
+        if constexpr (trial::family != Family::HCURL) {
+          const mfem::Array<int> & trial_native_to_lexicographic = dynamic_cast<const mfem::TensorBasisElement *>(form.trial_space_->GetBE(0))->GetDofMap();
+          ::detail::apply_permutation(trial_dofs, trial_native_to_lexicographic);
+        }
 
-          for (int j = 0; j < dofs_per_trial_boundary_element; j++) {
-            for (int l = 0; l < trial_vdim; l++) {
-              int trial_vdof = form.trial_space_->DofToVDof(::detail::get_index(trial_dofs[j]), l);
-              boundary_element_nonzero_LUT(b, j + dofs_per_trial_boundary_element * l) = {::detail::get_index(trial_vdof), ::detail::get_sign(trial_vdof)};
-            }
+        for (int j = 0; j < dofs_per_trial_boundary_element; j++) {
+          for (int l = 0; l < trial_vdim; l++) {
+            int trial_vdof = form.trial_space_->DofToVDof(::detail::get_index(trial_dofs[j]), l);
+            boundary_element_nonzero_LUT(b, j + dofs_per_trial_boundary_element * l) = {::detail::get_index(trial_vdof), ::detail::get_sign(trial_vdof)};
           }
         }
       }
@@ -337,6 +334,12 @@ private:
     }
 
     void Mult(const mfem::Vector& x, mfem::Vector& y) const { form.GradientMult(x, y); }
+
+    double operator()(const mfem::Vector& x) const { 
+      mfem::Vector y(1);
+      form.GradientMult(x, y); 
+      return y[0];
+    }
 
     operator mfem::Vector() {
 
@@ -347,12 +350,12 @@ private:
       g = 0.0;
 
       if (form.domain_integrals_.size() > 0) {
-        int num_elements = form.test_space_->GetNE();
+        int num_elements = form.trial_space_->GetNE();
         int trial_vdim = form.trial_space_->GetVDim();
         int dofs_per_trial_element = form.trial_space_->GetFE(0)->GetDof();
 
         mfem::Vector element_gradients = form.ComputeElementMatrices();
-        auto K_elem = mfem::Reshape(element_gradients.HostReadWrite(), dofs_per_test_element, dofs_per_trial_element * trial_vdim, num_elements);
+        auto K_elem = mfem::Reshape(element_gradients.HostRead(), dofs_per_test_element, dofs_per_trial_element * trial_vdim, num_elements);
         for (int e = 0; e < num_elements; e++) {
           for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
             auto [index, sign] = element_nonzero_LUT(e,j);
@@ -362,12 +365,12 @@ private:
       }
 
       if (form.boundary_integrals_.size() > 0) {
-        int num_boundary_elements = form.test_space_->GetNBE();
+        int num_boundary_elements = form.trial_space_->GetNBE();
         int trial_vdim = form.trial_space_->GetVDim();
         int dofs_per_trial_boundary_element = form.trial_space_->GetBE(0)->GetDof();
  
         mfem::Vector boundary_element_gradients = form.ComputeBoundaryElementMatrices();
-        auto K_elem = mfem::Reshape(boundary_element_gradients.HostReadWrite(), dofs_per_test_element, dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
+        auto K_elem = mfem::Reshape(boundary_element_gradients.HostRead(), dofs_per_test_boundary_element, dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
         for (int e = 0; e < num_boundary_elements; e++) {
           for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
             auto [index, sign] = boundary_element_nonzero_LUT(e,j);
@@ -389,8 +392,6 @@ private:
 
     Array2D< ::detail::signed_index > element_nonzero_LUT;
     Array2D< ::detail::signed_index > boundary_element_nonzero_LUT;
-
-    bool lookup_tables_initialized;
 
   };
 
