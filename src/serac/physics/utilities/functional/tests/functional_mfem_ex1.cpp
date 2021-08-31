@@ -30,29 +30,25 @@ constexpr int p   = 1;
 int main(int argc, char*argv[])
 {
 
-  int num_procs, myid;
+  // Initialize MPI
   MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
+  // Initialize the logger
   axom::slic::SimpleLogger logger;
 
-  serac::profiling::initializeCaliper();
-
+  // Open, refine, and distribute the star mesh
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
   auto        mesh = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
-  // Create standard MFEM bilinear and linear forms on H1
-  auto                        fec = mfem::H1_FECollection(p, dim);
+  // Create standard MFEM FE collections and space for H1
+  auto fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(mesh.get(), &fec);
 
-  // Set a random state to evaluate the residual
+  // Create a 
   mfem::ParGridFunction u_global(&fespace);
-  u_global.Randomize();
-
   mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
@@ -66,33 +62,47 @@ int main(int argc, char*argv[])
   // Set the essential boundaries
   mfem::Array<int> ess_bdr(mesh->bdr_attributes.Max());
   ess_bdr = 1;
-
   residual.SetEssentialBC(ess_bdr);
 
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{},
       [=]([[maybe_unused]] auto x, auto temperature) {
-        // get the value and the gradient from the input tuple
+        // Get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
+
+        // Set the uniform source term (comes from the linear form in MFEM ex1)
         auto source     = -1.0;
+
+        // Set the flux term (comes from the bilinear form in MFEM ex1)
         auto flux       = du_dx;
+
+        // Return the source and the flux as a tuple 
         return serac::tuple{source, flux};
       },
       *mesh);
 
   // Initialize the solution vector with the essential boundary values
-  mfem::Vector solution(U.Size());
-  solution = 0.001;
+  U = 0.0;
 
-  mfem::Vector zero_vec(U.Size());
-  zero_vec = 0.0;
+  // Calculate the initial residual for the RHS of the linear solve
+  mfem::Vector res = residual(U);
+  res *= -1.0;
 
-  mfem::Operator& grad = residual.GetGradient(solution);
+  // Get the gradient of the residual evaluation
+  mfem::Operator& grad = residual.GetGradient(U);
 
-  mfem::CG(grad, zero_vec, solution, 1, 50000, 1.0e-6, 1.0e-8);
+  // Solve the linear system using CG
+  mfem::CG(grad, res, U, 1);
 
-  serac::profiling::terminateCaliper();
+  // Output the grid function
+  u_global.SetFromTrueDofs(U);
+  u_global.Save("sol");
+  mesh->Save("mesh");
 
+  res = residual(U);
+  fmt::print("L2 norm of residual post-solve = {}\n", res.Norml2());
+
+  // Close out MPI
   MPI_Finalize();
 }
