@@ -78,6 +78,7 @@ int main(int argc, char*argv[])
   mfem::Vector zero(U);
   zero = 0.0;
 
+  // Set up the linear and nonlinear solvers
   mfem::CGSolver lin_solver(MPI_COMM_WORLD);
   lin_solver.SetPrintLevel(1);
   lin_solver.SetAbsTol(1.0e-8);
@@ -91,6 +92,7 @@ int main(int argc, char*argv[])
   nonlin_solver.SetAbsTol(1.0e-12);
   nonlin_solver.SetRelTol(1.0e-7);
 
+  // Drive the residual determined by functional to zero
   nonlin_solver.Mult(zero, U);
 
   /* 
