@@ -74,6 +74,29 @@ int main(int argc, char*argv[])
   // Initialize the solution vector with the essential boundary values
   U = 0.0;
 
+  // Create a zero vector to drive the nonlinear residual to zero
+  mfem::Vector zero(U);
+  zero = 0.0;
+
+  mfem::CGSolver lin_solver(MPI_COMM_WORLD);
+  lin_solver.SetPrintLevel(1);
+  lin_solver.SetAbsTol(1.0e-8);
+  lin_solver.SetRelTol(1.0e-8);
+  lin_solver.SetMaxIter(1000);
+
+  mfem::NewtonSolver nonlin_solver(MPI_COMM_WORLD);
+  nonlin_solver.SetOperator(residual);
+  nonlin_solver.SetSolver(lin_solver);
+  nonlin_solver.SetPrintLevel(1);
+  nonlin_solver.SetAbsTol(1.0e-12);
+  nonlin_solver.SetRelTol(1.0e-7);
+
+  nonlin_solver.Mult(zero, U);
+
+  /* 
+
+  // This shows how functional could be used in a purely linear context
+
   // Calculate the initial residual for the RHS of the linear solve
   mfem::Vector res = residual(U);
   res *= -1.0;
@@ -84,12 +107,14 @@ int main(int argc, char*argv[])
   // Solve the linear system using CG
   mfem::CG(grad, res, U, 1);
 
+  */
+
   // Output the grid function
   u_global.SetFromTrueDofs(U);
   u_global.Save("sol");
   mesh->Save("mesh");
 
-  res = residual(U);
+  mfem::Vector res = residual(U);
   fmt::print("L2 norm of residual post-solve = {}\n", res.Norml2());
 
   // Close out MPI
