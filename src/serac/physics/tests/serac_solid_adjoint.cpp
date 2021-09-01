@@ -132,7 +132,7 @@ TEST(solid_solver, adjoint)
   EXPECT_NEAR(adjoint_norm_1, 738.4103079, 0.05);
 
   // Do another adjoint solve with a non-homogeneous BC
-  FiniteElementDual adjoint_essential(StateManager::mesh(), solid_solver.displacement(), "adjoint_essential");
+  FiniteElementDual adjoint_essential(StateManager::mesh(), solid_solver.displacement().space(), "adjoint_essential");
 
   // Set the essential boundary to a non-zero value
   adjoint_essential = 0.5;

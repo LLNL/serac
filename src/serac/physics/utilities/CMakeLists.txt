@@ -23,6 +23,7 @@ set(physics_utilities_sources
     boundary_condition.cpp
     boundary_condition_manager.cpp
     equation_solver.cpp
+    finite_element_dual.cpp
     finite_element_state.cpp
     physics_utils.cpp
     state_manager.cpp
