@@ -28,9 +28,9 @@ BoundaryElementRestriction::BoundaryElementRestriction(mfem::FiniteElementSpace 
         int vdof = fes.DofToVDof(::detail::get_index(belem_dof_ids[i]), j);
 
         dof_ids.push_back(vdof);
-        outfile << vdof << std::endl;
-
+        outfile << vdof << " ";
       }
+      outfile << std::endl;
     }
 
     elem_to_dof_id_offsets.push_back(int(dof_ids.size() * vdim));

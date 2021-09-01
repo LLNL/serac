@@ -143,6 +143,8 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       auto   n_q = make_tensor<dim + 1>([&](int i) { return N(q, i, e); });  // Physical coords of unit normal
       double dx  = J(q, e) * dxi;
 
+      std::cout << e << " " << q << " " << x_q << std::endl;
+
       // evaluate the value/derivatives needed for the q-function at this quadrature point
       auto arg = Preprocess<trial_element>(u_elem, xi);
 

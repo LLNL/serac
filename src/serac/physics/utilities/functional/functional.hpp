@@ -108,7 +108,9 @@ class Functional<test(trial), execution_policy> : public mfem::Operator {
         G_trial_boundary_  = trial_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
         //G_trial_boundary_ = new BoundaryElementRestriction(*trial_space_);
 
-        G_trial_boundary_->PrintMatlab(std::cout);
+        std::ofstream outfile("G_trial_boundary.mtx");
+        G_trial_boundary_->PrintMatlab(outfile);
+        outfile.close();
 
         [[maybe_unused]] BoundaryElementRestriction b(*trial_space_);
 
@@ -196,6 +198,7 @@ class Functional<test(trial), execution_policy> : public mfem::Operator {
     // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
+
     boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
                                      integrand);
   }
