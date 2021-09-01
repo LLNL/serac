@@ -93,39 +93,8 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       // eval_quadrature is a SERAC_HOST_DEVICE quadrature point calculation
-
-      // At the moment, the GPU versions of the kernels don't support quadrature data.
-      // That will be addressed in an upcoming PR.
-      // We check if quadrature data is empty and execute on the GPU, otherwise we must execute on the CPU.
-      if constexpr (std::is_same_v<qpt_data_type, void>) {
-        eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
-                                                                     num_elements, qf);
-      } else {
-        auto   xi  = rule.points[q];
-        auto   dxi = rule.weights[q];
-        auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-        auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-        double dx  = det(J_q) * dxi;
-
-        // evaluate the value/derivatives needed for the q-function at this quadrature point
-        auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
-
-        // evaluate the user-specified constitutive model
-        //
-        // note: make_dual(arg) promotes those arguments to dual number types
-        // so that qf_output will contain values and derivatives
-        // TODO: Refactor the call to qf here since the current approach is somewhat messy
-        auto qf_output = [&qf, &x_q, &arg, &data, e, q]() { return qf(x_q, make_dual(arg), data(e, q)); }();
-
-        // integrate qf_output against test space shape functions / gradients
-        // to get element residual contributions
-        r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
-
-        // here, we store the derivative of the q-function w.r.t. its input arguments
-        //
-        // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
-        detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
-      }
+      eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
+                                                                   num_elements, qf, data);
     }
 
     // once we've finished the element integration loop, write our element residuals

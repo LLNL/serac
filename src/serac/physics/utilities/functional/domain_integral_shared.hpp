@@ -4,6 +4,32 @@
 
 namespace serac {
 
+namespace detail {
+
+/**
+ * @brief Actually calls the q-function
+ * This is an indirection layer to provide a transparent call site usage regardless of whether
+ * quadrature point (state) information is required
+ * @param[in] qf The quadrature function functor object
+ * @param[in] x_q The physical coordinates of the quadrature point
+ * @param[in] dual_arg The values and derivatives at the quadrature point, as a dual
+ * @param[inout] qpt_data The state information at the quadrature point
+ */
+template <typename lambda, typename coords_type, typename args_type, typename qpt_data_type>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, qpt_data_type&& qpt_data)
+{
+  return qf(x_q, dual_arg, qpt_data);
+}
+
+/// @overload
+template <typename lambda, typename coords_type, typename args_type>
+SERAC_HOST_DEVICE auto apply_qf(lambda&& qf, coords_type&& x_q, args_type&& dual_arg, std::nullptr_t)
+{
+  return qf(x_q, dual_arg);
+}
+
+}  // namespace detail
+
 namespace domain_integral {
 
 /**
@@ -116,10 +142,11 @@ SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tens
  * @param[in] qf The actual quadrature function, see @p lambda
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
-          typename u_elem_type, typename element_residual_type, typename J_type, typename X_type>
+          typename u_elem_type, typename element_residual_type, typename J_type, typename X_type,
+          typename qpt_data_type = void>
 SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type& r_elem,
                                        derivatives_type* derivatives_ptr, J_type J, X_type X, int num_elements,
-                                       lambda qf)
+                                       lambda qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
   using test_element         = finite_element<g, test>;
   using trial_element        = finite_element<g, trial>;
@@ -142,7 +169,7 @@ SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element
   //
   // note: make_dual(arg) promotes those arguments to dual number types
   // so that qf_output will contain values and derivatives
-  auto qf_output = qf(x_q, make_dual(arg));
+  auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
 
   // integrate qf_output against test space shape functions / gradients
   // to get element residual contributions

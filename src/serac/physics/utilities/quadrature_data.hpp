@@ -256,12 +256,15 @@ private:
  */
 template <>
 class QuadratureData<void> {
+  // Doesn't do anything
+public:
+  SERAC_HOST_DEVICE std::nullptr_t operator()(const int, const int) { return nullptr; }
 };
 
 // A dummy global so that lvalue references can be bound to something of type QData<void>
 // FIXME: There's probably a cleaner way to do this, it's technically a non-const global
 // but it's not really mutable because no operations are defined for it
-extern QuadratureData<void> dummy_qdata;
+extern SERAC_DEVICE QuadratureData<void> dummy_qdata;
 
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
 template <typename T>
