@@ -63,6 +63,17 @@ constexpr int dimension_of(Geometry g)
 }
 
 /**
+ * @brief Element conformity
+ */
+enum class Family
+{
+  H1,
+  HCURL,
+  HDIV,
+  L2
+};
+
+/**
  * @brief H1 elements of order @p p
  * @tparam p The order of the elements
  * @tparam c The vector dimension
@@ -71,6 +82,7 @@ template <int p, int c = 1>
 struct H1 {
   static constexpr int order      = p;  ///< the polynomial order of the elements
   static constexpr int components = c;  ///< the number of components at each node
+  static constexpr Family family = Family::H1;
 };
 
 /**
@@ -82,6 +94,7 @@ template <int p, int c = 1>
 struct Hcurl {
   static constexpr int order      = p;  ///< the polynomial order of the elements
   static constexpr int components = c;  ///< the number of components at each node
+  static constexpr Family family = Family::HCURL;
 };
 
 /**
@@ -93,17 +106,7 @@ template <int p, int c = 1>
 struct L2 {
   static constexpr int order      = p;  ///< the polynomial order of the elements
   static constexpr int components = c;  ///< the number of components at each node
-};
-
-/**
- * @brief Element conformity
- */
-enum class Family
-{
-  H1,
-  HCURL,
-  HDIV,
-  L2
+  static constexpr Family family = Family::L2;
 };
 
 /**

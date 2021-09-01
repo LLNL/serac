@@ -100,11 +100,57 @@ struct tensor<T> {
     return value;
   }
 
-  SERAC_HOST_DEVICE tensor() : value{} {}
-  SERAC_HOST_DEVICE tensor(T v) : value(v) {}
-  SERAC_HOST_DEVICE operator T() { return value; }
+  SERAC_HOST_DEVICE constexpr tensor() : value{} {}
+  SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
+  SERAC_HOST_DEVICE constexpr operator T() { return value; }
   T                 value;
 };
+
+template <typename T>
+struct tensor<T, 1> {
+  using type                     = T;
+  static constexpr int ndim      = 1;
+  static constexpr int first_dim = 1;
+
+  template <typename S>
+  SERAC_HOST_DEVICE constexpr auto& operator()(S, S) { return value; }
+
+  template <typename S>
+  SERAC_HOST_DEVICE constexpr auto operator()(S, S) const { return value; }
+
+  SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
+  SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
+
+  SERAC_HOST_DEVICE constexpr operator T(){ return value; }
+  SERAC_HOST_DEVICE constexpr tensor() : value() {}
+  SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
+  T value;
+};
+
+template <typename T>
+struct tensor<T, 1, 1> {
+  using type                     = T;
+  static constexpr int ndim      = 2;
+  static constexpr int first_dim = 1;
+
+  template <typename S>
+  SERAC_HOST_DEVICE constexpr auto& operator()(S, S) { return value; }
+
+  template <typename S>
+  SERAC_HOST_DEVICE constexpr auto operator()(S, S) const { return value; }
+
+  SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
+  SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
+
+  operator tensor<T, 1>(){ return value; }
+  tensor() : value() {}
+  tensor(T v) : value(v) {}
+  tensor(tensor< T, 1 > v) : value(v) {}
+
+  tensor< T, 1 > value;
+};
+
+
 
 template <typename T, int n>
 struct tensor<T, n> {
@@ -263,6 +309,9 @@ SERAC_HOST_DEVICE constexpr auto operator+(T other, zero)
 
 /////////////////////////////////////////////////
 
+/** @brief the unary negation of `zero` is `zero` */
+SERAC_HOST_DEVICE constexpr auto operator-(zero) { return zero{}; }
+
 /** @brief the difference of two `zero`s is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator-(zero, zero) { return zero{}; }
 
@@ -298,6 +347,10 @@ SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
 {
   return zero{};
 }
+
+/** @brief let `zero` be accessed like a tuple */
+template < int i >
+zero & get(zero & x) { return x; }
 
 /**
  * @brief Removes 1s from tensor dimensions
@@ -544,6 +597,24 @@ constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
     A[i] += B[i];
   }
   return A;
+}
+
+template <typename T>
+constexpr auto& operator+=(tensor<T>& A, const T & B)
+{
+  return A.value += B;
+}
+
+template <typename T>
+constexpr auto& operator+=(tensor<T, 1>& A, const T & B)
+{
+  return A.value += B;
+}
+
+template <typename T>
+constexpr auto& operator+=(tensor<T, 1, 1>& A, const T & B)
+{
+  return A.value += B;
 }
 
 /**
@@ -870,6 +941,19 @@ constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
   return AB;
 }
 
+template <typename S, typename T, int m, int ... n >
+constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n ... >& B)
+{
+  constexpr int dimensions[] = {n...};
+  tensor<decltype(S{} * T{}), n...> AB{};
+  for (int i = 0; i < dimensions[0]; i++) {
+    for (int j = 0; j < m; j++) {
+      AB[i] = AB[i] + A[j] * B[j][i];
+    }
+  }
+  return AB;
+}
+
 /**
  * @overload
  * @note vector . matrix . vector
@@ -950,35 +1034,8 @@ constexpr auto ddot(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
 /**
  * @brief this is a shorthand for dot(A, B)
  */
-template <typename S, typename T, int m, int n, int p>
-constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
-{
-  return dot(A, B);
-}
-
-/**
- * @brief this is a shorthand for dot(A, B)
- */
-template <typename S, typename T, int m, int n>
-constexpr auto operator*(const tensor<S, m>& A, const tensor<T, m, n>& B)
-{
-  return dot(A, B);
-}
-
-/**
- * @brief this is a shorthand for dot(A, B)
- */
-template <typename S, typename T, int m>
-constexpr auto operator*(const tensor<S, m>& A, const tensor<T, m>& B)
-{
-  return dot(A, B);
-}
-
-/**
- * @brief this is a shorthand for dot(A, B)
- */
-template <typename S, typename T, int m, int n>
-constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n>& B)
+template <typename S, typename T, int ... m, int ... n>
+constexpr auto operator*(const tensor<S, m ...>& A, const tensor<T, n ...>& B)
 {
   return dot(A, B);
 }
