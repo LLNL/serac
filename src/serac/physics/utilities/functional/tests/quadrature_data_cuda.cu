@@ -11,7 +11,9 @@
 
 #include "serac/physics/utilities/quadrature_data.hpp"
 
-using serac::QuadratureData;
+#include "serac/physics/utilities/functional/functional.hpp"
+
+using namespace serac;
 
 template <typename T>
 __global__ void fill(QuadratureData<T>& output, int num_elements, int num_quadrature_points)
@@ -57,6 +59,64 @@ TEST(QuadratureDataCUDA, basic_fill_and_copy)
   cudaDeviceSynchronize();
 
   EXPECT_TRUE(std::equal(source.begin(), source.end(), destination.begin()));
+}
+
+struct State {
+  double x;
+};
+
+bool operator==(const State& lhs, const State& rhs) { return lhs.x == rhs.x; }
+
+class QuadratureDataGPUTest : public ::testing::Test {
+protected:
+  void SetUp() override
+  {
+    constexpr auto mesh_file = SERAC_REPO_DIR "/data/meshes/star.mesh";
+    default_mesh             = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 0, 0);
+    resetWithNewMesh(*default_mesh);
+  }
+
+  void resetWithNewMesh(mfem::ParMesh& new_mesh)
+  {
+    mesh                = &new_mesh;
+    festate             = std::make_unique<FiniteElementState>(*mesh);
+    festate->gridFunc() = 0.0;
+    residual = std::make_unique<Functional<test_space(trial_space), gpu_policy>>(&festate->space(), &festate->space());
+  }
+  static constexpr int p   = 1;
+  static constexpr int dim = 2;
+  using test_space         = H1<p>;
+  using trial_space        = H1<p>;
+  std::unique_ptr<mfem::ParMesh>                                   default_mesh;
+  mfem::ParMesh*                                                   mesh = nullptr;
+  std::unique_ptr<FiniteElementState>                              festate;
+  std::unique_ptr<Functional<test_space(trial_space), gpu_policy>> residual;
+};
+
+struct basic_state_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& /* x */, field_t&& u, state_t&& state)
+  {
+    state.x += 0.1;
+    return u;
+  }
+};
+
+TEST_F(QuadratureDataGPUTest, basic_integrals)
+{
+  QuadratureData<State> qdata(*mesh, p);
+  State                 init{0.1};
+  qdata = init;
+  residual->AddDomainIntegral(Dimension<dim>{}, basic_state_qfunction{}, *mesh, qdata);
+
+  // If we run through it one time...
+  mfem::Vector U(festate->space().TrueVSize());
+  (*residual)(U);
+  // Then each element of the state should have been incremented accordingly...
+  State correct{0.2};
+  for (const auto& s : qdata) {
+    EXPECT_EQ(s, correct);
+  }
 }
 
 //------------------------------------------------------------------------------

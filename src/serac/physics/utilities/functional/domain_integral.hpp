@@ -489,7 +489,7 @@ public:
     // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
 #if defined(__CUDACC__)
     if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
-      evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
+      evaluation_ = [=, &data](const mfem::Vector& U, mfem::Vector& R) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
@@ -497,7 +497,7 @@ public:
         domain_integral::evaluation_kernel_cuda<
             geometry, test_space, trial_space, Q,
             serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
+            exec_config, U, R, qf_derivatives.get(), J_, X_, num_elements, qf, data);
       };
 
       gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
