@@ -403,7 +403,7 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<test(trial)> & f) : mfem::Operator(f.Height(), f.Width()), form(f), sparsity_pattern_initialized(false) {};
+    Gradient(Functional<test(trial), execution_policy> & f) : mfem::Operator(f.Height(), f.Width()), form(f), sparsity_pattern_initialized(false) {};
 
     virtual void Mult(const mfem::Vector& x, mfem::Vector& y) const override { form.GradientMult(x, y); }
     

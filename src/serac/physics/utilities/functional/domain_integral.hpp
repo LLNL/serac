@@ -226,7 +226,9 @@ auto evaluate_shape_functions(tensor < double, dim > xi, tensor< double, dim, di
       output[i].derivative = curl_N[i];
     }
     return output;
-  } else {
+  } 
+  
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     auto N = element_type::shape_functions(xi);
     auto grad_N = dot(element_type::shape_function_gradients(xi), inv(J));
 
@@ -242,6 +244,7 @@ auto evaluate_shape_functions(tensor < double, dim > xi, tensor< double, dim, di
     return output;   
 
   }
+
 }
 
 /**
