@@ -23,7 +23,7 @@ def parse_args():
     print("~~~~~~~ Given Command line Arguments ~~~~~~~")
     print("Ignore file Path: {0}".format(args.ignore))
     print("Log Path:         {0}".format(args.log))
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+    print("")
 
     return args
 
@@ -45,46 +45,50 @@ def main():
     warnings = []
     errors = []
     for log_line in log_lines:
-        # First, check if it matches any ignore regex's
-        matches_ignore = False
-        for ignore_regex in ignore_regexs:
-            if re.match(ignore_regex, log_line):
-                matches_ignore = True
-                break
-
+        # First, check if it is a warning/error
         lowered = log_line.lower()
-        has_warning = "warning:" in log_line.lower()
-        has_error = "error:" in log_line.lower()
+        has_warning = "warning:" in lowered
+        has_error = "error:" in lowered
 
-        if (has_warning or has_error) and matches_ignore:
+        # Then, check if it matches any ignore regex's
+        matches_ignore = False
+        if has_error or has_warning:
+            for ignore_regex in ignore_regexs:
+                if re.search(ignore_regex, log_line):
+                    matches_ignore = True
+                    break
+
+        if matches_ignore:
             ignores.append(log_line)
         elif has_error:
             errors.append(log_line)
         elif has_warning:
             warnings.append(log_line)
 
-    # Print warnings/errors that are found
-    if len(warnings) > 0:
-        print("~~~~~~~~~~~~~~~ Warnings ~~~~~~~~~~~~~~~")
-        for warning in warnings:
-            print(warning)
-        print("")
+    # Print ignores/warnings/errors that are found
+    print("~~~~~~~~~~~~~~~ Ignores ~~~~~~~~~~~~~~~~")
+    for ignore in ignores:
+        print(ignore)
+    print("")
 
-    if len(errors) > 0:
-        print("~~~~~~~~~~~~~~~ Errors ~~~~~~~~~~~~~~~~~")
-        for error in errors:
-            print(error)
-        print("")
+    print("~~~~~~~~~~~~~~~ Warnings ~~~~~~~~~~~~~~~")
+    for warning in warnings:
+        print(warning)
+    print("")
+
+    print("~~~~~~~~~~~~~~~ Errors ~~~~~~~~~~~~~~~~~")
+    for error in errors:
+        print(error)
+    print("")
 
     # Print summary info
-    print("~~~~~~~~~~~~~~~ Summary ~~~~~~~~~~~~~~~~")
+    print("~~~~~~~~~~~~~~~~~ Summary ~~~~~~~~~~~~~~~~~~")
     print("Warning Count: {0}".format(len(warnings)))
     print("Error Count:   {0}".format(len(errors)))
-    total_count = len(warnings) + len(errors)
-    print("Total Count:   {0}".format(total_count))
+    print("Ignored Count: {0}".format(len(ignores)))
 
     # Error out if any found
-    if total_count > 0:
+    if (len(warnings) + len(errors)) > 0:
         return False
     return True
 
