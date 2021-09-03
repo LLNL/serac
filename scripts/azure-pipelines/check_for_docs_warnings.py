@@ -10,9 +10,31 @@
 import os
 import sys
 
+def print_usage():
+    print("Usage: " + sys.argv[0] + " <path to documentation build output>")
 
 def main():
-  return True
+    # Check usage
+    if len(sys.argv) > 1 and ("--help" in sys.argv or "-h" in sys.argv):
+        print_usage()
+        return True
+
+    if len(sys.argv) < 2:
+        print("Error: Too few command line arguments given")
+        print_usage()
+        return False
+
+    if len(sys.argv) > 2:
+        print("Error: Too many command line arguments given")
+        print_usage()
+        return False
+
+    # get file to be check
+    file_path = sys.argv[1]
+    if not os.path.isfile(file_path):
+        print("Log Path: {0}".format(file_path))
+
+    return True
 
 
 if __name__ == "__main__":
