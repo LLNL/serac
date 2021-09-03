@@ -29,7 +29,7 @@ def main():
         print_usage()
         return False
 
-    # get file to be check
+    # Get file to be checked
     file_path = sys.argv[1]
     if not os.path.isfile(file_path):
         print("Log Path: {0}".format(file_path))
