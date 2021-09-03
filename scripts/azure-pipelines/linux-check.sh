@@ -69,7 +69,7 @@ fi
 
 if [[ "$DO_DOCS_CHECK" == "yes" ]] ; then
     or_die make VERBOSE=1 docs 2>&1 | tee docs_output
-    or_die ../scripts/azure-pipelines/check_for_docs_warnings.py -l docs_output
+    or_die ../scripts/check_log.py -l docs_output
 fi
 
 if [[ "$DO_STYLE_CHECK" == "yes" ]] ; then
