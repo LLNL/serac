@@ -80,9 +80,9 @@ enum class Family
  */
 template <int p, int c = 1>
 struct H1 {
-  static constexpr int order      = p;  ///< the polynomial order of the elements
-  static constexpr int components = c;  ///< the number of components at each node
-  static constexpr Family family = Family::H1;
+  static constexpr int    order      = p;  ///< the polynomial order of the elements
+  static constexpr int    components = c;  ///< the number of components at each node
+  static constexpr Family family     = Family::H1;
 };
 
 /**
@@ -92,9 +92,9 @@ struct H1 {
  */
 template <int p, int c = 1>
 struct Hcurl {
-  static constexpr int order      = p;  ///< the polynomial order of the elements
-  static constexpr int components = c;  ///< the number of components at each node
-  static constexpr Family family = Family::HCURL;
+  static constexpr int    order      = p;  ///< the polynomial order of the elements
+  static constexpr int    components = c;  ///< the number of components at each node
+  static constexpr Family family     = Family::HCURL;
 };
 
 /**
@@ -104,9 +104,9 @@ struct Hcurl {
  */
 template <int p, int c = 1>
 struct L2 {
-  static constexpr int order      = p;  ///< the polynomial order of the elements
-  static constexpr int components = c;  ///< the number of components at each node
-  static constexpr Family family = Family::L2;
+  static constexpr int    order      = p;  ///< the polynomial order of the elements
+  static constexpr int    components = c;  ///< the number of components at each node
+  static constexpr Family family     = Family::L2;
 };
 
 /**

@@ -34,8 +34,6 @@ namespace serac {
 
 namespace domain_integral {
 
-
-
 /**
  * @brief The base kernel template used to create different finite element calculation routines
  *
@@ -68,7 +66,7 @@ namespace domain_integral {
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
-                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda qf,
+                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda && qf,
                        QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
   using test_element               = finite_element<g, test>;
@@ -201,50 +199,45 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
   }
 }
 
-template < typename T1, typename T2 >
+template <typename T1, typename T2>
 struct linear_approximation {
   T1 value;
   T2 derivative;
 };
 
-template < typename element_type, int dim >
-auto evaluate_shape_functions(tensor < double, dim > xi, tensor< double, dim, dim > J) {
+template <typename element_type, int dim>
+auto evaluate_shape_functions(tensor<double, dim> xi, tensor<double, dim, dim> J)
+{
   if constexpr (element_type::family == Family::HCURL) {
-    auto N = dot(element_type::shape_functions(xi), inv(J));
+    auto N      = dot(element_type::shape_functions(xi), inv(J));
     auto curl_N = element_type::shape_function_curl(xi) / det(J);
     if constexpr (dim == 3) {
       curl_N = dot(curl_N, transpose(J));
     }
 
-    using pair_t = linear_approximation< 
-      typename std::remove_reference<decltype(N[0])>::type, 
-      typename std::remove_reference<decltype(curl_N[0])>::type
-    >;
-    tensor < pair_t, element_type::ndof > output{};
+    using pair_t = linear_approximation<std::remove_reference_t<decltype(N[0])>,
+                                        std::remove_reference_t<decltype(curl_N[0])> >;
+    tensor<pair_t, element_type::ndof> output{};
     for (int i = 0; i < element_type::ndof; i++) {
-      output[i].value = N[i];
+      output[i].value      = N[i];
       output[i].derivative = curl_N[i];
     }
     return output;
-  } 
-  
-  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
-    auto N = element_type::shape_functions(xi);
-    auto grad_N = dot(element_type::shape_function_gradients(xi), inv(J));
-
-    using pair_t = linear_approximation< 
-      typename std::remove_reference<decltype(N[0])>::type, 
-      typename std::remove_reference<decltype(grad_N[0])>::type
-    >;
-    tensor < pair_t, element_type::ndof > output{};
-    for (int i = 0; i < element_type::ndof; i++) {
-      output[i].value = N[i];
-      output[i].derivative = grad_N[i];
-    }
-    return output;   
-
   }
 
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
+    auto N      = element_type::shape_functions(xi);
+    auto grad_N = dot(element_type::shape_function_gradients(xi), inv(J));
+
+    using pair_t = linear_approximation<std::remove_reference_t<decltype(N[0])>,
+                                        std::remove_reference_t<decltype(grad_N[0])>>;
+    tensor<pair_t, element_type::ndof> output{};
+    for (int i = 0; i < element_type::ndof; i++) {
+      output[i].value      = N[i];
+      output[i].derivative = grad_N[i];
+    }
+    return output;
+  }
 }
 
 /**
@@ -273,20 +266,19 @@ template <Geometry g, typename test, typename trial, int Q, typename derivatives
 void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
                             int num_elements)
 {
-  using test_element  = finite_element<g, test>;
-  using trial_element = finite_element<g, trial>;
-  static constexpr int   dim        = dimension_of(g);
-  static constexpr int   test_ndof  = test_element::ndof;
-  static constexpr int   test_dim   = test_element::components;
-  static constexpr int   trial_ndof = trial_element::ndof;
-  static constexpr int   trial_dim  = test_element::components;
-  static constexpr auto  rule       = GaussQuadratureRule<g, Q>();
+  using test_element               = finite_element<g, test>;
+  using trial_element              = finite_element<g, trial>;
+  static constexpr int  dim        = dimension_of(g);
+  static constexpr int  test_ndof  = test_element::ndof;
+  static constexpr int  test_dim   = test_element::components;
+  static constexpr int  trial_ndof = trial_element::ndof;
+  static constexpr int  trial_dim  = trial_element::components;
+  static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto J  = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
   auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
-  //auto derivatives = mfem::Reshape(derivatives_ptr, );
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
@@ -294,25 +286,23 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-
       // get the position of this quadrature point in the parent and physical space,
       // and calculate the measure of that point in physical space.
-      auto xi_q  = rule.points[q];
-      auto dxi_q = rule.weights[q];
-      auto J_q   = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx = det(J_q) * dxi_q;
+      auto   xi_q  = rule.points[q];
+      auto   dxi_q = rule.weights[q];
+      auto   J_q   = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx    = det(J_q) * dxi_q;
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      //auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
       auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
 
-      auto & q00 = serac::get<0>(serac::get<0>(dq_darg)); // derivative of source term w.r.t. field value
-      auto & q01 = serac::get<1>(serac::get<0>(dq_darg)); // derivative of source term w.r.t. field derivative
-      auto & q10 = serac::get<0>(serac::get<1>(dq_darg)); // derivative of   flux term w.r.t. field value
-      auto & q11 = serac::get<1>(serac::get<1>(dq_darg)); // derivative of   flux term w.r.t. field derivative
+      auto& q00 = serac::get<0>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field value
+      auto& q01 = serac::get<1>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field derivative
+      auto& q10 = serac::get<0>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field value
+      auto& q11 = serac::get<1>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field derivative
 
-      auto M = evaluate_shape_functions< test_element >(xi_q, J_q);
-      auto N = evaluate_shape_functions< trial_element >(xi_q, J_q);
+      auto M = evaluate_shape_functions<test_element>(xi_q, J_q);
+      auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);
 
       // clang-format off
       for (int i = 0; i < test_ndof; i++) {
@@ -324,15 +314,16 @@ void gradient_matrix_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr
             M[i].derivative * q11 * N[j].derivative
           ) * dx;
         } 
-      } 
+      }
       // clang-format on
-
     }
 
     // Note: we "transpose" these values to get them into the layout that mfem expects
+    // clang-format off
     for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
       dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
     });
+    // clang-format on
 
   }
 }
@@ -418,7 +409,8 @@ public:
       };
 
       gradient_mat_ = [=](mfem::Vector& K_e) {
-        domain_integral::gradient_matrix_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_, num_elements);
+        domain_integral::gradient_matrix_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_,
+                                                                                      num_elements);
       };
     }
 
