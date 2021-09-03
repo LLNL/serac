@@ -9,17 +9,20 @@
 
 import argparse
 import os
+import re
 import sys
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Checks log for warnings and errors")
 
-    parser.add_argument("-l","--log", type=str, required=True, help="Path to log file to be checked") 
+    parser.add_argument("-l", "--log", type=str, required=True, help="Path to log file to be checked")
+    parser.add_argument("-i", "--ignore", type=str, required=False, help="Path to file that includes regex's to ignore lines")
 
     args = parser.parse_args()
 
     print("~~~~~~~ Given Command line Arguments ~~~~~~~")
-    print("Log Path: {0}".format(args.log))
+    print("Ignore file Path: {0}".format(args.ignore))
+    print("Log Path:         {0}".format(args.log))
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
     return args
@@ -31,13 +34,33 @@ def main():
     with open(args.log, "r") as f:
         log_lines = f.readlines()
 
+    if not args.ignore:
+        ignore_regexs = []
+    else:
+        with open(args.ignore, "r") as f:
+            ignore_regexs = f.readlines()
+
     # Get warnings/errors out of log file
+    ignores = []
     warnings = []
     errors = []
     for log_line in log_lines:
-        if "warning:" in log_line.lower():
-            warnings.append(log_line)
-        elif "error:" in log_line.lower():
+        # First, check if it matches any ignore regex's
+        matches_ignore = False
+        for ignore_regex in ignore_regexs:
+            if re.match(ignore_regex, log_line):
+                matches_ignore = True
+                break
+
+        lowered = log_line.lower()
+        has_warning = "warning:" in log_line.lower()
+        has_error = "error:" in log_line.lower()
+
+        if (has_warning or has_error) and matches_ignore:
+            ignores.append(log_line)
+        elif has_error:
+            errors.append(log_line)
+        elif has_warning:
             warnings.append(log_line)
 
     # Print warnings/errors that are found
