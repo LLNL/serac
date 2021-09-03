@@ -31,20 +31,55 @@ def handle_command_line():
         sys.exit(1)
 
     # Check given file path
-    file_path = sys.argv[1]
-    if not os.path.isfile(file_path):
-        print("Error: Given path is not a file: {0}".format(file_path))
+    log_path = sys.argv[1]
+    if not os.path.isfile(log_path):
+        print("Error: Given path is not a file: {0}".format(log_path))
         print_usage()
         sys.exit(1)
 
-    print("Log Path: {0}".format(file_path))
+    print("Log Path: {0}".format(log_path))
 
-    return file_path
+    return log_path
 
 
-def main()
-    file_path = handle_command_line()
+def main():
+    log_path = handle_command_line()
 
+    with open(log_path, "r") as f:
+        log_lines = f.readlines()
+
+    # Get warnings/errors out of log file
+    warnings = []
+    errors = []
+    for log_line in log_lines:
+        if "warning:" in log_line.lower():
+            warnings.append(log_line)
+        elif "error:" in log_line.lower():
+            warnings.append(log_line)
+
+    # Print warnings/errors that are found
+    if len(warnings) > 0:
+        print("~~~~~~~~~~~~~~~ Warnings ~~~~~~~~~~~~~~~")
+        for warning in warnings:
+            print(warning)
+        print("")
+
+    if len(errors) > 0:
+        print("~~~~~~~~~~~~~~~ Errors ~~~~~~~~~~~~~~~~~")
+        for error in errors:
+            print(error)
+        print("")
+
+    # Print summary info
+    print("~~~~~~~~~~~~~~~ Summary ~~~~~~~~~~~~~~~~")
+    print("Warning Count: {0}".format(len(warnings)))
+    print("Error Count:   {0}".format(len(errors)))
+    total_count = len(warnings) + len(errors)
+    print("Total Count:   {0}".format(total_count))
+
+    # Error out if any found
+    if total_count > 0:
+        return False
     return True
 
 if __name__ == "__main__":
