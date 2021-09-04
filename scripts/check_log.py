@@ -88,10 +88,9 @@ def main():
     print("Ignored Count: {0}".format(len(ignores)))
 
     # Error out if any found
-    # TODO: uncomment this in follow up PR that fixes warnings/errors
-    # if (len(warnings) + len(errors)) > 0:
-    #     return False
-    return True
+    # TODO: use this return statement in follow up PR that fixes warnings/errors
+    # return len(warnings) + len(errors)
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())
