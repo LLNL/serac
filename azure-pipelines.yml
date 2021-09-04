@@ -77,4 +77,4 @@ jobs:
       ci_env=`bash <(curl -s https://codecov.io/env)`
       echo "  -e DO_COVERAGE_CHECK  -e DO_DOCS_CHECK -e DO_STYLE_CHECK -e HOST_CONFIG ./serac/scripts/azure-pipelines/linux-check.sh"
       docker run --rm -v `pwd`:/home/serac/serac $ci_env -e DO_COVERAGE_CHECK  -e DO_DOCS_CHECK -e DO_STYLE_CHECK -e HOST_CONFIG $(Compiler_ImageName) ./serac/scripts/azure-pipelines/linux-check.sh
-    displayName: '$(TEST_TARGET) Style Check'
+    displayName: '$(TEST_TARGET) Check'
