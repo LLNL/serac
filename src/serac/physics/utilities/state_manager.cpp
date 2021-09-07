@@ -99,9 +99,9 @@ FiniteElementDual StateManager::newDual(FiniteElementDual::Options&& options)
     // Note: this is a static cast because we know this vector under the hood is a grid function
     // This is hidden from the user because the interpolation capabilities of a grid function
     // are inappropriate for dual vectors.
-    auto gf_view_of_local_dual_vector = static_cast<mfem::ParGridFunction&>(dual.localVec());
+    auto gf_view_of_local_dual_vector = static_cast<mfem::ParGridFunction*>(&dual.localVec());
 
-    datacoll_->RegisterField(name, &gf_view_of_local_dual_vector);
+    datacoll_->RegisterField(name, gf_view_of_local_dual_vector);
     // Now that it's been allocated, we can set it to zero
     dual.localVec() = 0.0;
     return dual;
