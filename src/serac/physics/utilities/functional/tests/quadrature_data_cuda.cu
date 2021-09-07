@@ -8,9 +8,8 @@
 
 #include "serac/serac_config.hpp"
 #include "serac/numerics/mesh_utils_base.hpp"
-
 #include "serac/physics/utilities/quadrature_data.hpp"
-
+#include "serac/physics/utilities/state_manager.hpp"
 #include "serac/physics/utilities/functional/functional.hpp"
 
 using namespace serac;
@@ -116,6 +115,257 @@ TEST_F(QuadratureDataGPUTest, basic_integrals)
   State correct{0.2};
   for (const auto& s : qdata) {
     EXPECT_EQ(s, correct);
+  }
+}
+
+struct StateWithDefault {
+  double x = 0.5;
+};
+
+bool operator==(const StateWithDefault& lhs, const StateWithDefault& rhs) { return lhs.x == rhs.x; }
+
+struct basic_state_with_default_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& /* x */, field_t&& u, state_t&& state)
+  {
+    state.x += 0.1;
+    return u;
+  }
+};
+
+TEST_F(QuadratureDataGPUTest, basic_integrals_default)
+{
+  QuadratureData<StateWithDefault> qdata(*mesh, p);
+  residual->AddDomainIntegral(Dimension<dim>{}, basic_state_with_default_qfunction{}, *mesh, qdata);
+  // If we run through it one time...
+  mfem::Vector U(festate->space().TrueVSize());
+  (*residual)(U);
+  // Then each element of the state should have been incremented accordingly...
+  StateWithDefault correct{0.6};
+  const auto&      const_qdata = qdata;
+  for (auto& s : const_qdata) {
+    EXPECT_EQ(s, correct);
+  }
+}
+
+struct StateWithMultiFields {
+  double x = 0.5;
+  double y = 0.3;
+};
+
+bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs)
+{
+  return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
+struct basic_state_with_multi_fields_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& /* x */, field_t&& u, state_t&& state)
+  {
+    state.x += 0.1;
+    state.y += 0.7;
+    return u;
+  }
+};
+
+TEST_F(QuadratureDataGPUTest, basic_integrals_multi_fields)
+{
+  QuadratureData<StateWithMultiFields> qdata(*mesh, p);
+  residual->AddDomainIntegral(Dimension<dim>{}, basic_state_with_multi_fields_qfunction{}, *mesh, qdata);
+  // If we run through it one time...
+  mfem::Vector U(festate->space().TrueVSize());
+  (*residual)(U);
+  // Then each element of the state should have been incremented accordingly...
+  StateWithMultiFields correct{0.6, 1.0};
+  for (const auto& s : qdata) {
+    EXPECT_EQ(s, correct);
+  }
+}
+
+template <typename T>
+class QuadratureDataGPUStateManagerTest : public QuadratureDataGPUTest {
+public:
+  using value_type                          = typename T::value_type;
+  static constexpr value_type initial_state = T::initial_state;
+  static void                 mutate(value_type& v, double other = 0.0) { T::mutate(v, other); }
+};
+
+struct MultiFieldWrapper {
+  using value_type                          = StateWithMultiFields;
+  static constexpr value_type initial_state = {};
+  static void                 mutate(value_type& v, double other = 0.0)
+  {
+    v.x += (0.1 + other);
+    v.y += (0.7 + other);
+  }
+};
+
+struct IntWrapper {
+  using value_type                          = int;
+  static constexpr value_type initial_state = 0;
+  static void                 mutate(value_type& v, double other = 0.0)
+  {
+    v += 4;
+    v += static_cast<int>(other * 10);
+  }
+};
+
+struct ThreeBytes {
+  char x[3] = {1, 2, 3};
+};
+
+bool operator==(const ThreeBytes& lhs, const ThreeBytes& rhs) { return std::equal(lhs.x, lhs.x + 3, rhs.x); }
+
+struct ThreeBytesWrapper {
+  using value_type = ThreeBytes;
+  static_assert(sizeof(value_type) == 3);
+  static constexpr value_type initial_state = {};
+  static void                 mutate(value_type& v, double other = 0.0)
+  {
+    v.x[0] = static_cast<char>(v.x[0] + 3 + (other * 10));
+    v.x[1] = static_cast<char>(v.x[1] + 2 + (other * 10));
+    v.x[2] = static_cast<char>(v.x[2] + 1 + (other * 10));
+  }
+};
+
+using StateTypes = ::testing::Types<MultiFieldWrapper, IntWrapper, ThreeBytesWrapper>;
+// NOTE: The extra comma is here due a clang issue where the variadic macro param is not provided
+// so instead, we leave it unspecified/empty
+TYPED_TEST_SUITE(QuadratureDataGPUStateManagerTest, StateTypes, );
+
+template <typename wrapper_t>
+struct state_manager_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& /* x */, field_t&& u, state_t&& state)
+  {
+    wrapper_t::mutate(state);
+    return u;
+  }
+};
+
+template <typename wrapper_t>
+struct state_manager_varying_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& x, field_t&& u, state_t&& state)
+  {
+    wrapper_t::mutate(state, norm(x));
+    mutated_data[idx++] = state;
+    return u;
+  }
+  DeviceArray<typename wrapper_t::value_type>& mutated_data;
+  int                                          idx = 0;
+};
+
+TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
+{
+  constexpr int cycle        = 0;
+  const auto    mutated_once = []() {
+    typename TestFixture::value_type result = TestFixture::initial_state;
+    TestFixture::mutate(result);
+    return result;
+  }();
+  const auto mutated_twice = []() {
+    typename TestFixture::value_type result = TestFixture::initial_state;
+    TestFixture::mutate(result);
+    TestFixture::mutate(result);
+    return result;
+  }();
+
+  // First set up the Functional object, run it once to update the state once,
+  // then save it
+  {
+    axom::sidre::DataStore datastore;
+    serac::StateManager::initialize(datastore);
+    // We need to use "this->" explicitly because we are in a derived class template
+    serac::StateManager::setMesh(std::move(this->default_mesh));
+    // Can't use auto& here because we're in a template context
+    serac::QuadratureData<typename TestFixture::value_type>& qdata =
+        serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
+    qdata = TestFixture::initial_state;
+
+    this->residual->AddDomainIntegral(Dimension<TestFixture::dim>{}, state_manager_qfunction<TestFixture>{},
+                                      *this->mesh, qdata);
+    // If we run through it one time...
+    mfem::Vector U(this->festate->space().TrueVSize());
+    (*this->residual)(U);
+
+    for (const auto& s : qdata) {
+      EXPECT_EQ(s, mutated_once);
+    }
+    serac::StateManager::save(0.0, cycle);
+    serac::StateManager::reset();
+  }
+
+  // Then reload the state to make sure it was synced correctly, and update it again before saving
+  {
+    axom::sidre::DataStore datastore;
+    serac::StateManager::initialize(datastore, "serac", "", cycle);
+    // Since the original mesh is dead, use the mesh recovered from the save file to build a new Functional
+    this->resetWithNewMesh(serac::StateManager::mesh());
+    serac::QuadratureData<typename TestFixture::value_type>& qdata =
+        serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
+    // Make sure the changes from the first increment were propagated through
+    for (const auto& s : qdata) {
+      EXPECT_EQ(s, mutated_once);
+    }
+
+    // Note that the mesh here has been recovered from the save file,
+    // same for the qdata (or rather the underlying QuadratureFunction)
+    this->residual->AddDomainIntegral(Dimension<TestFixture::dim>{}, state_manager_qfunction<TestFixture>{},
+                                      *this->mesh, qdata);
+    // Then increment it for the second time
+    mfem::Vector U(this->festate->space().TrueVSize());
+    (*this->residual)(U);
+    // Before saving it again
+    serac::StateManager::save(0.1, cycle + 1);
+    serac::StateManager::reset();
+  }
+
+  // Ordered quadrature point data that is unique (mutated with the point's distance from the origin)
+  DeviceArray<typename TestFixture::value_type> origin_mutated_data;
+
+  // Reload the state again to make sure the same synchronization still happens when the data
+  // is read in from a restart
+  {
+    axom::sidre::DataStore datastore;
+    serac::StateManager::initialize(datastore, "serac", "", cycle + 1);
+    // Since the original mesh is dead, use the mesh recovered from the save file to build a new Functional
+    this->resetWithNewMesh(serac::StateManager::mesh());
+    serac::QuadratureData<typename TestFixture::value_type>& qdata =
+        serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
+    // Make sure the changes from the second increment were propagated through
+    for (const auto& s : qdata) {
+      EXPECT_EQ(s, mutated_twice);
+    }
+
+    // CHAI FIXME: Why is this not called resize()?
+    origin_mutated_data.reallocate(std::distance(qdata.begin(), qdata.end()));
+
+    this->residual->AddDomainIntegral(Dimension<TestFixture::dim>{},
+                                      state_manager_varying_qfunction<TestFixture>{origin_mutated_data}, *this->mesh,
+                                      qdata);
+    // Then mutate it for the third time
+    mfem::Vector U(this->festate->space().TrueVSize());
+    (*this->residual)(U);
+    // Before saving it again
+    serac::StateManager::save(0.1, cycle + 2);
+    serac::StateManager::reset();
+  }
+
+  // Reload the state one more time to make sure order is preserved when reloading - the previous mutation
+  // included the distance of the quadrature point from the origin (which is unique)
+  {
+    axom::sidre::DataStore datastore;
+    serac::StateManager::initialize(datastore, "serac", "", cycle + 2);
+    serac::QuadratureData<typename TestFixture::value_type>& qdata =
+        serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
+    // Make sure the changes from the distance-specified increment were propagated through and in the correct order
+    std::size_t i = 0;
+    for (const auto& s : qdata) {
+      EXPECT_EQ(s, origin_mutated_data[i]);
+      i++;
+    }
+    serac::StateManager::reset();
   }
 }
 
