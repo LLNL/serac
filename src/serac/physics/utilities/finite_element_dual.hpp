@@ -7,23 +7,23 @@
 /**
  * @file finite_element_dual.hpp
  *
- * @brief This contains a class that represents the space of topological duals sampled
- * on a discrete finite element basis, i.e. the space of residuals and sensitivities.
+ * @brief This contains a class that represents the dual of a finite element vector space, i.e. the space of residuals
+ * and sensitivities.
  */
 
 #pragma once
 
+#include <memory>
+
 #include "mfem.hpp"
+
+#include "serac/physics/utilities/finite_element_state.hpp"
 
 namespace serac {
 
 /**
- * @brief Class for encapsulating the topological dual space of a finite element space (i.e. the
- * space of linear forms) as applied to a specific basis set
- *
- * @note While a grid function is provided by this class, interpolation operations are not
- * defined in this representation of the dual space and should be used with caution
- *
+ * @brief Class for encapsulating the dual vector space of a finite element space (i.e. the
+ * space of linear forms as applied to a specific basis set)
  */
 class FiniteElementDual {
 public:
@@ -47,13 +47,20 @@ public:
      */
     std::unique_ptr<mfem::FiniteElementCollection> coll = {};
     /**
-     * The DOF ordering that should be used interally by MFEM
+     * @brief The DOF ordering that should be used interally by MFEM
      */
     mfem::Ordering::Type ordering = mfem::Ordering::byVDIM;
     /**
      * @brief The name of the field encapsulated by the state object
      */
     std::string name = "";
+
+    /**
+     * @brief Whether the underlying grid function should be allocated or not
+     *
+     * @note This should only be false for restart runs
+     */
+    bool alloc_local = true;
   };
   /**
    * Main constructor for building a new dual object
@@ -62,9 +69,29 @@ public:
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementDual(mfem::ParMesh& mesh,
-                    Options&&      options = {
-                        .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = ""});
+  FiniteElementDual(mfem::ParMesh& mesh, FiniteElementDual::Options&& options = {.order       = 1,
+                                                                                 .vector_dim  = 1,
+                                                                                 .coll        = {},
+                                                                                 .ordering    = mfem::Ordering::byVDIM,
+                                                                                 .name        = "",
+                                                                                 .alloc_local = true})
+      : state_(mesh, {.order      = options.order,
+                      .vector_dim = options.vector_dim,
+                      .coll       = std::move(options.coll),
+                      .ordering   = options.ordering,
+                      .name       = options.name,
+                      .alloc_gf   = options.alloc_local}){};
+
+  /**
+   * @brief Minimal constructor for a FiniteElementDual given an already-existing grid function
+   * @param[in] mesh The problem mesh (object does not take ownership)
+   * @param[in] gf The field for the dual to create (object does not take ownership)
+   * @param[in] name The name of the field
+   *
+   * @note This is used mainly be the restart capability
+   */
+  FiniteElementDual(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "")
+      : state_(mesh, gf, name){};
 
   /**
    * @brief Minimal constructor for a FiniteElementDual given a finite element space
@@ -72,53 +99,72 @@ public:
    * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
    * @param[in] name The name of the field
    */
-  FiniteElementDual(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space, const std::string& name = "");
+  FiniteElementDual(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space, const std::string& name = "")
+      : state_(mesh, space, name){};
 
   /**
-   * Returns a non-owning reference to the internal mesh object
+   * @brief Returns a non-owning reference to the internal mesh object
    */
-  mfem::ParMesh& mesh() { return mesh_; }
+  mfem::ParMesh& mesh() { return state_.mesh(); }
 
   /**
    * Returns a non-owning reference to the internal FESpace
    */
-  mfem::ParFiniteElementSpace& space() { return *space_; }
+  mfem::ParFiniteElementSpace& space() { return state_.space(); }
   /// \overload
-  const mfem::ParFiniteElementSpace& space() const { return *space_; }
+  const mfem::ParFiniteElementSpace& space() const { return state_.space(); }
 
   /**
-   * Returns a non-owning reference to the vector of true DOFs
+   * @brief Returns a non-owning reference to the vector of true DOFs
    */
-  mfem::HypreParVector& trueVec() { return true_vec_; }
+  mfem::HypreParVector& trueVec() { return state_.trueVec(); }
 
   /// \overload
-  const mfem::HypreParVector& trueVec() const { return true_vec_; }
+  const mfem::HypreParVector& trueVec() const { return state_.trueVec(); }
 
   /**
    * @brief Returns a non-owning reference to the local degrees of freedom
    *
    * @return mfem::Vector& The local dof vector
+   * @note While this is a grid function for plotting and parallelization, we only return a vector
+   * type as the user should not use the interpolation capabilities of a grid function on the dual space
    */
-  mfem::Vector& localVec() { return local_vec_; }
+  mfem::Vector& localVec() { return state_.gridFunc(); }
 
   /// @overload
-  const mfem::Vector& localVec() const { return local_vec_; }
+  const mfem::Vector& localVec() const { return state_.gridFunc(); }
 
   /**
-   * Returns the name of the FEDual
+   * @brief Returns the name of the FEDual
    */
-  std::string name() const { return name_; }
+  std::string name() const { return state_.name(); }
 
   /**
-   * Initialize the true DOF vector by extracting true DOFs from the local
+   * @brief Initialize the true DOF vector by extracting true DOFs from the local
    * vector into the internal true DOF vector
    */
-  void initializeTrueVec();
+  void initializeTrueVec() { state_.initializeTrueVec(); }
 
   /**
-   * Set the local vector using the true DOF values
+   * @brief Set the local vector using the true DOF values
    */
-  void distributeSharedDofs();
+  void distributeSharedDofs() { state_.distributeSharedDofs(); }
+
+  /**
+   * @brief Set the value of the dual to a scalar
+   *
+   * @param value The scalar to set
+   * @return A reference to the modified dual
+   *
+   * @note This operates on the true dofs. In other words, if the value is different of different MPI ranks,
+   * the rank which owns the DOF will set the value in the local vector.
+   */
+  FiniteElementDual& operator=(const double value)
+  {
+    state_ = value;
+    distributeSharedDofs();
+    return *this;
+  }
 
   /**
    * Utility function for creating a tensor, e.g. mfem::HypreParVector,
@@ -129,48 +175,14 @@ public:
   template <typename Tensor>
   std::unique_ptr<Tensor> createOnSpace()
   {
-    static_assert(std::is_constructible_v<Tensor, mfem::ParFiniteElementSpace*>,
-                  "Tensor must be constructible with a ptr to ParFESpace");
-    return std::make_unique<Tensor>(space_.get());
+    return state_.createOnSpace<Tensor>();
   }
-
-  /**
-   * @brief Set a finite element dual to a constant value
-   *
-   * @param value The constant to set the finite element dual to
-   * @return The modified finite element dual
-   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
-   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
-   */
-  FiniteElementDual& operator=(const double value);
 
 private:
   /**
-   * @brief A reference to the mesh object on which the field is defined
+   * @brief The underlying FE state
    */
-  std::reference_wrapper<mfem::ParMesh> mesh_;
-  /**
-   * @brief Pointer to the FiniteElementCollection
-   */
-  std::unique_ptr<mfem::FiniteElementCollection> coll_;
-  /**
-   * @brief Pointer to the FiniteElementSpace
-   */
-  std::unique_ptr<mfem::ParFiniteElementSpace> space_;
-  /**
-   * @brief Local (or L) vector. This includes the shared dofs
-   * on each MPI rank.
-   */
-  mfem::Vector local_vec_;
-  /**
-   * @brief The true degree of freedom vector. Each entry is only listed
-   * on one MPI rank.
-   */
-  mfem::HypreParVector true_vec_;
-  /**
-   * @brief Name of the finite element dual.
-   */
-  std::string name_ = "";
+  FiniteElementState state_;
 };
 
 }  // namespace serac

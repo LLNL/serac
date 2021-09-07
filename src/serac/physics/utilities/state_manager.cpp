@@ -82,6 +82,32 @@ FiniteElementState StateManager::newState(FiniteElementState::Options&& options)
   }
 }
 
+FiniteElementDual StateManager::newDual(FiniteElementDual::Options&& options)
+{
+  SLIC_ERROR_ROOT_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
+  const std::string name = options.name;
+  if (is_restart_) {
+    auto field = datacoll_->GetParField(name);
+    return {mesh(), *field, name};
+  } else {
+    SLIC_ERROR_ROOT_IF(datacoll_->HasField(name),
+                       fmt::format("Serac's datacollection was already given a field named '{0}'", name));
+    options.alloc_local = false;
+    FiniteElementDual dual(mesh(), std::move(options));
+
+    // Create a grid function view of the local vector for plotting
+    // Note: this is a static cast because we know this vector under the hood is a grid function
+    // This is hidden from the user because the interpolation capabilities of a grid function
+    // are inappropriate for dual vectors.
+    auto gf_view_of_local_dual_vector = static_cast<mfem::ParGridFunction&>(dual.localVec());
+
+    datacoll_->RegisterField(name, &gf_view_of_local_dual_vector);
+    // Now that it's been allocated, we can set it to zero
+    dual.localVec() = 0.0;
+    return dual;
+  }
+}
+
 void StateManager::save(const double t, const int cycle)
 {
   SLIC_ERROR_ROOT_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");

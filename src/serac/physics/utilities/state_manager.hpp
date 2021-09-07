@@ -19,6 +19,7 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/physics/utilities/finite_element_state.hpp"
+#include "serac/physics/utilities/finite_element_dual.hpp"
 #include "serac/physics/utilities/quadrature_data.hpp"
 
 namespace serac {
@@ -46,6 +47,14 @@ public:
    * @note If this is a restart then the options (except for the name) will be ignored
    */
   static FiniteElementState newState(FiniteElementState::Options&& options = {});
+
+  /**
+   * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
+   * @param[in] options Configuration options for the FEDual, if a new state is created
+   * @see FiniteElementDual::FiniteElementDual
+   * @note If this is a restart then the options (except for the name) will be ignored
+   */
+  static FiniteElementDual newDual(FiniteElementDual::Options&& options = {});
 
   /**
    * @brief Factory method for creating a new QuadratureData object
