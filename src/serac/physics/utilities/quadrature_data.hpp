@@ -43,6 +43,17 @@ T* end(ManagedArray<T>& arr)
 }  // namespace chai
 #endif
 
+/**
+ * @brief Helper template for a GPU-compatible array type (when applicable)
+ * This will be eventually replaced with axom::Array
+ */
+template <typename T>
+#ifdef SERAC_USE_CHAI
+using DeviceArray = chai::ManagedArray<T>;
+#else
+using DeviceArray = std::vector<T>;
+#endif
+
 namespace serac {
 
 namespace detail {
@@ -226,22 +237,14 @@ private:
    * @note It may be possible to reduce memory pressure by only constructing the qfunc immediately prior to saving
    */
   detail::MaybeOwningPointer<mfem::QuadratureFunction> qfunc_;
-/**
- * @brief The actual data
- */
-#ifdef SERAC_USE_CHAI
-  chai::ManagedArray<T> data_;
-#else
-  std::vector<T>   data_;
-#endif
-/**
- * @brief A copy of the element_offsets member from mfem::QuadratureSpace
- */
-#ifdef SERAC_USE_CHAI
-  chai::ManagedArray<int> offsets_;
-#else
-  std::vector<int> offsets_;
-#endif
+  /**
+   * @brief The actual data
+   */
+  DeviceArray<T> data_;
+  /**
+   * @brief A copy of the element_offsets member from mfem::QuadratureSpace
+   */
+  DeviceArray<int> offsets_;
   /**
    * @brief The stride of the array
    */
