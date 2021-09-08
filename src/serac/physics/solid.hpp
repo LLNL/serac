@@ -356,12 +356,12 @@ public:
    * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
    *
    * @param[in] adjoint_load_state The dual state that contains the right hand side of the adjoint system
-   * @param[in] state_with_essential_boundary A optional finite element state containing the non-homogenous essential
+   * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
    */
   virtual const serac::FiniteElementState& solveAdjoint(FiniteElementDual& adjoint_load_state,
-                                                        FiniteElementDual* state_with_essential_boundary = nullptr);
+                                                        FiniteElementDual* dual_with_essential_boundary = nullptr);
 
   /**
    * @brief Compute the implicit sensitivity of the quantity of interest used in defining the load for the adjoint

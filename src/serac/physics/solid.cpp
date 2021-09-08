@@ -485,7 +485,7 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
 }
 
 const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load_vec,
-                                              FiniteElementDual* state_with_essential_boundary)
+                                              FiniteElementDual* dual_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
   SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None, "Adjoint analysis only valid following a forward solve.");
@@ -506,11 +506,11 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load_ve
   auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
 
-  if (state_with_essential_boundary) {
-    state_with_essential_boundary->initializeTrueVec();
+  if (dual_with_essential_boundary) {
+    dual_with_essential_boundary->initializeTrueVec();
     for (const auto& bc : bcs_.essentials()) {
       bc.eliminateFromMatrix(*J_T);
-      bc.eliminateToRHS(*J_T, state_with_essential_boundary->trueVec(), adjoint_load_vector);
+      bc.eliminateToRHS(*J_T, dual_with_essential_boundary->trueVec(), adjoint_load_vector);
     }
   } else {
     bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
