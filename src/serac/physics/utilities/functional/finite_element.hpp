@@ -155,6 +155,54 @@ struct is_finite_element<finite_element<g, Hcurl<p> > > {
   static constexpr bool value = true;  ///< whether or not type T is a finite_element
 };
 
+/**
+ * @brief a class that helps to extract the test space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename spaces>
+struct get_test_space;  // undefined
+
+/**
+ * @brief a class that helps to extract the test space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename test_space, typename trial_space>
+struct get_test_space<test_space(trial_space)> {
+  using type = test_space;  ///< the test space
+};
+
+/**
+ * @brief a class that helps to extract the trial space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename spaces>
+struct get_trial_space;  // undefined
+
+/**
+ * @brief a class that helps to extract the trial space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename test_space, typename trial_space>
+struct get_trial_space<test_space(trial_space)> {
+  using type = trial_space;  ///< the trial space
+};
+
+/**
+ * @brief a type function that extracts the test space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename spaces>
+using test_space_t = typename get_test_space<spaces>::type;
+
+/**
+ * @brief a type function that extracts the trial space from a function signature template parameter
+ * @tparam space The function signature itself
+ */
+template <typename spaces>
+using trial_space_t = typename get_trial_space<spaces>::type;
+
+
+
 #include "detail/segment_H1.inl"
 #include "detail/segment_Hcurl.inl"
 #include "detail/segment_L2.inl"

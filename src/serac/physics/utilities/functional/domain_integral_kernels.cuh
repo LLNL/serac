@@ -1,11 +1,9 @@
 #pragma once
 
-#include "mfem.hpp"
-#include "mfem/linalg/dtensor.hpp"
-
-#include "serac/physics/utilities/functional/integral_utilities.hpp"
-#include "serac/physics/utilities/functional/domain_integral_shared.hpp"
 #include <cstring>
+
+#include "serac/physics/utilities/quadrature_data.hpp"
+#include "serac/physics/utilities/functional/integral_utilities.hpp"
 
 namespace serac {
 
@@ -75,6 +73,7 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim  = dimension_of(g);
 
   // for each element in the domain
   const int grid_stride = blockDim.x * gridDim.x;
@@ -87,14 +86,37 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
-                                                                   num_elements, qf);
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
+
+      // evaluate the value/derivatives needed for the q-function at this quadrature point
+      auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
+
+      // evaluate the user-specified constitutive model
+      //
+      // note: make_dual(arg) promotes those arguments to dual number types
+      // so that qf_output will contain values and derivatives
+      auto qf_output = qf(x_q, make_dual(arg));
+
+      // integrate qf_output against test space shape functions / gradients
+      // to get element residual contributions
+      r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+
+      // here, we store the derivative of the q-function w.r.t. its input arguments
+      //
+      // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
+
+      // Note: This pattern may result in non-coalesced access depend on how it executed.
+      detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
     }
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
     detail::Add(r, r_elem, e);
-  }  // e loop
+  }  // element loop
 }
 
 /**
@@ -141,7 +163,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
-  static constexpr int  dim   = dimension_of(g);
+  static constexpr int  dim  = dimension_of(g);
 
   const int grid_stride = blockDim.x * gridDim.x;
   // launch a thread for each quadrature x element point
@@ -157,7 +179,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
     element_residual_type r_elem{};
 
     //// for each quadrature point in the element
-    // eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
+    //eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
     //                                                             num_elements, qf);
 
     auto   xi  = rule.points[q];
@@ -306,6 +328,7 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim  = dimension_of(g);
 
   const int grid_stride = blockDim.x * gridDim.x;
 #pragma unroll
@@ -315,6 +338,7 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
 
     // this is where we will accumulate the (change in) element residual tensor
     element_residual_type dr_elem{};
+
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
@@ -385,6 +409,7 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim  = dimension_of(g);
 
   const int grid_stride           = blockDim.x * gridDim.x;
   auto      thread_id             = blockIdx.x * blockDim.x + threadIdx.x;
@@ -418,8 +443,6 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
     // integrate dq against test space shape functions / gradients
     // to get the (change in) element residual contributions
     dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
-
-    //gradient_quadrature<g, test, trial, Q, derivatives_type>(e, q, du_elem, dr_elem, derivatives_ptr, J, num_elements);
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
@@ -458,7 +481,7 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
 
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type>
-void gradient_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
+void action_of_gradient_kernel(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
                           derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;

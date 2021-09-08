@@ -34,7 +34,6 @@ set(functional_detail_headers
     detail/segment_L2.inl
     detail/metaprogramming.hpp
     integral_utilities.hpp
-    domain_integral_shared.hpp
     )
 
 blt_list_append(TO functional_headers ELEMENTS domain_integral_cuda.cuh IF ENABLE_CUDA)

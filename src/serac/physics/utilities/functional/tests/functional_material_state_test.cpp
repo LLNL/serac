@@ -18,6 +18,9 @@
 
 #include "serac/physics/utilities/state_manager.hpp"
 
+// TODO reenable these tests
+#define ENABLE_FUNCTIONAL_TESTS false
+
 using namespace serac;
 
 struct State {
@@ -52,6 +55,23 @@ protected:
   std::unique_ptr<Functional<test_space(trial_space)>> residual;
 };
 
+struct StateWithDefault {
+  double x = 0.5;
+};
+
+bool operator==(const StateWithDefault& lhs, const StateWithDefault& rhs) { return lhs.x == rhs.x; }
+
+struct StateWithMultiFields {
+  double x = 0.5;
+  double y = 0.3;
+};
+
+bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs)
+{
+  return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
+#if ENABLE_FUNCTIONAL_TESTS
 TEST_F(QuadratureDataTest, basic_integrals)
 {
   QuadratureData<State> qdata(*mesh, p);
@@ -78,11 +98,7 @@ TEST_F(QuadratureDataTest, basic_integrals)
       Dimension<dim>{}, [&](auto /* x */, auto u) { return u; }, *mesh);
 }
 
-struct StateWithDefault {
-  double x = 0.5;
-};
 
-bool operator==(const StateWithDefault& lhs, const StateWithDefault& rhs) { return lhs.x == rhs.x; }
 
 TEST_F(QuadratureDataTest, basic_integrals_default)
 {
@@ -105,16 +121,6 @@ TEST_F(QuadratureDataTest, basic_integrals_default)
   }
 }
 
-struct StateWithMultiFields {
-  double x = 0.5;
-  double y = 0.3;
-};
-
-bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs)
-{
-  return lhs.x == rhs.x && lhs.y == rhs.y;
-}
-
 TEST_F(QuadratureDataTest, basic_integrals_multi_fields)
 {
   QuadratureData<StateWithMultiFields> qdata(*mesh, p);
@@ -135,6 +141,7 @@ TEST_F(QuadratureDataTest, basic_integrals_multi_fields)
     EXPECT_EQ(s, correct);
   }
 }
+#endif
 
 template <typename T>
 class QuadratureDataStateManagerTest : public QuadratureDataTest {
@@ -187,6 +194,7 @@ using StateTypes = ::testing::Types<MultiFieldWrapper, IntWrapper, ThreeBytesWra
 // so instead, we leave it unspecified/empty
 TYPED_TEST_SUITE(QuadratureDataStateManagerTest, StateTypes, );
 
+#if ENABLE_FUNCTIONAL_TESTS
 TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
 {
   constexpr int cycle        = 0;
@@ -311,6 +319,7 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
     serac::StateManager::reset();
   }
 }
+#endif
 
 //------------------------------------------------------------------------------
 #include "axom/slic/core/SimpleLogger.hpp"
