@@ -46,7 +46,7 @@ public:
    * @see FiniteElementState::FiniteElementState
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementState newState(FiniteElementState::Options&& options = {});
+  static FiniteElementState newState(FiniteElementVector::Options&& options = {});
 
   /**
    * @brief Factory method for creating a new FEDual object, signature is identical to FEDual constructor
@@ -54,7 +54,7 @@ public:
    * @see FiniteElementDual::FiniteElementDual
    * @note If this is a restart then the options (except for the name) will be ignored
    */
-  static FiniteElementDual newDual(FiniteElementDual::Options&& options = {});
+  static FiniteElementDual newDual(FiniteElementVector::Options&& options = {});
 
   /**
    * @brief Factory method for creating a new QuadratureData object
