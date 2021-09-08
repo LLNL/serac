@@ -484,7 +484,7 @@ FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bu
   return *bulk_sensitivity_;
 }
 
-const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load_vec,
+const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
                                               FiniteElementDual* dual_with_essential_boundary)
 {
   SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
@@ -493,13 +493,13 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load_ve
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
 
-  adjoint_load_vec.initializeTrueVec();
+  adjoint_load.initializeTrueVec();
 
   // note: The assignment operator must be called after the copy constructor because
   // the copy constructor only sets the partitioning, it does not copy the actual vector
   // values
-  mfem::HypreParVector adjoint_load_vector(adjoint_load_vec.trueVec());
-  adjoint_load_vector = adjoint_load_vec.trueVec();
+  mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
+  adjoint_load_vector = adjoint_load.trueVec();
 
   auto& lin_solver = nonlin_solver_.LinearSolver();
 
