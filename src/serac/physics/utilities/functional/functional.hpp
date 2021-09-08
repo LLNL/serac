@@ -634,6 +634,13 @@ private:
       sparsity_pattern_initialized = true;
     }
 
+    /** 
+     * @brief implicit conversion to mfem::SparseMatrix type
+     * 
+     * @note the first invokation of this function will be more expensive,
+     * as it creates the CSR graph once, and then caches it for creating subsequent
+     * sparse matrices.
+     */ 
     operator mfem::SparseMatrix()
     {
       if (!sparsity_pattern_initialized) {
