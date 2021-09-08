@@ -133,7 +133,8 @@ TEST(solid_solver, adjoint)
 
   // Do another adjoint solve with a non-homogeneous BC
   // Also test the state manager option for finite element duals
-  auto adjoint_essential = StateManager::newDual({.vector_dim = dim, .name = "adjoint_essential_load"});
+  auto adjoint_essential =
+      StateManager::newDual(FiniteElementVector::Options{.vector_dim = dim, .name = "adjoint_essential_load"});
 
   // Set the essential boundary to a non-zero value
   adjoint_essential = 0.5;
