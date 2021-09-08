@@ -28,7 +28,15 @@ namespace serac {
 
 namespace detail {
 
-struct elem_info {
+/**
+ * @brief a (poorly named) tuple of quantities used to discover the sparsity
+ * pattern associated with element and boundary element matrices.
+ *
+ * It stores information about how the entries of an element "stiffness" matrix
+ * map to the global stiffness. The operator< definition allows us to sort them
+ * lexicographically, to facilitate creating the CSR matrix graph.
+ */
+struct ElemInfo {
   int  global_row;
   int  global_col;
   int  local_row;
@@ -38,26 +46,51 @@ struct elem_info {
   bool on_boundary;
 };
 
-// for sorting lexicographically by {global_row, global_col}
-inline bool operator<(const elem_info& x, const elem_info& y)
+/// @brief for sorting lexicographically by {global_row, global_col}
+inline bool operator<(const ElemInfo& x, const ElemInfo& y)
 {
   return (x.global_row < y.global_row) || (x.global_row == y.global_row && x.global_col < y.global_col);
 }
 
-inline bool operator!=(const elem_info& x, const elem_info& y)
+inline bool operator!=(const ElemInfo& x, const ElemInfo& y)
 {
   return (x.global_row != y.global_row) || (x.global_col != y.global_col);
 }
 
+/** 
+ * @brief mfem will frequently encode {sign, index} into a single int32_t. 
+ * This function decodes the sign from such a type.
+ */
 inline int get_sign(int i) { return (i >= 0) ? 1 : -1; }
+
+/** 
+ * @brief mfem will frequently encode {sign, index} into a single int32_t. 
+ * This function decodes the index from such a type.
+ */
 inline int get_index(int i) { return (i >= 0) ? i : -1 - i; }
 
-struct signed_index {
+/** 
+ * @brief this type explicitly stores sign (typically used conveying edge/face orientation) and index values
+ * 
+ * TODO: investigate implementation via bitfield (should have smaller memory footprint, better readability than mfem's {sign, index} int32_t encoding)
+ */
+struct SignedIndex {
   int index;
   int sign;
-      operator int() { return index; }
+  operator int() { return index; }
 };
 
+/** 
+ * @brief reorder the entries of an array of integers according to the given permutation array
+ * 
+ * @param permutation the array describing how to reorder the input values
+ * @param input the array to be reordered
+ * 
+ * @note permutation[i] describes where input[i] will appear in the output array.
+ * 
+ * @note if entry permutation[i] is negative, it will be interpreted as a reordering 
+ * (according to its index) and sign change of the permuted value (according to mfem convention (?))
+ */
 inline void apply_permutation(const mfem::Array<int>& permutation, mfem::Array<int>& input)
 {
   auto output = input;
@@ -471,7 +504,7 @@ private:
       // Each active element and boundary element describes which nonzero entries
       // its element stiffness matrix will touch. Then we reduce that list down
       // to the unique nonzeros and use that information to fill out the CSR graph.
-      std::vector<detail::elem_info> infos;
+      std::vector<detail::ElemInfo> infos;
       infos.reserve(num_infos[0] + num_infos[1]);
 
       if (form.domain_integrals_.size() > 0) {
@@ -544,23 +577,33 @@ private:
 
       int nrows = form.test_space_->GetNDofs() * form.test_space_->GetVDim();
       row_ptr.resize(nrows + 1);
-      std::vector<detail::signed_index> nonzero_ids(infos.size());
+      std::vector<detail::SignedIndex> nonzero_ids(infos.size());
 
       int nnz    = 0;
       row_ptr[0] = 0;
       col_ind.push_back(infos[0].global_col);
       nonzero_ids[0] = {0, infos[0].sign};
 
+      // after sorting the infos array, we scan through it to identify all
+      // of the unique (i,j) pairs, so we can create the appropriate CSR graph
       for (size_t i = 1; i < infos.size(); i++) {
+
         // increment the nonzero count every time we find a new (i,j) pair
         nnz += (infos[i - 1] != infos[i]);
 
         nonzero_ids[i] = {nnz, infos[i].sign};
 
+        // also note which column is associated with this new (i,j) pair
         if (infos[i - 1] != infos[i]) {
           col_ind.push_back(infos[i].global_col);
         }
 
+        // if the (i,j) pair is on a different row, then make sure to
+        // set values in row_ptr such that the nonzero entries associated 
+        // with row r will be in the range [row_ptr[r], row_ptr[r+1])
+        //
+        // Note: this is a loop rather than single assignment to handle
+        // the case where there are rows with no nonzero entries.
         for (int j = infos[i - 1].global_row; j < infos[i].global_row; j++) {
           row_ptr[j + 1] = nonzero_ids[i];
         }
@@ -571,10 +614,10 @@ private:
         row_ptr[j + 1] = nnz;
       }
 
-      element_nonzero_LUT = Array3D<detail::signed_index>(num_elements, dofs_per_test_element * test_vdim,
+      element_nonzero_LUT = Array3D<detail::SignedIndex>(num_elements, dofs_per_test_element * test_vdim,
                                                           dofs_per_trial_element * trial_vdim);
       boundary_element_nonzero_LUT =
-          Array3D<detail::signed_index>(num_boundary_elements, dofs_per_test_boundary_element * test_vdim,
+          Array3D<detail::SignedIndex>(num_boundary_elements, dofs_per_test_boundary_element * test_vdim,
                                         dofs_per_trial_boundary_element * trial_vdim);
 
       // finally, fill in the lookup tables with the appropriate indices that correspond to
@@ -610,6 +653,8 @@ private:
       int     nnz    = row_ptr.back();
       double* values = new double[nnz]{};
 
+      // each element uses the lookup tables to add its contributions
+      // to their appropriate locations in the global sparse matrix
       if (form.domain_integrals_.size() > 0) {
         int num_elements           = form.test_space_->GetNE();
         int test_vdim              = form.test_space_->GetVDim();
@@ -630,6 +675,8 @@ private:
         }
       }
 
+      // each boundary element uses the lookup tables to add its contributions
+      // to their appropriate locations in the global sparse matrix
       if (form.boundary_integrals_.size() > 0) {
         int num_boundary_elements           = form.test_space_->GetNBE();
         int test_vdim                       = form.test_space_->GetVDim();
@@ -666,10 +713,10 @@ private:
     std::vector<int> col_ind;
 
     /// @brief lookup table of where to put the element gradient contributions in the CSR matrix
-    Array3D<detail::signed_index> element_nonzero_LUT;
+    Array3D<detail::SignedIndex> element_nonzero_LUT;
 
     /// @brief lookup table of where to put the boundary element gradient contributions in the CSR matrix
-    Array3D<detail::signed_index> boundary_element_nonzero_LUT;
+    Array3D<detail::SignedIndex> boundary_element_nonzero_LUT;
 
     mfem::SparseMatrix A;
 
