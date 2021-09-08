@@ -49,7 +49,7 @@ public:
      */
     std::unique_ptr<mfem::FiniteElementCollection> coll = {};
     /**
-     * The DOF ordering that should be used interally by MFEM
+     * @brief The DOF ordering that should be used interally by MFEM
      */
     mfem::Ordering::Type ordering = mfem::Ordering::byVDIM;
     /**
@@ -57,10 +57,10 @@ public:
      */
     std::string name = "";
     /**
-     * @brief Whether the GridFunction should be allocated (and owned by the FEState object)
-     * @note This should only be false for restart-based runs
+     * @brief A bool denoting if the grid function is managed by sidre
+     * @note This should only be true if calling a constructor from the StateManager class
      */
-    bool alloc_local = true;
+    bool managed_by_sidre = false;
   };
 
   /**
@@ -70,7 +70,12 @@ public:
    * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
    * and the name of the field
    */
-  FiniteElementVector(mfem::ParMesh& mesh, Options&& options);
+  FiniteElementVector(mfem::ParMesh& mesh, Options&& options = {.order            = 1,
+                                                                .vector_dim       = 1,
+                                                                .coll             = {},
+                                                                .ordering         = mfem::Ordering::byVDIM,
+                                                                .name             = "",
+                                                                .managed_by_sidre = false});
 
   /**
    * @brief Minimal constructor for a FiniteElementVector given an already-existing field

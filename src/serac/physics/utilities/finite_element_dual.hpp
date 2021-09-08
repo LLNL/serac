@@ -28,32 +28,9 @@ namespace serac {
 class FiniteElementDual : public FiniteElementVector {
 public:
   /**
-   * Main constructor for building a new finite element dual
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] options The options specified, namely those relating to the order of the problem,
-   * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
-   * and the name of the field
+   * @brief Use the finite element vector constructors
    */
-  FiniteElementDual(mfem::ParMesh& mesh, Options&& options = {})
-      : FiniteElementVector(mesh, std::forward<FiniteElementVector::Options>(options)){};
-
-  /**
-   * @brief Minimal constructor for a FiniteElementDual given an already-existing field
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] gf The field for the dual to create (object does not take ownership)
-   * @param[in] name The name of the field
-   */
-  FiniteElementDual(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "")
-      : FiniteElementVector(mesh, gf, name){};
-
-  /**
-   * @brief Minimal constructor for a FiniteElementDual given a finite element space
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] space The space to use for the finite element dual. This space is deep copied into the new FE state
-   * @param[in] name The name of the field
-   */
-  FiniteElementDual(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space, const std::string& name = "")
-      : FiniteElementVector(mesh, space, name){};
+  using FiniteElementVector::FiniteElementVector;
 
   /**
    * @brief Returns a non-owning reference to the local degrees of freedom

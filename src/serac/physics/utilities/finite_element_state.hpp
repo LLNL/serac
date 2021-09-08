@@ -54,32 +54,9 @@ inline bool is_vector_valued(const GeneralCoefficient& coef)
 class FiniteElementState : public FiniteElementVector {
 public:
   /**
-   * Main constructor for building a new finite element state
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] options The options specified, namely those relating to the order of the problem,
-   * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
-   * and the name of the field
+   * @brief Use the finite element vector constructors
    */
-  FiniteElementState(mfem::ParMesh& mesh, Options&& options = {})
-      : FiniteElementVector(mesh, std::forward<FiniteElementVector::Options>(options)){};
-
-  /**
-   * @brief Minimal constructor for a FiniteElementState given an already-existing field
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] gf The field for the state to create (object does not take ownership)
-   * @param[in] name The name of the field
-   */
-  FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "")
-      : FiniteElementVector(mesh, gf, name){};
-
-  /**
-   * @brief Minimal constructor for a FiniteElementState given a finite element space
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] space The space to use for the finite element state. This space is deep copied into the new FE state
-   * @param[in] name The name of the field
-   */
-  FiniteElementState(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space, const std::string& name = "")
-      : FiniteElementVector(mesh, space, name){};
+  using FiniteElementVector::FiniteElementVector;
 
   /**
    * @brief Minimal constructor for a FiniteElementState given an already-existing state
@@ -144,8 +121,8 @@ public:
   /**
    * @brief Set a finite element state to a constant value
    *
-   * @param value The constant to set the finite element dual to
-   * @return The modified finite element dual
+   * @param value The constant to set the finite element state to
+   * @return The modified finite element state
    * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
    * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
    */

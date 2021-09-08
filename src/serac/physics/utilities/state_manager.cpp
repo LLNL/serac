@@ -73,7 +73,7 @@ FiniteElementState StateManager::newState(FiniteElementVector::Options&& options
   } else {
     SLIC_ERROR_ROOT_IF(datacoll_->HasField(name),
                        fmt::format("Serac's datacollection was already given a field named '{0}'", name));
-    options.alloc_local = false;
+    options.managed_by_sidre = true;
     FiniteElementState state(mesh(), std::move(options));
     datacoll_->RegisterField(name, &(state.gridFunc()));
     // Now that it's been allocated, we can set it to zero
@@ -92,7 +92,7 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options)
   } else {
     SLIC_ERROR_ROOT_IF(datacoll_->HasField(name),
                        fmt::format("Serac's datacollection was already given a field named '{0}'", name));
-    options.alloc_local = false;
+    options.managed_by_sidre = true;
     FiniteElementDual dual(mesh(), std::move(options));
 
     // Create a grid function view of the local vector for plotting

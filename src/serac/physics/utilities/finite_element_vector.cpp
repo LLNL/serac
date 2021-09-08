@@ -13,12 +13,13 @@ namespace detail {
 /**
  * @brief Helper function for creating a GridFunction in both restart and not-restart scenarios
  * @param[in] space The FESpace to construct the GridFunction with
- * @param[in] alloc_gf Whether to allocate the GridFunction - if this is a non-restart run, we delay the allocation
- * so it can be taken care of inside MFEMSidreDataCollection
+ * @param[in] managed_by_sidre Whether the grid function is managed by sidre. If it is, the memory is managed by a raw
+ * pointer instead of a unique ptr within the MFEM sidre data collection.
  */
-MaybeOwningPointer<mfem::ParGridFunction> initialGridFunc(mfem::ParFiniteElementSpace* space, const bool alloc_gf)
+MaybeOwningPointer<mfem::ParGridFunction> initialGridFunc(mfem::ParFiniteElementSpace* space,
+                                                          const bool                   managed_by_sidre)
 {
-  if (alloc_gf) {
+  if (!managed_by_sidre) {
     return std::make_unique<mfem::ParGridFunction>(space);
   } else {
     return new mfem::ParGridFunction(space, static_cast<double*>(nullptr));
@@ -33,9 +34,7 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, FiniteElementVecto
                          : std::make_unique<mfem::H1_FECollection>(options.order, mesh.Dimension())),
       space_(std::make_unique<mfem::ParFiniteElementSpace>(&mesh, &detail::retrieve(coll_), options.vector_dim,
                                                            options.ordering)),
-      // When left unallocated, the allocation can happen inside the datastore
-      // Use a raw pointer here when unallocated, lifetime will be managed by the DataCollection
-      gf_(detail::initialGridFunc(&detail::retrieve(space_), options.alloc_local)),
+      gf_(detail::initialGridFunc(&detail::retrieve(space_), options.managed_by_sidre)),
       true_vec_(&detail::retrieve(space_)),
       name_(options.name)
 {
@@ -47,7 +46,7 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, mfem::ParFiniteEle
     : mesh_(mesh),
       coll_(std::unique_ptr<mfem::FiniteElementCollection>(mfem::FiniteElementCollection::New(space.FEColl()->Name()))),
       space_(std::make_unique<mfem::ParFiniteElementSpace>(space, &mesh, &detail::retrieve(coll_))),
-      gf_(detail::initialGridFunc(&detail::retrieve(space_), true)),
+      gf_(detail::initialGridFunc(&detail::retrieve(space_), false)),
       true_vec_(&detail::retrieve(space_)),
       name_(name)
 {
