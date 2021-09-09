@@ -111,7 +111,7 @@ public:
     // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
 #if defined(__CUDACC__)
     if constexpr (exec == ExecutionSpace::GPU) {
-      evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
+      evaluation_ = [this, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
@@ -122,7 +122,7 @@ public:
             exec_config, U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
       };
 
-      action_of_gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
+      action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
