@@ -116,7 +116,11 @@ public:
   /**
    * @brief Returns a non-owning reference to the vector of true DOFs
    * @return The underlying true degree of freedom vector
-   * @note Every entry in this vecor exists on exactly one MPI rank
+   * @note This is a "true dof" vector in the standard MFEM sense. Each degree of freedom is on fully independent
+   * (e.g. not constrained by non-conforming meshes) and exists on exactly one MPI rank. Please see the
+   * <a href="https://mfem.org/pri-dual-vec/">MFEM</a> and
+   * <a href="https://libceed.readthedocs.io/en/latest/libCEEDapi/#terminology-and-notation">CEED</a> documentation for
+   * more details.
    */
   mfem::HypreParVector& trueVec() { return true_vec_; }
   /// \overload
