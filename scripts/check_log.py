@@ -31,14 +31,18 @@ def parse_args():
 def main():
     args = parse_args()
 
+    # read lines from log
     with open(args.log, "r") as f:
         log_lines = f.readlines()
 
-    if not args.ignore:
-        ignore_regexs = []
-    else:
+    # read ignore regex's
+    ignore_regexs = []
+    if args.ignore:
         with open(args.ignore, "r") as f:
-            ignore_regexs = f.readlines()
+            # Only save lines that aren't comments ("#")
+            for currline in f.readlines():
+                if not currline.strip().startswith("#"):
+                    ignore_regexs = currline
 
     # Get warnings/errors out of log file
     ignores = []
@@ -66,7 +70,7 @@ def main():
             warnings.append(log_line)
 
     # Print ignores/warnings/errors that are found
-    print("~~~~~~~~~~~~~~~ Ignores ~~~~~~~~~~~~~~~~")
+    print("~~~~~~~~~~~~~~~ Ignored ~~~~~~~~~~~~~~~~")
     for ignore in ignores:
         print(ignore)
     print("")
