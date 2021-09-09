@@ -124,13 +124,31 @@ public:
 };
 
 /**
+ * @brief Policy class for implementing indexing of quadrature point data
+ */
+template <typename T, typename Derived>
+class QuadratureDataImpl {
+public:
+  /**
+   * @brief Retrieves the data for a given quadrature point
+   * @param[in] element_idx The index of the desired element within the mesh
+   * @param[in] q_idx The index of the desired quadrature point within the element
+   */
+  SERAC_HOST_DEVICE T& operator()(const int element_idx, const int q_idx);
+
+private:
+  Derived&       asDerived() { return static_cast<Derived&>(*this); }
+  const Derived& asDerived() const { return static_cast<const Derived&>(*this); }
+};
+
+/**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
  * @pre T must be default-constructible (TODO: Do we want to allow non-default constructible types?)
  * @pre T must be trivially copyable (due to the use of memcpy for type punning)
  */
 template <typename T>
-class QuadratureData : public SyncableData {
+class QuadratureData : public SyncableData, public QuadratureDataImpl<T, QuadratureData<T>> {
 public:
   /**
    * @brief Constructs using a mesh and polynomial order
@@ -172,13 +190,6 @@ public:
   // but this case should be fairly rare.
   QuadratureData(const QuadratureData&) = delete;
   QuadratureData(QuadratureData&&)      = delete;
-
-  /**
-   * @brief Retrieves the data for a given quadrature point
-   * @param[in] element_idx The index of the desired element within the mesh
-   * @param[in] q_idx The index of the desired quadrature point within the element
-   */
-  SERAC_HOST_DEVICE T& operator()(const int element_idx, const int q_idx);
 
   /**
    * @brief Assigns an item to each quadrature point
@@ -227,6 +238,9 @@ public:
     }
   }
 
+  T*         data() { return data_.data(); }
+  const int* offsets() const { return offsets_.data(); }
+
 private:
   /**
    * @brief Storage layout of @p qfunc_ containing mesh and polynomial order info
@@ -264,10 +278,28 @@ public:
   SERAC_HOST_DEVICE std::nullptr_t operator()(const int, const int) { return nullptr; }
 };
 
+/**
+ * @brief Stores instances of user-defined type for each quadrature point in a mesh
+ * @tparam T The type of the per-qpt data
+ * @pre T must be default-constructible (TODO: Do we want to allow non-default constructible types?)
+ * @pre T must be trivially copyable (due to the use of memcpy for type punning)
+ */
+template <typename T>
+class QuadratureDataView : public QuadratureDataImpl<T, QuadratureData<T>> {
+public:
+  QuadratureDataView(QuadratureData<T>& quad_data) : data_(quad_data.data()), offsets_(quad_data.offsets()) {}
+  T*         data() { return data_; }
+  const int* offsets() const { return offsets_; }
+
+private:
+  T*         data_    = nullptr;
+  const int* offsets_ = nullptr;
+};
+
 // A dummy global so that lvalue references can be bound to something of type QData<void>
 // FIXME: There's probably a cleaner way to do this, it's technically a non-const global
 // but it's not really mutable because no operations are defined for it
-extern SERAC_DEVICE QuadratureData<void> dummy_qdata;
+extern QuadratureData<void> dummy_qdata;
 
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
 template <typename T>
@@ -295,19 +327,19 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
 }
 
 template <typename T>
-SERAC_HOST_DEVICE T& QuadratureData<T>::operator()(const int element_idx, const int q_idx)
-{
-  const auto idx = offsets_[static_cast<std::size_t>(element_idx)] + q_idx;
-  return data_[static_cast<std::size_t>(idx)];
-}
-
-template <typename T>
 QuadratureData<T>& QuadratureData<T>::operator=(const T& item)
 {
   for (auto& datum : data_) {
     datum = item;
   }
   return *this;
+}
+
+template <typename T, typename Derived>
+SERAC_HOST_DEVICE T& QuadratureDataImpl<T, Derived>::operator()(const int element_idx, const int q_idx)
+{
+  const auto idx = asDerived().offsets()[static_cast<std::size_t>(element_idx)] + q_idx;
+  return asDerived().data()[static_cast<std::size_t>(idx)];
 }
 
 }  // namespace serac
