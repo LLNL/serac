@@ -180,7 +180,7 @@ protected:
    */
   detail::MaybeOwningPointer<const mfem::FiniteElementCollection> coll_;
   /**
-   * @brief Possibly-owning handle to the FiniteElementCollection, as it is owned
+   * @brief Possibly-owning handle to the mfem::ParFiniteElementSpace, as it is owned
    * by the FiniteElementVector in a normal run and by the MFEMSidreDataCollection
    * in a restart run
    */
@@ -198,7 +198,7 @@ protected:
 /**
  * @brief Find the average value of a finite element vector across all dofs
  *
- * @param state The state variable to compute a max of
+ * @param state The state variable to compute the average of
  * @return The average value
  */
 double avg(const FiniteElementVector& fe_vector);
