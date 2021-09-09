@@ -59,15 +59,6 @@ public:
   using FiniteElementVector::FiniteElementVector;
 
   /**
-   * @brief Minimal constructor for a FiniteElementState given an already-existing state
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] fe_state The state for the new state to copy
-   * @param[in] name The name of the field
-   */
-  FiniteElementState(mfem::ParMesh& mesh, FiniteElementState& fe_state, const std::string& name = "")
-      : FiniteElementVector(mesh, fe_state.gridFunc(), name){};
-
-  /**
    * Returns a non-owning reference to the internal grid function
    */
   mfem::ParGridFunction& gridFunc() { return detail::retrieve(gf_); }
