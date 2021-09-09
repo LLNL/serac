@@ -18,7 +18,9 @@
 
 #include "serac/physics/utilities/state_manager.hpp"
 
-// TODO reenable these tests
+// TODO: reenable these tests
+// I temporarily disabled some of the QuadratureData stuff
+// in DomainIntegral, as it didn't work on CUDA yet
 #define ENABLE_FUNCTIONAL_TESTS false
 
 using namespace serac;
