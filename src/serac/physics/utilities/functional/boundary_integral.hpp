@@ -353,17 +353,17 @@ public:
     //
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
-    evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
+    evaluation_ = [this, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
       boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
                                                                                  normals_, num_elements, qf);
     };
 
-    action_of_gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
+    action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
       boundary_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(),
                                                                                          J_, num_elements);
     };
 
-    element_gradient_ = [=](mfem::Vector& K_b) {
+    element_gradient_ = [this, qf_derivatives, num_elements](mfem::Vector& K_b) {
       boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives.get(), J_,
                                                                                        num_elements);
     };
