@@ -947,16 +947,16 @@ constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n...>& B)
   // the vector * tensor one, since clang emits an error about ambiguous
   // overloads if they are separate functions. The `if constexpr` expression avoids
   // using an `else` because that confuses nvcc (11.2) into thinking there's not
-  // a return statement 
-  if constexpr (sizeof ... (n) == 0) { 
+  // a return statement
+  if constexpr (sizeof...(n) == 0) {
     decltype(S{} * T{}) AB{};
     for (int i = 0; i < m; i++) {
       AB += A[i] * B[i];
     }
     return AB;
-  } 
+  }
 
-  if constexpr (sizeof ... (n) > 0) { 
+  if constexpr (sizeof...(n) > 0) {
     constexpr int                     dimensions[] = {n...};
     tensor<decltype(S{} * T{}), n...> AB{};
     for (int i = 0; i < dimensions[0]; i++) {
