@@ -924,20 +924,6 @@ constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n>& B)
 
 /**
  * @overload
- * @note vector . vector
- */
-template <typename S, typename T, int n>
-constexpr auto dot(const tensor<S, n>& A, const tensor<T, n>& B)
-{
-  decltype(S{} * T{}) AB{};
-  for (int i = 0; i < n; i++) {
-    AB += A[i] * B[i];
-  }
-  return AB;
-}
-
-/**
- * @overload
  * @note 3rd-order-tensor . vector
  */
 template <typename S, typename T, int m, int n, int p>
@@ -957,14 +943,29 @@ constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
 template <typename S, typename T, int m, int... n>
 constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n...>& B)
 {
-  constexpr int                     dimensions[] = {n...};
-  tensor<decltype(S{} * T{}), n...> AB{};
-  for (int i = 0; i < dimensions[0]; i++) {
-    for (int j = 0; j < m; j++) {
-      AB[i] = AB[i] + A[j] * B[j][i];
+  // this dot product function includes the vector * vector implementation and
+  // the vector * tensor one, since clang emits an error about ambiguous
+  // overloads if they are separate functions. The `if constexpr` expression avoids
+  // using an `else` because that confuses nvcc (11.2) into thinking there's not
+  // a return statement 
+  if constexpr (sizeof ... (n) == 0) { 
+    decltype(S{} * T{}) AB{};
+    for (int i = 0; i < m; i++) {
+      AB += A[i] * B[i];
     }
+    return AB;
+  } 
+
+  if constexpr (sizeof ... (n) > 0) { 
+    constexpr int                     dimensions[] = {n...};
+    tensor<decltype(S{} * T{}), n...> AB{};
+    for (int i = 0; i < dimensions[0]; i++) {
+      for (int j = 0; j < m; j++) {
+        AB[i] = AB[i] + A[j] * B[j][i];
+      }
+    }
+    return AB;
   }
-  return AB;
 }
 
 /**

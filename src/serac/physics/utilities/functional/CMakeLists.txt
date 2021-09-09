@@ -36,7 +36,7 @@ set(functional_detail_headers
     integral_utilities.hpp
     )
 
-blt_list_append(TO functional_headers ELEMENTS domain_integral_cuda.cuh IF ENABLE_CUDA)
+blt_list_append(TO functional_headers ELEMENTS domain_integral_kernels.cuh IF ENABLE_CUDA)
 
 blt_add_library(
       NAME        serac_functional

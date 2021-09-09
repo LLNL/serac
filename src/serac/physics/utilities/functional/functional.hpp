@@ -499,8 +499,8 @@ private:
       int entries_per_boundary_element =
           dofs_per_test_boundary_element * test_vdim * dofs_per_trial_boundary_element * trial_vdim;
 
-      int num_infos[2] = {(form.domain_integrals_.size() > 0) * entries_per_element * num_elements,
-                          (form.boundary_integrals_.size() > 0) * entries_per_boundary_element * num_boundary_elements};
+      size_t num_infos[2] = {(form.domain_integrals_.size() > 0) * entries_per_element * num_elements,
+                             (form.boundary_integrals_.size() > 0) * entries_per_boundary_element * num_boundary_elements};
 
       // Each active element and boundary element describes which nonzero entries
       // its element stiffness matrix will touch. Then we reduce that list down
@@ -657,7 +657,7 @@ private:
 
       constexpr bool col_ind_is_sorted = true;
 
-      int     nnz    = row_ptr.back();
+      size_t nnz    = row_ptr.back();
       double* values = new double[nnz]{};
 
       // each element uses the lookup tables to add its contributions
