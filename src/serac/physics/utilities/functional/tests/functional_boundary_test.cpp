@@ -138,7 +138,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
 
   mfem::SparseMatrix gradient1 = B.SpMat();
   // re-enable after working around FaceRestriction numbering inconsistencies
-  //mfem::SparseMatrix gradient2 = grad(residual);
+  // mfem::SparseMatrix gradient2 = grad(residual);
 
   if (verbose) {
     std::cout << "sum(r1):  " << r1.Sum() << std::endl;
@@ -150,22 +150,22 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
     std::ofstream outfile;
 
     // re-enable after working around FaceRestriction numbering inconsistencies
-    //outfile.open(std::to_string(p) + "_" + std::to_string(dim) + "_A_mfem.mtx");
-    //gradient1.SortColumnIndices();
-    //gradient1.PrintMM(outfile);
-    //outfile.close();
+    // outfile.open(std::to_string(p) + "_" + std::to_string(dim) + "_A_mfem.mtx");
+    // gradient1.SortColumnIndices();
+    // gradient1.PrintMM(outfile);
+    // outfile.close();
 
-    //outfile.open(std::to_string(p) + "_" + std::to_string(dim) + "_A_functional.mtx");
-    //gradient2.PrintMM(outfile);
-    //outfile.close();
+    // outfile.open(std::to_string(p) + "_" + std::to_string(dim) + "_A_functional.mtx");
+    // gradient2.PrintMM(outfile);
+    // outfile.close();
 
-    //check_gradient(residual, U);
+    // check_gradient(residual, U);
   }
 
   EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-12);
 
   // re-enable after working around FaceRestriction numbering inconsistencies
-  //EXPECT_NEAR(0.0, relative_error_frobenius_norm(gradient1, gradient2), 1.0e-5);
+  // EXPECT_NEAR(0.0, relative_error_frobenius_norm(gradient1, gradient2), 1.0e-5);
 }
 
 template <int p, int dim>
