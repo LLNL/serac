@@ -201,8 +201,6 @@ using test_space_t = typename get_test_space<spaces>::type;
 template <typename spaces>
 using trial_space_t = typename get_trial_space<spaces>::type;
 
-
-
 #include "detail/segment_H1.inl"
 #include "detail/segment_Hcurl.inl"
 #include "detail/segment_L2.inl"

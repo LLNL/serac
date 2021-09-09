@@ -38,7 +38,7 @@ namespace domain_integral {
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
-                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda && qf)
+                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda&& qf)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -93,7 +93,6 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       //
       // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
       detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
-
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -129,7 +128,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
-                     const mfem::Vector& J_, int num_elements)
+                               const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -182,7 +181,6 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
   }
 }
 
-
 /**
  * @brief The base kernel template used to compute tangent element entries that can be assembled
  * into a tangent matrix
@@ -207,7 +205,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
-                            int num_elements)
+                             int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -267,10 +265,9 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
       dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
     });
     // clang-format on
-
   }
 }
 
 }  // namespace domain_integral
 
-} 
+}  // namespace serac

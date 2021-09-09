@@ -73,7 +73,7 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
-  static constexpr int  dim  = dimension_of(g);
+  static constexpr int  dim   = dimension_of(g);
 
   // for each element in the domain
   const int grid_stride = blockDim.x * gridDim.x;
@@ -163,7 +163,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
-  static constexpr int  dim  = dimension_of(g);
+  static constexpr int  dim   = dimension_of(g);
 
   const int grid_stride = blockDim.x * gridDim.x;
   // launch a thread for each quadrature x element point
@@ -179,7 +179,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
     element_residual_type r_elem{};
 
     //// for each quadrature point in the element
-    //eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
+    // eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
     //                                                             num_elements, qf);
 
     auto   xi  = rule.points[q];
@@ -328,7 +328,7 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
-  static constexpr int  dim  = dimension_of(g);
+  static constexpr int  dim   = dimension_of(g);
 
   const int grid_stride = blockDim.x * gridDim.x;
 #pragma unroll
@@ -338,7 +338,6 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
 
     // this is where we will accumulate the (change in) element residual tensor
     element_residual_type dr_elem{};
-
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
@@ -409,7 +408,7 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
-  static constexpr int  dim  = dimension_of(g);
+  static constexpr int  dim   = dimension_of(g);
 
   const int grid_stride           = blockDim.x * gridDim.x;
   auto      thread_id             = blockIdx.x * blockDim.x + threadIdx.x;
@@ -482,7 +481,7 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type>
 void action_of_gradient_kernel(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
-                          derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
+                               derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;

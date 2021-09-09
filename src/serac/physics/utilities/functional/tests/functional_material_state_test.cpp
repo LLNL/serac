@@ -98,8 +98,6 @@ TEST_F(QuadratureDataTest, basic_integrals)
       Dimension<dim>{}, [&](auto /* x */, auto u) { return u; }, *mesh);
 }
 
-
-
 TEST_F(QuadratureDataTest, basic_integrals_default)
 {
   QuadratureData<StateWithDefault> qdata(*mesh, p);

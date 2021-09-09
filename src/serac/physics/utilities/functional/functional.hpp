@@ -57,38 +57,39 @@ inline bool operator!=(const ElemInfo& x, const ElemInfo& y)
   return (x.global_row != y.global_row) || (x.global_col != y.global_col);
 }
 
-/** 
- * @brief mfem will frequently encode {sign, index} into a single int32_t. 
+/**
+ * @brief mfem will frequently encode {sign, index} into a single int32_t.
  * This function decodes the sign from such a type.
  */
 inline int get_sign(int i) { return (i >= 0) ? 1 : -1; }
 
-/** 
- * @brief mfem will frequently encode {sign, index} into a single int32_t. 
+/**
+ * @brief mfem will frequently encode {sign, index} into a single int32_t.
  * This function decodes the index from such a type.
  */
 inline int get_index(int i) { return (i >= 0) ? i : -1 - i; }
 
-/** 
+/**
  * @brief this type explicitly stores sign (typically used conveying edge/face orientation) and index values
- * 
- * TODO: investigate implementation via bitfield (should have smaller memory footprint, better readability than mfem's {sign, index} int32_t encoding)
+ *
+ * TODO: investigate implementation via bitfield (should have smaller memory footprint, better readability than mfem's
+ * {sign, index} int32_t encoding)
  */
 struct SignedIndex {
   int index;
   int sign;
-  operator int() { return index; }
+      operator int() { return index; }
 };
 
-/** 
+/**
  * @brief reorder the entries of an array of integers according to the given permutation array
- * 
+ *
  * @param permutation the array describing how to reorder the input values
  * @param input the array to be reordered
- * 
+ *
  * @note permutation[i] describes where input[i] will appear in the output array.
- * 
- * @note if entry permutation[i] is negative, it will be interpreted as a reordering 
+ *
+ * @note if entry permutation[i] is negative, it will be interpreted as a reordering
  * (according to its index) and sign change of the permuted value (according to mfem convention (?))
  */
 inline void apply_permutation(const mfem::Array<int>& permutation, mfem::Array<int>& input)
@@ -587,7 +588,6 @@ private:
       // after sorting the infos array, we scan through it to identify all
       // of the unique (i,j) pairs, so we can create the appropriate CSR graph
       for (size_t i = 1; i < infos.size(); i++) {
-
         // increment the nonzero count every time we find a new (i,j) pair
         nnz += (infos[i - 1] != infos[i]);
 
@@ -599,7 +599,7 @@ private:
         }
 
         // if the (i,j) pair is on a different row, then make sure to
-        // set values in row_ptr such that the nonzero entries associated 
+        // set values in row_ptr such that the nonzero entries associated
         // with row r will be in the range [row_ptr[r], row_ptr[r+1])
         //
         // Note: this is a loop rather than single assignment to handle
@@ -615,10 +615,10 @@ private:
       }
 
       element_nonzero_LUT = Array3D<detail::SignedIndex>(num_elements, dofs_per_test_element * test_vdim,
-                                                          dofs_per_trial_element * trial_vdim);
+                                                         dofs_per_trial_element * trial_vdim);
       boundary_element_nonzero_LUT =
           Array3D<detail::SignedIndex>(num_boundary_elements, dofs_per_test_boundary_element * test_vdim,
-                                        dofs_per_trial_boundary_element * trial_vdim);
+                                       dofs_per_trial_boundary_element * trial_vdim);
 
       // finally, fill in the lookup tables with the appropriate indices that correspond to
       // where to put each element's stiffness matrix contributions
@@ -634,13 +634,13 @@ private:
       sparsity_pattern_initialized = true;
     }
 
-    /** 
+    /**
      * @brief implicit conversion to mfem::SparseMatrix type
-     * 
+     *
      * @note the first invokation of this function will be more expensive,
      * as it creates the CSR graph once, and then caches it for creating subsequent
      * sparse matrices.
-     */ 
+     */
     operator mfem::SparseMatrix()
     {
       if (!sparsity_pattern_initialized) {
