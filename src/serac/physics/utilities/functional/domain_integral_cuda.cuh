@@ -72,7 +72,7 @@ template <Geometry g, typename test, typename trial, int Q, typename derivatives
           typename qpt_data_type = void>
 __global__ void eval_cuda_element(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
                                   jacobian_type J, position_type X, int num_elements, lambda qf,
-                                  QuadratureData<qpt_data_type>& data = dummy_qdata)
+                                  QuadratureDataView<qpt_data_type> data = dummy_qdata_view)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -141,7 +141,7 @@ template <Geometry g, typename test, typename trial, int Q, typename derivatives
           typename qpt_data_type = void>
 __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
                                      jacobian_type J, position_type X, int num_elements, lambda qf,
-                                     QuadratureData<qpt_data_type>& data = dummy_qdata)
+                                     QuadratureDataView<qpt_data_type> data = dummy_qdata_view)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -233,13 +233,13 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
 
   if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
-    eval_cuda_quadrature<g, test, trial, Q>
-        <<<blocks_quadrature_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf, data);
+    eval_cuda_quadrature<g, test, trial, Q><<<blocks_quadrature_element, config.blocksize>>>(
+        u, r, derivatives_ptr, J, X, num_elements, qf, QuadratureDataView{data});
 
   } else if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_ELEMENT) {
     int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;
     eval_cuda_element<g, test, trial, Q>
-        <<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf, data);
+        <<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf, QuadratureDataView{data});
   }
 
   cudaDeviceSynchronize();

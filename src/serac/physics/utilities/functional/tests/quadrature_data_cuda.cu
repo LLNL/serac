@@ -15,7 +15,7 @@
 using namespace serac;
 
 template <typename T>
-__global__ void fill(QuadratureData<T>& output, int num_elements, int num_quadrature_points)
+__global__ void fill(QuadratureDataView<T> output, int num_elements, int num_quadrature_points)
 {
   int elem_id = threadIdx.x + blockIdx.x * blockDim.x;
   int quad_id = threadIdx.y;
@@ -25,7 +25,7 @@ __global__ void fill(QuadratureData<T>& output, int num_elements, int num_quadra
 }
 
 template <typename T>
-__global__ void copy(QuadratureData<T>& destination, QuadratureData<T>& source, int num_elements,
+__global__ void copy(QuadratureDataView<T> destination, QuadratureDataView<T> source, int num_elements,
                      int num_quadrature_points)
 {
   int elem_id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -53,8 +53,9 @@ TEST(QuadratureDataCUDA, basic_fill_and_copy)
   dim3 blocks{elements_per_block, static_cast<unsigned int>(num_quadrature_points)};
   dim3 grids{static_cast<unsigned int>(num_elements / elements_per_block)};
 
-  fill<<<grids, blocks>>>(source, num_elements, num_quadrature_points);
-  copy<<<grids, blocks>>>(destination, source, num_elements, num_quadrature_points);
+  fill<<<grids, blocks>>>(QuadratureDataView{source}, num_elements, num_quadrature_points);
+  copy<<<grids, blocks>>>(QuadratureDataView{destination}, QuadratureDataView{source}, num_elements,
+                          num_quadrature_points);
   cudaDeviceSynchronize();
 
   EXPECT_TRUE(std::equal(source.begin(), source.end(), destination.begin()));

@@ -146,7 +146,7 @@ template <Geometry g, typename test, typename trial, int Q, typename derivatives
           typename qpt_data_type = void>
 SERAC_HOST_DEVICE void eval_quadrature(int e, int q, u_elem_type u_elem, element_residual_type& r_elem,
                                        derivatives_type* derivatives_ptr, J_type J, X_type X, int num_elements,
-                                       lambda qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
+                                       lambda qf, QuadratureDataView<qpt_data_type> data = dummy_qdata_view)
 {
   using test_element         = finite_element<g, test>;
   using trial_element        = finite_element<g, trial>;

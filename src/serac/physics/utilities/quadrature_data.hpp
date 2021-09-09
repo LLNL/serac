@@ -137,8 +137,8 @@ public:
   SERAC_HOST_DEVICE T& operator()(const int element_idx, const int q_idx);
 
 private:
-  Derived&       asDerived() { return static_cast<Derived&>(*this); }
-  const Derived& asDerived() const { return static_cast<const Derived&>(*this); }
+  SERAC_HOST_DEVICE Derived& asDerived() { return static_cast<Derived&>(*this); }
+  SERAC_HOST_DEVICE const Derived& asDerived() const { return static_cast<const Derived&>(*this); }
 };
 
 /**
@@ -238,8 +238,8 @@ public:
     }
   }
 
-  T*         data() { return data_.data(); }
-  const int* offsets() const { return offsets_.data(); }
+  SERAC_HOST_DEVICE T*         data() { return data_.data(); }
+  SERAC_HOST_DEVICE const int* offsets() const { return offsets_.data(); }
 
 private:
   /**
@@ -278,6 +278,11 @@ public:
   SERAC_HOST_DEVICE std::nullptr_t operator()(const int, const int) { return nullptr; }
 };
 
+// A dummy global so that lvalue references can be bound to something of type QData<void>
+// FIXME: There's probably a cleaner way to do this, it's technically a non-const global
+// but it's not really mutable because no operations are defined for it
+extern QuadratureData<void> dummy_qdata;
+
 /**
  * @brief Stores instances of user-defined type for each quadrature point in a mesh
  * @tparam T The type of the per-qpt data
@@ -285,21 +290,37 @@ public:
  * @pre T must be trivially copyable (due to the use of memcpy for type punning)
  */
 template <typename T>
-class QuadratureDataView : public QuadratureDataImpl<T, QuadratureData<T>> {
+class QuadratureDataView : public QuadratureDataImpl<T, QuadratureDataView<T>> {
 public:
   QuadratureDataView(QuadratureData<T>& quad_data) : data_(quad_data.data()), offsets_(quad_data.offsets()) {}
-  T*         data() { return data_; }
-  const int* offsets() const { return offsets_; }
+  SERAC_HOST_DEVICE T*         data() { return data_; }
+  SERAC_HOST_DEVICE const int* offsets() const { return offsets_; }
 
 private:
   T*         data_    = nullptr;
   const int* offsets_ = nullptr;
 };
 
+template <typename T>
+QuadratureDataView(QuadratureData<T>&) -> QuadratureDataView<T>;
+
+/**
+ * @brief "Dummy" specialization, intended to be used as a sentinel
+ * This is used as the default argument when a reference to a @p QuadratureData is used as a function
+ * argument. By comparing the argument to the dummy instance of this class, functions to easily check
+ * if the user has passed in a "real" @p QuadratureData.
+ */
+template <>
+class QuadratureDataView<void> {
+  // Doesn't do anything
+public:
+  SERAC_HOST_DEVICE std::nullptr_t operator()(const int, const int) { return nullptr; }
+};
+
 // A dummy global so that lvalue references can be bound to something of type QData<void>
 // FIXME: There's probably a cleaner way to do this, it's technically a non-const global
 // but it's not really mutable because no operations are defined for it
-extern QuadratureData<void> dummy_qdata;
+extern QuadratureDataView<void> dummy_qdata_view;
 
 // Hijacks the "vdim" parameter (number of doubles per qpt) to allocate the correct amount of storage
 template <typename T>

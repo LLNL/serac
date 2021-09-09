@@ -13,7 +13,8 @@ namespace serac {
 /**
  * @brief Definition of extern variable
  */
-QuadratureData<void> dummy_qdata;
+QuadratureData<void>     dummy_qdata;
+QuadratureDataView<void> dummy_qdata_view;
 
 // Initialize StateManager's static members - both of these will be fully initialized in StateManager::initialize
 std::optional<axom::sidre::MFEMSidreDataCollection> StateManager::datacoll_;
