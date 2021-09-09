@@ -19,7 +19,9 @@
 #include "mfem/linalg/dtensor.hpp"
 
 #include "serac/physics/utilities/functional/domain_integral_kernels.hpp"
+#if defined(__CUDACC__)
 #include "serac/physics/utilities/functional/domain_integral_kernels.cuh"
+#endif
 
 namespace serac {
 
