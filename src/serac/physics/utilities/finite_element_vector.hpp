@@ -200,6 +200,8 @@ protected:
  *
  * @param state The state variable to compute the average of
  * @return The average value
+ * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
+ * implies these may or may not be nodal averages depending on the choice of finite element basis.
  */
 double avg(const FiniteElementVector& fe_vector);
 
@@ -208,6 +210,8 @@ double avg(const FiniteElementVector& fe_vector);
  *
  * @param state The state variable to compute a max of
  * @return The max value
+ * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
+ * implies these may or may not be nodal averages depending on the choice of finite element basis.
  */
 double max(const FiniteElementVector& fe_vector);
 
@@ -216,6 +220,8 @@ double max(const FiniteElementVector& fe_vector);
  *
  * @param state The state variable to compute a min of
  * @return The min value
+ * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
+ * implies these may or may not be nodal averages depending on the choice of finite element basis.
  */
 double min(const FiniteElementVector& fe_vector);
 
