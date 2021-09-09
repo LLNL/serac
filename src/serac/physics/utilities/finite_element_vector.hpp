@@ -194,7 +194,7 @@ protected:
 /**
  * @brief Find the average value of a finite element vector across all dofs
  *
- * @param state The state variable to compute a max of
+ * @param state The state variable to compute the average of
  * @return The average value
  */
 double avg(const FiniteElementVector& fe_vector);
