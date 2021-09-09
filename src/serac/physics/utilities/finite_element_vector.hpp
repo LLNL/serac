@@ -31,9 +31,9 @@ class FiniteElementVector {
 public:
   /**
    * @brief Structure for optionally configuring a FiniteElementVector
+   * @note The options are explicitly default-constructed to allow the user to partially aggregrate-initialized
+   * with only the options they care about
    */
-  // The optionals are explicitly default-constructed to allow the user to partially aggregrate-initialized
-  // with only the options they care about
   struct Options {
     /**
      * @brief The polynomial order that should be used for the problem
