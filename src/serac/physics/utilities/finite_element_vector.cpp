@@ -11,7 +11,7 @@ namespace serac {
 namespace detail {
 
 /**
- * @brief Helper function for creating a GridFunction in both restart and not-restart scenarios
+ * @brief Helper function for creating a GridFunction in both sidre and not-sidre scenarios
  * @param[in] space The FESpace to construct the GridFunction with
  * @param[in] managed_by_sidre Whether the grid function is managed by sidre. If it is, the memory is managed by a raw
  * pointer instead of a unique ptr within the MFEM sidre data collection.

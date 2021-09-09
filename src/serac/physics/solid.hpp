@@ -355,7 +355,7 @@ public:
    * @note It is expected that the forward analysis is complete and the current displacement state is valid
    * @note If the essential boundary state is not specified, homogeneous essential boundary conditions are applied
    *
-   * @param[in] adjoint_load_state The dual state that contains the right hand side of the adjoint system
+   * @param[in] adjoint_load The dual state that contains the right hand side of the adjoint system
    * @param[in] dual_with_essential_boundary A optional finite element dual containing the non-homogenous essential
    * boundary condition data for the adjoint problem
    * @return The computed adjoint finite element state
