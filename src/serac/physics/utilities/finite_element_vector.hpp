@@ -176,7 +176,7 @@ protected:
    */
   detail::MaybeOwningPointer<const mfem::FiniteElementCollection> coll_;
   /**
-   * @brief Possibly-owning handle to the FiniteElementCollection, as it is owned
+   * @brief Possibly-owning handle to the mfem::ParFiniteElementSpace, as it is owned
    * by the FiniteElementVector in a normal run and by the MFEMSidreDataCollection
    * in a restart run
    */
