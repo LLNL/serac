@@ -97,7 +97,7 @@ On systems using modules make sure to first load the revelant modules.
    module load nsight-compute
 
 
-There are an assortment of options and metrics provided to help profile kernels with ```ncu```. There are "Sections" which are types of metrics to profile, as well as "sets" of these metrics that can be used. 
+There are an assortment of options and metrics provided to help profile kernels with ``ncu``. There are "Sections" which are types of metrics to profile, as well as "sets" of these metrics that can be used. 
 
 To view what metrics are provided by which "set" run the following command:
 
@@ -125,5 +125,8 @@ To specifically profile a kernel (i.e. ``set_tensor``) using the "full" metric s
    ncu -f -o unit_test --set full -k "set_tensor|benchmark" ./tests/benchmark_tensor_unit_tests_cuda
 
 These commands will generate a profile report (``unit_test.ncu-rep``) that can be loaded in the Nsight Compute gui.
+
+.. image:: nsight_compute.png
+   :scale: 50 %
 
 The report contains a lot of useful information regarding what GPU was profiled, kernel metrics, summary performance information, and source and PTX information which can be useful when analyzing and optimizing for performance.

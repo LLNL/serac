@@ -26,39 +26,36 @@ __global__ void set_tensor(int N, TensorType tensor, TensorType* data)
   }
 }
 
-template <typename ... TupleATypes>
-__global__ void set_SoA(int N, std::tuple<TupleATypes ...> args)
+template <typename... TupleATypes>
+__global__ void set_SoA(int N, std::tuple<TupleATypes...> args)
 {
   int id          = blockIdx.x * blockDim.x + threadIdx.x;
   int grid_stride = blockDim.x * gridDim.x;
   for (int i = id; i < N; i += grid_stride) {
-std::apply(
-[&](auto & ... pair) {
-((std::get<1>(pair)[i] = std::get<0>(pair)), ...);
-}
-   , args);
+    std::apply([&](auto&... pair) { ((std::get<1>(pair)[i] = std::get<0>(pair)), ...); }, args);
   }
 }
 
-template <typename ... TupleATypes>
-void run_SoA_copy_benchmark(int N, dim3 grid, dim3 threadblock, TupleATypes ... values)
+template <typename... TupleATypes>
+void run_SoA_copy_benchmark(int N, dim3 grid, dim3 threadblock, TupleATypes... values)
 {
-  std::tuple<thrust::device_vector<TupleATypes> ...> device_vectors;
+  std::tuple<thrust::device_vector<TupleATypes>...> device_vectors;
 
-  std::apply([&](auto&&... device_vector) {
-     (device_vector.resize(N), ...);
-  }, device_vectors);
+  std::apply([&](auto&&... device_vector) { (device_vector.resize(N), ...); }, device_vectors);
 
   auto vals = std::make_tuple(values...);
 
-    // allocate tuples
-    auto T = 
-        std::apply([&](auto & ... val){
-            return std::apply([&](auto & ... vector) {
-                ((std::cout << val << " " << vector.data() << std::endl),...);
-        return std::make_tuple(std::make_tuple(val, thrust::raw_pointer_cast(vector.data()))...);
-                }, device_vectors);
-        }, vals);
+  // allocate tuples
+  auto T = std::apply(
+      [&](auto&... val) {
+        return std::apply(
+            [&](auto&... vector) {
+              ((std::cout << val << " " << vector.data() << std::endl), ...);
+              return std::make_tuple(std::make_tuple(val, thrust::raw_pointer_cast(vector.data()))...);
+            },
+            device_vectors);
+      },
+      vals);
 
   // run set_SoA benchmark
   set_SoA<<<grid, threadblock>>>(N, T);
@@ -219,11 +216,10 @@ struct tensor<T, first, rest...> {
   tensor<T, rest...> value[first];
 };
 
-
 }  // namespace benchmark
 
 struct S1 {
-  int a;
+  int    a;
   double b;
 };
 
@@ -251,7 +247,7 @@ int main()
   run_tensor_copy_benchmark(N, benchmark::tensor<double, 3, 3>({{{1, 2, 3}, {1, 2, 3}, {1, 2, 3}}}), grid, threadblock);
 
   // SoA benchmark
-  S1 s1 { .a = 1, .b=1.234};
+  S1 s1{.a = 1, .b = 1.234};
   run_SoA_copy_benchmark(N, grid, threadblock, s1.a, s1.b);
 }
 
