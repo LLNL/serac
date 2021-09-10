@@ -10,7 +10,9 @@ set(physics_utilities_headers
     boundary_condition.hpp
     boundary_condition_manager.hpp
     equation_solver.hpp
+    finite_element_vector.hpp
     finite_element_state.hpp
+    finite_element_dual.hpp
     physics_utils.hpp
     solver_config.hpp
     state_manager.hpp
@@ -22,6 +24,7 @@ set(physics_utilities_sources
     boundary_condition.cpp
     boundary_condition_manager.cpp
     equation_solver.cpp
+    finite_element_vector.cpp
     finite_element_state.cpp
     physics_utils.cpp
     state_manager.cpp
