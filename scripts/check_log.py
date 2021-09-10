@@ -63,7 +63,8 @@ def main():
         if has_error or has_warning:
             for ignore_regex in ignore_regexs:
                 if re.search(ignore_regex, log_line.rstrip()):
-                    print("line : {0}\nregex: {1}\n".format(log_line, ignore_regex))
+                    print("line : {0}".format(log_line.rstrip()))
+                    print("regex: {0}\n".format(ignore_regex))
                     matches_ignore = True
                     ignored_count += 1
                     break
