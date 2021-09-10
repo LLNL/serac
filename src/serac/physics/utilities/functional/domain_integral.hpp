@@ -94,7 +94,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
       // eval_quadrature is a SERAC_HOST_DEVICE quadrature point calculation
       eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
-                                                                   num_elements, qf, data);
+                                                                   num_elements, qf, QuadratureDataView{data});
     }
 
     // once we've finished the element integration loop, write our element residuals

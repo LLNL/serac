@@ -314,6 +314,7 @@ template <>
 class QuadratureDataView<void> {
   // Doesn't do anything
 public:
+  QuadratureDataView(QuadratureData<void>& = dummy_qdata) {}
   SERAC_HOST_DEVICE std::nullptr_t operator()(const int, const int) { return nullptr; }
 };
 
