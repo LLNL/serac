@@ -341,7 +341,7 @@ namespace domain_integral {
  *
  * In the future, the user will be able to override these defaults
  * to omit unused components (e.g. specify that they only need the gradient)
- * 
+ *
  * @tparam element_type The type of the element (used to determine the family)
  * @tparam T the type of the element values to be interpolated and differentiated
  * @tparam dim the geometric dimension of the element

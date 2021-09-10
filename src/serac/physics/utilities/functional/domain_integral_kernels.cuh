@@ -135,7 +135,7 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
  * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
  * information on the idea behind a quadrature function and its inputs/outputs
  * @tparam qpt_data_type The type of the data to store for each quadrature point
- * 
+ *
  * // I don't know why these template parameters are here
  * @tparam solution_type element solution
  * @tparam residual_type element residual
@@ -284,7 +284,7 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
  * kernels associated with finite element calculations
  *
  * This kernel processes the gradient of one element per thread
- * 
+ *
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space

@@ -46,7 +46,7 @@ struct ElemInfo {
   bool on_boundary;
 };
 
-/** 
+/**
  * @brief operator for sorting lexicographically by {global_row, global_col}
  * @param x the ElemInfo on the left
  * @param y the ElemInfo on the right
@@ -56,7 +56,7 @@ inline bool operator<(const ElemInfo& x, const ElemInfo& y)
   return (x.global_row < y.global_row) || (x.global_row == y.global_row && x.global_col < y.global_col);
 }
 
-/** 
+/**
  * @brief operator determining inequality by {global_row, global_col}
  * @param x the ElemInfo on the left
  * @param y the ElemInfo on the right

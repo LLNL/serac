@@ -165,7 +165,7 @@ struct get_test_space;  // undefined
 /**
  * @brief a class that helps to extract the test space from a function signature template parameter
  * @tparam test_space The kind of test space
- * @tparam trial_space The kind of trial space 
+ * @tparam trial_space The kind of trial space
  */
 template <typename test_space, typename trial_space>
 struct get_test_space<test_space(trial_space)> {
@@ -182,7 +182,7 @@ struct get_trial_space;  // undefined
 /**
  * @brief a class that helps to extract the trial space from a function signature template parameter
  * @tparam test_space The kind of test space
- * @tparam trial_space The kind of trial space 
+ * @tparam trial_space The kind of trial space
  */
 template <typename test_space, typename trial_space>
 struct get_trial_space<test_space(trial_space)> {
