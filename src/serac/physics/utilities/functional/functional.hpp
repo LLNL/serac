@@ -46,12 +46,21 @@ struct ElemInfo {
   bool on_boundary;
 };
 
-/// @brief for sorting lexicographically by {global_row, global_col}
+/** 
+ * @brief operator for sorting lexicographically by {global_row, global_col}
+ * @param x the ElemInfo on the left
+ * @param y the ElemInfo on the right
+ */
 inline bool operator<(const ElemInfo& x, const ElemInfo& y)
 {
   return (x.global_row < y.global_row) || (x.global_row == y.global_row && x.global_col < y.global_col);
 }
 
+/** 
+ * @brief operator determining inequality by {global_row, global_col}
+ * @param x the ElemInfo on the left
+ * @param y the ElemInfo on the right
+ */
 inline bool operator!=(const ElemInfo& x, const ElemInfo& y)
 {
   return (x.global_row != y.global_row) || (x.global_col != y.global_col);
@@ -210,7 +219,6 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
-   * @param[in] data The data structure containing per-quadrature-point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
@@ -240,7 +248,6 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
-   * @param[in] data The data structure containing per-quadrature-point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
@@ -275,7 +282,6 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
-   * @param[in] data The data structure containing per-quadrature-point data
    */
   template <typename lambda>
   void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain)
@@ -289,7 +295,6 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
-   * @param[in] data The data structure containing per-quadrature-point data
    */
   template <typename lambda>
   void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain)

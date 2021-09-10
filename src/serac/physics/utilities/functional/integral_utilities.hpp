@@ -341,11 +341,14 @@ namespace domain_integral {
  *
  * In the future, the user will be able to override these defaults
  * to omit unused components (e.g. specify that they only need the gradient)
+ * 
+ * @tparam element_type The type of the element (used to determine the family)
+ * @tparam T the type of the element values to be interpolated and differentiated
+ * @tparam dim the geometric dimension of the element
  *
  * @param[in] u The DOF values for the element
  * @param[in] xi The position of the quadrature point in reference space
  * @param[in] J The Jacobian of the element transformation at the quadrature point
- * @tparam element_type The type of the element (used to determine the family)
  */
 template <typename element_type, typename T, int dim>
 SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim> J)

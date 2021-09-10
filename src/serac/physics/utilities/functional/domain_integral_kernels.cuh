@@ -34,24 +34,21 @@ namespace domain_integral {
  *
  * This GPU kernel proccess one element per thread.
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
  * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
  * be evaluated at each quadrature point.
  * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
  * information on the idea behind a quadrature function and its inputs/outputs
- * @tparam qpt_data_type The type of the data to store for each quadrature point
  *
+ * // I don't know why these template parameters are here
  * @tparam solution_type element solution
  * @tparam residual_type element residual
- * @tparam position_type element position
+ * @tparam jacobian_type quadrature point jacobian
+ * @tparam position_type quadrature point position
  *
  * @param[in] u The element DOF values (primary input)
  * @param[inout] r The element residuals (primary output)
@@ -138,10 +135,12 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
  * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
  * information on the idea behind a quadrature function and its inputs/outputs
  * @tparam qpt_data_type The type of the data to store for each quadrature point
- *
+ * 
+ * // I don't know why these template parameters are here
  * @tparam solution_type element solution
  * @tparam residual_type element residual
- * @tparam position_type element position
+ * @tparam jacobian_type quadrature point jacobian
+ * @tparam position_type quadrature point position
  *
  * @param[in] u The element DOF values (primary input)
  * @param[inout] r The element residuals (primary output)
@@ -153,7 +152,6 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
  */
-
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
 __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
@@ -178,10 +176,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
     // this is where we will accumulate the element residual tensor
     element_residual_type r_elem{};
 
-    //// for each quadrature point in the element
-    // eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
-    //                                                             num_elements, qf);
-
+    // for each quadrature point in the element
     auto   xi  = rule.points[q];
     auto   dxi = rule.weights[q];
     auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
@@ -217,15 +212,11 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
 /**
  * @brief The GPU base template used to create different finite element calculation routines
  *
- * This function is used to invoke different GPU kernels.
+ * This function is used to select which GPU kernel implementation to invoke.
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
  * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
@@ -293,14 +284,10 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
  * kernels associated with finite element calculations
  *
  * This kernel processes the gradient of one element per thread
- *
+ * 
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
@@ -374,13 +361,9 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
  *
  * This kernel processes the gradient of one quadrature point per thread
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
@@ -455,13 +438,9 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
  *
  * This function is used to invoke the GPU kernels
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *

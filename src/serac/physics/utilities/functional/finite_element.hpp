@@ -157,14 +157,15 @@ struct is_finite_element<finite_element<g, Hcurl<p> > > {
 
 /**
  * @brief a class that helps to extract the test space from a function signature template parameter
- * @tparam space The function signature itself
+ * @tparam spaces The function signature containing test and trial spaces
  */
 template <typename spaces>
 struct get_test_space;  // undefined
 
 /**
  * @brief a class that helps to extract the test space from a function signature template parameter
- * @tparam space The function signature itself
+ * @tparam test_space The kind of test space
+ * @tparam trial_space The kind of trial space 
  */
 template <typename test_space, typename trial_space>
 struct get_test_space<test_space(trial_space)> {
@@ -173,14 +174,15 @@ struct get_test_space<test_space(trial_space)> {
 
 /**
  * @brief a class that helps to extract the trial space from a function signature template parameter
- * @tparam space The function signature itself
+ * @tparam spaces The function signature containing test and trial spaces
  */
 template <typename spaces>
 struct get_trial_space;  // undefined
 
 /**
  * @brief a class that helps to extract the trial space from a function signature template parameter
- * @tparam space The function signature itself
+ * @tparam test_space The kind of test space
+ * @tparam trial_space The kind of trial space 
  */
 template <typename test_space, typename trial_space>
 struct get_trial_space<test_space(trial_space)> {
@@ -189,14 +191,14 @@ struct get_trial_space<test_space(trial_space)> {
 
 /**
  * @brief a type function that extracts the test space from a function signature template parameter
- * @tparam space The function signature itself
+ * @tparam spaces The function signature itself
  */
 template <typename spaces>
 using test_space_t = typename get_test_space<spaces>::type;
 
 /**
  * @brief a type function that extracts the trial space from a function signature template parameter
- * @tparam space The function signature itself
+ * @tparam spaces The function signature itself
  */
 template <typename spaces>
 using trial_space_t = typename get_trial_space<spaces>::type;

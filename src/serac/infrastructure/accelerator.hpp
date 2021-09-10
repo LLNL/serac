@@ -129,7 +129,7 @@ std::string getCUDAMemInfoString()
 /**
  * @brief create shared_ptr to an array of `n` values of type `T`, either on the host or device
  * @tparam T the type of the value to be stored in the array
- * @tparam execution_space the memory space where the data lives
+ * @tparam exec the memory space where the data lives
  * @param n how many entries to allocate in the array
  */
 template <typename T, ExecutionSpace exec>

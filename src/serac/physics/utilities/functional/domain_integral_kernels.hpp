@@ -10,20 +10,15 @@ namespace domain_integral {
 /**
  * @brief The base kernel template used to create different finite element calculation routines
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
  * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
  * be evaluated at each quadrature point.
  * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
  * information on the idea behind a quadrature function and its inputs/outputs
- * @tparam qpt_data_type The type of the data to store for each quadrature point
  *
  * @param[in] U The full set of per-element DOF values (primary input)
  * @param[inout] R The full set of per-element residuals (primary output)
@@ -34,7 +29,6 @@ namespace domain_integral {
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
- * @param[inout] data The data for each quadrature point
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
