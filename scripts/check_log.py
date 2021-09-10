@@ -41,13 +41,17 @@ def main():
         with open(args.ignore, "r") as f:
             # Only save lines that aren't comments ("#")
             for currline in f.readlines():
-                if not currline.strip().startswith("#"):
-                    ignore_regexs = currline
+                stripped = currline.strip()
+                if stripped != "" and not stripped.startswith("#"):
+                    # Add regex w/o trailing newline characters
+                    ignore_regexs.append(currline.rstrip())
 
-    # Get warnings/errors out of log file
-    ignores = []
+    # Get warnings/errors out of log file and print ignored as you find them
+    # with what regex matched
     warnings = []
     errors = []
+    ignored_count = 0
+    print("~~~~~~~~~~~~~~~ Ignored ~~~~~~~~~~~~~~~~")
     for log_line in log_lines:
         # First, check if it is a warning/error
         lowered = log_line.lower()
@@ -58,23 +62,20 @@ def main():
         matches_ignore = False
         if has_error or has_warning:
             for ignore_regex in ignore_regexs:
-                if re.search(ignore_regex, log_line):
+                if re.search(ignore_regex, log_line.rstrip()):
+                    print("line : {0}".format(log_line))
+                    print("regex: {0}\n".format(ignore_regex))
                     matches_ignore = True
+                    ignored_count += 1
                     break
 
-        if matches_ignore:
-            ignores.append(log_line)
-        elif has_error:
-            errors.append(log_line)
-        elif has_warning:
-            warnings.append(log_line)
+        if not matches_ignore:
+            if has_error:
+                errors.append(log_line)
+            elif has_warning:
+                warnings.append(log_line)
 
-    # Print ignores/warnings/errors that are found
-    print("~~~~~~~~~~~~~~~ Ignored ~~~~~~~~~~~~~~~~")
-    for ignore in ignores:
-        print(ignore)
-    print("")
-
+    # Print warnings/errors that are found
     print("~~~~~~~~~~~~~~~ Warnings ~~~~~~~~~~~~~~~")
     for warning in warnings:
         print(warning)
@@ -89,7 +90,7 @@ def main():
     print("~~~~~~~~~~~~~~~~~ Summary ~~~~~~~~~~~~~~~~~~")
     print("Warning Count: {0}".format(len(warnings)))
     print("Error Count:   {0}".format(len(errors)))
-    print("Ignored Count: {0}".format(len(ignores)))
+    print("Ignored Count: {0}".format(ignored_count))
 
     # Error out if any found
     # TODO: use this return statement in follow up PR that fixes warnings/errors
