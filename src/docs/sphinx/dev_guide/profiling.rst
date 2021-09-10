@@ -82,3 +82,48 @@ Call ``serac::profiling::terminateCaliper()`` to conclude performance monitoring
 
 
 To analyze the contents of this file, use `cali-query <https://software.llnl.gov/Caliper/tools.html#cali-query>`_.
+
+====================================
+Profiling Serac using Nsight Compute
+====================================
+
+The CUDA toolkit provides a way to profile GPU kernels via command-line and a GUI. Unfortunately the UI is not supported on all platforms. However, it is possible to gather a profiling report using nsight-compute remotely, and then view the results in the UI. The following instructions detail this process.
+
+On systems using modules make sure to first load the revelant modules.
+
+.. code-block:: bash
+
+   module load cuda/11.2.0
+   module load nsight-compute
+
+
+There are an assortment of options and metrics provided to help profile kernels with ```ncu```. There are "Sections" which are types of metrics to profile, as well as "sets" of these metrics that can be used. 
+
+To view what metrics are provided by which "set" run the following command:
+
+.. code-block:: bash
+   ncu --list-sets
+
+The default currently includes `LaunchStats, Occupancy, SpeedOfLight` metrics.
+
+To generate a detailed report using the "default" set:
+
+.. code-block:: bash
+
+   ncu -f -o unit_test --details-all ./tests/benchmark_tensor_unit_tests_cuda
+
+To generate a detailed report using the "full" set:
+
+.. code-block:: bash
+
+   ncu -f -o unit_test --details-all --set full ./tests/benchmark_tensor_unit_tests_cuda
+
+To specifically profile a kernel (i.e. ``set_tensor``) using the "full" metric set:
+
+.. code-block:: bash
+
+   ncu -f -o unit_test --set full -k "set_tensor|benchmark" ./tests/benchmark_tensor_unit_tests_cuda
+
+These commands will generate a profile report (``unit_test.ncu-rep``) that can be loaded in the Nsight Compute gui.
+
+The report contains a lot of useful information regarding what GPU was profiled, kernel metrics, summary performance information, and source and PTX information which can be useful when analyzing and optimizing for performance.

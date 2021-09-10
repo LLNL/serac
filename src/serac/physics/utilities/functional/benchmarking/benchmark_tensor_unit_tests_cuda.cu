@@ -27,17 +27,16 @@ __global__ void set_tensor(int N, TensorType tensor, TensorType* data)
 }
 
 template <typename ... TupleATypes>
-__global__ void set_SoA(int N, TupleATypes ... args)
+__global__ void set_SoA(int N, std::tuple<TupleATypes ...> args)
 {
   int id          = blockIdx.x * blockDim.x + threadIdx.x;
   int grid_stride = blockDim.x * gridDim.x;
   for (int i = id; i < N; i += grid_stride) {
-     ([&] (auto & input)
-     {
-        auto member_var = std::get<0>(input);
-        auto device_array = std::get<1>(input);
-        device_array[i] = member_var;
-     } (args), ...);
+std::apply(
+[&](auto & ... pair) {
+((std::get<1>(pair)[i] = std::get<0>(pair)), ...);
+}
+   , args);
   }
 }
 
@@ -62,7 +61,7 @@ void run_SoA_copy_benchmark(int N, dim3 grid, dim3 threadblock, TupleATypes ... 
         }, vals);
 
   // run set_SoA benchmark
-  set_SoA<<<grid, threadblock>>>(N, std::forward(T));
+  set_SoA<<<grid, threadblock>>>(N, T);
 
   // // set tensors and copy to output
   // benchmark_tensor_throughput<<<grid, threadblock>>>(N, d_input, d_output);
