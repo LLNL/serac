@@ -11,16 +11,16 @@ RUN sudo useradd -m -s /bin/bash -G sudo serac
 WORKDIR "/home/serac"
 USER serac
 
-RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git
+RUN git clone --recursive --branch $branch --single-branch --depth 1 https://github.com/LLNL/serac.git serac_repo
 
-# New containers will use Python3
-RUN cd serac && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu20/ \
-                                                     --project-json=.uberenv_config.json \
-                                                     --spec=%clang@10.0.0 --prefix=/home/serac/serac_tpls -k \
-             && rm -rf /home/serac/serac_tpls/builds
+# Build/install TPLs via spack and then remove the temporary build directory on success
+RUN cd serac_repo && python3 ./scripts/uberenv/uberenv.py --spack-config-dir=./scripts/spack/configs/docker/ubuntu20/ \
+                                                          --project-json=.uberenv_config.json \
+                                                          --spec=%clang@10.0.0 --prefix=/home/serac/serac_tpls -k \
+                  && rm -rf /home/serac/serac_tpls/builds
 
 RUN mkdir -p /home/serac/export_hostconfig
-RUN cp ./serac/*.cmake /home/serac/export_hostconfig
+RUN cp ./serac_repo/*.cmake /home/serac/export_hostconfig
 
 # Make sure the new hostconfig worked
-RUN cd serac && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test && cd .. && rm -rf serac
+RUN cd serac_repo && python3 config-build.py -hc *.cmake -bp build && cd build && make -j && make -j test && cd /home/serac && rm -rf serac_repo
