@@ -94,6 +94,8 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   std::string postfix = concat("_H1<", p, ">");
 
+  std::cout << serac::accelerator::getCUDAMemInfoString() << std::endl;
+
   serac::profiling::initializeCaliper();
 
   // Create standard MFEM bilinear and linear forms on H1
@@ -139,6 +141,9 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
   U.UseDevice(true);
   u_global.GetTrueDofs(U);
 
+  cudaDeviceSynchronize();
+  std::cout << "MFEM " << serac::accelerator::getCUDAMemInfoString() << std::endl;
+
   // Set up the same problem using functional
 
   // Define the types for the test and trial spaces using the function arguments
@@ -175,7 +180,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   EXPECT_NEAR(0., error.Norml2() / r1.Norml2(), 1.e-14);
 
-  serac::accelerator::displayLastCUDAErrorMessage(std::cout);
+  serac::accelerator::displayLastCUDAMessage();
 
   // Compute the gradient using functional
   mfem::Operator& grad2 = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
@@ -192,6 +197,8 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
 
   // Ensure the two methods generate the same result
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-14);
+
+  std::cout << "Functional:" << serac::accelerator::getCUDAMemInfoString() << std::endl;
 
   serac::profiling::terminateCaliper();
 }
@@ -413,6 +420,9 @@ TEST(elasticity, 3D_cubic) { functional_test(H1<3, 3>{}, H1<3, 3>{}, Dimension<3
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
+
+  cudaDeviceSynchronize();
+  std::cout << "Initial:" << serac::accelerator::getCUDAMemInfoString() << std::endl;
 
   auto [num_procs, myid] = serac::initialize(argc, argv);
 

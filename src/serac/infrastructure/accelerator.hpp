@@ -41,8 +41,10 @@
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 #endif
 
-#include <iostream>
 #include <memory>
+
+#include "serac/infrastructure/logger.hpp"
+#include "serac/infrastructure/profiling.hpp"
 
 /**
  * @brief Accelerator functionality
@@ -85,21 +87,53 @@ void initializeDevice();
 void terminateDevice();
 
 #if defined(__CUDACC__)
+
 /**
  * @brief Utility method to display last cuda error message
  *
- * @param[in] o The output stream to post success or CUDA error messages
  * @param[in] success_string A string to print if there are no CUDA error messages
+ * @param[in] exit_on_error Exit on CUDA error
  */
-inline void displayLastCUDAErrorMessage(std::ostream& o, const char* success_string = "")
+inline void displayLastCUDAMessage(const char* success_string = "", bool exit_on_error = false)
 {
   auto error = cudaGetLastError();
   if (error != cudaError::cudaSuccess) {
-    o << "Last CUDA Error Message :" << cudaGetErrorString(error) << std::endl;
+    if (exit_on_error) {
+      SLIC_ERROR_ROOT(serac::profiling::concat("Last CUDA Error Message :", cudaGetErrorString(error)));
+    } else {
+      SLIC_WARNING_ROOT(serac::profiling::concat("Last CUDA Error Message :", cudaGetErrorString(error)));
+    }
   } else if (strlen(success_string) > 0) {
-    o << success_string << std::endl;
+    SLIC_INFO_ROOT(success_string);
   }
 }
+
+/**
+ * @brief Utility method to query the amount of memory (bytes) that is free on the device at runtime
+ *
+ * Granularity appears to be about 2MB of device memory on volta.
+ *
+ * @return tuple of free and total memory at the moment on the device context
+ */
+
+inline std::tuple<std::size_t, std::size_t> getCUDAMemInfo()
+{
+  std::size_t free_memory, total_memory;
+  auto        error = cudaMemGetInfo(&free_memory, &total_memory);
+  displayLastCUDAMessage();
+  return std::make_tuple(free_memory, total_memory);
+}
+
+/**
+ * @brief returns a string with GPU memory information
+ */
+
+std::string getCUDAMemInfoString()
+{
+  auto [free_memory, total_memory] = getCUDAMemInfo();
+  return fmt::format("Free memory: {} Total_memory: {}", free_memory, total_memory);
+}
+
 #endif
 
 /**
