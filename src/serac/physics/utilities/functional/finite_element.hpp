@@ -63,14 +63,26 @@ constexpr int dimension_of(Geometry g)
 }
 
 /**
+ * @brief Element conformity
+ */
+enum class Family
+{
+  H1,
+  HCURL,
+  HDIV,
+  L2
+};
+
+/**
  * @brief H1 elements of order @p p
  * @tparam p The order of the elements
  * @tparam c The vector dimension
  */
 template <int p, int c = 1>
 struct H1 {
-  static constexpr int order      = p;  ///< the polynomial order of the elements
-  static constexpr int components = c;  ///< the number of components at each node
+  static constexpr int    order      = p;  ///< the polynomial order of the elements
+  static constexpr int    components = c;  ///< the number of components at each node
+  static constexpr Family family     = Family::H1;
 };
 
 /**
@@ -80,8 +92,9 @@ struct H1 {
  */
 template <int p, int c = 1>
 struct Hcurl {
-  static constexpr int order      = p;  ///< the polynomial order of the elements
-  static constexpr int components = c;  ///< the number of components at each node
+  static constexpr int    order      = p;  ///< the polynomial order of the elements
+  static constexpr int    components = c;  ///< the number of components at each node
+  static constexpr Family family     = Family::HCURL;
 };
 
 /**
@@ -91,19 +104,9 @@ struct Hcurl {
  */
 template <int p, int c = 1>
 struct L2 {
-  static constexpr int order      = p;  ///< the polynomial order of the elements
-  static constexpr int components = c;  ///< the number of components at each node
-};
-
-/**
- * @brief Element conformity
- */
-enum class Family
-{
-  H1,
-  HCURL,
-  HDIV,
-  L2
+  static constexpr int    order      = p;  ///< the polynomial order of the elements
+  static constexpr int    components = c;  ///< the number of components at each node
+  static constexpr Family family     = Family::L2;
 };
 
 /**
@@ -151,6 +154,54 @@ template <Geometry g, int p>
 struct is_finite_element<finite_element<g, Hcurl<p> > > {
   static constexpr bool value = true;  ///< whether or not type T is a finite_element
 };
+
+/**
+ * @brief a class that helps to extract the test space from a function signature template parameter
+ * @tparam spaces The function signature containing test and trial spaces
+ */
+template <typename spaces>
+struct get_test_space;  // undefined
+
+/**
+ * @brief a class that helps to extract the test space from a function signature template parameter
+ * @tparam test_space The kind of test space
+ * @tparam trial_space The kind of trial space
+ */
+template <typename test_space, typename trial_space>
+struct get_test_space<test_space(trial_space)> {
+  using type = test_space;  ///< the test space
+};
+
+/**
+ * @brief a class that helps to extract the trial space from a function signature template parameter
+ * @tparam spaces The function signature containing test and trial spaces
+ */
+template <typename spaces>
+struct get_trial_space;  // undefined
+
+/**
+ * @brief a class that helps to extract the trial space from a function signature template parameter
+ * @tparam test_space The kind of test space
+ * @tparam trial_space The kind of trial space
+ */
+template <typename test_space, typename trial_space>
+struct get_trial_space<test_space(trial_space)> {
+  using type = trial_space;  ///< the trial space
+};
+
+/**
+ * @brief a type function that extracts the test space from a function signature template parameter
+ * @tparam spaces The function signature itself
+ */
+template <typename spaces>
+using test_space_t = typename get_test_space<spaces>::type;
+
+/**
+ * @brief a type function that extracts the trial space from a function signature template parameter
+ * @tparam spaces The function signature itself
+ */
+template <typename spaces>
+using trial_space_t = typename get_trial_space<spaces>::type;
 
 #include "detail/segment_H1.inl"
 #include "detail/segment_Hcurl.inl"

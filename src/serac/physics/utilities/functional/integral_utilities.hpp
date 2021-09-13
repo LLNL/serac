@@ -15,9 +15,10 @@
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
 
-#include "serac/physics/utilities/functional/tensor.hpp"
-#include "serac/physics/utilities/functional/finite_element.hpp"
 #include "serac/physics/utilities/functional/tuple.hpp"
+#include "serac/physics/utilities/functional/tensor.hpp"
+#include "serac/physics/utilities/functional/quadrature.hpp"
+#include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
 
 namespace serac {
 
@@ -133,38 +134,6 @@ SERAC_HOST_DEVICE void Add(const mfem::DeviceTensor<3, double>& r_global, tensor
     }
   }
 }
-
-/**
- * @brief a class that helps to extract the test space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename spaces>
-struct get_test_space;  // undefined
-
-/**
- * @brief a class that helps to extract the test space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename test_space, typename trial_space>
-struct get_test_space<test_space(trial_space)> {
-  using type = test_space;  ///< the test space
-};
-
-/**
- * @brief a class that helps to extract the trial space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename spaces>
-struct get_trial_space;  // undefined
-
-/**
- * @brief a class that helps to extract the trial space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename test_space, typename trial_space>
-struct get_trial_space<test_space(trial_space)> {
-  using type = trial_space;  ///< the trial space
-};
 
 /**
  * @brief a class that provides the lambda argument types for a given integral
@@ -306,21 +275,144 @@ SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type
 
 }  // namespace detail
 
-/**
- * @brief a type function that extracts the test space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename spaces>
-using test_space_t = typename detail::get_test_space<spaces>::type;
-
-/**
- * @brief a type function that extracts the trial space from a function signature template parameter
- * @tparam space The function signature itself
- */
-template <typename spaces>
-using trial_space_t = typename detail::get_trial_space<spaces>::type;
-
 static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
                                                     Geometry::Hexahedron};
+
+template <typename T1, typename T2>
+struct linear_approximation {
+  T1 value;
+  T2 derivative;
+};
+
+/**
+ * @brief a function that evaluates and packs the shape function information in a way
+ * that makes the element gradient evaluation simpler to implement
+ *
+ * @tparam element_type which type of finite element shape functions to evaluate
+ * @tparam dim the geometric dimension of the element
+ *
+ * @param[in] xi where to evaluate shape functions and their gradients
+ * @param[in] J the jacobian, dx_dxi, of the isoparametric map from parent-to-physical coordinates
+ */
+template <typename element_type, int dim>
+auto evaluate_shape_functions(const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
+{
+  if constexpr (element_type::family == Family::HCURL) {
+    auto N      = dot(element_type::shape_functions(xi), inv(J));
+    auto curl_N = element_type::shape_function_curl(xi) / det(J);
+    if constexpr (dim == 3) {
+      curl_N = dot(curl_N, transpose(J));
+    }
+
+    using pair_t =
+        linear_approximation<std::remove_reference_t<decltype(N[0])>, std::remove_reference_t<decltype(curl_N[0])>>;
+    tensor<pair_t, element_type::ndof> output{};
+    for (int i = 0; i < element_type::ndof; i++) {
+      output[i].value      = N[i];
+      output[i].derivative = curl_N[i];
+    }
+    return output;
+  }
+
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
+    auto N      = element_type::shape_functions(xi);
+    auto grad_N = dot(element_type::shape_function_gradients(xi), inv(J));
+
+    using pair_t =
+        linear_approximation<std::remove_reference_t<decltype(N[0])>, std::remove_reference_t<decltype(grad_N[0])>>;
+    tensor<pair_t, element_type::ndof> output{};
+    for (int i = 0; i < element_type::ndof; i++) {
+      output[i].value      = N[i];
+      output[i].derivative = grad_N[i];
+    }
+    return output;
+  }
+}
+
+namespace domain_integral {
+
+/**
+ * @brief Computes the arguments to be passed into the q-function (shape function evaluations)
+ * By default:
+ *  H1 family elements will compute {value, gradient}
+ *  Hcurl family elements will compute {value, curl}
+ *  TODO: Hdiv family elements will compute {value, divergence}
+ *  L2 family elements will compute value
+ *
+ * In the future, the user will be able to override these defaults
+ * to omit unused components (e.g. specify that they only need the gradient)
+ *
+ * @tparam element_type The type of the element (used to determine the family)
+ * @tparam T the type of the element values to be interpolated and differentiated
+ * @tparam dim the geometric dimension of the element
+ *
+ * @param[in] u The DOF values for the element
+ * @param[in] xi The position of the quadrature point in reference space
+ * @param[in] J The Jacobian of the element transformation at the quadrature point
+ */
+template <typename element_type, typename T, int dim>
+SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
+{
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
+    return serac::tuple{dot(u, element_type::shape_functions(xi)),
+                        dot(u, dot(element_type::shape_function_gradients(xi), inv(J)))};
+  }
+
+  if constexpr (element_type::family == Family::HCURL) {
+    // HCURL shape functions undergo a covariant Piola transformation when going
+    // from parent element to physical element
+    auto value = dot(u, dot(element_type::shape_functions(xi), inv(J)));
+    auto curl  = dot(u, element_type::shape_function_curl(xi) / det(J));
+    if constexpr (dim == 3) {
+      curl = dot(curl, transpose(J));
+    }
+    return serac::tuple{value, curl};
+  }
+}
+
+/**
+ * @brief Computes residual contributions from the output of the q-function
+ * This involves integrating the q-function output against functions from the
+ * test function space.
+ *
+ * By default:
+ *  H1 family elements integrate std::get<0>(f) against the test space shape functions
+ *                           and std::get<1>(f) against the test space shape function gradients
+ *  Hcurl family elements integrate std::get<0>(f) against the test space shape functions
+ *                              and std::get<1>(f) against the curl of the test space shape functions
+ * TODO: Hdiv family elements integrate std::get<0>(f) against the test space shape functions
+ *                                  and std::get<1>(f) against the divergence of the test space shape functions
+ *  L2 family elements integrate f against test space shape functions
+ *
+ * In the future, the user will be able to override these defaults
+ * to omit unused components (e.g. provide only the term to be integrated against test function gradients)
+ * @tparam element_type The type of the element (used to determine the family)
+ * @tparam T The type of the output from the user-provided q-function
+ * @pre T must be a pair type for H1, H(curl) and H(div) family elements
+ * @param[in] f The value component output of the user's quadrature function (as opposed to the value/derivative pair)
+ * @param[in] xi The position of the quadrature point in reference space
+ * @param[in] J The Jacobian of the element transformation at the quadrature point
+ */
+template <typename element_type, typename T, int dim>
+SERAC_HOST_DEVICE auto Postprocess(const T& f, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
+{
+  // TODO: Helpful static_assert about f being tuple or tuple-like for H1, hcurl, hdiv
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
+    auto W     = element_type::shape_functions(xi);
+    auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
+    return outer(W, serac::get<0>(f)) + dot(dW_dx, serac::get<1>(f));
+  }
+
+  if constexpr (element_type::family == Family::HCURL) {
+    auto W      = dot(element_type::shape_functions(xi), inv(J));
+    auto curl_W = element_type::shape_function_curl(xi) / det(J);
+    if constexpr (dim == 3) {
+      curl_W = dot(curl_W, transpose(J));
+    }
+    return (W * serac::get<0>(f) + curl_W * serac::get<1>(f));
+  }
+}
+
+}  // namespace domain_integral
 
 }  // namespace serac
