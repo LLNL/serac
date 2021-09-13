@@ -52,25 +52,15 @@
 namespace serac {
 
 /**
- * @brief tag type for signaling that calculations that should be performed on the CPU
+ * @brief enum used for signalling whether or not to perform certain calculations on the CPU or GPU
  */
-struct cpu_policy {
+enum class ExecutionSpace
+{
+  CPU,
+  GPU
 };
 
-/**
- * @brief tag type for signaling that calculations that should be performed on the GPU
- */
-#if defined(__CUDACC__)
-// TEMPORARY: Add temporary guard so gpu_policy cannot be used when there is no GPU.
-// The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
-struct gpu_policy {
-};
-#endif
-
-/**
- * @brief for now, we'll just default to the CPU
- */
-using default_policy = cpu_policy;
+constexpr ExecutionSpace default_execution_space = ExecutionSpace::CPU;
 
 namespace accelerator {
 
@@ -139,18 +129,18 @@ std::string getCUDAMemInfoString()
 /**
  * @brief create shared_ptr to an array of `n` values of type `T`, either on the host or device
  * @tparam T the type of the value to be stored in the array
- * @tparam execution_policy the memory space where the data lives
+ * @tparam exec the memory space where the data lives
  * @param n how many entries to allocate in the array
  */
-template <typename T, typename execution_policy>
+template <typename T, ExecutionSpace exec>
 std::shared_ptr<T[]> make_shared_array(std::size_t n)
 {
-  if constexpr (std::is_same_v<execution_policy, serac::cpu_policy>) {
+  if constexpr (exec == ExecutionSpace::CPU) {
     return std::shared_ptr<T[]>(new T[n]);
   }
 
 #if defined(__CUDACC__)
-  if constexpr (std::is_same_v<execution_policy, serac::gpu_policy>) {
+  if constexpr (exec == ExecutionSpace::GPU) {
     T* data;
     cudaMalloc(&data, sizeof(T) * n);
     auto deleter = [](T* ptr) { cudaFree(ptr); };

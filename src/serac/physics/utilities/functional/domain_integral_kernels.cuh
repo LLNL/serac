@@ -1,11 +1,9 @@
 #pragma once
 
-#include "mfem.hpp"
-#include "mfem/linalg/dtensor.hpp"
-
-#include "serac/physics/utilities/functional/integral_utilities.hpp"
-#include "serac/physics/utilities/functional/domain_integral_shared.hpp"
 #include <cstring>
+
+#include "serac/physics/utilities/quadrature_data.hpp"
+#include "serac/physics/utilities/functional/integral_utilities.hpp"
 
 namespace serac {
 
@@ -36,24 +34,21 @@ namespace domain_integral {
  *
  * This GPU kernel proccess one element per thread.
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
  * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
  * be evaluated at each quadrature point.
  * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
  * information on the idea behind a quadrature function and its inputs/outputs
- * @tparam qpt_data_type The type of the data to store for each quadrature point
  *
+ * // I don't know why these template parameters are here
  * @tparam solution_type element solution
  * @tparam residual_type element residual
- * @tparam position_type element position
+ * @tparam jacobian_type quadrature point jacobian
+ * @tparam position_type quadrature point position
  *
  * @param[in] u The element DOF values (primary input)
  * @param[inout] r The element residuals (primary output)
@@ -75,6 +70,7 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim   = dimension_of(g);
 
   // for each element in the domain
   const int grid_stride = blockDim.x * gridDim.x;
@@ -87,14 +83,37 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
-                                                                   num_elements, qf);
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
+
+      // evaluate the value/derivatives needed for the q-function at this quadrature point
+      auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
+
+      // evaluate the user-specified constitutive model
+      //
+      // note: make_dual(arg) promotes those arguments to dual number types
+      // so that qf_output will contain values and derivatives
+      auto qf_output = qf(x_q, make_dual(arg));
+
+      // integrate qf_output against test space shape functions / gradients
+      // to get element residual contributions
+      r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+
+      // here, we store the derivative of the q-function w.r.t. its input arguments
+      //
+      // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
+
+      // Note: This pattern may result in non-coalesced access depend on how it executed.
+      detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
     }
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
     detail::Add(r, r_elem, e);
-  }  // e loop
+  }  // element loop
 }
 
 /**
@@ -117,9 +136,11 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
  * information on the idea behind a quadrature function and its inputs/outputs
  * @tparam qpt_data_type The type of the data to store for each quadrature point
  *
+ * // I don't know why these template parameters are here
  * @tparam solution_type element solution
  * @tparam residual_type element residual
- * @tparam position_type element position
+ * @tparam jacobian_type quadrature point jacobian
+ * @tparam position_type quadrature point position
  *
  * @param[in] u The element DOF values (primary input)
  * @param[inout] r The element residuals (primary output)
@@ -131,7 +152,6 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
  */
-
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
 __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
@@ -141,6 +161,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim   = dimension_of(g);
 
   const int grid_stride = blockDim.x * gridDim.x;
   // launch a thread for each quadrature x element point
@@ -156,8 +177,31 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
     element_residual_type r_elem{};
 
     // for each quadrature point in the element
-    eval_quadrature<g, test, trial, Q, derivatives_type, lambda>(e, q, u_elem, r_elem, derivatives_ptr, J, X,
-                                                                 num_elements, qf);
+    auto   xi  = rule.points[q];
+    auto   dxi = rule.weights[q];
+    auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+    auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+    double dx  = det(J_q) * dxi;
+
+    // evaluate the value/derivatives needed for the q-function at this quadrature point
+    auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
+
+    // evaluate the user-specified constitutive model
+    //
+    // note: make_dual(arg) promotes those arguments to dual number types
+    // so that qf_output will contain values and derivatives
+    auto qf_output = qf(x_q, make_dual(arg));
+
+    // integrate qf_output against test space shape functions / gradients
+    // to get element residual contributions
+    r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+
+    // here, we store the derivative of the q-function w.r.t. its input arguments
+    //
+    // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
+
+    // Note: This pattern may result in non-coalesced access depend on how it executed.
+    detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
@@ -168,15 +212,11 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
 /**
  * @brief The GPU base template used to create different finite element calculation routines
  *
- * This function is used to invoke different GPU kernels.
+ * This function is used to select which GPU kernel implementation to invoke.
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
  * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
@@ -245,13 +285,9 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
  *
  * This kernel processes the gradient of one element per thread
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
@@ -279,6 +315,7 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim   = dimension_of(g);
 
   const int grid_stride = blockDim.x * gridDim.x;
 #pragma unroll
@@ -291,8 +328,25 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      gradient_quadrature<g, test, trial, Q, derivatives_type>(e, q, du_elem, dr_elem, derivatives_ptr, J,
-                                                               num_elements);
+      // get the position of this quadrature point in the parent and physical space,
+      // and calculate the measure of that point in physical space.
+      auto   xi  = rule.points[q];
+      auto   dxi = rule.weights[q];
+      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+      double dx  = det(J_q) * dxi;
+
+      // evaluate the (change in) value/derivatives at this quadrature point
+      auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
+
+      // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
+      auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
+
+      // use the chain rule to compute the first-order change in the q-function output
+      auto dq = chain_rule(dq_darg, darg);
+
+      // integrate dq against test space shape functions / gradients
+      // to get the (change in) element residual contributions
+      dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -307,13 +361,9 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
  *
  * This kernel processes the gradient of one quadrature point per thread
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
@@ -341,6 +391,7 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
   using trial_element         = finite_element<g, trial>;
   using element_residual_type = typename trial_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
+  static constexpr int  dim   = dimension_of(g);
 
   const int grid_stride           = blockDim.x * gridDim.x;
   auto      thread_id             = blockIdx.x * blockDim.x + threadIdx.x;
@@ -355,7 +406,25 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
     // this is where we will accumulate the (change in) element residual tensor
     element_residual_type dr_elem{};
 
-    gradient_quadrature<g, test, trial, Q, derivatives_type>(e, q, du_elem, dr_elem, derivatives_ptr, J, num_elements);
+    // get the position of this quadrature point in the parent and physical space,
+    // and calculate the measure of that point in physical space.
+    auto   xi  = rule.points[q];
+    auto   dxi = rule.weights[q];
+    auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
+    double dx  = det(J_q) * dxi;
+
+    // evaluate the (change in) value/derivatives at this quadrature point
+    auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
+
+    // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
+    auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
+
+    // use the chain rule to compute the first-order change in the q-function output
+    auto dq = chain_rule(dq_darg, darg);
+
+    // integrate dq against test space shape functions / gradients
+    // to get the (change in) element residual contributions
+    dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
@@ -369,13 +438,9 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
  *
  * This function is used to invoke the GPU kernels
  *
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
- *
- * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
@@ -394,8 +459,8 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
 
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type>
-void gradient_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
-                          derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
+void action_of_gradient_kernel(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
+                               derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;

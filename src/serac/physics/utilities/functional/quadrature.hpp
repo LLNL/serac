@@ -41,7 +41,7 @@ struct QuadratureRule {
 };
 
 /**
- * @brief Returns the quadrature rule for an element and order
+ * @brief Returns the Gauss-Legendre quadrature rule for an element and order
  * @tparam The shape of the element to produce a quadrature rule for
  * @tparam Q the number of quadrature points per dimension
  */

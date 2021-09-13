@@ -35,7 +35,7 @@ namespace boundary_integral {
  * TODO: provide gradients as well (needs some more info from mfem)
  */
 template <typename element_type, typename T, typename coord_type>
-auto Preprocess(T u, coord_type xi)
+auto Preprocess(const T& u, const coord_type& xi)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return dot(u, element_type::shape_functions(xi));
@@ -56,7 +56,7 @@ auto Preprocess(T u, coord_type xi)
  * In this case, q-function outputs are only integrated against test space shape functions
  */
 template <typename element_type, typename T, typename coord_type>
-auto Postprocess(T f, [[maybe_unused]] coord_type xi)
+auto Postprocess(const T& f, [[maybe_unused]] const coord_type& xi)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return outer(element_type::shape_functions(xi), f);
@@ -194,8 +194,8 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
-                     const mfem::Vector& J_, int num_elements)
+void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
+                               const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -247,7 +247,8 @@ void gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type*
 }
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
+void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
+                             int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -268,12 +269,11 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-
       // get the position of this quadrature point in the parent and physical space,
       // and calculate the measure of that point in physical space.
-      auto   xi_q   = rule.points[q];
-      auto   dxi_q  = rule.weights[q];
-      double dx     = J(q, e) * dxi_q;
+      auto   xi_q  = rule.points[q];
+      auto   dxi_q = rule.weights[q];
+      double dx    = J(q, e) * dxi_q;
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
@@ -284,21 +284,17 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
       for (int i = 0; i < test_ndof; i++) {
         for (int j = 0; j < trial_ndof; j++) {
           K_elem[i][j] += M[i] * dq_darg * N[j] * dx;
-        } 
-      } 
-
+        }
+      }
     }
 
     // once we've finished the element integration loop, write our element gradients
     // out to memory, to be later assembled into the global gradient by mfem
-    // 
+    //
     // Note: we "transpose" these values to get them into the layout that mfem expects
-    for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
-      dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
-    });
-
+    for_loop<test_ndof, test_dim, trial_ndof, trial_dim>(
+        [&](int i, int j, int k, int l) { dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l]; });
   }
-
 }
 
 }  // namespace boundary_integral
@@ -329,7 +325,8 @@ public:
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   BoundaryIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, const mfem::Vector& normals,
-                   Dimension<dim>, lambda_type&& qf) : J_(J), X_(X), normals_(normals)
+                   Dimension<dim>, lambda_type&& qf)
+      : J_(J), X_(X), normals_(normals)
 
   {
     constexpr auto geometry                      = supported_geometries[dim];
@@ -356,18 +353,19 @@ public:
     //
     // note: the qf_derivatives_ptr is copied by value to each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
-    evaluation_ = [=](const mfem::Vector& U, mfem::Vector& R) {
+    evaluation_ = [this, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
       boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
                                                                                  normals_, num_elements, qf);
     };
 
-    gradient_ = [=](const mfem::Vector& dU, mfem::Vector& dR) {
-      boundary_integral::gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(), J_,
-                                                                               num_elements);
+    action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
+      boundary_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(),
+                                                                                         J_, num_elements);
     };
 
-    gradient_mat_ = [=](mfem::Vector& K_b) {
-      boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives.get(), J_, num_elements);
+    element_gradient_ = [this, qf_derivatives, num_elements](mfem::Vector& K_b) {
+      boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives.get(), J_,
+                                                                                       num_elements);
     };
   }
 
@@ -383,17 +381,19 @@ public:
    * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
    * @param[in] input_E The input to the evaluation; per-element DOF values
    * @param[out] output_E The output of the evalution; per-element DOF residuals
-   * @see gradient_kernel
+   * @see action_of_gradient_kernel
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const { gradient_(input_E, output_E); }
+  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const
+  {
+    action_of_gradient_(input_E, output_E);
+  }
 
   /**
-   * @brief Computes the element stiffness matrices, storing them in an `mfem::Vector` that has been reshaped into a
-   * multidimensional array
+   * @brief Computes the derivative of each element's residual with respect to the element values
    * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
-   * elem)
+   * nelems)
    */
-  void ComputeElementMatrices(mfem::Vector& K_b) const { gradient_mat_(K_b); }
+  void ComputeElementGradients(mfem::Vector& K_b) const { element_gradient_(K_b); }
 
 private:
   /**
@@ -418,16 +418,16 @@ private:
   std::function<void(const mfem::Vector&, mfem::Vector&)> evaluation_;
 
   /**
-   * @brief Type-erased handle to gradient kernel
-   * @see gradient_kernel
+   * @brief Type-erased handle to kernel that evaluates the action of the gradient
+   * @see action_of_gradient_kernel
    */
-  std::function<void(const mfem::Vector&, mfem::Vector&)> gradient_;
+  std::function<void(const mfem::Vector&, mfem::Vector&)> action_of_gradient_;
 
   /**
-   * @brief Type-erased handle to gradient matrix assembly kernel
+   * @brief Type-erased handle to kernel that computes each element's gradients
    * @see gradient_matrix_kernel
    */
-  std::function<void(mfem::Vector&)> gradient_mat_;
+  std::function<void(mfem::Vector&)> element_gradient_;
 };
 
 }  // namespace serac

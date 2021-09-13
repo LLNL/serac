@@ -37,7 +37,7 @@ static constexpr double b = 2.1;
 template <int dim>
 struct hcurl_qfunction {
   template <typename x_t, typename vector_potential_t>
-  SERAC_HOST_DEVICE auto operator()(x_t x, vector_potential_t vector_potential)
+  SERAC_HOST_DEVICE auto operator()(x_t x, vector_potential_t vector_potential) const
   {
     auto [A, curl_A] = vector_potential;
     auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
@@ -140,7 +140,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Test fully assembled matrix
   mfem::Array<int> dofs;
   fespace.GetElementDofs(0, dofs);
-  mfem::Vector K_e = residual.ComputeElementMatrices();
+  mfem::Vector K_e = residual.ComputeElementGradients();
 
   serac::mfem_ext::AssembledSparseMatrix A_serac_mat(fespace, fespace, mfem::ElementDofOrdering::LEXICOGRAPHIC);
   {
