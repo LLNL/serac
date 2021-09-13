@@ -81,14 +81,21 @@ TEST(solid_solver, adjoint)
   mfem::Vector true_vec_1 = solid_solver.displacement().trueVec();
 
   // Make a dummy adjoint load for testing
-  mfem::ParLinearForm adjoint_load(&solid_solver.displacement().space());
+
+  FiniteElementDual assembled_adjoint_load(StateManager::mesh(), solid_solver.displacement().space(), "adjoint_load");
+
+  mfem::ParLinearForm adjoint_load(&assembled_adjoint_load.space());
 
   mfem::Vector load(dim);
   load = 0.1;
   mfem::VectorConstantCoefficient loadvec(load);
   adjoint_load.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(loadvec));
 
-  auto&  adjoint_state_1 = solid_solver.solveAdjoint(adjoint_load);
+  adjoint_load.Assemble();
+  assembled_adjoint_load.trueVec() = *adjoint_load.ParallelAssemble();
+  assembled_adjoint_load.distributeSharedDofs();
+
+  auto&  adjoint_state_1 = solid_solver.solveAdjoint(assembled_adjoint_load);
   double adjoint_norm_1  = norm(adjoint_state_1);
 
   SLIC_INFO_ROOT(fmt::format("Adjoint norm (homogeneous BCs): {}", adjoint_norm_1));
@@ -98,21 +105,17 @@ TEST(solid_solver, adjoint)
   mfem::ParFiniteElementSpace l2_fe_space(&serac::StateManager::mesh(), &l2_fe_coll);
 
   // Compute, assemble, and check the sensitivities
-  mfem::ParLinearForm& shear_sensitivity = solid_solver.shearModulusSensitivity(l2_fe_space);
+  auto& shear_sensitivity = solid_solver.shearModulusSensitivity(&l2_fe_space);
 
-  std::unique_ptr<mfem::HypreParVector> assembled_shear_sensitivity(shear_sensitivity.ParallelAssemble());
-
-  double shear_norm = mfem::ParNormlp(*assembled_shear_sensitivity, 2, MPI_COMM_WORLD);
+  double shear_norm = mfem::ParNormlp(shear_sensitivity.trueVec(), 2, MPI_COMM_WORLD);
 
   SLIC_INFO_ROOT(fmt::format("Shear sensitivity vector norm: {}", shear_norm));
 
   EXPECT_NEAR(shear_norm, 0.000211078850122, 1.0e-8);
 
-  mfem::ParLinearForm& bulk_sensitivity = solid_solver.bulkModulusSensitivity(l2_fe_space);
+  auto& bulk_sensitivity = solid_solver.bulkModulusSensitivity(&l2_fe_space);
 
-  std::unique_ptr<mfem::HypreParVector> assembled_bulk_sensitivity(bulk_sensitivity.ParallelAssemble());
-
-  double bulk_norm = mfem::ParNormlp(*assembled_bulk_sensitivity, 2, MPI_COMM_WORLD);
+  double bulk_norm = mfem::ParNormlp(bulk_sensitivity.trueVec(), 2, MPI_COMM_WORLD);
 
   SLIC_INFO_ROOT(fmt::format("Bulk sensitivity vector norm: {}", bulk_norm));
 
@@ -129,12 +132,14 @@ TEST(solid_solver, adjoint)
   EXPECT_NEAR(adjoint_norm_1, 738.4103079, 0.05);
 
   // Do another adjoint solve with a non-homogeneous BC
-  FiniteElementState adjoint_essential(StateManager::mesh(), solid_solver.displacement(), "adjoint_essential");
+  // Also test the state manager option for finite element duals
+  auto adjoint_essential =
+      StateManager::newDual(FiniteElementVector::Options{.vector_dim = dim, .name = "adjoint_essential_load"});
 
   // Set the essential boundary to a non-zero value
   adjoint_essential = 0.5;
 
-  auto&  adjoint_state_2 = solid_solver.solveAdjoint(adjoint_load, &adjoint_essential);
+  auto&  adjoint_state_2 = solid_solver.solveAdjoint(assembled_adjoint_load, &adjoint_essential);
   double adjoint_norm_2  = norm(adjoint_state_2);
 
   SLIC_INFO_ROOT(fmt::format("Adjoint norm (non-homogeneous BCs): {}", adjoint_norm_2));
