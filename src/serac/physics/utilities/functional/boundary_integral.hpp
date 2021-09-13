@@ -35,7 +35,7 @@ namespace boundary_integral {
  * TODO: provide gradients as well (needs some more info from mfem)
  */
 template <typename element_type, typename T, typename coord_type>
-auto Preprocess(T u, coord_type xi)
+auto Preprocess(const T& u, const coord_type& xi)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return dot(u, element_type::shape_functions(xi));
@@ -56,7 +56,7 @@ auto Preprocess(T u, coord_type xi)
  * In this case, q-function outputs are only integrated against test space shape functions
  */
 template <typename element_type, typename T, typename coord_type>
-auto Postprocess(T f, [[maybe_unused]] coord_type xi)
+auto Postprocess(const T& f, [[maybe_unused]] const coord_type& xi)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return outer(element_type::shape_functions(xi), f);

@@ -295,7 +295,7 @@ struct linear_approximation {
  * @param[in] J the jacobian, dx_dxi, of the isoparametric map from parent-to-physical coordinates
  */
 template <typename element_type, int dim>
-auto evaluate_shape_functions(tensor<double, dim> xi, tensor<double, dim, dim> J)
+auto evaluate_shape_functions(const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
 {
   if constexpr (element_type::family == Family::HCURL) {
     auto N      = dot(element_type::shape_functions(xi), inv(J));
@@ -351,7 +351,7 @@ namespace domain_integral {
  * @param[in] J The Jacobian of the element transformation at the quadrature point
  */
 template <typename element_type, typename T, int dim>
-SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
+SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
 {
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     return serac::tuple{dot(u, element_type::shape_functions(xi)),
@@ -394,7 +394,7 @@ SERAC_HOST_DEVICE auto Preprocess(T u, const tensor<double, dim> xi, const tenso
  * @param[in] J The Jacobian of the element transformation at the quadrature point
  */
 template <typename element_type, typename T, int dim>
-SERAC_HOST_DEVICE auto Postprocess(T f, const tensor<double, dim> xi, const tensor<double, dim, dim> J)
+SERAC_HOST_DEVICE auto Postprocess(const T& f, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
 {
   // TODO: Helpful static_assert about f being tuple or tuple-like for H1, hcurl, hdiv
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
