@@ -44,7 +44,7 @@ static constexpr double b = 2.1;
 template <int dim>
 struct thermal_qfunction {
   template <typename x_t, typename temperature_t>
-  __host__ __device__ auto operator()(x_t x, temperature_t temperature)
+  __host__ __device__ auto operator()(x_t x, temperature_t temperature) const
   {
     // get the value and the gradient from the input tuple
     auto [u, du_dx] = temperature;
@@ -57,7 +57,7 @@ struct thermal_qfunction {
 template <int dim>
 struct elastic_qfunction {
   template <typename x_t, typename displacement_t>
-  __host__ __device__ auto operator()(x_t x, displacement_t displacement)
+  __host__ __device__ auto operator()(x_t x, displacement_t displacement) const
   {
     // get the value and the gradient from the input tuple
     auto [u, du_dx]           = displacement;
@@ -72,7 +72,7 @@ struct elastic_qfunction {
 template <int dim>
 struct hcurl_qfunction {
   template <typename x_t, typename vector_potential_t>
-  __host__ __device__ auto operator()(x_t x, vector_potential_t vector_potential)
+  __host__ __device__ auto operator()(x_t x, vector_potential_t vector_potential) const
   {
     auto [A, curl_A] = vector_potential;
     auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
@@ -151,7 +151,7 @@ void functional_test(H1<p> test, H1<p> trial, Dimension<dim>)
   using trial_space = decltype(trial);
 
   // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space), gpu_policy> residual(&fespace, &fespace);
+  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(&fespace, &fespace);
 
   // Add the total domain residual term to the functional
   // note: NVCC's limited support for __device__ lambda functions
@@ -268,7 +268,7 @@ void functional_test(H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-  Functional<test_space(trial_space), gpu_policy> residual(&fespace, &fespace);
+  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(&fespace, &fespace);
   residual.AddDomainIntegral(Dimension<dim>{}, elastic_qfunction<dim>{}, mesh);
 
   mfem::Vector r1 = SERAC_PROFILE_EXPR(concat("mfem_Apply", postfix), (*J) * U - (*F));
@@ -357,7 +357,7 @@ void functional_test(Hcurl<p> test, Hcurl<p> trial, Dimension<dim>)
   using test_space  = decltype(test);
   using trial_space = decltype(trial);
 
-  Functional<test_space(trial_space), gpu_policy> residual(&fespace, &fespace);
+  Functional<test_space(trial_space), ExecutionSpace::GPU> residual(&fespace, &fespace);
 
   residual.AddDomainIntegral(Dimension<dim>{}, hcurl_qfunction<dim>{}, mesh);
 
