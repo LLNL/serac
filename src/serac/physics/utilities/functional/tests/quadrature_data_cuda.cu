@@ -81,16 +81,17 @@ protected:
     mesh                = &new_mesh;
     festate             = std::make_unique<FiniteElementState>(*mesh);
     festate->gridFunc() = 0.0;
-    residual = std::make_unique<Functional<test_space(trial_space), gpu_policy>>(&festate->space(), &festate->space());
+    residual            = std::make_unique<Functional<test_space(trial_space), ExecutionSpace::GPU>>(&festate->space(),
+                                                                                          &festate->space());
   }
   static constexpr int p   = 1;
   static constexpr int dim = 2;
   using test_space         = H1<p>;
   using trial_space        = H1<p>;
-  std::unique_ptr<mfem::ParMesh>                                   default_mesh;
-  mfem::ParMesh*                                                   mesh = nullptr;
-  std::unique_ptr<FiniteElementState>                              festate;
-  std::unique_ptr<Functional<test_space(trial_space), gpu_policy>> residual;
+  std::unique_ptr<mfem::ParMesh>                                            default_mesh;
+  mfem::ParMesh*                                                            mesh = nullptr;
+  std::unique_ptr<FiniteElementState>                                       festate;
+  std::unique_ptr<Functional<test_space(trial_space), ExecutionSpace::GPU>> residual;
 };
 
 struct basic_state_qfunction {
