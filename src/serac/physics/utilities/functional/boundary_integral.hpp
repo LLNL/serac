@@ -67,7 +67,9 @@ auto Postprocess(const T& f, [[maybe_unused]] const coord_type& xi)
   //  return outer(element_type::shape_functions(xi), dot(inv(J), f));
   //}
 
-  if constexpr (element_type::family == Family::QOI) { return f; }
+  if constexpr (element_type::family == Family::QOI) {
+    return f;
+  }
 }
 
 /**
@@ -371,10 +373,6 @@ public:
       boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives.get(), J_,
                                                                                        num_elements);
     };
-
-    gradient_mat_ = [=](mfem::Vector& K_b) {
-      boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives.get(), J_, num_elements);
-    };
   }
 
   /**
@@ -402,14 +400,6 @@ public:
    * nelems)
    */
   void ComputeElementGradients(mfem::Vector& K_b) const { element_gradient_(K_b); }
-
-  /**
-   * @brief Computes the element stiffness matrices, storing them in an `mfem::Vector` that has been reshaped into a
-   * multidimensional array
-   * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
-   * elem)
-   */
-  void ComputeElementMatrices(mfem::Vector& K_b) const { gradient_mat_(K_b); }
 
 private:
   /**

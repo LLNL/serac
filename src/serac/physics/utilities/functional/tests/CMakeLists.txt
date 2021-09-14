@@ -17,6 +17,7 @@ set(functional_tests_serial
     functional_boundary_test.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
+    array_test.cpp
     tuple_arithmetic_unit_tests.cpp)
 
 serac_add_tests( SOURCES ${functional_tests_serial}
@@ -52,6 +53,7 @@ if(ENABLE_CUDA)
     set(functional_tests_cuda 
         tensor_unit_tests_cuda.cu 
         functional_comparisons_cuda.cu
+        array_test_cuda.cu
        )
 
     serac_add_tests( SOURCES ${functional_tests_cuda}

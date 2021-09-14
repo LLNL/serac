@@ -54,7 +54,7 @@ public:
       : J_(J), X_(X)
   {
     constexpr auto geometry                      = supported_geometries[dim];
-    constexpr auto Q                             = std::max(order(test_space{}), order(trial_space{})) + 1;
+    constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
     constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
     uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
@@ -91,17 +91,17 @@ public:
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
 
     if constexpr (exec == ExecutionSpace::CPU) {
-      evaluation_ = [this, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
+      evaluation_ = [this, Q, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
         domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
                                                                                  num_elements, qf);
       };
 
-      action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
+      action_of_gradient_ = [this, Q, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
         domain_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(),
                                                                                          J_, num_elements);
       };
 
-      element_gradient_ = [this, qf_derivatives, num_elements](mfem::Vector& K_e) {
+      element_gradient_ = [this, Q, qf_derivatives, num_elements](mfem::Vector& K_e) {
         domain_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_,
                                                                                        num_elements);
       };

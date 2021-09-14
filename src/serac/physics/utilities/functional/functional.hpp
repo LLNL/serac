@@ -26,95 +26,7 @@
 
 namespace serac {
 
-namespace detail {
 
-/**
- * @brief a (poorly named) tuple of quantities used to discover the sparsity
- * pattern associated with element and boundary element matrices.
- *
- * It stores information about how the entries of an element "stiffness" matrix
- * map to the global stiffness. The operator< definition allows us to sort them
- * lexicographically, to facilitate creating the CSR matrix graph.
- */
-struct ElemInfo {
-  int  global_row;
-  int  global_col;
-  int  local_row;
-  int  local_col;
-  int  element_id;
-  int  sign;
-  bool on_boundary;
-};
-
-/**
- * @brief operator for sorting lexicographically by {global_row, global_col}
- * @param x the ElemInfo on the left
- * @param y the ElemInfo on the right
- */
-inline bool operator<(const ElemInfo& x, const ElemInfo& y)
-{
-  return (x.global_row < y.global_row) || (x.global_row == y.global_row && x.global_col < y.global_col);
-}
-
-/**
- * @brief operator determining inequality by {global_row, global_col}
- * @param x the ElemInfo on the left
- * @param y the ElemInfo on the right
- */
-inline bool operator!=(const ElemInfo& x, const ElemInfo& y)
-{
-  return (x.global_row != y.global_row) || (x.global_col != y.global_col);
-}
-
-/**
- * @brief mfem will frequently encode {sign, index} into a single int32_t.
- * This function decodes the sign from such a type.
- */
-inline int get_sign(int i) { return (i >= 0) ? 1 : -1; }
-
-/**
- * @brief mfem will frequently encode {sign, index} into a single int32_t.
- * This function decodes the index from such a type.
- */
-inline int get_index(int i) { return (i >= 0) ? i : -1 - i; }
-
-/**
- * @brief this type explicitly stores sign (typically used conveying edge/face orientation) and index values
- *
- * TODO: investigate implementation via bitfield (should have smaller memory footprint, better readability than mfem's
- * {sign, index} int32_t encoding)
- */
-struct SignedIndex {
-  int index;
-  int sign;
-      operator int() { return index; }
-};
-
-/**
- * @brief reorder the entries of an array of integers according to the given permutation array
- *
- * @param permutation the array describing how to reorder the input values
- * @param input the array to be reordered
- *
- * @note permutation[i] describes where input[i] will appear in the output array.
- *
- * @note if entry permutation[i] is negative, it will be interpreted as a reordering
- * (according to its index) and sign change of the permuted value (according to mfem convention (?))
- */
-inline void apply_permutation(const mfem::Array<int>& permutation, mfem::Array<int>& input)
-{
-  auto output = input;
-  for (int i = 0; i < permutation.Size(); i++) {
-    if (permutation[i] >= 0) {
-      output[i] = input[permutation[i]];
-    } else {
-      output[i] = -input[-permutation[i] - 1] - 1;
-    }
-  }
-  input = output;
-}
-
-}  // namespace detail
 
 /// @cond
 template <typename T, ExecutionSpace exec = serac::default_execution_space>
@@ -162,7 +74,7 @@ class Functional;
  */
 template <typename test, typename trial, ExecutionSpace exec>
 class Functional<test(trial), exec> : public mfem::Operator {
- public:
+public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
    * @param[in] test_fes The (non-qoi) test space
@@ -330,7 +242,7 @@ class Functional<test(trial), exec> : public mfem::Operator {
    * @brief Alias for @p Mult that uses a return value instead of an output parameter
    * @param[in] input_T The input vector
    */
-  mfem::Vector & operator()(const mfem::Vector& input_T) const
+  mfem::Vector& operator()(const mfem::Vector& input_T) const
   {
     Evaluation<Operation::Mult>(input_T, my_output_T_);
     return my_output_T_;
