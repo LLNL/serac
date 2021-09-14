@@ -37,13 +37,13 @@ namespace detail {
  * lexicographically, to facilitate creating the CSR matrix graph.
  */
 struct ElemInfo {
-  int  global_row;
-  int  global_col;
-  int  local_row;
-  int  local_col;
-  int  element_id;
-  int  sign;
-  bool on_boundary;
+  int  global_row;   ///< The global row number
+  int  global_col;   ///< The global column number
+  int  local_row;    ///< The local row number
+  int  local_col;    ///< The global column number
+  int  element_id;   ///< The element ID
+  int  sign;         ///< The orientation of the element
+  bool on_boundary;  ///< True if element is on the boundary
 };
 
 /**
@@ -85,9 +85,9 @@ inline int get_index(int i) { return (i >= 0) ? i : -1 - i; }
  * {sign, index} int32_t encoding)
  */
 struct SignedIndex {
-  int index;
-  int sign;
-      operator int() { return index; }
+  int index;                            ///< The index values
+  int sign;                             ///< The sign of the index
+      operator int() { return index; }  ///< () operator returning the index
 };
 
 /**
