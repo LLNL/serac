@@ -101,9 +101,21 @@ packages:
     externals:
     - spec: cmake@3.18.5
       prefix: /usr
+  doxygen:
+    version: [1.8.17]
+    buildable: false
+    externals:
+    - spec: doxygen@1.8.17
+      prefix: /usr
   llvm:
     version: [10.0.0]
     buildable: false
     externals:
     - spec: llvm@10.0.0+clang
+      prefix: /usr
+  py-sphinx:
+    version: [1.8.5]
+    buildable: false
+    externals:
+    - spec: py-sphinx@1.8.5
       prefix: /usr

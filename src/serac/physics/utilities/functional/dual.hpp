@@ -227,7 +227,7 @@ template <typename gradient_type>
 auto exp(dual<gradient_type> a)
 {
   using std::exp;
-  return dual<gradient_type>{exp(a.value), exp(a.value)};
+  return dual<gradient_type>{exp(a.value), exp(a.value) * a.gradient};
 }
 
 /** @brief implementation of the natural logarithm function for dual numbers */

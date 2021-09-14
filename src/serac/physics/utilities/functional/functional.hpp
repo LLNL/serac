@@ -14,6 +14,7 @@
 
 #include "mfem.hpp"
 
+#include "serac/infrastructure/logger.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/finite_element.hpp"
@@ -25,45 +26,98 @@
 
 namespace serac {
 
+namespace detail {
+
 /**
- * @brief a type trait used to identify the Hcurl family
+ * @brief a (poorly named) tuple of quantities used to discover the sparsity
+ * pattern associated with element and boundary element matrices.
+ *
+ * It stores information about how the entries of an element "stiffness" matrix
+ * map to the global stiffness. The operator< definition allows us to sort them
+ * lexicographically, to facilitate creating the CSR matrix graph.
  */
-template <typename T>
-struct is_hcurl {
-  /**
-   * @brief Flag denoting the type contained is Hcurl
-   */
-  static constexpr bool value = false;
+struct ElemInfo {
+  int  global_row;
+  int  global_col;
+  int  local_row;
+  int  local_col;
+  int  element_id;
+  int  sign;
+  bool on_boundary;
 };
 
 /**
- * @brief a type trait used to identify the Hcurl family
+ * @brief operator for sorting lexicographically by {global_row, global_col}
+ * @param x the ElemInfo on the left
+ * @param y the ElemInfo on the right
  */
-template <int p, int c>
-struct is_hcurl<Hcurl<p, c> > {
-  /**
-   * @brief Flag denoting the type contained is Hcurl
-   */
-  static constexpr bool value = true;
-};
-
-/**
- * @brief Right now, mfem doesn't have an implementation of GetFaceRestriction for Hcurl.
- *   This function exists to avoid calling that unimplemented case.
- */
-template <typename space>
-const mfem::Operator* GetFaceRestriction(mfem::ParFiniteElementSpace* pfes)
+inline bool operator<(const ElemInfo& x, const ElemInfo& y)
 {
-  if (!is_hcurl<space>::value) {
-    return pfes->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary,
-                                    mfem::L2FaceValues::SingleValued);
-  } else {
-    return nullptr;
-  }
+  return (x.global_row < y.global_row) || (x.global_row == y.global_row && x.global_col < y.global_col);
 }
 
+/**
+ * @brief operator determining inequality by {global_row, global_col}
+ * @param x the ElemInfo on the left
+ * @param y the ElemInfo on the right
+ */
+inline bool operator!=(const ElemInfo& x, const ElemInfo& y)
+{
+  return (x.global_row != y.global_row) || (x.global_col != y.global_col);
+}
+
+/**
+ * @brief mfem will frequently encode {sign, index} into a single int32_t.
+ * This function decodes the sign from such a type.
+ */
+inline int get_sign(int i) { return (i >= 0) ? 1 : -1; }
+
+/**
+ * @brief mfem will frequently encode {sign, index} into a single int32_t.
+ * This function decodes the index from such a type.
+ */
+inline int get_index(int i) { return (i >= 0) ? i : -1 - i; }
+
+/**
+ * @brief this type explicitly stores sign (typically used conveying edge/face orientation) and index values
+ *
+ * TODO: investigate implementation via bitfield (should have smaller memory footprint, better readability than mfem's
+ * {sign, index} int32_t encoding)
+ */
+struct SignedIndex {
+  int index;
+  int sign;
+      operator int() { return index; }
+};
+
+/**
+ * @brief reorder the entries of an array of integers according to the given permutation array
+ *
+ * @param permutation the array describing how to reorder the input values
+ * @param input the array to be reordered
+ *
+ * @note permutation[i] describes where input[i] will appear in the output array.
+ *
+ * @note if entry permutation[i] is negative, it will be interpreted as a reordering
+ * (according to its index) and sign change of the permuted value (according to mfem convention (?))
+ */
+inline void apply_permutation(const mfem::Array<int>& permutation, mfem::Array<int>& input)
+{
+  auto output = input;
+  for (int i = 0; i < permutation.Size(); i++) {
+    if (permutation[i] >= 0) {
+      output[i] = input[permutation[i]];
+    } else {
+      output[i] = -input[-permutation[i] - 1] - 1;
+    }
+  }
+  input = output;
+}
+
+}  // namespace detail
+
 /// @cond
-template <typename T, typename execution_policy = serac::default_policy>
+template <typename T, ExecutionSpace exec = serac::default_execution_space>
 class Functional;
 /// @endcond
 
@@ -81,9 +135,9 @@ class Functional;
  * Functional< H1(Hcurl) > my_residual;
  * @endcode
  *
- * @tparam execution_policy which kind of processor should be used to carry out calculations
  * @tparam test The space of test functions to use
  * @tparam trial The space of trial functions to use
+ * @tparam exec whether to carry out calculations on CPU or GPU
  *
  * To use this class, you use the methods @p Functional::Add****Integral(integrand,domain_of_integration)
  * where @p integrand is a q-function lambda or functor and @p domain_of_integration is an @p mfem::mesh
@@ -106,12 +160,12 @@ class Functional;
  * my_residual.AddDomainIntegral(Dimension<3>{}, integrand, domain_of_integration);
  * @endcode
  */
-template <typename test, typename trial, typename execution_policy>
-class Functional<test(trial), execution_policy> : public mfem::Operator {
+template <typename test, typename trial, ExecutionSpace exec>
+class Functional<test(trial), exec> : public mfem::Operator {
 public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
-   * @param[in] test_fes The test space
+   * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
   Functional(mfem::ParFiniteElementSpace* test_fes, mfem::ParFiniteElementSpace* trial_fes)
@@ -128,29 +182,34 @@ public:
     SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
 
     // Ensure the mesh has the appropriate neighbor information before constructing the face restriction operators
-    test_fes->ExchangeFaceNbrData();
-    trial_fes->ExchangeFaceNbrData();
-
-    // Generate the face restriction operators using the shared face mesh data
-    G_test_boundary_  = GetFaceRestriction<test>(test_fes);
-    G_trial_boundary_ = GetFaceRestriction<trial>(trial_fes);
-
-    input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
-    input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
-
-    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
-    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+    if (test_space_) {
+      test_space_->ExchangeFaceNbrData();
+    }
+    if (trial_space_) {
+      trial_space_->ExchangeFaceNbrData();
+    }
 
     // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
-    if (!(is_hcurl<test>::value || is_hcurl<trial>::value)) {
+    if (trial::family != Family::HCURL && test::family != Family::HCURL) {
+      if (test_space_) {
+        G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
+                                                           mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+      }
+      if (trial_space_) {
+        G_trial_boundary_ = trial_space_->GetFaceRestriction(
+            mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+      }
       input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
       output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
       output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
     }
 
-    my_output_T_.SetSize(test_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
-
-    dummy_.SetSize(trial_fes->GetTrueVSize(), mfem::Device::GetMemoryType());
+    input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
+    input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
+    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
+    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+    my_output_T_.SetSize(Height(), mfem::Device::GetMemoryType());
+    dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
   }
 
   /**
@@ -160,9 +219,9 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
-   * @param[in] data The data structure containing per-quadrature-point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
+   * @param[inout] data The data for each quadrature point
    */
   template <int dim, typename lambda, typename qpt_data_type = void>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
@@ -191,13 +250,11 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
-   * @param[in] data The data structure containing per-quadrature-point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
-                           QuadratureData<qpt_data_type>& data = dummy_qdata)
+  template <int dim, typename lambda>
+  void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
   {
     // TODO: fix mfem::FaceGeometricFactors
     auto num_boundary_elements = domain.GetNBE();
@@ -216,8 +273,9 @@ public:
     // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
+
     boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
-                                     integrand, data);
+                                     integrand);
   }
 
   /**
@@ -226,7 +284,7 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
-   * @param[in] data The data structure containing per-quadrature-point data
+   * @param[inout] data The data for each quadrature point
    */
   template <typename lambda, typename qpt_data_type = void>
   void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
@@ -240,7 +298,7 @@ public:
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
-   * @param[in] data The data structure containing per-quadrature-point data
+   * @param[inout] data The data for each quadrature point
    */
   template <typename lambda, typename qpt_data_type = void>
   void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
@@ -294,11 +352,11 @@ public:
   }
 
   /**
-   * @brief Obtains the element stiffness matrix reshaped a mfem::Vector
-   * @returns A mfem::Vector containing the assembled element stiffness matrix (test_dim * test_ndof, trial_dim
-   * * trial_ndof, nelem)
+   * @brief calculate and return the element stiffness matrices flattened into a mfem::Vector
+   * @returns A mfem::Vector containing the element stiffness matrix entries (flattened from a 3D array
+   * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
    */
-  mfem::Vector ComputeElementMatrices()
+  mfem::Vector ComputeElementGradients()
   {
     // Resize K_e_ if this is the first time
     if (K_e_.Size() == 0) {
@@ -310,9 +368,35 @@ public:
     // zero out internal vector
     K_e_ = 0.;
     // loop through integrals and accumulate
-    for (auto domain : domain_integrals_) domain.ComputeElementMatrices(K_e_);
+    for (auto& domain : domain_integrals_) {
+      domain.ComputeElementGradients(K_e_);
+    }
 
     return K_e_;
+  }
+
+  /**
+   * @brief calculate and return the boundary element stiffness matrices flattened into a mfem::Vector
+   * @returns A mfem::Vector containing the boundary element matrix entries (flattened from a 3D array
+   * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
+   */
+  mfem::Vector ComputeBoundaryElementGradients()
+  {
+    // Resize K_b_ if this is the first time
+    if (K_b_.Size() == 0) {
+      int num_boundary_elements           = test_space_->GetNBE();
+      int dofs_per_test_boundary_element  = test_space_->GetBE(0)->GetDof() * test_space_->GetVDim();
+      int dofs_per_trial_boundary_element = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
+      K_b_.SetSize(dofs_per_test_boundary_element * dofs_per_trial_boundary_element * num_boundary_elements);
+    }
+    // zero out internal vector
+    K_b_ = 0.;
+    // loop through integrals and accumulate
+    for (auto& boundary : boundary_integrals_) {
+      boundary.ComputeElementGradients(K_b_);
+    }
+
+    return K_b_;
   }
 
   /**
@@ -322,7 +406,7 @@ public:
 
   serac::mfem_ext::AssembledSparseMatrix& GetAssembledSparseMatrix()
   {
-    ComputeElementMatrices();  // Updates K_e_
+    ComputeElementGradients();  // Updates K_e_
     if (!assembled_spmat_) {
       assembled_spmat_ = std::make_unique<serac::mfem_ext::AssembledSparseMatrix>(
           *test_space_, *trial_space_, mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -340,7 +424,7 @@ public:
   void SetEssentialBC(const mfem::Array<int>& ess_attr)
   {
     static_assert(std::is_same_v<test, trial>, "can't specify essential bc on incompatible spaces");
-    test_space_->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
+    trial_space_->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
   }
 
 private:
@@ -357,20 +441,311 @@ private:
    * @brief Lightweight shim for mfem::Operator that produces the gradient of a @p Functional from a @p Mult
    */
   class Gradient : public mfem::Operator {
+    // TODO:
+    // this is a temporary array implementation to be replaced by axom::Array as soon as it's ready
+    // it implements a indexing by an operator() taking 3 arguments, with "row major" striding
+    template <typename T>
+    struct Array3D {
+      Array3D() = default;
+      Array3D(int n1, int n2, int n3) : strides{n2 * n3, n3, 1}, data(n1 * n2 * n3) {}
+      auto&          operator()(int i, int j, int k) { return data[i * strides[0] + j * strides[1] + k * strides[2]]; }
+      int            strides[3];
+      std::vector<T> data;
+    };
+
   public:
     /**
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional& f) : mfem::Operator(f.Height()), form(f){};
+    Gradient(Functional<test(trial), exec>& f)
+        : mfem::Operator(f.Height(), f.Width()), form_(f), sparsity_pattern_initialized_(false){};
 
-    virtual void Mult(const mfem::Vector& x, mfem::Vector& y) const override { form.GradientMult(x, y); }
+    /**
+     * @brief implement that action of the gradient: df := df_dx * dx
+     * @param[in] dx a small perturbation in the trial space
+     * @param[in] df the resulting small perturbation in the residuals
+     */
+    virtual void Mult(const mfem::Vector& dx, mfem::Vector& df) const override { form_.GradientMult(dx, df); }
+
+    /**
+     * @brief syntactic sugar:  df_dx.Mult(dx, df)  <=>  mfem::Vector df = df_dx(dx);
+     */
+    mfem::Vector operator()(const mfem::Vector& x) const
+    {
+      mfem::Vector y(form_.Height());
+      form_.GradientMult(x, y);
+      return y;
+    }
+
+    /**
+     * @brief this function discovers the locations of nonzero entries in the global "stiffness" matrix
+     * and initializes two lookup tables (LUT):
+     * element_nonzero_LUT(e, i, j) says where (in the global stiffness matrix) to put
+     *    the ith row and jth column entry of the e^th element stiffness matrix
+     * boundary_element_nonzero_LUT(e, i, j) says where (in the global stiffness matrix) to put
+     *    the ith row and jth column entry of the e^th boundary element stiffness matrix
+     */
+    void initialize_sparsity_pattern()
+    {
+      mfem::Array<int> test_dofs;
+      mfem::Array<int> trial_dofs;
+
+      int test_vdim  = form_.test_space_->GetVDim();
+      int trial_vdim = form_.trial_space_->GetVDim();
+
+      form_.test_space_->GetElementDofs(0, test_dofs);
+      form_.trial_space_->GetElementDofs(0, trial_dofs);
+      int num_elements           = form_.test_space_->GetNE();
+      int dofs_per_test_element  = test_dofs.Size();
+      int dofs_per_trial_element = trial_dofs.Size();
+      int entries_per_element    = dofs_per_test_element * dofs_per_trial_element;
+
+      form_.test_space_->GetBdrElementDofs(0, test_dofs);
+      form_.trial_space_->GetBdrElementDofs(0, trial_dofs);
+      int num_boundary_elements           = form_.test_space_->GetNBE();
+      int dofs_per_test_boundary_element  = test_dofs.Size();
+      int dofs_per_trial_boundary_element = trial_dofs.Size();
+      int entries_per_boundary_element =
+          dofs_per_test_boundary_element * test_vdim * dofs_per_trial_boundary_element * trial_vdim;
+
+      size_t num_infos[2] = {
+          (form_.domain_integrals_.size() > 0) * entries_per_element * num_elements,
+          (form_.boundary_integrals_.size() > 0) * entries_per_boundary_element * num_boundary_elements};
+
+      // Each active element and boundary element describes which nonzero entries
+      // its element stiffness matrix will touch. Then we reduce that list down
+      // to the unique nonzeros and use that inform_ation to fill out the CSR graph.
+      std::vector<detail::ElemInfo> infos;
+      infos.reserve(num_infos[0] + num_infos[1]);
+
+      if (form_.domain_integrals_.size() > 0) {
+        bool on_boundary = false;
+
+        for (int e = 0; e < num_elements; e++) {
+          form_.test_space_->GetElementDofs(e, test_dofs);
+          form_.trial_space_->GetElementDofs(e, trial_dofs);
+
+          const mfem::Array<int>& test_native_to_lexicographic =
+              dynamic_cast<const mfem::TensorBasisElement*>(form_.test_space_->GetFE(e))->GetDofMap();
+          const mfem::Array<int>& trial_native_to_lexicographic =
+              dynamic_cast<const mfem::TensorBasisElement*>(form_.trial_space_->GetFE(e))->GetDofMap();
+          detail::apply_permutation(test_native_to_lexicographic, test_dofs);
+          detail::apply_permutation(trial_native_to_lexicographic, trial_dofs);
+
+          for (int i = 0; i < dofs_per_test_element; i++) {
+            for (int j = 0; j < dofs_per_trial_element; j++) {
+              for (int k = 0; k < test_vdim; k++) {
+                int test_vdof = form_.test_space_->DofToVDof(detail::get_index(test_dofs[i]), k);
+                for (int l = 0; l < trial_vdim; l++) {
+                  int trial_vdof = form_.trial_space_->DofToVDof(detail::get_index(trial_dofs[j]), l);
+                  infos.push_back({test_vdof, trial_vdof, i + dofs_per_test_element * k, j + dofs_per_trial_element * l,
+                                   e, detail::get_sign(test_dofs[i]) * detail::get_sign(trial_dofs[j]), on_boundary});
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // mfem doesn't implement GetDofMap for some of its Nedelec elements (??),
+      // so we have to temporarily disable boundary terms for Hcurl until they do
+      if (form_.boundary_integrals_.size() > 0) {
+        bool on_boundary = true;
+
+        for (int b = 0; b < num_boundary_elements; b++) {
+          form_.test_space_->GetBdrElementDofs(b, test_dofs);
+          form_.trial_space_->GetBdrElementDofs(b, trial_dofs);
+
+          if constexpr (test::family != Family::HCURL) {
+            const mfem::Array<int>& test_native_to_lexicographic =
+                dynamic_cast<const mfem::TensorBasisElement*>(form_.test_space_->GetBE(b))->GetDofMap();
+            detail::apply_permutation(test_native_to_lexicographic, test_dofs);
+          }
+
+          if constexpr (trial::family != Family::HCURL) {
+            const mfem::Array<int>& trial_native_to_lexicographic =
+                dynamic_cast<const mfem::TensorBasisElement*>(form_.trial_space_->GetBE(b))->GetDofMap();
+            detail::apply_permutation(trial_native_to_lexicographic, trial_dofs);
+          }
+
+          for (int i = 0; i < dofs_per_test_boundary_element; i++) {
+            for (int j = 0; j < dofs_per_trial_boundary_element; j++) {
+              for (int k = 0; k < test_vdim; k++) {
+                int test_vdof = form_.test_space_->DofToVDof(detail::get_index(test_dofs[i]), k);
+                for (int l = 0; l < trial_vdim; l++) {
+                  int trial_vdof = form_.trial_space_->DofToVDof(detail::get_index(trial_dofs[j]), l);
+                  infos.push_back({test_vdof, trial_vdof, i + dofs_per_test_boundary_element * k,
+                                   j + dofs_per_trial_boundary_element * l, b,
+                                   detail::get_sign(test_dofs[i]) * detail::get_sign(trial_dofs[j]), on_boundary});
+                }
+              }
+            }
+          }
+        }
+      }
+
+      std::sort(infos.begin(), infos.end());
+
+      int nrows = form_.test_space_->GetNDofs() * form_.test_space_->GetVDim();
+      row_ptr_.resize(nrows + 1);
+      std::vector<detail::SignedIndex> nonzero_ids(infos.size());
+
+      int nnz     = 0;
+      row_ptr_[0] = 0;
+      col_ind_.push_back(infos[0].global_col);
+      nonzero_ids[0] = {0, infos[0].sign};
+
+      // after sorting the infos array, we scan through it to identify all
+      // of the unique (i,j) pairs, so we can create the appropriate CSR graph
+      for (size_t i = 1; i < infos.size(); i++) {
+        // increment the nonzero count every time we find a new (i,j) pair
+        nnz += (infos[i - 1] != infos[i]);
+
+        nonzero_ids[i] = {nnz, infos[i].sign};
+
+        // also note which column is associated with this new (i,j) pair
+        if (infos[i - 1] != infos[i]) {
+          col_ind_.push_back(infos[i].global_col);
+        }
+
+        // if the (i,j) pair is on a different row, then make sure to
+        // set values in row_ptr_ such that the nonzero entries associated
+        // with row r will be in the range [row_ptr_[r], row_ptr_[r+1])
+        //
+        // Note: this is a loop rather than single assignment to handle
+        // the case where there are rows with no nonzero entries.
+        for (int j = infos[i - 1].global_row; j < infos[i].global_row; j++) {
+          row_ptr_[j + 1] = nonzero_ids[i];
+        }
+      }
+
+      ++nnz;
+      for (int j = infos.back().global_row; j < nrows; j++) {
+        row_ptr_[j + 1] = nnz;
+      }
+
+      element_nonzero_LUT_ = Array3D<detail::SignedIndex>(num_elements, dofs_per_test_element * test_vdim,
+                                                          dofs_per_trial_element * trial_vdim);
+      boundary_element_nonzero_LUT_ =
+          Array3D<detail::SignedIndex>(num_boundary_elements, dofs_per_test_boundary_element * test_vdim,
+                                       dofs_per_trial_boundary_element * trial_vdim);
+
+      // finally, fill in the lookup tables with the appropriate indices that correspond to
+      // where to put each element's stiffness matrix contributions
+      for (size_t i = 0; i < infos.size(); i++) {
+        auto [_1, _2, local_row, local_col, element_id, _3, on_boundary] = infos[i];
+        if (on_boundary) {
+          boundary_element_nonzero_LUT_(element_id, local_row, local_col) = nonzero_ids[i];
+        } else {
+          element_nonzero_LUT_(element_id, local_row, local_col) = nonzero_ids[i];
+        }
+      }
+
+      sparsity_pattern_initialized_ = true;
+    }
+
+    /**
+     * @brief implicit conversion to mfem::SparseMatrix type
+     *
+     * @note the first invokation of this function will be more expensive,
+     * as it creates the CSR graph once, and then caches it for creating subsequent
+     * sparse matrices.
+     */
+    operator mfem::SparseMatrix()
+    {
+      if (!sparsity_pattern_initialized_) {
+        initialize_sparsity_pattern();
+      }
+
+      // the CSR graph (sparsity pattern) is reusable, so we cache
+      // that and ask mfem to not free that memory in ~SparseMatrix()
+      constexpr bool sparse_matrix_frees_graph_ptrs = false;
+
+      // the CSR values are NOT reusable, so we pass ownership of
+      // them to the mfem::SparseMatrix, to be freed in ~SparseMatrix()
+      constexpr bool sparse_matrix_frees_values_ptr = true;
+
+      constexpr bool col_ind_is_sorted = true;
+
+      size_t  nnz    = row_ptr_.back();
+      double* values = new double[nnz]{};
+
+      // each element uses the lookup tables to add its contributions
+      // to their appropriate locations in the global sparse matrix
+      if (form_.domain_integrals_.size() > 0) {
+        int num_elements           = form_.test_space_->GetNE();
+        int test_vdim              = form_.test_space_->GetVDim();
+        int trial_vdim             = form_.trial_space_->GetVDim();
+        int dofs_per_test_element  = form_.test_space_->GetFE(0)->GetDof();
+        int dofs_per_trial_element = form_.trial_space_->GetFE(0)->GetDof();
+
+        mfem::Vector element_matrices = form_.ComputeElementGradients();
+        auto         K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element * test_vdim,
+                                    dofs_per_trial_element * trial_vdim, num_elements);
+        for (int e = 0; e < num_elements; e++) {
+          for (int i = 0; i < dofs_per_test_element * test_vdim; i++) {
+            for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
+              auto [index, sign] = element_nonzero_LUT_(e, i, j);
+              values[index] += sign * K_elem(i, j, e);
+            }
+          }
+        }
+      }
+
+      // each boundary element uses the lookup tables to add its contributions
+      // to their appropriate locations in the global sparse matrix
+      if (form_.boundary_integrals_.size() > 0) {
+        int num_boundary_elements           = form_.test_space_->GetNBE();
+        int test_vdim                       = form_.test_space_->GetVDim();
+        int trial_vdim                      = form_.trial_space_->GetVDim();
+        int dofs_per_test_boundary_element  = form_.test_space_->GetBE(0)->GetDof();
+        int dofs_per_trial_boundary_element = form_.trial_space_->GetBE(0)->GetDof();
+
+        mfem::Vector boundary_element_matrices = form_.ComputeBoundaryElementGradients();
+        auto         K_elem =
+            mfem::Reshape(boundary_element_matrices.HostReadWrite(), dofs_per_test_boundary_element * test_vdim,
+                          dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
+        for (int e = 0; e < num_boundary_elements; e++) {
+          for (int i = 0; i < dofs_per_test_boundary_element * test_vdim; i++) {
+            for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
+              auto [index, sign] = boundary_element_nonzero_LUT_(e, i, j);
+              values[index] += sign * K_elem(i, j, e);
+            }
+          }
+        }
+      }
+
+      return mfem::SparseMatrix(row_ptr_.data(), col_ind_.data(), values, Height(), Width(),
+                                sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
+    }
 
   private:
+    /// @brief The "parent" @p Functional to calculate gradients with
+    Functional<test(trial), exec>& form_;
+
+    /// @brief stores offsets into col_ind and values arrays corresponding to a given row
+    std::vector<int> row_ptr_;
+
+    /// @brief contains the column index of a given entry in the sparse matrix
+    std::vector<int> col_ind_;
+
+    /// @brief lookup table of where to put the element gradient contributions in the CSR matrix
+    Array3D<detail::SignedIndex> element_nonzero_LUT_;
+
+    /// @brief lookup table of where to put the boundary element gradient contributions in the CSR matrix
+    Array3D<detail::SignedIndex> boundary_element_nonzero_LUT_;
+
     /**
-     * @brief The "parent" @p Functional to calculate gradients with
+     * @brief whether or not the sparse matrix graph has been determined
+     *
+     * note: this is not done automatically, since a user might only require
+     * the action of the gradient (which does not need this sparsity pattern),
+     * so the sparsity pattern is only initialized the first time the sparse
+     * matrix is formed, and then cached. This assumes the sparsity pattern does
+     * not change dynamically.
      */
-    Functional<test(trial), execution_policy>& form;
+    bool sparsity_pattern_initialized_;
   };
 
   /**
@@ -542,12 +917,12 @@ private:
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<DomainIntegral<test(trial), execution_policy> > domain_integrals_;
+  std::vector<DomainIntegral<test(trial), exec>> domain_integrals_;
 
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<BoundaryIntegral<test(trial)> > boundary_integrals_;
+  std::vector<BoundaryIntegral<test(trial)>> boundary_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
@@ -565,12 +940,31 @@ private:
   mutable mfem::Vector K_e_;
 
   /**
+   * @brief storage buffer for boundary element stiffness matrices, used in ComputeBoundaryElementMatrices() and
+   * UpdateAssembledSparseMatrix()
+   */
+  mutable mfem::Vector K_b_;
+
+  /**
    * @brief Local internal AssembledSparseMatrix storage for ComputeElementMatrices
    *
    * If unique_ptr is empty, construct AssembledSparseMatrix.
-   *
    */
   std::unique_ptr<serac::mfem_ext::AssembledSparseMatrix> assembled_spmat_;
+
+  template <typename T>
+  friend typename Functional<T>::Gradient& grad(Functional<T>&);
 };
+
+/**
+ * @brief free function for accessing the gradient member of a Functional object
+ *   intended to mimic the mathematical notation
+ * @param[in] f the Functional whose gradient is returned
+ */
+template <typename T>
+typename Functional<T>::Gradient& grad(Functional<T>& f)
+{
+  return f.grad_;
+}
 
 }  // namespace serac

@@ -52,6 +52,22 @@ protected:
   std::unique_ptr<Functional<test_space(trial_space)>> residual;
 };
 
+struct StateWithDefault {
+  double x = 0.5;
+};
+
+bool operator==(const StateWithDefault& lhs, const StateWithDefault& rhs) { return lhs.x == rhs.x; }
+
+struct StateWithMultiFields {
+  double x = 0.5;
+  double y = 0.3;
+};
+
+bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs)
+{
+  return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
 TEST_F(QuadratureDataTest, basic_integrals)
 {
   QuadratureData<State> qdata(*mesh, p);
@@ -78,12 +94,6 @@ TEST_F(QuadratureDataTest, basic_integrals)
       Dimension<dim>{}, [&](auto /* x */, auto u) { return u; }, *mesh);
 }
 
-struct StateWithDefault {
-  double x = 0.5;
-};
-
-bool operator==(const StateWithDefault& lhs, const StateWithDefault& rhs) { return lhs.x == rhs.x; }
-
 TEST_F(QuadratureDataTest, basic_integrals_default)
 {
   QuadratureData<StateWithDefault> qdata(*mesh, p);
@@ -103,16 +113,6 @@ TEST_F(QuadratureDataTest, basic_integrals_default)
   for (auto& s : const_qdata) {
     EXPECT_EQ(s, correct);
   }
-}
-
-struct StateWithMultiFields {
-  double x = 0.5;
-  double y = 0.3;
-};
-
-bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs)
-{
-  return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
 TEST_F(QuadratureDataTest, basic_integrals_multi_fields)

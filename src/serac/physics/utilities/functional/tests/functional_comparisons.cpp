@@ -37,7 +37,7 @@ static constexpr double b = 2.1;
 template <int dim>
 struct hcurl_qfunction {
   template <typename x_t, typename vector_potential_t>
-  SERAC_HOST_DEVICE auto operator()(x_t x, vector_potential_t vector_potential)
+  SERAC_HOST_DEVICE auto operator()(x_t x, vector_potential_t vector_potential) const
   {
     auto [A, curl_A] = vector_potential;
     auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
@@ -132,7 +132,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   }
 
   // Test that the two residuals are equivalent
-  EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
+  EXPECT_NEAR(0.0, mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
   // Compute the gradient using functional
   mfem::Operator& grad2 = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
@@ -140,7 +140,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Test fully assembled matrix
   mfem::Array<int> dofs;
   fespace.GetElementDofs(0, dofs);
-  mfem::Vector K_e = residual.ComputeElementMatrices();
+  mfem::Vector K_e = residual.ComputeElementGradients();
 
   serac::mfem_ext::AssembledSparseMatrix A_serac_mat(fespace, fespace, mfem::ElementDofOrdering::LEXICOGRAPHIC);
   {
@@ -161,7 +161,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
-    std::cout << "||g3||: " << g2.Norml2() << std::endl;
+    std::cout << "||g3||: " << g3.Norml2() << std::endl;
     std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
     std::cout << "||g1-g3||/||g1||: " << mfem::Vector(g1 - g3).Norml2() / g1.Norml2() << std::endl;
   }
@@ -267,6 +267,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
     std::cout << "||g2||: " << g2.Norml2() << std::endl;
+    std::cout << "||g3||: " << g3.Norml2() << std::endl;
     std::cout << "||g1-g2||/||g1||: " << mfem::Vector(g1 - g2).Norml2() / g1.Norml2() << std::endl;
     std::cout << "||g1-g3||/||g1||: " << mfem::Vector(g1 - g3).Norml2() / g1.Norml2() << std::endl;
   }
