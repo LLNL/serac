@@ -37,11 +37,11 @@
  */
 #define SERAC_HOST_DEVICE
 /**
- * @brief Macro that evaluates to __host__ when compiling with nvcc and does nothing on a host compiler
+ * @brief Macro that evaluates to `__host__` when compiling with nvcc and does nothing on a host compiler
  */
 #define SERAC_HOST
 /**
- * @brief Macro that evaluates to __device__ when compiling with nvcc and does nothing on a host compiler
+ * @brief Macro that evaluates to `__device__` when compiling with nvcc and does nothing on a host compiler
  */
 #define SERAC_DEVICE
 /**
