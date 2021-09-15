@@ -231,34 +231,59 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
 
-      auto& q00 = serac::get<0>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field value
-      auto& q01 = serac::get<1>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field derivative
-      auto& q10 = serac::get<0>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field value
-      auto& q11 = serac::get<1>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field derivative
+      if constexpr (std::is_same< test, QOI >::value) {
+        auto & q0 = serac::get<0>(dq_darg); // derivative of QoI w.r.t. field value
+        auto & q1 = serac::get<1>(dq_darg); // derivative of QoI w.r.t. field derivative
 
-      auto M = evaluate_shape_functions<test_element>(xi_q, J_q);
-      auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);
+        auto N = evaluate_shape_functions< trial_element >(xi_q, J_q);
 
-      // clang-format off
-      for (int i = 0; i < test_ndof; i++) {
         for (int j = 0; j < trial_ndof; j++) {
-          K_elem[i][j] += (
-            M[i].value      * q00 * N[j].value +
-            M[i].value      * q01 * N[j].derivative + 
-            M[i].derivative * q10 * N[j].value +
-            M[i].derivative * q11 * N[j].derivative
-          ) * dx;
+          K_elem[0][j] += (q0 * N[j].value + q1 * N[j].derivative) * dx;
         } 
-      }
-      // clang-format on
+      } 
+
+      if constexpr (!std::is_same< test, QOI >::value) {
+        auto & q00 = serac::get<0>(serac::get<0>(dq_darg)); // derivative of source term w.r.t. field value
+        auto & q01 = serac::get<1>(serac::get<0>(dq_darg)); // derivative of source term w.r.t. field derivative
+        auto & q10 = serac::get<0>(serac::get<1>(dq_darg)); // derivative of   flux term w.r.t. field value
+        auto & q11 = serac::get<1>(serac::get<1>(dq_darg)); // derivative of   flux term w.r.t. field derivative
+
+        auto M = evaluate_shape_functions< test_element >(xi_q, J_q);
+        auto N = evaluate_shape_functions< trial_element >(xi_q, J_q);
+
+        // clang-format off
+        for (int i = 0; i < test_ndof; i++) {
+          for (int j = 0; j < trial_ndof; j++) {
+            K_elem[i][j] += (
+              M[i].value      * q00 * N[j].value +
+              M[i].value      * q01 * N[j].derivative + 
+              M[i].derivative * q10 * N[j].value +
+              M[i].derivative * q11 * N[j].derivative
+            ) * dx;
+          } 
+        } 
+        // clang-format on
+      } 
+
     }
 
-    // Note: we "transpose" these values to get them into the layout that mfem expects
+    // once we've finished the element integration loop, write our element gradients
+    // out to memory, to be later assembled into the global gradient by mfem
     // clang-format off
-    for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
-      dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
-    });
+    if constexpr (std::is_same< test, QOI >::value) {
+      for_loop<trial_ndof, trial_dim>([&](int k, int l) {
+        dk(0, k + trial_ndof * l, e) += K_elem[0][k][0][l];
+      });
+    } 
+
+    if constexpr (!std::is_same< test, QOI >::value) {
+      // Note: we "transpose" these values to get them into the layout that mfem expects
+      for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
+        dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
+      });
+    }
     // clang-format on
+
   }
 }
 

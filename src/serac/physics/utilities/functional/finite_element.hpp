@@ -233,4 +233,6 @@ using trial_space_t = typename get_trial_space<spaces>::type;
 #include "detail/hexahedron_Hcurl.inl"
 #include "detail/hexahedron_L2.inl"
 
+#include "detail/qoi.inl"
+
 }  // namespace serac

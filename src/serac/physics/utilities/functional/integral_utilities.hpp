@@ -107,6 +107,15 @@ SERAC_HOST_DEVICE auto Load(const T& u, int e)
 };
 
 /**
+ * @overload
+ * @note Used for quantities of interest 
+ */
+void Add(const mfem::DeviceTensor<2, double>& r_global, double r_local, int e)
+{
+  r_global(0, e) += r_local;
+}
+
+/**
  * @brief Adds the contributions of the local residual to the global residual
  * @param[inout] r_global The full element-decomposed residual
  * @param[in] r_local The contributions to a residual from a single element
@@ -397,6 +406,8 @@ template <typename element_type, typename T, int dim>
 SERAC_HOST_DEVICE auto Postprocess(const T& f, const tensor<double, dim>& xi, const tensor<double, dim, dim>& J)
 {
   // TODO: Helpful static_assert about f being tuple or tuple-like for H1, hcurl, hdiv
+  if constexpr (element_type::family == Family::QOI) { return f; }
+
   if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
     auto W     = element_type::shape_functions(xi);
     auto dW_dx = dot(element_type::shape_function_gradients(xi), inv(J));
