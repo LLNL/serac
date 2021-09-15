@@ -93,9 +93,7 @@ def main():
     print("Ignored Count: {0}".format(ignored_count))
 
     # Error out if any found
-    # TODO: use this return statement in follow up PR that fixes warnings/errors
-    # return len(warnings) + len(errors)
-    return 0
+    return len(warnings) + len(errors)
 
 if __name__ == "__main__":
     sys.exit(main())

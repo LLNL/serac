@@ -33,11 +33,20 @@
 #include <cuda_runtime.h>
 #else  //__CUDACC__
 /**
- * @brief Macro that toggles between decorating a function for host and device or noop's for non-accelated builds.
+ * @brief Macro that evaluates to `__host__ __device__` when compiling with nvcc and does nothing on a host compiler.
  */
 #define SERAC_HOST_DEVICE
+/**
+ * @brief Macro that evaluates to `__host__` when compiling with nvcc and does nothing on a host compiler
+ */
 #define SERAC_HOST
+/**
+ * @brief Macro that evaluates to `__device__` when compiling with nvcc and does nothing on a host compiler
+ */
 #define SERAC_DEVICE
+/**
+ * @brief Macro to turn off specific nvcc warnings
+ */
 #define SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 #endif
 
@@ -60,8 +69,14 @@ enum class ExecutionSpace
   GPU
 };
 
+/**
+ * @brief The default execution space for serac builds
+ */
 constexpr ExecutionSpace default_execution_space = ExecutionSpace::CPU;
 
+/**
+ * @brief Namespace for methods involving accelerator-enabled builds
+ */
 namespace accelerator {
 
 /**

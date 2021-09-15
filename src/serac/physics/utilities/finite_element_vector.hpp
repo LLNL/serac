@@ -191,14 +191,21 @@ protected:
    * in a restart run
    */
   detail::MaybeOwningPointer<mfem::ParGridFunction> gf_;
-  mfem::HypreParVector                              true_vec_;
-  std::string                                       name_ = "";
+  /**
+   * @brief The hypre vector containing the true degrees of freedom
+   * @note Each entry in this vector is owned by exactly one MPI rank
+   */
+  mfem::HypreParVector true_vec_;
+  /**
+   * @brief The name of the finite element vector
+   */
+  std::string name_ = "";
 };
 
 /**
  * @brief Find the average value of a finite element vector across all dofs
  *
- * @param state The state variable to compute the average of
+ * @param fe_vector The state variable to compute the average of
  * @return The average value
  * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
  * implies these may or may not be nodal averages depending on the choice of finite element basis.
@@ -208,7 +215,7 @@ double avg(const FiniteElementVector& fe_vector);
 /**
  * @brief Find the max value of a finite element vector across all dofs
  *
- * @param state The state variable to compute a max of
+ * @param fe_vector The state variable to compute a max of
  * @return The max value
  * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
  * implies these may or may not be nodal averages depending on the choice of finite element basis.
@@ -218,7 +225,7 @@ double max(const FiniteElementVector& fe_vector);
 /**
  * @brief Find the min value of a finite element vector across all dofs
  *
- * @param state The state variable to compute a min of
+ * @param fe_vector The state variable to compute a min of
  * @return The min value
  * @note This acts on the actual scalar degree of freedom values, not the interpolated shape function values. This
  * implies these may or may not be nodal averages depending on the choice of finite element basis.

@@ -1,3 +1,3 @@
 # latex error that is specific to the docker image
 Error: \/undefined in getenv 
-
+Package newunicodechar Warning: Redefining Unicode character on input line
