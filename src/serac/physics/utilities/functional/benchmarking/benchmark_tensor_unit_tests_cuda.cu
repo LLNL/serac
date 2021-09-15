@@ -37,34 +37,13 @@ __global__ void set_SoA(int N, std::tuple<TupleATypes...> args)
 }
 
 template <typename... TupleATypes>
-void run_SoA_copy_benchmark(int N, dim3 grid, dim3 threadblock, TupleATypes... values)
+__global__ void benchmark_SoA_throughput(int N, std::tuple<TupleATypes...> copyTuples)
 {
-  std::tuple<thrust::device_vector<TupleATypes>...> device_vectors;
-
-  std::apply([&](auto&&... device_vector) { (device_vector.resize(N), ...); }, device_vectors);
-
-  auto vals = std::make_tuple(values...);
-
-  // allocate tuples
-  auto T = std::apply(
-      [&](auto&... val) {
-        return std::apply(
-            [&](auto&... vector) {
-              ((std::cout << val << " " << vector.data() << std::endl), ...);
-              return std::make_tuple(std::make_tuple(val, thrust::raw_pointer_cast(vector.data()))...);
-            },
-            device_vectors);
-      },
-      vals);
-
-  // run set_SoA benchmark
-  set_SoA<<<grid, threadblock>>>(N, T);
-
-  // // set tensors and copy to output
-  // benchmark_tensor_throughput<<<grid, threadblock>>>(N, d_input, d_output);
-
-  // wait for it to finish
-  cudaDeviceSynchronize();
+  int id          = blockIdx.x * blockDim.x + threadIdx.x;
+  int grid_stride = blockDim.x * gridDim.x;
+  for (int i = id; i < N; i += grid_stride) {
+    std::apply([&](auto&... pair) { ((std::get<0>(pair)[i] = std::get<1>(pair)[i]), ...); }, copyTuples);
+  }
 }
 
 template <typename TensorType>
@@ -75,6 +54,51 @@ __global__ void benchmark_tensor_throughput(int N, TensorType* input, TensorType
   for (int i = id; i < N; i += grid_stride) {
     output[i] = input[i];
   }
+}
+
+
+template <typename... TupleATypes>
+void run_SoA_copy_benchmark(int N, dim3 grid, dim3 threadblock, TupleATypes... values)
+{
+  std::tuple<thrust::device_vector<TupleATypes>...> device_vectors;
+  std::tuple<thrust::device_vector<TupleATypes>...> output_device_vectors;
+
+  std::apply([&](auto&&... device_vector) { (device_vector.resize(N), ...); }, device_vectors);
+  std::apply([&](auto&&... output_device_vector) { (output_device_vector.resize(N), ...); }, output_device_vectors);
+
+  auto vals = std::make_tuple(values...);
+
+  // allocate tuples
+  auto setT = std::apply(
+      [&](auto&... val) {
+        return std::apply(
+            [&](auto&... vector) {
+              return std::make_tuple(std::make_tuple(val, thrust::raw_pointer_cast(vector.data()))...);
+            },
+            device_vectors);
+      },
+      vals);
+
+  // allocate tuples
+  auto copyT = std::apply(
+      [&](auto&... out_vector) {
+        return std::apply(
+            [&](auto&... vector) {
+              return std::make_tuple(std::make_tuple(thrust::raw_pointer_cast(out_vector.data()),
+                                                     thrust::raw_pointer_cast(vector.data()))...);
+            },
+            device_vectors);
+      },
+      output_device_vectors);
+
+  // run set_SoA benchmark
+  set_SoA<<<grid, threadblock>>>(N, setT);
+
+  // // set tensors and copy to output
+  benchmark_SoA_throughput<<<grid, threadblock>>>(N, copyT);
+
+  // wait for it to finish
+  cudaDeviceSynchronize();
 }
 
 template <typename TensorType>
@@ -218,6 +242,7 @@ struct tensor<T, first, rest...> {
 
 }  // namespace benchmark
 
+// A custom struct type for Structure of Arrays experiments
 struct S1 {
   int    a;
   double b;
@@ -236,7 +261,7 @@ int main()
   run_tensor_copy_benchmark(N, serac::tensor<double, 2, 2>({{{1, 2}, {2, 1}}}), grid, threadblock);
   run_tensor_copy_benchmark(N, serac::tensor<double, 3, 3>({{{1, 2, 3}, {1, 2, 3}, {1, 2, 3}}}), grid, threadblock);
 
-  // simple memory experiments on custom types
+  // simple memory experiments on custom types with alignment
   run_tensor_copy_benchmark(N, benchmark::double2({1, 2}), grid, threadblock);
   run_tensor_copy_benchmark(N, double2({1, 2}), grid, threadblock);
   run_tensor_copy_benchmark(N, benchmark::double2_16({1, 2}), grid, threadblock);
@@ -246,9 +271,19 @@ int main()
   run_tensor_copy_benchmark(N, benchmark::tensor<double, 2, 2>({{{1, 2}, {2, 1}}}), grid, threadblock);
   run_tensor_copy_benchmark(N, benchmark::tensor<double, 3, 3>({{{1, 2, 3}, {1, 2, 3}, {1, 2, 3}}}), grid, threadblock);
 
-  // SoA benchmark
+  // Structure of Arrays (SoA) benchmark
+
   S1 s1{.a = 1, .b = 1.234};
   run_SoA_copy_benchmark(N, grid, threadblock, s1.a, s1.b);
+
+  serac::tensor<double, 2> tensor2({1, 2});
+  run_SoA_copy_benchmark(N, grid, threadblock, tensor2(0), tensor2(1));
+
+  benchmark::tensor<double, 3, 3> tensor3({{{1, 2, 3}, {1, 2, 3}, {1, 2, 3}}});
+  run_SoA_copy_benchmark(N, grid, threadblock, 
+			 tensor3(1,1), tensor3(1,2), tensor3(1,3),
+			 tensor3(2,1), tensor3(2,2), tensor3(2,3),
+			 tensor3(3,1), tensor3(3,2), tensor3(3,3));
 }
 
 // ncu -f -o unit_test --details-all ./tests/benchmark_tensor_unit_tests_cuda
