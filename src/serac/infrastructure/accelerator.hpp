@@ -37,11 +37,11 @@
  */
 #define SERAC_HOST_DEVICE
 /**
- * @brief Macro that toggles between decorating a function for host or noop's for non-accelated builds.
+ * @brief Macro that evaluates to __host__ when compiling with nvcc and does nothing on a host compiler
  */
 #define SERAC_HOST
 /**
- * @brief Macro that toggles between decorating a function for device or noop's for non-accelated builds.
+ * @brief Macro that evaluates to __device__ when compiling with nvcc and does nothing on a host compiler
  */
 #define SERAC_DEVICE
 /**
