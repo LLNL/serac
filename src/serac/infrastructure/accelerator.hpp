@@ -33,7 +33,7 @@
 #include <cuda_runtime.h>
 #else  //__CUDACC__
 /**
- * @brief Macro that toggles between decorating a function for host_device or noop's for non-accelated builds.
+ * @brief Macro that evaluates to `__host__ __device__` when compiling with nvcc and does nothing on a host compiler.
  */
 #define SERAC_HOST_DEVICE
 /**
