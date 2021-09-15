@@ -87,7 +87,7 @@ inline int get_index(int i) { return (i >= 0) ? i : -1 - i; }
 struct SignedIndex {
   int index;                            ///< The index values
   int sign;                             ///< The sign of the index
-      operator int() { return index; }  ///< () operator returning the index
+      operator int() { return index; }  ///< implicit conversion to type `int`, returning index member variable
 };
 
 /**
