@@ -139,7 +139,15 @@ if(NOT SERAC_FOUND)
     # Note: Targets not currently imported
   endif()
 
-  # FIXME: We probably will need these for RAJA/Umpire at some point
+  # FIXME: We probably will need these for RAJA at some point
+  # Umpire
+  if(SERAC_USE_UMPIRE)
+    set(SERAC_UMPIRE_DIR "@UMPIRE_DIR@")
+    if(NOT UMPIRE_DIR) 
+      set(UMPIRE_DIR ${SERAC_UMPIRE_DIR}) 
+    endif()
+    find_dependency(umpire REQUIRED NO_DEFAULT_PATH PATHS "${UMPIRE_DIR}")
+  endif()
 
   # CHAI
   if(SERAC_USE_CHAI)

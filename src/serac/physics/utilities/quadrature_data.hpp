@@ -301,8 +301,8 @@ private:
   const int* offsets_ = nullptr;
 };
 
-template <typename T>
-QuadratureDataView(QuadratureData<T>&) -> QuadratureDataView<T>;
+// template <typename T>
+// QuadratureDataView(QuadratureData<T>&) -> QuadratureDataView<T>;
 
 /**
  * @brief "Dummy" specialization, intended to be used as a sentinel
