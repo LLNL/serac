@@ -160,55 +160,79 @@ class Functional;
  * my_residual.AddDomainIntegral(Dimension<3>{}, integrand, domain_of_integration);
  * @endcode
  */
-template <typename test, typename trial, ExecutionSpace exec>
-class Functional<test(trial), exec> : public mfem::Operator {
+template <typename test, typename... trials, ExecutionSpace exec>
+class Functional<test(trials...), exec> : public mfem::Operator {
 public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
    * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
-  Functional(mfem::ParFiniteElementSpace* test_fes, mfem::ParFiniteElementSpace* trial_fes)
-      : Operator(test_fes->GetTrueVSize(), trial_fes->GetTrueVSize()),
+  Functional(mfem::ParFiniteElementSpace* test_fes, mfem::ParFiniteElementSpace* trial_fes...)
+      : Operator(test_fes->GetTrueVSize(), trial_fes->GetTrueVSize() + ...),
         test_space_(test_fes),
-        trial_space_(trial_fes),
+        trial_spaces_(trial_fes...),
         P_test_(test_space_->GetProlongationMatrix()),
         G_test_(test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
-        P_trial_(trial_space_->GetProlongationMatrix()),
-        G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
+        P_trials_(trial_spaces_...->GetProlongationMatrix()),
+        G_trials_(trial_spaces_...->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
         grad_(*this)
   {
+
+    static_assert(sizeof...(trials) == sizeof...(trial_fes),
+                  "Compile and runtime finite element space lists in Functional must be the same length.");
+
     SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
-    SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
+
+    for (auto& G_trial : G_trials_) {
+      SLIC_ERROR_IF(!G_trial, "Couldn't retrieve element restriction operator for trial space");
+    }
 
     // Ensure the mesh has the appropriate neighbor information before constructing the face restriction operators
     if (test_space_) {
       test_space_->ExchangeFaceNbrData();
     }
-    if (trial_space_) {
-      trial_space_->ExchangeFaceNbrData();
+    for (auto& trial_space : trial_spaces_) {
+      if (trial_space) {
+        trial_space->ExchangeFaceNbrData();
+      }
     }
 
     // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
-    if (trial::family != Family::HCURL && test::family != Family::HCURL) {
+    if (test::family != Family::HCURL) {
       if (test_space_) {
-        G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
-                                                           mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
-      }
-      if (trial_space_) {
-        G_trial_boundary_ = trial_space_->GetFaceRestriction(
+        G_test_boundary_ = test_space_->GetFaceRestriction(
             mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
       }
-      input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
-      output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
-      output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+      output_E_boundary_vector_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
+      output_L_boundary_vector_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
     }
 
-    input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
-    input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
-    output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
-    output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
+    output_E_vector_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
+    output_L_vector_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
     my_output_T_.SetSize(Height(), mfem::Device::GetMemoryType());
+
+    // Make a tuple of the compile-time trial spaces for iteration
+    tuple<trials...> compile_trials{};
+
+    G_trial_boundaries_.reize(trial_spaces_.size());
+    input_E_boundary_vectors_.resize(trial_spaces_.size());
+    input_T_vectors_.resize(trial_spaces_.size());
+    input_L_vectors_.resize(trial_spaces_.size());
+    input_E_vectors_.resize(trial_spaces_.size());
+    for (constexpr int i = 0; i < sizeof...(trials); ++i) {
+      if (trials.get<i>::family != Family::HCURL) {
+        if (trial_spaces_[i]) {
+          G_trial_boundary_ = trial_spaces_[i]->GetFaceRestriction(
+              mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+        }
+        input_E_boundary_vectors_[i].SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
+      }
+      input_L_vectors_[i].SetSize(P_trials_[i]->Height(), mfem::Device::GetMemoryType());
+      input_E_vectors_[i].SetSize(G_trials_[i]->Height(), mfem::Device::GetMemoryType());
+      input_T_vectors_[i].SetSize(P_trials_[i]->Width(), mfem::Device::GetMemoryType());
+    }
+
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
   }
 
@@ -306,10 +330,42 @@ public:
    * @brief Implements mfem::Operator::Mult
    * @param[in] input_T The input vector
    * @param[out] output_T The output vector
+   * @note For multiple trial spaces, we are using the MFEM-standard interface of a block vector input.
+   * For single trial spaces, it is not a block vector
    */
   void Mult(const mfem::Vector& input_T, mfem::Vector& output_T) const override
   {
-    Evaluation<Operation::Mult>(input_T, output_T);
+    // If this functional has multiple trial spaces, we need to unpack the mfem block vector
+    if (trial_spaces_.size() > 1) {
+      auto* block_vector = dynamic_cast<mfem::BlockVector*>(input_T);
+      SLIC_ERROR_ROOT_IF(!block_vector,
+                         "The inherited MFEM operator mult method can only be used with block vectors when multiple "
+                         "trial spaces are involved.");
+      
+      SLIC_ERROR_ROOT_IF(block_vector->NumBlocks() != trial_spaces_.size(), fmt::format("The input block vector to Mult has {} blocks while {} trial spaces are defined in Functional.", block_vector->NumBlocks(), trial_spaces_.size()));
+
+      for (int i = 0; i < trial_spaces.size(); i++) {
+        SLIC_ERROR_IF(
+            block_vector->GetBlock(i).Size() != input_T_vectors[i].Size(),
+            fmt::format("The {} block of the input vector has size {} while the expected true dof vector has size {}.",
+                        i, block_vector->GetBlock(i).Size(), input_T_vectors_[i].Size()));
+
+        input_T_vectors_[i] = block_vector->GetBlock(i);
+      }
+
+      Evaluation<Operation::Mult>(input_T_vectors_, output_T);
+
+    } else {
+      // If there is only one trial space, we can use the plain vector input T vector 
+
+      SLIC_ERROR_IF(input_T.Size() != input_T_vectors_[0].Size(),
+                    fmt::format("The input T vector has size {} but expected size {}.", input_T.Size(),
+                                input_T_vectors_[0].Size()));
+
+      input_T_vectors[0] = block_vector->GetBlock(0);
+
+      Evaluation<Operation::Mult>(input_T_vectors_, output_T);
+    }
   }
 
   /**
@@ -328,10 +384,13 @@ public:
 
   /**
    * @brief Alias for @p Mult that uses a return value instead of an output parameter
-   * @param[in] input_T The input vector
+   * @param[in] input_T The input trial space T vectors
    */
-  mfem::Vector& operator()(const mfem::Vector& input_T) const
+  mfem::Vector& operator()(const mfem::Vector& input_Ts...) const
   {
+    static_assert(sizeof...(input_Ts) == sizeof...(trials),
+                  "Functional residual evaluation must have the same number of input vectors as trial spaces");
+
     Evaluation<Operation::Mult>(input_T, my_output_T_);
     return my_output_T_;
   }
@@ -754,53 +813,53 @@ private:
   void Evaluation(const mfem::Vector& input_T, mfem::Vector& output_T) const
   {
     // get the values for each local processor
-    P_trial_->Mult(input_T, input_L_);
+    P_trial_->Mult(input_T, input_L_vectors_);
 
-    output_L_ = 0.0;
+    output_L_vector_ = 0.0;
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
-      G_trial_->Mult(input_L_, input_E_);
+      G_trial_->Mult(input_L_vectors_, input_E_vectors_);
 
       // compute residual contributions at the element level and sum them
-      output_E_ = 0.0;
+      output_E_vector_ = 0.0;
       for (auto& integral : domain_integrals_) {
         if constexpr (op == Operation::Mult) {
-          integral.Mult(input_E_, output_E_);
+          integral.Mult(input_E_vectors_, output_E_vector_);
         }
 
         if constexpr (op == Operation::GradientMult) {
-          integral.GradientMult(input_E_, output_E_);
+          integral.GradientMult(input_E_vectors_, output_E_vector_);
         }
       }
 
       // scatter-add to compute residuals on the local processor
-      G_test_->MultTranspose(output_E_, output_L_);
+      G_test_->MultTranspose(output_E_vector_, output_L_vector_);
     }
 
     if (boundary_integrals_.size() > 0) {
-      G_trial_boundary_->Mult(input_L_, input_E_boundary_);
+      G_trial_boundary_->Mult(input_L_vectors_, input_E_vectors_boundary_);
 
-      output_E_boundary_ = 0.0;
+      output_E_boundary_vector_ = 0.0;
       for (auto& integral : boundary_integrals_) {
         if constexpr (op == Operation::Mult) {
-          integral.Mult(input_E_boundary_, output_E_boundary_);
+          integral.Mult(input_E_vectors_boundary_, output_E_boundary_vector_);
         }
 
         if constexpr (op == Operation::GradientMult) {
-          integral.GradientMult(input_E_boundary_, output_E_boundary_);
+          integral.GradientMult(input_E_vectors_boundary_, output_E_boundary_vector_);
         }
       }
 
-      output_L_boundary_ = 0.0;
+      output_L_boundary_vector_ = 0.0;
 
       // scatter-add to compute residuals on the local processor
-      G_test_boundary_->MultTranspose(output_E_boundary_, output_L_boundary_);
+      G_test_boundary_->MultTranspose(output_E_boundary_vector_, output_L_boundary_vector_);
 
-      output_L_ += output_L_boundary_;
+      output_L_vector_ += output_L_boundary_vector_;
     }
 
     // scatter-add to compute global residuals
-    P_test_->MultTranspose(output_L_, output_T);
+    P_test_->MultTranspose(output_L_vector_, output_T);
 
     output_T.HostReadWrite();
     for (int i = 0; i < ess_tdof_list_.Size(); i++) {
@@ -815,39 +874,44 @@ private:
   }
 
   /**
+   * @brief The input set of true DOF values
+   */
+  mutable std::vector<mfem::Vector> input_T_vectors_;
+
+  /**
    * @brief The input set of local DOF values (i.e., on the current rank)
    */
-  mutable mfem::Vector input_L_;
+  mutable std::vector<mfem::Vector> input_L_vectors_;
 
   /**
    * @brief The output set of local DOF values (i.e., on the current rank)
    */
-  mutable mfem::Vector output_L_;
+  mutable mfem::Vector output_L_vector_;
 
   /**
    * @brief The input set of per-element DOF values
    */
-  mutable mfem::Vector input_E_;
+  mutable std::vector<mfem::Vector> input_E_vectors_;
 
   /**
    * @brief The output set of per-element DOF values
    */
-  mutable mfem::Vector output_E_;
+  mutable mfem::Vector output_E_vector_;
 
   /**
    * @brief The input set of per-boundaryelement DOF values
    */
-  mutable mfem::Vector input_E_boundary_;
+  mutable std::vector<mfem::Vector> input_E_boundary_vectors_;
 
   /**
    * @brief The output set of per-boundary-element DOF values
    */
-  mutable mfem::Vector output_E_boundary_;
+  mutable mfem::Vector output_E_boundary_vector_;
 
   /**
    * @brief The output set of local DOF values (i.e., on the current rank) from boundary elements
    */
-  mutable mfem::Vector output_L_boundary_;
+  mutable mfem::Vector output_L_boundary_vector_;
 
   /**
    * @brief The set of true DOF values, used as a scratchpad for @p operator()
@@ -867,7 +931,7 @@ private:
   /**
    * @brief Manages DOFs for the trial space
    */
-  mfem::ParFiniteElementSpace* trial_space_;
+  std::vector<mfem::ParFiniteElementSpace*> trial_spaces_;
 
   /**
    * @brief The set of true DOF indices to which an essential BC should be applied
@@ -890,13 +954,13 @@ private:
    * @brief Operator that converts true (global) DOF values to local (current rank) DOF values
    * for the trial space
    */
-  const mfem::Operator* P_trial_;
+  const std::vector<mfem::Operator*> P_trials_;
 
   /**
    * @brief Operator that converts local (current rank) DOF values to per-element DOF values
    * for the trial space
    */
-  const mfem::Operator* G_trial_;
+  const std::vector<mfem::Operator*> G_trials_;
 
   /**
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
@@ -908,17 +972,17 @@ private:
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
    * for the trial space
    */
-  const mfem::Operator* G_trial_boundary_;
+  const std::vector<mfem::Operator*> G_trial_boundaries_;
 
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<DomainIntegral<test(trial), exec>> domain_integrals_;
+  std::vector<DomainIntegral<test(trials...), exec>> domain_integrals_;
 
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<BoundaryIntegral<test(trial)>> boundary_integrals_;
+  std::vector<BoundaryIntegral<test(trials...)>> boundary_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
