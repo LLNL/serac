@@ -15,11 +15,77 @@
 
 #include "serac/numerics/mesh_utils_base.hpp"
 
+#include "serac/infrastructure/input.hpp"
+
 /**
  * The Serac namespace
  */
 namespace serac {
 namespace mesh {
+
+/**
+ * @brief Input options for meshes read from files
+ *
+ */
+struct FileInputOptions {
+  /**
+   * @brief Input file parameters specific to this class
+   *
+   * @param[in] container Inlet container on which the input schema will be defined
+   **/
+  static void defineInputFileSchema(axom::inlet::Container& container);
+
+  /**
+   * @brief The relative path for the mesh file
+   */
+  std::string relative_mesh_file_name;
+
+  /**
+   * @brief The absolute path for the mesh file, intended to be populated by the user directly
+   */
+  mutable std::string absolute_mesh_file_name{};
+};
+
+/**
+ * @brief Input options for generated meshes
+ *
+ */
+struct BoxInputOptions {
+  /**
+   * @brief Input file parameters for mesh generation
+   *
+   * @param[in] container Inlet container on which the input schema will be defined
+   **/
+  static void defineInputFileSchema(axom::inlet::Container& container);
+
+  /**
+   * @brief The number of elements in each direction
+   *
+   */
+  std::vector<int> elements;
+
+  /**
+   * @brief The physical size in each direction
+   *
+   */
+  std::vector<double> overall_size;
+};
+
+/**
+ * @brief Input options for generated meshes
+ *
+ */
+struct NBallInputOptions {
+  /**
+   * @brief The approximate total number of desired elements
+   */
+  int approx_elements;
+
+  /**
+   * @brief The space dimension of the n-ball
+   */
+  int dimension;
+};
 
 /**
  * @brief Container for the mesh input options
@@ -50,7 +116,6 @@ struct InputOptions {
    */
   int par_ref_levels;
 };
-
 /**
  * @brief Constructs an MFEM parallel mesh from a set of input options
  *

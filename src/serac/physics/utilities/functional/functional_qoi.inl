@@ -46,8 +46,8 @@ struct QoIElementRestriction : public mfem::Operator {
  */
 template <typename trial, ExecutionSpace exec>
 class Functional<double(trial), exec> : public mfem::Operator {
-
   using test = QOI;
+
 public:
   /**
    * @brief Constructs using a @p mfem::ParFiniteElementSpace object corresponding to the trial space
@@ -218,7 +218,7 @@ public:
    * @returns A mfem::Vector containing the element stiffness matrix entries (flattened from a 3D array
    * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
    */
-  mfem::Vector ComputeElementMatrices()
+  mfem::Vector ComputeElementGradients()
   {
     // Resize K_e_ if this is the first time
     if (K_e_.Size() == 0) {
@@ -228,7 +228,7 @@ public:
     // zero out internal vector
     K_e_ = 0.;
     // loop through integrals and accumulate
-    for (auto& domain : domain_integrals_) domain.ComputeElementMatrices(K_e_);
+    for (auto& domain : domain_integrals_) domain.ComputeElementGradients(K_e_);
 
     return K_e_;
   }
@@ -238,7 +238,7 @@ public:
    * @returns A mfem::Vector containing the boundary element matrix entries (flattened from a 3D array
    * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
    */
-  mfem::Vector ComputeBoundaryElementMatrices()
+  mfem::Vector ComputeBoundaryElementGradients()
   {
     // Resize K_b_ if this is the first time
     if (K_b_.Size() == 0) {
@@ -249,7 +249,7 @@ public:
     // zero out internal vector
     K_b_ = 0.;
     // loop through integrals and accumulate
-    for (auto& boundary : boundary_integrals_) boundary.ComputeElementMatrices(K_b_);
+    for (auto& boundary : boundary_integrals_) boundary.ComputeElementGradients(K_b_);
 
     return K_b_;
   }
@@ -283,9 +283,9 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<double(trial)>& f) : form(f)
+    Gradient(Functional<double(trial)>& f) : form(f), lookup_tables(*(f.trial_space_))
     {
-      #if 0
+#if 0
       int trial_vdim = form.trial_space_->GetVDim();
 
       mfem::Array<int> trial_dofs;
@@ -336,7 +336,7 @@ private:
           }
         }
       }
-      #endif
+#endif
     }
 
     void Mult(const mfem::Vector& x, mfem::Vector& y) const { form.GradientMult(x, y); }
@@ -350,7 +350,6 @@ private:
 
     operator mfem::Vector()
     {
-    #if 0
       constexpr int dofs_per_test_element          = 1;
       constexpr int dofs_per_test_boundary_element = 1;
 
@@ -362,12 +361,13 @@ private:
         int trial_vdim             = form.trial_space_->GetVDim();
         int dofs_per_trial_element = form.trial_space_->GetFE(0)->GetDof();
 
-        mfem::Vector element_gradients = form.ComputeElementMatrices();
+        mfem::Vector element_gradients = form.ComputeElementGradients();
         auto         K_elem            = mfem::Reshape(element_gradients.HostRead(), dofs_per_test_element,
                                     dofs_per_trial_element * trial_vdim, num_elements);
+        auto & LUT = lookup_tables.element_dofs;
         for (int e = 0; e < num_elements; e++) {
           for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
-            auto [index, sign] = element_nonzero_LUT(e, j);
+            auto [index, sign] = LUT(e, j);
             g[index] += sign * K_elem(0, j, e);
           }
         }
@@ -378,21 +378,19 @@ private:
         int trial_vdim                      = form.trial_space_->GetVDim();
         int dofs_per_trial_boundary_element = form.trial_space_->GetBE(0)->GetDof();
 
-        mfem::Vector boundary_element_gradients = form.ComputeBoundaryElementMatrices();
+        mfem::Vector boundary_element_gradients = form.ComputeBoundaryElementGradients();
         auto         K_elem = mfem::Reshape(boundary_element_gradients.HostRead(), dofs_per_test_boundary_element,
                                     dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
+        auto & LUT = lookup_tables.boundary_element_dofs;
         for (int e = 0; e < num_boundary_elements; e++) {
           for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
-            auto [index, sign] = boundary_element_nonzero_LUT(e, j);
+            auto [index, sign] = LUT(e, j);
             g[index] += sign * K_elem(0, j, e);
           }
         }
       }
 
       return g;
-    #else
-      return mfem::Vector();
-    #endif
     }
 
   private:
@@ -401,6 +399,7 @@ private:
      */
     Functional<double(trial), exec>& form;
 
+    DofNumbering lookup_tables;
     Array2D<detail::SignedIndex> element_nonzero_LUT;
     Array2D<detail::SignedIndex> boundary_element_nonzero_LUT;
   };
@@ -607,10 +606,10 @@ private:
 };
 
 // Are these aliases useful or confusing?
-template < typename T, ExecutionSpace exec = ExecutionSpace::CPU >
+template <typename T, ExecutionSpace exec = ExecutionSpace::CPU>
 using QuantityOfInterest = Functional<double(T), exec>;
 
-template < typename T, ExecutionSpace exec = ExecutionSpace::CPU >
+template <typename T, ExecutionSpace exec = ExecutionSpace::CPU>
 using ObjectiveFunction = Functional<double(T), exec>;
 
 }  // namespace serac

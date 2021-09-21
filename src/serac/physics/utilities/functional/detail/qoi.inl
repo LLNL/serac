@@ -9,8 +9,8 @@
  *
  * @brief Specialization of finite_element for expressing quantities of interest on any geometry
  */
-template < Geometry g >
-struct finite_element< g, QOI > {
+template <Geometry g>
+struct finite_element<g, QOI> {
   static constexpr auto geometry   = g;
   static constexpr auto family     = Family::QOI;
   static constexpr int  components = 1;
@@ -20,4 +20,4 @@ struct finite_element< g, QOI > {
   using residual_type = double;
 
   static constexpr double shape_functions(double /* xi */) { return 1.0; }
-}; 
+};

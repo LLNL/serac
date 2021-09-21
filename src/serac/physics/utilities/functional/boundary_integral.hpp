@@ -282,11 +282,11 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
 
-      if constexpr (std::is_same< test, QOI >::value) {
+      if constexpr (std::is_same<test, QOI>::value) {
         auto N = trial_element::shape_functions(xi_q);
         for (int j = 0; j < trial_ndof; j++) {
           K_elem[0][j] += dq_darg * N[j] * dx;
-        } 
+        }
       } else {
         auto M = test_element::shape_functions(xi_q);
         auto N = trial_element::shape_functions(xi_q);
@@ -294,22 +294,20 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
         for (int i = 0; i < test_ndof; i++) {
           for (int j = 0; j < trial_ndof; j++) {
             K_elem[i][j] += M[i] * dq_darg * N[j] * dx;
-          } 
-        } 
-      } 
-
+          }
+        }
+      }
     }
 
     // once we've finished the element integration loop, write our element gradients
     // out to memory, to be later assembled into the global gradient by mfem
-    // 
+    //
     // Note: we "transpose" these values to get them into the layout that mfem expects
     // clang-format off
     for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
       dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
     });
     // clang-format on
-
   }
 }
 

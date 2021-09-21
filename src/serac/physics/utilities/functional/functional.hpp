@@ -21,12 +21,11 @@
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
 #include "serac/physics/utilities/functional/domain_integral.hpp"
 #include "serac/physics/utilities/functional/boundary_integral.hpp"
+#include "serac/physics/utilities/functional/dof_numbering.hpp"
 #include "serac/numerics/assembled_sparse_matrix.hpp"
 #include "serac/infrastructure/logger.hpp"
 
 namespace serac {
-
-
 
 /// @cond
 template <typename T, ExecutionSpace exec = serac::default_execution_space>
@@ -366,7 +365,8 @@ private:
      * @param[in] f The @p Functional to use for gradient calculations
      */
     Gradient(Functional<test(trial), exec>& f)
-        : mfem::Operator(f.Height(), f.Width()), form_(f), sparsity_pattern_initialized_(false){};
+        : mfem::Operator(f.Height(), f.Width()), form_(f), sparsity_pattern_initialized_(false), 
+        lookup_tables(*(f.test_space_), *(f.trial_space_)) {};
 
     /**
      * @brief implement that action of the gradient: df := df_dx * dx
@@ -417,8 +417,9 @@ private:
           dofs_per_test_boundary_element * test_vdim * dofs_per_trial_boundary_element * trial_vdim;
 
       size_t num_infos[2] = {
-          (form_.domain_integrals_.size() > 0) * entries_per_element * num_elements,
-          (form_.boundary_integrals_.size() > 0) * entries_per_boundary_element * num_boundary_elements};
+          static_cast<size_t>((form_.domain_integrals_.size() > 0) * entries_per_element * num_elements),
+          static_cast<size_t>((form_.boundary_integrals_.size() > 0) * entries_per_boundary_element *
+                              num_boundary_elements)};
 
       // Each active element and boundary element describes which nonzero entries
       // its element stiffness matrix will touch. Then we reduce that list down
@@ -590,10 +591,11 @@ private:
         mfem::Vector element_matrices = form_.ComputeElementGradients();
         auto         K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element * test_vdim,
                                     dofs_per_trial_element * trial_vdim, num_elements);
+        auto & LUT = lookup_tables.element_nonzero_LUT;
         for (int e = 0; e < num_elements; e++) {
           for (int i = 0; i < dofs_per_test_element * test_vdim; i++) {
             for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
-              auto [index, sign] = element_nonzero_LUT_(e, i, j);
+              auto [index, sign] = LUT(e, i, j);
               values[index] += sign * K_elem(i, j, e);
             }
           }
@@ -613,10 +615,12 @@ private:
         auto         K_elem =
             mfem::Reshape(boundary_element_matrices.HostReadWrite(), dofs_per_test_boundary_element * test_vdim,
                           dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
+
+        auto & LUT = lookup_tables.boundary_element_nonzero_LUT;
         for (int e = 0; e < num_boundary_elements; e++) {
           for (int i = 0; i < dofs_per_test_boundary_element * test_vdim; i++) {
             for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
-              auto [index, sign] = boundary_element_nonzero_LUT_(e, i, j);
+              auto [index, sign] = LUT(e, i, j);
               values[index] += sign * K_elem(i, j, e);
             }
           }
@@ -653,6 +657,12 @@ private:
      * not change dynamically.
      */
     bool sparsity_pattern_initialized_;
+
+    /**
+     * @brief TODO
+     */
+    GradientAssemblyLookupTables lookup_tables;
+
   };
 
   /**

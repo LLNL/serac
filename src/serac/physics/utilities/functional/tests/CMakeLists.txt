@@ -19,6 +19,7 @@ set(functional_tests_serial
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     array_test.cpp
+    generate_sparsity.cpp
     tuple_arithmetic_unit_tests.cpp)
 
 serac_add_tests( SOURCES ${functional_tests_serial}

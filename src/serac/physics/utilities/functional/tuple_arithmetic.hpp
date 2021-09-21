@@ -216,7 +216,7 @@ SERAC_HOST_DEVICE auto get_gradient(serac::tuple<T...> tuple_of_values)
  * calculates df = df_dx * dx for different possible combinations of tuples-of-tuples, tuples, tensors, and scalars
  * @param[in] df_dx the derivative of some transformation f
  * @param[in] dx a small change in the inputs to the transformation f
- * 
+ *
  * @note the weird implementation of these conditional statements is a work-around for a compiler warning w/ nvcc
  */
 template <typename S, typename T>
@@ -225,18 +225,18 @@ SERAC_HOST_DEVICE auto chain_rule(S df_dx, T dx)
   constexpr bool matvec = (detail::is_tuple_of_tuples<S>::value && detail::is_tuple<T>::value);
   if constexpr (matvec) {
     return detail::chain_rule_tuple_matvec(df_dx, dx);
-  } 
+  }
 
   constexpr bool vecvec = !matvec && (detail::is_tuple<S>::value && detail::is_tuple<T>::value);
   if constexpr (vecvec) {
     auto int_seq = std::make_integer_sequence<int, int(serac::tuple_size<T>{})>();
     return detail::chain_rule_tuple_vecvec(df_dx, dx, int_seq);
-  } 
-  
+  }
+
   constexpr bool vecscalar = !vecvec && (detail::is_tuple<S>::value && !detail::is_tuple<T>::value);
   if constexpr (vecscalar) {
     return detail::chain_rule_tuple_scale(df_dx, dx);
-  } 
+  }
 
   constexpr bool scalarscalar = !vecscalar;
   if constexpr (scalarscalar) {
