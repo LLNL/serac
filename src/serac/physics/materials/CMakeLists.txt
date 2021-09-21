@@ -6,10 +6,12 @@
 
 set(materials_sources
     hyperelastic_material.cpp
+    thermal_expansion_material.cpp
     )
 
 set(materials_headers
     hyperelastic_material.hpp
+    thermal_expansion_material.hpp
     )
 
 set(materials_depends

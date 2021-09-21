@@ -31,6 +31,13 @@ void DisplacementHyperelasticIntegrator::CalcKinematics(const mfem::FiniteElemen
 
   solid_util::calcDeformationGradient(du_dX_, F_);
 
+  if (thermal_material_) {
+    F_copy_ = F_;
+    F_thermal_.SetSize(du_dX_.Width());
+    thermal_material_->evalThermalDeformationGradient(F_thermal_);
+    mfem::Mult(F_thermal_, F_copy_, F_);
+  }
+
   // Calculate the inverse of the deformation gradient
   mfem::CalcInverse(F_, Finv_);
 
@@ -67,6 +74,10 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(
 
   // Set the transformation for the underlying material. This is required for coefficient evaluation.
   material_.setTransformation(parent_to_reference_transformation);
+
+  if (thermal_material_) {
+    thermal_material_->setTransformation(parent_to_reference_transformation);
+  }
 
   for (int i = 0; i < ir->GetNPoints(); i++) {
     // Set the current integration point
@@ -111,6 +122,10 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(
 
   // Set the transformation for the underlying material. This is required for coefficient evaluation.
   material_.setTransformation(parent_to_reference_transformation);
+
+  if (thermal_material_) {
+    thermal_material_->setTransformation(parent_to_reference_transformation);
+  }
 
   output_residual_matrix_ = 0.0;
 
@@ -165,6 +180,11 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
 
   // Set the transformation for the underlying material. This is required for coefficient evaluation.
   material_.setTransformation(parent_to_reference_transformation);
+
+  if (thermal_material_) {
+    thermal_material_->setTransformation(parent_to_reference_transformation);
+  }
+
   SERAC_MARK_LOOP_START(ip_loop_id, "IntegrationPt Loop");
 
   for (int ip_num = 0; ip_num < ir->GetNPoints(); ip_num++) {

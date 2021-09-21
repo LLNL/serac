@@ -24,6 +24,7 @@
 #include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
 #include "serac/coefficients/sensitivity_coefficients.hpp"
 #include "serac/physics/utilities/finite_element_dual.hpp"
+#include "serac/physics/materials/thermal_expansion_material.hpp"
 
 namespace serac {
 
@@ -283,6 +284,16 @@ public:
                              bool material_nonlin = true);
 
   /**
+   * @brief Set the thermal expansion parameters for the solid mechanics module
+   *
+   * @param coef_thermal_expansion The coefficient for thermal expansion
+   * @param reference_temp The reference temperature
+   * @param temp The state object containing the current temperature of the solid
+   */
+  void setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
+                           std::unique_ptr<mfem::Coefficient>&& reference_temp, FiniteElementState& temp);
+
+  /**
    * @brief Set the initial displacement value
    *
    * @param[in] disp_state The initial displacement state
@@ -467,6 +478,11 @@ protected:
    * @brief The hyperelastic material model
    */
   std::unique_ptr<HyperelasticMaterial> material_;
+
+  /**
+   * @brief Thermal expansion properties
+   */
+  std::unique_ptr<ThermalExpansionMaterial> thermal_material_;
 
   /**
    * @brief Flag for enabling geometric nonlinearities in the residual calculation

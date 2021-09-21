@@ -13,6 +13,7 @@
 #pragma once
 
 #include "serac/physics/materials/hyperelastic_material.hpp"
+#include "serac/physics/materials/thermal_expansion_material.hpp"
 
 #include "mfem.hpp"
 
@@ -42,9 +43,9 @@ public:
    * @param[in] m  HyperelasticModel that will be integrated.
    * @param[in] geom_nonlin Flag to include geometric nonlinearities in the residual calculation
    */
-  explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial&   m,
+  explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial& m, ThermalExpansionMaterial* thermal_m,
                                               GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On)
-      : material_(m), geom_nonlin_(geom_nonlin)
+      : material_(m), thermal_material_(thermal_m), geom_nonlin_(geom_nonlin)
   {
   }
 
@@ -99,6 +100,8 @@ private:
    */
   HyperelasticMaterial& material_;
 
+  ThermalExpansionMaterial* thermal_material_;
+
   /**
    * @brief gradients of shape functions on the parent element (dof x dim).
    *
@@ -128,6 +131,10 @@ private:
    *
    */
   mfem::DenseMatrix F_;
+
+  mfem::DenseMatrix F_copy_;
+
+  mfem::DenseMatrix F_thermal_;
 
   /**
    * @brief the inverse of the deformation gradient
