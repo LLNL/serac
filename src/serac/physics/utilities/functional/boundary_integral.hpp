@@ -259,7 +259,7 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  test_dim   = test_element::components;
   static constexpr int  trial_ndof = trial_element::ndof;
-  static constexpr int  trial_dim  = test_element::components;
+  static constexpr int  trial_dim  = trial_element::components;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it

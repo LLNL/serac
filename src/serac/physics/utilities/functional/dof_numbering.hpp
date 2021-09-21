@@ -83,7 +83,7 @@ struct DofNumbering {
       for (int e = 0; e < boundary_element_dofs.size(0); e++) {
         for (int i = 0; i < boundary_element_dofs.size(1); i++) {
           int mfem_id = static_cast<int>(dof_ids[boundary_element_dofs.index(e, i)]);
-          boundary_element_dofs(e, i) = signed_index{mfem_sign(mfem_id), mfem_index(mfem_id)};
+          boundary_element_dofs(e, i) = signed_index{mfem_index(mfem_id), mfem_sign(mfem_id)};
         }
       }
     }

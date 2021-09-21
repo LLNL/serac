@@ -89,6 +89,12 @@ public:
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
   }
 
+  ~Functional() {
+    delete P_test_;
+    delete G_test_;
+    delete G_test_boundary_;
+  }
+
   /**
    * @brief Adds a domain integral term to the weak formulation of the PDE
    * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)

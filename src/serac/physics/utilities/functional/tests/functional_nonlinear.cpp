@@ -1,0 +1,198 @@
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
+
+#include <fstream>
+#include <iostream>
+
+#include "mfem.hpp"
+
+#include "axom/slic/core/SimpleLogger.hpp"
+#include "serac/infrastructure/input.hpp"
+#include "serac/serac_config.hpp"
+#include "serac/numerics/expr_template_ops.hpp"
+#include "serac/numerics/mesh_utils_base.hpp"
+#include "serac/physics/operators/stdfunction_operator.hpp"
+#include "serac/physics/utilities/functional/functional.hpp"
+#include "serac/physics/utilities/functional/tensor.hpp"
+#include "serac/numerics/assembled_sparse_matrix.hpp"
+#include "serac/infrastructure/profiling.hpp"
+#include <gtest/gtest.h>
+
+using namespace serac;
+using namespace serac::profiling;
+
+int num_procs, myid;
+int nsamples = 1;  // because mfem doesn't take in unsigned int
+
+constexpr bool                 verbose = false;
+std::unique_ptr<mfem::ParMesh> mesh2D;
+std::unique_ptr<mfem::ParMesh> mesh3D;
+
+static constexpr double a = 1.7;
+static constexpr double b = 2.1;
+
+template <int dim>
+struct hcurl_qfunction {
+  template <typename x_t, typename vector_potential_t>
+  SERAC_HOST_DEVICE auto operator()(x_t x, vector_potential_t vector_potential) const
+  {
+    auto [A, curl_A] = vector_potential;
+    auto J_term      = a * A - tensor<double, dim>{10 * x[0] * x[1], -5 * (x[0] - x[1]) * x[1]};
+    auto H_term      = b * curl_A;
+    return serac::tuple{J_term, H_term};
+  }
+};
+
+template <typename T>
+void check_gradient(Functional<T>& f, mfem::GridFunction& U)
+{
+  int                seed = 42;
+  mfem::GridFunction dU   = U;
+  dU.Randomize(seed);
+
+  double epsilon = 1.0e-8;
+
+  // grad(f) evaluates the gradient of f at the last evaluation,
+  // so we evaluate f(U) before calling grad(f)
+  f(U);
+
+  auto & dfdU = grad(f);
+
+  auto U_plus = U;
+  U_plus.Add(epsilon, dU);
+
+  auto U_minus = U;
+  U_minus.Add(-epsilon, dU);
+
+  mfem::Vector df1 = f(U_plus);
+  df1 -= f(U_minus);
+  df1 /= (2 * epsilon);
+
+  mfem::Vector df2 = mfem::SparseMatrix(dfdU) * dU;
+  mfem::Vector df3 = dfdU(dU);
+
+  double error1 = df1.DistanceTo(df2) / df1.Norml2();
+  double error2 = df1.DistanceTo(df3) / df1.Norml2();
+
+  mfem::SparseMatrix K = dfdU;
+
+  std::ofstream outfile("K1.mtx");
+  K.PrintMatlab(outfile);
+  outfile.close();
+
+  outfile.open("K_elem.mtx");
+  {
+    mfem::Vector tmp = f.ComputeElementGradients();
+    tmp.Print(outfile);
+  }
+  outfile.close();
+
+  outfile.open("K_belem.mtx");
+  {
+    mfem::Vector tmp = f.ComputeBoundaryElementGradients();
+    tmp.Print(outfile);
+  }
+  outfile.close();
+
+  outfile.open("face_restriction.mtx");
+  f.G_trial_boundary_->PrintMatlab(outfile);
+  outfile.close();
+
+  outfile.open("dof_numbering.txt");
+  DofNumbering trial_dofs(*(f.trial_space_));
+  auto & LUT = trial_dofs.boundary_element_dofs;
+  for (int i = 0; i < LUT.size(0); i++) {
+    for (int j = 0; j < LUT.size(1); j++) {
+      outfile << LUT(i,j) << " ";
+    }
+    outfile << std::endl;
+  }
+  outfile.close();
+
+  EXPECT_NEAR(0., error1, 1.e-8);
+  EXPECT_NEAR(0., error2, 1.e-8);
+
+}
+
+// this test sets up a toy "thermal" problem where the residual includes contributions
+// from a temperature-dependent source term and a temperature-gradient-dependent flux
+//
+// the same problem is expressed with mfem and functional, and their residuals and gradient action
+// are compared to ensure the implementations are in agreement.
+template <int p, int dim>
+void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
+{
+  std::string postfix = concat("_H1<", p, ">");
+  serac::profiling::initializeCaliper();
+
+  // Create standard MFEM bilinear and linear forms on H1
+  auto                        fec = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec);
+
+  // Set a random state to evaluate the residual
+  mfem::GridFunction U(&fespace);
+  U.Randomize();
+
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
+
+  // Construct the new functional object using the known test and trial spaces
+  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+
+  // Add the total domain residual term to the functional
+  residual.AddDomainIntegral(
+      Dimension<dim>{},
+      [=](auto x, auto temperature) {
+        // get the value and the gradient from the input tuple
+        auto [u, du_dx] = temperature;
+        auto source     = a * u * u - (100 * x[0] * x[1]);
+        auto flux       = b * du_dx;
+        return serac::tuple{source, flux};
+      }, mesh);
+
+  residual.AddBoundaryIntegral(
+      Dimension<dim-1>{},
+      [=](auto x, auto /*n*/, auto u) {
+        return x[0] + x[1] - cos(u);
+      }, mesh);
+
+  check_gradient(residual, U);
+
+  serac::profiling::terminateCaliper();
+}
+
+TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+//TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+//TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
+
+//TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+//TEST(thermal, 3D_quadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+//TEST(thermal, 3D_cubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+  MPI_Init(&argc, &argv);
+  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
+  axom::slic::SimpleLogger logger;
+
+  int serial_refinement   = 0;
+  int parallel_refinement = 0;
+
+  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/square.mesh";
+  mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+
+  //std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  //mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+
+  int result = RUN_ALL_TESTS();
+  MPI_Finalize();
+
+  return result;
+}

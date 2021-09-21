@@ -333,7 +333,9 @@ public:
     trial_space_->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
   }
 
-private:
+// TODO reenable privacy after debugging
+//private:
+
   /**
    * @brief Indicates whether to obtain values or gradients from a calculation
    */
@@ -632,6 +634,7 @@ private:
     }
 
   private:
+
     /// @brief The "parent" @p Functional to calculate gradients with
     Functional<test(trial), exec>& form_;
 
