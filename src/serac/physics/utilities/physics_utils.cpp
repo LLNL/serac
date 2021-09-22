@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/utilities/physics_utils.hpp"
-#include "serac/physics/materials/thermal_expansion_material.hpp"
 
 namespace serac::solid_util {
 
@@ -24,7 +23,6 @@ void calcLinearizedStrain(const mfem::DenseMatrix& du_dX, mfem::DenseMatrix& eps
 {
   epsilon.SetSize(du_dX.Size());
   epsilon = du_dX;
-
   epsilon.Symmetrize();
 }
 

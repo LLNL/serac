@@ -13,7 +13,6 @@
 #pragma once
 
 #include "mfem.hpp"
-#include "serac/physics/materials/thermal_expansion_material.hpp"
 
 namespace serac::solid_util {
 
