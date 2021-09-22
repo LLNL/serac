@@ -73,11 +73,11 @@ protected:
  * deformation gradient. The thermal deformation gradient of this model is given by
  *
  * \f[
- * \mathbf{F}_\theta = \mathbf{I} + \alpha \left( \theta - \theta_\mbox{ref} \right)
+ * \mathbf{F}_\theta = \mathbf{I} + \alpha \left( \theta - \theta_\textrm{ref} \right)
  * \f]
  *
  * where \f$\alpha\f$ is the coefficient of thermal expansion, \f$\theta\f$ is the current
- * temperature, and \f$\theta_\mbox{ref}\f$ is the reference temperature.
+ * temperature, and \f$\theta_\textrm{ref}\f$ is the reference temperature.
  */
 class IsotropicThermalExpansionMaterial : public ThermalExpansionMaterial {
 public:
@@ -85,7 +85,7 @@ public:
    * @brief Construct a new Isotropic Thermal Expansion Material object
    *
    * @param coef_thermal_expansion The coefficient of thermal expansion \f$\alpha\f$
-   * @param reference_temp The reference temperature \f$\theta_\mbox{ref}\f$
+   * @param reference_temp The reference temperature \f$\theta_{ref}\f$
    * @param temp The current temperature \f$\theta\f$
    */
   IsotropicThermalExpansionMaterial(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,

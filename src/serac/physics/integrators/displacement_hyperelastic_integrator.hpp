@@ -41,6 +41,7 @@ public:
    * @brief The constructor for the displacement hyperelastic integrator
    *
    * @param[in] m  HyperelasticModel that will be integrated.
+   * @param[in] thermal_m Optional thermal expansion material model
    * @param[in] geom_nonlin Flag to include geometric nonlinearities in the residual calculation
    */
   explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial& m, ThermalExpansionMaterial* thermal_m,
