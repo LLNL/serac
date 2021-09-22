@@ -92,7 +92,7 @@ void check_gradient(Functional<T>& f, mfem::GridFunction& U)
   // so we evaluate f(U) before calling grad(f)
   f(U);
 
-  auto & dfdU = grad(f);
+  auto& dfdU = grad(f);
 
   auto U_plus = U;
   U_plus.Add(epsilon, dU);
@@ -122,7 +122,8 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
 
   // Construct the new functional object
   Functional<double(trial_space)> measure(&fespace);
-  measure.AddDomainIntegral(Dimension<dim>{}, [&](auto /*x*/, auto /*u*/) { return 1.0; }, mesh);
+  measure.AddDomainIntegral(
+      Dimension<dim>{}, [&](auto /*x*/, auto /*u*/) { return 1.0; }, mesh);
 
   std::cout << "simplest possible domain qoi: " << measure(U) << " " << measure_mfem(mesh) << std::endl;
 
@@ -141,7 +142,6 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
 
   std::cout << "combined domain and boundary qoi: " << sum_of_measures(U) << " " << sum_of_measures_mfem(mesh)
             << std::endl;
-
 
   // ObjectiveFunction<T> is an alias for Functional<double(T)>
   ObjectiveFunction<trial_space> f(&fespace);
@@ -178,15 +178,14 @@ int main(int argc, char* argv[])
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
-  //std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/square.mesh";
+  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   functional_qoi_test(*mesh2D, H1<2>{}, Dimension<2>{});
-  //functional_qoi_test(*mesh3D, H1<1>{}, Dimension<3>{});
+  functional_qoi_test(*mesh3D, H1<1>{}, Dimension<3>{});
 
 #if 0
   int result = RUN_ALL_TESTS();

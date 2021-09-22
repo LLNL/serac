@@ -207,9 +207,9 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
 
   // this change was made to work around the following error in GCC:
   // error: ‘curves_group’ may be used uninitialized in this function [-Werror=maybe-uninitialized]
-  // maybe there is a better workaround, or a way to disable the warning
+  // maybe there is a better workaround, or a way to disable the error/warning
 
-  auto [_, rank] = getMPIInfo();
+  auto [_, rank]                      = getMPIInfo();
   const std::string curves_group_name = "serac_summary/curves";
 
   axom::sidre::Group* sidre_root = datastore.getRoot();

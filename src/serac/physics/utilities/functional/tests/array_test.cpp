@@ -1,14 +1,16 @@
 #include "serac/physics/utilities/functional/array.hpp"
 
-
 struct foo {
-  foo() : array(64, 64) {};
+  foo() : array(64, 64){};
   serac::CPUArray<double, 2> array;
 };
 
-auto function_that_makes_a_foo() {
-  foo f;
-  double sum = f.array(0,0) + f.array(1, 0); 
+auto& get_array_from(foo& f) { return f.array; }
+
+auto function_that_makes_a_foo(foo& f)
+{
+  auto   array = f.array;
+  double sum   = array(0, 0) + array(1, 0);
   return sum;
 }
 
@@ -28,5 +30,7 @@ int main()
 
   my_kernel(view(my_array));
 
-  function_that_makes_a_foo();
+  foo f;
+
+  function_that_makes_a_foo(f);
 }

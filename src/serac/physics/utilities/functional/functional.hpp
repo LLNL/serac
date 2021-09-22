@@ -333,8 +333,8 @@ public:
     trial_space_->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
   }
 
-// TODO reenable privacy after debugging
-//private:
+  // TODO reenable privacy after debugging
+  // private:
 
   /**
    * @brief Indicates whether to obtain values or gradients from a calculation
@@ -367,8 +367,10 @@ public:
      * @param[in] f The @p Functional to use for gradient calculations
      */
     Gradient(Functional<test(trial), exec>& f)
-        : mfem::Operator(f.Height(), f.Width()), form_(f), sparsity_pattern_initialized_(false), 
-        lookup_tables(*(f.test_space_), *(f.trial_space_)) {};
+        : mfem::Operator(f.Height(), f.Width()),
+          form_(f),
+          sparsity_pattern_initialized_(false),
+          lookup_tables(*(f.test_space_), *(f.trial_space_)){};
 
     /**
      * @brief implement that action of the gradient: df := df_dx * dx
@@ -593,7 +595,7 @@ public:
         mfem::Vector element_matrices = form_.ComputeElementGradients();
         auto         K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element * test_vdim,
                                     dofs_per_trial_element * trial_vdim, num_elements);
-        auto & LUT = lookup_tables.element_nonzero_LUT;
+        auto&        LUT    = lookup_tables.element_nonzero_LUT;
         for (int e = 0; e < num_elements; e++) {
           for (int i = 0; i < dofs_per_test_element * test_vdim; i++) {
             for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
@@ -618,7 +620,7 @@ public:
             mfem::Reshape(boundary_element_matrices.HostReadWrite(), dofs_per_test_boundary_element * test_vdim,
                           dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
 
-        auto & LUT = lookup_tables.boundary_element_nonzero_LUT;
+        auto& LUT = lookup_tables.boundary_element_nonzero_LUT;
         for (int e = 0; e < num_boundary_elements; e++) {
           for (int i = 0; i < dofs_per_test_boundary_element * test_vdim; i++) {
             for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
@@ -634,7 +636,6 @@ public:
     }
 
   private:
-
     /// @brief The "parent" @p Functional to calculate gradients with
     Functional<test(trial), exec>& form_;
 
@@ -665,7 +666,6 @@ public:
      * @brief TODO
      */
     GradientAssemblyLookupTables lookup_tables;
-
   };
 
   /**

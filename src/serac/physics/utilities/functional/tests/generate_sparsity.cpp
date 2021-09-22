@@ -90,8 +90,9 @@ void sparsity(mfem::ParMesh& mesh, lambda qf, std::string prefix = "")
   f(U);
   mfem::Vector element_matrices = f.ComputeElementGradients();
 
-  auto & element_LUT = gradient_LUT.element_nonzero_LUT;
-  auto K_elem = mfem::Reshape(element_matrices.HostReadWrite(), element_LUT.size(1), element_LUT.size(2), element_LUT.size(0));
+  auto& element_LUT = gradient_LUT.element_nonzero_LUT;
+  auto  K_elem =
+      mfem::Reshape(element_matrices.HostReadWrite(), element_LUT.size(1), element_LUT.size(2), element_LUT.size(0));
 
   std::vector<double> values(gradient_LUT.nnz, 0.0);
   for (int e = 0; e < element_LUT.size(0); e++) {
@@ -106,9 +107,10 @@ void sparsity(mfem::ParMesh& mesh, lambda qf, std::string prefix = "")
   int num_rows = test_fespace.GetNDofs() * test_fespace.GetVDim();
   int num_cols = trial_fespace.GetNDofs() * trial_fespace.GetVDim();
 
-  mfem::SparseMatrix B(gradient_LUT.row_ptr.data(), gradient_LUT.col_ind.data(), values.data(), num_rows, num_cols, false, false, true);
+  mfem::SparseMatrix B(gradient_LUT.row_ptr.data(), gradient_LUT.col_ind.data(), values.data(), num_rows, num_cols,
+                       false, false, true);
 
-  std::ofstream      outfile;
+  std::ofstream outfile;
   outfile.open(prefix + "B.mtx");
   B.PrintMM(outfile);
   outfile.close();
@@ -160,17 +162,16 @@ int main(int argc, char* argv[])
   sparsity<H1<1>, H1<1>, 2>(*mesh2D, default_qf, "h1h1_2D_");
   sparsity<H1<1>, H1<1>, 3>(*mesh3D, default_qf, "h1h1_3D_");
 
-  //sparsity<Hcurl<1>, Hcurl<1>, 2>(*mesh2D, default_qf, "hcurlhcurl_2D_");
-  //sparsity<Hcurl<1>, Hcurl<1>, 3>(*mesh3D, default_qf, "hcurlhcurl_3D_");
+  // sparsity<Hcurl<1>, Hcurl<1>, 2>(*mesh2D, default_qf, "hcurlhcurl_2D_");
+  // sparsity<Hcurl<1>, Hcurl<1>, 3>(*mesh3D, default_qf, "hcurlhcurl_3D_");
 
-  //auto hcurl_h1_3D_qf = [](auto /*x*/, auto field) {
+  // auto hcurl_h1_3D_qf = [](auto /*x*/, auto field) {
   //  auto [u, grad_u] = field;
   //  return serac::tuple{grad_u, grad_u};
   //};
 
-  //sparsity<Hcurl<1>, H1<1>, 3>(*mesh3D, hcurl_h1_3D_qf, "hcurlh1_3D_");
+  // sparsity<Hcurl<1>, H1<1>, 3>(*mesh3D, hcurl_h1_3D_qf, "hcurlh1_3D_");
 
-  //sparsity<H1<1, 2>, H1<1, 2>, 2>(*mesh2D, default_qf, "h1vh1v_2D_");
-  //sparsity<H1<1, 3>, H1<1, 3>, 3>(*mesh3D, default_qf, "h1vh1v_3D_");
-
+  // sparsity<H1<1, 2>, H1<1, 2>, 2>(*mesh2D, default_qf, "h1vh1v_2D_");
+  // sparsity<H1<1, 3>, H1<1, 3>, 3>(*mesh3D, default_qf, "h1vh1v_3D_");
 }

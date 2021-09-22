@@ -67,17 +67,19 @@ void copy(T* src_begin, T* src_end, T* dst_begin)
   }
 
 #if defined(__CUDACC__)
-  size_t num_bytes = (src_end - src_begin) * sizeof(T);
 
   if constexpr (src_device == Device::CPU && dst_device == Device::GPU) {
+    size_t num_bytes = (src_end - src_begin) * sizeof(T);
     cudaMemcpy(dst_begin, src_begin, num_bytes, cudaMemcpyHostToDevice);
   }
 
   if constexpr (src_device == Device::GPU && dst_device == Device::CPU) {
+    size_t num_bytes = (src_end - src_begin) * sizeof(T);
     cudaMemcpy(dst_begin, src_begin, num_bytes, cudaMemcpyDeviceToHost);
   }
 
   if constexpr (src_device == Device::GPU && dst_device == Device::GPU) {
+    size_t num_bytes = (src_end - src_begin) * sizeof(T);
     cudaMemcpy(dst_begin, src_begin, num_bytes, cudaMemcpyDeviceToDevice);
   }
 #endif
@@ -91,7 +93,7 @@ struct Indexable<1> {
   size_t sizes;
   Indexable(size_t n1) : sizes{n1} {}
   SERAC_HOST_DEVICE size_t index(size_t i) const { return i; }
-  size_t size(int i = 0) { return sizes; }
+  size_t                   size(int i = 0) { return sizes; }
 };
 
 template <>
@@ -100,7 +102,7 @@ struct Indexable<2> {
   size_t stride;
   Indexable(size_t n1, size_t n2) : sizes{n1, n2}, stride{n2} {}
   SERAC_HOST_DEVICE size_t index(size_t i, size_t j) const { return i * stride + j; }
-  size_t size(int i = 0) { return sizes[i]; }
+  size_t                   size(int i = 0) { return sizes[i]; }
 };
 
 template <>
@@ -109,7 +111,7 @@ struct Indexable<3> {
   size_t strides[2];
   Indexable(size_t n1, size_t n2, size_t n3) : sizes{n1, n2, n3}, strides{n2 * n3, n3} {}
   SERAC_HOST_DEVICE size_t index(size_t i, size_t j, size_t k) const { return i * strides[0] + j * strides[1] + k; }
-  size_t size(int i = 0) { return sizes[i]; }
+  size_t                   size(int i = 0) { return sizes[i]; }
 };
 
 template <typename T, Device device>
@@ -117,6 +119,12 @@ struct ArrayBase {
   ArrayBase() : ptr{nullptr}, n(0) {}
 
   ArrayBase(size_t size) : ptr{nullptr}, n(0) { resize(size); }
+
+  ArrayBase(const ArrayBase<T, device>& arr) : ptr{nullptr}, n(0)
+  {
+    resize(arr.n);
+    impl::copy<device, device>(arr.ptr, arr.ptr + arr.n, ptr);
+  };
 
   template <Device other_device>
   ArrayBase(const ArrayBase<T, other_device>& arr) : ptr{nullptr}, n(0)
@@ -180,6 +188,14 @@ struct Array<T, 2, Device::CPU> : public impl::ArrayBase<T, Device::CPU>, public
   using impl::ArrayBase<T, Device::CPU>::ptr;
   Array(size_t n1, size_t n2) : impl::ArrayBase<T, Device::CPU>(n1 * n2), impl::Indexable<2>(n1, n2) {}
 
+  Array(const Array<T, 2, Device::CPU>& other) : impl::ArrayBase<T, Device::CPU>(other), impl::Indexable<2>{other} {}
+
+  void operator=(const Array<T, 2, Device::CPU>& other)
+  {
+    impl::ArrayBase<T, Device::CPU>::operator=(other);
+    impl::Indexable<2>::             operator=(other);
+  }
+
 #if defined(__CUDACC__)
   Array(const Array<T, 2, Device::GPU>& other) : impl::ArrayBase<T, Device::CPU>(other), impl::Indexable<2>{other} {}
   void operator=(const Array<T, 2, Device::GPU>& other)
@@ -196,7 +212,27 @@ struct Array<T, 2, Device::CPU> : public impl::ArrayBase<T, Device::CPU>, public
 template <typename T>
 struct Array<T, 3, Device::CPU> : public impl::ArrayBase<T, Device::CPU>, public impl::Indexable<3> {
   using impl::ArrayBase<T, Device::CPU>::ptr;
-  Array(size_t n1, size_t n2, size_t n3) : impl::ArrayBase<T, Device::CPU>(n1 * n2 * n3), impl::Indexable<3>(n1, n2, n3){}
+  Array(size_t n1, size_t n2, size_t n3) : impl::ArrayBase<T, Device::CPU>(n1 * n2 * n3), impl::Indexable<3>(n1, n2, n3)
+  {
+  }
+
+  Array(const Array<T, 3, Device::CPU>& other) : impl::ArrayBase<T, Device::CPU>(other), impl::Indexable<3>{other} {}
+
+  void operator=(const Array<T, 3, Device::CPU>& other)
+  {
+    impl::ArrayBase<T, Device::CPU>::operator=(other);
+    impl::Indexable<3>::             operator=(other);
+  }
+
+#if defined(__CUDACC__)
+  Array(const Array<T, 3, Device::GPU>& other) : impl::ArrayBase<T, Device::CPU>(other), impl::Indexable<3>{other} {}
+  void operator=(const Array<T, 3, Device::GPU>& other)
+  {
+    impl::ArrayBase<T, Device::CPU>::operator=(other);
+    impl::Indexable<3>::             operator=(other);
+  }
+#endif
+
   T&       operator()(size_t i, size_t j, size_t k) { return ptr[index(i, j, k)]; }
   const T& operator()(size_t i, size_t j, size_t k) const { return ptr[index(i, j, k)]; }
 };
@@ -260,7 +296,9 @@ template <typename T>
 struct Array<T, 3, Device::GPU> : public impl::ArrayBase<T, Device::GPU>, public impl::Indexable<3> {
   using impl::ArrayBase<T, Device::GPU>::ptr;
   Array() = default;
-  Array(size_t n1, size_t n2, size_t n3) : impl::ArrayBase<T, Device::GPU>(n1 * n2 * n3), impl::Indexable<3>(n1, n2, n3) {}
+  Array(size_t n1, size_t n2, size_t n3) : impl::ArrayBase<T, Device::GPU>(n1 * n2 * n3), impl::Indexable<3>(n1, n2, n3)
+  {
+  }
   SERAC_DEVICE T&    operator()(size_t i, size_t j, size_t k) { return ptr[index(i, j, k)]; }
   SERAC_DEVICE const T& operator()(size_t i, size_t j, size_t k) const { return ptr[index(i, j, k)]; }
 };
@@ -275,7 +313,7 @@ struct ArrayView<T, 1, Device::GPU> : public impl::Indexable<1> {
   SERAC_DEVICE const T& operator[](size_t i) const { return ptr[i]; }
   SERAC_DEVICE T&    operator()(size_t i) { return ptr[i]; }
   SERAC_DEVICE const T& operator()(size_t i) const { return ptr[i]; }
-  T*              ptr;
+  T*                    ptr;
 };
 
 template <typename T>
@@ -286,7 +324,7 @@ struct ArrayView<T, 2, Device::GPU> : public impl::Indexable<2> {
   }
   SERAC_DEVICE T&    operator()(size_t i, size_t j) { return ptr[index(i, j)]; }
   SERAC_DEVICE const T& operator()(size_t i, size_t j) const { return ptr[index(i, j)]; }
-  T*              ptr;
+  T*                    ptr;
 };
 
 template <typename T, size_t d>

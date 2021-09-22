@@ -57,7 +57,7 @@ void check_gradient(Functional<T>& f, mfem::GridFunction& U)
   // so we evaluate f(U) before calling grad(f)
   f(U);
 
-  auto & dfdU = grad(f);
+  auto& dfdU = grad(f);
 
   auto U_plus = U;
   U_plus.Add(epsilon, dU);
@@ -77,7 +77,6 @@ void check_gradient(Functional<T>& f, mfem::GridFunction& U)
 
   EXPECT_NEAR(0., relative_error1, 1.e-6);
   EXPECT_NEAR(0., relative_error2, 1.e-6);
-
 }
 
 // this test sets up a toy "thermal" problem where the residual includes contributions
@@ -114,13 +113,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
         auto source     = a * u * u - (100 * x[0] * x[1]);
         auto flux       = b * du_dx;
         return serac::tuple{source, flux};
-      }, mesh);
+      },
+      mesh);
 
   residual.AddBoundaryIntegral(
-      Dimension<dim-1>{},
-      [=](auto x, auto /*n*/, auto u) {
-        return x[0] + x[1] - cos(u);
-      }, mesh);
+      Dimension<dim - 1>{}, [=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, mesh);
 
   check_gradient(residual, U);
 
@@ -128,7 +125,7 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
 }
 
 template <int p, int dim>
-void functional_test(mfem::ParMesh& mesh, H1<p,dim> test, H1<p,dim> trial, Dimension<dim>)
+void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dimension<dim>)
 {
   std::string postfix = concat("_H1<", p, ",", dim, ">");
   serac::profiling::initializeCaliper();
@@ -157,13 +154,11 @@ void functional_test(mfem::ParMesh& mesh, H1<p,dim> test, H1<p,dim> trial, Dimen
         auto source     = a * u * u[0];
         auto flux       = b * du_dx;
         return serac::tuple{source, flux};
-      }, mesh);
+      },
+      mesh);
 
   residual.AddBoundaryIntegral(
-      Dimension<dim-1>{},
-      [=](auto x, auto n, auto u) {
-        return (x[0] + x[1] - cos(u[0])) * n;
-      }, mesh);
+      Dimension<dim - 1>{}, [=](auto x, auto n, auto u) { return (x[0] + x[1] - cos(u[0])) * n; }, mesh);
 
   check_gradient(residual, U);
 
@@ -178,13 +173,13 @@ TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<
 TEST(thermal, 3D_quadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
 TEST(thermal, 3D_cubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
 
-TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1,2>{}, H1<1,2>{}, Dimension<2>{}); }
-TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2,2>{}, H1<2,2>{}, Dimension<2>{}); }
-TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3,2>{}, H1<3,2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
 
-TEST(elasticity, 3D_linear) { functional_test(*mesh3D, H1<1,3>{}, H1<1,3>{}, Dimension<3>{}); }
-TEST(elasticity, 3D_quadratic) { functional_test(*mesh3D, H1<2,3>{}, H1<2,3>{}, Dimension<3>{}); }
-TEST(elasticity, 3D_cubic) { functional_test(*mesh3D, H1<3,3>{}, H1<3,3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_linear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_quadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_cubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {

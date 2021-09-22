@@ -89,7 +89,8 @@ public:
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
   }
 
-  ~Functional() {
+  ~Functional()
+  {
     delete P_test_;
     delete G_test_;
     delete G_test_boundary_;
@@ -370,7 +371,7 @@ private:
         mfem::Vector element_gradients = form.ComputeElementGradients();
         auto         K_elem            = mfem::Reshape(element_gradients.HostRead(), dofs_per_test_element,
                                     dofs_per_trial_element * trial_vdim, num_elements);
-        auto & LUT = lookup_tables.element_dofs;
+        auto&        LUT               = lookup_tables.element_dofs;
         for (int e = 0; e < num_elements; e++) {
           for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
             auto [index, sign] = LUT(e, j);
@@ -387,7 +388,7 @@ private:
         mfem::Vector boundary_element_gradients = form.ComputeBoundaryElementGradients();
         auto         K_elem = mfem::Reshape(boundary_element_gradients.HostRead(), dofs_per_test_boundary_element,
                                     dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
-        auto & LUT = lookup_tables.boundary_element_dofs;
+        auto&        LUT    = lookup_tables.boundary_element_dofs;
         for (int e = 0; e < num_boundary_elements; e++) {
           for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
             auto [index, sign] = LUT(e, j);
@@ -405,7 +406,7 @@ private:
      */
     Functional<double(trial), exec>& form;
 
-    DofNumbering lookup_tables;
+    DofNumbering                 lookup_tables;
     Array2D<detail::SignedIndex> element_nonzero_LUT;
     Array2D<detail::SignedIndex> boundary_element_nonzero_LUT;
   };
