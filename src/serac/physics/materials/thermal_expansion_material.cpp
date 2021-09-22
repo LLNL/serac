@@ -23,14 +23,37 @@ inline void IsotropicThermalExpansionMaterial::EvalCoeffs() const
                                           parent_to_reference_transformation_->GetIntPoint());
 }
 
-void IsotropicThermalExpansionMaterial::evalThermalDeformationGradient(mfem::DenseMatrix& dx_dX)
+void IsotropicThermalExpansionMaterial::modifyDisplacementGradient(mfem::DenseMatrix& du_dX)
+{
+  double expansion = coef_thermal_expansion_ * (temp_ - reference_temp_);
+
+  for (int i = 0; i < du_dX.Width(); ++i) {
+    du_dX(i, i) += expansion * (1.0 + du_dX(i, i));
+  }
+}
+
+void IsotropicThermalExpansionMaterial::modifyDeformationGradient(mfem::DenseMatrix& F)
 {
   EvalCoeffs();
 
-  dx_dX = 0.0;
+  F_copy_ = F;
 
-  for (int i = 0; i < dx_dX.Width(); ++i) {
-    dx_dX(i, i) = 1.0 + coef_thermal_expansion_ * (temp_ - reference_temp_);
+  F_thermal_.SetSize(F.Width());
+  F_thermal_ = 0.0;
+
+  for (int i = 0; i < F.Width(); ++i) {
+    F_thermal_(i, i) = 1.0 + coef_thermal_expansion_ * (temp_ - reference_temp_);
+  }
+
+  mfem::Mult(F_copy_, F_thermal_, F);
+}
+
+void IsotropicThermalExpansionMaterial::modifyLinearizedStrain(mfem::DenseMatrix& epsilon)
+{
+  EvalCoeffs();
+
+  for (int i = 0; i < epsilon.Width(); ++i) {
+    epsilon(i, i) += coef_thermal_expansion_ * (temp_ - reference_temp_);
   }
 }
 

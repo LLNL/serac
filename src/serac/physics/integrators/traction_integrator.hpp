@@ -13,6 +13,7 @@
 #pragma once
 
 #include "mfem.hpp"
+#include "serac/physics/materials/thermal_expansion_material.hpp"
 
 namespace serac::mfem_ext {
 
@@ -28,8 +29,9 @@ public:
    * @param[in] compute_on_reference Flag for computing the residual in the stress-free configuration vs. the deformed
    * configuration
    */
-  explicit TractionIntegrator(mfem::VectorCoefficient& f, bool compute_on_reference = false)
-      : traction_(f), compute_on_reference_(compute_on_reference)
+  explicit TractionIntegrator(mfem::VectorCoefficient& f, ThermalExpansionMaterial* thermal_m,
+                              bool compute_on_reference = false)
+      : traction_(f), thermal_expansion_mat_(thermal_m), compute_on_reference_(compute_on_reference)
   {
   }
 
@@ -138,6 +140,8 @@ private:
    */
   mutable mfem::Vector current_normal_;
 
+  ThermalExpansionMaterial* thermal_expansion_mat_;
+
   /**
    * @brief Flag to compute on the reference configuration (linear traction)
    *
@@ -157,8 +161,9 @@ public:
    * @param[in] compute_on_reference Flag for computing the residual in the stress-free configuration vs. the deformed
    * configuration
    */
-  explicit PressureIntegrator(mfem::Coefficient& p, bool compute_on_reference = false)
-      : pressure_(p), compute_on_reference_(compute_on_reference)
+  explicit PressureIntegrator(mfem::Coefficient& p, ThermalExpansionMaterial* thermal_m,
+                              bool compute_on_reference = false)
+      : pressure_(p), thermal_expansion_mat_(thermal_m), compute_on_reference_(compute_on_reference)
   {
   }
 
@@ -260,6 +265,8 @@ private:
    *
    */
   mutable mfem::Vector current_normal_;
+
+  ThermalExpansionMaterial* thermal_expansion_mat_;
 
   /**
    * @brief Flag to compute on the reference configuration (linear traction)

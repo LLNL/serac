@@ -42,13 +42,17 @@ public:
    */
   void setTransformation(mfem::ElementTransformation& Ttr) { parent_to_reference_transformation_ = &Ttr; }
 
+  virtual void modifyDisplacementGradient(mfem::DenseMatrix& du_dX) = 0;
+
   /**
    * @brief Evaluate the strain energy density function, W = W(F).
    *
    * @param[in] du_dX the displacement gradient
    * @return double Strain energy density
    */
-  virtual void evalThermalDeformationGradient(mfem::DenseMatrix& dx_dX) = 0;
+  virtual void modifyDeformationGradient(mfem::DenseMatrix& F) = 0;
+
+  virtual void modifyLinearizedStrain(mfem::DenseMatrix& epsilon) = 0;
 
 protected:
   /**
@@ -75,7 +79,11 @@ public:
   {
   }
 
-  void evalThermalDeformationGradient(mfem::DenseMatrix& dx_dX);
+  void modifyDisplacementGradient(mfem::DenseMatrix& du_dX);
+
+  void modifyDeformationGradient(mfem::DenseMatrix& F);
+
+  void modifyLinearizedStrain(mfem::DenseMatrix& epsilon);
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -128,6 +136,10 @@ protected:
    *
    */
   inline void EvalCoeffs() const;
+
+  mutable mfem::DenseMatrix F_copy_;
+
+  mutable mfem::DenseMatrix F_thermal_;
 };
 
 }  // namespace serac

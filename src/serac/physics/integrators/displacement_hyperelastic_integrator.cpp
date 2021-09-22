@@ -29,14 +29,11 @@ void DisplacementHyperelasticIntegrator::CalcKinematics(const mfem::FiniteElemen
   // Calculate the displacement gradient using the current DOFs
   MultAtB(input_state_matrix_, dN_dX_, du_dX_);
 
-  solid_util::calcDeformationGradient(du_dX_, F_);
-
   if (thermal_material_) {
-    F_copy_ = F_;
-    F_thermal_.SetSize(du_dX_.Width());
-    thermal_material_->evalThermalDeformationGradient(F_thermal_);
-    mfem::Mult(F_thermal_, F_copy_, F_);
+    thermal_material_->modifyDisplacementGradient(du_dX_);
   }
+
+  solid_util::calcDeformationGradient(du_dX_, F_);
 
   // Calculate the inverse of the deformation gradient
   mfem::CalcInverse(F_, Finv_);

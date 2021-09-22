@@ -15,6 +15,7 @@
 #include "serac/physics/utilities/finite_element_state.hpp"
 #include "serac/physics/materials/hyperelastic_material.hpp"
 #include "serac/coefficients/sensitivity_coefficients.hpp"
+#include "serac/physics/materials/thermal_expansion_material.hpp"
 
 #include "mfem.hpp"
 
@@ -34,7 +35,7 @@ public:
    * @param linear_mat The linear elastic material model
    */
   ShearSensitivityCoefficient(FiniteElementState& displacement, FiniteElementState& adjoint_displacement,
-                              LinearElasticMaterial& linear_mat);
+                              LinearElasticMaterial& linear_mat, ThermalExpansionMaterial* thermal_mat = nullptr);
 
   /**
    * @brief Do not allow default construction of the shear sensitivity coefficient
@@ -69,6 +70,8 @@ private:
    *
    */
   LinearElasticMaterial& material_;
+
+  ThermalExpansionMaterial* thermal_material_;
 
   /**
    * @brief The displacement gradient
@@ -121,7 +124,7 @@ public:
    * @param linear_mat The linear elastic material model
    */
   BulkSensitivityCoefficient(FiniteElementState& displacement, FiniteElementState& adjoint_displacement,
-                             LinearElasticMaterial& linear_mat);
+                             LinearElasticMaterial& linear_mat, ThermalExpansionMaterial* thermal_mat = nullptr);
 
   /**
    * @brief Do not allow default construction of the bulk sensitivity coefficient
@@ -156,6 +159,8 @@ private:
    *
    */
   LinearElasticMaterial& material_;
+
+  ThermalExpansionMaterial* thermal_material_;
 
   /**
    * @brief The displacement gradient

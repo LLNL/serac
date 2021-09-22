@@ -15,6 +15,7 @@
 #include "mfem.hpp"
 
 #include "serac/numerics/array_4D.hpp"
+#include "serac/physics/materials/thermal_expansion_material.hpp"
 
 namespace serac {
 
@@ -28,7 +29,10 @@ public:
    * @brief Construct a new Hyperelastic Material object
    *
    */
-  HyperelasticMaterial() : parent_to_reference_transformation_(nullptr) {}
+  HyperelasticMaterial(ThermalExpansionMaterial* thermal_mat = nullptr)
+      : parent_to_reference_transformation_(nullptr), thermal_mat_(thermal_mat)
+  {
+  }
 
   /**
    * @brief Destroy the Hyperelastic Material object
@@ -75,6 +79,8 @@ protected:
    *
    */
   mfem::ElementTransformation* parent_to_reference_transformation_;
+
+  ThermalExpansionMaterial* thermal_mat_;
 };
 
 /**
@@ -92,8 +98,9 @@ public:
    * @param[in] mu Shear modulus mu
    * @param[in] bulk Bulk modulus K
    */
-  NeoHookeanMaterial(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& bulk)
-      : c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
+  NeoHookeanMaterial(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& bulk,
+                     ThermalExpansionMaterial* thermal_mat = nullptr)
+      : HyperelasticMaterial(thermal_mat), c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
   {
   }
 
@@ -190,8 +197,9 @@ public:
    * @param[in] mu Shear modulus mu
    * @param[in] bulk Bulk modulus K
    */
-  LinearElasticMaterial(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& bulk)
-      : c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
+  LinearElasticMaterial(std::unique_ptr<mfem::Coefficient>&& mu, std::unique_ptr<mfem::Coefficient>&& bulk,
+                        ThermalExpansionMaterial* thermal_mat = nullptr)
+      : HyperelasticMaterial(thermal_mat), c_mu_(std::move(mu)), c_bulk_(std::move(bulk))
   {
   }
 

@@ -68,6 +68,10 @@ void TractionIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
       // Calculate the displacement gradient using the current DOFs
       MultAtB(input_state_matrix_, dN_dX_, du_dX_);
 
+      if (thermal_expansion_mat_) {
+        thermal_expansion_mat_->modifyDisplacementGradient(du_dX_);
+      }
+
       solid_util::calcDeformationGradient(du_dX_, F_);
 
       CalcInverse(F_, Finv_);
@@ -189,6 +193,10 @@ void PressureIntegrator::AssembleFaceVector(const mfem::FiniteElement&        el
 
       // Calculate the displacement gradient using the current DOFs
       MultAtB(input_state_matrix_, dN_dX_, du_dX_);
+
+      if (thermal_expansion_mat_) {
+        thermal_expansion_mat_->modifyDisplacementGradient(du_dX_);
+      }
 
       solid_util::calcDeformationGradient(du_dX_, F_);
 
