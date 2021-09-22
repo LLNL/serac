@@ -257,30 +257,26 @@ void Solid::completeSetup()
 
   // Add the deformed traction integrator
   for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedTraction)) {
-    H_->AddBdrFaceIntegrator(
-        new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), thermal_material_.get(), false),
-        deformed_traction_data.markers());
+    H_->AddBdrFaceIntegrator(new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), false),
+                             deformed_traction_data.markers());
   }
 
   // Add the reference traction integrator
   for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferenceTraction)) {
-    H_->AddBdrFaceIntegrator(
-        new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), thermal_material_.get(), true),
-        deformed_traction_data.markers());
+    H_->AddBdrFaceIntegrator(new mfem_ext::TractionIntegrator(deformed_traction_data.vectorCoefficient(), true),
+                             deformed_traction_data.markers());
   }
 
   // Add the deformed pressure integrator
   for (auto& deformed_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedPressure)) {
-    H_->AddBdrFaceIntegrator(
-        new mfem_ext::PressureIntegrator(deformed_pressure_data.scalarCoefficient(), thermal_material_.get(), false),
-        deformed_pressure_data.markers());
+    H_->AddBdrFaceIntegrator(new mfem_ext::PressureIntegrator(deformed_pressure_data.scalarCoefficient(), false),
+                             deformed_pressure_data.markers());
   }
 
   // Add the reference pressure integrator
   for (auto& reference_pressure_data : bcs_.genericsWithTag(SolidBoundaryCondition::ReferencePressure)) {
-    H_->AddBdrFaceIntegrator(
-        new mfem_ext::PressureIntegrator(reference_pressure_data.scalarCoefficient(), thermal_material_.get(), true),
-        reference_pressure_data.markers());
+    H_->AddBdrFaceIntegrator(new mfem_ext::PressureIntegrator(reference_pressure_data.scalarCoefficient(), true),
+                             reference_pressure_data.markers());
   }
 
   // Add external forces

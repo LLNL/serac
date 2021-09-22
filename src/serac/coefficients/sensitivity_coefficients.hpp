@@ -33,9 +33,10 @@ public:
    * @param displacement The displacement state for computing the sensitivities via the adjoint method
    * @param adjoint_displacement The adjoint state for computing the sensitivities via the adjoint method
    * @param linear_mat The linear elastic material model
+   * @param thermal_mat The optional thermal expansion material model
    */
   ShearSensitivityCoefficient(FiniteElementState& displacement, FiniteElementState& adjoint_displacement,
-                              LinearElasticMaterial& linear_mat, ThermalExpansionMaterial* thermal_mat = nullptr);
+                              LinearElasticMaterial& linear_mat);
 
   /**
    * @brief Do not allow default construction of the shear sensitivity coefficient
@@ -70,8 +71,6 @@ private:
    *
    */
   LinearElasticMaterial& material_;
-
-  ThermalExpansionMaterial* thermal_material_;
 
   /**
    * @brief The displacement gradient
@@ -124,7 +123,7 @@ public:
    * @param linear_mat The linear elastic material model
    */
   BulkSensitivityCoefficient(FiniteElementState& displacement, FiniteElementState& adjoint_displacement,
-                             LinearElasticMaterial& linear_mat, ThermalExpansionMaterial* thermal_mat = nullptr);
+                             LinearElasticMaterial& linear_mat);
 
   /**
    * @brief Do not allow default construction of the bulk sensitivity coefficient
@@ -159,8 +158,6 @@ private:
    *
    */
   LinearElasticMaterial& material_;
-
-  ThermalExpansionMaterial* thermal_material_;
 
   /**
    * @brief The displacement gradient

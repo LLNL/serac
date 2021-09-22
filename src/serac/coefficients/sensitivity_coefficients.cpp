@@ -9,14 +9,10 @@
 
 namespace serac::mfem_ext {
 
-ShearSensitivityCoefficient::ShearSensitivityCoefficient(FiniteElementState&       displacement,
-                                                         FiniteElementState&       adjoint_displacement,
-                                                         LinearElasticMaterial&    linear_mat,
-                                                         ThermalExpansionMaterial* thermal_mat)
-    : displacement_(displacement),
-      adjoint_displacement_(adjoint_displacement),
-      material_(linear_mat),
-      thermal_material_(thermal_mat)
+ShearSensitivityCoefficient::ShearSensitivityCoefficient(FiniteElementState&    displacement,
+                                                         FiniteElementState&    adjoint_displacement,
+                                                         LinearElasticMaterial& linear_mat)
+    : displacement_(displacement), adjoint_displacement_(adjoint_displacement), material_(linear_mat)
 {
   dim_ = displacement_.gridFunc().ParFESpace()->GetVDim();
 
@@ -34,22 +30,12 @@ double ShearSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const m
   // Compute the displacement and deformation gradient
   displacement_.gridFunc().GetVectorGradient(T, du_dX_);
 
-  if (thermal_material_) {
-    thermal_material_->setTransformation(T);
-    thermal_material_->modifyDisplacementGradient(du_dX_);
-  }
-
   solid_util::calcDeformationGradient(du_dX_, F_);
 
   double det_J = F_.Det();
 
   // Compute the adjoint gradient and strain
   adjoint_displacement_.gridFunc().GetVectorGradient(T, dp_dX_);
-
-  if (thermal_material_) {
-    thermal_material_->setTransformation(T);
-    thermal_material_->modifyDisplacementGradient(dp_dX_);
-  }
 
   serac::solid_util::calcLinearizedStrain(dp_dX_, adjoint_strain_);
 
@@ -72,14 +58,10 @@ double ShearSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const m
   return scalar_sum;
 }
 
-BulkSensitivityCoefficient::BulkSensitivityCoefficient(FiniteElementState&       displacement,
-                                                       FiniteElementState&       adjoint_displacement,
-                                                       LinearElasticMaterial&    linear_mat,
-                                                       ThermalExpansionMaterial* thermal_mat)
-    : displacement_(displacement),
-      adjoint_displacement_(adjoint_displacement),
-      material_(linear_mat),
-      thermal_material_(thermal_mat)
+BulkSensitivityCoefficient::BulkSensitivityCoefficient(FiniteElementState&    displacement,
+                                                       FiniteElementState&    adjoint_displacement,
+                                                       LinearElasticMaterial& linear_mat)
+    : displacement_(displacement), adjoint_displacement_(adjoint_displacement), material_(linear_mat)
 {
   dim_ = displacement_.gridFunc().ParFESpace()->GetVDim();
 
@@ -97,22 +79,12 @@ double BulkSensitivityCoefficient::Eval(mfem::ElementTransformation& T, const mf
   // Compute the displacement and deformation gradient
   displacement_.gridFunc().GetVectorGradient(T, du_dX_);
 
-  if (thermal_material_) {
-    thermal_material_->setTransformation(T);
-    thermal_material_->modifyDisplacementGradient(du_dX_);
-  }
-
   solid_util::calcDeformationGradient(du_dX_, F_);
 
   double det_J = F_.Det();
 
   // Compute the adjoint gradient and strain
   adjoint_displacement_.gridFunc().GetVectorGradient(T, dp_dX_);
-
-  if (thermal_material_) {
-    thermal_material_->setTransformation(T);
-    thermal_material_->modifyDisplacementGradient(dp_dX_);
-  }
 
   serac::solid_util::calcLinearizedStrain(dp_dX_, adjoint_strain_);
 
