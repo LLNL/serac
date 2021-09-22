@@ -25,9 +25,7 @@ using namespace serac;
 using namespace serac::profiling;
 
 int num_procs, myid;
-int nsamples = 1;  // because mfem doesn't take in unsigned int
 
-constexpr bool                 verbose = false;
 std::unique_ptr<mfem::ParMesh> mesh2D;
 std::unique_ptr<mfem::ParMesh> mesh3D;
 
@@ -74,46 +72,11 @@ void check_gradient(Functional<T>& f, mfem::GridFunction& U)
   mfem::Vector df2 = mfem::SparseMatrix(dfdU) * dU;
   mfem::Vector df3 = dfdU(dU);
 
-  double error1 = df1.DistanceTo(df2) / df1.Norml2();
-  double error2 = df1.DistanceTo(df3) / df1.Norml2();
+  double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
+  double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
 
-  mfem::SparseMatrix K = dfdU;
-
-  std::ofstream outfile("K1.mtx");
-  K.PrintMatlab(outfile);
-  outfile.close();
-
-  outfile.open("K_elem.mtx");
-  {
-    mfem::Vector tmp = f.ComputeElementGradients();
-    tmp.Print(outfile);
-  }
-  outfile.close();
-
-  outfile.open("K_belem.mtx");
-  {
-    mfem::Vector tmp = f.ComputeBoundaryElementGradients();
-    tmp.Print(outfile);
-  }
-  outfile.close();
-
-  outfile.open("face_restriction.mtx");
-  f.G_trial_boundary_->PrintMatlab(outfile);
-  outfile.close();
-
-  outfile.open("dof_numbering.txt");
-  DofNumbering trial_dofs(*(f.trial_space_));
-  auto & LUT = trial_dofs.boundary_element_dofs;
-  for (int i = 0; i < LUT.size(0); i++) {
-    for (int j = 0; j < LUT.size(1); j++) {
-      outfile << LUT(i,j) << " ";
-    }
-    outfile << std::endl;
-  }
-  outfile.close();
-
-  EXPECT_NEAR(0., error1, 1.e-8);
-  EXPECT_NEAR(0., error2, 1.e-8);
+  EXPECT_NEAR(0., relative_error1, 1.e-6);
+  EXPECT_NEAR(0., relative_error2, 1.e-6);
 
 }
 
@@ -147,7 +110,6 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   residual.AddDomainIntegral(
       Dimension<dim>{},
       [=](auto x, auto temperature) {
-        // get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
         auto source     = a * u * u - (100 * x[0] * x[1]);
         auto flux       = b * du_dx;
@@ -165,13 +127,64 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   serac::profiling::terminateCaliper();
 }
 
-TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-//TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-//TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
+template <int p, int dim>
+void functional_test(mfem::ParMesh& mesh, H1<p,dim> test, H1<p,dim> trial, Dimension<dim>)
+{
+  std::string postfix = concat("_H1<", p, ",", dim, ">");
+  serac::profiling::initializeCaliper();
 
-//TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-//TEST(thermal, 3D_quadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-//TEST(thermal, 3D_cubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
+  // Create standard MFEM bilinear and linear forms on H1
+  auto                        fec = mfem::H1_FECollection(p, dim);
+  mfem::ParFiniteElementSpace fespace(&mesh, &fec, dim);
+
+  // Set a random state to evaluate the residual
+  mfem::GridFunction U(&fespace);
+  U.Randomize();
+
+  // Define the types for the test and trial spaces using the function arguments
+  using test_space  = decltype(test);
+  using trial_space = decltype(trial);
+
+  // Construct the new functional object using the known test and trial spaces
+  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+
+  // Add the total domain residual term to the functional
+  residual.AddDomainIntegral(
+      Dimension<dim>{},
+      [=](auto x, auto temperature) {
+        // get the value and the gradient from the input tuple
+        auto [u, du_dx] = temperature;
+        auto source     = a * u * u[0];
+        auto flux       = b * du_dx;
+        return serac::tuple{source, flux};
+      }, mesh);
+
+  residual.AddBoundaryIntegral(
+      Dimension<dim-1>{},
+      [=](auto x, auto n, auto u) {
+        return (x[0] + x[1] - cos(u[0])) * n;
+      }, mesh);
+
+  check_gradient(residual, U);
+
+  serac::profiling::terminateCaliper();
+}
+
+TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
+TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
+
+TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(thermal, 3D_quadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(thermal, 3D_cubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
+
+TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1,2>{}, H1<1,2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2,2>{}, H1<2,2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3,2>{}, H1<3,2>{}, Dimension<2>{}); }
+
+TEST(elasticity, 3D_linear) { functional_test(*mesh3D, H1<1,3>{}, H1<1,3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_quadratic) { functional_test(*mesh3D, H1<2,3>{}, H1<2,3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_cubic) { functional_test(*mesh3D, H1<3,3>{}, H1<3,3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {
@@ -185,11 +198,11 @@ int main(int argc, char* argv[])
   int serial_refinement   = 0;
   int parallel_refinement = 0;
 
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/square.mesh";
+  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
-  //std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  //mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+  std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+  mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
   int result = RUN_ALL_TESTS();
   MPI_Finalize();

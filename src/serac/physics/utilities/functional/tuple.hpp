@@ -198,6 +198,25 @@ SERAC_HOST_DEVICE constexpr auto operator+(const tuple<S...>& x, const tuple<T..
   return plus_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(S))>());
 }
 
+template <typename... T, int... i>
+SERAC_HOST_DEVICE constexpr void plus_equals_helper(tuple<T...>& x, const tuple<T...>& y,
+                                                    std::integer_sequence<int, i...>)
+{
+  ((get<i>(x) += get<i>(y)), ...);
+}
+
+/**
+ * @tparam T the types stored in the tuples x and y
+ * @param x a tuple of values
+ * @param y a tuple of values
+ * @brief add values contained in y, to the tuple x
+ */
+template <typename... T>
+SERAC_HOST_DEVICE constexpr auto operator+=(tuple<T...>& x, const tuple<T...>& y)
+{
+  return plus_equals_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
+}
+
 template <typename... S, typename... T, int... i>
 SERAC_HOST_DEVICE constexpr auto minus_helper(const tuple<S...>& x, const tuple<T...>& y,
                                               std::integer_sequence<int, i...>)
