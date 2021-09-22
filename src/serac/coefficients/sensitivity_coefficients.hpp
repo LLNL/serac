@@ -15,7 +15,6 @@
 #include "serac/physics/utilities/finite_element_state.hpp"
 #include "serac/physics/materials/hyperelastic_material.hpp"
 #include "serac/coefficients/sensitivity_coefficients.hpp"
-#include "serac/physics/materials/thermal_expansion_material.hpp"
 
 #include "mfem.hpp"
 
@@ -33,7 +32,6 @@ public:
    * @param displacement The displacement state for computing the sensitivities via the adjoint method
    * @param adjoint_displacement The adjoint state for computing the sensitivities via the adjoint method
    * @param linear_mat The linear elastic material model
-   * @param thermal_mat The optional thermal expansion material model
    */
   ShearSensitivityCoefficient(FiniteElementState& displacement, FiniteElementState& adjoint_displacement,
                               LinearElasticMaterial& linear_mat);

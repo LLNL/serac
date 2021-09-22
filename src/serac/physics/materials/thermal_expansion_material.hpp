@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file hyperelastic_material.hpp
+ * @file thermal_expansion_material.hpp
  *
- * @brief The hyperelastic material models for the solid module
+ * @brief The thermal expansion material models for the solid module
  */
 
 #pragma once
@@ -18,19 +18,19 @@
 namespace serac {
 
 /**
- * @brief Abstract interface class for a generic hyperelastic material
+ * @brief Abstract interface class for a generic thermal expansion model
  *
  */
 class ThermalExpansionMaterial {
 public:
   /**
-   * @brief Construct a new Hyperelastic Material object
+   * @brief Construct a new thermal expansion material
    *
    */
   ThermalExpansionMaterial() : parent_to_reference_transformation_(nullptr) {}
 
   /**
-   * @brief Destroy the Hyperelastic Material object
+   * @brief Destroy the thermal expansion material object
    *
    */
   virtual ~ThermalExpansionMaterial() = default;
@@ -42,17 +42,14 @@ public:
    */
   void setTransformation(mfem::ElementTransformation& Ttr) { parent_to_reference_transformation_ = &Ttr; }
 
-  virtual void modifyDisplacementGradient(mfem::DenseMatrix& du_dX) = 0;
-
   /**
-   * @brief Evaluate the strain energy density function, W = W(F).
+   * @brief Modify the displacement gradient to include thermal strain
    *
-   * @param[in] du_dX the displacement gradient
-   * @return double Strain energy density
+   * @param[inout] du_dX The unmodified displacement gradient
+   * @pre The underlying element transformation must be set to the correct integration point
+   * for the coefficient evaluations to work correctly
    */
-  virtual void modifyDeformationGradient(mfem::DenseMatrix& F) = 0;
-
-  virtual void modifyLinearizedStrain(mfem::DenseMatrix& epsilon) = 0;
+  virtual void modifyDisplacementGradient(mfem::DenseMatrix& du_dX) = 0;
 
 protected:
   /**
@@ -63,14 +60,34 @@ protected:
 };
 
 /**
- * @brief Neo-Hookean hyperelastic model with a strain energy density function given
- *   by the formula: \f$(\mu/2)(\bar{I}_1 - dim) + (K/2)(det(F)/g - 1)^2\f$ where
- *   F is the deformation gradient and \f$\bar{I}_1 = (det(F))^{-2/dim} Tr(F
- *   F^t)\f$. The parameters \f$\mu\f$ and \f$\lambda\f$ are the Lame parameters.
+ * @brief A simple isotropic finite deformation thermal expansion module.
  *
+ * @details This implements the split deformation gradient model
+ *
+ * \f[
+ * \mathbf{F} = \mathbf{F}_\theta \mathbf{F}_M
+ * \f]
+ *
+ * where \f$\mathbf{F}\f$ is the total deformation gradient, \f$\mathbf{F}_\theta\f$ is the
+ * deformation gradient induced by thermal expansion, and \f$\mathbf{F}_M\f$ is the mechanical
+ * deformation gradient. The thermal deformation gradient of this model is given by
+ *
+ * \f[
+ * \mathbf{F}_\theta = \mathbf{I} + \alpha \left( \theta - \theta_\mbox{ref} \right)
+ * \f]
+ *
+ * where \f$\alpha\f$ is the coefficient of thermal expansion, \f$\theta\f$ is the current
+ * temperature, and \f$\theta_\mbox{ref}\f$ is the reference temperature.
  */
 class IsotropicThermalExpansionMaterial : public ThermalExpansionMaterial {
 public:
+  /**
+   * @brief Construct a new Isotropic Thermal Expansion Material object
+   *
+   * @param coef_thermal_expansion The coefficient of thermal expansion \f$\alpha\f$
+   * @param reference_temp The reference temperature \f$\theta_\mbox{ref}\f$
+   * @param temp The current temperature \f$\theta\f$
+   */
   IsotropicThermalExpansionMaterial(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
                                     std::unique_ptr<mfem::Coefficient>&& reference_temp, FiniteElementState& temp)
       : c_coef_thermal_expansion_(std::move(coef_thermal_expansion)),
@@ -79,14 +96,17 @@ public:
   {
   }
 
+  /**
+   * @brief Modify the displacement gradient to include thermal strain
+   *
+   * @param[inout] du_dX The unmodified displacement gradient
+   * @pre The underlying element transformation must be set to the correct integration point
+   * for the coefficient evaluations to work correctly
+   */
   void modifyDisplacementGradient(mfem::DenseMatrix& du_dX);
 
-  void modifyDeformationGradient(mfem::DenseMatrix& F);
-
-  void modifyLinearizedStrain(mfem::DenseMatrix& epsilon);
-
   /**
-   * @brief Destroy the Hyperelastic Material object
+   * @brief Destroy the isotropic thermal expansion object
    *
    */
   virtual ~IsotropicThermalExpansionMaterial() = default;
@@ -99,47 +119,42 @@ public:
 
 protected:
   /**
-   * @brief Shear modulus in constant form
-   *
+   * @brief Coefficient of thermal expansion in constant form
    */
   mutable double coef_thermal_expansion_;
 
   /**
-   * @brief Bulk modulus in constant form
-   *
+   * @brief Reference temperature in constant form
    */
   mutable double reference_temp_;
 
+  /**
+   * @brief Current temperature in constant form
+   */
   mutable double temp_;
 
   /**
-   * @brief Shear modulus in coefficient form
-   *
+   * @brief Coefficient of thermal expansion in coefficient form
    */
   std::unique_ptr<mfem::Coefficient> c_coef_thermal_expansion_;
 
   /**
-   * @brief Bulk modulus in coefficient form
+   * @brief Reference temperature in coefficient form
    *
    */
   std::unique_ptr<mfem::Coefficient> c_reference_temp_;
 
   /**
-   * @brief The deformation gradient (dx_dX)
-   *
+   * @brief Coefficient of thermal expansion in finite element state form
    */
   FiniteElementState& temp_state_;
 
   /**
    * @brief Evaluate the coefficients
-   * @note The reference-to-target transformation must be set before this call.
+   * @pre The reference-to-target transformation must be set before this call.
    *
    */
   inline void EvalCoeffs() const;
-
-  mutable mfem::DenseMatrix F_copy_;
-
-  mutable mfem::DenseMatrix F_thermal_;
 };
 
 }  // namespace serac

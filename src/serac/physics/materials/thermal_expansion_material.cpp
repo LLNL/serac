@@ -32,29 +32,4 @@ void IsotropicThermalExpansionMaterial::modifyDisplacementGradient(mfem::DenseMa
   }
 }
 
-void IsotropicThermalExpansionMaterial::modifyDeformationGradient(mfem::DenseMatrix& F)
-{
-  EvalCoeffs();
-
-  F_copy_ = F;
-
-  F_thermal_.SetSize(F.Width());
-  F_thermal_ = 0.0;
-
-  for (int i = 0; i < F.Width(); ++i) {
-    F_thermal_(i, i) = 1.0 + coef_thermal_expansion_ * (temp_ - reference_temp_);
-  }
-
-  mfem::Mult(F_copy_, F_thermal_, F);
-}
-
-void IsotropicThermalExpansionMaterial::modifyLinearizedStrain(mfem::DenseMatrix& epsilon)
-{
-  EvalCoeffs();
-
-  for (int i = 0; i < epsilon.Width(); ++i) {
-    epsilon(i, i) += coef_thermal_expansion_ * (temp_ - reference_temp_);
-  }
-}
-
 }  // namespace serac

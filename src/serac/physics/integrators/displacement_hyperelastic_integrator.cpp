@@ -29,6 +29,8 @@ void DisplacementHyperelasticIntegrator::CalcKinematics(const mfem::FiniteElemen
   // Calculate the displacement gradient using the current DOFs
   MultAtB(input_state_matrix_, dN_dX_, du_dX_);
 
+  // If the underlying material has thermal expansion, add the thermal strain
+  // to the displacement gradient
   if (thermal_material_) {
     thermal_material_->modifyDisplacementGradient(du_dX_);
   }
@@ -69,7 +71,7 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(
 
   double energy = 0.0;
 
-  // Set the transformation for the underlying material. This is required for coefficient evaluation.
+  // Set the transformation for the underlying materials. This is required for coefficient evaluation.
   material_.setTransformation(parent_to_reference_transformation);
 
   if (thermal_material_) {
@@ -117,7 +119,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(
     ir = &(mfem::IntRules.Get(element.GetGeomType(), 2 * element.GetOrder() + 3));
   }
 
-  // Set the transformation for the underlying material. This is required for coefficient evaluation.
+  // Set the transformation for the underlying materials. This is required for coefficient evaluation.
   material_.setTransformation(parent_to_reference_transformation);
 
   if (thermal_material_) {
@@ -175,7 +177,7 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
 
   stiffness_matrix = 0.0;
 
-  // Set the transformation for the underlying material. This is required for coefficient evaluation.
+  // Set the transformation for the underlying materials. This is required for coefficient evaluation.
   material_.setTransformation(parent_to_reference_transformation);
 
   if (thermal_material_) {

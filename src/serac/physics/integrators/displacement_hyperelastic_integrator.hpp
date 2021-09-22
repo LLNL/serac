@@ -100,6 +100,10 @@ private:
    */
   HyperelasticMaterial& material_;
 
+  /**
+   * @brief The optional associated thermal expansion material model
+   * @note This is a non-owning pointer
+   */
   ThermalExpansionMaterial* thermal_material_;
 
   /**
@@ -131,10 +135,6 @@ private:
    *
    */
   mfem::DenseMatrix F_;
-
-  mfem::DenseMatrix F_copy_;
-
-  mfem::DenseMatrix F_thermal_;
 
   /**
    * @brief the inverse of the deformation gradient
