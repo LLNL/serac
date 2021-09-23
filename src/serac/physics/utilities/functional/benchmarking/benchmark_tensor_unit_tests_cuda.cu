@@ -8,16 +8,14 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-template <int n>
-void custom_assert(bool condition, const char (&message)[n])
-{
-  if (condition == false) {
-    printf("error: %s", message);
-  }
-}
-
-template <typename TensorType>
-__global__ void set_tensor(int N, TensorType tensor, TensorType* data)
+/**
+ * @brief Kernel to set an array of typed data on a GPU with the provided tensor
+ * @param N the number of array elements
+ * @param tensor the value that each element should be initialized to
+ * @param data The gpu typed array
+ */
+template <typename StructType>
+__global__ void set_struct(int N, StructType tensor, StructType* data)
 {
   int id          = blockIdx.x * blockDim.x + threadIdx.x;
   int grid_stride = blockDim.x * gridDim.x;
@@ -26,6 +24,16 @@ __global__ void set_tensor(int N, TensorType tensor, TensorType* data)
   }
 }
 
+/**
+ * @brief Kernel to set a structure of GPU arrays of typed data
+ *
+ * The args argument takes in a tuple of tuples. Each of the inner tuples contains firstly
+ * the value to set, and secondly the GPU array pointer within the Structure of Arrays that
+ * we would like to initialize using the first tuple value.
+ *
+ * @param N the number of elements in each array within the structure
+ * @param args A std::tuple of pairs of (value to set, gpu pointer array start)
+ */
 template <typename... TupleATypes>
 __global__ void set_SoA(int N, std::tuple<TupleATypes...> args)
 {
@@ -36,6 +44,17 @@ __global__ void set_SoA(int N, std::tuple<TupleATypes...> args)
   }
 }
 
+/**
+ * @brief A kernel bandwidth test copying tuple values between two Structures of Arrays on GPUs.
+ *
+ * The copyTuples argument takes in a tuple of tuples. Each of the inner tuples contains
+ * firstly the output array within the structure of arrays, and the second argument is the
+ * array in the Structure of Arrays to copy from. The elements are then copied element by
+ * element.
+ *
+ * @param N the number of elements in each of the arrays in the Structure of Arrays
+ * @param copyTuples
+ */
 template <typename... TupleATypes>
 __global__ void benchmark_SoA_throughput(int N, std::tuple<TupleATypes...> copyTuples)
 {
@@ -46,8 +65,15 @@ __global__ void benchmark_SoA_throughput(int N, std::tuple<TupleATypes...> copyT
   }
 }
 
-template <typename TensorType>
-__global__ void benchmark_tensor_throughput(int N, TensorType* input, TensorType* output)
+/**
+ * @brief The kernel bandwidth test to copy from a typed input array on the GPU to a typed output arary on the GPU
+ *
+ * @param N the number of elements within the input and output array
+ * @param input the GPU input array pointer
+ * @param output the GPU output array pointer
+ */
+template <typename StructType>
+__global__ void benchmark_struct_throughput(int N, StructType* input, StructType* output)
 {
   int id          = blockIdx.x * blockDim.x + threadIdx.x;
   int grid_stride = blockDim.x * gridDim.x;
@@ -56,19 +82,30 @@ __global__ void benchmark_tensor_throughput(int N, TensorType* input, TensorType
   }
 }
 
-
+/**
+ * @brief A method to drive the structures of arrays benchmark
+ *
+ * Thrust is used to allocate GPU arrays
+ *
+ * @param N the number of elements
+ * @param grid The GPU grid launch configuration
+ * @param threadblock The threadblock configuration to use
+ * @param values A list of values corresponding to different elements within the structure of arrays to initialize each
+ * of the arrays.
+ */
 template <typename... TupleATypes>
 void run_SoA_copy_benchmark(int N, dim3 grid, dim3 threadblock, TupleATypes... values)
 {
   std::tuple<thrust::device_vector<TupleATypes>...> device_vectors;
   std::tuple<thrust::device_vector<TupleATypes>...> output_device_vectors;
 
+  // allocate input and output structure of arrays  on the GPU
   std::apply([&](auto&&... device_vector) { (device_vector.resize(N), ...); }, device_vectors);
   std::apply([&](auto&&... output_device_vector) { (output_device_vector.resize(N), ...); }, output_device_vectors);
 
   auto vals = std::make_tuple(values...);
 
-  // allocate tuples
+  // allocate input tuples
   auto setT = std::apply(
       [&](auto&... val) {
         return std::apply(
@@ -79,7 +116,7 @@ void run_SoA_copy_benchmark(int N, dim3 grid, dim3 threadblock, TupleATypes... v
       },
       vals);
 
-  // allocate tuples
+  // allocate output tuples
   auto copyT = std::apply(
       [&](auto&... out_vector) {
         return std::apply(
@@ -94,27 +131,35 @@ void run_SoA_copy_benchmark(int N, dim3 grid, dim3 threadblock, TupleATypes... v
   // run set_SoA benchmark
   set_SoA<<<grid, threadblock>>>(N, setT);
 
-  // // set tensors and copy to output
+  // set tensors and copy to output
   benchmark_SoA_throughput<<<grid, threadblock>>>(N, copyT);
 
   // wait for it to finish
   cudaDeviceSynchronize();
 }
 
-template <typename TensorType>
-void run_tensor_copy_benchmark(int N, TensorType tensor, dim3 grid, dim3 threadblock)
+/**
+ * @brief Drives the Arrays of structures bandwidth copy test
+ *
+ * @param N the number of elements
+ * @param tensor The struct value to initialize the Array of structures
+ * @param grid The grid configuration to execute with
+ * @param threadblock The thread configuration to execut with.
+ */
+template <typename StructType>
+void run_tensor_copy_benchmark(int N, StructType tensor, dim3 grid, dim3 threadblock)
 {
-  thrust::device_vector<TensorType> input(N);
-  thrust::device_vector<TensorType> output(N);
+  thrust::device_vector<StructType> input(N);
+  thrust::device_vector<StructType> output(N);
 
   auto d_input  = thrust::raw_pointer_cast(input.data());
   auto d_output = thrust::raw_pointer_cast(output.data());
 
   // initialize input
-  set_tensor<<<grid, threadblock>>>(N, tensor, d_input);
+  set_struct<<<grid, threadblock>>>(N, tensor, d_input);
 
   // set tensors and copy to output
-  benchmark_tensor_throughput<<<grid, threadblock>>>(N, d_input, d_output);
+  benchmark_struct_throughput<<<grid, threadblock>>>(N, d_input, d_output);
 
   // wait for it to finish
   cudaDeviceSynchronize();
@@ -126,6 +171,8 @@ struct double2 {
   double x_2;
 };
 
+/// This is a special CUDA aligned type, which may allow for the compiler to issue instructions that can access more
+/// memory efficiently.
 struct __align__(16) double2_16
 {
   double x_1;
@@ -163,6 +210,7 @@ struct tensor<T> {
   T                 value;
 };
 
+// Let's try aligning each row
 template <typename T, int n>
 struct __align__(16) tensor<T, n>
 {
@@ -250,10 +298,12 @@ struct S1 {
 
 int main()
 {
-  int          N         = 10000000;  // ~ 10M
+  int          N         = 10000000;  // ~ 10M elements
   unsigned int blocksize = 256;
   dim3         threadblock{blocksize, 1, 1};
   dim3         grid{(N + blocksize - 1) / blocksize, 1, 1};
+
+  // Use standard serac::tensor types
   run_tensor_copy_benchmark(N, serac::tensor<double, >({1}), grid, threadblock);
   run_tensor_copy_benchmark(N, serac::tensor<double, 2>({1, 2}), grid, threadblock);
   run_tensor_copy_benchmark(N, serac::tensor<double, 3>({1, 2, 3}), grid, threadblock);
@@ -272,7 +322,6 @@ int main()
   run_tensor_copy_benchmark(N, benchmark::tensor<double, 3, 3>({{{1, 2, 3}, {1, 2, 3}, {1, 2, 3}}}), grid, threadblock);
 
   // Structure of Arrays (SoA) benchmark
-
   S1 s1{.a = 1, .b = 1.234};
   run_SoA_copy_benchmark(N, grid, threadblock, s1.a, s1.b);
 
@@ -280,12 +329,11 @@ int main()
   run_SoA_copy_benchmark(N, grid, threadblock, tensor2(0), tensor2(1));
 
   benchmark::tensor<double, 3, 3> tensor3({{{1, 2, 3}, {1, 2, 3}, {1, 2, 3}}});
-  run_SoA_copy_benchmark(N, grid, threadblock, 
-			 tensor3(1,1), tensor3(1,2), tensor3(1,3),
-			 tensor3(2,1), tensor3(2,2), tensor3(2,3),
-			 tensor3(3,1), tensor3(3,2), tensor3(3,3));
+  run_SoA_copy_benchmark(N, grid, threadblock, tensor3(1, 1), tensor3(1, 2), tensor3(1, 3), tensor3(2, 1),
+                         tensor3(2, 2), tensor3(2, 3), tensor3(3, 1), tensor3(3, 2), tensor3(3, 3));
 }
 
+// Sample commands used to profile this benchmark
 // ncu -f -o unit_test --details-all ./tests/benchmark_tensor_unit_tests_cuda
 // ncu -f -o unit_test --details-all --set full ./tests/benchmark_tensor_unit_tests_cuda
 // ncu -f -o unit_test --set full -k "set_tensor|benchmark" ./tests/benchmark_tensor_unit_tests_cuda
