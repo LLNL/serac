@@ -29,7 +29,7 @@ TEST(solid_solver, thermal_expansion)
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/onehex.mesh";
 
-  auto      pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 1, 0);
+  auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 1, 0);
   serac::StateManager::setMesh(std::move(pmesh));
 
   // define the solver configurations
@@ -49,8 +49,9 @@ TEST(solid_solver, thermal_expansion)
   Solid solid_solver(1, default_static, GeometricNonlinearities::Off);
 
   solid_solver.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
-                                       std::make_unique<mfem::ConstantCoefficient>(5.0), false);
+                                     std::make_unique<mfem::ConstantCoefficient>(5.0), false);
 
+  // set the boundary conditions to be fixed on the coordinate planes
   auto zero = std::make_shared<mfem::ConstantCoefficient>(0.0);
 
   solid_solver.setDisplacementBCs({1}, zero, 0);
@@ -59,10 +60,12 @@ TEST(solid_solver, thermal_expansion)
 
   solid_solver.displacement() = 0.0;
 
-  auto temp = serac::StateManager::newState({.name = "temp"});
+  // Make a dummy temperature finite element state to drive the thermal expansion
+  auto temp = serac::StateManager::newState(FiniteElementVector::Options{.name = "temp"});
 
   temp = 2.0;
 
+  // Define the thermal expansion model
   auto ref_temp = std::make_unique<mfem::ConstantCoefficient>(1.0);
   auto cte      = std::make_unique<mfem::ConstantCoefficient>(0.1);
 
@@ -79,10 +82,13 @@ TEST(solid_solver, thermal_expansion)
 
   double t = 0.0;
 
+  // Solve the quasi-static thermal expansion problem
   solid_solver.advanceTimestep(t);
 
+  // Output the deformed state
   solid_solver.outputState();
 
+  // Check the norm of the displacement error
   EXPECT_NEAR(0.13013338, norm(solid_solver.displacement()), 1.0e-4);
 
   MPI_Barrier(MPI_COMM_WORLD);
