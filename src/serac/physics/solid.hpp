@@ -284,7 +284,7 @@ public:
                              bool material_nonlin = true);
 
   /**
-   * @brief Set the thermal expansion parameters for the solid mechanics module
+   * @brief Set the isotropic thermal expansion parameters for the solid mechanics module
    *
    * @param coef_thermal_expansion The coefficient for thermal expansion
    * @param reference_temp The reference temperature

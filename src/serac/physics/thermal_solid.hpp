@@ -26,6 +26,40 @@ namespace serac {
 class ThermalSolid : public BasePhysics {
 public:
   /**
+   * @brief Stores all information held in the input file that
+   * is used to configure the thermal solid solver
+   */
+  struct InputOptions {
+    /**
+     * @brief Input file parameters specific to this class
+     *
+     * @param[in] container Inlet's Container that input files will be added to
+     **/
+    static void defineInputFileSchema(axom::inlet::Container& container);
+
+    /**
+     * @brief Solid mechanics input options
+     */
+    Solid::InputOptions solid_input;
+
+    /**
+     * @brief Thermal conduction input options
+     *
+     */
+    ThermalConduction::InputOptions thermal_input;
+
+    /**
+     * @brief The isotropic coefficient of thermal expansion
+     */
+    std::optional<input::CoefficientInputOptions> coef_thermal_expansion;
+
+    /**
+     * @brief The reference temperature for thermal expansion
+     */
+    std::optional<input::CoefficientInputOptions> reference_temperature;
+  };
+
+  /**
    * @brief Construct a new Thermal Structural Solver object
    *
    * @param[in] order The order of the temperature and displacement discretizations
@@ -39,8 +73,16 @@ public:
   /**
    * @brief Construct a new Thermal Solid object from input file options
    *
+   * @param[in] thermal_solid_input The thermal solid physics module input file option struct
+   * @param[in] name A name for the physics module
+   */
+  ThermalSolid(const ThermalSolid::InputOptions& thermal_solid_input, const std::string& name = "");
+
+  /**
+   * @brief Construct a new Thermal Solid object from input file options
+   *
    * @param[in] thermal_input The thermal physics module input file option struct
-   * @param[in] solid_input The solid mechanics module input file option struct
+   * @param[in] solid_input The solid physics module input file option struct
    * @param[in] name A name for the physics module
    */
   ThermalSolid(const ThermalConduction::InputOptions& thermal_input, const Solid::InputOptions& solid_input,
@@ -85,6 +127,19 @@ public:
     therm_solver_.setMassDensity(std::move(rho));
     solid_solver_.setMassDensity(std::move(rho));
   };
+
+  /**
+   * @brief Set the isotropic thermal expansion parameters
+   *
+   * @param coef_thermal_expansion The coefficient for thermal expansion
+   * @param reference_temp The reference temperature
+   */
+  void setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
+                           std::unique_ptr<mfem::Coefficient>&& reference_temp)
+  {
+    solid_solver_.setThermalExpansion(std::move(coef_thermal_expansion), std::move(reference_temp),
+                                      therm_solver_.temperature());
+  }
 
   /**
    * @brief Set the specific heat capacity
@@ -283,3 +338,14 @@ protected:
 };
 
 }  // namespace serac
+
+/**
+ * @brief Prototype the specialization for Inlet parsing
+ *
+ * @tparam The object to be created by inlet
+ */
+template <>
+struct FromInlet<serac::ThermalSolid::InputOptions> {
+  /// @brief Returns created object from Inlet container
+  serac::ThermalSolid::InputOptions operator()(const axom::inlet::Container& base);
+};
