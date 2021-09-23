@@ -49,7 +49,7 @@ TEST(solid_solver, thermal_expansion)
   Solid solid_solver(1, default_static, GeometricNonlinearities::Off);
 
   solid_solver.setMaterialParameters(std::make_unique<mfem::ConstantCoefficient>(0.25),
-                                       std::make_unique<mfem::ConstantCoefficient>(5.0));
+                                       std::make_unique<mfem::ConstantCoefficient>(5.0), false);
 
   auto zero = std::make_shared<mfem::ConstantCoefficient>(0.0);
 
@@ -61,7 +61,7 @@ TEST(solid_solver, thermal_expansion)
 
   auto temp = serac::StateManager::newState({.name = "temp"});
 
-  temp = 1.5;
+  temp = 2.0;
 
   auto ref_temp = std::make_unique<mfem::ConstantCoefficient>(1.0);
   auto cte      = std::make_unique<mfem::ConstantCoefficient>(0.1);
@@ -82,6 +82,8 @@ TEST(solid_solver, thermal_expansion)
   solid_solver.advanceTimestep(t);
 
   solid_solver.outputState();
+
+  EXPECT_NEAR(0.13013338, norm(solid_solver.displacement()), 1.0e-4);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

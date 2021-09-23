@@ -27,7 +27,7 @@ void IsotropicThermalExpansionMaterial::modifyDisplacementGradient(mfem::DenseMa
 {
   EvalCoeffs();
 
-  double expansion = coef_thermal_expansion_ * (temp_ - reference_temp_);
+  double expansion = coef_thermal_expansion_ * (reference_temp_ - temp_);
 
   for (int i = 0; i < du_dX.Width(); ++i) {
     du_dX(i, i) += expansion * (1.0 + du_dX(i, i));
