@@ -20,11 +20,13 @@ inline void IsotropicThermalExpansionMaterial::EvalCoeffs() const
   reference_temp_ =
       c_reference_temp_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
   temp_ = temp_state_.gridFuncCoef().Eval(*parent_to_reference_transformation_,
-                                          parent_to_reference_transformation_->GetIntPoint());
+                                          parent_to_reference_transformation_->GetIntPoint());                                       
 }
 
 void IsotropicThermalExpansionMaterial::modifyDisplacementGradient(mfem::DenseMatrix& du_dX)
 {
+  EvalCoeffs();
+
   double expansion = coef_thermal_expansion_ * (temp_ - reference_temp_);
 
   for (int i = 0; i < du_dX.Width(); ++i) {
