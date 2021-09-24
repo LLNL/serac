@@ -126,7 +126,7 @@ public:
    * models due to numerical issues. This modifies the displacement gradient (du/dX) in a way consistent with the
    * deformation gradient (dx/dX) decomposition of thermal strain.
    *
-   * \f{align*}{
+   * \f{eqnarray*}{
    * \mathbf{F}_\textbf{total} &= \mathbf{F}_\textbf{thermal}\mathbf{F}_\textbf{mechanical} \\
    * &= (\mathbf{I}+\mathbf{H}_\textbf{thermal})(\mathbf{I}+\mathbf{H}_\textbf{mechanical}) \\
    * &= \mathbf{I} + \mathbf{H}_\textbf{thermal} + \mathbf{H}_\textbf{mechanical} +
