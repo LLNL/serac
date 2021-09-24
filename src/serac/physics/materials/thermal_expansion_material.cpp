@@ -13,21 +13,16 @@
 
 namespace serac {
 
-inline void IsotropicThermalExpansionMaterial::EvalCoeffs() const
-{
-  coef_thermal_expansion_ = c_coef_thermal_expansion_->Eval(*parent_to_reference_transformation_,
-                                                            parent_to_reference_transformation_->GetIntPoint());
-  reference_temp_ =
-      c_reference_temp_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
-  temp_ = temp_state_.gridFuncCoef().Eval(*parent_to_reference_transformation_,
-                                          parent_to_reference_transformation_->GetIntPoint());
-}
-
 void IsotropicThermalExpansionMaterial::modifyDisplacementGradient(mfem::DenseMatrix& du_dX)
 {
-  EvalCoeffs();
+  auto coef_thermal_expansion = c_coef_thermal_expansion_->Eval(*parent_to_reference_transformation_,
+                                                                parent_to_reference_transformation_->GetIntPoint());
+  auto reference_temp =
+      c_reference_temp_->Eval(*parent_to_reference_transformation_, parent_to_reference_transformation_->GetIntPoint());
+  auto current_temp = temp_state_.gridFuncCoef().Eval(*parent_to_reference_transformation_,
+                                                      parent_to_reference_transformation_->GetIntPoint());
 
-  double expansion = coef_thermal_expansion_ * (reference_temp_ - temp_);
+  auto expansion = coef_thermal_expansion * (reference_temp - current_temp);
 
   for (int i = 0; i < du_dX.Width(); ++i) {
     du_dX(i, i) += expansion * (1.0 + du_dX(i, i));

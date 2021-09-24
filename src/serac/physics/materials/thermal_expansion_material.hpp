@@ -102,6 +102,21 @@ public:
    * @param[inout] du_dX The unmodified displacement gradient
    * @pre The underlying element transformation must be set to the correct integration point
    * for the coefficient evaluations to work correctly
+   * @details We often want to use displacement gradients instead of deformation gradients in material
+   * models due to numerical issues. This modifies the displacement gradient (du/dX) in a way consistent with the
+   * deformation gradient (dx/dX) decomposition of thermal strain.
+   *
+   * \f[
+   * \begin{align*}
+   * \mathbf{F}_\textbf{total} &= \mathbf{F}_\textbf{thermal}\mathbf{F}_\textbf{mechanical} \\
+   * &= (\mathbf{I}+\mathbf{H}_\textbf{thermal})(\mathbf{I}+\mathbf{H}_\textbf{mechanical}) \\
+   * &= \mathbf{I} + \mathbf{H}_\textbf{thermal} + \mathbf{H}_\textbf{mechanical} +
+   * \mathbf{H}_\textbf{thermal}\mathbf{H}_\textbf{mechanical} \\
+   * &= \mathbf{I} + \mathbf{H}_\textbf{modified} \\
+   * \mathbf{H}_\textbf{thermal} &= \mathbf{F}_\textbf{thermal} - \mathbf{I} \\
+   * &= \alpha \left( \theta - \theta_\textbf{ref}\right)\mathbf{I}
+   * \end{aligh*}
+   * \f]
    */
   void modifyDisplacementGradient(mfem::DenseMatrix& du_dX);
 
@@ -119,21 +134,6 @@ public:
 
 protected:
   /**
-   * @brief Coefficient of thermal expansion in constant form
-   */
-  mutable double coef_thermal_expansion_;
-
-  /**
-   * @brief Reference temperature in constant form
-   */
-  mutable double reference_temp_;
-
-  /**
-   * @brief Current temperature in constant form
-   */
-  mutable double temp_;
-
-  /**
    * @brief Coefficient of thermal expansion in coefficient form
    */
   std::unique_ptr<mfem::Coefficient> c_coef_thermal_expansion_;
@@ -148,13 +148,6 @@ protected:
    * @brief Coefficient of thermal expansion in finite element state form
    */
   FiniteElementState& temp_state_;
-
-  /**
-   * @brief Evaluate the coefficients
-   * @pre The reference-to-target transformation must be set before this call.
-   *
-   */
-  inline void EvalCoeffs() const;
 };
 
 }  // namespace serac
