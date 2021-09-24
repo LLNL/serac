@@ -132,7 +132,7 @@ public:
    * &= \mathbf{I} + \mathbf{H}_\textbf{thermal} + \mathbf{H}_\textbf{mechanical} +
    * \mathbf{H}_\textbf{thermal}\mathbf{H}_\textbf{mechanical} \\
    * &= \mathbf{I} + \mathbf{H}_\textbf{modified} \\
-   * \mathbf{H}_\textbf{thermal} &= \mathbf{F}_\textbf{thermal} - \mathbf{I} \\
+   * \mathbf{H}_\textbf{thermal} &= \mathbf{F}_\textbf{thermal} - \mathbf{I} 
    * &= \alpha \left( \theta - \theta_\textbf{ref}\right)\mathbf{I}
    * \f}
    */
