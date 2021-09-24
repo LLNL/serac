@@ -126,8 +126,7 @@ public:
    * models due to numerical issues. This modifies the displacement gradient (du/dX) in a way consistent with the
    * deformation gradient (dx/dX) decomposition of thermal strain.
    *
-   * \f[
-   * \begin{align*}
+   * \f{align*}{
    * \mathbf{F}_\textbf{total} &= \mathbf{F}_\textbf{thermal}\mathbf{F}_\textbf{mechanical} \\
    * &= (\mathbf{I}+\mathbf{H}_\textbf{thermal})(\mathbf{I}+\mathbf{H}_\textbf{mechanical}) \\
    * &= \mathbf{I} + \mathbf{H}_\textbf{thermal} + \mathbf{H}_\textbf{mechanical} +
@@ -135,8 +134,7 @@ public:
    * &= \mathbf{I} + \mathbf{H}_\textbf{modified} \\
    * \mathbf{H}_\textbf{thermal} &= \mathbf{F}_\textbf{thermal} - \mathbf{I} \\
    * &= \alpha \left( \theta - \theta_\textbf{ref}\right)\mathbf{I}
-   * \end{aligh*}
-   * \f]
+   * \f}
    */
   void modifyDisplacementGradient(mfem::DenseMatrix& du_dX);
 
