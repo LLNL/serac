@@ -105,6 +105,8 @@ public:
    * @param coef_thermal_expansion The coefficient of thermal expansion \f$\alpha\f$
    * @param reference_temp The reference temperature \f$\theta_{ref}\f$
    * @param temp The current temperature \f$\theta\f$
+   * @param geom_nonlin Flag to include geometric nonlinearities. If true, compute expansion in the current (instead of
+   * reference) configuration
    */
   IsotropicThermalExpansionMaterial(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
                                     std::unique_ptr<mfem::Coefficient>&& reference_temp, FiniteElementState& temp,
@@ -132,7 +134,7 @@ public:
    * &= \mathbf{I} + \mathbf{H}_\textbf{thermal} + \mathbf{H}_\textbf{mechanical} +
    * \mathbf{H}_\textbf{thermal}\mathbf{H}_\textbf{mechanical} \\
    * &= \mathbf{I} + \mathbf{H}_\textbf{modified} \\
-   * \mathbf{H}_\textbf{thermal} &= \mathbf{F}_\textbf{thermal} - \mathbf{I} 
+   * \mathbf{H}_\textbf{thermal} &= \mathbf{F}_\textbf{thermal} - \mathbf{I}
    * &= \alpha \left( \theta - \theta_\textbf{ref}\right)\mathbf{I}
    * \f}
    */
