@@ -208,8 +208,8 @@ void Solid::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::
 void Solid::setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
                                 std::unique_ptr<mfem::Coefficient>&& reference_temp, FiniteElementState& temp)
 {
-  thermal_material_ = std::make_unique<IsotropicThermalExpansionMaterial>(std::move(coef_thermal_expansion),
-                                                                          std::move(reference_temp), temp);
+  thermal_material_ = std::make_unique<IsotropicThermalExpansionMaterial>(
+      std::move(coef_thermal_expansion), std::move(reference_temp), temp, geom_nonlin_);
 }
 
 void Solid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
@@ -253,7 +253,7 @@ void Solid::completeSetup()
 
   // Add the hyperelastic integrator
   H_->AddDomainIntegrator(
-      new mfem_ext::DisplacementHyperelasticIntegrator(*material_, thermal_material_.get(), geom_nonlin_));
+      new mfem_ext::DisplacementHyperelasticIntegrator(*material_, *thermal_material_, geom_nonlin_));
 
   // Add the deformed traction integrator
   for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedTraction)) {

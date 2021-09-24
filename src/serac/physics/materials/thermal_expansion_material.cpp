@@ -25,7 +25,13 @@ void IsotropicThermalExpansionMaterial::modifyDisplacementGradient(mfem::DenseMa
   auto expansion = coef_thermal_expansion * (reference_temp - current_temp);
 
   for (int i = 0; i < du_dX.Width(); ++i) {
-    du_dX(i, i) += expansion * (1.0 + du_dX(i, i));
+    du_dX(i, i) += expansion;
+
+    // If the geometric nonlinearities are turned on, consider the extra expansion
+    // in the current configuration
+    if (geom_nonlin_ == GeometricNonlinearities::On) {
+      du_dX(i, i) += expansion * du_dX(i, i);
+    }
   }
 }
 

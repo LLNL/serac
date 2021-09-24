@@ -33,8 +33,8 @@ TEST(solid_solver, thermal_expansion)
   serac::StateManager::setMesh(std::move(pmesh));
 
   // define the solver configurations
-  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-6,
-                                                         .abs_tol     = 1.0e-10,
+  const IterativeSolverOptions default_linear_options = {.rel_tol     = 1.0e-10,
+                                                         .abs_tol     = 1.0e-12,
                                                          .print_level = 0,
                                                          .max_iter    = 500,
                                                          .lin_solver  = LinearSolver::GMRES,
@@ -89,7 +89,7 @@ TEST(solid_solver, thermal_expansion)
   solid_solver.outputState();
 
   // Check the norm of the displacement error
-  EXPECT_NEAR(0.13013338, norm(solid_solver.displacement()), 1.0e-4);
+  EXPECT_NEAR(0.11536897, norm(solid_solver.displacement()), 1.0e-4);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }

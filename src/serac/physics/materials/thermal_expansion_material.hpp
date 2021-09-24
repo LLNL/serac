@@ -18,6 +18,16 @@
 namespace serac {
 
 /**
+ * @brief Enum to set the geometric nonlinearity flag
+ *
+ */
+enum class GeometricNonlinearities
+{
+  On, /**< Include geometric nonlinearities */
+  Off /**< Do not include geometric nonlinearities */
+};
+
+/**
  * @brief Abstract interface class for a generic thermal expansion model
  *
  */
@@ -27,7 +37,10 @@ public:
    * @brief Construct a new thermal expansion material
    *
    */
-  ThermalExpansionMaterial() : parent_to_reference_transformation_(nullptr) {}
+  ThermalExpansionMaterial(GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On)
+      : parent_to_reference_transformation_(nullptr), geom_nonlin_(geom_nonlin)
+  {
+  }
 
   /**
    * @brief Destroy the thermal expansion material object
@@ -57,6 +70,11 @@ protected:
    *
    */
   mfem::ElementTransformation* parent_to_reference_transformation_;
+
+  /**
+   * @brief Flag to consider geometric nonlinearities in the thermal expansion calculation
+   */
+  GeometricNonlinearities geom_nonlin_;
 };
 
 /**
@@ -89,8 +107,10 @@ public:
    * @param temp The current temperature \f$\theta\f$
    */
   IsotropicThermalExpansionMaterial(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
-                                    std::unique_ptr<mfem::Coefficient>&& reference_temp, FiniteElementState& temp)
-      : c_coef_thermal_expansion_(std::move(coef_thermal_expansion)),
+                                    std::unique_ptr<mfem::Coefficient>&& reference_temp, FiniteElementState& temp,
+                                    GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On)
+      : ThermalExpansionMaterial(geom_nonlin),
+        c_coef_thermal_expansion_(std::move(coef_thermal_expansion)),
         c_reference_temp_(std::move(reference_temp)),
         temp_state_(temp)
   {
