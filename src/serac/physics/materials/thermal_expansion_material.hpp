@@ -73,7 +73,7 @@ protected:
  * deformation gradient. The thermal deformation gradient of this model is given by
  *
  * \f[
- * \mathbf{F}_\theta = \mathbf{I} + \alpha \left( \theta - \theta_\textrm{ref} \right)
+ * \mathbf{F}_\theta = (1 + \alpha (\theta - \theta_\textrm{ref})) \mathbf{I}
  * \f]
  *
  * where \f$\alpha\f$ is the coefficient of thermal expansion, \f$\theta\f$ is the current
