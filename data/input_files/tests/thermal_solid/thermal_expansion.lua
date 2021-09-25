@@ -2,7 +2,7 @@
 t_final = 1.0
 dt      = 1.0
 
-expected_u_l2norm = 0.107379
+expected_u_l2norm = 0.15090898
 expected_v_l2norm = 0.0
 expected_t_l2norm = 2.344805
 epsilon = 0.0001
@@ -14,7 +14,7 @@ main_mesh = {
     -- mesh file
     mesh = "../../../meshes/onehex.mesh",
     -- serial and parallel refinement levels
-    ser_ref_levels = 0,
+    ser_ref_levels = 1,
     par_ref_levels = 0,
 }
 
