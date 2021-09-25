@@ -277,21 +277,21 @@ public:
    *
    * @return A reference to the current temperature finite element state
    */
-  const serac::FiniteElementState& temperature() { return temperature_; };
+  const serac::FiniteElementState& temperature() const { return temperature_; };
 
   /**
    * @brief Get the displacement state
    *
    * @return The displacement state field
    */
-  const serac::FiniteElementState& displacement() { return displacement_; };
+  const serac::FiniteElementState& displacement() const { return displacement_; };
 
   /**
    * @brief Get the velocity state
    *
    * @return The velocity state field
    */
-  const serac::FiniteElementState& velocity() { return velocity_; };
+  const serac::FiniteElementState& velocity() const { return velocity_; };
 
   /**
    * @brief Advance the timestep

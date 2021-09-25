@@ -12,6 +12,7 @@
 #include "serac/numerics/mesh_utils.hpp"
 #include "serac/physics/solid.hpp"
 #include "serac/physics/thermal_conduction.hpp"
+#include "serac/physics/thermal_solid.hpp"
 #include "serac/physics/utilities/state_manager.hpp"
 
 namespace serac {
@@ -77,6 +78,23 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
   defineCommonTestSchema(inlet);
 }
 
+
+template <>
+void defineTestSchema<ThermalSolid>(axom::inlet::Inlet& inlet)
+{
+  // Integration test parameters
+  inlet.addDouble("expected_t_l2norm", "Correct L2 norm of the temperature field");
+  inlet.addDouble("expected_u_l2norm", "Correct L2 norm of the displacement field");
+  inlet.addDouble("expected_v_l2norm", "Correct L2 norm of the velocity field");
+
+  // Physics
+  auto& thermal_solid_table = inlet.addStruct("thermal_solid", "Thermal solid module");
+  // This is the "standard" schema for the actual physics module
+  serac::ThermalSolid::InputOptions::defineInputFileSchema(thermal_solid_table);
+
+  defineCommonTestSchema(inlet);
+}
+
 namespace detail {
 
 // Utility type for use in always-false static assertions
@@ -105,6 +123,12 @@ template <>
 std::string moduleName<ThermalConduction>()
 {
   return "thermal_conduction";
+}
+
+template <>
+std::string moduleName<ThermalSolid>()
+{
+  return "thermal_solid";
 }
 
 /**
@@ -146,6 +170,23 @@ void verifyFields(const ThermalConduction& phys_module, const axom::inlet::Inlet
     EXPECT_NEAR(error, 0.0, inlet["epsilon"]);
   }
 }
+
+template <>
+void verifyFields(const ThermalSolid& phys_module, const axom::inlet::Inlet& inlet)
+{
+  if (inlet.contains("expected_u_l2norm")) {
+    double x_norm = norm(phys_module.displacement());
+    EXPECT_NEAR(inlet["expected_u_l2norm"], x_norm, inlet["epsilon"]);
+  }
+  if (inlet.contains("expected_v_l2norm")) {
+    double v_norm = norm(phys_module.velocity());
+    EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
+  }
+  if (inlet.contains("expected_t_l2norm")) {
+    EXPECT_NEAR(inlet["expected_t_l2norm"], norm(phys_module.temperature()), inlet["epsilon"]);
+  }  
+}
+
 }  // namespace detail
 
 template <typename PhysicsModule>
@@ -230,6 +271,7 @@ void runModuleTest(const std::string& input_file, const std::string& test_name, 
 
 template void runModuleTest<Solid>(const std::string&, const std::string&, std::optional<int>);
 template void runModuleTest<ThermalConduction>(const std::string&, const std::string&, std::optional<int>);
+template void runModuleTest<ThermalSolid>(const std::string&, const std::string&, std::optional<int>);
 
 }  // end namespace test_utils
 

@@ -2,6 +2,11 @@
 t_final = 1.0
 dt      = 1.0
 
+expected_u_l2norm = 0.107379
+expected_v_l2norm = 0.0
+expected_t_l2norm = 2.344805
+epsilon = 0.0001
+
 output_type = "SidreVisIt"
 
 main_mesh = {
