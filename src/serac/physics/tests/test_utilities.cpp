@@ -78,7 +78,6 @@ void defineTestSchema<ThermalConduction>(axom::inlet::Inlet& inlet)
   defineCommonTestSchema(inlet);
 }
 
-
 template <>
 void defineTestSchema<ThermalSolid>(axom::inlet::Inlet& inlet)
 {
@@ -184,7 +183,7 @@ void verifyFields(const ThermalSolid& phys_module, const axom::inlet::Inlet& inl
   }
   if (inlet.contains("expected_t_l2norm")) {
     EXPECT_NEAR(inlet["expected_t_l2norm"], norm(phys_module.temperature()), inlet["epsilon"]);
-  }  
+  }
 }
 
 }  // namespace detail
