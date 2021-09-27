@@ -65,10 +65,11 @@ struct DofNumbering {
       }
 
       elem_restriction->Mult(iota, dof_ids);
+      const double * dof_ids_h = dof_ids.HostRead();
 
       for (int e = 0; e < element_dofs.size(0); e++) {
         for (int i = 0; i < element_dofs.size(1); i++) {
-          int mfem_id        = static_cast<int>(dof_ids[element_dofs.index(e, i)]);
+          int mfem_id        = static_cast<int>(dof_ids_h[element_dofs.index(e, i)]);
           element_dofs(e, i) = signed_index{mfem_index(mfem_id), mfem_sign(mfem_id)};
         }
       }
@@ -85,10 +86,11 @@ struct DofNumbering {
       }
 
       face_restriction->Mult(iota, dof_ids);
+      const double * dof_ids_h = dof_ids.HostRead();
 
       for (int e = 0; e < boundary_element_dofs.size(0); e++) {
         for (int i = 0; i < boundary_element_dofs.size(1); i++) {
-          int mfem_id                 = static_cast<int>(dof_ids[boundary_element_dofs.index(e, i)]);
+          int mfem_id                 = static_cast<int>(dof_ids_h[boundary_element_dofs.index(e, i)]);
           boundary_element_dofs(e, i) = signed_index{mfem_index(mfem_id), mfem_sign(mfem_id)};
         }
       }
