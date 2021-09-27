@@ -612,11 +612,4 @@ private:
   friend typename Functional<T>::Gradient& grad(Functional<T>&);
 };
 
-// Are these aliases useful or confusing?
-template <typename T, ExecutionSpace exec = ExecutionSpace::CPU>
-using QuantityOfInterest = Functional<double(T), exec>;
-
-template <typename T, ExecutionSpace exec = ExecutionSpace::CPU>
-using ObjectiveFunction = Functional<double(T), exec>;
-
 }  // namespace serac

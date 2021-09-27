@@ -127,8 +127,7 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
 
   std::cout << "simplest possible domain qoi: " << measure(U) << " " << measure_mfem(mesh) << std::endl;
 
-  // QuantityOfInterest<T> is an alias for Functional<double(T)>
-  QuantityOfInterest<trial_space> x_moment(&fespace);
+  Functional<double(trial_space)> x_moment(&fespace);
   x_moment.AddDomainIntegral(
       Dimension<dim>{}, [&](auto x, auto /*u*/) { return x[0]; }, mesh);
 
@@ -143,8 +142,7 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   std::cout << "combined domain and boundary qoi: " << sum_of_measures(U) << " " << sum_of_measures_mfem(mesh)
             << std::endl;
 
-  // ObjectiveFunction<T> is an alias for Functional<double(T)>
-  ObjectiveFunction<trial_space> f(&fespace);
+  Functional<double(trial_space)> f(&fespace);
   f.AddDomainIntegral(
       Dimension<dim>{},
       [&](auto x, auto temperature) {
