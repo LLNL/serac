@@ -349,19 +349,8 @@ public:
    * @brief Lightweight shim for mfem::Operator that produces the gradient of a @p Functional from a @p Mult
    */
   class Gradient : public mfem::Operator {
-    // TODO:
-    // this is a temporary array implementation to be replaced by axom::Array as soon as it's ready
-    // it implements a indexing by an operator() taking 3 arguments, with "row major" striding
-    template <typename T>
-    struct Array3D {
-      Array3D() = default;
-      Array3D(int n1, int n2, int n3) : strides{n2 * n3, n3, 1}, data(n1 * n2 * n3) {}
-      auto&          operator()(int i, int j, int k) { return data[i * strides[0] + j * strides[1] + k * strides[2]]; }
-      int            strides[3];
-      std::vector<T> data;
-    };
 
-  public:
+   public:
     /**
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
@@ -369,7 +358,6 @@ public:
     Gradient(Functional<test(trial), exec>& f)
         : mfem::Operator(f.Height(), f.Width()),
           form_(f),
-          sparsity_pattern_initialized_(false),
           lookup_tables(*(f.test_space_), *(f.trial_space_)){};
 
     /**
@@ -390,174 +378,6 @@ public:
     }
 
     /**
-     * @brief this function discovers the locations of nonzero entries in the global "stiffness" matrix
-     * and initializes two lookup tables (LUT):
-     * element_nonzero_LUT(e, i, j) says where (in the global stiffness matrix) to put
-     *    the ith row and jth column entry of the e^th element stiffness matrix
-     * boundary_element_nonzero_LUT(e, i, j) says where (in the global stiffness matrix) to put
-     *    the ith row and jth column entry of the e^th boundary element stiffness matrix
-     */
-    void initialize_sparsity_pattern()
-    {
-      mfem::Array<int> test_dofs;
-      mfem::Array<int> trial_dofs;
-
-      int test_vdim  = form_.test_space_->GetVDim();
-      int trial_vdim = form_.trial_space_->GetVDim();
-
-      form_.test_space_->GetElementDofs(0, test_dofs);
-      form_.trial_space_->GetElementDofs(0, trial_dofs);
-      int num_elements           = form_.test_space_->GetNE();
-      int dofs_per_test_element  = test_dofs.Size();
-      int dofs_per_trial_element = trial_dofs.Size();
-      int entries_per_element    = dofs_per_test_element * dofs_per_trial_element;
-
-      form_.test_space_->GetBdrElementDofs(0, test_dofs);
-      form_.trial_space_->GetBdrElementDofs(0, trial_dofs);
-      int num_boundary_elements           = form_.test_space_->GetNBE();
-      int dofs_per_test_boundary_element  = test_dofs.Size();
-      int dofs_per_trial_boundary_element = trial_dofs.Size();
-      int entries_per_boundary_element =
-          dofs_per_test_boundary_element * test_vdim * dofs_per_trial_boundary_element * trial_vdim;
-
-      size_t num_infos[2] = {
-          static_cast<size_t>((form_.domain_integrals_.size() > 0) * entries_per_element * num_elements),
-          static_cast<size_t>((form_.boundary_integrals_.size() > 0) * entries_per_boundary_element *
-                              num_boundary_elements)};
-
-      // Each active element and boundary element describes which nonzero entries
-      // its element stiffness matrix will touch. Then we reduce that list down
-      // to the unique nonzeros and use that inform_ation to fill out the CSR graph.
-      std::vector<detail::ElemInfo> infos;
-      infos.reserve(num_infos[0] + num_infos[1]);
-
-      if (form_.domain_integrals_.size() > 0) {
-        bool on_boundary = false;
-
-        for (int e = 0; e < num_elements; e++) {
-          form_.test_space_->GetElementDofs(e, test_dofs);
-          form_.trial_space_->GetElementDofs(e, trial_dofs);
-
-          const mfem::Array<int>& test_native_to_lexicographic =
-              dynamic_cast<const mfem::TensorBasisElement*>(form_.test_space_->GetFE(e))->GetDofMap();
-          const mfem::Array<int>& trial_native_to_lexicographic =
-              dynamic_cast<const mfem::TensorBasisElement*>(form_.trial_space_->GetFE(e))->GetDofMap();
-          detail::apply_permutation(test_native_to_lexicographic, test_dofs);
-          detail::apply_permutation(trial_native_to_lexicographic, trial_dofs);
-
-          for (int i = 0; i < dofs_per_test_element; i++) {
-            for (int j = 0; j < dofs_per_trial_element; j++) {
-              for (int k = 0; k < test_vdim; k++) {
-                int test_vdof = form_.test_space_->DofToVDof(detail::get_index(test_dofs[i]), k);
-                for (int l = 0; l < trial_vdim; l++) {
-                  int trial_vdof = form_.trial_space_->DofToVDof(detail::get_index(trial_dofs[j]), l);
-                  infos.push_back({test_vdof, trial_vdof, i + dofs_per_test_element * k, j + dofs_per_trial_element * l,
-                                   e, detail::get_sign(test_dofs[i]) * detail::get_sign(trial_dofs[j]), on_boundary});
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // mfem doesn't implement GetDofMap for some of its Nedelec elements (??),
-      // so we have to temporarily disable boundary terms for Hcurl until they do
-      if (form_.boundary_integrals_.size() > 0) {
-        bool on_boundary = true;
-
-        for (int b = 0; b < num_boundary_elements; b++) {
-          form_.test_space_->GetBdrElementDofs(b, test_dofs);
-          form_.trial_space_->GetBdrElementDofs(b, trial_dofs);
-
-          if constexpr (test::family != Family::HCURL) {
-            const mfem::Array<int>& test_native_to_lexicographic =
-                dynamic_cast<const mfem::TensorBasisElement*>(form_.test_space_->GetBE(b))->GetDofMap();
-            detail::apply_permutation(test_native_to_lexicographic, test_dofs);
-          }
-
-          if constexpr (trial::family != Family::HCURL) {
-            const mfem::Array<int>& trial_native_to_lexicographic =
-                dynamic_cast<const mfem::TensorBasisElement*>(form_.trial_space_->GetBE(b))->GetDofMap();
-            detail::apply_permutation(trial_native_to_lexicographic, trial_dofs);
-          }
-
-          for (int i = 0; i < dofs_per_test_boundary_element; i++) {
-            for (int j = 0; j < dofs_per_trial_boundary_element; j++) {
-              for (int k = 0; k < test_vdim; k++) {
-                int test_vdof = form_.test_space_->DofToVDof(detail::get_index(test_dofs[i]), k);
-                for (int l = 0; l < trial_vdim; l++) {
-                  int trial_vdof = form_.trial_space_->DofToVDof(detail::get_index(trial_dofs[j]), l);
-                  infos.push_back({test_vdof, trial_vdof, i + dofs_per_test_boundary_element * k,
-                                   j + dofs_per_trial_boundary_element * l, b,
-                                   detail::get_sign(test_dofs[i]) * detail::get_sign(trial_dofs[j]), on_boundary});
-                }
-              }
-            }
-          }
-        }
-      }
-
-      std::sort(infos.begin(), infos.end());
-
-      int nrows = form_.test_space_->GetNDofs() * form_.test_space_->GetVDim();
-      row_ptr_.resize(nrows + 1);
-      std::vector<detail::SignedIndex> nonzero_ids(infos.size());
-
-      int nnz     = 0;
-      row_ptr_[0] = 0;
-      col_ind_.push_back(infos[0].global_col);
-      nonzero_ids[0] = {0, infos[0].sign};
-
-      // after sorting the infos array, we scan through it to identify all
-      // of the unique (i,j) pairs, so we can create the appropriate CSR graph
-      for (size_t i = 1; i < infos.size(); i++) {
-        // increment the nonzero count every time we find a new (i,j) pair
-        nnz += (infos[i - 1] != infos[i]);
-
-        nonzero_ids[i] = {nnz, infos[i].sign};
-
-        // also note which column is associated with this new (i,j) pair
-        if (infos[i - 1] != infos[i]) {
-          col_ind_.push_back(infos[i].global_col);
-        }
-
-        // if the (i,j) pair is on a different row, then make sure to
-        // set values in row_ptr_ such that the nonzero entries associated
-        // with row r will be in the range [row_ptr_[r], row_ptr_[r+1])
-        //
-        // Note: this is a loop rather than single assignment to handle
-        // the case where there are rows with no nonzero entries.
-        for (int j = infos[i - 1].global_row; j < infos[i].global_row; j++) {
-          row_ptr_[j + 1] = nonzero_ids[i];
-        }
-      }
-
-      ++nnz;
-      for (int j = infos.back().global_row; j < nrows; j++) {
-        row_ptr_[j + 1] = nnz;
-      }
-
-      element_nonzero_LUT_ = Array3D<detail::SignedIndex>(num_elements, dofs_per_test_element * test_vdim,
-                                                          dofs_per_trial_element * trial_vdim);
-      boundary_element_nonzero_LUT_ =
-          Array3D<detail::SignedIndex>(num_boundary_elements, dofs_per_test_boundary_element * test_vdim,
-                                       dofs_per_trial_boundary_element * trial_vdim);
-
-      // finally, fill in the lookup tables with the appropriate indices that correspond to
-      // where to put each element's stiffness matrix contributions
-      for (size_t i = 0; i < infos.size(); i++) {
-        auto [_1, _2, local_row, local_col, element_id, _3, on_boundary] = infos[i];
-        if (on_boundary) {
-          boundary_element_nonzero_LUT_(element_id, local_row, local_col) = nonzero_ids[i];
-        } else {
-          element_nonzero_LUT_(element_id, local_row, local_col) = nonzero_ids[i];
-        }
-      }
-
-      sparsity_pattern_initialized_ = true;
-    }
-
-    /**
      * @brief implicit conversion to mfem::SparseMatrix type
      *
      * @note the first invokation of this function will be more expensive,
@@ -566,9 +386,6 @@ public:
      */
     operator mfem::SparseMatrix()
     {
-      if (!sparsity_pattern_initialized_) {
-        initialize_sparsity_pattern();
-      }
 
       // the CSR graph (sparsity pattern) is reusable, so we cache
       // that and ask mfem to not free that memory in ~SparseMatrix()
@@ -580,8 +397,7 @@ public:
 
       constexpr bool col_ind_is_sorted = true;
 
-      size_t  nnz    = row_ptr_.back();
-      double* values = new double[nnz]{};
+      double* values = new double[lookup_tables.nnz]{};
 
       // each element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
@@ -631,36 +447,13 @@ public:
         }
       }
 
-      return mfem::SparseMatrix(row_ptr_.data(), col_ind_.data(), values, Height(), Width(),
+      return mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, Height(), Width(),
                                 sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
     }
 
   private:
     /// @brief The "parent" @p Functional to calculate gradients with
     Functional<test(trial), exec>& form_;
-
-    /// @brief stores offsets into col_ind and values arrays corresponding to a given row
-    std::vector<int> row_ptr_;
-
-    /// @brief contains the column index of a given entry in the sparse matrix
-    std::vector<int> col_ind_;
-
-    /// @brief lookup table of where to put the element gradient contributions in the CSR matrix
-    Array3D<detail::SignedIndex> element_nonzero_LUT_;
-
-    /// @brief lookup table of where to put the boundary element gradient contributions in the CSR matrix
-    Array3D<detail::SignedIndex> boundary_element_nonzero_LUT_;
-
-    /**
-     * @brief whether or not the sparse matrix graph has been determined
-     *
-     * note: this is not done automatically, since a user might only require
-     * the action of the gradient (which does not need this sparsity pattern),
-     * so the sparsity pattern is only initialized the first time the sparse
-     * matrix is formed, and then cached. This assumes the sparsity pattern does
-     * not change dynamically.
-     */
-    bool sparsity_pattern_initialized_;
 
     /**
      * @brief TODO
