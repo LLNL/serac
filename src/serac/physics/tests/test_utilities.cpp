@@ -182,7 +182,8 @@ void verifyFields(const ThermalSolid& phys_module, const axom::inlet::Inlet& inl
     EXPECT_NEAR(inlet["expected_v_l2norm"], v_norm, inlet["epsilon"]);
   }
   if (inlet.contains("expected_t_l2norm")) {
-    EXPECT_NEAR(inlet["expected_t_l2norm"], norm(phys_module.temperature()), inlet["epsilon"]);
+    double t_norm = norm(phys_module.temperature());
+    EXPECT_NEAR(inlet["expected_t_l2norm"], t_norm, inlet["epsilon"]);
   }
 }
 

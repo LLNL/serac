@@ -2,9 +2,9 @@
 t_final = 1.0
 dt      = 1.0
 
-expected_u_l2norm = 0.15090898
+expected_u_l2norm = 0.4431086
 expected_v_l2norm = 0.0
-expected_t_l2norm = 2.344805
+expected_t_l2norm = 2.3424281
 epsilon = 0.0001
 
 output_type = "SidreVisIt"
@@ -23,20 +23,12 @@ thermal_solid = {
     solid = {
         equation_solver = {
             linear = {
-                type = "iterative",
-                iterative_options = {
-                    rel_tol     = 1.0e-6,
-                    abs_tol     = 1.0e-8,
-                    max_iter    = 5000,
-                    print_level = 0,
-                    solver_type = "gmres",
-                    prec_type   = "HypreAMG",
-                },
+                type = "direct",
             },
 
             nonlinear = {
-                rel_tol     = 1.0e-2,
-                abs_tol     = 1.0e-4,
+                rel_tol     = 1.0e-6,
+                abs_tol     = 1.0e-8,
                 max_iter    = 500,
                 print_level = 0,
             },
