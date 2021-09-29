@@ -137,8 +137,7 @@ public:
   void setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
                            std::unique_ptr<mfem::Coefficient>&& reference_temp)
   {
-    solid_solver_.setThermalExpansion(std::move(coef_thermal_expansion), std::move(reference_temp),
-                                      therm_solver_.temperature());
+    solid_solver_.setThermalExpansion(std::move(coef_thermal_expansion), std::move(reference_temp), temperature_);
   }
 
   /**

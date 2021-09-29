@@ -206,7 +206,7 @@ void Solid::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::
 }
 
 void Solid::setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
-                                std::unique_ptr<mfem::Coefficient>&& reference_temp, FiniteElementState& temp)
+                                std::unique_ptr<mfem::Coefficient>&& reference_temp, const FiniteElementState& temp)
 {
   thermal_material_ = std::make_unique<IsotropicThermalExpansionMaterial>(
       std::move(coef_thermal_expansion), std::move(reference_temp), temp, geom_nonlin_);

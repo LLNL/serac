@@ -213,7 +213,8 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
     }
 
     // Accumulate the geometric stiffness if desired
-    // TODO the geometric stiffness from the thermal expansion is not included
+    // TODO the geometric stiffness from the thermal expansion is not currently included. This term is small enough
+    // it is not affecting convergence.
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       material_.evalStress(du_dX_, sigma_);
       for (int a = 0; a < dof; ++a) {

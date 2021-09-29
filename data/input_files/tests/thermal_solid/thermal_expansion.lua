@@ -2,7 +2,7 @@
 t_final = 1.0
 dt      = 1.0
 
-expected_u_l2norm = 0.4431086
+expected_u_l2norm = 0.1301349
 expected_v_l2norm = 0.0
 expected_t_l2norm = 2.3424281
 epsilon = 0.0001
@@ -59,17 +59,17 @@ thermal_solid = {
 
         -- boundary condition parameters
         boundary_conds = {
-            ['displacement'] = {
+            ['displacement_x'] = {
                 attrs = {1},
                 component = 0,
                 constant = 0.0
             },
-            ['displacement'] = {
+            ['displacement_y'] = {
                 attrs = {2},
                 component = 1,
                 constant = 0.0,
             },
-            ['displacement'] = {
+            ['displacement_z'] = {
                 attrs = {3},
                 component = 2,
                 constant = 0.0,

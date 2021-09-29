@@ -109,7 +109,7 @@ public:
    * reference) configuration
    */
   IsotropicThermalExpansionMaterial(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
-                                    std::unique_ptr<mfem::Coefficient>&& reference_temp, FiniteElementState& temp,
+                                    std::unique_ptr<mfem::Coefficient>&& reference_temp, const FiniteElementState& temp,
                                     GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On)
       : ThermalExpansionMaterial(geom_nonlin),
         c_coef_thermal_expansion_(std::move(coef_thermal_expansion)),
@@ -167,7 +167,7 @@ protected:
   /**
    * @brief Coefficient of thermal expansion in finite element state form
    */
-  FiniteElementState& temp_state_;
+  const FiniteElementState& temp_state_;
 };
 
 }  // namespace serac

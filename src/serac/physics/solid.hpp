@@ -291,7 +291,7 @@ public:
    * @param temp The state object containing the current temperature of the solid
    */
   void setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
-                           std::unique_ptr<mfem::Coefficient>&& reference_temp, FiniteElementState& temp);
+                           std::unique_ptr<mfem::Coefficient>&& reference_temp, const FiniteElementState& temp);
 
   /**
    * @brief Set the initial displacement value
