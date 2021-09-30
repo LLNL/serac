@@ -6,22 +6,39 @@
 
 namespace serac {
 
+/**
+ * @brief a (poorly named) tuple of quantities used to discover the sparsity
+ * pattern associated with element and boundary element matrices.
+ *
+ * It stores information about how the entries of an element "stiffness" matrix
+ * map to the global stiffness. The operator< definition allows us to sort them
+ * lexicographically, to facilitate creating the CSR matrix graph.
+ */
 struct ElemInfo {
-  int  global_row_;
-  int  global_col_;
-  int  local_row_;
-  int  local_col_;
-  int  element_id_;
-  int  sign_;
-  bool on_boundary_;
+  int  global_row_;   ///< The global row number
+  int  global_col_;   ///< The global column number
+  int  local_row_;    ///< The local row number
+  int  local_col_;    ///< The global column number
+  int  element_id_;   ///< The element ID
+  int  sign_;         ///< The orientation of the element
+  bool on_boundary_;  ///< True if element is on the boundary
 };
 
-// for sorting lexicographically by {global_row, global_col}
+/**
+ * @brief operator for sorting lexicographically by {global_row, global_col}
+ * @param x the ElemInfo on the left
+ * @param y the ElemInfo on the right
+ */
 bool operator<(const ElemInfo & x, const ElemInfo & y)
 {
   return (x.global_row_ < y.global_row_) || (x.global_row_ == y.global_row_ && x.global_col_ < y.global_col_);
 }
 
+/**
+ * @brief operator determining inequality by {global_row, global_col}
+ * @param x the ElemInfo on the left
+ * @param y the ElemInfo on the right
+ */
 bool operator!=(const ElemInfo & x, const ElemInfo & y)
 {
   return (x.global_row_ != y.global_row_) || (x.global_col_ != y.global_col_);
@@ -38,15 +55,38 @@ auto& operator<<(std::ostream& out, ElemInfo e)
   return out;
 }
 
+/**
+ * @brief mfem will frequently encode {sign, index} into a single int32_t.
+ * This function decodes the sign from such a type.
+ */
 int mfem_sign(int i) { return (i >= 0) ? 1 : -1; }
+
+/**
+ * @brief mfem will frequently encode {sign, index} into a single int32_t.
+ * This function decodes the index from such a type.
+ */
 int mfem_index(int i) { return (i >= 0) ? i : -1 - i; }
 
+/**
+ * @brief this type explicitly stores sign (typically used conveying edge/face orientation) and index values
+ *
+ * TODO: investigate implementation via bitfield (should have smaller memory footprint, better readability than mfem's
+ * {sign, index} int32_t encoding)
+ */
 struct SignedIndex {
   int index_;
   int sign_;
   operator int() { return index_; }
 };
 
+/**
+ * @brief this object extracts the dofs for each element in a FiniteElementSpace as a 2D array such that
+ *   element_dofs_(e, i) will be the `i`th dof of element `e`. 
+ * 
+ * Note: due to an internal inconsistency between mfem::FiniteElementSpace and mfem::FaceRestriction, 
+ *    we choose to use the Restriction operator as the "source of truth", since we are also using its
+ *    convention for quadrature point numbering.
+ */
 struct DofNumbering {
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
       : element_dofs_(fespace.GetNE(), fespace.GetFE(0)->GetDof() * fespace.GetVDim()),
@@ -96,10 +136,25 @@ struct DofNumbering {
     }
   }
 
+  /// @brief element_dofs_(e, i) stores the `i`th dof of element `e`. 
   serac::CPUArray<SignedIndex, 2> element_dofs_;
+
+  /// @brief boundary_element_dofs_(b, i) stores the `i`th dof of boundary element `b`. 
   serac::CPUArray<SignedIndex, 2> boundary_element_dofs_;
+
 };
 
+/**
+ * @brief this object figures out the sparsity pattern associated with a finite element discretization
+ *   of the given test and trial function spaces, and records which nonzero each element "stiffness" 
+ *   matrix maps to, to facilitate assembling the element matrices into the global sparse matrix.
+ * 
+ *   element_nonzero_LUT(e, i, j) says where the (i,j) component of the element matrix `e`
+ * 
+ * Note: due to an internal inconsistency between mfem::FiniteElementSpace and mfem::FaceRestriction, 
+ *    we choose to use the Restriction operator as the "source of truth", since we are also using its
+ *    convention for quadrature point numbering.
+ */
 struct GradientAssemblyLookupTables {
   GradientAssemblyLookupTables(mfem::ParFiniteElementSpace& test_fespace, mfem::ParFiniteElementSpace& trial_fespace)
       : element_nonzero_LUT(trial_fespace.GetNE(), test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim(),
