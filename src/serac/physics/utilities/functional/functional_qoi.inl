@@ -301,8 +301,8 @@ private:
         auto & LUT = lookup_tables.boundary_element_dofs;
 
         zero_out(K_belem);
-        for (auto& domain : form_.domain_integrals_) {
-          domain.ComputeElementGradients(view(K_belem));
+        for (auto& boundary : form_.boundary_integrals_) {
+          boundary.ComputeElementGradients(view(K_belem));
         }
 
         for (size_t e = 0; e < K_belem.size(0); e++) {

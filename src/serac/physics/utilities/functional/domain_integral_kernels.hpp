@@ -190,9 +190,8 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
  *
- * @param[inout] K_e The full set of per-element element tangents [test_ndofs x test_dim, trial_ndofs x trial_dim]
- * @param[in] derivatives_ptr The address at which derivatives of the q-function with
- * respect to its arguments are stored
+ * @param[inout] dK 3-dimensional array storing the element gradient matrices
+ * @param[in] derivatives_ptr pointer to data describing the derivatives of the q-function with respect to its arguments
  * @param[in] J_ The Jacobians of the element transformations at all quadrature points
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
@@ -269,9 +268,11 @@ void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, deriv
     // out to memory, to be later assembled into the global gradient by mfem
     // clang-format off
     if constexpr (std::is_same< test, QOI >::value) {
-      for_loop<trial_ndof, trial_dim>([&](int k, int l) {
-        dk(e, 0, k + trial_ndof * l) += K_elem[0][k][0][l];
-      });
+      for (int k = 0; k < trial_ndof; k++) {
+        for (int l = 0; l < trial_dim; l++) {
+          dk(e, 0, k + trial_ndof * l) += K_elem[0][k][0][l];
+        }
+      }
     } 
 
     if constexpr (!std::is_same< test, QOI >::value) {
