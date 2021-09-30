@@ -198,7 +198,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
+void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
                              int num_elements)
 {
   using test_element               = finite_element<g, test>;
@@ -213,7 +213,6 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto J  = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-  auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
@@ -271,14 +270,14 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
     // clang-format off
     if constexpr (std::is_same< test, QOI >::value) {
       for_loop<trial_ndof, trial_dim>([&](int k, int l) {
-        dk(0, k + trial_ndof * l, e) += K_elem[0][k][0][l];
+        dk(e, 0, k + trial_ndof * l) += K_elem[0][k][0][l];
       });
     } 
 
     if constexpr (!std::is_same< test, QOI >::value) {
       // Note: we "transpose" these values to get them into the layout that mfem expects
       for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
-        dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
+        dk(e, i + test_ndof * j, k + trial_ndof * l) += K_elem[i][k][j][l];
       });
     }
     // clang-format on

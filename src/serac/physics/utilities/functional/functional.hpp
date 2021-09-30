@@ -121,6 +121,21 @@ public:
     output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
     my_output_T_.SetSize(Height(), mfem::Device::GetMemoryType());
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
+
+    {
+      int num_elements = test_space_->GetNE();
+      int ndof_per_test_element  = test_space_->GetFE(0)->GetDof() * test_space_->GetVDim();
+      int ndof_per_trial_element  = trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim();
+      element_gradients = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+    }
+
+    {
+      int num_belements = test_space_->GetNFbyType(mfem::FaceType::Boundary);
+      int ndof_per_test_belement  = test_space_->GetBE(0)->GetDof() * test_space_->GetVDim();
+      int ndof_per_trial_belement  = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
+      belement_gradients = Array<double, 3, exec>(num_belements, ndof_per_test_belement, ndof_per_trial_belement);
+    }
+
   }
 
   /**
@@ -213,6 +228,13 @@ public:
     AddDomainIntegral(Dimension<3>{}, integrand, domain);
   }
 
+  /// @brief alias for Functional::AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
+  template <typename lambda>
+  void AddSurfaceIntegral(lambda&& integrand, mfem::Mesh& domain)
+  {
+    AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
+  }
+
   /**
    * @brief Implements mfem::Operator::Mult
    * @param[in] input_T The input vector
@@ -256,69 +278,6 @@ public:
   virtual void GradientMult(const mfem::Vector& input_T, mfem::Vector& output_T) const
   {
     Evaluation<Operation::GradientMult>(input_T, output_T);
-  }
-
-  /**
-   * @brief calculate and return the element stiffness matrices flattened into a mfem::Vector
-   * @returns A mfem::Vector containing the element stiffness matrix entries (flattened from a 3D array
-   * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
-   */
-  mfem::Vector ComputeElementGradients()
-  {
-    // Resize K_e_ if this is the first time
-    if (K_e_.Size() == 0) {
-      const auto& test_el  = *test_space_->GetFE(0);
-      const auto& trial_el = *trial_space_->GetFE(0);
-      K_e_.SetSize(test_el.GetDof() * test_space_->GetVDim() * trial_el.GetDof() * trial_space_->GetVDim() *
-                   test_space_->GetNE());
-    }
-    // zero out internal vector
-    K_e_ = 0.;
-    // loop through integrals and accumulate
-    for (auto& domain : domain_integrals_) {
-      domain.ComputeElementGradients(K_e_);
-    }
-
-    return K_e_;
-  }
-
-  /**
-   * @brief calculate and return the boundary element stiffness matrices flattened into a mfem::Vector
-   * @returns A mfem::Vector containing the boundary element matrix entries (flattened from a 3D array
-   * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
-   */
-  mfem::Vector ComputeBoundaryElementGradients()
-  {
-    // Resize K_b_ if this is the first time
-    if (K_b_.Size() == 0) {
-      int num_boundary_elements           = test_space_->GetNBE();
-      int dofs_per_test_boundary_element  = test_space_->GetBE(0)->GetDof() * test_space_->GetVDim();
-      int dofs_per_trial_boundary_element = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
-      K_b_.SetSize(dofs_per_test_boundary_element * dofs_per_trial_boundary_element * num_boundary_elements);
-    }
-    // zero out internal vector
-    K_b_ = 0.;
-    // loop through integrals and accumulate
-    for (auto& boundary : boundary_integrals_) {
-      boundary.ComputeElementGradients(K_b_);
-    }
-
-    return K_b_;
-  }
-
-  /**
-   * @brief Computes element matrices and returns AssembledSparseMatrix
-   * @return reference to AssembledSparseMatrix with newly assembled entries
-   */
-  serac::mfem_ext::AssembledSparseMatrix& GetAssembledSparseMatrix()
-  {
-    ComputeElementGradients();  // Updates K_e_
-    if (!assembled_spmat_) {
-      assembled_spmat_ = std::make_unique<serac::mfem_ext::AssembledSparseMatrix>(
-          *test_space_, *trial_space_, mfem::ElementDofOrdering::LEXICOGRAPHIC);
-    }
-    assembled_spmat_->FillData(K_e_);
-    return *assembled_spmat_;
   }
 
   /**
@@ -402,49 +361,47 @@ public:
       // each element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
       if (form_.domain_integrals_.size() > 0) {
-        int num_elements           = form_.test_space_->GetNE();
-        int test_vdim              = form_.test_space_->GetVDim();
-        int trial_vdim             = form_.trial_space_->GetVDim();
-        int dofs_per_test_element  = form_.test_space_->GetFE(0)->GetDof();
-        int dofs_per_trial_element = form_.trial_space_->GetFE(0)->GetDof();
 
-        mfem::Vector element_matrices = form_.ComputeElementGradients();
-        auto         K_elem = mfem::Reshape(element_matrices.HostReadWrite(), dofs_per_test_element * test_vdim,
-                                    dofs_per_trial_element * trial_vdim, num_elements);
-        auto&        LUT    = lookup_tables.element_nonzero_LUT;
-        for (int e = 0; e < num_elements; e++) {
-          for (int i = 0; i < dofs_per_test_element * test_vdim; i++) {
-            for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
+        auto & K_elem = form_.element_gradients;
+        auto & LUT = lookup_tables.element_nonzero_LUT;
+
+        zero_out(K_elem);
+        for (auto& domain : form_.domain_integrals_) {
+          domain.ComputeElementGradients(view(K_elem));
+        }
+
+        for (size_t e = 0; e < K_elem.size(0); e++) {
+          for (size_t i = 0; i < K_elem.size(1); i++) {
+            for (size_t j = 0; j < K_elem.size(2); j++) {
               auto [index, sign] = LUT(e, i, j);
-              values[index] += sign * K_elem(i, j, e);
+              values[index] += sign * K_elem(e, i, j);
             }
           }
         }
+
       }
 
       // each boundary element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
       if (form_.boundary_integrals_.size() > 0) {
-        int num_boundary_elements           = form_.test_space_->GetNBE();
-        int test_vdim                       = form_.test_space_->GetVDim();
-        int trial_vdim                      = form_.trial_space_->GetVDim();
-        int dofs_per_test_boundary_element  = form_.test_space_->GetBE(0)->GetDof();
-        int dofs_per_trial_boundary_element = form_.trial_space_->GetBE(0)->GetDof();
 
-        mfem::Vector boundary_element_matrices = form_.ComputeBoundaryElementGradients();
-        auto         K_elem =
-            mfem::Reshape(boundary_element_matrices.HostReadWrite(), dofs_per_test_boundary_element * test_vdim,
-                          dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
+        auto & K_belem = form_.belement_gradients;
+        auto & LUT = lookup_tables.boundary_element_nonzero_LUT;
 
-        auto& LUT = lookup_tables.boundary_element_nonzero_LUT;
-        for (int e = 0; e < num_boundary_elements; e++) {
-          for (int i = 0; i < dofs_per_test_boundary_element * test_vdim; i++) {
-            for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
+        zero_out(K_belem);
+        for (auto& boundary : form_.boundary_integrals_) {
+          boundary.ComputeElementGradients(view(K_belem));
+        }
+
+        for (size_t e = 0; e < K_belem.size(0); e++) {
+          for (size_t i = 0; i < K_belem.size(1); i++) {
+            for (size_t j = 0; j < K_belem.size(2); j++) {
               auto [index, sign] = LUT(e, i, j);
-              values[index] += sign * K_elem(i, j, e);
+              values[index] += sign * K_belem(e, i, j);
             }
           }
         }
+
       }
 
       return mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, Height(), Width(),
@@ -635,7 +592,7 @@ public:
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<BoundaryIntegral<test(trial)>> boundary_integrals_;
+  std::vector<BoundaryIntegral<test(trial), exec>> boundary_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
@@ -646,17 +603,9 @@ public:
    */
   mutable Gradient grad_;
 
-  /**
-   * @brief storage buffer for element stiffness matrices, used in ComputeElementMatrices() and
-   * UpdateAssembledSparseMatrix()
-   */
-  mutable mfem::Vector K_e_;
+  Array<double, 3, exec> element_gradients;
 
-  /**
-   * @brief storage buffer for boundary element stiffness matrices, used in ComputeBoundaryElementMatrices() and
-   * UpdateAssembledSparseMatrix()
-   */
-  mutable mfem::Vector K_b_;
+ Array<double, 3, exec> belement_gradients;
 
   /**
    * @brief Local internal AssembledSparseMatrix storage for ComputeElementMatrices

@@ -67,8 +67,8 @@ struct DofNumbering {
       elem_restriction->Mult(iota, dof_ids);
       const double * dof_ids_h = dof_ids.HostRead();
 
-      for (int e = 0; e < element_dofs.size(0); e++) {
-        for (int i = 0; i < element_dofs.size(1); i++) {
+      for (size_t e = 0; e < element_dofs.size(0); e++) {
+        for (size_t i = 0; i < element_dofs.size(1); i++) {
           int mfem_id        = static_cast<int>(dof_ids_h[element_dofs.index(e, i)]);
           element_dofs(e, i) = signed_index{mfem_index(mfem_id), mfem_sign(mfem_id)};
         }
@@ -88,8 +88,8 @@ struct DofNumbering {
       face_restriction->Mult(iota, dof_ids);
       const double * dof_ids_h = dof_ids.HostRead();
 
-      for (int e = 0; e < boundary_element_dofs.size(0); e++) {
-        for (int i = 0; i < boundary_element_dofs.size(1); i++) {
+      for (size_t e = 0; e < boundary_element_dofs.size(0); e++) {
+        for (size_t i = 0; i < boundary_element_dofs.size(1); i++) {
           int mfem_id                 = static_cast<int>(dof_ids_h[boundary_element_dofs.index(e, i)]);
           boundary_element_dofs(e, i) = signed_index{mfem_index(mfem_id), mfem_sign(mfem_id)};
         }
@@ -115,16 +115,13 @@ struct GradientAssemblyLookupTables {
     int num_elements          = trial_fespace.GetNE();
     int num_boundary_elements = trial_fespace.GetNFbyType(mfem::FaceType::Boundary);
 
-    int test_vdim  = test_fespace.GetVDim();
-    int trial_vdim = trial_fespace.GetVDim();
-
     std::vector<elem_info> infos;
 
     bool on_boundary = false;
     for (int e = 0; e < num_elements; e++) {
-      for (int i = 0; i < test_dofs_.element_dofs.size(1); i++) {
+      for (int i = 0; i < int(test_dofs_.element_dofs.size(1)); i++) {
         auto test_dof = test_dofs_.element_dofs(e, i);
-        for (int j = 0; j < trial_dofs_.element_dofs.size(1); j++) {
+        for (int j = 0; j < int(trial_dofs_.element_dofs.size(1)); j++) {
           auto trial_dof = trial_dofs_.element_dofs(e, j);
           infos.push_back(
               elem_info{test_dof, trial_dof, i, j, e, mfem_sign(test_dof) * mfem_sign(trial_dof), on_boundary});
@@ -137,9 +134,9 @@ struct GradientAssemblyLookupTables {
     // an empty 2D array, so these loops will not do anything
     on_boundary = true;
     for (int e = 0; e < num_boundary_elements; e++) {
-      for (int i = 0; i < test_dofs_.boundary_element_dofs.size(1); i++) {
+      for (int i = 0; i < int(test_dofs_.boundary_element_dofs.size(1)); i++) {
         auto test_dof = test_dofs_.boundary_element_dofs(e, i);
-        for (int j = 0; j < trial_dofs_.boundary_element_dofs.size(1); j++) {
+        for (int j = 0; j < int(trial_dofs_.boundary_element_dofs.size(1)); j++) {
           auto trial_dof = trial_dofs_.boundary_element_dofs(e, j);
           infos.push_back(
               elem_info{test_dof, trial_dof, i, j, e, mfem_sign(test_dof) * mfem_sign(trial_dof), on_boundary});
@@ -175,15 +172,9 @@ struct GradientAssemblyLookupTables {
 
     row_ptr.back() = ++nnz;
 
-    int dofs_per_test_element  = test_dofs_.element_dofs.size(1);
-    int dofs_per_trial_element = trial_dofs_.element_dofs.size(1);
-
-    int dofs_per_test_boundary_element  = test_dofs_.boundary_element_dofs.size(1);
-    int dofs_per_trial_boundary_element = trial_dofs_.boundary_element_dofs.size(1);
-
     for (size_t i = 0; i < infos.size(); i++) {
-      auto [_1, _2, local_row, local_col, element_id, _3, on_boundary] = infos[i];
-      if (on_boundary) {
+      auto [_1, _2, local_row, local_col, element_id, _3, from_boundary_element] = infos[i];
+      if (from_boundary_element) {
         boundary_element_nonzero_LUT(element_id, local_row, local_col) = nonzero_ids[i];
       } else {
         element_nonzero_LUT(element_id, local_row, local_col) = nonzero_ids[i];
