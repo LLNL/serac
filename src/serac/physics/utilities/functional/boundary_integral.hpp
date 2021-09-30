@@ -272,8 +272,8 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(ArrayView<double,3,ExecutionSpace::CPU> dk, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
-                             int num_elements)
+void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, derivatives_type* derivatives_ptr,
+                             const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -285,7 +285,7 @@ void element_gradient_kernel(ArrayView<double,3,ExecutionSpace::CPU> dk, derivat
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J  = mfem::Reshape(J_.Read(), rule.size(), num_elements);
+  auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
@@ -345,8 +345,8 @@ template <typename spaces>
 class BoundaryIntegral<spaces, ExecutionSpace::CPU> {
 public:
   static constexpr ExecutionSpace exec = ExecutionSpace::CPU;
-  using test_space  = test_space_t<spaces>;   ///< the test function space
-  using trial_space = trial_space_t<spaces>;  ///< the trial function space
+  using test_space                     = test_space_t<spaces>;   ///< the test function space
+  using trial_space                    = trial_space_t<spaces>;  ///< the trial function space
 
   /**
    * @brief Constructs an @p BoundaryIntegral from a user-provided quadrature function
@@ -430,7 +430,7 @@ public:
    * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * nelems)
    */
-  void ComputeElementGradients(ArrayView<double,3,exec> K_b) const { element_gradient_(K_b); }
+  void ComputeElementGradients(ArrayView<double, 3, exec> K_b) const { element_gradient_(K_b); }
 
 private:
   /**
@@ -464,7 +464,7 @@ private:
    * @brief Type-erased handle to kernel that computes each element's gradients
    * @see gradient_matrix_kernel
    */
-  std::function<void(ArrayView<double,3,exec>)> element_gradient_;
+  std::function<void(ArrayView<double, 3, exec>)> element_gradient_;
 };
 
 }  // namespace serac

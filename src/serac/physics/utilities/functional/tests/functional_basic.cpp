@@ -60,8 +60,8 @@ void check_gradient(Functional<T>& f, mfem::GridFunction& U)
   EXPECT_NEAR(0., relative_error2, 1.e-6);
 }
 
-int main(int argc, char* argv[]) {
-
+int main(int argc, char* argv[])
+{
   int num_procs, myid;
 
   MPI_Init(&argc, &argv);
@@ -75,14 +75,14 @@ int main(int argc, char* argv[]) {
   int serial_refinement   = 0;
   int parallel_refinement = 0;
 
-  constexpr auto p = 2;
+  constexpr auto p   = 2;
   constexpr auto dim = 3;
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
+  mesh3D               = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
 
   // Create standard MFEM bilinear and linear forms on H1
-  auto fec = mfem::H1_FECollection(p, dim);
+  auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(mesh3D.get(), &fec);
 
   // Set a random state to evaluate the residual
@@ -105,10 +105,7 @@ int main(int argc, char* argv[]) {
       },
       *mesh3D);
 
-  residual.AddSurfaceIntegral(
-      [=](auto x, auto /*n*/, auto u) { 
-        return x[0] + x[1] - cos(u); 
-      }, *mesh3D);
+  residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
 
   mfem::SparseMatrix K = grad(residual);
 

@@ -89,16 +89,16 @@ public:
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
 
     {
-      int num_elements = trial_space_->GetNE();
+      int num_elements           = trial_space_->GetNE();
       int ndof_per_test_element  = 1;
-      int ndof_per_trial_element  = trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim();
-      element_gradients_ = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      int ndof_per_trial_element = trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim();
+      element_gradients_         = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
     }
 
     {
-      int num_belements = trial_space_->GetNFbyType(mfem::FaceType::Boundary);
+      int num_belements           = trial_space_->GetNFbyType(mfem::FaceType::Boundary);
       int ndof_per_test_belement  = 1;
-      int ndof_per_trial_belement  = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
+      int ndof_per_trial_belement = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
       belement_gradients_ = Array<double, 3, exec>(num_belements, ndof_per_test_belement, ndof_per_trial_belement);
     }
   }
@@ -254,7 +254,6 @@ private:
    * @brief mfem::Operator that produces the gradient of a @p Functional from a @p Mult
    */
   class Gradient {
-
   public:
     /**
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
@@ -277,9 +276,8 @@ private:
       g = 0.0;
 
       if (form_.domain_integrals_.size() > 0) {
-
-        auto & K_elem = form_.element_gradients_;
-        auto & LUT = lookup_tables.element_dofs_;
+        auto& K_elem = form_.element_gradients_;
+        auto& LUT    = lookup_tables.element_dofs_;
 
         zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
@@ -292,13 +290,11 @@ private:
             g[index] += sign * K_elem(e, 0, j);
           }
         }
-
       }
 
       if (form_.boundary_integrals_.size() > 0) {
-
-        auto & K_belem = form_.belement_gradients_;
-        auto & LUT = lookup_tables.boundary_element_dofs_;
+        auto& K_belem = form_.belement_gradients_;
+        auto& LUT     = lookup_tables.boundary_element_dofs_;
 
         zero_out(K_belem);
         for (auto& boundary : form_.boundary_integrals_) {
@@ -311,7 +307,6 @@ private:
             g[index] += sign * K_belem(e, 0, j);
           }
         }
-
       }
 
       return g;
@@ -509,10 +504,10 @@ private:
   /// @brief The gradient object used to implement @p GetGradient
   mutable Gradient grad_;
 
-  /// @brief array that stores each element's gradient of the residual w.r.t. trial values 
+  /// @brief array that stores each element's gradient of the residual w.r.t. trial values
   Array<double, 3, exec> element_gradients_;
 
-  /// @brief array that stores each boundary element's gradient of the residual w.r.t. trial values 
+  /// @brief array that stores each boundary element's gradient of the residual w.r.t. trial values
   Array<double, 3, exec> belement_gradients_;
 
   template <typename T>

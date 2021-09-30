@@ -197,8 +197,8 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
-                             int num_elements)
+void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, derivatives_type* derivatives_ptr,
+                             const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -211,7 +211,7 @@ void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, deriv
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J  = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
+  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {

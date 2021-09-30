@@ -29,7 +29,7 @@ struct ElemInfo {
  * @param x the ElemInfo on the left
  * @param y the ElemInfo on the right
  */
-bool operator<(const ElemInfo & x, const ElemInfo & y)
+bool operator<(const ElemInfo& x, const ElemInfo& y)
 {
   return (x.global_row_ < y.global_row_) || (x.global_row_ == y.global_row_ && x.global_col_ < y.global_col_);
 }
@@ -39,7 +39,7 @@ bool operator<(const ElemInfo & x, const ElemInfo & y)
  * @param x the ElemInfo on the left
  * @param y the ElemInfo on the right
  */
-bool operator!=(const ElemInfo & x, const ElemInfo & y)
+bool operator!=(const ElemInfo& x, const ElemInfo& y)
 {
   return (x.global_row_ != y.global_row_) || (x.global_col_ != y.global_col_);
 }
@@ -76,14 +76,14 @@ int mfem_index(int i) { return (i >= 0) ? i : -1 - i; }
 struct SignedIndex {
   int index_;
   int sign_;
-  operator int() { return index_; }
+      operator int() { return index_; }
 };
 
 /**
  * @brief this object extracts the dofs for each element in a FiniteElementSpace as a 2D array such that
- *   element_dofs_(e, i) will be the `i`th dof of element `e`. 
- * 
- * Note: due to an internal inconsistency between mfem::FiniteElementSpace and mfem::FaceRestriction, 
+ *   element_dofs_(e, i) will be the `i`th dof of element `e`.
+ *
+ * Note: due to an internal inconsistency between mfem::FiniteElementSpace and mfem::FaceRestriction,
  *    we choose to use the Restriction operator as the "source of truth", since we are also using its
  *    convention for quadrature point numbering.
  */
@@ -91,7 +91,7 @@ struct DofNumbering {
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
       : element_dofs_(fespace.GetNE(), fespace.GetFE(0)->GetDof() * fespace.GetVDim()),
         boundary_element_dofs_(fespace.GetNFbyType(mfem::FaceType::Boundary),
-                              fespace.GetBE(0)->GetDof() * fespace.GetVDim())
+                               fespace.GetBE(0)->GetDof() * fespace.GetVDim())
   {
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -104,11 +104,11 @@ struct DofNumbering {
       }
 
       elem_restriction->Mult(iota, dof_ids);
-      const double * dof_ids_h = dof_ids.HostRead();
+      const double* dof_ids_h = dof_ids.HostRead();
 
       for (size_t e = 0; e < element_dofs_.size(0); e++) {
         for (size_t i = 0; i < element_dofs_.size(1); i++) {
-          int mfem_id        = static_cast<int>(dof_ids_h[element_dofs_.index(e, i)]);
+          int mfem_id         = static_cast<int>(dof_ids_h[element_dofs_.index(e, i)]);
           element_dofs_(e, i) = SignedIndex{mfem_index(mfem_id), mfem_sign(mfem_id)};
         }
       }
@@ -125,34 +125,33 @@ struct DofNumbering {
       }
 
       face_restriction->Mult(iota, dof_ids);
-      const double * dof_ids_h = dof_ids.HostRead();
+      const double* dof_ids_h = dof_ids.HostRead();
 
       for (size_t e = 0; e < boundary_element_dofs_.size(0); e++) {
         for (size_t i = 0; i < boundary_element_dofs_.size(1); i++) {
-          int mfem_id                 = static_cast<int>(dof_ids_h[boundary_element_dofs_.index(e, i)]);
+          int mfem_id                  = static_cast<int>(dof_ids_h[boundary_element_dofs_.index(e, i)]);
           boundary_element_dofs_(e, i) = SignedIndex{mfem_index(mfem_id), mfem_sign(mfem_id)};
         }
       }
     }
   }
 
-  /// @brief element_dofs_(e, i) stores the `i`th dof of element `e`. 
+  /// @brief element_dofs_(e, i) stores the `i`th dof of element `e`.
   serac::CPUArray<SignedIndex, 2> element_dofs_;
 
-  /// @brief boundary_element_dofs_(b, i) stores the `i`th dof of boundary element `b`. 
+  /// @brief boundary_element_dofs_(b, i) stores the `i`th dof of boundary element `b`.
   serac::CPUArray<SignedIndex, 2> boundary_element_dofs_;
-
 };
 
 /**
  * @brief this object figures out the sparsity pattern associated with a finite element discretization
- *   of the given test and trial function spaces, and records which nonzero each element "stiffness" 
+ *   of the given test and trial function spaces, and records which nonzero each element "stiffness"
  *   matrix maps to, to facilitate assembling the element matrices into the global sparse matrix. e.g.
- * 
+ *
  *   element_nonzero_LUT(e, i, j) says where (in the global sparse matrix)
  *   to put the (i,j) component of the matrix associated with element element matrix `e`
- * 
- * Note: due to an internal inconsistency between mfem::FiniteElementSpace and mfem::FaceRestriction, 
+ *
+ * Note: due to an internal inconsistency between mfem::FiniteElementSpace and mfem::FaceRestriction,
  *    we choose to use the Restriction operator as the "source of truth", since we are also using its
  *    convention for quadrature point numbering.
  */
@@ -243,24 +242,23 @@ struct GradientAssemblyLookupTables {
   /**
    * @brief array holding the offsets for a given row of the sparse matrix
    * i.e. row r corresponds to the indices [row_ptr[r], row_ptr[r+1])
-   */ 
+   */
   std::vector<int> row_ptr;
 
   /// @brief array holding the column associated with each nonzero entry
   std::vector<int> col_ind;
 
   /**
-   * @brief element_nonzero_LUT(e, i, j) says where (in the global sparse matrix) 
+   * @brief element_nonzero_LUT(e, i, j) says where (in the global sparse matrix)
    * to put the (i, j) component of the matrix associated with element element matrix `e`
-   */ 
+   */
   serac::CPUArray<SignedIndex, 3> element_nonzero_LUT;
 
   /**
    * @brief boundary_element_nonzero_LUT(b, i, j) says where (in the global sparse matrix)
    * to put the (i, j) component of the matrix associated with boundary element element matrix `b`
-   */ 
+   */
   serac::CPUArray<SignedIndex, 3> boundary_element_nonzero_LUT;
-
 };
 
 }  // namespace serac

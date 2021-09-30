@@ -123,19 +123,18 @@ public:
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
 
     {
-      int num_elements = test_space_->GetNE();
+      int num_elements           = test_space_->GetNE();
       int ndof_per_test_element  = test_space_->GetFE(0)->GetDof() * test_space_->GetVDim();
-      int ndof_per_trial_element  = trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim();
-      element_gradients = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      int ndof_per_trial_element = trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim();
+      element_gradients_         = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
     }
 
     {
-      int num_belements = test_space_->GetNFbyType(mfem::FaceType::Boundary);
+      int num_belements           = test_space_->GetNFbyType(mfem::FaceType::Boundary);
       int ndof_per_test_belement  = test_space_->GetBE(0)->GetDof() * test_space_->GetVDim();
-      int ndof_per_trial_belement  = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
-      belement_gradients = Array<double, 3, exec>(num_belements, ndof_per_test_belement, ndof_per_trial_belement);
+      int ndof_per_trial_belement = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
+      belement_gradients_ = Array<double, 3, exec>(num_belements, ndof_per_test_belement, ndof_per_trial_belement);
     }
-
   }
 
   /**
@@ -308,16 +307,13 @@ public:
    * @brief Lightweight shim for mfem::Operator that produces the gradient of a @p Functional from a @p Mult
    */
   class Gradient : public mfem::Operator {
-
-   public:
+  public:
     /**
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
     Gradient(Functional<test(trial), exec>& f)
-        : mfem::Operator(f.Height(), f.Width()),
-          form_(f),
-          lookup_tables(*(f.test_space_), *(f.trial_space_)){};
+        : mfem::Operator(f.Height(), f.Width()), form_(f), lookup_tables(*(f.test_space_), *(f.trial_space_)){};
 
     /**
      * @brief implement that action of the gradient: df := df_dx * dx
@@ -345,7 +341,6 @@ public:
      */
     operator mfem::SparseMatrix()
     {
-
       // the CSR graph (sparsity pattern) is reusable, so we cache
       // that and ask mfem to not free that memory in ~SparseMatrix()
       constexpr bool sparse_matrix_frees_graph_ptrs = false;
@@ -361,9 +356,8 @@ public:
       // each element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
       if (form_.domain_integrals_.size() > 0) {
-
-        auto & K_elem = form_.element_gradients;
-        auto & LUT = lookup_tables.element_nonzero_LUT;
+        auto& K_elem = form_.element_gradients_;
+        auto& LUT    = lookup_tables.element_nonzero_LUT;
 
         zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
@@ -378,15 +372,13 @@ public:
             }
           }
         }
-
       }
 
       // each boundary element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
       if (form_.boundary_integrals_.size() > 0) {
-
-        auto & K_belem = form_.belement_gradients;
-        auto & LUT = lookup_tables.boundary_element_nonzero_LUT;
+        auto& K_belem = form_.belement_gradients_;
+        auto& LUT     = lookup_tables.boundary_element_nonzero_LUT;
 
         zero_out(K_belem);
         for (auto& boundary : form_.boundary_integrals_) {
@@ -401,7 +393,6 @@ public:
             }
           }
         }
-
       }
 
       return mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, Height(), Width(),
@@ -603,9 +594,11 @@ public:
    */
   mutable Gradient grad_;
 
-  Array<double, 3, exec> element_gradients;
+  /// @brief 3D array that stores each element's gradient of the residual w.r.t. trial values
+  Array<double, 3, exec> element_gradients_;
 
-  Array<double, 3, exec> belement_gradients;
+  /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
+  Array<double, 3, exec> belement_gradients_;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);

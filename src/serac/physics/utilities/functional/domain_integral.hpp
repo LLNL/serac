@@ -101,7 +101,7 @@ public:
                                                                                          J_, num_elements);
       };
 
-      element_gradient_ = [this, Q, qf_derivatives, num_elements](ArrayView<double,3,ExecutionSpace::CPU> K_e) {
+      element_gradient_ = [this, Q, qf_derivatives, num_elements](ArrayView<double, 3, ExecutionSpace::CPU> K_e) {
         domain_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_,
                                                                                        num_elements);
       };
@@ -161,10 +161,9 @@ public:
    * @param[inout] K_e The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * elem)
    */
-  void ComputeElementGradients(ArrayView<double,3,ExecutionSpace::CPU> K_e) const { element_gradient_(K_e); }
+  void ComputeElementGradients(ArrayView<double, 3, ExecutionSpace::CPU> K_e) const { element_gradient_(K_e); }
 
 private:
-
   /**
    * @brief Jacobians of the element transformations at all quadrature points
    */
@@ -180,7 +179,7 @@ private:
    * @see evaluation_kernel
    */
   std::function<void(const mfem::Vector&, mfem::Vector&)> evaluation_;
-  
+
   /**
    * @brief Type-erased handle to gradient kernel
    * @see gradient_kernel
@@ -191,7 +190,7 @@ private:
    * @brief Type-erased handle to gradient matrix assembly kernel
    * @see gradient_matrix_kernel
    */
-  std::function<void(ArrayView<double,3,exec>)> element_gradient_;
+  std::function<void(ArrayView<double, 3, exec>)> element_gradient_;
 };
 
 }  // namespace serac

@@ -172,11 +172,14 @@ struct Array<T, 1, ExecutionSpace::CPU> : public impl::ArrayBase<T, ExecutionSpa
   Array(size_t n) : impl::ArrayBase<T, ExecutionSpace::CPU>(n), impl::Indexable<1>{} {}
 
 #if defined(__CUDACC__)
-  Array(const Array<T, 1, ExecutionSpace::GPU>& other) : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<1>{other} {}
+  Array(const Array<T, 1, ExecutionSpace::GPU>& other)
+      : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<1>{other}
+  {
+  }
   void operator=(const Array<T, 1, ExecutionSpace::GPU>& other)
   {
     impl::ArrayBase<T, ExecutionSpace::CPU>::operator=(other);
-    impl::Indexable<1>::             operator=(other);
+    impl::Indexable<1>::                     operator=(other);
   }
 #endif
 
@@ -189,20 +192,26 @@ struct Array<T, 2, ExecutionSpace::CPU> : public impl::ArrayBase<T, ExecutionSpa
   using impl::ArrayBase<T, ExecutionSpace::CPU>::ptr;
   Array() : impl::ArrayBase<T, ExecutionSpace::CPU>(0), impl::Indexable<2>(0, 0) {}
   Array(size_t n1, size_t n2) : impl::ArrayBase<T, ExecutionSpace::CPU>(n1 * n2), impl::Indexable<2>(n1, n2) {}
-  Array(const Array<T, 2, ExecutionSpace::CPU>& other) : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<2>{other} {}
+  Array(const Array<T, 2, ExecutionSpace::CPU>& other)
+      : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<2>{other}
+  {
+  }
 
   void operator=(const Array<T, 2, ExecutionSpace::CPU>& other)
   {
     impl::ArrayBase<T, ExecutionSpace::CPU>::operator=(other);
-    impl::Indexable<2>::             operator=(other);
+    impl::Indexable<2>::                     operator=(other);
   }
 
 #if defined(__CUDACC__)
-  Array(const Array<T, 2, ExecutionSpace::GPU>& other) : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<2>{other} {}
+  Array(const Array<T, 2, ExecutionSpace::GPU>& other)
+      : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<2>{other}
+  {
+  }
   void operator=(const Array<T, 2, ExecutionSpace::GPU>& other)
   {
     impl::ArrayBase<T, ExecutionSpace::CPU>::operator=(other);
-    impl::Indexable<2>::             operator=(other);
+    impl::Indexable<2>::                     operator=(other);
   }
 #endif
 
@@ -214,24 +223,31 @@ template <typename T>
 struct Array<T, 3, ExecutionSpace::CPU> : public impl::ArrayBase<T, ExecutionSpace::CPU>, public impl::Indexable<3> {
   using impl::ArrayBase<T, ExecutionSpace::CPU>::ptr;
   Array() : impl::ArrayBase<T, ExecutionSpace::CPU>(0), impl::Indexable<3>(0, 0, 0) {}
-  Array(size_t n1, size_t n2, size_t n3) : impl::ArrayBase<T, ExecutionSpace::CPU>(n1 * n2 * n3), impl::Indexable<3>(n1, n2, n3)
+  Array(size_t n1, size_t n2, size_t n3)
+      : impl::ArrayBase<T, ExecutionSpace::CPU>(n1 * n2 * n3), impl::Indexable<3>(n1, n2, n3)
   {
   }
 
-  Array(const Array<T, 3, ExecutionSpace::CPU>& other) : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<3>{other} {}
+  Array(const Array<T, 3, ExecutionSpace::CPU>& other)
+      : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<3>{other}
+  {
+  }
 
   void operator=(const Array<T, 3, ExecutionSpace::CPU>& other)
   {
     impl::ArrayBase<T, ExecutionSpace::CPU>::operator=(other);
-    impl::Indexable<3>::             operator=(other);
+    impl::Indexable<3>::                     operator=(other);
   }
 
 #if defined(__CUDACC__)
-  Array(const Array<T, 3, ExecutionSpace::GPU>& other) : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<3>{other} {}
+  Array(const Array<T, 3, ExecutionSpace::GPU>& other)
+      : impl::ArrayBase<T, ExecutionSpace::CPU>(other), impl::Indexable<3>{other}
+  {
+  }
   void operator=(const Array<T, 3, ExecutionSpace::GPU>& other)
   {
     impl::ArrayBase<T, ExecutionSpace::CPU>::operator=(other);
-    impl::Indexable<3>::             operator=(other);
+    impl::Indexable<3>::                     operator=(other);
   }
 #endif
 
@@ -239,8 +255,9 @@ struct Array<T, 3, ExecutionSpace::CPU> : public impl::ArrayBase<T, ExecutionSpa
   const T& operator()(size_t i, size_t j, size_t k) const { return ptr[index(i, j, k)]; }
 };
 
-template < typename T >
-void zero_out(impl::ArrayBase<T, ExecutionSpace::CPU> & arr) {
+template <typename T>
+void zero_out(impl::ArrayBase<T, ExecutionSpace::CPU>& arr)
+{
   std::memset(arr.ptr, 0, arr.n * sizeof(T));
 }
 
@@ -273,7 +290,7 @@ struct ArrayView<T, 3, ExecutionSpace::CPU> : public impl::Indexable<3> {
   ArrayView(const Array<T, 3, ExecutionSpace::CPU>& arr) : impl::Indexable<3>(arr), ptr{arr.ptr} {}
   T&       operator()(size_t i, size_t j, size_t k) { return ptr[index(i, j, k)]; }
   const T& operator()(size_t i, size_t j, size_t k) const { return ptr[index(i, j, k)]; }
-  T* ptr;
+  T*       ptr;
 };
 
 template <typename T, size_t d, ExecutionSpace exec>
@@ -311,15 +328,17 @@ template <typename T>
 struct Array<T, 3, ExecutionSpace::GPU> : public impl::ArrayBase<T, ExecutionSpace::GPU>, public impl::Indexable<3> {
   using impl::ArrayBase<T, ExecutionSpace::GPU>::ptr;
   Array() = default;
-  Array(size_t n1, size_t n2, size_t n3) : impl::ArrayBase<T, ExecutionSpace::GPU>(n1 * n2 * n3), impl::Indexable<3>(n1, n2, n3)
+  Array(size_t n1, size_t n2, size_t n3)
+      : impl::ArrayBase<T, ExecutionSpace::GPU>(n1 * n2 * n3), impl::Indexable<3>(n1, n2, n3)
   {
   }
   SERAC_DEVICE T&    operator()(size_t i, size_t j, size_t k) { return ptr[index(i, j, k)]; }
   SERAC_DEVICE const T& operator()(size_t i, size_t j, size_t k) const { return ptr[index(i, j, k)]; }
 };
 
-template < typename T >
-void zero_out(impl::ArrayBase<T, serac::ExecutionSpace::GPU> & arr) {
+template <typename T>
+void zero_out(impl::ArrayBase<T, serac::ExecutionSpace::GPU>& arr)
+{
   cudaMemset(arr.ptr, 0, arr.n * sizeof(T));
 }
 
