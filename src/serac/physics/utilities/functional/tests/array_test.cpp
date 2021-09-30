@@ -1,5 +1,9 @@
 #include "serac/physics/utilities/functional/array.hpp"
 
+constexpr int N1 = 8;
+constexpr int N2 = 8;
+constexpr int N3 = 4;
+
 struct foo {
   foo() : array(64, 64){};
   serac::CPUArray<double, 2> array;
@@ -16,8 +20,8 @@ auto function_that_makes_a_foo(foo& f)
 
 void my_kernel(serac::CPUView<double, 2> values)
 {
-  for (uint32_t i = 0; i < 32; i++) {
-    for (uint32_t j = 0; j < 32; j++) {
+  for (uint32_t i = 0; i < values.size(0); i++) {
+    for (uint32_t j = 0; j < values.size(1); j++) {
       values(i, j) = i + j;
     }
   }
@@ -25,12 +29,28 @@ void my_kernel(serac::CPUView<double, 2> values)
 
 int main()
 {
-  serac::CPUArray<double, 2> my_array(32, 32);
-  serac::CPUArray<double, 3> my_array2(33, 32, 4);
+  serac::CPUArray<double, 2> my_array(N1, N2);
+  serac::CPUArray<double, 3> my_array2(N1, N2, N3);
 
   my_kernel(view(my_array));
+
+  for (size_t i = 0; i < my_array.size(0); i++) {
+    for (size_t j = 0; j < my_array.size(1); j++) {
+      std::cout << my_array(i,j) << " ";
+    }
+    std::cout << std::endl;
+  }
 
   foo f;
 
   function_that_makes_a_foo(f);
+
+  zero_out(my_array);
+
+  for (size_t i = 0; i < my_array.size(0); i++) {
+    for (size_t j = 0; j < my_array.size(1); j++) {
+      std::cout << my_array(i,j) << " ";
+    }
+    std::cout << std::endl;
+  }
 }

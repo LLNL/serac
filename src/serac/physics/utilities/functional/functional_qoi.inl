@@ -87,6 +87,20 @@ public:
     output_L_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
     my_output_T_.SetSize(Height(), mfem::Device::GetMemoryType());
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
+
+    {
+      int num_elements = trial_space_->GetNE();
+      int ndof_per_test_element  = 1;
+      int ndof_per_trial_element  = trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim();
+      element_gradients = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+    }
+
+    {
+      int num_belements = trial_space_->GetNFbyType(mfem::FaceType::Boundary);
+      int ndof_per_test_belement  = 1;
+      int ndof_per_trial_belement  = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
+      belement_gradients = Array<double, 3, exec>(num_belements, ndof_per_test_belement, ndof_per_trial_belement);
+    }
   }
 
   ~Functional()
@@ -130,7 +144,6 @@ public:
    * @brief Adds a boundary integral term to the weak formulation of the PDE
    * @tparam dim The dimension of the boundary element (1 for line, 2 for quad, etc)
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
-   * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
    * @param[in] data The data structure containing per-quadrature-point data
@@ -162,7 +175,7 @@ public:
   }
 
   /**
-   * @brief Adds an area integral, i.e., over 2D elements in R^2 space
+   * @brief Adds an area integral, i.e., over 2D elements in R^2
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
@@ -176,7 +189,7 @@ public:
   }
 
   /**
-   * @brief Adds a volume integral, i.e., over 3D elements in R^3 space
+   * @brief Adds a volume integral, i.e., over 3D elements in R^3
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
@@ -187,6 +200,13 @@ public:
   void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain)
   {
     AddDomainIntegral(Dimension<3>{}, integrand, domain);
+  }
+
+  /// @brief alias for Functional::AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
+  template <typename lambda>
+  void AddSurfaceIntegral(lambda&& integrand, mfem::Mesh& domain)
+  {
+    AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
   }
 
   /**
@@ -220,47 +240,6 @@ public:
     Evaluation<Operation::GradientMult>(input_T, output_T);
   }
 
-  /**
-   * @brief calculate and return the element stiffness matrices flattened into a mfem::Vector
-   * @returns A mfem::Vector containing the element stiffness matrix entries (flattened from a 3D array
-   * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
-   */
-  mfem::Vector ComputeElementGradients()
-  {
-    // Resize K_e_ if this is the first time
-    if (K_e_.Size() == 0) {
-      const auto& trial_el = *trial_space_->GetFE(0);
-      K_e_.SetSize(trial_el.GetDof() * trial_space_->GetVDim() * trial_space_->GetNE());
-    }
-    // zero out internal vector
-    K_e_ = 0.;
-    // loop through integrals and accumulate
-    for (auto& domain : domain_integrals_) domain.ComputeElementGradients(K_e_);
-
-    return K_e_;
-  }
-
-  /**
-   * @brief calculate and return the boundary element stiffness matrices flattened into a mfem::Vector
-   * @returns A mfem::Vector containing the boundary element matrix entries (flattened from a 3D array
-   * with dimensions test_dim * test_ndof, trial_dim * trial_ndof, nelem)
-   */
-  mfem::Vector ComputeBoundaryElementGradients()
-  {
-    // Resize K_b_ if this is the first time
-    if (K_b_.Size() == 0) {
-      int num_boundary_elements           = trial_space_->GetNBE();
-      int dofs_per_trial_boundary_element = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
-      K_b_.SetSize(dofs_per_trial_boundary_element * num_boundary_elements);
-    }
-    // zero out internal vector
-    K_b_ = 0.;
-    // loop through integrals and accumulate
-    for (auto& boundary : boundary_integrals_) boundary.ComputeElementGradients(K_b_);
-
-    return K_b_;
-  }
-
 private:
   /**
    * @brief Indicates whether to obtain values or gradients from a calculation
@@ -281,56 +260,58 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<double(trial)>& f) : form(f), lookup_tables(*(f.trial_space_)) {}
-    void Mult(const mfem::Vector& x, mfem::Vector& y) const { form.GradientMult(x, y); }
+    Gradient(Functional<double(trial)>& f) : form_(f), lookup_tables(*(f.trial_space_)) {}
+
+    void Mult(const mfem::Vector& x, mfem::Vector& y) const { form_.GradientMult(x, y); }
 
     double operator()(const mfem::Vector& x) const
     {
       mfem::Vector y(1);
-      form.GradientMult(x, y);
+      form_.GradientMult(x, y);
       return y[0];
     }
 
     operator mfem::Vector()
     {
-      constexpr int dofs_per_test_element          = 1;
-      constexpr int dofs_per_test_boundary_element = 1;
-
-      mfem::Vector g(form.trial_space_->TrueVSize());
+      mfem::Vector g(form_.trial_space_->TrueVSize());
       g = 0.0;
 
-      if (form.domain_integrals_.size() > 0) {
-        int num_elements           = form.trial_space_->GetNE();
-        int trial_vdim             = form.trial_space_->GetVDim();
-        int dofs_per_trial_element = form.trial_space_->GetFE(0)->GetDof();
+      if (form_.domain_integrals_.size() > 0) {
 
-        mfem::Vector element_gradients = form.ComputeElementGradients();
-        auto         K_elem            = mfem::Reshape(element_gradients.HostRead(), dofs_per_test_element,
-                                    dofs_per_trial_element * trial_vdim, num_elements);
-        auto&        LUT               = lookup_tables.element_dofs;
-        for (int e = 0; e < num_elements; e++) {
-          for (int j = 0; j < dofs_per_trial_element * trial_vdim; j++) {
+        auto & K_elem = form_.element_gradients;
+        auto & LUT = lookup_tables.element_dofs;
+
+        zero_out(K_elem);
+        for (auto& domain : form_.domain_integrals_) {
+          domain.ComputeElementGradients(view(K_elem));
+        }
+
+        for (size_t e = 0; e < K_elem.size(0); e++) {
+          for (size_t j = 0; j < K_elem.size(2); j++) {
             auto [index, sign] = LUT(e, j);
-            g[index] += sign * K_elem(0, j, e);
+            g[index] += sign * K_elem(e, 0, j);
           }
         }
+
       }
 
-      if (form.boundary_integrals_.size() > 0) {
-        int num_boundary_elements           = form.trial_space_->GetNBE();
-        int trial_vdim                      = form.trial_space_->GetVDim();
-        int dofs_per_trial_boundary_element = form.trial_space_->GetBE(0)->GetDof();
+      if (form_.boundary_integrals_.size() > 0) {
 
-        mfem::Vector boundary_element_gradients = form.ComputeBoundaryElementGradients();
-        auto         K_elem = mfem::Reshape(boundary_element_gradients.HostRead(), dofs_per_test_boundary_element,
-                                    dofs_per_trial_boundary_element * trial_vdim, num_boundary_elements);
-        auto&        LUT    = lookup_tables.boundary_element_dofs;
-        for (int e = 0; e < num_boundary_elements; e++) {
-          for (int j = 0; j < dofs_per_trial_boundary_element * trial_vdim; j++) {
+        auto & K_belem = form_.belement_gradients;
+        auto & LUT = lookup_tables.boundary_element_dofs;
+
+        zero_out(K_belem);
+        for (auto& domain : form_.domain_integrals_) {
+          domain.ComputeElementGradients(view(K_belem));
+        }
+
+        for (size_t e = 0; e < K_belem.size(0); e++) {
+          for (size_t j = 0; j < K_belem.size(2); j++) {
             auto [index, sign] = LUT(e, j);
-            g[index] += sign * K_elem(0, j, e);
+            g[index] += sign * K_belem(e, 0, j);
           }
         }
+
       }
 
       return g;
@@ -340,7 +321,7 @@ private:
     /**
      * @brief The "parent" @p Functional to calculate gradients with
      */
-    Functional<double(trial), exec>& form;
+    Functional<double(trial), exec>& form_;
 
     DofNumbering lookup_tables;
   };
@@ -519,7 +500,7 @@ private:
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<BoundaryIntegral<test(trial)>> boundary_integrals_;
+  std::vector<BoundaryIntegral<test(trial), exec>> boundary_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
@@ -530,17 +511,9 @@ private:
    */
   mutable Gradient grad_;
 
-  /**
-   * @brief storage buffer for element stiffness matrices, used in ComputeElementMatrices() and
-   * UpdateAssembledSparseMatrix()
-   */
-  mutable mfem::Vector K_e_;
+  Array<double, 3, exec> element_gradients;
 
-  /**
-   * @brief storage buffer for boundary element stiffness matrices, used in ComputeBoundaryElementMatrices() and
-   * UpdateAssembledSparseMatrix()
-   */
-  mutable mfem::Vector K_b_;
+  Array<double, 3, exec> belement_gradients;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);

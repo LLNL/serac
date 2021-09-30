@@ -173,8 +173,8 @@ struct GradientAssemblyLookupTables {
     row_ptr.back() = ++nnz;
 
     for (size_t i = 0; i < infos.size(); i++) {
-      auto [_1, _2, local_row, local_col, element_id, _3, is_on_boundary] = infos[i];
-      if (is_on_boundary) {
+      auto [_1, _2, local_row, local_col, element_id, _3, from_boundary_element] = infos[i];
+      if (from_boundary_element) {
         boundary_element_nonzero_LUT(element_id, local_row, local_col) = nonzero_ids[i];
       } else {
         element_nonzero_LUT(element_id, local_row, local_col) = nonzero_ids[i];

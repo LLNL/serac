@@ -148,9 +148,9 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   // Add the total domain residual term to the functional
   residual.AddDomainIntegral(
       Dimension<dim>{},
-      [=](auto x, auto temperature) {
+      [=](auto /*x*/, auto displacement) {
         // get the value and the gradient from the input tuple
-        auto [u, du_dx] = temperature;
+        auto [u, du_dx] = displacement;
         auto source     = a * u * u[0];
         auto flux       = b * du_dx;
         return serac::tuple{source, flux};

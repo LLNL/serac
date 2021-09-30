@@ -14,13 +14,13 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(functional_tests_serial
+    functional_basic.cpp
     functional_qoi.cpp
     functional_nonlinear.cpp
     functional_boundary_test.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     array_test.cpp
-    generate_sparsity.cpp
     tuple_arithmetic_unit_tests.cpp)
 
 serac_add_tests( SOURCES ${functional_tests_serial}

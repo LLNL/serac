@@ -251,7 +251,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
 }
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
+void element_gradient_kernel(ArrayView<double,3,ExecutionSpace::CPU> dk, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
                              int num_elements)
 {
   using test_element               = finite_element<g, test>;
@@ -265,7 +265,6 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto J  = mfem::Reshape(J_.Read(), rule.size(), num_elements);
-  auto dk = mfem::Reshape(K_e.ReadWrite(), test_ndof * test_dim, trial_ndof * trial_dim, num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
@@ -305,7 +304,7 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
     // Note: we "transpose" these values to get them into the layout that mfem expects
     // clang-format off
     for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
-      dk(i + test_ndof * j, k + trial_ndof * l, e) += K_elem[i][k][j][l];
+      dk(e, i + test_ndof * j, k + trial_ndof * l) += K_elem[i][k][j][l];
     });
     // clang-format on
   }
@@ -313,14 +312,18 @@ void element_gradient_kernel(mfem::Vector& K_e, derivatives_type* derivatives_pt
 
 }  // namespace boundary_integral
 
+template <typename spaces, ExecutionSpace exec>
+class BoundaryIntegral;
+
 /**
  * @brief Describes a single integral term in a weak forumulation of a partial differential equation
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  */
 template <typename spaces>
-class BoundaryIntegral {
+class BoundaryIntegral<spaces, ExecutionSpace::CPU> {
 public:
+  static constexpr ExecutionSpace exec = ExecutionSpace::CPU;
   using test_space  = test_space_t<spaces>;   ///< the test function space
   using trial_space = trial_space_t<spaces>;  ///< the trial function space
 
@@ -377,7 +380,7 @@ public:
                                                                                          J_, num_elements);
     };
 
-    element_gradient_ = [this, qf_derivatives, num_elements](mfem::Vector& K_b) {
+    element_gradient_ = [this, qf_derivatives, num_elements](ArrayView<double, 3, exec> K_b) {
       boundary_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_b, qf_derivatives.get(), J_,
                                                                                        num_elements);
     };
@@ -407,7 +410,7 @@ public:
    * @param[inout] K_b The reshaped vector as a mfem::DeviceTensor of size (test_dim * test_dof, trial_dim * trial_dof,
    * nelems)
    */
-  void ComputeElementGradients(mfem::Vector& K_b) const { element_gradient_(K_b); }
+  void ComputeElementGradients(ArrayView<double,3,exec> K_b) const { element_gradient_(K_b); }
 
 private:
   /**
@@ -441,7 +444,7 @@ private:
    * @brief Type-erased handle to kernel that computes each element's gradients
    * @see gradient_matrix_kernel
    */
-  std::function<void(mfem::Vector&)> element_gradient_;
+  std::function<void(ArrayView<double,3,exec>)> element_gradient_;
 };
 
 }  // namespace serac
