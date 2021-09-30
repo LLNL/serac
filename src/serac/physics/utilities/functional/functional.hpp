@@ -605,14 +605,7 @@ public:
 
   Array<double, 3, exec> element_gradients;
 
- Array<double, 3, exec> belement_gradients;
-
-  /**
-   * @brief Local internal AssembledSparseMatrix storage for ComputeElementMatrices
-   *
-   * If unique_ptr is empty, construct AssembledSparseMatrix.
-   */
-  std::unique_ptr<serac::mfem_ext::AssembledSparseMatrix> assembled_spmat_;
+  Array<double, 3, exec> belement_gradients;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);

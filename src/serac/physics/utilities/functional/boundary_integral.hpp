@@ -102,7 +102,6 @@ auto Postprocess(const T& f, [[maybe_unused]] const coord_type& xi)
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
- * @param[in] data The quadrature point data
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
@@ -181,8 +180,6 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  * Template parameters other than the test and trial spaces are used for customization + optimization
  * and are erased through the @p std::function members of @p BoundaryIntegral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
- * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
- * @tparam spatial_dim The full dimension of the mesh
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
@@ -250,6 +247,30 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
   }
 }
 
+/**
+ * @brief The base kernel template used to create create custom element stiffness matrices
+ * associated with finite element calculations
+ *
+ * @tparam test The type of the test function space
+ * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p BoundaryIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam Q Quadrature parameter describing how many points per dimension
+ * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
+ *
+ * @note lambda does not appear as a template argument, as the stiffness matrix is
+ * inherently just a linear transformation
+ *
+ * @param[in] K_e Vectorized view of stiffness matrix contributions
+ * @param[in] derivatives_ptr The address at which derivatives of the q-function with
+ * respect to its arguments are stored
+ * @param[in] J_ The Jacobians of the element transformations at all quadrature points
+ * @see mfem::GeometricFactors
+ * @param[in] num_elements The number of elements in the mesh
+ */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
 void element_gradient_kernel(ArrayView<double,3,ExecutionSpace::CPU> dk, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
                              int num_elements)
@@ -337,7 +358,6 @@ public:
    * @param[in] normals The unit normals of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
-   * @param[in] data The quadrature point data
    * @note The @p Dimension parameters are used to assist in the deduction of the dim template parameter
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>

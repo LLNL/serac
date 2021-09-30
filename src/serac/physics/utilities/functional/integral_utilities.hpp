@@ -261,7 +261,7 @@ struct qf_result<lambda_type, x_t, u_du_t, qpt_data_type, std::enable_if_t<!std:
  * @tparam derivatives_type The type of the derivatives
  * @tparam rule_type The type of the quadrature rule
  * @tparam row_major A boolean to choose to use row major access patterns or column major
- * @param[in] derivative_ptr pointer to derivatives
+ * @param[in] derivatives_ptr pointer to derivatives
  * @param[in] e element number
  * @param[in] q qaudrature number
  * @param[in] rule quadrature rule
@@ -284,9 +284,21 @@ SERAC_HOST_DEVICE constexpr derivatives_type& AccessDerivatives(derivatives_type
 static constexpr Geometry supported_geometries[] = {Geometry::Point, Geometry::Segment, Geometry::Quadrilateral,
                                                     Geometry::Hexahedron};
 
+/**
+ * @brief A container for a linear approximation
+ *
+ * @tparam T1 The type of the value
+ * @tparam T2 The type of the derivative
+ */
 template <typename T1, typename T2>
 struct linear_approximation {
+  /**
+   * @brief The value of the approximation
+   */
   T1 value;
+  /**
+   * @brief The derivative of the approximation
+   */
   T2 derivative;
 };
 

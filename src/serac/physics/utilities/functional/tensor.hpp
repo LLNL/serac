@@ -392,9 +392,8 @@ SERAC_HOST_DEVICE constexpr auto tensor_with_shape(std::integer_sequence<int, n.
  * @brief Creates a tensor of requested dimension by subsequent calls to a functor
  * Can be thought of as analogous to @p std::transform in that the set of possible
  * indices for dimensions @p n are transformed into the values of the tensor by @a f
- * @tparam n The parameter pack of integer dimensions
+ * @tparam lambda_type The type of the functor
  * @param[in] f The functor to generate the tensor values from
- * @pre @a f must accept @p sizeof...(n) arguments of type @p int
  *
  * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
  *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
@@ -407,6 +406,17 @@ SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
   return tensor<T>{f()};
 }
 
+/**
+ * @brief Creates a tensor of requested dimension by subsequent calls to a functor
+ *
+ * @tparam n1 The dimension of the tensor
+ * @tparam lambda_type The type of the functor
+ * @param[in] f The functor to generate the tensor values from
+ * @pre @a f must accept @p n1 arguments of type @p int
+ *
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
+ */
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int n1, typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
@@ -419,6 +429,18 @@ SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
   return A;
 }
 
+/**
+ * @brief Creates a tensor of requested dimension by subsequent calls to a functor
+ *
+ * @tparam n1 The first dimension of the tensor
+ * @tparam n2 The second dimension of the tensor
+ * @tparam lambda_type The type of the functor
+ * @param[in] f The functor to generate the tensor values from
+ * @pre @a f must accept @p n1 x @p n2 arguments of type @p int
+ *
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
+ */
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int n1, int n2, typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
@@ -433,6 +455,19 @@ SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
   return A;
 }
 
+/**
+ * @brief Creates a tensor of requested dimension by subsequent calls to a functor
+ *
+ * @tparam n1 The first dimension of the tensor
+ * @tparam n2 The second dimension of the tensor
+ * @tparam n3 The third dimension of the tensor
+ * @tparam lambda_type The type of the functor
+ * @param[in] f The functor to generate the tensor values from
+ * @pre @a f must accept @p n1 x @p n2 x @p n3 arguments of type @p int
+ *
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
+ */
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int n1, int n2, int n3, typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
@@ -449,6 +484,20 @@ SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
   return A;
 }
 
+/**
+ * @brief Creates a tensor of requested dimension by subsequent calls to a functor
+ *
+ * @tparam n1 The first dimension of the tensor
+ * @tparam n2 The second dimension of the tensor
+ * @tparam n3 The third dimension of the tensor
+ * @tparam n4 The fourth dimension of the tensor
+ * @tparam lambda_type The type of the functor
+ * @param[in] f The functor to generate the tensor values from
+ * @pre @a f must accept @p n1 x @p n2 x @p n3 x @p n4 arguments of type @p int
+ *
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
+ */
 SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
 template <int n1, int n2, int n3, int n4, typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
@@ -612,18 +661,36 @@ constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
   return A;
 }
 
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam T the underlying type of the tensor argument
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename T>
 constexpr auto& operator+=(tensor<T>& A, const T& B)
 {
   return A.value += B;
 }
 
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam T the underlying type of the tensor argument
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename T>
 constexpr auto& operator+=(tensor<T, 1>& A, const T& B)
 {
   return A.value += B;
 }
 
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam T the underlying type of the tensor argument
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
 template <typename T>
 constexpr auto& operator+=(tensor<T, 1, 1>& A, const T& B)
 {
@@ -940,6 +1007,17 @@ constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
   return AB;
 }
 
+/**
+ * @brief Dot product of a vector . vector and vector . tensor
+ *
+ * @tparam S the underlying type of the tensor (lefthand) argument
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam m the dimension of the first tensor
+ * @tparam n the parameter pack of dimensions of the second tensor
+ * @param A The lefthand tensor
+ * @param B The righthand tensor
+ * @return The computed dot product
+ */
 template <typename S, typename T, int m, int... n>
 constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n...>& B)
 {
