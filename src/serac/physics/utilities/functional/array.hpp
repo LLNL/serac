@@ -87,7 +87,7 @@ struct Indexable<1> {
   size_t sizes;
   Indexable(size_t n1) : sizes{n1} {}
   SERAC_HOST_DEVICE size_t index(size_t i) const { return i; }
-  size_t                   size(int i = 0) { return sizes; }
+  size_t                   size(int) { return sizes; }
 };
 
 template <>
