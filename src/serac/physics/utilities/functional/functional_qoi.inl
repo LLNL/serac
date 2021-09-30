@@ -92,14 +92,14 @@ public:
       int num_elements = trial_space_->GetNE();
       int ndof_per_test_element  = 1;
       int ndof_per_trial_element  = trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim();
-      element_gradients = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      element_gradients_ = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
     }
 
     {
       int num_belements = trial_space_->GetNFbyType(mfem::FaceType::Boundary);
       int ndof_per_test_belement  = 1;
       int ndof_per_trial_belement  = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
-      belement_gradients = Array<double, 3, exec>(num_belements, ndof_per_test_belement, ndof_per_trial_belement);
+      belement_gradients_ = Array<double, 3, exec>(num_belements, ndof_per_test_belement, ndof_per_trial_belement);
     }
   }
 
@@ -278,8 +278,8 @@ private:
 
       if (form_.domain_integrals_.size() > 0) {
 
-        auto & K_elem = form_.element_gradients;
-        auto & LUT = lookup_tables.element_dofs;
+        auto & K_elem = form_.element_gradients_;
+        auto & LUT = lookup_tables.element_dofs_;
 
         zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
@@ -297,8 +297,8 @@ private:
 
       if (form_.boundary_integrals_.size() > 0) {
 
-        auto & K_belem = form_.belement_gradients;
-        auto & LUT = lookup_tables.boundary_element_dofs;
+        auto & K_belem = form_.belement_gradients_;
+        auto & LUT = lookup_tables.boundary_element_dofs_;
 
         zero_out(K_belem);
         for (auto& boundary : form_.boundary_integrals_) {
@@ -506,14 +506,14 @@ private:
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
                                                              mfem::Element::QUADRILATERAL, mfem::Element::HEXAHEDRON};
 
-  /**
-   * @brief The gradient object used to implement @p GetGradient
-   */
+  /// @brief The gradient object used to implement @p GetGradient
   mutable Gradient grad_;
 
-  Array<double, 3, exec> element_gradients;
+  /// @brief array that stores each element's gradient of the residual w.r.t. trial values 
+  Array<double, 3, exec> element_gradients_;
 
-  Array<double, 3, exec> belement_gradients;
+  /// @brief array that stores each boundary element's gradient of the residual w.r.t. trial values 
+  Array<double, 3, exec> belement_gradients_;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);

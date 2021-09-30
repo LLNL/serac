@@ -147,9 +147,10 @@ struct DofNumbering {
 /**
  * @brief this object figures out the sparsity pattern associated with a finite element discretization
  *   of the given test and trial function spaces, and records which nonzero each element "stiffness" 
- *   matrix maps to, to facilitate assembling the element matrices into the global sparse matrix.
+ *   matrix maps to, to facilitate assembling the element matrices into the global sparse matrix. e.g.
  * 
- *   element_nonzero_LUT(e, i, j) says where the (i,j) component of the element matrix `e`
+ *   element_nonzero_LUT(e, i, j) says where (in the global sparse matrix)
+ *   to put the (i,j) component of the matrix associated with element element matrix `e`
  * 
  * Note: due to an internal inconsistency between mfem::FiniteElementSpace and mfem::FaceRestriction, 
  *    we choose to use the Restriction operator as the "source of truth", since we are also using its
@@ -236,12 +237,30 @@ struct GradientAssemblyLookupTables {
     }
   }
 
-  int              nnz;
+  /// @brief how many nonzero entries appear in the sparse matrix
+  int nnz;
+
+  /**
+   * @brief array holding the offsets for a given row of the sparse matrix
+   * i.e. row r corresponds to the indices [row_ptr[r], row_ptr[r+1])
+   */ 
   std::vector<int> row_ptr;
+
+  /// @brief array holding the column associated with each nonzero entry
   std::vector<int> col_ind;
 
+  /**
+   * @brief element_nonzero_LUT(e, i, j) says where (in the global sparse matrix) 
+   * to put the (i, j) component of the matrix associated with element element matrix `e`
+   */ 
   serac::CPUArray<SignedIndex, 3> element_nonzero_LUT;
+
+  /**
+   * @brief boundary_element_nonzero_LUT(b, i, j) says where (in the global sparse matrix)
+   * to put the (i, j) component of the matrix associated with boundary element element matrix `b`
+   */ 
   serac::CPUArray<SignedIndex, 3> boundary_element_nonzero_LUT;
+
 };
 
 }  // namespace serac
