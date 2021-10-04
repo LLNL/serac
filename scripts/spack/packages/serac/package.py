@@ -47,6 +47,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             description='Enable runtime safety and debug checks')
     variant('shared',   default=False,
             description='Enable build of shared libraries')
+    variant('asan', default=False,
+            description='Enable Address Sanitizer flags')
 
     varmsg = "Build development tools (such as Sphinx, AStyle, etc...)"
     variant("devtools", default=False, description=varmsg)
@@ -334,6 +336,9 @@ class Serac(CachedCMakePackage, CudaPackage):
                                             use_bin=True)
                 entries.append(cmake_cache_path('%s_EXECUTABLE' % dep.upper(),
                                                 pjoin(dep_bin_dir, dep)))
+
+        enable_asan = spec.satisfies("+asan")
+        entries.append(cmake_cache_option("ENABLE_ASAN", enable_asan))
 
         return entries
 
