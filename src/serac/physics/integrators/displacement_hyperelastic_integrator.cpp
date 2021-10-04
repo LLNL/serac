@@ -29,6 +29,12 @@ void DisplacementHyperelasticIntegrator::CalcKinematics(const mfem::FiniteElemen
   // Calculate the displacement gradient using the current DOFs
   MultAtB(input_state_matrix_, dN_dX_, du_dX_);
 
+  // If the underlying material has thermal expansion, add the thermal strain
+  // to the displacement gradient
+  if (thermal_material_) {
+    thermal_material_->modifyDisplacementGradient(du_dX_);
+  }
+
   solid_util::calcDeformationGradient(du_dX_, F_);
 
   // Calculate the inverse of the deformation gradient
@@ -65,8 +71,12 @@ double DisplacementHyperelasticIntegrator::GetElementEnergy(
 
   double energy = 0.0;
 
-  // Set the transformation for the underlying material. This is required for coefficient evaluation.
+  // Set the transformation for the underlying materials. This is required for coefficient evaluation.
   material_.setTransformation(parent_to_reference_transformation);
+
+  if (thermal_material_) {
+    thermal_material_->setTransformation(parent_to_reference_transformation);
+  }
 
   for (int i = 0; i < ir->GetNPoints(); i++) {
     // Set the current integration point
@@ -109,8 +119,12 @@ void DisplacementHyperelasticIntegrator::AssembleElementVector(
     ir = &(mfem::IntRules.Get(element.GetGeomType(), 2 * element.GetOrder() + 3));
   }
 
-  // Set the transformation for the underlying material. This is required for coefficient evaluation.
+  // Set the transformation for the underlying materials. This is required for coefficient evaluation.
   material_.setTransformation(parent_to_reference_transformation);
+
+  if (thermal_material_) {
+    thermal_material_->setTransformation(parent_to_reference_transformation);
+  }
 
   output_residual_matrix_ = 0.0;
 
@@ -163,8 +177,13 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
 
   stiffness_matrix = 0.0;
 
-  // Set the transformation for the underlying material. This is required for coefficient evaluation.
+  // Set the transformation for the underlying materials. This is required for coefficient evaluation.
   material_.setTransformation(parent_to_reference_transformation);
+
+  if (thermal_material_) {
+    thermal_material_->setTransformation(parent_to_reference_transformation);
+  }
+
   SERAC_MARK_LOOP_START(ip_loop_id, "IntegrationPt Loop");
 
   for (int ip_num = 0; ip_num < ir->GetNPoints(); ip_num++) {
@@ -194,6 +213,8 @@ void DisplacementHyperelasticIntegrator::AssembleElementGrad(
     }
 
     // Accumulate the geometric stiffness if desired
+    // TODO the geometric stiffness from the thermal expansion is not currently included. This term is small enough
+    // it is not affecting convergence.
     if (geom_nonlin_ == GeometricNonlinearities::On) {
       material_.evalStress(du_dX_, sigma_);
       for (int a = 0; a < dof; ++a) {
