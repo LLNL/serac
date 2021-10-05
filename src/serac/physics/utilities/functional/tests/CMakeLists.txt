@@ -13,17 +13,18 @@ blt_add_executable(NAME        tensor_unit_tests
                    FOLDER      serac/tests)
 
 # Then add the examples/tests
-set(functional_tests_serial
-    functional_boundary_test.cpp
+set(functional_unit_tests
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     tuple_arithmetic_unit_tests.cpp)
 
-serac_add_tests( SOURCES ${functional_tests_serial}
-                 DEPENDS_ON gtest serac_functional ${functional_depends})
+serac_add_tests( SOURCES ${functional_unit_tests}
+                 DEPENDS_ON gtest serac_functional ${functional_depends}
+                 PRECOMPILED_HEADER pch.hpp)
 
 # Then add the examples/tests
 set(functional_tests_mpi
+    functional_boundary_test.cpp
     functional_comparisons.cpp
     functional_comparison_L2.cpp
     functional_material_state_test.cpp
@@ -31,7 +32,8 @@ set(functional_tests_mpi
 
 serac_add_tests( SOURCES ${functional_tests_mpi}
                  DEPENDS_ON gtest serac_functional ${functional_depends}
-                 NUM_MPI_TASKS 4 )
+                 NUM_MPI_TASKS 4
+                 PRECOMPILED_HEADER pch.hpp)
 
 # not sure how we want to handle performance-related tests
 set(functional_performance_tests

@@ -143,7 +143,7 @@ endmacro(serac_convert_to_native_escaped_file_path)
 macro(serac_add_tests)
 
     set(options )
-    set(singleValueArgs NUM_MPI_TASKS)
+    set(singleValueArgs NUM_MPI_TASKS PRECOMPILED_HEADER)
     set(multiValueArgs SOURCES DEPENDS_ON)
 
     # Parse the arguments to the macro
@@ -153,6 +153,8 @@ macro(serac_add_tests)
     if ( NOT DEFINED arg_NUM_MPI_TASKS )
         set( arg_NUM_MPI_TASKS 1 )
     endif()
+
+    set(first_test)
 
     foreach(filename ${arg_SOURCES})
         get_filename_component(test_name ${filename} NAME_WE)
@@ -166,6 +168,30 @@ macro(serac_add_tests)
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}
                      NUM_MPI_TASKS ${arg_NUM_MPI_TASKS} )
+
+        if(DEFINED arg_PRECOMPILED_HEADER)
+
+            # only precompile the header for the first test in this group
+            if (NOT DEFINED first_test) 
+
+                #message(${test_name} " creating PCH from " ${arg_PRECOMPILED_HEADER})
+                target_precompile_headers(${test_name} PUBLIC ${arg_PRECOMPILED_HEADER})
+                set(first_test ${test_name})
+
+            # subsequent sourcefiles will reuse the precompiled header from the first test
+            else()
+
+                #message(${test_name} " reusing PCH from target " ${first_test})
+                target_precompile_headers(${test_name} REUSE_FROM ${first_test})
+
+            endif()
+
+        endif()
+
     endforeach()
+
+    # first_test's scope is not limited to this macro, so we should unset it
+    # before returning, so that old values will not be stored between calls
+    unset(first_test)
 
 endmacro(serac_add_tests)
