@@ -122,7 +122,7 @@ Serac.
 
 Unless otherwise specified Spack will default to a compiler.  This is generally not a good idea when
 developing large codes. To specify which compiler to use add the compiler specification to the ``--spec`` Uberenv
-command line option. On TOSS3, we recommend and have tested ``--spec=%clang@9.0.0``.  More compiler specs
+command line option. On TOSS3, we recommend and have tested ``--spec=%clang@10.0.0``.  More compiler specs
 can be found in the Spack compiler files in our repository:
 ``scripts/spack/configs/<platform>/compilers.yaml``.
 
@@ -145,11 +145,11 @@ Some helpful uberenv options include :
 * ``--spec=+glvis`` (build the optional glvis visualization library)
 * ``--spec=+caliper`` (build the `Caliper performance profiling library <https://github.com/LLNL/Caliper>`_)
 * ``--spec=+devtools`` (also build the devtools with one command)
-* ``--spec=%clang@9.0.0`` (build with a specific compiler as defined in the ``compiler.yaml`` file)
+* ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``compiler.yaml`` file)
 * ``--spack-config-dir=<Path to spack configuration directory>`` (use specific Spack configuration files)
 * ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository
 
-The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@9.0.0+debug+glvis+devtools``.
+The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@10.0.0+debug+glvis+devtools``.
 
 If you already have a Spack instance from another project that you would like to reuse,
 you can do so by changing the uberenv command as follows:
