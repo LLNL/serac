@@ -85,37 +85,17 @@ int main(int argc, char* argv[])
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(mesh3D.get(), &fec);
 
-  // Set a random state to evaluate the residual
-  mfem::GridFunction U(&fespace);
-  U.Randomize();
+  [[maybe_unused]] auto G_test_boundary_ = fespace.GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
 
-  // Define the types for the test and trial spaces using the function arguments
-  using test_space  = H1<p>;
-  using trial_space = H1<p>;
 
-  // Construct the new functional object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+  const mfem::FiniteElement&   el = *fespace.GetFE(0);
+  const mfem::IntegrationRule& ir = mfem::IntRules.Get(mfem::Element::QUADRILATERAL, el.GetOrder() * 2);
+  constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
+                         mfem::FaceGeometricFactors::NORMALS;
 
-  std::cout << "after functional ctor" << std::endl;
-
-  residual.AddVolumeIntegral(
-      [=](auto x, auto temperature) {
-        auto [u, du_dx] = temperature;
-        auto source     = u * u - (100 * x[0] * x[1]);
-        auto flux       = du_dx;
-        return serac::tuple{source, flux};
-      },
-      *mesh3D);
-
-  std::cout << "after volume integral" << std::endl;
-
-  residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
-
-  std::cout << "after surface integral" << std::endl;
-
-//  mfem::SparseMatrix K = grad(residual);
-//
-//  check_gradient(residual, U);
+  // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
+  // this is currently a dealbreaker, as we need this information to do any calculations
+  [[maybe_unused]] auto geom = mesh3D->GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
 
   MPI_Finalize();
 }
