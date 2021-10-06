@@ -13,20 +13,11 @@
 #pragma once
 
 #include "serac/physics/materials/hyperelastic_material.hpp"
+#include "serac/physics/materials/thermal_expansion_material.hpp"
 
 #include "mfem.hpp"
 
 namespace serac {
-
-/**
- * @brief Enum to set the geometric nonlinearity flag
- *
- */
-enum class GeometricNonlinearities
-{
-  On, /**< Include geometric nonlinearities */
-  Off /**< Do not include geometric nonlinearities */
-};
 
 namespace mfem_ext {
 
@@ -40,11 +31,24 @@ public:
    * @brief The constructor for the displacement hyperelastic integrator
    *
    * @param[in] m  HyperelasticModel that will be integrated.
+   * @param[in] thermal_m Thermal expansion material model
+   * @param[in] geom_nonlin Flag to include geometric nonlinearities in the residual calculation
+   */
+  explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial& m, ThermalExpansionMaterial& thermal_m,
+                                              GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On)
+      : material_(m), thermal_material_(&thermal_m), geom_nonlin_(geom_nonlin)
+  {
+  }
+
+  /**
+   * @brief The constructor for the displacement hyperelastic integrator
+   *
+   * @param[in] m  HyperelasticModel that will be integrated.
    * @param[in] geom_nonlin Flag to include geometric nonlinearities in the residual calculation
    */
   explicit DisplacementHyperelasticIntegrator(HyperelasticMaterial&   m,
                                               GeometricNonlinearities geom_nonlin = GeometricNonlinearities::On)
-      : material_(m), geom_nonlin_(geom_nonlin)
+      : material_(m), thermal_material_(nullptr), geom_nonlin_(geom_nonlin)
   {
   }
 
@@ -98,6 +102,12 @@ private:
    * @brief The associated hyperelastic model
    */
   HyperelasticMaterial& material_;
+
+  /**
+   * @brief The optional associated thermal expansion material model
+   * @note This is a non-owning pointer
+   */
+  ThermalExpansionMaterial* thermal_material_;
 
   /**
    * @brief gradients of shape functions on the parent element (dof x dim).
