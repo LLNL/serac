@@ -155,9 +155,11 @@ struct StateWithMultiFields {
   double y = 0.3;
 };
 
+bool almost_equal(double a, double b) { return std::abs(a - b) < 1e-10; }
+
 bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs)
 {
-  return lhs.x == rhs.x && lhs.y == rhs.y;
+  return almost_equal(lhs.x, rhs.x) && almost_equal(lhs.y, rhs.y);
 }
 
 struct basic_state_with_multi_fields_qfunction {
@@ -179,6 +181,21 @@ TEST_F(QuadratureDataGPUTest, basic_integrals_multi_fields)
   (*residual)(U);
   // Then each element of the state should have been incremented accordingly...
   StateWithMultiFields correct{0.6, 1.0};
+  for (const auto& s : qdata) {
+    EXPECT_EQ(s, correct);
+  }
+}
+
+TEST_F(QuadratureDataGPUTest, basic_integrals_multi_fields_bulk_assignment)
+{
+  QuadratureData<StateWithMultiFields> qdata(*mesh, p);
+  qdata = StateWithMultiFields{0.7, 0.2};
+  residual->AddDomainIntegral(Dimension<dim>{}, basic_state_with_multi_fields_qfunction{}, *mesh, qdata);
+  // If we run through it one time...
+  mfem::Vector U(festate->space().TrueVSize());
+  (*residual)(U);
+  // Then each element of the state should have been incremented accordingly...
+  StateWithMultiFields correct{0.8, 0.9};
   for (const auto& s : qdata) {
     EXPECT_EQ(s, correct);
   }
