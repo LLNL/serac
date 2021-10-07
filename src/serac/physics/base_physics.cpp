@@ -205,10 +205,6 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
 {
   double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
 
-  // this change was made to work around the following error in GCC:
-  // error: ‘curves_group’ may be used uninitialized in this function [-Werror=maybe-uninitialized]
-  // maybe there is a better workaround, or a way to disable the error/warning
-
   auto [_, rank]                      = getMPIInfo();
   const std::string curves_group_name = "serac_summary/curves";
 
