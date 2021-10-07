@@ -113,9 +113,9 @@ int main(int argc, char* argv[])
 
   std::cout << "after surface integral" << std::endl;
 
-//  mfem::SparseMatrix K = grad(residual);
-//
-//  check_gradient(residual, U);
+  //  mfem::SparseMatrix K = grad(residual);
+  //
+  //  check_gradient(residual, U);
 
   MPI_Finalize();
 }

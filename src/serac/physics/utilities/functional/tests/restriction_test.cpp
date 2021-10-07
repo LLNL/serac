@@ -85,12 +85,12 @@ int main(int argc, char* argv[])
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(mesh3D.get(), &fec);
 
-  [[maybe_unused]] auto G_test_boundary_ = fespace.GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
-
+  [[maybe_unused]] auto G_test_boundary_ = fespace.GetFaceRestriction(
+      mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
 
   const mfem::FiniteElement&   el = *fespace.GetFE(0);
   const mfem::IntegrationRule& ir = mfem::IntRules.Get(mfem::Element::QUADRILATERAL, el.GetOrder() * 2);
-  constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
+  constexpr auto flags            = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                          mfem::FaceGeometricFactors::NORMALS;
 
   // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.

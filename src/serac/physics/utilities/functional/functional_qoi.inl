@@ -127,7 +127,7 @@ public:
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
 
-    SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "Error: invalid mesh dimension for domain integral");
+    SLIC_ERROR_ROOT_IF(dim != domain.Dimension(), "invalid mesh dimension for domain integral");
     for (int e = 0; e < num_elements; e++) {
       SLIC_ERROR_ROOT_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
@@ -157,7 +157,7 @@ public:
     auto num_boundary_elements = domain.GetNBE();
     if (num_boundary_elements == 0) return;
 
-    SLIC_ERROR_ROOT_IF((dim + 1) != domain.Dimension(), "Error: invalid mesh dimension for boundary integral");
+    SLIC_ERROR_ROOT_IF((dim + 1) != domain.Dimension(), "invalid mesh dimension for boundary integral");
     for (int e = 0; e < num_boundary_elements; e++) {
       SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
@@ -412,7 +412,7 @@ private:
   mutable mfem::Vector output_E_;
 
   /**
-   * @brief The input set of per-boundaryelement DOF values
+   * @brief The input set of per-boundary-element DOF values
    */
   mutable mfem::Vector input_E_boundary_;
 

@@ -74,9 +74,15 @@ int mfem_index(int i) { return (i >= 0) ? i : -1 - i; }
  * {sign, index} int32_t encoding)
  */
 struct SignedIndex {
+  
+  /// the actual index of some quantity
   int index_;
+
+  /// whether or not the value associated with this index is positive or negative
   int sign_;
-      operator int() { return index_; }
+
+  /// the implicit conversion to int extracts only the index
+  operator int() { return index_; }
 };
 
 /**
@@ -171,6 +177,9 @@ struct GradientAssemblyLookupTables {
 
     std::vector<ElemInfo> infos;
 
+    // we start by having each element and boundary element emit the (i,j) entry that it
+    // touches in the global "stiffness matrix", and also keep track of some metadata about
+    // which element and which dof are associated with that particular nonzero entry
     bool on_boundary = false;
     for (int e = 0; e < num_elements; e++) {
       for (int i = 0; i < int(test_dofs.element_dofs_.size(1)); i++) {
@@ -198,10 +207,16 @@ struct GradientAssemblyLookupTables {
       }
     }
 
+    // sorting the ElemInfos by row and column groups the different contributions
+    // to the same location of the global stiffness matrix, and makes it easy to identify
+    // the unique entries
     std::sort(infos.begin(), infos.end());
 
+    // the row_ptr array size only depends on the number of rows in the global stiffness matrix,
+    // so we already know its size before processing the ElemInfo array
     row_ptr.resize(test_fespace.GetNDofs() * test_fespace.GetVDim() + 1);
 
+    // the other CSR matrix arrays are formed incrementally by going through the sorted ElemInfo values
     std::vector<SignedIndex> nonzero_ids(infos.size());
 
     nnz        = 0;
@@ -210,15 +225,16 @@ struct GradientAssemblyLookupTables {
     nonzero_ids[0] = {0, infos[0].sign_};
 
     for (size_t i = 1; i < infos.size(); i++) {
-      // increment the nonzero count every time we find a new (i,j) pair
+      // increment the nonzero count every time we find a new (i,j) entry
       nnz += (infos[i - 1] != infos[i]);
 
+      // record the index, sign, and column of this particular (i,j) entry
       nonzero_ids[i] = SignedIndex{nnz, infos[i].sign_};
-
       if (infos[i - 1] != infos[i]) {
         col_ind.push_back(infos[i].global_col_);
       }
 
+      // if the new entry has a different row, then the row_ptr offsets must be set as well
       for (int j = infos[i - 1].global_row_; j < infos[i].global_row_; j++) {
         row_ptr[j + 1] = nonzero_ids[i];
       }
@@ -226,6 +242,8 @@ struct GradientAssemblyLookupTables {
 
     row_ptr.back() = ++nnz;
 
+    // once we've finished processing the ElemInfo array, we go back and fill in our lookup tables
+    // so that each element can know precisely where to place its element stiffness matrix contributions
     for (size_t i = 0; i < infos.size(); i++) {
       auto [_1, _2, local_row, local_col, element_id, _3, from_boundary_element] = infos[i];
       if (from_boundary_element) {
