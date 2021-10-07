@@ -25,6 +25,9 @@
 #include "serac/physics/utilities/variant.hpp"
 
 // FIXME: CHAI PR for this
+// These overloads are here to provide begin/end iterators for chai::Array
+// QuadratureData will eventually use axom::Array, so when that happens this
+// code can be removed
 #ifdef SERAC_USE_CHAI
 namespace chai {
 
@@ -86,6 +89,11 @@ inline MaybeOwningPointer<mfem::QuadratureFunction> initialQuadFunc(mfem::Quadra
   }
 }
 
+/**
+ * @brief A helper type and function to obtain the inaccessible offsets member variable from an
+ * mfem::QuadratureSpace
+ * @see https://accu.org/journals/overload/28/156/harrison_2776/
+ */
 template <auto offsetV>
 struct forbidden_offsets {
   friend int* quadSpaceOffsets(mfem::QuadratureSpace& from) { return from.*offsetV; }
