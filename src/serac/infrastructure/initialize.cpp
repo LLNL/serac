@@ -95,7 +95,8 @@ std::pair<int, int> initialize(int argc, char* argv[], MPI_Comm comm)
   profiling::initializeCaliper();
 
   // Initialize GPU (no-op if not enabled/available)
-  accelerator::initializeDevice();
+  // TODO for some reason this causes errors on Lassen. We need to look into this ASAP.
+  // accelerator::initializeDevice();
 
   return getMPIInfo(comm);
 }
