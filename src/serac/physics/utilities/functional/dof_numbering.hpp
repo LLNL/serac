@@ -74,7 +74,6 @@ int mfem_index(int i) { return (i >= 0) ? i : -1 - i; }
  * {sign, index} int32_t encoding)
  */
 struct SignedIndex {
-  
   /// the actual index of some quantity
   int index_;
 

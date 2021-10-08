@@ -24,10 +24,11 @@ using namespace serac;
 using namespace serac::profiling;
 
 template <typename T>
-void check_gradient(Functional<T>& f, mfem::GridFunction& U)
+void check_gradient(Functional<T>& f, mfem::Vector& U)
 {
-  int                seed = 42;
-  mfem::GridFunction dU   = U;
+  int                   seed = 42;
+
+  mfem::Vector dU(U.Size());
   dU.Randomize(seed);
 
   double epsilon = 1.0e-8;
@@ -48,7 +49,9 @@ void check_gradient(Functional<T>& f, mfem::GridFunction& U)
   df1 -= f(U_minus);
   df1 /= (2 * epsilon);
 
-  mfem::Vector df2 = mfem::SparseMatrix(dfdU) * dU;
+  mfem::HypreParMatrix * dfdU_matrix = dfdU; 
+
+  mfem::Vector df2 = (*dfdU_matrix) * dU;
   mfem::Vector df3 = dfdU(dU);
 
   double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
@@ -60,8 +63,16 @@ void check_gradient(Functional<T>& f, mfem::GridFunction& U)
   EXPECT_NEAR(0., relative_error2, 1.e-6);
 }
 
+#include <unistd.h>
+
 int main(int argc, char* argv[])
 {
+
+  //{
+  //  int i=0;
+  //  while (0 == i) sleep(1);
+  //}
+
   int num_procs, myid;
 
   MPI_Init(&argc, &argv);
@@ -81,12 +92,18 @@ int main(int argc, char* argv[])
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
   mesh3D               = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
 
+  mesh3D->EnsureNodes();
+  mesh3D->ExchangeFaceNbrData();
+
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(mesh3D.get(), &fec);
 
   // Set a random state to evaluate the residual
-  mfem::GridFunction U(&fespace);
+  // mfem::ParGridFunction U(&fespace);
+  // U.Randomize();
+
+  mfem::Vector U(fespace.TrueVSize());
   U.Randomize();
 
   // Define the types for the test and trial spaces using the function arguments
@@ -113,9 +130,9 @@ int main(int argc, char* argv[])
 
   std::cout << "after surface integral" << std::endl;
 
-  //  mfem::SparseMatrix K = grad(residual);
-  //
-  //  check_gradient(residual, U);
+  mfem::SparseMatrix K = grad(residual);
+  
+  check_gradient(residual, U);
 
   MPI_Finalize();
 }
