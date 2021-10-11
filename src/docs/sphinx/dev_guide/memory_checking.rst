@@ -54,6 +54,74 @@ Helpful options:
     down the run
   * ``exitcode=0``: This stops Asan from returning a a non-zero exit code from your executable
     (defaults to 23) (LSAN_OPTIONS)
+    
+    
+Debugging with Address Sanitizer enabled
+========================================
+    
+If a program results in address sanitizer emitting an error (gcc example, here):
+
+.. code-block:: bash
+
+    ==45800==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x61a00000a1c0 at pc 0x5561996372b7 bp 0x7fff89f707e0 sp 0x7fff89f707d0
+    READ of size 8 at 0x61a00000a1c0 thread T0
+        #0 0x5561996372b6 in serac::Functional<double (serac::H1<2, 1>), (serac::ExecutionSpace)0>::Gradient::operator mfem::Vector() (/home/sam/code/serac/build/tests/functional_qoi+0x57e2b6)
+        #1 0x55619962df8c in void check_gradient<double (serac::H1<2, 1>)>(serac::Functional<double (serac::H1<2, 1>), (serac::ExecutionSpace)0>&, mfem::Vector&) (/home/sam/code/serac/build/tests/functional_qoi+0x574f8c)
+        #2 0x556199624144 in void functional_qoi_test<2, 2>(mfem::ParMesh&, serac::H1<2, 1>, serac::Dimension<2>) (/home/sam/code/serac/build/tests/functional_qoi+0x56b144)
+        #3 0x556199614ee3 in main /home/sam/code/serac/src/serac/physics/utilities/functional/tests/functional_qoi.cpp:206
+
+the information provided (e.g. invalid read at /home/sam/code/serac/build/tests/functional_qoi+0x57e2b6) doesn't precisely reveal where the error takes place.
+We can set a breakpoint on the address sanitizer error function to find out exactly where the problem lies, but first we need to find out the name of that
+error reporting symbol. One way to do this is to filter the symbols in the executable:
+
+.. code-block:: bash
+
+    sam@provolone:~/code/serac/build/tests$ nm -g ./functional_qoi | grep asan
+                     U __asan_after_dynamic_init
+                     U __asan_before_dynamic_init
+                     U __asan_handle_no_return
+                     U __asan_init
+    0000000001646450 B __asan_option_detect_stack_use_after_return
+                     U __asan_poison_stack_memory
+                     U __asan_register_globals
+                     U __asan_report_load1
+                     U __asan_report_load16
+                     U __asan_report_load2
+                     U __asan_report_load4
+                     U __asan_report_load8
+                     U __asan_report_load_n
+                     U __asan_report_store1
+                     U __asan_report_store16
+                     U __asan_report_store4
+                     U __asan_report_store8
+                     U __asan_report_store_n
+                     U __asan_stack_free_5
+                     U __asan_stack_free_6
+                     U __asan_stack_free_7
+                     U __asan_stack_free_8
+                     U __asan_stack_free_9
+                     U __asan_stack_malloc_0
+                     U __asan_stack_malloc_1
+                     U __asan_stack_malloc_2
+                     U __asan_stack_malloc_3
+                     U __asan_stack_malloc_4
+                     U __asan_stack_malloc_5
+                     U __asan_stack_malloc_6
+                     U __asan_stack_malloc_7
+                     U __asan_stack_malloc_8
+                     U __asan_stack_malloc_9
+                     U __asan_unpoison_stack_memory
+                     U __asan_unregister_globals
+                     U __asan_version_mismatch_check_v8
+    00000000016466a1 B __odr_asan.mesh2D
+    00000000016466a0 B __odr_asan.mesh3D
+    00000000016466a3 B __odr_asan.myid
+    00000000016466a2 B __odr_asan.nsamples
+    00000000016466a4 B __odr_asan.num_procs
+
+and select the one that corresponds to the the original error (read of size 8 => ``__asan_report_load8``).
+
+    
 
 Valgrind
 --------
