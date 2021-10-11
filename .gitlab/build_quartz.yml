@@ -50,6 +50,7 @@ quartz_release:
   extends: [.full_build_script, .on_quartz, .full_workflow]
   needs: []
   before_script:
+    - module load python/3.8.2
     # LC version of pip is ancient
     - if [[ $(python3 -c 'import pip; print(pip.__version__ < "19.3")') == "True" ]]; then python3 -m pip install --user --upgrade pip; fi
 
