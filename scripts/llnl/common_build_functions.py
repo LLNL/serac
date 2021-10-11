@@ -454,8 +454,9 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
         print("[using mirror location: %s]" % mirror_dir)
 
     # unique install location
+    prefix = builds_dir
     if not short_path:
-        prefix = pjoin(builds_dir, get_system_type())
+        prefix = pjoin(prefix, get_system_type())
     if not os.path.exists(prefix):
         os.mkdir(prefix)
     if not short_path:
