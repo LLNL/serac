@@ -45,7 +45,10 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& col
   datacoll_.emplace(collection_name_, bp_index_grp, domain_grp, owns_mesh_data);
   datacoll_->SetComm(MPI_COMM_WORLD);
 
-  if (!output_directory.empty()) {
+  if (output_directory.empty()) {
+    SLIC_ERROR_ROOT(
+        "DataCollection output directory is empty - this may result in problems if executables are run in parallel");
+  } else {
     datacoll_->SetPrefixPath(output_directory);
   }
 
@@ -116,6 +119,11 @@ FiniteElementDual StateManager::newDual(FiniteElementVector::Options&& options)
 void StateManager::save(const double t, const int cycle)
 {
   SLIC_ERROR_ROOT_IF(!datacoll_, "Serac's datacollection was not initialized - call StateManager::initialize first");
+
+  std::string file_path =
+      axom::utilities::filesystem::joinPath(datacoll_->GetPrefixPath(), datacoll_->GetCollectionName());
+  SLIC_INFO_ROOT(fmt::format("Saving data collection at time: {} to path: {}", t, file_path));
+
   for (const auto& data : syncable_data_) {
     data->sync();
   }

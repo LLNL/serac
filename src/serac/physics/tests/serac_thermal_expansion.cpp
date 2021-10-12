@@ -24,7 +24,7 @@ TEST(solid_solver, thermal_expansion)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "solid_thermal_expansion");
 
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/onehex.mesh";
