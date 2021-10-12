@@ -51,7 +51,7 @@ stages:
     - *run_update_uberenv
     - echo -e "section_start:$(date +%s):full_build_and_test\r\e[0K
       Full Build and Test ${CI_PROJECT_NAME}"
-    - ${ALLOC_COMMAND} python3 scripts/llnl/build_tpls.py -v ${SPEC} --directory=${FULL_BUILD_ROOT} --short-log
+    - ${ALLOC_COMMAND} python3 scripts/llnl/build_tpls.py -v ${SPEC} --directory=${FULL_BUILD_ROOT} --short-path
     - echo -e "section_end:$(date +%s):full_build_and_test\r\e[0K"
   artifacts:
     paths:
