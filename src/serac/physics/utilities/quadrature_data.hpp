@@ -96,10 +96,18 @@ inline MaybeOwningPointer<mfem::QuadratureFunction> initialQuadFunc(mfem::Quadra
  */
 template <auto offsetV>
 struct forbidden_offsets {
+  /**
+   * @brief Retrieves the offsets from an mfem::QuadratureSpace
+   * @param[in] from The QuadratureSpace to retrieve from
+   */
   friend int* quadSpaceOffsets(mfem::QuadratureSpace& from) { return from.*offsetV; }
 };
 
-int* quadSpaceOffsets(mfem::QuadratureSpace&);
+/**
+ * @brief Retrieves the offsets from an mfem::QuadratureSpace
+ * @param[in] from The QuadratureSpace to retrieve from
+ */
+int* quadSpaceOffsets(mfem::QuadratureSpace& from);
 
 template struct forbidden_offsets<&mfem::QuadratureSpace::element_offsets>;
 
@@ -246,7 +254,9 @@ public:
     }
   }
 
-  SERAC_HOST_DEVICE T*         data() { return data_.data(); }
+  /// @brief Returns the underlying data array
+  SERAC_HOST_DEVICE T* data() { return data_.data(); }
+  /// @brief Returns the element offsets array
   SERAC_HOST_DEVICE const int* offsets() const { return offsets_.data(); }
 
 private:
@@ -281,8 +291,8 @@ private:
  */
 template <>
 class QuadratureData<void> {
-  // Doesn't do anything
 public:
+  /// @brief Dummy data access
   SERAC_HOST_DEVICE std::nullptr_t operator()(const int, const int) { return nullptr; }
 };
 
@@ -300,17 +310,20 @@ extern QuadratureData<void> dummy_qdata;
 template <typename T>
 class QuadratureDataView : public QuadratureDataImpl<T, QuadratureDataView<T>> {
 public:
+  /**
+   * @brief Constructs a QuadratureDataView from a QuadratureData
+   * @param[in] quad_data The QuadratureData to take a view of
+   */
   QuadratureDataView(QuadratureData<T>& quad_data) : data_(quad_data.data()), offsets_(quad_data.offsets()) {}
-  SERAC_HOST_DEVICE T*         data() { return data_; }
+  /// @brief Returns the underlying data array
+  SERAC_HOST_DEVICE T* data() { return data_; }
+  /// @brief Returns the element offsets array
   SERAC_HOST_DEVICE const int* offsets() const { return offsets_; }
 
 private:
   T*         data_    = nullptr;
   const int* offsets_ = nullptr;
 };
-
-// template <typename T>
-// QuadratureDataView(QuadratureData<T>&) -> QuadratureDataView<T>;
 
 /**
  * @brief "Dummy" specialization, intended to be used as a sentinel
@@ -320,9 +333,10 @@ private:
  */
 template <>
 class QuadratureDataView<void> {
-  // Doesn't do anything
 public:
+  /// @brief Constructs a dummy view
   QuadratureDataView(QuadratureData<void>& = dummy_qdata) {}
+  /// @brief Dummy data access
   SERAC_HOST_DEVICE std::nullptr_t operator()(const int, const int) { return nullptr; }
 };
 

@@ -11,9 +11,13 @@
 namespace serac {
 
 /**
- * @brief Definition of extern variable
+ * @brief Definition of extern QuadratureData variable
  */
-QuadratureData<void>     dummy_qdata;
+QuadratureData<void> dummy_qdata;
+
+/**
+ * @brief Definition of extern QuadratureDataView variable
+ */
 QuadratureDataView<void> dummy_qdata_view;
 
 // Initialize StateManager's static members - both of these will be fully initialized in StateManager::initialize
