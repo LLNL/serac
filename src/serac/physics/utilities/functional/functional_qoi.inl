@@ -276,8 +276,6 @@ private:
     {
       gradient_L_ = 0.0;
 
-      std::cout << "gsize: " << gradient_L_.Size() << std::endl;
-
       if (form_.domain_integrals_.size() > 0) {
         auto& K_elem = form_.element_gradients_;
         auto& LUT    = lookup_tables.element_dofs_;
@@ -290,12 +288,7 @@ private:
         for (size_t e = 0; e < K_elem.size(0); e++) {
           for (size_t j = 0; j < K_elem.size(2); j++) {
             auto [index, sign] = LUT(e, j);
-            if (index >= gradient_L_.Size()) {
-              std::cout << "out of bounds access " << index << " at " << e << ", " << j << std::endl;
-            } else {
-              gradient_L_[index] += sign * K_elem(e, 0, j);
-            }
-
+            gradient_L_[index] += sign * K_elem(e, 0, j);
           }
         }
       }
