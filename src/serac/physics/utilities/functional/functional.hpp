@@ -130,10 +130,10 @@ public:
     }
 
     {
-      int num_belements           = test_space_->GetNFbyType(mfem::FaceType::Boundary);
-      int ndof_per_test_belement  = test_space_->GetBE(0)->GetDof() * test_space_->GetVDim();
-      int ndof_per_trial_belement = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
-      belement_gradients_ = Array<double, 3, exec>(num_belements, ndof_per_test_belement, ndof_per_trial_belement);
+      int num_bdr_elements           = test_space_->GetNFbyType(mfem::FaceType::Boundary);
+      int ndof_per_test_bdr_element  = test_space_->GetBE(0)->GetDof() * test_space_->GetVDim();
+      int ndof_per_trial_bdr_element = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
+      bdr_element_gradients_ = Array<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
     }
   }
 
@@ -182,11 +182,11 @@ public:
   void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
   {
     // TODO: fix mfem::FaceGeometricFactors
-    auto num_boundary_elements = domain.GetNBE();
-    if (num_boundary_elements == 0) return;
+    auto num_bdr_elements = domain.GetNBE();
+    if (num_bdr_elements == 0) return;
 
     SLIC_ERROR_ROOT_IF((dim + 1) != domain.Dimension(), "invalid mesh dimension for boundary integral");
-    for (int e = 0; e < num_boundary_elements; e++) {
+    for (int e = 0; e < num_bdr_elements; e++) {
       SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
@@ -199,7 +199,7 @@ public:
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
 
-    boundary_integrals_.emplace_back(num_boundary_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
+    bdr_integrals_.emplace_back(num_bdr_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
                                      integrand);
   }
 
@@ -375,12 +375,12 @@ private:
 
       // each boundary element uses the lookup tables to add its contributions
       // to their appropriate locations in the global sparse matrix
-      if (form_.boundary_integrals_.size() > 0) {
-        auto& K_belem = form_.belement_gradients_;
-        auto& LUT     = lookup_tables.boundary_element_nonzero_LUT;
+      if (form_.bdr_integrals_.size() > 0) {
+        auto& K_belem = form_.bdr_element_gradients_;
+        auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
 
         zero_out(K_belem);
-        for (auto& boundary : form_.boundary_integrals_) {
+        for (auto& boundary : form_.bdr_integrals_) {
           boundary.ComputeElementGradients(view(K_belem));
         }
 
@@ -448,11 +448,11 @@ private:
       G_test_->MultTranspose(output_E_, output_L_);
     }
 
-    if (boundary_integrals_.size() > 0) {
+    if (bdr_integrals_.size() > 0) {
       G_trial_boundary_->Mult(input_L_, input_E_boundary_);
 
       output_E_boundary_ = 0.0;
-      for (auto& integral : boundary_integrals_) {
+      for (auto& integral : bdr_integrals_) {
         if constexpr (op == Operation::Mult) {
           integral.Mult(input_E_boundary_, output_E_boundary_);
         }
@@ -589,7 +589,7 @@ private:
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<BoundaryIntegral<test(trial), exec>> boundary_integrals_;
+  std::vector<BoundaryIntegral<test(trial), exec>> bdr_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
@@ -604,7 +604,7 @@ private:
   Array<double, 3, exec> element_gradients_;
 
   /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
-  Array<double, 3, exec> belement_gradients_;
+  Array<double, 3, exec> bdr_element_gradients_;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);

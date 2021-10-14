@@ -95,7 +95,7 @@ struct SignedIndex {
 struct DofNumbering {
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
       : element_dofs_(fespace.GetNE(), fespace.GetFE(0)->GetDof() * fespace.GetVDim()),
-        boundary_element_dofs_(fespace.GetNFbyType(mfem::FaceType::Boundary),
+        bdr_element_dofs_(fespace.GetNFbyType(mfem::FaceType::Boundary),
                                fespace.GetBE(0)->GetDof() * fespace.GetVDim())
   {
     {
@@ -138,10 +138,10 @@ struct DofNumbering {
       face_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 
-      for (size_t e = 0; e < boundary_element_dofs_.size(0); e++) {
-        for (size_t i = 0; i < boundary_element_dofs_.size(1); i++) {
-          int mfem_id                  = static_cast<int>(dof_ids_h[boundary_element_dofs_.index(e, i)]);
-          boundary_element_dofs_(e, i) = SignedIndex{mfem_index(mfem_id), mfem_sign(mfem_id)};
+      for (size_t e = 0; e < bdr_element_dofs_.size(0); e++) {
+        for (size_t i = 0; i < bdr_element_dofs_.size(1); i++) {
+          int mfem_id                  = static_cast<int>(dof_ids_h[bdr_element_dofs_.index(e, i)]);
+          bdr_element_dofs_(e, i) = SignedIndex{mfem_index(mfem_id), mfem_sign(mfem_id)};
         }
       }
     }
@@ -150,8 +150,8 @@ struct DofNumbering {
   /// @brief element_dofs_(e, i) stores the `i`th dof of element `e`.
   serac::CPUArray<SignedIndex, 2> element_dofs_;
 
-  /// @brief boundary_element_dofs_(b, i) stores the `i`th dof of boundary element `b`.
-  serac::CPUArray<SignedIndex, 2> boundary_element_dofs_;
+  /// @brief bdr_element_dofs_(b, i) stores the `i`th dof of boundary element `b`.
+  serac::CPUArray<SignedIndex, 2> bdr_element_dofs_;
 };
 
 /**
@@ -170,7 +170,7 @@ struct GradientAssemblyLookupTables {
   GradientAssemblyLookupTables(mfem::ParFiniteElementSpace& test_fespace, mfem::ParFiniteElementSpace& trial_fespace)
       : element_nonzero_LUT(trial_fespace.GetNE(), test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim(),
                             trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim()),
-        boundary_element_nonzero_LUT(trial_fespace.GetNFbyType(mfem::FaceType::Boundary),
+        bdr_element_nonzero_LUT(trial_fespace.GetNFbyType(mfem::FaceType::Boundary),
                                      test_fespace.GetBE(0)->GetDof() * test_fespace.GetVDim(),
                                      trial_fespace.GetBE(0)->GetDof() * trial_fespace.GetVDim())
   {
@@ -178,7 +178,7 @@ struct GradientAssemblyLookupTables {
     DofNumbering trial_dofs(trial_fespace);
 
     int num_elements          = trial_fespace.GetNE();
-    int num_boundary_elements = trial_fespace.GetNFbyType(mfem::FaceType::Boundary);
+    int num_bdr_elements = trial_fespace.GetNFbyType(mfem::FaceType::Boundary);
 
     std::vector<ElemInfo> infos;
 
@@ -198,14 +198,14 @@ struct GradientAssemblyLookupTables {
     }
 
     // note: mfem doesn't implement FaceRestrictions for some of its function spaces,
-    // so until those are implemented, DofNumbering::boundary_element_dofs will be
+    // so until those are implemented, DofNumbering::bdr_element_dofs will be
     // an empty 2D array, so these loops will not do anything
     on_boundary = true;
-    for (int e = 0; e < num_boundary_elements; e++) {
-      for (int i = 0; i < int(test_dofs.boundary_element_dofs_.size(1)); i++) {
-        auto test_dof = test_dofs.boundary_element_dofs_(e, i);
-        for (int j = 0; j < int(trial_dofs.boundary_element_dofs_.size(1)); j++) {
-          auto trial_dof = trial_dofs.boundary_element_dofs_(e, j);
+    for (int e = 0; e < num_bdr_elements; e++) {
+      for (int i = 0; i < int(test_dofs.bdr_element_dofs_.size(1)); i++) {
+        auto test_dof = test_dofs.bdr_element_dofs_(e, i);
+        for (int j = 0; j < int(trial_dofs.bdr_element_dofs_.size(1)); j++) {
+          auto trial_dof = trial_dofs.bdr_element_dofs_(e, j);
           infos.push_back(
               ElemInfo{test_dof, trial_dof, i, j, e, mfem_sign(test_dof) * mfem_sign(trial_dof), on_boundary});
         }
@@ -250,9 +250,9 @@ struct GradientAssemblyLookupTables {
     // once we've finished processing the ElemInfo array, we go back and fill in our lookup tables
     // so that each element can know precisely where to place its element stiffness matrix contributions
     for (size_t i = 0; i < infos.size(); i++) {
-      auto [_1, _2, local_row, local_col, element_id, _3, from_boundary_element] = infos[i];
-      if (from_boundary_element) {
-        boundary_element_nonzero_LUT(element_id, local_row, local_col) = nonzero_ids[i];
+      auto [_1, _2, local_row, local_col, element_id, _3, from_bdr_element] = infos[i];
+      if (from_bdr_element) {
+        bdr_element_nonzero_LUT(element_id, local_row, local_col) = nonzero_ids[i];
       } else {
         element_nonzero_LUT(element_id, local_row, local_col) = nonzero_ids[i];
       }
@@ -278,10 +278,10 @@ struct GradientAssemblyLookupTables {
   serac::CPUArray<SignedIndex, 3> element_nonzero_LUT;
 
   /**
-   * @brief boundary_element_nonzero_LUT(b, i, j) says where (in the global sparse matrix)
+   * @brief bdr_element_nonzero_LUT(b, i, j) says where (in the global sparse matrix)
    * to put the (i, j) component of the matrix associated with boundary element element matrix `b`
    */
-  serac::CPUArray<SignedIndex, 3> boundary_element_nonzero_LUT;
+  serac::CPUArray<SignedIndex, 3> bdr_element_nonzero_LUT;
 };
 
 }  // namespace serac
