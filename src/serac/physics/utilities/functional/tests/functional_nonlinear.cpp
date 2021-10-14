@@ -45,10 +45,11 @@ struct hcurl_qfunction {
 };
 
 template <typename T>
-void check_gradient(Functional<T>& f, mfem::GridFunction& U)
+void check_gradient(Functional<T>& f, mfem::Vector& U)
 {
-  int                seed = 42;
-  mfem::GridFunction dU   = U;
+  int                   seed = 42;
+
+  mfem::Vector dU(U.Size());
   dU.Randomize(seed);
 
   double epsilon = 1.0e-8;
@@ -69,11 +70,15 @@ void check_gradient(Functional<T>& f, mfem::GridFunction& U)
   df1 -= f(U_minus);
   df1 /= (2 * epsilon);
 
-  mfem::Vector df2 = mfem::SparseMatrix(dfdU) * dU;
+  mfem::HypreParMatrix * dfdU_matrix = dfdU; 
+
+  mfem::Vector df2 = (*dfdU_matrix) * dU;
   mfem::Vector df3 = dfdU(dU);
 
   double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
   double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
+
+  std::cout << relative_error1 << " " << relative_error2 << std::endl;
 
   EXPECT_NEAR(0., relative_error1, 1.e-6);
   EXPECT_NEAR(0., relative_error2, 1.e-6);

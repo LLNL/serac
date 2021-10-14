@@ -129,8 +129,6 @@ int main(int argc, char* argv[])
   residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
 
   std::cout << "after surface integral" << std::endl;
-
-  mfem::SparseMatrix K = grad(residual);
   
   check_gradient(residual, U);
 

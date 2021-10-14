@@ -56,8 +56,6 @@ int main(int argc, char* argv[])
   }
 
   auto orthogonalize = [](mfem::Vector & x, mfem::Vector & y) {
-    x -= ((x * y) / (y * y)) * y;
-    x -= (dot(x,y) / dot(y,y)) * y;
     x.Add(-InnerProduct(x, y) / InnerProduct(y, y), y);
   };
 
