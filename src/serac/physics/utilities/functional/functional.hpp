@@ -296,6 +296,7 @@ public:
   }
 
 private:
+
   /**
    * @brief Indicates whether to obtain values or gradients from a calculation
    */
@@ -335,14 +336,10 @@ private:
     }
 
     /**
-     * @brief implicit conversion to mfem::SparseMatrix type
-     *
-     * @note the first invokation of this function will be more expensive,
-     * as it creates the CSR graph once, and then caches it for creating subsequent
-     * sparse matrices.
+     * @brief implicit conversion to mfem::HypreParMatrix type
      */
-    operator mfem::SparseMatrix()
-    {
+    operator mfem::HypreParMatrix *() {
+
       // the CSR graph (sparsity pattern) is reusable, so we cache
       // that and ask mfem to not free that memory in ~SparseMatrix()
       constexpr bool sparse_matrix_frees_graph_ptrs = false;
@@ -397,16 +394,12 @@ private:
         }
       }
 
-      return mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, Height(), Width(),
+      auto J_local = mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, Height(), Width(),
                                 sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
-    }
-
-
-    operator mfem::HypreParMatrix *() {
-      auto J_local = mfem::SparseMatrix(*this);
 
       auto * J_hypre = new mfem::HypreParMatrix(form_.test_space_->GetComm(), form_.test_space_->GlobalVSize(), form_.trial_space_->GlobalVSize(), form_.test_space_->GetDofOffsets(), form_.trial_space_->GetDofOffsets(), &J_local);
 
+      // does mfem::RAP delete J_hypre?
       return mfem::RAP(form_.test_space_->Dof_TrueDof_Matrix(), J_hypre, form_.trial_space_->Dof_TrueDof_Matrix());  
     }
 
@@ -415,7 +408,9 @@ private:
     Functional<test(trial), exec>& form_;
 
     /**
-     * @brief TODO
+     * @brief this object has lookup tables for where to place each
+     *   element and boundary element gradient contribution in the global
+     *   sparse matrix
      */
     GradientAssemblyLookupTables lookup_tables;
   };
