@@ -80,10 +80,12 @@ double sum_of_measures_mfem(mfem::ParMesh& mesh)
 }
 
 template <typename T>
-void check_gradient(Functional<T>& f, mfem::GridFunction& U)
+void check_gradient(Functional<T>& f, mfem::HypreParVector & U)
 {
-  int                seed = 42;
-  mfem::GridFunction dU   = U;
+  int seed = 42;
+
+  mfem::HypreParVector dU = U;
+  dU = U;
   dU.Randomize(seed);
 
   double epsilon = 1.0e-8;
@@ -93,18 +95,30 @@ void check_gradient(Functional<T>& f, mfem::GridFunction& U)
   f(U);
 
   auto& dfdU = grad(f);
+  mfem::HypreParVector & dfdU_vec = dfdU;
 
+  // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
   auto U_plus = U;
+  U_plus = U; // it hurts me to write this
   U_plus.Add(epsilon, dU);
 
   auto U_minus = U;
+  U_minus = U;
   U_minus.Add(-epsilon, dU);
 
   double df1 = (f(U_plus) - f(U_minus)) / (2 * epsilon);
-  double df2 = mfem::Vector(dfdU) * dU;
+  double df2 = InnerProduct(dfdU_vec, dU);
   double df3 = dfdU(dU);
 
-  std::cout << df1 << " " << df2 << " " << df3 << std::endl;
+  double relative_error1 = (df1 - df2) / df1;
+  double relative_error2 = (df1 - df3) / df1;
+
+  EXPECT_NEAR(0., relative_error1, 1.e-5);
+  EXPECT_NEAR(0., relative_error2, 1.e-5);
+
+  if (verbose) {
+    std::cout << relative_error1 << " " << relative_error2 << std::endl;
+  }
 }
 
 template <int p, int dim>
@@ -113,9 +127,13 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(&mesh, &fec);
 
-  mfem::GridFunction        U(&fespace);
+  mfem::ParGridFunction     U_gf(&fespace);
   mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
-  U.ProjectCoefficient(x_squared);
+  U_gf.ProjectCoefficient(x_squared);
+
+  mfem::HypreParVector * tmp = fespace.NewTrueDofVector();
+  mfem::HypreParVector U = *tmp;
+  U_gf.GetTrueDofs(U);
 
   // Define the types for the test and trial spaces using the function arguments
   using trial_space = decltype(trial);
@@ -162,10 +180,21 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   std::cout << "combined domain-and-boundary qoi with nonlinear spatial and temperature dependence: " << f(U) << " "
             << expected[dim] << std::endl;
   check_gradient(f, U);
+
+  delete tmp;
+
 }
+
+#include <unistd.h>
 
 int main(int argc, char* argv[])
 {
+
+  //{
+  //  int i=0;
+  //  while (0 == i) sleep(1);
+  //}
+
   ::testing::InitGoogleTest(&argc, argv);
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -179,8 +208,14 @@ int main(int argc, char* argv[])
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
+  mesh2D->EnsureNodes();
+  mesh2D->ExchangeFaceNbrData();
+
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+
+  mesh3D->EnsureNodes();
+  mesh3D->ExchangeFaceNbrData();
 
   functional_qoi_test(*mesh2D, H1<2>{}, Dimension<2>{});
   functional_qoi_test(*mesh3D, H1<1>{}, Dimension<3>{});

@@ -108,6 +108,12 @@ struct DofNumbering {
         iota[i] = i;
       }
 
+      // we're using Mult() to reveal the locations nonzero entries 
+      // in the restriction operator, since that information is not
+      // made available through its public interface
+      //
+      // TODO: investigate refactoring mfem's restriction operators 
+      // to provide this information in more natural way.
       elem_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
 

@@ -259,7 +259,9 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<double(trial)>& f) : form_(f), lookup_tables(*(f.trial_space_)) {}
+    Gradient(Functional<double(trial)>& f) : form_(f), lookup_tables(*(f.trial_space_)),
+      gradient_L_(f.trial_space_->GetVSize()),
+      gradient_T_(f.trial_space_->NewTrueDofVector()) {}
 
     void Mult(const mfem::Vector& x, mfem::Vector& y) const { form_.GradientMult(x, y); }
 
@@ -270,10 +272,11 @@ private:
       return y[0];
     }
 
-    operator mfem::Vector()
+    operator mfem::HypreParVector &()
     {
-      mfem::Vector g(form_.trial_space_->TrueVSize());
-      g = 0.0;
+      gradient_L_ = 0.0;
+
+      std::cout << "gsize: " << gradient_L_.Size() << std::endl;
 
       if (form_.domain_integrals_.size() > 0) {
         auto& K_elem = form_.element_gradients_;
@@ -287,7 +290,12 @@ private:
         for (size_t e = 0; e < K_elem.size(0); e++) {
           for (size_t j = 0; j < K_elem.size(2); j++) {
             auto [index, sign] = LUT(e, j);
-            g[index] += sign * K_elem(e, 0, j);
+            if (index >= gradient_L_.Size()) {
+              std::cout << "out of bounds access " << index << " at " << e << ", " << j << std::endl;
+            } else {
+              gradient_L_[index] += sign * K_elem(e, 0, j);
+            }
+
           }
         }
       }
@@ -304,12 +312,14 @@ private:
         for (size_t e = 0; e < K_belem.size(0); e++) {
           for (size_t j = 0; j < K_belem.size(2); j++) {
             auto [index, sign] = LUT(e, j);
-            g[index] += sign * K_belem(e, 0, j);
+            gradient_L_[index] += sign * K_belem(e, 0, j);
           }
         }
       }
 
-      return g;
+      form_.P_trial_->MultTranspose(gradient_L_, *gradient_T_);
+
+      return *gradient_T_;
     }
 
   private:
@@ -319,6 +329,11 @@ private:
     Functional<double(trial), exec>& form_;
 
     DofNumbering lookup_tables;
+
+    mfem::Vector gradient_L_;
+
+    std::unique_ptr < mfem::HypreParVector > gradient_T_;
+
   };
 
   /**
