@@ -16,12 +16,6 @@
 
 using namespace std::chrono_literals;
 
-mfem::HypreParVector deep_copy(const mfem::HypreParVector & x) {
-  mfem::HypreParVector y = x;
-  y = x; 
-  return y;
-}
-
 int main(int argc, char* argv[])
 {
   int num_procs, myid;
@@ -62,6 +56,8 @@ int main(int argc, char* argv[])
   }
 
   auto orthogonalize = [](mfem::Vector & x, mfem::Vector & y) {
+    x -= ((x * y) / (y * y)) * y;
+    x -= (dot(x,y) / dot(y,y)) * y;
     x.Add(-InnerProduct(x, y) / InnerProduct(y, y), y);
   };
 
