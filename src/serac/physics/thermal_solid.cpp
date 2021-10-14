@@ -51,6 +51,17 @@ ThermalSolid::ThermalSolid(const ThermalConduction::InputOptions& thermal_input,
   coupling_ = serac::CouplingScheme::OperatorSplit;
 }
 
+ThermalSolid::ThermalSolid(const ThermalSolid::InputOptions& thermal_solid_input, const std::string& name)
+    : ThermalSolid(thermal_solid_input.thermal_input, thermal_solid_input.solid_input, name)
+{
+  if (thermal_solid_input.coef_thermal_expansion) {
+    std::unique_ptr<mfem::Coefficient> cte(thermal_solid_input.coef_thermal_expansion->constructScalar());
+    std::unique_ptr<mfem::Coefficient> ref_temp(thermal_solid_input.reference_temperature->constructScalar());
+
+    setThermalExpansion(std::move(cte), std::move(ref_temp));
+  }
+}
+
 void ThermalSolid::completeSetup()
 {
   SLIC_ERROR_ROOT_IF(coupling_ != serac::CouplingScheme::OperatorSplit,
@@ -76,4 +87,57 @@ void ThermalSolid::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
+void ThermalSolid::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
+{
+  // The solid mechanics options
+  auto& solid_solver_table = container.addStruct("solid", "Finite deformation solid mechanics module").required();
+  serac::Solid::InputOptions::defineInputFileSchema(solid_solver_table);
+
+  // The thermal conduction options
+  auto& thermal_solver_table = container.addStruct("thermal_conduction", "Thermal conduction module").required();
+  serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_solver_table);
+
+  auto& ref_temp = container.addStruct("reference_temperature",
+                                       "Coefficient for the reference temperature for isotropic thermal expansion");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(ref_temp);
+
+  auto& coef_therm_expansion =
+      container.addStruct("coef_thermal_expansion", "Coefficient of thermal expansion for isotropic thermal expansion");
+  serac::input::CoefficientInputOptions::defineInputFileSchema(coef_therm_expansion);
+
+  container.registerVerifier([](const axom::inlet::Container& base) -> bool {
+    bool cte_found      = base.contains("coef_thermal_expansion");
+    bool ref_temp_found = base.contains("reference_temperature");
+
+    if (ref_temp_found && cte_found) {
+      return true;
+    } else if ((!ref_temp_found) && (!cte_found)) {
+      return true;
+    }
+
+    SLIC_WARNING_ROOT(
+        "Either both a coefficient of thermal expansion and reference temperature should be specified"
+        "in the thermal solid input file or neither should be.");
+
+    return false;
+  });
+}
+
 }  // namespace serac
+
+serac::ThermalSolid::InputOptions FromInlet<serac::ThermalSolid::InputOptions>::operator()(
+    const axom::inlet::Container& base)
+{
+  serac::ThermalSolid::InputOptions result;
+
+  result.solid_input = base["solid"].get<serac::Solid::InputOptions>();
+
+  result.thermal_input = base["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
+
+  if (base.contains("coef_thermal_expansion")) {
+    result.coef_thermal_expansion = base["coef_thermal_expansion"].get<serac::input::CoefficientInputOptions>();
+    result.reference_temperature  = base["reference_temperature"].get<serac::input::CoefficientInputOptions>();
+  }
+
+  return result;
+}

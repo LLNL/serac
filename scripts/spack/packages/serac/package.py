@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 from spack import *
+from spack.spec import UnsupportedCompilerError
 
 import os
 import socket
@@ -47,6 +48,8 @@ class Serac(CachedCMakePackage, CudaPackage):
             description='Enable runtime safety and debug checks')
     variant('shared',   default=False,
             description='Enable build of shared libraries')
+    variant('asan', default=False,
+            description='Enable Address Sanitizer flags')
 
     varmsg = "Build development tools (such as Sphinx, AStyle, etc...)"
     variant("devtools", default=False, description=varmsg)
@@ -110,6 +113,10 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("camp@0.1.0serac", when="+raja")
     depends_on("raja@0.13.1serac~openmp~shared", when="+raja")
     depends_on("umpire@5.0.1~shared", when="+umpire")
+    # Lump in CHAI with Umpire for now
+    depends_on("chai@2.3.1serac~shared", when="+umpire")
+    # Our RAJA version is too new for CHAI
+    # depends_on("chai+raja", when="+umpire+raja")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
@@ -131,11 +138,49 @@ class Serac(CachedCMakePackage, CudaPackage):
 
     conflicts('%intel', msg="Intel has a bug with c++17 support as of May 2020")
 
+    # ASan is only supported by GCC and (some) LLVM-derived
+    # compilers. There's no convenient spec syntax for negating sets
+    # of compilers -- in this case, the conflicts arise with compilers
+    # that aren't gcc, clang, or apple-clang.
+    #
+    # The preferred approach taken by upstream Spack as of upstream
+    # commit 24c01d5 is to raise an exception within a package stage
+    # (e.g., xios does so in its install stage, pfunit does so in its
+    # setup_build_environment stage, wrf does so in its configure
+    # stage, elemental does so in its cmake_args stage).
+    #
+    # The trouble with this approach in isolation is that the
+    # concretizer can't detect those conflicts, so the exception is
+    # raised after building all of a package's dependents. Some of the
+    # more likely conflicts are listed here to enable
+    # concretization-time conflict detection; the list of compilers in
+    # the loop is every compiler listed in the spack.compilers package
+    # (https://spack.readthedocs.io/en/latest/spack.compilers.html)
+    # except gcc, clang, and apple-clang, to err on the conservative side.
+    asan_compiler_blacklist = {'aocc', 'arm', 'cce', 'fj', 'intel', 'nag',
+                          'nvhpc', 'oneapi', 'pgi', 'xl', 'xl_r'}
+
+    # Whitelist of compilers known to support Address Sanitizer;
+    # used in conjunction with blacklist of compilers suspected
+    # not to support AddressSanitizer in this package's conflict
+    # directives.
+    asan_compiler_whitelist = {'gcc', 'clang', 'apple-clang'}
+
+    # ASan compiler blacklist and whitelist should be disjoint.
+    assert len(asan_compiler_blacklist & asan_compiler_whitelist) == 0
+
+    for compiler_ in asan_compiler_blacklist:
+        conflicts(
+            "%{0}".format(compiler_),
+            when="+asan",
+            msg="{0} compilers do not support Address Sanitizer".format(compiler_)
+        )
+
     # Libraries that have a GPU variant
     conflicts('cuda_arch=none', when='+cuda',
               msg='CUDA architecture is required')
     depends_on("amgx@2.1.x", when="+cuda")
-    cuda_deps = ["mfem", "axom"]
+    cuda_deps = ["mfem", "axom", "chai"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
     depends_on("caliper+cuda", when="+caliper+cuda")
@@ -146,6 +191,8 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on('axom cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         depends_on('raja cuda_arch={0}'.format(sm_),
+                when='cuda_arch={0}'.format(sm_))
+        depends_on('chai cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         # Caliper may not currently use its cuda_arch
         # but probably good practice to set it
@@ -270,7 +317,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path('SUPERLUDIST_DIR', dep_dir))
 
         # optional tpls
-        for dep in ('petsc', 'caliper', 'raja', 'umpire'):
+        for dep in ('petsc', 'caliper', 'raja', 'umpire', 'chai'):
             if spec.satisfies('^{0}'.format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
@@ -335,10 +382,20 @@ class Serac(CachedCMakePackage, CudaPackage):
                 entries.append(cmake_cache_path('%s_EXECUTABLE' % dep.upper(),
                                                 pjoin(dep_bin_dir, dep)))
 
+        enable_asan = spec.satisfies("+asan")
+        entries.append(cmake_cache_option("ENABLE_ASAN", enable_asan))
+
         return entries
 
 
     def cmake_args(self):
+        is_asan_compiler = self.compiler.name in self.asan_compiler_whitelist
+        if self.spec.satisfies('+asan') and not is_asan_compiler:
+            raise UnsupportedCompilerError(
+                "Serac cannot be built with Address Sanitizer flags "
+                "using {0} compilers".format(self.compiler.name)
+            )
+
         options = []
 
         if self.run_tests is False:

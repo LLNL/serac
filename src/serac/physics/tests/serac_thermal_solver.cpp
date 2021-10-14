@@ -50,7 +50,7 @@ TEST(thermal_solver, dyn_imp_solve_restart)
     MPI_Barrier(MPI_COMM_WORLD);
     const std::string input_file_path =
         std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/dyn_imp_solve.lua";
-    test_utils::runModuleTest<ThermalConduction>(input_file_path, "dyn_imp_solve_restart_first_phase");
+    test_utils::runModuleTest<ThermalConduction>(input_file_path, "dyn_imp_solve_restart");
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
@@ -62,7 +62,7 @@ TEST(thermal_solver, dyn_imp_solve_restart)
     const std::string input_file_path =
         std::string(SERAC_REPO_DIR) + "/data/input_files/tests/thermal_conduction/dyn_imp_solve_restart.lua";
     const int restart_cycle = 5;
-    test_utils::runModuleTest<ThermalConduction>(input_file_path, "dyn_imp_solve_restart_second_phase", restart_cycle);
+    test_utils::runModuleTest<ThermalConduction>(input_file_path, "dyn_imp_solve_restart", restart_cycle);
     MPI_Barrier(MPI_COMM_WORLD);
   }
 

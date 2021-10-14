@@ -202,6 +202,34 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Umpire
+    #------------------------------------------------------------------------------
+    if(UMPIRE_DIR)
+        serac_assert_is_directory(VARIABLE_NAME UMPIRE_DIR)
+        find_package(umpire REQUIRED NO_DEFAULT_PATH 
+                     PATHS ${UMPIRE_DIR})
+        message(STATUS "Umpire support is ON")
+        set(UMPIRE_FOUND TRUE)
+    else()
+        message(STATUS "Umpire support is OFF")
+        set(UMPIRE_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # CHAI
+    #------------------------------------------------------------------------------
+    if(CHAI_DIR)
+        serac_assert_is_directory(VARIABLE_NAME CHAI_DIR)
+        find_package(CHAI REQUIRED NO_DEFAULT_PATH 
+                     PATHS ${CHAI_DIR})
+        message(STATUS "CHAI support is ON")
+        set(CHAI_FOUND TRUE)
+    else()
+        message(STATUS "CHAI support is OFF")
+        set(CHAI_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # PETSC
     #------------------------------------------------------------------------------
     if(PETSC_DIR)

@@ -19,6 +19,7 @@ namespace domain_integral {
  * be evaluated at each quadrature point.
  * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
  * information on the idea behind a quadrature function and its inputs/outputs
+ * @tparam qpt_data_type The type of the data to store for each quadrature point
  *
  * @param[in] U The full set of per-element DOF values (primary input)
  * @param[inout] R The full set of per-element residuals (primary output)
@@ -29,10 +30,13 @@ namespace domain_integral {
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
+ * @param[inout] data The data for each quadrature point
  */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda>
+template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
+          typename qpt_data_type = void>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
-                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda&& qf)
+                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda&& qf,
+                       QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -77,7 +81,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
-      auto qf_output = qf(x_q, make_dual(arg));
+      auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions

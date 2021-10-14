@@ -46,11 +46,13 @@ public:
    * @param[in] X The actual (not reference) coordinates of all quadrature points
    * @see mfem::GeometricFactors
    * @param[in] qf The user-provided quadrature function
+   * @param[inout] data The data for each quadrature point
    * @note The @p Dimension parameters are used to assist in the deduction of the @a dim
    * and @a dim template parameters
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
-  DomainIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf)
+  DomainIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
+                 QuadratureData<qpt_data_type>& data = dummy_qdata)
       : J_(J), X_(X)
   {
     constexpr auto geometry                      = supported_geometries[dim];
@@ -91,9 +93,9 @@ public:
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
 
     if constexpr (exec == ExecutionSpace::CPU) {
-      evaluation_ = [this, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
+      evaluation_ = [this, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
         domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
-                                                                                 num_elements, qf);
+                                                                                 num_elements, qf, data);
       };
 
       action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
@@ -111,7 +113,7 @@ public:
     // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
 #if defined(__CUDACC__)
     if constexpr (exec == ExecutionSpace::GPU) {
-      evaluation_ = [this, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
+      evaluation_ = [this, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
@@ -119,7 +121,7 @@ public:
         domain_integral::evaluation_kernel_cuda<
             geometry, test_space, trial_space, Q,
             serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, U, R, qf_derivatives.get(), J_, X_, num_elements, qf);
+            exec_config, U, R, qf_derivatives.get(), J_, X_, num_elements, qf, data);
       };
 
       action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {

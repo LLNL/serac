@@ -60,6 +60,7 @@ if(ENABLE_CUDA)
         tensor_unit_tests_cuda.cu 
         functional_comparisons_cuda.cu
         array_test_cuda.cu
+        quadrature_data_cuda.cu
        )
 
     serac_add_tests( SOURCES ${functional_tests_cuda}

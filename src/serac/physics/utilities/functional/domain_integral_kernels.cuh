@@ -59,12 +59,15 @@ namespace domain_integral {
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
+ * @param[inout] data The data for each quadrature point
  */
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
-          typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
+          typename solution_type, typename residual_type, typename jacobian_type, typename position_type,
+          typename qpt_data_type = void>
 __global__ void eval_cuda_element(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
-                                  jacobian_type J, position_type X, int num_elements, lambda qf)
+                                  jacobian_type J, position_type X, int num_elements, lambda qf,
+                                  QuadratureDataView<qpt_data_type> data = dummy_qdata_view)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -96,7 +99,7 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
-      auto qf_output = qf(x_q, make_dual(arg));
+      auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
@@ -151,11 +154,14 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
+ * @param[inout] data The data for each quadrature point
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
-          typename solution_type, typename residual_type, typename jacobian_type, typename position_type>
+          typename solution_type, typename residual_type, typename jacobian_type, typename position_type,
+          typename qpt_data_type = void>
 __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
-                                     jacobian_type J, position_type X, int num_elements, lambda qf)
+                                     jacobian_type J, position_type X, int num_elements, lambda qf,
+                                     QuadratureDataView<qpt_data_type> data = dummy_qdata_view)
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
@@ -190,7 +196,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
     //
     // note: make_dual(arg) promotes those arguments to dual number types
     // so that qf_output will contain values and derivatives
-    auto qf_output = qf(x_q, make_dual(arg));
+    auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
 
     // integrate qf_output against test space shape functions / gradients
     // to get element residual contributions
@@ -235,13 +241,14 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
+ * @param[inout] data The data for each quadrature point
  */
 
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
-          typename derivatives_type, typename lambda>
+          typename derivatives_type, typename lambda, typename qpt_data_type = void>
 void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& U, mfem::Vector& R,
                             derivatives_type* derivatives_ptr, const mfem::Vector& J_, const mfem::Vector& X_,
-                            int num_elements, lambda qf)
+                            int num_elements, lambda qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -266,13 +273,13 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
 
   if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
-    eval_cuda_quadrature<g, test, trial, Q>
-        <<<blocks_quadrature_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+    eval_cuda_quadrature<g, test, trial, Q><<<blocks_quadrature_element, config.blocksize>>>(
+        u, r, derivatives_ptr, J, X, num_elements, qf, QuadratureDataView{data});
 
   } else if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_ELEMENT) {
     int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;
     eval_cuda_element<g, test, trial, Q>
-        <<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf);
+        <<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf, QuadratureDataView{data});
   }
 
   cudaDeviceSynchronize();

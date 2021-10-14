@@ -7,18 +7,59 @@
 #include <gtest/gtest.h>
 
 #include "serac/serac_config.hpp"
-
 #include "serac/numerics/mesh_utils_base.hpp"
-
-#include "serac/infrastructure/initialize.hpp"
-#include "serac/infrastructure/terminator.hpp"
-
-#include "serac/physics/utilities/functional/functional.hpp"
-#include "serac/physics/utilities/functional/tensor.hpp"
-
+#include "serac/physics/utilities/quadrature_data.hpp"
 #include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/utilities/functional/functional.hpp"
 
 using namespace serac;
+
+template <typename T>
+__global__ void fill(QuadratureDataView<T> output, int num_elements, int num_quadrature_points)
+{
+  int elem_id = threadIdx.x + blockIdx.x * blockDim.x;
+  int quad_id = threadIdx.y;
+  if (elem_id < num_elements && quad_id < num_quadrature_points) {
+    output(elem_id, quad_id) = elem_id * elem_id + quad_id;
+  }
+}
+
+template <typename T>
+__global__ void copy(QuadratureDataView<T> destination, QuadratureDataView<T> source, int num_elements,
+                     int num_quadrature_points)
+{
+  int elem_id = threadIdx.x + blockIdx.x * blockDim.x;
+  int quad_id = threadIdx.y;
+  if (elem_id < num_elements && quad_id < num_quadrature_points) {
+    destination(elem_id, quad_id) = source(elem_id, quad_id);
+  }
+}
+
+TEST(QuadratureDataCUDA, basic_fill_and_copy)
+{
+  constexpr auto mesh_file          = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  auto           mesh               = serac::mesh::refineAndDistribute(serac::buildMeshFromFile(mesh_file), 0, 0);
+  constexpr int  p                  = 1;
+  constexpr int  elements_per_block = 16;
+  const int      num_elements       = mesh->GetNE();
+
+  // FIXME: This assumes a homogeneous mesh
+  const int geom                  = mesh->GetElementBaseGeometry(0);
+  const int num_quadrature_points = mfem::IntRules.Get(geom, p).GetNPoints();
+
+  QuadratureData<int> source(*mesh, p);
+  QuadratureData<int> destination(*mesh, p);
+
+  dim3 blocks{elements_per_block, static_cast<unsigned int>(num_quadrature_points)};
+  dim3 grids{static_cast<unsigned int>(num_elements / elements_per_block)};
+
+  fill<<<grids, blocks>>>(QuadratureDataView{source}, num_elements, num_quadrature_points);
+  copy<<<grids, blocks>>>(QuadratureDataView{destination}, QuadratureDataView{source}, num_elements,
+                          num_quadrature_points);
+  cudaDeviceSynchronize();
+
+  EXPECT_TRUE(std::equal(source.begin(), source.end(), destination.begin()));
+}
 
 struct State {
   double x;
@@ -26,7 +67,7 @@ struct State {
 
 bool operator==(const State& lhs, const State& rhs) { return lhs.x == rhs.x; }
 
-class QuadratureDataTest : public ::testing::Test {
+class QuadratureDataGPUTest : public ::testing::Test {
 protected:
   void SetUp() override
   {
@@ -40,46 +81,34 @@ protected:
     mesh                = &new_mesh;
     festate             = std::make_unique<FiniteElementState>(*mesh);
     festate->gridFunc() = 0.0;
-    residual            = std::make_unique<Functional<test_space(trial_space)>>(&festate->space(), &festate->space());
+    residual            = std::make_unique<Functional<test_space(trial_space), ExecutionSpace::GPU>>(&festate->space(),
+                                                                                          &festate->space());
   }
   static constexpr int p   = 1;
   static constexpr int dim = 2;
   using test_space         = H1<p>;
   using trial_space        = H1<p>;
-  std::unique_ptr<mfem::ParMesh>                       default_mesh;
-  mfem::ParMesh*                                       mesh = nullptr;
-  std::unique_ptr<FiniteElementState>                  festate;
-  std::unique_ptr<Functional<test_space(trial_space)>> residual;
+  std::unique_ptr<mfem::ParMesh>                                            default_mesh;
+  mfem::ParMesh*                                                            mesh = nullptr;
+  std::unique_ptr<FiniteElementState>                                       festate;
+  std::unique_ptr<Functional<test_space(trial_space), ExecutionSpace::GPU>> residual;
 };
 
-struct StateWithDefault {
-  double x = 0.5;
+struct basic_state_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& /* x */, field_t&& u, state_t&& state)
+  {
+    state.x += 0.1;
+    return u;
+  }
 };
 
-bool operator==(const StateWithDefault& lhs, const StateWithDefault& rhs) { return lhs.x == rhs.x; }
-
-struct StateWithMultiFields {
-  double x = 0.5;
-  double y = 0.3;
-};
-
-bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs)
-{
-  return lhs.x == rhs.x && lhs.y == rhs.y;
-}
-
-TEST_F(QuadratureDataTest, basic_integrals)
+TEST_F(QuadratureDataGPUTest, basic_integrals)
 {
   QuadratureData<State> qdata(*mesh, p);
   State                 init{0.1};
   qdata = init;
-  residual->AddDomainIntegral(
-      Dimension<dim>{},
-      [&](auto /* x */, auto u, auto& state) {
-        state.x += 0.1;
-        return u;
-      },
-      *mesh, qdata);
+  residual->AddDomainIntegral(Dimension<dim>{}, basic_state_qfunction{}, *mesh, qdata);
 
   // If we run through it one time...
   mfem::Vector U(festate->space().TrueVSize());
@@ -89,21 +118,27 @@ TEST_F(QuadratureDataTest, basic_integrals)
   for (const auto& s : qdata) {
     EXPECT_EQ(s, correct);
   }
-  // Just to make sure I didn't break the stateless version
-  residual->AddDomainIntegral(
-      Dimension<dim>{}, [&](auto /* x */, auto u) { return u; }, *mesh);
 }
 
-TEST_F(QuadratureDataTest, basic_integrals_default)
+struct StateWithDefault {
+  double x = 0.5;
+};
+
+bool operator==(const StateWithDefault& lhs, const StateWithDefault& rhs) { return lhs.x == rhs.x; }
+
+struct basic_state_with_default_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& /* x */, field_t&& u, state_t&& state)
+  {
+    state.x += 0.1;
+    return u;
+  }
+};
+
+TEST_F(QuadratureDataGPUTest, basic_integrals_default)
 {
   QuadratureData<StateWithDefault> qdata(*mesh, p);
-  residual->AddDomainIntegral(
-      Dimension<dim>{},
-      [&](auto /* x */, auto u, auto& state) {
-        state.x += 0.1;
-        return u;
-      },
-      *mesh, qdata);
+  residual->AddDomainIntegral(Dimension<dim>{}, basic_state_with_default_qfunction{}, *mesh, qdata);
   // If we run through it one time...
   mfem::Vector U(festate->space().TrueVSize());
   (*residual)(U);
@@ -115,17 +150,32 @@ TEST_F(QuadratureDataTest, basic_integrals_default)
   }
 }
 
-TEST_F(QuadratureDataTest, basic_integrals_multi_fields)
+struct StateWithMultiFields {
+  double x = 0.5;
+  double y = 0.3;
+};
+
+bool almost_equal(double a, double b) { return std::abs(a - b) < 1e-10; }
+
+bool operator==(const StateWithMultiFields& lhs, const StateWithMultiFields& rhs)
+{
+  return almost_equal(lhs.x, rhs.x) && almost_equal(lhs.y, rhs.y);
+}
+
+struct basic_state_with_multi_fields_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& /* x */, field_t&& u, state_t&& state)
+  {
+    state.x += 0.1;
+    state.y += 0.7;
+    return u;
+  }
+};
+
+TEST_F(QuadratureDataGPUTest, basic_integrals_multi_fields)
 {
   QuadratureData<StateWithMultiFields> qdata(*mesh, p);
-  residual->AddDomainIntegral(
-      Dimension<dim>{},
-      [&](auto /* x */, auto u, auto& state) {
-        state.x += 0.1;
-        state.y += 0.7;
-        return u;
-      },
-      *mesh, qdata);
+  residual->AddDomainIntegral(Dimension<dim>{}, basic_state_with_multi_fields_qfunction{}, *mesh, qdata);
   // If we run through it one time...
   mfem::Vector U(festate->space().TrueVSize());
   (*residual)(U);
@@ -136,18 +186,33 @@ TEST_F(QuadratureDataTest, basic_integrals_multi_fields)
   }
 }
 
+TEST_F(QuadratureDataGPUTest, basic_integrals_multi_fields_bulk_assignment)
+{
+  QuadratureData<StateWithMultiFields> qdata(*mesh, p);
+  qdata = StateWithMultiFields{0.7, 0.2};
+  residual->AddDomainIntegral(Dimension<dim>{}, basic_state_with_multi_fields_qfunction{}, *mesh, qdata);
+  // If we run through it one time...
+  mfem::Vector U(festate->space().TrueVSize());
+  (*residual)(U);
+  // Then each element of the state should have been incremented accordingly...
+  StateWithMultiFields correct{0.8, 0.9};
+  for (const auto& s : qdata) {
+    EXPECT_EQ(s, correct);
+  }
+}
+
 template <typename T>
-class QuadratureDataStateManagerTest : public QuadratureDataTest {
+class QuadratureDataGPUStateManagerTest : public QuadratureDataGPUTest {
 public:
-  using value_type                          = typename T::value_type;
-  static constexpr value_type initial_state = T::initial_state;
-  static void                 mutate(value_type& v, double other = 0.0) { T::mutate(v, other); }
+  using value_type                              = typename T::value_type;
+  static constexpr value_type     initial_state = T::initial_state;
+  __host__ __device__ static void mutate(value_type& v, double other = 0.0) { T::mutate(v, other); }
 };
 
 struct MultiFieldWrapper {
-  using value_type                          = StateWithMultiFields;
-  static constexpr value_type initial_state = {};
-  static void                 mutate(value_type& v, double other = 0.0)
+  using value_type                              = StateWithMultiFields;
+  static constexpr value_type     initial_state = {};
+  __host__ __device__ static void mutate(value_type& v, double other = 0.0)
   {
     v.x += (0.1 + other);
     v.y += (0.7 + other);
@@ -155,9 +220,9 @@ struct MultiFieldWrapper {
 };
 
 struct IntWrapper {
-  using value_type                          = int;
-  static constexpr value_type initial_state = 0;
-  static void                 mutate(value_type& v, double other = 0.0)
+  using value_type                              = int;
+  static constexpr value_type     initial_state = 0;
+  __host__ __device__ static void mutate(value_type& v, double other = 0.0)
   {
     v += 4;
     v += static_cast<int>(other * 10);
@@ -173,8 +238,8 @@ bool operator==(const ThreeBytes& lhs, const ThreeBytes& rhs) { return std::equa
 struct ThreeBytesWrapper {
   using value_type = ThreeBytes;
   static_assert(sizeof(value_type) == 3);
-  static constexpr value_type initial_state = {};
-  static void                 mutate(value_type& v, double other = 0.0)
+  static constexpr value_type     initial_state = {};
+  __host__ __device__ static void mutate(value_type& v, double other = 0.0)
   {
     v.x[0] = static_cast<char>(v.x[0] + 3 + (other * 10));
     v.x[1] = static_cast<char>(v.x[1] + 2 + (other * 10));
@@ -185,9 +250,36 @@ struct ThreeBytesWrapper {
 using StateTypes = ::testing::Types<MultiFieldWrapper, IntWrapper, ThreeBytesWrapper>;
 // NOTE: The extra comma is here due a clang issue where the variadic macro param is not provided
 // so instead, we leave it unspecified/empty
-TYPED_TEST_SUITE(QuadratureDataStateManagerTest, StateTypes, );
+TYPED_TEST_SUITE(QuadratureDataGPUStateManagerTest, StateTypes, );
 
-TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
+template <typename wrapper_t>
+struct state_manager_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& /* x */, field_t&& u, state_t&& state)
+  {
+    wrapper_t::mutate(state);
+    return u;
+  }
+};
+
+template <typename wrapper_t>
+struct state_manager_varying_qfunction {
+  template <typename x_t, typename field_t, typename state_t>
+  __host__ __device__ auto operator()(x_t&& x, field_t&& u, state_t&& state)
+  {
+    double norm = 0.0;
+    for (int i = 0; i < x.first_dim; i++) {
+      norm += x[i] * x[i];
+    }
+    wrapper_t::mutate(state, norm);
+    mutated_data[idx++] = state;
+    return u;
+  }
+  DeviceArray<typename wrapper_t::value_type>& mutated_data;
+  int                                          idx = 0;
+};
+
+TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
 {
   constexpr int cycle        = 0;
   const auto    mutated_once = []() {
@@ -214,13 +306,8 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
         serac::StateManager::newQuadratureData<typename TestFixture::value_type>("test_data", this->p);
     qdata = TestFixture::initial_state;
 
-    this->residual->AddDomainIntegral(
-        Dimension<TestFixture::dim>{},
-        [&](auto /* x */, auto u, auto& state) {
-          TestFixture::mutate(state);
-          return u;
-        },
-        *this->mesh, qdata);
+    this->residual->AddDomainIntegral(Dimension<TestFixture::dim>{}, state_manager_qfunction<TestFixture>{},
+                                      *this->mesh, qdata);
     // If we run through it one time...
     mfem::Vector U(this->festate->space().TrueVSize());
     (*this->residual)(U);
@@ -247,13 +334,8 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
 
     // Note that the mesh here has been recovered from the save file,
     // same for the qdata (or rather the underlying QuadratureFunction)
-    this->residual->AddDomainIntegral(
-        Dimension<TestFixture::dim>{},
-        [&](auto /* x */, auto u, auto& state) {
-          TestFixture::mutate(state);
-          return u;
-        },
-        *this->mesh, qdata);
+    this->residual->AddDomainIntegral(Dimension<TestFixture::dim>{}, state_manager_qfunction<TestFixture>{},
+                                      *this->mesh, qdata);
     // Then increment it for the second time
     mfem::Vector U(this->festate->space().TrueVSize());
     (*this->residual)(U);
@@ -263,7 +345,7 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
   }
 
   // Ordered quadrature point data that is unique (mutated with the point's distance from the origin)
-  std::vector<typename TestFixture::value_type> origin_mutated_data;
+  DeviceArray<typename TestFixture::value_type> origin_mutated_data;
 
   // Reload the state again to make sure the same synchronization still happens when the data
   // is read in from a restart
@@ -279,14 +361,12 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
       EXPECT_EQ(s, mutated_twice);
     }
 
-    this->residual->AddDomainIntegral(
-        Dimension<TestFixture::dim>{},
-        [&](auto x, auto u, auto& state) {
-          TestFixture::mutate(state, norm(x));
-          origin_mutated_data.push_back(state);
-          return u;
-        },
-        *this->mesh, qdata);
+    // CHAI FIXME: Why is this not called resize()?
+    origin_mutated_data.reallocate(std::distance(qdata.begin(), qdata.end()));
+
+    // this->residual->AddDomainIntegral(Dimension<TestFixture::dim>{},
+    //                                   state_manager_varying_qfunction<TestFixture>{origin_mutated_data}, *this->mesh,
+    //                                   qdata);
     // Then mutate it for the third time
     mfem::Vector U(this->festate->space().TrueVSize());
     (*this->residual)(U);
@@ -305,7 +385,7 @@ TYPED_TEST(QuadratureDataStateManagerTest, basic_integrals_state_manager)
     // Make sure the changes from the distance-specified increment were propagated through and in the correct order
     std::size_t i = 0;
     for (const auto& s : qdata) {
-      EXPECT_EQ(s, origin_mutated_data[i]);
+      // EXPECT_EQ(s, origin_mutated_data[i]);
       i++;
     }
     serac::StateManager::reset();

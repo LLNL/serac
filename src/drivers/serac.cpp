@@ -60,6 +60,10 @@ void defineInputFileSchema(axom::inlet::Inlet& inlet)
   auto& thermal_solver_table = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_solver_table);
 
+  // The thermal solid options
+  auto& thermal_solid_solver_table = inlet.addStruct("thermal_solid", "Thermal solid module");
+  serac::ThermalSolid::InputOptions::defineInputFileSchema(thermal_solid_solver_table);
+
   // Verify the input file
   if (!inlet.verify()) {
     SLIC_ERROR_ROOT("Input file failed to verify.");
@@ -157,6 +161,7 @@ int main(int argc, char* argv[])
   // Create nullable contains for the solid and thermal input file options
   std::optional<serac::Solid::InputOptions>             solid_solver_options;
   std::optional<serac::ThermalConduction::InputOptions> thermal_solver_options;
+  std::optional<serac::ThermalSolid::InputOptions>      thermal_solid_solver_options;
 
   // If the blocks exist, read the appropriate input file options
   // FIXME: This will get patched in inlet so we can do inlet.isUserProvided("solid") etc
@@ -166,16 +171,21 @@ int main(int argc, char* argv[])
   if (inlet.getGlobalContainer().getChildContainers().at("thermal_conduction")->isUserProvided()) {
     thermal_solver_options = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
   }
+  if (inlet.getGlobalContainer().getChildContainers().at("thermal_solid")->isUserProvided()) {
+    thermal_solid_solver_options = inlet["thermal_solid"].get<serac::ThermalSolid::InputOptions>();
+  }
 
   // Construct the appropriate physics object using the input file options
-  if (solid_solver_options && thermal_solver_options) {
+  if (thermal_solid_solver_options) {
+    main_physics = std::make_unique<serac::ThermalSolid>(*thermal_solid_solver_options);
+  } else if (solid_solver_options && thermal_solver_options) {
     main_physics = std::make_unique<serac::ThermalSolid>(*thermal_solver_options, *solid_solver_options);
   } else if (solid_solver_options) {
     main_physics = std::make_unique<serac::Solid>(*solid_solver_options);
   } else if (thermal_solver_options) {
     main_physics = std::make_unique<serac::ThermalConduction>(*thermal_solver_options);
   } else {
-    SLIC_ERROR_ROOT("Neither solid nor thermal_conduction blocks specified in the input file.");
+    SLIC_ERROR_ROOT("Neither solid, thermal_conduction, nor thermal_solid blocks specified in the input file.");
   }
 
   // Complete the solver setup
