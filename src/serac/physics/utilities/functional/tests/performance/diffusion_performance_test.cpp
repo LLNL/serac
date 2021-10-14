@@ -15,7 +15,7 @@
 #include "axom/core/utilities/Timer.hpp"
 
 #include "serac/physics/utilities/functional/tensor.hpp"
-#include "serac/physics/utilities/functional/integral.hpp"
+#include "serac/physics/utilities/functional/domain_integral.hpp"
 #include "serac/physics/utilities/functional/quadrature.hpp"
 #include "serac/physics/utilities/functional/finite_element.hpp"
 #include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
@@ -85,7 +85,7 @@ auto count_ops0(tensor<double, D1D, D1D, D1D> x)
 template <int Q1D, int D1D>
 auto count_ops1(tensor<double, D1D * D1D * D1D> x)
 {
-  using element_type = finite_element< ::Geometry::Hexahedron, H1<D1D - 1> >;
+  using element_type = finite_element<Geometry::Hexahedron, H1<D1D - 1> >;
 
   auto xi = GaussLegendreNodes<Q1D>();
 
@@ -204,7 +204,7 @@ auto compute_all_gradients1(const tensor<double, D1D, D1D, D1D>& x)
 template <int Q1D, int D1D>
 auto compute_all_gradients2(const tensor<double, D1D * D1D * D1D>& x)
 {
-  using element_type = finite_element< ::Geometry::Hexahedron, H1<D1D - 1> >;
+  using element_type = finite_element<Geometry::Hexahedron, H1<D1D - 1> >;
 
   auto xi = GaussLegendreNodes<Q1D>();
 
@@ -220,7 +220,7 @@ auto compute_all_gradients2(const tensor<double, D1D * D1D * D1D>& x)
 template <int Q1D, int D1D>
 auto compute_all_gradients3(const tensor<double, D1D * D1D * D1D>& x)
 {
-  using element_type = finite_element< ::Geometry::Hexahedron, H1<D1D - 1> >;
+  using element_type = finite_element<Geometry::Hexahedron, H1<D1D - 1> >;
 
   [[maybe_unused]] static constexpr auto xi = GaussLegendreNodes<Q1D>();
 
@@ -319,8 +319,8 @@ auto time(lambda&& f)
 template <int Q1D, int D1D>
 void run_tests(int n)
 {
-  tensor<double, D1D, D1D, D1D>   y;
-  tensor<double, D1D * D1D * D1D> y2;
+  tensor<double, D1D, D1D, D1D>   y{};
+  tensor<double, D1D * D1D * D1D> y2{};
 
   std::cout << "running tests " << n << " times, with D1D: " << D1D << ", Q1D: " << Q1D << std::endl;
 

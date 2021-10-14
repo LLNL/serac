@@ -66,6 +66,16 @@ std::string findMeshFilePath(const std::string& mesh_path, const std::string& in
 std::string fullDirectoryFromPath(const std::string& file_path);
 
 /**
+ * @brief Returns the name of the input file (base name with file extension removed).
+ *
+ * // TODO: remove when axom::Path supports this
+ *
+ * @param[in] file_path path to a file
+ * @return name of input file
+ */
+std::string getInputFileName(const std::string& file_path);
+
+/**
  * @brief Defines the schema for a vector in R^{1,2,3} space
  * @param[inout] container The base container on which to define the schema
  */

@@ -101,9 +101,7 @@ mfem::Mesh buildDiskMesh(int approx_number_of_elements)
 
   squish(mesh);
 
-  // The copy ctor is marked explicit, but this should qualify for NRVO...
-  // It looks like this (and its analogues) don't have their copies elided...
-  return mfem::Mesh(mesh);
+  return mesh;
 }
 
 mfem::Mesh buildBallMesh(int approx_number_of_elements)
@@ -143,20 +141,19 @@ mfem::Mesh buildBallMesh(int approx_number_of_elements)
   // Reorient the tet mesh for use with high order Hcurl elements
   mesh.ReorientTetMesh();
 
-  // The copy ctor is marked explicit, but this should qualify for RVO...
-  return mfem::Mesh(mesh);
+  return mesh;
 }
 
 mfem::Mesh buildRectangleMesh(int elements_in_x, int elements_in_y, double size_x, double size_y)
 {
-  // Incoming: https://github.com/mfem/mfem/pull/2054
-  return {elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y};
+  return mfem::Mesh::MakeCartesian2D(elements_in_x, elements_in_y, mfem::Element::QUADRILATERAL, true, size_x, size_y);
 }
 
 mfem::Mesh buildCuboidMesh(int elements_in_x, int elements_in_y, int elements_in_z, double size_x, double size_y,
                            double size_z)
 {
-  return {elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, true, size_x, size_y, size_z};
+  return mfem::Mesh::MakeCartesian3D(elements_in_x, elements_in_y, elements_in_z, mfem::Element::HEXAHEDRON, size_x,
+                                     size_y, size_z);
 }
 
 mfem::Mesh buildCylinderMesh(int radial_refinement, int elements_lengthwise, double radius, double height)
@@ -344,7 +341,7 @@ mfem::Mesh buildRing(int radial_refinement, double inner_radius, double outer_ra
     mesh.SetVertices(new_vertices);
   }
 
-  return mfem::Mesh(mesh);
+  return mesh;
 }
 
 mfem::Mesh buildRingMesh(int radial_refinement, double inner_radius, double outer_radius, double total_angle,

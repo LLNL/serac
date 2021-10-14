@@ -32,7 +32,7 @@ The Serac build process has been broken into three phases with various related o
 2. Build the third party libraries
 3. Build the serac source code
 
-The developer tools are only required if you wish to contribute to the Serac source code. The first two steps involve building all of the 
+The developer tools are only required if you wish to contribute to the Serac source code. The first two steps involve building all of the
 third party libraries that are required by Serac. Two options exist for this process: using the `Spack HPC package manager <https://spack.io/>`_
 via the `uberenv wrapper script <https://github.com/LLNL/uberenv>`_ or building the required dependencies on your own. We recommend the first
 option as building HPC libraries by hand can be a tedious process. Once the third party libraries are built, Serac can be built using the
@@ -57,23 +57,23 @@ defined in the host-configs in our repository.
 
 If you wish to build them yourself (which takes a long time), use one of the following commands:
 
-For LC machines: 
+For LC machines:
 
 .. code-block:: bash
 
-   $ python scripts/llnl/build_devtools.py --directory=<devtool/build/path>
+   $ python3 scripts/llnl/build_devtools.py --directory=<devtool/build/path>
 
 For other machines:
 
 .. code-block:: bash
 
-   $ python scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=<spack/config/dir> --prefix=<devtool/build/path>
+   $ python3 scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=<spack/config/dir> --prefix=<devtool/build/path>
 
 For example on **Ubuntu 20.04**:
 
 .. code-block:: bash
 
-   python scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install
+   python3 scripts/uberenv/uberenv.py --project-json=scripts/spack/devtools.json --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install
 
 Unlike Serac's library dependencies, our developer tools can be built with any compiler because
 they are not linked into the serac executable.  We recommend GCC 8 because we have tested that they all
@@ -86,7 +86,7 @@ Building Serac's Dependencies via Spack/uberenv
   This is optional if you are on an LC machine as we have previously built the dependencies. You
   can see these machines and configurations in the ``host-configs`` repository directory.
 
-Serac only directly requires `MFEM <https://mfem.org/>`_, `Axom <https://github.com/LLNL/axom>`_, 
+Serac only directly requires `MFEM <https://mfem.org/>`_, `Axom <https://github.com/LLNL/axom>`_,
 and `Conduit <https://github.com/LLNL/conduit>`_.  Through MFEM, Serac also depends on a number of
 other third party libraries (Hypre, METIS, NetCDF, ParMETIS, SuperLU, and zlib).
 
@@ -101,7 +101,7 @@ doing the following:
 * Simplifies whole dependency build into one command
 
 Uberenv will create a directory containing a Spack instance with the required Serac
-dependencies installed. 
+dependencies installed.
 
 .. note::
    This directory **must not** be within the Serac repo - the example below
@@ -114,16 +114,16 @@ Serac.
 
 .. code-block:: bash
 
-   $ python scripts/uberenv/uberenv.py --prefix=../serac_libs
+   $ python3 scripts/uberenv/uberenv.py --prefix=../serac_libs
 
 .. note::
   On LC machines, it is good practice to do the build step in parallel on a compute node.
-  Here is an example command: ``salloc -ppdebug -N1-1 python scripts/uberenv/uberenv.py``
+  Here is an example command: ``salloc -ppdebug -N1-1 python3 scripts/uberenv/uberenv.py``
 
 Unless otherwise specified Spack will default to a compiler.  This is generally not a good idea when
 developing large codes. To specify which compiler to use add the compiler specification to the ``--spec`` Uberenv
-command line option. On TOSS3, we recommend and have tested ``--spec=%clang@9.0.0``.  More compiler specs
-can be found in the Spack compiler files in our repository: 
+command line option. On TOSS3, we recommend and have tested ``--spec=%clang@10.0.0``.  More compiler specs
+can be found in the Spack compiler files in our repository:
 ``scripts/spack/configs/<platform>/compilers.yaml``.
 
 We currently regularly test the following Spack configuration files:
@@ -135,34 +135,34 @@ We currently regularly test the following Spack configuration files:
 
 To install Serac on a new platform, it is a good idea to start with a known Spack configuration directory
 (located in the Serac repo at ``scripts/spack/configs/<platform>``). The ``compilers.yaml`` file
-describes the compilers and associated flags required for the platform and the ``packages.yaml`` file 
-describes the low-level libraries on the system to prevent Spack from building the world. Documentation on 
+describes the compilers and associated flags required for the platform and the ``packages.yaml`` file
+describes the low-level libraries on the system to prevent Spack from building the world. Documentation on
 these configuration files is located in the `Spack docs <https://spack.readthedocs.io/en/latest/configuration.html>`_.
 
-Some helpful uberenv options include :  
+Some helpful uberenv options include :
 
 * ``--spec=+debug`` (build the MFEM and Hypre libraries with debug symbols)
 * ``--spec=+glvis`` (build the optional glvis visualization library)
 * ``--spec=+caliper`` (build the `Caliper performance profiling library <https://github.com/LLNL/Caliper>`_)
 * ``--spec=+devtools`` (also build the devtools with one command)
-* ``--spec=%clang@9.0.0`` (build with a specific compiler as defined in the ``compiler.yaml`` file)
+* ``--spec=%clang@10.0.0`` (build with a specific compiler as defined in the ``compiler.yaml`` file)
 * ``--spack-config-dir=<Path to spack configuration directory>`` (use specific Spack configuration files)
-* ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository 
+* ``--prefix=<Path>`` (required, build and install the dependencies in a particular location) - this *must be outside* of your local Serac repository
 
-The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@9.0.0+debug+glvis+devtools``.
+The modifiers to the Spack specification ``spec`` can be chained together, e.g. ``--spec=%clang@10.0.0+debug+glvis+devtools``.
 
-If you already have a Spack instance from another project that you would like to reuse, 
+If you already have a Spack instance from another project that you would like to reuse,
 you can do so by changing the uberenv command as follows:
 
 .. code-block:: bash
 
-   $ python scripts/uberenv/uberenv.py --upstream=</path/to/my/spack>/opt/spack
+   $ python3 scripts/uberenv/uberenv.py --upstream=</path/to/my/spack>/opt/spack
 
 Building Serac's Dependencies by Hand
 -------------------------------------
 
-To build Serac's dependencies by hand, use of a ``host-config`` CMake configuration file is 
-stongly encouraged. A good place to start is by copying an existing host config in the 
+To build Serac's dependencies by hand, use of a ``host-config`` CMake configuration file is
+stongly encouraged. A good place to start is by copying an existing host config in the
 ``host-config`` directory and modifying it according to your system setup.
 
 .. _build-label:
@@ -185,16 +185,16 @@ one of the following commands:
 .. code-block:: bash
 
    # If you built Serac's dependencies yourself either via Spack or by hand
-   $ python ./config-build.py -hc <config_dependent_name>.cmake
+   $ python3 ./config-build.py -hc <config_dependent_name>.cmake
 
    # If you are on an LC machine and want to use our public pre-built dependencies
-   $ python ./config-build.py -hc host-configs/<machine name>-<SYS_TYPE>-<compiler>.cmake
+   $ python3 ./config-build.py -hc host-configs/<machine name>-<SYS_TYPE>-<compiler>.cmake
 
    # If you'd like to configure specific build options, e.g., a release build
-   $ python ./config-build.py -hc /path/to/host-config.cmake -DCMAKE_BUILD_TYPE=Release <more CMake build options...>
+   $ python3 ./config-build.py -hc /path/to/host-config.cmake -DCMAKE_BUILD_TYPE=Release <more CMake build options...>
 
 If you built the dependencies using Spack/uberenv, the host-config file is output at the
-project root. To use the pre-built dependencies on LC, you must be in the appropriate 
+project root. To use the pre-built dependencies on LC, you must be in the appropriate
 LC group. Contact `Jamie Bramwell <bramwell1@llnl.gov>`_ for access.
 
 Some build options frequently used by Serac include:
@@ -219,7 +219,7 @@ We provide the following useful build targets that can be run from the build dir
 
 * ``test``: Runs our unit tests
 * ``docs``: Builds our documentation to the following locations:
-   
+
    * Sphinx: ``build-*/src/docs/html/index.html``
    * Doxygen: ``/build-*/src/docs/html/doxygen/html/index.html``
 
@@ -258,11 +258,11 @@ must be specified using either:
 
 **Ubuntu 20.04**
 
-``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install``
+``python3 scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_20 --prefix=../path/to/install``
 
 **Ubuntu 18.04**
 
-``python scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_18 --prefix=../path/to/install``
+``python3 scripts/uberenv/uberenv.py --spack-config-dir=scripts/spack/configs/linux_ubuntu_18 --prefix=../path/to/install``
 
 Preparing OSX for Serac Installation
 ------------------------------------
@@ -283,7 +283,7 @@ Install required compilers and MPI via `homebrew <https://brew.sh/>`_:
 
 Build third-party libraries via Uberenv:
 
-``python scripts/uberenv/uberenv.py --spec=%apple-clang@11.0.1 --prefix=../path/to/install``
+``python3 scripts/uberenv/uberenv.py --spec=%apple-clang@11.0.1 --prefix=../path/to/install``
 
 .. note::
    You may need to alter the compiler spec inside ``scripts/spack/configs/darwin/compilers.yaml``.

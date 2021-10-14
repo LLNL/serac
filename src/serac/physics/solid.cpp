@@ -13,13 +13,14 @@
 #include "serac/physics/utilities/state_manager.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils.hpp"
+#include "serac/coefficients/sensitivity_coefficients.hpp"
 
 namespace serac {
 
 /**
  * @brief The number of fields in this physics module (displacement and velocity)
  */
-constexpr int NUM_FIELDS = 2;
+constexpr int NUM_FIELDS = 3;
 
 Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities geom_nonlin,
              FinalMeshOption keep_deformation, const std::string& name)
@@ -28,6 +29,8 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
           .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "velocity")})),
       displacement_(StateManager::newState(FiniteElementState::Options{
           .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "displacement")})),
+      adjoint_displacement_(StateManager::newState(FiniteElementState::Options{
+          .order = order, .vector_dim = mesh_.Dimension(), .name = detail::addPrefix(name, "adjoint_displacement")})),
       geom_nonlin_(geom_nonlin),
       keep_deformation_(keep_deformation),
       ode2_(displacement_.space().TrueVSize(), {.c0 = c0_, .c1 = c1_, .u = u_, .du_dt = du_dt_, .d2u_dt2 = previous_},
@@ -35,6 +38,7 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
 {
   state_.push_back(velocity_);
   state_.push_back(displacement_);
+  state_.push_back(adjoint_displacement_);
 
   // Initialize the mesh node pointers
   reference_nodes_ = displacement_.createOnSpace<mfem::ParGridFunction>();
@@ -44,8 +48,9 @@ Solid::Solid(int order, const SolverOptions& options, GeometricNonlinearities ge
   reference_nodes_->GetTrueDofs(x_);
   deformed_nodes_ = std::make_unique<mfem::ParGridFunction>(*reference_nodes_);
 
-  displacement_.trueVec() = 0.0;
-  velocity_.trueVec()     = 0.0;
+  displacement_.trueVec()         = 0.0;
+  velocity_.trueVec()             = 0.0;
+  adjoint_displacement_.trueVec() = 0.0;
 
   const auto& lin_options = options.H_lin_options;
   // If the user wants the AMG preconditioner with a linear solver, set the pfes
@@ -200,6 +205,13 @@ void Solid::setMaterialParameters(std::unique_ptr<mfem::Coefficient>&& mu, std::
   }
 }
 
+void Solid::setThermalExpansion(std::unique_ptr<mfem::Coefficient>&& coef_thermal_expansion,
+                                std::unique_ptr<mfem::Coefficient>&& reference_temp, const FiniteElementState& temp)
+{
+  thermal_material_ = std::make_unique<IsotropicThermalExpansionMaterial>(
+      std::move(coef_thermal_expansion), std::move(reference_temp), temp, geom_nonlin_);
+}
+
 void Solid::setViscosity(std::unique_ptr<mfem::Coefficient>&& visc_coef) { viscosity_ = std::move(visc_coef); }
 
 void Solid::setMassDensity(std::unique_ptr<mfem::Coefficient>&& rho_coef)
@@ -240,7 +252,8 @@ void Solid::completeSetup()
   H_ = displacement_.createOnSpace<mfem::ParNonlinearForm>();
 
   // Add the hyperelastic integrator
-  H_->AddDomainIntegrator(new mfem_ext::DisplacementHyperelasticIntegrator(*material_, geom_nonlin_));
+  H_->AddDomainIntegrator(
+      new mfem_ext::DisplacementHyperelasticIntegrator(*material_, *thermal_material_, geom_nonlin_));
 
   // Add the deformed traction integrator
   for (auto& deformed_traction_data : bcs_.genericsWithTag(SolidBoundaryCondition::DeformedTraction)) {
@@ -393,6 +406,141 @@ void Solid::advanceTimestep(double& dt)
   mesh_.NewNodes(*deformed_nodes_);
 
   cycle_ += 1;
+
+  previous_solve_ = PreviousSolve::Forward;
+}
+
+void Solid::checkSensitivityMode() const
+{
+  SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None,
+                     "Sensitivities only valid following a forward and adjoint solve.");
+  SLIC_WARNING_ROOT_IF(
+      previous_solve_ == PreviousSolve::Forward,
+      "Sensitivities only valid following a forward and adjoint solve (in that order). The previous solve was a "
+      "forward analysis. Ensure that the correct displacement and adjoint states are set for sensitivies.");
+
+  LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+
+  SLIC_ERROR_ROOT_IF(!linear_mat, "Only linear elastic materials allowed for sensitivity analysis.");
+}
+
+FiniteElementDual& Solid::shearModulusSensitivity(mfem::ParFiniteElementSpace* shear_space)
+{
+  checkSensitivityMode();
+
+  if (!shear_sensitivity_coef_) {
+    LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+
+    shear_sensitivity_coef_ =
+        std::make_unique<mfem_ext::ShearSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
+  }
+
+  // Add a scalar linear form integrator using the shear sensitivity coefficient against the given shear modulus finite
+  // element space
+  if (!shear_sensitivity_form_ || shear_space) {
+    SLIC_ERROR_IF(!shear_space, fmt::format("Finite element space is required for first shear sensitivity call."));
+    shear_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *shear_space);
+    shear_sensitivity_form_ = shear_sensitivity_->createOnSpace<mfem::ParLinearForm>();
+
+    shear_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*shear_sensitivity_coef_));
+  }
+
+  // Assemble the linear form at the current state and adjoint values
+  shear_sensitivity_form_->Assemble();
+
+  // Set the dual state to the assembled shear sensitivity
+  std::unique_ptr<mfem::HypreParVector> assembled_vec(shear_sensitivity_form_->ParallelAssemble());
+  shear_sensitivity_->trueVec() = *assembled_vec;
+
+  // Distribute the shared dofs in the dual state
+  shear_sensitivity_->distributeSharedDofs();
+
+  return *shear_sensitivity_;
+}
+
+FiniteElementDual& Solid::bulkModulusSensitivity(mfem::ParFiniteElementSpace* bulk_space)
+{
+  checkSensitivityMode();
+
+  if (!bulk_sensitivity_coef_) {
+    LinearElasticMaterial* linear_mat = dynamic_cast<LinearElasticMaterial*>(material_.get());
+
+    bulk_sensitivity_coef_ =
+        std::make_unique<mfem_ext::BulkSensitivityCoefficient>(displacement_, adjoint_displacement_, *linear_mat);
+  }
+
+  // Add a scalar linear form integrator using the shear sensitivity coefficient against the given bulk modulus finite
+  // element space
+  if (!bulk_sensitivity_form_ || bulk_space) {
+    SLIC_ERROR_IF(!bulk_space, fmt::format("Finite element space is required for first bulk sensitivity call."));
+    bulk_sensitivity_      = std::make_unique<FiniteElementDual>(mesh_, *bulk_space);
+    bulk_sensitivity_form_ = bulk_sensitivity_->createOnSpace<mfem::ParLinearForm>();
+
+    bulk_sensitivity_form_->AddDomainIntegrator(new mfem::DomainLFIntegrator(*bulk_sensitivity_coef_));
+  }
+
+  // Assemble the linear form at the current state and adjoint values
+  bulk_sensitivity_form_->Assemble();
+
+  // Set the dual state to the assembled bulk sensitivity
+  std::unique_ptr<mfem::HypreParVector> assembled_vec(bulk_sensitivity_form_->ParallelAssemble());
+  bulk_sensitivity_->trueVec() = *assembled_vec;
+
+  // Distribute the shared dofs in the dual state
+  bulk_sensitivity_->distributeSharedDofs();
+
+  return *bulk_sensitivity_;
+}
+
+const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
+                                              FiniteElementDual* dual_with_essential_boundary)
+{
+  SLIC_ERROR_ROOT_IF(!is_quasistatic_, "Adjoint analysis only vaild for quasistatic problems.");
+  SLIC_ERROR_ROOT_IF(previous_solve_ == PreviousSolve::None, "Adjoint analysis only valid following a forward solve.");
+
+  // Set the mesh nodes to the reference configuration
+  mesh_.NewNodes(*reference_nodes_);
+
+  adjoint_load.initializeTrueVec();
+
+  // note: The assignment operator must be called after the copy constructor because
+  // the copy constructor only sets the partitioning, it does not copy the actual vector
+  // values
+  mfem::HypreParVector adjoint_load_vector(adjoint_load.trueVec());
+  adjoint_load_vector = adjoint_load.trueVec();
+
+  auto& lin_solver = nonlin_solver_.LinearSolver();
+
+  auto& J   = dynamic_cast<mfem::HypreParMatrix&>(H_->GetGradient(displacement_.trueVec()));
+  auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
+
+  if (dual_with_essential_boundary) {
+    dual_with_essential_boundary->initializeTrueVec();
+    for (const auto& bc : bcs_.essentials()) {
+      bc.eliminateFromMatrix(*J_T);
+      bc.eliminateToRHS(*J_T, dual_with_essential_boundary->trueVec(), adjoint_load_vector);
+    }
+  } else {
+    bcs_.eliminateAllEssentialDofsFromMatrix(*J_T);
+  }
+
+  lin_solver.SetOperator(*J_T);
+  lin_solver.Mult(adjoint_load_vector, adjoint_displacement_.trueVec());
+
+  adjoint_displacement_.distributeSharedDofs();
+
+  // Update the mesh with the new deformed nodes
+  deformed_nodes_->Set(1.0, displacement_.gridFunc());
+  deformed_nodes_->Add(1.0, *reference_nodes_);
+
+  mesh_.NewNodes(*deformed_nodes_);
+
+  // Reset the equation solver to use the full nonlinear residual operator
+  nonlin_solver_.SetOperator(*residual_);
+
+  previous_solve_ = PreviousSolve::Adjoint;
+
+  return adjoint_displacement_;
 }
 
 void Solid::InputOptions::defineInputFileSchema(axom::inlet::Container& container)

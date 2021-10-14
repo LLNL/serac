@@ -16,24 +16,25 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <type_traits>
-#include <variant>
 
 #include "mfem.hpp"
+
+#include "serac/physics/utilities/variant.hpp"
+#include "serac/physics/utilities/finite_element_vector.hpp"
 
 namespace serac {
 
 /**
  * @brief A sum type for encapsulating either a scalar or vector coeffient
  */
-using GeneralCoefficient = std::variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
+using GeneralCoefficient = variant<std::shared_ptr<mfem::Coefficient>, std::shared_ptr<mfem::VectorCoefficient>>;
 
 /**
  * @brief convenience function for querying the type stored in a GeneralCoefficient
  */
 inline bool is_scalar_valued(const GeneralCoefficient& coef)
 {
-  return std::holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef);
+  return holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef);
 }
 
 /**
@@ -41,88 +42,35 @@ inline bool is_scalar_valued(const GeneralCoefficient& coef)
  */
 inline bool is_vector_valued(const GeneralCoefficient& coef)
 {
-  return std::holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef);
+  return holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef);
 }
 
 /**
- * @brief Class for encapsulating the critical MFEM components of a solver
+ * @brief Class for encapsulating the critical MFEM components of a primal finite element field
  *
  * Namely: Mesh, FiniteElementCollection, FiniteElementState,
  * GridFunction, and a Vector of the solution
  */
-class FiniteElementState {
+class FiniteElementState : public FiniteElementVector {
 public:
   /**
-   * @brief Structure for optionally configuring a FiniteElementState
+   * @brief Use the finite element vector constructors
    */
-  // The optionals are explicitly default-constructed to allow the user to partially aggregrate-initialized
-  // with only the options they care about
-  struct Options {
-    /**
-     * @brief The polynomial order that should be used for the problem
-     */
-    int order = 1;
-    /**
-     * @brief The number of copies of the finite element collections (e.g. vector_dim = 2 or 3 for solid mechanics).
-     * Defaults to scalar valued spaces.
-     */
-    int vector_dim = 1;
-    /**
-     * @brief The FECollection to use - defaults to an H1_FECollection
-     */
-    std::unique_ptr<mfem::FiniteElementCollection> coll = {};
-    /**
-     * The DOF ordering that should be used interally by MFEM
-     */
-    mfem::Ordering::Type ordering = mfem::Ordering::byVDIM;
-    /**
-     * @brief The name of the field encapsulated by the state object
-     */
-    std::string name = "";
-    /**
-     * @brief Whether the GridFunction should be allocated (and owned by the FEState object)
-     */
-    bool alloc_gf = true;
-  };
-
-  /**
-   * Main constructor for building a new state object
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] options The options specified, namely those relating to the order of the problem,
-   * the dimension of the FESpace, the type of FEColl, the DOF ordering that should be used,
-   * and the name of the field
-   */
-  FiniteElementState(
-      mfem::ParMesh& mesh,
-      Options&&      options = {
-          .order = 1, .vector_dim = 1, .coll = {}, .ordering = mfem::Ordering::byVDIM, .name = "", .alloc_gf = true});
-
-  /**
-   * @brief Minimal constructor for a FiniteElementState given an already-existing field
-   * @param[in] mesh The problem mesh (object does not take ownership)
-   * @param[in] gf The field for the state to create (object does not take ownership)
-   * @param[in] name The name of the field
-   */
-  FiniteElementState(mfem::ParMesh& mesh, mfem::ParGridFunction& gf, const std::string& name = "");
-
-  /**
-   * Returns the MPI communicator for the state
-   */
-  MPI_Comm comm() const { return retrieve(space_).GetComm(); }
+  using FiniteElementVector::FiniteElementVector;
 
   /**
    * Returns a non-owning reference to the internal grid function
    */
-  mfem::ParGridFunction& gridFunc() { return retrieve(gf_); }
+  mfem::ParGridFunction& gridFunc() { return detail::retrieve(gf_); }
   /// \overload
-  const mfem::ParGridFunction& gridFunc() const { return retrieve(gf_); }
+  const mfem::ParGridFunction& gridFunc() const { return detail::retrieve(gf_); }
 
   /**
    * Returns a GridFunctionCoefficient referencing the internal grid function
    */
   mfem::GridFunctionCoefficient gridFuncCoef() const
   {
-    const auto& gf = retrieve(gf_);
+    const auto& gf = detail::retrieve(gf_);
     return mfem::GridFunctionCoefficient{&gf, gf.VectorDim()};
   }
 
@@ -131,30 +79,8 @@ public:
    */
   mfem::VectorGridFunctionCoefficient vectorGridFuncCoef() const
   {
-    return mfem::VectorGridFunctionCoefficient{&retrieve(gf_)};
+    return mfem::VectorGridFunctionCoefficient{&detail::retrieve(gf_)};
   }
-
-  /**
-   * Returns a non-owning reference to the internal mesh object
-   */
-  mfem::ParMesh& mesh() { return mesh_; }
-
-  /**
-   * Returns a non-owning reference to the internal FESpace
-   */
-  mfem::ParFiniteElementSpace& space() { return retrieve(space_); }
-  /// \overload
-  const mfem::ParFiniteElementSpace& space() const { return retrieve(space_); }
-
-  /**
-   * Returns a non-owning reference to the vector of true DOFs
-   */
-  mfem::HypreParVector& trueVec() { return true_vec_; }
-
-  /**
-   * Returns the name of the FEState (field)
-   */
-  std::string name() const { return name_; }
 
   /**
    * Projects a coefficient (vector or scalar) onto the field
@@ -164,102 +90,44 @@ public:
   {
     // The generic lambda parameter, auto&&, allows the component type (mfem::Coef or mfem::VecCoef)
     // to be deduced, and the appropriate version of ProjectCoefficient is dispatched.
-    std::visit([this](auto&& concrete_coef) { retrieve(gf_).ProjectCoefficient(*concrete_coef); }, coef);
+    visit(
+        [this](auto&& concrete_coef) {
+          detail::retrieve(gf_).ProjectCoefficient(*concrete_coef);
+          initializeTrueVec();
+        },
+        coef);
   }
   /// \overload
-  void project(mfem::Coefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
-  /// \overload
-  void project(mfem::VectorCoefficient& coef) { retrieve(gf_).ProjectCoefficient(coef); }
-
-  /**
-   * Initialize the true DOF vector by extracting true DOFs from the internal
-   * grid function into the internal true DOF vector
-   */
-  void initializeTrueVec() { retrieve(gf_).GetTrueDofs(true_vec_); }
-
-  /**
-   * Set the internal grid function using the true DOF values
-   */
-  void distributeSharedDofs() { retrieve(gf_).SetFromTrueDofs(true_vec_); }
-
-  /**
-   * Utility function for creating a tensor, e.g. mfem::HypreParVector,
-   * mfem::ParBilinearForm, etc on the FESpace encapsulated by an FEState object
-   * @return An owning pointer to a heap-allocated tensor
-   * @pre Tensor must have the constructor Tensor::Tensor(ParFiniteElementSpace*)
-   */
-  template <typename Tensor>
-  std::unique_ptr<Tensor> createOnSpace()
+  void project(mfem::Coefficient& coef)
   {
-    static_assert(std::is_constructible_v<Tensor, mfem::ParFiniteElementSpace*>,
-                  "Tensor must be constructible with a ptr to ParFESpace");
-    return std::make_unique<Tensor>(&retrieve(space_));
+    detail::retrieve(gf_).ProjectCoefficient(coef);
+    initializeTrueVec();
   }
-
-private:
+  /// \overload
+  void project(mfem::VectorCoefficient& coef)
+  {
+    detail::retrieve(gf_).ProjectCoefficient(coef);
+    initializeTrueVec();
+  }
   /**
-   * @brief A helper type for uniform semantics over owning/non-owning pointers
+   * @brief Set a finite element state to a constant value
    *
-   * This logic is needed to integrate with the mesh and field reconstruction logic
-   * provided by Sidre's MFEMSidreDataCollection.  When a Serac restart occurs, the
-   * saved data is used to construct fully functional mfem::(Par)Mesh and
-   * mfem::(Par)GridFunction objects.  The FiniteElementCollection and (Par)FiniteElementSpace
-   * objects are intermediates in the construction of these objects and are therefore owned
-   * by the MFEMSidreDataCollection in the case of a restart/reconstruction.  In a normal run,
-   * Serac constructs the mesh and fields, so these FEColl and FESpace objects are owned
-   * by Serac.  In both cases, the MFEMSidreDataCollection maintains ownership of the mesh
-   * and field objects themselves.
+   * @param value The constant to set the finite element state to
+   * @return The modified finite element state
+   * @note This sets the true degrees of freedom and then broadcasts to the shared grid function entries. This means
+   * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
    */
-  template <typename T>
-  using MaybeOwningPointer = std::variant<T*, std::unique_ptr<T>>;
-
-  /**
-   * @brief Retrieves a reference to the underlying object in a MaybeOwningPointer
-   * @param[in] obj The object to dereference
-   */
-  template <typename T>
-  static T& retrieve(MaybeOwningPointer<T>& obj)
+  FiniteElementState& operator=(const double value)
   {
-    return std::visit([](auto&& ptr) -> T& { return *ptr; }, obj);
+    FiniteElementVector::operator=(value);
+    return *this;
   }
-  /// @overload
-  template <typename T>
-  static const T& retrieve(const MaybeOwningPointer<T>& obj)
-  {
-    return std::visit([](auto&& ptr) -> const T& { return *ptr; }, obj);
-  }
-
-  /**
-   * @brief A reference to the mesh object on which the field is defined
-   */
-  std::reference_wrapper<mfem::ParMesh> mesh_;
-  /**
-   * @brief Possibly-owning handle to the FiniteElementCollection, as it is owned
-   * by the FiniteElementState in a normal run and by the MFEMSidreDataCollection
-   * in a restart run
-   * @note Must be const as FESpaces store a const reference to their FEColls
-   */
-  MaybeOwningPointer<const mfem::FiniteElementCollection> coll_;
-  /**
-   * @brief Possibly-owning handle to the FiniteElementCollection, as it is owned
-   * by the FiniteElementState in a normal run and by the MFEMSidreDataCollection
-   * in a restart run
-   */
-  MaybeOwningPointer<mfem::ParFiniteElementSpace> space_;
-  /**
-   * @brief Possibly-owning handle to the ParGridFunction, as it is owned
-   * by the FiniteElementState in a normal run and by the MFEMSidreDataCollection
-   * in a restart run
-   */
-  MaybeOwningPointer<mfem::ParGridFunction> gf_;
-  mfem::HypreParVector                      true_vec_;
-  std::string                               name_ = "";
 };
 
 /**
  * @brief Calculate the Lp norm of a finite element state
  *
- * @param state The state variable to compute a norm of 
+ * @param state The state variable to compute a norm of
  * @param p Order of the norm
  * @return The norm value
  */

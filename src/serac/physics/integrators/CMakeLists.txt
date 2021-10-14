@@ -4,6 +4,10 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause) 
 
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+
 set(integrators_sources
     displacement_hyperelastic_integrator.cpp
     nonlinear_reaction_integrator.cpp

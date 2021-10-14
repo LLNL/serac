@@ -8,7 +8,11 @@
 # Basic CMake Setup
 #------------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.8)
+if(ENABLE_CUDA)
+    cmake_minimum_required(VERSION 3.18)
+else()
+    cmake_minimum_required(VERSION 3.14)
+endif()
 
 project(serac LANGUAGES CXX C)
 
@@ -139,6 +143,10 @@ add_subdirectory(examples)
 #------------------------------------------------------------------------------
 
 message(STATUS "Serac Code Checks: ${SERAC_ENABLE_CODE_CHECKS}")
+
+# Add CUDA related files to code style checking list
+list(APPEND BLT_C_FILE_EXTS ".cuh")
+
 if (SERAC_ENABLE_CODE_CHECKS)
     serac_add_code_checks(PREFIX   serac
                           INCLUDES /src/ /tests/

@@ -80,6 +80,22 @@ std::string fullDirectoryFromPath(const std::string& path)
   return dir;
 }
 
+std::string getInputFileName(const std::string& file_path)
+{
+  axom::Path  path(file_path);
+  std::string basename = path.baseName();
+  std::string name;
+
+  size_t index = basename.find_last_of(".");
+  if (index != std::string::npos) {
+    name = basename.substr(0, index);
+  } else {
+    name = basename;
+  }
+
+  return name;
+}
+
 void defineVectorInputFileSchema(axom::inlet::Container& container)
 {
   // TODO: I had to remove the required tag on x as we now have an optional vector input in the coefficients. IT would

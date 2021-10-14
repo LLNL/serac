@@ -29,7 +29,12 @@ def parse_args():
     parser.add_option("-d", "--directory",
                       dest="directory",
                       default="",
-                      help="Location to build all TPL's, timestamp directory will be created (Defaults to shared location)")
+                      help="Location to build all TPL's, sys_type/timestamp directory will be created (Defaults to shared location)")
+    parser.add_option("--short-path",
+                      action="store_true",
+                      dest="short_path",
+                      default=False,
+                      help="Does not add sys_type or timestamp to tpl directory (useful for CI).")
     # Spack spec to use for the build
     parser.add_option("-s", "--spec",
                       dest="spec",
@@ -74,7 +79,7 @@ def main():
         os.chdir(repo_dir)
 
         timestamp = get_timestamp()
-        res = full_build_and_test_of_tpls(builds_dir, timestamp, opts["spec"], opts["verbose"], opts["mirror"])
+        res = full_build_and_test_of_tpls(builds_dir, timestamp, opts["spec"], opts["verbose"], opts["short_path"], opts["mirror"])
     finally:
         os.chdir(original_wd)
 

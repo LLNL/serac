@@ -100,10 +100,66 @@ struct tensor<T> {
     return value;
   }
 
-  SERAC_HOST_DEVICE tensor() : value{} {}
-  SERAC_HOST_DEVICE tensor(T v) : value(v) {}
-  SERAC_HOST_DEVICE operator T() { return value; }
-  T                 value;
+  SERAC_HOST_DEVICE constexpr tensor() : value{} {}
+  SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
+  SERAC_HOST_DEVICE constexpr operator T() { return value; }
+  T                           value;
+};
+
+template <typename T>
+struct tensor<T, 1> {
+  using type                     = T;
+  static constexpr int ndim      = 1;
+  static constexpr int first_dim = 1;
+
+  template <typename S>
+  SERAC_HOST_DEVICE constexpr auto& operator()(S)
+  {
+    return value;
+  }
+
+  template <typename S>
+  SERAC_HOST_DEVICE constexpr auto operator()(S) const
+  {
+    return value;
+  }
+
+  SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
+  SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
+
+  SERAC_HOST_DEVICE constexpr operator T() { return value; }
+  SERAC_HOST_DEVICE constexpr tensor() : value() {}
+  SERAC_HOST_DEVICE constexpr tensor(T v) : value(v) {}
+  T value;
+};
+
+template <typename T>
+struct tensor<T, 1, 1> {
+  using type                     = T;
+  static constexpr int ndim      = 2;
+  static constexpr int first_dim = 1;
+
+  template <typename S>
+  SERAC_HOST_DEVICE constexpr auto& operator()(S, S)
+  {
+    return value;
+  }
+
+  template <typename S>
+  SERAC_HOST_DEVICE constexpr auto operator()(S, S) const
+  {
+    return value;
+  }
+
+  SERAC_HOST_DEVICE constexpr auto& operator[](int) { return value; };
+  SERAC_HOST_DEVICE constexpr auto  operator[](int) const { return value; };
+
+  operator tensor<T, 1>() { return value; }
+  tensor() : value() {}
+  tensor(T v) : value(v) {}
+  tensor(tensor<T, 1> v) : value(v) {}
+
+  tensor<T, 1> value;
 };
 
 template <typename T, int n>
@@ -263,6 +319,9 @@ SERAC_HOST_DEVICE constexpr auto operator+(T other, zero)
 
 /////////////////////////////////////////////////
 
+/** @brief the unary negation of `zero` is `zero` */
+SERAC_HOST_DEVICE constexpr auto operator-(zero) { return zero{}; }
+
 /** @brief the difference of two `zero`s is `zero` */
 SERAC_HOST_DEVICE constexpr auto operator-(zero, zero) { return zero{}; }
 
@@ -299,6 +358,13 @@ SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
   return zero{};
 }
 
+/** @brief let `zero` be accessed like a tuple */
+template <int i>
+zero& get(zero& x)
+{
+  return x;
+}
+
 /**
  * @brief Removes 1s from tensor dimensions
  * For example, a tensor<T, 1, 10> is equivalent to a tensor<T, 10>
@@ -326,19 +392,126 @@ SERAC_HOST_DEVICE constexpr auto tensor_with_shape(std::integer_sequence<int, n.
  * @brief Creates a tensor of requested dimension by subsequent calls to a functor
  * Can be thought of as analogous to @p std::transform in that the set of possible
  * indices for dimensions @p n are transformed into the values of the tensor by @a f
- * @tparam n The parameter pack of integer dimensions
+ * @tparam lambda_type The type of the functor
  * @param[in] f The functor to generate the tensor values from
- * @pre @a f must accept @p sizeof...(n) arguments of type @p int
+ *
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
  */
-template <int... n, typename lambda_type>
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
+template <typename lambda_type>
 SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
 {
-  using T = decltype(f(n...));
-  tensor<T, n...> A{};
-  if constexpr (sizeof...(n) == 0) {
-    A.value = f();
-  } else {
-    for_constexpr<n...>([&](auto... i) { A(i...) = f(i...); });
+  using T = decltype(f());
+  return tensor<T>{f()};
+}
+
+/**
+ * @brief Creates a tensor of requested dimension by subsequent calls to a functor
+ *
+ * @tparam n1 The dimension of the tensor
+ * @tparam lambda_type The type of the functor
+ * @param[in] f The functor to generate the tensor values from
+ * @pre @a f must accept @p n1 arguments of type @p int
+ *
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
+ */
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
+template <int n1, typename lambda_type>
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
+{
+  using T = decltype(f(n1));
+  tensor<T, n1> A{};
+  for (int i = 0; i < n1; i++) {
+    A(i) = f(i);
+  }
+  return A;
+}
+
+/**
+ * @brief Creates a tensor of requested dimension by subsequent calls to a functor
+ *
+ * @tparam n1 The first dimension of the tensor
+ * @tparam n2 The second dimension of the tensor
+ * @tparam lambda_type The type of the functor
+ * @param[in] f The functor to generate the tensor values from
+ * @pre @a f must accept @p n1 x @p n2 arguments of type @p int
+ *
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
+ */
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
+template <int n1, int n2, typename lambda_type>
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
+{
+  using T = decltype(f(n1, n2));
+  tensor<T, n1, n2> A{};
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) {
+      A(i, j) = f(i, j);
+    }
+  }
+  return A;
+}
+
+/**
+ * @brief Creates a tensor of requested dimension by subsequent calls to a functor
+ *
+ * @tparam n1 The first dimension of the tensor
+ * @tparam n2 The second dimension of the tensor
+ * @tparam n3 The third dimension of the tensor
+ * @tparam lambda_type The type of the functor
+ * @param[in] f The functor to generate the tensor values from
+ * @pre @a f must accept @p n1 x @p n2 x @p n3 arguments of type @p int
+ *
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
+ */
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
+template <int n1, int n2, int n3, typename lambda_type>
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
+{
+  using T = decltype(f(n1, n2, n3));
+  tensor<T, n1, n2, n3> A{};
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) {
+      for (int k = 0; k < n3; k++) {
+        A(i, j, k) = f(i, j, k);
+      }
+    }
+  }
+  return A;
+}
+
+/**
+ * @brief Creates a tensor of requested dimension by subsequent calls to a functor
+ *
+ * @tparam n1 The first dimension of the tensor
+ * @tparam n2 The second dimension of the tensor
+ * @tparam n3 The third dimension of the tensor
+ * @tparam n4 The fourth dimension of the tensor
+ * @tparam lambda_type The type of the functor
+ * @param[in] f The functor to generate the tensor values from
+ * @pre @a f must accept @p n1 x @p n2 x @p n3 x @p n4 arguments of type @p int
+ *
+ * @note the different cases of 0D, 1D, 2D, 3D, and 4D are implemented separately
+ *       to work around a limitation in nvcc involving __host__ __device__ lambdas with `auto` parameters.
+ */
+SERAC_SUPPRESS_NVCC_HOSTDEVICE_WARNING
+template <int n1, int n2, int n3, int n4, typename lambda_type>
+SERAC_HOST_DEVICE constexpr auto make_tensor(lambda_type f)
+{
+  using T = decltype(f(n1, n2, n3, n4));
+  tensor<T, n1, n2, n3, n4> A{};
+  for (int i = 0; i < n1; i++) {
+    for (int j = 0; j < n2; j++) {
+      for (int k = 0; k < n3; k++) {
+        for (int l = 0; l < n4; l++) {
+          A(i, j, k, l) = f(i, j, k, l);
+        }
+      }
+    }
   }
   return A;
 }
@@ -486,6 +659,42 @@ constexpr auto& operator+=(tensor<S, n...>& A, const tensor<T, n...>& B)
     A[i] += B[i];
   }
   return A;
+}
+
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam T the underlying type of the tensor argument
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
+template <typename T>
+constexpr auto& operator+=(tensor<T>& A, const T& B)
+{
+  return A.value += B;
+}
+
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam T the underlying type of the tensor argument
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
+template <typename T>
+constexpr auto& operator+=(tensor<T, 1>& A, const T& B)
+{
+  return A.value += B;
+}
+
+/**
+ * @brief compound assignment (+) on tensors
+ * @tparam T the underlying type of the tensor argument
+ * @param[in] A The lefthand tensor
+ * @param[in] B The righthand tensor
+ */
+template <typename T>
+constexpr auto& operator+=(tensor<T, 1, 1>& A, const T& B)
+{
+  return A.value += B;
 }
 
 /**
@@ -782,20 +991,6 @@ constexpr auto dot(const tensor<S, m, n>& A, const tensor<T, n>& B)
 
 /**
  * @overload
- * @note vector . vector
- */
-template <typename S, typename T, int n>
-constexpr auto dot(const tensor<S, n>& A, const tensor<T, n>& B)
-{
-  decltype(S{} * T{}) AB{};
-  for (int i = 0; i < n; i++) {
-    AB += A[i] * B[i];
-  }
-  return AB;
-}
-
-/**
- * @overload
  * @note 3rd-order-tensor . vector
  */
 template <typename S, typename T, int m, int n, int p>
@@ -810,6 +1005,45 @@ constexpr auto dot(const tensor<S, m, n, p>& A, const tensor<T, p>& B)
     }
   }
   return AB;
+}
+
+/**
+ * @brief Dot product of a vector . vector and vector . tensor
+ *
+ * @tparam S the underlying type of the tensor (lefthand) argument
+ * @tparam T the underlying type of the tensor (righthand) argument
+ * @tparam m the dimension of the first tensor
+ * @tparam n the parameter pack of dimensions of the second tensor
+ * @param A The lefthand tensor
+ * @param B The righthand tensor
+ * @return The computed dot product
+ */
+template <typename S, typename T, int m, int... n>
+constexpr auto dot(const tensor<S, m>& A, const tensor<T, m, n...>& B)
+{
+  // this dot product function includes the vector * vector implementation and
+  // the vector * tensor one, since clang emits an error about ambiguous
+  // overloads if they are separate functions. The `if constexpr` expression avoids
+  // using an `else` because that confuses nvcc (11.2) into thinking there's not
+  // a return statement
+  if constexpr (sizeof...(n) == 0) {
+    decltype(S{} * T{}) AB{};
+    for (int i = 0; i < m; i++) {
+      AB += A[i] * B[i];
+    }
+    return AB;
+  }
+
+  if constexpr (sizeof...(n) > 0) {
+    constexpr int                     dimensions[] = {n...};
+    tensor<decltype(S{} * T{}), n...> AB{};
+    for (int i = 0; i < dimensions[0]; i++) {
+      for (int j = 0; j < m; j++) {
+        AB[i] = AB[i] + A[j] * B[j][i];
+      }
+    }
+    return AB;
+  }
 }
 
 /**
@@ -892,35 +1126,8 @@ constexpr auto ddot(const tensor<S, m, n>& A, const tensor<T, m, n>& B)
 /**
  * @brief this is a shorthand for dot(A, B)
  */
-template <typename S, typename T, int m, int n, int p>
-constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n, p>& B)
-{
-  return dot(A, B);
-}
-
-/**
- * @brief this is a shorthand for dot(A, B)
- */
-template <typename S, typename T, int m, int n>
-constexpr auto operator*(const tensor<S, m>& A, const tensor<T, m, n>& B)
-{
-  return dot(A, B);
-}
-
-/**
- * @brief this is a shorthand for dot(A, B)
- */
-template <typename S, typename T, int m>
-constexpr auto operator*(const tensor<S, m>& A, const tensor<T, m>& B)
-{
-  return dot(A, B);
-}
-
-/**
- * @brief this is a shorthand for dot(A, B)
- */
-template <typename S, typename T, int m, int n>
-constexpr auto operator*(const tensor<S, m, n>& A, const tensor<T, n>& B)
+template <typename S, typename T, int... m, int... n>
+constexpr auto operator*(const tensor<S, m...>& A, const tensor<T, n...>& B)
 {
   return dot(A, B);
 }
@@ -1038,7 +1245,7 @@ constexpr auto dev(const tensor<T, n, n>& A)
  * @return I_dim
  */
 template <int dim>
-constexpr tensor<double, dim, dim> Identity()
+SERAC_HOST_DEVICE constexpr tensor<double, dim, dim> Identity()
 {
   tensor<double, dim, dim> I{};
   for (int i = 0; i < dim; i++) {
@@ -1375,7 +1582,7 @@ using outer_product_t = typename detail::outer_prod<T1, T2>::type;
  * @param[in] arg The tensor of dual numbers
  */
 template <typename T, int... n>
-auto get_value(const tensor<dual<T>, n...>& arg)
+SERAC_HOST_DEVICE auto get_value(const tensor<dual<T>, n...>& arg)
 {
   tensor<double, n...> value{};
   for_constexpr<n...>([&](auto... i) { value(i...) = arg(i...).value; });
@@ -1386,14 +1593,14 @@ auto get_value(const tensor<dual<T>, n...>& arg)
  * @brief Retrieves the gradient component of a double (which is nothing)
  * @return The sentinel, @see zero
  */
-auto get_gradient(double /* arg */) { return zero{}; }
+SERAC_HOST_DEVICE auto get_gradient(double /* arg */) { return zero{}; }
 
 /**
  * @brief Retrieves a gradient tensor from a tensor of dual numbers
  * @param[in] arg The tensor of dual numbers
  */
 template <typename T, int... n>
-auto get_gradient(const tensor<dual<double>, n...>& arg)
+SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<double>, n...>& arg)
 {
   tensor<double, n...> g{};
   for_constexpr<n...>([&](auto... i) { g[{i...}] = arg[{i...}].gradient; });
@@ -1402,7 +1609,7 @@ auto get_gradient(const tensor<dual<double>, n...>& arg)
 
 /// @overload
 template <int... n, int... m>
-auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
+SERAC_HOST_DEVICE auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 {
   tensor<double, n..., m...> g{};
   for_constexpr<n...>([&](auto... i) { g(i...) = arg(i...).gradient; });
@@ -1412,14 +1619,14 @@ auto get_gradient(const tensor<dual<tensor<double, m...>>, n...>& arg)
 /**
  * @brief evaluate the change (to first order) in a function, f, given a small change in the input argument, dx.
  */
-constexpr auto chain_rule(const zero /* df_dx */, const zero /* dx */) { return zero{}; }
+SERAC_HOST_DEVICE constexpr auto chain_rule(const zero /* df_dx */, const zero /* dx */) { return zero{}; }
 
 /**
  * @overload
  * @note this overload implements a no-op for the case where the gradient w.r.t. an input argument is identically zero
  */
 template <typename T>
-constexpr auto chain_rule(const zero /* df_dx */, const T /* dx */)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const zero /* df_dx */, const T /* dx */)
 {
   return zero{};
 }
@@ -1429,7 +1636,7 @@ constexpr auto chain_rule(const zero /* df_dx */, const T /* dx */)
  * @note this overload implements a no-op for the case where the small change is indentically zero
  */
 template <typename T>
-constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */)
 {
   return zero{};
 }
@@ -1438,14 +1645,14 @@ constexpr auto chain_rule(const T /* df_dx */, const zero /* dx */)
  * @overload
  * @note for a scalar-valued function of a scalar, the chain rule is just multiplication
  */
-constexpr auto chain_rule(const double df_dx, const double dx) { return df_dx * dx; }
+SERAC_HOST_DEVICE constexpr auto chain_rule(const double df_dx, const double dx) { return df_dx * dx; }
 
 /**
  * @overload
  * @note for a tensor-valued function of a scalar, the chain rule is just scalar multiplication
  */
 template <int... n>
-constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
 {
   return df_dx * dx;
 }
@@ -1455,7 +1662,7 @@ constexpr auto chain_rule(const tensor<double, n...>& df_dx, const double dx)
  * @note for a scalar-valued function of a tensor, the chain rule is the inner product
  */
 template <int... n>
-constexpr auto chain_rule(const tensor<double, n...>& df_dx, const tensor<double, n...>& dx)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const tensor<double, n...>& df_dx, const tensor<double, n...>& dx)
 {
   double total{};
   for_constexpr<n...>([&](auto... i) { total += df_dx(i...) * dx(i...); });
@@ -1467,7 +1674,7 @@ constexpr auto chain_rule(const tensor<double, n...>& df_dx, const tensor<double
  * @note for a vector-valued function of a tensor, the chain rule contracts over all indices of dx
  */
 template <int m, int... n>
-constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<double, n...>& dx)
+SERAC_HOST_DEVICE constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<double, n...>& dx)
 {
   tensor<double, m> total{};
   for (int i = 0; i < m; i++) {
@@ -1481,7 +1688,7 @@ constexpr auto chain_rule(const tensor<double, m, n...>& df_dx, const tensor<dou
  * @note for a matrix-valued function of a tensor, the chain rule contracts over all indices of dx
  */
 template <int m, int n, int... p>
-auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p...>& dx)
+SERAC_HOST_DEVICE auto chain_rule(const tensor<double, m, n, p...>& df_dx, const tensor<double, p...>& dx)
 {
   tensor<double, m, n> total{};
   for (int i = 0; i < m; i++) {

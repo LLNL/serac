@@ -32,7 +32,7 @@ macro(serac_add_code_checks)
          "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
 
     set(_all_sources)
-    file(GLOB_RECURSE _all_sources "*.cpp" "*.hpp" "*.inl")
+    file(GLOB_RECURSE _all_sources "*.cpp" "*.hpp" "*.inl" "*.cuh" "*.cu")
 
     # Check for includes/excludes
     if (NOT DEFINED arg_INCLUDES)
@@ -42,7 +42,7 @@ macro(serac_add_code_checks)
         foreach(_source ${_all_sources})
             set(_to_be_included FALSE)
             foreach(_include ${arg_INCLUDES})
-                if (${_source} MATCHES ${_include})
+                if (${_source} MATCHES "^${PROJECT_SOURCE_DIR}${_include}")
                     set(_to_be_included TRUE)
                     break()
                 endif()
@@ -69,18 +69,24 @@ macro(serac_add_code_checks)
 
 
     set(_src_sources)
-    file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp")
+    file(GLOB_RECURSE _src_sources "src/*.cpp" "src/*.hpp" "src/*.inl")
+    list(FILTER _src_sources EXCLUDE REGEX ".*/tests/.*pp")
 
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check
                               CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*"
                               SRC_FILES         ${_src_sources})
 
-    set(_test_sources)
-    file(GLOB_RECURSE _test_sources "tests/*.cpp" "tests/*.hpp")
+    # Create list of recursive test directory glob expressions
+    # NOTE: GLOB operator ** did not appear to be supported by cmake and did not recursively find test subdirectories
+    # NOTE: Do not include all directories at root (for example: blt)
+
+    file(GLOB_RECURSE _test_sources "${PROJECT_SOURCE_DIR}/src/*.cpp" "{PROJECT_SOURCE_DIR}/tests/*.cpp")
+    list(FILTER _test_sources INCLUDE REGEX ".*/tests/.*pp")
 
     blt_add_clang_tidy_target(NAME              ${arg_PREFIX}_guidelines_check_tests
                               CHECKS            "clang-analyzer-*,clang-analyzer-cplusplus*,cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers"
                               SRC_FILES         ${_test_sources})
+                                  
     if (ENABLE_COVERAGE)
         blt_add_code_coverage_target(NAME   ${arg_PREFIX}_coverage
                                      RUNNER ${CMAKE_MAKE_PROGRAM} test
@@ -125,3 +131,41 @@ macro(serac_convert_to_native_escaped_file_path path output)
     file(TO_NATIVE_PATH ${path} ${output})
     string(REPLACE "\\" "\\\\"  ${output} "${${output}}")
 endmacro(serac_convert_to_native_escaped_file_path)
+
+##------------------------------------------------------------------------------
+## serac_add_tests( SOURCES       [source1 [source2 ...]]
+##                  DEPENDS_ON    [dep1 [dep2 ...]]
+##                  NUM_MPI_TASKS [num tasks])
+##
+## Creates an executable per given source and then adds the test to CTest
+##------------------------------------------------------------------------------
+
+macro(serac_add_tests)
+
+    set(options )
+    set(singleValueArgs NUM_MPI_TASKS)
+    set(multiValueArgs SOURCES DEPENDS_ON)
+
+    # Parse the arguments to the macro
+    cmake_parse_arguments(arg
+        "${options}" "${singleValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    if ( NOT DEFINED arg_NUM_MPI_TASKS )
+        set( arg_NUM_MPI_TASKS 1 )
+    endif()
+
+    foreach(filename ${arg_SOURCES})
+        get_filename_component(test_name ${filename} NAME_WE)
+
+        blt_add_executable(NAME        ${test_name}
+                           SOURCES     ${filename}
+                           OUTPUT_DIR  ${TEST_OUTPUT_DIRECTORY}
+                           DEPENDS_ON  ${arg_DEPENDS_ON}
+                           FOLDER      serac/tests )
+
+        blt_add_test(NAME          ${test_name}
+                     COMMAND       ${test_name}
+                     NUM_MPI_TASKS ${arg_NUM_MPI_TASKS} )
+    endforeach()
+
+endmacro(serac_add_tests)

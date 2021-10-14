@@ -33,7 +33,7 @@ struct QuadratureRule {
   /**
    * @brief The coordinates in reference space for each quadrature point
    */
-  tensor<double, n, dim> points;
+  reduced_tensor<double, n, dim> points;
   /**
    * @brief Returns the number of points in the rule
    */
@@ -41,7 +41,7 @@ struct QuadratureRule {
 };
 
 /**
- * @brief Returns the quadrature rule for an element and order
+ * @brief Returns the Gauss-Legendre quadrature rule for an element and order
  * @tparam The shape of the element to produce a quadrature rule for
  * @tparam Q the number of quadrature points per dimension
  */
@@ -50,6 +50,11 @@ constexpr auto GaussQuadratureRule()
 {
   auto x = GaussLegendreNodes<Q>();
   auto w = GaussLegendreWeights<Q>();
+
+  if constexpr (g == Geometry::Segment) {
+    return QuadratureRule<Q, 1>{w, x};
+  }
+
   if constexpr (g == Geometry::Quadrilateral) {
     QuadratureRule<Q * Q, 2> rule{};
     int                      count = 0;

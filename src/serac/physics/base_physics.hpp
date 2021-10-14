@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "mfem.hpp"
+#include "axom/sidre.hpp"
 
 #include "serac/physics/utilities/boundary_condition_manager.hpp"
 #include "serac/physics/utilities/equation_solver.hpp"
@@ -106,14 +107,32 @@ public:
    *
    * @param[in] output_type The type of output files to produce
    * @param[in] root_name The root name of the output files
+   * @param[in] output_directory The directory to output files to
    */
-  virtual void initializeOutput(const serac::OutputType output_type, const std::string& root_name);
+  virtual void initializeOutput(const serac::OutputType output_type, const std::string& root_name,
+                                const std::string output_directory = "");
 
   /**
    * @brief Output the current state of the PDE fields
-   *
    */
   virtual void outputState() const;
+
+  /**
+   * @brief Initializes the Sidre structure for simulation summary data
+   *
+   * @param[in] datastore Sidre DataStore where data are saved
+   * @param[in] t_final Final time of the simulation
+   * @param[in] dt The time step
+   */
+  virtual void initializeSummary(axom::sidre::DataStore& datastore, const double t_final, const double dt) const;
+
+  /**
+   * @brief Saves the summary data to the Sidre Datastore
+   *
+   * @param[in] datastore Sidre DataStore where curves are saved
+   * @param[in] t The current time of the simulation
+   */
+  virtual void saveSummary(axom::sidre::DataStore& datastore, const double t) const;
 
   /**
    * @brief Destroy the Base Solver object
@@ -160,6 +179,11 @@ protected:
    * @brief Root output name
    */
   std::string root_name_;
+
+  /**
+   * @brief Directory to output files
+   */
+  std::string output_directory_;
 
   /**
    * @brief Number of significant figures to output for floating-point

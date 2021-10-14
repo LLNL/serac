@@ -272,7 +272,7 @@ def build_and_test_host_config(test_root,host_config, report_to_stdout = False, 
     bld_output_file =  pjoin(build_dir,"output.log.make.txt")
     print("[starting build]")
     print("[log file: %s]" % bld_output_file)
-    res = sexe("cd %s && make -j 16 VERBOSE=1 " % build_dir,
+    res = sexe("cd %s && make -j 8 VERBOSE=1 " % build_dir,
                 output_file = bld_output_file,
                 echo=True)
 
@@ -434,7 +434,7 @@ def set_group_and_perms(directory):
     return 0
 
 
-def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, mirror_location = ''):
+def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = False, short_path = False, mirror_location = ''):
     if spec:
         specs = [spec]
     else:
@@ -454,10 +454,13 @@ def full_build_and_test_of_tpls(builds_dir, timestamp, spec, report_to_stdout = 
         print("[using mirror location: %s]" % mirror_dir)
 
     # unique install location
-    prefix = pjoin(builds_dir, get_system_type())
+    prefix = builds_dir
+    if not short_path:
+        prefix = pjoin(prefix, get_system_type())
     if not os.path.exists(prefix):
         os.mkdir(prefix)
-    prefix = pjoin(prefix, timestamp)
+    if not short_path:
+        prefix = pjoin(prefix, timestamp)
 
     # create a mirror
     uberenv_create_mirror(prefix, spec, "", mirror_dir)

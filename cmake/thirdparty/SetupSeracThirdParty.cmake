@@ -8,6 +8,19 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # Prevent this file from being called twice in the same scope
     set(SERAC_THIRD_PARTY_LIBRARIES_FOUND TRUE)
 
+    #------------------------------------------------------------------------------
+    # CUDA
+    #------------------------------------------------------------------------------
+    if(ENABLE_CUDA)
+        # Manually set includes as system includes
+        foreach(_target cuda_runtime cuda)
+            get_target_property(_dirs ${_target} INTERFACE_INCLUDE_DIRECTORIES)
+            set_property(TARGET ${_target} 
+                         APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                         "${_dirs}")
+        endforeach()
+    endif()
+
     # Policy to use <PackageName>_ROOT variable in find_<Package> commands
     # Policy added in 3.12+
     if(POLICY CMP0074)
@@ -21,14 +34,14 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         MESSAGE(FATAL_ERROR "Could not find Conduit. Conduit requires explicit CONDUIT_DIR.")
     endif()
 
-    set(_conduit_config "${CONDUIT_DIR}/lib/cmake/ConduitConfig.cmake")
+    set(_conduit_config "${CONDUIT_DIR}/lib/cmake/conduit/ConduitConfig.cmake")
     if(NOT EXISTS ${_conduit_config})
         MESSAGE(FATAL_ERROR "Could not find Conduit CMake include file ${_conduit_config}")
     endif()
 
     find_package(Conduit REQUIRED
                  NO_DEFAULT_PATH
-                 PATHS ${CONDUIT_DIR}/lib/cmake)
+                 PATHS ${CONDUIT_DIR}/lib/cmake/conduit)
 
     # Manually set includes as system includes
     get_target_property(_dirs conduit::conduit INTERFACE_INCLUDE_DIRECTORIES)
@@ -257,8 +270,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Should this logic be in the Caliper CMake package?
         # If CMake version doesn't support CUDAToolkit the libraries
         # are just "baked in"
-        if(ENABLE_CUDA AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
-            find_package(CUDAToolkit REQUIRED)
+        if(ENABLE_CUDA)
+            if(CMAKE_VERSION VERSION_LESS 3.17)
+                message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
+            else()
+                find_package(CUDAToolkit REQUIRED)
+            endif() 
         endif()
 
         find_package(caliper REQUIRED NO_DEFAULT_PATH 
@@ -273,6 +290,47 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     else()
         message(STATUS "Caliper support is OFF")
         set(CALIPER_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # Umpire
+    #------------------------------------------------------------------------------
+    if(UMPIRE_DIR)
+        serac_assert_is_directory(VARIABLE_NAME UMPIRE_DIR)
+        find_package(umpire REQUIRED NO_DEFAULT_PATH 
+                     PATHS ${UMPIRE_DIR})
+        message(STATUS "Umpire support is ON")
+        set(UMPIRE_FOUND TRUE)
+    else()
+        message(STATUS "Umpire support is OFF")
+        set(UMPIRE_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # CHAI
+    #------------------------------------------------------------------------------
+    if(CHAI_DIR)
+        serac_assert_is_directory(VARIABLE_NAME CHAI_DIR)
+        find_package(CHAI REQUIRED NO_DEFAULT_PATH 
+                     PATHS ${CHAI_DIR})
+        message(STATUS "CHAI support is ON")
+        set(CHAI_FOUND TRUE)
+    else()
+        message(STATUS "CHAI support is OFF")
+        set(CHAI_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
+    # PETSC
+    #------------------------------------------------------------------------------
+    if(PETSC_DIR)
+        serac_assert_is_directory(VARIABLE_NAME PETSC_DIR)
+        include(${CMAKE_CURRENT_LIST_DIR}/FindPETSc.cmake)
+        message(STATUS "PETSc support is ON")
+        set(PETSC_FOUND TRUE)
+    else()
+        message(STATUS "PETSc support is OFF")
+        set(PETSC_FOUND FALSE)
     endif()
 
     #------------------------------------------------------------------------------
