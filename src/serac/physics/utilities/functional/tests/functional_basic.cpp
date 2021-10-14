@@ -57,10 +57,10 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
   double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
 
-  std::cout << relative_error1 << " " << relative_error2 << std::endl;
-
   EXPECT_NEAR(0., relative_error1, 1.e-6);
   EXPECT_NEAR(0., relative_error2, 1.e-6);
+
+  delete dfdU_matrix;
 }
 
 #include <unistd.h>
@@ -81,8 +81,6 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  std::unique_ptr<mfem::ParMesh> mesh3D;
-
   int serial_refinement   = 0;
   int parallel_refinement = 0;
 
@@ -90,18 +88,11 @@ int main(int argc, char* argv[])
   constexpr auto dim = 3;
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  mesh3D               = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
-
-  mesh3D->EnsureNodes();
-  mesh3D->ExchangeFaceNbrData();
+  auto mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
   mfem::ParFiniteElementSpace fespace(mesh3D.get(), &fec);
-
-  // Set a random state to evaluate the residual
-  // mfem::ParGridFunction U(&fespace);
-  // U.Randomize();
 
   mfem::Vector U(fespace.TrueVSize());
   U.Randomize();
@@ -113,8 +104,6 @@ int main(int argc, char* argv[])
   // Construct the new functional object using the known test and trial spaces
   Functional<test_space(trial_space)> residual(&fespace, &fespace);
 
-  std::cout << "after functional ctor" << std::endl;
-
   residual.AddVolumeIntegral(
       [=](auto x, auto temperature) {
         auto [u, du_dx] = temperature;
@@ -124,11 +113,7 @@ int main(int argc, char* argv[])
       },
       *mesh3D);
 
-  std::cout << "after volume integral" << std::endl;
-
   residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
-
-  std::cout << "after surface integral" << std::endl;
   
   check_gradient(residual, U);
 

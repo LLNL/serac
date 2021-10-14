@@ -208,14 +208,8 @@ int main(int argc, char* argv[])
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
   mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
 
-  mesh2D->EnsureNodes();
-  mesh2D->ExchangeFaceNbrData();
-
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
-
-  mesh3D->EnsureNodes();
-  mesh3D->ExchangeFaceNbrData();
 
   functional_qoi_test(*mesh2D, H1<2>{}, Dimension<2>{});
   functional_qoi_test(*mesh3D, H1<1>{}, Dimension<3>{});

@@ -430,6 +430,12 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, con
     parallel_mesh->UniformRefinement();
   }
 
+  // for reasons I don't understand, 
+  // these calls need to be made immediately after creating the mesh,
+  // in order for mfem::FaceRestriction to work properly (?)
+  parallel_mesh->EnsureNodes();
+  parallel_mesh->ExchangeFaceNbrData();
+
   return parallel_mesh;
 }
 
