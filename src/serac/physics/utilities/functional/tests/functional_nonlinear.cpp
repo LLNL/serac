@@ -47,7 +47,7 @@ struct hcurl_qfunction {
 template <typename T>
 void check_gradient(Functional<T>& f, mfem::Vector& U)
 {
-  int                   seed = 42;
+  int seed = 42;
 
   mfem::Vector dU(U.Size());
   dU.Randomize(seed);
@@ -70,7 +70,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   df1 -= f(U_minus);
   df1 /= (2 * epsilon);
 
-  mfem::HypreParMatrix * dfdU_matrix = dfdU; 
+  mfem::HypreParMatrix* dfdU_matrix = dfdU;
 
   mfem::Vector df2 = (*dfdU_matrix) * dU;
   mfem::Vector df3 = dfdU(dU);
@@ -171,23 +171,33 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 }
 
 TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-//TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-//TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
+// TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+// TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
 //
-//TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-//TEST(thermal, 3D_quadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-//TEST(thermal, 3D_cubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
+// TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+// TEST(thermal, 3D_quadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+// TEST(thermal, 3D_cubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
 
-//TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
-//TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
-//TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
+// TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+// TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
+// TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
 //
-//TEST(elasticity, 3D_linear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
-//TEST(elasticity, 3D_quadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
-//TEST(elasticity, 3D_cubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
+// TEST(elasticity, 3D_linear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
+// TEST(elasticity, 3D_quadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
+// TEST(elasticity, 3D_cubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
+
+#include <thread>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 int main(int argc, char* argv[])
 {
+  //{
+  //  int i = 0;
+  //  do { std::this_thread::sleep_for(1s); } while (i == 0);
+  //}
+
   ::testing::InitGoogleTest(&argc, argv);
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -210,7 +220,7 @@ int main(int argc, char* argv[])
 
   return result;
 #else
-  //functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{});
+  // functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{});
   functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{});
 #endif
 }

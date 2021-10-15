@@ -1,3 +1,4 @@
+// these tests will be removed once axom::Array is ready
 #include "serac/physics/utilities/functional/array.hpp"
 
 __global__ void fill_kernel(serac::GPUView<double, 2> values)

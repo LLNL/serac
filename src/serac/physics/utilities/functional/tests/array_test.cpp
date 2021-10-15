@@ -1,3 +1,4 @@
+// these tests will be removed once axom::Array is ready
 #include "serac/physics/utilities/functional/array.hpp"
 
 constexpr int N1 = 8;

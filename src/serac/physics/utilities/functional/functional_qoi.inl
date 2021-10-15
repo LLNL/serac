@@ -97,7 +97,8 @@ public:
       int num_bdr_elements           = trial_space_->GetNFbyType(mfem::FaceType::Boundary);
       int ndof_per_test_bdr_element  = 1;
       int ndof_per_trial_bdr_element = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
-      bdr_element_gradients_ = Array<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
+      bdr_element_gradients_ =
+          Array<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
     }
   }
 
@@ -168,8 +169,7 @@ public:
     // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-    bdr_integrals_.emplace_back(num_bdr_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{},
-                                     integrand);
+    bdr_integrals_.emplace_back(num_bdr_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{}, integrand);
   }
 
   /**
@@ -257,9 +257,13 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<double(trial)>& f) : form_(f), lookup_tables(*(f.trial_space_)),
-      gradient_L_(f.trial_space_->GetVSize()),
-      gradient_T_(f.trial_space_->NewTrueDofVector()) {}
+    Gradient(Functional<double(trial)>& f)
+        : form_(f),
+          lookup_tables(*(f.trial_space_)),
+          gradient_L_(f.trial_space_->GetVSize()),
+          gradient_T_(f.trial_space_->NewTrueDofVector())
+    {
+    }
 
     void Mult(const mfem::Vector& x, mfem::Vector& y) const { form_.GradientMult(x, y); }
 
@@ -323,8 +327,7 @@ private:
 
     mfem::Vector gradient_L_;
 
-    std::unique_ptr < mfem::HypreParVector > gradient_T_;
-
+    std::unique_ptr<mfem::HypreParVector> gradient_T_;
   };
 
   /**

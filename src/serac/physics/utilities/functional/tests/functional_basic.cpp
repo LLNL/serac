@@ -26,7 +26,7 @@ using namespace serac::profiling;
 template <typename T>
 void check_gradient(Functional<T>& f, mfem::Vector& U)
 {
-  int                   seed = 42;
+  int seed = 42;
 
   mfem::Vector dU(U.Size());
   dU.Randomize(seed);
@@ -49,7 +49,7 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   df1 -= f(U_minus);
   df1 /= (2 * epsilon);
 
-  mfem::HypreParMatrix * dfdU_matrix = dfdU; 
+  mfem::HypreParMatrix* dfdU_matrix = dfdU;
 
   mfem::Vector df2 = (*dfdU_matrix) * dU;
   mfem::Vector df3 = dfdU(dU);
@@ -67,7 +67,6 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
 
 int main(int argc, char* argv[])
 {
-
   //{
   //  int i=0;
   //  while (0 == i) sleep(1);
@@ -88,7 +87,7 @@ int main(int argc, char* argv[])
   constexpr auto dim = 3;
 
   std::string meshfile = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
-  auto mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
+  auto        mesh3D   = mesh::refineAndDistribute(buildMeshFromFile(meshfile), serial_refinement, parallel_refinement);
 
   // Create standard MFEM bilinear and linear forms on H1
   auto                        fec = mfem::H1_FECollection(p, dim);
@@ -114,7 +113,7 @@ int main(int argc, char* argv[])
       *mesh3D);
 
   residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
-  
+
   check_gradient(residual, U);
 
   MPI_Finalize();

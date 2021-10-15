@@ -103,7 +103,7 @@ public:
                                                                                          J_, num_elements);
       };
 
-      element_gradient_ = [this, qf_derivatives, num_elements](ArrayView<double, 3, ExecutionSpace::CPU> K_e) {
+      element_gradient_ = [this, qf_derivatives, num_elements](CPUView<double, 3> K_e) {
         domain_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_,
                                                                                        num_elements);
       };

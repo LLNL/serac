@@ -80,12 +80,12 @@ double sum_of_measures_mfem(mfem::ParMesh& mesh)
 }
 
 template <typename T>
-void check_gradient(Functional<T>& f, mfem::HypreParVector & U)
+void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
 {
   int seed = 42;
 
   mfem::HypreParVector dU = U;
-  dU = U;
+  dU                      = U;
   dU.Randomize(seed);
 
   double epsilon = 1.0e-8;
@@ -94,16 +94,16 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector & U)
   // so we evaluate f(U) before calling grad(f)
   f(U);
 
-  auto& dfdU = grad(f);
-  mfem::HypreParVector & dfdU_vec = dfdU;
+  auto&                 dfdU     = grad(f);
+  mfem::HypreParVector& dfdU_vec = dfdU;
 
   // TODO: fix this weird copy ctor behavior in mfem::HypreParVector
   auto U_plus = U;
-  U_plus = U; // it hurts me to write this
+  U_plus      = U;  // it hurts me to write this
   U_plus.Add(epsilon, dU);
 
   auto U_minus = U;
-  U_minus = U;
+  U_minus      = U;
   U_minus.Add(-epsilon, dU);
 
   double df1 = (f(U_plus) - f(U_minus)) / (2 * epsilon);
@@ -131,8 +131,8 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   mfem::FunctionCoefficient x_squared([](mfem::Vector x) { return x[0] * x[0]; });
   U_gf.ProjectCoefficient(x_squared);
 
-  mfem::HypreParVector * tmp = fespace.NewTrueDofVector();
-  mfem::HypreParVector U = *tmp;
+  mfem::HypreParVector* tmp = fespace.NewTrueDofVector();
+  mfem::HypreParVector  U   = *tmp;
   U_gf.GetTrueDofs(U);
 
   // Define the types for the test and trial spaces using the function arguments
@@ -182,14 +182,12 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   check_gradient(f, U);
 
   delete tmp;
-
 }
 
 #include <unistd.h>
 
 int main(int argc, char* argv[])
 {
-
   //{
   //  int i=0;
   //  while (0 == i) sleep(1);

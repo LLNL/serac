@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
   int entries_per_proc = 6;
-  int total_entries = entries_per_proc * num_procs;
+  int total_entries    = entries_per_proc * num_procs;
 
   mfem::Vector x_global(total_entries);
   mfem::Vector y_global(total_entries);
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     y_local_data[i] = y_global(i + myid * entries_per_proc);
   }
 
-  HYPRE_BigInt col[2] = {myid * entries_per_proc, (myid + 1) * entries_per_proc};
+  HYPRE_BigInt         col[2] = {myid * entries_per_proc, (myid + 1) * entries_per_proc};
   mfem::HypreParVector x_local(MPI_COMM_WORLD, total_entries, x_local_data, col);
   mfem::HypreParVector y_local(MPI_COMM_WORLD, total_entries, y_local_data, col);
 
@@ -50,14 +50,13 @@ int main(int argc, char* argv[])
 
   if (myid == 0) {
     printf("before: \n");
-    printf("x_global * x_global: %f\n"
-           "x_local * x_local: %f\n\n",
-           InnerProduct(x_global, x_global), xTx);
+    printf(
+        "x_global * x_global: %f\n"
+        "x_local * x_local: %f\n\n",
+        InnerProduct(x_global, x_global), xTx);
   }
 
-  auto orthogonalize = [](mfem::Vector & x, mfem::Vector & y) {
-    x.Add(-InnerProduct(x, y) / InnerProduct(y, y), y);
-  };
+  auto orthogonalize = [](mfem::Vector& x, mfem::Vector& y) { x.Add(-InnerProduct(x, y) / InnerProduct(y, y), y); };
 
   orthogonalize(x_global, y_global);
   orthogonalize(x_local, y_local);
@@ -66,9 +65,10 @@ int main(int argc, char* argv[])
 
   if (myid == 0) {
     printf("after: \n");
-    printf("x_global * x_global: %f\n"
-           "x_local * x_local: %f\n\n",
-           InnerProduct(x_global, x_global), xTx);
+    printf(
+        "x_global * x_global: %f\n"
+        "x_local * x_local: %f\n\n",
+        InnerProduct(x_global, x_global), xTx);
   }
 
   {

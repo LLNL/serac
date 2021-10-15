@@ -272,8 +272,8 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, derivatives_type* derivatives_ptr,
-                             const mfem::Vector& J_, int num_elements)
+void element_gradient_kernel(CPUView<double, 3> dk, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
+                             int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -324,7 +324,7 @@ void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, deriv
     //
     // Note: we "transpose" these values to get them into the layout that mfem expects
     // clang-format off
-    for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
+    for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([e, &dk, &K_elem](int i, int j, int k, int l) {
       dk(e, i + test_ndof * j, k + trial_ndof * l) += K_elem[i][k][j][l];
     });
     // clang-format on

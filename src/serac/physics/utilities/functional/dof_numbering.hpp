@@ -44,7 +44,7 @@ bool operator!=(const ElemInfo& x, const ElemInfo& y)
   return (x.global_row_ != y.global_row_) || (x.global_col_ != y.global_col_);
 }
 
-auto& operator<<(std::ostream& out, ElemInfo e)
+auto& operator<<(std::ostream& out, const ElemInfo& e)
 {
   out << e.global_row_ << ", ";
   out << e.global_col_ << ", ";
@@ -95,8 +95,7 @@ struct SignedIndex {
 struct DofNumbering {
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
       : element_dofs_(fespace.GetNE(), fespace.GetFE(0)->GetDof() * fespace.GetVDim()),
-        bdr_element_dofs_(fespace.GetNFbyType(mfem::FaceType::Boundary),
-                               fespace.GetBE(0)->GetDof() * fespace.GetVDim())
+        bdr_element_dofs_(fespace.GetNFbyType(mfem::FaceType::Boundary), fespace.GetBE(0)->GetDof() * fespace.GetVDim())
   {
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -108,11 +107,11 @@ struct DofNumbering {
         iota[i] = i;
       }
 
-      // we're using Mult() to reveal the locations nonzero entries 
+      // we're using Mult() to reveal the locations nonzero entries
       // in the restriction operator, since that information is not
       // made available through its public interface
       //
-      // TODO: investigate refactoring mfem's restriction operators 
+      // TODO: investigate refactoring mfem's restriction operators
       // to provide this information in more natural way.
       elem_restriction->Mult(iota, dof_ids);
       const double* dof_ids_h = dof_ids.HostRead();
@@ -140,7 +139,7 @@ struct DofNumbering {
 
       for (size_t e = 0; e < bdr_element_dofs_.size(0); e++) {
         for (size_t i = 0; i < bdr_element_dofs_.size(1); i++) {
-          int mfem_id                  = static_cast<int>(dof_ids_h[bdr_element_dofs_.index(e, i)]);
+          int mfem_id             = static_cast<int>(dof_ids_h[bdr_element_dofs_.index(e, i)]);
           bdr_element_dofs_(e, i) = SignedIndex{mfem_index(mfem_id), mfem_sign(mfem_id)};
         }
       }
@@ -171,13 +170,13 @@ struct GradientAssemblyLookupTables {
       : element_nonzero_LUT(trial_fespace.GetNE(), test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim(),
                             trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim()),
         bdr_element_nonzero_LUT(trial_fespace.GetNFbyType(mfem::FaceType::Boundary),
-                                     test_fespace.GetBE(0)->GetDof() * test_fespace.GetVDim(),
-                                     trial_fespace.GetBE(0)->GetDof() * trial_fespace.GetVDim())
+                                test_fespace.GetBE(0)->GetDof() * test_fespace.GetVDim(),
+                                trial_fespace.GetBE(0)->GetDof() * trial_fespace.GetVDim())
   {
     DofNumbering test_dofs(test_fespace);
     DofNumbering trial_dofs(trial_fespace);
 
-    int num_elements          = trial_fespace.GetNE();
+    int num_elements     = trial_fespace.GetNE();
     int num_bdr_elements = trial_fespace.GetNFbyType(mfem::FaceType::Boundary);
 
     std::vector<ElemInfo> infos;
