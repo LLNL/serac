@@ -86,6 +86,37 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
 
     #------------------------------------------------------------------------------
+    # Caliper
+    #------------------------------------------------------------------------------
+    if(CALIPER_DIR)
+        serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
+
+        # Should this logic be in the Caliper CMake package?
+        # If CMake version doesn't support CUDAToolkit the libraries
+        # are just "baked in"
+        if(ENABLE_CUDA)
+            if(CMAKE_VERSION VERSION_LESS 3.17)
+                message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
+            else()
+                find_package(CUDAToolkit REQUIRED)
+            endif() 
+        endif()
+
+        find_package(caliper REQUIRED NO_DEFAULT_PATH 
+                     PATHS ${CALIPER_DIR})
+        message(STATUS "Caliper support is ON")
+        set(CALIPER_FOUND TRUE)
+
+        # Set the include directories as Caliper does not completely
+        # configure the "caliper" target
+        set_target_properties(caliper PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES ${caliper_INCLUDE_PATH})
+    else()
+        message(STATUS "Caliper support is OFF")
+        set(CALIPER_FOUND FALSE)
+    endif()
+
+    #------------------------------------------------------------------------------
     # MFEM
     #------------------------------------------------------------------------------
     if(MFEM_DIR)
@@ -129,12 +160,15 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         # Assumes that we have AMGX if we have CUDA
         set(MFEM_USE_AMGX ${ENABLE_CUDA} CACHE BOOL "")
 
+        set(MFEM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
+
         # Prefix the "check" targets
         set(MFEM_CUSTOM_TARGET_PREFIX "mfem_" CACHE STRING "" FORCE)
         # Disable tests + examples
         set(MFEM_ENABLE_TESTING OFF CACHE BOOL "")
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
+
         add_subdirectory(${PROJECT_SOURCE_DIR}/mfem)
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
@@ -157,6 +191,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         find_package(axom REQUIRED
                         NO_DEFAULT_PATH 
                         PATHS ${AXOM_DIR}/lib/cmake)
+
+        message(STATUS "Axom support is ON")
 
         #
         # Check for optional Axom headers that are required for Serac
@@ -209,6 +245,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     else()
         # Otherwise we use the submodule
         message(STATUS "Using axom submodule")
+        message("BUILDING AXOM!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         if(NOT LUA_DIR)
             message(FATAL_ERROR "LUA_DIR is required to use the axom submodule"
                                 "\nTry running CMake with '-DLUA_DIR=path/to/lua/install'\n ")
@@ -216,6 +253,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION ON CACHE BOOL "")
         set(AXOM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(AXOM_ENABLE_TESTS    OFF CACHE BOOL "")
+        set(AXOM_ENABLE_DOCS     OFF CACHE BOOL "")
+        set(AXOM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
         # Used for the doxygen target
         set(AXOM_CUSTOM_TARGET_PREFIX "axom_" CACHE STRING "" FORCE)
         if(ENABLE_CUDA)
@@ -231,6 +270,9 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set_target_properties(axom PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${_axom_includes}>")
         get_target_property(_axom_includes axom INTERFACE_INCLUDE_DIRECTORIES)
         message(STATUS "includes are ${_axom_includes}")
+
+        message(STATUS "Axom support is ON via submodule")
+
     endif()
 
     #------------------------------------------------------------------------------
@@ -259,38 +301,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     endif()
     
     message(STATUS "Tribol support is " ${TRIBOL_FOUND})
-
-
-    #------------------------------------------------------------------------------
-    # Caliper
-    #------------------------------------------------------------------------------
-    if(CALIPER_DIR)
-        serac_assert_is_directory(VARIABLE_NAME CALIPER_DIR)
-
-        # Should this logic be in the Caliper CMake package?
-        # If CMake version doesn't support CUDAToolkit the libraries
-        # are just "baked in"
-        if(ENABLE_CUDA)
-            if(CMAKE_VERSION VERSION_LESS 3.17)
-                message(FATAL_ERROR "Serac+Caliper+CUDA requires CMake > 3.17.")
-            else()
-                find_package(CUDAToolkit REQUIRED)
-            endif() 
-        endif()
-
-        find_package(caliper REQUIRED NO_DEFAULT_PATH 
-                     PATHS ${CALIPER_DIR})
-        message(STATUS "Caliper support is ON")
-        set(CALIPER_FOUND TRUE)
-
-        # Set the include directories as Caliper does not completely
-        # configure the "caliper" target
-        set_target_properties(caliper PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES ${caliper_INCLUDE_PATH})
-    else()
-        message(STATUS "Caliper support is OFF")
-        set(CALIPER_FOUND FALSE)
-    endif()
 
     #------------------------------------------------------------------------------
     # Umpire

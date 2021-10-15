@@ -302,8 +302,9 @@ class Serac(CachedCMakePackage, CudaPackage):
             entries.append(cmake_cache_path("TPL_ROOT", tpl_root))
 
         # required tpls
+        # Note: lua is included in the case that axom is built via submodule
         for dep in ('ascent', 'axom', 'conduit', 'mfem', 'hdf5',
-                    'hypre', 'metis', 'parmetis'):
+                    'hypre', 'metis', 'parmetis', 'lua'):
             dep_dir = get_spec_path(spec, dep, path_replacements)
             entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
                                             dep_dir))
