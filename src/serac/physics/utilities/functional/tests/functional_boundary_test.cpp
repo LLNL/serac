@@ -117,7 +117,7 @@ void boundary_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim>)
   B.Finalize();
   std::unique_ptr<mfem::HypreParMatrix> J(B.ParallelAssemble());
 
-  mfem::ParGridFunction U(&fespace);
+  mfem::Vector U(fespace.TrueVSize());
   U.Randomize();
 
   using test_space  = decltype(test);

@@ -407,15 +407,19 @@ private:
       }
 
       auto J_local =
-          mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, Height(), Width(),
+          mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values, form_.output_L_.Size(), form_.input_L_.Size(),
                              sparse_matrix_frees_graph_ptrs, sparse_matrix_frees_values_ptr, col_ind_is_sorted);
 
-      auto* J_hypre = new mfem::HypreParMatrix(form_.test_space_->GetComm(), form_.test_space_->GlobalVSize(),
+      auto * R = form_.test_space_->Dof_TrueDof_Matrix();
+
+      auto* A = new mfem::HypreParMatrix(form_.test_space_->GetComm(), form_.test_space_->GlobalVSize(),
                                                form_.trial_space_->GlobalVSize(), form_.test_space_->GetDofOffsets(),
                                                form_.trial_space_->GetDofOffsets(), &J_local);
 
-      // does mfem::RAP delete J_hypre?
-      return mfem::RAP(form_.test_space_->Dof_TrueDof_Matrix(), J_hypre, form_.trial_space_->Dof_TrueDof_Matrix());
+      auto * P = form_.trial_space_->Dof_TrueDof_Matrix();
+
+      // does mfem::RAP delete A?
+      return mfem::RAP(R, A, P);
     }
 
   private:

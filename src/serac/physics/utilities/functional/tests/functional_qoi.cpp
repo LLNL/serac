@@ -184,14 +184,8 @@ void functional_qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>)
   delete tmp;
 }
 
-#include <unistd.h>
-
 int main(int argc, char* argv[])
 {
-  //{
-  //  int i=0;
-  //  while (0 == i) sleep(1);
-  //}
 
   ::testing::InitGoogleTest(&argc, argv);
   MPI_Init(&argc, &argv);

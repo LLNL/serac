@@ -78,8 +78,8 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   double relative_error1 = df1.DistanceTo(df2) / df1.Norml2();
   double relative_error2 = df1.DistanceTo(df3) / df1.Norml2();
 
-  EXPECT_NEAR(0., relative_error1, 1.e-6);
-  EXPECT_NEAR(0., relative_error2, 1.e-6);
+  EXPECT_NEAR(0., relative_error1, 2.e-6);
+  EXPECT_NEAR(0., relative_error2, 2.e-6);
 
   delete dfdU_matrix;
 }
@@ -171,32 +171,23 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
 }
 
 TEST(thermal, 2D_linear) { functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{}); }
-// TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
-// TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
-//
-// TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
-// TEST(thermal, 3D_quadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
-// TEST(thermal, 3D_cubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
+TEST(thermal, 2D_quadratic) { functional_test(*mesh2D, H1<2>{}, H1<2>{}, Dimension<2>{}); }
+TEST(thermal, 2D_cubic) { functional_test(*mesh2D, H1<3>{}, H1<3>{}, Dimension<2>{}); }
 
-// TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
-// TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
-// TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
-//
-// TEST(elasticity, 3D_linear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
-// TEST(elasticity, 3D_quadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
-// TEST(elasticity, 3D_cubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
+TEST(thermal, 3D_linear) { functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{}); }
+TEST(thermal, 3D_quadratic) { functional_test(*mesh3D, H1<2>{}, H1<2>{}, Dimension<3>{}); }
+TEST(thermal, 3D_cubic) { functional_test(*mesh3D, H1<3>{}, H1<3>{}, Dimension<3>{}); }
 
-#include <thread>
-#include <chrono>
+TEST(elasticity, 2D_linear) { functional_test(*mesh2D, H1<1, 2>{}, H1<1, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_quadratic) { functional_test(*mesh2D, H1<2, 2>{}, H1<2, 2>{}, Dimension<2>{}); }
+TEST(elasticity, 2D_cubic) { functional_test(*mesh2D, H1<3, 2>{}, H1<3, 2>{}, Dimension<2>{}); }
 
-using namespace std::chrono_literals;
+TEST(elasticity, 3D_linear) { functional_test(*mesh3D, H1<1, 3>{}, H1<1, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_quadratic) { functional_test(*mesh3D, H1<2, 3>{}, H1<2, 3>{}, Dimension<3>{}); }
+TEST(elasticity, 3D_cubic) { functional_test(*mesh3D, H1<3, 3>{}, H1<3, 3>{}, Dimension<3>{}); }
 
 int main(int argc, char* argv[])
 {
-  //{
-  //  int i = 0;
-  //  do { std::this_thread::sleep_for(1s); } while (i == 0);
-  //}
 
   ::testing::InitGoogleTest(&argc, argv);
   MPI_Init(&argc, &argv);
@@ -214,13 +205,8 @@ int main(int argc, char* argv[])
   std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
   mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
 
-#if 0
   int result = RUN_ALL_TESTS();
   MPI_Finalize();
 
   return result;
-#else
-  // functional_test(*mesh2D, H1<1>{}, H1<1>{}, Dimension<2>{});
-  functional_test(*mesh3D, H1<1>{}, H1<1>{}, Dimension<3>{});
-#endif
 }
