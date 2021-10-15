@@ -85,6 +85,39 @@ struct SignedIndex {
 };
 
 /**
+ * @brief this is a (hopefully) temporary measure to work around the fact that mfem's
+ * support for querying information about boundary elements is inconsistent, or entirely
+ * unimplemented.
+ *
+ * known issues: getting dofs/ids for boundary elements in 2D w/ Hcurl spaces
+ *               getting dofs/ids for boundary elements in 2D,3D w/ L2 spaces
+ */
+template <typename T>
+serac::CPUArray<T, 3> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& trial_fes,
+                                                            const mfem::ParFiniteElementSpace& test_fes)
+{
+  auto* test_BE  = test_fes.GetBE(0);
+  auto* trial_BE = trial_fes.GetBE(0);
+  if (test_BE && trial_BE) {
+    return serac::CPUArray<T, 3>(trial_fes.GetNFbyType(mfem::FaceType::Boundary),
+                                 test_BE->GetDof() * test_fes.GetVDim(), trial_BE->GetDof() * trial_fes.GetVDim());
+  } else {
+    return serac::CPUArray<T, 3>(0, 0, 0);
+  }
+}
+
+template <typename T>
+serac::CPUArray<T, 2> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& fes)
+{
+  auto* BE = fes.GetBE(0);
+  if (BE) {
+    return serac::CPUArray<T, 2>(fes.GetNFbyType(mfem::FaceType::Boundary), BE->GetDof() * fes.GetVDim());
+  } else {
+    return serac::CPUArray<T, 2>(0, 0);
+  }
+}
+
+/**
  * @brief this object extracts the dofs for each element in a FiniteElementSpace as a 2D array such that
  *   element_dofs_(e, i) will be the `i`th dof of element `e`.
  *
@@ -95,7 +128,7 @@ struct SignedIndex {
 struct DofNumbering {
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
       : element_dofs_(fespace.GetNE(), fespace.GetFE(0)->GetDof() * fespace.GetVDim()),
-        bdr_element_dofs_(fespace.GetNFbyType(mfem::FaceType::Boundary), fespace.GetBE(0)->GetDof() * fespace.GetVDim())
+        bdr_element_dofs_(guard_against_unimplemented_bdr_stuff<SignedIndex>(fespace))
   {
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -169,9 +202,7 @@ struct GradientAssemblyLookupTables {
   GradientAssemblyLookupTables(mfem::ParFiniteElementSpace& test_fespace, mfem::ParFiniteElementSpace& trial_fespace)
       : element_nonzero_LUT(trial_fespace.GetNE(), test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim(),
                             trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim()),
-        bdr_element_nonzero_LUT(trial_fespace.GetNFbyType(mfem::FaceType::Boundary),
-                                test_fespace.GetBE(0)->GetDof() * test_fespace.GetVDim(),
-                                trial_fespace.GetBE(0)->GetDof() * trial_fespace.GetVDim())
+        bdr_element_nonzero_LUT(guard_against_unimplemented_bdr_stuff<SignedIndex>(trial_fespace, test_fespace))
   {
     DofNumbering test_dofs(test_fespace);
     DofNumbering trial_dofs(trial_fespace);

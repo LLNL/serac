@@ -143,11 +143,7 @@ public:
     }
 
     {
-      int num_bdr_elements           = test_space_->GetNFbyType(mfem::FaceType::Boundary);
-      int ndof_per_test_bdr_element  = test_space_->GetBE(0)->GetDof() * test_space_->GetVDim();
-      int ndof_per_trial_bdr_element = trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim();
-      bdr_element_gradients_ =
-          Array<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
+      bdr_element_gradients_ = guard_against_unimplemented_bdr_stuff<double>(*test_space_, *trial_space_);
     }
   }
 
