@@ -138,7 +138,8 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
+  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
+                         QuadratureData<qpt_data_type>& data = dummy_qdata)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -162,9 +163,9 @@ public:
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
    * @param[in] data The data structure containing per-quadrature-point data
-   * 
+   *
    * @brief Adds a boundary integral term to the weak formulation of the PDE
-   * 
+   *
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
@@ -197,7 +198,7 @@ public:
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[in] data The data structure containing per-quadrature-point data
-   * 
+   *
    * @brief Adds an area integral, i.e., over 2D elements in R^2
    */
   template <typename lambda, typename qpt_data_type = void>
@@ -212,7 +213,7 @@ public:
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[in] data The data structure containing per-quadrature-point data
-   * 
+   *
    * @brief Adds a volume integral, i.e., over 3D elements in R^3
    */
   template <typename lambda, typename qpt_data_type = void>
@@ -231,7 +232,7 @@ public:
   /**
    * @param[in] input_T The input vector
    * @param[out] output_T The output vector
-   * 
+   *
    * @brief Implements mfem::Operator::Mult
    */
   void Mult(const mfem::Vector& input_T, mfem::Vector& output_T) const
@@ -279,7 +280,7 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<double(trial)> & f)
+    Gradient(Functional<double(trial)>& f)
         : form_(f),
           lookup_tables(*(f.trial_space_)),
           gradient_L_(f.trial_space_->GetVSize()),
