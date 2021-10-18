@@ -138,7 +138,7 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata
+  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
