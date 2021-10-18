@@ -162,7 +162,6 @@ public:
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
-   * @param[in] data The data structure containing per-quadrature-point data
    *
    * @brief Adds a boundary integral term to the weak formulation of the PDE
    *
