@@ -264,7 +264,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
  * @note lambda does not appear as a template argument, as the stiffness matrix is
  * inherently just a linear transformation
  *
- * @param[in] K_e Vectorized view of stiffness matrix contributions
+ * @param[in] dk array for storing each element's gradient contributions
  * @param[in] derivatives_ptr The address at which derivatives of the q-function with
  * respect to its arguments are stored
  * @param[in] J_ The Jacobians of the element transformations at all quadrature points
@@ -344,7 +344,7 @@ class BoundaryIntegral;
 template <typename spaces>
 class BoundaryIntegral<spaces, ExecutionSpace::CPU> {
 public:
-  static constexpr ExecutionSpace exec = ExecutionSpace::CPU;
+  static constexpr ExecutionSpace exec = ExecutionSpace::CPU;    ///< whether calculations should happen on CPU or GPU
   using test_space                     = test_space_t<spaces>;   ///< the test function space
   using trial_space                    = trial_space_t<spaces>;  ///< the trial function space
 

@@ -122,9 +122,9 @@ struct L2 {
  * @tparam c The vector dimension
  */
 struct QOI {
-  static constexpr int    order      = 0;  ///< the polynomial order of the elements
-  static constexpr int    components = 1;  ///< the number of components at each node
-  static constexpr Family family     = Family::QOI;
+  static constexpr int    order      = 0;            ///< the polynomial order of the elements
+  static constexpr int    components = 1;            ///< the number of components at each node
+  static constexpr Family family     = Family::QOI;  ///< the family of the basis functions
 };
 
 /**

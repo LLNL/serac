@@ -44,17 +44,6 @@ bool operator!=(const ElemInfo& x, const ElemInfo& y)
   return (x.global_row_ != y.global_row_) || (x.global_col_ != y.global_col_);
 }
 
-auto& operator<<(std::ostream& out, const ElemInfo& e)
-{
-  out << e.global_row_ << ", ";
-  out << e.global_col_ << ", ";
-  out << e.local_row_ << ", ";
-  out << e.local_col_ << ", ";
-  out << e.element_id_ << ", ";
-  out << e.on_boundary_;
-  return out;
-}
-
 /**
  * @brief mfem will frequently encode {sign, index} into a single int32_t.
  * This function decodes the sign from such a type.
@@ -107,6 +96,7 @@ serac::CPUArray<T, 3> guard_against_unimplemented_bdr_stuff(const mfem::ParFinit
   }
 }
 
+/// @overload
 template <typename T>
 serac::CPUArray<T, 2> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& fes)
 {
@@ -128,6 +118,12 @@ serac::CPUArray<T, 2> guard_against_unimplemented_bdr_stuff(const mfem::ParFinit
  *    convention for quadrature point numbering.
  */
 struct DofNumbering {
+  /**
+   * @param fespace the finite element space to extract dof numbers from
+   *
+   * @brief create lookup tables of which degrees of freedom correspond to
+   * each element and boundary element
+   */
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
       : element_dofs_(static_cast<size_t>(fespace.GetNE()),
                       static_cast<size_t>(fespace.GetFE(0)->GetDof() * fespace.GetVDim())),
@@ -202,6 +198,13 @@ struct DofNumbering {
  *    convention for quadrature point numbering.
  */
 struct GradientAssemblyLookupTables {
+  /**
+   * @param test_fespace the test finite element space to extract dof numbers from
+   * @param trial_fespace the trial finite element space to extract dof numbers from
+   *
+   * @brief create lookup tables of which degrees of freedom correspond to
+   * each element and boundary element
+   */
   GradientAssemblyLookupTables(mfem::ParFiniteElementSpace& test_fespace, mfem::ParFiniteElementSpace& trial_fespace)
       : element_nonzero_LUT(static_cast<size_t>(trial_fespace.GetNE()),
                             static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),

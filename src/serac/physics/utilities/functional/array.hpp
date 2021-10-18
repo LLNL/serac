@@ -10,6 +10,8 @@
  * @brief a placeholder that implements some basic multdimensional array stuff until axom::Array is ready
  */
 
+//! @cond suppress doxygen warnings for this file, as it is temporary
+
 #pragma once
 
 #include <stddef.h>
@@ -23,6 +25,14 @@ namespace serac {
 
 namespace detail {
 
+/**
+ * @tparam T the data type to allocate memory for
+ * @tparam exec which memory space to use (CPU or GPU)
+ * @param n how many items to allocate memory for
+ *
+ * @brief an abstraction for memory allocation for different types,
+ *   and on different memory spaces
+ */
 template <typename T, ExecutionSpace exec>
 T* allocate(size_t n)
 {
@@ -39,6 +49,13 @@ T* allocate(size_t n)
 #endif
 }
 
+/**
+ * @tparam exec which memory space the memory belongs to (CPU or GPU)
+ * @tparam T the data type to deallocate memory for
+ *
+ * @brief an abstraction for memory deallocation for different types,
+ *   and on different memory spaces
+ */
 template <ExecutionSpace exec, typename T>
 void deallocate(T* ptr)
 {
@@ -53,6 +70,13 @@ void deallocate(T* ptr)
 #endif
 }
 
+/**
+ * @tparam src_exec the memory space where src_begin and src_end ptrs reside
+ * @tparam dst_exec the memory space where dst_begin resides
+ *
+ * @brief abstraction for copying memory between pointers. Calls either std::copy
+ * or cudaMemcpy as appropriate for the execution spaces of src, dst
+ */
 template <ExecutionSpace src_exec, ExecutionSpace dst_exec, typename T>
 void copy(T* src_begin, T* src_end, T* dst_begin)
 {
@@ -79,6 +103,7 @@ void copy(T* src_begin, T* src_end, T* dst_begin)
 #endif
 }
 
+/// @brief a class responsible for generating offsets associated with a d-dimensional multi-index
 template <size_t d>
 struct Indexable;
 
@@ -258,12 +283,21 @@ struct Array<T, 3, ExecutionSpace::CPU> : public detail::ArrayBase<T, ExecutionS
   const T& operator()(size_t i, size_t j, size_t k) const { return ptr[index(i, j, k)]; }
 };
 
+/// @brief set the contents of an array to zero, byte-wise
 template <typename T>
 void zero_out(detail::ArrayBase<T, ExecutionSpace::CPU>& arr)
 {
   std::memset(arr.ptr, 0, arr.n * sizeof(T));
 }
 
+/**
+ * @tparam T the type stored in the container
+ * @tparam d the dimensionality of the array
+ * @tparam exec where the memory lives (CPU, GPU)
+ *
+ * @brief a container that behaves similar to Array, but does not own its data.
+ * ArrayView objects have reference semantics, and copying them is inexpensive.
+ */
 template <typename T, size_t d, ExecutionSpace exec>
 struct ArrayView;
 
@@ -296,15 +330,18 @@ struct ArrayView<T, 3, ExecutionSpace::CPU> : public detail::Indexable<3> {
   T*       ptr;
 };
 
+/// @brief make a view into an Array of a given shape / space
 template <typename T, size_t d, ExecutionSpace exec>
 auto view(const Array<T, d, exec>& arr)
 {
   return ArrayView<T, d, exec>(arr);
 }
 
+/// @brief an alias for arrays that reside in CPU memory
 template <typename T, size_t d>
 using CPUArray = Array<T, d, ExecutionSpace::CPU>;
 
+/// @brief an alias for arrays that reside in GPU memory
 template <typename T, size_t d>
 using CPUView = ArrayView<T, d, ExecutionSpace::CPU>;
 
@@ -380,3 +417,5 @@ using GPUView = ArrayView<T, d, ExecutionSpace::GPU>;
 #endif
 
 }  // namespace serac
+
+//! @endcond

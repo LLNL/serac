@@ -12,30 +12,46 @@
 
 namespace serac {
 
+/**
+ * @brief this class behaves like a Prolongation operator, except is specialized for
+ * the case of a quantity of interest. The action of its MultTranspose() operator (the
+ * only thing it is used for) sums the values from different processors.
+ */
 struct QoIProlongation : public mfem::Operator {
+  /// @brief create a QoIProlongation for a Quantity of Interest
   QoIProlongation(MPI_Comm c) : mfem::Operator(1, 1), comm(c) {}
 
+  /// @brief unimplemented: do not use
   void Mult(const mfem::Vector&, mfem::Vector&) const override
   {
     SLIC_ERROR_ROOT("QoIProlongation::Mult() is not defined");
   }
 
+  /// @brief set the value of output to the distributed sum over input values from different processors
   void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override
   {
     MPI_Allreduce(&input[0], &output[0], 1, MPI_DOUBLE, MPI_SUM, comm);
   }
 
-  MPI_Comm comm;
+  MPI_Comm comm;  ///< MPI communicator used to carry out the distributed reduction
 };
 
+/**
+ * @brief this class behaves like a Restriction operator, except is specialized for
+ * the case of a quantity of interest. The action of its MultTranspose() operator (the
+ * only thing it is used for) sums the values on this local processor.
+ */
 struct QoIElementRestriction : public mfem::Operator {
+  /// @brief create a QoIElementRestriction for a Quantity of Interest
   QoIElementRestriction(int num_elements) : mfem::Operator(num_elements, 1) {}
 
+  /// @brief unimplemented: do not use
   void Mult(const mfem::Vector&, mfem::Vector&) const override
   {
     SLIC_ERROR_ROOT("QoIElementRestriction::Mult() is not defined, exiting...");
   }
 
+  /// @brief set the value of output to the sum of the values of input
   void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override { output[0] = input.Sum(); }
 };
 
@@ -102,6 +118,7 @@ public:
     }
   }
 
+  /// @brief destructor: deallocate the mfem::Operators that we're responsible for
   ~Functional()
   {
     delete P_test_;
@@ -121,7 +138,7 @@ public:
    * and @a spatial_dim template parameter
    */
   template <int dim, typename lambda, typename qpt_data_type = void>
-  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
+  void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata
   {
     auto num_elements = domain.GetNE();
     if (num_elements == 0) return;
@@ -136,16 +153,18 @@ public:
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
     auto           geom  = domain.GetGeometricFactors(ir, flags);
-    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand);
+    domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
   }
 
   /**
-   * @brief Adds a boundary integral term to the weak formulation of the PDE
    * @tparam dim The dimension of the boundary element (1 for line, 2 for quad, etc)
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
    * @param[in] data The data structure containing per-quadrature-point data
+   * 
+   * @brief Adds a boundary integral term to the weak formulation of the PDE
+   * 
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
@@ -173,31 +192,33 @@ public:
   }
 
   /**
-   * @brief Adds an area integral, i.e., over 2D elements in R^2
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[in] data The data structure containing per-quadrature-point data
+   * 
+   * @brief Adds an area integral, i.e., over 2D elements in R^2
    */
   template <typename lambda, typename qpt_data_type = void>
-  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain)
+  void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
   {
-    AddDomainIntegral(Dimension<2>{}, integrand, domain);
+    AddDomainIntegral(Dimension<2>{}, integrand, domain, data);
   }
 
   /**
-   * @brief Adds a volume integral, i.e., over 3D elements in R^3
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
    * @param[in] data The data structure containing per-quadrature-point data
+   * 
+   * @brief Adds a volume integral, i.e., over 3D elements in R^3
    */
   template <typename lambda, typename qpt_data_type = void>
-  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain)
+  void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
   {
-    AddDomainIntegral(Dimension<3>{}, integrand, domain);
+    AddDomainIntegral(Dimension<3>{}, integrand, domain, data);
   }
 
   /// @brief alias for Functional::AddBoundaryIntegral(Dimension<2>{}, integrand, domain);
@@ -208,9 +229,10 @@ public:
   }
 
   /**
-   * @brief Implements mfem::Operator::Mult
    * @param[in] input_T The input vector
    * @param[out] output_T The output vector
+   * 
+   * @brief Implements mfem::Operator::Mult
    */
   void Mult(const mfem::Vector& input_T, mfem::Vector& output_T) const
   {
@@ -257,7 +279,7 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<double(trial)>& f)
+    Gradient(Functional<double(trial)> & f)
         : form_(f),
           lookup_tables(*(f.trial_space_)),
           gradient_L_(f.trial_space_->GetVSize()),

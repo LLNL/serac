@@ -9,6 +9,7 @@
  *
  * @brief Specialization of finite_element for expressing quantities of interest on any geometry
  */
+/// @cond
 template <Geometry g>
 struct finite_element<g, QOI> {
   static constexpr auto geometry   = g;
@@ -21,3 +22,4 @@ struct finite_element<g, QOI> {
 
   static constexpr double shape_functions(double /* xi */) { return 1.0; }
 };
+/// @endcond
