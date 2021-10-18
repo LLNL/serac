@@ -170,7 +170,7 @@ struct Array<T, 1, ExecutionSpace::CPU> : public detail::ArrayBase<T, ExecutionS
                                           public detail::Indexable<1> {
   using detail::ArrayBase<T, ExecutionSpace::CPU>::ptr;
   Array() : detail::ArrayBase<T, ExecutionSpace::CPU>(0), detail::Indexable<1>(0) {}
-  Array(size_t n) : detail::ArrayBase<T, ExecutionSpace::CPU>(n), detail::Indexable<1>{} {}
+  Array(size_t n) : detail::ArrayBase<T, ExecutionSpace::CPU>(n), detail::Indexable<1>{n} {}
 
 #if defined(__CUDACC__)
   Array(const Array<T, 1, ExecutionSpace::GPU>& other)

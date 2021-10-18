@@ -274,7 +274,7 @@ void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, deriv
     if constexpr (std::is_same< test, QOI >::value) {
       for (int k = 0; k < trial_ndof; k++) {
         for (int l = 0; l < trial_dim; l++) {
-          dk(e, 0, k + trial_ndof * l) += K_elem[0][k][0][l];
+          dk(static_cast<size_t>(e), 0, static_cast<size_t>(k + trial_ndof * l)) += K_elem[0][k][0][l];
         }
       }
     } 
@@ -282,7 +282,7 @@ void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, deriv
     if constexpr (!std::is_same< test, QOI >::value) {
       // Note: we "transpose" these values to get them into the layout that mfem expects
       for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
-        dk(e, i + test_ndof * j, k + trial_ndof * l) += K_elem[i][k][j][l];
+        dk(static_cast<size_t>(e), static_cast<size_t>(i + test_ndof * j), static_cast<size_t>(k + trial_ndof * l)) += K_elem[i][k][j][l];
       });
     }
     // clang-format on

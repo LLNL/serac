@@ -325,7 +325,7 @@ void element_gradient_kernel(CPUView<double, 3> dk, derivatives_type* derivative
     // Note: we "transpose" these values to get them into the layout that mfem expects
     // clang-format off
     for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([e, &dk, &K_elem](int i, int j, int k, int l) {
-      dk(e, i + test_ndof * j, k + trial_ndof * l) += K_elem[i][k][j][l];
+      dk(static_cast<size_t>(e), static_cast<size_t>(i + test_ndof * j), static_cast<size_t>(k + trial_ndof * l)) += K_elem[i][k][j][l];
     });
     // clang-format on
   }

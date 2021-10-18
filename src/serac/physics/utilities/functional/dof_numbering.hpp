@@ -15,11 +15,11 @@ namespace serac {
  * lexicographically, to facilitate creating the CSR matrix graph.
  */
 struct ElemInfo {
-  int  global_row_;   ///< The global row number
-  int  global_col_;   ///< The global column number
-  int  local_row_;    ///< The local row number
-  int  local_col_;    ///< The global column number
-  int  element_id_;   ///< The element ID
+  uint32_t  global_row_;   ///< The global row number
+  uint32_t  global_col_;   ///< The global column number
+  uint32_t  local_row_;    ///< The local row number
+  uint32_t  local_col_;    ///< The global column number
+  uint32_t  element_id_;   ///< The element ID
   int  sign_;         ///< The orientation of the element
   bool on_boundary_;  ///< True if element is on the boundary
 };
@@ -65,7 +65,7 @@ int mfem_sign(int i) { return (i >= 0) ? 1 : -1; }
  * @brief mfem will frequently encode {sign, index} into a single int32_t.
  * This function decodes the index from such a type.
  */
-int mfem_index(int i) { return (i >= 0) ? i : -1 - i; }
+uint32_t mfem_index(int i) { return static_cast<uint32_t>((i >= 0) ? i : -1 - i); }
 
 /**
  * @brief this type explicitly stores sign (typically used conveying edge/face orientation) and index values
@@ -75,13 +75,13 @@ int mfem_index(int i) { return (i >= 0) ? i : -1 - i; }
  */
 struct SignedIndex {
   /// the actual index of some quantity
-  int index_;
+  uint32_t index_;
 
   /// whether or not the value associated with this index is positive or negative
   int sign_;
 
   /// the implicit conversion to int extracts only the index
-  operator int() { return index_; }
+  operator uint32_t() { return index_; }
 };
 
 /**
@@ -99,8 +99,8 @@ serac::CPUArray<T, 3> guard_against_unimplemented_bdr_stuff(const mfem::ParFinit
   auto* test_BE  = test_fes.GetBE(0);
   auto* trial_BE = trial_fes.GetBE(0);
   if (test_BE && trial_BE) {
-    return serac::CPUArray<T, 3>(trial_fes.GetNFbyType(mfem::FaceType::Boundary),
-                                 test_BE->GetDof() * test_fes.GetVDim(), trial_BE->GetDof() * trial_fes.GetVDim());
+    return serac::CPUArray<T, 3>(static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
+                                 static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()), static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim()));
   } else {
     return serac::CPUArray<T, 3>(0, 0, 0);
   }
@@ -111,7 +111,7 @@ serac::CPUArray<T, 2> guard_against_unimplemented_bdr_stuff(const mfem::ParFinit
 {
   auto* BE = fes.GetBE(0);
   if (BE) {
-    return serac::CPUArray<T, 2>(fes.GetNFbyType(mfem::FaceType::Boundary), BE->GetDof() * fes.GetVDim());
+    return serac::CPUArray<T, 2>(static_cast<size_t>(fes.GetNFbyType(mfem::FaceType::Boundary)), static_cast<size_t>(BE->GetDof() * fes.GetVDim()));
   } else {
     return serac::CPUArray<T, 2>(0, 0);
   }
@@ -127,7 +127,7 @@ serac::CPUArray<T, 2> guard_against_unimplemented_bdr_stuff(const mfem::ParFinit
  */
 struct DofNumbering {
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
-      : element_dofs_(fespace.GetNE(), fespace.GetFE(0)->GetDof() * fespace.GetVDim()),
+      : element_dofs_(static_cast<size_t>(fespace.GetNE()), static_cast<size_t>(fespace.GetFE(0)->GetDof() * fespace.GetVDim())),
         bdr_element_dofs_(guard_against_unimplemented_bdr_stuff<SignedIndex>(fespace))
   {
     {
@@ -200,15 +200,15 @@ struct DofNumbering {
  */
 struct GradientAssemblyLookupTables {
   GradientAssemblyLookupTables(mfem::ParFiniteElementSpace& test_fespace, mfem::ParFiniteElementSpace& trial_fespace)
-      : element_nonzero_LUT(trial_fespace.GetNE(), test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim(),
-                            trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim()),
+      : element_nonzero_LUT(static_cast<size_t>(trial_fespace.GetNE()), static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),
+                            static_cast<size_t>(trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim())),
         bdr_element_nonzero_LUT(guard_against_unimplemented_bdr_stuff<SignedIndex>(trial_fespace, test_fespace))
   {
     DofNumbering test_dofs(test_fespace);
     DofNumbering trial_dofs(trial_fespace);
 
-    int num_elements     = trial_fespace.GetNE();
-    int num_bdr_elements = trial_fespace.GetNFbyType(mfem::FaceType::Boundary);
+    auto num_elements     = static_cast<uint32_t>(trial_fespace.GetNE());
+    auto num_bdr_elements = static_cast<uint32_t>(trial_fespace.GetNFbyType(mfem::FaceType::Boundary));
 
     std::vector<ElemInfo> infos;
 
@@ -216,13 +216,13 @@ struct GradientAssemblyLookupTables {
     // touches in the global "stiffness matrix", and also keep track of some metadata about
     // which element and which dof are associated with that particular nonzero entry
     bool on_boundary = false;
-    for (int e = 0; e < num_elements; e++) {
-      for (int i = 0; i < int(test_dofs.element_dofs_.size(1)); i++) {
+    for (uint32_t e = 0; e < num_elements; e++) {
+      for (uint32_t i = 0; i < test_dofs.element_dofs_.size(1); i++) {
         auto test_dof = test_dofs.element_dofs_(e, i);
-        for (int j = 0; j < int(trial_dofs.element_dofs_.size(1)); j++) {
+        for (uint32_t j = 0; j < trial_dofs.element_dofs_.size(1); j++) {
           auto trial_dof = trial_dofs.element_dofs_(e, j);
           infos.push_back(
-              ElemInfo{test_dof, trial_dof, i, j, e, mfem_sign(test_dof) * mfem_sign(trial_dof), on_boundary});
+              ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
         }
       }
     }
@@ -231,13 +231,13 @@ struct GradientAssemblyLookupTables {
     // so until those are implemented, DofNumbering::bdr_element_dofs will be
     // an empty 2D array, so these loops will not do anything
     on_boundary = true;
-    for (int e = 0; e < num_bdr_elements; e++) {
-      for (int i = 0; i < int(test_dofs.bdr_element_dofs_.size(1)); i++) {
+    for (uint32_t e = 0; e < num_bdr_elements; e++) {
+      for (uint32_t i = 0; i < test_dofs.bdr_element_dofs_.size(1); i++) {
         auto test_dof = test_dofs.bdr_element_dofs_(e, i);
-        for (int j = 0; j < int(trial_dofs.bdr_element_dofs_.size(1)); j++) {
+        for (uint32_t j = 0; j < trial_dofs.bdr_element_dofs_.size(1); j++) {
           auto trial_dof = trial_dofs.bdr_element_dofs_(e, j);
           infos.push_back(
-              ElemInfo{test_dof, trial_dof, i, j, e, mfem_sign(test_dof) * mfem_sign(trial_dof), on_boundary});
+              ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
         }
       }
     }
@@ -249,14 +249,14 @@ struct GradientAssemblyLookupTables {
 
     // the row_ptr array size only depends on the number of rows in the global stiffness matrix,
     // so we already know its size before processing the ElemInfo array
-    row_ptr.resize(test_fespace.GetNDofs() * test_fespace.GetVDim() + 1);
+    row_ptr.resize(static_cast<size_t>(test_fespace.GetNDofs() * test_fespace.GetVDim() + 1));
 
     // the other CSR matrix arrays are formed incrementally by going through the sorted ElemInfo values
     std::vector<SignedIndex> nonzero_ids(infos.size());
 
     nnz        = 0;
     row_ptr[0] = 0;
-    col_ind.push_back(infos[0].global_col_);
+    col_ind.push_back(static_cast<int>(infos[0].global_col_));
     nonzero_ids[0] = {0, infos[0].sign_};
 
     for (size_t i = 1; i < infos.size(); i++) {
@@ -266,16 +266,16 @@ struct GradientAssemblyLookupTables {
       // record the index, sign, and column of this particular (i,j) entry
       nonzero_ids[i] = SignedIndex{nnz, infos[i].sign_};
       if (infos[i - 1] != infos[i]) {
-        col_ind.push_back(infos[i].global_col_);
+        col_ind.push_back(static_cast<int>(infos[i].global_col_));
       }
 
       // if the new entry has a different row, then the row_ptr offsets must be set as well
-      for (int j = infos[i - 1].global_row_; j < infos[i].global_row_; j++) {
-        row_ptr[j + 1] = nonzero_ids[i];
+      for (uint32_t j = infos[i - 1].global_row_; j < infos[i].global_row_; j++) {
+        row_ptr[j + 1] = static_cast<int>(nonzero_ids[i]);
       }
     }
 
-    row_ptr.back() = ++nnz;
+    row_ptr.back() = static_cast<int>(++nnz);
 
     // once we've finished processing the ElemInfo array, we go back and fill in our lookup tables
     // so that each element can know precisely where to place its element stiffness matrix contributions
@@ -290,7 +290,7 @@ struct GradientAssemblyLookupTables {
   }
 
   /// @brief how many nonzero entries appear in the sparse matrix
-  int nnz;
+  uint32_t nnz;
 
   /**
    * @brief array holding the offsets for a given row of the sparse matrix

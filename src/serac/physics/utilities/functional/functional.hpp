@@ -136,9 +136,9 @@ public:
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
 
     {
-      int num_elements           = test_space_->GetNE();
-      int ndof_per_test_element  = test_space_->GetFE(0)->GetDof() * test_space_->GetVDim();
-      int ndof_per_trial_element = trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim();
+      auto num_elements           = static_cast<size_t>(test_space_->GetNE());
+      auto ndof_per_test_element  = static_cast<size_t>(test_space_->GetFE(0)->GetDof() * test_space_->GetVDim());
+      auto ndof_per_trial_element = static_cast<size_t>(trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim());
       element_gradients_         = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
     }
 
