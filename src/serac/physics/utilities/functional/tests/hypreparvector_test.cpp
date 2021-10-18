@@ -35,8 +35,8 @@ int main(int argc, char* argv[])
     y_global(i) = sin(i * i + 0.3);
   }
 
-  double * x_local_data = new double[static_cast<size_t>(entries_per_proc)];
-  double * y_local_data = new double[static_cast<size_t>(entries_per_proc)];
+  double* x_local_data = new double[static_cast<size_t>(entries_per_proc)];
+  double* y_local_data = new double[static_cast<size_t>(entries_per_proc)];
   for (int i = 0; i < entries_per_proc; i++) {
     x_local_data[i] = x_global(i + myid * entries_per_proc);
     y_local_data[i] = y_global(i + myid * entries_per_proc);
@@ -93,8 +93,8 @@ int main(int argc, char* argv[])
     if (myid == 0) std::cout << V(0) << std::endl;
   }
 
-  delete [] x_local_data;
-  delete [] y_local_data;
+  delete[] x_local_data;
+  delete[] y_local_data;
 
   MPI_Finalize();
 }

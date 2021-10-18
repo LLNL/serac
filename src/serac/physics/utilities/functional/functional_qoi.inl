@@ -90,7 +90,7 @@ public:
       auto num_elements           = static_cast<size_t>(trial_space_->GetNE());
       auto ndof_per_test_element  = static_cast<size_t>(1);
       auto ndof_per_trial_element = static_cast<size_t>(trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim());
-      element_gradients_         = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
+      element_gradients_          = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
     }
 
     {

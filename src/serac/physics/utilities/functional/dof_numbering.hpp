@@ -15,13 +15,13 @@ namespace serac {
  * lexicographically, to facilitate creating the CSR matrix graph.
  */
 struct ElemInfo {
-  uint32_t  global_row_;   ///< The global row number
-  uint32_t  global_col_;   ///< The global column number
-  uint32_t  local_row_;    ///< The local row number
-  uint32_t  local_col_;    ///< The global column number
-  uint32_t  element_id_;   ///< The element ID
-  int  sign_;         ///< The orientation of the element
-  bool on_boundary_;  ///< True if element is on the boundary
+  uint32_t global_row_;   ///< The global row number
+  uint32_t global_col_;   ///< The global column number
+  uint32_t local_row_;    ///< The local row number
+  uint32_t local_col_;    ///< The global column number
+  uint32_t element_id_;   ///< The element ID
+  int      sign_;         ///< The orientation of the element
+  bool     on_boundary_;  ///< True if element is on the boundary
 };
 
 /**
@@ -100,7 +100,8 @@ serac::CPUArray<T, 3> guard_against_unimplemented_bdr_stuff(const mfem::ParFinit
   auto* trial_BE = trial_fes.GetBE(0);
   if (test_BE && trial_BE) {
     return serac::CPUArray<T, 3>(static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
-                                 static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()), static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim()));
+                                 static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
+                                 static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim()));
   } else {
     return serac::CPUArray<T, 3>(0, 0, 0);
   }
@@ -111,7 +112,8 @@ serac::CPUArray<T, 2> guard_against_unimplemented_bdr_stuff(const mfem::ParFinit
 {
   auto* BE = fes.GetBE(0);
   if (BE) {
-    return serac::CPUArray<T, 2>(static_cast<size_t>(fes.GetNFbyType(mfem::FaceType::Boundary)), static_cast<size_t>(BE->GetDof() * fes.GetVDim()));
+    return serac::CPUArray<T, 2>(static_cast<size_t>(fes.GetNFbyType(mfem::FaceType::Boundary)),
+                                 static_cast<size_t>(BE->GetDof() * fes.GetVDim()));
   } else {
     return serac::CPUArray<T, 2>(0, 0);
   }
@@ -127,7 +129,8 @@ serac::CPUArray<T, 2> guard_against_unimplemented_bdr_stuff(const mfem::ParFinit
  */
 struct DofNumbering {
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
-      : element_dofs_(static_cast<size_t>(fespace.GetNE()), static_cast<size_t>(fespace.GetFE(0)->GetDof() * fespace.GetVDim())),
+      : element_dofs_(static_cast<size_t>(fespace.GetNE()),
+                      static_cast<size_t>(fespace.GetFE(0)->GetDof() * fespace.GetVDim())),
         bdr_element_dofs_(guard_against_unimplemented_bdr_stuff<SignedIndex>(fespace))
   {
     {
@@ -200,7 +203,8 @@ struct DofNumbering {
  */
 struct GradientAssemblyLookupTables {
   GradientAssemblyLookupTables(mfem::ParFiniteElementSpace& test_fespace, mfem::ParFiniteElementSpace& trial_fespace)
-      : element_nonzero_LUT(static_cast<size_t>(trial_fespace.GetNE()), static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),
+      : element_nonzero_LUT(static_cast<size_t>(trial_fespace.GetNE()),
+                            static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),
                             static_cast<size_t>(trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim())),
         bdr_element_nonzero_LUT(guard_against_unimplemented_bdr_stuff<SignedIndex>(trial_fespace, test_fespace))
   {
@@ -221,8 +225,7 @@ struct GradientAssemblyLookupTables {
         auto test_dof = test_dofs.element_dofs_(e, i);
         for (uint32_t j = 0; j < trial_dofs.element_dofs_.size(1); j++) {
           auto trial_dof = trial_dofs.element_dofs_(e, j);
-          infos.push_back(
-              ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
+          infos.push_back(ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
         }
       }
     }
@@ -236,8 +239,7 @@ struct GradientAssemblyLookupTables {
         auto test_dof = test_dofs.bdr_element_dofs_(e, i);
         for (uint32_t j = 0; j < trial_dofs.bdr_element_dofs_.size(1); j++) {
           auto trial_dof = trial_dofs.bdr_element_dofs_(e, j);
-          infos.push_back(
-              ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
+          infos.push_back(ElemInfo{test_dof, trial_dof, i, j, e, test_dof.sign_ * trial_dof.sign_, on_boundary});
         }
       }
     }
