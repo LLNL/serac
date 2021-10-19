@@ -361,8 +361,7 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
       EXPECT_EQ(s, mutated_twice);
     }
 
-    // CHAI FIXME: Why is this not called resize()?
-    origin_mutated_data.reallocate(std::distance(qdata.begin(), qdata.end()));
+    origin_mutated_data.resize(std::distance(qdata.begin(), qdata.end()));
 
     // this->residual->AddDomainIntegral(Dimension<TestFixture::dim>{},
     //                                   state_manager_varying_qfunction<TestFixture>{origin_mutated_data}, *this->mesh,

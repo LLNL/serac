@@ -46,6 +46,12 @@ T* allocate(size_t n)
     cudaMalloc(&ptr, sizeof(T) * n);
     return ptr;
   }
+
+  if constexpr (exec == ExecutionSpace::Dynamic) {
+    T* ptr;
+    cudaMallocManaged(&ptr, sizeof(T) * n);
+    return ptr;
+  }
 #endif
 }
 
@@ -64,7 +70,7 @@ void deallocate(T* ptr)
   }
 
 #if defined(__CUDACC__)
-  if constexpr (exec == ExecutionSpace::GPU) {
+  if constexpr (exec == ExecutionSpace::GPU || exec == ExecutionSpace::Dynamic) {
     cudaFree(ptr);
   }
 #endif
@@ -112,7 +118,7 @@ struct Indexable<1> {
   size_t sizes;
   Indexable(size_t n1) : sizes{n1} {}
   SERAC_HOST_DEVICE size_t index(size_t i) const { return i; }
-  size_t                   size(int) { return sizes; }
+  size_t                   size(int = 0) const { return sizes; }
 };
 
 template <>
@@ -414,6 +420,24 @@ using GPUArray = Array<T, d, ExecutionSpace::GPU>;
 
 template <typename T, size_t d>
 using GPUView = ArrayView<T, d, ExecutionSpace::GPU>;
+
+template <typename T>
+struct Array<T, 1, ExecutionSpace::Dynamic> : public detail::ArrayBase<T, ExecutionSpace::Dynamic>,
+                                              public detail::Indexable<1> {
+  using detail::ArrayBase<T, ExecutionSpace::Dynamic>::ptr;
+  Array() = default;
+  Array(size_t n) : detail::ArrayBase<T, ExecutionSpace::Dynamic>(n), detail::Indexable<1>(n) {}
+  SERAC_HOST_DEVICE T&    operator()(size_t i) { return ptr[i]; }
+  SERAC_HOST_DEVICE const T& operator()(size_t i) const { return ptr[i]; }
+  SERAC_HOST_DEVICE T*    data() { return ptr; }
+  SERAC_HOST_DEVICE const T* data() const { return ptr; }
+  SERAC_HOST_DEVICE T* begin() { return ptr; }
+  SERAC_HOST_DEVICE T* end() { return ptr + this->size(); }
+};
+
+template <typename T>
+using ManagedArray = Array<T, 1, ExecutionSpace::Dynamic>;
+
 #endif
 
 }  // namespace serac
