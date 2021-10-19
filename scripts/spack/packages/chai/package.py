@@ -3,24 +3,19 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import socket
-
 from spack import *
 
 
-class Chai(CachedCMakePackage, CudaPackage, ROCmPackage):
+class Chai(CMakePackage, CudaPackage, ROCmPackage):
     """
     Copy-hiding array interface for data migration between memory spaces
     """
 
     homepage = "https://github.com/LLNL/CHAI"
     git      = "https://github.com/LLNL/CHAI.git"
-    tags     = ['ecp', 'e4s', 'radiuss']
-
-    maintainers = ['davidbeckingsale']
 
     version('develop', branch='develop', submodules=True)
-    version('main', branch='main', submodules=True)
+    version('master', branch='main', submodules=True)
     version('2.4.0', tag='v2.4.0', submodules=True)
     version('2.3.0', tag='v2.3.0', submodules=True)
     version('2.2.2', tag='v2.2.2', submodules=True)
@@ -38,7 +33,6 @@ class Chai(CachedCMakePackage, CudaPackage, ROCmPackage):
     variant('raja', default=False, description='Build plugin for RAJA')
     variant('benchmarks', default=False, description='Build benchmarks.')
     variant('examples', default=True, description='Build examples.')
-    variant('openmp', default=False, description='Build using OpenMP')
     # TODO: figure out gtest dependency and then set this default True
     # and remove the +tests conflict below.
     variant('tests', default=False, description='Build tests')
@@ -46,121 +40,75 @@ class Chai(CachedCMakePackage, CudaPackage, ROCmPackage):
     depends_on('cmake@3.8:', type='build')
     depends_on('cmake@3.9:', type='build', when="+cuda")
 
-    depends_on('blt@0.4.1:', type='build', when='@2.4.0:')
-    depends_on('blt@0.4.0:', type='build', when='@2.3.0')
-    depends_on('blt@0.3.6:', type='build', when='@:2.2.2')
+    depends_on('blt@0.4.0:', type='build', when='@2.3.1:')
+    depends_on('blt@:0.3.6', type='build', when='@:2.3.0')
 
     depends_on('umpire')
-    depends_on('umpire@6.0.0', when="@2.4.0")
-    depends_on('umpire@4.1.2', when="@2.2.0:2.3.0")
-    depends_on('umpire@main', when='@main')
+    depends_on('raja', when="+raja")
 
-    with when('+cuda'):
-        depends_on('umpire+cuda')
-        for sm_ in CudaPackage.cuda_arch_values:
-            depends_on('umpire+cuda cuda_arch={0}'.format(sm_),
-                       when='cuda_arch={0}'.format(sm_))
+    depends_on('umpire+cuda', when="+cuda")
+    depends_on('raja+cuda', when="+raja+cuda")
 
-    with when('+rocm'):
-        depends_on('umpire+rocm')
-        for arch in ROCmPackage.amdgpu_targets:
-            depends_on('umpire+rocm amdgpu_target={0}'.format(arch),
-                       when='amdgpu_target={0}'.format(arch))
-
-    with when('+raja'):
-        depends_on('raja~openmp', when='~openmp')
-        depends_on('raja+openmp', when='+openmp')
-        depends_on('raja@0.14.0', when="@2.4.0")
-        depends_on('raja@0.13.0', when="@2.3.0")
-        depends_on('raja@0.12.0', when="@2.2.0:2.2.2")
-        depends_on('raja@main', when='@main')
-
-        with when('+cuda'):
-            depends_on('raja+cuda')
-            for sm_ in CudaPackage.cuda_arch_values:
-                depends_on('raja+cuda cuda_arch={0}'.format(sm_),
-                           when='cuda_arch={0}'.format(sm_))
-        with when('+rocm'):
-            depends_on('raja+rocm')
-            for arch in ROCmPackage.amdgpu_targets:
-                depends_on('raja+rocm amdgpu_target={0}'.format(arch),
-                           when='amdgpu_target={0}'.format(arch))
+    # variants +rocm and amdgpu_targets are not automatically passed to
+    # dependencies, so do it manually.
+    depends_on('umpire+rocm', when='+rocm')
+    depends_on('raja+rocm', when="+raja+rocm")
+    for val in ROCmPackage.amdgpu_targets:
+        depends_on('umpire amdgpu_target=%s' % val, when='amdgpu_target=%s' % val)
+        depends_on('raja amdgpu_target=%s' % val, when='+raja amdgpu_target=%s' % val)
 
     conflicts('+benchmarks', when='~tests')
 
-    def _get_sys_type(self, spec):
-        sys_type = spec.architecture
-        if "SYS_TYPE" in env:
-            sys_type = env["SYS_TYPE"]
-        return sys_type
-
-    @property
-    def cache_name(self):
-        hostname = socket.gethostname()
-        if "SYS_TYPE" in env:
-            hostname = hostname.rstrip('1234567890')
-        return "{0}-{1}-{2}@{3}.cmake".format(
-            hostname,
-            self._get_sys_type(self.spec),
-            self.spec.compiler.name,
-            self.spec.compiler.version
-        )
-
-    def initconfig_hardware_entries(self):
+    def cmake_args(self):
         spec = self.spec
-        entries = super(Chai, self).initconfig_hardware_entries()
 
-        entries.append(cmake_cache_option("ENABLE_OPENMP", '+openmp' in spec))
+        options = []
+        options.append('-DBLT_SOURCE_DIR={0}'.format(spec['blt'].prefix))
 
         if '+cuda' in spec:
-            entries.append(cmake_cache_option("ENABLE_CUDA", True))
-            entries.append(cmake_cache_option("CMAKE_CUDA_SEPARABLE_COMPILATION", True))
-            entries.append(cmake_cache_option("CUDA_SEPARABLE_COMPILATION", True))
+            options.extend([
+                '-DENABLE_CUDA=ON',
+                '-DCUDA_TOOLKIT_ROOT_DIR=' + spec['cuda'].prefix])
 
             if not spec.satisfies('cuda_arch=none'):
                 cuda_arch = spec.variants['cuda_arch'].value
-                entries.append(cmake_cache_string(
-                    "CUDA_ARCH", 'sm_{0}'.format(cuda_arch[0])))
-                entries.append(cmake_cache_string(
-                    "CMAKE_CUDA_ARCHITECTURES", '{0}'.format(cuda_arch[0])))
+                options.append('-DCUDA_ARCH=sm_{0}'.format(cuda_arch[0]))
                 flag = '-arch sm_{0}'.format(cuda_arch[0])
-                entries.append(cmake_cache_string(
-                    "CMAKE_CUDA_FLAGS", '{0}'.format(flag)))
+                options.append('-DCMAKE_CUDA_FLAGS:STRING={0}'.format(flag))
         else:
-            entries.append(cmake_cache_option("ENABLE_CUDA", False))
+            options.append('-DENABLE_CUDA=OFF')
 
         if '+rocm' in spec:
-            entries.append(cmake_cache_option("ENABLE_HIP", True))
-            entries.append(cmake_cache_path(
-                "HIP_ROOT_DIR", '{0}'.format(spec['hip'].prefix)))
+            options.extend([
+                '-DENABLE_HIP=ON',
+                '-DHIP_ROOT_DIR={0}'.format(spec['hip'].prefix)
+            ])
             archs = self.spec.variants['amdgpu_target'].value
             if archs != 'none':
                 arch_str = ",".join(archs)
-                entries.append(cmake_cache_string(
-                    "HIP_HIPCC_FLAGS", '--amdgpu-target={0}'.format(arch_str)))
+                options.append(
+                    '-DHIP_HIPCC_FLAGS=--amdgpu-target={0}'.format(arch_str)
+                )
         else:
-            entries.append(cmake_cache_option("ENABLE_HIP", False))
+            options.append('-DENABLE_HIP=OFF')
 
-        return entries
-
-    def initconfig_package_entries(self):
-        spec = self.spec
-        entries = []
-
-        entries.append(cmake_cache_path("BLT_SOURCE_DIR", spec['blt'].prefix))
         if '+raja' in spec:
-            entries.append(cmake_cache_option("ENABLE_RAJA_PLUGIN", True))
-            entries.append(cmake_cache_path("RAJA_DIR", spec['raja'].prefix))
-        entries.append(cmake_cache_option('ENABLE_PICK', '+enable_pick' in spec))
-        entries.append(cmake_cache_path(
-            "umpire_DIR", spec['umpire'].prefix.share.umpire.cmake))
-        entries.append(cmake_cache_option("ENABLE_TESTS", '+tests' in spec))
-        entries.append(cmake_cache_option("ENABLE_BENCHMARKS", '+benchmarks' in spec))
-        entries.append(cmake_cache_option("ENABLE_EXAMPLES", '+examples' in spec))
-        entries.append(cmake_cache_option("BUILD_SHARED_LIBS", '+shared' in spec))
+            options.extend(['-DENABLE_RAJA_PLUGIN=ON',
+                            '-DRAJA_DIR=' + spec['raja'].prefix])
 
-        return entries
+        options.append(self.define_from_variant('ENABLE_PICK', 'enable_pick'))
 
-    def cmake_args(self):
-        options = []
+        options.append('-Dumpire_DIR:PATH='
+                       + spec['umpire'].prefix.share.umpire.cmake)
+
+        options.append('-DENABLE_TESTS={0}'.format(
+            'ON' if '+tests' in spec  else 'OFF'))
+
+        options.append(self.define_from_variant('ENABLE_BENCHMARKS', 'benchmarks'))
+
+        options.append(self.define_from_variant('ENABLE_EXAMPLES', 'examples'))
+
+        options.append('-DENABLE_BENCHMARKS={0}'.format(
+            'ON' if '+benchmarks' in spec else 'OFF'))
+
         return options
