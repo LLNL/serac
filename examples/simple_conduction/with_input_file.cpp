@@ -24,49 +24,51 @@ int main(int argc, char* argv[])
 {
   /*auto [num_procs, rank] = */serac::initialize(argc, argv);
 
-  // _inlet_init_start
+  // Initialize the data store and input file reader
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore);
   auto inlet = serac::input::initialize(datastore, input_file);
-  // _inlet_init_end
 
-  // _inlet_schema_start
+  // Read the mesh options from the input file via inlet
   auto& mesh_schema = inlet.addStruct("main_mesh", "The main mesh for the problem");
   serac::mesh::InputOptions::defineInputFileSchema(mesh_schema);
 
+  // Read the thermal conduction options from the input file via inlet
   auto& thermal_schema = inlet.addStruct("thermal_conduction", "Thermal conduction module");
   serac::ThermalConduction::InputOptions::defineInputFileSchema(thermal_schema);
 
+  // Read the output type from the input file via inlet
   serac::input::defineOutputTypeInputFileSchema(inlet.getGlobalContainer());
-  // _inlet_schema_end
 
-  // _inlet_verify_start
+  // Verify that the input file parsed correctly
   SLIC_ERROR_ROOT_IF(!inlet.verify(), "Input file contained errors");
-  // _inlet_verify_end
 
-  // _create_mesh_start
+  // Build the mesh and pass it to the state manager
   auto mesh_options = inlet["main_mesh"].get<serac::mesh::InputOptions>();
   auto mesh = serac::mesh::buildParallelMesh(mesh_options);
   serac::StateManager::setMesh(std::move(mesh));
-  // _create_mesh_end
 
-  // _create_module_start
+  // Build a thermal conduction physics module from the input file options
   auto conduction_opts = inlet["thermal_conduction"].get<serac::ThermalConduction::InputOptions>();
   serac::ThermalConduction conduction(conduction_opts);
-  // _create_module_end
-  // _output_type_start
+
+  // Initialize the output files
   conduction.initializeOutput(inlet.getGlobalContainer().get<serac::OutputType>(), "simple_conduction_with_input_file");
-  // _output_type_end
-  // Complete the solver setup
+
+  // Finalize the MFEM-based data structures inside the thermal conduction module
   conduction.completeSetup();
-  // Output the initial state
+
+  // Output the initial state to the chosen file type
   conduction.outputState();
 
-  double dt; // Unused for steady-state simulations
+  // This solves the PDE system. As the given input file is quasi-static, this call
+  // performs a single solve.
+  double dt = 1.0;
   conduction.advanceTimestep(dt);
 
   // Output the final state
   conduction.outputState();
 
+  // Clean up all of the software infrastructure
   serac::exitGracefully();
 }

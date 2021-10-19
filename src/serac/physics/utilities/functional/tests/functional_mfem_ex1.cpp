@@ -41,7 +41,7 @@ int main(int argc, char*argv[])
   mfem::Vector U(fespace.TrueVSize());
   u_global.GetTrueDofs(U);
 
-  // Define the types for the test and trial spaces using the function arguments
+  // Define the compile-time types for the test and trial spaces
   using test_space  = H1<p>;
   using trial_space = H1<p>;
 
@@ -61,7 +61,7 @@ int main(int argc, char*argv[])
         auto [u, du_dx] = temperature;
 
         // Set the uniform source term (comes from the linear form in MFEM ex1)
-        auto source     = -1.0;
+        auto source     = -1.0; //  + u * u * x[0];
 
         // Set the flux term (comes from the bilinear form in MFEM ex1)
         auto flux       = du_dx;
@@ -81,8 +81,7 @@ int main(int argc, char*argv[])
   // Set up the linear and nonlinear solvers
   mfem::CGSolver lin_solver(MPI_COMM_WORLD);
   lin_solver.SetPrintLevel(1);
-  lin_solver.SetAbsTol(1.0e-8);
-  lin_solver.SetRelTol(1.0e-8);
+  lin_solver.SetAbsTol(1.0e-12);
   lin_solver.SetMaxIter(1000);
 
   mfem::NewtonSolver nonlin_solver(MPI_COMM_WORLD);
@@ -90,7 +89,6 @@ int main(int argc, char*argv[])
   nonlin_solver.SetSolver(lin_solver);
   nonlin_solver.SetPrintLevel(1);
   nonlin_solver.SetAbsTol(1.0e-12);
-  nonlin_solver.SetRelTol(1.0e-7);
 
   // Drive the residual determined by functional to zero
   nonlin_solver.Mult(zero, U);
