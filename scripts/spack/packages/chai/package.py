@@ -14,6 +14,10 @@ class Chai(CMakePackage, CudaPackage, ROCmPackage):
     homepage = "https://github.com/LLNL/CHAI"
     git      = "https://github.com/LLNL/CHAI.git"
 
+    # SERAC EDIT START
+    version('2.3.1serac', commit='84c08e9a2ed30755055f7efc7373e6cbcc65d5de', submodules="True")
+    # SERAC EDIT END
+
     version('develop', branch='develop', submodules=True)
     version('master', branch='main', submodules=True)
     version('2.4.0', tag='v2.4.0', submodules=True)

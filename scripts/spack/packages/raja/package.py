@@ -10,6 +10,10 @@ class Raja(CMakePackage, CudaPackage, ROCmPackage):
     homepage = "http://software.llnl.gov/RAJA/"
     git      = "https://github.com/LLNL/RAJA.git"
 
+    # SERAC EDIT START
+    version('0.13.1serac', commit='ed48bd23bd249874c078be35d8235257dc4a4a09', submodules="True")
+    # SERAC EDIT END
+
     version('develop', branch='develop', submodules='True')
     version('main',  branch='main',  submodules='True')
     version('0.14.0', tag='v0.14.0', submodules='True')

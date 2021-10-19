@@ -114,8 +114,9 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("raja@0.14.0~openmp~shared", when="+raja")
     depends_on("umpire@6.0.0~shared", when="+umpire")
     # Lump in CHAI with Umpire for now
-    depends_on("chai@2.4.0serac~shared+raja", when="+cuda+umpire")
-    depends_on("chai+raja", when="+cuda+raja")
+    depends_on("chai@2.4.0~shared", when="+umpire")
+    # Our RAJA version is too new for CHAI
+    # depends_on("chai+raja", when="+umpire+raja")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
