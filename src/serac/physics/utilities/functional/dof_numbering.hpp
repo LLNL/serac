@@ -86,12 +86,23 @@ bool is_Hcurl(const mfem::ParFiniteElementSpace& fes)
 /**
  * @param fes the finite element space in question
  *
+ * @brief return whether or not the underlying function space is L2 or not
+ */
+bool is_L2(const mfem::ParFiniteElementSpace& fes)
+{
+  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS);
+}
+
+/**
+ * @param fes the finite element space in question
+ *
  * @brief attempt to characterize which FiniteElementSpaces
  * mfem::FaceRestriction actually works with
  */
 bool supports_bdr_stuff(const mfem::ParFiniteElementSpace& fes)
 {
-  return !(is_Hcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(is_Hcurl(fes) && fes.GetMesh()->Dimension() == 3);
+  return !(is_Hcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(is_Hcurl(fes) && fes.GetMesh()->Dimension() == 3) &&
+         !(is_L2(fes));
 }
 
 /**
