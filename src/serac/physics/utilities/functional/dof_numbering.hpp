@@ -74,6 +74,27 @@ struct SignedIndex {
 };
 
 /**
+ * @param fes the finite element space in question
+ *
+ * @brief return whether or not the underlying function space is Hcurl or not
+ */
+bool is_Hcurl(const mfem::ParFiniteElementSpace& fes)
+{
+  return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::TANGENTIAL);
+}
+
+/**
+ * @param fes the finite element space in question
+ *
+ * @brief attempt to characterize which FiniteElementSpaces
+ * mfem::FaceRestriction actually works with
+ */
+bool supports_bdr_stuff(const mfem::ParFiniteElementSpace& fes)
+{
+  return !(is_Hcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(is_Hcurl(fes) && fes.GetMesh()->Dimension() == 3);
+}
+
+/**
  * @brief this is a (hopefully) temporary measure to work around the fact that mfem's
  * support for querying information about boundary elements is inconsistent, or entirely
  * unimplemented.
@@ -85,9 +106,9 @@ template <typename T, ExecutionSpace exec>
 serac::Array<T, 3, exec> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& trial_fes,
                                                                const mfem::ParFiniteElementSpace& test_fes)
 {
-  auto* test_BE  = test_fes.GetBE(0);
-  auto* trial_BE = trial_fes.GetBE(0);
-  if (test_BE && trial_BE) {
+  if (supports_bdr_stuff(test_fes) && supports_bdr_stuff(trial_fes)) {
+    auto* test_BE  = test_fes.GetBE(0);
+    auto* trial_BE = trial_fes.GetBE(0);
     return serac::Array<T, 3, exec>(static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
                                     static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
                                     static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim()));
@@ -100,8 +121,8 @@ serac::Array<T, 3, exec> guard_against_unimplemented_bdr_stuff(const mfem::ParFi
 template <typename T, ExecutionSpace exec>
 serac::Array<T, 2, exec> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& fes)
 {
-  auto* BE = fes.GetBE(0);
-  if (BE) {
+  if (supports_bdr_stuff(fes)) {
+    auto* BE = fes.GetBE(0);
     return serac::Array<T, 2, exec>(static_cast<size_t>(fes.GetNFbyType(mfem::FaceType::Boundary)),
                                     static_cast<size_t>(BE->GetDof() * fes.GetVDim()));
   } else {
@@ -157,7 +178,7 @@ struct DofNumbering {
       }
     }
 
-    {
+    if (bdr_element_dofs_.size() > 0) {
       auto face_restriction = fespace.GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
                                                          mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
 
