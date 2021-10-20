@@ -177,10 +177,6 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
   const int grid_stride = blockDim.x * gridDim.x;
   // launch a thread for each quadrature x element point
   for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
-    if (qe == 0) {
-      printf("ptr: %p\n", &u(0, 0));
-    }
-
     // warps won't fetch that many elements ... not great.. but not horrible
     int e = qe / rule.size();
     int q = qe % rule.size();
@@ -205,8 +201,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
     //
     // note: make_dual(arg) promotes those arguments to dual number types
     // so that qf_output will contain values and derivatives
-    auto qf_output = qf(x_q, make_dual(arg));
-    // auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
+    auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
 
     // integrate qf_output against test space shape functions / gradients
     // to get element residual contributions

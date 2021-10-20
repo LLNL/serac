@@ -425,14 +425,14 @@ template <typename T>
 struct Array<T, 1, ExecutionSpace::Dynamic> : public detail::ArrayBase<T, ExecutionSpace::Dynamic>,
                                               public detail::Indexable<1> {
   using detail::ArrayBase<T, ExecutionSpace::Dynamic>::ptr;
-  Array() = default;
+  Array() : detail::ArrayBase<T, ExecutionSpace::Dynamic>(0), detail::Indexable<1>(0){};
   Array(size_t n) : detail::ArrayBase<T, ExecutionSpace::Dynamic>(n), detail::Indexable<1>(n) {}
   SERAC_HOST_DEVICE T&    operator()(size_t i) { return ptr[i]; }
   SERAC_HOST_DEVICE const T& operator()(size_t i) const { return ptr[i]; }
   SERAC_HOST_DEVICE T*    data() { return ptr; }
   SERAC_HOST_DEVICE const T* data() const { return ptr; }
-  SERAC_HOST_DEVICE T* begin() { return ptr; }
-  SERAC_HOST_DEVICE T* end() { return ptr + this->size(); }
+  T*                         begin() { return ptr; }
+  T*                         end() { return ptr + this->size(); }
 };
 
 template <typename T>

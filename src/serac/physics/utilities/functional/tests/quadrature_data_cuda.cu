@@ -345,7 +345,7 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
   }
 
   // Ordered quadrature point data that is unique (mutated with the point's distance from the origin)
-  // DeviceArray<typename TestFixture::value_type> origin_mutated_data;
+  DeviceArray<typename TestFixture::value_type> origin_mutated_data;
 
   // Reload the state again to make sure the same synchronization still happens when the data
   // is read in from a restart
@@ -361,7 +361,7 @@ TYPED_TEST(QuadratureDataGPUStateManagerTest, basic_integrals_state_manager)
       EXPECT_EQ(s, mutated_twice);
     }
 
-    // origin_mutated_data.resize(std::distance(qdata.begin(), qdata.end()));
+    origin_mutated_data.resize(std::distance(qdata.begin(), qdata.end()));
 
     // this->residual->AddDomainIntegral(Dimension<TestFixture::dim>{},
     //                                   state_manager_varying_qfunction<TestFixture>{origin_mutated_data}, *this->mesh,
