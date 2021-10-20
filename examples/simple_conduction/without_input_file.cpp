@@ -40,8 +40,7 @@ int main(int argc, char* argv[])
 
   // Set a temperature (Dirichlet) boundary condition on a boundary attribute set
   const std::set<int> boundary_constant_attributes = {1};
-  constexpr double boundary_constant = 1.0;
-  auto boundary_constant_coef = std::make_unique<mfem::ConstantCoefficient>(boundary_constant);
+  auto boundary_constant_coef = std::make_unique<mfem::ConstantCoefficient>(1.0);
   conduction.setTemperatureBCs(boundary_constant_attributes, std::move(boundary_constant_coef));
 
   // Set a different temperature boundary condition on a boundary attribute set
