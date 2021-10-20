@@ -61,7 +61,7 @@ int main(int argc, char*argv[])
         auto [u, du_dx] = temperature;
 
         // Set the uniform source term (comes from the linear form in MFEM ex1)
-        auto source     = -1.0; //  + u * u * x[0];
+        auto source     = -1.0; // + u * u * x[0];
 
         // Set the flux term (comes from the bilinear form in MFEM ex1)
         auto flux       = du_dx;
@@ -80,7 +80,7 @@ int main(int argc, char*argv[])
 
   // Set up the linear and nonlinear solvers
   mfem::CGSolver lin_solver(MPI_COMM_WORLD);
-  lin_solver.SetPrintLevel(1);
+  lin_solver.SetPrintLevel(0);
   lin_solver.SetAbsTol(1.0e-12);
   lin_solver.SetMaxIter(1000);
 
