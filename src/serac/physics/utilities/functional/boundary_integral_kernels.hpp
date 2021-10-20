@@ -318,3 +318,5 @@ void element_gradient_kernel(CPUView<double, 3> dk, derivatives_type* derivative
 }
 
 }  // namespace boundary_integral
+
+}  // namespace serac

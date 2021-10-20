@@ -26,6 +26,8 @@
 #include "serac/physics/utilities/functional/boundary_integral_kernels.cuh"
 #endif
 
+namespace serac {
+
 /**
  * @brief Describes a single boundary integral term in a weak forumulation of a partial differential equation
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
