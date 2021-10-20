@@ -356,7 +356,7 @@ template <typename T>
 struct Array<T, 1, ExecutionSpace::GPU> : public detail::ArrayBase<T, ExecutionSpace::GPU>,
                                           public detail::Indexable<1> {
   using detail::ArrayBase<T, ExecutionSpace::GPU>::ptr;
-  Array() = default;
+  Array() : detail::ArrayBase<T, ExecutionSpace::GPU>(0), detail::Indexable<1>(0) {}
   Array(size_t n) : detail::ArrayBase<T, ExecutionSpace::GPU>(n), detail::Indexable<1>(n) {}
   SERAC_DEVICE T&    operator()(size_t i) { return ptr[i]; }
   SERAC_DEVICE const T& operator()(size_t i) const { return ptr[i]; }
@@ -366,7 +366,7 @@ template <typename T>
 struct Array<T, 2, ExecutionSpace::GPU> : public detail::ArrayBase<T, ExecutionSpace::GPU>,
                                           public detail::Indexable<2> {
   using detail::ArrayBase<T, ExecutionSpace::GPU>::ptr;
-  Array() = default;
+  Array() : detail::ArrayBase<T, ExecutionSpace::GPU>(0), detail::Indexable<2>(0, 0) {}
   Array(size_t n1, size_t n2) : detail::ArrayBase<T, ExecutionSpace::GPU>(n1 * n2), detail::Indexable<2>(n1, n2) {}
   SERAC_DEVICE T&    operator()(size_t i, size_t j) { return ptr[index(i, j)]; }
   SERAC_DEVICE const T& operator()(size_t i, size_t j) const { return ptr[index(i, j)]; }
@@ -376,7 +376,7 @@ template <typename T>
 struct Array<T, 3, ExecutionSpace::GPU> : public detail::ArrayBase<T, ExecutionSpace::GPU>,
                                           public detail::Indexable<3> {
   using detail::ArrayBase<T, ExecutionSpace::GPU>::ptr;
-  Array() = default;
+  Array() : detail::ArrayBase<T, ExecutionSpace::GPU>(0), detail::Indexable<3>(0, 0, 0) {}
   Array(size_t n1, size_t n2, size_t n3)
       : detail::ArrayBase<T, ExecutionSpace::GPU>(n1 * n2 * n3), detail::Indexable<3>(n1, n2, n3)
   {

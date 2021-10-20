@@ -1,3 +1,8 @@
+// Copyright (c) 2019-2021, Lawrence Livermore National Security, LLC and
+// other Serac Project Developers. See the top-level LICENSE file for
+// details.
+//
+// SPDX-License-Identifier: (BSD-3-Clause)
 #pragma once
 
 #include <cstring>
@@ -165,13 +170,17 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
 {
   using test_element          = finite_element<g, test>;
   using trial_element         = finite_element<g, trial>;
-  using element_residual_type = typename trial_element::residual_type;
+  using element_residual_type = typename test_element::residual_type;
   static constexpr auto rule  = GaussQuadratureRule<g, Q>();
   static constexpr int  dim   = dimension_of(g);
 
   const int grid_stride = blockDim.x * gridDim.x;
   // launch a thread for each quadrature x element point
   for (int qe = blockIdx.x * blockDim.x + threadIdx.x; qe < num_elements * rule.size(); qe += grid_stride) {
+    if (qe == 0) {
+      printf("ptr: %p\n", &u(0, 0));
+    }
+
     // warps won't fetch that many elements ... not great.. but not horrible
     int e = qe / rule.size();
     int q = qe % rule.size();
@@ -196,7 +205,8 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
     //
     // note: make_dual(arg) promotes those arguments to dual number types
     // so that qf_output will contain values and derivatives
-    auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
+    auto qf_output = qf(x_q, make_dual(arg));
+    // auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
 
     // integrate qf_output against test space shape functions / gradients
     // to get element residual contributions
@@ -252,7 +262,7 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
-  using element_residual_type      = typename trial_element::residual_type;
+  using element_residual_type      = typename test_element::residual_type;
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();

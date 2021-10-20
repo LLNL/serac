@@ -81,31 +81,31 @@ struct SignedIndex {
  * known issues: getting dofs/ids for boundary elements in 2D w/ Hcurl spaces
  *               getting dofs/ids for boundary elements in 2D,3D w/ L2 spaces
  */
-template <typename T>
-serac::CPUArray<T, 3> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& trial_fes,
-                                                            const mfem::ParFiniteElementSpace& test_fes)
+template <typename T, ExecutionSpace exec>
+serac::Array<T, 3, exec> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& trial_fes,
+                                                               const mfem::ParFiniteElementSpace& test_fes)
 {
   auto* test_BE  = test_fes.GetBE(0);
   auto* trial_BE = trial_fes.GetBE(0);
   if (test_BE && trial_BE) {
-    return serac::CPUArray<T, 3>(static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
-                                 static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
-                                 static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim()));
+    return serac::Array<T, 3, exec>(static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
+                                    static_cast<size_t>(test_BE->GetDof() * test_fes.GetVDim()),
+                                    static_cast<size_t>(trial_BE->GetDof() * trial_fes.GetVDim()));
   } else {
-    return serac::CPUArray<T, 3>(0, 0, 0);
+    return serac::Array<T, 3, exec>(0, 0, 0);
   }
 }
 
 /// @overload
-template <typename T>
-serac::CPUArray<T, 2> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& fes)
+template <typename T, ExecutionSpace exec>
+serac::Array<T, 2, exec> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& fes)
 {
   auto* BE = fes.GetBE(0);
   if (BE) {
-    return serac::CPUArray<T, 2>(static_cast<size_t>(fes.GetNFbyType(mfem::FaceType::Boundary)),
-                                 static_cast<size_t>(BE->GetDof() * fes.GetVDim()));
+    return serac::Array<T, 2, exec>(static_cast<size_t>(fes.GetNFbyType(mfem::FaceType::Boundary)),
+                                    static_cast<size_t>(BE->GetDof() * fes.GetVDim()));
   } else {
-    return serac::CPUArray<T, 2>(0, 0);
+    return serac::Array<T, 2, exec>(0, 0);
   }
 }
 
@@ -117,6 +117,7 @@ serac::CPUArray<T, 2> guard_against_unimplemented_bdr_stuff(const mfem::ParFinit
  *    we choose to use the Restriction operator as the "source of truth", since we are also using its
  *    convention for quadrature point numbering.
  */
+
 struct DofNumbering {
   /**
    * @param fespace the finite element space to extract dof numbers from
@@ -127,7 +128,7 @@ struct DofNumbering {
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
       : element_dofs_(static_cast<size_t>(fespace.GetNE()),
                       static_cast<size_t>(fespace.GetFE(0)->GetDof() * fespace.GetVDim())),
-        bdr_element_dofs_(guard_against_unimplemented_bdr_stuff<SignedIndex>(fespace))
+        bdr_element_dofs_(guard_against_unimplemented_bdr_stuff<SignedIndex, ExecutionSpace::CPU>(fespace))
   {
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -209,7 +210,8 @@ struct GradientAssemblyLookupTables {
       : element_nonzero_LUT(static_cast<size_t>(trial_fespace.GetNE()),
                             static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),
                             static_cast<size_t>(trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim())),
-        bdr_element_nonzero_LUT(guard_against_unimplemented_bdr_stuff<SignedIndex>(trial_fespace, test_fespace))
+        bdr_element_nonzero_LUT(
+            guard_against_unimplemented_bdr_stuff<SignedIndex, ExecutionSpace::CPU>(trial_fespace, test_fespace))
   {
     DofNumbering test_dofs(test_fespace);
     DofNumbering trial_dofs(trial_fespace);
