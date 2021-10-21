@@ -144,7 +144,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p> test, H1<p> trial, Dimension<dim
   // Compute the gradient action using standard MFEM and functional
   mfem::Vector g1 = SERAC_PROFILE_EXPR_LOOP(concat("mfem_ApplyGradient", postfix), (*J_mfem) * U, nsamples);
   mfem::Vector g2 = SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient", postfix), grad2 * U, nsamples);
-  mfem::Vector g3 = SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient_Matrix", postfix), (*J_func) * U, nsamples);
+  mfem::Vector g3 =
+      SERAC_PROFILE_EXPR_LOOP(concat("functional_ApplyGradient_Matrix", postfix), (*J_func) * U, nsamples);
 
   if (verbose) {
     std::cout << "||g1||: " << g1.Norml2() << std::endl;
@@ -240,7 +241,8 @@ void functional_test(mfem::ParMesh& mesh, H1<p, dim> test, H1<p, dim> trial, Dim
   }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-14);
 
-  mfem::Operator& grad_operator = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
+  mfem::Operator& grad_operator =
+      SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
   auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad(residual));
 
@@ -332,7 +334,8 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   }
   EXPECT_NEAR(0., mfem::Vector(r1 - r2).Norml2() / r1.Norml2(), 1.e-13);
 
-  mfem::Operator& grad_operator = SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
+  mfem::Operator& grad_operator =
+      SERAC_PROFILE_EXPR(concat("functional_GetGradient", postfix), residual.GetGradient(U));
 
   auto J_func = std::unique_ptr<mfem::HypreParMatrix>(grad(residual));
 
@@ -350,7 +353,7 @@ void functional_test(mfem::ParMesh& mesh, Hcurl<p> test, Hcurl<p> trial, Dimensi
   EXPECT_NEAR(0., mfem::Vector(g1 - g2).Norml2() / g1.Norml2(), 1.e-13);
 
   // TODO: investigate incorrect directional derivative from HypreParMatrix matvec w/ Hcurl
-  //EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-13);
+  // EXPECT_NEAR(0., mfem::Vector(g1 - g3).Norml2() / g1.Norml2(), 1.e-13);
 
   serac::profiling::terminateCaliper();
 }

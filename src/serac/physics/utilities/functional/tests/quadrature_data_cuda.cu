@@ -410,7 +410,7 @@ int main(int argc, char* argv[])
 
   MPI_Finalize();
 
-  // why does this test need to call terminateDevice, 
+  // why does this test need to call terminateDevice,
   // but none of the other CUDA tests do?
   serac::accelerator::terminateDevice();
 
