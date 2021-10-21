@@ -143,7 +143,7 @@ public:
     }
 
     {
-      bdr_element_gradients_ = guard_against_unimplemented_bdr_stuff<double, exec>(*test_space_, *trial_space_);
+      bdr_element_gradients_ = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_);
     }
   }
 

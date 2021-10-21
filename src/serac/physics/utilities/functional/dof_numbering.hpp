@@ -44,17 +44,7 @@ bool operator!=(const ElemInfo& x, const ElemInfo& y)
   return (x.global_row_ != y.global_row_) || (x.global_col_ != y.global_col_);
 }
 
-/**
- * @brief mfem will frequently encode {sign, index} into a single int32_t.
- * This function decodes the sign from such a type.
- */
-int mfem_sign(int i) { return (i >= 0) ? 1 : -1; }
 
-/**
- * @brief mfem will frequently encode {sign, index} into a single int32_t.
- * This function decodes the index from such a type.
- */
-uint32_t mfem_index(int i) { return static_cast<uint32_t>((i >= 0) ? i : -1 - i); }
 
 /**
  * @brief this type explicitly stores sign (typically used conveying edge/face orientation) and index values
@@ -63,6 +53,9 @@ uint32_t mfem_index(int i) { return static_cast<uint32_t>((i >= 0) ? i : -1 - i)
  * {sign, index} int32_t encoding)
  */
 struct SignedIndex {
+
+
+
   /// the actual index of some quantity
   uint32_t index_;
 
@@ -74,11 +67,21 @@ struct SignedIndex {
 };
 
 /**
+ * @brief mfem will frequently encode {sign, index} into a single int32_t.
+ * This function decodes those values.
+ * 
+ * @param i an integer that mfem has encoded to contain two separate pieces of information 
+ */
+SignedIndex decodeSignedIndex(int i) {
+  return SignedIndex{static_cast<uint32_t>((i >= 0) ? i : -1 - i), (i >= 0) ? 1 : -1 };
+} 
+
+/**
  * @param fes the finite element space in question
  *
  * @brief return whether or not the underlying function space is Hcurl or not
  */
-bool is_Hcurl(const mfem::ParFiniteElementSpace& fes)
+bool isHcurl(const mfem::ParFiniteElementSpace& fes)
 {
   return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::TANGENTIAL);
 }
@@ -88,7 +91,7 @@ bool is_Hcurl(const mfem::ParFiniteElementSpace& fes)
  *
  * @brief return whether or not the underlying function space is L2 or not
  */
-bool is_L2(const mfem::ParFiniteElementSpace& fes)
+bool isL2(const mfem::ParFiniteElementSpace& fes)
 {
   return (fes.FEColl()->GetContType() == mfem::FiniteElementCollection::DISCONTINUOUS);
 }
@@ -99,25 +102,29 @@ bool is_L2(const mfem::ParFiniteElementSpace& fes)
  * @brief attempt to characterize which FiniteElementSpaces
  * mfem::FaceRestriction actually works with
  */
-bool supports_bdr_stuff(const mfem::ParFiniteElementSpace& fes)
+bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
 {
-  return !(is_Hcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(is_Hcurl(fes) && fes.GetMesh()->Dimension() == 3) &&
-         !(is_L2(fes));
+  return !(isHcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(isHcurl(fes) && fes.GetMesh()->Dimension() == 3) && !(isL2(fes));
 }
 
 /**
  * @brief this is a (hopefully) temporary measure to work around the fact that mfem's
  * support for querying information about boundary elements is inconsistent, or entirely
- * unimplemented.
+ * unimplemented. If the finite element spaces both work with mfem::FaceRestriction, it will
+ * return a 3D array sized to store the boundary element gradient matrices, else the 3D array
+ * will have dimensions 0x0x0 to indicate that it is unused.
+ * 
+ * @param trial_fes the trial finite element space
+ * @param test_fes the test finite element space
  *
  * known issues: getting dofs/ids for boundary elements in 2D w/ Hcurl spaces
  *               getting dofs/ids for boundary elements in 2D,3D w/ L2 spaces
  */
 template <typename T, ExecutionSpace exec>
-serac::Array<T, 3, exec> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& trial_fes,
-                                                               const mfem::ParFiniteElementSpace& test_fes)
+serac::Array<T, 3, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& trial_fes,
+                                                              const mfem::ParFiniteElementSpace& test_fes)
 {
-  if (supports_bdr_stuff(test_fes) && supports_bdr_stuff(trial_fes)) {
+  if (compatibleWithFaceRestriction(test_fes) && compatibleWithFaceRestriction(trial_fes)) {
     auto* test_BE  = test_fes.GetBE(0);
     auto* trial_BE = trial_fes.GetBE(0);
     return serac::Array<T, 3, exec>(static_cast<size_t>(trial_fes.GetNFbyType(mfem::FaceType::Boundary)),
@@ -130,9 +137,9 @@ serac::Array<T, 3, exec> guard_against_unimplemented_bdr_stuff(const mfem::ParFi
 
 /// @overload
 template <typename T, ExecutionSpace exec>
-serac::Array<T, 2, exec> guard_against_unimplemented_bdr_stuff(const mfem::ParFiniteElementSpace& fes)
+serac::Array<T, 2, exec> allocateMemoryForBdrElementGradients(const mfem::ParFiniteElementSpace& fes)
 {
-  if (supports_bdr_stuff(fes)) {
+  if (compatibleWithFaceRestriction(fes)) {
     auto* BE = fes.GetBE(0);
     return serac::Array<T, 2, exec>(static_cast<size_t>(fes.GetNFbyType(mfem::FaceType::Boundary)),
                                     static_cast<size_t>(BE->GetDof() * fes.GetVDim()));
@@ -160,7 +167,7 @@ struct DofNumbering {
   DofNumbering(const mfem::ParFiniteElementSpace& fespace)
       : element_dofs_(static_cast<size_t>(fespace.GetNE()),
                       static_cast<size_t>(fespace.GetFE(0)->GetDof() * fespace.GetVDim())),
-        bdr_element_dofs_(guard_against_unimplemented_bdr_stuff<SignedIndex, ExecutionSpace::CPU>(fespace))
+        bdr_element_dofs_(allocateMemoryForBdrElementGradients<SignedIndex, ExecutionSpace::CPU>(fespace))
   {
     {
       auto elem_restriction = fespace.GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
@@ -184,7 +191,7 @@ struct DofNumbering {
       for (size_t e = 0; e < element_dofs_.size(0); e++) {
         for (size_t i = 0; i < element_dofs_.size(1); i++) {
           int mfem_id         = static_cast<int>(dof_ids_h[element_dofs_.index(e, i)]);
-          element_dofs_(e, i) = SignedIndex{mfem_index(mfem_id), mfem_sign(mfem_id)};
+          element_dofs_(e, i) = decodeSignedIndex(mfem_id);
         }
       }
     }
@@ -205,7 +212,7 @@ struct DofNumbering {
       for (size_t e = 0; e < bdr_element_dofs_.size(0); e++) {
         for (size_t i = 0; i < bdr_element_dofs_.size(1); i++) {
           int mfem_id             = static_cast<int>(dof_ids_h[bdr_element_dofs_.index(e, i)]);
-          bdr_element_dofs_(e, i) = SignedIndex{mfem_index(mfem_id), mfem_sign(mfem_id)};
+          bdr_element_dofs_(e, i) = decodeSignedIndex(mfem_id);
         }
       }
     }
@@ -243,7 +250,7 @@ struct GradientAssemblyLookupTables {
                             static_cast<size_t>(test_fespace.GetFE(0)->GetDof() * test_fespace.GetVDim()),
                             static_cast<size_t>(trial_fespace.GetFE(0)->GetDof() * trial_fespace.GetVDim())),
         bdr_element_nonzero_LUT(
-            guard_against_unimplemented_bdr_stuff<SignedIndex, ExecutionSpace::CPU>(trial_fespace, test_fespace))
+            allocateMemoryForBdrElementGradients<SignedIndex, ExecutionSpace::CPU>(trial_fespace, test_fespace))
   {
     DofNumbering test_dofs(test_fespace);
     DofNumbering trial_dofs(trial_fespace);
