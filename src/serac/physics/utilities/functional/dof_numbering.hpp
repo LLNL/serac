@@ -44,8 +44,6 @@ bool operator!=(const ElemInfo& x, const ElemInfo& y)
   return (x.global_row_ != y.global_row_) || (x.global_col_ != y.global_col_);
 }
 
-
-
 /**
  * @brief this type explicitly stores sign (typically used conveying edge/face orientation) and index values
  *
@@ -53,9 +51,6 @@ bool operator!=(const ElemInfo& x, const ElemInfo& y)
  * {sign, index} int32_t encoding)
  */
 struct SignedIndex {
-
-
-
   /// the actual index of some quantity
   uint32_t index_;
 
@@ -69,12 +64,13 @@ struct SignedIndex {
 /**
  * @brief mfem will frequently encode {sign, index} into a single int32_t.
  * This function decodes those values.
- * 
- * @param i an integer that mfem has encoded to contain two separate pieces of information 
+ *
+ * @param i an integer that mfem has encoded to contain two separate pieces of information
  */
-SignedIndex decodeSignedIndex(int i) {
-  return SignedIndex{static_cast<uint32_t>((i >= 0) ? i : -1 - i), (i >= 0) ? 1 : -1 };
-} 
+SignedIndex decodeSignedIndex(int i)
+{
+  return SignedIndex{static_cast<uint32_t>((i >= 0) ? i : -1 - i), (i >= 0) ? 1 : -1};
+}
 
 /**
  * @param fes the finite element space in question
@@ -104,7 +100,8 @@ bool isL2(const mfem::ParFiniteElementSpace& fes)
  */
 bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
 {
-  return !(isHcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(isHcurl(fes) && fes.GetMesh()->Dimension() == 3) && !(isL2(fes));
+  return !(isHcurl(fes) && fes.GetMesh()->Dimension() == 2) && !(isHcurl(fes) && fes.GetMesh()->Dimension() == 3) &&
+         !(isL2(fes));
 }
 
 /**
@@ -113,7 +110,7 @@ bool compatibleWithFaceRestriction(const mfem::ParFiniteElementSpace& fes)
  * unimplemented. If the finite element spaces both work with mfem::FaceRestriction, it will
  * return a 3D array sized to store the boundary element gradient matrices, else the 3D array
  * will have dimensions 0x0x0 to indicate that it is unused.
- * 
+ *
  * @param trial_fes the trial finite element space
  * @param test_fes the test finite element space
  *
