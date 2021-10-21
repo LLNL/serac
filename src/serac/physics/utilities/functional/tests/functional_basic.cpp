@@ -63,15 +63,8 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   delete dfdU_matrix;
 }
 
-#include <unistd.h>
-
 int main(int argc, char* argv[])
 {
-  //{
-  //  int i=0;
-  //  while (0 == i) sleep(1);
-  //}
-
   int num_procs, myid;
 
   MPI_Init(&argc, &argv);
