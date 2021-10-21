@@ -17,7 +17,6 @@
 #include "serac/physics/operators/stdfunction_operator.hpp"
 #include "serac/physics/utilities/functional/functional.hpp"
 #include "serac/physics/utilities/functional/tensor.hpp"
-#include "serac/numerics/assembled_sparse_matrix.hpp"
 #include "serac/infrastructure/profiling.hpp"
 #include <gtest/gtest.h>
 

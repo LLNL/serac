@@ -22,8 +22,6 @@
 #include "serac/physics/utilities/functional/domain_integral.hpp"
 #include "serac/physics/utilities/functional/boundary_integral.hpp"
 #include "serac/physics/utilities/functional/dof_numbering.hpp"
-#include "serac/numerics/assembled_sparse_matrix.hpp"
-#include "serac/infrastructure/logger.hpp"
 
 namespace serac {
 
