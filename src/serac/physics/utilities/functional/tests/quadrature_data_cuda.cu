@@ -402,11 +402,17 @@ int main(int argc, char* argv[])
 
   MPI_Init(&argc, &argv);
 
+  serac::accelerator::initializeDevice();
+
   axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when exiting main scope
 
   result = RUN_ALL_TESTS();
 
   MPI_Finalize();
+
+  // why does this test need to call terminateDevice, 
+  // but none of the other CUDA tests do?
+  serac::accelerator::terminateDevice();
 
   return result;
 }
