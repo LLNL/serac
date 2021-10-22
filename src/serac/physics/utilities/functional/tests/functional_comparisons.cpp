@@ -20,9 +20,6 @@
 #include "serac/infrastructure/profiling.hpp"
 #include <gtest/gtest.h>
 
-// TODO remove AssembledSparseMatrix completely and refactor these tests
-#define enable_assembled_sparsematrix_stuff 0
-
 using namespace serac;
 using namespace serac::profiling;
 

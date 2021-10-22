@@ -15,7 +15,6 @@ blt_add_executable(NAME        tensor_unit_tests
 # Then add the examples/tests
 set(functional_tests_serial
     hypreparvector_test.cpp
-    restriction_test.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     array_test.cpp
@@ -56,9 +55,6 @@ endforeach()
 
 if(ENABLE_CUDA)
 
-    # TODO: serac::initializeDevice is currently broken,
-    # until it gets fixed, these tests are disabled to avoid CI
-    # preventing pull requests from going through
     set(functional_tests_cuda 
         tensor_unit_tests_cuda.cu 
         functional_comparisons_cuda.cu
