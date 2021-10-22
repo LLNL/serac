@@ -164,8 +164,9 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename solution_type, typename residual_type, typename jacobian_type, typename position_type,
           typename qpt_data_type = void>
-__global__ void eval_cuda_quadrature(const solution_type u, residual_type r, GPUView< derivatives_type, 2 > qf_derivatives,
-                                     jacobian_type J, position_type X, int num_elements, lambda qf,
+__global__ void eval_cuda_quadrature(const solution_type u, residual_type r,
+                                     GPUView<derivatives_type, 2> qf_derivatives, jacobian_type J, position_type X,
+                                     int num_elements, lambda qf,
                                      QuadratureDataView<qpt_data_type> data = dummy_qdata_view)
 {
   using test_element          = finite_element<g, test>;
@@ -215,7 +216,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, GPU
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
     detail::Add(r, r_elem, e);
-  } 
+  }
 }
 
 /**
@@ -250,7 +251,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, GPU
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type, typename lambda, typename qpt_data_type = void>
 void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& U, mfem::Vector& R,
-                            GPUView< derivatives_type, 2 > qf_derivatives, const mfem::Vector& J_, const mfem::Vector& X_,
+                            GPUView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_, const mfem::Vector& X_,
                             int num_elements, lambda qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
   using test_element               = finite_element<g, test>;
@@ -318,7 +319,8 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
           typename dresidual_type>
-__global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr, GPUView< derivatives_type, 2 > qf_derivatives,
+__global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr,
+                                      GPUView<derivatives_type, 2>              qf_derivatives,
                                       const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
   using test_element          = finite_element<g, test>;
@@ -394,7 +396,8 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
           typename dresidual_type>
-__global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type dr, GPUView< derivatives_type, 2 > qf_derivatives,
+__global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type dr,
+                                         GPUView<derivatives_type, 2>              qf_derivatives,
                                          const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
   using test_element          = finite_element<g, test>;
@@ -470,7 +473,7 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type>
 void action_of_gradient_kernel(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
-                               GPUView< derivatives_type, 2 > qf_derivatives, const mfem::Vector& J_, int num_elements)
+                               GPUView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
