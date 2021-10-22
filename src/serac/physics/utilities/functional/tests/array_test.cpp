@@ -1,4 +1,7 @@
 // these tests will be removed once axom::Array is ready
+
+#include <gtest/gtest.h>
+
 #include "serac/physics/utilities/functional/array.hpp"
 
 constexpr int N1 = 8;
@@ -37,9 +40,8 @@ int main()
 
   for (size_t i = 0; i < my_array.size(0); i++) {
     for (size_t j = 0; j < my_array.size(1); j++) {
-      std::cout << my_array(i, j) << " ";
+      EXPECT_EQ(i + j, my_array(i, j));
     }
-    std::cout << std::endl;
   }
 
   foo f;
@@ -50,8 +52,7 @@ int main()
 
   for (size_t i = 0; i < my_array.size(0); i++) {
     for (size_t j = 0; j < my_array.size(1); j++) {
-      std::cout << my_array(i, j) << " ";
+      EXPECT_EQ(0, my_array(i, j));
     }
-    std::cout << std::endl;
   }
 }
