@@ -121,7 +121,13 @@ void check_gradient(Functional<T>& f, mfem::HypreParVector& U)
   }
 }
 
-enum class WhichTest { Measure, Moment, SumOfMeasures, Nonlinear };
+enum class WhichTest
+{
+  Measure,
+  Moment,
+  SumOfMeasures,
+  Nonlinear
+};
 
 template <int p, int dim>
 void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
@@ -141,7 +147,6 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
   using trial_space = decltype(trial);
 
   switch (which) {
-
     case WhichTest::Measure: {
       Functional<double(trial_space)> measure(&fespace);
       measure.AddDomainIntegral(
@@ -176,7 +181,6 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
     } break;
 
     case WhichTest::Nonlinear: {
-
       Functional<double(trial_space)> f(&fespace);
       f.AddDomainIntegral(
           Dimension<dim>{},
@@ -205,11 +209,9 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
       check_gradient(f, U);
 
     } break;
-
   }
 
   delete tmp;
-
 }
 
 // clang-format off
