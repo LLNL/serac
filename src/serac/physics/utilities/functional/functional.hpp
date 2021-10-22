@@ -411,7 +411,7 @@ private:
 
       auto* P = form_.trial_space_->Dof_TrueDof_Matrix();
 
-      auto * RAP = mfem::RAP(R, A, P);
+      auto* RAP = mfem::RAP(R, A, P);
 
       delete A;
 

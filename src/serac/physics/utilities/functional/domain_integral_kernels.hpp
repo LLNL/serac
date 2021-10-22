@@ -95,7 +95,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
       // here, we store the derivative of the q-function w.r.t. its input arguments
       //
       // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
-      qf_derivatives(e, q) = get_gradient(qf_output);
+      qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q)) = get_gradient(qf_output);
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -168,7 +168,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
       auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = qf_derivatives(e, q);
+      auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
 
       // use the chain rule to compute the first-order change in the q-function output
       auto dq = chain_rule(dq_darg, darg);
@@ -236,7 +236,7 @@ void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, CPUVi
       double dx    = det(J_q) * dxi_q;
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = qf_derivatives(e, q);
+      auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
 
       if constexpr (std::is_same<test, QOI>::value) {
         auto& q0 = serac::get<0>(dq_darg);  // derivative of QoI w.r.t. field value

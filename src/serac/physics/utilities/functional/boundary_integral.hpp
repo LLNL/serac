@@ -82,7 +82,7 @@ public:
     // that of the DomainIntegral that allocated it.
 
     // TODO: change this allocation to use exec, rather than ExecutionSpace::CPU, once
-    // we implement GPU boundary kernels 
+    // we implement GPU boundary kernels
     auto ptr = accelerator::make_shared_array<derivative_type, ExecutionSpace::CPU>(num_quadrature_points);
 
     size_t                      n1 = static_cast<size_t>(num_elements);
@@ -97,13 +97,13 @@ public:
     // this lambda function captures ptr by-value to extend its lifetime
     //                   vvv
     evaluation_ = [this, ptr, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
-      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives, J_, X_,
-                                                                                 normals_, num_elements, qf);
+      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives, J_, X_, normals_,
+                                                                                 num_elements, qf);
     };
 
     action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
-      boundary_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives,
-                                                                                         J_, num_elements);
+      boundary_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives, J_,
+                                                                                         num_elements);
     };
 
     element_gradient_ = [this, qf_derivatives, num_elements](ArrayView<double, 3, exec> K_b) {
