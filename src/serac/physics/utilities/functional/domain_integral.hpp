@@ -86,9 +86,6 @@ public:
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
     //
     // std::function's type erasure lets us wrap those specific details inside a function with known signature
-    //
-    // note: qf_derivatives is captured by each lambda function below,
-    //       to allow the evaluation kernel to pass derivative values to the gradient kernel
     if constexpr (exec == ExecutionSpace::CPU) {
       // note: this lambda function captures ptr by-value to extend its lifetime
       //                   vvv

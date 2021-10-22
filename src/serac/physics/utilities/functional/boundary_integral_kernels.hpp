@@ -91,7 +91,7 @@ auto Postprocess(const T& f, [[maybe_unused]] const coord_type& xi)
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
-void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type* derivatives_ptr,
+void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView< derivatives_type, 2> qf_derivatives,
                        const mfem::Vector& J_, const mfem::Vector& X_, const mfem::Vector& N_, int num_elements,
                        lambda qf)
 
@@ -146,7 +146,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
       // here, we store the derivative of the q-function w.r.t. its input arguments
       //
       // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
-      derivatives_ptr[e * int(rule.size()) + q] = get_gradient(qf_output);
+      qf_derivatives(e, q) = get_gradient(qf_output);
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -181,7 +181,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, derivatives_type*
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivatives_type* derivatives_ptr,
+void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView< derivatives_type, 2> qf_derivatives,
                                const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
@@ -217,7 +217,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
       auto darg = Preprocess<trial_element>(du_elem, xi);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
+      auto dq_darg = qf_derivatives(e, q);
 
       // use the chain rule to compute the first-order change in the q-function output
       auto dq = chain_rule(dq_darg, darg);
@@ -258,7 +258,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, derivat
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(CPUView<double, 3> dk, derivatives_type* derivatives_ptr, const mfem::Vector& J_,
+void element_gradient_kernel(CPUView<double, 3> dk, CPUView< derivatives_type, 2 > qf_derivatives, const mfem::Vector& J_,
                              int num_elements)
 {
   using test_element               = finite_element<g, test>;
@@ -286,7 +286,7 @@ void element_gradient_kernel(CPUView<double, 3> dk, derivatives_type* derivative
       double dx    = J(q, e) * dxi_q;
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = derivatives_ptr[e * int(rule.size()) + q];
+      auto dq_darg = qf_derivatives(e, q);
 
       if constexpr (std::is_same<test, QOI>::value) {
         auto N = trial_element::shape_functions(xi_q);
