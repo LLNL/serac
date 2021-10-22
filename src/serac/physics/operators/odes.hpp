@@ -16,8 +16,8 @@
 
 #include "mfem.hpp"
 
-#include "serac/physics/utilities/boundary_condition_manager.hpp"
-#include "serac/physics/utilities/equation_solver.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
+#include "serac/numerics/equation_solver.hpp"
 
 namespace serac::mfem_ext {
 

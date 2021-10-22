@@ -4,20 +4,26 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+add_subdirectory(functional)
+
 if(ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
 
 set(numerics_headers
     array_4D.hpp
+    equation_solver.hpp
     expr_template_impl.hpp
     expr_template_ops.hpp
     mesh_utils.hpp
     mesh_utils_base.hpp
+    quadrature_data.hpp
+    solver_config.hpp
     vector_expression.hpp
     )
 
 set(numerics_sources
+    equation_solver.cpp
     mesh_utils.cpp
     )
 

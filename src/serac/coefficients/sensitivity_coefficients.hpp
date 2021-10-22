@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "serac/physics/utilities/finite_element_state.hpp"
+#include "serac/physics/state/finite_element_state.hpp"
 #include "serac/physics/materials/hyperelastic_material.hpp"
 #include "serac/coefficients/sensitivity_coefficients.hpp"
 

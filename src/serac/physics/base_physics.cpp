@@ -15,8 +15,8 @@
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
-#include "serac/physics/utilities/finite_element_state.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/state/finite_element_state.hpp"
+#include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
 

@@ -19,7 +19,6 @@ set(physics_operators_sources
 
 set(physics_operators_depends
     serac_infrastructure
-    serac_physics_utilities
     serac_numerics
     )
 

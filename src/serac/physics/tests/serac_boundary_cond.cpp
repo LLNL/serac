@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/utilities/boundary_condition_manager.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
 
 #include <memory>
 

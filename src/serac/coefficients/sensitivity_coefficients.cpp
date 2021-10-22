@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/coefficients/sensitivity_coefficients.hpp"
-#include "serac/physics/utilities/physics_utils.hpp"
+#include "serac/physics/materials/solid_utils.hpp"
 
 namespace serac::mfem_ext {
 

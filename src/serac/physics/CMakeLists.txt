@@ -4,10 +4,11 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-add_subdirectory(utilities)
 add_subdirectory(operators)
 add_subdirectory(integrators)
 add_subdirectory(materials)
+add_subdirectory(state)
+add_subdirectory(boundary_conditions)
 
 if(ENABLE_TESTS)
     add_subdirectory(tests)
@@ -33,8 +34,9 @@ set(physics_dependencies
     serac_physics_integrators
     serac_physics_materials
     serac_numerics
-    serac_physics_utilities
     serac_physics_operators
+    serac_boundary_conditions
+    serac_state
     )
 
 blt_add_library(

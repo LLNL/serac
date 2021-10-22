@@ -15,7 +15,7 @@
 #include "serac/physics/solid.hpp"
 #include "serac/physics/thermal_conduction.hpp"
 #include "serac/physics/thermal_solid.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
 

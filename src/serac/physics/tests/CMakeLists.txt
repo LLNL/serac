@@ -11,7 +11,7 @@ blt_add_library(
     NAME        test_utils
     SOURCES     test_utilities.cpp
     HEADERS     test_utilities.hpp
-    DEPENDS_ON  serac_physics gtest
+    DEPENDS_ON  serac_physics serac_state gtest
     )
 
 set(solver_tests
