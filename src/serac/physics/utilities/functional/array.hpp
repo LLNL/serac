@@ -309,10 +309,8 @@ struct ArrayView;
 
 template <typename T>
 struct ArrayView<T, 1, ExecutionSpace::CPU> : public detail::Indexable<1> {
-  template <ExecutionSpace exec>
-  ArrayView(const Array<T, 3, exec>& arr) : detail::Indexable<1>(arr), ptr{arr.ptr}
-  {
-  }
+  ArrayView(T * p, size_t n) : detail::Indexable<1>(n), ptr{p}{}
+  ArrayView(const Array<T, 1, ExecutionSpace::CPU>& arr) : detail::Indexable<1>(arr), ptr{arr.ptr} {}
   T&       operator[](size_t i) { return ptr[i]; }
   const T& operator[](size_t i) const { return ptr[i]; }
   T&       operator()(size_t i) { return ptr[i]; }
@@ -322,6 +320,7 @@ struct ArrayView<T, 1, ExecutionSpace::CPU> : public detail::Indexable<1> {
 
 template <typename T>
 struct ArrayView<T, 2, ExecutionSpace::CPU> : public detail::Indexable<2> {
+  ArrayView(T * p, size_t n1, size_t n2) : detail::Indexable<2>(n1, n2), ptr{p}{}
   ArrayView(const Array<T, 2, ExecutionSpace::CPU>& arr) : detail::Indexable<2>(arr), ptr{arr.ptr} {}
   T&       operator()(size_t i, size_t j) { return ptr[index(i, j)]; }
   const T& operator()(size_t i, size_t j) const { return ptr[index(i, j)]; }
@@ -330,6 +329,7 @@ struct ArrayView<T, 2, ExecutionSpace::CPU> : public detail::Indexable<2> {
 
 template <typename T>
 struct ArrayView<T, 3, ExecutionSpace::CPU> : public detail::Indexable<3> {
+  ArrayView(T * p, size_t n1, size_t n2, size_t n3) : detail::Indexable<3>(n1, n2, n3), ptr{p}{}
   ArrayView(const Array<T, 3, ExecutionSpace::CPU>& arr) : detail::Indexable<3>(arr), ptr{arr.ptr} {}
   T&       operator()(size_t i, size_t j, size_t k) { return ptr[index(i, j, k)]; }
   const T& operator()(size_t i, size_t j, size_t k) const { return ptr[index(i, j, k)]; }
@@ -393,10 +393,8 @@ void zero_out(detail::ArrayBase<T, serac::ExecutionSpace::GPU>& arr)
 
 template <typename T>
 struct ArrayView<T, 1, ExecutionSpace::GPU> : public detail::Indexable<1> {
-  template <ExecutionSpace exec>
-  ArrayView(const Array<T, 1, exec>& arr) : ptr{arr.ptr}, detail::Indexable<1>(arr)
-  {
-  }
+  ArrayView(T * p, size_t n) : detail::Indexable<1>(n), ptr{p}{}
+  ArrayView(const Array<T, 1, ExecutionSpace::GPU>& arr) : ptr{arr.ptr}, detail::Indexable<1>(arr) {}
   SERAC_DEVICE T&    operator[](size_t i) { return ptr[i]; }
   SERAC_DEVICE const T& operator[](size_t i) const { return ptr[i]; }
   SERAC_DEVICE T&    operator()(size_t i) { return ptr[i]; }
@@ -406,10 +404,8 @@ struct ArrayView<T, 1, ExecutionSpace::GPU> : public detail::Indexable<1> {
 
 template <typename T>
 struct ArrayView<T, 2, ExecutionSpace::GPU> : public detail::Indexable<2> {
-  template <ExecutionSpace exec>
-  ArrayView(const Array<T, 2, exec>& arr) : ptr{arr.ptr}, detail::Indexable<2>(arr)
-  {
-  }
+  ArrayView(T * p, size_t n1, size_t n2) : detail::Indexable<2>(n1, n2), ptr{p} {}
+  ArrayView(const Array<T, 2, ExecutionSpace::GPU>& arr) : ptr{arr.ptr}, detail::Indexable<2>(arr) {}
   SERAC_DEVICE T&    operator()(size_t i, size_t j) { return ptr[index(i, j)]; }
   SERAC_DEVICE const T& operator()(size_t i, size_t j) const { return ptr[index(i, j)]; }
   T*                    ptr;

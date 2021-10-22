@@ -164,7 +164,7 @@ __global__ void eval_cuda_element(const solution_type u, residual_type r, deriva
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename solution_type, typename residual_type, typename jacobian_type, typename position_type,
           typename qpt_data_type = void>
-__global__ void eval_cuda_quadrature(const solution_type u, residual_type r, derivatives_type* derivatives_ptr,
+__global__ void eval_cuda_quadrature(const solution_type u, residual_type r, GPUView< derivatives_type, 2 > qf_derivatives,
                                      jacobian_type J, position_type X, int num_elements, lambda qf,
                                      QuadratureDataView<qpt_data_type> data = dummy_qdata_view)
 {
@@ -210,14 +210,12 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
     // here, we store the derivative of the q-function w.r.t. its input arguments
     //
     // this will be used by other kernels to evaluate gradients / adjoints / directional derivatives
-
-    // Note: This pattern may result in non-coalesced access depend on how it executed.
-    detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements) = get_gradient(qf_output);
+    qf_derivatives(e, q) = get_gradient(qf_output);
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
     detail::Add(r, r_elem, e);
-  }  // quadrature x element loop
+  } 
 }
 
 /**
@@ -252,7 +250,7 @@ __global__ void eval_cuda_quadrature(const solution_type u, residual_type r, der
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type, typename lambda, typename qpt_data_type = void>
 void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const mfem::Vector& U, mfem::Vector& R,
-                            derivatives_type* derivatives_ptr, const mfem::Vector& J_, const mfem::Vector& X_,
+                            GPUView< derivatives_type, 2 > qf_derivatives, const mfem::Vector& J_, const mfem::Vector& X_,
                             int num_elements, lambda qf, QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
   using test_element               = finite_element<g, test>;
@@ -279,12 +277,12 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
   if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
     eval_cuda_quadrature<g, test, trial, Q><<<blocks_quadrature_element, config.blocksize>>>(
-        u, r, derivatives_ptr, J, X, num_elements, qf, QuadratureDataView{data});
+        u, r, qf_derivatives, J, X, num_elements, qf, QuadratureDataView{data});
 
   } else if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_ELEMENT) {
     int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;
     eval_cuda_element<g, test, trial, Q>
-        <<<blocks_element, config.blocksize>>>(u, r, derivatives_ptr, J, X, num_elements, qf, QuadratureDataView{data});
+        <<<blocks_element, config.blocksize>>>(u, r, qf_derivatives, J, X, num_elements, qf, QuadratureDataView{data});
   }
 
   cudaDeviceSynchronize();
@@ -320,7 +318,7 @@ void evaluation_kernel_cuda(serac::detail::GPULaunchConfiguration config, const 
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
           typename dresidual_type>
-__global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr, derivatives_type* derivatives_ptr,
+__global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr, GPUView< derivatives_type, 2 > qf_derivatives,
                                       const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
   using test_element          = finite_element<g, test>;
@@ -351,7 +349,7 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
       auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-      auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
+      auto dq_darg = qf_derivatives(e, q);
 
       // use the chain rule to compute the first-order change in the q-function output
       auto dq = chain_rule(dq_darg, darg);
@@ -396,7 +394,7 @@ __global__ void gradient_cuda_element(const dsolution_type du, dresidual_type dr
 
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename dsolution_type,
           typename dresidual_type>
-__global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type dr, derivatives_type* derivatives_ptr,
+__global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type dr, GPUView< derivatives_type, 2 > qf_derivatives,
                                          const mfem::DeviceTensor<4, const double> J, int num_elements)
 {
   using test_element          = finite_element<g, test>;
@@ -429,7 +427,7 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
     auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
 
     // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
-    auto dq_darg = detail::AccessDerivatives(derivatives_ptr, e, q, rule, num_elements);
+    auto dq_darg = qf_derivatives(e, q);
 
     // use the chain rule to compute the first-order change in the q-function output
     auto dq = chain_rule(dq_darg, darg);
@@ -472,7 +470,7 @@ __global__ void gradient_cuda_quadrature(const dsolution_type du, dresidual_type
 template <Geometry g, typename test, typename trial, int Q, serac::detail::ThreadParallelizationStrategy policy,
           typename derivatives_type>
 void action_of_gradient_kernel(serac::detail::GPULaunchConfiguration config, const mfem::Vector& dU, mfem::Vector& dR,
-                               derivatives_type* derivatives_ptr, const mfem::Vector& J_, int num_elements)
+                               GPUView< derivatives_type, 2 > qf_derivatives, const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -495,12 +493,12 @@ void action_of_gradient_kernel(serac::detail::GPULaunchConfiguration config, con
   if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT) {
     int blocks_quadrature_element = (num_elements * rule.size() + config.blocksize - 1) / config.blocksize;
     gradient_cuda_quadrature<g, test, trial, Q, derivatives_type>
-        <<<blocks_quadrature_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
+        <<<blocks_quadrature_element, config.blocksize>>>(du, dr, qf_derivatives, J, num_elements);
 
   } else if constexpr (policy == serac::detail::ThreadParallelizationStrategy::THREAD_PER_ELEMENT) {
     int blocks_element = (num_elements + config.blocksize - 1) / config.blocksize;
     gradient_cuda_element<g, test, trial, Q, derivatives_type>
-        <<<blocks_element, config.blocksize>>>(du, dr, derivatives_ptr, J, num_elements);
+        <<<blocks_element, config.blocksize>>>(du, dr, qf_derivatives, J, num_elements);
   }
 
   cudaDeviceSynchronize();

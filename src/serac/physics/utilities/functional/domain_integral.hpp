@@ -71,40 +71,40 @@ public:
     using qf_result_type  = typename detail::qf_result<lambda_type, x_t, u_du_t, qpt_data_type>::type;
     using derivative_type = decltype(get_gradient(std::declval<qf_result_type>()));
 
-    // the derivative_type data is stored in a shared_ptr here, because it can't be a
-    // member variable on the DomainIntegral class template (it depends on the lambda function,
-    // which isn't known until the time of construction).
-    //
-    // This shared_ptr should have a comparable lifetime to the DomainIntegral instance itself, since
-    // the reference count will increase when it is captured by the lambda functions below, and
-    // the reference count will go back to zero after those std::functions are deconstructed in
-    // DomainIntegral::~DomainIntegral()
-    //
-    // derivatives are stored as a 2D array, such that quadrature point q of element e is accessed by
-    // qf_derivatives[e * quadrature_points_per_element + q]
-    auto qf_derivatives = serac::accelerator::make_shared_array<derivative_type, exec>(num_quadrature_points);
+    // allocate memory for the derivatives of the q-function at each quadrature point
+    // 
+    // Note: ptr's lifetime is managed in an unusual way! It is captured by-value in one of the
+    // lambda functions below to augment the reference count, and extend its lifetime to match
+    // that of the DomainIntegral that allocated it.
+    auto ptr = accelerator::make_shared_array<derivative_type, exec>(num_quadrature_points);
+
+    size_t n1 = static_cast<size_t>(num_elements);
+    size_t n2 = static_cast<size_t>(quadrature_points_per_element);
+    ArrayView< derivative_type, 2, exec > qf_derivatives{ptr.get(), n1, n2};
 
     // this is where we actually specialize the finite element kernel templates with
     // our specific requirements (element type, test/trial spaces, quadrature rule, q-function, etc).
     //
     // std::function's type erasure lets us wrap those specific details inside a function with known signature
     //
-    // note: the qf_derivatives_ptr is copied by value to each lambda function below,
+    // note: qf_derivatives is captured by each lambda function below,
     //       to allow the evaluation kernel to pass derivative values to the gradient kernel
-
     if constexpr (exec == ExecutionSpace::CPU) {
-      evaluation_ = [this, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
-        domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives.get(), J_, X_,
+
+      // note: this lambda function captures ptr by-value to extend its lifetime
+      //                   vvv
+      evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
+        domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives, J_, X_,
                                                                                  num_elements, qf, data);
       };
 
       action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
-        domain_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives.get(),
+        domain_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives,
                                                                                          J_, num_elements);
       };
 
       element_gradient_ = [this, qf_derivatives, num_elements](CPUView<double, 3> K_e) {
-        domain_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives.get(), J_,
+        domain_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives, J_,
                                                                                        num_elements);
       };
     }
@@ -113,7 +113,10 @@ public:
     // The proposed future solution is to template the calls on policy (evaluation_kernel<policy>)
 #if defined(__CUDACC__)
     if constexpr (exec == ExecutionSpace::GPU) {
-      evaluation_ = [this, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
+
+      // note: this lambda function captures ptr by-value to extend its lifetime
+      //                   vvv
+      evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const mfem::Vector& U, mfem::Vector& R) {
         // TODO: Refactor execution configuration. Blocksize of 128 chosen as a good starting point. Has not been
         // optimized
         serac::detail::GPULaunchConfiguration exec_config{.blocksize = 128};
@@ -121,7 +124,7 @@ public:
         domain_integral::evaluation_kernel_cuda<
             geometry, test_space, trial_space, Q,
             serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, U, R, qf_derivatives.get(), J_, X_, num_elements, qf, data);
+            exec_config, U, R, qf_derivatives, J_, X_, num_elements, qf, data);
       };
 
       action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
@@ -132,7 +135,7 @@ public:
         domain_integral::action_of_gradient_kernel<
             geometry, test_space, trial_space, Q,
             serac::detail::ThreadParallelizationStrategy::THREAD_PER_QUADRATURE_POINT>(
-            exec_config, dU, dR, qf_derivatives.get(), J_, num_elements);
+            exec_config, dU, dR, qf_derivatives, J_, num_elements);
       };
     }
 #endif
@@ -193,6 +196,7 @@ private:
    * @see gradient_matrix_kernel
    */
   std::function<void(ArrayView<double, 3, exec>)> element_gradient_;
+
 };
 
 }  // namespace serac
