@@ -19,7 +19,6 @@ int main()
 
   for (int i = 0; i < 32; i++) {
     for (int j = 0; j < 32; j++) {
-
       EXPECT_NEAR(i + j, my_array_h(i, j), 1.0e-16);
     }
   }
