@@ -16,7 +16,6 @@
 #include <memory>
 
 #include "mfem.hpp"
-#include "mfem/linalg/dtensor.hpp"
 
 #include "serac/physics/utilities/functional/array.hpp"
 #include "serac/physics/utilities/functional/domain_integral_kernels.hpp"
