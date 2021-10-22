@@ -14,7 +14,6 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(functional_tests_serial
-    hypreparvector_test.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
     array_test.cpp
@@ -29,7 +28,6 @@ set(functional_tests_mpi
     functional_qoi.cpp
     functional_nonlinear.cpp
     functional_boundary_test.cpp
- 
     functional_comparisons.cpp
     functional_comparison_L2.cpp
     functional_material_state_test.cpp

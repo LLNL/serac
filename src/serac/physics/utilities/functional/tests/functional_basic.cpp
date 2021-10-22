@@ -63,15 +63,12 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   delete dfdU_matrix;
 }
 
-int main(int argc, char* argv[])
+TEST(functional, basic)
 {
   int num_procs, myid;
 
-  MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
-  axom::slic::SimpleLogger logger;
 
   int serial_refinement   = 0;
   int parallel_refinement = 0;
@@ -108,6 +105,25 @@ int main(int argc, char* argv[])
   residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
 
   check_gradient(residual, U);
+}
+
+//------------------------------------------------------------------------------
+#include "axom/slic/core/SimpleLogger.hpp"
+
+int main(int argc, char* argv[])
+{
+  int result = 0;
+
+  ::testing::InitGoogleTest(&argc, argv);
+
+  MPI_Init(&argc, &argv);
+
+  axom::slic::SimpleLogger logger;  // create & initialize test logger, finalized when
+                                    // exiting main scope
+
+  result = RUN_ALL_TESTS();
 
   MPI_Finalize();
+
+  return result;
 }
