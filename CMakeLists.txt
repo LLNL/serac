@@ -146,7 +146,6 @@ set(exported_targets
     serac_physics
     serac_infrastructure
     serac_numerics
-    serac_physics_utilities
     serac_physics_operators
     serac_physics_integrators)
 
