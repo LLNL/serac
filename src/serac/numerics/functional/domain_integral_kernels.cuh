@@ -7,8 +7,8 @@
 
 #include <cstring>
 
-#include "serac/physics/utilities/quadrature_data.hpp"
-#include "serac/physics/utilities/functional/integral_utilities.hpp"
+#include "serac/numerics/quadrature_data.hpp"
+#include "serac/numerics/functional/integral_utilities.hpp"
 
 namespace serac {
 
