@@ -199,7 +199,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
  *
- * @param[inout] dK 3-dimensional array storing the element gradient matrices
+ * @param[inout] dk 3-dimensional array storing the element gradient matrices
  * @param[in] derivatives_ptr pointer to data describing the derivatives of the q-function with respect to its arguments
  * @param[in] J_ The Jacobians of the element transformations at all quadrature points
  * @see mfem::GeometricFactors
