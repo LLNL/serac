@@ -430,6 +430,8 @@ std::unique_ptr<mfem::ParMesh> refineAndDistribute(mfem::Mesh&& serial_mesh, con
     parallel_mesh->UniformRefinement();
   }
 
+  parallel_mesh->ExchangeFaceNbrData();
+
   return parallel_mesh;
 }
 

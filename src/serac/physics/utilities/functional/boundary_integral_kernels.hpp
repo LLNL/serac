@@ -10,14 +10,66 @@
 
 namespace serac {
 
-namespace domain_integral {
+namespace boundary_integral {
+
+/**
+ * @overload
+ * @note This specialization of detail::Preprocess is called when doing integrals
+ * where the spatial dimension is different from the dimension of the element geometry
+ * (i.e. surface integrals in 3D space, line integrals in 2D space, etc)
+ *
+ * TODO: provide gradients as well (needs some more info from mfem)
+ */
+template <typename element_type, typename T, typename coord_type>
+auto Preprocess(const T& u, const coord_type& xi)
+{
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
+    return dot(u, element_type::shape_functions(xi));
+  }
+
+  // we can't support HCURL until some issues in mfem are fixed
+  // if constexpr (element_type::family == Family::HCURL) {
+  //  return dot(u, dot(element_type::shape_functions(xi), inv(J)));
+  //}
+}
+
+/**
+ * @overload
+ * @note This specialization of detail::Postprocess is called when doing integrals
+ * where the spatial dimension is different from the dimension of the element geometry
+ * (i.e. surface integrals in 3D space, line integrals in 2D space, etc)
+ *
+ * In this case, q-function outputs are only integrated against test space shape functions
+ */
+template <typename element_type, typename T, typename coord_type>
+auto Postprocess(const T& f, [[maybe_unused]] const coord_type& xi)
+{
+  if constexpr (element_type::family == Family::H1 || element_type::family == Family::L2) {
+    return outer(element_type::shape_functions(xi), f);
+  }
+
+  // we can't support HCURL until fixing some shortcomings in mfem
+  // if constexpr (element_type::family == Family::HCURL) {
+  //  return outer(element_type::shape_functions(xi), dot(inv(J), f));
+  //}
+
+  if constexpr (element_type::family == Family::QOI) {
+    return f;
+  }
+}
 
 /**
  * @brief The base kernel template used to create different finite element calculation routines
  *
- * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
+ *
+ * Template parameters other than the test and trial spaces are used for customization + optimization
+ * and are erased through the @p std::function members of @p BoundaryIntegral
+ * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
+ * @tparam geometry_dim The dimension of the element (2 for quad, 3 for hex, etc)
+ * @tparam spatial_dim The full dimension of the mesh
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function (see below) w.r.t. its input arguments
  * @tparam lambda The actual quadrature-function (either lambda function or functor object) to
@@ -32,16 +84,17 @@ namespace domain_integral {
  * respect to its arguments will be stored
  * @param[in] J_ The Jacobians of the element transformations at all quadrature points
  * @param[in] X_ The actual (not reference) coordinates of all quadrature points
+ * @param[in] N_ The unit normals of all quadrature points
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  * @param[in] qf The actual quadrature function, see @p lambda
- * @param[inout] data The data for each quadrature point
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
 void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivatives_type, 2> qf_derivatives,
-                       const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda&& qf,
-                       QuadratureData<qpt_data_type>& data = dummy_qdata)
+                       const mfem::Vector& J_, const mfem::Vector& X_, const mfem::Vector& N_, int num_elements,
+                       lambda qf)
+
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
@@ -53,8 +106,9 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements);
-  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
+  auto N = mfem::Reshape(N_.Read(), rule.size(), dim + 1, num_elements);
+  auto X = mfem::Reshape(X_.Read(), rule.size(), dim + 1, num_elements);
+  auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements);
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
@@ -68,29 +122,26 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      // eval_quadrature is a SERAC_HOST_DEVICE quadrature point calculation
-
-      // At the moment, the GPU versions of the kernels don't support quadrature data.
-      // That will be addressed in an upcoming PR.
-      // We check if quadrature data is empty and execute on the GPU, otherwise we must execute on the CPU.
+      // get the position of this quadrature point in the parent and physical space,
+      // and calculate the measure of that point in physical space.
       auto   xi  = rule.points[q];
       auto   dxi = rule.weights[q];
-      auto   x_q = make_tensor<dim>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
-      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = det(J_q) * dxi;
+      auto   x_q = make_tensor<dim + 1>([&](int i) { return X(q, i, e); });  // Physical coords of qpt
+      auto   n_q = make_tensor<dim + 1>([&](int i) { return N(q, i, e); });  // Physical coords of unit normal
+      double dx  = J(q, e) * dxi;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
-      auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
+      auto arg = Preprocess<trial_element>(u_elem, xi);
 
       // evaluate the user-specified constitutive model
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
-      auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
+      auto qf_output = qf(x_q, n_q, make_dual(arg));
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
-      r_elem += Postprocess<test_element>(get_value(qf_output), xi, J_q) * dx;
+      r_elem += Postprocess<test_element>(get_value(qf_output), xi) * dx;
 
       // here, we store the derivative of the q-function w.r.t. its input arguments
       //
@@ -110,10 +161,10 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
  *
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
- * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO), QOI}
+ * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO)}
  *
  * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p DomainIntegral
+ * and are erased through the @p std::function members of @p BoundaryIntegral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
@@ -136,14 +187,13 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
   using element_residual_type      = typename test_element::residual_type;
-  static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J  = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
+  auto J  = mfem::Reshape(J_.Read(), rule.size(), num_elements);
   auto du = detail::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
   auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
 
@@ -161,11 +211,10 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
       // and calculate the measure of that point in physical space.
       auto   xi  = rule.points[q];
       auto   dxi = rule.weights[q];
-      auto   J_q = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx  = det(J_q) * dxi;
+      double dx  = J(q, e) * dxi;
 
       // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
+      auto darg = Preprocess<trial_element>(du_elem, xi);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
@@ -175,7 +224,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
 
       // integrate dq against test space shape functions / gradients
       // to get the (change in) element residual contributions
-      dr_elem += Postprocess<test_element>(dq, xi, J_q) * dx;
+      dr_elem += Postprocess<test_element>(dq, xi) * dx;
     }
 
     // once we've finished the element integration loop, write our element residuals
@@ -185,33 +234,35 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
 }
 
 /**
- * @brief The base kernel template used to compute tangent element entries that can be assembled
- * into a tangent matrix
+ * @brief The base kernel template used to create create custom element stiffness matrices
+ * associated with finite element calculations
  *
  * @tparam test The type of the test function space
  * @tparam trial The type of the trial function space
  * The above spaces can be any combination of {H1, Hcurl, Hdiv (TODO), L2 (TODO), QOI}
  *
  * Template parameters other than the test and trial spaces are used for customization + optimization
- * and are erased through the @p std::function members of @p Integral
+ * and are erased through the @p std::function members of @p BoundaryIntegral
  * @tparam g The shape of the element (only quadrilateral and hexahedron are supported at present)
  * @tparam Q Quadrature parameter describing how many points per dimension
  * @tparam derivatives_type Type representing the derivative of the q-function w.r.t. its input arguments
  *
+ * @note lambda does not appear as a template argument, as the stiffness matrix is
+ * inherently just a linear transformation
  *
- * @param[inout] dk 3-dimensional array storing the element gradient matrices
- * @param[in] derivatives_ptr pointer to data describing the derivatives of the q-function with respect to its arguments
+ * @param[in] dk array for storing each element's gradient contributions
+ * @param[in] derivatives_ptr The address at which derivatives of the q-function with
+ * respect to its arguments are stored
  * @param[in] J_ The Jacobians of the element transformations at all quadrature points
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
 template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, CPUView<derivatives_type, 2> qf_derivatives,
-                             const mfem::Vector& J_, int num_elements)
+void element_gradient_kernel(CPUView<double, 3> dk, CPUView<derivatives_type, 2> qf_derivatives, const mfem::Vector& J_,
+                             int num_elements)
 {
   using test_element               = finite_element<g, test>;
   using trial_element              = finite_element<g, trial>;
-  static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
   static constexpr int  test_dim   = test_element::components;
   static constexpr int  trial_ndof = trial_element::ndof;
@@ -220,7 +271,7 @@ void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, CPUVi
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
-  auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
+  auto J = mfem::Reshape(J_.Read(), rule.size(), num_elements);
 
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
@@ -232,68 +283,40 @@ void element_gradient_kernel(ArrayView<double, 3, ExecutionSpace::CPU> dk, CPUVi
       // and calculate the measure of that point in physical space.
       auto   xi_q  = rule.points[q];
       auto   dxi_q = rule.weights[q];
-      auto   J_q   = make_tensor<dim, dim>([&](int i, int j) { return J(q, i, j, e); });
-      double dx    = det(J_q) * dxi_q;
+      double dx    = J(q, e) * dxi_q;
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
 
       if constexpr (std::is_same<test, QOI>::value) {
-        auto& q0 = serac::get<0>(dq_darg);  // derivative of QoI w.r.t. field value
-        auto& q1 = serac::get<1>(dq_darg);  // derivative of QoI w.r.t. field derivative
-
-        auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);
-
+        auto N = trial_element::shape_functions(xi_q);
         for (int j = 0; j < trial_ndof; j++) {
-          K_elem[0][j] += (q0 * N[j].value + q1 * N[j].derivative) * dx;
+          K_elem[0][j] += dq_darg * N[j] * dx;
         }
-      }
+      } else {
+        auto M = test_element::shape_functions(xi_q);
+        auto N = trial_element::shape_functions(xi_q);
 
-      if constexpr (!std::is_same<test, QOI>::value) {
-        auto& q00 = serac::get<0>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field value
-        auto& q01 = serac::get<1>(serac::get<0>(dq_darg));  // derivative of source term w.r.t. field derivative
-        auto& q10 = serac::get<0>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field value
-        auto& q11 = serac::get<1>(serac::get<1>(dq_darg));  // derivative of   flux term w.r.t. field derivative
-
-        auto M = evaluate_shape_functions<test_element>(xi_q, J_q);
-        auto N = evaluate_shape_functions<trial_element>(xi_q, J_q);
-
-        // clang-format off
         for (int i = 0; i < test_ndof; i++) {
           for (int j = 0; j < trial_ndof; j++) {
-            K_elem[i][j] += (
-              M[i].value      * q00 * N[j].value +
-              M[i].value      * q01 * N[j].derivative + 
-              M[i].derivative * q10 * N[j].value +
-              M[i].derivative * q11 * N[j].derivative
-            ) * dx;
-          } 
+            K_elem[i][j] += M[i] * dq_darg * N[j] * dx;
+          }
         }
-        // clang-format on
       }
     }
 
     // once we've finished the element integration loop, write our element gradients
     // out to memory, to be later assembled into the global gradient by mfem
+    //
+    // Note: we "transpose" these values to get them into the layout that mfem expects
     // clang-format off
-    if constexpr (std::is_same< test, QOI >::value) {
-      for (int k = 0; k < trial_ndof; k++) {
-        for (int l = 0; l < trial_dim; l++) {
-          dk(static_cast<size_t>(e), 0, static_cast<size_t>(k + trial_ndof * l)) += K_elem[0][k][0][l];
-        }
-      }
-    } 
-
-    if constexpr (!std::is_same< test, QOI >::value) {
-      // Note: we "transpose" these values to get them into the layout that mfem expects
-      for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([&](int i, int j, int k, int l) {
-        dk(static_cast<size_t>(e), static_cast<size_t>(i + test_ndof * j), static_cast<size_t>(k + trial_ndof * l)) += K_elem[i][k][j][l];
-      });
-    }
+    for_loop<test_ndof, test_dim, trial_ndof, trial_dim>([e, &dk, &K_elem](int i, int j, int k, int l) {
+      dk(static_cast<size_t>(e), static_cast<size_t>(i + test_ndof * j), static_cast<size_t>(k + trial_ndof * l)) += K_elem[i][k][j][l];
+    });
     // clang-format on
   }
 }
 
-}  // namespace domain_integral
+}  // namespace boundary_integral
 
 }  // namespace serac

@@ -205,21 +205,18 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
 {
   double l1norm_value, l2norm_value, linfnorm_value, avg_value, max_value, min_value;
 
-  axom::sidre::Group* sidre_root;
-  axom::sidre::Group* curves_group;
-  auto [_, rank] = getMPIInfo();
+  auto [_, rank]                      = getMPIInfo();
+  const std::string curves_group_name = "serac_summary/curves";
+
+  axom::sidre::Group* sidre_root = datastore.getRoot();
+
+  SLIC_ERROR_ROOT_IF(!sidre_root->hasGroup(curves_group_name),
+                     fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
+
+  axom::sidre::Group* curves_group = sidre_root->getGroup(curves_group_name);
 
   // Don't save curves on anything other than root node
   if (rank == 0) {
-    const std::string curves_group_name = "serac_summary/curves";
-
-    // Get Sidre curves group
-    sidre_root = datastore.getRoot();
-    SLIC_ERROR_ROOT_IF(!sidre_root->hasGroup(curves_group_name),
-                       fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
-    curves_group = sidre_root->getGroup(curves_group_name);
-
-    // t
     axom::sidre::Array<double> ts(curves_group->getView("t"));
     ts.append(t);
   }

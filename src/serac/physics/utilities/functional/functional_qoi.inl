@@ -5,97 +5,73 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 /**
- * @file functional.hpp
+ * @file functional_qoi.inl
  *
- * @brief Implementation of the quadrature-function-based functional enabling rapid development of FEM formulations
+ * @brief a specialization of serac::Functional for quantities of interest
  */
-
-#pragma once
-
-#include "mfem.hpp"
-
-#include "serac/infrastructure/logger.hpp"
-#include "serac/physics/utilities/functional/tensor.hpp"
-#include "serac/physics/utilities/functional/quadrature.hpp"
-#include "serac/physics/utilities/functional/finite_element.hpp"
-#include "serac/physics/utilities/functional/tuple_arithmetic.hpp"
-#include "serac/physics/utilities/functional/domain_integral.hpp"
-#include "serac/physics/utilities/functional/boundary_integral.hpp"
-#include "serac/physics/utilities/functional/dof_numbering.hpp"
 
 namespace serac {
 
 /**
- * @brief for reasons I don't understand,
- * these calls need to be made immediately after creating the mesh,
- * in order for mfem::FaceRestriction to work properly (?)
- *
- * @note Apparently, calling these functions also messes up Sidre, causing it to segfault, so..
+ * @brief this class behaves like a Prolongation operator, except is specialized for
+ * the case of a quantity of interest. The action of its MultTranspose() operator (the
+ * only thing it is used for) sums the values from different processors.
  */
-void make_the_mesh_work(mfem::ParMesh* mesh)
-{
-  mesh->EnsureNodes();
-  mesh->ExchangeFaceNbrData();
-}
+struct QoIProlongation : public mfem::Operator {
+  /// @brief create a QoIProlongation for a Quantity of Interest
+  QoIProlongation(MPI_Comm c) : mfem::Operator(1, 1), comm(c) {}
 
-/// @cond
-template <typename T, ExecutionSpace exec = serac::default_execution_space>
-class Functional;
-/// @endcond
+  /// @brief unimplemented: do not use
+  void Mult(const mfem::Vector&, mfem::Vector&) const override
+  {
+    SLIC_ERROR_ROOT("QoIProlongation::Mult() is not defined");
+  }
+
+  /// @brief set the value of output to the distributed sum over input values from different processors
+  void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override
+  {
+    MPI_Allreduce(&input[0], &output[0], 1, MPI_DOUBLE, MPI_SUM, comm);
+  }
+
+  MPI_Comm comm;  ///< MPI communicator used to carry out the distributed reduction
+};
 
 /**
- * @brief Intended to be like @p std::function for finite element kernels
- *
- * That is: you tell it the inputs (trial spaces) for a kernel, and the outputs (test space) like @p std::function
- * For example, this code represents a function that takes an integer argument and returns a double:
- * @code{.cpp}
- * std::function< double(double, int) > my_func;
- * @endcode
- * And this represents a function that takes values from an Hcurl field and returns a
- * residual vector associated with an H1 field:
- * @code{.cpp}
- * Functional< H1(Hcurl) > my_residual;
- * @endcode
- *
- * @tparam test The space of test functions to use
- * @tparam trial The space of trial functions to use
- * @tparam exec whether to carry out calculations on CPU or GPU
- *
- * To use this class, you use the methods @p Functional::Add****Integral(integrand,domain_of_integration)
- * where @p integrand is a q-function lambda or functor and @p domain_of_integration is an @p mfem::mesh
- *
- * @see https://libceed.readthedocs.io/en/latest/libCEEDapi/#theoretical-framework for additional
- * information on the idea behind a quadrature function and its inputs/outputs
- *
- * @code{.cpp}
- * // for domains made up of quadrilaterals embedded in R^2
- * my_residual.AddAreaIntegral(integrand, domain_of_integration);
- * // alternatively...
- * my_residual.AddDomainIntegral(Dimension<2>{}, integrand, domain_of_integration);
- *
- * // for domains made up of quadrilaterals embedded in R^3
- * my_residual.AddSurfaceIntegral(integrand, domain_of_integration);
- *
- * // for domains made up of hexahedra embedded in R^3
- * my_residual.AddVolumeIntegral(integrand, domain_of_integration);
- * // alternatively...
- * my_residual.AddDomainIntegral(Dimension<3>{}, integrand, domain_of_integration);
- * @endcode
+ * @brief this class behaves like a Restriction operator, except is specialized for
+ * the case of a quantity of interest. The action of its MultTranspose() operator (the
+ * only thing it is used for) sums the values on this local processor.
  */
-template <typename test, typename trial, ExecutionSpace exec>
-class Functional<test(trial), exec> : public mfem::Operator {
+struct QoIElementRestriction : public mfem::Operator {
+  /// @brief create a QoIElementRestriction for a Quantity of Interest
+  QoIElementRestriction(int num_elements) : mfem::Operator(num_elements, 1) {}
+
+  /// @brief unimplemented: do not use
+  void Mult(const mfem::Vector&, mfem::Vector&) const override
+  {
+    SLIC_ERROR_ROOT("QoIElementRestriction::Mult() is not defined, exiting...");
+  }
+
+  /// @brief set the value of output to the sum of the values of input
+  void MultTranspose(const mfem::Vector& input, mfem::Vector& output) const override { output[0] = input.Sum(); }
+};
+
+/**
+ * @brief a partial template specialization of Functional with test == double, implying "quantity of interest"
+ */
+template <typename trial, ExecutionSpace exec>
+class Functional<double(trial), exec> : public mfem::Operator {
+  using test = QOI;
+
 public:
   /**
-   * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
-   * @param[in] test_fes The (non-qoi) test space
+   * @brief Constructs using a @p mfem::ParFiniteElementSpace object corresponding to the trial space
    * @param[in] trial_fes The trial space
    */
-  Functional(mfem::ParFiniteElementSpace* test_fes, mfem::ParFiniteElementSpace* trial_fes)
-      : Operator(test_fes->GetTrueVSize(), trial_fes->GetTrueVSize()),
-        test_space_(test_fes),
+  Functional(mfem::ParFiniteElementSpace* trial_fes)
+      : Operator(1 /* the output of a QoI is a scalar */, trial_fes->GetTrueVSize()),
         trial_space_(trial_fes),
-        P_test_(test_space_->GetProlongationMatrix()),
-        G_test_(test_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
+        P_test_(new QoIProlongation(trial_fes->GetParMesh()->GetComm())),
+        G_test_(new QoIElementRestriction(trial_fes->GetParMesh()->GetNE())),
         P_trial_(trial_space_->GetProlongationMatrix()),
         G_trial_(trial_space_->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC)),
         grad_(*this)
@@ -103,20 +79,13 @@ public:
     SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
     SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
 
+    G_test_boundary_ = new QoIElementRestriction(trial_fes->GetParMesh()->GetNBE());
+
     // Ensure the mesh has the appropriate neighbor information before constructing the face restriction operators
-    if (test_space_) {
-      test_space_->ExchangeFaceNbrData();
-    }
-    if (trial_space_) {
-      trial_space_->ExchangeFaceNbrData();
-    }
+    if (trial_space_) trial_space_->ExchangeFaceNbrData();
 
     // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
-    if (trial::family != Family::HCURL && test::family != Family::HCURL) {
-      if (test_space_) {
-        G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
-                                                           mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
-      }
+    if (trial::family != Family::HCURL) {
       if (trial_space_) {
         G_trial_boundary_ = trial_space_->GetFaceRestriction(
             mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
@@ -134,27 +103,39 @@ public:
     dummy_.SetSize(Width(), mfem::Device::GetMemoryType());
 
     {
-      auto num_elements           = static_cast<size_t>(test_space_->GetNE());
-      auto ndof_per_test_element  = static_cast<size_t>(test_space_->GetFE(0)->GetDof() * test_space_->GetVDim());
+      auto num_elements           = static_cast<size_t>(trial_space_->GetNE());
+      auto ndof_per_test_element  = static_cast<size_t>(1);
       auto ndof_per_trial_element = static_cast<size_t>(trial_space_->GetFE(0)->GetDof() * trial_space_->GetVDim());
       element_gradients_          = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
     }
 
     {
-      bdr_element_gradients_ = allocateMemoryForBdrElementGradients<double, exec>(*test_space_, *trial_space_);
+      auto num_bdr_elements           = static_cast<size_t>(trial_space_->GetNFbyType(mfem::FaceType::Boundary));
+      auto ndof_per_test_bdr_element  = static_cast<size_t>(1);
+      auto ndof_per_trial_bdr_element = static_cast<size_t>(trial_space_->GetBE(0)->GetDof() * trial_space_->GetVDim());
+      bdr_element_gradients_ =
+          Array<double, 3, exec>(num_bdr_elements, ndof_per_test_bdr_element, ndof_per_trial_bdr_element);
     }
   }
 
+  /// @brief destructor: deallocate the mfem::Operators that we're responsible for
+  ~Functional()
+  {
+    delete P_test_;
+    delete G_test_;
+    delete G_test_boundary_;
+  }
+
   /**
-   * @brief Adds a domain integral term to the weak formulation of the PDE
+   * @brief Adds a domain integral term to the Functional object
    * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
+   * @param[in] data The data structure containing per-quadrature-point data
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
-   * @param[inout] data The data for each quadrature point
    */
   template <int dim, typename lambda, typename qpt_data_type = void>
   void AddDomainIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain,
@@ -168,7 +149,7 @@ public:
       SLIC_ERROR_ROOT_IF(domain.GetElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
-    const mfem::FiniteElement&   el = *test_space_->GetFE(0);
+    const mfem::FiniteElement&   el = *trial_space_->GetFE(0);
     const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
@@ -177,15 +158,17 @@ public:
   }
 
   /**
-   * @brief Adds a boundary integral term to the weak formulation of the PDE
    * @tparam dim The dimension of the boundary element (1 for line, 2 for quad, etc)
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @param[in] integrand The user-provided quadrature function, see @p Integral
    * @param[in] domain The domain on which to evaluate the integral
+   *
+   * @brief Adds a boundary integral term to the Functional object
+   *
    * @note The @p Dimension parameters are used to assist in the deduction of the @a geometry_dim
    * and @a spatial_dim template parameter
    */
-  template <int dim, typename lambda>
+  template <int dim, typename lambda, typename qpt_data_type = void>
   void AddBoundaryIntegral(Dimension<dim>, lambda&& integrand, mfem::Mesh& domain)
   {
     // TODO: fix mfem::FaceGeometricFactors
@@ -197,7 +180,7 @@ public:
       SLIC_ERROR_ROOT_IF(domain.GetBdrElementType(e) != supported_types[dim], "Mesh contains unsupported element type");
     }
 
-    const mfem::FiniteElement&   el = *test_space_->GetFE(0);
+    const mfem::FiniteElement&   el = *trial_space_->GetBE(0);
     const mfem::IntegrationRule& ir = mfem::IntRules.Get(supported_types[dim], el.GetOrder() * 2);
     constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                            mfem::FaceGeometricFactors::NORMALS;
@@ -205,17 +188,17 @@ public:
     // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
-
     bdr_integrals_.emplace_back(num_bdr_elements, geom->detJ, geom->X, geom->normal, Dimension<dim>{}, integrand);
   }
 
   /**
-   * @brief Adds an area integral, i.e., over 2D elements in R^2 space
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
-   * @param[inout] data The data for each quadrature point
+   * @param[in] data The data structure containing per-quadrature-point data
+   *
+   * @brief Adds an area integral, i.e., over 2D elements in R^2
    */
   template <typename lambda, typename qpt_data_type = void>
   void AddAreaIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
@@ -224,12 +207,13 @@ public:
   }
 
   /**
-   * @brief Adds a volume integral, i.e., over 3D elements in R^3 space
    * @tparam lambda the type of the integrand functor: must implement operator() with an appropriate function signature
    * @tparam qpt_data_type The type of the data to store for each quadrature point
    * @param[in] integrand The quadrature function
    * @param[in] domain The mesh to evaluate the integral on
-   * @param[inout] data The data for each quadrature point
+   * @param[in] data The data structure containing per-quadrature-point data
+   *
+   * @brief Adds a volume integral, i.e., over 3D elements in R^3
    */
   template <typename lambda, typename qpt_data_type = void>
   void AddVolumeIntegral(lambda&& integrand, mfem::Mesh& domain, QuadratureData<qpt_data_type>& data = dummy_qdata)
@@ -245,37 +229,24 @@ public:
   }
 
   /**
-   * @brief Implements mfem::Operator::Mult
    * @param[in] input_T The input vector
    * @param[out] output_T The output vector
+   *
+   * @brief Implements mfem::Operator::Mult
    */
-  void Mult(const mfem::Vector& input_T, mfem::Vector& output_T) const override
+  void Mult(const mfem::Vector& input_T, mfem::Vector& output_T) const
   {
     Evaluation<Operation::Mult>(input_T, output_T);
-  }
-
-  /**
-   * @brief Implements mfem::Operator::GetGradient
-   * @param[in] x The input vector where the gradient is evaluated
-   *
-   * Note: at present, this Functional::Gradient object only supports the action of the gradient (i.e. directional
-   * derivative) We are looking into making that Functional::Gradient also be convertible to a sparse matrix format as
-   * well.
-   */
-  mfem::Operator& GetGradient(const mfem::Vector& x) const override
-  {
-    Mult(x, dummy_);  // this is ugly
-    return grad_;
   }
 
   /**
    * @brief Alias for @p Mult that uses a return value instead of an output parameter
    * @param[in] input_T The input vector
    */
-  mfem::Vector& operator()(const mfem::Vector& input_T) const
+  double operator()(const mfem::Vector& input_T) const
   {
     Evaluation<Operation::Mult>(input_T, my_output_T_);
-    return my_output_T_;
+    return my_output_T_[0];
   }
 
   /**
@@ -284,21 +255,9 @@ public:
    * @param[out] output_T The output vector
    * @see DomainIntegral::GradientMult, BoundaryIntegral::GradientMult
    */
-  virtual void GradientMult(const mfem::Vector& input_T, mfem::Vector& output_T) const
+  void GradientMult(const mfem::Vector& input_T, mfem::Vector& output_T) const
   {
     Evaluation<Operation::GradientMult>(input_T, output_T);
-  }
-
-  /**
-   * @brief Applies an essential boundary condition to the attributes specified by @a ess_attr
-   * @param[in] ess_attr The mesh attributes to apply the BC to
-   *
-   * @note This gets more interesting when having more than one trial space
-   */
-  void SetEssentialBC(const mfem::Array<int>& ess_attr)
-  {
-    static_assert(std::is_same_v<test, trial>, "can't specify essential bc on incompatible spaces");
-    trial_space_->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
   }
 
 private:
@@ -312,56 +271,38 @@ private:
   };
 
   /**
-   * @brief Lightweight shim for mfem::Operator that produces the gradient of a @p Functional from a @p Mult
+   * @brief mfem::Operator that produces the gradient of a @p Functional from a @p Mult
    */
-  class Gradient : public mfem::Operator {
+  class Gradient {
   public:
     /**
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<test(trial), exec>& f)
-        : mfem::Operator(f.Height(), f.Width()), form_(f), lookup_tables(*(f.test_space_), *(f.trial_space_)){};
-
-    /**
-     * @brief implement that action of the gradient: df := df_dx * dx
-     * @param[in] dx a small perturbation in the trial space
-     * @param[in] df the resulting small perturbation in the residuals
-     */
-    virtual void Mult(const mfem::Vector& dx, mfem::Vector& df) const override { form_.GradientMult(dx, df); }
-
-    /**
-     * @brief syntactic sugar:  df_dx.Mult(dx, df)  <=>  mfem::Vector df = df_dx(dx);
-     */
-    mfem::Vector operator()(const mfem::Vector& x) const
+    Gradient(Functional<double(trial)>& f)
+        : form_(f),
+          lookup_tables(*(f.trial_space_)),
+          gradient_L_(f.trial_space_->GetVSize()),
+          gradient_T_(f.trial_space_->NewTrueDofVector())
     {
-      mfem::Vector y(form_.Height());
-      form_.GradientMult(x, y);
-      return y;
     }
 
-    /**
-     * @brief implicit conversion to mfem::HypreParMatrix type
-     */
-    operator mfem::HypreParMatrix *()
+    void Mult(const mfem::Vector& x, mfem::Vector& y) const { form_.GradientMult(x, y); }
+
+    double operator()(const mfem::Vector& x) const
     {
-      // the CSR graph (sparsity pattern) is reusable, so we cache
-      // that and ask mfem to not free that memory in ~SparseMatrix()
-      constexpr bool sparse_matrix_frees_graph_ptrs = false;
+      mfem::Vector y(1);
+      form_.GradientMult(x, y);
+      return y[0];
+    }
 
-      // the CSR values are NOT reusable, so we pass ownership of
-      // them to the mfem::SparseMatrix, to be freed in ~SparseMatrix()
-      constexpr bool sparse_matrix_frees_values_ptr = true;
+    operator mfem::HypreParVector &()
+    {
+      gradient_L_ = 0.0;
 
-      constexpr bool col_ind_is_sorted = true;
-
-      double* values = new double[lookup_tables.nnz]{};
-
-      // each element uses the lookup tables to add its contributions
-      // to their appropriate locations in the global sparse matrix
       if (form_.domain_integrals_.size() > 0) {
         auto& K_elem = form_.element_gradients_;
-        auto& LUT    = lookup_tables.element_nonzero_LUT;
+        auto& LUT    = lookup_tables.element_dofs_;
 
         zero_out(K_elem);
         for (auto& domain : form_.domain_integrals_) {
@@ -369,20 +310,16 @@ private:
         }
 
         for (size_t e = 0; e < K_elem.size(0); e++) {
-          for (size_t i = 0; i < K_elem.size(1); i++) {
-            for (size_t j = 0; j < K_elem.size(2); j++) {
-              auto [index, sign] = LUT(e, i, j);
-              values[index] += sign * K_elem(e, i, j);
-            }
+          for (size_t j = 0; j < K_elem.size(2); j++) {
+            auto [index, sign] = LUT(e, j);
+            gradient_L_[index] += sign * K_elem(e, 0, j);
           }
         }
       }
 
-      // each boundary element uses the lookup tables to add its contributions
-      // to their appropriate locations in the global sparse matrix
       if (form_.bdr_integrals_.size() > 0) {
         auto& K_belem = form_.bdr_element_gradients_;
-        auto& LUT     = lookup_tables.bdr_element_nonzero_LUT;
+        auto& LUT     = lookup_tables.bdr_element_dofs_;
 
         zero_out(K_belem);
         for (auto& boundary : form_.bdr_integrals_) {
@@ -390,44 +327,29 @@ private:
         }
 
         for (size_t e = 0; e < K_belem.size(0); e++) {
-          for (size_t i = 0; i < K_belem.size(1); i++) {
-            for (size_t j = 0; j < K_belem.size(2); j++) {
-              auto [index, sign] = LUT(e, i, j);
-              values[index] += sign * K_belem(e, i, j);
-            }
+          for (size_t j = 0; j < K_belem.size(2); j++) {
+            auto [index, sign] = LUT(e, j);
+            gradient_L_[index] += sign * K_belem(e, 0, j);
           }
         }
       }
 
-      auto J_local = mfem::SparseMatrix(lookup_tables.row_ptr.data(), lookup_tables.col_ind.data(), values,
-                                        form_.output_L_.Size(), form_.input_L_.Size(), sparse_matrix_frees_graph_ptrs,
-                                        sparse_matrix_frees_values_ptr, col_ind_is_sorted);
+      form_.P_trial_->MultTranspose(gradient_L_, *gradient_T_);
 
-      auto* R = form_.test_space_->Dof_TrueDof_Matrix();
-
-      auto* A = new mfem::HypreParMatrix(form_.test_space_->GetComm(), form_.test_space_->GlobalVSize(),
-                                         form_.trial_space_->GlobalVSize(), form_.test_space_->GetDofOffsets(),
-                                         form_.trial_space_->GetDofOffsets(), &J_local);
-
-      auto* P = form_.trial_space_->Dof_TrueDof_Matrix();
-
-      auto* RAP = mfem::RAP(R, A, P);
-
-      delete A;
-
-      return RAP;
+      return *gradient_T_;
     }
 
   private:
-    /// @brief The "parent" @p Functional to calculate gradients with
-    Functional<test(trial), exec>& form_;
-
     /**
-     * @brief this object has lookup tables for where to place each
-     *   element and boundary element gradient contribution in the global
-     *   sparse matrix
+     * @brief The "parent" @p Functional to calculate gradients with
      */
-    GradientAssemblyLookupTables lookup_tables;
+    Functional<double(trial), exec>& form_;
+
+    DofNumbering lookup_tables;
+
+    mfem::Vector gradient_L_;
+
+    std::unique_ptr<mfem::HypreParVector> gradient_T_;
   };
 
   /**
@@ -521,7 +443,7 @@ private:
   mutable mfem::Vector output_E_;
 
   /**
-   * @brief The input set of per-boundaryelement DOF values
+   * @brief The input set of per-boundary-element DOF values
    */
   mutable mfem::Vector input_E_boundary_;
 
@@ -610,32 +532,17 @@ private:
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
                                                              mfem::Element::QUADRILATERAL, mfem::Element::HEXAHEDRON};
 
-  /**
-   * @brief The gradient object used to implement @p GetGradient
-   */
+  /// @brief The gradient object used to implement @p GetGradient
   mutable Gradient grad_;
 
-  /// @brief 3D array that stores each element's gradient of the residual w.r.t. trial values
+  /// @brief array that stores each element's gradient of the residual w.r.t. trial values
   Array<double, 3, exec> element_gradients_;
 
-  /// @brief 3D array that stores each boundary element's gradient of the residual w.r.t. trial values
+  /// @brief array that stores each boundary element's gradient of the residual w.r.t. trial values
   Array<double, 3, exec> bdr_element_gradients_;
 
   template <typename T>
   friend typename Functional<T>::Gradient& grad(Functional<T>&);
 };
 
-/**
- * @brief free function for accessing the gradient member of a Functional object
- *   intended to mimic the mathematical notation
- * @param[in] f the Functional whose gradient is returned
- */
-template <typename T>
-typename Functional<T>::Gradient& grad(Functional<T>& f)
-{
-  return f.grad_;
-}
-
 }  // namespace serac
-
-#include "functional_qoi.inl"

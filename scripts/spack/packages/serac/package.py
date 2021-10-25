@@ -111,12 +111,8 @@ class Serac(CachedCMakePackage, CudaPackage):
     depends_on("axom~raja", when="~raja")
     depends_on("axom~umpire", when="~umpire")
     depends_on("camp@0.1.0serac", when="+raja")
-    depends_on("raja@0.13.1serac~openmp~shared", when="+raja")
-    depends_on("umpire@5.0.1~shared", when="+umpire")
-    # Lump in CHAI with Umpire for now
-    depends_on("chai@2.3.1serac~shared", when="+umpire")
-    # Our RAJA version is too new for CHAI
-    # depends_on("chai+raja", when="+umpire+raja")
+    depends_on("raja@0.14.0~openmp~shared", when="+raja")
+    depends_on("umpire@6.0.0~shared", when="+umpire")
 
     # Libraries that support "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
     # "build_type=RelWithDebInfo|Debug|Release|MinSizeRel"
@@ -180,7 +176,7 @@ class Serac(CachedCMakePackage, CudaPackage):
     conflicts('cuda_arch=none', when='+cuda',
               msg='CUDA architecture is required')
     depends_on("amgx@2.1.x", when="+cuda")
-    cuda_deps = ["mfem", "axom", "chai"]
+    cuda_deps = ["mfem", "axom"]
     for dep in cuda_deps:
         depends_on("{0}+cuda".format(dep), when="+cuda")
     depends_on("caliper+cuda", when="+caliper+cuda")
@@ -191,8 +187,6 @@ class Serac(CachedCMakePackage, CudaPackage):
         depends_on('axom cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         depends_on('raja cuda_arch={0}'.format(sm_),
-                when='cuda_arch={0}'.format(sm_))
-        depends_on('chai cuda_arch={0}'.format(sm_),
                 when='cuda_arch={0}'.format(sm_))
         # Caliper may not currently use its cuda_arch
         # but probably good practice to set it
@@ -317,7 +311,7 @@ class Serac(CachedCMakePackage, CudaPackage):
         entries.append(cmake_cache_path('SUPERLUDIST_DIR', dep_dir))
 
         # optional tpls
-        for dep in ('petsc', 'caliper', 'raja', 'umpire', 'chai'):
+        for dep in ('petsc', 'caliper', 'raja', 'umpire'):
             if spec.satisfies('^{0}'.format(dep)):
                 dep_dir = get_spec_path(spec, dep, path_replacements)
                 entries.append(cmake_cache_path('%s_DIR' % dep.upper(),
