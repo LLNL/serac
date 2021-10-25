@@ -79,7 +79,7 @@ public:
     //
     // Note: ptr's lifetime is managed in an unusual way! It is captured by-value in one of the
     // lambda functions below to augment the reference count, and extend its lifetime to match
-    // that of the DomainIntegral that allocated it.
+    // that of the BoundaryIntegral that allocated it.
 
     // TODO: change this allocation to use exec, rather than ExecutionSpace::CPU, once
     // we implement GPU boundary kernels

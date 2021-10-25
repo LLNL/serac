@@ -63,16 +63,8 @@ void check_gradient(Functional<T>& f, mfem::Vector& U)
   delete dfdU_matrix;
 }
 
-int main(int argc, char* argv[])
+TEST(basic, nonlinear_thermal_test_3D)
 {
-  int num_procs, myid;
-
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-
-  axom::slic::SimpleLogger logger;
-
   int serial_refinement   = 0;
   int parallel_refinement = 0;
 
@@ -108,6 +100,21 @@ int main(int argc, char* argv[])
   residual.AddSurfaceIntegral([=](auto x, auto /*n*/, auto u) { return x[0] + x[1] - cos(u); }, *mesh3D);
 
   check_gradient(residual, U);
+}
 
+int main(int argc, char* argv[])
+{
+  int num_procs, myid;
+
+  ::testing::InitGoogleTest(&argc, argv);
+  MPI_Init(&argc, &argv);
+  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
+  axom::slic::SimpleLogger logger;
+
+  int result = RUN_ALL_TESTS();
   MPI_Finalize();
+
+  return result;
 }

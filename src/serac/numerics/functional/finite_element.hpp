@@ -117,9 +117,7 @@ struct L2 {
 };
 
 /**
- * @brief Discontinuous elements of order @p p
- * @tparam p The order of the elements
- * @tparam c The vector dimension
+ * @brief "Quantity of Interest" elements (i.e. elements with a single shape function, 1)
  */
 struct QOI {
   static constexpr int    order      = 0;            ///< the polynomial order of the elements
