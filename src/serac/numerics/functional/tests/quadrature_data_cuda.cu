@@ -8,9 +8,9 @@
 
 #include "serac/serac_config.hpp"
 #include "serac/numerics/mesh_utils_base.hpp"
-#include "serac/physics/utilities/quadrature_data.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
-#include "serac/physics/utilities/functional/functional.hpp"
+#include "serac/numerics/quadrature_data.hpp"
+#include "serac/physics/state/state_manager.hpp"
+#include "serac/numerics/functional/functional.hpp"
 
 using namespace serac;
 

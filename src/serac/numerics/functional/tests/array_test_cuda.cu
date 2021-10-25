@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "serac/physics/utilities/functional/array.hpp"
+#include "serac/numerics/functional/array.hpp"
 
 __global__ void fill_kernel(serac::GPUView<double, 2> values)
 {
