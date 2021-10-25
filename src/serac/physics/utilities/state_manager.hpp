@@ -34,7 +34,7 @@ public:
    * @brief Initializes the StateManager with a sidre DataStore (into which state will be written/read)
    * @param[in] ds The DataStore to use
    * @param[in] collection_name_prefix The prefix for the name of the Sidre DataCollection to be created
-   * @param[in] output_directory The directory to output files to
+   * @param[in] output_directory The directory to output files to - cannot be empty
    * @param[in] cycle_to_load The cycle to load - required for restarts
    */
   static void initialize(axom::sidre::DataStore& ds, const std::string& collection_name_prefix,

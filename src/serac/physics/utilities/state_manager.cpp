@@ -47,7 +47,8 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& col
 
   if (output_directory.empty()) {
     SLIC_ERROR_ROOT(
-        "DataCollection output directory is empty - this may result in problems if executables are run in parallel");
+        "DataCollection output directory cannot be empty - this will result in problems if executables are run in "
+        "parallel");
   } else {
     datacoll_->SetPrefixPath(output_directory);
   }
