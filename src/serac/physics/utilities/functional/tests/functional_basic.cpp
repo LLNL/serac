@@ -102,6 +102,9 @@ TEST(basic, nonlinear_thermal_test_3D)
   check_gradient(residual, U);
 }
 
+//------------------------------------------------------------------------------
+#include "axom/slic/core/SimpleLogger.hpp"
+
 int main(int argc, char* argv[])
 {
   int num_procs, myid;
