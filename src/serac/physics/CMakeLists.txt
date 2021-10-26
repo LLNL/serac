@@ -8,6 +8,7 @@ add_subdirectory(integrators)
 add_subdirectory(materials)
 add_subdirectory(state)
 add_subdirectory(boundary_conditions)
+add_subdirectory(coefficients)
 
 if(ENABLE_TESTS)
     add_subdirectory(tests)
@@ -35,6 +36,7 @@ set(physics_dependencies
     serac_numerics
     serac_boundary_conditions
     serac_state
+    serac_mesh
     )
 
 blt_add_library(

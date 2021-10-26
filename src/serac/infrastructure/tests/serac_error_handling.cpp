@@ -10,7 +10,7 @@
 
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
-#include "serac/numerics/mesh_utils.hpp"
+#include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/thermal_conduction.hpp"
 #include "serac/physics/boundary_conditions/boundary_condition.hpp"
 #include "serac/numerics/equation_solver.hpp"

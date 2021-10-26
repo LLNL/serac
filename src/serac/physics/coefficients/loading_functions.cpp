@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/coefficients/loading_functions.hpp"
+#include "serac/physics/coefficients/loading_functions.hpp"
 
 namespace serac {
 

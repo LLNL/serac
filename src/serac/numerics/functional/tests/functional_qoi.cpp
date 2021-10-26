@@ -10,7 +10,7 @@
 #include "mfem.hpp"
 
 #include "serac/serac_config.hpp"
-#include "serac/numerics/mesh_utils_base.hpp"
+#include "serac/mesh/mesh_utils_base.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"

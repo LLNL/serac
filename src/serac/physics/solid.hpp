@@ -22,7 +22,7 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/physics/materials/hyperelastic_material.hpp"
 #include "serac/physics/integrators/displacement_hyperelastic_integrator.hpp"
-#include "serac/coefficients/sensitivity_coefficients.hpp"
+#include "serac/physics/coefficients/sensitivity_coefficients.hpp"
 #include "serac/physics/state/finite_element_dual.hpp"
 #include "serac/physics/materials/thermal_expansion_material.hpp"
 

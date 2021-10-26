@@ -11,13 +11,13 @@
 
 #include "mfem.hpp"
 
-#include "serac/coefficients/coefficient_extensions.hpp"
+#include "serac/physics/coefficients/coefficient_extensions.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/solid.hpp"
-#include "serac/numerics/mesh_utils.hpp"
+#include "serac/mesh/mesh_utils.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/physics/tests/test_utilities.hpp"

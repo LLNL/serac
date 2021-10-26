@@ -15,8 +15,6 @@ set(numerics_headers
     equation_solver.hpp
     expr_template_impl.hpp
     expr_template_ops.hpp
-    mesh_utils.hpp
-    mesh_utils_base.hpp
     quadrature_data.hpp
     solver_config.hpp
     vector_expression.hpp
@@ -26,7 +24,6 @@ set(numerics_headers
 
 set(numerics_sources
     equation_solver.cpp
-    mesh_utils.cpp
     odes.cpp
     )
 

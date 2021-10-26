@@ -16,7 +16,7 @@
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
-#include "serac/numerics/mesh_utils_base.hpp"
+#include "serac/mesh/mesh_utils_base.hpp"
 
 #include <gtest/gtest.h>
 

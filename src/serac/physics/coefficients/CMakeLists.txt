@@ -27,11 +27,11 @@ blt_add_library(
     )
 
 target_include_directories(serac_coefficients PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../..>
     $<INSTALL_INTERFACE:include>
     )
 
-install(FILES ${coefficients_headers} DESTINATION include/serac/coefficients )
+install(FILES ${coefficients_headers} DESTINATION include/serac/physics/coefficients )
 
 install(TARGETS              serac_coefficients
         EXPORT               serac-targets

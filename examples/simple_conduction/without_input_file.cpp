@@ -22,7 +22,7 @@
 #include "serac/infrastructure/terminator.hpp"
 // _incl_infra_end
 // _incl_mesh_start
-#include "serac/numerics/mesh_utils.hpp"
+#include "serac/mesh/mesh_utils.hpp"
 // _incl_mesh_end
 
 // _main_init_start

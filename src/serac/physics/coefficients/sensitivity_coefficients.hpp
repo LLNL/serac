@@ -14,7 +14,7 @@
 
 #include "serac/physics/state/finite_element_state.hpp"
 #include "serac/physics/materials/hyperelastic_material.hpp"
-#include "serac/coefficients/sensitivity_coefficients.hpp"
+#include "serac/physics/coefficients/sensitivity_coefficients.hpp"
 
 #include "mfem.hpp"
 

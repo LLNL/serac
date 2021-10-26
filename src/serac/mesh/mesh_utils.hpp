@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "serac/numerics/mesh_utils_base.hpp"
+#include "serac/mesh/mesh_utils_base.hpp"
 
 /**
  * The Serac namespace

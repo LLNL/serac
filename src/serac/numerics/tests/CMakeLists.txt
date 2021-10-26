@@ -7,17 +7,8 @@
 set(test_dependencies gtest serac_numerics serac_boundary_conditions serac_state)
 blt_list_append( TO test_dependencies ELEMENTS caliper IF ${SERAC_USE_CALIPER} )
 
-set(numerics_parallel_tests
-    serac_mesh.cpp
-    )
-
-serac_add_tests( SOURCES ${numerics_parallel_tests}
-                 DEPENDS_ON ${test_dependencies}
-                 NUM_MPI_TASKS 2)
-
 set(numerics_serial_tests
     expr_templates.cpp
-    mesh_generation.cpp
     serac_operator.cpp
     serac_odes.cpp
     )

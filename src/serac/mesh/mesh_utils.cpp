@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/numerics/mesh_utils.hpp"
+#include "serac/mesh/mesh_utils.hpp"
 
 #include <fstream>
 
