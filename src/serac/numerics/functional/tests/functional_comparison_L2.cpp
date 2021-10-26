@@ -8,7 +8,7 @@
 #include "serac/serac_config.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/mesh_utils_base.hpp"
-#include "serac/physics/operators/stdfunction_operator.hpp"
+#include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/infrastructure/profiling.hpp"

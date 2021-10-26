@@ -20,11 +20,14 @@ set(numerics_headers
     quadrature_data.hpp
     solver_config.hpp
     vector_expression.hpp
+    odes.hpp
+    stdfunction_operator.hpp
     )
 
 set(numerics_sources
     equation_solver.cpp
     mesh_utils.cpp
+    odes.cpp
     )
 
 set(numerics_depends serac_infrastructure)

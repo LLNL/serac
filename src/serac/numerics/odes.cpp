@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: (BSD-3-Clause)
 
-#include "serac/physics/operators/odes.hpp"
+#include "serac/numerics/odes.hpp"
 
 #include "serac/numerics/expr_template_ops.hpp"
 

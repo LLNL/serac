@@ -18,7 +18,7 @@
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/solid.hpp"
 #include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/operators/odes.hpp"
+#include "serac/numerics/odes.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/physics/tests/test_utilities.hpp"
 

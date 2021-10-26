@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "serac/physics/operators/stdfunction_operator.hpp"
+#include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 
 #include "mfem.hpp"
