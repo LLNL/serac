@@ -30,7 +30,6 @@ serac_add_tests( SOURCES ${solver_tests}
 
 set(solver_utility_tests
     serac_dtor.cpp
-    serac_boundary_cond.cpp
     serac_newmark_test.cpp)
 
 serac_add_tests( SOURCES ${solver_utility_tests}

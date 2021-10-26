@@ -4,6 +4,10 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
+if(ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()
+
 set(boundary_conditions_headers
     boundary_condition.hpp
     boundary_condition_manager.hpp
