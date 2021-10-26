@@ -7,7 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "serac/serac_config.hpp"
-#include "serac/numerics/mesh_utils_base.hpp"
+#include "serac/mesh/mesh_utils_base.hpp"
 #include "serac/numerics/quadrature_data.hpp"
 #include "serac/physics/state/state_manager.hpp"
 #include "serac/numerics/functional/functional.hpp"

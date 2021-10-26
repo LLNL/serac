@@ -21,7 +21,7 @@
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
-#include "serac/numerics/mesh_utils_base.hpp"
+#include "serac/mesh/mesh_utils_base.hpp"
 
 using namespace serac;
 using namespace serac::profiling;
