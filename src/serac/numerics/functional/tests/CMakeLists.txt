@@ -61,7 +61,7 @@ if(ENABLE_CUDA)
        )
 
     serac_add_tests( SOURCES ${functional_tests_cuda}
-                     DEPENDS_ON gtest serac_functional ${functional_depends} cuda)
+                     DEPENDS_ON gtest serac_functional serac_state ${functional_depends} cuda)
 
     # FIXME: Different linker is used depending on whether axom is a dependency??
     # clang directly (with axom) or the MPI wrapper (without axom)
