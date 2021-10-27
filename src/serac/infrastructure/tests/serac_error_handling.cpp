@@ -119,7 +119,7 @@ TEST(serac_error_handling, invalid_output_type)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "invalid_output_type");
   serac::StateManager::setMesh(mesh::refineAndDistribute(buildDiskMesh(1000)));
   ThermalConduction physics(1, ThermalConduction::defaultQuasistaticOptions());
   // Try a definitely wrong number to ensure that an invalid output type is detected

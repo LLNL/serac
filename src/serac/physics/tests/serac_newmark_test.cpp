@@ -119,7 +119,7 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   // Create DataStore
   axom::sidre::DataStore datastore;
   // Intialize MFEMSidreDataCollection
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "newmark_beta_simple");
 
   // Initialize Inlet and read input file
   std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve.lua";
@@ -188,7 +188,7 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   // Create DataStore
   axom::sidre::DataStore datastore;
   // Intialize MFEMSidreDataCollection
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "newmark_beta_equilibrium");
 
   // Initialize Inlet and read input file
   std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve_bending.lua";
@@ -230,7 +230,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   // Create DataStore
   axom::sidre::DataStore datastore;
   // Intialize MFEMSidreDataCollection
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "newmark_beta_first_order_equilibrium");
 
   // Initialize Inlet and read input file
   std::string input_file =
