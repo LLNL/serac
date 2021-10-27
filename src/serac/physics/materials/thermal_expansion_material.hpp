@@ -13,7 +13,7 @@
 #pragma once
 
 #include "mfem.hpp"
-#include "serac/physics/utilities/finite_element_state.hpp"
+#include "serac/physics/state/finite_element_state.hpp"
 
 namespace serac {
 

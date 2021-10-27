@@ -18,9 +18,9 @@
 #include "mfem.hpp"
 #include "axom/sidre.hpp"
 
-#include "serac/physics/utilities/boundary_condition_manager.hpp"
-#include "serac/physics/utilities/equation_solver.hpp"
-#include "serac/physics/utilities/finite_element_state.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition_manager.hpp"
+#include "serac/numerics/equation_solver.hpp"
+#include "serac/physics/state/finite_element_state.hpp"
 
 namespace serac {
 

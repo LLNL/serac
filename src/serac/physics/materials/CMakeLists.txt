@@ -7,17 +7,19 @@
 set(materials_sources
     hyperelastic_material.cpp
     thermal_expansion_material.cpp
+    solid_utils.cpp
     )
 
 set(materials_headers
     hyperelastic_material.hpp
     thermal_expansion_material.hpp
+    solid_utils.hpp
     )
 
 set(materials_depends
     serac_infrastructure
     serac_numerics
-    serac_physics_utilities
+    mfem
     )
 
 blt_add_library(

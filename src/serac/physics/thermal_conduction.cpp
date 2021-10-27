@@ -10,7 +10,7 @@
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/physics/integrators/nonlinear_reaction_integrator.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
 
