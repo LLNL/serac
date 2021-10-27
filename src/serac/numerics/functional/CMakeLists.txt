@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: (BSD-3-Clause)
 
-set(functional_depends serac_physics mfem mpi)
+set(functional_depends mfem mpi serac_infrastructure serac_mesh)
 blt_list_append( TO functional_depends ELEMENTS cuda    IF ENABLE_CUDA )
 blt_list_append( TO functional_depends ELEMENTS caliper IF SERAC_USE_CALIPER )
 
@@ -33,7 +33,6 @@ set(functional_detail_headers
     detail/segment_Hcurl.inl
     detail/segment_L2.inl
     detail/metaprogramming.hpp
-    integral_utilities.hpp
     )
 
 blt_list_append(TO functional_headers ELEMENTS domain_integral_kernels.cuh IF ENABLE_CUDA)
@@ -45,8 +44,8 @@ blt_add_library(
       )
 
 
-install(FILES ${functional_headers} DESTINATION include/serac/physics/utilities/functional )
-install(FILES ${functional_detail_headers} DESTINATION include/serac/physics/utilities/functional/detail )
+install(FILES ${functional_headers} DESTINATION include/serac/numerics/functional )
+install(FILES ${functional_detail_headers} DESTINATION include/serac/numerics/functional/detail )
 
 install(TARGETS              serac_functional
         EXPORT               serac-targets
