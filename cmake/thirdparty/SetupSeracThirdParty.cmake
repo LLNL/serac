@@ -170,7 +170,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
 
-        add_subdirectory(${PROJECT_SOURCE_DIR}/mfem)
+        add_subdirectory(${PROJECT_SOURCE_DIR}/mfem  ${CMAKE_BINARY_DIR}/mfem)
+ 
+        set(MFEM_FOUND TRUE CACHE BOOL "" FORCE)
+
         # Patch the mfem target with the correct include directories
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${_mfem_includes}>)
@@ -256,21 +259,26 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set(AXOM_ENABLE_TESTS    OFF CACHE BOOL "")
         set(AXOM_ENABLE_DOCS     OFF CACHE BOOL "")
         set(AXOM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
+
         # Used for the doxygen target
         set(AXOM_CUSTOM_TARGET_PREFIX "axom_" CACHE STRING "" FORCE)
         if(ENABLE_CUDA)
             # This appears to be unconditionally needed for Axom, why isn't it part of the build system?
             set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
         endif()
-        add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src)
+        add_subdirectory(${PROJECT_SOURCE_DIR}/axom/src ${CMAKE_BINARY_DIR}/axom)
         set(AXOM_FOUND TRUE CACHE BOOL "" FORCE)
-        # Mark the axom includes as "system"
-        get_target_property(_axom_includes axom INTERFACE_INCLUDE_DIRECTORIES)
-        # target_include_directories(axom SYSTEM INTERFACE $<BUILD_INTERFACE:${_axom_includes}>)
-        set_target_properties(axom PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${_axom_includes}>")
-        set_target_properties(axom PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${_axom_includes}>")
-        get_target_property(_axom_includes axom INTERFACE_INCLUDE_DIRECTORIES)
-        message(STATUS "includes are ${_axom_includes}")
+
+        # Mark the axom includes as "system" and filter unallowed directories
+        get_target_property(_dirs axom INTERFACE_INCLUDE_DIRECTORIES)
+        list(REMOVE_ITEM _dirs ${PROJECT_SOURCE_DIR})
+        set_property(TARGET axom 
+                     PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                     "${_dirs}")
+        set_property(TARGET axom 
+                     APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                     "${_dirs}")
+
     endif()
 
     #------------------------------------------------------------------------------
