@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 // # Author: Jonathan Wong @ LLNL.
 
-#include "serac/coefficients/coefficient_extensions.hpp"
+#include "serac/physics/coefficients/coefficient_extensions.hpp"
 
 #include <memory>
 

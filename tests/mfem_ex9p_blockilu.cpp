@@ -48,7 +48,7 @@
 #include <iostream>
 
 #include "mfem.hpp"
-#include "serac/physics/utilities/equation_solver.hpp"
+#include "serac/numerics/equation_solver.hpp"
 #include "serac/serac_config.hpp"
 
 using namespace std;

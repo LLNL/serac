@@ -1,0 +1,259 @@
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[         0,          0]
+NotebookDataLength[      9356,        258]
+NotebookOptionsPosition[      8411,        229]
+NotebookOutlinePosition[      8800,        245]
+CellTagsIndexPosition[      8757,        242]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"f", "[", 
+    RowBox[{"x_", ",", " ", "y_", ",", " ", "u_"}], "]"}], " ", ":=", " ", 
+   RowBox[{
+    SuperscriptBox["x", "2"], " ", "+", " ", 
+    RowBox[{"Sin", "[", "y", "]"}], " ", "+", " ", 
+    RowBox[{"x", " ", 
+     SuperscriptBox["u", "3"]}]}]}], " ", ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"g", "[", 
+    RowBox[{"x_", ",", " ", "y_", ",", " ", "u_"}], "]"}], " ", ":=", " ", 
+   RowBox[{"x", " ", "-", " ", "y", " ", "+", " ", 
+    RowBox[{"Cos", "[", 
+     RowBox[{"u", " ", "y"}], "]"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"u", " ", "=", " ", 
+   SuperscriptBox["x", "2"]}], ";"}]}], "Input",
+ CellLabel->"In[1]:=",ExpressionUUID->"6d21a73d-ef34-4457-b78c-27862462aed7"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"from", " ", "\"\<star.mesh\>\""}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"vertices", " ", "=", " ", 
+     InterpretationBox[
+      DynamicModuleBox[{Typeset`open = False}, 
+       TemplateBox[{"List", "ListIcon", 
+         GridBox[{{
+            RowBox[{
+              TagBox["\"Head: \"", "IconizedLabel"], "\[InvisibleSpace]", 
+              TagBox["List", "IconizedItem"]}]}, {
+            RowBox[{
+              TagBox["\"Dimensions: \"", "IconizedLabel"], 
+              "\[InvisibleSpace]", 
+              TagBox[
+               RowBox[{"{", 
+                 RowBox[{"31", ",", "2"}], "}"}], "IconizedItem"]}]}, {
+            RowBox[{
+              TagBox["\"Byte count: \"", "IconizedLabel"], 
+              "\[InvisibleSpace]", 
+              TagBox["3016", "IconizedItem"]}]}}, 
+          GridBoxAlignment -> {"Columns" -> {{Left}}}, DefaultBaseStyle -> 
+          "Column", 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}], 
+         Dynamic[Typeset`open]},
+        "IconizedObject"]],
+      {{0, 0}, {1, 0}, {0.309017, 0.951057}, {1.30902, 0.951057}, {-0.809017, 
+       0.587785}, {-0.5, 1.53884}, {-0.809017, -0.587785}, {-1.61803, 0}, {
+       0.309017, -0.951057}, {-0.5, -1.53884}, {1.30902, -0.951057}, {
+       0.5, 0}, {1.15451, 0.475529}, {0.809019, 0.951057}, {0.154508, 
+       0.475529}, {-0.0954915, 1.24495}, {-0.654508, 1.06331}, {-0.404508, 
+       0.293893}, {-1.21352, 
+       0.293893}, {-1.21352, -0.293892}, {-0.404508, -0.293893}, {-0.654508, \
+-1.06331}, {-0.0954915, -1.24495}, {0.154508, -0.475529}, {
+       0.809019, -0.951057}, {1.15451, -0.475529}, {0.654509, 
+       0.475529}, {-0.25, 0.769421}, {-0.809016, 0}, {-0.25, -0.76942}, {
+       0.654509, -0.475529}},
+      SelectWithContents->True,
+      Selectable->False]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"boundarySegments", "=", 
+     InterpretationBox[
+      DynamicModuleBox[{Typeset`open = False}, 
+       TemplateBox[{"List", "ListIcon", 
+         GridBox[{{
+            RowBox[{
+              TagBox["\"Head: \"", "IconizedLabel"], "\[InvisibleSpace]", 
+              TagBox["List", "IconizedItem"]}]}, {
+            RowBox[{
+              TagBox["\"Length: \"", "IconizedLabel"], "\[InvisibleSpace]", 
+              TagBox["20", "IconizedItem"]}]}, {
+            RowBox[{
+              TagBox["\"Byte count: \"", "IconizedLabel"], 
+              "\[InvisibleSpace]", 
+              TagBox["520", "IconizedItem"]}]}}, 
+          GridBoxAlignment -> {"Columns" -> {{Left}}}, DefaultBaseStyle -> 
+          "Column", 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}], 
+         Dynamic[Typeset`open]},
+        "IconizedObject"]],
+      {2, 26, 11, 25, 9, 23, 10, 22, 7, 20, 8, 19, 5, 17, 6, 16, 3, 14, 4, 13},
+      SelectWithContents->True,
+      Selectable->False]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"domain", " ", "=", " ", 
+     RowBox[{"Polygon", "[", 
+      RowBox[{"vertices", "[", 
+       RowBox[{"[", "boundarySegments", "]"}], "]"}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"boundary", " ", "=", " ", 
+     RowBox[{"RegionBoundary", "[", "domain", "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"NumberForm", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"NIntegrate", "[", 
+       RowBox[{
+        RowBox[{"f", "[", 
+         RowBox[{"x", ",", "y", ",", "u"}], "]"}], ",", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"x", ",", "y"}], "}"}], "\[Element]", "domain"}]}], "]"}], 
+      "+", 
+      RowBox[{"NIntegrate", "[", 
+       RowBox[{
+        RowBox[{"g", "[", 
+         RowBox[{"x", ",", "y", ",", "u"}], "]"}], ",", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"x", ",", "y"}], "}"}], "\[Element]", "boundary"}]}], 
+       "]"}]}], ",", " ", "100"}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"(*", 
+    RowBox[{"Graphics", "[", 
+     RowBox[{"{", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{"Arrow", "[", 
+          RowBox[{"vertices", "[", 
+           RowBox[{"[", "boundarySegments", "]"}], "]"}], "]"}], " ", "&"}], 
+        " ", "/@", " ", "boundarySegments"}], ",", "\[IndentingNewLine]", 
+       "Red", ",", 
+       RowBox[{"PointSize", "[", "0.02", "]"}], ",", "\[IndentingNewLine]", 
+       RowBox[{"Point", " ", "/@", " ", "vertices"}]}], "\[IndentingNewLine]",
+       "}"}], "]"}], "*)"}]}]}]], "Input",
+ CellChangeTimes->{{3.838814825930313*^9, 3.8388148342616453`*^9}, {
+  3.838814874852668*^9, 3.8388148749828997`*^9}, {3.838854035251334*^9, 
+  3.838854035445654*^9}, {3.83885439067137*^9, 3.838854451265374*^9}, {
+  3.838854492425124*^9, 3.8388544926209917`*^9}},
+ CellLabel->"In[4]:=",ExpressionUUID->"f6509bee-9830-4634-8d06-ec5a954ff09b"],
+
+Cell[BoxData[
+ TagBox[
+  InterpretationBox[
+   StyleBox["\<\"9.71388562400895\"\>",
+    ShowStringCharacters->False],
+   9.713885624008947,
+   AutoDelete->True],
+  NumberForm[#, 100]& ]], "Output",
+ CellChangeTimes->{3.838854493196183*^9, 3.841342960554687*^9},
+ CellLabel->
+  "Out[8]//NumberForm=",ExpressionUUID->"068cdc5b-e56a-470e-a5d1-\
+ebd6d3a76bd8"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"beam", "-", 
+    RowBox[{"hex", ".", "mesh"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"domain", " ", "=", " ", 
+     RowBox[{"Cuboid", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"0", ",", " ", "0", ",", "0"}], "}"}], ",", " ", 
+       RowBox[{"{", 
+        RowBox[{"8", ",", " ", "1", ",", " ", "1"}], "}"}]}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"boundary", " ", "=", " ", 
+     RowBox[{"RegionBoundary", "[", "domain", "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"NumberForm", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"NIntegrate", "[", 
+       RowBox[{
+        RowBox[{"f", "[", 
+         RowBox[{"x", ",", "y", ",", "u"}], "]"}], ",", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"x", ",", "y", ",", "z"}], "}"}], "\[Element]", 
+         "domain"}]}], "]"}], "+", 
+      RowBox[{"NIntegrate", "[", 
+       RowBox[{
+        RowBox[{"g", "[", 
+         RowBox[{"x", ",", "y", ",", "u"}], "]"}], ",", 
+        RowBox[{
+         RowBox[{"{", 
+          RowBox[{"x", ",", "y", ",", "z"}], "}"}], "\[Element]", 
+         "boundary"}]}], "]"}]}], ",", " ", "100"}], "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.83885405918498*^9, 3.838854107766342*^9}, {
+  3.8388544886463842`*^9, 3.8388544887894917`*^9}},
+ CellLabel->"In[9]:=",ExpressionUUID->"058d5784-b340-4ea5-9dad-6d64ca63635a"],
+
+Cell[BoxData[
+ TagBox[
+  InterpretationBox[
+   StyleBox[
+    RowBox[{"\<\"2.097457548402147\"\>", "\[Times]", 
+     SuperscriptBox["10", "\<\"6\"\>"]}],
+    ShowStringCharacters->False],
+   2.097457548402147*^6,
+   AutoDelete->True],
+  NumberForm[#, 100]& ]], "Output",
+ CellChangeTimes->{3.838854495139509*^9, 3.841342961419701*^9},
+ CellLabel->
+  "Out[11]//NumberForm=",ExpressionUUID->"b59f5c6e-a887-41c6-86a6-\
+ca517ab013cd"]
+}, Open  ]]
+},
+WindowSize->{1866, 1032},
+WindowMargins->{{0, Automatic}, {0, Automatic}},
+FrontEndVersion->"12.3 for Linux x86 (64-bit) (July 9, 2021)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"6ff92c07-673a-49c3-9893-6b4c8cf5a19c"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[400, 13, 775, 20, 71, "Input",ExpressionUUID->"6d21a73d-ef34-4457-b78c-27862462aed7"],
+Cell[CellGroupData[{
+Cell[1200, 37, 4917, 116, 244, "Input",ExpressionUUID->"f6509bee-9830-4634-8d06-ec5a954ff09b"],
+Cell[6120, 155, 356, 11, 46, "Output",ExpressionUUID->"068cdc5b-e56a-470e-a5d1-ebd6d3a76bd8"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6513, 171, 1450, 40, 92, "Input",ExpressionUUID->"058d5784-b340-4ea5-9dad-6d64ca63635a"],
+Cell[7966, 213, 429, 13, 46, "Output",ExpressionUUID->"b59f5c6e-a887-41c6-86a6-ca517ab013cd"]
+}, Open  ]]
+}
+]
+*)
+

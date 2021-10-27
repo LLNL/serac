@@ -9,7 +9,7 @@
 #include "serac/infrastructure/profiling.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
 #include "serac/numerics/array_4D.hpp"
-#include "serac/physics/utilities/physics_utils.hpp"
+#include "serac/physics/materials/solid_utils.hpp"
 
 namespace serac::mfem_ext {
 

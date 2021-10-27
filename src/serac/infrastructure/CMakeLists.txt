@@ -17,6 +17,7 @@ set(infrastructure_headers
     output.hpp
     profiling.hpp
     terminator.hpp
+    variant.hpp
     )
 
 set(infrastructure_sources

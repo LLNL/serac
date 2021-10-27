@@ -15,8 +15,8 @@
 #include "mfem.hpp"
 
 #include "serac/physics/base_physics.hpp"
-#include "serac/physics/operators/odes.hpp"
-#include "serac/physics/operators/stdfunction_operator.hpp"
+#include "serac/numerics/odes.hpp"
+#include "serac/numerics/stdfunction_operator.hpp"
 
 namespace serac {
 

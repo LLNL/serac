@@ -10,11 +10,11 @@
 
 #include "serac/infrastructure/cli.hpp"
 #include "serac/infrastructure/initialize.hpp"
-#include "serac/numerics/mesh_utils.hpp"
+#include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/thermal_conduction.hpp"
-#include "serac/physics/utilities/boundary_condition.hpp"
-#include "serac/physics/utilities/equation_solver.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/boundary_conditions/boundary_condition.hpp"
+#include "serac/numerics/equation_solver.hpp"
+#include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 class SlicErrorException : public std::exception {
@@ -119,7 +119,7 @@ TEST(serac_error_handling, invalid_output_type)
 {
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "invalid_output_type");
   serac::StateManager::setMesh(mesh::refineAndDistribute(buildDiskMesh(1000)));
   ThermalConduction physics(1, ThermalConduction::defaultQuasistaticOptions());
   // Try a definitely wrong number to ensure that an invalid output type is detected

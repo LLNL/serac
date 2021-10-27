@@ -54,8 +54,6 @@ void outputSummary(const axom::sidre::DataStore& datastore, const std::string& d
 void outputFields(const axom::sidre::DataStore& datastore, const std::string& data_collection_name,
                   const std::string& output_directory, double time, const FileFormat file_format)
 {
-  SLIC_INFO_ROOT(fmt::format("Outputting field data at time: {}", time));
-
   // Configure Ascent to extract data
   ascent::Ascent ascent;
   conduit::Node  ascent_opts;
@@ -74,6 +72,8 @@ void outputFields(const axom::sidre::DataStore& datastore, const std::string& da
   const std::string path         = axom::utilities::filesystem::joinPath(output_directory, file_name);
   extracts["e1/params/path"]     = path;
   extracts["e1/params/protocol"] = file_format_string;
+
+  SLIC_INFO_ROOT(fmt::format("Outputting field data at time: {} to path: {}", time, path));
 
   // Get domain Sidre group
   const axom::sidre::Group* sidre_root = datastore.getRoot();

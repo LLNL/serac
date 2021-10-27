@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: (BSD-3-Clause)
 
 #include "serac/physics/materials/thermal_expansion_material.hpp"
-#include "serac/physics/utilities/physics_utils.hpp"
+#include "serac/physics/materials/solid_utils.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 

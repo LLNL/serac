@@ -11,14 +11,14 @@
 
 #include "mfem.hpp"
 
-#include "serac/coefficients/coefficient_extensions.hpp"
+#include "serac/physics/coefficients/coefficient_extensions.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
 #include "serac/numerics/expr_template_ops.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/state/state_manager.hpp"
 #include "serac/infrastructure/input.hpp"
 #include "serac/physics/solid.hpp"
-#include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/operators/odes.hpp"
+#include "serac/mesh/mesh_utils.hpp"
+#include "serac/numerics/odes.hpp"
 #include "serac/serac_config.hpp"
 #include "serac/physics/tests/test_utilities.hpp"
 
@@ -119,7 +119,7 @@ TEST_F(NewmarkBetaTest, SimpleLua)
   // Create DataStore
   axom::sidre::DataStore datastore;
   // Intialize MFEMSidreDataCollection
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "newmark_beta_simple");
 
   // Initialize Inlet and read input file
   std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve.lua";
@@ -188,7 +188,7 @@ TEST_F(NewmarkBetaTest, EquilbriumLua)
   // Create DataStore
   axom::sidre::DataStore datastore;
   // Intialize MFEMSidreDataCollection
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "newmark_beta_equilibrium");
 
   // Initialize Inlet and read input file
   std::string input_file = std::string(SERAC_REPO_DIR) + "/data/input_files/tests/solid/dyn_newmark_solve_bending.lua";
@@ -230,7 +230,7 @@ TEST_F(NewmarkBetaTest, FirstOrderEquilbriumLua)
   // Create DataStore
   axom::sidre::DataStore datastore;
   // Intialize MFEMSidreDataCollection
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "newmark_beta_first_order_equilibrium");
 
   // Initialize Inlet and read input file
   std::string input_file =
