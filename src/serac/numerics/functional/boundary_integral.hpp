@@ -15,8 +15,6 @@
 #include "mfem.hpp"
 #include "mfem/linalg/dtensor.hpp"
 
-#include "serac/physics/state/finite_element_state.hpp"
-
 #include "serac/numerics/functional/tensor.hpp"
 #include "serac/numerics/functional/quadrature.hpp"
 #include "serac/numerics/functional/tuple_arithmetic.hpp"
