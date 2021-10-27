@@ -25,7 +25,7 @@ TEST(solid_solver, adjoint)
   MPI_Barrier(MPI_COMM_WORLD);
 
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "solid_adjoint");
 
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";
