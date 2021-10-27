@@ -16,43 +16,20 @@
 
 #include "serac/serac_config.hpp"
 
-#ifdef SERAC_USE_CHAI
-#include "chai/ManagedArray.hpp"
-#endif
+#include "serac/physics/utilities/functional/array.hpp"
 
 #include "serac/infrastructure/accelerator.hpp"
 
 #include "serac/physics/utilities/variant.hpp"
-
-// FIXME: CHAI PR for this
-// These overloads are here to provide begin/end iterators for chai::Array
-// QuadratureData will eventually use axom::Array, so when that happens this
-// code can be removed
-#ifdef SERAC_USE_CHAI
-namespace chai {
-
-template <typename T>
-T* begin(ManagedArray<T>& arr)
-{
-  return arr.data();
-}
-
-template <typename T>
-T* end(ManagedArray<T>& arr)
-{
-  return arr.data() + arr.size();
-}
-
-}  // namespace chai
-#endif
 
 /**
  * @brief Helper template for a GPU-compatible array type (when applicable)
  * This will be eventually replaced with axom::Array
  */
 template <typename T>
-#ifdef SERAC_USE_CHAI
-using DeviceArray = chai::ManagedArray<T>;
+// #ifdef SERAC_USE_CUDA // FIXME: This is what we want
+#ifdef __CUDACC__
+using DeviceArray = serac::ManagedArray<T>;
 #else
 using DeviceArray = std::vector<T>;
 #endif
@@ -364,7 +341,7 @@ QuadratureData<T>::QuadratureData(mfem::Mesh& mesh, const int p, const bool allo
   // FIXME: Can we avoid storing a copy of the offsets array in the general case?
   std::memcpy(offsets_.data(), detail::quadSpaceOffsets(detail::retrieve(qspace_)),
               static_cast<std::size_t>(mesh.GetNE() + 1) * sizeof(int));
-#ifdef SERAC_USE_CHAI
+#ifdef __CUDACC__
   // Unlike std::vector, ManagedArray does not appear to default-construct the elements
   std::fill_n(data_.data(), data_.size(), T{});
 #endif

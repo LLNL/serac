@@ -15,12 +15,10 @@ set(numerics_headers
     mesh_utils.hpp
     mesh_utils_base.hpp
     vector_expression.hpp
-    assembled_sparse_matrix.hpp
     )
 
 set(numerics_sources
     mesh_utils.cpp
-    assembled_sparse_matrix.cpp	
     )
 
 set(numerics_depends serac_infrastructure)

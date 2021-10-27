@@ -14,9 +14,9 @@ blt_add_executable(NAME        tensor_unit_tests
 
 # Then add the examples/tests
 set(functional_tests_serial
-    functional_boundary_test.cpp
     hcurl_unit_tests.cpp
     test_tensor_ad.cpp
+    array_test.cpp
     tuple_arithmetic_unit_tests.cpp)
 
 serac_add_tests( SOURCES ${functional_tests_serial}
@@ -24,6 +24,10 @@ serac_add_tests( SOURCES ${functional_tests_serial}
 
 # Then add the examples/tests
 set(functional_tests_mpi
+    functional_basic.cpp
+    functional_qoi.cpp
+    functional_nonlinear.cpp
+    functional_boundary_test.cpp
     functional_comparisons.cpp
     functional_comparison_L2.cpp
     functional_material_state_test.cpp
@@ -52,6 +56,7 @@ if(ENABLE_CUDA)
     set(functional_tests_cuda 
         tensor_unit_tests_cuda.cu 
         functional_comparisons_cuda.cu
+        array_test_cuda.cu
         quadrature_data_cuda.cu
        )
 

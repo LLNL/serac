@@ -426,6 +426,8 @@ int main(int argc, char* argv[])
 
   auto [num_procs, myid] = serac::initialize(argc, argv);
 
+  serac::accelerator::initializeDevice();
+
   mfem::OptionsParser args(argc, argv);
   args.AddOption(&serial_refinement, "-r", "--ref", "");
   args.AddOption(&parallel_refinement, "-pr", "--pref", "");
