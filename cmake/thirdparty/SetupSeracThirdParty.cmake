@@ -120,6 +120,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # MFEM
     #------------------------------------------------------------------------------
     if(MFEM_DIR)
+        message(STATUS "Using installed MFEM")
         include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
     else()
         message(STATUS "Using MFEM submodule")
@@ -186,6 +187,7 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     # Axom
     #------------------------------------------------------------------------------
     if(AXOM_DIR)
+        message(STATUS "Using installed Axom")
         serac_assert_is_directory(VARIABLE_NAME AXOM_DIR)
 
         find_package(axom REQUIRED
@@ -245,9 +247,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     else()
         # Otherwise we use the submodule
         message(STATUS "Using axom submodule")
-        message("BUILDING AXOM!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         if(NOT LUA_DIR)
-            message(FATAL_ERROR "LUA_DIR is required to use the axom submodule"
+            message(FATAL_ERROR "LUA_DIR is required to use the Axom submodule"
                                 "\nTry running CMake with '-DLUA_DIR=path/to/lua/install'\n ")
         endif()
         set(AXOM_ENABLE_MFEM_SIDRE_DATACOLLECTION ON CACHE BOOL "")
@@ -270,9 +271,6 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         set_target_properties(axom PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${_axom_includes}>")
         get_target_property(_axom_includes axom INTERFACE_INCLUDE_DIRECTORIES)
         message(STATUS "includes are ${_axom_includes}")
-
-        message(STATUS "Axom support is ON via submodule")
-
     endif()
 
     #------------------------------------------------------------------------------
