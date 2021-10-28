@@ -125,11 +125,12 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
     else()
         message(STATUS "Using MFEM submodule")
 
-        #### Store Data
-        set(AXOM_DIR_SAVE ${AXOM_DIR})
-        set(UMPIRE_DIR_SAVE ${UMPIRE_DIR})
-        set(RAJA_DIR_SAVE ${RAJA_DIR})
-        set(PETSC_DIR_SAVE ${PETSC_DIR})
+        #### Store Data that MFEM clears
+        set(tpls_to_save ASCENT AXOM CALIPER CONDUIT HDF5
+                         HYPRE LUA METIS NETCDF PETSC RAJA UMPIRE)
+        foreach(_tpl ${tpls_to_save})
+            set(${_tpl}_DIR_SAVE "${${_tpl}_DIR}")
+        endforeach()
 
         #### MFEM "Use" Options
 
@@ -191,10 +192,10 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
         
         #### Restore previously stored data
-        set(AXOM_DIR ${AXOM_DIR_SAVE} CACHE PATH "" FORCE)
-        set(UMPIRE_DIR ${UMPIRE_DIR_SAVE} CACHE PATH "" FORCE)
-        set(RAJA_DIR ${RAJA_DIR_SAVE} CACHE PATH "" FORCE)
-        set(PETSC_DIR ${PETSC_DIR_SAVE} CACHE PATH "" FORCE)
+        foreach(_tpl ${tpls_to_save})
+            set(${_tpl}_DIR "${${_tpl}_DIR_SAVE}" CACHE PATH "" FORCE)
+        endforeach()
+
         set(MFEM_BUILT_WITH_CMAKE TRUE)
     endif()
 

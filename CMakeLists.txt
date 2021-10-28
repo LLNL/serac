@@ -172,7 +172,7 @@ install(TARGETS              serac
 if (NOT AXOM_DIR)
     # Add Axom's targets to our export set
     # TODO: we should ask Axom for this list in the future
-    set(axom_exported_targets axom cli11 fmt lua sol sparsehash)
+    set(axom_exported_targets axom cli11 fmt hdf5 lua sol sparsehash)
     install(TARGETS              ${axom_exported_targets}
             EXPORT               serac-targets
             DESTINATION          lib
