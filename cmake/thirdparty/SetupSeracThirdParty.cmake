@@ -124,49 +124,60 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         include(${CMAKE_CURRENT_LIST_DIR}/FindMFEM.cmake)
     else()
         message(STATUS "Using MFEM submodule")
+
+        #### Store Data
         set(AXOM_DIR_SAVE ${AXOM_DIR})
         set(UMPIRE_DIR_SAVE ${UMPIRE_DIR})
         set(RAJA_DIR_SAVE ${RAJA_DIR})
         set(PETSC_DIR_SAVE ${PETSC_DIR})
+
+        #### MFEM "Use" Options
+
+        # Assumes that we have AMGX if we have CUDA
+        set(MFEM_USE_AMGX ${ENABLE_CUDA} CACHE BOOL "")
+        set(MFEM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
+        # We don't use MFEM's Conduit/Axom support
+        set(MFEM_USE_CONDUIT OFF CACHE BOOL "")
+        set(MFEM_USE_CUDA ${ENABLE_CUDA} CACHE BOOL "")
+        set(MFEM_USE_LAPACK ON CACHE BOOL "")
         # mfem+mpi requires metis
-        set(MFEM_USE_MPI ${ENABLE_MPI} CACHE BOOL "")
         set(MFEM_USE_METIS ${ENABLE_MPI} CACHE BOOL "")
+        set(MFEM_USE_METIS_5 ${ENABLE_MPI} CACHE BOOL "")
+        set(MFEM_USE_MPI ${ENABLE_MPI} CACHE BOOL "")
+        if(NETCDF_DIR)
+            serac_assert_is_directory(VARIABLE_NAME NETCDF_DIR)
+            set(MFEM_USE_NETCDF ON CACHE BOOL "")
+        endif()
         # mfem+mpi also needs parmetis
         if(ENABLE_MPI)
             serac_assert_is_directory(VARIABLE_NAME PARMETIS_DIR)
             # Slightly different naming convention
             set(ParMETIS_DIR ${PARMETIS_DIR} CACHE PATH "")
         endif()
-        # CUDA
-        set(MFEM_USE_CUDA ${ENABLE_CUDA} CACHE BOOL "")
-
-        # This always gets built
-        set(MFEM_USE_ZLIB ON CACHE BOOL "")
+        set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
+        #TODO: RAJA?
+        if(SUNDIALS_DIR)
+            serac_assert_is_directory(VARIABLE_NAME SUNDIALS_DIR)
+            set(MFEM_USE_SUNDIALS ON CACHE BOOL "")
+        else()
+            set(MFEM_USE_SUNDIALS OFF CACHE BOOL "")
+        endif()
         if(SUPERLUDIST_DIR)
             serac_assert_is_directory(VARIABLE_NAME SUPERLUDIST_DIR)
             # MFEM uses a slightly different naming convention
             set(SuperLUDist_DIR ${SUPERLUDIST_DIR} CACHE PATH "")
             set(MFEM_USE_SUPERLU ${ENABLE_MPI} CACHE BOOL "")
         endif()
+        #TODO: Umpire?
+        set(MFEM_USE_ZLIB ON CACHE BOOL "")
 
-        if(NETCDF_DIR)
-            serac_assert_is_directory(VARIABLE_NAME NETCDF_DIR)
-            set(MFEM_USE_NETCDF ON CACHE BOOL "")
-        endif()
-
-        set(MFEM_USE_PETSC ${PETSC_FOUND} CACHE BOOL "")
-        # Always true because Axom uses Conduit
-        set(MFEM_USE_CONDUIT ON CACHE BOOL "")
-        set(MFEM_USE_CUDA ${ENABLE_CUDA} CACHE BOOL "")
-        # Assumes that we have AMGX if we have CUDA
-        set(MFEM_USE_AMGX ${ENABLE_CUDA} CACHE BOOL "")
-
-        set(MFEM_USE_CALIPER ${CALIPER_FOUND} CACHE BOOL "")
+        #### MFEM Configuration Options
 
         # Prefix the "check" targets
         set(MFEM_CUSTOM_TARGET_PREFIX "mfem_" CACHE STRING "" FORCE)
+
         # Disable tests + examples
-        set(MFEM_ENABLE_TESTING OFF CACHE BOOL "")
+        set(MFEM_ENABLE_TESTING  OFF CACHE BOOL "")
         set(MFEM_ENABLE_EXAMPLES OFF CACHE BOOL "")
         set(MFEM_ENABLE_MINIAPPS OFF CACHE BOOL "")
 
@@ -178,7 +189,8 @@ if (NOT SERAC_THIRD_PARTY_LIBRARIES_FOUND)
         get_target_property(_mfem_includes mfem INCLUDE_DIRECTORIES)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${_mfem_includes}>)
         target_include_directories(mfem SYSTEM INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/mfem>)
-        # blt_print_target_properties(TARGET mfem)
+        
+        #### Restore previously stored data
         set(AXOM_DIR ${AXOM_DIR_SAVE} CACHE PATH "" FORCE)
         set(UMPIRE_DIR ${UMPIRE_DIR_SAVE} CACHE PATH "" FORCE)
         set(RAJA_DIR ${RAJA_DIR_SAVE} CACHE PATH "" FORCE)
