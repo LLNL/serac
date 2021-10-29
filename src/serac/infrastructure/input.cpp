@@ -221,6 +221,18 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& cont
   serac::input::defineVectorInputFileSchema(pw_vector_container);
 }
 
+
+void FunctionInputOptions::defineInputFileSchema(axom::inlet::Container& container)
+{
+  // Vectors are implemented as lua usertypes and can be converted to/from mfem::Vector
+  container.addFunction("vector_function", axom::inlet::FunctionTag::Vector,
+                        {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
+                        "The function to use for an mfem::VectorFunctionCoefficient");
+  container.addFunction("scalar_function", axom::inlet::FunctionTag::Double,
+                        {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
+                        "The function to use for an mfem::FunctionCoefficient");
+}
+
 }  // namespace serac::input
 
 mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Container& base)
@@ -330,6 +342,42 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
                      "Coefficient has multiple definitions. Please use only one of (constant, vector_constant, "
                      "piecewise_constant, vector_piecewise_constant, scalar_function, vector_function");
   SLIC_ERROR_ROOT_IF(coefficient_definitions == 0, "Coefficient definition does not contain known type.");
+
+  return result;
+}
+
+serac::input::FunctionInputOptions FromInlet<serac::input::FunctionInputOptions>::operator()(
+    const axom::inlet::Container& base)
+{
+  serac::input::FunctionInputOptions result;
+
+  // Create a counter for definition of the coefficient
+  int function_definitions = 0;
+
+  // Check if functions have been assigned and store them appropriately
+  if (base.contains("vector_function")) {
+    auto func = base["vector_function"]
+                    .get<std::function<axom::inlet::FunctionType::Vector(axom::inlet::FunctionType::Vector, double)>>();
+    result.vector_function = [func(std::move(func))](const mfem::Vector& input, double t, mfem::Vector& output) {
+      auto ret = func({input.GetData(), input.Size()}, t);
+      // Copy from the primal vector into the MFEM vector
+      std::copy(ret.vec.data(), ret.vec.data() + input.Size(), output.GetData());
+    };
+    function_definitions++;
+  }
+
+  if (base.contains("scalar_function")) {
+    auto func = base["scalar_function"].get<std::function<double(axom::inlet::FunctionType::Vector, double)>>();
+    result.scalar_function = [func(std::move(func))](const mfem::Vector& input, double t) {
+      return func({input.GetData(), input.Size()}, t);
+    };
+    function_definitions++;
+  }
+
+  SLIC_ERROR_ROOT_IF(function_definitions > 1,
+                     "Function has multiple definitions. Please use only one of "
+                     "(scalar_function, vector_function)");
+  SLIC_ERROR_ROOT_IF(function_definitions == 0, "Function definition does not contain known type.");
 
   return result;
 }
