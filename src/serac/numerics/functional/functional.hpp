@@ -82,15 +82,19 @@ class Functional;
  * my_residual.AddDomainIntegral(Dimension<3>{}, integrand, domain_of_integration);
  * @endcode
  */
-template <typename test, typename trial, ExecutionSpace exec>
-class Functional<test(trial), exec> : public mfem::Operator {
+template <typename test, typename ... trials, ExecutionSpace exec>
+class Functional<test(trials ...), exec> : public mfem::Operator {
+
+  static constexpr tuple < trials ... > trial_spaces;
+  static constexpr int num_trial_spaces = sizeof ... (trials);
+
 public:
   /**
    * @brief Constructs using @p mfem::ParFiniteElementSpace objects corresponding to the test/trial spaces
    * @param[in] test_fes The (non-qoi) test space
    * @param[in] trial_fes The trial space
    */
-  Functional(mfem::ParFiniteElementSpace* test_fes, mfem::ParFiniteElementSpace* trial_fes)
+  Functional(mfem::ParFiniteElementSpace* test_fes, std::array< mfem::ParFiniteElementSpace*, num_trial_spaces > trial_fes)
       : Operator(test_fes->GetTrueVSize(), trial_fes->GetTrueVSize()),
         test_space_(test_fes),
         trial_space_(trial_fes),
@@ -103,28 +107,23 @@ public:
     SLIC_ERROR_IF(!G_test_, "Couldn't retrieve element restriction operator for test space");
     SLIC_ERROR_IF(!G_trial_, "Couldn't retrieve element restriction operator for trial space");
 
-    // Ensure the mesh has the appropriate neighbor information before constructing the face restriction operators
-    if (test_space_) {
-      test_space_->ExchangeFaceNbrData();
-    }
-    if (trial_space_) {
-      trial_space_->ExchangeFaceNbrData();
+    // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
+    if (compatibleWithFaceRestriction(*test_space_)) { 
+      G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
+                                                         mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
     }
 
-    // for now, limitations in mfem prevent us from implementing surface integrals for Hcurl test/trial space
-    if (trial::family != Family::HCURL && test::family != Family::HCURL) {
-      if (test_space_) {
-        G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
-                                                           mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
-      }
-      if (trial_space_) {
-        G_trial_boundary_ = trial_space_->GetFaceRestriction(
+    for (int i = 0; i < num_trial_spaces; i++) {
+      if (compatibleWithFaceRestriction(*trial_space_[i])) { 
+        G_trial_boundary_[i] = trial_space_[i]->GetFaceRestriction(
             mfem::ElementDofOrdering::LEXICOGRAPHIC, mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
       }
-      input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
-      output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
-      output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
     }
+
+
+    input_E_boundary_.SetSize(G_trial_boundary_->Height(), mfem::Device::GetMemoryType());
+    output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
+    output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
 
     input_L_.SetSize(P_trial_->Height(), mfem::Device::GetMemoryType());
     input_E_.SetSize(G_trial_->Height(), mfem::Device::GetMemoryType());
@@ -295,10 +294,11 @@ public:
    *
    * @note This gets more interesting when having more than one trial space
    */
+  template < int which = 0 >
   void SetEssentialBC(const mfem::Array<int>& ess_attr)
   {
-    static_assert(std::is_same_v<test, trial>, "can't specify essential bc on incompatible spaces");
-    trial_space_->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
+    static_assert(std::is_same_v<test, serac::get<which>(trial_spaces)>, "can't specify essential bc on incompatible spaces");
+    trial_space_[which]->GetEssentialTrueDofs(ess_attr, ess_tdof_list_);
   }
 
 private:
@@ -320,7 +320,7 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<test(trial), exec>& f)
+    Gradient(Functional<test(trials ...), exec>& f)
         : mfem::Operator(f.Height(), f.Width()), form_(f), lookup_tables(*(f.test_space_), *(f.trial_space_)){};
 
     /**
@@ -420,7 +420,7 @@ private:
 
   private:
     /// @brief The "parent" @p Functional to calculate gradients with
-    Functional<test(trial), exec>& form_;
+    Functional<test(trials ...), exec>& form_;
 
     /**
      * @brief this object has lookup tables for where to place each
@@ -553,7 +553,7 @@ private:
   /**
    * @brief Manages DOFs for the trial space
    */
-  mfem::ParFiniteElementSpace* trial_space_;
+  std::array< mfem::ParFiniteElementSpace*, num_trial_spaces > trial_space_;
 
   /**
    * @brief The set of true DOF indices to which an essential BC should be applied
@@ -594,17 +594,17 @@ private:
    * @brief Operator that converts local (current rank) DOF values to per-boundary element DOF values
    * for the trial space
    */
-  const mfem::Operator* G_trial_boundary_;
+  const mfem::Operator* G_trial_boundary_[num_trial_spaces];
 
   /**
    * @brief The set of domain integrals (spatial_dim == geometric_dim)
    */
-  std::vector<DomainIntegral<test(trial), exec>> domain_integrals_;
+  std::vector<DomainIntegral<test(trials ... ), exec>> domain_integrals_;
 
   /**
    * @brief The set of boundary integral (spatial_dim > geometric_dim)
    */
-  std::vector<BoundaryIntegral<test(trial), exec>> bdr_integrals_;
+  std::vector<BoundaryIntegral<test(trials ...), exec>> bdr_integrals_;
 
   // simplex elements are currently not supported;
   static constexpr mfem::Element::Type supported_types[4] = {mfem::Element::POINT, mfem::Element::SEGMENT,
