@@ -25,19 +25,6 @@
 
 namespace serac {
 
-/**
- * @brief for reasons I don't understand,
- * these calls need to be made immediately after creating the mesh,
- * in order for mfem::FaceRestriction to work properly (?)
- *
- * @note Apparently, calling these functions also messes up Sidre, causing it to segfault, so..
- */
-void make_the_mesh_work(mfem::ParMesh* mesh)
-{
-  mesh->EnsureNodes();
-  mesh->ExchangeFaceNbrData();
-}
-
 /// @cond
 template <typename T, ExecutionSpace exec = serac::default_execution_space>
 class Functional;
