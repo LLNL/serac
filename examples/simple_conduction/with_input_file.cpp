@@ -12,10 +12,10 @@
  */
 
 #include "serac/physics/thermal_conduction.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/state/state_manager.hpp"
 #include "serac/infrastructure/initialize.hpp"
 #include "serac/infrastructure/terminator.hpp"
-#include "serac/numerics/mesh_utils.hpp"
+#include "serac/mesh/mesh_utils.hpp"
 #include "serac/serac_config.hpp" // for SERAC_REPO_DIR
 
 const auto input_file = SERAC_REPO_DIR "/examples/simple_conduction/conduction.lua";
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 
   // _inlet_init_start
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "with_input_file_example");
   auto inlet = serac::input::initialize(datastore, input_file);
   // _inlet_init_end
 

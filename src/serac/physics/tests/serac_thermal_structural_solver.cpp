@@ -11,9 +11,9 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
-#include "serac/coefficients/coefficient_extensions.hpp"
-#include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/coefficients/coefficient_extensions.hpp"
+#include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -24,7 +24,7 @@ TEST(dynamic_solver, dyn_solve)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "dynamic_solve");
 
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/beam-hex.mesh";

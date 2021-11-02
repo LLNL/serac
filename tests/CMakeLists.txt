@@ -9,7 +9,7 @@ set(mfem_tests
     )
 
 serac_add_tests( SOURCES ${mfem_tests}
-                 DEPENDS_ON gtest serac_physics_utilities
+                 DEPENDS_ON gtest serac_numerics
                  NUM_MPI_TASKS 2)
 
 set(language_tests

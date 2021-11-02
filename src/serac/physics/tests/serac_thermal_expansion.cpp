@@ -11,9 +11,9 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
-#include "serac/coefficients/coefficient_extensions.hpp"
-#include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/coefficients/coefficient_extensions.hpp"
+#include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -24,7 +24,7 @@ TEST(solid_solver, thermal_expansion)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "solid_thermal_expansion");
 
   // Open the mesh
   std::string mesh_file = std::string(SERAC_REPO_DIR) + "/data/meshes/onehex.mesh";

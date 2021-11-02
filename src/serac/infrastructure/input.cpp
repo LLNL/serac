@@ -13,7 +13,7 @@
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
-#include "serac/physics/utilities/solver_config.hpp"
+#include "serac/numerics/solver_config.hpp"
 
 namespace serac::input {
 

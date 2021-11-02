@@ -66,7 +66,8 @@ namespace serac {
 enum class ExecutionSpace
 {
   CPU,
-  GPU
+  GPU,
+  Dynamic  // Corresponds to execution that can "legally" happen on either the host or device
 };
 
 /**

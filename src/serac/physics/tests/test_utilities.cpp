@@ -8,12 +8,14 @@
 
 #include <gtest/gtest.h>
 
+#include "axom/core.hpp"
+
 #include "serac/infrastructure/input.hpp"
-#include "serac/numerics/mesh_utils.hpp"
+#include "serac/mesh/mesh_utils.hpp"
 #include "serac/physics/solid.hpp"
 #include "serac/physics/thermal_conduction.hpp"
 #include "serac/physics/thermal_solid.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
 
@@ -198,10 +200,12 @@ void runModuleTest(const std::string& input_file, const std::string& test_name, 
   // Initialize the DataCollection
   // WARNING: This must happen before serac::input::initialize, as the loading
   // process will wipe out the datastore
+  std::string output_directory = test_name;
+  axom::utilities::filesystem::makeDirsForPath(output_directory);
   if (restart_cycle) {
-    serac::StateManager::initialize(datastore, "serac", "", *restart_cycle);
+    serac::StateManager::initialize(datastore, "serac", output_directory, *restart_cycle);
   } else {
-    serac::StateManager::initialize(datastore);
+    serac::StateManager::initialize(datastore, "serac", output_directory);
   }
 
   // Initialize Inlet and read input file

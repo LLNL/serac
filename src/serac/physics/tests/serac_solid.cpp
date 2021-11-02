@@ -11,10 +11,10 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
-#include "serac/coefficients/coefficient_extensions.hpp"
+#include "serac/physics/coefficients/coefficient_extensions.hpp"
 #include "serac/infrastructure/input.hpp"
-#include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
 #include "test_utilities.hpp"
 
@@ -55,7 +55,7 @@ TEST(solid_solver, qs_custom_solve)
 
   // Initialize Inlet and read input file
   auto inlet = serac::input::initialize(datastore, input_file_path);
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "solid_qs_custom_solve");
 
   test_utils::defineTestSchema<Solid>(inlet);
 

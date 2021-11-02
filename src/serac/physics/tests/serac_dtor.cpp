@@ -14,8 +14,8 @@
 #include <gtest/gtest.h>
 #include "mfem.hpp"
 
-#include "serac/numerics/mesh_utils.hpp"
-#include "serac/physics/utilities/state_manager.hpp"
+#include "serac/mesh/mesh_utils.hpp"
+#include "serac/physics/state/state_manager.hpp"
 #include "serac/serac_config.hpp"
 
 namespace serac {
@@ -29,7 +29,7 @@ TEST(serac_dtor, test1)
 
   // Create DataStore
   axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore);
+  serac::StateManager::initialize(datastore, "serac", "serac_dtor");
 
   auto pmesh = mesh::refineAndDistribute(buildMeshFromFile(mesh_file), 1, 0);
   serac::StateManager::setMesh(std::move(pmesh));

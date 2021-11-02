@@ -11,7 +11,7 @@ blt_add_library(
     NAME        test_utils
     SOURCES     test_utilities.cpp
     HEADERS     test_utilities.hpp
-    DEPENDS_ON  serac_physics gtest
+    DEPENDS_ON  serac_physics serac_state gtest
     )
 
 set(solver_tests
@@ -30,7 +30,6 @@ serac_add_tests( SOURCES ${solver_tests}
 
 set(solver_utility_tests
     serac_dtor.cpp
-    serac_boundary_cond.cpp
     serac_newmark_test.cpp)
 
 serac_add_tests( SOURCES ${solver_utility_tests}
