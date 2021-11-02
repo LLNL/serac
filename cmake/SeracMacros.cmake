@@ -143,7 +143,7 @@ endmacro(serac_convert_to_native_escaped_file_path)
 macro(serac_add_tests)
 
     set(options )
-    set(singleValueArgs NUM_MPI_TASKS PRECOMPILED_HEADER)
+    set(singleValueArgs NUM_MPI_TASKS)
     set(multiValueArgs SOURCES DEPENDS_ON)
 
     # Parse the arguments to the macro
@@ -169,23 +169,9 @@ macro(serac_add_tests)
                      COMMAND       ${test_name}
                      NUM_MPI_TASKS ${arg_NUM_MPI_TASKS} )
 
-        if(DEFINED arg_PRECOMPILED_HEADER)
-
-            # only precompile the header for the first test in this group
-            if (NOT DEFINED first_test) 
-
-                #message(${test_name} " creating PCH from " ${arg_PRECOMPILED_HEADER})
-                target_precompile_headers(${test_name} PUBLIC ${arg_PRECOMPILED_HEADER})
-                set(first_test ${test_name})
-
-            # subsequent sourcefiles will reuse the precompiled header from the first test
-            else()
-
-                #message(${test_name} " reusing PCH from target " ${first_test})
-                target_precompile_headers(${test_name} REUSE_FROM ${first_test})
-
-            endif()
-
+        if(TARGET serac_precompiled_headers)
+            message(${test_name} " reusing PCH from target serac_precompiled_headers")
+            target_precompile_headers(${test_name} REUSE_FROM serac_precompiled_headers)
         endif()
 
     endforeach()

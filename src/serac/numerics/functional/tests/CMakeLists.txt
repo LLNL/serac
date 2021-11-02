@@ -19,7 +19,7 @@ set(functional_tests_serial
     array_test.cpp
     tuple_arithmetic_unit_tests.cpp)
 
-serac_add_tests( SOURCES ${functional_unit_tests}
+serac_add_tests( SOURCES ${functional_tests_serial}
                  DEPENDS_ON gtest serac_functional ${functional_depends}
                  PRECOMPILED_HEADER pch.hpp)
 

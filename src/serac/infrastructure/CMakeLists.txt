@@ -46,6 +46,8 @@ target_include_directories(serac_infrastructure PUBLIC
     $<INSTALL_INTERFACE:include>
     )
 
+target_precompile_headers(serac_infrastructure REUSE_FROM serac_precompiled_headers)
+
 install(FILES ${infrastructure_headers} DESTINATION include/serac/infrastructure )
 
 install(TARGETS              serac_infrastructure
