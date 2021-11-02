@@ -38,6 +38,8 @@ public:
   using test_space  = test_space_t<spaces>;   ///< the test function space
   using trial_space = trial_space_t<spaces>;  ///< the trial function space
 
+  static constexpr int num_trial_spaces = num_trial_spaces_v<spaces>;
+
   /**
    * @brief Constructs an @p BoundaryIntegral from a user-provided quadrature function
    * @tparam dim The dimension of the element (2 for quad, 3 for hex, etc)
@@ -94,13 +96,13 @@ public:
     //
     // this lambda function captures ptr by-value to extend its lifetime
     //                   vvv
-    evaluation_ = [this, ptr, qf_derivatives, num_elements, qf](const mfem::Vector& U, mfem::Vector& R) {
-      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives, J_, X_, normals_,
+    evaluation_ = [this, ptr, qf_derivatives, num_elements, qf](const std::array< mfem::Vector, num_trial_spaces > & U, mfem::Vector& R) {
+      boundary_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U[0], R, qf_derivatives, J_, X_, normals_,
                                                                                  num_elements, qf);
     };
 
-    action_of_gradient_ = [this, qf_derivatives, num_elements](const mfem::Vector& dU, mfem::Vector& dR) {
-      boundary_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU, dR, qf_derivatives, J_,
+    action_of_gradient_ = [this, qf_derivatives, num_elements](const std::array< mfem::Vector, num_trial_spaces > & dU, mfem::Vector& dR) {
+      boundary_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU[0], dR, qf_derivatives, J_,
                                                                                          num_elements);
     };
 
@@ -116,7 +118,7 @@ public:
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @see evaluation_kernel
    */
-  void Mult(const mfem::Vector& input_E, mfem::Vector& output_E) const { evaluation_(input_E, output_E); }
+  void Mult(const std::array< mfem::Vector, num_trial_spaces > & input_E, mfem::Vector& output_E) const { evaluation_(input_E, output_E); }
 
   /**
    * @brief Applies the integral, i.e., @a output_E = gradient( @a input_E )
@@ -124,7 +126,7 @@ public:
    * @param[out] output_E The output of the evalution; per-element DOF residuals
    * @see action_of_gradient_kernel
    */
-  void GradientMult(const mfem::Vector& input_E, mfem::Vector& output_E) const
+  void GradientMult(const std::array< mfem::Vector, num_trial_spaces > & input_E, mfem::Vector& output_E) const
   {
     action_of_gradient_(input_E, output_E);
   }
@@ -156,13 +158,13 @@ private:
    * @brief Type-erased handle to evaluation kernel
    * @see evaluation_kernel
    */
-  std::function<void(const mfem::Vector&, mfem::Vector&)> evaluation_;
+  std::function<void(const std::array< mfem::Vector, num_trial_spaces > &, mfem::Vector&)> evaluation_;
 
   /**
    * @brief Type-erased handle to kernel that evaluates the action of the gradient
    * @see action_of_gradient_kernel
    */
-  std::function<void(const mfem::Vector&, mfem::Vector&)> action_of_gradient_;
+  std::function<void(const std::array< mfem::Vector, num_trial_spaces > &, mfem::Vector&)> action_of_gradient_;
 
   /**
    * @brief Type-erased handle to kernel that computes each element's gradients

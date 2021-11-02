@@ -219,6 +219,15 @@ using test_space_t = typename get_test_space<spaces>::type;
 template <typename spaces>
 using trial_space_t = typename get_trial_space<spaces>::type;
 
+template <typename spaces>
+struct get_num_trial_spaces{ static constexpr int value = 0; };
+
+template <typename test, typename ... trials>
+struct get_num_trial_spaces<test(trials ...)>{ static constexpr int value = sizeof ... (trials); };
+
+template < typename spaces >
+constexpr int num_trial_spaces_v = get_num_trial_spaces<spaces>::value;
+
 #include "detail/segment_H1.inl"
 #include "detail/segment_Hcurl.inl"
 #include "detail/segment_L2.inl"
