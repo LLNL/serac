@@ -116,6 +116,7 @@ void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Container
 {
   container.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
   CoefficientInputOptions::defineInputFileSchema(container);
+  FunctionInputOptions::defineInputFileSchema(container);
 }
 
 bool CoefficientInputOptions::isVector() const
@@ -273,7 +274,16 @@ serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Co
 serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
     const axom::inlet::Container& base)
 {
-  serac::input::BoundaryConditionInputOptions result{.coef_opts = base.get<serac::input::CoefficientInputOptions>()};
+  serac::input::BoundaryConditionInputOptions result;
+  
+  if (base.contains("coef_opts")) {
+    result.coef_opts = base.get<serac::input::CoefficientInputOptions>();
+  }
+
+  if (base.contains("func_opts")) {
+    result.func_opts = base.get<serac::input::FunctionInputOptions>();
+  }
+
   // Build a set with just the values of the map
   auto bdr_attr_map = base["attrs"].get<std::unordered_map<int, int>>();
   for (const auto& [_, val] : bdr_attr_map) {

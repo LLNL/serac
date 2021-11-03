@@ -18,6 +18,7 @@ set(physics_sources
     base_physics.cpp
     solid.cpp
     thermal_conduction.cpp
+    thermal_conduction_functional.cpp
     thermal_solid.cpp
     )
 
@@ -25,6 +26,7 @@ set(physics_headers
     base_physics.hpp
     solid.hpp
     thermal_conduction.hpp
+    thermal_conduction_functional.hpp
     thermal_solid.hpp
     )
 

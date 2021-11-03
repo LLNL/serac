@@ -23,7 +23,21 @@
  * @brief The input related helper functions and objects
  *
  */
-namespace serac::input {
+namespace serac {
+
+/**
+ * @brief The type for coefficient functions that are vector-valued
+ *
+ */
+using VecFunc = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
+
+/**
+ * @brief The type for coefficient functions that are scalar-valued
+ *
+ */
+using ScalarFunc = std::function<double(const mfem::Vector&, double)>;
+
+namespace input {
 
 /**
  * @brief The input file languages supported by Inlet
@@ -92,17 +106,6 @@ void defineOutputTypeInputFileSchema(axom::inlet::Container& container);
  */
 struct CoefficientInputOptions {
   /**
-   * @brief The type for coefficient functions that are vector-valued
-   *
-   */
-  using VecFunc = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
-
-  /**
-   * @brief The type for coefficient functions that are scalar-valued
-   *
-   */
-  using ScalarFunc = std::function<double(const mfem::Vector&, double)>;
-  /**
    * @brief The scalar std::function corresponding to a function coefficient
    */
   ScalarFunc scalar_function;
@@ -159,17 +162,6 @@ struct CoefficientInputOptions {
  */
 struct FunctionInputOptions {
   /**
-   * @brief The type for coefficient functions that are vector-valued
-   *
-   */
-  using VecFunc = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
-
-  /**
-   * @brief The type for coefficient functions that are scalar-valued
-   *
-   */
-  using ScalarFunc = std::function<double(const mfem::Vector&, double)>;
-  /**
    * @brief The scalar std::function corresponding to a function coefficient
    */
   ScalarFunc scalar_function;
@@ -197,6 +189,9 @@ struct BoundaryConditionInputOptions {
    * @brief The information from the input file on the BC coefficient
    */
   CoefficientInputOptions coef_opts;
+
+  FunctionInputOptions func_opts;
+
   /**
    * @brief Input file parameters specific to this class
    *
@@ -205,7 +200,9 @@ struct BoundaryConditionInputOptions {
   static void defineInputFileSchema(axom::inlet::Container& container);
 };
 
-}  // namespace serac::input
+} // namespace input
+
+}  // namespace serac
 
 /**
  * @brief Prototype the specialization for Inlet parsing
