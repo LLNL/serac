@@ -60,6 +60,18 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, mfem::ParGridFunct
   true_vec_ = 0.0;
 }
 
+FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
+    : mesh_(input_vector.mesh()),
+      coll_(std::move(input_vector.coll_)),
+      space_(std::move(input_vector.space_)),
+      gf_(std::move(input_vector.gf_)),
+      name_(std::move(input_vector.name_))
+{
+  // HypreParVec doesn't have a move constructor, so it must be implemented
+  auto* parallel_vec = input_vector.true_vec_.StealParVector();
+  true_vec_.WrapHypreParVector(parallel_vec);
+}
+
 FiniteElementVector& FiniteElementVector::operator=(const double value)
 {
   true_vec_ = value;

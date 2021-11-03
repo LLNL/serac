@@ -103,7 +103,7 @@ public:
    *
    * @param[in] input_vector The input vector used for construction
    */
-  FiniteElementVector(FiniteElementVector&& input_vector) = default;
+  FiniteElementVector(FiniteElementVector&& input_vector);
 
   /**
    * @brief Returns the MPI communicator for the state
