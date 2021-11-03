@@ -60,16 +60,6 @@ FiniteElementVector::FiniteElementVector(mfem::ParMesh& mesh, mfem::ParGridFunct
   true_vec_ = 0.0;
 }
 
-FiniteElementVector::FiniteElementVector(FiniteElementVector&& input_vector)
-    : mesh_(input_vector.mesh()),
-      coll_(std::move(input_vector.coll_)),
-      space_(std::move(input_vector.space_)),
-      gf_(std::move(input_vector.gf_)),
-      true_vec_(std::move(input_vector.true_vec_)),
-      name_(std::move(input_vector.name_))
-{
-}
-
 FiniteElementVector& FiniteElementVector::operator=(const double value)
 {
   true_vec_ = value;
