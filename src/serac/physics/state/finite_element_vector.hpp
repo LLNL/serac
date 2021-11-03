@@ -94,6 +94,18 @@ public:
   FiniteElementVector(mfem::ParMesh& mesh, mfem::ParFiniteElementSpace& space, const std::string& name = "");
 
   /**
+   * @brief Delete the default copy constructor
+   */
+  FiniteElementVector(const FiniteElementVector&) = delete;
+
+  /**
+   * @brief Move construct a new Finite Element Vector object
+   *
+   * @param[in] input_vector The input vector used for construction
+   */
+  FiniteElementVector(FiniteElementVector&& input_vector);
+
+  /**
    * @brief Returns the MPI communicator for the state
    * @return The underlying MPI communicator
    */
@@ -165,6 +177,11 @@ public:
                   "Tensor must be constructible with a ptr to ParFESpace");
     return std::make_unique<Tensor>(&detail::retrieve(space_));
   }
+
+  /**
+   * @brief Destroy the Finite Element Vector object
+   */
+  virtual ~FiniteElementVector() {}
 
 protected:
   /**
