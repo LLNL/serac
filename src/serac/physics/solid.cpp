@@ -223,7 +223,7 @@ void Solid::setDisplacement(mfem::VectorCoefficient& disp_state)
 {
   disp_state.SetTime(time_);
   displacement_.project(disp_state);
-  displacement_.initializeTrueVec();
+  displacement_.setTrueVec();
   gf_initialized_[1] = true;
 }
 
@@ -231,7 +231,7 @@ void Solid::setVelocity(mfem::VectorCoefficient& velo_state)
 {
   velo_state.SetTime(time_);
   velocity_.project(velo_state);
-  velocity_.initializeTrueVec();
+  velocity_.setTrueVec();
   gf_initialized_[0] = true;
 }
 
@@ -240,8 +240,8 @@ void Solid::resetToReferenceConfiguration()
   displacement_.gridFunc() = 0.0;
   velocity_.gridFunc()     = 0.0;
 
-  velocity_.initializeTrueVec();
-  displacement_.initializeTrueVec();
+  velocity_.setTrueVec();
+  displacement_.setTrueVec();
 
   mesh_.NewNodes(*reference_nodes_);
 }
@@ -379,8 +379,8 @@ std::unique_ptr<mfem::Operator> Solid::buildQuasistaticOperator()
 void Solid::advanceTimestep(double& dt)
 {
   // Initialize the true vector
-  velocity_.initializeTrueVec();
-  displacement_.initializeTrueVec();
+  velocity_.setTrueVec();
+  displacement_.setTrueVec();
 
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
@@ -501,7 +501,7 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   // Set the mesh nodes to the reference configuration
   mesh_.NewNodes(*reference_nodes_);
 
-  adjoint_load.initializeTrueVec();
+  adjoint_load.setTrueVec();
 
   // note: The assignment operator must be called after the copy constructor because
   // the copy constructor only sets the partitioning, it does not copy the actual vector
@@ -515,7 +515,7 @@ const FiniteElementState& Solid::solveAdjoint(FiniteElementDual& adjoint_load,
   auto  J_T = std::unique_ptr<mfem::HypreParMatrix>(J.Transpose());
 
   if (dual_with_essential_boundary) {
-    dual_with_essential_boundary->initializeTrueVec();
+    dual_with_essential_boundary->setTrueVec();
     for (const auto& bc : bcs_.essentials()) {
       bc.eliminateFromMatrix(*J_T);
       bc.eliminateToRHS(*J_T, dual_with_essential_boundary->trueVec(), adjoint_load_vector);

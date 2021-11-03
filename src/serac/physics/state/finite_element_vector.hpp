@@ -133,17 +133,6 @@ public:
   std::string name() const { return name_; }
 
   /**
-   * @brief Set the internal grid function using the true DOF values
-   */
-  void distributeSharedDofs() { detail::retrieve(gf_).SetFromTrueDofs(true_vec_); }
-
-  /**
-   * @brief Initialize the true DOF vector by extracting true DOFs from the internal
-   * grid function/local into the internal true DOF vector
-   */
-  void initializeTrueVec() { detail::retrieve(gf_).GetTrueDofs(true_vec_); }
-
-  /**
    * @brief Set a finite element state to a constant value
    *
    * @param value The constant to set the finite element state to
@@ -152,6 +141,16 @@ public:
    * that if a different value is given on different processors, a shared DOF will be set to the owning processor value.
    */
   FiniteElementVector& operator=(const double value);
+
+  /**
+   * @brief Set the internal grid function using the true DOF values
+   */
+  virtual void distributeSharedDofs() = 0;
+
+  /**
+   * @brief Initialize the true DOF vector using the internal grid function
+   */
+  virtual void setTrueVec() = 0;
 
   /**
    * @brief Utility function for creating a tensor, e.g. mfem::HypreParVector,

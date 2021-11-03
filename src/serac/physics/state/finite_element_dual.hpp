@@ -46,6 +46,30 @@ public:
   const mfem::Vector& localVec() const { return detail::retrieve(gf_); }
 
   /**
+   * @brief Set the internal grid function using the true DOF values
+   *
+   * This sets the finite element dofs by multiplying the true dofs
+   * by the transponse of the restriction operator.
+   *
+   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
+   *
+   */
+  void distributeSharedDofs()
+  {
+    detail::retrieve(space_).GetRestrictionMatrix()->MultTranspose(true_vec_, detail::retrieve(gf_));
+  }
+
+  /**
+   * @brief Set the true vector from the grid function values
+   *
+   * This sets the true vector dofs by multiplying the finite element dofs
+   * by the transpose of the prolongation operator.
+   *
+   * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
+   */
+  void setTrueVec() { detail::retrieve(gf_).ParallelAssemble(true_vec_); }
+
+  /**
    * @brief Set a finite element dual to a constant value
    *
    * @param value The constant to set the finite element dual to
