@@ -358,6 +358,25 @@ SERAC_HOST_DEVICE constexpr auto operator*(T /*other*/, zero)
   return zero{};
 }
 
+/** @brief `zero` divided by something is `zero` */
+template <typename T>
+SERAC_HOST_DEVICE constexpr auto operator/(zero, T /*other*/)
+{
+  return zero{};
+}
+
+/** @brief `zero` plus `zero` is `zero */
+SERAC_HOST_DEVICE constexpr auto operator+=(zero, zero)
+{
+  return zero{};
+}
+
+/** @brief `zero` minus `zero` is `zero */
+SERAC_HOST_DEVICE constexpr auto operator-=(zero, zero)
+{
+  return zero{};
+}
+
 /** @brief let `zero` be accessed like a tuple */
 template <int i>
 zero& get(zero& x)

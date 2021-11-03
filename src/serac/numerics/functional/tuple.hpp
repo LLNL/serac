@@ -309,6 +309,33 @@ SERAC_HOST_DEVICE constexpr auto operator+=(tuple<T...>& x, const tuple<T...>& y
 }
 
 /**
+ * @brief A helper function for the -= operator of tuples
+ *
+ * @tparam T the types stored in the tuples x and y
+ * @tparam i integer sequence used to index the tuples
+ * @param x tuple of values to be subracted from
+ * @param y tuple of values to subtract from x
+ */
+template <typename... T, int... i>
+SERAC_HOST_DEVICE constexpr void minus_equals_helper(tuple<T...>& x, const tuple<T...>& y,
+                                                     std::integer_sequence<int, i...>)
+{
+  ((get<i>(x) -= get<i>(y)), ...);
+}
+
+/**
+ * @tparam T the types stored in the tuples x and y
+ * @param x a tuple of values
+ * @param y a tuple of values
+ * @brief add values contained in y, to the tuple x
+ */
+template <typename... T>
+SERAC_HOST_DEVICE constexpr auto operator-=(tuple<T...>& x, const tuple<T...>& y)
+{
+  return minus_equals_helper(x, y, std::make_integer_sequence<int, static_cast<int>(sizeof...(T))>());
+}
+
+/**
  * @brief A helper function for the - operator of tuples
  *
  * @tparam S the types stored in the tuple x

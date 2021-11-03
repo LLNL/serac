@@ -222,6 +222,14 @@ auto cos(dual<gradient_type> a)
   return dual<gradient_type>{cos(a.value), -a.gradient * sin(a.value)};
 }
 
+/** @brief implementation of cosine for dual numbers */
+template <typename gradient_type>
+auto sin(dual<gradient_type> a)
+{
+  using std::cos, std::sin;
+  return dual<gradient_type>{sin(a.value), a.gradient * cos(a.value)};
+}
+
 /** @brief implementation of exponential function for dual numbers */
 template <typename gradient_type>
 auto exp(dual<gradient_type> a)
