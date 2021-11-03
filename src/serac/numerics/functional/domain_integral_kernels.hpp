@@ -68,7 +68,6 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
 
     // for each quadrature point in the element
     for (int q = 0; q < static_cast<int>(rule.size()); q++) {
-      // eval_quadrature is a SERAC_HOST_DEVICE quadrature point calculation
 
       // At the moment, the GPU versions of the kernels don't support quadrature data.
       // That will be addressed in an upcoming PR.

@@ -25,18 +25,18 @@
 
 namespace serac {
 
+template <typename spaces, ExecutionSpace exec>
+class DomainIntegral;
+
 /**
  * @brief Describes a single integral term in a weak forumulation of a partial differential equation
  * @tparam spaces A @p std::function -like set of template parameters that describe the test and trial
  * function spaces, i.e., @p test(trial)
  */
-template <typename spaces, ExecutionSpace exec>
-class DomainIntegral {
+template <typename test, typename ... trials, ExecutionSpace exec>
+class DomainIntegral<test(trials...), exec> {
 public:
-  using test_space  = test_space_t<spaces>;   ///< the test function space
-  using trial_space = trial_space_t<spaces>;  ///< the trial function space
-
-  static constexpr int num_trial_spaces = num_trial_spaces_v<spaces>;
+  static constexpr int num_trial_spaces = sizeof ... (trials);
 
   /**
    * @brief Constructs a @p DomainIntegral from a user-provided quadrature function
@@ -57,7 +57,7 @@ public:
       : J_(J), X_(X)
   {
     constexpr auto geometry                      = supported_geometries[dim];
-    constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
+    constexpr auto Q                             = std::max({test::order, trials::order ... })  + 1;
     constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
 
     uint32_t num_quadrature_points = quadrature_points_per_element * uint32_t(num_elements);
@@ -68,7 +68,7 @@ public:
     // we use them to observe the output type and allocate memory to store
     // the derivative information at each quadrature point
     using x_t             = tensor<double, dim>;
-    using u_du_t          = typename detail::lambda_argument<trial_space, dim, dim>::type;
+    using u_du_t          = typename detail::lambda_argument<trials..., dim, dim>::type;
     using qf_result_type  = typename detail::qf_result<lambda_type, x_t, u_du_t, qpt_data_type>::type;
     using derivative_type = decltype(get_gradient(std::declval<qf_result_type>()));
 
@@ -91,17 +91,17 @@ public:
       // note: this lambda function captures ptr by-value to extend its lifetime
       //                   vvv
       evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const std::array< mfem::Vector, num_trial_spaces > & U, mfem::Vector& R) {
-        domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U[0], R, qf_derivatives, J_, X_,
+        domain_integral::evaluation_kernel<geometry, test, trials..., Q>(U[0], R, qf_derivatives, J_, X_,
                                                                                  num_elements, qf, data);
       };
 
       action_of_gradient_ = [this, qf_derivatives, num_elements](const std::array< mfem::Vector, num_trial_spaces > & dU, mfem::Vector& dR) {
-        domain_integral::action_of_gradient_kernel<geometry, test_space, trial_space, Q>(dU[0], dR, qf_derivatives, J_,
+        domain_integral::action_of_gradient_kernel<geometry, test, trials..., Q>(dU[0], dR, qf_derivatives, J_,
                                                                                          num_elements);
       };
 
       element_gradient_ = [this, qf_derivatives, num_elements](CPUView<double, 3> K_e) {
-        domain_integral::element_gradient_kernel<geometry, test_space, trial_space, Q>(K_e, qf_derivatives, J_,
+        domain_integral::element_gradient_kernel<geometry, test, trials..., Q>(K_e, qf_derivatives, J_,
                                                                                        num_elements);
       };
     }
