@@ -1,8 +1,11 @@
 // these tests will be removed once axom::Array is ready
 
 #include <gtest/gtest.h>
+#include <array>
 
 #include "serac/numerics/functional/array.hpp"
+
+#include "serac/numerics/functional/EVectorView.hpp"
 
 constexpr int N1 = 8;
 constexpr int N2 = 8;
@@ -55,4 +58,12 @@ int main()
       EXPECT_EQ(0, my_array(i, j));
     }
   }
+
+  using element_type_1 = serac::finite_element< serac::Geometry::Quadrilateral, serac::H1<2, 4> >;
+  using element_type_2 = serac::finite_element< serac::Geometry::Quadrilateral, serac::Hcurl<3> >;
+
+  serac::EVectorView < serac::ExecutionSpace::CPU, element_type_1, element_type_2 > foo({nullptr, nullptr}, 5);
+
+  [[maybe_unused]] auto tmp = foo[53];
+
 }
