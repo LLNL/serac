@@ -74,7 +74,7 @@ void BoundaryCondition::project(FiniteElementState& state) const
       }
     }
   }
-  state.setTrueVec();
+  state.initializeTrueVec();
 }
 
 void BoundaryCondition::project() const
@@ -105,14 +105,14 @@ void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time,
 void BoundaryCondition::projectBdr(FiniteElementState& state, const double time, const bool should_be_scalar) const
 {
   projectBdr(state.gridFunc(), time, should_be_scalar);
-  state.setTrueVec();
+  state.initializeTrueVec();
 }
 
 void BoundaryCondition::projectBdr(const double time, const bool should_be_scalar) const
 {
   SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   projectBdr(*state_, time, should_be_scalar);
-  state_->setTrueVec();
+  state_->initializeTrueVec();
 }
 
 void BoundaryCondition::projectBdrToDofs(mfem::Vector& dof_values, const double time, const bool should_be_scalar) const
@@ -143,7 +143,7 @@ void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vecto
                               const double time, const bool should_be_scalar) const
 {
   projectBdr(state, time, should_be_scalar);
-  state.setTrueVec();
+  state.initializeTrueVec();
   eliminateToRHS(k_mat_post_elim, state.trueVec(), rhs);
 }
 

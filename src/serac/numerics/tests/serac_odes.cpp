@@ -259,7 +259,7 @@ double first_order_ode_test(int nsteps, ode_type type, constraint_type constrain
   serac::FiniteElementState dummy(mesh, FiniteElementState::Options{.order = 1, .name = "dummy"});
   // Explicitly allocate the gridfunction as it is not being managed by Sidre
   dummy.gridFunc().GetMemory().New(dummy.gridFunc().Size());
-  dummy.setTrueVec();
+  dummy.initializeTrueVec();
 
   if (constraint == SINE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(sine_wave);
@@ -369,7 +369,7 @@ double second_order_ode_test(int nsteps, ode_type type, constraint_type constrai
   serac::FiniteElementState dummy(mesh, FiniteElementState::Options{.order = 1, .name = "dummy"});
   // Explicitly allocate the gridfunction as it is not being managed by Sidre
   dummy.gridFunc().GetMemory().New(dummy.gridFunc().Size());
-  dummy.setTrueVec();
+  dummy.initializeTrueVec();
 
   if (constraint == SINE_WAVE) {
     auto coef = std::make_shared<mfem::FunctionCoefficient>(sine_wave);

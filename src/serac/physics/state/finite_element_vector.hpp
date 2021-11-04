@@ -162,7 +162,7 @@ public:
   /**
    * @brief Initialize the true DOF vector using the internal grid function
    */
-  virtual void setTrueVec() = 0;
+  virtual void initializeTrueVec() = 0;
 
   /**
    * @brief Utility function for creating a tensor, e.g. mfem::HypreParVector,

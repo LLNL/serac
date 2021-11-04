@@ -60,14 +60,14 @@ public:
   }
 
   /**
-   * @brief Set the true vector from the grid function values
+   * @brief Initialize the true vector from the grid function values
    *
    * This sets the true vector dofs by multiplying the finite element dofs
    * by the transpose of the prolongation operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    */
-  void setTrueVec() { detail::retrieve(gf_).ParallelAssemble(true_vec_); }
+  void initializeTrueVec() { detail::retrieve(gf_).ParallelAssemble(true_vec_); }
 
   /**
    * @brief Set a finite element dual to a constant value

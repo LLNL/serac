@@ -182,7 +182,7 @@ void ThermalConduction::completeSetup()
   }
 
   // Initialize the true vector
-  temperature_.setTrueVec();
+  temperature_.initializeTrueVec();
 
   if (is_quasistatic_) {
     residual_ = mfem_ext::StdFunctionOperator(
@@ -234,7 +234,7 @@ void ThermalConduction::completeSetup()
 
 void ThermalConduction::advanceTimestep(double& dt)
 {
-  temperature_.setTrueVec();
+  temperature_.initializeTrueVec();
 
   if (is_quasistatic_) {
     nonlin_solver_.Mult(zero_, temperature_.trueVec());

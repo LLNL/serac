@@ -70,14 +70,14 @@ public:
   void distributeSharedDofs() { detail::retrieve(gf_).SetFromTrueDofs(true_vec_); }
 
   /**
-   * @brief Set the true vector from the grid function values
+   * @brief Initialize the true vector from the grid function values
    *
    * This sets the true vector dofs by multiplying the finite element dofs
    * by the restriction operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
    */
-  void setTrueVec() { detail::retrieve(gf_).GetTrueDofs(true_vec_); }
+  void initializeTrueVec() { detail::retrieve(gf_).GetTrueDofs(true_vec_); }
 
   /**
    * Returns a non-owning reference to the internal grid function
@@ -114,7 +114,7 @@ public:
     visit(
         [this](auto&& concrete_coef) {
           detail::retrieve(gf_).ProjectCoefficient(*concrete_coef);
-          setTrueVec();
+          initializeTrueVec();
         },
         coef);
   }
@@ -122,13 +122,13 @@ public:
   void project(mfem::Coefficient& coef)
   {
     detail::retrieve(gf_).ProjectCoefficient(coef);
-    setTrueVec();
+    initializeTrueVec();
   }
   /// \overload
   void project(mfem::VectorCoefficient& coef)
   {
     detail::retrieve(gf_).ProjectCoefficient(coef);
-    setTrueVec();
+    initializeTrueVec();
   }
   /**
    * @brief Set a finite element state to a constant value
