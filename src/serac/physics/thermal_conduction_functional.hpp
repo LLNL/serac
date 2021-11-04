@@ -17,6 +17,7 @@
 #include "serac/physics/base_physics.hpp"
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
+#include "serac/numerics/functional/functional.hpp"
 
 namespace serac {
 
@@ -30,6 +31,7 @@ namespace serac {
  *  where M is a mass matrix, K is a stiffness matrix, and f is a
  *  thermal load vector.
  */
+template<int order, int dim>
 class ThermalConductionFunctional : public BasePhysics {
 public:
   /**
@@ -85,12 +87,6 @@ public:
      * @param[in] container Inlet's Container that input files will be added to
      **/
     static void defineInputFileSchema(axom::inlet::Container& container);
-
-    /**
-     * @brief The order of the discretized field
-     *
-     */
-    int order;
 
     /**
      * @brief The linear, nonlinear, and ODE solver options
@@ -185,11 +181,10 @@ public:
   /**
    * @brief Construct a new Thermal Solver object
    *
-   * @param[in] order The order of the thermal field discretization
    * @param[in] options The system solver parameters
    * @param[in] name An optional name for the physics module instance
    */
-  ThermalConductionFunctional(int order, const SolverOptions& options, const std::string& name = "");
+  ThermalConductionFunctional(const SolverOptions& options, const std::string& name = "");
 
   /**
    * @brief Construct a new Thermal Solver object
@@ -283,6 +278,9 @@ public:
   virtual ~ThermalConductionFunctional() = default;
 
 protected:
+  using trial = H1<order>;
+  using test  = H1<order>;
+
   /**
    * @brief The temperature finite element state
    */
@@ -291,12 +289,12 @@ protected:
   /**
    * @brief Mass bilinear form object
    */
-  std::unique_ptr<mfem::ParBilinearForm> M_form_;
+  Functional<test(trial)> M_functional_;
 
   /**
    * @brief Stiffness nonlinear form object
    */
-  std::unique_ptr<mfem::ParNonlinearForm> K_form_;
+  Functional<test(trial)> K_functional_;
 
   /**
    * @brief Assembled mass matrix

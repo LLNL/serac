@@ -11,21 +11,32 @@
 #include "serac/physics/integrators/nonlinear_reaction_integrator.hpp"
 #include "serac/physics/integrators/wrapper_integrator.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/numerics/functional/detail/metaprogramming.hpp"
 
 namespace serac {
 
 constexpr int NUM_FIELDS = 1;
 
-ThermalConductionFunctional::ThermalConductionFunctional(int order, const SolverOptions& options, const std::string& name)
+constexpr int MAX_ORDER = 4;
+
+template<int order, int dim>
+ThermalConductionFunctional<order, dim>::ThermalConductionFunctional(const SolverOptions& options, const std::string& name)
     : BasePhysics(NUM_FIELDS, order),
       temperature_(StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                       .vector_dim = 1,
                                                                       .ordering   = mfem::Ordering::byNODES,
                                                                       .name = detail::addPrefix(name, "temperature")})),
+      K_functional_(&temperature_.space(), &temperature_.space()),
+      M_functional_(&temperature_.space(), &temperature_.space()),
       residual_(temperature_.space().TrueVSize()),
       ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
            nonlin_solver_, bcs_)
 {
+  static_assert(order > 0 && order < MAX_ORDER, "Invalid order requested in the thermal conduction module");
+
+  SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
+                     fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+
   state_.push_back(temperature_);
 
   nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
@@ -56,8 +67,9 @@ ThermalConductionFunctional::ThermalConductionFunctional(int order, const Solver
   rho_ = [](const mfem::Vector& /* x */, double /* t */) { return 1.0; };
 }
 
-ThermalConductionFunctional::ThermalConductionFunctional(const InputOptions& options, const std::string& name)
-    : ThermalConductionFunctional(options.order, options.solver_options, name)
+template<int order, int dim>
+ThermalConductionFunctional<order, dim>::ThermalConductionFunctional(const InputOptions& options, const std::string& name)
+    : ThermalConductionFunctional<order, dim>(options.solver_options, name)
 {
   setConductivity([kappa = options.kappa](const mfem::Vector&, double) { return kappa; });
   setMassDensity([rho = options.rho](const mfem::Vector&, double) { return rho; });
@@ -88,7 +100,8 @@ ThermalConductionFunctional::ThermalConductionFunctional(const InputOptions& opt
   }
 }
 
-void ThermalConductionFunctional::setTemperature(ScalarFunc temp)
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::setTemperature(ScalarFunc temp)
 {
   // Project the coefficient onto the grid function
   mfem::FunctionCoefficient temp_coef(temp);
@@ -98,56 +111,67 @@ void ThermalConductionFunctional::setTemperature(ScalarFunc temp)
   gf_initialized_[0] = true;
 }
 
-void ThermalConductionFunctional::setTemperatureBCs(const std::set<int>&               temp_bdr,
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::setTemperatureBCs(const std::set<int>& temp_bdr,
                                           std::shared_ptr<mfem::Coefficient> temp_bdr_coef)
 {
   bcs_.addEssential(temp_bdr, temp_bdr_coef, temperature_);
 }
 
-void ThermalConductionFunctional::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef)
 {
   // Set the natural (integral) boundary condition
   bcs_.addNatural(flux_bdr, flux_bdr_coef, -1);
 }
 
-void ThermalConductionFunctional::setConductivity(ScalarFunc kappa)
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::setConductivity(ScalarFunc kappa)
 {
   // Set the conduction coefficient
   kappa_ = std::move(kappa);
 }
 
-void ThermalConductionFunctional::setSource(ScalarFunc source)
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::setSource(ScalarFunc source)
 {
   // Set the body source integral coefficient
   source_ = std::move(source);
 }
 
-void ThermalConductionFunctional::setSpecificHeatCapacity(ScalarFunc cp)
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::setSpecificHeatCapacity(ScalarFunc cp)
 {
   // Set the specific heat capacity coefficient
   cp_ = std::move(cp);
 }
 
-void ThermalConductionFunctional::setMassDensity(ScalarFunc rho)
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::setMassDensity(ScalarFunc rho)
 {
   // Set the density coefficient
   rho_ = std::move(rho);
 }
 
-void ThermalConductionFunctional::completeSetup()
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::completeSetup()
 {
   SLIC_ASSERT_MSG(kappa_, "Conductivity not set in ThermalSolver!");
 
-  // Add the domain diffusion integrator to the K form
-  K_form_ = temperature_.createOnSpace<mfem::ParNonlinearForm>();
-  K_form_->AddDomainIntegrator(
-      new mfem_ext::BilinearToNonlinearFormIntegrator(std::make_unique<mfem::DiffusionIntegrator>(*kappa_)));
+  K_functional_.AddDomainIntegral(
+      Dimension<dim>{},
+      [this]([[maybe_unused]] auto x, auto temperature) {
+        // Get the value and the gradient from the input tuple
+        auto [u, du_dx] = temperature;
 
-  // Add the body source to the RS if specified
-  if (source_) {
-    K_form_->AddDomainIntegrator(new mfem_ext::LinearToNonlinearFormIntegrator(
-        std::make_unique<mfem::DomainLFIntegrator>(*source_), temperature_.space()));
-  }
+        auto source = zero{};
+
+        auto flux = kappa_(x, t_) * du_dx;
+
+        // Return the source and the flux as a tuple 
+        return serac::tuple{source, flux};
+      },
+      mesh_);
 
   // Build the dof array lookup tables
   temperature_.space().BuildDofToArrays();
@@ -155,6 +179,7 @@ void ThermalConductionFunctional::completeSetup()
   // Project the essential boundary coefficients
   for (auto& bc : bcs_.essentials()) {
     bc.projectBdr(temperature_, time_);
+    K_functional_.AddEssentialBC(bc.markers());
   }
 
   // Initialize the true vector
@@ -165,39 +190,40 @@ void ThermalConductionFunctional::completeSetup()
         temperature_.space().TrueVSize(),
 
         [this](const mfem::Vector& u, mfem::Vector& r) {
-          K_form_->Mult(u, r);
+          r = K_functional_(u);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
         [this](const mfem::Vector& u) -> mfem::Operator& {
-          auto& J = dynamic_cast<mfem::HypreParMatrix&>(K_form_->GetGradient(u));
+          auto& J = dynamic_cast<mfem::HypreParMatrix&>(K_functional_->GetGradient(u));
           bcs_.eliminateAllEssentialDofsFromMatrix(J);
           return J;
         });
 
   } else {
     // If dynamic, assemble the mass matrix
-    M_form_ = temperature_.createOnSpace<mfem::ParBilinearForm>();
+    M_functional_.AddDomainIntegral(
+      Dimension<dim>{},
+      [this]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
+        auto source = cp_(x, t) * rho_(x, t);
 
-    // Define the mass matrix coefficient as a product of the density and specific heat capacity
-    mass_coef_ = std::make_unique<mfem::ProductCoefficient>(*rho_, *cp_);
+        auto flux = zero{};
 
-    M_form_->AddDomainIntegrator(new mfem::MassIntegrator(*mass_coef_));
-    M_form_->Assemble(0);  // keep sparsity pattern of M and K the same
-    M_form_->Finalize();
-
-    M_.reset(M_form_->ParallelAssemble());
+        // Return the source and the flux as a tuple 
+        return serac::tuple{source, flux};
+      },
+      mesh_);
 
     residual_ = mfem_ext::StdFunctionOperator(
         temperature_.space().TrueVSize(),
         [this](const mfem::Vector& du_dt, mfem::Vector& r) {
-          r = (*M_) * du_dt + (*K_form_) * (u_ + dt_ * du_dt);
+          r = (M_functional.GetGradient(u_)) * du_dt + (*K_functional_) * (u_ + dt_ * du_dt);
           r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
         },
 
         [this](const mfem::Vector& du_dt) -> mfem::Operator& {
           // Only reassemble the stiffness if it is a new timestep or we have a nonlinear reaction
-          if (dt_ != previous_dt_ || reaction_) {
+          if (dt_ != previous_dt_) {
             auto localJ = std::unique_ptr<mfem::SparseMatrix>(
                 mfem::Add(1.0, M_form_->SpMat(), dt_, K_form_->GetLocalGradient(u_ + dt_ * du_dt)));
             J_.reset(M_form_->ParallelAssemble(localJ.get()));
@@ -208,7 +234,8 @@ void ThermalConductionFunctional::completeSetup()
   }
 }
 
-void ThermalConductionFunctional::advanceTimestep(double& dt)
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::advanceTimestep(double& dt)
 {
   temperature_.initializeTrueVec();
 
@@ -225,7 +252,8 @@ void ThermalConductionFunctional::advanceTimestep(double& dt)
   cycle_ += 1;
 }
 
-void ThermalConductionFunctional::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
+template<int order, int dim>
+void ThermalConductionFunctional<order, dim>::InputOptions::defineInputFileSchema(axom::inlet::Container& container)
 {
   // Polynomial interpolation order - currently up to 8th order is allowed
   container.addInt("order", "Order degree of the finite elements.").defaultValue(1).range(1, 8);
@@ -261,6 +289,17 @@ void ThermalConductionFunctional::InputOptions::defineInputFileSchema(axom::inle
   auto& init_temp = container.addStruct("initial_temperature", "Coefficient for initial condition");
   serac::input::CoefficientInputOptions::defineInputFileSchema(init_temp);
 }
+
+// force template instantiations
+ThermalConductionFunctional<1, 2>;
+ThermalConductionFunctional<2, 2>;
+ThermalConductionFunctional<3, 2>;
+ThermalConductionFunctional<4, 2>;
+
+ThermalConductionFunctional<1, 3>;
+ThermalConductionFunctional<2, 3>;
+ThermalConductionFunctional<3, 3>;
+ThermalConductionFunctional<4, 3>;
 
 }  // namespace serac
 
