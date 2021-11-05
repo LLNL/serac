@@ -34,8 +34,9 @@ namespace serac {
 template <int order, int dim>
 class ThermalConductionFunctional : public BasePhysics {
 public:
-  using ScalarFunction = std::function<tensor<double, 1>(tensor<double, dim>, tensor<double, 1>)>;
+  using ScalarFunction = std::function<double(tensor<double, dim>, tensor<double, 1>)>;
   using VectorFunction = std::function<tensor<double, dim>(tensor<double, dim>, tensor<double, 1>)>;
+  using TensorFunction = std::function<tensor<double, dim, dim>(tensor<double, dim>, tensor<double, 1>)>;
 
   /**
    * @brief A timestep method and config for the M solver
@@ -153,7 +154,7 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void setConductivity(ScalarFunction kappa_function);
+  void setConductivity(TensorFunction kappa_function);
 
   /**
    * @brief Set the temperature state vector from a coefficient
@@ -237,7 +238,7 @@ protected:
   /**
    * @brief Conduction coefficient
    */
-  ScalarFunction kappa_;
+  TensorFunction kappa_;
 
   /**
    * @brief Body source coefficient

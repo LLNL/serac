@@ -107,7 +107,7 @@ void ThermalConductionFunctional<order, dim>::setTemperatureBCs(const std::set<i
 }
 
 template <int order, int dim>
-void ThermalConductionFunctional<order, dim>::setConductivity(ScalarFunction kappa)
+void ThermalConductionFunctional<order, dim>::setConductivity(TensorFunction kappa)
 {
   // Set the conduction coefficient
   kappa_ = std::move(kappa);
@@ -145,9 +145,9 @@ void ThermalConductionFunctional<order, dim>::completeSetup()
         // Get the value and the gradient from the input tuple
         auto [u, du_dx] = temperature;
 
-        auto source = source_(x, time_);
-
         auto flux = kappa_(x, time_) * du_dx;
+
+        auto source = source_(x, time_);
 
         // Return the source and the flux as a tuple
         return serac::tuple{source, flux};
@@ -187,9 +187,12 @@ void ThermalConductionFunctional<order, dim>::completeSetup()
     M_functional_.AddDomainIntegral(
         Dimension<dim>{},
         [this]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
+
+          auto [u, du_dx] = temperature;
+
           auto source = cp_(x, time_) * rho_(x, time_);
 
-          auto flux = 0.0;
+          auto flux = 0.0 * du_dx;
 
           // Return the source and the flux as a tuple
           return serac::tuple{source, flux};
