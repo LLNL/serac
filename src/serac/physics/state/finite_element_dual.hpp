@@ -48,7 +48,7 @@ public:
   /**
    * @brief Set the internal grid function using the true DOF values
    *
-   * This sets the finite element dofs by multiplying the true dofs
+   * This distributes true vector dofs to the finite element (local) dofs by multiplying the true dofs
    * by the transponse of the restriction operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details
@@ -62,7 +62,7 @@ public:
   /**
    * @brief Initialize the true vector from the grid function values
    *
-   * This sets the true vector dofs by multiplying the finite element dofs
+   * This initializes the true vector dofs by multiplying the finite element (local) dofs
    * by the transpose of the prolongation operator.
    *
    * @see <a href="https://mfem.org/pri-dual-vec/">MFEM documentation</a> for details

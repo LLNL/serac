@@ -155,7 +155,7 @@ public:
   FiniteElementVector& operator=(const double value);
 
   /**
-   * @brief Set the internal grid function using the true DOF values
+   * @brief Distribute dofs the internal grid function (local dofs) using the true DOF values
    */
   virtual void distributeSharedDofs() = 0;
 
