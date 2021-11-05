@@ -23,21 +23,7 @@
  * @brief The input related helper functions and objects
  *
  */
-namespace serac {
-
-/**
- * @brief The type for coefficient functions that are vector-valued
- *
- */
-using VecFunc = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
-
-/**
- * @brief The type for coefficient functions that are scalar-valued
- *
- */
-using ScalarFunc = std::function<double(const mfem::Vector&, double)>;
-
-namespace input {
+namespace serac::input {
 
 /**
  * @brief The input file languages supported by Inlet
@@ -106,6 +92,17 @@ void defineOutputTypeInputFileSchema(axom::inlet::Container& container);
  */
 struct CoefficientInputOptions {
   /**
+   * @brief The type for coefficient functions that are vector-valued
+   *
+   */
+  using VecFunc = std::function<void(const mfem::Vector&, double, mfem::Vector&)>;
+
+  /**
+   * @brief The type for coefficient functions that are scalar-valued
+   *
+   */
+  using ScalarFunc = std::function<double(const mfem::Vector&, double)>;
+  /**
    * @brief The scalar std::function corresponding to a function coefficient
    */
   ScalarFunc scalar_function;
@@ -158,26 +155,6 @@ struct CoefficientInputOptions {
 };
 
 /**
- * @brief The information required from the input file for an std::function using mfem input and output types
- */
-struct FunctionInputOptions {
-  /**
-   * @brief The scalar std::function corresponding to a function coefficient
-   */
-  ScalarFunc scalar_function;
-
-  /**
-   * @brief The vector std::function corresponding to a function coefficient
-   */
-  VecFunc vector_function;
-
-  /**
-   * @brief Defines the input file schema on the provided inlet container
-   */
-  static void defineInputFileSchema(axom::inlet::Container& container);
-};
-
-/**
  * @brief The information required from the input file for a boundary condition
  */
 struct BoundaryConditionInputOptions {
@@ -189,9 +166,6 @@ struct BoundaryConditionInputOptions {
    * @brief The information from the input file on the BC coefficient
    */
   CoefficientInputOptions coef_opts;
-
-  FunctionInputOptions func_opts;
-
   /**
    * @brief Input file parameters specific to this class
    *
@@ -200,9 +174,7 @@ struct BoundaryConditionInputOptions {
   static void defineInputFileSchema(axom::inlet::Container& container);
 };
 
-} // namespace input
-
-}  // namespace serac
+}  // namespace serac::input
 
 /**
  * @brief Prototype the specialization for Inlet parsing
@@ -240,17 +212,6 @@ template <>
 struct FromInlet<serac::input::CoefficientInputOptions> {
   /// @brief Returns created object from Inlet container
   serac::input::CoefficientInputOptions operator()(const axom::inlet::Container& base);
-};
-
-/**
- * @brief Prototype the specialization for Inlet parsing
- *
- * @tparam The object to be created by Inlet
- */
-template <>
-struct FromInlet<serac::input::FunctionInputOptions> {
-  /// @brief Returns created object from Inlet container
-  serac::input::FunctionInputOptions operator()(const axom::inlet::Container& base);
 };
 
 /**

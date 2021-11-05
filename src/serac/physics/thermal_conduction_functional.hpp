@@ -31,9 +31,12 @@ namespace serac {
  *  where M is a mass matrix, K is a stiffness matrix, and f is a
  *  thermal load vector.
  */
-template<int order, int dim>
+template <int order, int dim>
 class ThermalConductionFunctional : public BasePhysics {
 public:
+  using ScalarFunction = std::function<tensor<double, 1>(tensor<double, dim>, tensor<double, 1>)>;
+  using VectorFunction = std::function<tensor<double, dim>(tensor<double, dim>, tensor<double, 1>)>;
+
   /**
    * @brief A timestep method and config for the M solver
    */
@@ -74,62 +77,6 @@ public:
      *
      */
     std::optional<TimesteppingOptions> dyn_options = std::nullopt;
-  };
-
-  /**
-   * @brief Stores all information held in the input file that
-   * is used to configure the solver
-   */
-  struct InputOptions {
-    /**
-     * @brief Input file parameters specific to this class
-     *
-     * @param[in] container Inlet's Container that input files will be added to
-     **/
-    static void defineInputFileSchema(axom::inlet::Container& container);
-
-    /**
-     * @brief The linear, nonlinear, and ODE solver options
-     *
-     */
-    SolverOptions solver_options;
-
-    /**
-     * @brief The conductivity parameter
-     *
-     */
-    double kappa;
-
-    /**
-     * @brief The specific heat capacity
-     *
-     */
-    double cp;
-
-    /**
-     * @brief The mass density
-     *
-     */
-    double rho;
-
-    /**
-     * @brief Source function
-     *
-     */
-    std::optional<input::FunctionInputOptions> source_func;
-
-    /**
-     * @brief The boundary condition information
-     */
-    std::unordered_map<std::string, input::BoundaryConditionInputOptions> boundary_conditions;
-
-    /**
-     * @brief The initial temperature field
-     * @note This can be used as either an intialization for dynamic simulations or an
-     *       initial guess for quasi-static ones
-     *
-     */
-    std::optional<input::FunctionInputOptions> initial_temperature_func;
   };
 
   /**
@@ -187,28 +134,12 @@ public:
   ThermalConductionFunctional(const SolverOptions& options, const std::string& name = "");
 
   /**
-   * @brief Construct a new Thermal Solver object
-   *
-   * @param[in] options The solver information parsed from the input file
-   * @param[in] name An optional name for the physics module instance
-   */
-  ThermalConductionFunctional(const InputOptions& options, const std::string& name = "");
-
-  /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
    * @param[in] temp_bdr_coef The prescribed boundary temperature
    */
-  void setTemperatureBCs(const std::set<int>& temp_bdr, std::shared_ptr<mfem::Coefficient> temp_bdr_coef);
-
-  /**
-   * @brief Set flux boundary conditions (weakly enforced)
-   *
-   * @param[in] flux_bdr The boundary attributes on which to enforce a heat flux (weakly enforced)
-   * @param[in] flux_bdr_coef The prescribed boundary heat flux
-   */
-  void setFluxBCs(const std::set<int>& flux_bdr, std::shared_ptr<mfem::Coefficient> flux_bdr_coef);
+  void setTemperatureBCs(const std::set<int>& temp_bdr, ScalarFunction temp_function);
 
   /**
    * @brief Advance the timestep
@@ -222,35 +153,35 @@ public:
    *
    * @param[in] kappa The thermal conductivity
    */
-  void setConductivity(ScalarFunc kappa_function);
+  void setConductivity(ScalarFunction kappa_function);
 
   /**
    * @brief Set the temperature state vector from a coefficient
    *
    * @param[in] temp The temperature coefficient
    */
-  void setTemperature(ScalarFunc temp_function);
+  void setTemperature(ScalarFunction temp_function);
 
   /**
    * @brief Set the thermal body source from a coefficient
    *
    * @param[in] source The source function coefficient
    */
-  void setSource(ScalarFunc source_function);
+  void setSource(ScalarFunction source_function);
 
   /**
    * @brief Set the density field. Defaults to 1.0 if not set.
    *
    * @param[in] rho The density field coefficient
    */
-  void setMassDensity(ScalarFunc rho_function);
+  void setMassDensity(ScalarFunction rho_function);
 
   /**
    * @brief Set the specific heat capacity. Defaults to 1.0 if not set.
    *
    * @param[in] cp The specific heat capacity
    */
-  void setSpecificHeatCapacity(ScalarFunc cp_function);
+  void setSpecificHeatCapacity(ScalarFunction cp_function);
 
   /**
    * @brief Get the temperature state
@@ -301,33 +232,35 @@ protected:
    */
   std::unique_ptr<mfem::HypreParMatrix> M_;
 
+  std::shared_ptr<mfem::Coefficient> temp_bdr_coef_;
+
   /**
    * @brief Conduction coefficient
    */
-  ScalarFunc kappa_;
+  ScalarFunction kappa_;
 
   /**
    * @brief Body source coefficient
    */
-  ScalarFunc source_;
+  ScalarFunction source_;
 
   /**
    * @brief Density coefficient
    *
    */
-  ScalarFunc rho_;
+  ScalarFunction rho_;
 
   /**
    * @brief Specific heat capacity
    *
    */
-  ScalarFunc cp_;
+  ScalarFunction cp_;
 
   /**
    * @brief Combined mass matrix coefficient (rho * cp)
    *
    */
-  ScalarFunc mass_coef_;
+  ScalarFunction mass_coef_;
 
   /**
    * @brief mfem::Operator that describes the weight residual
@@ -379,18 +312,9 @@ protected:
    * nonlinear solver
    */
   mfem::Vector previous_;
-
 };
+
+// force template instantiations
+template class ThermalConductionFunctional<1, 2>;
 
 }  // namespace serac
-
-/**
- * @brief Prototype the specialization for Inlet parsing
- *
- * @tparam The object to be created by inlet
- */
-template <>
-struct FromInlet<serac::ThermalConductionFunctional::InputOptions> {
-  /// @brief Returns created object from Inlet container
-  serac::ThermalConductionFunctional::InputOptions operator()(const axom::inlet::Container& base);
-};

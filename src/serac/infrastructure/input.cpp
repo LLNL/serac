@@ -116,7 +116,6 @@ void BoundaryConditionInputOptions::defineInputFileSchema(axom::inlet::Container
 {
   container.addIntArray("attrs", "Boundary attributes to which the BC should be applied");
   CoefficientInputOptions::defineInputFileSchema(container);
-  FunctionInputOptions::defineInputFileSchema(container);
 }
 
 bool CoefficientInputOptions::isVector() const
@@ -222,18 +221,6 @@ void CoefficientInputOptions::defineInputFileSchema(axom::inlet::Container& cont
   serac::input::defineVectorInputFileSchema(pw_vector_container);
 }
 
-
-void FunctionInputOptions::defineInputFileSchema(axom::inlet::Container& container)
-{
-  // Vectors are implemented as lua usertypes and can be converted to/from mfem::Vector
-  container.addFunction("vector_function", axom::inlet::FunctionTag::Vector,
-                        {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
-                        "The function to use for an mfem::VectorFunctionCoefficient");
-  container.addFunction("scalar_function", axom::inlet::FunctionTag::Double,
-                        {axom::inlet::FunctionTag::Vector, axom::inlet::FunctionTag::Double},
-                        "The function to use for an mfem::FunctionCoefficient");
-}
-
 }  // namespace serac::input
 
 mfem::Vector FromInlet<mfem::Vector>::operator()(const axom::inlet::Container& base)
@@ -274,16 +261,7 @@ serac::OutputType FromInlet<serac::OutputType>::operator()(const axom::inlet::Co
 serac::input::BoundaryConditionInputOptions FromInlet<serac::input::BoundaryConditionInputOptions>::operator()(
     const axom::inlet::Container& base)
 {
-  serac::input::BoundaryConditionInputOptions result;
-  
-  if (base.contains("coef_opts")) {
-    result.coef_opts = base.get<serac::input::CoefficientInputOptions>();
-  }
-
-  if (base.contains("func_opts")) {
-    result.func_opts = base.get<serac::input::FunctionInputOptions>();
-  }
-
+  serac::input::BoundaryConditionInputOptions result{.coef_opts = base.get<serac::input::CoefficientInputOptions>()};
   // Build a set with just the values of the map
   auto bdr_attr_map = base["attrs"].get<std::unordered_map<int, int>>();
   for (const auto& [_, val] : bdr_attr_map) {
@@ -352,42 +330,6 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
                      "Coefficient has multiple definitions. Please use only one of (constant, vector_constant, "
                      "piecewise_constant, vector_piecewise_constant, scalar_function, vector_function");
   SLIC_ERROR_ROOT_IF(coefficient_definitions == 0, "Coefficient definition does not contain known type.");
-
-  return result;
-}
-
-serac::input::FunctionInputOptions FromInlet<serac::input::FunctionInputOptions>::operator()(
-    const axom::inlet::Container& base)
-{
-  serac::input::FunctionInputOptions result;
-
-  // Create a counter for definition of the coefficient
-  int function_definitions = 0;
-
-  // Check if functions have been assigned and store them appropriately
-  if (base.contains("vector_function")) {
-    auto func = base["vector_function"]
-                    .get<std::function<axom::inlet::FunctionType::Vector(axom::inlet::FunctionType::Vector, double)>>();
-    result.vector_function = [func(std::move(func))](const mfem::Vector& input, double t, mfem::Vector& output) {
-      auto ret = func({input.GetData(), input.Size()}, t);
-      // Copy from the primal vector into the MFEM vector
-      std::copy(ret.vec.data(), ret.vec.data() + input.Size(), output.GetData());
-    };
-    function_definitions++;
-  }
-
-  if (base.contains("scalar_function")) {
-    auto func = base["scalar_function"].get<std::function<double(axom::inlet::FunctionType::Vector, double)>>();
-    result.scalar_function = [func(std::move(func))](const mfem::Vector& input, double t) {
-      return func({input.GetData(), input.Size()}, t);
-    };
-    function_definitions++;
-  }
-
-  SLIC_ERROR_ROOT_IF(function_definitions > 1,
-                     "Function has multiple definitions. Please use only one of "
-                     "(scalar_function, vector_function)");
-  SLIC_ERROR_ROOT_IF(function_definitions == 0, "Function definition does not contain known type.");
 
   return result;
 }
