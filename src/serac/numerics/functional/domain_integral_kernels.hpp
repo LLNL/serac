@@ -7,6 +7,7 @@
 
 #include "serac/numerics/quadrature_data.hpp"
 #include "serac/numerics/functional/integral_utilities.hpp"
+#include "serac/numerics/functional/evector_view.hpp"
 
 namespace serac {
 
@@ -58,10 +59,16 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
   auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
+  //auto tmp = EVectorView< ExecutionSpace::CPU, trial_element >({U.Read()}, size_t(num_elements));
+
   // for each element in the domain
   for (int e = 0; e < num_elements; e++) {
+
     // get the DOF values for this particular element
     tensor u_elem = detail::Load<trial_element>(u, e);
+
+    //auto u_elem2 = tmp[e];
+    //std::cout << u_elem - serac::get<0>(u_elem2) << std::endl;
 
     // this is where we will accumulate the element residual tensor
     element_residual_type r_elem{};

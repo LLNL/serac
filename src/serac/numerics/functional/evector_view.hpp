@@ -7,30 +7,36 @@
 namespace serac {
 
 template < serac::ExecutionSpace exec, typename element_type >
-auto ArrayViewForElement(double * ptr, size_t num_elements, element_type) {
+auto ArrayViewForElement(const double * ptr, size_t num_elements, element_type) {
   if constexpr (element_type::components == 1) {
-    return ArrayView<double, 2, exec>(ptr, num_elements, element_type::ndof);
+    return ArrayView<const double, 2, exec>(ptr, element_type::ndof, num_elements);
   } else {
-    return ArrayView<double, 3, exec>(ptr, num_elements, element_type::ndof, element_type::components);
+    return ArrayView<const double, 3, exec>(ptr, element_type::ndof, element_type::components, num_elements);
   }
 }
 
 template < serac::ExecutionSpace exec, typename ... element_types >
 struct EVectorView {
 
-  using element_types_tuple = serac::tuple< element_types ... >;
-
   static constexpr int n = sizeof ... (element_types);
 
-  using T = serac::tuple < typename element_types::residual_type ... >;
+  using element_types_tuple = serac::tuple< element_types ... >;
 
-  EVectorView(std::array<double *, n> pointers, size_t num_elements) {
+  using T = serac::tuple < 
+    typename std::conditional<
+      element_types::components == 1, 
+      tensor<double, element_types::ndof>, 
+      tensor<double, element_types::components, element_types::ndof> 
+    >::type ...
+  >;
+
+  EVectorView(std::array<const double *, n> pointers, size_t num_elements) {
     for_constexpr< n >([&](auto i){
       serac::get<i>(data) = ArrayViewForElement<exec>(pointers[i], num_elements, serac::get<i>(element_types_tuple{}));
     });
   }
 
-  void update_pointers(std::array<double *, n> pointers) {
+  void UpdatePointers(std::array<double *, n> pointers) {
     for_constexpr< n >([&](auto i){
       serac::get<i>(data).ptr = pointers[i];
     });
@@ -50,7 +56,7 @@ struct EVectorView {
       if constexpr (components == 1) {
         serac::get<I>(values) = make_tensor<ndof>([&arr, e](int i) { return arr(size_t(i), e); });
       } else {
-        serac::get<I>(values) = make_tensor<ndof, components>([&arr, e](int i, int j) { return arr(size_t(i), size_t(j), e); });
+        serac::get<I>(values) = make_tensor<components, ndof>([&arr, e](int j, int i) { return arr(size_t(i), size_t(j), e); });
       }
     });
 
@@ -63,7 +69,7 @@ struct EVectorView {
    * 2 when spaces == 1  (num_elements, dofs_per_element)
    * 3 when spaces  > 1  (num_elements, dofs_per_element, num_components)
    */
-  serac::tuple < serac::ArrayView< double, 2 + (element_types::components > 1), exec > ... > data;
+  serac::tuple < serac::ArrayView< const double, 2 + (element_types::components > 1), exec > ... > data;
 
 };
 

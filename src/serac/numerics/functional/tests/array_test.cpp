@@ -4,8 +4,7 @@
 #include <array>
 
 #include "serac/numerics/functional/array.hpp"
-
-#include "serac/numerics/functional/EVectorView.hpp"
+#include "serac/numerics/functional/evector_view.hpp"
 
 constexpr int N1 = 8;
 constexpr int N2 = 8;
