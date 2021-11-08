@@ -9,9 +9,9 @@ namespace serac {
 template < serac::ExecutionSpace exec, typename element_type >
 auto ArrayViewForElement(const double * ptr, size_t num_elements, element_type) {
   if constexpr (element_type::components == 1) {
-    return ArrayView<const double, 2, exec>(ptr, element_type::ndof, num_elements);
+    return ArrayView<const double, 2, exec>(ptr, num_elements, element_type::ndof);
   } else {
-    return ArrayView<const double, 3, exec>(ptr, element_type::ndof, element_type::components, num_elements);
+    return ArrayView<const double, 3, exec>(ptr, num_elements, element_type::components, element_type::ndof);
   }
 }
 
@@ -54,9 +54,9 @@ struct EVectorView {
       auto & arr = serac::get<I>(data);
 
       if constexpr (components == 1) {
-        serac::get<I>(values) = make_tensor<ndof>([&arr, e](int i) { return arr(size_t(i), e); });
+        serac::get<I>(values) = make_tensor<ndof>([&arr, e](int i) { return arr(e, size_t(i)); });
       } else {
-        serac::get<I>(values) = make_tensor<components, ndof>([&arr, e](int j, int i) { return arr(size_t(i), size_t(j), e); });
+        serac::get<I>(values) = make_tensor<components, ndof>([&arr, e](int j, int i) { return arr(e, size_t(i), size_t(j)); });
       }
     });
 

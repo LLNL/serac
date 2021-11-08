@@ -6,6 +6,9 @@
 #include "serac/numerics/functional/array.hpp"
 #include "serac/numerics/functional/evector_view.hpp"
 
+#include "mfem.hpp"
+#include "mfem/linalg/dtensor.hpp"
+
 constexpr int N1 = 8;
 constexpr int N2 = 8;
 constexpr int N3 = 4;
@@ -58,11 +61,37 @@ int main()
     }
   }
 
-  using element_type_1 = serac::finite_element< serac::Geometry::Quadrilateral, serac::H1<2, 4> >;
-  using element_type_2 = serac::finite_element< serac::Geometry::Quadrilateral, serac::Hcurl<3> >;
 
-  serac::EVectorView < serac::ExecutionSpace::CPU, element_type_1, element_type_2 > foo({nullptr, nullptr}, 5);
+  {
+    using element_type = serac::finite_element< serac::Geometry::Quadrilateral, serac::H1<2, 4> >;
 
-  [[maybe_unused]] auto tmp = foo[53];
+    serac::EVectorView < serac::ExecutionSpace::CPU, element_type > foo({nullptr}, 5);
+
+    mfem::DeviceTensor< 3, double > bar{nullptr, 9, 4, 5};
+
+    std::cout << &serac::get<0>(foo.data)(0, 0, 1) - &serac::get<0>(foo.data)(0, 0, 0) << std::endl;
+    std::cout << &serac::get<0>(foo.data)(0, 1, 0) - &serac::get<0>(foo.data)(0, 0, 0) << std::endl;
+    std::cout << &serac::get<0>(foo.data)(1, 0, 0) - &serac::get<0>(foo.data)(0, 0, 0) << std::endl;
+
+    std::cout << &bar(1, 0, 0) - &bar(0, 0, 0) << std::endl;
+    std::cout << &bar(0, 1, 0) - &bar(0, 0, 0) << std::endl;
+    std::cout << &bar(0, 0, 1) - &bar(0, 0, 0) << std::endl;
+  }
+
+  {
+    using element_type = serac::finite_element< serac::Geometry::Quadrilateral, serac::H1<2> >;
+
+    serac::EVectorView < serac::ExecutionSpace::CPU, element_type > foo({nullptr}, 5);
+
+    mfem::DeviceTensor< 2, double > bar{nullptr, 9, 5};
+
+    std::cout << &serac::get<0>(foo.data)(0, 1) - &serac::get<0>(foo.data)(0, 0) << std::endl;
+    std::cout << &serac::get<0>(foo.data)(1, 0) - &serac::get<0>(foo.data)(0, 0) << std::endl;
+
+    std::cout << &bar(1, 0) - &bar(0, 0) << std::endl;
+    std::cout << &bar(0, 1) - &bar(0, 0) << std::endl;
+  }
+
+  //[[maybe_unused]] auto tmp = foo[53];
 
 }
