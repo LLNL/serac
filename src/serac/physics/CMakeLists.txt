@@ -18,7 +18,6 @@ set(physics_sources
     base_physics.cpp
     solid.cpp
     thermal_conduction.cpp
-    thermal_conduction_functional.cpp
     thermal_solid.cpp
     )
 

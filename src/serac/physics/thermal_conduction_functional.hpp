@@ -34,9 +34,24 @@ namespace serac {
 template <int order, int dim>
 class ThermalConductionFunctional : public BasePhysics {
 public:
-  using ScalarFunction = std::function<double(tensor<double, dim>, tensor<double, 1>)>;
-  using VectorFunction = std::function<tensor<double, dim>(tensor<double, dim>, tensor<double, 1>)>;
-  using TensorFunction = std::function<tensor<double, dim, dim>(tensor<double, dim>, tensor<double, 1>)>;
+  struct ConstantIsotropicMaterial {
+    double rho;
+    double cp;
+    double kappa;
+
+    SERAC_HOST_DEVICE auto thermalFlux(auto u, auto du_dx) { return kappa * du_dx; }
+  };
+
+  struct ConstantSource {
+    double constant;
+
+    SERAC_HOST_DEVICE auto source(auto x, auto u, auto du_dx) { return constant; }
+  };
+
+  struct ScalarFunction {
+    double                 constant;
+    SERAC_HOST_DEVICE auto function(auto x, auto t) { return constant; }
+  }
 
   /**
    * @brief A timestep method and config for the M solver
@@ -132,7 +147,47 @@ public:
    * @param[in] options The system solver parameters
    * @param[in] name An optional name for the physics module instance
    */
-  ThermalConductionFunctional(const SolverOptions& options, const std::string& name = "");
+  ThermalConductionFunctional(const SolverOptions& options, const std::string& name = "")
+      : BasePhysics(NUM_FIELDS, order),
+        temperature_(
+            StateManager::newState(FiniteElementState::Options{.order      = order,
+                                                               .vector_dim = 1,
+                                                               .ordering   = mfem::Ordering::byNODES,
+                                                               .name       = detail::addPrefix(name, "temperature")})),
+        M_functional_(&temperature_.space(), &temperature_.space()),
+        K_functional_(&temperature_.space(), &temperature_.space()),
+        residual_(temperature_.space().TrueVSize()),
+        ode_(temperature_.space().TrueVSize(), {.u = u_, .dt = dt_, .du_dt = previous_, .previous_dt = previous_dt_},
+             nonlin_solver_, bcs_)
+  {
+    SLIC_ERROR_ROOT_IF(mesh_.Dimension() != dim,
+                       fmt::format("Compile time dimension and runtime mesh dimension mismatch"));
+
+    state_.push_back(temperature_);
+
+    nonlin_solver_ = mfem_ext::EquationSolver(mesh_.GetComm(), options.T_lin_options, options.T_nonlin_options);
+    nonlin_solver_.SetOperator(residual_);
+
+    // Check for dynamic mode
+    if (options.dyn_options) {
+      ode_.SetTimestepper(options.dyn_options->timestepper);
+      ode_.SetEnforcementMethod(options.dyn_options->enforcement_method);
+      is_quasistatic_ = false;
+    } else {
+      is_quasistatic_ = true;
+    }
+
+    dt_          = 0.0;
+    previous_dt_ = -1.0;
+
+    int true_size = temperature_.space().TrueVSize();
+    u_.SetSize(true_size);
+    previous_.SetSize(true_size);
+    previous_ = 0.0;
+
+    zero_.SetSize(true_size);
+    zero_ = 0.0;
+  }
 
   /**
    * @brief Set essential temperature boundary conditions (strongly enforced)
@@ -140,49 +195,121 @@ public:
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
    * @param[in] temp_bdr_coef The prescribed boundary temperature
    */
-  void setTemperatureBCs(const std::set<int>& temp_bdr, ScalarFunction temp_function);
+  template <typename TemperatureType>
+  void setTemperatureBCs(const std::set<int>& temp_bdr, TemperatureType temp)
+  {
+    // Project the coefficient onto the grid function
+    temp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>([temp](const mfem::Vector& x, double t) -> double {
+      tensor<double, dim> x_tensor;
+      x_tensor[0] = x[0];
+      if constexpr (dim > 1) {
+        x_tensor[1] = x[1];
+      }
+      if constexpr (dim > 2) {
+        x_tensor[2] = x[2];
+      }
+
+      return temp(x_tensor, t);
+    });
+
+    bcs_.addEssential(temp_bdr, temp_bdr_coef_, temperature_);
+  }
 
   /**
    * @brief Advance the timestep
    *
    * @param[inout] dt The timestep to advance. For adaptive time integration methods, the actual timestep is returned.
    */
-  void advanceTimestep(double& dt) override;
+  void advanceTimestep(double& dt) override
+  {
+    temperature_.initializeTrueVec();
 
-  /**
-   * @brief Set the thermal conductivity
-   *
-   * @param[in] kappa The thermal conductivity
-   */
-  void setConductivity(TensorFunction kappa_function);
+    if (is_quasistatic_) {
+      nonlin_solver_.Mult(zero_, temperature_.trueVec());
+    } else {
+      SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
 
-  /**
-   * @brief Set the temperature state vector from a coefficient
-   *
-   * @param[in] temp The temperature coefficient
-   */
-  void setTemperature(ScalarFunction temp_function);
+      // Step the time integrator
+      ode_.Step(temperature_.trueVec(), time_, dt);
+    }
 
-  /**
-   * @brief Set the thermal body source from a coefficient
-   *
-   * @param[in] source The source function coefficient
-   */
-  void setSource(ScalarFunction source_function);
+    temperature_.distributeSharedDofs();
+    cycle_ += 1;
+  }
 
-  /**
-   * @brief Set the density field. Defaults to 1.0 if not set.
-   *
-   * @param[in] rho The density field coefficient
-   */
-  void setMassDensity(ScalarFunction rho_function);
+  template <typename MaterialType>
+  void setMaterial(MaterialType material)
+  {
+    K_functional_.AddDomainIntegral(
+        Dimension<dim>{},
+        [material]([[maybe_unused]] auto x, auto temperature) {
+          // Get the value and the gradient from the input tuple
+          auto [u, du_dx] = temperature;
 
-  /**
-   * @brief Set the specific heat capacity. Defaults to 1.0 if not set.
-   *
-   * @param[in] cp The specific heat capacity
-   */
-  void setSpecificHeatCapacity(ScalarFunction cp_function);
+          auto flux = material.thermal_flux(u, du_dx);
+
+          auto source = u * 0.0;
+
+          // Return the source and the flux as a tuple
+          return serac::tuple{source, flux};
+        },
+        mesh_);
+
+    M_functional_.AddDomainIntegral(
+        Dimension<dim>{},
+        [this]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
+          auto [u, du_dx] = temperature;
+
+          auto source = material.cp * material.rho;
+
+          auto flux = 0.0 * du_dx;
+
+          // Return the source and the flux as a tuple
+          return serac::tuple{source, flux};
+        },
+        mesh_);
+  }
+
+  template <typename TemperatureType>
+  void setTemperature(TemperatureType temp_function)
+  {
+    // Project the coefficient onto the grid function
+    mfem::FunctionCoefficient temp_coef([temp](const mfem::Vector& x, double t) -> double {
+      tensor<double, dim> x_tensor;
+      x_tensor[0] = x[0];
+      if constexpr (dim > 1) {
+        x_tensor[1] = x[1];
+      }
+      if constexpr (dim > 2) {
+        x_tensor[2] = x[2];
+      }
+
+      return temp(x_tensor, t);
+    });
+
+    temp_coef.SetTime(time_);
+    temperature_.project(temp_coef);
+    gf_initialized_[0] = true;
+  }
+
+  template <typename SourceType>
+  void setSource(SourceType source_function)
+  {
+    K_functional_.AddDomainIntegral(
+        Dimension<dim>{},
+        [source_function]([[maybe_unused]] auto x, auto temperature) {
+          // Get the value and the gradient from the input tuple
+          auto [u, du_dx] = temperature;
+
+          auto flux = du_dx * 0.0;
+
+          auto source = source_function(x, u, du_dx);
+
+          // Return the source and the flux as a tuple
+          return serac::tuple{source, flux};
+        },
+        mesh_);
+  }
 
   /**
    * @brief Get the temperature state
@@ -202,7 +329,85 @@ public:
    * This must be called before StaticSolve() or AdvanceTimestep(). If allow_dynamic
    * = false, do not allocate the mass matrix or dynamic operator
    */
-  void completeSetup() override;
+  void completeSetup() override
+  {
+    // Build the dof array lookup tables
+    temperature_.space().BuildDofToArrays();
+
+    // Project the essential boundary coefficients
+    for (auto& bc : bcs_.essentials()) {
+      bc.projectBdr(temperature_, time_);
+      K_functional_.SetEssentialBC(bc.markers());
+    }
+
+    // Initialize the true vector
+    temperature_.initializeTrueVec();
+
+    if (is_quasistatic_) {
+      residual_ = mfem_ext::StdFunctionOperator(
+          temperature_.space().TrueVSize(),
+
+          [this](const mfem::Vector& u, mfem::Vector& r) {
+            r = K_functional_(u);
+            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+          },
+
+          [this](const mfem::Vector& u) -> mfem::Operator& {
+            K_functional_(u);
+            J_.reset(grad(K_functional_));
+            bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            return *J_;
+          });
+
+    } else {
+      // If dynamic, assemble the mass matrix
+      residual_ = mfem_ext::StdFunctionOperator(
+          temperature_.space().TrueVSize(),
+          [this](const mfem::Vector& du_dt, mfem::Vector& r) {
+            mfem::Vector K_arg;
+            add(1.0, u_, dt_, du_dt, K_arg);
+
+            add(M_functional_(du_dt), K_functional_(K_arg), r);
+            r.SetSubVector(bcs_.allEssentialDofs(), 0.0);
+          },
+
+          [this](const mfem::Vector& du_dt) -> mfem::Operator& {
+            // Only reassemble the stiffness if it is a new timestep
+            if (dt_ != previous_dt_) {
+              mfem::Vector K_arg;
+              add(1.0, u_, dt_, du_dt, K_arg);
+
+              M_functional_(u_);
+              std::unique_ptr<mfem::HypreParMatrix> m_mat(grad(M_functional_));
+
+              K_functional_(K_arg);
+              std::unique_ptr<mfem::HypreParMatrix> k_mat(grad(K_functional_));
+
+              J_.reset(mfem::Add(1.0, *m_mat, dt_, *k_mat));
+              bcs_.eliminateAllEssentialDofsFromMatrix(*J_);
+            }
+            return *J_;
+          });
+    }
+  }
+
+  template <int order, int dim>
+  void ThermalConductionFunctional<order, dim>::advanceTimestep(double& dt)
+  {
+    temperature_.initializeTrueVec();
+
+    if (is_quasistatic_) {
+      nonlin_solver_.Mult(zero_, temperature_.trueVec());
+    } else {
+      SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
+
+      // Step the time integrator
+      ode_.Step(temperature_.trueVec(), time_, dt);
+    }
+
+    temperature_.distributeSharedDofs();
+    cycle_ += 1;
+  }
 
   /**
    * @brief Destroy the Thermal Solver object
@@ -234,34 +439,6 @@ protected:
   std::unique_ptr<mfem::HypreParMatrix> M_;
 
   std::shared_ptr<mfem::Coefficient> temp_bdr_coef_;
-
-  /**
-   * @brief Conduction coefficient
-   */
-  TensorFunction kappa_;
-
-  /**
-   * @brief Body source coefficient
-   */
-  ScalarFunction source_;
-
-  /**
-   * @brief Density coefficient
-   *
-   */
-  ScalarFunction rho_;
-
-  /**
-   * @brief Specific heat capacity
-   *
-   */
-  ScalarFunction cp_;
-
-  /**
-   * @brief Combined mass matrix coefficient (rho * cp)
-   *
-   */
-  ScalarFunction mass_coef_;
 
   /**
    * @brief mfem::Operator that describes the weight residual
