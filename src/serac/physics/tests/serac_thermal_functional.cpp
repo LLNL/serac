@@ -22,6 +22,19 @@ void functional_test()
 {
   MPI_Barrier(MPI_COMM_WORLD);
 
+  int serial_refinement   = 1;
+  int parallel_refinement = 0;
+
+  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+  auto        mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+  mesh2D->ExchangeFaceNbrData();
+
+  // Create DataStore
+  axom::sidre::DataStore datastore;
+  serac::StateManager::initialize(datastore, "serac", "dynamic_solve");
+
+  serac::StateManager::setMesh(std::move(mesh2D));
+
   // define a boundary attribute set
   std::set<int> ess_bdr = {1};
 
@@ -44,6 +57,11 @@ void functional_test()
 
 TEST(thermal_functional, 2D_linear) { functional_test<1, 2>(); }
 
+}  // namespace serac
+
+//------------------------------------------------------------------------------
+#include "axom/slic/core/SimpleLogger.hpp"
+
 int main(int argc, char* argv[])
 {
   ::testing::InitGoogleTest(&argc, argv);
@@ -51,23 +69,8 @@ int main(int argc, char* argv[])
 
   axom::slic::SimpleLogger logger;
 
-  int serial_refinement   = 1;
-  int parallel_refinement = 0;
-
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  auto        mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
-  mesh2D->ExchangeFaceNbrData();
-
-  // Create DataStore
-  axom::sidre::DataStore datastore;
-  serac::StateManager::initialize(datastore, "serac", "dynamic_solve");
-
-  serac::StateManager::setMesh(std::move(mesh2D));
-
   int result = RUN_ALL_TESTS();
   MPI_Finalize();
 
   return result;
 }
-
-}  // namespace serac
