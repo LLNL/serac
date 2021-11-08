@@ -82,7 +82,7 @@ class Functional;
 template <typename test, typename... trials, ExecutionSpace exec>
 class Functional<test(trials...), exec> : public mfem::Operator {
   static constexpr tuple<trials...> trial_spaces{};
-  static constexpr int              num_trial_spaces = sizeof...(trials);
+  static constexpr uint32_t         num_trial_spaces = sizeof...(trials);
 
 public:
   /**
@@ -97,7 +97,7 @@ public:
         trial_space_(trial_fes),
         grad_(*this)
   {
-    for (int i = 0; i < num_trial_spaces; i++) {
+    for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i] = trial_space_[i]->GetProlongationMatrix();
       G_trial_[i] = trial_space_[i]->GetElementRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC);
       SLIC_ERROR_IF(!G_trial_[i], "Couldn't retrieve element restriction operator for trial space");
@@ -136,7 +136,7 @@ public:
 
     auto num_elements          = static_cast<size_t>(test_space_->GetNE());
     auto ndof_per_test_element = static_cast<size_t>(test_space_->GetFE(0)->GetDof() * test_space_->GetVDim());
-    for (int i = 0; i < num_trial_spaces; i++) {
+    for (uint32_t i = 0; i < num_trial_spaces; i++) {
       auto ndof_per_trial_element =
           static_cast<size_t>(trial_space_[i]->GetFE(0)->GetDof() * trial_space_[i]->GetVDim());
       element_gradients_[i]     = Array<double, 3, exec>(num_elements, ndof_per_test_element, ndof_per_trial_element);
@@ -321,7 +321,7 @@ private:
      * @brief Constructs a Gradient wrapper that references a parent @p Functional
      * @param[in] f The @p Functional to use for gradient calculations
      */
-    Gradient(Functional<test(trials...), exec>& f, int which = 0)
+    Gradient(Functional<test(trials...), exec>& f, uint32_t which = 0)
         : mfem::Operator(f.Height(), f.Width()),
           form_(f),
           lookup_tables(*(f.test_space_), *(f.trial_space_[which])),
@@ -447,7 +447,7 @@ private:
      *    grad<1>(f) == df_dtrial1
      *    grad<2>(f) == df_dtrial2
      */
-    int which_argument;
+    uint32_t which_argument;
 
     /// @brief shallow copy of the test space from the associated Functional
     mfem::ParFiniteElementSpace* test_space_;
@@ -467,7 +467,7 @@ private:
   {
 
     // get the values for each local processor
-    for (int i = 0; i < num_trial_spaces; i++) {
+    for (uint32_t i = 0; i < num_trial_spaces; i++) {
       P_trial_[i]->Mult(input_T, input_L_[i]); // VARIADICTODO
     }
 
@@ -475,7 +475,7 @@ private:
 
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
-      for (int i = 0; i < num_trial_spaces; i++) {
+      for (uint32_t i = 0; i < num_trial_spaces; i++) {
         G_trial_[i]->Mult(input_L_[i], input_E_[i]);
       }
 
@@ -496,7 +496,7 @@ private:
     }
 
     if (bdr_integrals_.size() > 0) {
-      for (int i = 0; i < num_trial_spaces; i++) {
+      for (uint32_t i = 0; i < num_trial_spaces; i++) {
         G_trial_boundary_[i]->Mult(input_L_[i], input_E_boundary_[i]);
       }
 
