@@ -38,9 +38,9 @@ namespace domain_integral {
  * @param[in] qf The actual quadrature function, see @p lambda
  * @param[inout] data The data for each quadrature point
  */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type, typename lambda,
+template <Geometry g, typename test, typename trial, int Q, typename T, typename derivatives_type, typename lambda,
           typename qpt_data_type = void>
-void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivatives_type, 2> qf_derivatives,
+void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_derivatives,
                        const mfem::Vector& J_, const mfem::Vector& X_, int num_elements, lambda&& qf,
                        QuadratureData<qpt_data_type>& data = dummy_qdata)
 {
@@ -49,26 +49,20 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
   using element_residual_type      = typename test_element::residual_type;
   static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
-  static constexpr int  trial_ndof = trial_element::ndof;
+  //static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto X = mfem::Reshape(X_.Read(), rule.size(), dim, num_elements);
   auto J = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-  auto u = detail::Reshape<trial>(U.Read(), trial_ndof, num_elements);
   auto r = detail::Reshape<test>(R.ReadWrite(), test_ndof, num_elements);
 
-  //auto tmp = EVectorView< ExecutionSpace::CPU, trial_element >({U.Read()}, size_t(num_elements));
-
   // for each element in the domain
-  for (int e = 0; e < num_elements; e++) {
+  for (uint32_t e = 0; e < uint32_t(num_elements); e++) {
 
     // get the DOF values for this particular element
-    tensor u_elem = detail::Load<trial_element>(u, e);
-
-    //auto u_elem2 = tmp[e];
-    //std::cout << u_elem - serac::get<0>(u_elem2) << std::endl;
+    auto u_elem = u[e];
 
     // this is where we will accumulate the element residual tensor
     element_residual_type r_elem{};
@@ -86,13 +80,13 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
       double dx  = det(J_q) * dxi;
 
       // evaluate the value/derivatives needed for the q-function at this quadrature point
-      auto arg = Preprocess<trial_element>(u_elem, xi, J_q);
+      auto arg = Preprocess<trial_element>(get<0>(u_elem), xi, J_q);
 
       // evaluate the user-specified constitutive model
       //
       // note: make_dual(arg) promotes those arguments to dual number types
       // so that qf_output will contain values and derivatives
-      auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(e, q));
+      auto qf_output = detail::apply_qf(qf, x_q, make_dual(arg), data(int(e), q));
 
       // integrate qf_output against test space shape functions / gradients
       // to get element residual contributions
@@ -106,7 +100,7 @@ void evaluation_kernel(const mfem::Vector& U, mfem::Vector& R, CPUView<derivativ
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
-    detail::Add(r, r_elem, e);
+    detail::Add(r, r_elem, int(e));
   }
 }
 

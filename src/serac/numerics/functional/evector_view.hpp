@@ -56,7 +56,7 @@ struct EVectorView {
       if constexpr (components == 1) {
         serac::get<I>(values) = make_tensor<ndof>([&arr, e](int i) { return arr(e, size_t(i)); });
       } else {
-        serac::get<I>(values) = make_tensor<components, ndof>([&arr, e](int j, int i) { return arr(e, size_t(i), size_t(j)); });
+        serac::get<I>(values) = make_tensor<components, ndof>([&arr, e](int j, int i) { return arr(e, size_t(j), size_t(i)); });
       }
     });
 

@@ -36,6 +36,7 @@ class DomainIntegral;
 template <typename test, typename ... trials, ExecutionSpace exec>
 class DomainIntegral<test(trials...), exec> {
 public:
+
   static constexpr int num_trial_spaces = sizeof ... (trials);
 
   /**
@@ -88,11 +89,14 @@ public:
     //
     // std::function's type erasure lets us wrap those specific details inside a function with known signature
     if constexpr (exec == ExecutionSpace::CPU) {
+
       // note: this lambda function captures ptr by-value to extend its lifetime
       //                   vvv
       evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const std::array< mfem::Vector, num_trial_spaces > & U, mfem::Vector& R) {
-        domain_integral::evaluation_kernel<geometry, test, trials..., Q>(U[0], R, qf_derivatives, J_, X_,
-                                                                                 num_elements, qf, data);
+        std::array< const double *, num_trial_spaces > ptrs;
+        for (uint32_t i = 0; i < num_trial_spaces; i++) { ptrs[i] = U[i].Read(); }
+        serac::EVectorView < ExecutionSpace::CPU, finite_element< geometry, trials > ...> u(ptrs, size_t(num_elements));
+        domain_integral::evaluation_kernel<geometry, test, trials..., Q>(u, R, qf_derivatives, J_, X_, num_elements, qf, data);
       };
 
       action_of_gradient_ = [this, qf_derivatives, num_elements](const std::array< mfem::Vector, num_trial_spaces > & dU, mfem::Vector& dR) {

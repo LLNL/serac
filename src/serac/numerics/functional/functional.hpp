@@ -121,10 +121,10 @@ public:
     if (compatibleWithFaceRestriction(*test_space_)) {
       G_test_boundary_ = test_space_->GetFaceRestriction(mfem::ElementDofOrdering::LEXICOGRAPHIC,
                                                          mfem::FaceType::Boundary, mfem::L2FaceValues::SingleValued);
+      output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
     }
 
     output_E_.SetSize(G_test_->Height(), mfem::Device::GetMemoryType());
-    output_E_boundary_.SetSize(G_test_boundary_->Height(), mfem::Device::GetMemoryType());
 
     output_L_boundary_.SetSize(P_test_->Height(), mfem::Device::GetMemoryType());
 
