@@ -18,8 +18,31 @@
 #include "serac/numerics/odes.hpp"
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
+#include "serac/physics/state/state_manager.hpp"
 
 namespace serac {
+
+struct ConstantIsotropicMaterial {
+  double rho;
+  double cp;
+  double kappa;
+
+  template <typename T1, typename T2>
+  SERAC_HOST_DEVICE T2 thermalFlux([[maybe_unused]] T1& u, [[maybe_unused]] T2& du_dx) const
+  {
+    return kappa * du_dx;
+  }
+};
+
+struct ScalarFunction {
+  double constant;
+
+  template <typename T1>
+  SERAC_HOST_DEVICE double operator()([[maybe_unused]] T1& x, [[maybe_unused]] double t) const
+  {
+    return constant;
+  }
+};
 
 /**
  * @brief An object containing the solver for a thermal conduction PDE
@@ -34,25 +57,6 @@ namespace serac {
 template <int order, int dim>
 class ThermalConductionFunctional : public BasePhysics {
 public:
-  struct ConstantIsotropicMaterial {
-    double rho;
-    double cp;
-    double kappa;
-
-    SERAC_HOST_DEVICE auto thermalFlux(auto u, auto du_dx) { return kappa * du_dx; }
-  };
-
-  struct ConstantSource {
-    double constant;
-
-    SERAC_HOST_DEVICE auto source(auto x, auto u, auto du_dx) { return constant; }
-  };
-
-  struct ScalarFunction {
-    double                 constant;
-    SERAC_HOST_DEVICE auto function(auto x, auto t) { return constant; }
-  }
-
   /**
    * @brief A timestep method and config for the M solver
    */
@@ -148,7 +152,7 @@ public:
    * @param[in] name An optional name for the physics module instance
    */
   ThermalConductionFunctional(const SolverOptions& options, const std::string& name = "")
-      : BasePhysics(NUM_FIELDS, order),
+      : BasePhysics(1, order),
         temperature_(
             StateManager::newState(FiniteElementState::Options{.order      = order,
                                                                .vector_dim = 1,
@@ -246,7 +250,7 @@ public:
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
 
-          auto flux = material.thermal_flux(u, du_dx);
+          auto flux = material.thermalFlux(u, du_dx);
 
           auto source = u * 0.0;
 
@@ -257,7 +261,7 @@ public:
 
     M_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [this]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
+        [material]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
           auto [u, du_dx] = temperature;
 
           auto source = material.cp * material.rho;
@@ -274,7 +278,7 @@ public:
   void setTemperature(TemperatureType temp_function)
   {
     // Project the coefficient onto the grid function
-    mfem::FunctionCoefficient temp_coef([temp](const mfem::Vector& x, double t) -> double {
+    mfem::FunctionCoefficient temp_coef([temp_function](const mfem::Vector& x, double t) -> double {
       tensor<double, dim> x_tensor;
       x_tensor[0] = x[0];
       if constexpr (dim > 1) {
@@ -284,7 +288,7 @@ public:
         x_tensor[2] = x[2];
       }
 
-      return temp(x_tensor, t);
+      return temp_function(x_tensor, t);
     });
 
     temp_coef.SetTime(time_);
@@ -297,13 +301,13 @@ public:
   {
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [source_function]([[maybe_unused]] auto x, auto temperature) {
+        [source_function, this]([[maybe_unused]] auto x, auto temperature) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
 
           auto flux = du_dx * 0.0;
 
-          auto source = source_function(x, u, du_dx);
+          auto source = source_function(x, time_);
 
           // Return the source and the flux as a tuple
           return serac::tuple{source, flux};
@@ -391,24 +395,6 @@ public:
     }
   }
 
-  template <int order, int dim>
-  void ThermalConductionFunctional<order, dim>::advanceTimestep(double& dt)
-  {
-    temperature_.initializeTrueVec();
-
-    if (is_quasistatic_) {
-      nonlin_solver_.Mult(zero_, temperature_.trueVec());
-    } else {
-      SLIC_ASSERT_MSG(gf_initialized_[0], "Thermal state not initialized!");
-
-      // Step the time integrator
-      ode_.Step(temperature_.trueVec(), time_, dt);
-    }
-
-    temperature_.distributeSharedDofs();
-    cycle_ += 1;
-  }
-
   /**
    * @brief Destroy the Thermal Solver object
    */
@@ -491,8 +477,5 @@ protected:
    */
   mfem::Vector previous_;
 };
-
-// force template instantiations
-template class ThermalConductionFunctional<1, 2>;
 
 }  // namespace serac
