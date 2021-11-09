@@ -27,7 +27,6 @@ void functional_test()
 
   std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
   auto        mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
-  mesh2D->ExchangeFaceNbrData();
 
   // Create DataStore
   axom::sidre::DataStore datastore;
