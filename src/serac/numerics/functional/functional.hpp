@@ -472,7 +472,6 @@ private:
     }
 
     output_L_ = 0.0;
-
     if (domain_integrals_.size() > 0) {
       // get the values for each element on the local processor
       for (uint32_t i = 0; i < num_trial_spaces; i++) {

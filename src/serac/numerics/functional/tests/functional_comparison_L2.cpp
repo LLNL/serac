@@ -77,7 +77,7 @@ void functional_test(mfem::ParMesh& mesh, L2<p> test, L2<p> trial, Dimension<dim
   using trial_space = decltype(trial);
 
   // Construct the new weak form object using the known test and trial spaces
-  Functional<test_space(trial_space)> residual(&fespace, &fespace);
+  Functional<test_space(trial_space)> residual(&fespace, {&fespace});
 
   // Add the total domain residual term to the weak form
   residual.AddDomainIntegral(

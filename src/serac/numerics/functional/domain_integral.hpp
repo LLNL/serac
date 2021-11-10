@@ -73,6 +73,8 @@ public:
     using qf_result_type  = typename detail::qf_result<lambda_type, x_t, u_du_t, qpt_data_type>::type;
     using derivative_type = decltype(get_gradient(std::declval<qf_result_type>()));
 
+    using EVector_t = EVectorView < exec, finite_element< geometry, trials > ... >;
+
     // allocate memory for the derivatives of the q-function at each quadrature point
     //
     // Note: ptr's lifetime is managed in an unusual way! It is captured by-value in one of the
@@ -95,12 +97,15 @@ public:
       evaluation_ = [this, ptr, qf_derivatives, num_elements, qf, &data](const std::array< mfem::Vector, num_trial_spaces > & U, mfem::Vector& R) {
         std::array< const double *, num_trial_spaces > ptrs;
         for (uint32_t i = 0; i < num_trial_spaces; i++) { ptrs[i] = U[i].Read(); }
-        serac::EVectorView < ExecutionSpace::CPU, finite_element< geometry, trials > ...> u(ptrs, size_t(num_elements));
+        EVector_t u(ptrs, size_t(num_elements));
         domain_integral::evaluation_kernel<geometry, test, trials..., Q>(u, R, qf_derivatives, J_, X_, num_elements, qf, data);
       };
 
       action_of_gradient_ = [this, qf_derivatives, num_elements](const std::array< mfem::Vector, num_trial_spaces > & dU, mfem::Vector& dR) {
-        domain_integral::action_of_gradient_kernel<geometry, test, trials..., Q>(dU[0], dR, qf_derivatives, J_,
+        std::array< const double *, num_trial_spaces > ptrs;
+        for (uint32_t i = 0; i < num_trial_spaces; i++) { ptrs[i] = dU[i].Read(); }
+        EVector_t du(ptrs, size_t(num_elements));
+        domain_integral::action_of_gradient_kernel<geometry, test, trials..., Q>(du, dR, qf_derivatives, J_,
                                                                                          num_elements);
       };
 

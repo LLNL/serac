@@ -148,7 +148,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
 
   switch (which) {
     case WhichTest::Measure: {
-      Functional<double(trial_space)> measure(&fespace);
+      Functional<double(trial_space)> measure({&fespace});
       measure.AddDomainIntegral(
           Dimension<dim>{}, [&](auto /*x*/, auto /*u*/) { return 1.0; }, mesh);
 
@@ -158,8 +158,8 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
 
     } break;
 
-    case (WhichTest::Moment): {
-      Functional<double(trial_space)> x_moment(&fespace);
+    case WhichTest::Moment: {
+      Functional<double(trial_space)> x_moment({&fespace});
       x_moment.AddDomainIntegral(
           Dimension<dim>{}, [&](auto x, auto /*u*/) { return x[0]; }, mesh);
 
@@ -169,7 +169,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
     } break;
 
     case WhichTest::SumOfMeasures: {
-      Functional<double(trial_space)> sum_of_measures(&fespace);
+      Functional<double(trial_space)> sum_of_measures({&fespace});
       sum_of_measures.AddDomainIntegral(
           Dimension<dim>{}, [&](auto /*x*/, auto /*u*/) { return 1.0; }, mesh);
       sum_of_measures.AddBoundaryIntegral(
@@ -181,7 +181,7 @@ void qoi_test(mfem::ParMesh& mesh, H1<p> trial, Dimension<dim>, WhichTest which)
     } break;
 
     case WhichTest::Nonlinear: {
-      Functional<double(trial_space)> f(&fespace);
+      Functional<double(trial_space)> f({&fespace});
       f.AddDomainIntegral(
           Dimension<dim>{},
           [&](auto x, auto temperature) {

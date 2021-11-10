@@ -129,8 +129,8 @@ void evaluation_kernel(T u, mfem::Vector& R, CPUView<derivatives_type, 2> qf_der
  * @see mfem::GeometricFactors
  * @param[in] num_elements The number of elements in the mesh
  */
-template <Geometry g, typename test, typename trial, int Q, typename derivatives_type>
-void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView<derivatives_type, 2> qf_derivatives,
+template <Geometry g, typename test, typename trial, int Q, typename T, typename derivatives_type>
+void action_of_gradient_kernel(T du, mfem::Vector& dR, CPUView<derivatives_type, 2> qf_derivatives,
                                const mfem::Vector& J_, int num_elements)
 {
   using test_element               = finite_element<g, test>;
@@ -138,19 +138,18 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
   using element_residual_type      = typename test_element::residual_type;
   static constexpr int  dim        = dimension_of(g);
   static constexpr int  test_ndof  = test_element::ndof;
-  static constexpr int  trial_ndof = trial_element::ndof;
   static constexpr auto rule       = GaussQuadratureRule<g, Q>();
 
   // mfem provides this information in 1D arrays, so we reshape it
   // into strided multidimensional arrays before using
   auto J  = mfem::Reshape(J_.Read(), rule.size(), dim, dim, num_elements);
-  auto du = detail::Reshape<trial>(dU.Read(), trial_ndof, num_elements);
   auto dr = detail::Reshape<test>(dR.ReadWrite(), test_ndof, num_elements);
 
   // for each element in the domain
-  for (int e = 0; e < num_elements; e++) {
+  for (uint32_t e = 0; e < uint32_t(num_elements); e++) {
+
     // get the (change in) values for this particular element
-    tensor du_elem = detail::Load<trial_element>(du, e);
+    auto du_elem = du[e];
 
     // this is where we will accumulate the (change in) element residual tensor
     element_residual_type dr_elem{};
@@ -165,7 +164,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
       double dx  = det(J_q) * dxi;
 
       // evaluate the (change in) value/derivatives at this quadrature point
-      auto darg = Preprocess<trial_element>(du_elem, xi, J_q);
+      auto darg = Preprocess<trial_element>(get<0>(du_elem), xi, J_q);
 
       // recall the derivative of the q-function w.r.t. its arguments at this quadrature point
       auto dq_darg = qf_derivatives(static_cast<size_t>(e), static_cast<size_t>(q));
@@ -180,7 +179,7 @@ void action_of_gradient_kernel(const mfem::Vector& dU, mfem::Vector& dR, CPUView
 
     // once we've finished the element integration loop, write our element residuals
     // out to memory, to be later assembled into global residuals by mfem
-    detail::Add(dr, dr_elem, e);
+    detail::Add(dr, dr_elem, static_cast<int>(e));
   }
 }
 
