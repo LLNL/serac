@@ -85,7 +85,7 @@ public:
     // std::function's type erasure lets us wrap those specific details inside a function with known signature
     if constexpr (exec == ExecutionSpace::CPU) {
       // note: this lambda function captures ptr by-value to extend its lifetime
-      //                   vvv
+      //             vvv
       evaluation_ = [ptr, qf_derivatives, num_elements, qf, &data, &J, &X](const mfem::Vector& U, mfem::Vector& R) {
         domain_integral::evaluation_kernel<geometry, test_space, trial_space, Q>(U, R, qf_derivatives, J, X,
                                                                                  num_elements, qf, data);
