@@ -22,27 +22,31 @@
 
 namespace serac {
 
-struct ConstantIsotropicMaterial {
+namespace Thermal {
+
+struct LinearIsotropicConductor {
   double rho;
   double cp;
   double kappa;
 
   template <typename T1, typename T2>
-  SERAC_HOST_DEVICE T2 thermalFlux([[maybe_unused]] T1& u, [[maybe_unused]] T2& du_dx) const
+  SERAC_HOST_DEVICE T2 operator()([[maybe_unused]] T1& u, [[maybe_unused]] T2& du_dx) const
   {
     return kappa * du_dx;
   }
 };
 
-struct ScalarFunction {
-  double constant;
+struct ConstantSource {
+  double source;
 
-  template <typename T1>
-  SERAC_HOST_DEVICE double operator()([[maybe_unused]] T1& x, [[maybe_unused]] double t) const
+  template <typename T1, typename T2>
+  SERAC_HOST_DEVICE T2 operator()([[maybe_unused]] T1& u, [[maybe_unused]] T2& du_dx) const
   {
-    return constant;
+    return source;
   }
 };
+
+}  // namespace Thermal
 
 /**
  * @brief An object containing the solver for a thermal conduction PDE
@@ -199,22 +203,10 @@ public:
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
    * @param[in] temp_bdr_coef The prescribed boundary temperature
    */
-  template <typename TemperatureType>
-  void setTemperatureBCs(const std::set<int>& temp_bdr, TemperatureType temp)
+  void setTemperatureBCs(const std::set<int>& temp_bdr, std::function<double(const mfem::Vector& x, double t)> temp)
   {
     // Project the coefficient onto the grid function
-    temp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>([temp](const mfem::Vector& x, double t) -> double {
-      tensor<double, dim> x_tensor;
-      x_tensor[0] = x[0];
-      if constexpr (dim > 1) {
-        x_tensor[1] = x[1];
-      }
-      if constexpr (dim > 2) {
-        x_tensor[2] = x[2];
-      }
-
-      return temp(x_tensor, t);
-    });
+    temp_bdr_coef_ = std::make_shared<mfem::FunctionCoefficient>(temp);
 
     bcs_.addEssential(temp_bdr, temp_bdr_coef_, temperature_);
   }
@@ -250,7 +242,7 @@ public:
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
 
-          auto flux = material.thermalFlux(u, du_dx);
+          auto flux = material(u, du_dx);
 
           auto source = u * 0.0;
 
@@ -274,22 +266,10 @@ public:
         mesh_);
   }
 
-  template <typename TemperatureType>
-  void setTemperature(TemperatureType temp_function)
+  void setTemperature(std::function<double(const mfem::Vector& x, double t)> temp)
   {
     // Project the coefficient onto the grid function
-    mfem::FunctionCoefficient temp_coef([temp_function](const mfem::Vector& x, double t) -> double {
-      tensor<double, dim> x_tensor;
-      x_tensor[0] = x[0];
-      if constexpr (dim > 1) {
-        x_tensor[1] = x[1];
-      }
-      if constexpr (dim > 2) {
-        x_tensor[2] = x[2];
-      }
-
-      return temp_function(x_tensor, t);
-    });
+    mfem::FunctionCoefficient temp_coef(temp);
 
     temp_coef.SetTime(time_);
     temperature_.project(temp_coef);

@@ -51,13 +51,18 @@ void functional_test()
   ThermalConductionFunctional<p, dim> thermal_solver(ThermalConductionFunctional<p, dim>::defaultQuasistaticOptions(),
                                                      "thermal_functional");
 
-  ConstantIsotropicMaterial mat{.rho = 1.0, .cp = 1.0, .kappa = 1.0};
-  ScalarFunction            one{1.0};
+  Thermal::LinearIsotropicConductor mat{.rho = 1.0, .cp = 1.0, .kappa = 1.0};
+
+  auto one = [](const mfem::Vector&, double) -> double { return 1.0; };
 
   thermal_solver.setTemperatureBCs(ess_bdr, one);
-  thermal_solver.setMaterial(mat);
-  thermal_solver.setSource(one);
   thermal_solver.setTemperature(one);
+
+  thermal_solver.setMaterial(mat);
+
+  Thermal::ConstantSource source{1.0};
+
+  thermal_solver.setSource(source);
 
   thermal_solver.completeSetup();
 
