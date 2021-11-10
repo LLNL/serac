@@ -51,7 +51,8 @@ public:
    */
   template <int dim, typename lambda_type, typename qpt_data_type = void>
   DomainIntegral(int num_elements, const mfem::Vector& J, const mfem::Vector& X, Dimension<dim>, lambda_type&& qf,
-                 QuadratureData<qpt_data_type>& data = dummy_qdata) {
+                 QuadratureData<qpt_data_type>& data = dummy_qdata)
+  {
     constexpr auto geometry                      = supported_geometries[dim];
     constexpr auto Q                             = std::max(test_space::order, trial_space::order) + 1;
     constexpr auto quadrature_points_per_element = (dim == 2) ? Q * Q : Q * Q * Q;
