@@ -25,19 +25,6 @@
 
 namespace serac {
 
-/**
- * @brief for reasons I don't understand,
- * these calls need to be made immediately after creating the mesh,
- * in order for mfem::FaceRestriction to work properly (?)
- *
- * @note Apparently, calling these functions also messes up Sidre, causing it to segfault, so..
- */
-void make_the_mesh_work(mfem::ParMesh* mesh)
-{
-  mesh->EnsureNodes();
-  mesh->ExchangeFaceNbrData();
-}
-
 /// @cond
 template <typename T, ExecutionSpace exec = serac::default_execution_space>
 class Functional;
@@ -172,6 +159,9 @@ public:
     const mfem::IntegrationRule& ir = mfem::IntRules.Get(el.GetGeomType(), el.GetOrder() * 2);
 
     constexpr auto flags = mfem::GeometricFactors::COORDINATES | mfem::GeometricFactors::JACOBIANS;
+
+    // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
+    // the necessary data as references in the integral data structure.
     auto           geom  = domain.GetGeometricFactors(ir, flags);
     domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
   }
@@ -202,7 +192,10 @@ public:
     constexpr auto flags = mfem::FaceGeometricFactors::COORDINATES | mfem::FaceGeometricFactors::DETERMINANTS |
                            mfem::FaceGeometricFactors::NORMALS;
 
-    // despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
+    // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
+    // the necessary data as references in the integral data structure.
+
+    // Despite what their documentation says, mfem doesn't actually support the JACOBIANS flag.
     // this is currently a dealbreaker, as we need this information to do any calculations
     auto geom = domain.GetFaceGeometricFactors(ir, flags, mfem::FaceType::Boundary);
 
