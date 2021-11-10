@@ -62,12 +62,32 @@ struct ConstantSource {
    * @tparam T1 type of the physical position
    * @tparam T2 type of the temperature
    * @tparam T3 type of the temperature gradient
-   * @return SERAC_HOST_DEVICE
+   * @return The thermal source value
    */
   template <typename T1, typename T2, typename T3>
   SERAC_HOST_DEVICE T2 operator()(T1& /* x */, double /* t */, T2& u, T3& /* du_dx */) const
   {
     return source + u * 0.0;
+  }
+};
+
+/// Constant thermal flux boundary model
+struct FluxBoundary {
+  /// The constant flux applied to the boundary
+  double flux;
+
+  /**
+   * @brief Evaluation function for the thermal flux on a boundary
+   *
+   * @tparam T1 Type of the physical position
+   * @tparam T2 Type of the normal vector
+   * @tparam T3 Type of the temperature
+   * @return The flux applied to the boundary
+   */
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE T3 operator()(T1& /* x */, T2& /* n */, T3& u) const
+  {
+    return flux + u * 0.0;
   }
 };
 
@@ -263,7 +283,7 @@ public:
         [material](auto, auto temperature) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
-          auto flux = material(u, du_dx);
+          auto flux       = material(u, du_dx);
 
           auto source = u * 0.0;
 
@@ -302,13 +322,12 @@ public:
     gf_initialized_[0] = true;
   }
 
-
   /**
-   * @brief Set the thermal source function 
-   * 
+   * @brief Set the thermal source function
+   *
    * @tparam SourceType The type of the source function
    * @param source_function A source function for a prescribed thermal load
-   * 
+   *
    * @pre SourceType must have the operator (x, time, u, du_dx) defined as the thermal load
    */
   template <typename SourceType>
@@ -328,6 +347,21 @@ public:
           return serac::tuple{source, flux};
         },
         mesh_);
+  }
+
+  /**
+   * @brief Set the thermal flux boundary condition
+   *
+   * @tparam FluxType The type of the flux function
+   * @param flux_function A function describing the thermal flux applied to a boundary
+   *
+   * @pre FluxType must have the operator (x, normal, temperature) to return the flux value
+   */
+  template <typename FluxType>
+  void setFluxBCs(FluxType flux_function)
+  {
+    K_functional_.AddBoundaryIntegral(
+        Dimension<dim - 1>{}, [flux_function, this](auto x, auto n, auto u) { return flux_function(x, n, u); }, mesh_);
   }
 
   /**

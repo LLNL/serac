@@ -61,8 +61,10 @@ void functional_test()
   thermal_solver.setMaterial(mat);
 
   Thermal::ConstantSource source{1.0};
-
   thermal_solver.setSource(source);
+
+  Thermal::FluxBoundary flux_bc{0.0};
+  thermal_solver.setFluxBCs(flux_bc);
 
   thermal_solver.completeSetup();
 
