@@ -22,27 +22,52 @@
 
 namespace serac {
 
+/// ThermalConductionFunctional helper structs
 namespace Thermal {
 
+/// Linear isotropic thermal conduction material model
 struct LinearIsotropicConductor {
+  /// Density
   double rho;
+
+  /// Specific heat capacity
   double cp;
+
+  /// Constant isotropic thermal conductivity
   double kappa;
 
+  /**
+   * @brief Function defining the thermal flux
+   *
+   * @tparam T1 type of the temperature (e.g. tensor or dual type)
+   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
+   * @param du_dx Gradient of the temperature
+   * @return The thermal flux of the material model
+   */
   template <typename T1, typename T2>
-  SERAC_HOST_DEVICE T2 operator()([[maybe_unused]] T1& u, [[maybe_unused]] T2& du_dx) const
+  SERAC_HOST_DEVICE T2 operator()(T1& /* u */, T2& du_dx) const
   {
     return kappa * du_dx;
   }
 };
 
+/// Constant thermal source model
 struct ConstantSource {
+  /// The constant source
   double source;
 
-  template <typename T1, typename T2>
-  SERAC_HOST_DEVICE T2 operator()([[maybe_unused]] T1& u, [[maybe_unused]] T2& du_dx) const
+  /**
+   * @brief Evaluation function for the constant thermal source model
+   *
+   * @tparam T1 type of the physical position
+   * @tparam T2 type of the temperature
+   * @tparam T3 type of the temperature gradient
+   * @return SERAC_HOST_DEVICE
+   */
+  template <typename T1, typename T2, typename T3>
+  SERAC_HOST_DEVICE T2 operator()(T1& /* x */, double /* t */, T2& u, T3& /* du_dx */) const
   {
-    return source;
+    return source + u * 0.0;
   }
 };
 
@@ -53,28 +78,22 @@ struct ConstantSource {
  *
  * This is a generic linear thermal diffusion oeprator of the form
  *
- *    M du/dt = -kappa Ku + f
+ * \f[
+ * \mathbf{M} \frac{\partial \mathbf{u}}{\partial t} = -\kappa \mathbf{K} \mathbf{u} + \mathbf{f}
+ * \f]
  *
- *  where M is a mass matrix, K is a stiffness matrix, and f is a
- *  thermal load vector.
+ *  where \f$\mathbf{M}\f$ is a mass matrix, \f$\mathbf{K}\f$ is a stiffness matrix, \f$\mathbf{u}\f$ is the
+ *  temperature degree of freedom vector, and \f$\mathbf{f}\f$ is a thermal load vector.
  */
 template <int order, int dim>
 class ThermalConductionFunctional : public BasePhysics {
 public:
-  /**
-   * @brief A timestep method and config for the M solver
-   */
+  /// A timestep method and config for the M solver
   struct TimesteppingOptions {
-    /**
-     * @brief The timestepping method to be applied
-     *
-     */
+    /// The timestepping method to be applied
     TimestepMethod timestepper;
 
-    /**
-     * @brief The essential boundary enforcement method to use
-     *
-     */
+    /// The essential boundary enforcement method to use
     DirichletEnforcementMethod enforcement_method;
   };
 
@@ -83,22 +102,15 @@ public:
    * Either quasistatic, or time-dependent with timestep and M options
    */
   struct SolverOptions {
-    /**
-     * @brief The linear solver options
-     *
-     */
+    /// The linear solver options
     LinearSolverOptions T_lin_options;
 
-    /**
-     * @brief The nonlinear solver options
-     *
-     */
+    /// The nonlinear solver options
     NonlinearSolverOptions T_nonlin_options;
 
     /**
      * @brief The optional ODE solver parameters
      * @note If this is not defined, a quasi-static solve is performed
-     *
      */
     std::optional<TimesteppingOptions> dyn_options = std::nullopt;
   };
@@ -150,7 +162,7 @@ public:
   }
 
   /**
-   * @brief Construct a new Thermal Solver object
+   * @brief Construct a new Thermal Functional Solver object
    *
    * @param[in] options The system solver parameters
    * @param[in] name An optional name for the physics module instance
@@ -201,7 +213,7 @@ public:
    * @brief Set essential temperature boundary conditions (strongly enforced)
    *
    * @param[in] temp_bdr The boundary attributes on which to enforce a temperature
-   * @param[in] temp_bdr_coef The prescribed boundary temperature
+   * @param[in] temp_bdr_coef The prescribed boundary temperature function
    */
   void setTemperatureBCs(const std::set<int>& temp_bdr, std::function<double(const mfem::Vector& x, double t)> temp)
   {
@@ -233,15 +245,24 @@ public:
     cycle_ += 1;
   }
 
+  /**
+   * @brief Set the thermal flux and mass properties for the physics module
+   *
+   * @tparam MaterialType The thermal material type
+   * @param material A material containing density, specific heat, and thermal flux evaluation information
+   *
+   * @pre MaterialType must have a double member cp defining the specific heat
+   * @pre MaterialType must have a double member rho defining the density
+   * @pre MaterialType must have the operator (u, du_dx) defined as the thermal flux
+   */
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [material]([[maybe_unused]] auto x, auto temperature) {
+        [material](auto, auto temperature) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
-
           auto flux = material(u, du_dx);
 
           auto source = u * 0.0;
@@ -253,7 +274,7 @@ public:
 
     M_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [material]([[maybe_unused]] auto x, [[maybe_unused]] auto temperature) {
+        [material](auto, auto temperature) {
           auto [u, du_dx] = temperature;
 
           auto source = material.cp * material.rho;
@@ -266,6 +287,11 @@ public:
         mesh_);
   }
 
+  /**
+   * @brief Set the underlying finite element state to a prescribed temperature
+   *
+   * @param temp The function describing the temperature field
+   */
   void setTemperature(std::function<double(const mfem::Vector& x, double t)> temp)
   {
     // Project the coefficient onto the grid function
@@ -276,18 +302,27 @@ public:
     gf_initialized_[0] = true;
   }
 
+
+  /**
+   * @brief Set the thermal source function 
+   * 
+   * @tparam SourceType The type of the source function
+   * @param source_function A source function for a prescribed thermal load
+   * 
+   * @pre SourceType must have the operator (x, time, u, du_dx) defined as the thermal load
+   */
   template <typename SourceType>
   void setSource(SourceType source_function)
   {
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
-        [source_function, this]([[maybe_unused]] auto x, auto temperature) {
+        [source_function, this](auto x, auto temperature) {
           // Get the value and the gradient from the input tuple
           auto [u, du_dx] = temperature;
 
           auto flux = du_dx * 0.0;
 
-          auto source = source_function(x, time_);
+          auto source = source_function(x, time_, u, du_dx);
 
           // Return the source and the flux as a tuple
           return serac::tuple{source, flux};
@@ -302,9 +337,7 @@ public:
    */
   const serac::FiniteElementState& temperature() const { return temperature_; };
 
-  /**
-   * @overload
-   */
+  /// @overload
   serac::FiniteElementState& temperature() { return temperature_; };
 
   /**
@@ -375,35 +408,29 @@ public:
     }
   }
 
-  /**
-   * @brief Destroy the Thermal Solver object
-   */
+  /// Destroy the Thermal Solver object
   virtual ~ThermalConductionFunctional() = default;
 
 protected:
+  /// The compile-time finite element trial space for thermal conduction (H1 of order p)
   using trial = H1<order>;
-  using test  = H1<order>;
 
-  /**
-   * @brief The temperature finite element state
-   */
+  /// The compile-time finite element test space for thermal conduction (H1 of order p)
+  using test = H1<order>;
+
+  /// The temperature finite element state
   serac::FiniteElementState temperature_;
 
-  /**
-   * @brief Mass bilinear form object
-   */
+  /// Mass functional object \f$\mathbf{M} = \int_\Omega c_p \, \rho \, \phi_i \phi_j\, dx \f$
   Functional<test(trial)> M_functional_;
 
-  /**
-   * @brief Stiffness nonlinear form object
-   */
+  /// Stiffness functional object \f$\mathbf{K} = \int_\Omega \theta \cdot \nabla \phi_i  + f \phi_i \, dx \f$
   Functional<test(trial)> K_functional_;
 
-  /**
-   * @brief Assembled mass matrix
-   */
+  /// Assembled mass matrix
   std::unique_ptr<mfem::HypreParMatrix> M_;
 
+  /// Coefficient containing the essential boundary values
   std::shared_ptr<mfem::Coefficient> temp_bdr_coef_;
 
   /**
@@ -419,42 +446,25 @@ protected:
    */
   mfem_ext::FirstOrderODE ode_;
 
-  /**
-   * @brief the specific methods and tolerances specified to
-   * solve the nonlinear residual equations
-   */
+  /// the specific methods and tolerances specified to solve the nonlinear residual equations
   mfem_ext::EquationSolver nonlin_solver_;
 
-  /**
-   * @brief assembled sparse matrix for the Jacobian
-   * at the predicted temperature
-   */
+  /// Assembled sparse matrix for the Jacobian
   std::unique_ptr<mfem::HypreParMatrix> J_;
 
-  /**
-   * @brief The current timestep
-   */
+  /// The current timestep
   double dt_;
 
-  /**
-   * @brief The previous timestep
-   */
+  /// The previous timestep
   double previous_dt_;
 
-  /**
-   * @brief A zero vector
-   */
+  /// An auxilliary zero vector
   mfem::Vector zero_;
 
-  /**
-   * @brief predicted temperature true dofs
-   */
+  /// Predicted temperature true dofs
   mfem::Vector u_;
 
-  /**
-   * @brief previous value of du_dt used to prime the pump for the
-   * nonlinear solver
-   */
+  /// Previous value of du_dt used to prime the pump for the nonlinear solver
   mfem::Vector previous_;
 };
 
