@@ -25,14 +25,25 @@ void functional_test()
   int serial_refinement   = 1;
   int parallel_refinement = 0;
 
-  std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
-  auto        mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
-
   // Create DataStore
   axom::sidre::DataStore datastore;
   serac::StateManager::initialize(datastore, "serac", "dynamic_solve");
 
-  serac::StateManager::setMesh(std::move(mesh2D));
+  static_assert(dim == 2 || dim == 3, "Dimension must be 2 or 3 for thermal functional test");
+
+  if constexpr (dim == 2) {
+    std::string meshfile2D = SERAC_REPO_DIR "/data/meshes/star.mesh";
+    auto mesh2D = mesh::refineAndDistribute(buildMeshFromFile(meshfile2D), serial_refinement, parallel_refinement);
+
+    serac::StateManager::setMesh(std::move(mesh2D));
+  }
+
+  if constexpr (dim == 3) {
+    std::string meshfile3D = SERAC_REPO_DIR "/data/meshes/beam-hex.mesh";
+    auto mesh3D = mesh::refineAndDistribute(buildMeshFromFile(meshfile3D), serial_refinement, parallel_refinement);
+
+    serac::StateManager::setMesh(std::move(mesh3D));
+  }
 
   // define a boundary attribute set
   std::set<int> ess_bdr = {1};
@@ -55,6 +66,10 @@ void functional_test()
 }
 
 TEST(thermal_functional, 2D_linear) { functional_test<1, 2>(); }
+TEST(thermal_functional, 2D_quad) { functional_test<2, 2>(); }
+
+TEST(thermal_functional, 3D_linear) { functional_test<1, 3>(); }
+TEST(thermal_functional, 3D_quad) { functional_test<2, 3>(); }
 
 }  // namespace serac
 

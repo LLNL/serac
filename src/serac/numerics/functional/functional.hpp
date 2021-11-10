@@ -162,7 +162,7 @@ public:
 
     // NOTE: we are relying on MFEM to keep these geometric factors accurate. We store
     // the necessary data as references in the integral data structure.
-    auto           geom  = domain.GetGeometricFactors(ir, flags);
+    auto geom = domain.GetGeometricFactors(ir, flags);
     domain_integrals_.emplace_back(num_elements, geom->J, geom->X, Dimension<dim>{}, integrand, data);
   }
 
