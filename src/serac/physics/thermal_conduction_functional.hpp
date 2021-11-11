@@ -270,8 +270,9 @@ public:
   template <typename SourceType>
   void setSource(SourceType source_function)
   {
-    static_assert(Thermal::has_thermal_source<SourceType>::value,
-                  "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
+    static_assert(
+        Thermal::has_thermal_source<SourceType>::value,
+        "Thermal functional sources must have a public (x, t, u, du_dx) operator for thermal source evaluation.");
 
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
@@ -300,6 +301,10 @@ public:
   template <typename FluxType>
   void setFluxBCs(FluxType flux_function)
   {
+    static_assert(Thermal::has_thermal_flux_boundary<FluxType>::value,
+                  "Thermal flux boundary condition types must have a public (x, n, u) operator for thermal boundary "
+                  "flux evaluation.");
+
     K_functional_.AddBoundaryIntegral(
         Dimension<dim - 1>{}, [flux_function](auto x, auto n, auto u) { return flux_function(x, n, u); }, mesh_);
   }

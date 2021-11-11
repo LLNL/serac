@@ -96,8 +96,9 @@ struct has_thermal_source : std::false_type {
 };
 
 template <typename T>
-struct has_thermal_source<T, std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 3>&>(), std::declval<double>(), std::declval<tensor<double, 1>&>(),
-                                                                   std::declval<tensor<double, 3>&>()))>>
+struct has_thermal_source<T, std::void_t<decltype(std::declval<T&>()(
+                                 std::declval<tensor<double, 3>&>(), std::declval<double>(),
+                                 std::declval<tensor<double, 1>&>(), std::declval<tensor<double, 3>&>()))>>
     : std::true_type {
 };
 
@@ -119,6 +120,17 @@ struct FluxBoundary {
   {
     return flux + u * 0.0;
   }
+};
+
+// Use SFINAE to add static assertions checking if the given solid material type is acceptable
+template <typename T, typename = void>
+struct has_thermal_flux_boundary : std::false_type {
+};
+
+template <typename T>
+struct has_thermal_flux_boundary<
+    T, std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 3>&>(), std::declval<tensor<double, 3>&>(),
+                                               std::declval<tensor<double, 1>&>()))>> : std::true_type {
 };
 
 }  // namespace serac::Thermal
