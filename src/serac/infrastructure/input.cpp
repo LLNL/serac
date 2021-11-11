@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "axom/core.hpp"
+#include "axom/primal.hpp"
 
 #include "serac/infrastructure/logger.hpp"
 #include "serac/infrastructure/terminator.hpp"
@@ -283,7 +284,7 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
     auto func = base["vector_function"]
                     .get<std::function<axom::inlet::FunctionType::Vector(axom::inlet::FunctionType::Vector, double)>>();
     result.vector_function = [func(std::move(func))](const mfem::Vector& input, double t, mfem::Vector& output) {
-      auto ret = func({input.GetData(), input.Size()}, t);
+      auto ret = func({axom::primal::Vector3D{input.GetData(), input.Size()}, input.Size()}, t);
       // Copy from the primal vector into the MFEM vector
       std::copy(ret.vec.data(), ret.vec.data() + input.Size(), output.GetData());
     };
@@ -293,7 +294,7 @@ serac::input::CoefficientInputOptions FromInlet<serac::input::CoefficientInputOp
   if (base.contains("scalar_function")) {
     auto func = base["scalar_function"].get<std::function<double(axom::inlet::FunctionType::Vector, double)>>();
     result.scalar_function = [func(std::move(func))](const mfem::Vector& input, double t) {
-      return func({input.GetData(), input.Size()}, t);
+      return func({axom::primal::Vector3D{input.GetData(), input.Size()}, input.Size()}, t);
     };
     coefficient_definitions++;
   }
