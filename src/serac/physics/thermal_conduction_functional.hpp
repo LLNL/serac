@@ -19,79 +19,9 @@
 #include "serac/numerics/stdfunction_operator.hpp"
 #include "serac/numerics/functional/functional.hpp"
 #include "serac/physics/state/state_manager.hpp"
+#include "serac/physics/materials/thermal_functional_material.hpp"
 
 namespace serac {
-
-/// ThermalConductionFunctional helper structs
-namespace Thermal {
-
-/// Linear isotropic thermal conduction material model
-struct LinearIsotropicConductor {
-  /// Density
-  double rho;
-
-  /// Specific heat capacity
-  double cp;
-
-  /// Constant isotropic thermal conductivity
-  double kappa;
-
-  /**
-   * @brief Function defining the thermal flux
-   *
-   * @tparam T1 type of the temperature (e.g. tensor or dual type)
-   * @tparam T2 type of the temperature gradient (e.g. tensor or dual type)
-   * @param du_dx Gradient of the temperature
-   * @return The thermal flux of the material model
-   */
-  template <typename T1, typename T2>
-  SERAC_HOST_DEVICE T2 operator()(T1& /* u */, T2& du_dx) const
-  {
-    return kappa * du_dx;
-  }
-};
-
-/// Constant thermal source model
-struct ConstantSource {
-  /// The constant source
-  double source;
-
-  /**
-   * @brief Evaluation function for the constant thermal source model
-   *
-   * @tparam T1 type of the physical position
-   * @tparam T2 type of the temperature
-   * @tparam T3 type of the temperature gradient
-   * @return The thermal source value
-   */
-  template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE T2 operator()(T1& /* x */, double /* t */, T2& u, T3& /* du_dx */) const
-  {
-    return source + u * 0.0;
-  }
-};
-
-/// Constant thermal flux boundary model
-struct FluxBoundary {
-  /// The constant flux applied to the boundary
-  double flux;
-
-  /**
-   * @brief Evaluation function for the thermal flux on a boundary
-   *
-   * @tparam T1 Type of the physical position
-   * @tparam T2 Type of the normal vector
-   * @tparam T3 Type of the temperature
-   * @return The flux applied to the boundary
-   */
-  template <typename T1, typename T2, typename T3>
-  SERAC_HOST_DEVICE T3 operator()(T1& /* x */, T2& /* n */, T3& u) const
-  {
-    return flux + u * 0.0;
-  }
-};
-
-}  // namespace Thermal
 
 /**
  * @brief An object containing the solver for a thermal conduction PDE
@@ -278,6 +208,13 @@ public:
   template <typename MaterialType>
   void setMaterial(MaterialType material)
   {
+    static_assert(Thermal::has_rho<MaterialType>::value,
+                  "Thermal functional materials must have a public double member rho for density.");
+    static_assert(Thermal::has_cp<MaterialType>::value,
+                  "Thermal functional materials must have a public double member cp for specific heat capacity.");
+    static_assert(Thermal::has_thermal_flux<MaterialType>::value,
+                  "Thermal functional materials must have a public (u, du_dx) operator for thermal flux evaluation.");
+
     K_functional_.AddDomainIntegral(
         Dimension<dim>{},
         [material](auto, auto temperature) {
