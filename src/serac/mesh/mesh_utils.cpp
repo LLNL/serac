@@ -138,9 +138,6 @@ mfem::Mesh buildBallMesh(int approx_number_of_elements)
 
   squish(mesh);
 
-  // Reorient the tet mesh for use with high order Hcurl elements
-  mesh.ReorientTetMesh();
-
   return mesh;
 }
 
