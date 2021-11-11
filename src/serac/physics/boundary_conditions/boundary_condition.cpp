@@ -82,15 +82,17 @@ void BoundaryCondition::project() const
   project(*state_);
 }
 
-void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time, const bool should_be_scalar) const
+void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time) const
 {
-  if (should_be_scalar) {
-    SLIC_ASSERT_MSG(holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
-                    "Boundary condition should have been an mfem::Coefficient");
-  } else {
+  if (gf.VectorDim() > 1) {
     SLIC_ASSERT_MSG(holds_alternative<std::shared_ptr<mfem::VectorCoefficient>>(coef_),
                     "Boundary condition should have been an mfem::VectorCoefficient");
+  } else {
+    SLIC_ASSERT_MSG(holds_alternative<std::shared_ptr<mfem::Coefficient>>(coef_),
+                    "Boundary condition should have been an mfem::Coefficient");
   }
+
+  SLIC_ASSERT_MSG(!component_, "Component-wise boundary projection not implemented");
 
   // markers_ should be const param but it's not
   visit(
@@ -101,25 +103,25 @@ void BoundaryCondition::projectBdr(mfem::ParGridFunction& gf, const double time,
       coef_);
 }
 
-void BoundaryCondition::projectBdr(FiniteElementState& state, const double time, const bool should_be_scalar) const
+void BoundaryCondition::projectBdr(FiniteElementState& state, const double time) const
 {
-  projectBdr(state.gridFunc(), time, should_be_scalar);
+  projectBdr(state.gridFunc(), time);
   state.initializeTrueVec();
 }
 
-void BoundaryCondition::projectBdr(const double time, const bool should_be_scalar) const
+void BoundaryCondition::projectBdr(const double time) const
 {
   SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
-  projectBdr(*state_, time, should_be_scalar);
+  projectBdr(*state_, time);
   state_->initializeTrueVec();
 }
 
-void BoundaryCondition::projectBdrToDofs(mfem::Vector& dof_values, const double time, const bool should_be_scalar) const
+void BoundaryCondition::projectBdrToDofs(mfem::Vector& dof_values, const double time) const
 {
   SLIC_ERROR_ROOT_IF(!state_, "Boundary condition must be associated with a FiniteElementState.");
   auto gf = state_->gridFunc();
   gf.SetFromTrueDofs(dof_values);
-  projectBdr(gf, time, should_be_scalar);
+  projectBdr(gf, time);
   gf.GetTrueDofs(dof_values);
 }
 
@@ -139,9 +141,9 @@ void BoundaryCondition::eliminateToRHS(mfem::HypreParMatrix& k_mat_post_elim, co
 }
 
 void BoundaryCondition::apply(mfem::HypreParMatrix& k_mat_post_elim, mfem::Vector& rhs, FiniteElementState& state,
-                              const double time, const bool should_be_scalar) const
+                              const double time) const
 {
-  projectBdr(state, time, should_be_scalar);
+  projectBdr(state, time);
   state.initializeTrueVec();
   eliminateToRHS(k_mat_post_elim, state.trueVec(), rhs);
 }
