@@ -509,8 +509,8 @@ TEST_P(FirstOrderODE_suite, all)
                       first_order_ode_test(nsteps[o] * 4, type, constraint, timestepper, enforcement)};
 
   std::string message = axom::fmt::format("running first order test({0}, {1}, {2}, {3}), errors: ({4}, {5}, {6})",
-                                    to_string(type), to_string(constraint), to_string(timestepper),
-                                    to_string(enforcement), errors[0], errors[1], errors[2]);
+                                          to_string(type), to_string(constraint), to_string(timestepper),
+                                          to_string(enforcement), errors[0], errors[1], errors[2]);
   SLIC_INFO(message);
 
   // this tolerance is pretty loose, since some some of the
@@ -580,8 +580,8 @@ TEST_P(SecondOrderODE_suite, all)
                         second_order_ode_test(120, type, constraint, timestepper, enforcement)};
 
     std::string message = axom::fmt::format("running second order test({0}, {1}, {2}, {3}), errors: ({4}, {5}, {6})",
-                                      to_string(type), to_string(constraint), to_string(timestepper),
-                                      to_string(enforcement), errors[0], errors[1], errors[2]);
+                                            to_string(type), to_string(constraint), to_string(timestepper),
+                                            to_string(enforcement), errors[0], errors[1], errors[2]);
 
     SLIC_INFO(message);
 

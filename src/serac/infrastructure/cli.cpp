@@ -19,8 +19,8 @@ namespace serac::cli {
 std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], std::string app_description)
 {
   // specify all input arguments
-  axom::CLI::App    app{app_description};
-  std::string input_file_path;
+  axom::CLI::App app{app_description};
+  std::string    input_file_path;
   app.add_option("-i, --input-file", input_file_path, "Input file to use")->required()->check(axom::CLI::ExistingFile);
   int  restart_cycle;
   auto restart_opt =
