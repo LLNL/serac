@@ -8,7 +8,7 @@
 
 #include <fstream>
 
-#include "fmt/fmt.hpp"
+#include "axom/fmt.hpp"
 
 #include "axom/core.hpp"
 
@@ -123,14 +123,14 @@ void BasePhysics::outputState() const
     }
 
     case serac::OutputType::GLVis: {
-      const std::string mesh_name = fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
+      const std::string mesh_name = axom::fmt::format("{0}-mesh.{1:0>6}.{2:0>6}", root_name_, cycle_, mpi_rank_);
       const std::string mesh_path = axom::utilities::filesystem::joinPath(output_directory_, mesh_name);
       std::ofstream     omesh(mesh_path);
       omesh.precision(FLOAT_PRECISION_);
       state_.front().get().mesh().Print(omesh);
 
       for (FiniteElementState& state : state_) {
-        std::string sol_name = fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state.name(), cycle_, mpi_rank_);
+        std::string sol_name = axom::fmt::format("{0}-{1}.{2:0>6}.{3:0>6}", root_name_, state.name(), cycle_, mpi_rank_);
         const std::string sol_path = axom::utilities::filesystem::joinPath(output_directory_, sol_name);
         std::ofstream     osol(sol_path);
         osol.precision(FLOAT_PRECISION_);
@@ -171,7 +171,7 @@ void BasePhysics::initializeSummary(axom::sidre::DataStore& datastore, double t_
   axom::sidre::Group* sidre_root         = datastore.getRoot();
   SLIC_ERROR_ROOT_IF(
       sidre_root->hasGroup(summary_group_name),
-      fmt::format("Sidre Group '{0}' cannot exist when initializeSummary is called", summary_group_name));
+      axom::fmt::format("Sidre Group '{0}' cannot exist when initializeSummary is called", summary_group_name));
   axom::sidre::Group* summary_group = sidre_root->createGroup(summary_group_name);
 
   // Write run info
@@ -211,7 +211,7 @@ void BasePhysics::saveSummary(axom::sidre::DataStore& datastore, const double t)
   axom::sidre::Group* sidre_root = datastore.getRoot();
 
   SLIC_ERROR_ROOT_IF(!sidre_root->hasGroup(curves_group_name),
-                     fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
+                     axom::fmt::format("Sidre Group '{0}' did not exist when saveCurves was called", curves_group_name));
 
   axom::sidre::Group* curves_group = sidre_root->getGroup(curves_group_name);
 

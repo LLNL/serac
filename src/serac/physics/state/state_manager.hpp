@@ -72,7 +72,7 @@ public:
       return static_cast<QuadratureData<T>&>(*syncable_data_.back());
     } else {
       SLIC_ERROR_ROOT_IF(datacoll_->HasQField(name),
-                         fmt::format("Serac's datacollection was already given a qfield named '{0}'", name));
+                         axom::fmt::format("Serac's datacollection was already given a qfield named '{0}'", name));
       syncable_data_.push_back(std::make_unique<QuadratureData<T>>(mesh(), p, false));
       // The static_cast is safe here because we "know" what we just inserted into the vector
       auto& qdata = static_cast<QuadratureData<T>&>(*syncable_data_.back());
