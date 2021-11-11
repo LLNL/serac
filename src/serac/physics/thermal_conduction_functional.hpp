@@ -361,7 +361,7 @@ public:
   void setFluxBCs(FluxType flux_function)
   {
     K_functional_.AddBoundaryIntegral(
-        Dimension<dim - 1>{}, [flux_function, this](auto x, auto n, auto u) { return flux_function(x, n, u); }, mesh_);
+        Dimension<dim - 1>{}, [flux_function](auto x, auto n, auto u) { return flux_function(x, n, u); }, mesh_);
   }
 
   /**
