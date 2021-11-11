@@ -65,7 +65,8 @@ struct has_thermal_flux : std::false_type {
 };
 
 template <typename T>
-struct has_thermal_flux<T, std::void_t<decltype(std::declval<T&>()(tensor<double, 1>{}, tensor<double, 3>{}))>>
+struct has_thermal_flux<T, std::void_t<decltype(std::declval<T&>()(std::declval<tensor<double, 1>&>(),
+                                                                   std::declval<tensor<double, 3>&>()))>>
     : std::true_type {
 };
 
