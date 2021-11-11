@@ -19,12 +19,12 @@ namespace serac::cli {
 std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv[], std::string app_description)
 {
   // specify all input arguments
-  axom::CLI::::App    app{app_description};
+  axom::CLI::App    app{app_description};
   std::string input_file_path;
-  app.add_option("-i, --input-file", input_file_path, "Input file to use")->required()->check(axom::CLI::::ExistingFile);
+  app.add_option("-i, --input-file", input_file_path, "Input file to use")->required()->check(axom::CLI::ExistingFile);
   int  restart_cycle;
   auto restart_opt =
-      app.add_option("-c, --restart-cycle", restart_cycle, "Cycle to restart from")->check(axom::CLI::::PositiveNumber);
+      app.add_option("-c, --restart-cycle", restart_cycle, "Cycle to restart from")->check(axom::CLI::PositiveNumber);
   bool create_input_file_docs{false};
   app.add_flag("-d, --create-input-file-docs", create_input_file_docs,
                "Writes Sphinx documentation for input file, then exits");
@@ -36,14 +36,14 @@ std::unordered_map<std::string, std::string> defineAndParse(int argc, char* argv
   // Parse the arguments and check if they are good
   try {
     app.parse(argc, argv);
-  } catch (const axom::CLI::::ParseError& e) {
+  } catch (const axom::CLI::ParseError& e) {
     serac::logger::flush();
     if (e.get_name() == "CallForHelp") {
       auto msg = app.help();
       SLIC_INFO_ROOT(msg);
       serac::exitGracefully();
     } else {
-      auto err_msg = axom::CLI::::FailureMessage::simple(&app, e);
+      auto err_msg = axom::CLI::FailureMessage::simple(&app, e);
       SLIC_ERROR_ROOT(err_msg);
     }
   }
