@@ -163,6 +163,10 @@ macro(serac_add_tests)
                            DEPENDS_ON  ${arg_DEPENDS_ON}
                            FOLDER      serac/tests )
 
+        if(ENABLE_CUDA AND UMPIRE_FOUND)
+            set_target_properties(${test_name} PROPERTIES LINKER_LANGUAGE CUDA)
+        endif()
+
         blt_add_test(NAME          ${test_name}
                      COMMAND       ${test_name}
                      NUM_MPI_TASKS ${arg_NUM_MPI_TASKS} )
