@@ -26,7 +26,9 @@ class Camp(CMakePackage, CudaPackage, ROCmPackage):
     # TODO: figure out gtest dependency and then set this default True.
     variant('tests', default=False, description='Build tests')
 
-    depends_on('cub', when='+cuda')
+    # SERAC EDIT BEGIN: CUDA 11+ comes with CUB
+    depends_on('cub', when='+cuda ^cuda@:10.99')
+    # SERAC EDIT END
 
     depends_on('blt')
 
