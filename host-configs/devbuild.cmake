@@ -7,35 +7,39 @@
 #------------------------------------------------------------------------------
 # Compilers
 #------------------------------------------------------------------------------
-# Compiler Spec: gcc@8.3.1
+# Compiler Spec: clang@10.0.0
 #------------------------------------------------------------------------------
 if(DEFINED ENV{SPACK_CC})
 
-  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_11_10_21_35_13/spack/lib/spack/env/gcc/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_08_04_16_31_23/spack/lib/spack/env/clang/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_11_10_21_35_13/spack/lib/spack/env/gcc/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_08_04_16_31_23/spack/lib/spack/env/clang/clang++" CACHE PATH "")
 
-  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_11_10_21_35_13/spack/lib/spack/env/gcc/gfortran" CACHE PATH "")
+  set(CMAKE_Fortran_COMPILER "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_08_04_16_31_23/spack/lib/spack/env/clang/gfortran" CACHE PATH "")
 
 else()
 
-  set(CMAKE_C_COMPILER "/usr/tce/packages/gcc/gcc-8.3.1/bin/gcc" CACHE PATH "")
+  set(CMAKE_C_COMPILER "/usr/tce/packages/clang/clang-10.0.0/bin/clang" CACHE PATH "")
 
-  set(CMAKE_CXX_COMPILER "/usr/tce/packages/gcc/gcc-8.3.1/bin/g++" CACHE PATH "")
+  set(CMAKE_CXX_COMPILER "/usr/tce/packages/clang/clang-10.0.0/bin/clang++" CACHE PATH "")
 
   set(CMAKE_Fortran_COMPILER "/usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran" CACHE PATH "")
 
 endif()
 
+set(CMAKE_C_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE STRING "")
+
+set(CMAKE_CXX_FLAGS "--gcc-toolchain=/usr/tce/packages/gcc/gcc-8.3.1" CACHE STRING "")
+
 #------------------------------------------------------------------------------
 # MPI
 #------------------------------------------------------------------------------
 
-set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.3.1/bin/mpicc" CACHE PATH "")
+set(MPI_C_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-clang-10.0.0/bin/mpicc" CACHE PATH "")
 
-set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.3.1/bin/mpicxx" CACHE PATH "")
+set(MPI_CXX_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-clang-10.0.0/bin/mpicxx" CACHE PATH "")
 
-set(MPI_Fortran_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-gcc-8.3.1/bin/mpif90" CACHE PATH "")
+set(MPI_Fortran_COMPILER "/usr/tce/packages/mvapich2/mvapich2-2.3-clang-10.0.0/bin/mpif90" CACHE PATH "")
 
 set(MPIEXEC_EXECUTABLE "/usr/bin/srun" CACHE PATH "")
 
@@ -55,17 +59,11 @@ set(ENABLE_MPI ON CACHE BOOL "")
 # TPLs
 #------------------------------------------------------------------------------
 
-set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_11_10_21_35_13/gcc-8.3.1" CACHE PATH "")
+set(TPL_ROOT "/usr/WS2/smithdev/libs/serac/toss_3_x86_64_ib/2021_08_04_16_31_23/clang-10.0.0" CACHE PATH "")
 
 set(ASCENT_DIR "${TPL_ROOT}/ascent-0.7.1serac" CACHE PATH "")
 
-set(AXOM_DIR "${TPL_ROOT}/axom-0.6.0serac" CACHE PATH "")
-
-set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2serac" CACHE PATH "")
-
-set(LUA_DIR "${TPL_ROOT}/lua-5.3.5" CACHE PATH "")
-
-set(MFEM_DIR "${TPL_ROOT}/mfem-4.3.0serac" CACHE PATH "")
+set(CONDUIT_DIR "${TPL_ROOT}/conduit-0.7.2" CACHE PATH "")
 
 set(HDF5_DIR "${TPL_ROOT}/hdf5-1.8.21" CACHE PATH "")
 
@@ -79,13 +77,20 @@ set(NETCDF_DIR "${TPL_ROOT}/netcdf-c-4.7.4" CACHE PATH "")
 
 set(SUPERLUDIST_DIR "${TPL_ROOT}/superlu-dist-6.1.1" CACHE PATH "")
 
-# CALIPER not built
+
+# These need to be unset
+#set(AXOM_DIR "${TPL_ROOT}/axom-0.5.0serac" CACHE PATH "")
+#set(MFEM_DIR "${TPL_ROOT}/mfem-4.3.0" CACHE PATH "")
+
+# These need to be set
+set(LUA_DIR "${TPL_ROOT}/lua-5.3.5" CACHE PATH "")
+set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.6.1" CACHE PATH "")
 
 # PETSC not built
 
-# RAJA not built
+# CALIPER not built
 
-set(SUNDIALS_DIR "${TPL_ROOT}/sundials-5.6.1" CACHE PATH "")
+# RAJA not built
 
 # UMPIRE not built
 
@@ -108,6 +113,5 @@ set(SPHINX_EXECUTABLE "/collab/usr/gapps/python/build/spack-toss3.4/opt/spack/li
 set(CPPCHECK_EXECUTABLE "${DEVTOOLS_ROOT}/cppcheck-1.87/bin/cppcheck" CACHE PATH "")
 
 set(DOXYGEN_EXECUTABLE "${DEVTOOLS_ROOT}/doxygen-1.8.17/bin/doxygen" CACHE PATH "")
-
 
 
