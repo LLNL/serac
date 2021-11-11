@@ -54,7 +54,6 @@ void BoundaryCondition::project(FiniteElementState& state) const
   auto size  = tdofs.Size();
   if (size) {
     // Generate the scalar dof list from the vector dof list
-    SLIC_ASSERT_MSG(space, "Only BCs associated with a space can be projected.");
     mfem::Array<int> dof_list(size);
     std::transform(tdofs.begin(), tdofs.end(), dof_list.begin(),
                    [&space = std::as_const(state.space())](int tdof) { return space.VDofToDof(tdof); });
