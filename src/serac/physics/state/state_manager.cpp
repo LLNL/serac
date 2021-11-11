@@ -66,6 +66,11 @@ void StateManager::initialize(axom::sidre::DataStore& ds, const std::string& col
 
     datacoll_->UpdateStateFromDS();
     datacoll_->UpdateMeshAndFieldsFromDS();
+
+    // Functional needs the nodal grid function and neighbor data in the mesh
+    mesh().EnsureNodes();
+    mesh().ExchangeFaceNbrData();
+
   } else {
     datacoll_->SetCycle(0);   // Iteration counter
     datacoll_->SetTime(0.0);  // Simulation time
@@ -133,10 +138,14 @@ void StateManager::save(const double t, const int cycle)
   datacoll_->Save();
 }
 
-void StateManager::setMesh(std::unique_ptr<mfem::ParMesh> mesh)
+void StateManager::setMesh(std::unique_ptr<mfem::ParMesh> pmesh)
 {
-  datacoll_->SetMesh(mesh.release());
+  datacoll_->SetMesh(pmesh.release());
   datacoll_->SetOwnData(true);
+
+  // Functional needs the nodal grid function and neighbor data in the mesh
+  StateManager::mesh().EnsureNodes();
+  StateManager::mesh().ExchangeFaceNbrData();
 }
 
 mfem::ParMesh& StateManager::mesh()

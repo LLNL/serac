@@ -101,7 +101,7 @@ public:
   /**
    * @brief Gives ownership of mesh to StateManager
    */
-  static void setMesh(std::unique_ptr<mfem::ParMesh> mesh);
+  static void setMesh(std::unique_ptr<mfem::ParMesh> pmesh);
 
   /**
    * @brief Returns a non-owning reference to mesh held by StateManager
